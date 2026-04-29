@@ -11,6 +11,8 @@
     "worker:ingest": "npm run ingest --workspace=@shortfoot/worker",
     "mobile:start": "npm run start --workspace=@shortfoot/mobile",
     "mobile:android": "npm run android --workspace=@shortfoot/mobile",
+    "web:dev": "npm run dev --workspace=@shortfoot/web",
+    "web:build": "npm run build --workspace=@shortfoot/web",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

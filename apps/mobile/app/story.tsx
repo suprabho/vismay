@@ -10,6 +10,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useFollowedStories, type StoryGroup } from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
@@ -262,7 +263,7 @@ function ProgressBar({
   progress,
 }: {
   state: 'done' | 'active' | 'pending';
-  progress: Animated.SharedValue<number>;
+  progress: SharedValue<number>;
 }) {
   const style = useAnimatedStyle(() => ({
     transform: [{ scaleX: state === 'active' ? progress.value : state === 'done' ? 1 : 0 }],

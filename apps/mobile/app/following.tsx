@@ -35,6 +35,13 @@ export default function FollowingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: insets.bottom + 24 }}>
+        <Pressable
+          onPress={() => router.push('/onboarding/leagues?edit=1')}
+          className="rounded-lg border border-border py-3 items-center mb-6"
+        >
+          <Text className="text-text font-semibold">Edit preferences</Text>
+        </Pressable>
+
         <Text className="text-muted text-sm mb-6">Tap to unfollow.</Text>
 
         {(['league', 'team', 'player'] as const).map((type) =>

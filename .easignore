@@ -1,0 +1,11 @@
+# Exclude non-mobile workspaces from EAS uploads.
+# apps/worker pulls sharp directly; apps/web pulls it via Next.js.
+# Both fail to compile on EAS Build and aren't needed for the mobile build.
+apps/worker
+apps/web
+
+# Locally-generated native projects from `expo prebuild`.
+# EAS runs its own prebuild on the cloud; shipping these bloats the upload
+# (439KB → 335MB) and can cause subtle conflicts.
+apps/mobile/ios
+apps/mobile/android

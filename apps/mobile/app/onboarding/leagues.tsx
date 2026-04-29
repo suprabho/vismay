@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLeagues } from '@/lib/useEntities';
-import { useFollowMutation } from '@/lib/useFollows';
+import { useFollowMutation, useFollows } from '@/lib/useFollows';
 import { EntityChip } from '@/components/EntityChip';
 
 const MIN_LEAGUES = 3;
@@ -11,10 +11,26 @@ const MIN_LEAGUES = 3;
 export default function OnboardingLeagues() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
   const { data: leagues, isLoading } = useLeagues();
-  const { follow } = useFollowMutation();
+  const { data: follows } = useFollows();
+  const { follow, unfollow } = useFollowMutation();
   const [picked, setPicked] = useState<Set<string>>(new Set()); // entity IDs
+  const [initial, setInitial] = useState<Set<string>>(new Set());
+  const [seeded, setSeeded] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (seeded || !leagues) return;
+    if (edit && !follows) return;
+    if (edit && follows) {
+      const followed = new Set(follows.map((f) => f.entity_id));
+      const seed = new Set(leagues.filter((l) => followed.has(l.id)).map((l) => l.id));
+      setPicked(seed);
+      setInitial(seed);
+    }
+    setSeeded(true);
+  }, [leagues, follows, edit, seeded]);
 
   function toggle(id: string) {
     setPicked((prev) => {
@@ -27,11 +43,18 @@ export default function OnboardingLeagues() {
 
   async function next() {
     setBusy(true);
-    // Follow the picked leagues in parallel
-    await Promise.all(Array.from(picked).map((id) => follow.mutateAsync(id)));
+    const toFollow = Array.from(picked).filter((id) => !initial.has(id));
+    const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
+    await Promise.all([
+      ...toFollow.map((id) => follow.mutateAsync(id)),
+      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+    ]);
     setBusy(false);
     const slugs = (leagues ?? []).filter((l) => picked.has(l.id)).map((l) => l.slug);
-    router.push({ pathname: '/onboarding/teams', params: { leagues: slugs.join(',') } });
+    router.push({
+      pathname: '/onboarding/teams',
+      params: { leagues: slugs.join(','), ...(edit ? { edit: '1' } : {}) },
+    });
   }
 
   if (isLoading) {

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTeams } from '@/lib/useEntities';
-import { useFollowMutation } from '@/lib/useFollows';
+import { useFollowMutation, useFollows } from '@/lib/useFollows';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { EntityChip } from '@/components/EntityChip';
@@ -14,13 +14,28 @@ export default function OnboardingTeams() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, refreshProfile } = useAuth();
-  const { leagues } = useLocalSearchParams<{ leagues?: string }>();
+  const { leagues, edit } = useLocalSearchParams<{ leagues?: string; edit?: string }>();
   const leagueSlugs = useMemo(() => (leagues ? leagues.split(',').filter(Boolean) : []), [leagues]);
 
   const { data: teams, isLoading } = useTeams(leagueSlugs);
-  const { follow } = useFollowMutation();
+  const { data: follows } = useFollows();
+  const { follow, unfollow } = useFollowMutation();
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [initial, setInitial] = useState<Set<string>>(new Set());
+  const [seeded, setSeeded] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (seeded || !teams) return;
+    if (edit && !follows) return;
+    if (edit && follows) {
+      const followed = new Set(follows.map((f) => f.entity_id));
+      const seed = new Set(teams.filter((t) => followed.has(t.id)).map((t) => t.id));
+      setPicked(seed);
+      setInitial(seed);
+    }
+    setSeeded(true);
+  }, [teams, follows, edit, seeded]);
 
   // Group teams by league for readability
   const grouped = useMemo(() => {
@@ -46,14 +61,21 @@ export default function OnboardingTeams() {
   async function finish() {
     if (!session) return;
     setBusy(true);
-    await Promise.all(Array.from(picked).map((id) => follow.mutateAsync(id)));
-    await supabase
-      .from('profiles')
-      .update({ onboarded_at: new Date().toISOString() })
-      .eq('id', session.user.id);
-    await refreshProfile();
+    const toFollow = Array.from(picked).filter((id) => !initial.has(id));
+    const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
+    await Promise.all([
+      ...toFollow.map((id) => follow.mutateAsync(id)),
+      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+    ]);
+    if (!edit) {
+      await supabase
+        .from('profiles')
+        .update({ onboarded_at: new Date().toISOString() })
+        .eq('id', session.user.id);
+      await refreshProfile();
+    }
     setBusy(false);
-    router.replace('/(tabs)/feed');
+    router.replace(edit ? '/following' : '/(tabs)/feed');
   }
 
   if (isLoading) {
