@@ -39,13 +39,19 @@ export function useFollowMutation() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
 
+  const invalidateFollowDependent = () => {
+    qc.invalidateQueries({ queryKey: ['follows', userId] });
+    qc.invalidateQueries({ queryKey: ['followedFixtures', userId] });
+    qc.invalidateQueries({ queryKey: ['followedStories', userId] });
+  };
+
   const follow = useMutation({
     mutationFn: async (entityId: string) => {
       if (!userId) throw new Error('Not signed in');
       const { error } = await supabase.from('follows').insert({ user_id: userId, entity_id: entityId });
       if (error && !/duplicate/i.test(error.message)) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['follows', userId] }),
+    onSuccess: invalidateFollowDependent,
   });
 
   const unfollow = useMutation({
@@ -54,7 +60,7 @@ export function useFollowMutation() {
       const { error } = await supabase.from('follows').delete().eq('entity_id', entityId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['follows', userId] }),
+    onSuccess: invalidateFollowDependent,
   });
 
   return { follow, unfollow };

@@ -13,6 +13,7 @@ export type FixtureRow = {
   competition_slug: string;
   season: string;
   matchday: number | null;
+  stage: string | null;
   kickoff_at: string;
   status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
   home_score: number | null;
@@ -24,7 +25,7 @@ export type FixtureRow = {
 };
 
 const FIXTURE_COLS = `
-  id, competition_slug, season, matchday, kickoff_at, status,
+  id, competition_slug, season, matchday, stage, kickoff_at, status,
   home_score, away_score, home_team_name, away_team_name,
   home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
   away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { ThemeProvider } from '@shortfoot/brand/web';
+import { ThemeProvider } from '@/lib/ThemeProvider';
 import { AuthProvider } from '@/lib/AuthProvider';
 import { QueryProvider } from '@/lib/QueryProvider';
 

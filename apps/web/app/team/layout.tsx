@@ -1,11 +1,10 @@
-import { AppHeader } from '@/components/AppHeader';
+import { AppShell } from '@/components/AppShell';
 import { AuthGate } from '@/components/AuthGate';
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGate>
-      <AppHeader />
-      {children}
+      <AppShell>{children}</AppShell>
     </AuthGate>
   );
 }

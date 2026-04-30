@@ -54,7 +54,7 @@ export function FeedCard({ headline, summary, imageUrl, publisher, url, publishe
         <Text className="text-text text-xl font-bold leading-tight mb-3">{headline}</Text>
 
         {summary ? (
-          <Text className="text-text/80 text-[15px] leading-[22px]">{summary}</Text>
+          <Text className="text-white text-[15px] leading-[22px]">{summary}</Text>
         ) : (
           <Text className="text-muted text-sm italic">Summary unavailable.</Text>
         )}

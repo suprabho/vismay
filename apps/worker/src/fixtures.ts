@@ -116,6 +116,7 @@ async function syncFixtures(
       competition_slug: comp.slug,
       season: normalizeSeason(m.season),
       matchday: m.matchday ?? null,
+      stage: m.stage ?? null,
       home_team_id: homeId,
       away_team_id: awayId,
       home_team_name: homeId ? null : m.homeTeam?.name ?? 'TBD',

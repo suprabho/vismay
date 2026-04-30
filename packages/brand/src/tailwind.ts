@@ -46,10 +46,11 @@ export function brandPreset(opts?: {
 function cssVarMap<T extends Record<string, unknown>>(
   source: T,
   prefix: string,
-): Record<keyof T & string, string> {
-  const out = {} as Record<keyof T & string, string>;
-  for (const key of Object.keys(source) as Array<keyof T & string>) {
-    out[key] = `var(--sf-${prefix}-${kebab(key)})`;
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of Object.keys(source)) {
+    const slug = kebab(key);
+    out[slug] = `var(--sf-${prefix}-${slug})`;
   }
   return out;
 }

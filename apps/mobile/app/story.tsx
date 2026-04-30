@@ -242,7 +242,7 @@ export default function StoryScreen() {
         </View>
         <Text className="text-text text-2xl font-bold leading-tight mb-3">{story.headline}</Text>
         {story.summary ? (
-          <Text className="text-text/90 text-[15px] leading-[22px]" numberOfLines={6}>
+          <Text className="text-white text-[15px] leading-[22px]" numberOfLines={6}>
             {story.summary}
           </Text>
         ) : null}

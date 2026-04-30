@@ -8,7 +8,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "@shortfoot/brand": "*",
@@ -17,6 +18,7 @@
     "@tanstack/react-query": "^5.56.2",
     "expo": "^55.0.0",
     "expo-blur": "~55.0.14",
+    "expo-build-properties": "~55.0.13",
     "expo-constants": "~55.0.15",
     "expo-dev-client": "~55.0.28",
     "expo-image": "~55.0.9",

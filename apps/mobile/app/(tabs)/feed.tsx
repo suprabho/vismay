@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
@@ -60,6 +60,20 @@ function FeedBody({ tab }: { tab: Tab }) {
   const stories = useFollowedStories();
   const { seen, markSeen } = useSeenArticles();
 
+  const items = discover.data?.pages.flatMap((p) => p.items) ?? [];
+
+  useEffect(() => {
+    if (
+      tab === 'discover' &&
+      items.length === 0 &&
+      discover.hasNextPage &&
+      !discover.isFetchingNextPage &&
+      !discover.isLoading
+    ) {
+      discover.fetchNextPage();
+    }
+  }, [tab, items.length, discover]);
+
   const showRings = tab === 'forYou' && (stories.data?.length ?? 0) > 0;
   const topGap = insets.top + 56 + (showRings ? RINGS_HEIGHT : 0);
 
@@ -116,13 +130,19 @@ function FeedBody({ tab }: { tab: Tab }) {
     );
   }
 
-  const items = discover.data?.pages.flatMap((p) => p.items) ?? [];
-
-  if (items.length === 0) {
+  if (items.length === 0 && !discover.hasNextPage) {
     return (
       <View className="flex-1 items-center justify-center px-6">
         <Text className="text-text text-lg mb-2">Nothing here yet</Text>
         <Text className="text-muted text-sm text-center">No recent stories yet. Check back soon.</Text>
+      </View>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color="#00D26A" />
       </View>
     );
   }

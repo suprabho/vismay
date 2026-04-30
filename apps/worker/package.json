@@ -8,6 +8,8 @@
     "ingest:ci": "tsx src/ingest.ts",
     "scores": "tsx --env-file=.env src/scores.ts",
     "scores:ci": "tsx src/scores.ts",
+    "fixtures": "tsx --env-file=.env src/fixtures.ts",
+    "fixtures:ci": "tsx src/fixtures.ts",
     "backfill:images": "tsx --env-file=.env src/backfillImages.ts",
     "backfill:colors": "tsx --env-file=.env src/backfillColors.ts",
     "typecheck": "tsc --noEmit"

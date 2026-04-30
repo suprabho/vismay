@@ -513,7 +513,9 @@ function LeagueCardContent({
               text={
                 section.lastMatchdayNumber != null
                   ? `Matchday ${section.lastMatchdayNumber} · Results`
-                  : 'Recent results'
+                  : section.lastStage
+                    ? `${stageLabel(section.lastStage)} · Results`
+                    : 'Recent results'
               }
             />
             <MatchdayPager fixtures={section.lastMatchday} />
@@ -530,7 +532,9 @@ function LeagueCardContent({
               text={
                 section.nextMatchdayNumber != null
                   ? `Matchday ${section.nextMatchdayNumber} · Upcoming`
-                  : 'Upcoming'
+                  : section.nextStage
+                    ? `${stageLabel(section.nextStage)} · Upcoming`
+                    : 'Upcoming'
               }
             />
             <MatchdayPager fixtures={section.nextMatchday} />
@@ -624,6 +628,35 @@ function FormDot({ fixture, teamId }: { fixture: FixtureRow; teamId: string }) {
       }}
     />
   );
+}
+
+// football-data.org stage codes → human labels. Anything unmapped falls back
+// to title-cased words ("ROUND_OF_32" → "Round Of 32") so new stages don't
+// crash the UI even if we forget to extend this map.
+function stageLabel(stage: string): string {
+  const map: Record<string, string> = {
+    PRELIMINARY_ROUND: 'Preliminary Round',
+    FIRST_QUALIFYING_ROUND: '1st Qualifying Round',
+    SECOND_QUALIFYING_ROUND: '2nd Qualifying Round',
+    THIRD_QUALIFYING_ROUND: '3rd Qualifying Round',
+    PLAY_OFFS: 'Play-offs',
+    PLAY_OFF_ROUND: 'Play-off Round',
+    GROUP_STAGE: 'Group Stage',
+    LEAGUE_STAGE: 'League Phase',
+    LAST_16: 'Round of 16',
+    ROUND_OF_16: 'Round of 16',
+    ROUND_OF_32: 'Round of 32',
+    QUARTER_FINALS: 'Quarter-finals',
+    SEMI_FINALS: 'Semi-finals',
+    THIRD_PLACE: 'Third Place',
+    FINAL: 'Final',
+  };
+  if (map[stage]) return map[stage]!;
+  return stage
+    .toLowerCase()
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 function nextLeagueChip(section: LeagueSection): string | null {

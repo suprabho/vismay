@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -12,8 +13,14 @@ import { defaultTheme, themes } from './themes';
 import type { ThemeName } from './types';
 import { themeToVars } from './vars';
 
+export type ThemeStorage = {
+  load: () => ThemeName | null | Promise<ThemeName | null>;
+  save: (name: ThemeName) => void | Promise<void>;
+};
+
 export type ThemeProviderProps = {
   initialTheme?: ThemeName;
+  storage?: ThemeStorage;
   children: ReactNode;
 };
 
@@ -21,16 +28,40 @@ export type ThemeProviderProps = {
  * Web ThemeProvider. Applies the active theme's CSS variables on a wrapping
  * <div> so descendant Tailwind utilities resolve correctly, and mirrors them
  * on documentElement so styles outside the wrapper (e.g. <body>) follow too.
+ *
+ * If `storage` is provided, the provider rehydrates from it on mount and
+ * persists every theme change.
  */
 export function ThemeProvider({
   initialTheme = defaultTheme,
+  storage,
   children,
 }: ThemeProviderProps) {
-  const [themeName, setTheme] = useState<ThemeName>(initialTheme);
+  const [themeName, setThemeState] = useState<ThemeName>(initialTheme);
+
+  useEffect(() => {
+    if (!storage) return;
+    let cancelled = false;
+    Promise.resolve(storage.load()).then((name) => {
+      if (cancelled || !name) return;
+      if (name in themes) setThemeState(name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storage]);
+
+  const setTheme = useCallback(
+    (name: ThemeName) => {
+      setThemeState(name);
+      if (storage) void Promise.resolve(storage.save(name));
+    },
+    [storage],
+  );
 
   const value = useMemo(() => {
     return { themeName, theme: themes[themeName], setTheme };
-  }, [themeName]);
+  }, [themeName, setTheme]);
 
   const varMap = useMemo(() => themeToVars(themes[themeName]), [themeName]);
 

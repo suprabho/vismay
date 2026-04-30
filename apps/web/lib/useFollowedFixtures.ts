@@ -7,7 +7,7 @@ import type { Entity } from './useEntities';
 import type { FixtureRow } from './useFixtures';
 
 const FIXTURE_COLS = `
-  id, competition_slug, season, matchday, kickoff_at, status,
+  id, competition_slug, season, matchday, stage, kickoff_at, status,
   home_score, away_score, home_team_name, away_team_name,
   home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
   away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
@@ -19,6 +19,9 @@ export type LeagueSection = {
   nextMatchday: FixtureRow[];
   lastMatchdayNumber: number | null;
   nextMatchdayNumber: number | null;
+  // For knockout rounds (no matchday). Mutually exclusive with the *Number fields.
+  lastStage: string | null;
+  nextStage: string | null;
 };
 
 export type TeamSection = {
@@ -37,6 +40,50 @@ type FollowRow = {
   created_at: string;
   entity: Entity;
 };
+
+// A fixture with both sides unresolved is a knockout slot before the draw —
+// useless to display (no team, no outcome). Keep half-resolved rows.
+function notTbd(f: FixtureRow): boolean {
+  return f.home != null || f.away != null;
+}
+
+type RoundGroup = {
+  fixtures: FixtureRow[];
+  matchday: number | null;
+  stage: string | null;
+};
+
+// Group the next/last "round" out of a kickoff-sorted list. League rounds use
+// `matchday`; knockouts have `stage` (LAST_16, etc.) instead. We anchor on the
+// first fixture's grouping key so the section header matches what the user sees.
+function groupRound(fixtures: FixtureRow[], kind: 'past' | 'upcoming'): RoundGroup {
+  if (fixtures.length === 0) return { fixtures: [], matchday: null, stage: null };
+  const head = fixtures[0]!;
+  const sortAsc = (a: FixtureRow, b: FixtureRow) => a.kickoff_at.localeCompare(b.kickoff_at);
+
+  if (head.matchday != null) {
+    const md = head.matchday;
+    return {
+      fixtures: fixtures.filter((f) => f.matchday === md).sort(sortAsc),
+      matchday: md,
+      stage: null,
+    };
+  }
+  if (head.stage) {
+    const stage = head.stage;
+    return {
+      fixtures: fixtures.filter((f) => f.stage === stage).sort(sortAsc),
+      matchday: null,
+      stage,
+    };
+  }
+  const slice = fixtures.slice(0, 5);
+  return {
+    fixtures: kind === 'upcoming' ? slice : slice.sort(sortAsc),
+    matchday: null,
+    stage: null,
+  };
+}
 
 export function useFollowedFixtures() {
   const { session } = useAuth();
@@ -78,32 +125,20 @@ export function useFollowedFixtures() {
             .order('kickoff_at', { ascending: true })
             .limit(30),
         ]);
-        const past = (pastRes.data ?? []) as unknown as FixtureRow[];
-        const upcoming = (upRes.data ?? []) as unknown as FixtureRow[];
+        const past = ((pastRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd);
+        const upcoming = ((upRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd);
 
-        const lastMd = past.find((f) => f.matchday != null)?.matchday ?? null;
-        const nextMd = upcoming.find((f) => f.matchday != null)?.matchday ?? null;
-
-        const lastMatchday =
-          lastMd != null
-            ? past
-                .filter((f) => f.matchday === lastMd)
-                .sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at))
-            : past.slice(0, 5).sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at));
-
-        const nextMatchday =
-          nextMd != null
-            ? upcoming
-                .filter((f) => f.matchday === nextMd)
-                .sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at))
-            : upcoming.slice(0, 5);
+        const lastGroup = groupRound(past, 'past');
+        const nextGroup = groupRound(upcoming, 'upcoming');
 
         return {
           entity: league,
-          lastMatchday,
-          nextMatchday,
-          lastMatchdayNumber: lastMd,
-          nextMatchdayNumber: nextMd,
+          lastMatchday: lastGroup.fixtures,
+          nextMatchday: nextGroup.fixtures,
+          lastMatchdayNumber: lastGroup.matchday,
+          nextMatchdayNumber: nextGroup.matchday,
+          lastStage: lastGroup.stage,
+          nextStage: nextGroup.stage,
         };
       });
 
@@ -126,8 +161,8 @@ export function useFollowedFixtures() {
         ]);
         return {
           entity: team,
-          past: (pastRes.data ?? []) as unknown as FixtureRow[],
-          upcoming: (upRes.data ?? []) as unknown as FixtureRow[],
+          past: ((pastRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd),
+          upcoming: ((upRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd),
         };
       });
 
