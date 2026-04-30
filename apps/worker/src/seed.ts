@@ -105,6 +105,7 @@ async function seedLeagues() {
 async function seedTeams(competitions: any[]) {
   console.log('[seed] teams...');
   const allTeams: any[] = [];
+  const memberships: { teamSlug: string; competitionSlug: string }[] = [];
 
   for (const comp of competitions) {
     await sleep(6500); // rate limit
@@ -112,15 +113,17 @@ async function seedTeams(competitions: any[]) {
       const data = await fdFetch<{ teams: any[] }>(`/competitions/${comp.code}/teams`);
       const leagueSlug = slugify(commonName(comp.name));
       for (const t of data.teams) {
+        const teamSlug = slugify(commonName(t.name));
         allTeams.push({
           type: 'team' as const,
-          slug: slugify(commonName(t.name)),
+          slug: teamSlug,
           name: t.name,
           football_data_id: t.id,
           country: t.area?.name ?? null,
           league_slug: leagueSlug,
           crest_url: t.crest ?? null,
         });
+        memberships.push({ teamSlug, competitionSlug: leagueSlug });
       }
       console.log(`  [${comp.code}] +${data.teams.length} teams`);
     } catch (e) {
@@ -128,7 +131,8 @@ async function seedTeams(competitions: any[]) {
     }
   }
 
-  // Dedupe by slug (teams appear in multiple competitions — e.g., Man City is in PL + CL)
+  // Dedupe entity rows by slug (a team in multiple comps stores once).
+  // Memberships are kept un-deduped — that's the whole point of the join table.
   const deduped = Array.from(
     new Map(allTeams.map((t) => [t.slug, t])).values()
   );
@@ -139,6 +143,43 @@ async function seedTeams(competitions: any[]) {
 
   if (error) throw error;
   console.log(`[seed] upserted ${deduped.length} unique teams`);
+
+  // Resolve slugs -> ids for the team_competitions junction.
+  const slugSet = new Set<string>();
+  for (const m of memberships) {
+    slugSet.add(m.teamSlug);
+    slugSet.add(m.competitionSlug);
+  }
+  const { data: lookup, error: lookupError } = await supabase
+    .from('entities')
+    .select('id, slug, type')
+    .in('slug', Array.from(slugSet));
+  if (lookupError) throw lookupError;
+
+  const teamIdBySlug = new Map<string, string>();
+  const compIdBySlug = new Map<string, string>();
+  for (const e of lookup ?? []) {
+    if (e.type === 'team') teamIdBySlug.set(e.slug, e.id);
+    else if (e.type === 'league') compIdBySlug.set(e.slug, e.id);
+  }
+
+  const tcRows: { team_id: string; competition_id: string }[] = [];
+  const seen = new Set<string>();
+  for (const m of memberships) {
+    const teamId = teamIdBySlug.get(m.teamSlug);
+    const compId = compIdBySlug.get(m.competitionSlug);
+    if (!teamId || !compId) continue;
+    const key = `${teamId}:${compId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tcRows.push({ team_id: teamId, competition_id: compId });
+  }
+
+  const { error: tcError } = await supabase
+    .from('team_competitions')
+    .upsert(tcRows, { onConflict: 'team_id,competition_id', ignoreDuplicates: true });
+  if (tcError) throw tcError;
+  console.log(`[seed] upserted ${tcRows.length} team-competition memberships`);
 }
 
 async function main() {

@@ -1,19 +1,44 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { EntityChip } from '@/components/EntityChip';
 import { useLeagues } from '@/lib/useEntities';
-import { useFollowMutation } from '@/lib/useFollows';
+import { useFollowMutation, useFollows } from '@/lib/useFollows';
 
 const MIN_LEAGUES = 3;
 
-export default function OnboardingLeagues() {
+function PageSpinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+    </div>
+  );
+}
+
+function OnboardingLeaguesInner() {
   const router = useRouter();
+  const params = useSearchParams();
+  const edit = params.get('edit');
   const { data: leagues, isLoading } = useLeagues();
-  const { follow } = useFollowMutation();
+  const { data: follows } = useFollows();
+  const { follow, unfollow } = useFollowMutation();
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [initial, setInitial] = useState<Set<string>>(new Set());
+  const [seeded, setSeeded] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (seeded || !leagues) return;
+    if (edit && !follows) return;
+    if (edit && follows) {
+      const followed = new Set(follows.map((f) => f.entity_id));
+      const seed = new Set(leagues.filter((l) => followed.has(l.id)).map((l) => l.id));
+      setPicked(seed);
+      setInitial(seed);
+    }
+    setSeeded(true);
+  }, [leagues, follows, edit, seeded]);
 
   function toggle(id: string) {
     setPicked((prev) => {
@@ -26,18 +51,21 @@ export default function OnboardingLeagues() {
 
   async function next() {
     setBusy(true);
-    await Promise.all(Array.from(picked).map((id) => follow.mutateAsync(id)));
+    const toFollow = Array.from(picked).filter((id) => !initial.has(id));
+    const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
+    await Promise.all([
+      ...toFollow.map((id) => follow.mutateAsync(id)),
+      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+    ]);
     setBusy(false);
     const slugs = (leagues ?? []).filter((l) => picked.has(l.id)).map((l) => l.slug);
-    router.push(`/onboarding/teams?leagues=${encodeURIComponent(slugs.join(','))}`);
+    const qs = new URLSearchParams({ leagues: slugs.join(',') });
+    if (edit) qs.set('edit', '1');
+    router.push(`/onboarding/teams?${qs.toString()}`);
   }
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   const canContinue = picked.size >= MIN_LEAGUES;
@@ -78,5 +106,13 @@ export default function OnboardingLeagues() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingLeagues() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <OnboardingLeaguesInner />
+    </Suspense>
   );
 }
