@@ -100,13 +100,17 @@ export function resolveUnits(
         if (sub.mobileParagraphs) {
           hasMobileOverrides = true
           sub.mobileParagraphs.forEach((mobileSpec, sliceIdx) => {
+            const raw = sliceParagraphs(allParagraphs, mobileSpec)
+            const mobileParagraphs = isStat
+              ? extractStatSubheading(raw, sub.subheading).paragraphs
+              : raw
             mobileUnits.push({
               parentIndex,
               subIndex,
               parentConfig: section,
               heading: sliceIdx === 0 ? heading : undefined,
               subheading: sliceIdx === 0 ? subheading : undefined,
-              paragraphs: sliceParagraphs(allParagraphs, mobileSpec),
+              paragraphs: mobileParagraphs,
             })
           })
         } else {
@@ -205,13 +209,20 @@ export function resolveUnits(
       } else if (section.mobileParagraphs) {
         hasMobileOverrides = true
         section.mobileParagraphs.forEach((mobileSpec, sliceIdx) => {
+          const raw = sliceParagraphs(allParagraphs, mobileSpec)
+          // For stat sections, strip the *italic* subheading paragraph from each
+          // mobile slice so it isn't rendered twice (once as the styled subheading
+          // label and again as body text with raw asterisks).
+          const mobileParagraphs = isStat
+            ? extractStatSubheading(raw, section.subheading).paragraphs
+            : raw
           mobileUnits.push({
             parentIndex,
             subIndex: 0,
             parentConfig: section,
             heading: sliceIdx === 0 ? heading : undefined,
             subheading: sliceIdx === 0 ? subheading : undefined,
-            paragraphs: sliceParagraphs(allParagraphs, mobileSpec),
+            paragraphs: mobileParagraphs,
           })
         })
       } else {

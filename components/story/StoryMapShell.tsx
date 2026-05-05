@@ -252,7 +252,7 @@ export default function StoryMapShell({
           className="
             fixed pointer-events-none z-10
             top-1/2 -translate-y-2/3 left-1/2 -translate-x-1/2
-            w-[calc(100vw-2.25rem)] aspect-3/4
+            w-[calc(100vw-1rem)] aspect-3/4
             [@media(min-aspect-ratio:1/1)]:top-0
             [@media(min-aspect-ratio:1/1)]:translate-y-0
             [@media(min-aspect-ratio:1/1)]:translate-x-0
@@ -261,14 +261,14 @@ export default function StoryMapShell({
             [@media(min-aspect-ratio:1/1)]:w-[63vw]
             [@media(min-aspect-ratio:1/1)]:aspect-auto
             [@media(min-aspect-ratio:1/1)]:h-[50vh]
-            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:top-[72px]
+            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:top-18
             [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:translate-y-0
-            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:max-h-[calc(50svh-88px)]
+            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:max-h-[calc(50svh-16px)]
             flex items-center justify-center backdrop-blur-3xl
           "
         >
           <div
-            className="w-full h-full max-w-[760px] [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-3 [@media(min-aspect-ratio:1/1)]:p-0"
+            className="w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0"
             style={{
               background: 'rgb(var(--color-panel-rgb) / 0.2)',
               border: '0.5px solid var(--color-line)',
