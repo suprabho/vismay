@@ -252,7 +252,7 @@ export default function StoryMapShell({
           className="
             fixed pointer-events-none z-10
             top-1/2 -translate-y-2/3 left-1/2 -translate-x-1/2
-            w-[calc(100vw-2.25rem)] aspect-square
+            w-[calc(100vw-2.25rem)] aspect-3/4
             [@media(min-aspect-ratio:1/1)]:top-0
             [@media(min-aspect-ratio:1/1)]:translate-y-0
             [@media(min-aspect-ratio:1/1)]:translate-x-0

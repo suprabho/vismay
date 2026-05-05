@@ -419,6 +419,16 @@ async function generateSpeech(text: string): Promise<Buffer | null> {
       return null
     }
 
+    // If Gemini's hint is longer than 5 minutes, treat it as a daily-quota
+    // signal — bail out instead of sleeping overnight inside the script.
+    const MAX_INLINE_BACKOFF = 5 * 60 * 1000
+    if (result.retryAfterMs && result.retryAfterMs > MAX_INLINE_BACKOFF) {
+      console.error(
+        `\n  ✗ Gemini returned a ${Math.round(result.retryAfterMs / 60_000)}-minute retry delay — likely daily quota exhausted. Stopping.`
+      )
+      throw new Error('DAILY_QUOTA_EXHAUSTED')
+    }
+
     // Backoff: honor server hint if present, otherwise exponential (15s, 30s, 60s, 120s).
     const backoffMs =
       result.retryAfterMs ?? Math.min(120_000, 15_000 * Math.pow(2, attempt - 1))
@@ -890,8 +900,16 @@ async function main() {
     console.log(`(whisper alignment ON: ${WHISPER_BIN}, model=${path.basename(WHISPER_MODEL)})`)
   }
 
-  for (const slug of storySlugs) {
-    await processStory(slug, force)
+  try {
+    for (const slug of storySlugs) {
+      await processStory(slug, force)
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'DAILY_QUOTA_EXHAUSTED') {
+      console.error('Re-run tomorrow once the quota resets — already-generated rows will be skipped.')
+      process.exit(2)
+    }
+    throw err
   }
 
   console.log('\nAll done.')

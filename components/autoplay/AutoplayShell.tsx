@@ -289,7 +289,6 @@ export default function AutoplayShell({
     if (!iframeReady) return
     scrollIframeToUnit(activeUnit)
   }, [activeUnit, iframeReady, scrollIframeToUnit])
-
   /* ─── Audio playback ─────────────────────────────────────────── */
 
   const stopPlayback = useCallback(() => {
