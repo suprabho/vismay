@@ -37,8 +37,8 @@ export default function HeliumPriceChart({ activeStep }: { activeStep: number })
       textStyle: { color: MUTED, fontSize: mobile ? 9 : 11, fontWeight: 'normal', fontFamily: 'var(--font-mono)' },
     },
     grid: mobile
-      ? { left: 40, right: 16, top: 28, bottom: 40 }
-      : { left: 65, right: 30, top: 35, bottom: 50 },
+      ? { left: 40, right: 60, top: 28, bottom: 70 }
+      : { left: 65, right: showProjected ? 110 : 80, top: 35, bottom: 50 },
     xAxis: {
       type: 'category',
       data: months,
@@ -69,7 +69,8 @@ export default function HeliumPriceChart({ activeStep }: { activeStep: number })
           fontFamily: 'var(--font-mono)',
           fontSize: 12,
           fontWeight: 700,
-          formatter: () => showProjected ? '$1,800+' : '$153 — spike',
+          formatter: () =>
+            showProjected ? '$1,800+' : mobile ? '$153' : '$153 — spike',
         },
       },
       {
@@ -85,7 +86,10 @@ export default function HeliumPriceChart({ activeStep }: { activeStep: number })
           fontFamily: 'var(--font-mono)',
           fontSize: 12,
           fontWeight: 700,
-          formatter: () => showProjected ? '$1,050 — repricing' : '$520 — unmoved',
+          formatter: () =>
+            showProjected
+              ? mobile ? '$1,050' : '$1,050 — repricing'
+              : mobile ? '$520' : '$520 — unmoved',
         },
       },
       // Projected zone highlight
@@ -106,6 +110,7 @@ export default function HeliumPriceChart({ activeStep }: { activeStep: number })
     legend: {
       top: mobile ? 2 : 5,
       left: 10,
+      itemGap: mobile ? 20 : 24,
       textStyle: { color: MUTED, fontSize: mobile ? 8 : 10, fontFamily: 'var(--font-mono)' },
       data: [
         { name: 'Spot (2% of market)', itemStyle: { color: ACCENT } },

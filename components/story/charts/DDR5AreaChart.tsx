@@ -62,6 +62,11 @@ export default function DDR5AreaChart({ activeStep }: { activeStep: number }) {
     legend: {
       top: mobile ? 2 : 5,
       left: 10,
+      // Stacked vertically so the long projection labels (e.g.
+      // "60-day: +2-4% GPU hr") don't crash into "Historical (verified)"
+      // when 2+ items are visible.
+      orient: 'vertical',
+      itemGap: 4,
       textStyle: { color: MUTED, fontSize: mobile ? 8 : 10, fontFamily: 'var(--font-mono)' },
       data: [
         { name: 'Historical (verified)', itemStyle: { color: ACCENT2 } },
@@ -70,9 +75,16 @@ export default function DDR5AreaChart({ activeStep }: { activeStep: number }) {
         ...(show3yr ? [{ name: '3-5yr: +30-50% GPU hr', itemStyle: { color: ACCENT } }] : []),
       ],
     },
-    grid: mobile
-      ? { left: 40, right: 16, top: 30, bottom: 40 }
-      : { left: 58, right: 30, top: 38, bottom: 50 },
+    // Pad top to fit the vertically-stacked legend (1–4 items).
+    // Pad bottom so 45°-rotated x-axis labels don't crash into the title caption.
+    grid: (() => {
+      const legendCount = 1 + (show60d ? 1 : 0) + (show6mo ? 1 : 0) + (show3yr ? 1 : 0)
+      const lineH = mobile ? 14 : 18
+      const topPad = (mobile ? 30 : 38) + (legendCount - 1) * lineH
+      return mobile
+        ? { left: 40, right: 60, top: topPad, bottom: 70 }
+        : { left: 58, right: 70, top: topPad, bottom: 50 }
+    })(),
     xAxis: {
       type: 'category',
       data: months,

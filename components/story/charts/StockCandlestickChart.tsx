@@ -113,9 +113,11 @@ export default function StockCandlestickChart({ activeStep }: { activeStep: numb
         ],
       },
       // ── Plot area padding (controls chart inset) ───────
+      // right padding leaves room for the -18% / -54% markLine labels
+      // (position: 'end') so they don't get clipped at narrow widths.
       grid: mobile
-        ? { left: 36, right: 16, top: 28, bottom: 55 }
-        : { left: 55, right: 30, top: 35, bottom: 70 },
+        ? { left: 36, right: 50, top: 28, bottom: 55 }
+        : { left: 55, right: 50, top: 35, bottom: 70 },
       // ── X axis: shared "trading days from peak" scale ──
       xAxis: {
         type: 'value',
@@ -290,10 +292,11 @@ export default function StockCandlestickChart({ activeStep }: { activeStep: numb
       ],
     },
     // ── Plot area inset (left/right/top/bottom padding) ──
+    // Right padding leaves room for the −18% markLine label at position 'end'.
     grid: [
       mobile
-        ? { left: 36, right: 16, top: 28, bottom: 55 }
-        : { left: 55, right: 30, top: 35, bottom: 70 },
+        ? { left: 36, right: 50, top: 28, bottom: 55 }
+        : { left: 55, right: 50, top: 35, bottom: 70 },
     ],
     // ── X axis: date labels for 2026 series ──────────────
     xAxis: [

@@ -50,6 +50,7 @@ export default function DRAMPriceChart({ activeStep }: { activeStep: number }) {
     legend: {
       top: 0,
       left: 10,
+      itemGap: mobile ? 12 : 24,
       textStyle: { color: MUTED, fontSize: mobile ? 8 : 10 },
       data: [
         { name: 'Pre-existing supercycle', itemStyle: { color: ACCENT2 } },

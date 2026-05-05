@@ -12,11 +12,16 @@ import type { Theme } from '@/types/story'
 
 type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'settings'
 
+interface ChartEntry {
+  id: string
+  editable: boolean
+}
+
 interface InitialState {
   markdown: string
   config_yaml: string
   share_yaml: string
-  charts: string[]
+  charts: ChartEntry[]
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -192,7 +197,13 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
     if (nextConfig != null) setConfig(nextConfig)
     if (nextShare != null) setShare(nextShare)
     if (chartIds.length > 0) {
-      setCharts((prev) => Array.from(new Set([...prev, ...chartIds])).sort())
+      setCharts((prev) => {
+        const existing = new Set(prev.map((c) => c.id))
+        const additions: ChartEntry[] = chartIds
+          .filter((id) => !existing.has(id))
+          .map((id) => ({ id, editable: true }))
+        return [...prev, ...additions].sort((a, b) => a.id.localeCompare(b.id))
+      })
     }
 
     setBulkBusy(false)
@@ -364,8 +375,8 @@ function ChartsList({
   onChartsChange,
 }: {
   slug: string
-  charts: string[]
-  onChartsChange: (next: string[]) => void
+  charts: ChartEntry[]
+  onChartsChange: (next: ChartEntry[]) => void
 }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -423,8 +434,12 @@ function ChartsList({
       setError(body?.error ?? `HTTP ${res.status}`)
       return
     }
-    if (!charts.includes(id)) {
-      onChartsChange([...charts, id].sort())
+    if (!charts.some((c) => c.id === id)) {
+      onChartsChange(
+        [...charts, { id, editable: true }].sort((a, b) =>
+          a.id.localeCompare(b.id)
+        )
+      )
     }
     router.push(`/admin/${slug}/charts/${id}`)
   }
@@ -460,25 +475,38 @@ function ChartsList({
         </div>
       ) : (
         <ul className="divide-y divide-white/5">
-          {charts.map((id) => (
-            <li key={id} className="flex items-center">
-              <Link
-                href={`/admin/${slug}/charts/${id}`}
-                className="flex-1 flex items-center justify-between px-4 py-4 active:bg-white/5 min-w-0"
+          {charts.map((c) =>
+            c.editable ? (
+              <li key={c.id} className="flex items-center">
+                <Link
+                  href={`/admin/${slug}/charts/${c.id}`}
+                  className="flex-1 flex items-center justify-between px-4 py-4 active:bg-white/5 min-w-0"
+                >
+                  <span className="font-mono text-sm truncate">{c.id}.json</span>
+                  <span className="text-neutral-500 shrink-0 ml-2">›</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => downloadChart(c.id)}
+                  className="px-3 py-4 text-sm text-neutral-400 hover:text-white hover:bg-white/5 shrink-0"
+                  title={`Download ${c.id}.json`}
+                >
+                  ↓
+                </button>
+              </li>
+            ) : (
+              <li
+                key={c.id}
+                className="flex items-center justify-between px-4 py-4 text-neutral-500"
+                title="Hardcoded React component — not editable as JSON"
               >
-                <span className="font-mono text-sm truncate">{id}.json</span>
-                <span className="text-neutral-500 shrink-0 ml-2">›</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => downloadChart(id)}
-                className="px-3 py-4 text-sm text-neutral-400 hover:text-white hover:bg-white/5 shrink-0"
-                title={`Download ${id}.json`}
-              >
-                ↓
-              </button>
-            </li>
-          ))}
+                <span className="font-mono text-sm truncate">{c.id}</span>
+                <span className="text-[10px] uppercase tracking-wider border border-white/10 rounded px-1.5 py-0.5 shrink-0">
+                  code
+                </span>
+              </li>
+            )
+          )}
         </ul>
       )}
     </div>

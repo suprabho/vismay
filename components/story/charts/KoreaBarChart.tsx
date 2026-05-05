@@ -55,6 +55,7 @@ export default function KoreaBarChart({ activeStep }: { activeStep: number }) {
     legend: {
       top: 0,
       left: 10,
+      itemGap: mobile ? 10 : 20,
       itemWidth: 10,
       itemHeight: 10,
       textStyle: { color: MUTED, fontSize: mobile ? 8 : 10 },
