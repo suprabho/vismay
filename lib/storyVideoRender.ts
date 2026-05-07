@@ -187,6 +187,9 @@ async function walkAndRecord(args: {
     args: [
       '--autoplay-policy=no-user-gesture-required',
       '--disable-blink-features=AutomationControlled',
+      // Headless Chromium has smooth-scrolling off by default — without this
+      // flag, `scrollIntoView({ behavior: 'smooth' })` silently teleports.
+      '--enable-smooth-scrolling',
     ],
   })
   const context = await browser.newContext({
@@ -195,6 +198,51 @@ async function walkAndRecord(args: {
     // recordVideo.size must match viewport — Playwright doesn't upscale,
     // it just pads the captured frames with empty space.
     recordVideo: { dir: args.workDir, size: cfg.viewport },
+    // Force `prefers-reduced-motion: no-preference` so the page's animations
+    // — chart entrances, GSAP transitions, smooth scroll — actually run.
+    // Some CI / headless setups default to `reduce`, which makes everything
+    // teleport and ruins the recording.
+    reducedMotion: 'no-preference',
+  })
+
+  // Capture every Mapbox map instance the page creates, so the walk loop
+  // can wait for camera transitions to settle before advancing. Without
+  // this, the next cue's scroll fires while the previous map is still
+  // panning + tile-loading, and the recording shows visible tile pop-in.
+  await context.addInitScript(() => {
+    interface MapStub {
+      loaded(): boolean
+      once(event: string, fn: () => void): void
+    }
+    interface CaptureWindow extends Window {
+      __capturedMaps__?: MapStub[]
+      __mapboxgl_proxy__?: { Map?: unknown }
+    }
+    const win = window as unknown as CaptureWindow
+    win.__capturedMaps__ = []
+    let originalMap: (new (...args: unknown[]) => MapStub) | null = null
+    Object.defineProperty(win, 'mapboxgl', {
+      configurable: true,
+      get() {
+        return win.__mapboxgl_proxy__
+      },
+      set(v: { Map?: unknown }) {
+        win.__mapboxgl_proxy__ = v
+        if (v && v.Map && !originalMap) {
+          originalMap = v.Map as new (...args: unknown[]) => MapStub
+          const proxy = function (...args: unknown[]) {
+            const inst = new (originalMap as new (
+              ...args: unknown[]
+            ) => MapStub)(...args)
+            win.__capturedMaps__!.push(inst)
+            return inst
+          } as unknown as new (...args: unknown[]) => MapStub
+          proxy.prototype = originalMap.prototype
+          Object.assign(proxy, originalMap)
+          v.Map = proxy
+        }
+      },
+    })
   })
 
   const contextStartMs = Date.now()
@@ -224,8 +272,40 @@ async function walkAndRecord(args: {
       ) as HTMLElement | null
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, cue.unit_index)
+
     const targetWallMs =
       walkStartMs + (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.end_ms
+
+    // Wait for any active Mapbox camera transition to settle before
+    // counting hold time, but cap at the smaller of 1.5s and the remaining
+    // hold budget. Capping matters: the absolute-clock pacing is what keeps
+    // the walk locked to audio duration, and a stuck `idle` event would
+    // otherwise stall the timeline.
+    const idleCapMs = Math.min(
+      1500,
+      Math.max(0, targetWallMs - Date.now())
+    )
+    if (idleCapMs > 0) {
+      await Promise.race([
+        page
+          .waitForFunction(
+            () => {
+              const w = window as unknown as {
+                __capturedMaps__?: { loaded(): boolean }[]
+              }
+              const maps = w.__capturedMaps__
+              if (!maps || maps.length === 0) return true
+              return maps.every((m) => m.loaded())
+            },
+            { timeout: idleCapMs }
+          )
+          .catch(() => {
+            /* timed out waiting for idle — fall through */
+          }),
+        page.waitForTimeout(idleCapMs),
+      ])
+    }
+
     const remaining = Math.max(0, targetWallMs - Date.now())
     if (remaining > 0) await page.waitForTimeout(remaining)
   }
