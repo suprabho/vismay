@@ -64,7 +64,11 @@ async function main() {
   const aspect = aspectArg as VideoAspect
 
   const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!)
-  const baseUrl = `http://localhost:${process.env.PORT ?? 3000}`
+  // CI / dispatched-render path passes BASE_URL pointing at the deployed site
+  // so the headless browser can hit it without needing a dev server in the
+  // workflow runner. Local dev defaults to localhost.
+  const baseUrl =
+    process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
 
   console.log(`\n━━━ ${slug} · ${aspect} ━━━`)
   console.log(`  baseUrl: ${baseUrl}`)

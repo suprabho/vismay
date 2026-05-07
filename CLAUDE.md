@@ -22,11 +22,20 @@ Per story in `content/stories/`:
 
 Readers: `lib/content.ts`, `lib/storyConfig.ts`. Rendering: SSG via `generateStaticParams` in `app/story/[slug]/page.tsx`.
 
-## Deployment requirements
+## Autoplay video render
 
-The autoplay video render path (`scripts/generate-video.ts`, `app/api/story-video/[slug]/route.ts`, `lib/storyVideoRender.ts`) shells out to a real headless Chromium and to `ffmpeg`. Anywhere this is expected to work — local dev, CI, the prod runtime that serves the API route — needs both:
+`/api/story-video/[slug]?aspect=9:16|16:9` produces a downloadable MP4 of an autoplay session. It has two execution modes that share one polling-friendly response shape (`{ status: 'ready' | 'rendering', public_url? }`):
 
-- **`ffmpeg` on PATH** (`brew install ffmpeg` locally; install via system package manager on the deploy host).
-- **Playwright Chromium installed** (`npx playwright install chromium`). This is *not* automated via a `postinstall` script because it would also fire on Vercel-style serverless builds where the binary doesn't run anyway.
+- **Sync mode** (local dev): the route runs `lib/storyVideoRender.ts` in-process. Needs `ffmpeg` on PATH (`brew install ffmpeg`) and Playwright Chromium (`npx playwright install chromium`). Request blocks for ~real-time playback.
+- **Dispatch mode** (production): when `GITHUB_DISPATCH_TOKEN` + `GITHUB_DISPATCH_REPO` are set, the route fires a `workflow_dispatch` to `.github/workflows/render-video.yml` and returns 202. The Actions runner does the render and uploads to the `story-video` bucket; the UI polls the same endpoint until the cached row appears.
 
-Vercel default runtime can't host this — Playwright needs a real Chromium and `maxDuration` of up to 300s. If you move the API route to a separate worker (Fly.io / Railway / a long-running Node service), make sure that environment has both prerequisites. The renderer fails fast with a clear message if either is missing.
+**Vercel env vars** (production):
+- `GITHUB_DISPATCH_TOKEN` — fine-grained PAT with `Actions: write` on this repo
+- `GITHUB_DISPATCH_REPO` — `owner/repo` (e.g. `suprabho/vizmaya-fyi`)
+- `GITHUB_DISPATCH_REF` — branch the workflow runs from (defaults to `main`)
+- `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — already required for other paths
+
+**GitHub repo secrets** (the workflow itself needs these):
+- `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`
+
+Vercel default runtime can't host the sync path — Playwright needs a real Chromium and ffmpeg has to be on PATH, neither of which the serverless runtime provides. The dispatch path works around this without standing up a dedicated worker. If volume grows to where Actions minutes are a concern, the `renderStoryVideo` function is the seam for moving to Fly.io / Railway / a Node service — only the dispatch wiring would change.

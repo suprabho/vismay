@@ -527,30 +527,50 @@ export default function AutoplayShell({
   /* ─── Video download ──────────────────────────────────────────── */
 
   /**
-   * Hit the video render API for the current ratio. The request can take
-   * up to ~real-time playback when the cache is cold (server walks the
-   * autoplay timeline in headless Chromium and muxes with ffmpeg). Cached
-   * hits return immediately.
+   * Hit the video render API for the current ratio. Two server modes share
+   * one polling loop here:
+   *  - **Sync render** (local dev): the first response itself is `status:
+   *    'ready'` after several minutes of fetch, so we exit on iteration 1.
+   *  - **Async render** (production via GitHub Actions): the first response
+   *    is `status: 'rendering'` (HTTP 202), and we poll until the cached
+   *    MP4 appears in `story_videos` (signaled by `status: 'ready'`).
+   *
+   * Cached hits return immediately in either mode.
    */
   const handleDownloadVideo = useCallback(async () => {
     if (downloadingVideo) return
     setDownloadingVideo(true)
     setVideoError(null)
     try {
-      const res = await fetch(
-        `/api/story-video/${slug}?aspect=${encodeURIComponent(ratio)}`
-      )
-      const body = (await res.json().catch(() => ({}))) as {
-        public_url?: string
-        error?: string
-      }
-      if (!res.ok || !body.public_url) {
+      const endpoint = `/api/story-video/${slug}?aspect=${encodeURIComponent(ratio)}`
+      // 60 attempts × 15s = 15 min ceiling. A 10-minute story renders in
+      // ~real-time on the runner, plus ~30–60s of CI startup, so this is a
+      // generous upper bound. If a render legitimately takes longer the
+      // cached row will still be there next time the user clicks.
+      const MAX_ATTEMPTS = 60
+      const POLL_MS = 15_000
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const res = await fetch(endpoint)
+        const body = (await res.json().catch(() => ({}))) as {
+          status?: string
+          public_url?: string
+          error?: string
+        }
+        if (res.ok && body.status === 'ready' && body.public_url) {
+          // Cross-origin storage URL — `download` attr is mostly ignored by
+          // browsers in that case, so just open in a new tab. Users can save
+          // from the browser's media viewer.
+          window.open(body.public_url, '_blank', 'noopener,noreferrer')
+          return
+        }
+        if (res.status === 202 || body.status === 'rendering') {
+          // Render dispatched (or still in flight) — back off and retry.
+          await new Promise((r) => setTimeout(r, POLL_MS))
+          continue
+        }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
-      // Cross-origin storage URL — `download` attr is mostly ignored by
-      // browsers in that case, so just open in a new tab. Users can save
-      // from the browser's media viewer.
-      window.open(body.public_url, '_blank', 'noopener,noreferrer')
+      throw new Error('render timed out — try again later')
     } catch (err) {
       setVideoError(err instanceof Error ? err.message : 'render failed')
     } finally {
