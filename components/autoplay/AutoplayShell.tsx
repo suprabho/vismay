@@ -631,7 +631,7 @@ export default function AutoplayShell({
             <iframe
               key={ratio /* force reload when ratio changes */}
               ref={iframeRef}
-              src={`/story/${slug}`}
+              src={`/story/${slug}?autoplay=1`}
               onLoad={handleIframeLoad}
               title="Autoplay preview"
               style={{

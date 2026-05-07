@@ -82,6 +82,10 @@ export default function StoryMapShell({
 }: Props) {
   const [activeUnit, setActiveUnit] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [isAutoplay, setIsAutoplay] = useState(false)
+  useEffect(() => {
+    setIsAutoplay(new URLSearchParams(window.location.search).get('autoplay') === '1')
+  }, [])
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
   // breakpoint — treat them as the same signal so both charts and the
   // unit-selector stay consistent when the viewport changes.
@@ -287,7 +291,9 @@ export default function StoryMapShell({
       {/* Snap-scroll container — the scrollable element, root of the observer */}
       <div
         ref={containerRef}
-        className="relative z-0 h-svh overflow-y-scroll snap-y snap-mandatory"
+        className={`relative z-0 h-svh overflow-y-scroll snap-y snap-mandatory${
+          isAutoplay ? ' hide-scrollbar' : ''
+        }`}
       >
         {units.map((unit, i) => (
           <MapStorySection
