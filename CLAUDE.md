@@ -21,3 +21,12 @@ Per story in `content/stories/`:
 - `<slug>/charts/*.json` — chart data served at runtime by `app/api/chart-data/[slug]/[id]/route.ts`
 
 Readers: `lib/content.ts`, `lib/storyConfig.ts`. Rendering: SSG via `generateStaticParams` in `app/story/[slug]/page.tsx`.
+
+## Deployment requirements
+
+The autoplay video render path (`scripts/generate-video.ts`, `app/api/story-video/[slug]/route.ts`, `lib/storyVideoRender.ts`) shells out to a real headless Chromium and to `ffmpeg`. Anywhere this is expected to work — local dev, CI, the prod runtime that serves the API route — needs both:
+
+- **`ffmpeg` on PATH** (`brew install ffmpeg` locally; install via system package manager on the deploy host).
+- **Playwright Chromium installed** (`npx playwright install chromium`). This is *not* automated via a `postinstall` script because it would also fire on Vercel-style serverless builds where the binary doesn't run anyway.
+
+Vercel default runtime can't host this — Playwright needs a real Chromium and `maxDuration` of up to 300s. If you move the API route to a separate worker (Fly.io / Railway / a long-running Node service), make sure that environment has both prerequisites. The renderer fails fast with a clear message if either is missing.
