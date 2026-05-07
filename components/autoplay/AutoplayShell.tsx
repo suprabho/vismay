@@ -96,6 +96,11 @@ export default function AutoplayShell({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  /* ─── Video download state ──────────────────────────────────────── */
+
+  const [downloadingVideo, setDownloadingVideo] = useState(false)
+  const [videoError, setVideoError] = useState<string | null>(null)
+
   // Use mobileUnits for 9:16 (vertical), desktop for 16:9
   const isVertical = ratio === '9:16'
   const units = useMemo(
@@ -519,6 +524,40 @@ export default function AutoplayShell({
     setSaveError(null)
   }, [])
 
+  /* ─── Video download ──────────────────────────────────────────── */
+
+  /**
+   * Hit the video render API for the current ratio. The request can take
+   * up to ~real-time playback when the cache is cold (server walks the
+   * autoplay timeline in headless Chromium and muxes with ffmpeg). Cached
+   * hits return immediately.
+   */
+  const handleDownloadVideo = useCallback(async () => {
+    if (downloadingVideo) return
+    setDownloadingVideo(true)
+    setVideoError(null)
+    try {
+      const res = await fetch(
+        `/api/story-video/${slug}?aspect=${encodeURIComponent(ratio)}`
+      )
+      const body = (await res.json().catch(() => ({}))) as {
+        public_url?: string
+        error?: string
+      }
+      if (!res.ok || !body.public_url) {
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
+      // Cross-origin storage URL — `download` attr is mostly ignored by
+      // browsers in that case, so just open in a new tab. Users can save
+      // from the browser's media viewer.
+      window.open(body.public_url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : 'render failed')
+    } finally {
+      setDownloadingVideo(false)
+    }
+  }, [downloadingVideo, slug, ratio])
+
   /* ─── Tune-mode keyboard ──────────────────────────────────────── */
 
   useEffect(() => {
@@ -591,13 +630,41 @@ export default function AutoplayShell({
             >
               Tune{cueOverrides.size > 0 ? ` · ${cueOverrides.size}*` : ''}
             </button>
+            {/* Render-on-demand: button is disabled while there are unsaved
+                tune overrides so the rendered video can never lag behind
+                what the user sees in the player. Errors render inline below. */}
+            <button
+              onClick={handleDownloadVideo}
+              disabled={
+                downloadingVideo ||
+                chunks.length === 0 ||
+                cueOverrides.size > 0
+              }
+              title={
+                cueOverrides.size > 0
+                  ? 'Save tuning before downloading'
+                  : chunks.length === 0
+                    ? 'No audio generated for this story'
+                    : `Render and download ${ratio} MP4`
+              }
+              className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                color: 'var(--color-text)',
+                background: 'transparent',
+                borderColor: 'var(--color-surface)',
+              }}
+            >
+              {downloadingVideo ? 'Rendering…' : `Download ${ratio}`}
+            </button>
             <div
               className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.65rem] tracking-wider"
               style={{ color: 'var(--color-muted)' }}
             >
-              {chunks.length > 0
-                ? `${chunks.length} chunks · ${(totalDurationMs / 1000).toFixed(0)}s`
-                : 'no audio generated'}
+              {videoError
+                ? <span style={{ color: 'var(--color-accent)' }}>video: {videoError}</span>
+                : chunks.length > 0
+                  ? `${chunks.length} chunks · ${(totalDurationMs / 1000).toFixed(0)}s`
+                  : 'no audio generated'}
             </div>
           </div>
         </div>

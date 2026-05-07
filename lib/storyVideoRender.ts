@@ -1,0 +1,423 @@
+/**
+ * Server-side: render an autoplay session as MP4.
+ *
+ * Imports `playwright` and shells out to `ffmpeg`, so this module can only
+ * run in a Node runtime (Next.js API routes with `runtime = 'nodejs'`,
+ * scripts under `tsx`). Do not import from a Client Component or an Edge
+ * route handler.
+ *
+ * Caller responsibilities:
+ *   - Pass a Supabase service-role client (RLS would block writes).
+ *   - Provide a `baseUrl` reachable from the headless browser
+ *     (e.g. `http://localhost:3000` in dev).
+ *   - Ensure `ffmpeg` is on PATH and Playwright Chromium is installed
+ *     (`npx playwright install chromium`).
+ */
+
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { spawn } from 'child_process'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { chromium } from 'playwright'
+import {
+  computeAudioRevisionHash,
+  getCachedVideo,
+  loadChunksAndCues,
+  type VideoAspect,
+} from './storyVideo'
+
+interface CueRow {
+  unit_index: number
+  chunk_index: number
+  start_ms: number
+  end_ms: number
+}
+
+interface ChunkRow {
+  chunk_index: number
+  public_url: string
+  duration_ms: number
+}
+
+/**
+ * Per-aspect render config.
+ *
+ * - `viewport` is what the page sees in CSS pixels. It controls layout —
+ *   text size, paddings, breakpoints — and decides which side of the
+ *   `(max-aspect-ratio: 1/1)` media query the page lands on (mobile vs
+ *   desktop layout, see lib/chartTheme.ts:69). Playwright's `recordVideo`
+ *   captures the page at viewport size (its `size` option does not upscale
+ *   — it pads with empty space), so this is also the recording resolution.
+ * - `output` is the final MP4's pixel dimensions. If `output != viewport`,
+ *   the mux step upscales with ffmpeg's lanczos scaler.
+ *
+ * 9:16 uses a mobile-sized viewport (473×840) so text and chrome are sized
+ * for a phone, then ffmpeg upscales to 1080×1920 for shareable HD output —
+ * at viewport=1080×1920 the page would lay out with desktop-scale type
+ * inside a tall frame and text would look tiny. 16:9 keeps viewport ==
+ * output (1920×1080) since the desktop layout is already calibrated for HD.
+ */
+const RENDER_CONFIG: Record<
+  VideoAspect,
+  {
+    viewport: { width: number; height: number }
+    output: { width: number; height: number }
+  }
+> = {
+  '9:16': {
+    viewport: { width: 473, height: 840 }, // 473/840 ≈ 0.5631, ~9:16
+    output: { width: 1080, height: 1920 },
+  },
+  '16:9': {
+    viewport: { width: 1920, height: 1080 },
+    output: { width: 1920, height: 1080 },
+  },
+}
+
+const VIDEO_BUCKET = 'story-video'
+
+/* ─── ffmpeg + download helpers ─────────────────────────────────────── */
+
+function runFfmpeg(args: string[], label: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    let stderr = ''
+    proc.stderr.on('data', (d) => {
+      stderr += d.toString()
+    })
+    proc.on('error', (err) => reject(new Error(`${label}: ${err.message}`)))
+    proc.on('exit', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`${label} exited ${code}\n${stderr.slice(-2000)}`))
+    })
+  })
+}
+
+async function downloadFile(url: string, destPath: string): Promise<void> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`download ${url}: HTTP ${res.status}`)
+  const buf = Buffer.from(await res.arrayBuffer())
+  fs.writeFileSync(destPath, buf)
+}
+
+async function buildCombinedAudio(
+  chunks: ChunkRow[],
+  workDir: string
+): Promise<string> {
+  const ordered = [...chunks].sort((a, b) => a.chunk_index - b.chunk_index)
+
+  const localPaths: string[] = []
+  for (const chunk of ordered) {
+    const local = path.join(workDir, `chunk-${chunk.chunk_index}.wav`)
+    await downloadFile(chunk.public_url, local)
+    localPaths.push(local)
+  }
+
+  if (localPaths.length === 1) return localPaths[0]
+
+  // ffmpeg concat demuxer — bit-exact concatenation, no re-encoding. The
+  // generator writes WAVs with identical format (mono / 24kHz / 16-bit), so
+  // `-c copy` is safe.
+  const listPath = path.join(workDir, 'concat.txt')
+  fs.writeFileSync(
+    listPath,
+    localPaths.map((p) => `file '${p.replace(/'/g, `'\\''`)}'`).join('\n')
+  )
+  const combinedPath = path.join(workDir, 'combined.wav')
+  await runFfmpeg(
+    ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c', 'copy', combinedPath],
+    'concat'
+  )
+  return combinedPath
+}
+
+/* ─── Headless walk ─────────────────────────────────────────────────── */
+
+interface PlaywrightRenderResult {
+  videoPath: string
+  durationMs: number
+}
+
+/**
+ * Walk the cue list in headless Chromium, recording the page as WebM. The
+ * scroll logic mirrors AutoplayShell.scrollIframeToUnit:261-271 — same
+ * `[data-unit-index="<n>"]` selector, same smooth scrollIntoView. Hold time
+ * per unit equals (end_ms - start_ms) so the recorded footage shares the
+ * same timeline as the audio.
+ */
+async function walkAndRecord(args: {
+  slug: string
+  aspect: VideoAspect
+  baseUrl: string
+  workDir: string
+  chunks: ChunkRow[]
+  cues: CueRow[]
+}): Promise<PlaywrightRenderResult> {
+  const cfg = RENDER_CONFIG[args.aspect]
+
+  // Sort cues by playback order (chunk_index then start_ms). Within a chunk,
+  // start_ms order equals unit_index order; across chunks, chunk_index orders
+  // them. This matches how the autoplay player advances.
+  const ordered = [...args.cues].sort(
+    (a, b) =>
+      a.chunk_index - b.chunk_index ||
+      a.start_ms - b.start_ms ||
+      a.unit_index - b.unit_index
+  )
+
+  // Absolute end time per cue, measured in ms from the walk's t=0. Cues
+  // partition each chunk's duration and chunks play back-to-back, so cue C's
+  // target end-time = (sum of chunk durations before C's chunk) + cue.end_ms.
+  //
+  // We use absolute targets — instead of summing per-cue waitForTimeout calls
+  // — so that scroll-evaluate latency doesn't compound. On a Mapbox-heavy
+  // page each evaluate can stall the JS thread for a few seconds; with the
+  // additive approach the walk overruns audio total and the `-shortest` mux
+  // crops the last chunk of footage. With absolute targets, a slow scroll
+  // shortens that cue's hold instead of pushing the whole timeline back.
+  const chunkOffsetMs = new Map<number, number>()
+  let totalAudioMs = 0
+  for (const c of [...args.chunks].sort((a, b) => a.chunk_index - b.chunk_index)) {
+    chunkOffsetMs.set(c.chunk_index, totalAudioMs)
+    totalAudioMs += c.duration_ms
+  }
+
+  const browser = await chromium.launch({
+    args: [
+      '--autoplay-policy=no-user-gesture-required',
+      '--disable-blink-features=AutomationControlled',
+    ],
+  })
+  const context = await browser.newContext({
+    viewport: cfg.viewport,
+    deviceScaleFactor: 1,
+    // recordVideo.size must match viewport — Playwright doesn't upscale,
+    // it just pads the captured frames with empty space.
+    recordVideo: { dir: args.workDir, size: cfg.viewport },
+  })
+
+  const contextStartMs = Date.now()
+  const page = await context.newPage()
+
+  // ?autoplay=1 strips chrome and applies the autoplay-flavored layout.
+  // Aspect is determined entirely by viewport via the `(max-aspect-ratio:
+  // 1/1)` media query (lib/chartTheme.ts:69) — no separate query param.
+  const url = `${args.baseUrl}/story/${args.slug}?autoplay=1`
+  await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
+
+  await page.waitForSelector('[data-unit-index]', { timeout: 30_000 })
+  try {
+    await page.waitForLoadState('networkidle', { timeout: 15_000 })
+  } catch {
+    // Some pages keep websockets open; networkidle never resolves. Continue.
+  }
+  // One extra beat for any GSAP/chart entrance animations to settle.
+  await page.waitForTimeout(800)
+
+  const walkStartMs = Date.now()
+
+  for (const cue of ordered) {
+    await page.evaluate((idx) => {
+      const el = document.querySelector(
+        `[data-unit-index="${idx}"]`
+      ) as HTMLElement | null
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, cue.unit_index)
+    const targetWallMs =
+      walkStartMs + (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.end_ms
+    const remaining = Math.max(0, targetWallMs - Date.now())
+    if (remaining > 0) await page.waitForTimeout(remaining)
+  }
+
+  // Hold the final frame until the absolute audio end. If we got here ahead
+  // of schedule (rare, but possible on a fast machine), waitForTimeout pads
+  // out to match audio duration so the trim window equals audio length.
+  const walkEndAbsMs = walkStartMs + totalAudioMs
+  const tailRemaining = Math.max(0, walkEndAbsMs - Date.now())
+  if (tailRemaining > 0) await page.waitForTimeout(tailRemaining)
+
+  const walkEndMs = Date.now()
+  const offsetSec = (walkStartMs - contextStartMs) / 1000
+  const walkSec = (walkEndMs - walkStartMs) / 1000
+
+  // Closing the context finalizes the recorded video file on disk.
+  const video = page.video()
+  await context.close()
+  await browser.close()
+  if (!video) throw new Error('playwright did not record a video')
+  const rawVideoPath = await video.path()
+
+  // Trim away the page-load + networkidle "intro" so video and audio start
+  // together. We can't pause Playwright's recorder mid-context, hence the trim.
+  const trimmedPath = path.join(args.workDir, 'trimmed.webm')
+  await runFfmpeg(
+    [
+      '-y',
+      '-ss', offsetSec.toFixed(3),
+      '-i', rawVideoPath,
+      '-t', walkSec.toFixed(3),
+      '-c', 'copy',
+      trimmedPath,
+    ],
+    'trim'
+  )
+
+  return { videoPath: trimmedPath, durationMs: Math.round(walkSec * 1000) }
+}
+
+async function muxToMp4(
+  videoPath: string,
+  audioPath: string,
+  outPath: string,
+  outputSize: { width: number; height: number }
+): Promise<void> {
+  // libx264 needs even dimensions; lanczos for sharp text on upscale; yuv420p
+  // for max compatibility with social platforms / QuickTime.
+  const vfFilter = `scale=${outputSize.width}:${outputSize.height}:flags=lanczos,format=yuv420p`
+  await runFfmpeg(
+    [
+      '-y',
+      '-i', videoPath,
+      '-i', audioPath,
+      '-c:v', 'libx264',
+      '-preset', 'medium',
+      '-crf', '20',
+      '-vf', vfFilter,
+      '-c:a', 'aac',
+      '-b:a', '160k',
+      '-shortest',
+      '-movflags', '+faststart',
+      outPath,
+    ],
+    'mux'
+  )
+}
+
+/* ─── Upload ────────────────────────────────────────────────────────── */
+
+async function uploadAndRecord(args: {
+  supabase: SupabaseClient
+  slug: string
+  aspect: VideoAspect
+  audioRevisionHash: string
+  durationMs: number
+  mp4Buffer: Buffer
+}): Promise<string> {
+  // 16:9 contains a slash that's invalid in storage paths.
+  const aspectKey = args.aspect === '9:16' ? '9x16' : '16x9'
+  const storagePath = `${args.slug}/${aspectKey}.mp4`
+
+  const { error: uploadErr } = await args.supabase.storage
+    .from(VIDEO_BUCKET)
+    .upload(storagePath, args.mp4Buffer, {
+      contentType: 'video/mp4',
+      upsert: true,
+    })
+  if (uploadErr) throw new Error(`upload: ${uploadErr.message}`)
+
+  const { data } = args.supabase.storage.from(VIDEO_BUCKET).getPublicUrl(storagePath)
+  const publicUrl = data.publicUrl
+
+  const { error: dbErr } = await args.supabase.from('story_videos').upsert(
+    {
+      slug: args.slug,
+      aspect: args.aspect,
+      storage_path: storagePath,
+      public_url: publicUrl,
+      audio_revision_hash: args.audioRevisionHash,
+      duration_ms: args.durationMs,
+    },
+    { onConflict: 'slug,aspect' }
+  )
+  if (dbErr) throw new Error(`db upsert: ${dbErr.message}`)
+
+  return publicUrl
+}
+
+/* ─── Public entry point ────────────────────────────────────────────── */
+
+export interface RenderResult {
+  public_url: string
+  cached: boolean
+  duration_ms: number | null
+}
+
+export async function renderStoryVideo(args: {
+  supabase: SupabaseClient
+  slug: string
+  aspect: VideoAspect
+  baseUrl: string
+  force?: boolean
+  log?: (msg: string) => void
+}): Promise<RenderResult> {
+  const log = args.log ?? (() => {})
+
+  const { chunks, cues } = await loadChunksAndCues(args.supabase, args.slug)
+  if (chunks.length === 0 || cues.length === 0) {
+    throw new Error(
+      `no audio chunks/cues for ${args.slug} — generate audio first via npx tsx scripts/generate-audio.ts`
+    )
+  }
+
+  const audioRevisionHash = computeAudioRevisionHash(chunks, cues)
+
+  if (!args.force) {
+    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect)
+    if (existing && existing.audio_revision_hash === audioRevisionHash) {
+      log(`cached (hash match) → ${existing.public_url}`)
+      return {
+        public_url: existing.public_url,
+        cached: true,
+        duration_ms: existing.duration_ms,
+      }
+    }
+  }
+
+  const workDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), `vizmaya-video-${args.slug}-`)
+  )
+  log(`workdir: ${workDir}`)
+
+  try {
+    log(`downloading + concatenating ${chunks.length} audio chunk(s)`)
+    const combinedAudioPath = await buildCombinedAudio(chunks, workDir)
+
+    const cfg = RENDER_CONFIG[args.aspect]
+    log(
+      `rendering ${cues.length} cue(s): viewport ${cfg.viewport.width}×${cfg.viewport.height} → output ${cfg.output.width}×${cfg.output.height} (lanczos upscale)`
+    )
+    const { videoPath, durationMs } = await walkAndRecord({
+      slug: args.slug,
+      aspect: args.aspect,
+      baseUrl: args.baseUrl,
+      workDir,
+      chunks,
+      cues,
+    })
+
+    log(`muxing video + audio (${(durationMs / 1000).toFixed(1)}s)`)
+    const outPath = path.join(workDir, 'out.mp4')
+    await muxToMp4(videoPath, combinedAudioPath, outPath, cfg.output)
+
+    const mp4Buffer = fs.readFileSync(outPath)
+    log(`uploading ${(mp4Buffer.length / 1024 / 1024).toFixed(1)}MB to ${VIDEO_BUCKET}`)
+    const publicUrl = await uploadAndRecord({
+      supabase: args.supabase,
+      slug: args.slug,
+      aspect: args.aspect,
+      audioRevisionHash,
+      durationMs,
+      mp4Buffer,
+    })
+
+    log(`✓ ${publicUrl}`)
+    return { public_url: publicUrl, cached: false, duration_ms: durationMs }
+  } finally {
+    try {
+      fs.rmSync(workDir, { recursive: true, force: true })
+    } catch {
+      /* ignore */
+    }
+  }
+}
