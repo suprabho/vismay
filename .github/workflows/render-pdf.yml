@@ -1,0 +1,71 @@
+name: Render story PDF
+
+# Triggered by the API route's `workflow_dispatch` POST when an end user
+# clicks "Download" on the /reports builder. Runs on ubuntu-latest because
+# we need real Chromium binaries — Vercel-style serverless can't host this
+# synchronously, and GitHub Actions runners can. Strictly cheaper than the
+# video workflow (no ffmpeg, no audio).
+#
+# Required repo secrets:
+#   NEXT_PUBLIC_SUPABASE_URL       — same value as in Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY      — service role key for storage writes
+#   NEXT_PUBLIC_MAPBOX_TOKEN       — story page renders Mapbox tiles
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: Story slug
+        required: true
+        type: string
+      format:
+        description: Output PDF format
+        required: true
+        type: choice
+        options:
+          - report
+          - slides
+      base_url:
+        description: Site URL the headless browser should hit
+        required: true
+        type: string
+        default: https://vizmaya.fyi
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Pull NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY /
+    # NEXT_PUBLIC_MAPBOX_TOKEN from the `Production` environment's secrets,
+    # which is where they're already configured. Without this line `secrets.X`
+    # only resolves repo-level secrets, which would be empty.
+    environment: Production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `--with-deps` pulls the system libs Chromium needs (libnss3, etc.).
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Render
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          BASE_URL: ${{ inputs.base_url }}
+        # `--force` because cache-miss is the only reason this workflow runs.
+        # The API route only dispatches after confirming the cached row's
+        # hash doesn't match the current content_revision_hash.
+        run: pnpm exec tsx scripts/generate-pdf.ts "${{ inputs.slug }}" "${{ inputs.format }}" --force

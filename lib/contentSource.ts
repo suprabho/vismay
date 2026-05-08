@@ -30,12 +30,14 @@ export interface ContentSource {
   readMarkdown(slug: string): Promise<string | null>
   readConfigYaml(slug: string): Promise<string | null>
   readShareYaml(slug: string): Promise<string | null>
+  readReportYaml(slug: string): Promise<string | null>
   readChart(slug: string, chartId: string): Promise<unknown | null>
 
   /** Write methods for the admin editor. Callers are responsible for auth. */
   writeMarkdown(slug: string, raw: string): Promise<void>
   writeConfigYaml(slug: string, raw: string | null): Promise<void>
   writeShareYaml(slug: string, raw: string | null): Promise<void>
+  writeReportYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
   updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder'>>): Promise<void>
   listChartIds(slug: string): Promise<string[]>
@@ -78,6 +80,9 @@ const fsSource: ContentSource = {
   async readShareYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.share.yaml`))
   },
+  async readReportYaml(slug) {
+    return fsReadIfExists(path.join(STORIES_DIR, `${slug}.report.yaml`))
+  },
   async readChart(slug, chartId) {
     const filePath = path.join(STORIES_DIR, slug, 'charts', `${chartId}.json`)
     if (!fs.existsSync(filePath)) return null
@@ -101,6 +106,14 @@ const fsSource: ContentSource = {
   },
   async writeShareYaml(slug, raw) {
     const p = path.join(STORIES_DIR, `${slug}.share.yaml`)
+    if (raw == null) {
+      if (fs.existsSync(p)) fs.unlinkSync(p)
+      return
+    }
+    fs.writeFileSync(p, raw, 'utf8')
+  },
+  async writeReportYaml(slug, raw) {
+    const p = path.join(STORIES_DIR, `${slug}.report.yaml`)
     if (raw == null) {
       if (fs.existsSync(p)) fs.unlinkSync(p)
       return
@@ -193,6 +206,19 @@ const dbSource: ContentSource = {
     if (error) throw new Error(`readShareYaml ${slug}: ${error.message}`)
     return data?.share_yaml ?? null
   },
+  async readReportYaml(slug) {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('stories')
+      .select('report_yaml')
+      .eq('slug', slug)
+      .maybeSingle()
+    // Pre-010 deployments don't have the report_yaml column; treat as null
+    // rather than failing — readers should fall through to "no overrides".
+    if (error?.message?.includes('report_yaml')) return null
+    if (error) throw new Error(`readReportYaml ${slug}: ${error.message}`)
+    return (data as { report_yaml?: string | null } | null)?.report_yaml ?? null
+  },
   async readChart(slug, chartId) {
     const sb = createServiceClient()
     const { data, error } = await sb
@@ -242,6 +268,14 @@ const dbSource: ContentSource = {
       .update({ share_yaml: raw, updated_at: new Date().toISOString() })
       .eq('slug', slug)
     if (error) throw new Error(`writeShareYaml ${slug}: ${error.message}`)
+  },
+  async writeReportYaml(slug, raw) {
+    const sb = createServiceClient()
+    const { error } = await sb
+      .from('stories')
+      .update({ report_yaml: raw, updated_at: new Date().toISOString() })
+      .eq('slug', slug)
+    if (error) throw new Error(`writeReportYaml ${slug}: ${error.message}`)
   },
   async writeChart(slug, chartId, data) {
     const sb = createServiceClient()
