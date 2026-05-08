@@ -1,0 +1,51 @@
+{
+  "steps": [
+    {
+      "title": "Coral colonies in or near the project zone — 20,668 total (ZSI count)",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: {c} colonies ({d}%)"
+        },
+        "legend": {
+          "orient": "vertical",
+          "right": "4%",
+          "top": "middle",
+          "textStyle": { "color": "$text", "fontSize": 12 },
+          "itemWidth": 12,
+          "itemHeight": 12
+        },
+        "series": [
+          {
+            "name": "Coral colonies",
+            "type": "pie",
+            "radius": ["48%", "72%"],
+            "center": ["32%", "50%"],
+            "avoidLabelOverlap": true,
+            "label": {
+              "show": true,
+              "position": "inside",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "labelLine": { "show": false },
+            "data": [
+              {
+                "value": 16150,
+                "name": "To translocate (≤15 m)",
+                "itemStyle": { "color": "$amber" }
+              },
+              {
+                "value": 4518,
+                "name": "Unaddressed (15–30 m)",
+                "itemStyle": { "color": "$red" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

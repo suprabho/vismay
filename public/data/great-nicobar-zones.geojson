@@ -1,0 +1,59 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "source": "Approximated from PIB project briefs and Sanctuary Nature Foundation maps. Polygons are illustrative — for the story-page choropleth only; not survey-grade.",
+    "units": "WGS84 longitude, latitude (degrees)"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "project_envelope",
+        "name": "Great Nicobar project envelope (~166.10 sq km)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [93.790, 6.765],
+            [93.860, 6.770],
+            [93.910, 6.815],
+            [93.935, 6.880],
+            [93.930, 6.965],
+            [93.895, 7.020],
+            [93.835, 7.040],
+            [93.775, 7.010],
+            [93.745, 6.940],
+            [93.745, 6.860],
+            [93.770, 6.795],
+            [93.790, 6.765]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "denotified_reserve",
+        "name": "Denotified tribal reserve (~84.10 sq km, of 853 sq km PAT'56 reserve)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [93.800, 6.775],
+            [93.860, 6.785],
+            [93.905, 6.825],
+            [93.910, 6.890],
+            [93.870, 6.940],
+            [93.815, 6.950],
+            [93.770, 6.910],
+            [93.760, 6.850],
+            [93.785, 6.800],
+            [93.800, 6.775]
+          ]
+        ]
+      }
+    }
+  ]
+}
