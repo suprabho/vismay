@@ -312,7 +312,7 @@ export default function ReportShell({
       <PreviewFlowFrame
         nativeWidth={PAGE_W}
         minNativeHeight={PAGE_H}
-        maxWidth={`min(95vw, ${PAGE_W}px, calc((100vh - 96px) * ${PAGE_W} / ${PAGE_H}))`}
+        maxWidth={`min(95vw, ${PAGE_W}px)`}
       >
         {renderCover()}
       </PreviewFlowFrame>
@@ -321,7 +321,7 @@ export default function ReportShell({
           key={gi}
           nativeWidth={PAGE_W}
           minNativeHeight={PAGE_H}
-          maxWidth={`min(95vw, ${PAGE_W}px, calc((100vh - 96px) * ${PAGE_W} / ${PAGE_H}))`}
+          maxWidth={`min(95vw, ${PAGE_W}px)`}
         >
           {renderSectionPage(group, gi, { breakBefore: false })}
         </PreviewFlowFrame>

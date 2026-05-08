@@ -277,7 +277,6 @@ export default function SlidesShell({
           key={i}
           nativeWidth={SLIDE_W}
           nativeHeight={SLIDE_H}
-          maxHeight="calc(100vh - 96px)"
         >
           <section
             className="relative overflow-hidden"
