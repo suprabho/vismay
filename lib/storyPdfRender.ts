@@ -18,6 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chromium } from 'playwright'
+import { ADMIN_COOKIE_NAME, expectedToken } from './adminAuth'
 import { getContentSource } from './contentSource'
 import {
   computeContentRevisionHash,
@@ -39,14 +40,14 @@ const RENDER_CONFIG: Record<
     pdfArgs: {
       width?: string
       height?: string
-      format?: 'Letter'
+      format?: 'A4'
       landscape?: boolean
     }
   }
 > = {
   report: {
-    viewport: { width: 816, height: 1056 }, // 8.5×11in @ 96dpi
-    pdfArgs: { format: 'Letter', landscape: false },
+    viewport: { width: 794, height: 1123 }, // A4 (210×297mm) @ 96dpi
+    pdfArgs: { format: 'A4', landscape: false },
   },
   slides: {
     viewport: { width: 1920, height: 1080 },
@@ -81,6 +82,32 @@ async function renderPdfBuffer(args: {
       // entrances rely on this in some setups.
       reducedMotion: 'no-preference',
     })
+
+    // Pre-authenticate as admin so the gated /story/<slug>/<format> route
+    // accepts the request. Computes the same hmac the auth lib expects from
+    // an /api/admin/login round-trip — skipping that round-trip avoids a
+    // dependency on the Next dev server being able to set cookies on us.
+    // Throws if ADMIN_PASSWORD isn't configured: in that case the route
+    // would redirect us to /admin/login and the render would fail anyway.
+    const adminToken = expectedToken()
+    if (!adminToken) {
+      throw new Error(
+        'ADMIN_PASSWORD not set — cannot authenticate Playwright against gated /story/<slug>/<format> route'
+      )
+    }
+    const cookieUrl = new URL(args.baseUrl)
+    await context.addCookies([
+      {
+        name: ADMIN_COOKIE_NAME,
+        value: adminToken,
+        domain: cookieUrl.hostname,
+        path: '/',
+        httpOnly: true,
+        secure: cookieUrl.protocol === 'https:',
+        sameSite: 'Lax',
+      },
+    ])
+
     const page = await context.newPage()
 
     const url = `${args.baseUrl}/story/${args.slug}/${args.format}?print=1`

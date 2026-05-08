@@ -8,7 +8,8 @@
  * calls `page.pdf({ landscape: true, width: 1920px, height: 1080px })`.
  */
 
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@/lib/contentSource'
 import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
@@ -34,6 +35,9 @@ export default async function StorySlidesPage({ params, searchParams }: RoutePar
   const { slug } = await params
   const sp = (await searchParams) ?? {}
   const print = sp.print === '1'
+
+  if (!(await isAuthed()))
+    redirect(`/admin/login?next=${encodeURIComponent(`/story/${slug}/slides${print ? '?print=1' : ''}`)}`)
 
   let story
   let config

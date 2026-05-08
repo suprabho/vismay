@@ -10,6 +10,12 @@ name: Render story PDF
 #   NEXT_PUBLIC_SUPABASE_URL       — same value as in Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY      — service role key for storage writes
 #   NEXT_PUBLIC_MAPBOX_TOKEN       — story page renders Mapbox tiles
+#   ADMIN_PASSWORD                 — Playwright pre-sets the admin cookie
+#                                    so the gated /story/<slug>/<format>
+#                                    route accepts the screenshot request.
+#                                    MUST exactly match Vercel's value.
+#   ADMIN_SESSION_SECRET           — optional; if set on Vercel, must match
+#                                    here too. Defaults to ADMIN_PASSWORD.
 
 on:
   workflow_dispatch:
@@ -64,6 +70,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
           BASE_URL: ${{ inputs.base_url }}
         # `--force` because cache-miss is the only reason this workflow runs.
         # The API route only dispatches after confirming the cached row's

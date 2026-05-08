@@ -1,11 +1,16 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@/lib/storyConfig.types'
 import ChartPanel from '@/components/story/ChartPanel'
 import PdfMapBg from './PdfMapBg'
-import Image from 'next/image'
+import PreviewFlowFrame from './PreviewFlowFrame'
 import { usePdfReadiness } from '@/lib/pdfReadiness'
+
+// A4 @ 96 dpi: 210mm × 297mm → 794 × 1123 px. Mirrors the `format: 'A4'`
+// passed to Playwright's `page.pdf()` so the preview matches print exactly.
+const PAGE_W = 794
+const PAGE_H = 1123
 
 interface Props {
   slug: string
@@ -66,45 +71,25 @@ export default function ReportShell({
   )
   const { noteMapReady } = usePdfReadiness(expectedMaps)
 
-  return (
-    <div
-      data-pdf-shell="report"
+  const renderCover = (): ReactNode => (
+    <section
+      className="relative overflow-hidden"
       style={{
+        width: `${PAGE_W}px`,
+        height: `${PAGE_H}px`,
+        breakAfter: 'page',
+        breakInside: 'avoid',
         background: 'var(--color-bg)',
-        color: 'var(--color-text)',
-        fontFamily: 'var(--font-sans)',
+        padding: '96px',
       }}
     >
-      {!print && (
-        <div
-          className="fixed top-2 right-2 z-50 px-3 py-1 rounded font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider"
-          style={{ background: 'var(--color-surface)', color: 'var(--color-muted)' }}
-        >
-          Report preview · add ?print=1 to hide chrome
-        </div>
-      )}
-
-      {/* Cover */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          width: '8.5in',
-          height: '11in',
-          breakAfter: 'page',
-          breakInside: 'avoid',
-          background: 'var(--color-bg)',
-          padding: '1in',
-        }}
-      >
         <div className="h-full flex flex-col justify-between">
           <div>
             {logo && (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={logo}
                 alt=""
-                width={200}
-                height={48}
-                unoptimized
                 style={{ height: '48px', width: 'auto' }}
               />
             )}
@@ -131,35 +116,39 @@ export default function ReportShell({
           </div>
         </div>
       </section>
+  )
 
-      {/* Section pages */}
-      {groups.map((group, gi) => {
-        const first = group.units[0]
-        const map = first.parentConfig.map
-        const center = map?.center as [number, number] | undefined
-        const zoom = map?.zoom
-        const pitch = map?.pitch
-        const bearing = map?.bearing
-        const pins = map?.pins
-        const regions = map?.regions
-        const heatmap = map?.heatmap
-        const showMap = !!center && typeof zoom === 'number'
-        const eyebrow = first.parentConfig.eyebrow
-        const sectionHeading = first.heading
-        const sectionSubheading = first.subheading
+  const renderSectionPage = (
+    group: SectionGroup,
+    gi: number,
+    options: { breakBefore: boolean }
+  ): ReactNode => {
+    const first = group.units[0]
+    const map = first.parentConfig.map
+    const center = map?.center as [number, number] | undefined
+    const zoom = map?.zoom
+    const pitch = map?.pitch
+    const bearing = map?.bearing
+    const pins = map?.pins
+    const regions = map?.regions
+    const heatmap = map?.heatmap
+    const showMap = !!center && typeof zoom === 'number'
+    const eyebrow = first.parentConfig.eyebrow
+    const sectionHeading = first.heading
+    const sectionSubheading = first.subheading
 
-        return (
-          <section
-            key={gi}
-            className="relative"
-            style={{
-              width: '8.5in',
-              minHeight: '11in',
-              breakBefore: 'page',
-              padding: '0.6in 0.6in 0.5in',
-              background: 'var(--color-bg)',
-            }}
-          >
+    return (
+      <section
+        key={gi}
+        className="relative"
+        style={{
+          width: `${PAGE_W}px`,
+          minHeight: `${PAGE_H}px`,
+          breakBefore: options.breakBefore ? 'page' : undefined,
+          padding: '56px 56px 48px',
+          background: 'var(--color-bg)',
+        }}
+      >
             <header className="mb-4">
               {eyebrow && (
                 <div
@@ -209,6 +198,7 @@ export default function ReportShell({
                   defaultPinColor={config.defaults.pinColor}
                   defaultPinRadius={config.defaults.pinRadius}
                   onReady={noteMapReady}
+                  lazy={!print}
                 />
               </div>
             )}
@@ -259,16 +249,83 @@ export default function ReportShell({
               })}
             </div>
 
-            <footer
-              className="absolute bottom-3 left-0 right-0 flex justify-between px-[0.6in] font-[family-name:var(--font-mono)] uppercase"
-              style={{ fontSize: '8pt', letterSpacing: '0.15em', color: 'var(--color-muted)' }}
-            >
-              <span>{slug}</span>
-              <span>{gi + 1} / {groups.length}</span>
-            </footer>
-          </section>
-        )
-      })}
+        <footer
+          className="absolute bottom-3 left-0 right-0 flex justify-between px-[56px] font-[family-name:var(--font-mono)] uppercase"
+          style={{ fontSize: '8pt', letterSpacing: '0.15em', color: 'var(--color-muted)' }}
+        >
+          <span>{slug}</span>
+          <span>{gi + 1} / {groups.length}</span>
+        </footer>
+      </section>
+    )
+  }
+
+  // Print path: native-size pages with break-before: page between groups.
+  if (print) {
+    return (
+      <div
+        data-pdf-shell="report"
+        style={{
+          background: 'var(--color-bg)',
+          color: 'var(--color-text)',
+          fontFamily: 'var(--font-sans)',
+        }}
+      >
+        {renderCover()}
+        {groups.map((group, gi) =>
+          renderSectionPage(group, gi, { breakBefore: true })
+        )}
+      </div>
+    )
+  }
+
+  // Preview path: each native page becomes a fit-scaled framed card stacked
+  // vertically. The cover renders as one card and each section as another.
+  return (
+    <div
+      data-pdf-shell="report"
+      style={{
+        background: 'var(--color-surface)',
+        color: 'var(--color-text)',
+        fontFamily: 'var(--font-sans)',
+        minHeight: '100vh',
+        paddingTop: '56px',
+      }}
+    >
+      <div
+        className="fixed top-3 right-3 z-50 flex items-center gap-3 px-3 py-1.5 rounded font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider"
+        style={{
+          background: 'var(--color-bg)',
+          color: 'var(--color-muted)',
+          border: '1px solid var(--color-line)',
+        }}
+      >
+        <span>Report preview</span>
+        <a
+          href={`/reports/${slug}`}
+          style={{ color: 'var(--color-accent)' }}
+          className="hover:underline"
+        >
+          Edit overrides →
+        </a>
+      </div>
+      <PreviewFlowFrame
+        nativeWidth={PAGE_W}
+        minNativeHeight={PAGE_H}
+        maxWidth={`min(95vw, ${PAGE_W}px, calc((100vh - 96px) * ${PAGE_W} / ${PAGE_H}))`}
+      >
+        {renderCover()}
+      </PreviewFlowFrame>
+      {groups.map((group, gi) => (
+        <PreviewFlowFrame
+          key={gi}
+          nativeWidth={PAGE_W}
+          minNativeHeight={PAGE_H}
+          maxWidth={`min(95vw, ${PAGE_W}px, calc((100vh - 96px) * ${PAGE_W} / ${PAGE_H}))`}
+        >
+          {renderSectionPage(group, gi, { breakBefore: false })}
+        </PreviewFlowFrame>
+      ))}
     </div>
   )
 }

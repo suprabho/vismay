@@ -6,13 +6,11 @@
  * owns the format toggle, override controls, iframe preview, and download
  * triggers.
  *
- * Gating: same-origin referer check via `headers()`. Dev mode allows
- * direct navigation (Referer absent) so the author can paste the URL into
- * the address bar. Production fails closed when Referer is missing.
+ * Gated by the same admin password as /admin (lib/adminAuth.ts cookie).
  */
 
-import { headers } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@/lib/contentSource'
 import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
@@ -27,25 +25,10 @@ interface RouteParams {
 
 export const dynamic = 'force-dynamic'
 
-async function checkReferer(): Promise<boolean> {
-  if (process.env.NODE_ENV !== 'production') return true
-  const h = await headers()
-  const referer = h.get('referer')
-  const host = h.get('host')
-  if (!referer || !host) return false
-  try {
-    const refUrl = new URL(referer)
-    return refUrl.host === host
-  } catch {
-    return false
-  }
-}
-
 export default async function ReportsBuilderPage({ params }: RouteParams) {
-  const allowed = await checkReferer()
-  if (!allowed) notFound()
-
   const { slug } = await params
+  if (!(await isAuthed()))
+    redirect(`/admin/login?next=${encodeURIComponent(`/reports/${slug}`)}`)
 
   let story
   let config

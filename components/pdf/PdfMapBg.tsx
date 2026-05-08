@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapPinConfig, MapPalette } from '@/lib/storyConfig.types'
 import type { MapRegionLayer, HeatmapLayer, MapStep } from '@/types/story'
 import MapboxBackground from '@/components/story/charts/MapboxBackground'
@@ -28,20 +28,30 @@ interface Props {
    * width, height as fractions of the canvas. Defaults to centered.
    */
   focusArea?: { top: number; left: number; width: number; height: number }
+  /**
+   * When true, defer Mapbox mount until the host enters the viewport. Use for
+   * the in-browser preview path where only one section is on screen at a time
+   * and mounting all N maps eagerly blows past the browser's WebGL context cap
+   * (~8–16) on long stories. Leave false for the headless print path —
+   * Playwright's page.pdf() rasterizes the entire document at once, so every
+   * map must already be live when capture fires.
+   */
+  lazy?: boolean
 }
 
 const DEFAULT_FOCUS_AREA = { top: 0, left: 0, width: 1, height: 1 }
 
 /**
- * Eager-mount Mapbox background for PDF render shells.
+ * Mapbox background for PDF render shells.
  *
- * Mirrors ShareMapBg's prop surface but skips the IntersectionObserver lazy
- * mount — Playwright's `page.pdf()` rasterizes the entire document at once,
- * so off-viewport maps must already have rendered.
- *
- * Note: this means a story with N units mounts N WebGL contexts. Browsers cap
- * simultaneous contexts at ~8–16; longer stories may hit the cap and have
- * later maps fail to load. Deferred to Phase 7+ if it bites.
+ * Two modes via `lazy`:
+ *   - `lazy=false` (default, print path): mount eagerly. Playwright's
+ *     `page.pdf()` rasterizes the entire document in one shot, so off-viewport
+ *     maps must already be live.
+ *   - `lazy=true` (preview path): mount on first viewport intersection, then
+ *     keep mounted. Mirrors ShareMapBg. Avoids creating N simultaneous WebGL
+ *     contexts on long reports — browsers cap at ~8–16 and evict the oldest,
+ *     causing earlier sections to flash blank.
  */
 export default function PdfMapBg({
   center,
@@ -62,7 +72,28 @@ export default function PdfMapBg({
   defaultPinColor,
   defaultPinRadius,
   focusArea = DEFAULT_FOCUS_AREA,
+  lazy = false,
 }: Props) {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(!lazy)
+
+  useEffect(() => {
+    if (!lazy || mounted) return
+    const el = hostRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setMounted(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '400px' }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [lazy, mounted])
+
   const steps: MapStep[] = useMemo(
     () => [
       {
@@ -79,26 +110,28 @@ export default function PdfMapBg({
   )
 
   return (
-    <div className="absolute inset-0">
-      <MapboxBackground
-        accessToken={accessToken}
-        steps={steps}
-        activeStep={0}
-        style={style}
-        interactive={false}
-        staticCapture
-        onReady={onReady}
-        palette={palette}
-        fontstack={fontstack}
-        hideAllLabels
-        highlightCountry={highlightCountry}
-        highlightColor={highlightColor}
-        defaultOpacity={defaultOpacity}
-        defaultPinColor={defaultPinColor}
-        defaultPinRadius={defaultPinRadius}
-        landscapeFocusArea={focusArea}
-        portraitFocusArea={focusArea}
-      />
+    <div ref={hostRef} className="absolute inset-0">
+      {mounted && (
+        <MapboxBackground
+          accessToken={accessToken}
+          steps={steps}
+          activeStep={0}
+          style={style}
+          interactive={false}
+          staticCapture
+          onReady={onReady}
+          palette={palette}
+          fontstack={fontstack}
+          hideAllLabels
+          highlightCountry={highlightCountry}
+          highlightColor={highlightColor}
+          defaultOpacity={defaultOpacity}
+          defaultPinColor={defaultPinColor}
+          defaultPinRadius={defaultPinRadius}
+          landscapeFocusArea={focusArea}
+          portraitFocusArea={focusArea}
+        />
+      )}
     </div>
   )
 }
