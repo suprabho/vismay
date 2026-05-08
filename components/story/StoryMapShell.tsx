@@ -255,19 +255,16 @@ export default function StoryMapShell({
         <div
           className="
             fixed pointer-events-none z-10
-            top-1/2 -translate-y-2/3 left-1/2 -translate-x-1/2
-            w-[calc(100vw-1rem)] aspect-3/4
+            top-[72px] left-1/2 -translate-x-1/2
+            w-[calc(100vw-1rem)] aspect-3/4 max-h-[calc(50svh-88px)]
             [@media(min-aspect-ratio:1/1)]:top-0
-            [@media(min-aspect-ratio:1/1)]:translate-y-0
             [@media(min-aspect-ratio:1/1)]:translate-x-0
             [@media(min-aspect-ratio:1/1)]:left-auto
             [@media(min-aspect-ratio:1/1)]:right-0
             [@media(min-aspect-ratio:1/1)]:w-[63vw]
             [@media(min-aspect-ratio:1/1)]:aspect-auto
             [@media(min-aspect-ratio:1/1)]:h-[50vh]
-            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:top-18
-            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:translate-y-0
-            [@media(max-aspect-ratio:1/1)_and_(max-height:700px)]:max-h-[calc(50svh-16px)]
+            [@media(min-aspect-ratio:1/1)]:max-h-none
             flex items-center justify-center backdrop-blur-3xl
           "
         >

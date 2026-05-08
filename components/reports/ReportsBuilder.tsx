@@ -218,6 +218,44 @@ export default function ReportsBuilder({
   )
 
   const previewSrc = `/story/${slug}/${format}`
+  const overrideCount = useMemo(
+    () =>
+      pages.filter(
+        (p) =>
+          !p.include ||
+          p.heading.trim() ||
+          p.subheading.trim() ||
+          p.paragraphs.trim() ||
+          p.chartOverrideId.trim()
+      ).length,
+    [pages]
+  )
+
+  const [sheetOpen, setSheetOpen] = useState(false)
+  // Close sheet on Escape (mobile + desktop both, harmless on desktop where
+  // the sheet isn't visible — `md:hidden` hides the backdrop+sheet anyway).
+  useEffect(() => {
+    if (!sheetOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSheetOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sheetOpen])
+
+  const editControls = (
+    <>
+      {pages.map((p, i) => (
+        <PageControls
+          key={unitKey(p)}
+          page={p}
+          unit={units[i]}
+          chartIds={chartIds}
+          onChange={(patch) => update(i, patch)}
+        />
+      ))}
+    </>
+  )
 
   return (
     <div
@@ -226,26 +264,27 @@ export default function ReportsBuilder({
     >
       {/* Top bar */}
       <div
-        className="flex items-center justify-between px-6 py-3 border-b flex-shrink-0"
+        className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b flex-shrink-0"
         style={{ borderColor: 'var(--color-surface)' }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <a
             href={`/story/${slug}`}
-            className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider opacity-60 hover:opacity-100"
+            className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider opacity-60 hover:opacity-100 flex-shrink-0"
           >
-            ← Story
+            ←
           </a>
-          <h1 className="font-[family-name:var(--font-serif)] text-lg font-bold">
-            Reports — {title}
+          <h1 className="font-[family-name:var(--font-serif)] text-base sm:text-lg font-bold truncate">
+            <span className="hidden sm:inline">Reports — </span>
+            {title}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <FormatToggle value={format} onChange={setFormat} />
           <button
             onClick={handleSave}
             disabled={!dirty || saving}
-            className="px-4 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-wider disabled:opacity-40"
+            className="px-3 sm:px-4 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.7rem] sm:text-[0.75rem] uppercase tracking-wider disabled:opacity-40"
             style={{
               background: 'var(--color-accent)',
               color: 'var(--color-bg)',
@@ -256,7 +295,7 @@ export default function ReportsBuilder({
           <button
             onClick={() => handleDownload(format)}
             disabled={downloading !== null}
-            className="px-4 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-wider border disabled:opacity-40"
+            className="hidden sm:inline-flex px-4 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-wider border disabled:opacity-40"
             style={{
               borderColor: 'var(--color-surface)',
               color: 'var(--color-text)',
@@ -266,34 +305,47 @@ export default function ReportsBuilder({
               ? 'Rendering…'
               : `Download ${format === 'report' ? 'Report' : 'Slides'}`}
           </button>
+          {/* Mobile-only download icon button */}
+          <button
+            onClick={() => handleDownload(format)}
+            disabled={downloading !== null}
+            aria-label={`Download ${format}`}
+            className="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border disabled:opacity-40"
+            style={{
+              borderColor: 'var(--color-surface)',
+              color: 'var(--color-text)',
+            }}
+          >
+            {downloading === format ? (
+              <span className="text-[0.6rem] font-[family-name:var(--font-mono)]">…</span>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
       {(saveError || downloadError) && (
         <div
-          className="px-6 py-2 text-[0.75rem]"
+          className="px-3 sm:px-6 py-2 text-[0.75rem]"
           style={{ background: 'var(--color-surface)', color: 'var(--color-warn, #ff6b6b)' }}
         >
           {saveError ?? downloadError}
         </div>
       )}
 
-      {/* Body: controls left, preview right */}
-      <div className="flex-1 min-h-0 grid" style={{ gridTemplateColumns: '420px 1fr' }}>
+      {/* Body */}
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {/* Desktop sidebar */}
         <div
-          className="overflow-y-auto border-r p-4 space-y-3"
+          className="hidden md:block md:w-[420px] flex-shrink-0 overflow-y-auto border-r p-4 space-y-3"
           style={{ borderColor: 'var(--color-surface)' }}
         >
-          {pages.map((p, i) => (
-            <PageControls
-              key={unitKey(p)}
-              page={p}
-              unit={units[i]}
-              chartIds={chartIds}
-              onChange={(patch) => update(i, patch)}
-            />
-          ))}
+          {editControls}
         </div>
-        <div className="relative" style={{ background: 'var(--color-surface)' }}>
+        {/* Preview — full width on mobile, fills remaining width on desktop */}
+        <div className="flex-1 relative min-h-0" style={{ background: 'var(--color-surface)' }}>
           <iframe
             key={iframeKey}
             ref={iframeRef}
@@ -303,6 +355,86 @@ export default function ReportsBuilder({
             title={`Preview · ${format}`}
           />
         </div>
+      </div>
+
+      {/* Mobile bottom-sheet trigger */}
+      <button
+        onClick={() => setSheetOpen(true)}
+        className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-wider"
+        style={{
+          background: 'var(--color-accent)',
+          color: 'var(--color-bg)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z" />
+        </svg>
+        Edit{overrideCount > 0 ? ` · ${overrideCount}` : ''}
+      </button>
+
+      {/* Mobile bottom sheet + backdrop */}
+      <div
+        onClick={() => setSheetOpen(false)}
+        className="md:hidden fixed inset-0 z-40 transition-opacity duration-200"
+        style={{
+          background: 'rgba(0,0,0,0.5)',
+          opacity: sheetOpen ? 1 : 0,
+          pointerEvents: sheetOpen ? 'auto' : 'none',
+        }}
+        aria-hidden="true"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit overrides"
+        className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col rounded-t-2xl transition-transform duration-300"
+        style={{
+          background: 'var(--color-bg)',
+          maxHeight: '85vh',
+          height: '85vh',
+          transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)',
+          boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
+          borderTop: '1px solid var(--color-surface)',
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+          style={{ borderColor: 'var(--color-surface)' }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full"
+            style={{ background: 'var(--color-surface)' }}
+          />
+          <h2 className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider">
+            Edit overrides{overrideCount > 0 ? ` · ${overrideCount}` : ''}
+          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={!dirty || saving}
+              className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider disabled:opacity-40"
+              style={{
+                background: 'var(--color-accent)',
+                color: 'var(--color-bg)',
+              }}
+            >
+              {saving ? '…' : dirty ? 'Save' : 'Saved'}
+            </button>
+            <button
+              onClick={() => setSheetOpen(false)}
+              aria-label="Close"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-md"
+              style={{ color: 'var(--color-text)' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 6l12 12M6 18L18 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">{editControls}</div>
       </div>
     </div>
   )
