@@ -167,6 +167,10 @@ async function uploadAndRecord(args: {
       storage_path: storagePath,
       public_url: publicUrl,
       content_revision_hash: args.contentRevisionHash,
+      // Clear the in-flight stub timestamp set by markPdfDispatched().
+      // classifyPdfState() prefers `public_url` regardless, but nulling
+      // this keeps the row's state unambiguous in DB readers.
+      dispatched_at: null,
     },
     { onConflict: 'slug,format' }
   )

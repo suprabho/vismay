@@ -21,6 +21,8 @@ export interface CachedPdf {
   public_url: string
   content_revision_hash: string
   storage_path: string
+  /** Set when an async render is dispatched and not yet completed. */
+  dispatched_at: string | null
 }
 
 /**
@@ -64,7 +66,7 @@ export async function getCachedPdf(
 ): Promise<CachedPdf | null> {
   const { data, error } = await supabase
     .from('story_pdfs')
-    .select('public_url, content_revision_hash, storage_path')
+    .select('public_url, content_revision_hash, storage_path, dispatched_at')
     .eq('slug', slug)
     .eq('format', format)
     .maybeSingle()
@@ -76,3 +78,67 @@ export async function getCachedPdf(
 }
 
 export const PDF_BUCKET = 'story-pdf'
+
+/**
+ * Window during which a stub row counts as "render in progress" — beyond
+ * this we assume the workflow died (CI failure, timeout, secret rotation,
+ * etc.) and let the next poll re-dispatch. Comfortably longer than any
+ * reasonable PDF render: render-pdf.yml has timeout-minutes=15, plus a few
+ * minutes of CI overhead. 30 min gives a safe cushion.
+ */
+export const DISPATCH_STALE_MS = 30 * 60 * 1000
+
+/**
+ * What a `story_pdfs` row tells us right now.
+ *
+ *   - `ready`        cached PDF exists for the current content_revision_hash.
+ *   - `rendering`    a stub row was written within DISPATCH_STALE_MS and the
+ *                    real PDF hasn't landed yet. Don't re-dispatch.
+ *   - `stale`        a stub row exists but is older than DISPATCH_STALE_MS;
+ *                    treat as a failed render and dispatch fresh.
+ *   - `missing`      no row, or row's hash doesn't match — needs a render.
+ */
+export type PdfState =
+  | { kind: 'ready'; row: CachedPdf }
+  | { kind: 'rendering' }
+  | { kind: 'stale' }
+  | { kind: 'missing' }
+
+export function classifyPdfState(
+  row: CachedPdf | null,
+  expectedHash: string,
+  now: number = Date.now()
+): PdfState {
+  if (!row || row.content_revision_hash !== expectedHash) return { kind: 'missing' }
+  if (row.public_url) return { kind: 'ready', row }
+  if (row.dispatched_at) {
+    const age = now - new Date(row.dispatched_at).getTime()
+    return age < DISPATCH_STALE_MS ? { kind: 'rendering' } : { kind: 'stale' }
+  }
+  return { kind: 'missing' }
+}
+
+/**
+ * Insert/update a stub row marking the (slug, format) as in flight. Called
+ * right before dispatching the GitHub Actions workflow. The renderer then
+ * overwrites this row with the real `public_url` on completion (see
+ * lib/storyPdfRender.ts).
+ */
+export async function markPdfDispatched(
+  supabase: SupabaseClient,
+  args: { slug: string; format: PdfFormat; contentRevisionHash: string }
+): Promise<void> {
+  const storagePath = `${args.slug}/${args.format}.pdf`
+  const { error } = await supabase.from('story_pdfs').upsert(
+    {
+      slug: args.slug,
+      format: args.format,
+      storage_path: storagePath,
+      public_url: '',
+      content_revision_hash: args.contentRevisionHash,
+      dispatched_at: new Date().toISOString(),
+    },
+    { onConflict: 'slug,format' }
+  )
+  if (error) throw new Error(`mark pdf dispatched: ${error.message}`)
+}
