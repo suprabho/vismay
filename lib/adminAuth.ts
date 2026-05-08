@@ -16,8 +16,10 @@ const COOKIE_NAME = 'vmy_admin'
 
 function getSecret(): string {
   // ADMIN_SESSION_SECRET rotates sessions on deploy. Falls back to the
-  // password itself so a single env var works for local dev.
-  return process.env.ADMIN_SESSION_SECRET ?? process.env.ADMIN_PASSWORD ?? ''
+  // password itself so a single env var works for local dev. `||` (not `??`)
+  // so an empty-string value — which is what GitHub Actions assigns when a
+  // referenced secret doesn't exist — also triggers the fallback.
+  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || ''
 }
 
 export function expectedToken(): string | null {
