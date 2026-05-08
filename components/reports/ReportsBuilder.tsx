@@ -174,10 +174,10 @@ export default function ReportsBuilder({
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
       setSavedYaml(draftYaml)
-      // Saving changes the content_revision_hash, which invalidates any
-      // previously cached PDF URL — clear them so the UI doesn't link to a
-      // stale render.
-      setPdfUrls({ report: null, slides: null })
+      // Don't clear pdfUrls here. The Supabase storage path is stable
+      // (`<slug>/<format>.pdf`) and a re-render upserts in place, so the
+      // "View latest" link still points at the most recently rendered file
+      // even after the saved overrides change.
       // Reload the iframe so the freshly saved overrides are reflected.
       setIframeKey((k) => k + 1)
     } catch (err) {
@@ -209,9 +209,16 @@ export default function ReportsBuilder({
           }
           const data = await res.json()
           if (data.status === 'ready' && data.public_url) {
-            setPdfUrls((prev) => ({ ...prev, [fmt]: data.public_url }))
+            // Append a short cache-buster so the freshly uploaded bytes
+            // win over any CDN copy of the previous render at the same URL.
+            const hash: string | undefined = data.content_revision_hash
+            const sep = data.public_url.includes('?') ? '&' : '?'
+            const viewUrl = hash
+              ? `${data.public_url}${sep}v=${hash.slice(0, 12)}`
+              : data.public_url
+            setPdfUrls((prev) => ({ ...prev, [fmt]: viewUrl }))
             const link = document.createElement('a')
-            link.href = data.public_url
+            link.href = viewUrl
             link.download = `${slug}-${fmt}.pdf`
             link.click()
             return

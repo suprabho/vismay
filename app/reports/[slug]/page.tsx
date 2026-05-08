@@ -17,11 +17,7 @@ import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { getFontImportUrl } from '@/lib/getFontImports'
 import { createServiceClient } from '@/lib/supabase'
-import {
-  classifyPdfState,
-  computeContentRevisionHash,
-  getCachedPdf,
-} from '@/lib/storyPdf'
+import { type CachedPdf, getCachedPdf } from '@/lib/storyPdf'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import ReportsBuilder from '@/components/reports/ReportsBuilder'
 
@@ -53,20 +49,20 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
     source.listChartIds(slug),
   ])
 
-  // Surface previously rendered PDFs so the builder can link to them even
-  // before the user clicks Download. Only "ready" (hash-matching) rows count;
-  // stale or rendering rows show as no link, prompting a fresh render.
+  // Surface the stable Supabase URL for any render that exists so the
+  // builder can link to it even when the saved content has drifted past
+  // the rendered hash. The storage path is `<slug>/<format>.pdf` and
+  // uploads upsert, so the URL never changes — we just append a short
+  // `?v=<hash>` cache-buster so a fresh render shows up immediately even
+  // when Supabase's CDN still has the old bytes.
   const supabase = createServiceClient()
-  const contentHash = await computeContentRevisionHash(source, slug)
   const [reportRow, slidesRow] = await Promise.all([
     getCachedPdf(supabase, slug, 'report'),
     getCachedPdf(supabase, slug, 'slides'),
   ])
-  const reportState = classifyPdfState(reportRow, contentHash)
-  const slidesState = classifyPdfState(slidesRow, contentHash)
   const initialPdfs = {
-    report: reportState.kind === 'ready' ? reportState.row.public_url : null,
-    slides: slidesState.kind === 'ready' ? slidesState.row.public_url : null,
+    report: cacheBustedUrl(reportRow),
+    slides: cacheBustedUrl(slidesRow),
   }
 
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
@@ -103,4 +99,10 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
       />
     </ThemeProvider>
   )
+}
+
+function cacheBustedUrl(row: CachedPdf | null): string | null {
+  if (!row || !row.public_url) return null
+  const sep = row.public_url.includes('?') ? '&' : '?'
+  return `${row.public_url}${sep}v=${row.content_revision_hash.slice(0, 12)}`
 }
