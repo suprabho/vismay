@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation'
 import ThemeEditor from './ThemeEditor'
 import YamlCardsView from './YamlCardsView'
 import FileActions from './FileActions'
+import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'settings'
+type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -22,6 +23,8 @@ interface InitialState {
   config_yaml: string
   share_yaml: string
   charts: ChartEntry[]
+  narrationUnits: NarrationUnit[]
+  tts_yaml: string | null
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -30,6 +33,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'config', label: 'Config' },
   { id: 'share', label: 'Share' },
   { id: 'charts', label: 'Charts' },
+  { id: 'narration', label: 'Narration' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -317,6 +321,13 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
         )}
         {tab === 'charts' && (
           <ChartsList slug={slug} charts={charts} onChartsChange={setCharts} />
+        )}
+        {tab === 'narration' && (
+          <NarrationEditor
+            slug={slug}
+            units={initial.narrationUnits}
+            initialYaml={initial.tts_yaml}
+          />
         )}
         {tab === 'settings' && (
           <SettingsPanel

@@ -358,4 +358,13 @@ export interface ResolvedUnit {
    * Undefined for desktop units and for non-hero kinds.
    */
   heroPart?: 'title' | 'dek'
+  /**
+   * Mobile-only: when a desktop unit expands into multiple mobile units
+   * (via `mobileParagraphs` or hero title/dek split), `sliceIndex` is the
+   * 0-based position of this mobile unit within that expansion. Always 0
+   * for desktop units and for non-split mobile units. Used as the third
+   * coordinate of mobile unit identity by lib/storyTts.ts so per-unit
+   * overrides survive content tweaks within the same section.
+   */
+  sliceIndex?: number
 }

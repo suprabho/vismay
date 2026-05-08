@@ -54,3 +54,23 @@ Vercel default runtime can't host the sync path — Playwright needs a real Chro
 - Apply migration `010_story_pdfs.sql` — adds the `story_pdfs` table, the `story-pdf` bucket, and the `report_yaml` column on `stories`.
 - No new env vars; the dispatch path reuses `GITHUB_DISPATCH_TOKEN` / `GITHUB_DISPATCH_REPO` / `GITHUB_DISPATCH_REF`.
 - Same GitHub repo secrets as the video workflow (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`).
+
+## TTS narration overrides (per-unit)
+
+`scripts/generate-audio.ts` derives the spoken text for each mobile unit from heading + paragraphs. To override that text without editing the displayed markdown, save a `<slug>.tts.yaml` (also `stories.tts_yaml` after migration 012):
+
+```yaml
+units:
+  - unit: { parentIndex: 1, subIndex: 0, sliceIndex: 0 }
+    script: "Custom narration for this unit."
+```
+
+- **Edit:** `/admin/<slug>` → "Narration" tab. Each mobile unit shows its current default + an override textarea. Save persists the YAML; "Regenerate audio" fires `render-audio.yml`.
+- **Identity:** `(parentIndex, subIndex, sliceIndex)` — same as `resolveUnits` mobile units. Hero splits into `sliceIndex=0` (title, silent) and `sliceIndex=1` (dek+byline). Methodology units (`TTS_SKIP_IDS` in [lib/storyTts.ts](lib/storyTts.ts)) are intentionally excluded from TTS — the override input is disabled for them.
+- **Cache invalidation:** the script's chunk hash includes the override text, so only edited chunks regenerate.
+
+**Audio render dispatch:** `lib/storyAudioDispatch.ts` fires `.github/workflows/render-audio.yml` when `GITHUB_DISPATCH_TOKEN` + `GITHUB_DISPATCH_REPO` are set (same envs as PDF/video). The workflow needs an additional repo secret: `GEMINI_API_KEY`. Without dispatch envs configured, the regen button returns `mode: 'unconfigured'` with a hint to run `npx tsx scripts/generate-audio.ts <slug> --force` locally.
+
+**Deploy requirements:**
+- Apply migration `012_story_tts.sql` — adds `stories.tts_yaml`.
+- Add `GEMINI_API_KEY` to the `Production` environment in repo secrets so render-audio.yml can authenticate to Gemini.

@@ -3,6 +3,11 @@ import { parse as parseYaml } from 'yaml'
 import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@/lib/contentSource'
 import EditorClient from '@/components/admin/EditorClient'
+import { getStoryContent } from '@/lib/content'
+import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
+import { resolveUnits } from '@/lib/resolveUnits'
+import { defaultNarrationText } from '@/lib/storyTts'
+import type { NarrationUnit } from '@/components/admin/NarrationEditor'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,11 +46,12 @@ export default async function EditStoryPage({ params }: Props) {
   if (!(await isAuthed())) redirect(`/admin/login?next=/admin/${slug}`)
 
   const src = getContentSource()
-  const [markdown, config_yaml, share_yaml, jsonChartIds] = await Promise.all([
+  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
     src.readShareYaml(slug),
     src.listChartIds(slug),
+    src.readTtsYaml(slug),
   ])
   if (markdown == null) notFound()
 
@@ -62,6 +68,40 @@ export default async function EditStoryPage({ params }: Props) {
     }),
   ]
 
+  // Build narration units for the Narration tab. Stories without a config
+  // (or with an invalid one) silently skip — the tab will render an empty
+  // state rather than 500ing.
+  let narrationUnits: NarrationUnit[] = []
+  try {
+    if (await hasStoryConfig(slug)) {
+      const story = await getStoryContent(slug)
+      const config = await loadStoryConfig(slug)
+      const { mobileUnits } = resolveUnits(slug, story.sections, config)
+      narrationUnits = mobileUnits.map((u) => {
+        const sliceIndex = u.sliceIndex ?? 0
+        const kindLabel = u.parentConfig.kind ?? 'text'
+        const headlineSnippet =
+          u.heading || u.subheading || u.paragraphs[0]?.replace(/\*+/g, '') || '(no heading)'
+        return {
+          parentIndex: u.parentIndex,
+          subIndex: u.subIndex,
+          sliceIndex,
+          sectionId: u.parentConfig.id,
+          label: `${kindLabel} · ${headlineSnippet.slice(0, 80)}`,
+          defaultScript: defaultNarrationText({
+            heading: u.heading,
+            paragraphs: u.paragraphs,
+            parentConfig: { kind: u.parentConfig.kind },
+            heroPart: u.heroPart,
+          }),
+          preview: [u.heading, u.paragraphs[0]?.replace(/\*+/g, '')].filter(Boolean).join(' — '),
+        }
+      })
+    }
+  } catch {
+    // Leave narrationUnits empty; the tab handles the empty state.
+  }
+
   return (
     <EditorClient
       slug={slug}
@@ -70,6 +110,8 @@ export default async function EditStoryPage({ params }: Props) {
         config_yaml: config_yaml ?? '',
         share_yaml: share_yaml ?? '',
         charts,
+        narrationUnits,
+        tts_yaml: tts_yaml ?? null,
       }}
     />
   )

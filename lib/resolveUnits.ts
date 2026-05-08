@@ -111,6 +111,7 @@ export function resolveUnits(
               heading: sliceIdx === 0 ? heading : undefined,
               subheading: sliceIdx === 0 ? subheading : undefined,
               paragraphs: mobileParagraphs,
+              sliceIndex: sliceIdx,
             })
           })
         } else {
@@ -121,6 +122,7 @@ export function resolveUnits(
             heading,
             subheading,
             paragraphs: sliceParagraphs(allParagraphs, sub.paragraphs),
+            sliceIndex: 0,
           })
         }
         // Record the mobile range that backs this desktop unit
@@ -194,6 +196,7 @@ export function resolveUnits(
           subheading,
           paragraphs: [],
           heroPart: 'title',
+          sliceIndex: 0,
         })
         // Dek + byline half. Inherits the original paragraphs (which is where
         // the dek `*…*` and byline `**…**` markdown live).
@@ -205,6 +208,7 @@ export function resolveUnits(
           subheading: undefined,
           paragraphs: sliceParagraphs(allParagraphs, section.paragraphs),
           heroPart: 'dek',
+          sliceIndex: 1,
         })
       } else if (section.mobileParagraphs) {
         hasMobileOverrides = true
@@ -223,6 +227,7 @@ export function resolveUnits(
             heading: sliceIdx === 0 ? heading : undefined,
             subheading: sliceIdx === 0 ? subheading : undefined,
             paragraphs: mobileParagraphs,
+            sliceIndex: sliceIdx,
           })
         })
       } else {
@@ -233,6 +238,7 @@ export function resolveUnits(
           heading,
           subheading,
           paragraphs: sliceParagraphs(allParagraphs, section.paragraphs),
+          sliceIndex: 0,
         })
       }
       // Record the mobile range that backs this desktop unit

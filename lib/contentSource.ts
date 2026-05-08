@@ -31,6 +31,7 @@ export interface ContentSource {
   readConfigYaml(slug: string): Promise<string | null>
   readShareYaml(slug: string): Promise<string | null>
   readReportYaml(slug: string): Promise<string | null>
+  readTtsYaml(slug: string): Promise<string | null>
   readChart(slug: string, chartId: string): Promise<unknown | null>
 
   /** Write methods for the admin editor. Callers are responsible for auth. */
@@ -38,6 +39,7 @@ export interface ContentSource {
   writeConfigYaml(slug: string, raw: string | null): Promise<void>
   writeShareYaml(slug: string, raw: string | null): Promise<void>
   writeReportYaml(slug: string, raw: string | null): Promise<void>
+  writeTtsYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
   updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder'>>): Promise<void>
   listChartIds(slug: string): Promise<string[]>
@@ -83,6 +85,9 @@ const fsSource: ContentSource = {
   async readReportYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.report.yaml`))
   },
+  async readTtsYaml(slug) {
+    return fsReadIfExists(path.join(STORIES_DIR, `${slug}.tts.yaml`))
+  },
   async readChart(slug, chartId) {
     const filePath = path.join(STORIES_DIR, slug, 'charts', `${chartId}.json`)
     if (!fs.existsSync(filePath)) return null
@@ -114,6 +119,14 @@ const fsSource: ContentSource = {
   },
   async writeReportYaml(slug, raw) {
     const p = path.join(STORIES_DIR, `${slug}.report.yaml`)
+    if (raw == null) {
+      if (fs.existsSync(p)) fs.unlinkSync(p)
+      return
+    }
+    fs.writeFileSync(p, raw, 'utf8')
+  },
+  async writeTtsYaml(slug, raw) {
+    const p = path.join(STORIES_DIR, `${slug}.tts.yaml`)
     if (raw == null) {
       if (fs.existsSync(p)) fs.unlinkSync(p)
       return
@@ -219,6 +232,19 @@ const dbSource: ContentSource = {
     if (error) throw new Error(`readReportYaml ${slug}: ${error.message}`)
     return (data as { report_yaml?: string | null } | null)?.report_yaml ?? null
   },
+  async readTtsYaml(slug) {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('stories')
+      .select('tts_yaml')
+      .eq('slug', slug)
+      .maybeSingle()
+    // Pre-012 deployments don't have the tts_yaml column; treat as null
+    // rather than failing — readers should fall through to "no overrides".
+    if (error?.message?.includes('tts_yaml')) return null
+    if (error) throw new Error(`readTtsYaml ${slug}: ${error.message}`)
+    return (data as { tts_yaml?: string | null } | null)?.tts_yaml ?? null
+  },
   async readChart(slug, chartId) {
     const sb = createServiceClient()
     const { data, error } = await sb
@@ -276,6 +302,14 @@ const dbSource: ContentSource = {
       .update({ report_yaml: raw, updated_at: new Date().toISOString() })
       .eq('slug', slug)
     if (error) throw new Error(`writeReportYaml ${slug}: ${error.message}`)
+  },
+  async writeTtsYaml(slug, raw) {
+    const sb = createServiceClient()
+    const { error } = await sb
+      .from('stories')
+      .update({ tts_yaml: raw, updated_at: new Date().toISOString() })
+      .eq('slug', slug)
+    if (error) throw new Error(`writeTtsYaml ${slug}: ${error.message}`)
   },
   async writeChart(slug, chartId, data) {
     const sb = createServiceClient()

@@ -132,6 +132,15 @@ interface UnitInfo {
    * for skipped units — autoplay shows their dot with "no audio".
    */
   skipTts?: boolean
+  /**
+   * Stable mobile-unit identity used to look up per-unit narration overrides
+   * in `<slug>.tts.yaml`. Mirrors the shape `resolveUnits` exposes for runtime
+   * mobile units, so an override saved from the admin Narration tab attaches
+   * to the same unit here.
+   */
+  parentIndex: number
+  subIndex: number
+  sliceIndex: number
 }
 
 /**
@@ -146,31 +155,51 @@ const TTS_SKIP_IDS = new Set(['methodology'])
  * `mobileParagraphs`, expand it into one unit per slice. Audio is generated
  * per mobile unit; the desktop player concatenates these segments back-to-back.
  */
+interface YamlSubsection {
+  text?: string
+  heading?: string
+  paragraphs?: number | [number, number]
+  mobileParagraphs?: Array<number | [number, number]>
+}
+interface YamlSection {
+  kind?: string
+  id?: string
+  chart?: string
+  text?: string
+  heading?: string
+  paragraphs?: number | [number, number]
+  mobileParagraphs?: Array<number | [number, number]>
+  subsections?: YamlSubsection[]
+}
+
 function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
   const { sections } = getStoryContent(slug)
   const configPath = path.join(STORIES_DIR, `${slug}.config.yaml`)
   if (!fs.existsSync(configPath)) return []
-  const config = parseYaml(fs.readFileSync(configPath, 'utf8'))
+  const config = parseYaml(fs.readFileSync(configPath, 'utf8')) as { sections: YamlSection[] }
   const units: UnitInfo[] = []
 
-  for (const section of config.sections) {
+  config.sections.forEach((section, parentIndex) => {
     const kind = section.kind ?? 'text'
     const skipTts = TTS_SKIP_IDS.has(section.id ?? '')
     const subs = section.subsections
     if (subs && subs.length > 0) {
-      for (const sub of subs) {
-        const md = resolveAnchor(sections, sub.text)
+      subs.forEach((sub, subIndex) => {
+        const md = sub.text ? resolveAnchor(sections, sub.text) : undefined
         const allP = md ? getParagraphs(md) : []
         const heading = sub.heading ?? md?.heading
 
         if (sub.mobileParagraphs) {
-          sub.mobileParagraphs.forEach((mobileSpec: number | [number, number], sliceIdx: number) => {
+          sub.mobileParagraphs.forEach((mobileSpec, sliceIdx) => {
             units.push({
               heading: sliceIdx === 0 ? heading : undefined,
               paragraphs: sliceParagraphs(allP, mobileSpec),
               kind,
               chart: section.chart,
               skipTts,
+              parentIndex,
+              subIndex,
+              sliceIndex: sliceIdx,
             })
           })
         } else {
@@ -180,9 +209,12 @@ function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
             kind,
             chart: section.chart,
             skipTts,
+            parentIndex,
+            subIndex,
+            sliceIndex: 0,
           })
         }
-      }
+      })
     } else if (section.text) {
       const md = resolveAnchor(sections, section.text)
       const allP = md ? getParagraphs(md) : []
@@ -198,6 +230,9 @@ function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
           chart: section.chart,
           heroPart: 'title',
           skipTts,
+          parentIndex,
+          subIndex: 0,
+          sliceIndex: 0,
         })
         units.push({
           heading: undefined,
@@ -206,6 +241,9 @@ function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
           chart: section.chart,
           heroPart: 'dek',
           skipTts,
+          parentIndex,
+          subIndex: 0,
+          sliceIndex: 1,
         })
       } else if (section.mobileParagraphs) {
         section.mobileParagraphs.forEach((mobileSpec: number | [number, number], sliceIdx: number) => {
@@ -215,6 +253,9 @@ function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
             kind,
             chart: section.chart,
             skipTts,
+            parentIndex,
+            subIndex: 0,
+            sliceIndex: sliceIdx,
           })
         })
       } else {
@@ -224,12 +265,56 @@ function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
           kind,
           chart: section.chart,
           skipTts,
+          parentIndex,
+          subIndex: 0,
+          sliceIndex: 0,
         })
       }
     }
-  }
+  })
 
   return units
+}
+
+/* ─── TTS overrides ────────────────────────────────────────────────── */
+
+/**
+ * Read `<slug>.tts.yaml` for per-unit narration overrides. Returns a Map
+ * keyed by `${parentIndex}.${subIndex}.${sliceIndex}`. The schema mirrors
+ * `lib/storyTts.ts` (re-implemented here so the script stays free of Next/TS
+ * path-alias imports — the bundle is `npx tsx`-only).
+ */
+function loadTtsOverrides(slug: string): Map<string, string> {
+  const out = new Map<string, string>()
+  const ttsPath = path.join(STORIES_DIR, `${slug}.tts.yaml`)
+  if (!fs.existsSync(ttsPath)) return out
+  let doc: unknown
+  try {
+    doc = parseYaml(fs.readFileSync(ttsPath, 'utf8'))
+  } catch {
+    return out
+  }
+  if (!doc || typeof doc !== 'object') return out
+  const unitsRaw = (doc as { units?: unknown }).units
+  if (!Array.isArray(unitsRaw)) return out
+  for (const entry of unitsRaw) {
+    if (!entry || typeof entry !== 'object') continue
+    const e = entry as Record<string, unknown>
+    const u = e.unit as { parentIndex?: unknown; subIndex?: unknown; sliceIndex?: unknown } | undefined
+    const script = e.script
+    if (
+      !u ||
+      typeof u.parentIndex !== 'number' ||
+      typeof u.subIndex !== 'number' ||
+      typeof script !== 'string' ||
+      !script.trim()
+    ) {
+      continue
+    }
+    const sliceIndex = typeof u.sliceIndex === 'number' ? u.sliceIndex : 0
+    out.set(`${u.parentIndex}.${u.subIndex}.${sliceIndex}`, script)
+  }
+  return out
 }
 
 /* ─── Text extraction ──────────────────────────────────────────────── */
@@ -622,7 +707,10 @@ function wordCount(s: string): number {
  * empty/very-short narration text are still included so they get a (zero-
  * duration) cue and remain addressable from the player.
  */
-function packUnitsIntoChunks(units: UnitInfo[]): AudioChunk[] {
+function packUnitsIntoChunks(
+  units: UnitInfo[],
+  overrides: Map<string, string>
+): AudioChunk[] {
   const chunks: AudioChunk[] = []
   let current: AudioChunk = { unitIndices: [], texts: [] }
   let currentWords = 0
@@ -633,7 +721,9 @@ function packUnitsIntoChunks(units: UnitInfo[]): AudioChunk[] {
     // their dot with "no audio" — viewers can scroll past them silently.
     if (units[i].skipTts) continue
 
-    const text = unitToNarrationText(units[i])
+    const u = units[i]
+    const override = overrides.get(`${u.parentIndex}.${u.subIndex}.${u.sliceIndex}`)
+    const text = override ?? unitToNarrationText(u)
     const words = wordCount(text)
 
     if (currentWords > 0 && currentWords + words > CHUNK_WORD_TARGET) {
@@ -807,9 +897,11 @@ async function processStory(slug: string, force: boolean) {
     return
   }
 
-  const chunks = packUnitsIntoChunks(units)
+  const overrides = loadTtsOverrides(slug)
+  const chunks = packUnitsIntoChunks(units, overrides)
+  const overrideMsg = overrides.size > 0 ? ` (${overrides.size} script overrides)` : ''
   console.log(
-    `  ${units.length} units → ${chunks.length} chunks (target ${CHUNK_WORD_TARGET} words/chunk)`
+    `  ${units.length} units → ${chunks.length} chunks (target ${CHUNK_WORD_TARGET} words/chunk)${overrideMsg}`
   )
 
   const existingHashes = await getExistingChunkHashes(slug)
