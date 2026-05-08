@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase'
 import {
+  classifyVideoState,
   computeAudioRevisionHash,
   getCachedVideo,
   loadChunksAndCues,
+  markDispatched,
   type VideoAspect,
 } from '@/lib/storyVideo'
 import {
@@ -23,9 +25,10 @@ import { renderStoryVideo } from '@/lib/storyVideoRender'
  *    uploads the MP4 to the same Supabase bucket. Callers poll this endpoint
  *    until the cache lookup returns a row.
  *
- * Vercel can't host the sync path — Playwright needs a real Chromium and
- * ffmpeg has to be on PATH. The dispatch path keeps the API route lightweight
- * (cache lookup + an HTTP POST to GitHub).
+ * In-flight tracking lives in the `story_videos.dispatched_at` column. A
+ * stub row is written at dispatch time so subsequent polls return 202
+ * without re-dispatching. Without this guard, one click stacks dozens of
+ * concurrent workflow runs because every 15s poll sees a cache miss.
  */
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -42,8 +45,9 @@ function isAspect(v: string | null): v is VideoAspect {
  *
  * Responses:
  *   200 { status: 'ready', public_url, cached, duration_ms }
- *   202 { status: 'rendering' }     dispatch fired, poll again later
+ *   202 { status: 'rendering' }     dispatch fired (or already in flight)
  *   400 { error }                   bad slug or aspect
+ *   404 { error }                   no audio for slug
  *   500 { error }                   render or dispatch failed
  */
 export async function GET(
@@ -72,36 +76,45 @@ export async function GET(
 
   const supabase = createServiceClient()
 
-  // Cache lookup happens regardless of path — when GH Actions completes a
-  // render, the row appears in `story_videos` and subsequent polls hit here.
-  if (!force) {
-    try {
-      const { chunks, cues } = await loadChunksAndCues(supabase, slug)
-      if (chunks.length === 0 || cues.length === 0) {
-        return NextResponse.json(
-          { error: 'no audio for slug' },
-          { status: 404 }
-        )
-      }
-      const hash = computeAudioRevisionHash(chunks, cues)
-      const cached = await getCachedVideo(supabase, slug, aspect)
-      if (cached && cached.audio_revision_hash === hash) {
-        return NextResponse.json({
-          status: 'ready',
-          public_url: cached.public_url,
-          cached: true,
-          duration_ms: cached.duration_ms,
-        })
-      }
-    } catch (err) {
-      // Lookup failures shouldn't block the dispatch path — fall through.
-      console.error('[story-video] cache lookup error:', err)
+  let hash: string
+  try {
+    const { chunks, cues } = await loadChunksAndCues(supabase, slug)
+    if (chunks.length === 0 || cues.length === 0) {
+      return NextResponse.json({ error: 'no audio for slug' }, { status: 404 })
     }
+    hash = computeAudioRevisionHash(chunks, cues)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'audio lookup failed'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+
+  // Inspect the existing row (if any) and decide what to do.
+  if (!force) {
+    const row = await getCachedVideo(supabase, slug, aspect)
+    const state = classifyVideoState(row, hash)
+    if (state.kind === 'ready') {
+      return NextResponse.json({
+        status: 'ready',
+        public_url: state.row.public_url,
+        cached: true,
+        duration_ms: state.row.duration_ms,
+      })
+    }
+    if (state.kind === 'rendering') {
+      // A workflow is already in flight for this (slug, aspect, hash). The
+      // 202 keeps the client polling, but we don't fire another dispatch.
+      return NextResponse.json({ status: 'rendering' }, { status: 202 })
+    }
+    // 'stale' falls through to a fresh dispatch; 'missing' too.
   }
 
   // Async path: hand the work to GitHub Actions.
   if (isDispatchConfigured()) {
     try {
+      // Mark in-flight BEFORE dispatching. If the dispatch itself fails the
+      // stub stays — that's fine, the next poll within 30 min reads it as
+      // `rendering`, and after 30 min as `stale` and tries again.
+      await markDispatched(supabase, { slug, aspect, audioRevisionHash: hash })
       await dispatchRenderJob({ slug, aspect, baseUrl })
       return NextResponse.json({ status: 'rendering' }, { status: 202 })
     } catch (err) {

@@ -58,6 +58,8 @@ export interface CachedVideo {
   public_url: string
   audio_revision_hash: string
   duration_ms: number | null
+  /** Set when an async render is dispatched and not yet completed. */
+  dispatched_at: string | null
 }
 
 export async function getCachedVideo(
@@ -67,7 +69,7 @@ export async function getCachedVideo(
 ): Promise<CachedVideo | null> {
   const { data, error } = await supabase
     .from('story_videos')
-    .select('public_url, audio_revision_hash, duration_ms')
+    .select('public_url, audio_revision_hash, duration_ms, dispatched_at')
     .eq('slug', slug)
     .eq('aspect', aspect)
     .maybeSingle()
@@ -76,4 +78,70 @@ export async function getCachedVideo(
     return null
   }
   return (data as CachedVideo | null) ?? null
+}
+
+/**
+ * Window during which a stub row counts as "render in progress" — beyond
+ * this we assume the workflow died (CI failure, timeout, secret rotation,
+ * etc.) and let the next poll re-dispatch. Comfortably longer than any
+ * legitimate render: a 17-min audio + ~3 min CI overhead = 20 min worst
+ * case. Using 30 here gives a 10-min cushion.
+ */
+export const DISPATCH_STALE_MS = 30 * 60 * 1000
+
+/**
+ * What a `story_videos` row tells us right now.
+ *
+ *   - `ready`        cached MP4 exists for the current audio_revision_hash.
+ *   - `rendering`    a stub row was written within DISPATCH_STALE_MS and the
+ *                    real MP4 hasn't landed yet. Don't re-dispatch.
+ *   - `stale`        a stub row exists but is older than DISPATCH_STALE_MS;
+ *                    treat as a failed render and dispatch fresh.
+ *   - `missing`      no row, or row's hash doesn't match — needs a render.
+ */
+export type VideoState =
+  | { kind: 'ready'; row: CachedVideo }
+  | { kind: 'rendering' }
+  | { kind: 'stale' }
+  | { kind: 'missing' }
+
+export function classifyVideoState(
+  row: CachedVideo | null,
+  expectedHash: string,
+  now: number = Date.now()
+): VideoState {
+  if (!row || row.audio_revision_hash !== expectedHash) return { kind: 'missing' }
+  if (row.public_url) return { kind: 'ready', row }
+  if (row.dispatched_at) {
+    const age = now - new Date(row.dispatched_at).getTime()
+    return age < DISPATCH_STALE_MS ? { kind: 'rendering' } : { kind: 'stale' }
+  }
+  return { kind: 'missing' }
+}
+
+/**
+ * Insert/update a stub row marking the (slug, aspect) as in flight. Called
+ * right before dispatching the GitHub Actions workflow. The renderer then
+ * overwrites this row with the real `public_url` + `duration_ms` on
+ * completion (see lib/storyVideoRender.ts).
+ */
+export async function markDispatched(
+  supabase: SupabaseClient,
+  args: { slug: string; aspect: VideoAspect; audioRevisionHash: string }
+): Promise<void> {
+  const aspectKey = args.aspect === '9:16' ? '9x16' : '16x9'
+  const storagePath = `${args.slug}/${aspectKey}.mp4`
+  const { error } = await supabase.from('story_videos').upsert(
+    {
+      slug: args.slug,
+      aspect: args.aspect,
+      storage_path: storagePath,
+      public_url: '',
+      audio_revision_hash: args.audioRevisionHash,
+      duration_ms: null,
+      dispatched_at: new Date().toISOString(),
+    },
+    { onConflict: 'slug,aspect' }
+  )
+  if (error) throw new Error(`mark dispatched: ${error.message}`)
 }

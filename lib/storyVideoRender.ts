@@ -407,6 +407,10 @@ async function uploadAndRecord(args: {
       public_url: publicUrl,
       audio_revision_hash: args.audioRevisionHash,
       duration_ms: args.durationMs,
+      // Clear the in-flight stub timestamp set by markDispatched(). The
+      // classifyVideoState() check would prefer `public_url` regardless,
+      // but nulling this keeps the row's state unambiguous in DB readers.
+      dispatched_at: null,
     },
     { onConflict: 'slug,aspect' }
   )
