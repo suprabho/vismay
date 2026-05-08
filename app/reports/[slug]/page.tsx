@@ -16,6 +16,12 @@ import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { getFontImportUrl } from '@/lib/getFontImports'
+import { createServiceClient } from '@/lib/supabase'
+import {
+  classifyPdfState,
+  computeContentRevisionHash,
+  getCachedPdf,
+} from '@/lib/storyPdf'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import ReportsBuilder from '@/components/reports/ReportsBuilder'
 
@@ -47,6 +53,22 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
     source.listChartIds(slug),
   ])
 
+  // Surface previously rendered PDFs so the builder can link to them even
+  // before the user clicks Download. Only "ready" (hash-matching) rows count;
+  // stale or rendering rows show as no link, prompting a fresh render.
+  const supabase = createServiceClient()
+  const contentHash = await computeContentRevisionHash(source, slug)
+  const [reportRow, slidesRow] = await Promise.all([
+    getCachedPdf(supabase, slug, 'report'),
+    getCachedPdf(supabase, slug, 'slides'),
+  ])
+  const reportState = classifyPdfState(reportRow, contentHash)
+  const slidesState = classifyPdfState(slidesRow, contentHash)
+  const initialPdfs = {
+    report: reportState.kind === 'ready' ? reportState.row.public_url : null,
+    slides: slidesState.kind === 'ready' ? slidesState.row.public_url : null,
+  }
+
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
 
   // Each unit gets a stable index = (parentIndex, subIndex). The builder
@@ -77,6 +99,7 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
         units={builderUnits}
         chartIds={chartIds}
         initialYaml={reportYaml}
+        initialPdfs={initialPdfs}
       />
     </ThemeProvider>
   )

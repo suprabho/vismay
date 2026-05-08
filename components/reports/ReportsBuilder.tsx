@@ -23,6 +23,7 @@ interface Props {
   units: BuilderUnit[]
   chartIds: string[]
   initialYaml: string | null
+  initialPdfs: Record<Format, string | null>
 }
 
 type Format = 'report' | 'slides'
@@ -120,6 +121,7 @@ export default function ReportsBuilder({
   units,
   chartIds,
   initialYaml,
+  initialPdfs,
 }: Props) {
   const [format, setFormat] = useState<Format>('report')
   const [pages, setPages] = useState<PageState[]>(() =>
@@ -130,6 +132,10 @@ export default function ReportsBuilder({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState<Format | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  // URLs of the most recently rendered PDFs (one per format). Seeded from the
+  // server-side cache lookup; nulls clear when the saved overrides change
+  // since that invalidates the content_revision_hash and any old PDF.
+  const [pdfUrls, setPdfUrls] = useState<Record<Format, string | null>>(initialPdfs)
   const [iframeKey, setIframeKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -168,6 +174,10 @@ export default function ReportsBuilder({
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
       setSavedYaml(draftYaml)
+      // Saving changes the content_revision_hash, which invalidates any
+      // previously cached PDF URL — clear them so the UI doesn't link to a
+      // stale render.
+      setPdfUrls({ report: null, slides: null })
       // Reload the iframe so the freshly saved overrides are reflected.
       setIframeKey((k) => k + 1)
     } catch (err) {
@@ -199,6 +209,7 @@ export default function ReportsBuilder({
           }
           const data = await res.json()
           if (data.status === 'ready' && data.public_url) {
+            setPdfUrls((prev) => ({ ...prev, [fmt]: data.public_url }))
             const link = document.createElement('a')
             link.href = data.public_url
             link.download = `${slug}-${fmt}.pdf`
@@ -292,6 +303,22 @@ export default function ReportsBuilder({
           >
             {saving ? 'Saving…' : dirty ? 'Save' : 'Saved'}
           </button>
+          {pdfUrls[format] && (
+            <a
+              href={pdfUrls[format] as string}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider border"
+              style={{
+                borderColor: 'var(--color-surface)',
+                color: 'var(--color-text)',
+                opacity: 0.85,
+              }}
+              title="Open the most recently rendered PDF in a new tab"
+            >
+              View latest ↗
+            </a>
+          )}
           <button
             onClick={() => handleDownload(format)}
             disabled={downloading !== null}
@@ -305,6 +332,25 @@ export default function ReportsBuilder({
               ? 'Rendering…'
               : `Download ${format === 'report' ? 'Report' : 'Slides'}`}
           </button>
+          {/* Mobile-only "view latest PDF" link, shown when available */}
+          {pdfUrls[format] && (
+            <a
+              href={pdfUrls[format] as string}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`View latest ${format} PDF`}
+              className="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border"
+              style={{
+                borderColor: 'var(--color-surface)',
+                color: 'var(--color-text)',
+                opacity: 0.85,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 3h7v7M21 3l-9 9M19 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6" />
+              </svg>
+            </a>
+          )}
           {/* Mobile-only download icon button */}
           <button
             onClick={() => handleDownload(format)}
