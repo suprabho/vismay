@@ -56,14 +56,67 @@ if (fs.existsSync(envPath)) {
 const ROOT = path.resolve(__dirname, '..')
 const STORIES_DIR = path.join(ROOT, 'content/stories')
 
+// When CONTENT_SOURCE=db, story files live in Postgres (see lib/contentSource.ts).
+// CI workflows dispatched from the admin portal run on a fresh checkout that
+// won't have DB-only stories on disk, so they must set this env var.
+const USE_DB_CONTENT = (process.env.CONTENT_SOURCE ?? 'fs').toLowerCase() === 'db'
+
+async function loadMarkdown(slug: string): Promise<string | null> {
+  if (USE_DB_CONTENT) {
+    const { data, error } = await supabase
+      .from('stories').select('markdown').eq('slug', slug).maybeSingle()
+    if (error) throw new Error(`loadMarkdown ${slug}: ${error.message}`)
+    return data?.markdown ?? null
+  }
+  const p = path.join(STORIES_DIR, `${slug}.md`)
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null
+}
+
+async function loadConfigYaml(slug: string): Promise<string | null> {
+  if (USE_DB_CONTENT) {
+    const { data, error } = await supabase
+      .from('stories').select('config_yaml').eq('slug', slug).maybeSingle()
+    if (error) throw new Error(`loadConfigYaml ${slug}: ${error.message}`)
+    return data?.config_yaml ?? null
+  }
+  const p = path.join(STORIES_DIR, `${slug}.config.yaml`)
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null
+}
+
+async function loadTtsYaml(slug: string): Promise<string | null> {
+  if (USE_DB_CONTENT) {
+    const { data, error } = await supabase
+      .from('stories').select('tts_yaml').eq('slug', slug).maybeSingle()
+    // Pre-012 deployments don't have the tts_yaml column; treat as null.
+    if (error?.message?.includes('tts_yaml')) return null
+    if (error) throw new Error(`loadTtsYaml ${slug}: ${error.message}`)
+    return (data as { tts_yaml?: string | null } | null)?.tts_yaml ?? null
+  }
+  const p = path.join(STORIES_DIR, `${slug}.tts.yaml`)
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null
+}
+
+async function listAllStorySlugs(): Promise<string[]> {
+  if (USE_DB_CONTENT) {
+    const { data, error } = await supabase.from('stories').select('slug')
+    if (error) throw new Error(`listAllStorySlugs: ${error.message}`)
+    return (data ?? []).map((r) => r.slug as string)
+  }
+  return fs
+    .readdirSync(STORIES_DIR)
+    .filter((f) => f.endsWith('.config.yaml'))
+    .map((f) => f.replace('.config.yaml', ''))
+}
+
 interface ContentSection {
   heading: string
   level: number
   body: string[]
 }
 
-function getStoryContent(slug: string) {
-  const file = fs.readFileSync(path.join(STORIES_DIR, `${slug}.md`), 'utf8')
+async function getStoryContent(slug: string) {
+  const file = await loadMarkdown(slug)
+  if (file == null) throw new Error(`story not found: ${slug}`)
   const { data, content } = matter(file)
   const sections: ContentSection[] = []
   let current: ContentSection | null = null
@@ -172,11 +225,11 @@ interface YamlSection {
   subsections?: YamlSubsection[]
 }
 
-function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
-  const { sections } = getStoryContent(slug)
-  const configPath = path.join(STORIES_DIR, `${slug}.config.yaml`)
-  if (!fs.existsSync(configPath)) return []
-  const config = parseYaml(fs.readFileSync(configPath, 'utf8')) as { sections: YamlSection[] }
+async function resolveMobileUnitsFlat(slug: string): Promise<UnitInfo[]> {
+  const { sections } = await getStoryContent(slug)
+  const configYaml = await loadConfigYaml(slug)
+  if (configYaml == null) return []
+  const config = parseYaml(configYaml) as { sections: YamlSection[] }
   const units: UnitInfo[] = []
 
   config.sections.forEach((section, parentIndex) => {
@@ -284,13 +337,13 @@ function resolveMobileUnitsFlat(slug: string): UnitInfo[] {
  * `lib/storyTts.ts` (re-implemented here so the script stays free of Next/TS
  * path-alias imports — the bundle is `npx tsx`-only).
  */
-function loadTtsOverrides(slug: string): Map<string, string> {
+async function loadTtsOverrides(slug: string): Promise<Map<string, string>> {
   const out = new Map<string, string>()
-  const ttsPath = path.join(STORIES_DIR, `${slug}.tts.yaml`)
-  if (!fs.existsSync(ttsPath)) return out
+  const ttsYaml = await loadTtsYaml(slug)
+  if (ttsYaml == null) return out
   let doc: unknown
   try {
-    doc = parseYaml(fs.readFileSync(ttsPath, 'utf8'))
+    doc = parseYaml(ttsYaml)
   } catch {
     return out
   }
@@ -891,13 +944,13 @@ async function runWhisperAlignment(
 async function processStory(slug: string, force: boolean) {
   console.log(`\n━━━ ${slug} ━━━`)
 
-  const units = resolveMobileUnitsFlat(slug)
+  const units = await resolveMobileUnitsFlat(slug)
   if (units.length === 0) {
     console.log('  No units found, skipping.')
     return
   }
 
-  const overrides = loadTtsOverrides(slug)
+  const overrides = await loadTtsOverrides(slug)
   const chunks = packUnitsIntoChunks(units, overrides)
   const overrideMsg = overrides.size > 0 ? ` (${overrides.size} script overrides)` : ''
   console.log(
@@ -974,13 +1027,7 @@ async function main() {
   const force = args.includes('--force')
   const slugs = args.filter((a) => !a.startsWith('--'))
 
-  const storySlugs =
-    slugs.length > 0
-      ? slugs
-      : fs
-          .readdirSync(STORIES_DIR)
-          .filter((f) => f.endsWith('.config.yaml'))
-          .map((f) => f.replace('.config.yaml', ''))
+  const storySlugs = slugs.length > 0 ? slugs : await listAllStorySlugs()
 
   console.log(`Audio generation for: ${storySlugs.join(', ')}`)
   if (force) console.log('(--force: regenerating all)')
