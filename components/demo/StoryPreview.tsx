@@ -10,9 +10,11 @@
  * the desktop layout reflow to a tablet/mobile breakpoint and makes the
  * mobile layout look cramped.
  *
- * The desktop iframe uses CSS container queries — `transform: scale(calc(
- * 100cqw / DESKTOP_NATIVE_W))` — so the scale follows container width
- * without JS.
+ * The desktop iframe uses CSS container queries — `transform: scale(tan(
+ * atan2(100cqw, DESKTOP_NATIVE_W * 1px)))` — so the scale follows
+ * container width without JS. The tan/atan2 detour is a length→number
+ * conversion: `scale()` requires a unitless number, and a plain
+ * `calc(100cqw / 1440)` evaluates to a `<length>`, which is invalid.
  *
  * Layout: on lg+ the phone is pinned bottom-right of the desktop iframe
  * (Apple feature-page style). Below lg only the phone shows, stacked.
@@ -85,7 +87,7 @@ export default function StoryPreview({ storySlug }: Props) {
             width: DESKTOP_NATIVE_W,
             height: DESKTOP_NATIVE_H,
             border: 0,
-            transform: `scale(calc(100cqw / ${DESKTOP_NATIVE_W}))`,
+            transform: `scale(tan(atan2(100cqw, ${DESKTOP_NATIVE_W}px)))`,
             transformOrigin: 'top left',
           }}
         />
