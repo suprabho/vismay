@@ -779,14 +779,18 @@ export default function MapboxBackground({
         .mapbox-highlight-popup .mapboxgl-popup-tip {
           display: none !important;
         }
+        .mapbox-fade-root .mapboxgl-canvas-container {
+          opacity: var(--map-fade, 1);
+          transition: var(--map-fade-transition, opacity 800ms ease);
+        }
       `}</style>
       <div
         ref={containerRef}
-        className="w-full h-full"
+        className="w-full h-full mapbox-fade-root"
         style={{
-          opacity: loaded ? currentOpacity : 0,
-          transition: reduceMotion ? 'none' : 'opacity 800ms ease',
-        }}
+          ['--map-fade' as string]: loaded ? String(currentOpacity) : '0',
+          ['--map-fade-transition' as string]: reduceMotion ? 'none' : 'opacity 800ms ease',
+        } as React.CSSProperties}
       />
     </>
   )
