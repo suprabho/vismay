@@ -271,7 +271,44 @@ async function walkAndRecord(args: {
   } catch {
     // Some pages keep websockets open; networkidle never resolves. Continue.
   }
-  // One extra beat for any GSAP/chart entrance animations to settle.
+
+  // Wait for Mapbox maps to finish their first load before starting the walk.
+  // Without this the first cue's tiles pop in on camera, which is the most
+  // visible artifact in the final video. The intro time before walkStartMs is
+  // trimmed by ffmpeg below, so waiting longer here doesn't desync audio — it
+  // only adds wall-clock to the render.
+  //
+  // Two-phase poll: (1) wait briefly for any map to be captured by the proxy
+  // — if the page has no maps we don't want to hang; (2) wait for every
+  // captured map to report `loaded()`. Both phases swallow timeouts so a
+  // stuck map can't block the render; the per-cue idle wait further down
+  // handles late-arriving maps and post-pan tile loads.
+  try {
+    await page.waitForFunction(
+      () => {
+        const w = window as unknown as {
+          __capturedMaps__?: { loaded(): boolean }[]
+        }
+        return !!w.__capturedMaps__ && w.__capturedMaps__.length > 0
+      },
+      { timeout: 5_000 }
+    )
+    await page.waitForFunction(
+      () => {
+        const w = window as unknown as {
+          __capturedMaps__?: { loaded(): boolean }[]
+        }
+        const maps = w.__capturedMaps__!
+        return maps.every((m) => m.loaded())
+      },
+      { timeout: 30_000 }
+    )
+  } catch {
+    // Either no maps appeared, or they didn't settle in time.
+  }
+
+  // One extra beat for any GSAP/chart entrance animations to settle, plus
+  // tile rendering after `loaded()` flips true.
   await page.waitForTimeout(800)
 
   const walkStartMs = Date.now()
