@@ -295,7 +295,9 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
             {isMapTitle ? (
               /* Map + section heading overlay card — heading sits in a
                  translucent panel mirroring MapStorySection on the story
-                 page so the share view matches the live story aesthetic. */
+                 page so the share view matches the live story aesthetic.
+                 4:3 landscape gets a more compact caption (smaller heading,
+                 no hero dek) so the map isn't crowded out of view. */
               <div className="flex flex-col justify-end h-full p-4">
                 <div
                   className="rounded-lg p-5 backdrop-blur-sm"
@@ -313,7 +315,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                     </div>
                   )}
                   <h2
-                    className="font-serif text-[1.6rem] font-bold leading-[1.2]"
+                    className={`font-serif font-bold leading-[1.2] ${ratio === '4:3' ? 'text-[1.25rem]' : 'text-[1.6rem]'}`}
                     style={{ color: 'var(--color-text)' }}
                   >
                     {heading || title}
@@ -326,7 +328,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                       {subheading}
                     </p>
                   )}
-                  {kind === 'hero' && (() => {
+                  {kind === 'hero' && ratio !== '4:3' && (() => {
                     const { dek } = extractHeroBits(paragraphs)
                     return dek ? (
                       <p
