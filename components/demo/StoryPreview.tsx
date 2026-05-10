@@ -3,22 +3,32 @@
  * layout, one inside a phone-frame mockup so the prospect sees both
  * surfaces at a glance.
  *
- * The phone iframe renders at a real mobile viewport (NATIVE_W × NATIVE_H)
- * and is scaled down with `transform: scale()` so the page's mobile media
- * queries see proper dimensions. Squishing the iframe to bezel-size
- * directly (without scale) causes text/maps to look cramped because the
- * story's mobile layout assumes ~390 px of horizontal real estate.
+ * Both iframes render at their real native viewports (DESKTOP_NATIVE_W ×
+ * DESKTOP_NATIVE_H, NATIVE_W × NATIVE_H) and are scaled down with
+ * `transform: scale()` so the story's media queries see proper dimensions.
+ * Squishing an iframe to its visible size directly (without scale) makes
+ * the desktop layout reflow to a tablet/mobile breakpoint and makes the
+ * mobile layout look cramped.
  *
- * Layout: on md+ the phone is pinned bottom-right of the desktop iframe
- * (Apple feature-page style). Below md it stacks beneath, centered.
+ * The desktop iframe uses CSS container queries — `transform: scale(calc(
+ * 100cqw / DESKTOP_NATIVE_W))` — so the scale follows container width
+ * without JS.
+ *
+ * Layout: on lg+ the phone is pinned bottom-right of the desktop iframe
+ * (Apple feature-page style). Below lg only the phone shows, stacked.
  */
 
 interface Props {
   storySlug: string
 }
 
-// Real-viewport size the iframe content sees. Picked to match an iPhone 14
-// so the story's mobile breakpoints behave naturally.
+// Real-viewport size the desktop iframe content sees. Picked to match a
+// common laptop width so the story renders its desktop layout.
+const DESKTOP_NATIVE_W = 1440
+const DESKTOP_NATIVE_H = 810
+
+// Real-viewport size the phone iframe content sees. Picked to match an
+// iPhone 14 so the story's mobile breakpoints behave naturally.
 const NATIVE_W = 390
 const NATIVE_H = 845
 
@@ -55,11 +65,12 @@ export default function StoryPreview({ storySlug }: Props) {
   return (
     <div className="relative" style={{ borderColor: 'var(--demo-fg-line)' }}>
       <div
-        className="relative w-full overflow-hidden border"
+        className="relative w-full overflow-hidden border hidden lg:block"
         style={{
-          aspectRatio: '16 / 9',
+          aspectRatio: `${DESKTOP_NATIVE_W} / ${DESKTOP_NATIVE_H}`,
           background: '#000',
           borderColor: 'var(--demo-fg-line)',
+          containerType: 'inline-size',
         }}
       >
         <iframe
@@ -67,14 +78,22 @@ export default function StoryPreview({ storySlug }: Props) {
           title="Story (desktop)"
           loading="lazy"
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-          className="absolute inset-0 w-full h-full border-0"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: DESKTOP_NATIVE_W,
+            height: DESKTOP_NATIVE_H,
+            border: 0,
+            transform: `scale(calc(100cqw / ${DESKTOP_NATIVE_W}))`,
+            transformOrigin: 'top left',
+          }}
         />
 
-        {/* Phone-frame mockup pinned bottom-right (md+ only). Sized to fit
-            inside the 16:9 hero block at typical desktop viewports without
-            overflowing. */}
+        {/* Phone-frame mockup pinned bottom-right. Sized to fit inside the
+            16:9 hero block at typical desktop viewports without overflowing. */}
         <div
-          className="hidden lg:block absolute z-10"
+          className="absolute z-10"
           style={{
             right: 24,
             bottom: 24,
@@ -91,10 +110,10 @@ export default function StoryPreview({ storySlug }: Props) {
         </div>
       </div>
 
-      {/* Stacked phone block for narrow viewports — replaces the floating
-          mockup so neither overlaps the desktop iframe at phone sizes. */}
+      {/* Stacked phone block for narrow viewports — the desktop iframe is
+          hidden below lg so this is the only preview on small screens. */}
       <div
-        className="lg:hidden mt-6 mx-auto"
+        className="lg:hidden mx-auto"
         style={{ width: BEZEL_W_MOBILE }}
       >
         <div

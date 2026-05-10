@@ -25,21 +25,26 @@ export default async function DemoLoginPage({ params }: Props) {
   const { clientSlug } = await params
   if (!isValidClientSlug(clientSlug)) notFound()
 
+  // Always render the form — never 404 on missing/archived demos so the
+  // page can't be used to enumerate slugs. The auth route returns the
+  // same generic 401 whether the slug is unknown or the password is wrong.
   const demo = await getDemoByClientSlug(clientSlug)
-  if (!demo || demo.status === 'archived') notFound()
 
-  if (await isDemoAuthed(clientSlug, demo.password_hash)) {
+  if (demo && demo.status !== 'archived' && (await isDemoAuthed(clientSlug, demo.password_hash))) {
     redirect(`/demo/${clientSlug}`)
   }
 
   // Match the demo page's own theme so the gate doesn't whiplash from one
-  // palette to another after sign-in.
+  // palette to another after sign-in. Falls back to defaults when there
+  // is no demo or its story can't be loaded.
   let storyTheme = null
-  try {
-    const story = await getStoryContent(demo.story_slug)
-    storyTheme = story.frontmatter.theme ?? null
-  } catch {
-    // Fall back to defaults.
+  if (demo) {
+    try {
+      const story = await getStoryContent(demo.story_slug)
+      storyTheme = story.frontmatter.theme ?? null
+    } catch {
+      // Fall back to defaults.
+    }
   }
 
   const bg = storyTheme?.colors.background ?? '#14120E'
@@ -66,7 +71,7 @@ export default async function DemoLoginPage({ params }: Props) {
         } as React.CSSProperties
       }
     >
-      <DemoLoginForm clientSlug={clientSlug} clientName={demo.client_name} />
+      <DemoLoginForm clientSlug={clientSlug} clientName={demo?.client_name ?? 'a private preview'} />
     </div>
   )
 }
