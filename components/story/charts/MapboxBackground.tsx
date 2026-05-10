@@ -729,14 +729,20 @@ export default function MapboxBackground({
     }
   }, [activeStep, steps, loaded, defaultPinColor, defaultPinRadius, landscapeFocusArea, portraitFocusArea, staticCapture, onReady])
 
-  // Re-evaluate focal padding when the viewport flips between portrait and
-  // landscape — without this, rotating the device leaves the camera padded
-  // for the previous orientation.
+  // Re-evaluate focal padding when the container or viewport resizes —
+  // covers both portrait/landscape flips AND container-only size changes
+  // (e.g. PreviewFrame's `zoom: scale` settling after the wrapper measures
+  // inside the /reports iframe). Without the container observer, Mapbox
+  // keeps the WebGL canvas at its initial size and the map renders smaller
+  // than its embed box.
   useEffect(() => {
     if (!loaded) return
+    const el = containerRef.current
+    if (!el) return
     function onResize() {
       const map = mapRef.current
       if (!map) return
+      map.resize()
       map.setPadding(computeFocusPadding(containerRef.current, landscapeFocusArea, portraitFocusArea))
       // setPadding by itself doesn't redraw at the new focal point — nudge
       // the camera back to the active step so it re-projects with the new pad.
@@ -750,8 +756,13 @@ export default function MapboxBackground({
         })
       }
     }
+    const ro = new ResizeObserver(onResize)
+    ro.observe(el)
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', onResize)
+    }
   }, [loaded, landscapeFocusArea, portraitFocusArea, activeStep, steps])
 
   const currentOpacity = (steps[activeStep]?.opacity ?? defaultOpacity)
