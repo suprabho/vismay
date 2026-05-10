@@ -6,6 +6,7 @@ import ChartPanel from '@/components/story/ChartPanel'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
 import { usePdfReadiness } from '@/lib/pdfReadiness'
+import { getReportMapOverride } from '@/lib/storyReportConfig'
 
 const SLIDE_W = 1920
 const SLIDE_H = 1080
@@ -47,10 +48,16 @@ export default function SlidesShell({
     return units.map((unit) => {
       const map = unit.parentConfig.map
       const subMap = unit.parentConfig.subsections?.[unit.subIndex]?.map
-      const center = (subMap?.center ?? map?.center) as [number, number] | undefined
-      const zoom = subMap?.zoom ?? map?.zoom
-      const pitch = subMap?.pitch ?? map?.pitch
-      const bearing = subMap?.bearing ?? map?.bearing
+      // Per-page report override beats subsection beats parent — so editing
+      // the camera in /reports always wins, even when the source story has a
+      // subsection map block for the same unit.
+      const ov = getReportMapOverride(unit.parentConfig)
+      const center = (ov?.center ?? subMap?.center ?? map?.center) as
+        | [number, number]
+        | undefined
+      const zoom = ov?.zoom ?? subMap?.zoom ?? map?.zoom
+      const pitch = ov?.pitch ?? subMap?.pitch ?? map?.pitch
+      const bearing = ov?.bearing ?? subMap?.bearing ?? map?.bearing
       const pins = subMap?.pins ?? map?.pins
       const regions = subMap?.regions ?? map?.regions
       const heatmap = subMap?.heatmap ?? map?.heatmap

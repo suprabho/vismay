@@ -70,15 +70,28 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
   // Each unit gets a stable index = (parentIndex, subIndex). The builder
   // serializes from this, so even if markdown changes order later the
   // overrides stay attached to the correct unit identity.
-  const builderUnits = units.map((u) => ({
-    parentIndex: u.parentIndex,
-    subIndex: u.subIndex,
-    heading: u.heading,
-    subheading: u.subheading,
-    paragraphs: u.paragraphs,
-    eyebrow: u.parentConfig.eyebrow,
-    chartId: u.parentConfig.chart,
-  }))
+  const builderUnits = units.map((u) => {
+    const m = u.parentConfig.map
+    const parentMap =
+      m && m.center && typeof m.zoom === 'number'
+        ? {
+            center: m.center as [number, number],
+            zoom: m.zoom,
+            pitch: m.pitch ?? 0,
+            bearing: m.bearing ?? 0,
+          }
+        : null
+    return {
+      parentIndex: u.parentIndex,
+      subIndex: u.subIndex,
+      heading: u.heading,
+      subheading: u.subheading,
+      paragraphs: u.paragraphs,
+      eyebrow: u.parentConfig.eyebrow,
+      chartId: u.parentConfig.chart,
+      parentMap,
+    }
+  })
 
   return (
     <ThemeProvider theme={story.frontmatter.theme}>

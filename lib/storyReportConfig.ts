@@ -38,6 +38,12 @@ export interface ReportPageOverride {
   mapOverride?: {
     style?: string
     palette?: MapPalette
+    /** Per-page camera (center/zoom/pitch/bearing). Overrides the section's
+     *  `map:` block in the story config for the report and slides PDFs. */
+    center?: [number, number]
+    zoom?: number
+    pitch?: number
+    bearing?: number
   }
 }
 
@@ -91,13 +97,40 @@ export function parseReportConfig(raw: string | null): ReportConfig | null {
       if (typeof id === 'string') page.chartOverride = { id }
     }
     if (e.mapOverride && typeof e.mapOverride === 'object') {
-      const mo = e.mapOverride as { style?: unknown; palette?: unknown }
+      const mo = e.mapOverride as {
+        style?: unknown
+        palette?: unknown
+        center?: unknown
+        zoom?: unknown
+        pitch?: unknown
+        bearing?: unknown
+      }
       const out: ReportPageOverride['mapOverride'] = {}
       if (typeof mo.style === 'string') out.style = mo.style
       if (mo.palette && typeof mo.palette === 'object') {
         out.palette = mo.palette as MapPalette
       }
-      if (out.style || out.palette) page.mapOverride = out
+      if (
+        Array.isArray(mo.center) &&
+        mo.center.length === 2 &&
+        typeof mo.center[0] === 'number' &&
+        typeof mo.center[1] === 'number'
+      ) {
+        out.center = [mo.center[0], mo.center[1]]
+      }
+      if (typeof mo.zoom === 'number') out.zoom = mo.zoom
+      if (typeof mo.pitch === 'number') out.pitch = mo.pitch
+      if (typeof mo.bearing === 'number') out.bearing = mo.bearing
+      if (
+        out.style ||
+        out.palette ||
+        out.center ||
+        out.zoom != null ||
+        out.pitch != null ||
+        out.bearing != null
+      ) {
+        page.mapOverride = out
+      }
     }
     pages.push(page)
   }
@@ -152,12 +185,20 @@ export function applyReportOverrides(
       const parent = { ...unit.parentConfig }
       if (ov.chartOverride) parent.chart = ov.chartOverride.id
       if (ov.mapOverride) {
+        // Merge camera fields directly into parent.map so existing shells
+        // (which already read parent.map.{center,zoom,...}) pick them up.
+        // Style/palette can't be merged here — they live on `defaults`, not
+        // on the section's map block — so we also stash the full override
+        // on a side channel for shells that consume style/palette.
         parent.map = {
           ...parent.map,
-          ...(ov.mapOverride.style ? { /* style applied at shell level */ } : {}),
+          ...(ov.mapOverride.center ? { center: ov.mapOverride.center } : {}),
+          ...(ov.mapOverride.zoom != null ? { zoom: ov.mapOverride.zoom } : {}),
+          ...(ov.mapOverride.pitch != null ? { pitch: ov.mapOverride.pitch } : {}),
+          ...(ov.mapOverride.bearing != null
+            ? { bearing: ov.mapOverride.bearing }
+            : {}),
         }
-        // Stash the full override on a non-enumerable side channel so the
-        // shells can read it without polluting the typed surface.
         ;(parent as unknown as { __reportMapOverride?: typeof ov.mapOverride }).__reportMapOverride =
           ov.mapOverride
       }

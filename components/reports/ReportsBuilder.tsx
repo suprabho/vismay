@@ -6,6 +6,8 @@ import {
   parseReportConfig,
   type ReportPageOverride,
 } from '@/lib/storyReportConfig'
+import { extractMapView, type MapView } from '@/lib/yamlMapPatch'
+import MapPickerModal from '@/components/admin/MapPickerModal'
 
 export interface BuilderUnit {
   parentIndex: number
@@ -15,6 +17,8 @@ export interface BuilderUnit {
   paragraphs: string[]
   eyebrow: string | undefined
   chartId: string | undefined
+  /** Section default map camera. Null when the section has no `map:` block. */
+  parentMap: MapView | null
 }
 
 interface Props {
@@ -36,6 +40,8 @@ interface PageState {
   subheading: string
   paragraphs: string
   chartOverrideId: string
+  /** Per-page camera override. Null = use the section default. */
+  mapView: MapView | null
 }
 
 function unitKey(u: { parentIndex: number; subIndex: number }): string {
@@ -55,6 +61,16 @@ function buildInitialState(
   }
   return units.map((u) => {
     const ov = overrides.get(unitKey(u))
+    const mo = ov?.mapOverride
+    const mapView: MapView | null =
+      mo && mo.center && typeof mo.zoom === 'number'
+        ? {
+            center: mo.center,
+            zoom: mo.zoom,
+            pitch: mo.pitch ?? 0,
+            bearing: mo.bearing ?? 0,
+          }
+        : null
     return {
       parentIndex: u.parentIndex,
       subIndex: u.subIndex,
@@ -63,8 +79,22 @@ function buildInitialState(
       subheading: ov?.subheading ?? '',
       paragraphs: (ov?.paragraphs ?? []).join('\n\n'),
       chartOverrideId: ov?.chartOverride?.id ?? '',
+      mapView,
     }
   })
+}
+
+/** Round-trip helper: build a minimal `map:` YAML block so we can hand it to
+ *  MapPickerModal (which speaks YAML). The modal hands back a patched YAML
+ *  blob that we parse back into a MapView. */
+function viewToFakeSectionRaw(view: MapView): string {
+  return [
+    'map:',
+    `  center: [${view.center[0]}, ${view.center[1]}]`,
+    `  zoom: ${view.zoom}`,
+    `  pitch: ${view.pitch}`,
+    `  bearing: ${view.bearing}`,
+  ].join('\n')
 }
 
 function serializeToYaml(states: PageState[]): string {
@@ -99,6 +129,15 @@ function serializeToYaml(states: PageState[]): string {
       entry.chartOverride = { id: s.chartOverrideId.trim() }
       dirty = true
     }
+    if (s.mapView) {
+      entry.mapOverride = {
+        center: [round(s.mapView.center[0], 4), round(s.mapView.center[1], 4)],
+        zoom: round(s.mapView.zoom, 2),
+        pitch: round(s.mapView.pitch, 1),
+        bearing: round(s.mapView.bearing, 1),
+      }
+      dirty = true
+    }
     if (dirty) pages.push(entry)
   }
   if (pages.length === 0) return ''
@@ -111,8 +150,14 @@ function serializeToYaml(states: PageState[]): string {
       ...(p.subheading && { subheading: p.subheading }),
       ...(p.paragraphs && { paragraphs: p.paragraphs }),
       ...(p.chartOverride && { chartOverride: p.chartOverride }),
+      ...(p.mapOverride && { mapOverride: p.mapOverride }),
     })),
   })
+}
+
+function round(n: number, places: number): number {
+  const p = Math.pow(10, places)
+  return Math.round(n * p) / p
 }
 
 export default function ReportsBuilder({
@@ -244,10 +289,13 @@ export default function ReportsBuilder({
           p.heading.trim() ||
           p.subheading.trim() ||
           p.paragraphs.trim() ||
-          p.chartOverrideId.trim()
+          p.chartOverrideId.trim() ||
+          p.mapView != null
       ).length,
     [pages]
   )
+
+  const [mapEditIdx, setMapEditIdx] = useState<number | null>(null)
 
   const [sheetOpen, setSheetOpen] = useState(false)
   // Close sheet on Escape (mobile + desktop both, harmless on desktop where
@@ -270,10 +318,16 @@ export default function ReportsBuilder({
           unit={units[i]}
           chartIds={chartIds}
           onChange={(patch) => update(i, patch)}
+          onEditMap={() => setMapEditIdx(i)}
         />
       ))}
     </>
   )
+
+  const mapEditUnit = mapEditIdx !== null ? units[mapEditIdx] : null
+  const mapEditPage = mapEditIdx !== null ? pages[mapEditIdx] : null
+  const mapEditCurrent: MapView | null =
+    mapEditPage?.mapView ?? mapEditUnit?.parentMap ?? null
 
   return (
     <div
@@ -489,6 +543,26 @@ export default function ReportsBuilder({
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-3">{editControls}</div>
       </div>
+
+      {mapEditIdx !== null && mapEditUnit && mapEditCurrent && (
+        <MapPickerModal
+          sectionRaw={viewToFakeSectionRaw(mapEditCurrent)}
+          sectionLabel={
+            mapEditUnit.eyebrow
+              ? `§${mapEditUnit.parentIndex}.${mapEditUnit.subIndex} · ${mapEditUnit.eyebrow}`
+              : `§${mapEditUnit.parentIndex}.${mapEditUnit.subIndex}`
+          }
+          hideMobileTarget
+          onApply={(nextRaw) => {
+            const next = extractMapView(nextRaw)
+            if (next && mapEditIdx !== null) {
+              update(mapEditIdx, { mapView: next })
+            }
+            setMapEditIdx(null)
+          }}
+          onClose={() => setMapEditIdx(null)}
+        />
+      )}
     </div>
   )
 }
@@ -530,12 +604,16 @@ function PageControls({
   unit,
   chartIds,
   onChange,
+  onEditMap,
 }: {
   page: PageState
   unit: BuilderUnit
   chartIds: string[]
   onChange: (patch: Partial<PageState>) => void
+  onEditMap: () => void
 }) {
+  const hasMap = unit.parentMap !== null
+  const overrideView = page.mapView
   return (
     <div
       className="rounded-md p-3 space-y-2 border"
@@ -617,6 +695,38 @@ function PageControls({
             </option>
           ))}
         </select>
+      )}
+      {hasMap && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onEditMap}
+            className="flex-1 px-2 py-1.5 rounded text-[0.75rem] font-[family-name:var(--font-mono)] uppercase tracking-wider border"
+            style={{
+              borderColor: 'var(--color-surface)',
+              background: 'transparent',
+              color: 'var(--color-text)',
+            }}
+          >
+            {overrideView ? 'Edit map override' : 'Edit map'}
+          </button>
+          {overrideView && (
+            <button
+              type="button"
+              onClick={() => onChange({ mapView: null })}
+              title="Reset to section default"
+              aria-label="Reset map override"
+              className="px-2 py-1.5 rounded text-[0.7rem] border opacity-60 hover:opacity-100"
+              style={{
+                borderColor: 'var(--color-surface)',
+                background: 'transparent',
+                color: 'var(--color-text)',
+              }}
+            >
+              Reset
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

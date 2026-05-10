@@ -43,6 +43,10 @@ interface Props {
   style?: string
   onApply: (nextRaw: string) => void
   onClose: () => void
+  /** Hide the desktop/mobile target toggle and force the desktop target.
+   *  Use for surfaces (e.g. the report builder) that don't render a mobile
+   *  story view and only need the single landscape camera. */
+  hideMobileTarget?: boolean
 }
 
 type Target = 'desktop' | 'mobile'
@@ -55,6 +59,7 @@ export default function MapPickerModal({
   style,
   onApply,
   onClose,
+  hideMobileTarget = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -264,8 +269,8 @@ export default function MapPickerModal({
       </header>
 
       <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-white/10 bg-black/30">
-        <TargetToggle target={target} onChange={switchTarget} />
-        {showClearMobile && (
+        {hideMobileTarget ? <span /> : <TargetToggle target={target} onChange={switchTarget} />}
+        {!hideMobileTarget && showClearMobile && (
           <button
             type="button"
             onClick={() => {
