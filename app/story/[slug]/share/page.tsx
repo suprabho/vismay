@@ -1,7 +1,5 @@
-export const revalidate = 60
-
 import { notFound } from 'next/navigation'
-import { getStoryContent, getViewableStorySlugs } from '@/lib/content'
+import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig, loadShareConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { getFontImportUrl } from '@/lib/getFontImports'
@@ -11,18 +9,14 @@ import ShareShell from '@/components/share/ShareShell'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ ratio?: string }>
 }
 
-export async function generateStaticParams() {
-  const slugs = await getViewableStorySlugs()
-  const withConfig = await Promise.all(
-    slugs.map(async (slug) => ((await hasStoryConfig(slug)) ? slug : null))
-  )
-  return withConfig.filter((s): s is string => s !== null).map((slug) => ({ slug }))
-}
-
-export default async function SharePage({ params }: RouteParams) {
+export default async function SharePage({ params, searchParams }: RouteParams) {
   const { slug } = await params
+  const sp = await searchParams
+  const initialRatio: '1:1' | '3:4' | '4:3' =
+    sp.ratio === '1:1' || sp.ratio === '4:3' ? sp.ratio : '3:4'
 
   let story
   let config
@@ -57,6 +51,7 @@ export default async function SharePage({ params }: RouteParams) {
         accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
         shareOverrides={shareConfig?.sections ?? null}
         logo={logo}
+        initialRatio={initialRatio}
       />
     </ThemeProvider>
   )

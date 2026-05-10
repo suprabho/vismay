@@ -17,6 +17,7 @@ interface Props {
   accessToken: string
   shareOverrides: Record<string, ShareSectionOverride> | null
   logo?: string
+  initialRatio: AspectRatio
 }
 
 interface CardEntry {
@@ -136,16 +137,10 @@ function buildCardList(
   return cards
 }
 
-export default function ShareShell({ slug, units, config, title, accessToken, shareOverrides, logo }: Props) {
-  // Headless capture hook: when the URL carries `?ratio=`, lock the ratio so
-  // a Playwright-driven share render captures cards at the requested size
-  // without UI input. No-op for normal users.
-  const initialRatio: AspectRatio = (() => {
-    if (typeof window === 'undefined') return '3:4'
-    const param = new URLSearchParams(window.location.search).get('ratio')
-    if (param === '1:1' || param === '3:4' || param === '4:3') return param
-    return '3:4'
-  })()
+export default function ShareShell({ slug, units, config, title, accessToken, shareOverrides, logo, initialRatio }: Props) {
+  // `initialRatio` is seeded by the server from `?ratio=` so the first paint
+  // (and the Playwright share-render capture) has the correct card dimensions.
+  // After mount, `setRatio` keeps the in-page AspectRatioToggle interactive.
   const [ratio, setRatio] = useState<AspectRatio>(initialRatio)
   const [downloading, setDownloading] = useState(false)
   const cardRefs = useRef<(ShareCardHandle | null)[]>([])
@@ -220,7 +215,7 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
       delete w.__captureByIndex__
       delete w.__shareCards__
     }
-  }, [cards])
+  }, [cards, ratio])
 
   const handleSave = useCallback(async () => {
     setSaving(true)
