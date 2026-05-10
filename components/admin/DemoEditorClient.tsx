@@ -190,6 +190,7 @@ export default function DemoEditorClient({ demoId, initial, defaultContentYaml }
         {tab === 'share' && (
           <ShareTab
             demoId={demoId}
+            storySlug={storySlug}
             picked={pickedIds}
             setPicked={setPickedIds}
           />
@@ -342,16 +343,20 @@ function ContentTab({
 
 function ShareTab({
   demoId,
+  storySlug,
   picked,
   setPicked,
 }: {
   demoId: number
+  storySlug: string
   picked: Set<string>
   setPicked: (s: Set<string>) => void
 }) {
   const [cards, setCards] = useState<ShareCardEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rendering, setRendering] = useState(false)
+  const [renderingVideo, setRenderingVideo] = useState(false)
+  const [renderingPdf, setRenderingPdf] = useState(false)
 
   useEffect(() => {
     fetch(`/api/admin/demos/${demoId}/cards`)
@@ -394,6 +399,62 @@ function ShareTab({
     }
   }
 
+  async function triggerVideoRender() {
+    setRenderingVideo(true)
+    try {
+      const results = await Promise.all(
+        (['9:16', '16:9'] as const).map(async (aspect) => {
+          const res = await fetch(
+            `/api/story-video/${storySlug}?aspect=${encodeURIComponent(aspect)}&preview=1&force=1`
+          )
+          const body = await res.json().catch(() => ({}))
+          return { aspect, ok: res.ok || res.status === 202, status: res.status, body }
+        })
+      )
+      const failed = results.filter((r) => !r.ok)
+      if (failed.length > 0) {
+        alert(
+          failed
+            .map((f) => `${f.aspect}: ${f.body.error ?? `HTTP ${f.status}`}`)
+            .join('\n')
+        )
+      } else {
+        const dispatched = results.every((r) => r.status === 202)
+        alert(dispatched ? 'Video renders dispatched (9:16 + 16:9)' : 'Video renders complete')
+      }
+    } finally {
+      setRenderingVideo(false)
+    }
+  }
+
+  async function triggerPdfRender() {
+    setRenderingPdf(true)
+    try {
+      const results = await Promise.all(
+        (['report', 'slides'] as const).map(async (format) => {
+          const res = await fetch(
+            `/api/story-pdf/${storySlug}?format=${format}&force=1`
+          )
+          const body = await res.json().catch(() => ({}))
+          return { format, ok: res.ok || res.status === 202, status: res.status, body }
+        })
+      )
+      const failed = results.filter((r) => !r.ok)
+      if (failed.length > 0) {
+        alert(
+          failed
+            .map((f) => `${f.format}: ${f.body.error ?? `HTTP ${f.status}`}`)
+            .join('\n')
+        )
+      } else {
+        const dispatched = results.every((r) => r.status === 202)
+        alert(dispatched ? 'PDF renders dispatched (report + slides)' : 'PDF renders complete')
+      }
+    } finally {
+      setRenderingPdf(false)
+    }
+  }
+
   if (cards == null) return <div className="text-sm text-neutral-400">Loading cards…</div>
 
   return (
@@ -408,6 +469,22 @@ function ShareTab({
           <span className="text-xs text-neutral-500">
             {picked.size} / {MAX_CURATED_CARDS} selected
           </span>
+          <button
+            onClick={triggerPdfRender}
+            disabled={renderingPdf}
+            className="bg-white/10 hover:bg-white/20 disabled:opacity-40 rounded-md px-3 py-1.5 text-xs"
+            title="Force re-render report + slides PDFs (bypasses cache)"
+          >
+            {renderingPdf ? 'Rendering PDFs…' : 'Render PDFs'}
+          </button>
+          <button
+            onClick={triggerVideoRender}
+            disabled={renderingVideo}
+            className="bg-white/10 hover:bg-white/20 disabled:opacity-40 rounded-md px-3 py-1.5 text-xs"
+            title="Force re-render preview videos for both aspects (bypasses cache)"
+          >
+            {renderingVideo ? 'Rendering videos…' : 'Render videos'}
+          </button>
           <button
             onClick={triggerRender}
             disabled={rendering || picked.size === 0}
