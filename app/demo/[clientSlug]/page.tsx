@@ -35,14 +35,16 @@ export default async function DemoRoute({ params }: Props) {
   const adminBypass = await isAuthed()
 
   // Non-admins always go through the login form when access conditions
-  // aren't met. Same redirect for missing/draft/wrong-cookie so there's
+  // aren't met. Same redirect for missing/archived/wrong-cookie so there's
   // no slug-enumeration channel — the auth route returns the same 401
-  // for unknown slugs and wrong passwords. Admins skip this gate so they
-  // can preview without juggling demo passwords during prep.
+  // for unknown slugs and wrong passwords. Drafts are reachable with the
+  // right password (status is a label, not an extra gate); only archived
+  // demos are off-limits. Admins skip this gate so they can preview
+  // without juggling demo passwords during prep.
   if (!adminBypass) {
     if (
       !demo ||
-      demo.status !== 'live' ||
+      demo.status === 'archived' ||
       !(await isDemoAuthed(clientSlug, demo.password_hash))
     ) {
       redirect(`/demo/${clientSlug}/login`)

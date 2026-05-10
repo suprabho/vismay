@@ -30,6 +30,9 @@ export default async function DemoLoginPage({ params }: Props) {
   // same generic 401 whether the slug is unknown or the password is wrong.
   const demo = await getDemoByClientSlug(clientSlug)
 
+  // Mirror the gate in /demo/<slug>: archived blocks; draft + live both let
+  // an authed user through. Must match the page's condition exactly or the
+  // page-redirects-to-login plus login-redirects-to-page handshake loops.
   if (demo && demo.status !== 'archived' && (await isDemoAuthed(clientSlug, demo.password_hash))) {
     redirect(`/demo/${clientSlug}`)
   }

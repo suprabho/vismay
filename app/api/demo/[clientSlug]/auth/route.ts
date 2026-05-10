@@ -33,8 +33,11 @@ export async function POST(
   }
 
   const demo = await getDemoByClientSlug(clientSlug)
+  // Drafts are reachable with the right password — `status` is a label,
+  // not an extra gate. Archived/missing collapse into the same generic
+  // 401 as wrong-password to avoid leaking which slugs exist. Must agree
+  // with the page + login-redirect checks below or we get a redirect loop.
   if (!demo || demo.status === 'archived') {
-    // Don't leak existence — same response as wrong password.
     return NextResponse.json({ error: 'invalid password' }, { status: 401 })
   }
 
