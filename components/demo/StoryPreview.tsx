@@ -16,8 +16,9 @@
  * conversion: `scale()` requires a unitless number, and a plain
  * `calc(100cqw / 1440)` evaluates to a `<length>`, which is invalid.
  *
- * Layout: on lg+ the phone is pinned bottom-right of the desktop iframe
- * (Apple feature-page style). Below lg only the phone shows, stacked.
+ * Layout: on lg+ the desktop sits in a browser-chrome bezel with the
+ * phone bezel beside it (flex row, bottoms aligned). Below lg only the
+ * phone shows, stacked.
  */
 
 interface Props {
@@ -45,6 +46,11 @@ const BEZEL_W_MOBILE = 280
 // Bezel padding around the screen.
 const BEZEL_PAD = 10
 
+// Desktop browser-chrome frame.
+const DESKTOP_FRAME_PAD = 10
+const DESKTOP_CHROME_H = 26
+const DESKTOP_FRAME_RADIUS = 12
+
 function scaleFor(bezelW: number): number {
   const screenW = bezelW - BEZEL_PAD * 2
   return screenW / NATIVE_W
@@ -66,39 +72,39 @@ export default function StoryPreview({ storySlug }: Props) {
   const storyUrl = `/story/${storySlug}`
   return (
     <div className="relative" style={{ borderColor: 'var(--demo-fg-line)' }}>
-      <div
-        className="relative w-full overflow-hidden border hidden lg:block"
-        style={{
-          aspectRatio: `${DESKTOP_NATIVE_W} / ${DESKTOP_NATIVE_H}`,
-          background: '#000',
-          borderColor: 'var(--demo-fg-line)',
-          containerType: 'inline-size',
-        }}
-      >
-        <iframe
-          src={storyUrl}
-          title="Story (desktop)"
-          loading="lazy"
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: DESKTOP_NATIVE_W,
-            height: DESKTOP_NATIVE_H,
-            border: 0,
-            transform: `scale(tan(atan2(100cqw, ${DESKTOP_NATIVE_W}px)))`,
-            transformOrigin: 'top left',
-          }}
-        />
+      {/* lg+ side-by-side: desktop bezel (flex-1) + phone bezel (fixed). */}
+      <div className="hidden lg:flex items-end gap-6">
+        <DesktopFrame className="flex-1">
+          <div
+            className="relative w-full overflow-hidden"
+            style={{
+              aspectRatio: `${DESKTOP_NATIVE_W} / ${DESKTOP_NATIVE_H}`,
+              background: '#000',
+              containerType: 'inline-size',
+            }}
+          >
+            <iframe
+              src={storyUrl}
+              title="Story (desktop)"
+              loading="lazy"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: DESKTOP_NATIVE_W,
+                height: DESKTOP_NATIVE_H,
+                border: 0,
+                transform: `scale(tan(atan2(100cqw, ${DESKTOP_NATIVE_W}px)))`,
+                transformOrigin: 'top left',
+              }}
+            />
+          </div>
+        </DesktopFrame>
 
-        {/* Phone-frame mockup pinned bottom-right. Sized to fit inside the
-            16:9 hero block at typical desktop viewports without overflowing. */}
         <div
-          className="absolute z-10"
+          className="relative shrink-0"
           style={{
-            right: 24,
-            bottom: 24,
             width: BEZEL_W_DESKTOP,
             height: DESKTOP_BEZEL_H,
             padding: BEZEL_PAD,
@@ -132,6 +138,52 @@ export default function StoryPreview({ storySlug }: Props) {
         >
           <PhoneScreen storyUrl={storyUrl} scale={MOBILE_SCALE} />
         </div>
+      </div>
+    </div>
+  )
+}
+
+function DesktopFrame({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: '#1a1a1a',
+        border: '1px solid rgb(var(--demo-fg-rgb) / 0.25)',
+        borderRadius: DESKTOP_FRAME_RADIUS,
+        padding: DESKTOP_FRAME_PAD,
+        paddingTop: DESKTOP_CHROME_H,
+        boxShadow: '0 30px 60px -20px rgba(0,0,0,0.7)',
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 9,
+          left: 12,
+          display: 'flex',
+          gap: 6,
+        }}
+      >
+        <span style={{ width: 9, height: 9, borderRadius: 9, background: '#ff5f57' }} />
+        <span style={{ width: 9, height: 9, borderRadius: 9, background: '#febc2e' }} />
+        <span style={{ width: 9, height: 9, borderRadius: 9, background: '#28c840' }} />
+      </div>
+      <div
+        style={{
+          borderRadius: 6,
+          overflow: 'hidden',
+          background: '#000',
+        }}
+      >
+        {children}
       </div>
     </div>
   )
