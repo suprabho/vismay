@@ -64,12 +64,15 @@ export default function PreviewFrame({
         }}
       >
         {/*
-         * `zoom` instead of `transform: scale()` — Mapbox GL's WebGL canvas
-         * renders blank under a CSS transform because getBoundingClientRect
-         * reports post-transform dimensions while the GL viewport is set
-         * from the un-transformed offsetWidth, so the canvas ends up sized
-         * to nothing. `zoom` actually changes layout dimensions, which both
-         * Mapbox and ECharts handle correctly.
+         * `transform: scale()` (not `zoom`) — in Chrome, CSS `zoom` propagates
+         * into descendants' `clientWidth`, so Mapbox (which sizes its WebGL
+         * canvas from `container.clientWidth`) reads already-scaled dimensions
+         * and the canvas then gets scaled AGAIN by the parent zoom — ending up
+         * `scale²` the size it should be. With `transform: scale()`, layout
+         * dimensions stay native, Mapbox sizes the canvas to the full 1920×1080
+         * frame, and the visual transform shrinks it once to fit the wrapper.
+         * `transform-origin: top left` keeps the visual top-left aligned with
+         * the wrapper's top-left so `overflow: hidden` clips cleanly.
          */}
         <div
           style={{
@@ -78,7 +81,8 @@ export default function PreviewFrame({
             left: 0,
             width: `${nativeWidth}px`,
             height: `${nativeHeight}px`,
-            zoom: scale,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
           }}
         >
           {children}
