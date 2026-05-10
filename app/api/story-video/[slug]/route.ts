@@ -68,6 +68,7 @@ export async function GET(
     )
   }
   const force = url.searchParams.get('force') === '1'
+  const preview = url.searchParams.get('preview') === '1'
 
   // The headless browser fetches `/story/<slug>?autoplay=1` from this same
   // app — derive the base URL from the incoming request so it works in dev,
@@ -90,7 +91,7 @@ export async function GET(
 
   // Inspect the existing row (if any) and decide what to do.
   if (!force) {
-    const row = await getCachedVideo(supabase, slug, aspect)
+    const row = await getCachedVideo(supabase, slug, aspect, preview)
     const state = classifyVideoState(row, hash)
     if (state.kind === 'ready') {
       return NextResponse.json({
@@ -101,8 +102,8 @@ export async function GET(
       })
     }
     if (state.kind === 'rendering') {
-      // A workflow is already in flight for this (slug, aspect, hash). The
-      // 202 keeps the client polling, but we don't fire another dispatch.
+      // A workflow is already in flight for this (slug, aspect, preview, hash).
+      // The 202 keeps the client polling, but we don't fire another dispatch.
       return NextResponse.json({ status: 'rendering' }, { status: 202 })
     }
     // 'stale' falls through to a fresh dispatch; 'missing' too.
@@ -111,11 +112,8 @@ export async function GET(
   // Async path: hand the work to GitHub Actions.
   if (isDispatchConfigured()) {
     try {
-      // Mark in-flight BEFORE dispatching. If the dispatch itself fails the
-      // stub stays — that's fine, the next poll within 30 min reads it as
-      // `rendering`, and after 30 min as `stale` and tries again.
-      await markDispatched(supabase, { slug, aspect, audioRevisionHash: hash })
-      await dispatchRenderJob({ slug, aspect, baseUrl })
+      await markDispatched(supabase, { slug, aspect, audioRevisionHash: hash, preview })
+      await dispatchRenderJob({ slug, aspect, baseUrl, preview })
       return NextResponse.json({ status: 'rendering' }, { status: 202 })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'dispatch failed'
@@ -131,6 +129,7 @@ export async function GET(
       aspect,
       baseUrl,
       force,
+      preview,
     })
     return NextResponse.json({ status: 'ready', ...result })
   } catch (err) {

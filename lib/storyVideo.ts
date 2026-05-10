@@ -65,13 +65,15 @@ export interface CachedVideo {
 export async function getCachedVideo(
   supabase: SupabaseClient,
   slug: string,
-  aspect: VideoAspect
+  aspect: VideoAspect,
+  preview: boolean = false
 ): Promise<CachedVideo | null> {
   const { data, error } = await supabase
     .from('story_videos')
     .select('public_url, audio_revision_hash, duration_ms, dispatched_at')
     .eq('slug', slug)
     .eq('aspect', aspect)
+    .eq('preview', preview)
     .maybeSingle()
   if (error) {
     console.error(`[storyVideo] cache lookup failed: ${error.message}`)
@@ -127,21 +129,28 @@ export function classifyVideoState(
  */
 export async function markDispatched(
   supabase: SupabaseClient,
-  args: { slug: string; aspect: VideoAspect; audioRevisionHash: string }
+  args: {
+    slug: string
+    aspect: VideoAspect
+    audioRevisionHash: string
+    preview?: boolean
+  }
 ): Promise<void> {
   const aspectKey = args.aspect === '9:16' ? '9x16' : '16x9'
-  const storagePath = `${args.slug}/${aspectKey}.mp4`
+  const preview = args.preview ?? false
+  const storagePath = `${args.slug}/${aspectKey}${preview ? '__preview' : ''}.mp4`
   const { error } = await supabase.from('story_videos').upsert(
     {
       slug: args.slug,
       aspect: args.aspect,
+      preview,
       storage_path: storagePath,
       public_url: '',
       audio_revision_hash: args.audioRevisionHash,
       duration_ms: null,
       dispatched_at: new Date().toISOString(),
     },
-    { onConflict: 'slug,aspect' }
+    { onConflict: 'slug,aspect,preview' }
   )
   if (error) throw new Error(`mark dispatched: ${error.message}`)
 }

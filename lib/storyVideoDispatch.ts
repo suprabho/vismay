@@ -29,6 +29,7 @@ export async function dispatchRenderJob(args: {
   slug: string
   aspect: VideoAspect
   baseUrl: string
+  preview?: boolean
 }): Promise<void> {
   const token = process.env.GITHUB_DISPATCH_TOKEN
   const repo = process.env.GITHUB_DISPATCH_REPO
@@ -57,6 +58,7 @@ export async function dispatchRenderJob(args: {
           slug: args.slug,
           aspect: args.aspect,
           base_url: args.baseUrl,
+          preview: args.preview ? '1' : '0',
         },
       }),
     }

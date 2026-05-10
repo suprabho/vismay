@@ -232,15 +232,23 @@ export default function AdminHome() {
           <h1 className="text-lg font-semibold">Stories</h1>
           <p className="text-sm text-neutral-400 mt-0.5">{stories.length} total</p>
         </div>
-        <button
-          type="button"
-          disabled={uploadBusy}
-          onClick={() => uploadInputRef.current?.click()}
-          className="text-sm text-neutral-300 hover:text-white shrink-0 disabled:opacity-40 px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
-          title="Upload .md + optional .config.yaml / .share.yaml / chart .json files for one story"
-        >
-          {uploadBusy ? 'uploading…' : '↑ upload story'}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/demos"
+            className="text-sm text-neutral-300 hover:text-white shrink-0 px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
+          >
+            Demos →
+          </Link>
+          <button
+            type="button"
+            disabled={uploadBusy}
+            onClick={() => uploadInputRef.current?.click()}
+            className="text-sm text-neutral-300 hover:text-white shrink-0 disabled:opacity-40 px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
+            title="Upload .md + optional .config.yaml / .share.yaml / chart .json files for one story"
+          >
+            {uploadBusy ? 'uploading…' : '↑ upload story'}
+          </button>
+        </div>
         <input
           ref={uploadInputRef}
           type="file"

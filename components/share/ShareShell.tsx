@@ -137,7 +137,16 @@ function buildCardList(
 }
 
 export default function ShareShell({ slug, units, config, title, accessToken, shareOverrides, logo }: Props) {
-  const [ratio, setRatio] = useState<AspectRatio>('3:4')
+  // Headless capture hook: when the URL carries `?ratio=`, lock the ratio so
+  // a Playwright-driven share render captures cards at the requested size
+  // without UI input. No-op for normal users.
+  const initialRatio: AspectRatio = (() => {
+    if (typeof window === 'undefined') return '3:4'
+    const param = new URLSearchParams(window.location.search).get('ratio')
+    if (param === '1:1' || param === '3:4' || param === '4:3') return param
+    return '3:4'
+  })()
+  const [ratio, setRatio] = useState<AspectRatio>(initialRatio)
   const [downloading, setDownloading] = useState(false)
   const cardRefs = useRef<(ShareCardHandle | null)[]>([])
 
@@ -177,6 +186,41 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
   }, [dirty])
 
   const cards = useMemo(() => buildCardList(units, draftOverrides), [units, draftOverrides])
+
+  // Expose a headless-capture API on `window` so the demo share-render
+  // pipeline can drive captures without simulating user input. Stable card
+  // identity matches `lib/shareCardList.ts` so the renderer can target a
+  // specific card by id. Per-(parent,sub,variant) slice counter mirrors
+  // the iteration order in lib/shareCardList.ts buildShareCardList.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    interface CaptureWindow extends Window {
+      __shareCards__?: { id: string; index: number; variant: string; label: string }[]
+      __captureByIndex__?: (i: number) => Promise<string | null>
+      __shareReady__?: boolean
+    }
+    const w = window as unknown as CaptureWindow
+    const sliceCounters = new Map<string, number>()
+    w.__shareCards__ = cards.map((card, i) => {
+      const variantId = card.variant === 'map-title' ? 'map-title' : card.variant === 'graph' ? 'graph' : 'auto'
+      const counterKey = `${card.unit.parentIndex}-${card.unit.subIndex}-${variantId}`
+      const sliceIdx = sliceCounters.get(counterKey) ?? 0
+      sliceCounters.set(counterKey, sliceIdx + 1)
+      const id = `${card.unit.parentIndex}-${card.unit.subIndex}-${sliceIdx}-${variantId}`
+      return { id, index: i, variant: card.variant, label: card.label }
+    })
+    w.__captureByIndex__ = async (i: number) => {
+      const handle = cardRefs.current[i]
+      if (!handle) return null
+      return handle.capture()
+    }
+    w.__shareReady__ = true
+    return () => {
+      w.__shareReady__ = false
+      delete w.__captureByIndex__
+      delete w.__shareCards__
+    }
+  }, [cards])
 
   const handleSave = useCallback(async () => {
     setSaving(true)

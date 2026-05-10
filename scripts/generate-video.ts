@@ -50,10 +50,11 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 async function main() {
   const args = process.argv.slice(2)
   const force = args.includes('--force')
+  const preview = args.includes('--preview')
   const positional = args.filter((a) => !a.startsWith('--'))
 
   if (positional.length < 2) {
-    console.error('Usage: npx tsx scripts/generate-video.ts <slug> <9:16|16:9> [--force]')
+    console.error('Usage: npx tsx scripts/generate-video.ts <slug> <9:16|16:9> [--force] [--preview]')
     process.exit(1)
   }
   const [slug, aspectArg] = positional
@@ -64,13 +65,10 @@ async function main() {
   const aspect = aspectArg as VideoAspect
 
   const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!)
-  // CI / dispatched-render path passes BASE_URL pointing at the deployed site
-  // so the headless browser can hit it without needing a dev server in the
-  // workflow runner. Local dev defaults to localhost.
   const baseUrl =
     process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
 
-  console.log(`\n━━━ ${slug} · ${aspect} ━━━`)
+  console.log(`\n━━━ ${slug} · ${aspect}${preview ? ' · preview (20s)' : ''} ━━━`)
   console.log(`  baseUrl: ${baseUrl}`)
 
   const result = await renderStoryVideo({
@@ -79,6 +77,7 @@ async function main() {
     aspect,
     baseUrl,
     force,
+    preview,
     log: (msg) => console.log(`  ${msg}`),
   })
 

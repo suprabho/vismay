@@ -63,12 +63,17 @@ export interface RenderResult {
   content_revision_hash: string
 }
 
+interface PdfRenderResult {
+  pdfBuffer: Buffer
+  thumbnailBuffer: Buffer | null
+}
+
 async function renderPdfBuffer(args: {
   slug: string
   format: PdfFormat
   baseUrl: string
   log: (msg: string) => void
-}): Promise<Buffer> {
+}): Promise<PdfRenderResult> {
   const cfg = RENDER_CONFIG[args.format]
 
   const browser = await chromium.launch({
@@ -133,8 +138,31 @@ async function renderPdfBuffer(args: {
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     })
 
+    // First-page screenshot for the demo gallery thumbnail. The page is
+    // already rendered at print viewport; capturing the visible viewport
+    // (no scroll) gives us page 1 — both report and slides routes start
+    // page 1 at the top of the document, so this is page-accurate.
+    let thumbnailBytes: Buffer | null = null
+    try {
+      args.log('capturing first-page thumbnail')
+      const screenshot = await page.screenshot({
+        type: 'png',
+        clip: {
+          x: 0,
+          y: 0,
+          width: cfg.viewport.width,
+          height: cfg.viewport.height,
+        },
+      })
+      thumbnailBytes = Buffer.from(screenshot)
+    } catch (err) {
+      args.log(
+        `thumbnail capture failed (non-fatal): ${err instanceof Error ? err.message : err}`
+      )
+    }
+
     await context.close()
-    return Buffer.from(pdfBytes)
+    return { pdfBuffer: Buffer.from(pdfBytes), thumbnailBuffer: thumbnailBytes }
   } finally {
     await browser.close()
   }
@@ -146,7 +174,8 @@ async function uploadAndRecord(args: {
   format: PdfFormat
   contentRevisionHash: string
   pdfBuffer: Buffer
-}): Promise<string> {
+  thumbnailBuffer: Buffer | null
+}): Promise<{ publicUrl: string; thumbnailUrl: string | null }> {
   const storagePath = `${args.slug}/${args.format}.pdf`
 
   const { error: uploadErr } = await args.supabase.storage
@@ -160,12 +189,27 @@ async function uploadAndRecord(args: {
   const { data } = args.supabase.storage.from(PDF_BUCKET).getPublicUrl(storagePath)
   const publicUrl = data.publicUrl
 
+  let thumbnailUrl: string | null = null
+  if (args.thumbnailBuffer) {
+    const thumbPath = `${args.slug}/${args.format}__thumb.png`
+    const { error: thumbErr } = await args.supabase.storage
+      .from(PDF_BUCKET)
+      .upload(thumbPath, args.thumbnailBuffer, {
+        contentType: 'image/png',
+        upsert: true,
+      })
+    if (!thumbErr) {
+      thumbnailUrl = args.supabase.storage.from(PDF_BUCKET).getPublicUrl(thumbPath).data.publicUrl
+    }
+  }
+
   const { error: dbErr } = await args.supabase.from('story_pdfs').upsert(
     {
       slug: args.slug,
       format: args.format,
       storage_path: storagePath,
       public_url: publicUrl,
+      thumbnail_url: thumbnailUrl,
       content_revision_hash: args.contentRevisionHash,
       // Clear the in-flight stub timestamp set by markPdfDispatched().
       // classifyPdfState() prefers `public_url` regardless, but nulling
@@ -176,7 +220,7 @@ async function uploadAndRecord(args: {
   )
   if (dbErr) throw new Error(`db upsert: ${dbErr.message}`)
 
-  return publicUrl
+  return { publicUrl, thumbnailUrl }
 }
 
 export async function renderStoryPdf(args: {
@@ -205,7 +249,7 @@ export async function renderStoryPdf(args: {
   }
 
   log(`rendering ${args.format} via ${args.baseUrl}`)
-  const pdfBuffer = await renderPdfBuffer({
+  const { pdfBuffer, thumbnailBuffer } = await renderPdfBuffer({
     slug: args.slug,
     format: args.format,
     baseUrl: args.baseUrl,
@@ -213,12 +257,13 @@ export async function renderStoryPdf(args: {
   })
 
   log(`uploading ${(pdfBuffer.length / 1024).toFixed(1)}KB to ${PDF_BUCKET}`)
-  const publicUrl = await uploadAndRecord({
+  const { publicUrl } = await uploadAndRecord({
     supabase: args.supabase,
     slug: args.slug,
     format: args.format,
     contentRevisionHash,
     pdfBuffer,
+    thumbnailBuffer,
   })
 
   log(`✓ ${publicUrl}`)

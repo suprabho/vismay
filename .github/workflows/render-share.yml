@@ -1,0 +1,55 @@
+name: Render demo share assets
+
+# Triggered by /api/admin/demos/[id]/render-share when sales clicks
+# "Render share assets" in the admin demo editor. Runs Playwright on
+# ubuntu-latest to drive the existing /story/<slug>/share page and
+# upload PNGs to the story-share bucket.
+#
+# Same secrets as render-pdf.yml: Supabase URL + service role + Mapbox.
+# No ffmpeg required.
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo_id:
+        description: Demo row id
+        required: true
+        type: string
+      base_url:
+        description: Site URL the headless browser should hit
+        required: true
+        type: string
+        default: https://vizmaya.fyi
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Render share assets
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
+          BASE_URL: ${{ inputs.base_url }}
+        run: pnpm exec tsx scripts/generate-share.ts "${{ inputs.demo_id }}"

@@ -29,6 +29,11 @@ on:
         required: true
         type: string
         default: https://vizmaya.fyi
+      preview:
+        description: 1 = render 20-second preview clip; 0 = full-length
+        required: false
+        type: string
+        default: '0'
 
 jobs:
   render:
@@ -71,4 +76,4 @@ jobs:
         # `--force` because cache-miss is the only reason this workflow runs.
         # The API route only dispatches after confirming the cached row's
         # hash doesn't match the current audio_revision_hash.
-        run: pnpm exec tsx scripts/generate-video.ts "${{ inputs.slug }}" "${{ inputs.aspect }}" --force
+        run: pnpm exec tsx scripts/generate-video.ts "${{ inputs.slug }}" "${{ inputs.aspect }}" --force ${{ inputs.preview == '1' && '--preview' || '' }}

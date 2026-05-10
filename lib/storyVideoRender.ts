@@ -146,6 +146,9 @@ interface PlaywrightRenderResult {
  * per unit equals (end_ms - start_ms) so the recorded footage shares the
  * same timeline as the audio.
  */
+/** Cap length for the demo preview render. Plan locked at 20s. */
+const PREVIEW_CAP_MS = 20_000
+
 async function walkAndRecord(args: {
   slug: string
   aspect: VideoAspect
@@ -153,6 +156,8 @@ async function walkAndRecord(args: {
   workDir: string
   chunks: ChunkRow[]
   cues: CueRow[]
+  /** When true, cap the walk + audio at PREVIEW_CAP_MS for short previews. */
+  preview?: boolean
 }): Promise<PlaywrightRenderResult> {
   const cfg = RENDER_CONFIG[args.aspect]
 
@@ -182,6 +187,12 @@ async function walkAndRecord(args: {
     chunkOffsetMs.set(c.chunk_index, totalAudioMs)
     totalAudioMs += c.duration_ms
   }
+
+  // For preview renders we cap the walk at PREVIEW_CAP_MS. The cue list is
+  // truncated to whatever falls inside that window (we keep any cue whose
+  // *start* is < cap; the in-loop hold then clamps to cap below).
+  const targetWalkMs = args.preview ? Math.min(PREVIEW_CAP_MS, totalAudioMs) : totalAudioMs
+  const isPreview = !!args.preview
 
   const browser = await chromium.launch({
     args: [
@@ -266,6 +277,10 @@ async function walkAndRecord(args: {
   const walkStartMs = Date.now()
 
   for (const cue of ordered) {
+    const cueStartAbs = (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.start_ms
+    // Skip cues whose start is past the preview cap.
+    if (isPreview && cueStartAbs >= targetWalkMs) break
+
     await page.evaluate((idx) => {
       const el = document.querySelector(
         `[data-unit-index="${idx}"]`
@@ -273,8 +288,9 @@ async function walkAndRecord(args: {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, cue.unit_index)
 
-    const targetWallMs =
-      walkStartMs + (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.end_ms
+    const cueEndAbs = (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.end_ms
+    const cappedEndAbs = isPreview ? Math.min(cueEndAbs, targetWalkMs) : cueEndAbs
+    const targetWallMs = walkStartMs + cappedEndAbs
 
     // Wait for any active Mapbox camera transition to settle before
     // counting hold time, but cap at the smaller of 1.5s and the remaining
@@ -310,10 +326,10 @@ async function walkAndRecord(args: {
     if (remaining > 0) await page.waitForTimeout(remaining)
   }
 
-  // Hold the final frame until the absolute audio end. If we got here ahead
-  // of schedule (rare, but possible on a fast machine), waitForTimeout pads
-  // out to match audio duration so the trim window equals audio length.
-  const walkEndAbsMs = walkStartMs + totalAudioMs
+  // Hold the final frame until the absolute audio end (or preview cap).
+  // If we got here ahead of schedule (rare, but possible on a fast machine),
+  // waitForTimeout pads out so the trim window matches the target duration.
+  const walkEndAbsMs = walkStartMs + targetWalkMs
   const tailRemaining = Math.max(0, walkEndAbsMs - Date.now())
   if (tailRemaining > 0) await page.waitForTimeout(tailRemaining)
 
@@ -380,13 +396,15 @@ async function uploadAndRecord(args: {
   supabase: SupabaseClient
   slug: string
   aspect: VideoAspect
+  preview: boolean
   audioRevisionHash: string
   durationMs: number
   mp4Buffer: Buffer
 }): Promise<string> {
   // 16:9 contains a slash that's invalid in storage paths.
   const aspectKey = args.aspect === '9:16' ? '9x16' : '16x9'
-  const storagePath = `${args.slug}/${aspectKey}.mp4`
+  const suffix = args.preview ? '__preview' : ''
+  const storagePath = `${args.slug}/${aspectKey}${suffix}.mp4`
 
   const { error: uploadErr } = await args.supabase.storage
     .from(VIDEO_BUCKET)
@@ -403,6 +421,7 @@ async function uploadAndRecord(args: {
     {
       slug: args.slug,
       aspect: args.aspect,
+      preview: args.preview,
       storage_path: storagePath,
       public_url: publicUrl,
       audio_revision_hash: args.audioRevisionHash,
@@ -412,7 +431,7 @@ async function uploadAndRecord(args: {
       // but nulling this keeps the row's state unambiguous in DB readers.
       dispatched_at: null,
     },
-    { onConflict: 'slug,aspect' }
+    { onConflict: 'slug,aspect,preview' }
   )
   if (dbErr) throw new Error(`db upsert: ${dbErr.message}`)
 
@@ -433,9 +452,11 @@ export async function renderStoryVideo(args: {
   aspect: VideoAspect
   baseUrl: string
   force?: boolean
+  preview?: boolean
   log?: (msg: string) => void
 }): Promise<RenderResult> {
   const log = args.log ?? (() => {})
+  const preview = !!args.preview
 
   const { chunks, cues } = await loadChunksAndCues(args.supabase, args.slug)
   if (chunks.length === 0 || cues.length === 0) {
@@ -447,7 +468,7 @@ export async function renderStoryVideo(args: {
   const audioRevisionHash = computeAudioRevisionHash(chunks, cues)
 
   if (!args.force) {
-    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect)
+    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect, preview)
     if (existing && existing.audio_revision_hash === audioRevisionHash) {
       log(`cached (hash match) → ${existing.public_url}`)
       return {
@@ -469,7 +490,7 @@ export async function renderStoryVideo(args: {
 
     const cfg = RENDER_CONFIG[args.aspect]
     log(
-      `rendering ${cues.length} cue(s): viewport ${cfg.viewport.width}×${cfg.viewport.height} → output ${cfg.output.width}×${cfg.output.height} (lanczos upscale)`
+      `rendering ${cues.length} cue(s)${preview ? ' [preview, capped at 20s]' : ''}: viewport ${cfg.viewport.width}×${cfg.viewport.height} → output ${cfg.output.width}×${cfg.output.height} (lanczos upscale)`
     )
     const { videoPath, durationMs } = await walkAndRecord({
       slug: args.slug,
@@ -478,11 +499,31 @@ export async function renderStoryVideo(args: {
       workDir,
       chunks,
       cues,
+      preview,
     })
+
+    // For preview renders, trim the combined audio to durationMs so the
+    // mux doesn't tail off into post-cap audio. mux's `-shortest` would
+    // chop one or the other regardless, but explicit trim makes the
+    // output exact and avoids surprise frame-of-silence padding.
+    let muxAudioPath = combinedAudioPath
+    if (preview) {
+      muxAudioPath = path.join(workDir, 'audio-preview.wav')
+      await runFfmpeg(
+        [
+          '-y',
+          '-i', combinedAudioPath,
+          '-t', (durationMs / 1000).toFixed(3),
+          '-c', 'copy',
+          muxAudioPath,
+        ],
+        'audio-trim'
+      )
+    }
 
     log(`muxing video + audio (${(durationMs / 1000).toFixed(1)}s)`)
     const outPath = path.join(workDir, 'out.mp4')
-    await muxToMp4(videoPath, combinedAudioPath, outPath, cfg.output)
+    await muxToMp4(videoPath, muxAudioPath, outPath, cfg.output)
 
     const mp4Buffer = fs.readFileSync(outPath)
     log(`uploading ${(mp4Buffer.length / 1024 / 1024).toFixed(1)}MB to ${VIDEO_BUCKET}`)
@@ -490,6 +531,7 @@ export async function renderStoryVideo(args: {
       supabase: args.supabase,
       slug: args.slug,
       aspect: args.aspect,
+      preview,
       audioRevisionHash,
       durationMs,
       mp4Buffer,
