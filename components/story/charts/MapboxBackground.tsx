@@ -711,11 +711,11 @@ export default function MapboxBackground({
           `<div style="
             font-family: var(--font-mono);
             font-size: 0.7rem;
-            color: #e0ddd5;
-            background: rgba(10, 14, 20, 0.9);
+            color: var(--color-text);
+            background: rgb(var(--color-panel-rgb) / 0.9);
             padding: 4px 10px;
             border-radius: 4px;
-            border: 0.5px solid #1a2830;
+            border: 0.5px solid var(--color-line);
             ${staticCapture
               ? 'white-space: normal; max-width: 140px; text-align: left;'
               : 'white-space: nowrap;'}
