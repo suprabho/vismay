@@ -710,7 +710,8 @@ export default function MapboxBackground({
         }).setHTML(
           `<div style="
             font-family: var(--font-mono);
-            font-size: 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 600;
             color: var(--color-text);
             background: rgb(var(--color-panel-rgb) / 0.9);
             padding: 4px 10px;
