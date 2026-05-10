@@ -51,7 +51,7 @@ export default async function StoryReportPage({ params, searchParams }: RoutePar
 
   const { units } = resolveUnits(slug, story.sections, config)
   const reportConfigRaw = await getContentSource().readReportYaml(slug)
-  const reportConfig = parseReportConfig(reportConfigRaw)
+  const reportConfig = parseReportConfig(reportConfigRaw, 'report')
   const reportUnits = applyReportOverrides(units, reportConfig)
 
   const configWithDefaults = {

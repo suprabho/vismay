@@ -37,6 +37,20 @@ import {
  * fontstack here. The broader editor still owns those.
  */
 
+/**
+ * Optional frame reference. When provided, the map canvas is rendered at this
+ * aspect ratio so the user previews the camera against the actual output
+ * frame (e.g. the report PDF's map div, or a slide's map area). The focal-area
+ * overlay is replaced by a labelled border tracing the frame, and Mapbox
+ * padding is dropped to 0 since the entire frame is map (no overlay text).
+ */
+export interface PickerFrame {
+  width: number
+  height: number
+  /** Short label shown in the frame overlay, e.g. "Report map · 682×336". */
+  label: string
+}
+
 interface Props {
   sectionRaw: string
   sectionLabel: string
@@ -47,6 +61,10 @@ interface Props {
    *  Use for surfaces (e.g. the report builder) that don't render a mobile
    *  story view and only need the single landscape camera. */
   hideMobileTarget?: boolean
+  /** Constrain the map canvas to the given frame's aspect ratio and label it
+   *  as a reference rectangle. Implies `hideMobileTarget` semantics for the
+   *  focal padding (no story-style focal subarea is applied). */
+  frame?: PickerFrame
 }
 
 type Target = 'desktop' | 'mobile'
@@ -60,6 +78,7 @@ export default function MapPickerModal({
   onApply,
   onClose,
   hideMobileTarget = false,
+  frame,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -153,9 +172,16 @@ export default function MapPickerModal({
       const c = containerRef.current
       if (!m || !c) return
       m.resize()
-      m.setPadding(
-        computeStoryFocusPadding(c, STORY_LANDSCAPE_FOCUS_AREA, STORY_PORTRAIT_FOCUS_AREA)
-      )
+      // When a frame reference is set the map fills the frame entirely (no
+      // focal subarea), so padding is 0 — the camera frames against the same
+      // dimensions the user sees in the rendered PDF page.
+      if (frame) {
+        m.setPadding({ top: 0, bottom: 0, left: 0, right: 0 })
+      } else {
+        m.setPadding(
+          computeStoryFocusPadding(c, STORY_LANDSCAPE_FOCUS_AREA, STORY_PORTRAIT_FOCUS_AREA)
+        )
+      }
     }
     function applyInitialFocus() {
       const m = mapRef.current
@@ -283,18 +309,27 @@ export default function MapPickerModal({
         )}
       </div>
 
-      <div className="relative flex-1 min-h-0 bg-neutral-950 flex items-center justify-center">
+      <div className="relative flex-1 min-h-0 bg-neutral-950 flex items-center justify-center p-4">
         {token ? (
           <div
             className={
-              target === 'mobile'
-                ? 'relative h-full overflow-hidden'
-                : 'relative w-full h-full overflow-hidden'
+              frame
+                ? 'relative max-w-full max-h-full overflow-hidden'
+                : target === 'mobile'
+                  ? 'relative h-full overflow-hidden'
+                  : 'relative w-full h-full overflow-hidden'
             }
             style={
-              target === 'mobile'
-                ? { aspectRatio: '9 / 19.5', maxWidth: '100%' }
-                : undefined
+              frame
+                ? {
+                    aspectRatio: `${frame.width} / ${frame.height}`,
+                    width: '100%',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                  }
+                : target === 'mobile'
+                  ? { aspectRatio: '9 / 19.5', maxWidth: '100%' }
+                  : undefined
             }
           >
             {/* Mapbox sets `.mapboxgl-map { position: relative }` on its
@@ -303,9 +338,13 @@ export default function MapPickerModal({
                 instead of sizing, and the container collapses to 0×0. Use
                 explicit width/height like MapboxBackground does. */}
             <div ref={containerRef} className="w-full h-full" />
-            <FocusAreaOverlay
-              area={target === 'mobile' ? STORY_PORTRAIT_FOCUS_AREA : STORY_LANDSCAPE_FOCUS_AREA}
-            />
+            {frame ? (
+              <FrameOverlay frame={frame} />
+            ) : (
+              <FocusAreaOverlay
+                area={target === 'mobile' ? STORY_PORTRAIT_FOCUS_AREA : STORY_LANDSCAPE_FOCUS_AREA}
+              />
+            )}
           </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-neutral-400">
@@ -405,6 +444,20 @@ function FocusAreaOverlay({ area }: { area: StoryFocusArea }) {
     >
       <span className="absolute top-1 left-1 text-[10px] uppercase tracking-wider text-white/60 font-mono bg-black/50 px-1.5 py-0.5 rounded">
         focal area
+      </span>
+    </div>
+  )
+}
+
+/** Outline the entire canvas as the frame reference, with a label corner.
+ *  Used in the report builder where the map fills the actual output frame
+ *  rather than sitting under overlay text — so there's no focal subarea, just
+ *  a labelled border that matches the rendered map div's bounds. */
+function FrameOverlay({ frame }: { frame: PickerFrame }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none border border-dashed border-white/40 rounded-sm">
+      <span className="absolute top-1 left-1 text-[10px] uppercase tracking-wider text-white/60 font-mono bg-black/50 px-1.5 py-0.5 rounded">
+        {frame.label}
       </span>
     </div>
   )

@@ -56,7 +56,7 @@ export default async function StorySlidesPage({ params, searchParams }: RoutePar
   )
   const baseSlideUnits = hasShareOverrides ? shareUnits : units
   const reportConfigRaw = await getContentSource().readReportYaml(slug)
-  const reportConfig = parseReportConfig(reportConfigRaw)
+  const reportConfig = parseReportConfig(reportConfigRaw, 'slides')
   const slideUnits = applyReportOverrides(baseSlideUnits, reportConfig)
 
   const configWithDefaults = {

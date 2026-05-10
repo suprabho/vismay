@@ -3,19 +3,35 @@
  * `content/stories/<slug>.report.yaml` (fs) or `stories.report_yaml` (db) —
  * see `contentSource.readReportYaml`.
  *
- * Schema (intentionally narrow — see plan question answers):
+ * Schema (nested per format — report and slides each carry their own pages):
  *
- *   pages:
- *     - unit: { parentIndex: 0, subIndex: 0 }
- *       include: false                     # skip this unit in the export
- *     - unit: { parentIndex: 1, subIndex: 0 }
- *       heading: "Custom heading"          # overrides the unit heading
- *       subheading: "Custom subheading"
- *       paragraphs: ["..."]                # replaces unit.paragraphs entirely
- *       chartOverride: { id: "alt-chart" } # swap chart id (must exist in registry / data:)
- *       mapOverride:
- *         style: "mapbox://..."
- *         palette: { ... }                 # MapPalette subset
+ *   report:
+ *     pages:
+ *       - unit: { parentIndex: 0, subIndex: 0 }
+ *         include: false                     # skip this unit in the export
+ *       - unit: { parentIndex: 1, subIndex: 0 }
+ *         heading: "Custom heading"          # overrides the unit heading
+ *         subheading: "Custom subheading"
+ *         paragraphs: ["..."]                # replaces unit.paragraphs entirely
+ *         chartOverride: { id: "alt-chart" } # swap chart id (must exist in registry / data:)
+ *         mapOverride:
+ *           style: "mapbox://..."
+ *           palette: { ... }                 # MapPalette subset
+ *           center: [lng, lat]
+ *           zoom: 9.2
+ *           pitch: 30
+ *           bearing: 12
+ *   slides:
+ *     pages:
+ *       - unit: { parentIndex: 0, subIndex: 0 }
+ *         heading: "Different heading for slides"
+ *         mapOverride:
+ *           zoom: 7.5                        # slides-specific camera
+ *
+ * Legacy shape (still readable): a top-level `pages:` array with no
+ * `report:`/`slides:` keys is interpreted as applying to both formats. The
+ * builder always writes the nested shape on save, so this only matters until
+ * each story has been re-saved once.
  *
  * Unit identity is `(parentIndex, subIndex)` so the override survives
  * markdown reorders as long as the section/subsection layout is stable.
@@ -26,6 +42,8 @@
 
 import { parse as parseYaml } from 'yaml'
 import type { ResolvedUnit, MapPalette } from './storyConfig.types'
+
+export type OverrideFormat = 'report' | 'slides'
 
 export interface ReportPageOverride {
   parentIndex: number
@@ -39,7 +57,7 @@ export interface ReportPageOverride {
     style?: string
     palette?: MapPalette
     /** Per-page camera (center/zoom/pitch/bearing). Overrides the section's
-     *  `map:` block in the story config for the report and slides PDFs. */
+     *  `map:` block in the story config for the report or slides PDF. */
     center?: [number, number]
     zoom?: number
     pitch?: number
@@ -51,25 +69,15 @@ export interface ReportConfig {
   pages: ReportPageOverride[]
 }
 
-/**
- * Parse the YAML blob into a ReportConfig. Returns `null` for absent or
- * empty input so callers can treat "no overrides" identically to "no file."
- * Validation is intentionally permissive — unknown keys are dropped, but
- * malformed entries silently skip rather than throwing, so a typo can't
- * break a story page.
- */
-export function parseReportConfig(raw: string | null): ReportConfig | null {
-  if (!raw || !raw.trim()) return null
-  let doc: unknown
-  try {
-    doc = parseYaml(raw)
-  } catch {
-    return null
-  }
-  if (!doc || typeof doc !== 'object') return null
-  const pagesRaw = (doc as { pages?: unknown }).pages
-  if (!Array.isArray(pagesRaw)) return { pages: [] }
+export interface StoryOverridesConfig {
+  report: ReportConfig
+  slides: ReportConfig
+}
 
+const EMPTY: ReportConfig = { pages: [] }
+
+function parsePagesArray(pagesRaw: unknown): ReportPageOverride[] {
+  if (!Array.isArray(pagesRaw)) return []
   const pages: ReportPageOverride[] = []
   for (const entry of pagesRaw) {
     if (!entry || typeof entry !== 'object') continue
@@ -134,7 +142,55 @@ export function parseReportConfig(raw: string | null): ReportConfig | null {
     }
     pages.push(page)
   }
-  return { pages }
+  return pages
+}
+
+/**
+ * Parse the YAML blob into a StoryOverridesConfig with both formats
+ * populated. Returns empty configs (pages: []) for absent or empty input.
+ *
+ * Accepts both the new nested shape (`report:`/`slides:` keys) and the
+ * legacy flat shape (top-level `pages:`); legacy is mirrored into both
+ * formats so existing stories don't regress until they're re-saved.
+ */
+export function parseStoryOverrides(raw: string | null): StoryOverridesConfig {
+  if (!raw || !raw.trim()) return { report: { pages: [] }, slides: { pages: [] } }
+  let doc: unknown
+  try {
+    doc = parseYaml(raw)
+  } catch {
+    return { report: { pages: [] }, slides: { pages: [] } }
+  }
+  if (!doc || typeof doc !== 'object') {
+    return { report: { pages: [] }, slides: { pages: [] } }
+  }
+  const d = doc as Record<string, unknown>
+  const reportNode = d.report as { pages?: unknown } | undefined
+  const slidesNode = d.slides as { pages?: unknown } | undefined
+  if (reportNode || slidesNode) {
+    return {
+      report: { pages: parsePagesArray(reportNode?.pages) },
+      slides: { pages: parsePagesArray(slidesNode?.pages) },
+    }
+  }
+  // Legacy flat shape: a single `pages:` array applied to both formats.
+  const flat = parsePagesArray(d.pages)
+  return { report: { pages: flat }, slides: { pages: flat } }
+}
+
+/**
+ * Back-compat wrapper. `parseReportConfig(raw, format)` returns just the
+ * per-format ReportConfig, mirroring the old signature shape that callers
+ * already use. Pass `'report'` (default) or `'slides'`.
+ */
+export function parseReportConfig(
+  raw: string | null,
+  format: OverrideFormat = 'report'
+): ReportConfig | null {
+  const all = parseStoryOverrides(raw)
+  const cfg = all[format]
+  if (!raw || !raw.trim()) return null
+  return cfg.pages.length > 0 ? cfg : EMPTY
 }
 
 function findOverride(

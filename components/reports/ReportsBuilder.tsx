@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { stringify as stringifyYaml } from 'yaml'
 import {
-  parseReportConfig,
+  parseStoryOverrides,
   type ReportPageOverride,
 } from '@/lib/storyReportConfig'
 import { extractMapView, type MapView } from '@/lib/yamlMapPatch'
-import MapPickerModal from '@/components/admin/MapPickerModal'
+import MapPickerModal, {
+  type PickerFrame,
+} from '@/components/admin/MapPickerModal'
 
 export interface BuilderUnit {
   parentIndex: number
@@ -32,6 +34,19 @@ interface Props {
 
 type Format = 'report' | 'slides'
 
+/** Actual map-div dimensions inside each PDF page layout, used as the
+ *  "frame reference" rectangle in the map picker so the user can frame the
+ *  camera against the same aspect ratio they'll see in the rendered output.
+ *  Sources:
+ *    - report: ReportShell.tsx — full-width map @ 3.5in tall inside a 794×1123
+ *      page with 56px side padding. Effective 682×336 px.
+ *    - slides: SlidesShell.tsx — left-half map at 50% × (1080 - 64 - 48) px =
+ *      960×968 px. */
+const MAP_FRAME_BY_FORMAT: Record<Format, PickerFrame> = {
+  report: { width: 682, height: 336, label: 'Report map · 682×336' },
+  slides: { width: 960, height: 968, label: 'Slides map · 960×968' },
+}
+
 interface PageState {
   parentIndex: number
   subIndex: number
@@ -44,20 +59,19 @@ interface PageState {
   mapView: MapView | null
 }
 
+type PagesByFormat = Record<Format, PageState[]>
+
 function unitKey(u: { parentIndex: number; subIndex: number }): string {
   return `${u.parentIndex}.${u.subIndex}`
 }
 
-function buildInitialState(
+function buildPageStatesFor(
   units: BuilderUnit[],
-  initialYaml: string | null
+  pages: ReportPageOverride[]
 ): PageState[] {
-  const config = parseReportConfig(initialYaml)
   const overrides = new Map<string, ReportPageOverride>()
-  if (config) {
-    for (const p of config.pages) {
-      overrides.set(`${p.parentIndex}.${p.subIndex}`, p)
-    }
+  for (const p of pages) {
+    overrides.set(`${p.parentIndex}.${p.subIndex}`, p)
   }
   return units.map((u) => {
     const ov = overrides.get(unitKey(u))
@@ -84,6 +98,17 @@ function buildInitialState(
   })
 }
 
+function buildInitialState(
+  units: BuilderUnit[],
+  initialYaml: string | null
+): PagesByFormat {
+  const all = parseStoryOverrides(initialYaml)
+  return {
+    report: buildPageStatesFor(units, all.report.pages),
+    slides: buildPageStatesFor(units, all.slides.pages),
+  }
+}
+
 /** Round-trip helper: build a minimal `map:` YAML block so we can hand it to
  *  MapPickerModal (which speaks YAML). The modal hands back a patched YAML
  *  blob that we parse back into a MapView. */
@@ -97,7 +122,7 @@ function viewToFakeSectionRaw(view: MapView): string {
   ].join('\n')
 }
 
-function serializeToYaml(states: PageState[]): string {
+function pagesForFormat(states: PageState[]): ReportPageOverride[] {
   // Only emit entries that diverge from defaults to keep the YAML tidy.
   const pages: ReportPageOverride[] = []
   for (const s of states) {
@@ -140,9 +165,11 @@ function serializeToYaml(states: PageState[]): string {
     }
     if (dirty) pages.push(entry)
   }
-  if (pages.length === 0) return ''
-  // Use yaml's default emit; explicit unit object so the schema reads nicely.
-  return stringifyYaml({
+  return pages
+}
+
+function pagesToYamlNode(pages: ReportPageOverride[]) {
+  return {
     pages: pages.map((p) => ({
       unit: { parentIndex: p.parentIndex, subIndex: p.subIndex },
       ...(p.include === false && { include: false }),
@@ -152,7 +179,17 @@ function serializeToYaml(states: PageState[]): string {
       ...(p.chartOverride && { chartOverride: p.chartOverride }),
       ...(p.mapOverride && { mapOverride: p.mapOverride }),
     })),
-  })
+  }
+}
+
+function serializeToYaml(byFormat: PagesByFormat): string {
+  const reportPages = pagesForFormat(byFormat.report)
+  const slidesPages = pagesForFormat(byFormat.slides)
+  if (reportPages.length === 0 && slidesPages.length === 0) return ''
+  const doc: Record<string, unknown> = {}
+  if (reportPages.length > 0) doc.report = pagesToYamlNode(reportPages)
+  if (slidesPages.length > 0) doc.slides = pagesToYamlNode(slidesPages)
+  return stringifyYaml(doc)
 }
 
 function round(n: number, places: number): number {
@@ -169,9 +206,10 @@ export default function ReportsBuilder({
   initialPdfs,
 }: Props) {
   const [format, setFormat] = useState<Format>('report')
-  const [pages, setPages] = useState<PageState[]>(() =>
+  const [pagesByFormat, setPagesByFormat] = useState<PagesByFormat>(() =>
     buildInitialState(units, initialYaml)
   )
+  const pages = pagesByFormat[format]
   const [savedYaml, setSavedYaml] = useState<string>(initialYaml ?? '')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -184,7 +222,7 @@ export default function ReportsBuilder({
   const [iframeKey, setIframeKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const draftYaml = useMemo(() => serializeToYaml(pages), [pages])
+  const draftYaml = useMemo(() => serializeToYaml(pagesByFormat), [pagesByFormat])
   const dirty = draftYaml !== savedYaml
 
   useEffect(() => {
@@ -197,13 +235,16 @@ export default function ReportsBuilder({
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
 
-  const update = useCallback((idx: number, patch: Partial<PageState>) => {
-    setPages((prev) => {
-      const next = prev.slice()
-      next[idx] = { ...next[idx], ...patch }
-      return next
-    })
-  }, [])
+  const update = useCallback(
+    (idx: number, patch: Partial<PageState>) => {
+      setPagesByFormat((prev) => {
+        const list = prev[format].slice()
+        list[idx] = { ...list[idx], ...patch }
+        return { ...prev, [format]: list }
+      })
+    },
+    [format]
+  )
 
   const handleSave = useCallback(async () => {
     setSaving(true)
@@ -549,10 +590,11 @@ export default function ReportsBuilder({
           sectionRaw={viewToFakeSectionRaw(mapEditCurrent)}
           sectionLabel={
             mapEditUnit.eyebrow
-              ? `§${mapEditUnit.parentIndex}.${mapEditUnit.subIndex} · ${mapEditUnit.eyebrow}`
-              : `§${mapEditUnit.parentIndex}.${mapEditUnit.subIndex}`
+              ? `§${mapEditUnit.parentIndex}.${mapEditUnit.subIndex} · ${mapEditUnit.eyebrow} · ${format}`
+              : `§${mapEditUnit.parentIndex}.${mapEditUnit.subIndex} · ${format}`
           }
           hideMobileTarget
+          frame={MAP_FRAME_BY_FORMAT[format]}
           onApply={(nextRaw) => {
             const next = extractMapView(nextRaw)
             if (next && mapEditIdx !== null) {
