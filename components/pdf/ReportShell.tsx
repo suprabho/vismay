@@ -271,6 +271,10 @@ export default function ReportShell({
           fontFamily: 'var(--font-sans)',
         }}
       >
+        {/* `preferCSSPageSize: true` in page.pdf() honors this; without it
+            Chromium falls back to default Letter portrait and ignores the
+            `format: 'A4'` passed to page.pdf(). */}
+        <style>{`@page { size: A4 portrait; margin: 0; }`}</style>
         {renderCover()}
         {groups.map((group, gi) =>
           renderSectionPage(group, gi, { breakBefore: true })

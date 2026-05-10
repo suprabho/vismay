@@ -222,6 +222,10 @@ export default function SlidesShell({
         data-pdf-shell="slides"
         style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
       >
+        {/* `preferCSSPageSize: true` in page.pdf() honors this; without it
+            Chromium falls back to default Letter portrait and ignores the
+            explicit width/height passed to page.pdf(). */}
+        <style>{`@page { size: ${SLIDE_W}px ${SLIDE_H}px; margin: 0; }`}</style>
         {slides.map((slide, i) => (
           <section
             key={i}
