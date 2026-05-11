@@ -414,6 +414,18 @@ function ChartsList({
     URL.revokeObjectURL(url)
   }
 
+  async function deleteChart(id: string) {
+    if (!confirm(`Delete ${id}.json? This cannot be undone, and any story config that references "${id}" will break until updated.`)) return
+    setError(null)
+    const res = await fetch(`/api/admin/stories/${slug}/charts/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      setError(body?.error ?? `Delete failed (HTTP ${res.status})`)
+      return
+    }
+    onChartsChange(charts.filter((c) => c.id !== id))
+  }
+
   async function uploadChart(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -503,6 +515,14 @@ function ChartsList({
                   title={`Download ${c.id}.json`}
                 >
                   ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteChart(c.id)}
+                  className="px-3 py-4 text-sm text-neutral-400 hover:text-red-400 hover:bg-white/5 shrink-0"
+                  title={`Delete ${c.id}.json`}
+                >
+                  ✕
                 </button>
               </li>
             ) : (

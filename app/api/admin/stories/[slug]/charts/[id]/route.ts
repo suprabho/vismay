@@ -60,3 +60,25 @@ export async function PUT(
   revalidatePath(`/story/${slug}/share`)
   return NextResponse.json({ ok: true })
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ slug: string; id: string }> }
+) {
+  if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const { slug, id } = await params
+  if (!SAFE_ID.test(slug) || !SAFE_ID.test(id)) {
+    return NextResponse.json({ error: 'bad slug or id' }, { status: 400 })
+  }
+  try {
+    await getContentSource().deleteChart(slug, id)
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'delete failed' },
+      { status: 500 }
+    )
+  }
+  revalidatePath(`/story/${slug}`)
+  revalidatePath(`/story/${slug}/share`)
+  return NextResponse.json({ ok: true })
+}

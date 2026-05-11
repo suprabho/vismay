@@ -41,6 +41,7 @@ export interface ContentSource {
   writeReportYaml(slug: string, raw: string | null): Promise<void>
   writeTtsYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
+  deleteChart(slug: string, chartId: string): Promise<void>
   updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder'>>): Promise<void>
   listChartIds(slug: string): Promise<string[]>
 }
@@ -137,6 +138,10 @@ const fsSource: ContentSource = {
     const dir = path.join(STORIES_DIR, slug, 'charts')
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(path.join(dir, `${chartId}.json`), JSON.stringify(data, null, 2) + '\n', 'utf8')
+  },
+  async deleteChart(slug, chartId) {
+    const p = path.join(STORIES_DIR, slug, 'charts', `${chartId}.json`)
+    if (fs.existsSync(p)) fs.unlinkSync(p)
   },
   async listChartIds(slug) {
     const dir = path.join(STORIES_DIR, slug, 'charts')
@@ -319,6 +324,15 @@ const dbSource: ContentSource = {
         onConflict: 'slug,chart_id',
       })
     if (error) throw new Error(`writeChart ${slug}/${chartId}: ${error.message}`)
+  },
+  async deleteChart(slug, chartId) {
+    const sb = createServiceClient()
+    const { error } = await sb
+      .from('chart_data')
+      .delete()
+      .eq('slug', slug)
+      .eq('chart_id', chartId)
+    if (error) throw new Error(`deleteChart ${slug}/${chartId}: ${error.message}`)
   },
   async listChartIds(slug) {
     const sb = createServiceClient()
