@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 .claude/worktrees/
+
+# local-only data repo (kept alongside project, not inside)
+epstein-network-data/

@@ -53,7 +53,10 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   // flight_ids the selected person appears on (loaded by PersonDetail and lifted up)
   const [personFlightIds, setPersonFlightIds] = useState<Set<number> | null>(null);
+  // blackbook ids linked to the selected person (lifted from PersonDetail)
+  const [personBlackbookIds, setPersonBlackbookIds] = useState<Set<number> | null>(null);
   const [hoveredAirport, setHoveredAirport] = useState<Airport | null>(null);
+  const [hoveredBlackbook, setHoveredBlackbook] = useState<BlackbookPoint | null>(null);
   const [personQuery, setPersonQuery] = useState("");
 
   const airportByCode = useMemo(() => {
@@ -114,10 +117,15 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
     );
   }, [persons, personQuery]);
 
-  const filteredBlackbook = useMemo(
-    () => (visible.blackbook ? blackbook : []),
-    [blackbook, visible.blackbook]
-  );
+  const filteredBlackbook = useMemo(() => {
+    // If a person is selected and we have their blackbook ids loaded, show
+    // those entries only (regardless of the toggle — it's part of the focused
+    // view). Otherwise honor the visibility toggle.
+    if (personBlackbookIds && personBlackbookIds.size > 0) {
+      return blackbook.filter((b) => personBlackbookIds.has(b.id));
+    }
+    return visible.blackbook ? blackbook : [];
+  }, [blackbook, visible.blackbook, personBlackbookIds]);
 
   // -------------------------------------------------------------------------
   // Layers
@@ -172,15 +180,37 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
     id: "blackbook",
     data: filteredBlackbook,
     getPosition: (d) => [d.lng, d.lat],
-    getRadius: 4_000,
+    // Slightly larger when filtered to a person — these are the focal points.
+    getRadius: personBlackbookIds ? 8_000 : 4_000,
     radiusUnits: "meters",
-    radiusMinPixels: 2,
-    radiusMaxPixels: 6,
+    radiusMinPixels: personBlackbookIds ? 4 : 2,
+    radiusMaxPixels: personBlackbookIds ? 10 : 6,
     getFillColor: C_BLACKBOOK,
+    getLineColor: [255, 220, 255, 220],
+    lineWidthMinPixels: 1,
+    stroked: true,
     pickable: true,
+    onHover: ({ object }) => setHoveredBlackbook(object ?? null),
   });
 
-  const layers = [blackbookLayer, arcLayer, airportLayer, airportLabelLayer];
+  const blackbookLabelLayer = new TextLayer<BlackbookPoint>({
+    id: "blackbook-labels",
+    // Only label when filtered to a person — otherwise the map gets unreadable.
+    data: personBlackbookIds ? filteredBlackbook : [],
+    getPosition: (d) => [d.lng, d.lat],
+    getText: (d) => d.city ?? d.name,
+    getSize: 10,
+    getColor: [240, 200, 240, 240],
+    getBackgroundColor: [0, 0, 0, 180],
+    background: true,
+    backgroundPadding: [4, 2, 4, 2],
+    fontFamily: "monospace",
+    getTextAnchor: "middle",
+    getAlignmentBaseline: "top",
+    getPixelOffset: [0, 10],
+  });
+
+  const layers = [blackbookLayer, blackbookLabelLayer, arcLayer, airportLayer, airportLabelLayer];
 
   // -------------------------------------------------------------------------
   // Person selection — PersonDetail loads their flights and reports back so
@@ -190,29 +220,45 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
   function selectPerson(personId: string) {
     setSelectedPersonId(personId);
     setPersonFlightIds(null);
+    setPersonBlackbookIds(null);
   }
 
   function clearPerson() {
     setSelectedPersonId(null);
     setPersonFlightIds(null);
+    setPersonBlackbookIds(null);
   }
 
   // Stable identity across re-renders so PersonDetail's useEffect doesn't refetch
   // every time the year slider or layer toggle changes.
-  const handlePersonFlightsLoaded = useCallback(
-    (personId: string, flightIds: number[], iataCodes: string[]) => {
+  const handlePersonDataLoaded = useCallback(
+    (
+      personId: string,
+      flightIds: number[],
+      iataCodes: string[],
+      blackbookIds: number[]
+    ) => {
       // Race guard: a slower response from a previously selected person
       // shouldn't override the current selection.
       if (personId !== selectedPersonId) return;
 
       setPersonFlightIds(new Set(flightIds));
+      setPersonBlackbookIds(new Set(blackbookIds));
 
-      const coords = iataCodes
-        .map((c) => airportByCode.get(c))
-        .filter((a): a is Airport => Boolean(a));
+      // Fit the camera to the union of the person's flight airports and the
+      // blackbook locations they're tied to.
+      const coords: Array<{ lng: number; lat: number }> = [];
+      for (const c of iataCodes) {
+        const a = airportByCode.get(c);
+        if (a) coords.push({ lng: a.lng, lat: a.lat });
+      }
+      const bbSet = new Set(blackbookIds);
+      for (const b of blackbook) {
+        if (bbSet.has(b.id)) coords.push({ lng: b.lng, lat: b.lat });
+      }
       if (coords.length === 0) return;
-      const lngs = coords.map((a) => a.lng);
-      const lats = coords.map((a) => a.lat);
+      const lngs = coords.map((c) => c.lng);
+      const lats = coords.map((c) => c.lat);
       const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
       const minLat = Math.min(...lats), maxLat = Math.max(...lats);
       const span = Math.max(maxLng - minLng, maxLat - minLat);
@@ -225,7 +271,7 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
         transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
       } as typeof v));
     },
-    [selectedPersonId, airportByCode]
+    [selectedPersonId, airportByCode, blackbook]
   );
 
   // -------------------------------------------------------------------------
@@ -249,7 +295,7 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
         <MapboxMap
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/dark-v11"
-          projection="mercator"
+          projection="globe"
         />
       </DeckGL>
 
@@ -308,6 +354,18 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
         </div>
       )}
 
+      {/* ── Hover blackbook tooltip ──────────────────────────────────────── */}
+      {hoveredBlackbook && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-black/85 border border-fuchsia-400/40 rounded px-3 py-1.5 text-xs font-mono text-fuchsia-200 pointer-events-none whitespace-nowrap">
+          <span className="text-fuchsia-300">{hoveredBlackbook.name}</span>
+          {(hoveredBlackbook.city || hoveredBlackbook.country) && (
+            <span className="ml-2 text-white/50">
+              {[hoveredBlackbook.city, hoveredBlackbook.country].filter(Boolean).join(", ")}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* ── Legend ───────────────────────────────────────────────────────── */}
       <div className="absolute bottom-6 left-5 z-10 flex flex-col gap-1.5 pointer-events-none">
         {[
@@ -329,7 +387,7 @@ export default function EpsteinMap({ airports, flights, blackbook, persons }: Pr
           personId={selectedPersonId}
           person={persons.find((p) => p.entity_id === selectedPersonId)}
           onClose={clearPerson}
-          onFlightsLoaded={handlePersonFlightsLoaded}
+          onDataLoaded={handlePersonDataLoaded}
         />
       )}
 

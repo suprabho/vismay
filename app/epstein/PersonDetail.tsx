@@ -52,10 +52,15 @@ interface Props {
   personId: string;
   person: PersonSummary | undefined;
   onClose: () => void;
-  onFlightsLoaded: (personId: string, flightIds: number[], iataCodes: string[]) => void;
+  onDataLoaded: (
+    personId: string,
+    flightIds: number[],
+    iataCodes: string[],
+    blackbookIds: number[]
+  ) => void;
 }
 
-export default function PersonDetail({ personId, person, onClose, onFlightsLoaded }: Props) {
+export default function PersonDetail({ personId, person, onClose, onDataLoaded }: Props) {
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +78,12 @@ export default function PersonDetail({ personId, person, onClose, onFlightsLoade
           for (const c of f.from_codes) codes.add(c);
           for (const c of f.to_codes) codes.add(c);
         }
-        onFlightsLoaded(personId, (d.flights ?? []).map((f) => f.flight_id), Array.from(codes));
+        onDataLoaded(
+          personId,
+          (d.flights ?? []).map((f) => f.flight_id),
+          Array.from(codes),
+          (d.blackbook ?? []).map((b) => b.id)
+        );
       })
       .catch(() => {
         if (!cancelled) setData(null);
@@ -84,7 +94,7 @@ export default function PersonDetail({ personId, person, onClose, onFlightsLoade
     return () => {
       cancelled = true;
     };
-  }, [personId, onFlightsLoaded]);
+  }, [personId, onDataLoaded]);
 
   const citationByNumber = new Map<string, Citation>();
   for (const c of data?.citations ?? []) {
