@@ -16,8 +16,13 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import { chromium, type Browser } from 'playwright'
+import { chromium, type BrowserContext } from 'playwright'
 import { createServiceClient } from '../../lib/supabase'
+
+// Real browser UA — Playwright's default contains "HeadlessChrome", which
+// some bot walls (Cloudflare, Akamai) flag.
+const USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 const NEWS_INDEX_URL = 'https://www.iea.org/news'
 
@@ -28,13 +33,18 @@ interface NewsItem {
   publishedAt: string
 }
 
-async function discoverArticleUrls(browser: Browser): Promise<string[]> {
-  const page = await browser.newPage()
+async function discoverArticleUrls(context: BrowserContext): Promise<string[]> {
+  const page = await context.newPage()
   try {
+    // `domcontentloaded` instead of `networkidle` — IEA's page has analytics
+    // and lazy-load chatter that never goes idle within 60s. We only need the
+    // server-rendered article cards, so wait for the anchor selector to
+    // appear instead.
     await page.goto(NEWS_INDEX_URL, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: 60_000,
     })
+    await page.waitForSelector('a[href^="/news/"]', { timeout: 30_000 })
     // Each article card on /news links to /news/<slug>. Filter to those —
     // the page also has /news (self-link), pagination, and other anchors.
     const urls = await page.$$eval('a[href^="/news/"]', (links) =>
@@ -54,10 +64,10 @@ async function discoverArticleUrls(browser: Browser): Promise<string[]> {
 }
 
 async function fetchArticle(
-  browser: Browser,
+  context: BrowserContext,
   url: string
 ): Promise<NewsItem | null> {
-  const page = await browser.newPage()
+  const page = await context.newPage()
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
     const meta = await page.evaluate(() => {
@@ -156,10 +166,11 @@ async function main() {
   const sb = createServiceClient()
   const anthropic = new Anthropic()
   const browser = await chromium.launch()
+  const context = await browser.newContext({ userAgent: USER_AGENT })
 
   try {
     console.log(`Discovering articles at ${NEWS_INDEX_URL} ...`)
-    const urls = await discoverArticleUrls(browser)
+    const urls = await discoverArticleUrls(context)
     console.log(`Found ${urls.length} article links on the index page`)
 
     if (urls.length === 0) {
@@ -186,7 +197,7 @@ async function main() {
     let skipped = 0
     for (const url of newUrls) {
       try {
-        const item = await fetchArticle(browser, url)
+        const item = await fetchArticle(context, url)
         if (!item) {
           console.warn(`  · ${url}: missing og: metadata, skipping`)
           skipped++
