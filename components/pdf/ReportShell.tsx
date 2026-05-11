@@ -29,6 +29,13 @@ function stripMarkdown(text: string): string {
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
 }
 
+function extractByline(units: ResolvedUnit[]): string {
+  const hero = units.find((u) => (u.parentConfig.kind ?? 'text') === 'hero') ?? units[0]
+  if (!hero) return ''
+  const bylineParagraph = hero.paragraphs.find((p) => p.startsWith('**'))
+  return bylineParagraph?.replace(/^\*+|\*+$/g, '').trim() ?? ''
+}
+
 interface SectionGroup {
   parentIndex: number
   units: ResolvedUnit[]
@@ -65,6 +72,7 @@ export default function ReportShell({
   print = false,
 }: Props) {
   const groups = useMemo(() => groupByParent(units), [units])
+  const byline = useMemo(() => extractByline(units), [units])
   const expectedMaps = useMemo(
     () => groups.filter((g) => !!g.units[0]?.parentConfig.map?.center).length,
     [groups]
@@ -108,12 +116,14 @@ export default function ReportShell({
               {title}
             </h1>
           </div>
-          <div
-            className="font-[family-name:var(--font-mono)] uppercase"
-            style={{ fontSize: '10pt', letterSpacing: '0.15em', color: 'var(--color-muted)' }}
-          >
-            {slug}
-          </div>
+          {byline && (
+            <div
+              className="font-[family-name:var(--font-mono)] uppercase"
+              style={{ fontSize: '10pt', letterSpacing: '0.15em', color: 'var(--color-muted)' }}
+            >
+              {byline}
+            </div>
+          )}
         </div>
       </section>
   )
