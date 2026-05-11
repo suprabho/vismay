@@ -55,6 +55,25 @@ Vercel default runtime can't host the sync path — Playwright needs a real Chro
 - No new env vars; the dispatch path reuses `GITHUB_DISPATCH_TOKEN` / `GITHUB_DISPATCH_REPO` / `GITHUB_DISPATCH_REF`.
 - Same GitHub repo secrets as the video workflow (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`).
 
+## Epics (/iea, /epstein, …)
+
+Topic collections that bundle a bespoke landing page with curated vizmaya stories. Data model lives in migration `015_epics_iea.sql`:
+
+- `epics` — `slug`, `name`, `description`, `landing_component`. The discriminator picks which React component the route renders.
+- `story_epics` — many-to-many between `stories.slug` and `epics.slug`, with optional `position` for ordering.
+- Per-epic data tables alongside (`iea_news`, `iea_countries` so far).
+
+URLs are top-level per epic (`/iea`, `/epstein`) rather than `/epic/<slug>` — each landing page is hand-built. Reads go through `lib/epics.ts`.
+
+### IEA news pipeline
+
+`.github/workflows/scrape-iea-news.yml` runs daily (06:15 UTC) — pulls `iea.org/rss/news`, hands each new article to Claude (Opus 4.7 via structured outputs) for ISO country-code tagging, and upserts into `iea_news`. Idempotent on `source_url`.
+
+- **Script:** [scripts/iea/scrape-news.ts](scripts/iea/scrape-news.ts). Run locally with `pnpm iea:scrape`.
+- **Manual run in prod:** GitHub → Actions → "Scrape IEA news" → "Run workflow".
+- **Required repo secret** (in the `Production` environment): `ANTHROPIC_API_KEY`. The Supabase secrets are reused from the other workflows.
+- The seed in migration 015 inserts 8 mock articles with `source_url` like `https://www.iea.org/news/mock-1`. They won't conflict with the scraper (different URLs) but should be deleted once the real feed has populated.
+
 ## TTS narration overrides (per-unit)
 
 `scripts/generate-audio.ts` derives the spoken text for each mobile unit from heading + paragraphs. To override that text without editing the displayed markdown, save a `<slug>.tts.yaml` (also `stories.tts_yaml` after migration 012):

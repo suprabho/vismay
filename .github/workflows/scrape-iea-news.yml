@@ -1,0 +1,48 @@
+name: Scrape IEA news
+
+# Daily pull of iea.org/rss/news. Each new article is tagged with ISO country
+# codes via Claude and upserted into the iea_news table. Idempotent on
+# source_url, so re-runs and manual dispatches are safe.
+#
+# Required repo secrets (in the `Production` environment so secrets.X resolves):
+#   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY  — service role key for iea_news writes
+#   ANTHROPIC_API_KEY          — Claude API key for country tagging
+
+on:
+  schedule:
+    # 06:15 UTC daily — picks up overnight IEA news before US/EU work hours.
+    # The :15 offset avoids the top-of-hour Actions queue spike.
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: scrape-iea-news
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: Production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Scrape IEA news
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: pnpm iea:scrape
