@@ -28,6 +28,15 @@
   display: none;
 }
 
+/* Tailwind v4 emits `.snap-y` (scroll-snap-type: y var(--tw-scroll-snap-strictness))
+   but does not emit a `.snap-mandatory` rule that flips the variable off the
+   `proximity` default declared on the `*` selector. Without this override the
+   story page's snap container falls back to proximity snapping, which feels
+   broken — drags don't lock to a section. */
+.snap-mandatory {
+  --tw-scroll-snap-strictness: mandatory;
+}
+
 .admin-root ::selection,
 .admin-root textarea::selection,
 .admin-root input::selection {

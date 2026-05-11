@@ -260,9 +260,12 @@ async function walkAndRecord(args: {
   const page = await context.newPage()
 
   // ?autoplay=1 strips chrome and applies the autoplay-flavored layout.
+  // ?capture=1 sets staticCapture in StoryMapShell so the map jumps
+  // deterministically between cues instead of flying — keeps tile loads
+  // off-frame and makes camera state predictable from cue timing alone.
   // Aspect is determined entirely by viewport via the `(max-aspect-ratio:
   // 1/1)` media query (lib/chartTheme.ts:69) — no separate query param.
-  const url = `${args.baseUrl}/story/${args.slug}?autoplay=1`
+  const url = `${args.baseUrl}/story/${args.slug}?autoplay=1&capture=1`
   await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
 
   await page.waitForSelector('[data-unit-index]', { timeout: 30_000 })

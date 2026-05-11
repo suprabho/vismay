@@ -473,6 +473,19 @@ export default function MapboxBackground({
   /** Bumped on every step change; async layer appliers compare against it
    * to abort stale writes that would otherwise collide with newer ones. */
   const layerGenRef = useRef(0)
+  /** Current step/steps mirrored into refs so the resize-handler effect can
+   * read them without listing them as deps. Listing them re-creates the
+   * ResizeObserver on every section change, and ResizeObserver always fires
+   * its initial notification when re-attached — which would jumpTo and kill
+   * the in-flight flyTo. */
+  const activeStepRef = useRef(activeStep)
+  const stepsRef = useRef(steps)
+  useEffect(() => {
+    activeStepRef.current = activeStep
+  }, [activeStep])
+  useEffect(() => {
+    stepsRef.current = steps
+  }, [steps])
   const [loaded, setLoaded] = useState(false)
 
   // Initialize map (once)
@@ -735,18 +748,35 @@ export default function MapboxBackground({
   // inside the /reports iframe). Without the container observer, Mapbox
   // keeps the WebGL canvas at its initial size and the map renders smaller
   // than its embed box.
+  //
+  // activeStep/steps are intentionally NOT in the dep array — they're read
+  // via refs. Including them would re-attach the ResizeObserver on every
+  // section change, and ResizeObserver's "initial notification" on observe()
+  // would fire jumpTo and cancel the in-flight flyTo from the activeStep
+  // effect above.
   useEffect(() => {
     if (!loaded) return
     const el = containerRef.current
     if (!el) return
+    // Start cached size at 0 so the ResizeObserver's initial fire runs once
+    // (covers the PreviewFrame `zoom: scale` case where the map was created
+    // before the wrapper settled). After that, only true size changes trigger
+    // a re-project — keeping spurious jumpTo calls from interrupting flyTo.
+    let lastWidth = 0
+    let lastHeight = 0
     function onResize() {
       const map = mapRef.current
       if (!map) return
+      const w = el!.clientWidth
+      const h = el!.clientHeight
+      if (w === lastWidth && h === lastHeight) return
+      lastWidth = w
+      lastHeight = h
       map.resize()
       map.setPadding(computeFocusPadding(containerRef.current, landscapeFocusArea, portraitFocusArea))
       // setPadding by itself doesn't redraw at the new focal point — nudge
       // the camera back to the active step so it re-projects with the new pad.
-      const step = steps[activeStep]
+      const step = stepsRef.current[activeStepRef.current]
       if (step) {
         map.jumpTo({
           center: step.center,
@@ -763,7 +793,7 @@ export default function MapboxBackground({
       ro.disconnect()
       window.removeEventListener('resize', onResize)
     }
-  }, [loaded, landscapeFocusArea, portraitFocusArea, activeStep, steps])
+  }, [loaded, landscapeFocusArea, portraitFocusArea])
 
   const currentOpacity = (steps[activeStep]?.opacity ?? defaultOpacity)
   const reduceMotion = typeof window !== 'undefined' && prefersReducedMotion()

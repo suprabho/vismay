@@ -83,8 +83,15 @@ export default function StoryMapShell({
   const [activeUnit, setActiveUnit] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isAutoplay, setIsAutoplay] = useState(false)
+  // `?capture=1` is set by Playwright pipelines (video render) to opt out of
+  // map flyTo and other timing-sensitive animations so the recorded frames
+  // are deterministic. End users on /story/<slug> never set this flag and
+  // get the full animated experience.
+  const [isCapture, setIsCapture] = useState(false)
   useEffect(() => {
-    setIsAutoplay(new URLSearchParams(window.location.search).get('autoplay') === '1')
+    const params = new URLSearchParams(window.location.search)
+    setIsAutoplay(params.get('autoplay') === '1')
+    setIsCapture(params.get('capture') === '1')
   }, [])
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
   // breakpoint — treat them as the same signal so both charts and the
@@ -241,6 +248,7 @@ export default function StoryMapShell({
           fontstack={defaults.mapFontstack}
           landscapeFocusArea={STORY_LANDSCAPE_FOCUS_AREA}
           portraitFocusArea={STORY_PORTRAIT_FOCUS_AREA}
+          staticCapture={isCapture}
         />
       </div>
 
