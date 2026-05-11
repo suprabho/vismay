@@ -40,6 +40,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # IEA's edge blocks plain `fetch` from cloud IPs (403). Playwright
+      # drives a real Chromium so the request looks like a normal browser.
+      # `--with-deps` pulls the system libs Chromium needs.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
       - name: Scrape IEA news
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

@@ -1,55 +1,91 @@
 /**
- * IEA news scraper — pulls iea.org/rss/news, tags each new article with ISO
- * country codes via Claude, and upserts into the iea_news table.
+ * IEA news scraper — discovers articles on iea.org/news (rendered via
+ * Playwright Chromium because IEA's edge blocks plain `fetch` from cloud
+ * IPs), extracts metadata from each article's og: tags, tags ISO country
+ * codes via Claude, and upserts into iea_news.
  *
- * Run locally:  npx tsx scripts/iea/scrape-news.ts
- * Run in CI:    .github/workflows/scrape-iea-news.yml (daily cron + manual dispatch)
+ * Run locally:  pnpm iea:scrape          (needs `pnpm exec playwright install chromium`)
+ * Run in CI:    .github/workflows/scrape-iea-news.yml
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write to iea_news
  *   ANTHROPIC_API_KEY                                    — country tagging
  *
  * Idempotency: source_url is the natural key (unique index in migration 015).
- * Re-running on the same feed is a no-op for already-seen URLs.
+ * Re-runs are no-ops for already-seen URLs.
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import { JSDOM } from 'jsdom'
+import { chromium, type Browser } from 'playwright'
 import { createServiceClient } from '../../lib/supabase'
 
-const RSS_URL = 'https://www.iea.org/rss/news'
+const NEWS_INDEX_URL = 'https://www.iea.org/news'
 
-interface RssItem {
+interface NewsItem {
   url: string
   title: string
   summary: string | null
   publishedAt: string
 }
 
-async function fetchRss(): Promise<RssItem[]> {
-  const res = await fetch(RSS_URL, {
-    headers: { 'user-agent': 'vizmaya-iea-scraper/1.0 (+https://vizmaya.fyi)' },
-  })
-  if (!res.ok) {
-    throw new Error(`RSS fetch failed: ${res.status} ${res.statusText}`)
-  }
-  const xml = await res.text()
-  const dom = new JSDOM(xml, { contentType: 'text/xml' })
-  const items: RssItem[] = []
-  for (const item of dom.window.document.querySelectorAll('item')) {
-    const url = item.querySelector('link')?.textContent?.trim()
-    const title = item.querySelector('title')?.textContent?.trim()
-    const pubDate = item.querySelector('pubDate')?.textContent?.trim()
-    const description = item.querySelector('description')?.textContent?.trim() ?? null
-    if (!url || !title || !pubDate) continue
-    items.push({
-      url,
-      title,
-      summary: description,
-      publishedAt: new Date(pubDate).toISOString(),
+async function discoverArticleUrls(browser: Browser): Promise<string[]> {
+  const page = await browser.newPage()
+  try {
+    await page.goto(NEWS_INDEX_URL, {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
     })
+    // Each article card on /news links to /news/<slug>. Filter to those —
+    // the page also has /news (self-link), pagination, and other anchors.
+    const urls = await page.$$eval('a[href^="/news/"]', (links) =>
+      Array.from(
+        new Set(
+          links
+            .map((a) => (a as HTMLAnchorElement).href)
+            .filter((h) => /\/news\/[a-z0-9-]+\/?$/.test(new URL(h).pathname))
+            .map((h) => h.replace(/\/$/, ''))
+        )
+      )
+    )
+    return urls
+  } finally {
+    await page.close()
   }
-  return items
+}
+
+async function fetchArticle(
+  browser: Browser,
+  url: string
+): Promise<NewsItem | null> {
+  const page = await browser.newPage()
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+    const meta = await page.evaluate(() => {
+      const attr = (sel: string) =>
+        document.querySelector(sel)?.getAttribute('content') ?? null
+      return {
+        title:
+          attr('meta[property="og:title"]') ??
+          attr('meta[name="twitter:title"]') ??
+          document.title,
+        summary:
+          attr('meta[property="og:description"]') ??
+          attr('meta[name="description"]'),
+        publishedAt:
+          attr('meta[property="article:published_time"]') ??
+          attr('meta[itemprop="datePublished"]'),
+      }
+    })
+    if (!meta.title || !meta.publishedAt) return null
+    return {
+      url,
+      title: meta.title.trim(),
+      summary: meta.summary?.trim() ?? null,
+      publishedAt: new Date(meta.publishedAt).toISOString(),
+    }
+  } finally {
+    await page.close()
+  }
 }
 
 const COUNTRY_TAGGING_SYSTEM = `You extract ISO 3166-1 alpha-2 country codes from IEA news headlines.
@@ -67,7 +103,7 @@ Use the special code "EU" only when the European Union is explicitly named as a 
 
 async function extractCountryCodes(
   anthropic: Anthropic,
-  item: RssItem
+  item: NewsItem
 ): Promise<string[]> {
   const userText = `Headline: ${item.title}\n\n${
     item.summary ? `Summary: ${item.summary}` : '(no summary available)'
@@ -119,59 +155,76 @@ async function extractCountryCodes(
 async function main() {
   const sb = createServiceClient()
   const anthropic = new Anthropic()
+  const browser = await chromium.launch()
 
-  console.log('Fetching IEA RSS feed...')
-  const items = await fetchRss()
-  console.log(`Got ${items.length} items from feed`)
+  try {
+    console.log(`Discovering articles at ${NEWS_INDEX_URL} ...`)
+    const urls = await discoverArticleUrls(browser)
+    console.log(`Found ${urls.length} article links on the index page`)
 
-  if (items.length === 0) {
-    console.log('Empty feed — nothing to do')
-    return
-  }
-
-  const urls = items.map((i) => i.url)
-  const { data: existing, error: lookupErr } = await sb
-    .from('iea_news')
-    .select('source_url')
-    .in('source_url', urls)
-  if (lookupErr) throw new Error(`Lookup failed: ${lookupErr.message}`)
-  const existingUrls = new Set((existing ?? []).map((r: { source_url: string }) => r.source_url))
-
-  const newItems = items.filter((i) => !existingUrls.has(i.url))
-  console.log(
-    `${newItems.length} new (${items.length - newItems.length} already in DB)`
-  )
-
-  let inserted = 0
-  for (const item of newItems) {
-    try {
-      const countryCodes = await extractCountryCodes(anthropic, item)
-      const { error: insertErr } = await sb.from('iea_news').upsert(
-        {
-          source_url: item.url,
-          title: item.title,
-          summary: item.summary,
-          published_at: item.publishedAt,
-          country_codes: countryCodes,
-          fetched_at: new Date().toISOString(),
-        },
-        { onConflict: 'source_url' }
-      )
-      if (insertErr) {
-        console.error(`  ✗ ${item.url}: ${insertErr.message}`)
-        continue
-      }
-      inserted++
-      console.log(
-        `  ✓ ${item.title}  →  [${countryCodes.join(', ') || '—'}]`
-      )
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`  ✗ ${item.url}: ${msg}`)
+    if (urls.length === 0) {
+      console.log('No article URLs discovered — aborting (selector may have drifted).')
+      process.exitCode = 1
+      return
     }
-  }
 
-  console.log(`\nDone. Inserted ${inserted}/${newItems.length} new articles.`)
+    const { data: existing, error: lookupErr } = await sb
+      .from('iea_news')
+      .select('source_url')
+      .in('source_url', urls)
+    if (lookupErr) throw new Error(`Lookup failed: ${lookupErr.message}`)
+    const existingUrls = new Set(
+      (existing ?? []).map((r: { source_url: string }) => r.source_url)
+    )
+
+    const newUrls = urls.filter((u) => !existingUrls.has(u))
+    console.log(
+      `${newUrls.length} new (${urls.length - newUrls.length} already in DB)`
+    )
+
+    let inserted = 0
+    let skipped = 0
+    for (const url of newUrls) {
+      try {
+        const item = await fetchArticle(browser, url)
+        if (!item) {
+          console.warn(`  · ${url}: missing og: metadata, skipping`)
+          skipped++
+          continue
+        }
+        const countryCodes = await extractCountryCodes(anthropic, item)
+        const { error: insertErr } = await sb.from('iea_news').upsert(
+          {
+            source_url: item.url,
+            title: item.title,
+            summary: item.summary,
+            published_at: item.publishedAt,
+            country_codes: countryCodes,
+            fetched_at: new Date().toISOString(),
+          },
+          { onConflict: 'source_url' }
+        )
+        if (insertErr) {
+          console.error(`  ✗ ${url}: ${insertErr.message}`)
+          continue
+        }
+        inserted++
+        console.log(
+          `  ✓ ${item.title}  →  [${countryCodes.join(', ') || '—'}]`
+        )
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`  ✗ ${url}: ${msg}`)
+      }
+    }
+
+    console.log(
+      `\nDone. Inserted ${inserted}/${newUrls.length} new articles ` +
+        `(${skipped} skipped for missing metadata).`
+    )
+  } finally {
+    await browser.close()
+  }
 }
 
 main().catch((err) => {
