@@ -1,289 +1,165 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Map } from "react-map-gl/mapbox";
+import { Map as MapboxMap } from "react-map-gl/mapbox";
 import { DeckGL } from "@deck.gl/react";
 import { FlyToInterpolator } from "deck.gl";
-import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, TextLayer, ArcLayer } from "@deck.gl/layers";
+
+import type { Airport, Flight, BlackbookPoint, PersonSummary } from "./page";
+import PersonDetail from "./PersonDetail";
+
+// ---------------------------------------------------------------------------
+// View + colors
+// ---------------------------------------------------------------------------
+
+const INITIAL_VIEW_STATE = {
+  longitude: -65,
+  latitude: 30,
+  zoom: 2.5,
+  pitch: 0,
+  bearing: 0,
+};
+
+const C_AIRPORT: [number, number, number, number] = [255, 150, 30, 220];
+const C_ARC_FROM: [number, number, number] = [255, 150, 30];
+const C_ARC_TO: [number, number, number] = [80, 160, 255];
+const C_BLACKBOOK: [number, number, number, number] = [200, 80, 200, 180];
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface Location {
-  id: string;
-  name: string;
-  canonical_name: string | null;
-  lat: number;
-  lng: number;
-  mention_count: number;
-}
+type LayerVisibility = { flights: boolean; airports: boolean; blackbook: boolean };
 
-interface Person {
-  id: string;
-  name: string;
-  role: string | null;
-  associated_location: string | null;
-  mention_count: number;
-}
-
-interface Event {
-  id: string;
-  name: string;
-  event_date: string | null;
-  location_name: string | null;
-  mention_count: number;
-}
-
-interface Substory {
-  id: string;
-  title: string;
-  summary: string;
-  narrative: string | null;
-  doc_count: number;
-  people: string[];
-  locations: string[];
-  events: string[];
-}
-
-interface SourceDoc {
-  id: string;
-  source: string;
-  source_url: string;
-  filename: string | null;
-  context: string | null;
-}
-
-type EntityType = "location" | "person" | "event";
-
-interface SelectedEntity {
-  id: string;
-  type: EntityType;
-  name: string;
-  role?: string | null;
-  mention_count: number;
-  lat: number;
-  lng: number;
-}
-
-type LayerMode = "all" | "locations" | "people";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const INITIAL_VIEW_STATE = {
-  longitude: -88,
-  latitude: 36,
-  zoom: 3.5,
-  pitch: 0,
-  bearing: 0,
-};
-
-// Colors per entity type [r, g, b, a]
-const COLORS: Record<EntityType, [number, number, number, number]> = {
-  location: [255, 120, 20, 220],
-  person: [80, 160, 255, 220],
-  event: [160, 80, 255, 220],
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function jitter(val: number, idx: number, total: number): number {
-  if (total <= 1) return val;
-  const spread = 0.6;
-  return val + ((idx / (total - 1)) - 0.5) * spread;
+interface Props {
+  airports: Airport[];
+  flights: Flight[];
+  blackbook: BlackbookPoint[];
+  persons: PersonSummary[];
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function EpsteinMap() {
+export default function EpsteinMap({ airports, flights, blackbook, persons }: Props) {
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+  const [yearRange, setYearRange] = useState<[number, number]>([1991, 1994]);
+  const [visible, setVisible] = useState<LayerVisibility>({
+    flights: true, airports: true, blackbook: false,
+  });
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  // flight_ids the selected person appears on (loaded by PersonDetail and lifted up)
+  const [personFlightIds, setPersonFlightIds] = useState<Set<number> | null>(null);
+  const [hoveredAirport, setHoveredAirport] = useState<Airport | null>(null);
+  const [personQuery, setPersonQuery] = useState("");
 
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [substories, setSubstories] = useState<Substory[]>([]);
+  const airportByCode = useMemo(() => {
+    const m = new Map<string, Airport>();
+    for (const a of airports) m.set(a.iata, a);
+    return m;
+  }, [airports]);
 
-  const [selectedSubstory, setSelectedSubstory] = useState<Substory | null>(null);
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
-  const [entityDocs, setEntityDocs] = useState<SourceDoc[]>([]);
-  const [docsLoading, setDocsLoading] = useState(false);
-
-  const [layerMode, setLayerMode] = useState<LayerMode>("all");
-  const [loading, setLoading] = useState(true);
-  const [hoveredName, setHoveredName] = useState<string | null>(null);
-
-  // -------------------------------------------------------------------------
-  // Data fetch
-  // -------------------------------------------------------------------------
-
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/epstein/entities?type=all&limit=2000").then((r) => r.json()),
-      fetch("/api/epstein/substories").then((r) => r.json()),
-    ])
-      .then(([entities, subs]) => {
-        setLocations(entities.locations ?? []);
-        setPeople(entities.people ?? []);
-        setEvents(entities.events ?? []);
-        setSubstories(subs ?? []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  // -------------------------------------------------------------------------
-  // Resolve people → map coordinates via associated_location
-  // -------------------------------------------------------------------------
-
-  const locationByName = useCallback(
-    (name: string | null): Location | undefined => {
-      if (!name) return undefined;
-      const lower = name.toLowerCase();
-      return (
-        locations.find((l) => (l.canonical_name ?? l.name).toLowerCase() === lower) ??
-        locations.find((l) => l.name.toLowerCase() === lower) ??
-        locations.find((l) => lower.includes(l.name.toLowerCase()))
-      );
-    },
-    [locations]
-  );
-
-  // People with resolved coordinates (jitter when multiple people share a location)
-  const mappedPeople = useCallback((): Array<Person & { lat: number; lng: number }> => {
-    const byLoc: Record<string, Person[]> = {};
-    const result: Array<Person & { lat: number; lng: number }> = [];
-
-    for (const p of people) {
-      const loc = locationByName(p.associated_location);
-      if (!loc) continue;
-      const key = `${loc.lat},${loc.lng}`;
-      if (!byLoc[key]) byLoc[key] = [];
-      byLoc[key].push(p);
-    }
-
-    for (const [key, group] of Object.entries(byLoc)) {
-      const [lat, lng] = key.split(",").map(Number);
-      group.forEach((p, i) => {
-        result.push({
-          ...p,
-          lat: jitter(lat, i, group.length),
-          lng: jitter(lng, i, group.length),
-        });
-      });
-    }
-    return result;
-  }, [people, locationByName]);
-
-  // Events with resolved coordinates
-  const mappedEvents = useCallback((): Array<Event & { lat: number; lng: number }> => {
-    return events.flatMap((e) => {
-      const loc = locationByName(e.location_name);
-      if (!loc) return [];
-      return [{ ...e, lat: loc.lat + 0.3, lng: loc.lng + 0.3 }];
-    });
-  }, [events, locationByName]);
-
-  // -------------------------------------------------------------------------
-  // Filter by selected substory
-  // -------------------------------------------------------------------------
-
-  const activeLocations = selectedSubstory
-    ? locations.filter(
-        (l) =>
-          selectedSubstory.locations.includes(l.canonical_name ?? l.name) ||
-          selectedSubstory.locations.includes(l.name)
-      )
-    : locations;
-
-  const activePeople = selectedSubstory
-    ? mappedPeople().filter((p) =>
-        selectedSubstory.people.some((n) => n.toLowerCase() === p.name.toLowerCase())
-      )
-    : mappedPeople();
-
-  const activeEvents = selectedSubstory
-    ? mappedEvents().filter((e) =>
-        selectedSubstory.events.some((n) => n.toLowerCase() === e.name.toLowerCase())
-      )
-    : mappedEvents();
-
-  // -------------------------------------------------------------------------
-  // Click → fetch source docs
-  // -------------------------------------------------------------------------
-
-  const handleEntityClick = useCallback(
-    async (entity: SelectedEntity) => {
-      setSelectedEntity(entity);
-      setEntityDocs([]);
-      setDocsLoading(true);
-      try {
-        const r = await fetch(
-          `/api/epstein/entity-docs?entityType=${entity.type}&entityId=${entity.id}`
-        );
-        const data = await r.json();
-        setEntityDocs(data.docs ?? []);
-      } catch {
-        setEntityDocs([]);
-      } finally {
-        setDocsLoading(false);
-      }
-    },
-    []
-  );
-
-  // -------------------------------------------------------------------------
-  // Deck.gl layers
-  // -------------------------------------------------------------------------
-
-  const maxMentions = Math.max(
-    ...activeLocations.map((l) => l.mention_count),
-    ...activePeople.map((p) => p.mention_count),
-    1
-  );
-
-  const locationsLayer = new ScatterplotLayer<Location>({
-    id: "locations",
-    data: layerMode !== "people" ? activeLocations.filter((l) => l.lat && l.lng) : [],
-    getPosition: (d) => [d.lng, d.lat],
-    getRadius: (d) => Math.max(Math.sqrt((d.mention_count / maxMentions) * 1600) * 1000 + 8000, 8000),
-    radiusUnits: "meters",
-    radiusMinPixels: 6,
-    radiusMaxPixels: 40,
-    getFillColor: COLORS.location,
-    getLineColor: [255, 160, 60, 180],
-    lineWidthMinPixels: 1.5,
-    stroked: true,
-    pickable: true,
-    onHover: ({ object }) => setHoveredName(object ? (object.canonical_name ?? object.name) : null),
-    onClick: ({ object }) => {
-      if (object) {
-        handleEntityClick({
-          id: object.id,
-          type: "location",
-          name: object.canonical_name ?? object.name,
-          mention_count: object.mention_count,
-          lat: object.lat,
-          lng: object.lng,
+  // Year-filtered flights → arcs (one arc per from→to leg)
+  const arcs = useMemo(() => {
+    type Arc = { fromIata: string; toIata: string; flightId: number; from: [number, number]; to: [number, number] };
+    const out: Arc[] = [];
+    for (const f of flights) {
+      if (!f.year) continue;
+      if (f.year < yearRange[0] || f.year > yearRange[1]) continue;
+      if (personFlightIds && !personFlightIds.has(f.id)) continue;
+      // Flatten multi-leg into segments. PSP→CLE→CMH means from=['PSP','CLE'] to=['CMH'],
+      // so the full leg list is [PSP, CLE, CMH].
+      const stops = [...f.from_codes, ...f.to_codes];
+      for (let i = 0; i < stops.length - 1; i++) {
+        const a = airportByCode.get(stops[i]);
+        const b = airportByCode.get(stops[i + 1]);
+        if (!a || !b) continue;
+        out.push({
+          fromIata: stops[i],
+          toIata: stops[i + 1],
+          flightId: f.id,
+          from: [a.lng, a.lat],
+          to: [b.lng, b.lat],
         });
       }
-    },
+    }
+    return out;
+  }, [flights, yearRange, airportByCode, personFlightIds]);
+
+  // Airports with positive traffic in the current year window
+  const activeAirports = useMemo(() => {
+    const touched = new Set<string>();
+    for (const a of arcs) {
+      touched.add(a.fromIata);
+      touched.add(a.toIata);
+    }
+    return airports.filter((a) => touched.has(a.iata));
+  }, [airports, arcs]);
+
+  const maxTraffic = useMemo(
+    () => Math.max(1, ...activeAirports.map((a) => a.traffic)),
+    [activeAirports]
+  );
+
+  const filteredPersons = useMemo(() => {
+    const q = personQuery.trim().toLowerCase();
+    if (!q) return persons;
+    return persons.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.aliases.some((a) => a.toLowerCase().includes(q))
+    );
+  }, [persons, personQuery]);
+
+  const filteredBlackbook = useMemo(
+    () => (visible.blackbook ? blackbook : []),
+    [blackbook, visible.blackbook]
+  );
+
+  // -------------------------------------------------------------------------
+  // Layers
+  // -------------------------------------------------------------------------
+
+  const arcLayer = new ArcLayer({
+    id: "flight-arcs",
+    data: visible.flights ? arcs : [],
+    getSourcePosition: (d: any) => d.from,
+    getTargetPosition: (d: any) => d.to,
+    getSourceColor: C_ARC_FROM,
+    getTargetColor: C_ARC_TO,
+    getWidth: 1.2,
+    greatCircle: true,
+    pickable: false,
+    opacity: 0.55,
   });
 
-  const locationsLabelLayer = new TextLayer<Location>({
-    id: "locations-labels",
-    data: layerMode !== "people" ? activeLocations.filter((l) => l.lat && l.lng) : [],
+  const airportLayer = new ScatterplotLayer<Airport>({
+    id: "airports",
+    data: visible.airports ? activeAirports : [],
     getPosition: (d) => [d.lng, d.lat],
-    getText: (d) => d.canonical_name ?? d.name,
+    getRadius: (d) => Math.sqrt(d.traffic / maxTraffic) * 50_000 + 8_000,
+    radiusUnits: "meters",
+    radiusMinPixels: 4,
+    radiusMaxPixels: 28,
+    getFillColor: C_AIRPORT,
+    getLineColor: [255, 200, 100, 200],
+    lineWidthMinPixels: 1,
+    stroked: true,
+    pickable: true,
+    onHover: ({ object }) => setHoveredAirport(object ?? null),
+  });
+
+  const airportLabelLayer = new TextLayer<Airport>({
+    id: "airport-labels",
+    data: visible.airports ? activeAirports.filter((a) => a.traffic >= maxTraffic * 0.25) : [],
+    getPosition: (d) => [d.lng, d.lat],
+    getText: (d) => d.iata,
     getSize: 11,
-    getColor: [255, 200, 140, 230],
-    getBackgroundColor: [0, 0, 0, 160],
+    getColor: [255, 200, 140, 240],
+    getBackgroundColor: [0, 0, 0, 180],
     background: true,
     backgroundPadding: [4, 2, 4, 2],
     fontFamily: "monospace",
@@ -292,120 +168,74 @@ export default function EpsteinMap() {
     getPixelOffset: [0, -10],
   });
 
-  const peopleLayer = new ScatterplotLayer<Person & { lat: number; lng: number }>({
-    id: "people",
-    data: layerMode !== "locations" ? activePeople : [],
+  const blackbookLayer = new ScatterplotLayer<BlackbookPoint>({
+    id: "blackbook",
+    data: filteredBlackbook,
     getPosition: (d) => [d.lng, d.lat],
-    getRadius: 6000,
+    getRadius: 4_000,
     radiusUnits: "meters",
-    radiusMinPixels: 5,
-    radiusMaxPixels: 20,
-    getFillColor: COLORS.person,
-    getLineColor: [140, 200, 255, 180],
-    lineWidthMinPixels: 1,
-    stroked: true,
+    radiusMinPixels: 2,
+    radiusMaxPixels: 6,
+    getFillColor: C_BLACKBOOK,
     pickable: true,
-    onHover: ({ object }) => setHoveredName(object ? object.name : null),
-    onClick: ({ object }) => {
-      if (object) {
-        handleEntityClick({
-          id: object.id,
-          type: "person",
-          name: object.name,
-          role: object.role,
-          mention_count: object.mention_count,
-          lat: object.lat,
-          lng: object.lng,
-        });
-      }
-    },
   });
 
-  const peopleLabelLayer = new TextLayer<Person & { lat: number; lng: number }>({
-    id: "people-labels",
-    data: layerMode !== "locations" ? activePeople : [],
-    getPosition: (d) => [d.lng, d.lat],
-    getText: (d) => d.name,
-    getSize: 10,
-    getColor: [160, 210, 255, 220],
-    getBackgroundColor: [0, 0, 30, 160],
-    background: true,
-    backgroundPadding: [3, 2, 3, 2],
-    fontFamily: "monospace",
-    getTextAnchor: "middle",
-    getAlignmentBaseline: "top",
-    getPixelOffset: [0, 10],
-  });
-
-  const eventsLayer = new ScatterplotLayer<Event & { lat: number; lng: number }>({
-    id: "events",
-    data: activeEvents,
-    getPosition: (d) => [d.lng, d.lat],
-    getRadius: 5000,
-    radiusUnits: "meters",
-    radiusMinPixels: 4,
-    radiusMaxPixels: 16,
-    getFillColor: COLORS.event,
-    lineWidthMinPixels: 1,
-    stroked: false,
-    pickable: true,
-    onHover: ({ object }) => setHoveredName(object ? object.name : null),
-    onClick: ({ object }) => {
-      if (object) {
-        handleEntityClick({
-          id: object.id,
-          type: "event",
-          name: object.name,
-          mention_count: object.mention_count,
-          lat: object.lat,
-          lng: object.lng,
-        });
-      }
-    },
-  });
-
-  const layers = [locationsLayer, locationsLabelLayer, peopleLayer, peopleLabelLayer, eventsLayer];
+  const layers = [blackbookLayer, arcLayer, airportLayer, airportLabelLayer];
 
   // -------------------------------------------------------------------------
-  // Fly to substory
+  // Person selection — PersonDetail loads their flights and reports back so
+  // we can filter the map and fly to the bounding box of their airports.
   // -------------------------------------------------------------------------
 
-  const flyToSubstory = useCallback(
-    (sub: Substory) => {
-      const relevant = locations.filter(
-        (l) =>
-          sub.locations.includes(l.canonical_name ?? l.name) ||
-          sub.locations.includes(l.name)
-      );
-      if (!relevant.length) return;
-      const lngs = relevant.map((l) => l.lng);
-      const lats = relevant.map((l) => l.lat);
-      setViewState({
-        longitude: (Math.min(...lngs) + Math.max(...lngs)) / 2,
-        latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
-        zoom: 4,
-        pitch: 0,
-        bearing: 0,
-        // @ts-expect-error deck.gl transition props
-        transitionDuration: 1200,
+  function selectPerson(personId: string) {
+    setSelectedPersonId(personId);
+    setPersonFlightIds(null);
+  }
+
+  function clearPerson() {
+    setSelectedPersonId(null);
+    setPersonFlightIds(null);
+  }
+
+  // Stable identity across re-renders so PersonDetail's useEffect doesn't refetch
+  // every time the year slider or layer toggle changes.
+  const handlePersonFlightsLoaded = useCallback(
+    (personId: string, flightIds: number[], iataCodes: string[]) => {
+      // Race guard: a slower response from a previously selected person
+      // shouldn't override the current selection.
+      if (personId !== selectedPersonId) return;
+
+      setPersonFlightIds(new Set(flightIds));
+
+      const coords = iataCodes
+        .map((c) => airportByCode.get(c))
+        .filter((a): a is Airport => Boolean(a));
+      if (coords.length === 0) return;
+      const lngs = coords.map((a) => a.lng);
+      const lats = coords.map((a) => a.lat);
+      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+      const span = Math.max(maxLng - minLng, maxLat - minLat);
+      setViewState((v) => ({
+        ...v,
+        longitude: (minLng + maxLng) / 2,
+        latitude: (minLat + maxLat) / 2,
+        zoom: Math.max(2, Math.min(5, 6 - Math.log2(Math.max(span, 1)))),
+        transitionDuration: 900,
         transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
-      });
+      } as typeof v));
     },
-    [locations]
+    [selectedPersonId, airportByCode]
   );
 
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
 
-  const totalEntities =
-    activeLocations.filter((l) => l.lat && l.lng).length +
-    activePeople.length +
-    activeEvents.length;
+  const hasData = airports.length > 0 || flights.length > 0;
 
   return (
     <div className="relative w-full h-screen bg-black text-white overflow-hidden">
-      {/* Map */}
       <DeckGL
         viewState={viewState}
         onViewStateChange={({ viewState: vs }: { viewState: unknown }) =>
@@ -413,16 +243,10 @@ export default function EpsteinMap() {
         }
         controller={{ doubleClickZoom: false }}
         layers={layers}
-        style={{ position: "absolute", top: "0", left: "0", right: "0", bottom: "0" }}
+        style={{ position: "absolute", inset: "0" }}
         getCursor={({ isHovering }) => (isHovering ? "pointer" : "grab")}
-        onClick={({ object }) => {
-          if (!object) {
-            setSelectedEntity(null);
-            setEntityDocs([]);
-          }
-        }}
       >
-        <Map
+        <MapboxMap
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/dark-v11"
           projection="mercator"
@@ -430,265 +254,191 @@ export default function EpsteinMap() {
       </DeckGL>
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-5 py-3.5 flex items-center justify-between bg-gradient-to-b from-black/90 to-transparent pointer-events-none">
+      {/* Right padding clears the 320px right sidebar so the layer toggle stays visible. */}
+      <div className="absolute top-0 left-0 right-80 z-10 px-5 py-3.5 flex items-center justify-between bg-gradient-to-b from-black/90 to-transparent pointer-events-none">
         <div>
           <h1 className="text-sm font-mono font-bold tracking-widest uppercase text-orange-400 leading-tight">
-            Epstein Document Map
+            Epstein Flight Network
           </h1>
           <p className="text-xs text-white/40 mt-0.5 font-mono">
-            {loading
-              ? "Loading…"
-              : `${activeLocations.filter((l) => l.lat && l.lng).length} places · ${activePeople.length} people · ${activeEvents.length} events`}
+            {arcs.length} legs · {activeAirports.length} airports · {persons.length} people
           </p>
         </div>
 
-        {/* Layer toggle */}
         <div className="pointer-events-auto flex gap-1 bg-black/70 border border-white/10 rounded-full p-1">
-          {(["all", "locations", "people"] as LayerMode[]).map((mode) => (
+          {(["flights", "airports", "blackbook"] as const).map((k) => (
             <button
-              key={mode}
-              onClick={() => setLayerMode(mode)}
+              key={k}
+              onClick={() => setVisible((v) => ({ ...v, [k]: !v[k] }))}
               className={`px-3 py-1 rounded-full text-xs font-mono transition-colors ${
-                layerMode === mode ? "bg-orange-500 text-black" : "text-white/50 hover:text-white"
+                visible[k] ? "bg-orange-500 text-black" : "text-white/50 hover:text-white"
               }`}
             >
-              {mode}
+              {k}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── Legend ───────────────────────────────────────────────────────── */}
-      <div className="absolute bottom-6 left-5 z-10 flex flex-col gap-1.5 pointer-events-none">
-        {([
-          { type: "location", label: "Place" },
-          { type: "person", label: "Person" },
-          { type: "event", label: "Event" },
-        ] as { type: EntityType; label: string }[]).map(({ type, label }) => {
-          const [r, g, b] = COLORS[type];
-          return (
-            <div key={type} className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full border border-white/30"
-                style={{ background: `rgb(${r},${g},${b})` }}
-              />
-              <span className="text-xs font-mono text-white/50">{label}</span>
-            </div>
-          );
-        })}
+      {/* ── Year slider ──────────────────────────────────────────────────── */}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-6 z-10 pointer-events-auto bg-black/85 border border-white/10 rounded-xl px-4 py-3 backdrop-blur w-[420px]">
+        <div className="flex items-center justify-between text-xs font-mono text-white/50 mb-1.5">
+          <span>Years</span>
+          <span className="text-orange-400">{yearRange[0]} – {yearRange[1]}</span>
+        </div>
+        <DualRange
+          min={1991}
+          max={1994}
+          value={yearRange}
+          onChange={setYearRange}
+        />
+        <p className="text-[10px] text-white/30 font-mono mt-1.5 leading-snug">
+          Coverage: pages 1–31 of the flight logs (1991–1994 of 1991–2019).
+          {personFlightIds &&
+            ` Filtered to ${personFlightIds.size} flight${personFlightIds.size === 1 ? "" : "s"}.`}
+        </p>
       </div>
 
-      {/* ── Hover tooltip ────────────────────────────────────────────────── */}
-      {hoveredName && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-black/80 border border-orange-500/30 rounded px-3 py-1.5 text-xs font-mono text-orange-300 pointer-events-none whitespace-nowrap">
-          {hoveredName}
+      {/* ── Hover airport tooltip ────────────────────────────────────────── */}
+      {hoveredAirport && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-black/85 border border-orange-500/30 rounded px-3 py-1.5 text-xs font-mono text-orange-300 pointer-events-none whitespace-nowrap">
+          {hoveredAirport.iata} — {hoveredAirport.full_name ?? hoveredAirport.city}
+          {hoveredAirport.country ? `, ${hoveredAirport.country}` : ""}
+          <span className="ml-2 text-white/40">{hoveredAirport.traffic} legs</span>
         </div>
       )}
 
-      {/* ── Entity detail panel (left) ───────────────────────────────────── */}
-      {selectedEntity && (
-        <div className="absolute left-4 top-16 z-10 w-72 bg-black/85 backdrop-blur border border-white/10 rounded-xl overflow-hidden shadow-2xl">
-          <div className="px-4 pt-3 pb-2 border-b border-white/10 flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{
-                    background: `rgb(${COLORS[selectedEntity.type].slice(0, 3).join(",")})`,
-                  }}
-                />
-                <span className="text-xs font-mono text-white/40 uppercase tracking-wider">
-                  {selectedEntity.type}
-                </span>
-              </div>
-              <p className="text-sm font-mono font-semibold text-white leading-snug truncate">
-                {selectedEntity.name}
-              </p>
-              {selectedEntity.role && (
-                <p className="text-xs text-white/50 mt-0.5 leading-snug">{selectedEntity.role}</p>
-              )}
-              <p className="text-xs text-white/30 mt-1">
-                {selectedEntity.mention_count} mention{selectedEntity.mention_count !== 1 ? "s" : ""}
-              </p>
-            </div>
-            <button
-              onClick={() => { setSelectedEntity(null); setEntityDocs([]); }}
-              className="text-white/30 hover:text-white/70 text-lg leading-none flex-shrink-0 transition-colors"
-            >
-              ×
-            </button>
+      {/* ── Legend ───────────────────────────────────────────────────────── */}
+      <div className="absolute bottom-6 left-5 z-10 flex flex-col gap-1.5 pointer-events-none">
+        {[
+          { color: `rgb(${C_AIRPORT.slice(0, 3).join(",")})`, label: "Airport" },
+          { color: `rgb(${C_ARC_FROM.join(",")})`, label: "Flight origin" },
+          { color: `rgb(${C_ARC_TO.join(",")})`, label: "Flight dest." },
+          { color: `rgb(${C_BLACKBOOK.slice(0, 3).join(",")})`, label: "Black Book" },
+        ].map((l) => (
+          <div key={l.label} className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full border border-white/30" style={{ background: l.color }} />
+            <span className="text-xs font-mono text-white/50">{l.label}</span>
           </div>
+        ))}
+      </div>
 
-          <div className="px-4 py-3">
-            <p className="text-xs font-mono text-white/40 uppercase tracking-wider mb-2">
-              Source Documents
-            </p>
-
-            {docsLoading ? (
-              <p className="text-xs text-white/30 font-mono">Loading…</p>
-            ) : entityDocs.length === 0 ? (
-              <p className="text-xs text-white/30 font-mono">No linked documents found.</p>
-            ) : (
-              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
-                {entityDocs.map((doc) => (
-                  <a
-                    key={doc.id}
-                    href={doc.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <div className="border border-white/10 rounded-lg px-3 py-2 hover:border-orange-500/40 hover:bg-orange-500/5 transition-colors">
-                      <p className="text-xs font-mono text-orange-400 group-hover:text-orange-300 truncate leading-snug">
-                        {doc.filename ?? doc.source_url.split("/").pop() ?? "Document"}
-                      </p>
-                      <p className="text-xs text-white/30 mt-0.5 uppercase tracking-wider">
-                        {doc.source}
-                      </p>
-                      {doc.context && (
-                        <p className="text-xs text-white/40 mt-1 leading-relaxed line-clamp-2 italic">
-                          "{doc.context}"
-                        </p>
-                      )}
-                    </div>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+      {/* ── Person detail panel (left, lazy-loaded) ──────────────────────── */}
+      {selectedPersonId && (
+        <PersonDetail
+          personId={selectedPersonId}
+          person={persons.find((p) => p.entity_id === selectedPersonId)}
+          onClose={clearPerson}
+          onFlightsLoaded={handlePersonFlightsLoaded}
+        />
       )}
 
-      {/* ── Substory sidebar (right) ──────────────────────────────────────── */}
+      {/* ── Persons sidebar (right) ──────────────────────────────────────── */}
       <div className="absolute right-0 top-0 bottom-0 z-10 w-80 flex flex-col bg-black/75 backdrop-blur-sm border-l border-white/10 overflow-hidden">
-        {selectedSubstory ? (
-          <>
-            <div className="px-4 py-3 border-b border-orange-500/20 flex-shrink-0 flex items-center gap-2">
+        <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
+          <p className="text-xs font-mono uppercase tracking-widest text-white/40 mb-2">People</p>
+          <input
+            type="search"
+            value={personQuery}
+            onChange={(e) => setPersonQuery(e.target.value)}
+            placeholder="Search…"
+            className="w-full bg-black/60 border border-white/10 rounded px-2.5 py-1.5 text-xs font-mono text-white placeholder:text-white/30 focus:border-orange-500/50 focus:outline-none"
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {filteredPersons.length === 0 ? (
+            <div className="px-4 py-8 text-center text-white/30 text-xs font-mono">
+              No matches.
+            </div>
+          ) : (
+            filteredPersons.map((p) => (
               <button
-                onClick={() => setSelectedSubstory(null)}
-                className="text-white/40 hover:text-white text-sm font-mono transition-colors"
-                aria-label="Back to stories"
+                key={p.entity_id}
+                onClick={() => selectPerson(p.entity_id)}
+                className={`w-full text-left px-4 py-2.5 border-b border-white/5 transition-colors ${
+                  selectedPersonId === p.entity_id ? "bg-orange-500/10" : "hover:bg-white/5"
+                }`}
               >
-                ←
-              </button>
-              <p className="text-xs font-mono uppercase tracking-widest text-orange-400 truncate">
-                Story
-              </p>
-              <span className="ml-auto text-xs font-mono text-white/30">
-                {totalEntities} entities
-              </span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-              <h2 className="text-sm font-mono font-bold text-white leading-snug mb-1">
-                {selectedSubstory.title}
-              </h2>
-              {selectedSubstory.summary && (
-                <p className="text-xs text-white/50 italic leading-relaxed mb-4">
-                  {selectedSubstory.summary}
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-mono text-white leading-snug min-w-0">{p.name}</p>
+                  {p.importance > 0 && (
+                    <span className="text-[10px] font-mono text-white/30 flex-shrink-0 mt-px">
+                      {p.importance}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-white/40 mt-0.5 leading-snug line-clamp-1">
+                  {[p.nationality, ...p.occupations.slice(0, 2)].filter(Boolean).join(" · ")}
                 </p>
-              )}
-
-              {selectedSubstory.narrative && (
-                <div className="space-y-3 mb-5">
-                  {selectedSubstory.narrative.split(/\n\n+/).map((para, i) => (
-                    <p key={i} className="text-xs text-white/70 leading-relaxed">
-                      {para}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {selectedSubstory.people.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs text-white/30 mb-1 uppercase tracking-wider">People</p>
-                  <p className="text-xs text-blue-300/80 leading-relaxed">
-                    {selectedSubstory.people.slice(0, 12).join(", ")}
-                    {selectedSubstory.people.length > 12 &&
-                      ` +${selectedSubstory.people.length - 12}`}
-                  </p>
-                </div>
-              )}
-              {selectedSubstory.locations.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs text-white/30 mb-1 uppercase tracking-wider">Places</p>
-                  <p className="text-xs text-orange-300/80 leading-relaxed">
-                    {selectedSubstory.locations.slice(0, 10).join(", ")}
-                  </p>
-                </div>
-              )}
-              {selectedSubstory.events.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs text-white/30 mb-1 uppercase tracking-wider">Events</p>
-                  <p className="text-xs text-purple-300/80 leading-relaxed">
-                    {selectedSubstory.events.join(", ")}
-                  </p>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
-              <p className="text-xs font-mono uppercase tracking-widest text-white/40">Stories</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {loading ? (
-                <div className="px-4 py-8 text-center text-white/30 text-xs font-mono">
-                  Loading…
-                </div>
-              ) : substories.length === 0 ? (
-                <div className="px-4 py-8 text-center text-white/30 text-xs font-mono">
-                  No stories yet.
-                  <br />
-                  <code className="text-orange-400">pnpm epstein:substories</code>
-                </div>
-              ) : (
-                substories.map((sub) => (
-                  <button
-                    key={sub.id}
-                    onClick={() => {
-                      setSelectedSubstory(sub);
-                      flyToSubstory(sub);
-                    }}
-                    className="w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors"
-                  >
-                    <p className="text-xs font-mono text-white leading-snug">{sub.title}</p>
-                    {sub.summary && (
-                      <p className="text-xs text-white/40 mt-1 leading-snug line-clamp-2">
-                        {sub.summary}
-                      </p>
-                    )}
-                    <div className="flex gap-3 mt-1.5 text-xs text-white/30">
-                      <span>{sub.doc_count} docs</span>
-                      <span>{sub.people.length} people</span>
-                      <span>{sub.locations.length} places</span>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </>
-        )}
+              </button>
+            ))
+          )}
+        </div>
       </div>
 
       {/* ── Empty state ──────────────────────────────────────────────────── */}
-      {!loading && locations.length === 0 && (
+      {!hasData && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-          <div className="text-center bg-black/80 border border-white/10 rounded-xl px-8 py-6 max-w-sm">
+          <div className="text-center bg-black/85 border border-white/10 rounded-xl px-8 py-6 max-w-sm">
             <p className="text-orange-400 font-mono text-sm font-bold mb-2">No data yet</p>
             <p className="text-white/50 text-xs leading-relaxed mb-3">
-              Run the ingest pipeline to populate the map:
+              Apply migration 016 and run the loader:
             </p>
-            <div className="text-left bg-black/50 rounded-lg p-3 text-xs font-mono text-green-400 space-y-1">
-              {["crawl", "ingest", "ner", "geocode", "substories"].map((cmd) => (
-                <p key={cmd}>pnpm epstein:{cmd}</p>
-              ))}
-            </div>
+            <pre className="text-left bg-black/50 rounded-lg p-3 text-xs font-mono text-green-400 leading-relaxed whitespace-pre-wrap">
+{`pnpm epstein:import-curated \\
+  --repo-path ../epstein-network-data`}
+            </pre>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dual-range slider (two thumbs)
+// ---------------------------------------------------------------------------
+
+function DualRange({
+  min,
+  max,
+  value,
+  onChange,
+}: {
+  min: number;
+  max: number;
+  value: [number, number];
+  onChange: (v: [number, number]) => void;
+}) {
+  return (
+    <div className="relative h-4">
+      <div className="absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2 bg-white/15 rounded-full" />
+      <div
+        className="absolute top-1/2 h-0.5 -translate-y-1/2 bg-orange-500 rounded-full"
+        style={{
+          left: `${((value[0] - min) / (max - min)) * 100}%`,
+          right: `${100 - ((value[1] - min) / (max - min)) * 100}%`,
+        }}
+      />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={1}
+        value={value[0]}
+        onChange={(e) => onChange([Math.min(Number(e.target.value), value[1]), value[1]])}
+        className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-400 [&::-webkit-slider-thumb]:cursor-pointer"
+      />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={1}
+        value={value[1]}
+        onChange={(e) => onChange([value[0], Math.max(Number(e.target.value), value[0])])}
+        className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-400 [&::-webkit-slider-thumb]:cursor-pointer"
+      />
     </div>
   );
 }

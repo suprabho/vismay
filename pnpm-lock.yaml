@@ -68,9 +68,15 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      csv-parse:
+        specifier: ^6.2.1
+        version: 6.2.1
       deck.gl:
         specifier: ^9.3.0
         version: 9.3.0(@arcgis/core@4.34.8)(@luma.gl/gltf@9.3.2(@luma.gl/core@9.3.2)(@luma.gl/engine@9.3.2(@luma.gl/core@9.3.2)(@luma.gl/shadertools@9.3.2(@luma.gl/core@9.3.2)))(@luma.gl/shadertools@9.3.2(@luma.gl/core@9.3.2)))(@luma.gl/shadertools@9.3.2(@luma.gl/core@9.3.2))(@luma.gl/webgl@9.3.2(@luma.gl/core@9.3.2))(@math.gl/web-mercator@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       echarts:
         specifier: ^6.0.0
         version: 6.0.0
@@ -2514,6 +2520,9 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
+  csv-parse@6.2.1:
+    resolution: {integrity: sha512-LRLMV+UCyfMokp8Wb411duBf1gaBKJfOfBWU9eHMJ+b+cJYZsNu3AFmjJf3+yPGd59Exz1TsMjaSFyxnYB9+IQ==}
+
   d3-array@2.12.1:
     resolution: {integrity: sha512-B0ErZK/66mHtEsR1TkPEEkwdy+WDesimkM5gpZr5Dsg54BiTA5RXtYW5qTLIAcekaS9xfZrzBLF/OAkB3Qn1YQ==}
 
@@ -2809,8 +2818,8 @@ packages:
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
 
-  dotenv@17.4.0:
-    resolution: {integrity: sha512-kCKF62fwtzwYm0IGBNjRUjtJgMfGapII+FslMHIjMR5KTnwEmBmWLDRSnc3XSNP8bNy34tekgQyDT0hr7pERRQ==}
+  dotenv@17.4.2:
+    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
 
   draco3d@1.5.7:
@@ -5731,7 +5740,7 @@ snapshots:
   '@dotenvx/dotenvx@1.59.1':
     dependencies:
       commander: 11.1.0
-      dotenv: 17.4.0
+      dotenv: 17.4.2
       eciesjs: 0.4.18
       execa: 5.1.1
       fdir: 6.5.0(picomatch@4.0.4)
@@ -7760,6 +7769,8 @@ snapshots:
 
   csstype@3.2.3: {}
 
+  csv-parse@6.2.1: {}
+
   d3-array@2.12.1:
     dependencies:
       internmap: 1.0.1
@@ -8093,7 +8104,7 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
 
-  dotenv@17.4.0: {}
+  dotenv@17.4.2: {}
 
   draco3d@1.5.7: {}
 
