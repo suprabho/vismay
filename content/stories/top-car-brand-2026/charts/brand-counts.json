@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "title": "Best-selling car brand — number of countries where the brand was #1 in 2025",
+      "subtitle": "Focus2Move country-by-country sales data",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} countries"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Nissan",
+            "BYD",
+            "Škoda",
+            "Suzuki",
+            "Hyundai",
+            "Renault",
+            "Kia",
+            "Fiat",
+            "Volkswagen",
+            "Toyota"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Countries where #1",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 2, "itemStyle": { "color": "$accent2" } },
+              { "value": 2, "itemStyle": { "color": "$accent" } },
+              { "value": 2, "itemStyle": { "color": "$accent2" } },
+              { "value": 2, "itemStyle": { "color": "$accent2" } },
+              { "value": 2, "itemStyle": { "color": "$accent2" } },
+              { "value": 2, "itemStyle": { "color": "$accent2" } },
+              { "value": 3, "itemStyle": { "color": "$accent2" } },
+              { "value": 3, "itemStyle": { "color": "$accent2" } },
+              { "value": 5, "itemStyle": { "color": "$amber" } },
+              { "value": 25, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

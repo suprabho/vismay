@@ -1,0 +1,36 @@
+# Share mode overrides for top-car-brand-2026.
+#
+# Each key matches a section `id` from the main .config.yaml.
+# Only fields you specify are overridden — everything else falls
+# back to the main config.
+
+sections:
+  toyota-25-stat:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "**Toyota was the #1 brand in 25 of 61 countries in 2025** — twenty-five out of sixty-one. Volkswagen, the runner-up, leads in five. Every other brand tops out at two or three."
+
+  norway-89:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "**89% of new cars in Norway were battery-electric in 2024.** Norway is the only country where Tesla is the best-selling brand. The brand follows the energy."
+
+  china-48:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "**48% of new cars in China were electric in 2024** — 11 million EVs sold, more than the rest of the world combined. BYD became the country's best-selling brand because the EV transition and the local-champion bet are the same event."
+
+  ice-stat:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "**Russia, Iran, Nigeria, Pakistan, India, Saudi Arabia — all under 2% EV share in 2024.** Each has a domestic ICE-only champion: Lada, Iran Khodro, Innoson, Suzuki, Maruti. The brand winner is the powertrain the country can manufacture, finance, and fuel."
+
+  oil-displaced:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "**1.2 million barrels of oil per day** displaced by the global EV fleet in 2024 — about 5% of on-road car demand. Five percent in fifteen years. The next five will come faster."

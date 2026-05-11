@@ -1,0 +1,602 @@
+# Story config — top-car-brand-2026
+#
+# The reader walks the Focus2Move 2025 country-by-country brand map,
+# layered with the IEA Global EV Outlook 2025 EV-sales-share map.
+# The journey: Toyota's 25-country empire (Act I), Norway as the
+# pure-EV outlier (Act II), Europe's regional loyalty as a brand-
+# stable / powertrain-flipping case (Act II), China and the
+# local-champion-equals-EV-champion pattern (Act III), the ICE-
+# holdout belt (Act IV), and a closing world view that unifies
+# the two layers.
+#
+# COORDINATES (HQ or capital focal points):
+#   Toyota City, Japan       137.1567,  35.0833
+#   Riyadh, Saudi Arabia      46.6753,  24.7136
+#   Bangkok, Thailand        100.5018,  13.7563
+#   Sydney, Australia        151.2093, -33.8688
+#   Washington DC, USA       -77.0369,  38.9072
+#   Oslo, Norway              10.7522,  59.9139
+#   Berlin, Germany           13.4050,  52.5200
+#   Paris, France              2.3522,  48.8566
+#   Rome, Italy               12.4964,  41.9028
+#   Prague, Czech Republic    14.4378,  50.0755
+#   Shenzhen, China          114.0579,  22.5431  (BYD HQ)
+#   Beijing, China           116.4074,  39.9042
+#   Hai Phong, Vietnam       106.6881,  20.8449  (VinFast plant)
+#   Seoul, South Korea       126.9780,  37.5665
+#   Tolyatti, Russia          49.4242,  53.5303  (Lada / AvtoVAZ)
+#   Tehran, Iran              51.4215,  35.6892  (Iran Khodro)
+#   Nnewi, Nigeria             6.9667,   6.0167  (Innoson)
+#   New Delhi, India          77.2090,  28.6139
+#   Karachi, Pakistan         67.0011,  24.8607
+#
+# CHOROPLETH RAMP (EV sales share %, IEA GEO 2025 for 2024 actuals):
+#   [0, 5, 15, 30, 60, 90]
+#     → [$surface, $accent2, $amber, $teal, $accent, $accent]
+#   The deep-blue end ($accent) marks the EV-finished markets;
+#   the warm end ($accent2 / $amber) marks the petrol-and-hybrid bulk.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#4fa6d9"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Brand Map and the Electron Map"
+    eyebrow: "Automotive · May 2026"
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30, 60, 90]
+        colors: ["$surface", "$accent2", "$amber", "$teal", "$accent", "$accent"]
+        items:
+          - { code: "NO", value: 89 }
+          - { code: "IS", value: 71 }
+          - { code: "SE", value: 60 }
+          - { code: "DK", value: 57 }
+          - { code: "CN", value: 48 }
+          - { code: "FI", value: 36 }
+          - { code: "NL", value: 34 }
+          - { code: "PT", value: 32 }
+          - { code: "BE", value: 28 }
+          - { code: "FR", value: 24 }
+          - { code: "GB", value: 22 }
+          - { code: "IE", value: 22 }
+          - { code: "CH", value: 20 }
+          - { code: "DE", value: 19 }
+          - { code: "AT", value: 19 }
+          - { code: "VN", value: 17 }
+          - { code: "IL", value: 18 }
+          - { code: "TW", value: 18 }
+          - { code: "CA", value: 13 }
+          - { code: "TH", value: 13 }
+          - { code: "ES", value: 12 }
+          - { code: "TR", value: 11 }
+          - { code: "US", value: 10 }
+          - { code: "AU", value: 9 }
+          - { code: "KR", value: 9 }
+          - { code: "MX", value: 9 }
+          - { code: "JO", value: 8 }
+          - { code: "RO", value: 9 }
+          - { code: "GR", value: 6 }
+          - { code: "BR", value: 6 }
+          - { code: "PL", value: 4 }
+          - { code: "AE", value: 5 }
+          - { code: "ZA", value: 1 }
+          - { code: "JP", value: 3 }
+          - { code: "IN", value: 2 }
+          - { code: "RU", value: 2 }
+          - { code: "SA", value: 1 }
+          - { code: "IR", value: 1 }
+          - { code: "NG", value: 1 }
+          - { code: "PK", value: 1 }
+
+  # ═══════════════════════════════════════════════
+  # ACT I — TOYOTA'S EMPIRE
+  # ═══════════════════════════════════════════════
+
+  - id: toyota-25-stat
+    kind: stat
+    text: "25"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 3]
+    map:
+      center: [40.0, 20.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$amber"]
+        items:
+          - { code: "AR", value: 1 }
+          - { code: "AU", value: 1 }
+          - { code: "BH", value: 1 }
+          - { code: "CL", value: 1 }
+          - { code: "FI", value: 1 }
+          - { code: "GR", value: 1 }
+          - { code: "ID", value: 1 }
+          - { code: "IE", value: 1 }
+          - { code: "IL", value: 1 }
+          - { code: "JP", value: 1 }
+          - { code: "JO", value: 1 }
+          - { code: "KW", value: 1 }
+          - { code: "OM", value: 1 }
+          - { code: "PH", value: 1 }
+          - { code: "PL", value: 1 }
+          - { code: "QA", value: 1 }
+          - { code: "SA", value: 1 }
+          - { code: "ZA", value: 1 }
+          - { code: "ES", value: 1 }
+          - { code: "TW", value: 1 }
+          - { code: "TZ", value: 1 }
+          - { code: "TH", value: 1 }
+          - { code: "AE", value: 1 }
+          - { code: "US", value: 1 }
+          - { code: "YE", value: 1 }
+
+  - id: toyota-wins
+    text: "What Toyota wins on"
+    chart: data:brand-counts
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [40.0, 20.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [137.1567, 35.0833]
+          label: "Toyota City — HQ"
+          color: "#d9a84a"
+        - coordinates: [-77.0369, 38.9072]
+          label: "USA — Toyota #1"
+          color: "#d9a84a"
+          labelAnchor: right
+        - coordinates: [46.6753, 24.7136]
+          label: "Riyadh — Toyota #1"
+          color: "#d9a84a"
+          labelAnchor: bottom
+        - coordinates: [100.5018, 13.7563]
+          label: "Bangkok — Toyota #1"
+          color: "#d9a84a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent2"]
+        items:
+          - { code: "AR", value: 1 }
+          - { code: "AU", value: 1 }
+          - { code: "BH", value: 1 }
+          - { code: "CL", value: 1 }
+          - { code: "FI", value: 1 }
+          - { code: "GR", value: 1 }
+          - { code: "ID", value: 1 }
+          - { code: "IE", value: 1 }
+          - { code: "IL", value: 1 }
+          - { code: "JP", value: 1 }
+          - { code: "JO", value: 1 }
+          - { code: "KW", value: 1 }
+          - { code: "OM", value: 1 }
+          - { code: "PH", value: 1 }
+          - { code: "PL", value: 1 }
+          - { code: "QA", value: 1 }
+          - { code: "SA", value: 1 }
+          - { code: "ZA", value: 1 }
+          - { code: "ES", value: 1 }
+          - { code: "TW", value: 1 }
+          - { code: "TZ", value: 1 }
+          - { code: "TH", value: 1 }
+          - { code: "AE", value: 1 }
+          - { code: "US", value: 1 }
+          - { code: "YE", value: 1 }
+
+  # ═══════════════════════════════════════════════
+  # BRIDGE — THE TWO MAPS, SIDE BY SIDE
+  # ═══════════════════════════════════════════════
+
+  - id: two-maps
+    text: "The two maps, side by side"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 25.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30, 60, 90]
+        colors: ["$surface", "$accent2", "$amber", "$teal", "$accent", "$accent"]
+        items:
+          - { code: "NO", value: 89 }
+          - { code: "IS", value: 71 }
+          - { code: "SE", value: 60 }
+          - { code: "DK", value: 57 }
+          - { code: "CN", value: 48 }
+          - { code: "FI", value: 36 }
+          - { code: "NL", value: 34 }
+          - { code: "PT", value: 32 }
+          - { code: "BE", value: 28 }
+          - { code: "FR", value: 24 }
+          - { code: "GB", value: 22 }
+          - { code: "IE", value: 22 }
+          - { code: "CH", value: 20 }
+          - { code: "DE", value: 19 }
+          - { code: "AT", value: 19 }
+          - { code: "VN", value: 17 }
+          - { code: "IL", value: 18 }
+          - { code: "TW", value: 18 }
+          - { code: "CA", value: 13 }
+          - { code: "TH", value: 13 }
+          - { code: "ES", value: 12 }
+          - { code: "TR", value: 11 }
+          - { code: "US", value: 10 }
+          - { code: "AU", value: 9 }
+          - { code: "KR", value: 9 }
+          - { code: "MX", value: 9 }
+          - { code: "JO", value: 8 }
+          - { code: "RO", value: 9 }
+          - { code: "GR", value: 6 }
+          - { code: "BR", value: 6 }
+          - { code: "PL", value: 4 }
+          - { code: "AE", value: 5 }
+          - { code: "JP", value: 3 }
+          - { code: "IN", value: 2 }
+          - { code: "RU", value: 2 }
+          - { code: "ZA", value: 1 }
+          - { code: "SA", value: 1 }
+          - { code: "IR", value: 1 }
+          - { code: "NG", value: 1 }
+          - { code: "PK", value: 1 }
+
+  # ═══════════════════════════════════════════════
+  # ACT II — NORWAY, THE PURE-EV OUTLIER
+  # ═══════════════════════════════════════════════
+
+  - id: norway-89
+    kind: stat
+    text: "89%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 62.0]
+      zoom: 4.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [10.7522, 59.9139]
+          label: "Oslo — 89% of new cars BEV (2024)"
+          color: "#4fa6d9"
+      regions:
+        level: country
+        ramp: [0, 89]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "NO", value: 89 }
+
+  # ═══════════════════════════════════════════════
+  # EUROPE — REGIONAL LOYALTY
+  # ═══════════════════════════════════════════════
+
+  - id: europe-regional
+    text: "Europe's regional loyalty"
+    chart: data:ev-share-europe
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 50.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [13.4050, 52.5200]
+          label: "Berlin — VW · 19% EV"
+          color: "#d9a84a"
+        - coordinates: [2.3522, 48.8566]
+          label: "Paris — Renault · 24% EV"
+          color: "#d9a84a"
+          labelAnchor: bottom
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome — Fiat · 9% EV"
+          color: "#d9a84a"
+          labelAnchor: right
+        - coordinates: [14.4378, 50.0755]
+          label: "Prague — Škoda · 6% EV"
+          color: "#d9a84a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30, 60, 90]
+        colors: ["$surface", "$accent2", "$amber", "$teal", "$accent", "$accent"]
+        items:
+          - { code: "NO", value: 89 }
+          - { code: "IS", value: 71 }
+          - { code: "SE", value: 60 }
+          - { code: "DK", value: 57 }
+          - { code: "FI", value: 36 }
+          - { code: "NL", value: 34 }
+          - { code: "PT", value: 32 }
+          - { code: "BE", value: 28 }
+          - { code: "FR", value: 24 }
+          - { code: "GB", value: 22 }
+          - { code: "IE", value: 22 }
+          - { code: "CH", value: 20 }
+          - { code: "DE", value: 19 }
+          - { code: "AT", value: 19 }
+          - { code: "ES", value: 12 }
+          - { code: "TR", value: 11 }
+          - { code: "RO", value: 9 }
+          - { code: "IT", value: 9 }
+          - { code: "GR", value: 6 }
+          - { code: "CZ", value: 6 }
+          - { code: "BG", value: 3 }
+          - { code: "PL", value: 4 }
+
+  # ═══════════════════════════════════════════════
+  # ACT III — CHINA, BYD, AND THE LOCAL CHAMPION
+  # ═══════════════════════════════════════════════
+
+  - id: china-48
+    kind: stat
+    text: "48%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [110.0, 30.0]
+      zoom: 3.2
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [114.0579, 22.5431]
+          label: "Shenzhen — BYD HQ"
+          color: "#4fa6d9"
+        - coordinates: [116.4074, 39.9042]
+          label: "Beijing"
+          color: "#d9a84a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 48]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "CN", value: 48 }
+
+  - id: vietnam-korea
+    text: "Vietnam and South Korea"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [115.0, 20.0]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [106.6881, 20.8449]
+          label: "Hai Phong — VinFast"
+          color: "#4fa6d9"
+        - coordinates: [126.9780, 37.5665]
+          label: "Seoul — Hyundai"
+          color: "#4fa6d9"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30, 60, 90]
+        colors: ["$surface", "$accent2", "$amber", "$teal", "$accent", "$accent"]
+        items:
+          - { code: "VN", value: 17 }
+          - { code: "KR", value: 9 }
+          - { code: "CN", value: 48 }
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — THE ICE HOLDOUTS
+  # ═══════════════════════════════════════════════
+
+  - id: ice-stat
+    kind: stat
+    text: "Under 2%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [55.0, 30.0]
+      zoom: 2.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [49.4242, 53.5303]
+          label: "Tolyatti — Lada"
+          color: "#c26a4a"
+        - coordinates: [51.4215, 35.6892]
+          label: "Tehran — Iran Khodro"
+          color: "#c26a4a"
+          labelAnchor: top
+        - coordinates: [6.9667, 6.0167]
+          label: "Nnewi — Innoson"
+          color: "#c26a4a"
+          labelAnchor: bottom
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi — Maruti"
+          color: "#c26a4a"
+          labelAnchor: right
+        - coordinates: [67.0011, 24.8607]
+          label: "Karachi — Suzuki"
+          color: "#c26a4a"
+          labelAnchor: left
+      regions:
+        level: country
+        ramp: [0, 5]
+        colors: ["$surface", "$red"]
+        items:
+          - { code: "RU", value: 2 }
+          - { code: "IR", value: 1 }
+          - { code: "NG", value: 1 }
+          - { code: "PK", value: 1 }
+          - { code: "IN", value: 2 }
+          - { code: "SA", value: 1 }
+          - { code: "DZ", value: 1 }
+          - { code: "EG", value: 1 }
+
+  # ═══════════════════════════════════════════════
+  # THE LONG ROAD — STOCK VS SALES
+  # ═══════════════════════════════════════════════
+
+  - id: stock-vs-sales
+    text: "The long road, in stock terms"
+    chart: data:stock-vs-sales
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 25.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30]
+        colors: ["$surface", "$accent2", "$amber", "$accent"]
+        items:
+          - { code: "NO", value: 30 }
+          - { code: "IS", value: 14 }
+          - { code: "SE", value: 9 }
+          - { code: "DK", value: 8 }
+          - { code: "NL", value: 6 }
+          - { code: "CN", value: 7 }
+          - { code: "DE", value: 4 }
+          - { code: "GB", value: 3 }
+          - { code: "FR", value: 4 }
+          - { code: "US", value: 2 }
+          - { code: "JP", value: 1 }
+          - { code: "IN", value: 0 }
+
+  # ═══════════════════════════════════════════════
+  # OIL DEMAND DISPLACED
+  # ═══════════════════════════════════════════════
+
+  - id: oil-displaced
+    kind: stat
+    text: "1.2 mb/d"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 25.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30, 60, 90]
+        colors: ["$surface", "$accent2", "$amber", "$teal", "$accent", "$accent"]
+        items:
+          - { code: "NO", value: 89 }
+          - { code: "CN", value: 48 }
+          - { code: "DE", value: 19 }
+          - { code: "GB", value: 22 }
+          - { code: "FR", value: 24 }
+          - { code: "US", value: 10 }
+          - { code: "IN", value: 2 }
+          - { code: "JP", value: 3 }
+
+  # ═══════════════════════════════════════════════
+  # CODA
+  # ═══════════════════════════════════════════════
+
+  - id: coda
+    text: "What the two maps say together"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [0, 5, 15, 30, 60, 90]
+        colors: ["$surface", "$accent2", "$amber", "$teal", "$accent", "$accent"]
+        items:
+          - { code: "NO", value: 89 }
+          - { code: "IS", value: 71 }
+          - { code: "SE", value: 60 }
+          - { code: "DK", value: 57 }
+          - { code: "CN", value: 48 }
+          - { code: "FI", value: 36 }
+          - { code: "NL", value: 34 }
+          - { code: "PT", value: 32 }
+          - { code: "BE", value: 28 }
+          - { code: "FR", value: 24 }
+          - { code: "GB", value: 22 }
+          - { code: "IE", value: 22 }
+          - { code: "CH", value: 20 }
+          - { code: "DE", value: 19 }
+          - { code: "AT", value: 19 }
+          - { code: "VN", value: 17 }
+          - { code: "IL", value: 18 }
+          - { code: "TW", value: 18 }
+          - { code: "CA", value: 13 }
+          - { code: "TH", value: 13 }
+          - { code: "ES", value: 12 }
+          - { code: "TR", value: 11 }
+          - { code: "US", value: 10 }
+          - { code: "AU", value: 9 }
+          - { code: "KR", value: 9 }
+          - { code: "MX", value: 9 }
+          - { code: "JO", value: 8 }
+          - { code: "RO", value: 9 }
+          - { code: "GR", value: 6 }
+          - { code: "BR", value: 6 }
+          - { code: "PL", value: 4 }
+          - { code: "AE", value: 5 }
+          - { code: "JP", value: 3 }
+          - { code: "IN", value: 2 }
+          - { code: "RU", value: 2 }
+          - { code: "ZA", value: 1 }
+          - { code: "SA", value: 1 }
+          - { code: "IR", value: 1 }
+          - { code: "NG", value: 1 }
+          - { code: "PK", value: 1 }
