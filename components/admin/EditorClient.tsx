@@ -10,6 +10,7 @@ import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
+import type { CachedVideo } from '@/lib/storyVideo'
 
 type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'settings'
 
@@ -25,6 +26,10 @@ interface InitialState {
   charts: ChartEntry[]
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
+  videoCache: {
+    '9:16': CachedVideo | null
+    '16:9': CachedVideo | null
+  }
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -327,6 +332,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
             slug={slug}
             units={initial.narrationUnits}
             initialYaml={initial.tts_yaml}
+            videoCache={initial.videoCache}
           />
         )}
         {tab === 'settings' && (

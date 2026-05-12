@@ -7,6 +7,8 @@ import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { defaultNarrationText } from '@/lib/storyTts'
+import { getCachedVideo, type CachedVideo } from '@/lib/storyVideo'
+import { createServiceClient } from '@/lib/supabase'
 import type { NarrationUnit } from '@/components/admin/NarrationEditor'
 
 export const dynamic = 'force-dynamic'
@@ -46,6 +48,7 @@ export default async function EditStoryPage({ params }: Props) {
   if (!(await isAuthed())) redirect(`/admin/login?next=/admin/${slug}`)
 
   const src = getContentSource()
+  const videoCache = await loadVideoCache(slug)
   const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
@@ -112,7 +115,29 @@ export default async function EditStoryPage({ params }: Props) {
         charts,
         narrationUnits,
         tts_yaml: tts_yaml ?? null,
+        videoCache,
       }}
     />
   )
+}
+
+export type VideoCache = {
+  '9:16': CachedVideo | null
+  '16:9': CachedVideo | null
+}
+
+// Best-effort cache lookup. If Supabase isn't reachable (fs-only dev, env
+// missing) we just return nulls so the panel renders an "idle" state
+// instead of failing the whole admin page.
+async function loadVideoCache(slug: string): Promise<VideoCache> {
+  try {
+    const supabase = createServiceClient()
+    const [vert, horiz] = await Promise.all([
+      getCachedVideo(supabase, slug, '9:16', false),
+      getCachedVideo(supabase, slug, '16:9', false),
+    ])
+    return { '9:16': vert, '16:9': horiz }
+  } catch {
+    return { '9:16': null, '16:9': null }
+  }
 }

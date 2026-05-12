@@ -263,9 +263,13 @@ async function walkAndRecord(args: {
   // ?capture=1 sets staticCapture in StoryMapShell so the map jumps
   // deterministically between cues instead of flying — keeps tile loads
   // off-frame and makes camera state predictable from cue timing alone.
-  // Aspect is determined entirely by viewport via the `(max-aspect-ratio:
-  // 1/1)` media query (lib/chartTheme.ts:69) — no separate query param.
-  const url = `${args.baseUrl}/story/${args.slug}?autoplay=1&capture=1`
+  // ?compose=vertical (9:16 only) constrains the story content to a 4:5
+  // central band and fills the surrounding 9:16 frame with the story's
+  // aura background — see components/story/VerticalCaptureFrame.tsx.
+  // Aspect itself is determined by viewport via the `(max-aspect-ratio:
+  // 1/1)` media query (lib/chartTheme.ts:69).
+  const composeParam = args.aspect === '9:16' ? '&compose=vertical' : ''
+  const url = `${args.baseUrl}/story/${args.slug}?autoplay=1&capture=1${composeParam}`
   await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
 
   await page.waitForSelector('[data-unit-index]', { timeout: 30_000 })

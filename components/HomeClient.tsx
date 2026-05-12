@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
+import AuraBackground from '@/components/AuraBackground'
 import type { Theme } from '@/types/story'
 
 export interface HomeStory {
@@ -19,38 +20,6 @@ export interface HomeEpic {
   slug: string
   name: string
   description: string | null
-}
-
-function AuraBackground({ slug }: { slug: string }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setShow(true)
-          obs.disconnect()
-        }
-      },
-      { rootMargin: '300px' }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-  return (
-    <div ref={ref} className="bn-aura" aria-hidden>
-      {show && (
-        <iframe
-          title=""
-          src={`https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=off&theme=light`}
-          loading="lazy"
-          tabIndex={-1}
-        />
-      )}
-    </div>
-  )
 }
 
 const css = `

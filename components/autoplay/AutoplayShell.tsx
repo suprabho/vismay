@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import type { ResolvedUnit, StoryDefaults } from '@/lib/storyConfig.types'
+import { usePollVideoRender } from '@/lib/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
 import TunePanel from './AutoplayTunePanel'
 
@@ -98,8 +99,8 @@ export default function AutoplayShell({
 
   /* ─── Video download state ──────────────────────────────────────── */
 
-  const [downloadingVideo, setDownloadingVideo] = useState(false)
-  const [videoError, setVideoError] = useState<string | null>(null)
+  const { state: videoState, error: videoError, poll: pollVideo } = usePollVideoRender()
+  const downloadingVideo = videoState === 'rendering'
 
   // Use mobileUnits for 9:16 (vertical), desktop for 16:9
   const isVertical = ratio === '9:16'
@@ -539,44 +540,16 @@ export default function AutoplayShell({
    */
   const handleDownloadVideo = useCallback(async () => {
     if (downloadingVideo) return
-    setDownloadingVideo(true)
-    setVideoError(null)
     try {
-      const endpoint = `/api/story-video/${slug}?aspect=${encodeURIComponent(ratio)}`
-      // 60 attempts × 15s = 15 min ceiling. A 10-minute story renders in
-      // ~real-time on the runner, plus ~30–60s of CI startup, so this is a
-      // generous upper bound. If a render legitimately takes longer the
-      // cached row will still be there next time the user clicks.
-      const MAX_ATTEMPTS = 60
-      const POLL_MS = 15_000
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const res = await fetch(endpoint)
-        const body = (await res.json().catch(() => ({}))) as {
-          status?: string
-          public_url?: string
-          error?: string
-        }
-        if (res.ok && body.status === 'ready' && body.public_url) {
-          // Cross-origin storage URL — `download` attr is mostly ignored by
-          // browsers in that case, so just open in a new tab. Users can save
-          // from the browser's media viewer.
-          window.open(body.public_url, '_blank', 'noopener,noreferrer')
-          return
-        }
-        if (res.status === 202 || body.status === 'rendering') {
-          // Render dispatched (or still in flight) — back off and retry.
-          await new Promise((r) => setTimeout(r, POLL_MS))
-          continue
-        }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
-      }
-      throw new Error('render timed out — try again later')
-    } catch (err) {
-      setVideoError(err instanceof Error ? err.message : 'render failed')
-    } finally {
-      setDownloadingVideo(false)
+      const { public_url } = await pollVideo({ slug, aspect: ratio })
+      // Cross-origin storage URL — `download` attr is mostly ignored by
+      // browsers in that case, so just open in a new tab. Users can save
+      // from the browser's media viewer.
+      window.open(public_url, '_blank', 'noopener,noreferrer')
+    } catch {
+      // error already surfaced via videoError from the hook
     }
-  }, [downloadingVideo, slug, ratio])
+  }, [downloadingVideo, slug, ratio, pollVideo])
 
   /* ─── Tune-mode keyboard ──────────────────────────────────────── */
 

@@ -10,6 +10,7 @@ import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@/lib/getFontImports'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import StoryMapShell from '@/components/story/StoryMapShell'
+import VerticalCaptureFrame from '@/components/story/VerticalCaptureFrame'
 import VizmayaLogo from '@/components/VizmayaLogo'
 
 interface RouteParams {
@@ -112,13 +113,15 @@ export default async function StoryPage({ params }: RouteParams) {
           }}
         />
       </Link>
-      <StoryMapShell
-        units={units}
-        mobileUnits={hasMobileOverrides ? mobileUnits : undefined}
-        accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
-        defaults={defaults}
-        slug={slug}
-      />
+      <VerticalCaptureFrame auraSlug={story.frontmatter.aura}>
+        <StoryMapShell
+          units={units}
+          mobileUnits={hasMobileOverrides ? mobileUnits : undefined}
+          accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+          defaults={defaults}
+          slug={slug}
+        />
+      </VerticalCaptureFrame>
     </ThemeProvider>
   )
 }

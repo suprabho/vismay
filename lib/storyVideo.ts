@@ -17,13 +17,26 @@ interface CueRow {
 }
 
 /**
- * Cache key over both chunk identity (URLs + durations) and per-cue timings
- * (unit_index/chunk_index/start_ms/end_ms). Mutating cues via the tune panel
- * writes back to story_audio_cues directly with no version flag, so the only
- * way to detect tuning is to hash the timings themselves.
+ * Bump when the render pipeline changes the visual output of cached MP4s
+ * (composition, layout, capture URL, render-script behavior). All existing
+ * `story_videos` rows will mismatch on the next request and re-render.
+ *
+ *   v1 — initial pipeline
+ *   v2 — 9:16 composes content into a 4:5 central band with the story's
+ *        aura behind, via ?compose=vertical (storyVideoRender.ts).
+ */
+export const RENDER_PIPELINE_VERSION = 'v2'
+
+/**
+ * Cache key over chunk identity (URLs + durations), per-cue timings, and
+ * the current pipeline version. Mutating cues via the tune panel writes back
+ * to story_audio_cues directly with no version flag, so the only way to
+ * detect tuning is to hash the timings themselves; the pipeline-version
+ * suffix lets composition/render changes invalidate the cache too.
  */
 export function computeAudioRevisionHash(chunks: ChunkRow[], cues: CueRow[]): string {
   const payload = JSON.stringify({
+    pipeline: RENDER_PIPELINE_VERSION,
     chunks: chunks.map((c) => [c.chunk_index, c.public_url, c.duration_ms]),
     cues: cues.map((c) => [c.unit_index, c.chunk_index, c.start_ms, c.end_ms]),
   })

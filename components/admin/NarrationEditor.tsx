@@ -9,11 +9,17 @@
  * to fire the GitHub Actions workflow. Only edited units are written to YAML
  * — empty / unchanged-from-default rows stay out of the file so it doesn't
  * grow with no-op entries.
+ *
+ * Also hosts the Render Video panel — same dispatch pattern as audio regen,
+ * with polling for the resulting MP4 link. Lives here (rather than its own
+ * tab) so all dispatch-style admin actions sit next to each other.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { stringify as stringifyYaml } from 'yaml'
 import { parseTtsConfig, TTS_SKIP_IDS } from '@/lib/storyTts'
+import { usePollVideoRender } from '@/lib/usePollVideoRender'
+import type { CachedVideo, VideoAspect } from '@/lib/storyVideo'
 
 export interface NarrationUnit {
   parentIndex: number
@@ -33,6 +39,10 @@ interface Props {
   slug: string
   units: NarrationUnit[]
   initialYaml: string | null
+  videoCache: {
+    '9:16': CachedVideo | null
+    '16:9': CachedVideo | null
+  }
 }
 
 interface UnitState {
@@ -84,7 +94,7 @@ function serializeToYaml(states: UnitState[]): string {
   return stringifyYaml({ units: out })
 }
 
-export default function NarrationEditor({ slug, units, initialYaml }: Props) {
+export default function NarrationEditor({ slug, units, initialYaml, videoCache }: Props) {
   const [states, setStates] = useState<UnitState[]>(() =>
     buildInitialState(units, initialYaml)
   )
@@ -219,6 +229,8 @@ export default function NarrationEditor({ slug, units, initialYaml }: Props) {
         </div>
       )}
 
+      <VideoRenderPanel slug={slug} initial={videoCache} dirty={dirty} />
+
       <div className="flex-1 overflow-y-auto divide-y divide-white/5">
         {units.map((u, i) => (
           <UnitRow
@@ -229,6 +241,115 @@ export default function NarrationEditor({ slug, units, initialYaml }: Props) {
           />
         ))}
       </div>
+    </div>
+  )
+}
+
+function VideoRenderPanel({
+  slug,
+  initial,
+  dirty,
+}: {
+  slug: string
+  initial: { '9:16': CachedVideo | null; '16:9': CachedVideo | null }
+  dirty: boolean
+}) {
+  return (
+    <div className="px-4 py-3 border-b border-white/5 bg-neutral-950/40 shrink-0 space-y-2">
+      <div className="flex items-center gap-2 text-xs">
+        <div className="font-medium text-neutral-300">Render video</div>
+        <div className="text-[10px] text-neutral-500">
+          dispatches GitHub Actions · polls every 5 min
+        </div>
+      </div>
+      <VideoRenderRow slug={slug} aspect="9:16" initial={initial['9:16']} dirty={dirty} />
+      <VideoRenderRow slug={slug} aspect="16:9" initial={initial['16:9']} dirty={dirty} />
+    </div>
+  )
+}
+
+function VideoRenderRow({
+  slug,
+  aspect,
+  initial,
+  dirty,
+}: {
+  slug: string
+  aspect: VideoAspect
+  initial: CachedVideo | null
+  dirty: boolean
+}) {
+  const { state, error, poll } = usePollVideoRender()
+  const [force, setForce] = useState(false)
+  // Hold the latest URL we know about: either the server-hydrated one or
+  // whatever a freshly completed poll gave us.
+  const [latestUrl, setLatestUrl] = useState<string | null>(
+    initial && initial.public_url ? initial.public_url : null
+  )
+
+  const handleRender = useCallback(async () => {
+    try {
+      const { public_url } = await poll({ slug, aspect, force })
+      setLatestUrl(public_url)
+    } catch {
+      // error already surfaced via the hook's `error` state
+    }
+  }, [poll, slug, aspect, force])
+
+  const isRendering = state === 'rendering'
+  const initialDispatching =
+    initial && !initial.public_url && initial.dispatched_at !== null
+
+  let statusEl: React.ReactNode
+  if (state === 'rendering') {
+    statusEl = <span className="text-amber-300/80">rendering · polling every 5 min</span>
+  } else if (state === 'error' && error) {
+    statusEl = <span className="text-red-300/80">error · {error}</span>
+  } else if (latestUrl) {
+    statusEl = <span className="text-emerald-300/80">ready</span>
+  } else if (initialDispatching) {
+    statusEl = (
+      <span className="text-amber-300/80">in flight (dispatched · click Render to poll)</span>
+    )
+  } else {
+    statusEl = <span className="text-neutral-500">no render yet</span>
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="font-mono text-neutral-400 w-12 shrink-0">{aspect}</span>
+      <span className="flex-1 truncate">{statusEl}</span>
+      <label
+        className="flex items-center gap-1 text-neutral-500 select-none cursor-pointer"
+        title="Append &force=1 to bypass the cache"
+      >
+        <input
+          type="checkbox"
+          checked={force}
+          onChange={(e) => setForce(e.target.checked)}
+          className="accent-white"
+        />
+        force
+      </label>
+      <button
+        type="button"
+        onClick={handleRender}
+        disabled={isRendering || dirty}
+        title={dirty ? 'Save narration first' : `Render ${aspect} MP4`}
+        className="px-3 py-1 rounded border border-white/10 text-neutral-200 hover:bg-white/5 disabled:opacity-40"
+      >
+        {isRendering ? 'Rendering…' : 'Render'}
+      </button>
+      {latestUrl && (
+        <a
+          href={latestUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="px-3 py-1 rounded text-neutral-300 hover:text-white hover:bg-white/5 border border-white/10"
+        >
+          Open ↗
+        </a>
+      )}
     </div>
   )
 }
