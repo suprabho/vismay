@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PersonSummary } from "./page";
+import DetailSheet from "./DetailSheet";
 
 type Citation = {
   citation_id: string;
@@ -102,23 +103,33 @@ export default function PersonDetail({ personId, person, onClose, onDataLoaded }
   }
 
   return (
-    <div className="absolute left-4 top-16 bottom-6 z-20 w-[420px] flex flex-col bg-black/90 backdrop-blur border border-white/10 rounded-xl overflow-hidden shadow-2xl">
-      <div className="px-4 pt-3 pb-3 border-b border-white/10 flex items-start justify-between gap-2 flex-shrink-0">
+    <DetailSheet>
+      <div
+        className="px-4 pt-3 pb-3 flex items-start justify-between gap-2 shrink-0"
+        style={{ borderBottom: "1px solid color-mix(in srgb, var(--vmy-bone) 8%, transparent)" }}
+      >
         <div className="min-w-0">
-          <p className="text-[11px] font-mono text-white/40 uppercase tracking-widest mb-0.5">
-            Person
+          <p
+            className="text-[10px] font-mono uppercase tracking-[0.24em] mb-1"
+            style={{ color: "var(--vmy-ember)" }}
+          >
+            ✕ Person Dossier
           </p>
-          <p className="text-sm font-mono font-semibold text-white leading-snug">
+          <p
+            className="text-lg leading-snug"
+            style={{ fontFamily: "var(--font-fraunces), serif", color: "var(--vmy-bone)", fontWeight: 500 }}
+          >
             {person?.name ?? personId}
           </p>
-          <p className="text-[11px] text-white/50 mt-0.5 leading-snug">
+          <p className="text-[11px] mt-0.5 leading-snug font-mono" style={{ color: "color-mix(in srgb, var(--vmy-bone) 50%, transparent)" }}>
             {[person?.nationality, ...(person?.occupations ?? [])].filter(Boolean).join(" · ")}
           </p>
         </div>
         <button
           onClick={onClose}
           aria-label="Close"
-          className="text-white/30 hover:text-white/70 text-lg leading-none flex-shrink-0 transition-colors"
+          className="text-lg leading-none shrink-0 transition-colors hover:opacity-100"
+          style={{ color: "color-mix(in srgb, var(--vmy-bone) 40%, transparent)" }}
         >
           ×
         </button>
@@ -126,37 +137,43 @@ export default function PersonDetail({ personId, person, onClose, onDataLoaded }
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {person?.summary && (
-          <p className="text-xs text-white/70 leading-relaxed">{person.summary}</p>
+          <p className="text-xs leading-relaxed" style={{ color: "color-mix(in srgb, var(--vmy-bone) 78%, transparent)" }}>
+            {person.summary}
+          </p>
         )}
 
         {loading && (
-          <p className="text-xs text-white/30 font-mono">Loading detail…</p>
+          <p className="text-xs font-mono" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>Loading detail…</p>
         )}
 
         {data && (
           <>
             {data.flights.length > 0 && (
-              <Section title={`Flights (${data.flights.length})`}>
+              <Section title={`Flights · ${data.flights.length}`}>
                 <ul className="space-y-1.5">
                   {data.flights.slice(0, 30).map((f, i) => (
-                    <li key={i} className="text-xs font-mono text-white/70 leading-snug">
-                      <span className="text-orange-300/80">
+                    <li
+                      key={i}
+                      className="text-xs font-mono leading-snug"
+                      style={{ color: "color-mix(in srgb, var(--vmy-bone) 72%, transparent)" }}
+                    >
+                      <span style={{ color: "var(--vmy-ember)" }}>
                         {f.flight_date ?? "—"}
                       </span>
-                      <span className="mx-1.5 text-white/30">·</span>
+                      <span className="mx-1.5" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>·</span>
                       <span>
                         {f.from_codes.join("→")}
                         {f.from_codes.length && f.to_codes.length ? "→" : ""}
                         {f.to_codes.join("→")}
                       </span>
                       {f.aircraft_tail && (
-                        <span className="ml-1.5 text-white/30">{f.aircraft_tail}</span>
+                        <span className="ml-1.5" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>{f.aircraft_tail}</span>
                       )}
-                      <span className="ml-1.5 text-white/30 italic">as {f.raw_name}</span>
+                      <span className="ml-1.5 italic" style={{ color: "color-mix(in srgb, var(--vmy-bone) 35%, transparent)" }}>as {f.raw_name}</span>
                     </li>
                   ))}
                   {data.flights.length > 30 && (
-                    <li className="text-[11px] text-white/30 font-mono">
+                    <li className="text-[11px] font-mono" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>
                       +{data.flights.length - 30} more flights
                     </li>
                   )}
@@ -167,15 +184,15 @@ export default function PersonDetail({ personId, person, onClose, onDataLoaded }
             {data.blackbook.length > 0 && (
               <Section title="Black Book">
                 {data.blackbook.map((b) => (
-                  <div key={b.id} className="text-xs text-white/70 leading-snug">
+                  <div key={b.id} className="text-xs leading-snug" style={{ color: "color-mix(in srgb, var(--vmy-bone) 72%, transparent)" }}>
                     {b.address && <div>{b.address}</div>}
                     {(b.city || b.country) && (
-                      <div className="text-white/50">
+                      <div style={{ color: "color-mix(in srgb, var(--vmy-bone) 50%, transparent)" }}>
                         {[b.city, b.country].filter(Boolean).join(", ")}
                       </div>
                     )}
                     {b.email && (
-                      <div className="text-orange-300/70 mt-0.5">{b.email}</div>
+                      <div className="mt-0.5" style={{ color: "var(--vmy-rose)" }}>{b.email}</div>
                     )}
                   </div>
                 ))}
@@ -183,7 +200,7 @@ export default function PersonDetail({ personId, person, onClose, onDataLoaded }
             )}
 
             {data.relationships.length > 0 && (
-              <Section title={`Relationships (${data.relationships.length})`}>
+              <Section title={`Relationships · ${data.relationships.length}`}>
                 <ul className="space-y-2">
                   {data.relationships.map((r, i) => (
                     <RelationshipRow
@@ -199,14 +216,14 @@ export default function PersonDetail({ personId, person, onClose, onDataLoaded }
             {data.relationships.length === 0 &&
               data.flights.length === 0 &&
               data.blackbook.length === 0 && (
-                <p className="text-xs text-white/30 font-mono">
+                <p className="text-xs font-mono" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>
                   No relationships, flights, or Black Book entries linked.
                 </p>
               )}
           </>
         )}
       </div>
-    </div>
+    </DetailSheet>
   );
 }
 
@@ -217,8 +234,11 @@ export default function PersonDetail({ personId, person, onClose, onDataLoaded }
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[11px] font-mono text-white/40 uppercase tracking-widest mb-1.5">
-        {title}
+      <p
+        className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
+        style={{ color: "color-mix(in srgb, var(--vmy-bone) 45%, transparent)" }}
+      >
+        — {title}
       </p>
       {children}
     </div>
@@ -227,16 +247,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function VerificationBadge({ status }: { status: string | null }) {
   const s = (status ?? "").toLowerCase();
-  // Factual = green; Unverified = amber; everything else = grey
-  const styles =
+  // Factual = ember; Unverified = rose; everything else = bone-muted.
+  const style: React.CSSProperties =
     s === "factual"
-      ? "bg-green-500/15 text-green-300 border-green-400/40"
+      ? { color: "var(--vmy-signal)", background: "color-mix(in srgb, var(--vmy-signal) 10%, transparent)", borderColor: "color-mix(in srgb, var(--vmy-signal) 35%, transparent)" }
       : s === "unverified"
-      ? "bg-amber-500/15 text-amber-300 border-amber-400/40"
-      : "bg-white/5 text-white/50 border-white/20";
+      ? { color: "var(--vmy-rose)", background: "color-mix(in srgb, var(--vmy-rose) 12%, transparent)", borderColor: "color-mix(in srgb, var(--vmy-rose) 35%, transparent)" }
+      : { color: "color-mix(in srgb, var(--vmy-bone) 50%, transparent)", background: "color-mix(in srgb, var(--vmy-bone) 5%, transparent)", borderColor: "color-mix(in srgb, var(--vmy-bone) 18%, transparent)" };
   return (
     <span
-      className={`inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-px rounded border ${styles}`}
+      className="inline-block text-[9px] font-mono uppercase tracking-wider px-1.5 py-px rounded border"
+      style={style}
     >
       {status ?? "—"}
     </span>
@@ -251,30 +272,49 @@ function RelationshipRow({
   citations: Map<string, Citation>;
 }) {
   return (
-    <li className="border border-white/10 rounded-lg px-2.5 py-2 leading-snug">
+    <li
+      className="rounded-lg px-2.5 py-2 leading-snug"
+      style={{
+        border: "1px solid color-mix(in srgb, var(--vmy-bone) 8%, transparent)",
+        background: "color-mix(in srgb, var(--vmy-ink) 40%, transparent)",
+      }}
+    >
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="min-w-0">
-          <span className="text-[11px] font-mono text-orange-300/90 uppercase tracking-wider">
+          <span
+            className="text-[10px] font-mono uppercase tracking-[0.16em]"
+            style={{ color: "var(--vmy-ember)" }}
+          >
             {edge.rel_type.replace(/_/g, " ")}
           </span>
           {edge.direction === "in" && (
-            <span className="text-[10px] text-white/30 ml-1.5">(received)</span>
+            <span className="text-[10px] ml-1.5" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>(received)</span>
           )}
         </div>
         <VerificationBadge status={edge.verification_status} />
       </div>
-      <p className="text-xs text-white/80 truncate">
+      <p
+        className="text-sm truncate"
+        style={{ fontFamily: "var(--font-fraunces), serif", color: "var(--vmy-bone)" }}
+      >
         {edge.other_name ?? edge.other_id}
         {edge.other_kind !== "person" && (
-          <span className="text-white/30 ml-1.5">[{edge.other_kind}]</span>
+          <span className="text-[11px] font-mono ml-1.5" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>
+            [{edge.other_kind}]
+          </span>
         )}
       </p>
       {edge.context && (
-        <p className="text-[11px] text-white/55 mt-1 leading-relaxed">{edge.context}</p>
+        <p
+          className="text-[11px] mt-1 leading-relaxed"
+          style={{ color: "color-mix(in srgb, var(--vmy-bone) 60%, transparent)" }}
+        >
+          {edge.context}
+        </p>
       )}
       {edge.citations.length > 0 && (
-        <p className="text-[11px] mt-1.5 leading-snug">
-          <span className="text-white/30 mr-1">cites:</span>
+        <p className="text-[11px] mt-1.5 leading-snug font-mono">
+          <span className="mr-1" style={{ color: "color-mix(in srgb, var(--vmy-bone) 30%, transparent)" }}>cites:</span>
           {edge.citations.map((num, i) => {
             const c = citations.get(num);
             return (
@@ -284,15 +324,16 @@ function RelationshipRow({
                     href={c.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-orange-300/80 hover:text-orange-300 underline decoration-orange-300/30"
+                    className="underline"
+                    style={{ color: "var(--vmy-steel)", textDecorationColor: "color-mix(in srgb, var(--vmy-steel) 40%, transparent)" }}
                     title={c.title ?? undefined}
                   >
                     [{num}]
                   </a>
                 ) : (
-                  <span className="text-white/40">[{num}]</span>
+                  <span style={{ color: "color-mix(in srgb, var(--vmy-bone) 40%, transparent)" }}>[{num}]</span>
                 )}
-                {i < edge.citations.length - 1 && <span className="text-white/20"> </span>}
+                {i < edge.citations.length - 1 && <span style={{ color: "color-mix(in srgb, var(--vmy-bone) 20%, transparent)" }}> </span>}
               </span>
             );
           })}

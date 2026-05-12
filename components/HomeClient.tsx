@@ -15,6 +15,12 @@ export interface HomeStory {
   theme?: Theme
 }
 
+export interface HomeEpic {
+  slug: string
+  name: string
+  description: string | null
+}
+
 function AuraBackground({ slug }: { slug: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [show, setShow] = useState(false)
@@ -150,6 +156,20 @@ const css = `
 .vz .bn.accent-blue:not(.has-aura) h3,.vz .bn.accent-blue:not(.has-aura) p,.vz .bn.accent-blue:not(.has-aura) .bn-k,.vz .bn.accent-blue:not(.has-aura) .bn-a{color:#fff}
 .vz .bn.accent-blue:not(.has-aura) p,.vz .bn.accent-blue:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
 
+/* Epics --------------------------------------------------- */
+.vz .epics{padding:120px clamp(24px,5vw,56px);border-top:1px solid var(--line);background:var(--cream)}
+.vz .epics-inner{max-width:1100px;margin:0 auto}
+.vz .epics-head{text-align:center;margin-bottom:64px}
+.vz .epics-head h2{font-size:clamp(30px,4vw,48px);font-style:italic;font-weight:400;margin-top:18px;max-width:22ch;margin-left:auto;margin-right:auto}
+.vz .epics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.vz .ep{position:relative;background:#fff;border:1px solid var(--line);border-radius:6px;padding:32px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease;color:var(--ink);min-height:220px}
+.vz .ep:hover{transform:translateY(-2px);box-shadow:0 12px 32px -18px rgba(12,12,16,.22);border-color:rgba(12,12,16,.18);opacity:1}
+.vz .ep-k{font-family:var(--ff-m);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--pink);margin-bottom:18px}
+.vz .ep h3{font-family:var(--ff-d);font-style:italic;font-weight:400;color:var(--ink);line-height:1.18;margin:0 0 12px;font-size:26px}
+.vz .ep p{font-family:var(--ff-m);font-size:13px;line-height:1.75;color:var(--muted);margin:0}
+.vz .ep-a{margin-top:24px;font-family:var(--ff-m);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);opacity:.6;transition:opacity .3s}
+.vz .ep:hover .ep-a{opacity:1}
+
 /* Manifesto ---------------------------------------------- */
 .vz .manifesto{padding:120px clamp(24px,5vw,56px);background:var(--cream);border-top:1px solid var(--line)}
 .vz .manifesto-inner{max-width:760px;margin:0 auto}
@@ -195,7 +215,7 @@ const css = `
 }
 `
 
-export default function HomeClient({ stories }: { stories: HomeStory[] }) {
+export default function HomeClient({ stories, epics = [] }: { stories: HomeStory[]; epics?: HomeEpic[] }) {
   useEffect(() => {
     const nav = document.getElementById('nav')
     const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 60)
@@ -247,6 +267,7 @@ export default function HomeClient({ stories }: { stories: HomeStory[] }) {
         </button>
         <div className="nav-r">
           <a className="nav-link" href="#work">Work</a>
+          <a className="nav-link" href="#epics">Epics</a>
           <Link className="nav-link" href="/stories">Archive</Link>
           <a className="nav-link" href="#about">About</a>
           <a className="nav-cta" href="https://www.youtube.com/@Vizmayaa" target="_blank" rel="noreferrer">Subscribe</a>
@@ -296,6 +317,35 @@ export default function HomeClient({ stories }: { stories: HomeStory[] }) {
           })}
         </div>
       </section>
+
+      {/* EPICS — long-running collections */}
+      {epics.length > 0 && (
+        <section id="epics" className="epics">
+          <div className="epics-inner">
+            <div className="epics-head">
+              <div className="rv kicker">Epics</div>
+              <h2 className="rv" data-d="1">Investigations we keep returning to.</h2>
+            </div>
+            <div className="epics-grid">
+              {epics.map((e, i) => (
+                <Link
+                  key={e.slug}
+                  href={`/${e.slug}`}
+                  className="ep rv"
+                  data-d={String((i % 3) + 1)}
+                >
+                  <div>
+                    <div className="ep-k">Collection · {String(i + 1).padStart(2, '0')}</div>
+                    <h3>{e.name}</h3>
+                    {e.description && <p>{e.description}</p>}
+                  </div>
+                  <div className="ep-a">Enter →</div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* TRIAD — three worlds, three mysteries */}
       <section className="triad">

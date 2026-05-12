@@ -1,7 +1,29 @@
+import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import EpsteinMap from "./EpsteinMap";
+import { getEpic } from "@/lib/epics";
+import { resolveEpsteinTheme } from "./theme";
 
-export const metadata = { title: "Epstein Flight Network" };
+const title = "Epstein Flight Network — vizmaya";
+const description =
+  "An interactive map of Jeffrey Epstein's private flights, the people who flew on them, and the addresses in his black book.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: "/epstein" },
+  openGraph: {
+    type: "website",
+    title,
+    description,
+    url: "/epstein",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
+};
 
 // Fetch at request time. Data is tiny (~50 KB serialized) so SSR > client fetch.
 export const dynamic = "force-dynamic";
@@ -150,6 +172,7 @@ async function loadData() {
 }
 
 export default async function EpsteinPage() {
-  const data = await loadData();
-  return <EpsteinMap {...data} />;
+  const [data, epic] = await Promise.all([loadData(), getEpic("epstein")]);
+  const theme = resolveEpsteinTheme(epic?.theme);
+  return <EpsteinMap {...data} theme={theme} />;
 }

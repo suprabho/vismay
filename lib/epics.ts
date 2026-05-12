@@ -15,13 +15,14 @@ export interface Epic {
   name: string
   description: string | null
   landingComponent: string
+  theme: Record<string, unknown>
 }
 
 export async function getEpic(slug: string): Promise<Epic | null> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name, description, landing_component')
+    .select('slug, name, description, landing_component, theme')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
@@ -32,7 +33,67 @@ export async function getEpic(slug: string): Promise<Epic | null> {
     name: data.name,
     description: data.description,
     landingComponent: data.landing_component,
+    theme: (data.theme as Record<string, unknown>) ?? {},
   }
+}
+
+// Admin read: returns the row even if it's not in the published status.
+export async function getEpicForAdmin(slug: string): Promise<Epic | null> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('epics')
+    .select('slug, name, description, landing_component, theme')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw new Error(`getEpicForAdmin ${slug}: ${error.message}`)
+  if (!data) return null
+  return {
+    slug: data.slug,
+    name: data.name,
+    description: data.description,
+    landingComponent: data.landing_component,
+    theme: (data.theme as Record<string, unknown>) ?? {},
+  }
+}
+
+export async function listEpics(): Promise<Pick<Epic, 'slug' | 'name'>[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('epics')
+    .select('slug, name')
+    .order('name', { ascending: true })
+  if (error) throw new Error(`listEpics: ${error.message}`)
+  return (data ?? []).map((r: any) => ({ slug: r.slug, name: r.name }))
+}
+
+export interface PublishedEpic {
+  slug: string
+  name: string
+  description: string | null
+}
+
+export async function listPublishedEpics(): Promise<PublishedEpic[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('epics')
+    .select('slug, name, description')
+    .eq('status', 'published')
+    .order('name', { ascending: true })
+  if (error) throw new Error(`listPublishedEpics: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    slug: r.slug,
+    name: r.name,
+    description: r.description ?? null,
+  }))
+}
+
+export async function updateEpicTheme(slug: string, theme: Record<string, string>): Promise<void> {
+  const sb = createServiceClient()
+  const { error } = await sb
+    .from('epics')
+    .update({ theme, updated_at: new Date().toISOString() })
+    .eq('slug', slug)
+  if (error) throw new Error(`updateEpicTheme ${slug}: ${error.message}`)
 }
 
 export interface EpicStory {

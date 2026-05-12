@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getAllStories } from '@/lib/content'
-import HomeClient, { type HomeStory } from '@/components/HomeClient'
+import { listPublishedEpics } from '@/lib/epics'
+import HomeClient, { type HomeStory, type HomeEpic } from '@/components/HomeClient'
 
 export const revalidate = 0
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const stories = await getAllStories()
+  const [stories, epics] = await Promise.all([getAllStories(), listPublishedEpics()])
   const homeStories: HomeStory[] = stories.map((s) => ({
     slug: s.slug,
     title: s.title,
@@ -22,5 +23,10 @@ export default async function HomePage() {
     aura: s.aura,
     theme: s.theme,
   }))
-  return <HomeClient stories={homeStories} />
+  const homeEpics: HomeEpic[] = epics.map((e) => ({
+    slug: e.slug,
+    name: e.name,
+    description: e.description,
+  }))
+  return <HomeClient stories={homeStories} epics={homeEpics} />
 }
