@@ -73,6 +73,17 @@ URLs are top-level per epic (`/iea`, `/epstein`) rather than `/epic/<slug>` — 
 - **Manual run in prod:** GitHub → Actions → "Scrape IEA news" → "Run workflow".
 - **Required repo secret** (in the `Production` environment): `GEMINI_API_KEY` (shared with render-audio). The Supabase secrets are reused from the other workflows.
 
+### IEA country energy profiles
+
+Each map pin on `/iea` opens a detail sheet with the editorial summary, four ECharts visualisations (electricity mix, primary energy mix, GHG from energy, renewables share) plus four headline stat tiles. Data lives in `iea_country_energy` (one row per `country_code × indicator × year`) and is loaded from Our World in Data's `owid-energy-data.csv` (CC BY 4.0, refreshed annually each April). The 12 hand-written editorial summaries on `iea_countries` are preserved across re-imports — the importer only touches `name`, `lat`, `lng`.
+
+- **Schema:** [supabase/migrations/018_iea_country_energy.sql](supabase/migrations/018_iea_country_energy.sql).
+- **Importer:** [scripts/iea/import-owid.ts](scripts/iea/import-owid.ts). Run with `pnpm iea:import-owid`. Manual — OWID's annual refresh doesn't justify a cron yet.
+- **Reader:** `getIeaCountryProfile(code)` in [lib/epics.ts](lib/epics.ts) — one round-trip that returns chart-shaped timeseries, latest-year tile values, and per-country news (30d window).
+- **API:** `/api/iea/country/[code]` ([app/api/iea/country/[code]/route.ts](app/api/iea/country/[code]/route.ts)).
+- **UI:** [app/iea/CountryDetail.tsx](app/iea/CountryDetail.tsx) rendered inside the shared [components/DetailSheet.tsx](components/DetailSheet.tsx) (mobile bottom sheet, desktop left-side panel — same pattern as `/epstein`).
+- **Adding indicators:** extend `INDICATOR_MAP` in the importer plus `getIeaCountryProfile`'s shaping logic; nothing in the schema changes.
+
 ## TTS narration overrides (per-unit)
 
 `scripts/generate-audio.ts` derives the spoken text for each mobile unit from heading + paragraphs. To override that text without editing the displayed markdown, save a `<slug>.tts.yaml` (also `stories.tts_yaml` after migration 012):

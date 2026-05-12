@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
@@ -8,6 +8,7 @@ import VizmayaLogo from "@/components/VizmayaLogo";
 import type { Epic, EpicStory, IeaCountry, IeaNewsItem } from "@/lib/epics";
 import { COUNTRY_CENTROIDS } from "@/lib/iea/countryCentroids";
 import { ieaLogoPalette, type IeaTheme } from "./theme";
+import CountryDetail from "./CountryDetail";
 
 interface Props {
   epic: Epic;
@@ -108,16 +109,6 @@ export default function IeaLanding({ epic, countries, news, stories, theme }: Pr
     [pins, maxCount]
   );
 
-  const selectedCountry = useMemo(
-    () => (selectedCode ? pins.find((p) => p.code === selectedCode) ?? null : null),
-    [selectedCode, pins]
-  );
-
-  const selectedNews = useMemo(
-    () => (selectedCode ? news.filter((n) => n.countryCodes.includes(selectedCode)) : []),
-    [news, selectedCode]
-  );
-
   const selectCountry = (pin: CountryPin) => {
     setSelectedCode(pin.code);
     mapRef.current?.getMap().easeTo({
@@ -156,7 +147,17 @@ export default function IeaLanding({ epic, countries, news, stories, theme }: Pr
   return (
     <div
       className="relative w-full h-screen overflow-hidden"
-      style={{ background: theme.ink, color: theme.bone }}
+      style={{
+        background: theme.ink,
+        color: theme.bone,
+        // CSS vars consumed by the shared DetailSheet + CountryDetail via
+        // color-mix(). Sourced from the IEA theme so admin recolours flow
+        // through to the country profile sheet without a separate provider.
+        "--vmy-surface": theme.surface,
+        "--vmy-bone": theme.bone,
+        "--vmy-ember": theme.accent,
+        "--vmy-ink": theme.ink,
+      } as CSSProperties}
     >
       <Map
         ref={mapRef}
@@ -351,103 +352,9 @@ export default function IeaLanding({ epic, countries, news, stories, theme }: Pr
         </div>
       </header>
 
-      {/* Side panel */}
-      {selectedCountry && (
-        <aside
-          className="absolute top-20 right-4 bottom-32 w-[360px] z-20 rounded-lg shadow-2xl flex flex-col overflow-hidden"
-          style={{
-            background: alpha(theme.surface, 95),
-            border: `1px solid ${theme.line}`,
-          }}
-        >
-          <div
-            className="px-5 py-4 flex items-start justify-between gap-2"
-            style={{ borderBottom: `1px solid ${theme.line}` }}
-          >
-            <div>
-              <div
-                className="text-[10px] uppercase tracking-widest"
-                style={{ color: theme.muted }}
-              >
-                Country profile
-              </div>
-              <h2
-                className="text-lg font-semibold mt-0.5"
-                style={{ color: theme.bone }}
-              >
-                {selectedCountry.name}
-              </h2>
-            </div>
-            <button
-              onClick={() => setSelectedCode(null)}
-              className="text-sm leading-none transition-colors"
-              style={{ color: theme.muted }}
-              aria-label="Close panel"
-            >
-              ×
-            </button>
-          </div>
-          <div className="px-5 py-4 overflow-y-auto flex-1">
-            {selectedCountry.summary && (
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: alpha(theme.bone, 85) }}
-              >
-                {selectedCountry.summary}
-              </p>
-            )}
-            <div className="mt-5">
-              <div
-                className="text-[10px] uppercase tracking-widest mb-2"
-                style={{ color: theme.muted }}
-              >
-                Last 7 days
-              </div>
-              {selectedNews.length === 0 ? (
-                <p className="text-xs" style={{ color: theme.muted }}>
-                  No recent articles.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {selectedNews.map((n) => (
-                    <li key={n.id}>
-                      <a
-                        href={n.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="iea-link block group"
-                      >
-                        <div
-                          className="text-[10px] uppercase tracking-widest mb-0.5"
-                          style={{ color: alpha(theme.muted, 70) }}
-                        >
-                          {new Date(n.publishedAt).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </div>
-                        <div
-                          className="text-sm leading-snug iea-link-title"
-                          style={{ color: alpha(theme.bone, 90) }}
-                        >
-                          {n.title}
-                        </div>
-                        {n.summary && (
-                          <div
-                            className="text-xs mt-1 leading-snug"
-                            style={{ color: theme.muted }}
-                          >
-                            {n.summary}
-                          </div>
-                        )}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </aside>
+      {/* Country detail sheet — bottom sheet on mobile, left-side floating panel at md+. */}
+      {selectedCode && (
+        <CountryDetail code={selectedCode} onClose={() => setSelectedCode(null)} />
       )}
 
       {/* Stories rail */}
@@ -488,9 +395,6 @@ export default function IeaLanding({ epic, countries, news, stories, theme }: Pr
       </footer>
 
       <style jsx>{`
-        .iea-link:hover .iea-link-title {
-          color: ${theme.accentHi};
-        }
         .iea-story-chip:hover {
           border-color: ${alpha(theme.accentHi, 60)};
           color: ${theme.accentHi};

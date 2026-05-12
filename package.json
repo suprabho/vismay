@@ -20,7 +20,8 @@
     "epstein:substories": "npx tsx scripts/epstein/substories.ts",
     "epstein:seed-bondi": "npx tsx scripts/epstein/seed-doj-bondi.ts",
     "epstein:import-curated": "npx tsx scripts/epstein/import-curated.ts",
-    "iea:scrape": "npx tsx scripts/iea/scrape-news.ts"
+    "iea:scrape": "npx tsx scripts/iea/scrape-news.ts",
+    "iea:import-owid": "npx tsx scripts/iea/import-owid.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PersonSummary } from "./page";
-import DetailSheet from "./DetailSheet";
+import DetailSheet from "@/components/DetailSheet";
 
 type Citation = {
   citation_id: string;

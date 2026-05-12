@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DetailSheet from "./DetailSheet";
+import DetailSheet from "@/components/DetailSheet";
 
 type Entry = {
   id: number;
