@@ -290,7 +290,14 @@ export default function HomeClient({ stories, epics = [] }: { stories: HomeStory
         <div id="work" className="bento rv">
           {stories.map((s, i) => {
             const mod = i % 5
-            const tileClass = i === 0 ? 'feature' : mod === 1 ? 'wide' : mod === 2 ? 'wide' : mod === 3 ? 'tall accent-pink' : 'wide accent-blue'
+            const isTall = mod === 3
+            const isTrailingTall = isTall && i >= stories.length - 2
+            const tileClass = i === 0
+              ? 'feature'
+              : mod === 1 ? 'wide'
+              : mod === 2 ? 'wide'
+              : isTall ? (isTrailingTall ? 'wide accent-pink' : 'tall accent-pink')
+              : 'wide accent-blue'
             const auraClass = s.aura ? ' has-aura' : ''
             const themeStyle: CSSProperties | undefined = s.aura && s.theme
               ? {
