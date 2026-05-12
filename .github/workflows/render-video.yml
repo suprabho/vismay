@@ -38,7 +38,7 @@ on:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     # Pull NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY /
     # NEXT_PUBLIC_MAPBOX_TOKEN from the `Production` environment's secrets,
     # which is where they're already configured. Without this line `secrets.X`

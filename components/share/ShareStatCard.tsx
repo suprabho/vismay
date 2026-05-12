@@ -1,14 +1,17 @@
 'use client'
 
+import type { StatColor } from '@/lib/storyConfig.types'
+import { statColorVar } from '@/components/story/ThemeProvider'
+
 interface Props {
   value: string
   subheading?: string
   description: string
+  color?: StatColor
 }
 
-export default function ShareStatCard({ value, subheading, description }: Props) {
-  const isPercentage = value.includes('%')
-  const color = isPercentage ? 'var(--color-red, #E24B4A)' : 'var(--color-accent2)'
+export default function ShareStatCard({ value, subheading, description, color: colorToken }: Props) {
+  const color = statColorVar(colorToken)
 
   return (
     <div className="flex flex-col items-center justify-center text-center h-full px-10 pt-12 pb-8">

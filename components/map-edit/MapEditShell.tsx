@@ -10,6 +10,7 @@ import type {
   ShareConfig,
   ResolvedUnit,
   StoryDefaults,
+  StatColor,
 } from '@/lib/storyConfig.types'
 import ShareMapBg from '@/components/share/ShareMapBg'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
@@ -507,6 +508,23 @@ function SliderControl({
 
 /* ─── Content Preview ───────────────────────────────────────────── */
 
+/**
+ * Admin-palette hex values keyed by stat color token. The admin shell isn't
+ * wrapped in a ThemeProvider, so we can't resolve `var(--color-*)` here —
+ * this static map keeps the preview legible without dragging the per-story
+ * theme into the admin chrome. Story render fidelity is handled by the live
+ * preview iframe alongside it.
+ */
+const ADMIN_STAT_HEX: Record<StatColor, string> = {
+  accent: '#d8a14a',
+  accent2: '#00d5be',
+  red: '#E24B4A',
+  positive: '#8ab56f',
+  amber: '#d9a84a',
+  teal: '#3a7a6a',
+  muted: '#7f8a7d',
+}
+
 function ContentPreview({ unit }: { unit: ResolvedUnit }) {
   const kind = unit.parentConfig.kind ?? 'text'
 
@@ -541,7 +559,7 @@ function ContentPreview({ unit }: { unit: ResolvedUnit }) {
           <div
             className="font-serif text-4xl font-bold leading-none mb-2"
             style={{
-              color: unit.heading.includes('%') ? '#E24B4A' : '#00d5be',
+              color: ADMIN_STAT_HEX[unit.parentConfig.color ?? 'accent2'],
             }}
           >
             {unit.heading}

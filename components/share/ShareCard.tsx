@@ -364,6 +364,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                 value={heading}
                 subheading={subheading}
                 description={paragraphs.join(' ')}
+                color={parentConfig.color}
               />
             ) : (
               <ShareTextCard heading={heading} subheading={subheading} paragraphs={paragraphs} />

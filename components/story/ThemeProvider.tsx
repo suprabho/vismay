@@ -3,6 +3,17 @@
 import { Theme } from '@/types/story'
 import { ReactNode, useMemo } from 'react'
 import { ChartColorsProvider, themeToChartColors } from '@/lib/chartTheme'
+import type { StatColor } from '@/lib/storyConfig.types'
+
+/**
+ * Resolve a stat-panel color token to the CSS variable emitted by the
+ * surrounding `ThemeProvider`. Unset → `accent2` (the historical default
+ * for non-percentage stats). Centralised so the story renderer and the
+ * share-card renderer can't drift apart.
+ */
+export function statColorVar(token?: StatColor): string {
+  return `var(--color-${token ?? 'accent2'})`
+}
 
 /**
  * Convert a `#rrggbb` hex color into the space-separated RGB triple expected

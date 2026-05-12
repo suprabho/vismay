@@ -1,10 +1,11 @@
 import type { MetadataRoute } from 'next'
 import { getStoryContent, getViewableStorySlugs } from '@/lib/content'
+import { listPublishedEpics } from '@/lib/epics'
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vizmaya.fyi'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const slugs = await getViewableStorySlugs()
+  const [slugs, epics] = await Promise.all([getViewableStorySlugs(), listPublishedEpics()])
   const stories = await Promise.all(
     slugs.map(async (slug) => {
       try {
@@ -22,6 +23,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   )
 
+  const epicEntries: MetadataRoute.Sitemap = epics.map((e) => ({
+    url: `${BASE_URL}/${e.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly',
+    priority: 0.85,
+  }))
+
   return [
     {
       url: BASE_URL,
@@ -35,6 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.9,
     },
+    ...epicEntries,
     ...stories.filter((s): s is NonNullable<typeof s> => s !== null),
   ]
 }
