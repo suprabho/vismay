@@ -131,7 +131,8 @@ const css = `
 .vz .bn.has-aura,.vz .bn.has-aura.feature,.vz .bn.has-aura.accent-pink,.vz .bn.has-aura.accent-blue{background:var(--bn-bg,#0c0c10);border-color:color-mix(in srgb,var(--bn-text,#fff) 12%,transparent);color:var(--bn-text,#fff)}
 .vz .bn.has-aura .bn-aura::after{background:linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 70%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 22%,transparent) 55%,transparent 100%)}
 .vz .bn.has-aura h3,.vz .bn.has-aura.feature h3{color:var(--bn-text,#fff)}
-.vz .bn.has-aura p,.vz .bn.has-aura.feature p,.vz .bn.has-aura .bn-k,.vz .bn.has-aura.feature .bn-k{color:color-mix(in srgb,var(--bn-muted,var(--bn-text,#fff)) 92%,transparent)}
+.vz .bn.has-aura p,.vz .bn.has-aura.feature p{color:var(--bn-text,#fff)}
+.vz .bn.has-aura .bn-k,.vz .bn.has-aura.feature .bn-k{color:color-mix(in srgb,var(--bn-muted,var(--bn-text,#fff)) 92%,transparent)}
 .vz .bn.has-aura .bn-n{color:var(--bn-accent,var(--bn-text,#fff))}
 .vz .bn.has-aura .bn-a{color:var(--bn-accent,var(--bn-text,#fff));opacity:.7}
 .vz .bn.has-aura:hover .bn-a{opacity:1}
@@ -139,22 +140,22 @@ const css = `
 .vz .bn-k{font-family:var(--ff-m);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .vz .bn-n{color:var(--teal)}
 .vz .bn h3{font-family:var(--ff-d);font-style:italic;font-weight:400;color:var(--ink);line-height:1.18;margin:0 0 10px;font-size:22px}
-.vz .bn p{font-family:var(--ff-m);font-size:12.5px;line-height:1.7;color:var(--muted);margin:0}
+.vz .bn p{font-family:var(--ff-m);font-size:12.5px;line-height:1.7;color:var(--ink);margin:0}
 .vz .bn-a{margin-top:18px;font-family:var(--ff-m);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);opacity:.55;transition:opacity .3s}
 .vz .bn:hover .bn-a{opacity:1}
 .vz .bn.feature{grid-column:span 4;grid-row:span 2;background:var(--ink);border-color:rgba(255,255,255,.08);color:#fff}
 .vz .bn.feature h3{color:#fff;font-size:clamp(26px,3vw,38px);line-height:1.15}
-.vz .bn.feature p{color:rgba(255,255,255,.78);font-size:13.5px;line-height:1.75}
+.vz .bn.feature p{color:#fff;font-size:13.5px;line-height:1.75}
 .vz .bn.feature .bn-k{color:rgba(255,255,255,.4)}
 .vz .bn.feature .bn-n{color:var(--teal)}
 .vz .bn.wide{grid-column:span 2}
 .vz .bn.tall{grid-column:span 2;grid-row:span 2}
 .vz .bn.accent-pink{background:var(--pink);border-color:transparent;color:#fff}
 .vz .bn.accent-pink:not(.has-aura) h3,.vz .bn.accent-pink:not(.has-aura) p,.vz .bn.accent-pink:not(.has-aura) .bn-k,.vz .bn.accent-pink:not(.has-aura) .bn-a{color:#fff}
-.vz .bn.accent-pink:not(.has-aura) p,.vz .bn.accent-pink:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
+.vz .bn.accent-pink:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
 .vz .bn.accent-blue{background:var(--blue);border-color:transparent;color:#fff}
 .vz .bn.accent-blue:not(.has-aura) h3,.vz .bn.accent-blue:not(.has-aura) p,.vz .bn.accent-blue:not(.has-aura) .bn-k,.vz .bn.accent-blue:not(.has-aura) .bn-a{color:#fff}
-.vz .bn.accent-blue:not(.has-aura) p,.vz .bn.accent-blue:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
+.vz .bn.accent-blue:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
 
 /* Epics --------------------------------------------------- */
 .vz .epics{padding:120px clamp(24px,5vw,56px);border-top:1px solid var(--line);background:var(--cream)}
