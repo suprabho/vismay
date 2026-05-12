@@ -147,14 +147,22 @@ async function main() {
   }
 
   const urls = items.map((i) => i.url)
-  const { data: existing, error: lookupErr } = await sb
-    .from('iea_news')
-    .select('source_url')
-    .in('source_url', urls)
-  if (lookupErr) throw new Error(`Lookup failed: ${lookupErr.message}`)
-  const existingUrls = new Set(
-    (existing ?? []).map((r: { source_url: string }) => r.source_url)
-  )
+  // Google News redirect URLs run ~500 chars each. Stuffing all 100 into a
+  // single `.in()` blows past PostgREST's URL length limit (8KB), which
+  // surfaces as a 400 Bad Request. Batch the lookup at ~15/page (~7.5KB).
+  const existingUrls = new Set<string>()
+  const LOOKUP_BATCH = 15
+  for (let i = 0; i < urls.length; i += LOOKUP_BATCH) {
+    const batch = urls.slice(i, i + LOOKUP_BATCH)
+    const { data, error: lookupErr } = await sb
+      .from('iea_news')
+      .select('source_url')
+      .in('source_url', batch)
+    if (lookupErr) throw new Error(`Lookup failed: ${lookupErr.message}`)
+    for (const row of (data ?? []) as { source_url: string }[]) {
+      existingUrls.add(row.source_url)
+    }
+  }
 
   const newItems = items.filter((i) => !existingUrls.has(i.url))
   console.log(
