@@ -30,6 +30,19 @@ export const EPSTEIN_THEME_DEFAULTS: EpsteinTheme = {
   signal: "#d96548",
 };
 
+export const EPSTEIN_THEME_LABELS: Record<keyof EpsteinTheme, { label: string; hint: string }> = {
+  ink: { label: "Ink", hint: "Page background, halos" },
+  surface: { label: "Surface", hint: "Panels and chips" },
+  elevated: { label: "Elevated", hint: "Hover/pressed surfaces" },
+  bone: { label: "Bone", hint: "Primary text on dark" },
+  muted: { label: "Muted", hint: "Secondary text, labels" },
+  line: { label: "Line", hint: "Dividers and borders" },
+  ember: { label: "Ember", hint: "Primary accent — airports / origin" },
+  steel: { label: "Steel", hint: "Secondary accent — destinations" },
+  rose: { label: "Rose", hint: "Black-book points and emails" },
+  signal: { label: "Signal", hint: "Strong-warning highlight" },
+};
+
 // Back-compat: a handful of imports still reference EPSTEIN_THEME as a static
 // constant. Anywhere that can take a resolved theme should prefer the prop.
 export const EPSTEIN_THEME = EPSTEIN_THEME_DEFAULTS;

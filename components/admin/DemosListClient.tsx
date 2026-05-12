@@ -56,12 +56,7 @@ export default function DemosListClient({ initialDemos }: Props) {
   return (
     <div className="flex-1 flex flex-col">
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/admin" className="text-sm text-neutral-400 hover:text-white">
-            ← Stories
-          </Link>
-          <h1 className="text-lg font-semibold">Demos</h1>
-        </div>
+        <h1 className="text-lg font-semibold">Demos</h1>
         <button
           onClick={() => setShowNew(true)}
           className="bg-white text-neutral-950 rounded-md px-4 py-2 text-sm font-medium"

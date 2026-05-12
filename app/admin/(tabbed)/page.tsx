@@ -233,18 +233,6 @@ export default function AdminHome() {
           <p className="text-sm text-neutral-400 mt-0.5">{stories.length} total</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/admin/epics/epstein"
-            className="text-sm text-neutral-300 hover:text-white shrink-0 px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
-          >
-            Epstein theme →
-          </Link>
-          <Link
-            href="/admin/demos"
-            className="text-sm text-neutral-300 hover:text-white shrink-0 px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
-          >
-            Demos →
-          </Link>
           <button
             type="button"
             disabled={uploadBusy}

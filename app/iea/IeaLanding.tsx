@@ -7,12 +7,14 @@ import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
 import type { Epic, EpicStory, IeaCountry, IeaNewsItem } from "@/lib/epics";
 import { COUNTRY_CENTROIDS } from "@/lib/iea/countryCentroids";
+import { ieaLogoPalette, type IeaTheme } from "./theme";
 
 interface Props {
   epic: Epic;
   countries: IeaCountry[];
   news: IeaNewsItem[];
   stories: EpicStory[];
+  theme: IeaTheme;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -21,25 +23,19 @@ const INITIAL_VIEW_STATE = {
   zoom: 1.3,
 };
 
-const IEA_LOGO_PALETTE = {
-  text: "#F5E6CC",
-  teal: "#FFC850",
-  accent: "#FF8C28",
-  accent2: "#FF5A1F",
-  surface: "#0A0A0B",
-  muted: "#7A6B52",
-  line: "#F5E6CC",
-};
-
 interface CountryPin extends IeaCountry {
   articleCount: number;
 }
 
-export default function IeaLanding({ epic, countries, news, stories }: Props) {
+const alpha = (c: string, p: number) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
+
+export default function IeaLanding({ epic, countries, news, stories, theme }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
   const [cursor, setCursor] = useState<"grab" | "pointer">("grab");
+
+  const logoPalette = useMemo(() => ieaLogoPalette(theme), [theme]);
 
   const articleCountByCode = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -158,7 +154,10 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
   }, []);
 
   return (
-    <div className="relative w-full h-screen bg-black text-white overflow-hidden">
+    <div
+      className="relative w-full h-screen overflow-hidden"
+      style={{ background: theme.ink, color: theme.bone }}
+    >
       <Map
         ref={mapRef}
         reuseMaps
@@ -213,8 +212,8 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
               "fill-color": [
                 "case",
                 ["in", ["get", "iso_3166_1"], ["literal", newsCodes]],
-                "#FF8C28",
-                "#FFC850",
+                theme.accent,
+                theme.accentHi,
               ],
               "fill-opacity": [
                 "case",
@@ -234,7 +233,7 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
             source-layer="country_boundaries"
             filter={["in", ["get", "iso_3166_1"], ["literal", ieaCodes]]}
             paint={{
-              "line-color": "#FFC850",
+              "line-color": theme.accentHi,
               "line-width": [
                 "case",
                 ["==", ["get", "iso_3166_1"], selectedCode ?? ""],
@@ -253,7 +252,7 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
             filter={[">", ["get", "articleCount"], 0]}
             paint={{
               "circle-radius": ["get", "basePulseRadius"],
-              "circle-color": "#FF8C28",
+              "circle-color": theme.accent,
               "circle-opacity": 0.45,
               "circle-stroke-width": 0,
               "circle-pitch-alignment": "map",
@@ -268,13 +267,13 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
               "circle-color": [
                 "case",
                 ["==", ["get", "code"], selectedCode ?? ""],
-                "#FFC850",
+                theme.accentHi,
                 ["==", ["get", "code"], hoveredCode ?? ""],
-                "#FFAA3C",
-                "#FF8C28",
+                theme.accentMid,
+                theme.accent,
               ],
               "circle-opacity": 0.95,
-              "circle-stroke-color": "#FFDCA0",
+              "circle-stroke-color": theme.accentEdge,
               "circle-stroke-width": 1,
               "circle-stroke-opacity": 0.9,
             }}
@@ -288,11 +287,11 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
               "circle-color": [
                 "case",
                 ["==", ["get", "code"], hoveredCode ?? ""],
-                "#FFAA3C",
-                "#B4A58C",
+                theme.accentMid,
+                theme.accentLo,
               ],
               "circle-opacity": 0.7,
-              "circle-stroke-color": "#FFDCBA",
+              "circle-stroke-color": theme.accentEdge,
               "circle-stroke-width": 1,
               "circle-stroke-opacity": 0.55,
             }}
@@ -310,8 +309,8 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
               "text-allow-overlap": false,
             }}
             paint={{
-              "text-color": "#FFDCB4",
-              "text-halo-color": "#000000",
+              "text-color": theme.accentEdge,
+              "text-halo-color": theme.ink,
               "text-halo-width": 1.5,
               "text-halo-blur": 0.5,
             }}
@@ -320,24 +319,32 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
       </Map>
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-10 px-6 py-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+      <header
+        className="absolute top-0 left-0 right-0 z-10 px-6 py-4 pointer-events-none"
+        style={{
+          background: `linear-gradient(to bottom, ${alpha(theme.ink, 80)}, transparent)`,
+        }}
+      >
         <div className="flex items-start gap-4">
           <Link href="/" className="pointer-events-auto shrink-0">
             <VizmayaLogo
               className="w-[160px] h-[40px]"
-              palette={IEA_LOGO_PALETTE}
+              palette={logoPalette}
             />
           </Link>
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold tracking-wide text-white">
+            <h1 className="text-sm font-semibold tracking-wide" style={{ color: theme.bone }}>
               {epic.name}
             </h1>
             {epic.description && (
-              <p className="mt-1 text-xs text-zinc-400 max-w-xl">
+              <p className="mt-1 text-xs max-w-xl" style={{ color: theme.muted }}>
                 {epic.description}
               </p>
             )}
-            <p className="mt-2 text-[11px] uppercase tracking-widest text-zinc-500">
+            <p
+              className="mt-2 text-[11px] uppercase tracking-widest"
+              style={{ color: alpha(theme.muted, 80) }}
+            >
               {news.length} articles · last 7 days · {pins.length} countries
             </p>
           </div>
@@ -346,19 +353,35 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
 
       {/* Side panel */}
       {selectedCountry && (
-        <aside className="absolute top-20 right-4 bottom-32 w-[360px] z-20 bg-zinc-950/95 border border-zinc-800 rounded-lg shadow-2xl flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-800 flex items-start justify-between gap-2">
+        <aside
+          className="absolute top-20 right-4 bottom-32 w-[360px] z-20 rounded-lg shadow-2xl flex flex-col overflow-hidden"
+          style={{
+            background: alpha(theme.surface, 95),
+            border: `1px solid ${theme.line}`,
+          }}
+        >
+          <div
+            className="px-5 py-4 flex items-start justify-between gap-2"
+            style={{ borderBottom: `1px solid ${theme.line}` }}
+          >
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-zinc-500">
+              <div
+                className="text-[10px] uppercase tracking-widest"
+                style={{ color: theme.muted }}
+              >
                 Country profile
               </div>
-              <h2 className="text-lg font-semibold text-white mt-0.5">
+              <h2
+                className="text-lg font-semibold mt-0.5"
+                style={{ color: theme.bone }}
+              >
                 {selectedCountry.name}
               </h2>
             </div>
             <button
               onClick={() => setSelectedCode(null)}
-              className="text-zinc-500 hover:text-white text-sm leading-none"
+              className="text-sm leading-none transition-colors"
+              style={{ color: theme.muted }}
               aria-label="Close panel"
             >
               ×
@@ -366,16 +389,24 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
           </div>
           <div className="px-5 py-4 overflow-y-auto flex-1">
             {selectedCountry.summary && (
-              <p className="text-sm text-zinc-300 leading-relaxed">
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: alpha(theme.bone, 85) }}
+              >
                 {selectedCountry.summary}
               </p>
             )}
             <div className="mt-5">
-              <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
+              <div
+                className="text-[10px] uppercase tracking-widest mb-2"
+                style={{ color: theme.muted }}
+              >
                 Last 7 days
               </div>
               {selectedNews.length === 0 ? (
-                <p className="text-xs text-zinc-500">No recent articles.</p>
+                <p className="text-xs" style={{ color: theme.muted }}>
+                  No recent articles.
+                </p>
               ) : (
                 <ul className="space-y-3">
                   {selectedNews.map((n) => (
@@ -384,19 +415,28 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
                         href={n.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block group"
+                        className="iea-link block group"
                       >
-                        <div className="text-[10px] uppercase tracking-widest text-zinc-600 mb-0.5">
+                        <div
+                          className="text-[10px] uppercase tracking-widest mb-0.5"
+                          style={{ color: alpha(theme.muted, 70) }}
+                        >
                           {new Date(n.publishedAt).toLocaleDateString(undefined, {
                             month: "short",
                             day: "numeric",
                           })}
                         </div>
-                        <div className="text-sm text-zinc-200 group-hover:text-amber-200 leading-snug">
+                        <div
+                          className="text-sm leading-snug iea-link-title"
+                          style={{ color: alpha(theme.bone, 90) }}
+                        >
                           {n.title}
                         </div>
                         {n.summary && (
-                          <div className="text-xs text-zinc-500 mt-1 leading-snug">
+                          <div
+                            className="text-xs mt-1 leading-snug"
+                            style={{ color: theme.muted }}
+                          >
                             {n.summary}
                           </div>
                         )}
@@ -411,12 +451,20 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
       )}
 
       {/* Stories rail */}
-      <footer className="absolute left-0 right-0 bottom-0 z-10 px-6 py-4 bg-gradient-to-t from-black/95 to-transparent">
-        <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">
+      <footer
+        className="absolute left-0 right-0 bottom-0 z-10 px-6 py-4"
+        style={{
+          background: `linear-gradient(to top, ${alpha(theme.ink, 95)}, transparent)`,
+        }}
+      >
+        <div
+          className="text-[10px] uppercase tracking-widest mb-2"
+          style={{ color: theme.muted }}
+        >
           vizmaya stories
         </div>
         {stories.length === 0 ? (
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs" style={{ color: alpha(theme.muted, 70) }}>
             No stories assigned to this epic yet.
           </p>
         ) : (
@@ -425,7 +473,12 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
               <Link
                 key={s.slug}
                 href={`/story/${s.slug}`}
-                className="shrink-0 px-3 py-2 border border-zinc-800 hover:border-amber-500/60 rounded text-sm text-zinc-200 hover:text-amber-200 bg-zinc-950/60"
+                className="iea-story-chip shrink-0 px-3 py-2 rounded text-sm"
+                style={{
+                  border: `1px solid ${theme.line}`,
+                  color: alpha(theme.bone, 85),
+                  background: alpha(theme.surface, 60),
+                }}
               >
                 {s.title}
               </Link>
@@ -433,6 +486,16 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
           </div>
         )}
       </footer>
+
+      <style jsx>{`
+        .iea-link:hover .iea-link-title {
+          color: ${theme.accentHi};
+        }
+        .iea-story-chip:hover {
+          border-color: ${alpha(theme.accentHi, 60)};
+          color: ${theme.accentHi};
+        }
+      `}</style>
     </div>
   );
 }

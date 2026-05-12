@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getEpic, getEpicStories, getIeaCountries, getIeaNewsSince } from '@/lib/epics'
 import IeaLanding from './IeaLanding'
+import { resolveIeaTheme } from './theme'
 
 export const revalidate = 0
 
@@ -27,12 +28,15 @@ export default async function IeaPage() {
     )
   }
 
+  const theme = resolveIeaTheme(epic.theme)
+
   return (
     <IeaLanding
       epic={epic}
       countries={countries}
       news={news}
       stories={stories}
+      theme={theme}
     />
   )
 }
