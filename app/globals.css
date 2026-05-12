@@ -45,8 +45,8 @@
 }
 
 body {
-  background: var(--color-bg, #0a0e14);
-  color: var(--color-text, #e0ddd5);
+  background: var(--color-bg, #fff);
+  color: var(--color-text, #0c0c10);
   font-family: var(--font-sans);
   line-height: 1.7;
   overflow-x: hidden;

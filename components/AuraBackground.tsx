@@ -10,7 +10,14 @@ import { useEffect, useRef, useState } from 'react'
  * Outputs a `.bn-aura` wrapper div for backwards compatibility with the
  * home-page CSS that styles overlays via `.bn-aura::after`.
  */
-export default function AuraBackground({ slug }: { slug: string }) {
+export default function AuraBackground({
+  slug,
+  input = 'off',
+}: {
+  slug: string
+  /** Aura embed `input` mode. `mic` lets the aura react to playing audio. */
+  input?: 'off' | 'mic'
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const [show, setShow] = useState(false)
   useEffect(() => {
@@ -33,7 +40,7 @@ export default function AuraBackground({ slug }: { slug: string }) {
       {show && (
         <iframe
           title=""
-          src={`https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=off&theme=light`}
+          src={`https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=${input}&theme=light`}
           loading="lazy"
           tabIndex={-1}
         />

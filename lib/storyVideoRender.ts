@@ -66,7 +66,7 @@ const RENDER_CONFIG: Record<
   }
 > = {
   '9:16': {
-    viewport: { width: 473, height: 840 }, // 473/840 ≈ 0.5631, ~9:16
+    viewport: { width: 646, height: 1136 }, // 646/1136 ≈ 0.5687, ~9:16
     output: { width: 1080, height: 1920 },
   },
   '16:9': {

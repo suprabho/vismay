@@ -36,11 +36,13 @@ export default function VerticalCaptureFrame({
 }) {
   const [compose, setCompose] = useState(false)
   const [iframeSrc, setIframeSrc] = useState<string | null>(null)
+  const [autoplay, setAutoplay] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('compose') !== 'vertical') return
     setCompose(true)
+    setAutoplay(params.get('autoplay') === '1')
     // The iframe loads the same story page minus the compose param, so the
     // inner page renders its normal story content (no recursive wrap).
     params.delete('compose')
@@ -52,7 +54,7 @@ export default function VerticalCaptureFrame({
 
   return (
     <div className="vcf-frame">
-      {auraSlug && <AuraBackground slug={auraSlug} />}
+      {auraSlug && <AuraBackground slug={auraSlug} input={autoplay ? 'mic' : 'off'} />}
       {iframeSrc && (
         <iframe
           src={iframeSrc}
@@ -71,7 +73,7 @@ export default function VerticalCaptureFrame({
           width: 100vw;
           height: 100vh;
           overflow: hidden;
-          background: var(--color-bg, #000);
+          background: var(--color-bg, #fff);
         }
         /* Aura iframe sits at the back, filling the entire 9:16 frame. */
         .vcf-frame > .bn-aura {
@@ -103,7 +105,7 @@ export default function VerticalCaptureFrame({
           aspect-ratio: 4 / 5;
           border: 0;
           display: block;
-          background: var(--color-bg, #000);
+          background: var(--color-bg, #fff);
           z-index: 1;
         }
       `}</style>
