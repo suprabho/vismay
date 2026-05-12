@@ -67,7 +67,7 @@ URLs are top-level per epic (`/iea`, `/epstein`) rather than `/epic/<slug>` — 
 
 ### IEA news pipeline
 
-`.github/workflows/scrape-iea-news.yml` runs daily (06:15 UTC) — pulls Google News RSS for "International Energy Agency", hands each new article to Gemini (2.0 Flash via JSON-schema response config) for ISO country-code tagging, and upserts into `iea_news`. Idempotent on `source_url`.
+`.github/workflows/scrape-iea-news.yml` runs daily (06:15 UTC) — pulls Google News RSS for "International Energy Agency", hands each new article to Gemma (`gemma-4-26b-a4b-it` via the Gemini API, prompt-engineered JSON output) for ISO country-code tagging, and upserts into `iea_news`. Idempotent on `source_url`.
 
 - **Script:** [scripts/iea/scrape-news.ts](scripts/iea/scrape-news.ts). Run locally with `pnpm iea:scrape`.
 - **Manual run in prod:** GitHub → Actions → "Scrape IEA news" → "Run workflow".

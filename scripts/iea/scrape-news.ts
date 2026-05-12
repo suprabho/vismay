@@ -80,7 +80,10 @@ Empty array if the article is about:
 - Global aggregates ("global emissions", "world coal demand")
 - Multi-region groupings with no specific country focus
 
-Use the special code "EU" only when the European Union is explicitly named as a bloc; otherwise drop down to specific member-state codes.`
+Use the special code "EU" only when the European Union is explicitly named as a bloc; otherwise drop down to specific member-state codes.
+
+Respond ONLY with valid JSON in this exact shape, no markdown fences:
+{"country_codes": ["XX", "YY"]}`
 
 async function extractCountryCodes(
   genai: GoogleGenAI,
@@ -91,27 +94,17 @@ async function extractCountryCodes(
   }`
 
   const response = await genai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemma-4-26b-a4b-it',
     contents: `${COUNTRY_TAGGING_SYSTEM}\n\n${userText}`,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'object',
-        properties: {
-          country_codes: {
-            type: 'array',
-            items: { type: 'string' },
-          },
-        },
-        required: ['country_codes'],
-      } as unknown as Record<string, unknown>,
-    },
   })
 
   const text = response.text ?? ''
-  if (!text) return []
+  // Gemma doesn't honour responseSchema, so scrape the first JSON object out
+  // of the free-form text (same idiom as scripts/epstein/ner.ts).
+  const match = text.match(/\{[\s\S]*\}/)
+  if (!match) return []
   try {
-    const parsed = JSON.parse(text) as { country_codes?: unknown }
+    const parsed = JSON.parse(match[0]) as { country_codes?: unknown }
     const raw = Array.isArray(parsed.country_codes) ? parsed.country_codes : []
     return raw
       .filter((c): c is string => typeof c === 'string')
