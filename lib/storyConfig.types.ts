@@ -91,6 +91,21 @@ export interface MapPinConfig {
 
 export type SectionKind = 'text' | 'hero' | 'stat'
 
+/**
+ * Theme palette token used to color a `kind: stat` panel's giant number.
+ * Each value maps to a CSS variable emitted by `ThemeProvider`
+ * (e.g. `red` → `var(--color-red)`). Tokens like `background` / `surface` /
+ * `text` are intentionally excluded — they don't read as a foreground accent.
+ */
+export type StatColor =
+  | 'accent'
+  | 'accent2'
+  | 'red'
+  | 'positive'
+  | 'amber'
+  | 'teal'
+  | 'muted'
+
 export interface MapOverrides {
   center?: [number, number]
   zoom?: number
@@ -193,6 +208,8 @@ export interface StorySectionConfig {
   chart?: string
   /** Optional eyebrow line shown above the hero title (kind: hero only). */
   eyebrow?: string
+  /** Theme palette token for the stat number's color (kind: stat only). Defaults to `accent2`. */
+  color?: StatColor
   map: {
     center: [number, number]
     zoom: number

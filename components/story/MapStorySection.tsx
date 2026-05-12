@@ -1,8 +1,9 @@
 'use client'
 
-import type { ResolvedUnit } from '@/lib/storyConfig.types'
+import type { ResolvedUnit, StatColor } from '@/lib/storyConfig.types'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
 import { HeroPanel, HeroPanelTitle, HeroPanelDek } from './Hero'
+import { statColorVar } from './ThemeProvider'
 
 interface Props {
   unitIndex: number
@@ -147,7 +148,12 @@ export default function MapStorySection({ unitIndex, unit }: Props) {
       <div className={cardClasses} style={cardStyle}>
         <div className="max-w-[820px] mx-auto h-full flex flex-col justify-center">
           {kind === 'stat' && heading ? (
-            <StatPanel value={heading} subheading={subheading} description={paragraphs.join(' ')} />
+            <StatPanel
+              value={heading}
+              subheading={subheading}
+              description={paragraphs.join(' ')}
+              color={parentConfig.color}
+            />
           ) : (
             <TextPanel
               heading={heading}
@@ -207,11 +213,20 @@ function TextPanel({
 /**
  * `kind: stat` — display the section's heading as a giant number with the
  * body text as caption beneath. Mirrors the legacy StatBlock visual.
- * Color is red for percentages, accent2 otherwise.
+ * Color comes from the section's `color` field (theme token); defaults to accent2.
  */
-function StatPanel({ value, subheading, description }: { value: string; subheading?: string; description: string }) {
-  const isPercentage = value.includes('%')
-  const color = isPercentage ? 'var(--color-red, #E24B4A)' : 'var(--color-accent2)'
+function StatPanel({
+  value,
+  subheading,
+  description,
+  color: colorToken,
+}: {
+  value: string
+  subheading?: string
+  description: string
+  color?: StatColor
+}) {
+  const color = statColorVar(colorToken)
 
   return (
     <div className="flex flex-col items-center text-center py-4">
