@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Map } from "react-map-gl/mapbox";
-import { DeckGL } from "@deck.gl/react";
-import { FlyToInterpolator } from "deck.gl";
-import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
+import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
+import VizmayaLogo from "@/components/VizmayaLogo";
 import type { Epic, EpicStory, IeaCountry, IeaNewsItem } from "@/lib/epics";
 import { COUNTRY_CENTROIDS } from "@/lib/iea/countryCentroids";
 
@@ -19,10 +17,18 @@ interface Props {
 
 const INITIAL_VIEW_STATE = {
   longitude: 10,
-  latitude: 25,
-  zoom: 1.6,
-  pitch: 0,
-  bearing: 0,
+  latitude: 20,
+  zoom: 1.3,
+};
+
+const IEA_LOGO_PALETTE = {
+  text: "#F5E6CC",
+  teal: "#FFC850",
+  accent: "#FF8C28",
+  accent2: "#FF5A1F",
+  surface: "#0A0A0B",
+  muted: "#7A6B52",
+  line: "#F5E6CC",
 };
 
 interface CountryPin extends IeaCountry {
@@ -30,11 +36,11 @@ interface CountryPin extends IeaCountry {
 }
 
 export default function IeaLanding({ epic, countries, news, stories }: Props) {
-  const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+  const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<"grab" | "pointer">("grab");
 
-  // Articles per ISO code in the last-7-day window.
   const articleCountByCode = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const item of news) {
@@ -75,9 +81,35 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
     return [...featured, ...extras];
   }, [countries, articleCountByCode]);
 
+  const ieaCodes = useMemo(() => countries.map((c) => c.code), [countries]);
+  const newsCodes = useMemo(
+    () => Object.keys(articleCountByCode).filter((c) => articleCountByCode[c] > 0),
+    [articleCountByCode]
+  );
+
   const maxCount = useMemo(
     () => Math.max(1, ...pins.map((p) => p.articleCount)),
     [pins]
+  );
+
+  const pinsGeoJson = useMemo(
+    () => ({
+      type: "FeatureCollection" as const,
+      features: pins.map((p) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+        properties: {
+          code: p.code,
+          name: p.name,
+          articleCount: p.articleCount,
+          coreRadius: 5 + Math.sqrt(p.articleCount / maxCount) * 9,
+          basePulseRadius: 10 + Math.sqrt(p.articleCount / maxCount) * 14,
+          label:
+            p.articleCount > 0 ? `${p.name} · ${p.articleCount}` : p.name,
+        },
+      })),
+    }),
+    [pins, maxCount]
   );
 
   const selectedCountry = useMemo(
@@ -92,108 +124,224 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
 
   const selectCountry = (pin: CountryPin) => {
     setSelectedCode(pin.code);
-    setViewState({
-      ...INITIAL_VIEW_STATE,
-      longitude: pin.lng,
-      latitude: pin.lat,
+    mapRef.current?.getMap().easeTo({
+      center: [pin.lng, pin.lat],
       zoom: 3.2,
-      // @ts-expect-error deck.gl transition props
-      transitionDuration: 900,
-      transitionInterpolator: new FlyToInterpolator({ speed: 1.4 }),
+      duration: 900,
+      essential: true,
     });
   };
 
-  // Pins sized by article count; countries with 0 articles render as faint dots
-  // so the user still sees them and can click for the profile.
-  const pinLayer = new ScatterplotLayer<CountryPin>({
-    id: "iea-country-pins",
-    data: pins,
-    getPosition: (d) => [d.lng, d.lat],
-    getRadius: (d) =>
-      80000 + Math.sqrt(d.articleCount / maxCount) * 260000,
-    radiusUnits: "meters",
-    radiusMinPixels: 6,
-    radiusMaxPixels: 48,
-    getFillColor: (d) => {
-      const isSelected = d.code === selectedCode;
-      const isHovered = d.code === hoveredCode;
-      if (isSelected) return [255, 200, 80, 240];
-      if (isHovered) return [255, 170, 60, 220];
-      if (d.articleCount === 0) return [120, 120, 130, 140];
-      return [255, 140, 40, 210];
-    },
-    getLineColor: [255, 220, 160, 220],
-    lineWidthMinPixels: 1,
-    stroked: true,
-    pickable: true,
-    onHover: ({ object }) => setHoveredCode(object?.code ?? null),
-    onClick: ({ object }) => object && selectCountry(object),
-    updateTriggers: {
-      getFillColor: [selectedCode, hoveredCode],
-    },
-  });
-
-  const labelLayer = new TextLayer<CountryPin>({
-    id: "iea-country-labels",
-    data: pins,
-    getPosition: (d) => [d.lng, d.lat],
-    getText: (d) =>
-      d.articleCount > 0 ? `${d.name} · ${d.articleCount}` : d.name,
-    getSize: 11,
-    getColor: [255, 220, 180, 230],
-    getBackgroundColor: [0, 0, 0, 170],
-    background: true,
-    backgroundPadding: [4, 2, 4, 2],
-    fontFamily: "monospace",
-    getTextAnchor: "middle",
-    getAlignmentBaseline: "bottom",
-    getPixelOffset: [0, -12],
-  });
+  // Drive the pulse ring's radius + opacity each frame via setPaintProperty.
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    const tick = (t: number) => {
+      const map = mapRef.current?.getMap();
+      if (map && map.getLayer("iea-pulse-ring")) {
+        const phase = ((t - start) % 1800) / 1800;
+        map.setPaintProperty("iea-pulse-ring", "circle-radius", [
+          "*",
+          ["get", "basePulseRadius"],
+          1 + phase * 1.6,
+        ]);
+        map.setPaintProperty(
+          "iea-pulse-ring",
+          "circle-opacity",
+          0.55 * (1 - phase)
+        );
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   return (
     <div className="relative w-full h-screen bg-black text-white overflow-hidden">
-      <DeckGL
-        viewState={viewState}
-        onViewStateChange={({ viewState: vs }: { viewState: unknown }) =>
-          setViewState(vs as typeof viewState)
-        }
-        controller={{ doubleClickZoom: false }}
-        layers={[pinLayer, labelLayer]}
-        style={{ position: "absolute", top: "0", left: "0", right: "0", bottom: "0" }}
-        getCursor={({ isHovering }) => (isHovering ? "pointer" : "grab")}
-        onClick={({ object }) => {
-          if (!object) setSelectedCode(null);
+      <Map
+        ref={mapRef}
+        reuseMaps
+        initialViewState={INITIAL_VIEW_STATE}
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+        projection="globe"
+        attributionControl={false}
+        doubleClickZoom={false}
+        cursor={cursor}
+        interactiveLayerIds={[
+          "iea-country-fill",
+          "iea-pulse-core",
+          "iea-static-dot",
+        ]}
+        onMouseMove={(e) => {
+          const feat = e.features?.[0];
+          const code = (feat?.properties?.code ??
+            feat?.properties?.iso_3166_1) as string | undefined;
+          setHoveredCode(code ?? null);
+          setCursor(feat ? "pointer" : "grab");
         }}
+        onMouseLeave={() => {
+          setHoveredCode(null);
+          setCursor("grab");
+        }}
+        onClick={(e) => {
+          const feat = e.features?.[0];
+          if (!feat) {
+            setSelectedCode(null);
+            return;
+          }
+          const code = (feat.properties?.code ??
+            feat.properties?.iso_3166_1) as string | undefined;
+          if (!code) return;
+          const pin = pins.find((p) => p.code === code);
+          if (pin) selectCountry(pin);
+        }}
+        style={{ position: "absolute", inset: 0 }}
       >
-        <Map
-          reuseMaps
-          mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
-          projection={{ name: "mercator" }}
-          attributionControl={false}
-        />
-      </DeckGL>
+        <Source
+          id="iea-country-boundaries"
+          type="vector"
+          url="mapbox://mapbox.country-boundaries-v1"
+        >
+          <Layer
+            id="iea-country-fill"
+            type="fill"
+            source-layer="country_boundaries"
+            filter={["in", ["get", "iso_3166_1"], ["literal", ieaCodes]]}
+            paint={{
+              "fill-color": [
+                "case",
+                ["in", ["get", "iso_3166_1"], ["literal", newsCodes]],
+                "#FF8C28",
+                "#FFC850",
+              ],
+              "fill-opacity": [
+                "case",
+                ["==", ["get", "iso_3166_1"], selectedCode ?? ""],
+                0.35,
+                ["==", ["get", "iso_3166_1"], hoveredCode ?? ""],
+                0.28,
+                ["in", ["get", "iso_3166_1"], ["literal", newsCodes]],
+                0.2,
+                0.1,
+              ],
+            }}
+          />
+          <Layer
+            id="iea-country-outline"
+            type="line"
+            source-layer="country_boundaries"
+            filter={["in", ["get", "iso_3166_1"], ["literal", ieaCodes]]}
+            paint={{
+              "line-color": "#FFC850",
+              "line-width": [
+                "case",
+                ["==", ["get", "iso_3166_1"], selectedCode ?? ""],
+                1.6,
+                0.6,
+              ],
+              "line-opacity": 0.65,
+            }}
+          />
+        </Source>
+
+        <Source id="iea-pins" type="geojson" data={pinsGeoJson}>
+          <Layer
+            id="iea-pulse-ring"
+            type="circle"
+            filter={[">", ["get", "articleCount"], 0]}
+            paint={{
+              "circle-radius": ["get", "basePulseRadius"],
+              "circle-color": "#FF8C28",
+              "circle-opacity": 0.45,
+              "circle-stroke-width": 0,
+              "circle-pitch-alignment": "map",
+            }}
+          />
+          <Layer
+            id="iea-pulse-core"
+            type="circle"
+            filter={[">", ["get", "articleCount"], 0]}
+            paint={{
+              "circle-radius": ["get", "coreRadius"],
+              "circle-color": [
+                "case",
+                ["==", ["get", "code"], selectedCode ?? ""],
+                "#FFC850",
+                ["==", ["get", "code"], hoveredCode ?? ""],
+                "#FFAA3C",
+                "#FF8C28",
+              ],
+              "circle-opacity": 0.95,
+              "circle-stroke-color": "#FFDCA0",
+              "circle-stroke-width": 1,
+              "circle-stroke-opacity": 0.9,
+            }}
+          />
+          <Layer
+            id="iea-static-dot"
+            type="circle"
+            filter={["==", ["get", "articleCount"], 0]}
+            paint={{
+              "circle-radius": 4,
+              "circle-color": [
+                "case",
+                ["==", ["get", "code"], hoveredCode ?? ""],
+                "#FFAA3C",
+                "#B4A58C",
+              ],
+              "circle-opacity": 0.7,
+              "circle-stroke-color": "#FFDCBA",
+              "circle-stroke-width": 1,
+              "circle-stroke-opacity": 0.55,
+            }}
+          />
+          <Layer
+            id="iea-country-labels"
+            type="symbol"
+            filter={[">", ["get", "articleCount"], 0]}
+            layout={{
+              "text-field": ["get", "label"],
+              "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Regular"],
+              "text-size": 11,
+              "text-offset": [0, -1.4],
+              "text-anchor": "bottom",
+              "text-allow-overlap": false,
+            }}
+            paint={{
+              "text-color": "#FFDCB4",
+              "text-halo-color": "#000000",
+              "text-halo-width": 1.5,
+              "text-halo-blur": 0.5,
+            }}
+          />
+        </Source>
+      </Map>
 
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-10 px-6 py-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-        <div className="flex items-baseline gap-3">
-          <Link
-            href="/"
-            className="text-xs uppercase tracking-widest text-zinc-400 hover:text-white pointer-events-auto"
-          >
-            vizmaya
+        <div className="flex items-start gap-4">
+          <Link href="/" className="pointer-events-auto shrink-0">
+            <VizmayaLogo
+              className="w-[160px] h-[40px]"
+              palette={IEA_LOGO_PALETTE}
+            />
           </Link>
-          <span className="text-xs text-zinc-600">/</span>
-          <h1 className="text-sm font-semibold tracking-wide text-white">
-            {epic.name}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold tracking-wide text-white">
+              {epic.name}
+            </h1>
+            {epic.description && (
+              <p className="mt-1 text-xs text-zinc-400 max-w-xl">
+                {epic.description}
+              </p>
+            )}
+            <p className="mt-2 text-[11px] uppercase tracking-widest text-zinc-500">
+              {news.length} articles · last 7 days · {pins.length} countries
+            </p>
+          </div>
         </div>
-        {epic.description && (
-          <p className="mt-1 text-xs text-zinc-400 max-w-xl">{epic.description}</p>
-        )}
-        <p className="mt-2 text-[11px] uppercase tracking-widest text-zinc-500">
-          {news.length} articles · last 7 days · {pins.length} countries
-        </p>
       </header>
 
       {/* Side panel */}
