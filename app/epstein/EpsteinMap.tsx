@@ -617,9 +617,10 @@ export default function EpsteinMap({ airports, flights, blackbook, persons, them
       </div>
 
       {/* ── Hover airport tooltip ────────────────────────────────────────── */}
+      {/* Hidden on mobile — hover isn't a touch interaction; tap opens the sheet instead. */}
       {hoveredAirport && (
         <div
-          className="absolute top-20 md:top-16 left-1/2 -translate-x-1/2 z-20 rounded-md px-3 py-1.5 text-xs font-mono pointer-events-none whitespace-nowrap backdrop-blur"
+          className="hidden md:block absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-md px-3 py-1.5 text-xs font-mono pointer-events-none whitespace-nowrap overflow-hidden text-ellipsis backdrop-blur max-w-[calc(100vw-1rem)]"
           style={{
             background: alpha(theme.surface, 92),
             border: `1px solid ${alpha(theme.ember, 35)}`,
@@ -636,9 +637,10 @@ export default function EpsteinMap({ airports, flights, blackbook, persons, them
       )}
 
       {/* ── Hover blackbook tooltip ──────────────────────────────────────── */}
+      {/* Hidden on mobile — hover isn't a touch interaction; tap opens the sheet instead. */}
       {hoveredBlackbook && (
         <div
-          className="absolute top-20 md:top-16 left-1/2 -translate-x-1/2 z-20 rounded-md px-3 py-1.5 text-xs font-mono pointer-events-none whitespace-nowrap backdrop-blur"
+          className="hidden md:block absolute top-16 left-1/2 -translate-x-1/2 z-20 rounded-md px-3 py-1.5 text-xs font-mono pointer-events-none whitespace-nowrap overflow-hidden text-ellipsis backdrop-blur max-w-[calc(100vw-1rem)]"
           style={{
             background: alpha(theme.surface, 92),
             border: `1px solid ${alpha(theme.rose, 40)}`,

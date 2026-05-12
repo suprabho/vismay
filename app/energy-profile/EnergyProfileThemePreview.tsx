@@ -1,11 +1,11 @@
 'use client'
 
-import type { IeaTheme } from './theme'
+import type { EnergyProfileTheme } from './theme'
 
 const alpha = (c: string, p: number) => `color-mix(in srgb, ${c} ${p}%, transparent)`
 
-export function IeaThemePreview({ theme }: { theme: Record<string, string> }) {
-  const t = theme as Record<keyof IeaTheme, string>
+export function EnergyProfileThemePreview({ theme }: { theme: Record<string, string> }) {
+  const t = theme as Record<keyof EnergyProfileTheme, string>
   return (
     <aside
       className="border-t md:border-t-0 md:border-l border-white/5 p-5 md:sticky md:top-[60px] md:self-start"

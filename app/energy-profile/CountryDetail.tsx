@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import DetailSheet from '@/components/DetailSheet'
-import ElectricityMixChart from '@/components/iea/charts/ElectricityMixChart'
-import PrimaryEnergyMixChart from '@/components/iea/charts/PrimaryEnergyMixChart'
-import Co2Chart from '@/components/iea/charts/Co2Chart'
-import RenewablesShareChart from '@/components/iea/charts/RenewablesShareChart'
+import ElectricityMixChart from '@/components/energy-profile/charts/ElectricityMixChart'
+import PrimaryEnergyMixChart from '@/components/energy-profile/charts/PrimaryEnergyMixChart'
+import Co2Chart from '@/components/energy-profile/charts/Co2Chart'
+import RenewablesShareChart from '@/components/energy-profile/charts/RenewablesShareChart'
 import type { IeaCountryProfile } from '@/lib/epics'
 
 interface Props {
@@ -25,7 +25,7 @@ export default function CountryDetail({ code, onClose }: Props) {
   useEffect(() => {
     let cancelled = false
     setState({ kind: 'loading' })
-    fetch(`/api/iea/country/${encodeURIComponent(code)}`)
+    fetch(`/api/energy-profile/country/${encodeURIComponent(code)}`)
       .then(async (r) => {
         if (r.status === 404) {
           if (!cancelled) setState({ kind: 'missing' })
@@ -155,7 +155,7 @@ function Profile({ data }: { data: IeaCountryProfile }) {
       ) : (
         <p className="text-xs font-mono text-zinc-500">
           No OWID energy data for this country yet. Try{' '}
-          <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-[10px]">pnpm iea:import-owid</code>.
+          <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-[10px]">pnpm energy-profile:import-owid</code>.
         </p>
       )}
 

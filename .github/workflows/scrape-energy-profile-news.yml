@@ -1,4 +1,4 @@
-name: Scrape IEA news
+name: Scrape Energy Profile news
 
 # Daily pull of Google News' RSS search for "International Energy Agency".
 # Each new article is tagged with ISO country codes via Gemini and upserted
@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: scrape-iea-news
+  group: scrape-energy-profile-news
   cancel-in-progress: false
 
 jobs:
@@ -46,9 +46,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Scrape IEA news
+      - name: Scrape Energy Profile news
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: pnpm iea:scrape
+        run: pnpm energy-profile:scrape

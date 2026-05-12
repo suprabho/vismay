@@ -9,8 +9,8 @@
  * feed that surfaces the same IEA stories (with broader coverage from
  * Reuters / Bloomberg / etc) and works from any IP.
  *
- * Run locally:  pnpm iea:scrape
- * Run in CI:    .github/workflows/scrape-iea-news.yml (daily cron)
+ * Run locally:  pnpm energy-profile:scrape
+ * Run in CI:    .github/workflows/scrape-energy-profile-news.yml (daily cron)
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write to iea_news
@@ -37,7 +37,7 @@ interface NewsItem {
 
 async function fetchFeed(): Promise<NewsItem[]> {
   const res = await fetch(FEED_URL, {
-    headers: { 'user-agent': 'vizmaya-iea-scraper/1.0 (+https://vizmaya.fyi)' },
+    headers: { 'user-agent': 'vizmaya-energy-profile-scraper/1.0 (+https://vizmaya.fyi)' },
   })
   if (!res.ok) {
     throw new Error(`RSS fetch failed: ${res.status} ${res.statusText}`)

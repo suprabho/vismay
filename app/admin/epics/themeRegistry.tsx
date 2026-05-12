@@ -2,7 +2,7 @@
 
 import type { ComponentType } from 'react'
 import { EpsteinThemePreview } from '@/app/epstein/EpsteinThemePreview'
-import { IeaThemePreview } from '@/app/iea/IeaThemePreview'
+import { EnergyProfileThemePreview } from '@/app/energy-profile/EnergyProfileThemePreview'
 import { THEME_REGISTRY_SERVER, type ThemeMeta } from './themeRegistry.server'
 
 export interface ThemeRegistryEntry extends ThemeMeta {
@@ -11,7 +11,7 @@ export interface ThemeRegistryEntry extends ThemeMeta {
 
 export const THEME_REGISTRY: Record<string, ThemeRegistryEntry> = {
   epstein: { ...THEME_REGISTRY_SERVER.epstein, Preview: EpsteinThemePreview },
-  iea: { ...THEME_REGISTRY_SERVER.iea, Preview: IeaThemePreview },
+  'energy-profile': { ...THEME_REGISTRY_SERVER['energy-profile'], Preview: EnergyProfileThemePreview },
 }
 
 export function getThemeEntry(slug: string): ThemeRegistryEntry | null {

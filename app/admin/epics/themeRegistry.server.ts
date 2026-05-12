@@ -3,7 +3,7 @@
 // The client registry in themeRegistry.tsx re-exports this with preview components.
 
 import { EPSTEIN_THEME_DEFAULTS, EPSTEIN_THEME_LABELS } from '@/app/epstein/theme'
-import { IEA_THEME_DEFAULTS, IEA_THEME_LABELS } from '@/app/iea/theme'
+import { ENERGY_PROFILE_THEME_DEFAULTS, ENERGY_PROFILE_THEME_LABELS } from '@/app/energy-profile/theme'
 
 export interface ThemeMeta {
   defaults: Record<string, string>
@@ -15,9 +15,9 @@ export const THEME_REGISTRY_SERVER: Record<string, ThemeMeta> = {
     defaults: EPSTEIN_THEME_DEFAULTS,
     labels: EPSTEIN_THEME_LABELS,
   },
-  iea: {
-    defaults: IEA_THEME_DEFAULTS,
-    labels: IEA_THEME_LABELS,
+  'energy-profile': {
+    defaults: ENERGY_PROFILE_THEME_DEFAULTS,
+    labels: ENERGY_PROFILE_THEME_LABELS,
   },
 }
 

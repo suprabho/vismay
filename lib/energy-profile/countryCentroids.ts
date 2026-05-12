@@ -1,17 +1,18 @@
 /**
  * Fallback country centroids keyed by ISO 3166-1 alpha-2 code.
  *
- * The /iea map renders pins for the 12 featured countries in `iea_countries`
- * (which carry editorial summaries) plus any other countries that show up in
- * the last-7-day news window. This table supplies the lat/lng for that second
- * group — countries Gemma tags that don't have a DB row of their own.
+ * The /energy-profile map renders pins for the 12 featured countries in
+ * `iea_countries` (which carry editorial summaries) plus any other countries
+ * that show up in the last-7-day news window. This table supplies the lat/lng
+ * for that second group — countries Gemma tags that don't have a DB row of
+ * their own.
  *
  * Coordinates are country-level geographic centroids from the Google Public
  * Data canonical list. Good enough to drop a pin in roughly the right place;
  * not surveyor-grade.
  *
  * Includes the special bloc code "EU" (pointing at Brussels) because the
- * country-tagging prompt in scripts/iea/scrape-news.ts allows it.
+ * country-tagging prompt in scripts/energy-profile/scrape-news.ts allows it.
  */
 
 export interface CountryCentroid {

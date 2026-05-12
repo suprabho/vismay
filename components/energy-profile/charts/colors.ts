@@ -1,5 +1,5 @@
 /**
- * Fixed palette for the /iea country detail charts. Matches the source order
+ * Fixed palette for the /energy-profile country detail charts. Matches the source order
  * in `MIX_SOURCES` in lib/epics.ts so the stacked-area sources read coal →
  * gas → oil at the bottom, renewables on top.
  */

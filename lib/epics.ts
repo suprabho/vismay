@@ -183,8 +183,10 @@ export async function getIeaCountries(): Promise<IeaCountry[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Per-country energy profile — backs /api/iea/country/[code] and the
-// CountryDetail sheet on /iea. Indicator keys mirror scripts/iea/import-owid.ts.
+// Per-country energy profile — backs /api/energy-profile/country/[code] and
+// the CountryDetail sheet on /energy-profile. Indicator keys mirror
+// scripts/energy-profile/import-owid.ts. Table/function names stay iea_*
+// because the underlying DB tables weren't renamed when the epic was.
 
 // Stacked-area "energy mix" sources, in the order we want them to stack.
 // `key` is the suffix appended to `elec_share_*` and `primary_share_*` in the

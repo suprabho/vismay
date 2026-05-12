@@ -1,37 +1,37 @@
 import type { Metadata } from 'next'
 import { getEpic, getEpicStories, getIeaCountries, getIeaNewsSince } from '@/lib/epics'
-import IeaLanding from './IeaLanding'
-import { resolveIeaTheme } from './theme'
+import EnergyProfileLanding from './EnergyProfileLanding'
+import { resolveEnergyProfileTheme } from './theme'
 
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'IEA — vizmaya',
+  title: 'Energy Profile — vizmaya',
   description:
     'Live energy news, country profiles, and vizmaya stories on the global energy transition.',
-  alternates: { canonical: '/iea' },
+  alternates: { canonical: '/energy-profile' },
 }
 
-export default async function IeaPage() {
+export default async function EnergyProfilePage() {
   const [epic, countries, news, stories] = await Promise.all([
-    getEpic('iea'),
+    getEpic('energy-profile'),
     getIeaCountries(),
     getIeaNewsSince(7),
-    getEpicStories('iea'),
+    getEpicStories('energy-profile'),
   ])
 
   if (!epic) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-400">
-        IEA epic not seeded. Apply migration 015.
+        Energy Profile epic not seeded. Apply migration 019.
       </div>
     )
   }
 
-  const theme = resolveIeaTheme(epic.theme)
+  const theme = resolveEnergyProfileTheme(epic.theme)
 
   return (
-    <IeaLanding
+    <EnergyProfileLanding
       epic={epic}
       countries={countries}
       news={news}

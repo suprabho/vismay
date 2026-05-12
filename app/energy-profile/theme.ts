@@ -1,11 +1,11 @@
-// Palette for the IEA epic landing. Defaults mirror the hardcoded values in
-// IeaLanding.tsx (globe map: country fills, animated pulse pins, labels) so
-// the unthemed page is pixel-identical.
+// Palette for the Energy Profile epic landing. Defaults mirror the hardcoded
+// values in EnergyProfileLanding.tsx (globe map: country fills, animated pulse
+// pins, labels) so the unthemed page is pixel-identical.
 //
 // Admin override: each epic row in the DB carries a `theme` jsonb column. Any
-// keys present there win over these defaults — see resolveIeaTheme below.
+// keys present there win over these defaults — see resolveEnergyProfileTheme below.
 
-export type IeaTheme = {
+export type EnergyProfileTheme = {
   ink: string;
   surface: string;
   elevated: string;
@@ -19,7 +19,7 @@ export type IeaTheme = {
   accentEdge: string;
 };
 
-export const IEA_THEME_DEFAULTS: IeaTheme = {
+export const ENERGY_PROFILE_THEME_DEFAULTS: EnergyProfileTheme = {
   ink: "#0a0a0a",
   surface: "#0a0a0b",
   elevated: "#18181b",
@@ -33,7 +33,7 @@ export const IEA_THEME_DEFAULTS: IeaTheme = {
   accentEdge: "#ffdca0",
 };
 
-export const IEA_THEME_LABELS: Record<keyof IeaTheme, { label: string; hint: string }> = {
+export const ENERGY_PROFILE_THEME_LABELS: Record<keyof EnergyProfileTheme, { label: string; hint: string }> = {
   ink: { label: "Ink", hint: "Page background, text halo" },
   surface: { label: "Surface", hint: "Side panel background" },
   elevated: { label: "Elevated", hint: "Card / hover state" },
@@ -49,20 +49,20 @@ export const IEA_THEME_LABELS: Record<keyof IeaTheme, { label: string; hint: str
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-export function resolveIeaTheme(override: unknown): IeaTheme {
-  if (!override || typeof override !== "object") return IEA_THEME_DEFAULTS;
-  const out: IeaTheme = { ...IEA_THEME_DEFAULTS };
-  for (const key of Object.keys(IEA_THEME_DEFAULTS) as (keyof IeaTheme)[]) {
+export function resolveEnergyProfileTheme(override: unknown): EnergyProfileTheme {
+  if (!override || typeof override !== "object") return ENERGY_PROFILE_THEME_DEFAULTS;
+  const out: EnergyProfileTheme = { ...ENERGY_PROFILE_THEME_DEFAULTS };
+  for (const key of Object.keys(ENERGY_PROFILE_THEME_DEFAULTS) as (keyof EnergyProfileTheme)[]) {
     const v = (override as Record<string, unknown>)[key];
     if (typeof v === "string" && HEX.test(v)) out[key] = v;
   }
   return out;
 }
 
-// Maps the four recolorable slots in the Vizmaya Rive logo onto the IEA
-// palette. The Rive file expects text/teal/accent/accent2 plus optional
+// Maps the four recolorable slots in the Vizmaya Rive logo onto the Energy
+// Profile palette. The Rive file expects text/teal/accent/accent2 plus optional
 // surface/muted/line.
-export function ieaLogoPalette(theme: IeaTheme) {
+export function energyProfileLogoPalette(theme: EnergyProfileTheme) {
   return {
     text: theme.bone,
     teal: theme.accentHi,

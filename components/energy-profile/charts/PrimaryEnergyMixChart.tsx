@@ -15,15 +15,21 @@ interface Props {
 export default function PrimaryEnergyMixChart({ years, series }: Props) {
   const option: EChartsOption = {
     backgroundColor: 'transparent',
-    grid: { top: 8, right: 10, bottom: 22, left: 36 },
+    grid: { top: 8, right: 10, bottom: 54, left: 36 },
     legend: {
       bottom: 0,
       left: 'center',
       textStyle: { color: CHART_AXIS_COLOR, fontSize: 10 },
       itemWidth: 8,
       itemHeight: 8,
+      itemGap: 12,
       icon: 'circle',
       type: 'scroll',
+      pageIconSize: 9,
+      pageIconColor: CHART_AXIS_COLOR,
+      pageIconInactiveColor: CHART_LINE_COLOR,
+      pageTextStyle: { color: CHART_AXIS_COLOR, fontSize: 9 },
+      padding: [4, 28],
     },
     tooltip: {
       trigger: 'axis',
@@ -61,7 +67,7 @@ export default function PrimaryEnergyMixChart({ years, series }: Props) {
   return (
     <ReactECharts
       option={option}
-      style={{ height: 220, width: '100%' }}
+      style={{ height: 248, width: '100%' }}
       opts={{ renderer: 'svg' }}
     />
   )

@@ -9,7 +9,7 @@
  * Ember + EIA inputs as one CC BY 4.0 CSV that covers ~200 countries back to
  * 1900. They refresh annually each April.
  *
- * Run locally:  pnpm iea:import-owid
+ * Run locally:  pnpm energy-profile:import-owid
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write access
@@ -23,7 +23,7 @@
 import { parse as parseCsv } from 'csv-parse/sync'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '../../lib/supabase'
-import { COUNTRY_CENTROIDS } from '../../lib/iea/countryCentroids'
+import { COUNTRY_CENTROIDS } from '../../lib/energy-profile/countryCentroids'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
@@ -67,9 +67,10 @@ const INDICATOR_MAP: Record<string, string> = {
   electricity_demand: 'electricity_demand_twh',
 }
 
-// ISO 3166-1 alpha-3 → alpha-2. Covers every country OWID emits with a
-// non-empty `iso_code` column. Codes for which we don't have a centroid in
-// lib/iea/countryCentroids.ts are dropped at the import step.
+// ISO 3166-1 alpha-3 → alpha-2 for every assigned code (sovereign states +
+// dependencies/territories). The territories pass through the same filter as
+// countries: rows whose mapped alpha-2 has no centroid in
+// lib/energy-profile/countryCentroids.ts are dropped at the import step.
 const ALPHA3_TO_ALPHA2: Record<string, string> = {
   AFG: 'AF', ALB: 'AL', DZA: 'DZ', AND: 'AD', AGO: 'AO', ATG: 'AG', ARG: 'AR',
   ARM: 'AM', AUS: 'AU', AUT: 'AT', AZE: 'AZ', BHS: 'BS', BHR: 'BH', BGD: 'BD',
@@ -100,6 +101,15 @@ const ALPHA3_TO_ALPHA2: Record<string, string> = {
   TUR: 'TR', TKM: 'TM', TUV: 'TV', UGA: 'UG', UKR: 'UA', ARE: 'AE', GBR: 'GB',
   USA: 'US', URY: 'UY', UZB: 'UZ', VUT: 'VU', VEN: 'VE', VNM: 'VN', YEM: 'YE',
   ZMB: 'ZM', ZWE: 'ZW',
+  // Dependencies & territories (ISO 3166-1)
+  AIA: 'AI', ALA: 'AX', ASM: 'AS', ATA: 'AQ', ATF: 'TF', ABW: 'AW', BES: 'BQ',
+  BLM: 'BL', BMU: 'BM', BVT: 'BV', CCK: 'CC', COK: 'CK', CUW: 'CW', CXR: 'CX',
+  ESH: 'EH', FLK: 'FK', FRO: 'FO', GGY: 'GG', GIB: 'GI', GLP: 'GP', GRL: 'GL',
+  GUF: 'GF', GUM: 'GU', HMD: 'HM', IMN: 'IM', IOT: 'IO', JEY: 'JE', MAF: 'MF',
+  MNP: 'MP', MSR: 'MS', MTQ: 'MQ', MYT: 'YT', NCL: 'NC', NFK: 'NF', NIU: 'NU',
+  PCN: 'PN', PYF: 'PF', REU: 'RE', SGS: 'GS', SHN: 'SH', SJM: 'SJ', SPM: 'PM',
+  SXM: 'SX', TCA: 'TC', TKL: 'TK', UMI: 'UM', VAT: 'VA', VGB: 'VG', VIR: 'VI',
+  WLF: 'WF',
 }
 
 interface CountryRow {
@@ -119,7 +129,7 @@ interface IndicatorRow {
 async function fetchCsv(url: string): Promise<string> {
   console.log(`[owid] fetching ${url}`)
   const res = await fetch(url, {
-    headers: { 'user-agent': 'vizmaya-iea-importer/1.0 (+https://vizmaya.fyi)' },
+    headers: { 'user-agent': 'vizmaya-energy-profile-importer/1.0 (+https://vizmaya.fyi)' },
   })
   if (!res.ok) {
     throw new Error(`fetch ${url}: ${res.status} ${res.statusText}`)
@@ -201,7 +211,7 @@ function parseRows(csvText: string): Parsed {
   }
   if (skippedNoCentroid.size > 0) {
     console.warn(
-      `[owid] ${skippedNoCentroid.size} codes mapped but no centroid in lib/iea/countryCentroids.ts (skipped): ${[...skippedNoCentroid].slice(0, 10).join(', ')}`,
+      `[owid] ${skippedNoCentroid.size} codes mapped but no centroid in lib/energy-profile/countryCentroids.ts (skipped): ${[...skippedNoCentroid].slice(0, 10).join(', ')}`,
     )
   }
 
