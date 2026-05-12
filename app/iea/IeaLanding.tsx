@@ -8,6 +8,7 @@ import { DeckGL } from "@deck.gl/react";
 import { FlyToInterpolator } from "deck.gl";
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Epic, EpicStory, IeaCountry, IeaNewsItem } from "@/lib/epics";
+import { COUNTRY_CENTROIDS } from "@/lib/iea/countryCentroids";
 
 interface Props {
   epic: Epic;
@@ -44,11 +45,35 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
     return counts;
   }, [news]);
 
-  const pins: CountryPin[] = useMemo(
-    () =>
-      countries.map((c) => ({ ...c, articleCount: articleCountByCode[c.code] ?? 0 })),
-    [countries, articleCountByCode]
-  );
+  // Pin set is the union of:
+  //   - the 12 featured countries from `iea_countries` (always shown, even
+  //     with 0 articles, so users can click for the editorial profile)
+  //   - any other country tagged in the last-7-day news window, looked up
+  //     in COUNTRY_CENTROIDS for lat/lng (no summary)
+  // Without the second group, news for countries outside the featured 12
+  // would be silently dropped from the map.
+  const pins: CountryPin[] = useMemo(() => {
+    const featuredCodes = new Set(countries.map((c) => c.code));
+    const featured: CountryPin[] = countries.map((c) => ({
+      ...c,
+      articleCount: articleCountByCode[c.code] ?? 0,
+    }));
+    const extras: CountryPin[] = [];
+    for (const [code, count] of Object.entries(articleCountByCode)) {
+      if (featuredCodes.has(code)) continue;
+      const centroid = COUNTRY_CENTROIDS[code];
+      if (!centroid) continue;
+      extras.push({
+        code,
+        name: centroid.name,
+        lat: centroid.lat,
+        lng: centroid.lng,
+        summary: null,
+        articleCount: count,
+      });
+    }
+    return [...featured, ...extras];
+  }, [countries, articleCountByCode]);
 
   const maxCount = useMemo(
     () => Math.max(1, ...pins.map((p) => p.articleCount)),
@@ -167,7 +192,7 @@ export default function IeaLanding({ epic, countries, news, stories }: Props) {
           <p className="mt-1 text-xs text-zinc-400 max-w-xl">{epic.description}</p>
         )}
         <p className="mt-2 text-[11px] uppercase tracking-widest text-zinc-500">
-          {news.length} articles · last 7 days · {countries.length} countries
+          {news.length} articles · last 7 days · {pins.length} countries
         </p>
       </header>
 
