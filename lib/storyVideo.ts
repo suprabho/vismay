@@ -23,7 +23,9 @@ interface CueRow {
  *
  *   v1 — initial pipeline
  *   v2 — 9:16 composes content into a 4:5 central band with the story's
- *        aura behind, via ?compose=vertical (storyVideoRender.ts).
+ *        aura behind, via ?compose=vertical (storyVideoRender.ts). The
+ *        inner story is embedded in an iframe so its `h-svh` sections lay
+ *        out for the 4:5 viewport instead of clipping a 9:16 layout.
  */
 export const RENDER_PIPELINE_VERSION = 'v2'
 

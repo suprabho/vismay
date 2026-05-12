@@ -5,39 +5,63 @@ import AuraBackground from '@/components/AuraBackground'
 
 /**
  * Compose wrapper used by the 9:16 video render pipeline. When the page
- * URL has `?compose=vertical` set, the existing story content is constrained
- * to a central 4:5 band (the YouTube Shorts safe-zone), and the surrounding
- * 9:16 frame is filled with the story's `aura` iframe — same component used
- * on the home-page bento tiles.
+ * URL has `?compose=vertical` set, the existing story content is loaded
+ * inside a centered 4:5 iframe (the YouTube Shorts safe-zone) so its
+ * layout responds to the 4:5 viewport — `h-svh` resolves to the inner
+ * height, not the outer 9:16 frame. The surrounding 9:16 area is filled
+ * with the story's `aura` iframe.
+ *
+ * Embedding via iframe (rather than just CSS-constraining children) is
+ * what fixes the original clipping: the story page's section heights are
+ * `h-svh`, which would otherwise overflow the 4:5 box and crop top + bottom.
  *
  * When `?compose=vertical` is absent the wrapper renders children directly
  * with zero added DOM, so regular `/story/<slug>` traffic is unaffected.
  *
  * Activation is client-side (reads window.location.search on mount) — this
  * preserves SSG for normal page views. The capture pipeline waits for
- * `[data-unit-index]` before recording, by which point React has hydrated
- * and the wrap is in place.
+ * `[data-unit-index]` inside the inner iframe before recording, by which
+ * point both frames have hydrated.
  */
 export default function VerticalCaptureFrame({
+  slug,
   auraSlug,
   children,
 }: {
+  /** Story slug — used to build the inner iframe's src. */
+  slug: string
   /** Slug of the per-story aura embed; falls back to theme background when absent. */
   auraSlug?: string
   children: ReactNode
 }) {
   const [compose, setCompose] = useState(false)
+  const [iframeSrc, setIframeSrc] = useState<string | null>(null)
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    setCompose(params.get('compose') === 'vertical')
-  }, [])
+    if (params.get('compose') !== 'vertical') return
+    setCompose(true)
+    // The iframe loads the same story page minus the compose param, so the
+    // inner page renders its normal story content (no recursive wrap).
+    params.delete('compose')
+    const qs = params.toString()
+    setIframeSrc(`/story/${slug}${qs ? `?${qs}` : ''}`)
+  }, [slug])
 
   if (!compose) return <>{children}</>
 
   return (
     <div className="vcf-frame">
       {auraSlug && <AuraBackground slug={auraSlug} />}
-      <div className="vcf-inner">{children}</div>
+      {iframeSrc && (
+        <iframe
+          src={iframeSrc}
+          className="vcf-inner"
+          title="Story content"
+          /* Tagged so the render module can locate this exact iframe. */
+          data-vcf-inner=""
+        />
+      )}
       <style>{`
         /* Outer 9:16 frame fills the viewport. Background falls back to the
            story theme color when no aura is set. */
@@ -49,9 +73,7 @@ export default function VerticalCaptureFrame({
           overflow: hidden;
           background: var(--color-bg, #000);
         }
-        /* Position the aura iframe to fill the entire frame. The component
-           outputs <div class="bn-aura"><iframe/></div>; styles below mirror
-           the home page CSS so it renders correctly outside HomeClient. */
+        /* Aura iframe sits at the back, filling the entire 9:16 frame. */
         .vcf-frame > .bn-aura {
           position: absolute;
           inset: 0;
@@ -68,10 +90,9 @@ export default function VerticalCaptureFrame({
           display: block;
           background: transparent;
         }
-        /* Central 4:5 safe-zone, vertically centered inside the 9:16 frame.
-           Story content renders here. Its theme bg is opaque so it covers
-           the aura within the band — aura is visible only in the top and
-           bottom letterbox strips. */
+        /* Central 4:5 iframe holding the story. Its own viewport drives
+           the inner page's layout, so 100vh / 100svh resolve to the 4:5
+           height and nothing gets clipped at top or bottom. */
         .vcf-inner {
           position: absolute;
           left: 0;
@@ -80,7 +101,8 @@ export default function VerticalCaptureFrame({
           transform: translateY(-50%);
           width: 100%;
           aspect-ratio: 4 / 5;
-          overflow: hidden auto;
+          border: 0;
+          display: block;
           background: var(--color-bg, #000);
           z-index: 1;
         }

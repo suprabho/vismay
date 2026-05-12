@@ -19,7 +19,7 @@ import os from 'os'
 import path from 'path'
 import { spawn } from 'child_process'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { chromium } from 'playwright'
+import { chromium, type Frame } from 'playwright'
 import {
   computeAudioRevisionHash,
   getCachedVideo,
@@ -272,7 +272,23 @@ async function walkAndRecord(args: {
   const url = `${args.baseUrl}/story/${args.slug}?autoplay=1&capture=1${composeParam}`
   await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
 
-  await page.waitForSelector('[data-unit-index]', { timeout: 30_000 })
+  // In 9:16 compose mode the actual story content is rendered inside an
+  // iframe (components/story/VerticalCaptureFrame.tsx) so its layout
+  // responds to a 4:5 viewport — `h-svh` sections resolve to the inner
+  // height instead of overflowing the YouTube-Shorts safe zone. The story
+  // page selectors, the Mapbox-proxy state, and the scroll target all live
+  // in that iframe, so we resolve a Frame handle here and drive everything
+  // through it. 16:9 keeps using the page's main frame as before.
+  let walkFrame: Frame = page.mainFrame()
+  if (args.aspect === '9:16') {
+    await page.waitForSelector('iframe[data-vcf-inner]', { timeout: 30_000 })
+    const handle = await page.$('iframe[data-vcf-inner]')
+    const inner = await handle?.contentFrame()
+    if (!inner) throw new Error('vertical capture iframe never produced a contentFrame')
+    walkFrame = inner
+  }
+
+  await walkFrame.waitForSelector('[data-unit-index]', { timeout: 30_000 })
   try {
     await page.waitForLoadState('networkidle', { timeout: 15_000 })
   } catch {
@@ -290,8 +306,12 @@ async function walkAndRecord(args: {
   // captured map to report `loaded()`. Both phases swallow timeouts so a
   // stuck map can't block the render; the per-cue idle wait further down
   // handles late-arriving maps and post-pan tile loads.
+  //
+  // `addInitScript` runs in every frame in the context, so the iframe's
+  // window has its own `__capturedMaps__` array populated by the story
+  // page running inside it.
   try {
-    await page.waitForFunction(
+    await walkFrame.waitForFunction(
       () => {
         const w = window as unknown as {
           __capturedMaps__?: { loaded(): boolean }[]
@@ -300,7 +320,7 @@ async function walkAndRecord(args: {
       },
       { timeout: 5_000 }
     )
-    await page.waitForFunction(
+    await walkFrame.waitForFunction(
       () => {
         const w = window as unknown as {
           __capturedMaps__?: { loaded(): boolean }[]
@@ -325,7 +345,7 @@ async function walkAndRecord(args: {
     // Skip cues whose start is past the preview cap.
     if (isPreview && cueStartAbs >= targetWalkMs) break
 
-    await page.evaluate((idx) => {
+    await walkFrame.evaluate((idx) => {
       const el = document.querySelector(
         `[data-unit-index="${idx}"]`
       ) as HTMLElement | null
@@ -347,7 +367,7 @@ async function walkAndRecord(args: {
     )
     if (idleCapMs > 0) {
       await Promise.race([
-        page
+        walkFrame
           .waitForFunction(
             () => {
               const w = window as unknown as {

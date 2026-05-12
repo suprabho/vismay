@@ -261,34 +261,57 @@ export default function AutoplayShell({
   /* ─── Iframe scroll control ──────────────────────────────────── */
 
   /**
+   * Find the document that holds the story's `[data-unit-index]` elements.
+   * In 16:9 the player iframe loads the story directly, so its contentDoc
+   * is the story doc. In 9:16 (compose=vertical) the player iframe loads
+   * VerticalCaptureFrame, which renders a nested iframe with the actual
+   * story — descend one level into `iframe[data-vcf-inner]`.
+   */
+  const getStoryDocument = useCallback(
+    (iframe: HTMLIFrameElement): Document | null => {
+      const doc = iframe.contentDocument
+      if (!doc) return null
+      const innerIframe = doc.querySelector<HTMLIFrameElement>(
+        'iframe[data-vcf-inner]'
+      )
+      return innerIframe?.contentDocument ?? doc
+    },
+    []
+  )
+
+  /**
    * Scroll the iframe's snap-scroll container to the section with the given
    * `data-unit-index`. Same-origin so we can reach into contentDocument.
    */
   const scrollIframeToUnit = useCallback((unitIndex: number) => {
     const iframe = iframeRef.current
     if (!iframe) return
-    const doc = iframe.contentDocument
+    const doc = getStoryDocument(iframe)
     if (!doc) return
     const target = doc.querySelector<HTMLElement>(
       `[data-unit-index="${unitIndex}"]`
     )
     if (!target) return
     target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+  }, [getStoryDocument])
 
   // When iframe finishes loading, jump to the active unit (no smooth on init).
+  // In 9:16 compose mode the outer iframe `load` event fires before the
+  // nested story iframe has loaded — the activeUnit useEffect below will
+  // re-fire the scroll once both frames are ready, so the initial miss is
+  // harmless (activeUnit starts at 0, which is the natural scroll position).
   const handleIframeLoad = useCallback(() => {
     setIframeReady(true)
     const iframe = iframeRef.current
     if (!iframe) return
-    const doc = iframe.contentDocument
+    const doc = getStoryDocument(iframe)
     if (!doc) return
     const target = doc.querySelector<HTMLElement>(
       `[data-unit-index="${activeUnit}"]`
     )
     if (target) target.scrollIntoView({ block: 'start' })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [getStoryDocument])
 
   // Sync iframe scroll when activeUnit changes (after the iframe has loaded).
   useEffect(() => {
@@ -691,7 +714,11 @@ export default function AutoplayShell({
             <iframe
               key={ratio /* force reload when ratio changes */}
               ref={iframeRef}
-              src={`/story/${slug}?autoplay=1`}
+              src={
+                ratio === '9:16'
+                  ? `/story/${slug}?autoplay=1&compose=vertical`
+                  : `/story/${slug}?autoplay=1`
+              }
               onLoad={handleIframeLoad}
               title="Autoplay preview"
               style={{

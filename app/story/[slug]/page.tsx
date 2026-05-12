@@ -113,7 +113,7 @@ export default async function StoryPage({ params }: RouteParams) {
           }}
         />
       </Link>
-      <VerticalCaptureFrame auraSlug={story.frontmatter.aura}>
+      <VerticalCaptureFrame slug={slug} auraSlug={story.frontmatter.aura}>
         <StoryMapShell
           units={units}
           mobileUnits={hasMobileOverrides ? mobileUnits : undefined}
