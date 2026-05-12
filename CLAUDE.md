@@ -67,12 +67,11 @@ URLs are top-level per epic (`/iea`, `/epstein`) rather than `/epic/<slug>` — 
 
 ### IEA news pipeline
 
-`.github/workflows/scrape-iea-news.yml` runs daily (06:15 UTC) — pulls `iea.org/rss/news`, hands each new article to Claude (Opus 4.7 via structured outputs) for ISO country-code tagging, and upserts into `iea_news`. Idempotent on `source_url`.
+`.github/workflows/scrape-iea-news.yml` runs daily (06:15 UTC) — pulls Google News RSS for "International Energy Agency", hands each new article to Gemini (2.0 Flash via JSON-schema response config) for ISO country-code tagging, and upserts into `iea_news`. Idempotent on `source_url`.
 
 - **Script:** [scripts/iea/scrape-news.ts](scripts/iea/scrape-news.ts). Run locally with `pnpm iea:scrape`.
 - **Manual run in prod:** GitHub → Actions → "Scrape IEA news" → "Run workflow".
-- **Required repo secret** (in the `Production` environment): `ANTHROPIC_API_KEY`. The Supabase secrets are reused from the other workflows.
-- The seed in migration 015 inserts 8 mock articles with `source_url` like `https://www.iea.org/news/mock-1`. They won't conflict with the scraper (different URLs) but should be deleted once the real feed has populated.
+- **Required repo secret** (in the `Production` environment): `GEMINI_API_KEY` (shared with render-audio). The Supabase secrets are reused from the other workflows.
 
 ## TTS narration overrides (per-unit)
 

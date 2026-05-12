@@ -1,6 +1,6 @@
 /**
  * IEA news scraper — consumes Google News' RSS search for "International
- * Energy Agency", tags each new article with ISO country codes via Claude,
+ * Energy Agency", tags each new article with ISO country codes via Gemini,
  * and upserts into iea_news.
  *
  * Why Google News and not iea.org directly? IEA's site fronts a JS-driven
@@ -14,13 +14,13 @@
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write to iea_news
- *   ANTHROPIC_API_KEY                                    — country tagging
+ *   GEMINI_API_KEY                                       — country tagging
  *
  * Idempotency: source_url is the natural key (unique in migration 015).
  * Google News redirect URLs are stable per-article, so re-runs are no-ops.
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenAI } from '@google/genai'
 import { JSDOM } from 'jsdom'
 import { createServiceClient } from '../../lib/supabase'
 
@@ -83,46 +83,35 @@ Empty array if the article is about:
 Use the special code "EU" only when the European Union is explicitly named as a bloc; otherwise drop down to specific member-state codes.`
 
 async function extractCountryCodes(
-  anthropic: Anthropic,
+  genai: GoogleGenAI,
   item: NewsItem
 ): Promise<string[]> {
   const userText = `Headline: ${item.title}\n\n${
     item.summary ? `Summary: ${item.summary}` : '(no summary available)'
   }`
 
-  const response = await anthropic.messages.create({
-    model: 'claude-opus-4-7',
-    max_tokens: 1024,
-    system: [
-      {
-        type: 'text',
-        text: COUNTRY_TAGGING_SYSTEM,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    output_config: {
-      format: {
-        type: 'json_schema',
-        schema: {
-          type: 'object',
-          properties: {
-            country_codes: {
-              type: 'array',
-              items: { type: 'string' },
-            },
+  const response = await genai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: `${COUNTRY_TAGGING_SYSTEM}\n\n${userText}`,
+    config: {
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          country_codes: {
+            type: 'array',
+            items: { type: 'string' },
           },
-          required: ['country_codes'],
-          additionalProperties: false,
         },
-      },
+        required: ['country_codes'],
+      } as unknown as Record<string, unknown>,
     },
-    messages: [{ role: 'user', content: userText }],
   })
 
-  const textBlock = response.content.find((b) => b.type === 'text')
-  if (!textBlock || textBlock.type !== 'text') return []
+  const text = response.text ?? ''
+  if (!text) return []
   try {
-    const parsed = JSON.parse(textBlock.text) as { country_codes?: unknown }
+    const parsed = JSON.parse(text) as { country_codes?: unknown }
     const raw = Array.isArray(parsed.country_codes) ? parsed.country_codes : []
     return raw
       .filter((c): c is string => typeof c === 'string')
@@ -135,7 +124,9 @@ async function extractCountryCodes(
 
 async function main() {
   const sb = createServiceClient()
-  const anthropic = new Anthropic()
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set')
+  const genai = new GoogleGenAI({ apiKey })
 
   console.log('Fetching Google News RSS for "International Energy Agency"...')
   const items = await fetchFeed()
@@ -172,7 +163,7 @@ async function main() {
   let inserted = 0
   for (const item of newItems) {
     try {
-      const countryCodes = await extractCountryCodes(anthropic, item)
+      const countryCodes = await extractCountryCodes(genai, item)
       // Outlet name (Reuters, Bloomberg, …) goes into topics so the UI can
       // surface it as a chip without a schema change.
       const topics = item.source ? [item.source] : []
