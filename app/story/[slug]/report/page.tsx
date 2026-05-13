@@ -26,7 +26,7 @@ import ReportShell from '@/components/pdf/ReportShell'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
-  searchParams?: Promise<{ print?: string }>
+  searchParams?: Promise<{ print?: string; embed?: string }>
 }
 
 export const dynamic = 'force-dynamic'
@@ -35,6 +35,7 @@ export default async function StoryReportPage({ params, searchParams }: RoutePar
   const { slug } = await params
   const sp = (await searchParams) ?? {}
   const print = sp.print === '1'
+  const embed = sp.embed === '1'
 
   if (!(await isAuthed()))
     redirect(`/admin/login?next=${encodeURIComponent(`/story/${slug}/report${print ? '?print=1' : ''}`)}`)
@@ -83,6 +84,7 @@ export default async function StoryReportPage({ params, searchParams }: RoutePar
         accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
         logo={logo}
         print={print}
+        embed={embed}
       />
     </ThemeProvider>
   )

@@ -81,6 +81,13 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
             bearing: m.bearing ?? 0,
           }
         : null
+    const subMap = u.parentConfig.subsections?.[u.subIndex]?.map
+    const sourcePins = subMap?.pins ?? m?.pins ?? []
+    const parentPins = sourcePins.map((p) => ({
+      coordinates: p.coordinates as [number, number],
+      label: p.label,
+      labelAnchor: p.labelAnchor,
+    }))
     return {
       parentIndex: u.parentIndex,
       subIndex: u.subIndex,
@@ -90,6 +97,7 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
       eyebrow: u.parentConfig.eyebrow,
       chartId: u.parentConfig.chart,
       parentMap,
+      parentPins,
     }
   })
 

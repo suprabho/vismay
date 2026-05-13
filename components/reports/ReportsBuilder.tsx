@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { stringify as stringifyYaml } from 'yaml'
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
   parseStoryOverrides,
+  type PinOverride,
   type ReportPageOverride,
 } from '@/lib/storyReportConfig'
 import { extractMapView, type MapView } from '@/lib/yamlMapPatch'
@@ -21,6 +22,9 @@ export interface BuilderUnit {
   chartId: string | undefined
   /** Section default map camera. Null when the section has no `map:` block. */
   parentMap: MapView | null
+  /** Section default pin list, used as starting state when the user opens the
+   *  pin-override YAML editor. */
+  parentPins: Array<{ coordinates: [number, number]; label?: string; labelAnchor?: PinOverride['labelAnchor'] }>
 }
 
 interface Props {
@@ -59,6 +63,8 @@ interface PageState {
   hideMap: boolean
   /** Per-page camera override. Null = use the section default. */
   mapView: MapView | null
+  /** Per-page pin patches (label position, color, etc.). Empty = no patches. */
+  pinOverrides: PinOverride[]
 }
 
 type PagesByFormat = Record<Format, PageState[]>
@@ -98,6 +104,7 @@ function buildPageStatesFor(
       hideChart: ov?.hideChart === true,
       hideMap: ov?.hideMap === true,
       mapView,
+      pinOverrides: mo?.pinOverrides ?? [],
     }
   })
 }
@@ -124,6 +131,117 @@ function viewToFakeSectionRaw(view: MapView): string {
     `  pitch: ${view.pitch}`,
     `  bearing: ${view.bearing}`,
   ].join('\n')
+}
+
+/** Combined map-override payload edited through the YAML textarea. Camera
+ *  fields are required (so the textarea always seeds with a valid view);
+ *  `pinOverrides` is empty when the user hasn't patched any pins. */
+interface MapEditPayload {
+  view: MapView
+  pinOverrides: PinOverride[]
+}
+
+/** Serialize the camera + pin patches to the flat YAML shape used in the
+ *  per-page YAML textarea (no enclosing `mapOverride:` key — just the
+ *  fields). */
+function payloadToYaml(p: MapEditPayload): string {
+  const lines = [
+    `center: [${round(p.view.center[0], 4)}, ${round(p.view.center[1], 4)}]`,
+    `zoom: ${round(p.view.zoom, 2)}`,
+    `pitch: ${round(p.view.pitch, 1)}`,
+    `bearing: ${round(p.view.bearing, 1)}`,
+  ]
+  if (p.pinOverrides.length > 0) {
+    lines.push('pinOverrides:')
+    for (const pin of p.pinOverrides) {
+      lines.push(
+        `  - coordinates: [${round(pin.coordinates[0], 6)}, ${round(pin.coordinates[1], 6)}]`
+      )
+      if (pin.label !== undefined) lines.push(`    label: ${JSON.stringify(pin.label)}`)
+      if (pin.labelAnchor !== undefined) lines.push(`    labelAnchor: ${pin.labelAnchor}`)
+      if (pin.color !== undefined) lines.push(`    color: ${JSON.stringify(pin.color)}`)
+      if (pin.radius !== undefined) lines.push(`    radius: ${pin.radius}`)
+      if (pin.pulse !== undefined) lines.push(`    pulse: ${pin.pulse}`)
+    }
+  }
+  return lines.join('\n')
+}
+
+const VALID_PIN_ANCHORS: ReadonlySet<NonNullable<PinOverride['labelAnchor']>> = new Set([
+  'top',
+  'bottom',
+  'left',
+  'right',
+])
+
+function parsePinOverridesFromYaml(raw: unknown): PinOverride[] | null {
+  if (raw === undefined) return []
+  if (!Array.isArray(raw)) return null
+  const out: PinOverride[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') return null
+    const e = entry as Record<string, unknown>
+    const c = e.coordinates
+    if (!Array.isArray(c) || c.length !== 2) return null
+    const lng = Number(c[0])
+    const lat = Number(c[1])
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null
+    const patch: PinOverride = { coordinates: [lng, lat] }
+    if (e.label !== undefined) {
+      if (typeof e.label !== 'string') return null
+      patch.label = e.label
+    }
+    if (e.labelAnchor !== undefined) {
+      if (
+        typeof e.labelAnchor !== 'string' ||
+        !VALID_PIN_ANCHORS.has(e.labelAnchor as NonNullable<PinOverride['labelAnchor']>)
+      ) {
+        return null
+      }
+      patch.labelAnchor = e.labelAnchor as PinOverride['labelAnchor']
+    }
+    if (e.color !== undefined) {
+      if (typeof e.color !== 'string') return null
+      patch.color = e.color
+    }
+    if (e.radius !== undefined) {
+      const n = Number(e.radius)
+      if (!Number.isFinite(n)) return null
+      patch.radius = n
+    }
+    if (e.pulse !== undefined) {
+      if (typeof e.pulse !== 'boolean') return null
+      patch.pulse = e.pulse
+    }
+    out.push(patch)
+  }
+  return out
+}
+
+/** Parse the flat YAML shape produced by payloadToYaml back into the payload.
+ *  Returns null on any structural mismatch so the caller can show an error. */
+function yamlToPayload(text: string): MapEditPayload | null {
+  let raw: unknown
+  try {
+    raw = parseYaml(text)
+  } catch {
+    return null
+  }
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const c = o.center
+  if (!Array.isArray(c) || c.length !== 2) return null
+  const lng = Number(c[0])
+  const lat = Number(c[1])
+  const zoom = Number(o.zoom)
+  if (!Number.isFinite(lng) || !Number.isFinite(lat) || !Number.isFinite(zoom)) {
+    return null
+  }
+  const pitch = Number.isFinite(Number(o.pitch)) ? Number(o.pitch) : 0
+  const bearing = Number.isFinite(Number(o.bearing)) ? Number(o.bearing) : 0
+  const pinOverrides = parsePinOverridesFromYaml(o.pinOverrides)
+  if (pinOverrides === null) return null
+  return { view: { center: [lng, lat], zoom, pitch, bearing }, pinOverrides }
 }
 
 function pagesForFormat(states: PageState[]): ReportPageOverride[] {
@@ -172,6 +290,20 @@ function pagesForFormat(states: PageState[]): ReportPageOverride[] {
         zoom: round(s.mapView.zoom, 2),
         pitch: round(s.mapView.pitch, 1),
         bearing: round(s.mapView.bearing, 1),
+      }
+      dirty = true
+    }
+    if (s.pinOverrides.length > 0) {
+      entry.mapOverride = {
+        ...(entry.mapOverride ?? {}),
+        pinOverrides: s.pinOverrides.map((p) => ({
+          coordinates: [round(p.coordinates[0], 6), round(p.coordinates[1], 6)],
+          ...(p.label !== undefined ? { label: p.label } : {}),
+          ...(p.labelAnchor !== undefined ? { labelAnchor: p.labelAnchor } : {}),
+          ...(p.color !== undefined ? { color: p.color } : {}),
+          ...(p.radius !== undefined ? { radius: p.radius } : {}),
+          ...(p.pulse !== undefined ? { pulse: p.pulse } : {}),
+        })),
       }
       dirty = true
     }
@@ -335,7 +467,7 @@ export default function ReportsBuilder({
     [slug]
   )
 
-  const previewSrc = `/story/${slug}/${format}`
+  const previewSrc = `/story/${slug}/${format}?embed=1`
   const overrideCount = useMemo(
     () =>
       pages.filter(
@@ -347,7 +479,8 @@ export default function ReportsBuilder({
           p.subheading.trim() ||
           p.paragraphs.trim() ||
           p.chartOverrideId.trim() ||
-          p.mapView != null
+          p.mapView != null ||
+          p.pinOverrides.length > 0
       ).length,
     [pages]
   )
@@ -673,6 +806,37 @@ function PageControls({
   const hasMap = unit.parentMap !== null
   const hasChart = !!unit.chartId
   const overrideView = page.mapView
+  const effectiveView = overrideView ?? unit.parentMap
+  const [yamlOpen, setYamlOpen] = useState(false)
+  const effectivePayload: MapEditPayload | null = effectiveView
+    ? { view: effectiveView, pinOverrides: page.pinOverrides }
+    : null
+  const [yamlDraft, setYamlDraft] = useState<string>(() =>
+    effectivePayload ? payloadToYaml(effectivePayload) : ''
+  )
+  const [yamlError, setYamlError] = useState<string | null>(null)
+  // Keep the textarea in sync when the source view changes (e.g. modal apply
+  // or reset) — but only when the user isn't actively editing.
+  useEffect(() => {
+    if (!yamlOpen) {
+      setYamlDraft(effectivePayload ? payloadToYaml(effectivePayload) : '')
+      setYamlError(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    overrideView?.center[0],
+    overrideView?.center[1],
+    overrideView?.zoom,
+    overrideView?.pitch,
+    overrideView?.bearing,
+    unit.parentMap?.center[0],
+    unit.parentMap?.center[1],
+    unit.parentMap?.zoom,
+    unit.parentMap?.pitch,
+    unit.parentMap?.bearing,
+    page.pinOverrides.length,
+    yamlOpen,
+  ])
   return (
     <div
       className="rounded-md p-3 space-y-2 border"
@@ -784,36 +948,123 @@ function PageControls({
         </select>
       )}
       {hasMap && !page.hideMap && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onEditMap}
-            className="flex-1 px-2 py-1.5 rounded text-[0.75rem] font-[family-name:var(--font-mono)] uppercase tracking-wider border"
-            style={{
-              borderColor: 'var(--color-surface)',
-              background: 'transparent',
-              color: 'var(--color-text)',
-            }}
-          >
-            {overrideView ? 'Edit map override' : 'Edit map'}
-          </button>
-          {overrideView && (
+        <>
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => onChange({ mapView: null })}
-              title="Reset to section default"
-              aria-label="Reset map override"
-              className="px-2 py-1.5 rounded text-[0.7rem] border opacity-60 hover:opacity-100"
+              onClick={onEditMap}
+              className="flex-1 px-2 py-1.5 rounded text-[0.75rem] font-[family-name:var(--font-mono)] uppercase tracking-wider border"
               style={{
                 borderColor: 'var(--color-surface)',
                 background: 'transparent',
                 color: 'var(--color-text)',
               }}
             >
-              Reset
+              {overrideView ? 'Edit map override' : 'Edit map'}
             </button>
+            <button
+              type="button"
+              onClick={() => setYamlOpen((v) => !v)}
+              aria-expanded={yamlOpen}
+              aria-label="Edit map YAML"
+              className="px-2 py-1.5 rounded text-[0.7rem] font-[family-name:var(--font-mono)] uppercase tracking-wider border"
+              style={{
+                borderColor: 'var(--color-surface)',
+                background: yamlOpen ? 'var(--color-surface)' : 'transparent',
+                color: 'var(--color-text)',
+                opacity: 0.8,
+              }}
+            >
+              YAML
+            </button>
+            {overrideView && (
+              <button
+                type="button"
+                onClick={() => onChange({ mapView: null })}
+                title="Reset to section default"
+                aria-label="Reset map override"
+                className="px-2 py-1.5 rounded text-[0.7rem] border opacity-60 hover:opacity-100"
+                style={{
+                  borderColor: 'var(--color-surface)',
+                  background: 'transparent',
+                  color: 'var(--color-text)',
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          {yamlOpen && (
+            <div className="space-y-1">
+              <textarea
+                value={yamlDraft}
+                onChange={(e) => {
+                  const text = e.target.value
+                  setYamlDraft(text)
+                  const next = yamlToPayload(text)
+                  if (next) {
+                    setYamlError(null)
+                    onChange({
+                      mapView: next.view,
+                      pinOverrides: next.pinOverrides,
+                    })
+                  } else {
+                    setYamlError(
+                      'Invalid YAML — needs center, zoom (numbers); pinOverrides[] entries need coordinates.'
+                    )
+                  }
+                }}
+                spellCheck={false}
+                rows={6}
+                className="w-full px-2 py-1.5 rounded text-[0.75rem] border font-[family-name:var(--font-mono)] resize-vertical"
+                style={{
+                  borderColor: yamlError
+                    ? 'var(--color-warn, #ff6b6b)'
+                    : 'var(--color-surface)',
+                  background: 'transparent',
+                  color: 'var(--color-text)',
+                }}
+                placeholder={[
+                  'center: [lng, lat]',
+                  'zoom: 0',
+                  'pitch: 0',
+                  'bearing: 0',
+                  'pinOverrides:',
+                  '  - coordinates: [lng, lat]',
+                  '    labelAnchor: right',
+                ].join('\n')}
+              />
+              {unit.parentPins.length > 0 && (
+                <details className="text-[0.7rem] opacity-70">
+                  <summary
+                    className="cursor-pointer font-[family-name:var(--font-mono)] uppercase tracking-wider"
+                    style={{ color: 'var(--color-muted)' }}
+                  >
+                    {unit.parentPins.length} pin
+                    {unit.parentPins.length === 1 ? '' : 's'} — coords reference
+                  </summary>
+                  <ul className="mt-1 space-y-0.5 font-[family-name:var(--font-mono)]">
+                    {unit.parentPins.map((p, i) => (
+                      <li key={i} style={{ color: 'var(--color-muted)' }}>
+                        [{round(p.coordinates[0], 4)}, {round(p.coordinates[1], 4)}]
+                        {p.label ? ` — ${p.label}` : ''}
+                        {p.labelAnchor ? ` · ${p.labelAnchor}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {yamlError && (
+                <div
+                  className="text-[0.7rem] font-[family-name:var(--font-mono)]"
+                  style={{ color: 'var(--color-warn, #ff6b6b)' }}
+                >
+                  {yamlError}
+                </div>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   )

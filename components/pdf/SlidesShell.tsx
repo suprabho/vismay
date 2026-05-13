@@ -6,7 +6,11 @@ import ChartPanel from '@/components/story/ChartPanel'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
 import { usePdfReadiness } from '@/lib/pdfReadiness'
-import { getReportMapOverride, isReportMapHidden } from '@/lib/storyReportConfig'
+import {
+  getReportMapOverride,
+  getReportPins,
+  isReportMapHidden,
+} from '@/lib/storyReportConfig'
 
 const SLIDE_W = 1920
 const SLIDE_H = 1080
@@ -20,6 +24,8 @@ interface Props {
   logo?: string
   /** When true, hides any non-print chrome (debug overlays, etc.). */
   print?: boolean
+  /** When true, hides the preview-chrome banner (used when embedded in /reports). */
+  embed?: boolean
 }
 
 /** Strip basic markdown bold/italic markers for plain-text layout. */
@@ -43,6 +49,7 @@ export default function SlidesShell({
   accessToken,
   logo,
   print = false,
+  embed = false,
 }: Props) {
   const slides = useMemo(() => {
     return units.map((unit) => {
@@ -58,7 +65,7 @@ export default function SlidesShell({
       const zoom = ov?.zoom ?? subMap?.zoom ?? map?.zoom
       const pitch = ov?.pitch ?? subMap?.pitch ?? map?.pitch
       const bearing = ov?.bearing ?? subMap?.bearing ?? map?.bearing
-      const pins = subMap?.pins ?? map?.pins
+      const pins = getReportPins(unit.parentConfig) ?? subMap?.pins ?? map?.pins
       const regions = subMap?.regions ?? map?.regions
       const heatmap = subMap?.heatmap ?? map?.heatmap
       return { unit, center, zoom, pitch, bearing, pins, regions, heatmap }
@@ -273,23 +280,25 @@ export default function SlidesShell({
         paddingTop: '56px',
       }}
     >
-      <div
-        className="fixed top-3 right-3 z-50 flex items-center gap-3 px-3 py-1.5 rounded font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider"
-        style={{
-          background: 'var(--color-bg)',
-          color: 'var(--color-muted)',
-          border: '1px solid var(--color-line)',
-        }}
-      >
-        <span>Slides preview</span>
-        <a
-          href={`/reports/${slug}`}
-          style={{ color: 'var(--color-accent)' }}
-          className="hover:underline"
+      {!embed && (
+        <div
+          className="fixed top-3 right-3 z-50 flex items-center gap-3 px-3 py-1.5 rounded font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider"
+          style={{
+            background: 'var(--color-bg)',
+            color: 'var(--color-muted)',
+            border: '1px solid var(--color-line)',
+          }}
         >
-          Edit overrides →
-        </a>
-      </div>
+          <span>Slides preview</span>
+          <a
+            href={`/reports/${slug}`}
+            style={{ color: 'var(--color-accent)' }}
+            className="hover:underline"
+          >
+            Edit overrides →
+          </a>
+        </div>
+      )}
       {slides.map((slide, i) => (
         <PreviewFrame
           key={i}

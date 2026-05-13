@@ -41,7 +41,21 @@
  */
 
 import { parse as parseYaml } from 'yaml'
-import type { ResolvedUnit, MapPalette } from './storyConfig.types'
+import type { ResolvedUnit, MapPalette, MapPinConfig } from './storyConfig.types'
+
+export type PinAnchor = 'top' | 'bottom' | 'left' | 'right'
+
+/** Patch applied to a single pin, matched against the section's pin array by
+ *  `coordinates`. Only the fields you list are mutated — the rest of the pin
+ *  is preserved. Use this to nudge a label without re-listing every pin. */
+export interface PinOverride {
+  coordinates: [number, number]
+  label?: string
+  labelAnchor?: PinAnchor
+  color?: string
+  radius?: number
+  pulse?: boolean
+}
 
 export type OverrideFormat = 'report' | 'slides'
 
@@ -66,6 +80,10 @@ export interface ReportPageOverride {
     zoom?: number
     pitch?: number
     bearing?: number
+    /** Per-page pin patches. Each entry matches a section pin by coordinates
+     *  (rounded to 6 decimals) and shallow-merges the listed fields. Pins not
+     *  named here pass through unchanged. */
+    pinOverrides?: PinOverride[]
   }
 }
 
@@ -79,6 +97,46 @@ export interface StoryOverridesConfig {
 }
 
 const EMPTY: ReportConfig = { pages: [] }
+
+const VALID_ANCHORS: ReadonlySet<PinAnchor> = new Set([
+  'top',
+  'bottom',
+  'left',
+  'right',
+])
+
+function parsePinOverrides(raw: unknown): PinOverride[] {
+  if (!Array.isArray(raw)) return []
+  const out: PinOverride[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const e = entry as Record<string, unknown>
+    const c = e.coordinates
+    if (
+      !Array.isArray(c) ||
+      c.length !== 2 ||
+      typeof c[0] !== 'number' ||
+      typeof c[1] !== 'number'
+    ) {
+      continue
+    }
+    const patch: PinOverride = { coordinates: [c[0], c[1]] }
+    if (typeof e.label === 'string') patch.label = e.label
+    if (typeof e.labelAnchor === 'string' && VALID_ANCHORS.has(e.labelAnchor as PinAnchor)) {
+      patch.labelAnchor = e.labelAnchor as PinAnchor
+    }
+    if (typeof e.color === 'string') patch.color = e.color
+    if (typeof e.radius === 'number') patch.radius = e.radius
+    if (typeof e.pulse === 'boolean') patch.pulse = e.pulse
+    out.push(patch)
+  }
+  return out
+}
+
+const COORD_PRECISION = 6
+function coordKey(c: readonly [number, number]): string {
+  return `${c[0].toFixed(COORD_PRECISION)},${c[1].toFixed(COORD_PRECISION)}`
+}
 
 function parsePagesArray(pagesRaw: unknown): ReportPageOverride[] {
   if (!Array.isArray(pagesRaw)) return []
@@ -135,13 +193,18 @@ function parsePagesArray(pagesRaw: unknown): ReportPageOverride[] {
       if (typeof mo.zoom === 'number') out.zoom = mo.zoom
       if (typeof mo.pitch === 'number') out.pitch = mo.pitch
       if (typeof mo.bearing === 'number') out.bearing = mo.bearing
+      const pinPatches = parsePinOverrides(
+        (mo as { pinOverrides?: unknown }).pinOverrides
+      )
+      if (pinPatches.length > 0) out.pinOverrides = pinPatches
       if (
         out.style ||
         out.palette ||
         out.center ||
         out.zoom != null ||
         out.pitch != null ||
-        out.bearing != null
+        out.bearing != null ||
+        out.pinOverrides
       ) {
         page.mapOverride = out
       }
@@ -272,6 +335,29 @@ export function applyReportOverrides(
         }
         ;(parent as unknown as { __reportMapOverride?: typeof ov.mapOverride }).__reportMapOverride =
           ov.mapOverride
+        if (ov.mapOverride.pinOverrides && ov.mapOverride.pinOverrides.length > 0) {
+          const subPins = parent.subsections?.[unit.subIndex]?.map?.pins
+          const sourcePins: MapPinConfig[] = subPins ?? parent.map?.pins ?? []
+          const patchesByCoord = new Map<string, PinOverride>()
+          for (const patch of ov.mapOverride.pinOverrides) {
+            patchesByCoord.set(coordKey(patch.coordinates), patch)
+          }
+          const merged: MapPinConfig[] = sourcePins.map((pin) => {
+            const patch = patchesByCoord.get(coordKey(pin.coordinates))
+            if (!patch) return pin
+            return {
+              ...pin,
+              ...(patch.label !== undefined ? { label: patch.label } : {}),
+              ...(patch.labelAnchor !== undefined
+                ? { labelAnchor: patch.labelAnchor }
+                : {}),
+              ...(patch.color !== undefined ? { color: patch.color } : {}),
+              ...(patch.radius !== undefined ? { radius: patch.radius } : {}),
+              ...(patch.pulse !== undefined ? { pulse: patch.pulse } : {}),
+            }
+          })
+          ;(parent as unknown as { __reportPins?: MapPinConfig[] }).__reportPins = merged
+        }
       }
       next.parentConfig = parent
     }
@@ -289,6 +375,17 @@ export function getReportMapOverride(
 ): ReportPageOverride['mapOverride'] | undefined {
   return (parentConfig as unknown as { __reportMapOverride?: ReportPageOverride['mapOverride'] })
     .__reportMapOverride
+}
+
+/**
+ * Helper for shells: read the per-unit resolved pin list when the report
+ * config patched pins on this page. Returns `undefined` when no patch ran —
+ * in that case shells should fall back to the section's source pins.
+ */
+export function getReportPins(
+  parentConfig: ResolvedUnit['parentConfig']
+): MapPinConfig[] | undefined {
+  return (parentConfig as unknown as { __reportPins?: MapPinConfig[] }).__reportPins
 }
 
 /**
