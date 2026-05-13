@@ -49,13 +49,15 @@ export default async function EditStoryPage({ params }: Props) {
 
   const src = getContentSource()
   const videoCache = await loadVideoCache(slug)
-  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml] = await Promise.all([
-    src.readMarkdown(slug),
-    src.readConfigYaml(slug),
-    src.readShareYaml(slug),
-    src.listChartIds(slug),
-    src.readTtsYaml(slug),
-  ])
+  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml, map_yaml] =
+    await Promise.all([
+      src.readMarkdown(slug),
+      src.readConfigYaml(slug),
+      src.readShareYaml(slug),
+      src.listChartIds(slug),
+      src.readTtsYaml(slug),
+      src.readMapYaml(slug),
+    ])
   if (markdown == null) notFound()
 
   // Merge editable JSON-backed charts with YAML chart refs so stories whose
@@ -115,6 +117,7 @@ export default async function EditStoryPage({ params }: Props) {
         charts,
         narrationUnits,
         tts_yaml: tts_yaml ?? null,
+        map_yaml: map_yaml ?? null,
         videoCache,
       }}
     />

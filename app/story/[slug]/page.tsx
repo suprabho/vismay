@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getStoryContent, getViewableStorySlugs } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
+import { getContentSource } from '@/lib/contentSource'
+import { parseMapOverrides } from '@/lib/storyMapOverrides'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@/lib/getFontImports'
@@ -64,13 +66,21 @@ export default async function StoryPage({ params }: RouteParams) {
 
   let story
   let config
+  let mapYaml: string | null = null
   try {
     story = await getStoryContent(slug)
     if (!(await hasStoryConfig(slug))) notFound()
     config = await loadStoryConfig(slug)
+    // Autoplay map overrides — read here so they ship in the SSG bundle
+    // alongside the resolved config; StoryMapShell only applies them when
+    // it sees `?autoplay=1` in the URL (client-side detection). Scroll
+    // mode never sees the override, so this is a no-op for normal readers.
+    mapYaml = await getContentSource().readMapYaml(slug)
   } catch {
     notFound()
   }
+
+  const mapOverrides = parseMapOverrides(mapYaml)
 
   const { units, mobileUnits, hasMobileOverrides } = resolveUnits(
     slug,
@@ -120,6 +130,7 @@ export default async function StoryPage({ params }: RouteParams) {
           accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
           defaults={defaults}
           slug={slug}
+          mapOverrides={mapOverrides}
         />
       </VerticalCaptureFrame>
     </ThemeProvider>

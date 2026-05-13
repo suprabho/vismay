@@ -1,0 +1,41 @@
+-- Per-story autoplay map override.
+--
+-- Autoplay (the /story/<slug>?autoplay=1 self-running playback used to
+-- record /api/story-video MP4s in 9:16 and 16:9) reuses the same map
+-- camera/pin steps as scrollytelling. That's usually fine but sometimes
+-- you want a different framing for the muted, video-shaped playback —
+-- e.g. a tighter zoom that crops to 9:16 cleanly without re-editing the
+-- shared `<slug>.config.yaml` which scrollytelling readers depend on.
+--
+-- This column holds an opaque YAML blob that targets `(parentIndex, subIndex?)`
+-- and is merged on top of the resolved map state ONLY when the page is
+-- rendered with `?autoplay=1`. Scroll-mode readers see the unmodified
+-- config.yaml. Parsed by lib/storyMapOverrides.ts.
+--
+-- Schema:
+--
+--   overrides:
+--     - target: { parentIndex: 1 }                  # parent-level
+--       map:
+--         center: [-95, 40]
+--         zoom: 4
+--         pins: [{ coordinates: [-95, 40], label: "X" }]
+--     - target: { parentIndex: 1, subIndex: 0 }     # subsection-level
+--       map:
+--         zoom: 5
+--         mobile:
+--           zoom: 3
+--
+-- Identity is `(parentIndex, subIndex?)` — `subIndex` omitted means the
+-- override targets the parent section's `map:` block, present means it
+-- targets `subsections[subIndex].map`. Field-level merge for scalars; pins,
+-- regions, heatmap REPLACE (matching the existing subsection-override
+-- semantics in lib/storyConfig.types.ts).
+--
+-- Note: 021 added an identical column that 022 dropped after the first
+-- attempt at this feature was reverted. We re-add it under the same name
+-- because the schema and intent are unchanged — only the application
+-- semantics now restrict it to autoplay-mode renders.
+
+alter table stories
+  add column if not exists map_yaml text;
