@@ -55,6 +55,8 @@ interface PageState {
   subheading: string
   paragraphs: string
   chartOverrideId: string
+  hideChart: boolean
+  hideMap: boolean
   /** Per-page camera override. Null = use the section default. */
   mapView: MapView | null
 }
@@ -93,6 +95,8 @@ function buildPageStatesFor(
       subheading: ov?.subheading ?? '',
       paragraphs: (ov?.paragraphs ?? []).join('\n\n'),
       chartOverrideId: ov?.chartOverride?.id ?? '',
+      hideChart: ov?.hideChart === true,
+      hideMap: ov?.hideMap === true,
       mapView,
     }
   })
@@ -150,6 +154,14 @@ function pagesForFormat(states: PageState[]): ReportPageOverride[] {
         .filter(Boolean)
       dirty = true
     }
+    if (s.hideChart) {
+      entry.hideChart = true
+      dirty = true
+    }
+    if (s.hideMap) {
+      entry.hideMap = true
+      dirty = true
+    }
     if (s.chartOverrideId.trim()) {
       entry.chartOverride = { id: s.chartOverrideId.trim() }
       dirty = true
@@ -173,6 +185,8 @@ function pagesToYamlNode(pages: ReportPageOverride[]) {
     pages: pages.map((p) => ({
       unit: { parentIndex: p.parentIndex, subIndex: p.subIndex },
       ...(p.include === false && { include: false }),
+      ...(p.hideChart && { hideChart: true }),
+      ...(p.hideMap && { hideMap: true }),
       ...(p.heading && { heading: p.heading }),
       ...(p.subheading && { subheading: p.subheading }),
       ...(p.paragraphs && { paragraphs: p.paragraphs }),
@@ -327,6 +341,8 @@ export default function ReportsBuilder({
       pages.filter(
         (p) =>
           !p.include ||
+          p.hideChart ||
+          p.hideMap ||
           p.heading.trim() ||
           p.subheading.trim() ||
           p.paragraphs.trim() ||
@@ -655,6 +671,7 @@ function PageControls({
   onEditMap: () => void
 }) {
   const hasMap = unit.parentMap !== null
+  const hasChart = !!unit.chartId
   const overrideView = page.mapView
   return (
     <div
@@ -719,7 +736,35 @@ function PageControls({
           color: 'var(--color-text)',
         }}
       />
-      {chartIds.length > 0 && (
+      {(hasChart || hasMap) && (
+        <div className="flex items-center gap-4">
+          {hasChart && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={page.hideChart}
+                onChange={(e) => onChange({ hideChart: e.target.checked })}
+              />
+              <span className="font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider">
+                Hide chart
+              </span>
+            </label>
+          )}
+          {hasMap && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={page.hideMap}
+                onChange={(e) => onChange({ hideMap: e.target.checked })}
+              />
+              <span className="font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider">
+                Hide map
+              </span>
+            </label>
+          )}
+        </div>
+      )}
+      {chartIds.length > 0 && !page.hideChart && (
         <select
           value={page.chartOverrideId}
           onChange={(e) => onChange({ chartOverrideId: e.target.value })}
@@ -738,7 +783,7 @@ function PageControls({
           ))}
         </select>
       )}
-      {hasMap && (
+      {hasMap && !page.hideMap && (
         <div className="flex items-center gap-2">
           <button
             type="button"

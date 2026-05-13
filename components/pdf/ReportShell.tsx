@@ -6,6 +6,7 @@ import ChartPanel from '@/components/story/ChartPanel'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
 import { usePdfReadiness } from '@/lib/pdfReadiness'
+import { isReportMapHidden } from '@/lib/storyReportConfig'
 
 // A4 @ 96 dpi: 210mm × 297mm → 794 × 1123 px. Mirrors the `format: 'A4'`
 // passed to Playwright's `page.pdf()` so the preview matches print exactly.
@@ -36,27 +37,12 @@ function extractByline(units: ResolvedUnit[]): string {
   return bylineParagraph?.replace(/^\*+|\*+$/g, '').trim() ?? ''
 }
 
-interface SectionGroup {
-  parentIndex: number
-  units: ResolvedUnit[]
-}
-
-function groupByParent(units: ResolvedUnit[]): SectionGroup[] {
-  const groups: SectionGroup[] = []
-  let current: SectionGroup | null = null
-  for (const unit of units) {
-    if (!current || current.parentIndex !== unit.parentIndex) {
-      current = { parentIndex: unit.parentIndex, units: [] }
-      groups.push(current)
-    }
-    current.units.push(unit)
-  }
-  return groups
-}
-
 /**
- * Letter-size portrait booklet. One section group per page (with `break-before:
- * page`); content flows and may continue onto a second page if it overflows.
+ * Letter-size portrait booklet. One unit per page (with `break-before: page`),
+ * so every subsection lands on its own page instead of stacking under its
+ * parent. Each subsection page renders its parent's map (the map config is
+ * parent-level — center/zoom/pins are shared across subsections of the same
+ * parent), plus the subsection's own heading + paragraphs + chart.
  *
  * @page rules sit in the route's <style> tag — they need to apply to the
  * print stylesheet of the document, which Playwright's page.pdf() honors when
@@ -71,11 +57,14 @@ export default function ReportShell({
   logo,
   print = false,
 }: Props) {
-  const groups = useMemo(() => groupByParent(units), [units])
   const byline = useMemo(() => extractByline(units), [units])
   const expectedMaps = useMemo(
-    () => groups.filter((g) => !!g.units[0]?.parentConfig.map?.center).length,
-    [groups]
+    () =>
+      units.filter(
+        (u) =>
+          !!u.parentConfig.map?.center && !isReportMapHidden(u.parentConfig)
+      ).length,
+    [units]
   )
   const { noteMapReady } = usePdfReadiness(expectedMaps)
 
@@ -128,13 +117,12 @@ export default function ReportShell({
       </section>
   )
 
-  const renderSectionPage = (
-    group: SectionGroup,
-    gi: number,
+  const renderUnitPage = (
+    unit: ResolvedUnit,
+    ui: number,
     options: { breakBefore: boolean }
   ): ReactNode => {
-    const first = group.units[0]
-    const map = first.parentConfig.map
+    const map = unit.parentConfig.map
     const center = map?.center as [number, number] | undefined
     const zoom = map?.zoom
     const pitch = map?.pitch
@@ -142,14 +130,16 @@ export default function ReportShell({
     const pins = map?.pins
     const regions = map?.regions
     const heatmap = map?.heatmap
-    const showMap = !!center && typeof zoom === 'number'
-    const eyebrow = first.parentConfig.eyebrow
-    const sectionHeading = first.heading
-    const sectionSubheading = first.subheading
+    const showMap =
+      !!center && typeof zoom === 'number' && !isReportMapHidden(unit.parentConfig)
+    const eyebrow = unit.parentConfig.eyebrow
+    const heading = unit.heading
+    const subheading = unit.subheading
+    const chartId = unit.parentConfig.chart
 
     return (
       <section
-        key={gi}
+        key={ui}
         className="relative"
         style={{
           width: `${PAGE_W}px`,
@@ -168,19 +158,19 @@ export default function ReportShell({
                   {eyebrow}
                 </div>
               )}
-              {sectionHeading && (
+              {heading && (
                 <h2
                   className="font-serif font-bold mb-2"
                   style={{ fontSize: '22pt', lineHeight: 1.15, color: 'var(--color-text)' }}
                 >
-                  {sectionHeading}
+                  {heading}
                 </h2>
               )}
-              {sectionSubheading && (
+              {subheading && (
                 <p
                   style={{ fontSize: '12pt', lineHeight: 1.4, color: 'var(--color-muted)' }}
                 >
-                  {sectionSubheading}
+                  {subheading}
                 </p>
               )}
             </header>
@@ -213,50 +203,23 @@ export default function ReportShell({
               </div>
             )}
 
-            <div className="flex flex-col gap-5">
-              {group.units.map((unit, ui) => {
-                const isFirst = ui === 0
-                const showSubheadingHere = !isFirst && unit.subheading
-                const showHeadingHere = !isFirst && unit.heading
-                const chartId = unit.parentConfig.chart
-                return (
-                  <div key={ui} style={{ breakInside: 'avoid' }}>
-                    {showHeadingHere && (
-                      <h3
-                        className="font-serif font-bold mb-1"
-                        style={{ fontSize: '14pt', lineHeight: 1.2, color: 'var(--color-text)' }}
-                      >
-                        {unit.heading}
-                      </h3>
-                    )}
-                    {showSubheadingHere && (
-                      <p
-                        className="mb-2"
-                        style={{ fontSize: '11pt', lineHeight: 1.4, color: 'var(--color-muted)' }}
-                      >
-                        {unit.subheading}
-                      </p>
-                    )}
-                    {unit.paragraphs.map((p, j) => (
-                      <p
-                        key={j}
-                        className="mb-2"
-                        style={{ fontSize: '11pt', lineHeight: 1.5, color: 'var(--color-text)' }}
-                      >
-                        {stripMarkdown(p)}
-                      </p>
-                    ))}
-                    {chartId && (
-                      <div
-                        className="my-3"
-                        style={{ width: '100%', height: '2.8in', breakInside: 'avoid' }}
-                      >
-                        <ChartPanel chartId={chartId} activeStep={unit.subIndex} slug={slug} />
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="flex flex-col gap-3">
+              {unit.paragraphs.map((p, j) => (
+                <p
+                  key={j}
+                  style={{ fontSize: '11pt', lineHeight: 1.5, color: 'var(--color-text)' }}
+                >
+                  {stripMarkdown(p)}
+                </p>
+              ))}
+              {chartId && (
+                <div
+                  className="mt-3"
+                  style={{ width: '100%', height: '3.8in', overflow: 'hidden', breakInside: 'avoid' }}
+                >
+                  <ChartPanel chartId={chartId} activeStep={unit.subIndex} slug={slug} />
+                </div>
+              )}
             </div>
 
         <footer
@@ -264,13 +227,13 @@ export default function ReportShell({
           style={{ fontSize: '8pt', letterSpacing: '0.15em', color: 'var(--color-muted)' }}
         >
           <span>{slug}</span>
-          <span>{gi + 1} / {groups.length}</span>
+          <span>{ui + 1} / {units.length}</span>
         </footer>
       </section>
     )
   }
 
-  // Print path: native-size pages with break-before: page between groups.
+  // Print path: native-size pages with break-before: page between units.
   if (print) {
     return (
       <div
@@ -286,8 +249,8 @@ export default function ReportShell({
             `format: 'A4'` passed to page.pdf(). */}
         <style>{`@page { size: A4 portrait; margin: 0; }`}</style>
         {renderCover()}
-        {groups.map((group, gi) =>
-          renderSectionPage(group, gi, { breakBefore: true })
+        {units.map((unit, ui) =>
+          renderUnitPage(unit, ui, { breakBefore: true })
         )}
       </div>
     )
@@ -330,14 +293,14 @@ export default function ReportShell({
       >
         {renderCover()}
       </PreviewFlowFrame>
-      {groups.map((group, gi) => (
+      {units.map((unit, ui) => (
         <PreviewFlowFrame
-          key={gi}
+          key={ui}
           nativeWidth={PAGE_W}
           minNativeHeight={PAGE_H}
           maxWidth={`min(95vw, ${PAGE_W}px)`}
         >
-          {renderSectionPage(group, gi, { breakBefore: false })}
+          {renderUnitPage(unit, ui, { breakBefore: false })}
         </PreviewFlowFrame>
       ))}
     </div>

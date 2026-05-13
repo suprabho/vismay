@@ -52,6 +52,10 @@ export interface ReportPageOverride {
   heading?: string
   subheading?: string
   paragraphs?: string[]
+  /** Drop the chart for this unit (overrides any `chartOverride`). */
+  hideChart?: boolean
+  /** Drop the map for this unit (overrides any `mapOverride`). */
+  hideMap?: boolean
   chartOverride?: { id: string }
   mapOverride?: {
     style?: string
@@ -95,6 +99,8 @@ function parsePagesArray(pagesRaw: unknown): ReportPageOverride[] {
       subIndex: unit.subIndex,
     }
     if (typeof e.include === 'boolean') page.include = e.include
+    if (typeof e.hideChart === 'boolean') page.hideChart = e.hideChart
+    if (typeof e.hideMap === 'boolean') page.hideMap = e.hideMap
     if (typeof e.heading === 'string') page.heading = e.heading
     if (typeof e.subheading === 'string') page.subheading = e.subheading
     if (Array.isArray(e.paragraphs) && e.paragraphs.every((p) => typeof p === 'string')) {
@@ -235,12 +241,21 @@ export function applyReportOverrides(
       subheading: ov.subheading ?? unit.subheading,
       paragraphs: ov.paragraphs ?? unit.paragraphs,
     }
-    if (ov.chartOverride || ov.mapOverride) {
+    if (ov.chartOverride || ov.mapOverride || ov.hideChart || ov.hideMap) {
       // Per-unit clone of the parent config so chart / map overrides don't
       // leak across other units of the same parent section.
       const parent = { ...unit.parentConfig }
-      if (ov.chartOverride) parent.chart = ov.chartOverride.id
-      if (ov.mapOverride) {
+      if (ov.hideChart) {
+        parent.chart = undefined
+      } else if (ov.chartOverride) {
+        parent.chart = ov.chartOverride.id
+      }
+      if (ov.hideMap) {
+        // `map` is required on StorySectionConfig, so we can't drop it
+        // outright. Stash a side-channel flag the shell can read to suppress
+        // map rendering without violating the type.
+        ;(parent as unknown as { __hideMap?: boolean }).__hideMap = true
+      } else if (ov.mapOverride) {
         // Merge camera fields directly into parent.map so existing shells
         // (which already read parent.map.{center,zoom,...}) pick them up.
         // Style/palette can't be merged here — they live on `defaults`, not
@@ -274,4 +289,16 @@ export function getReportMapOverride(
 ): ReportPageOverride['mapOverride'] | undefined {
   return (parentConfig as unknown as { __reportMapOverride?: ReportPageOverride['mapOverride'] })
     .__reportMapOverride
+}
+
+/**
+ * Helper for shells: returns true when the per-unit override asked to drop
+ * the parent's map on this page.
+ */
+export function isReportMapHidden(
+  parentConfig: ResolvedUnit['parentConfig']
+): boolean {
+  return Boolean(
+    (parentConfig as unknown as { __hideMap?: boolean }).__hideMap
+  )
 }
