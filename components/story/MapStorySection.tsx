@@ -58,14 +58,39 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
   const heroBits = kind === 'hero' ? extractHeroBits(paragraphs) : null
   const hasChart = !!parentConfig.chart
 
-  // Autoplay mode: render only the snap target (no text card, no hero panel,
-  // no stat). The hero dek slice is portrait-only — kept for parity with the
-  // non-autoplay split so landscape/portrait unit counts match.
+  // Autoplay mode: render only the snap target (no text card, no hero panel).
+  // Stat sections are an exception — the number IS the visual, so it renders
+  // centered in the viewport like the chart panel does. The hero dek slice is
+  // portrait-only — kept for parity with the non-autoplay split so
+  // landscape/portrait unit counts match.
   if (isAutoplay) {
     const portraitOnly =
       kind === 'hero' && heroPart === 'dek'
         ? ' [@media(min-aspect-ratio:1/1)]:hidden'
         : ''
+    if (kind === 'stat' && heading) {
+      return (
+        <section
+          data-unit-index={unitIndex}
+          className={`snap-start snap-always h-svh w-full relative${portraitOnly}`}
+        >
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vw,80vh)] rounded-lg p-6 backdrop-blur-3xl pointer-events-none z-10"
+            style={{
+              background: 'rgb(var(--color-panel-rgb) / 0.2)',
+              border: '0.5px solid var(--color-line)',
+            }}
+          >
+            <StatPanel
+              value={heading}
+              subheading={subheading}
+              description={paragraphs.join(' ')}
+              color={parentConfig.color}
+            />
+          </div>
+        </section>
+      )
+    }
     return (
       <section
         data-unit-index={unitIndex}
