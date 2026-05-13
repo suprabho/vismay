@@ -137,7 +137,13 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
   // story-specific overrides remain authoritative. cssVars fills in the
   // names the chart JSON commonly uses (positive/text/bg).
   const palette = { ...cssVars, ...(colors as unknown as Record<string, string>) }
-  const option = replaceColorTokens(step.option as unknown as JsonValue, palette) as EChartsOption
+  const resolved = replaceColorTokens(step.option as unknown as JsonValue, palette) as EChartsOption
+  // Hand-built charts (KoreaBarChart, StockCandlestickChart, …) all set
+  // `backgroundColor: 'transparent'` so the story bg shows through. ECharts 6
+  // doesn't default to transparent everywhere — captured PDFs of slides with
+  // GenericChart showed an opaque white chart canvas. Force transparent here
+  // unless the chart JSON explicitly opts in, so the page bg always wins.
+  const option: EChartsOption = { backgroundColor: 'transparent', ...resolved }
 
   return (
     <div

@@ -40,9 +40,10 @@ function extractByline(units: ResolvedUnit[]): string {
 /**
  * Letter-size portrait booklet. One unit per page (with `break-before: page`),
  * so every subsection lands on its own page instead of stacking under its
- * parent. Each subsection page renders its parent's map (the map config is
- * parent-level — center/zoom/pins are shared across subsections of the same
- * parent), plus the subsection's own heading + paragraphs + chart.
+ * parent. Each subsection page renders the map resolved at that unit's level
+ * — per-page `/reports` override beats subsection `map:` block beats parent
+ * `map:` — plus the subsection's heading, paragraphs, and chart. Mirrors the
+ * SlidesShell precedence so the same `/reports` edit applies to both formats.
  *
  * @page rules sit in the route's <style> tag — they need to apply to the
  * print stylesheet of the document, which Playwright's page.pdf() honors when
