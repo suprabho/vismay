@@ -22,7 +22,8 @@
     "epstein:import-curated": "npx tsx scripts/epstein/import-curated.ts",
     "energy-profile:scrape": "npx tsx scripts/energy-profile/scrape-news.ts",
     "energy-profile:import-owid": "npx tsx scripts/energy-profile/import-owid.ts",
-    "energy-profile:generate-summaries": "npx tsx scripts/energy-profile/generate-summaries.ts"
+    "energy-profile:generate-summaries": "npx tsx scripts/energy-profile/generate-summaries.ts",
+    "canva:bootstrap": "npx tsx scripts/canva-bootstrap.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

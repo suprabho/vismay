@@ -12,6 +12,7 @@ import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
 import type { CachedVideo } from '@/lib/storyVideo'
+import type { CanvaDesignRow } from '@/lib/canva'
 import type { MapTarget } from '@/lib/storyMapOverrides'
 
 type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'map' | 'settings'
@@ -34,6 +35,10 @@ interface InitialState {
   videoCache: {
     '9:16': CachedVideo | null
     '16:9': CachedVideo | null
+  }
+  canvaCache: {
+    '9:16': CanvaDesignRow | null
+    '16:9': CanvaDesignRow | null
   }
 }
 
@@ -339,6 +344,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
             units={initial.narrationUnits}
             initialYaml={initial.tts_yaml}
             videoCache={initial.videoCache}
+            canvaCache={initial.canvaCache}
           />
         )}
         {tab === 'map' && (

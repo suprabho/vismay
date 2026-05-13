@@ -20,6 +20,7 @@ import { stringify as stringifyYaml } from 'yaml'
 import { parseTtsConfig, TTS_SKIP_IDS } from '@/lib/storyTts'
 import { usePollVideoRender } from '@/lib/usePollVideoRender'
 import type { CachedVideo, VideoAspect } from '@/lib/storyVideo'
+import type { CanvaDesignRow } from '@/lib/canva'
 
 export interface NarrationUnit {
   parentIndex: number
@@ -42,6 +43,10 @@ interface Props {
   videoCache: {
     '9:16': CachedVideo | null
     '16:9': CachedVideo | null
+  }
+  canvaCache: {
+    '9:16': CanvaDesignRow | null
+    '16:9': CanvaDesignRow | null
   }
 }
 
@@ -94,7 +99,7 @@ function serializeToYaml(states: UnitState[]): string {
   return stringifyYaml({ units: out })
 }
 
-export default function NarrationEditor({ slug, units, initialYaml, videoCache }: Props) {
+export default function NarrationEditor({ slug, units, initialYaml, videoCache, canvaCache }: Props) {
   const [states, setStates] = useState<UnitState[]>(() =>
     buildInitialState(units, initialYaml)
   )
@@ -229,7 +234,7 @@ export default function NarrationEditor({ slug, units, initialYaml, videoCache }
         </div>
       )}
 
-      <VideoRenderPanel slug={slug} initial={videoCache} dirty={dirty} />
+      <VideoRenderPanel slug={slug} initial={videoCache} canvaInitial={canvaCache} dirty={dirty} />
 
       <div className="flex-1 overflow-y-auto divide-y divide-white/5">
         {units.map((u, i) => (
@@ -248,10 +253,12 @@ export default function NarrationEditor({ slug, units, initialYaml, videoCache }
 function VideoRenderPanel({
   slug,
   initial,
+  canvaInitial,
   dirty,
 }: {
   slug: string
   initial: { '9:16': CachedVideo | null; '16:9': CachedVideo | null }
+  canvaInitial: { '9:16': CanvaDesignRow | null; '16:9': CanvaDesignRow | null }
   dirty: boolean
 }) {
   return (
@@ -262,8 +269,20 @@ function VideoRenderPanel({
           dispatches GitHub Actions · polls every 5 min
         </div>
       </div>
-      <VideoRenderRow slug={slug} aspect="9:16" initial={initial['9:16']} dirty={dirty} />
-      <VideoRenderRow slug={slug} aspect="16:9" initial={initial['16:9']} dirty={dirty} />
+      <VideoRenderRow
+        slug={slug}
+        aspect="9:16"
+        initial={initial['9:16']}
+        canvaInitial={canvaInitial['9:16']}
+        dirty={dirty}
+      />
+      <VideoRenderRow
+        slug={slug}
+        aspect="16:9"
+        initial={initial['16:9']}
+        canvaInitial={canvaInitial['16:9']}
+        dirty={dirty}
+      />
     </div>
   )
 }
@@ -272,11 +291,13 @@ function VideoRenderRow({
   slug,
   aspect,
   initial,
+  canvaInitial,
   dirty,
 }: {
   slug: string
   aspect: VideoAspect
   initial: CachedVideo | null
+  canvaInitial: CanvaDesignRow | null
   dirty: boolean
 }) {
   const { state, error, poll } = usePollVideoRender()
@@ -286,6 +307,11 @@ function VideoRenderRow({
   const [latestUrl, setLatestUrl] = useState<string | null>(
     initial && initial.public_url ? initial.public_url : null
   )
+  const [canvaEditUrl, setCanvaEditUrl] = useState<string | null>(
+    canvaInitial?.edit_url ?? null
+  )
+  const [pushing, setPushing] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
 
   const handleRender = useCallback(async () => {
     try {
@@ -296,15 +322,47 @@ function VideoRenderRow({
     }
   }, [poll, slug, aspect, force])
 
+  const handleCanvaPush = useCallback(async () => {
+    // Already pushed → just open the existing design.
+    if (canvaEditUrl) {
+      window.open(canvaEditUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    setPushing(true)
+    setPushError(null)
+    try {
+      const res = await fetch(
+        `/api/admin/canva/push/${slug}?aspect=${encodeURIComponent(aspect)}`,
+        { method: 'POST' }
+      )
+      const body = (await res.json().catch(() => ({}))) as {
+        edit_url?: string
+        error?: string
+      }
+      if (!res.ok || !body.edit_url) {
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
+      setCanvaEditUrl(body.edit_url)
+      window.open(body.edit_url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : 'push failed')
+    } finally {
+      setPushing(false)
+    }
+  }, [canvaEditUrl, slug, aspect])
+
   const isRendering = state === 'rendering'
   const initialDispatching =
     initial && !initial.public_url && initial.dispatched_at !== null
+  const canPush = Boolean(latestUrl) && !isRendering
 
   let statusEl: React.ReactNode
   if (state === 'rendering') {
     statusEl = <span className="text-amber-300/80">rendering · polling every 5 min</span>
   } else if (state === 'error' && error) {
     statusEl = <span className="text-red-300/80">error · {error}</span>
+  } else if (pushError) {
+    statusEl = <span className="text-red-300/80">canva · {pushError}</span>
   } else if (latestUrl) {
     statusEl = <span className="text-emerald-300/80">ready</span>
   } else if (initialDispatching) {
@@ -350,6 +408,21 @@ function VideoRenderRow({
           Open ↗
         </a>
       )}
+      <button
+        type="button"
+        onClick={handleCanvaPush}
+        disabled={pushing || (!canvaEditUrl && !canPush)}
+        title={
+          canvaEditUrl
+            ? 'Open the existing Canva design — drag the MP4 from Uploads, then run auto-captions'
+            : !canPush
+              ? 'Render the autoplay first'
+              : 'Upload MP4 to Canva Uploads + create a blank design at the right aspect. Drag the asset onto the canvas inside Canva, then run auto-captions.'
+        }
+        className="px-3 py-1 rounded border border-white/10 text-neutral-200 hover:bg-white/5 disabled:opacity-40"
+      >
+        {pushing ? 'Pushing…' : canvaEditUrl ? 'Open in Canva' : 'Send to Canva'}
+      </button>
     </div>
   )
 }
