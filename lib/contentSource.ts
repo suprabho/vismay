@@ -32,6 +32,7 @@ export interface ContentSource {
   readShareYaml(slug: string): Promise<string | null>
   readReportYaml(slug: string): Promise<string | null>
   readTtsYaml(slug: string): Promise<string | null>
+  readMapYaml(slug: string): Promise<string | null>
   readChart(slug: string, chartId: string): Promise<unknown | null>
 
   /** Write methods for the admin editor. Callers are responsible for auth. */
@@ -40,6 +41,7 @@ export interface ContentSource {
   writeShareYaml(slug: string, raw: string | null): Promise<void>
   writeReportYaml(slug: string, raw: string | null): Promise<void>
   writeTtsYaml(slug: string, raw: string | null): Promise<void>
+  writeMapYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
   deleteChart(slug: string, chartId: string): Promise<void>
   updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder'>>): Promise<void>
@@ -89,6 +91,9 @@ const fsSource: ContentSource = {
   async readTtsYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.tts.yaml`))
   },
+  async readMapYaml(slug) {
+    return fsReadIfExists(path.join(STORIES_DIR, `${slug}.map.yaml`))
+  },
   async readChart(slug, chartId) {
     const filePath = path.join(STORIES_DIR, slug, 'charts', `${chartId}.json`)
     if (!fs.existsSync(filePath)) return null
@@ -128,6 +133,14 @@ const fsSource: ContentSource = {
   },
   async writeTtsYaml(slug, raw) {
     const p = path.join(STORIES_DIR, `${slug}.tts.yaml`)
+    if (raw == null) {
+      if (fs.existsSync(p)) fs.unlinkSync(p)
+      return
+    }
+    fs.writeFileSync(p, raw, 'utf8')
+  },
+  async writeMapYaml(slug, raw) {
+    const p = path.join(STORIES_DIR, `${slug}.map.yaml`)
     if (raw == null) {
       if (fs.existsSync(p)) fs.unlinkSync(p)
       return
@@ -250,6 +263,19 @@ const dbSource: ContentSource = {
     if (error) throw new Error(`readTtsYaml ${slug}: ${error.message}`)
     return (data as { tts_yaml?: string | null } | null)?.tts_yaml ?? null
   },
+  async readMapYaml(slug) {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('stories')
+      .select('map_yaml')
+      .eq('slug', slug)
+      .maybeSingle()
+    // Pre-021 deployments don't have the map_yaml column; treat as null
+    // rather than failing — readers fall through to the base config.yaml.
+    if (error?.message?.includes('map_yaml')) return null
+    if (error) throw new Error(`readMapYaml ${slug}: ${error.message}`)
+    return (data as { map_yaml?: string | null } | null)?.map_yaml ?? null
+  },
   async readChart(slug, chartId) {
     const sb = createServiceClient()
     const { data, error } = await sb
@@ -315,6 +341,14 @@ const dbSource: ContentSource = {
       .update({ tts_yaml: raw, updated_at: new Date().toISOString() })
       .eq('slug', slug)
     if (error) throw new Error(`writeTtsYaml ${slug}: ${error.message}`)
+  },
+  async writeMapYaml(slug, raw) {
+    const sb = createServiceClient()
+    const { error } = await sb
+      .from('stories')
+      .update({ map_yaml: raw, updated_at: new Date().toISOString() })
+      .eq('slug', slug)
+    if (error) throw new Error(`writeMapYaml ${slug}: ${error.message}`)
   },
   async writeChart(slug, chartId, data) {
     const sb = createServiceClient()

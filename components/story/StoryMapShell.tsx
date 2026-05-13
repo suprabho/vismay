@@ -261,7 +261,18 @@ export default function StoryMapShell({
           — text card stacks directly beneath in the bottom half. */}
       {showChart && (
         <div
-          className="
+          className={
+            isAutoplay
+              ? // Autoplay: text card is hidden, so the chart claims the
+                // viewport center. Square-ish band, cap at 80vmin so it
+                // stays away from the safe-zone edges in both 16:9 and 9:16.
+                `
+            fixed pointer-events-none z-10
+            top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+            w-[min(90vw,80vh)] h-[min(90vw,80vh)]
+            flex items-center justify-center backdrop-blur-3xl
+          `
+              : `
             fixed pointer-events-none z-10
             top-[72px] left-1/2 -translate-x-1/2
             w-[calc(100vw-1rem)] aspect-3/4 max-h-[calc(50svh-88px)]
@@ -274,10 +285,15 @@ export default function StoryMapShell({
             [@media(min-aspect-ratio:1/1)]:h-[50vh]
             [@media(min-aspect-ratio:1/1)]:max-h-none
             flex items-center justify-center backdrop-blur-3xl
-          "
+          `
+          }
         >
           <div
-            className="w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0"
+            className={
+              isAutoplay
+                ? 'w-full h-full rounded-lg overflow-hidden flex items-center justify-center p-1.5'
+                : 'w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0'
+            }
             style={{
               background: 'rgb(var(--color-panel-rgb) / 0.2)',
               border: '0.5px solid var(--color-line)',
@@ -305,6 +321,7 @@ export default function StoryMapShell({
             key={`${unit.parentIndex}-${unit.subIndex}-${i}`}
             unitIndex={i}
             unit={unit}
+            isAutoplay={isAutoplay}
           />
         ))}
       </div>

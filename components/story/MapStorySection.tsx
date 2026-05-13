@@ -8,6 +8,12 @@ import { statColorVar } from './ThemeProvider'
 interface Props {
   unitIndex: number
   unit: ResolvedUnit
+  /**
+   * Autoplay mode (video render / `?autoplay=1`) hides the text card entirely
+   * — only the map + chart play. The snap target stays mounted so the
+   * IntersectionObserver still fires and drives camera + chart steps.
+   */
+  isAutoplay?: boolean
 }
 
 /**
@@ -43,11 +49,29 @@ function extractHeroBits(paragraphs: string[]): { dek: string; byline: string } 
  * Portrait layout: text card centered below the top-pinned chart strip
  * (or centered with no top strip when chartless).
  */
-export default function MapStorySection({ unitIndex, unit }: Props) {
+export default function MapStorySection({ unitIndex, unit, isAutoplay = false }: Props) {
   const { parentConfig, heading, subheading, paragraphs, heroPart } = unit
   const kind = parentConfig.kind ?? 'text'
   const heroBits = kind === 'hero' ? extractHeroBits(paragraphs) : null
   const hasChart = !!parentConfig.chart
+
+  // Autoplay mode: render the snap target only, no text card. The chart and
+  // map (owned by StoryMapShell) become the entire visual; text is omitted.
+  // All snap targets are preserved (including hero dek slices) so the
+  // IntersectionObserver still drives the same camera/chart cue sequence —
+  // shortening the unit list here would also shorten the rendered video.
+  if (isAutoplay) {
+    const portraitOnly =
+      kind === 'hero' && heroPart === 'dek'
+        ? ' [@media(min-aspect-ratio:1/1)]:hidden'
+        : ''
+    return (
+      <section
+        data-unit-index={unitIndex}
+        className={`snap-start snap-always h-svh w-full relative${portraitOnly}`}
+      />
+    )
+  }
 
   // Two static class strings — Tailwind v4 JIT picks both up because they
   // appear literally in the source. Selected at render time.

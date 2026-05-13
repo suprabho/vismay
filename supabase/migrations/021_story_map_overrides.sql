@@ -1,0 +1,31 @@
+-- Per-story map override.
+--
+-- Story maps are defined inline in <slug>.config.yaml under each section's
+-- `map:` block (and per-subsection `map:` overrides). Editing camera, pins,
+-- regions, etc. there forces a config-yaml save that re-validates the entire
+-- story. This column holds a separate, opaque YAML blob whose entries are
+-- merged onto the resolved map state at load time — letting the admin Map
+-- tab tweak camera + pins + layers without touching the base config.
+--
+-- Schema (parsed by lib/storyMapOverrides.ts):
+--
+--   overrides:
+--     - target: { parentIndex: 1 }                  # parent-level
+--       map:
+--         center: [-95, 40]
+--         zoom: 4
+--         pins: [{ coordinates: [-95, 40], label: "X" }]
+--     - target: { parentIndex: 1, subIndex: 0 }     # subsection-level
+--       map:
+--         zoom: 5
+--         mobile:
+--           zoom: 3
+--
+-- Identity is `(parentIndex, subIndex?)` — `subIndex` omitted means the
+-- override targets the parent section's `map:` block, present means it
+-- targets `subsections[subIndex].map`. Field-level merge for scalars; pins,
+-- regions, heatmap REPLACE (matching the existing subsection-override
+-- semantics in lib/storyConfig.types.ts).
+
+alter table stories
+  add column if not exists map_yaml text;

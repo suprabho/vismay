@@ -10,6 +10,7 @@ import { defaultNarrationText } from '@/lib/storyTts'
 import { getCachedVideo, type CachedVideo } from '@/lib/storyVideo'
 import { createServiceClient } from '@/lib/supabase'
 import type { NarrationUnit } from '@/components/admin/NarrationEditor'
+import type { StoryConfig } from '@/lib/storyConfig.types'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,13 +50,15 @@ export default async function EditStoryPage({ params }: Props) {
 
   const src = getContentSource()
   const videoCache = await loadVideoCache(slug)
-  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml] = await Promise.all([
-    src.readMarkdown(slug),
-    src.readConfigYaml(slug),
-    src.readShareYaml(slug),
-    src.listChartIds(slug),
-    src.readTtsYaml(slug),
-  ])
+  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml, map_yaml] =
+    await Promise.all([
+      src.readMarkdown(slug),
+      src.readConfigYaml(slug),
+      src.readShareYaml(slug),
+      src.listChartIds(slug),
+      src.readTtsYaml(slug),
+      src.readMapYaml(slug),
+    ])
   if (markdown == null) notFound()
 
   // Merge editable JSON-backed charts with YAML chart refs so stories whose
@@ -73,12 +76,16 @@ export default async function EditStoryPage({ params }: Props) {
 
   // Build narration units for the Narration tab. Stories without a config
   // (or with an invalid one) silently skip — the tab will render an empty
-  // state rather than 500ing.
+  // state rather than 500ing. The Map tab also needs the parsed config —
+  // base form (without map overrides applied) so the editor can layer the
+  // user's draft on top without double-applying.
   let narrationUnits: NarrationUnit[] = []
+  let mapConfig: StoryConfig | null = null
   try {
     if (await hasStoryConfig(slug)) {
       const story = await getStoryContent(slug)
       const config = await loadStoryConfig(slug)
+      mapConfig = await loadStoryConfig(slug, { applyMapOverrides: false })
       const { mobileUnits } = resolveUnits(slug, story.sections, config)
       narrationUnits = mobileUnits.map((u) => {
         const sliceIndex = u.sliceIndex ?? 0
@@ -115,6 +122,9 @@ export default async function EditStoryPage({ params }: Props) {
         charts,
         narrationUnits,
         tts_yaml: tts_yaml ?? null,
+        map_yaml: map_yaml ?? null,
+        mapConfig,
+        mapboxAccessToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '',
         videoCache,
       }}
     />
