@@ -47,6 +47,12 @@ interface Props {
   initialYaml: string | null
   mapStyle: string
   onClose?: () => void
+  /**
+   * Fired after a successful PUT to `/api/admin/stories/<slug>/map`.
+   * AutoplayShell uses this to reload the preview iframe so the fresh
+   * overrides take effect immediately instead of waiting for ISR.
+   */
+  onSaved?: () => void
 }
 
 const YAML_PLACEHOLDER = `# Autoplay map overrides — edited above visually or here as raw YAML.
@@ -77,6 +83,7 @@ export default function AutoplayMapEditor({
   initialYaml,
   mapStyle,
   onClose,
+  onSaved,
 }: Props) {
   const initialState = useMemo(
     () => hydrateOverrides(parseMapOverrides(initialYaml)),
@@ -169,6 +176,7 @@ export default function AutoplayMapEditor({
       }
       setSavedSerialized(currentSerialized)
       setStatus({ type: 'ok', msg: 'Saved' })
+      onSaved?.()
     } catch (err) {
       setStatus({
         type: 'err',
@@ -177,7 +185,7 @@ export default function AutoplayMapEditor({
     } finally {
       setSaving(false)
     }
-  }, [currentSerialized, slug])
+  }, [currentSerialized, slug, onSaved])
 
   // Cmd/Ctrl+S to save.
   useEffect(() => {

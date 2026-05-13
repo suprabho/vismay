@@ -12,6 +12,7 @@
  */
 
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@/lib/contentSource'
 
@@ -51,5 +52,9 @@ export async function PUT(
   }
 
   await getContentSource().writeMapYaml(slug, raw === '' ? null : (raw as string | null))
+  // Bust the ISR cache for the story page so the autoplay preview iframe
+  // (which loads /story/<slug>?autoplay=1) gets the freshly-saved overrides
+  // on its next request instead of waiting up to `revalidate = 60` seconds.
+  revalidatePath(`/story/${slug}`)
   return NextResponse.json({ ok: true })
 }

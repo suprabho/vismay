@@ -93,6 +93,12 @@ export default function AutoplayShell({
 }: Props) {
   /* ─── Map editor side panel (admin only) ─────────────────────────── */
   const [mapEditorOpen, setMapEditorOpen] = useState(false)
+  /**
+   * Cache-buster appended to the iframe URL. Bumped after a successful save
+   * in the map editor so the iframe re-fetches /story/<slug> and the freshly
+   * persisted overrides flow through StoryMapShell — no waiting for ISR.
+   */
+  const [mapReloadNonce, setMapReloadNonce] = useState(0)
   const [ratio, setRatio] = useState<AutoplayRatio>('9:16')
   const [activeUnit, setActiveUnit] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -363,6 +369,20 @@ export default function AutoplayShell({
     }
     setIsPlaying(false)
   }, [ratio])
+
+  // When map overrides are re-saved, the iframe remounts via key change —
+  // reset ready state and stop audio. Keep activeUnit so the admin stays on
+  // the section they were tuning. The activeUnit useEffect will re-scroll
+  // the fresh iframe to that section once it loads.
+  useEffect(() => {
+    if (mapReloadNonce === 0) return
+    setIframeReady(false)
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    setIsPlaying(false)
+  }, [mapReloadNonce])
 
   /**
    * Play the chunk that contains `startCue`, seeking to its `start_ms`. When
@@ -751,7 +771,7 @@ export default function AutoplayShell({
             }}
           >
             <iframe
-              key={ratio /* force reload when ratio changes */}
+              key={`${ratio}-${mapReloadNonce}` /* force reload when ratio or map overrides change */}
               ref={iframeRef}
               src={
                 ratio === '9:16'
@@ -860,6 +880,7 @@ export default function AutoplayShell({
             initialYaml={initialMapYaml}
             mapStyle={mapStyle}
             onClose={() => setMapEditorOpen(false)}
+            onSaved={() => setMapReloadNonce((n) => n + 1)}
           />
         </div>
       )}

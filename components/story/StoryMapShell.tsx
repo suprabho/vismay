@@ -328,10 +328,11 @@ export default function StoryMapShell({
       {showChart && (
         <div
           className={
-            isAutoplay
-              ? // Autoplay: text card is hidden, so the chart claims the
-                // viewport center. Square clamp keeps it inside the safe
-                // zone in both 16:9 and the 9:16 compose iframe.
+            isAutoplay && isPortrait
+              ? // 9:16 autoplay only: text card is hidden, so the chart
+                // claims the viewport center. Square clamp keeps it inside
+                // the safe zone of the 9:16 compose iframe. 16:9 autoplay
+                // keeps the regular landscape layout below.
                 `
             fixed pointer-events-none z-10
             top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
@@ -356,7 +357,7 @@ export default function StoryMapShell({
         >
           <div
             className={
-              isAutoplay
+              isAutoplay && isPortrait
                 ? 'w-full h-full rounded-lg overflow-hidden flex items-center justify-center p-1.5'
                 : 'w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0'
             }
@@ -387,7 +388,10 @@ export default function StoryMapShell({
             key={`${unit.parentIndex}-${unit.subIndex}-${i}`}
             unitIndex={i}
             unit={unit}
-            isAutoplay={isAutoplay}
+            // Only hide the text card in 9:16 autoplay. 16:9 autoplay keeps
+            // the normal landscape text card so the recorded video has the
+            // section copy on screen alongside the map and chart.
+            isAutoplay={isAutoplay && isPortrait}
           />
         ))}
       </div>

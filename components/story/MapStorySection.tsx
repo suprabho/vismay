@@ -9,10 +9,12 @@ interface Props {
   unitIndex: number
   unit: ResolvedUnit
   /**
-   * Autoplay mode (`?autoplay=1`, used by the video-render pipeline) hides
-   * the text card entirely — only the map + chart play. The snap target
-   * stays mounted so the IntersectionObserver still drives camera/chart
-   * cues; dropping it would shorten the rendered video timeline.
+   * 9:16 autoplay only (`?autoplay=1` + portrait iframe, used by the
+   * vertical video-render pipeline) hides the text card entirely — only
+   * the map + chart play. 16:9 autoplay keeps the text card so the
+   * landscape video has section copy on screen. The snap target stays
+   * mounted either way so the IntersectionObserver still drives
+   * camera/chart cues; dropping it would shorten the rendered video.
    */
   isAutoplay?: boolean
 }
