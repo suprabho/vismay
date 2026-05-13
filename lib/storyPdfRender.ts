@@ -81,7 +81,17 @@ async function renderPdfBuffer(args: {
   const cfg = RENDER_CONFIG[args.format]
 
   const browser = await chromium.launch({
-    args: ['--disable-blink-features=AutomationControlled'],
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      // Chromium caps simultaneous WebGL contexts at 16 by default. Slide
+      // decks and reports mount one Mapbox canvas per page, eagerly, so the
+      // headless capture can rasterize them in a single page.pdf() pass —
+      // 17+ maps on a single story silently evicts the oldest contexts and
+      // those slides render with no tile imagery (only DOM pin markers
+      // survive). Bumping the cap to 64 covers the longest stories we have
+      // without changing memory behaviour for shorter ones.
+      '--max-active-webgl-contexts=64',
+    ],
   })
   try {
     const context = await browser.newContext({
