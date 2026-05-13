@@ -138,20 +138,7 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
   // names the chart JSON commonly uses (positive/text/bg).
   const palette = { ...cssVars, ...(colors as unknown as Record<string, string>) }
   const resolved = replaceColorTokens(step.option as unknown as JsonValue, palette) as EChartsOption
-  // Captured PDFs of slides with GenericChart showed an opaque white chart
-  // canvas — `backgroundColor: 'transparent'` (the convention every hand-built
-  // chart uses) didn't take effect in the slides render path. Chromium's PDF
-  // pipeline appears to composite a transparent ECharts canvas against white
-  // in landscape page mode (it's correct in A4-portrait report renders).
-  //
-  // Fill the canvas with the story's theme bg so the chart blends into the
-  // page either way. Fall back to transparent if the CSS var hasn't been
-  // resolved yet (first frame before useEffect runs).
-  const themeBg = cssVars.bg || cssVars.background
-  const option: EChartsOption = {
-    ...resolved,
-    backgroundColor: themeBg || 'transparent',
-  }
+  const option: EChartsOption = { backgroundColor: 'transparent', ...resolved }
 
   return (
     <div

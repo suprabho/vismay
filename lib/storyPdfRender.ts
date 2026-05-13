@@ -119,6 +119,25 @@ async function renderPdfBuffer(args: {
 
     const page = await context.newPage()
 
+    // Bubble in-page console.log to the runner's stdout. The pdfReadiness
+    // instrumentation prints `[pdf-ready +Xms] …` lines we need to see when a
+    // render times out, otherwise we're blind to which maps fired and which
+    // stalled. Errors get the same treatment so a runtime exception on the
+    // page doesn't hide behind a Playwright timeout.
+    page.on('console', (msg) => {
+      const text = msg.text()
+      if (
+        text.startsWith('[pdf-ready') ||
+        msg.type() === 'error' ||
+        msg.type() === 'warning'
+      ) {
+        args.log(`page.${msg.type()}: ${text}`)
+      }
+    })
+    page.on('pageerror', (err) => {
+      args.log(`pageerror: ${err.message}`)
+    })
+
     const url = `${args.baseUrl}/story/${args.slug}/${args.format}?print=1`
     args.log(`navigating: ${url}`)
     await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
