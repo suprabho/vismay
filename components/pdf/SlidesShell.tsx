@@ -6,7 +6,7 @@ import ChartPanel from '@/components/story/ChartPanel'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
 import { usePdfReadiness } from '@/lib/pdfReadiness'
-import { getReportMapOverride } from '@/lib/storyReportConfig'
+import { getReportMapOverride, isReportMapHidden } from '@/lib/storyReportConfig'
 
 const SLIDE_W = 1920
 const SLIDE_H = 1080
@@ -66,7 +66,13 @@ export default function SlidesShell({
   }, [units])
 
   const expectedMaps = useMemo(
-    () => slides.filter((s) => !!s.center && typeof s.zoom === 'number').length,
+    () =>
+      slides.filter(
+        (s) =>
+          !!s.center &&
+          typeof s.zoom === 'number' &&
+          !isReportMapHidden(s.unit.parentConfig)
+      ).length,
     [slides]
   )
   const { noteMapReady } = usePdfReadiness(expectedMaps)
@@ -87,7 +93,8 @@ export default function SlidesShell({
     const heading = unit.heading
     const subheading = unit.subheading
     const chartId = unit.parentConfig.chart
-    const showMap = !!center && typeof zoom === 'number'
+    const showMap =
+      !!center && typeof zoom === 'number' && !isReportMapHidden(unit.parentConfig)
     return (
       <>
         <header

@@ -6,7 +6,7 @@ import ChartPanel from '@/components/story/ChartPanel'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
 import { usePdfReadiness } from '@/lib/pdfReadiness'
-import { isReportMapHidden } from '@/lib/storyReportConfig'
+import { getReportMapOverride, isReportMapHidden } from '@/lib/storyReportConfig'
 
 // A4 @ 96 dpi: 210mm × 297mm → 794 × 1123 px. Mirrors the `format: 'A4'`
 // passed to Playwright's `page.pdf()` so the preview matches print exactly.
@@ -60,10 +60,15 @@ export default function ReportShell({
   const byline = useMemo(() => extractByline(units), [units])
   const expectedMaps = useMemo(
     () =>
-      units.filter(
-        (u) =>
-          !!u.parentConfig.map?.center && !isReportMapHidden(u.parentConfig)
-      ).length,
+      units.filter((u) => {
+        const subMap = u.parentConfig.subsections?.[u.subIndex]?.map
+        const ov = getReportMapOverride(u.parentConfig)
+        const center = ov?.center ?? subMap?.center ?? u.parentConfig.map?.center
+        const zoom = ov?.zoom ?? subMap?.zoom ?? u.parentConfig.map?.zoom
+        return (
+          !!center && typeof zoom === 'number' && !isReportMapHidden(u.parentConfig)
+        )
+      }).length,
     [units]
   )
   const { noteMapReady } = usePdfReadiness(expectedMaps)
@@ -123,13 +128,21 @@ export default function ReportShell({
     options: { breakBefore: boolean }
   ): ReactNode => {
     const map = unit.parentConfig.map
-    const center = map?.center as [number, number] | undefined
-    const zoom = map?.zoom
-    const pitch = map?.pitch
-    const bearing = map?.bearing
-    const pins = map?.pins
-    const regions = map?.regions
-    const heatmap = map?.heatmap
+    const subMap = unit.parentConfig.subsections?.[unit.subIndex]?.map
+    // Per-page report override beats subsection beats parent — mirrors the
+    // precedence used in SlidesShell so the same /reports edit applies to both
+    // formats, and the source story's subsection `map:` blocks still flow
+    // through when no override is set.
+    const ov = getReportMapOverride(unit.parentConfig)
+    const center = (ov?.center ?? subMap?.center ?? map?.center) as
+      | [number, number]
+      | undefined
+    const zoom = ov?.zoom ?? subMap?.zoom ?? map?.zoom
+    const pitch = ov?.pitch ?? subMap?.pitch ?? map?.pitch
+    const bearing = ov?.bearing ?? subMap?.bearing ?? map?.bearing
+    const pins = subMap?.pins ?? map?.pins
+    const regions = subMap?.regions ?? map?.regions
+    const heatmap = subMap?.heatmap ?? map?.heatmap
     const showMap =
       !!center && typeof zoom === 'number' && !isReportMapHidden(unit.parentConfig)
     const eyebrow = unit.parentConfig.eyebrow
