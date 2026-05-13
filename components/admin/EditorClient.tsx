@@ -12,6 +12,7 @@ import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
 import type { CachedVideo } from '@/lib/storyVideo'
+import type { MapTarget } from '@/lib/storyMapOverrides'
 
 type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'map' | 'settings'
 
@@ -28,6 +29,8 @@ interface InitialState {
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
   map_yaml: string | null
+  mapTargets: MapTarget[]
+  mapStyle: string
   videoCache: {
     '9:16': CachedVideo | null
     '16:9': CachedVideo | null
@@ -339,7 +342,12 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           />
         )}
         {tab === 'map' && (
-          <MapEditor slug={slug} initialYaml={initial.map_yaml} />
+          <MapEditor
+            slug={slug}
+            targets={initial.mapTargets}
+            initialYaml={initial.map_yaml}
+            mapStyle={initial.mapStyle}
+          />
         )}
         {tab === 'settings' && (
           <SettingsPanel

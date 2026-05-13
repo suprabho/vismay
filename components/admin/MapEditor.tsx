@@ -3,104 +3,61 @@
 /**
  * Autoplay map override editor.
  *
- * Layout:
- *   - Top bar: aspect toggle (9:16 / 16:9), "Open in new tab", override
- *     count, Save button.
- *   - Left pane: YAML textarea with sample-comment placeholder.
- *   - Right pane: iframe loading the live story in autoplay mode at the
- *     selected aspect, framed with `aspect-ratio` CSS so what you see is
- *     what the video render will see. Reloads on save.
+ * Lists every (parentIndex, subIndex?) target in the story. Each row
+ * shows the current camera state — base or overridden — and an "Edit"
+ * button that opens the existing MapPickerModal (the same interactive
+ * Mapbox canvas the Config tab and Reports tab use). The modal's
+ * Desktop/Mobile target toggle maps to the autoplay 16:9 / 9:16 video
+ * renders respectively (mobile = portrait override).
  *
- * The override applies ONLY in autoplay (`?autoplay=1`) — scrollytelling
- * readers see the unmodified config.yaml. See lib/storyMapOverrides.ts.
+ * The override applies ONLY in autoplay (`?autoplay=1`) — see
+ * lib/storyMapOverrides.ts and StoryMapShell. Scrollytelling readers see
+ * the unmodified config.yaml.
  */
 
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import MapPickerModal from './MapPickerModal'
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
-import { parseMapOverrides } from '@/lib/storyMapOverrides'
-import { useTabIndent } from '@/lib/useTabIndent'
-
-type Aspect = '9:16' | '16:9'
+  hydrateOverrides,
+  parseMapOverrides,
+  serializeOverrides,
+  type MapTarget,
+  type TargetCameraOverride,
+} from '@/lib/storyMapOverrides'
+import {
+  applyMapView,
+  applyMobileMapView,
+  extractMapView,
+  extractMobileMapView,
+  type MapView,
+} from '@/lib/yamlMapPatch'
 
 interface Props {
   slug: string
+  targets: MapTarget[]
   initialYaml: string | null
+  mapStyle: string
 }
 
-const PLACEHOLDER = `# Autoplay map overrides — applied ONLY when the story plays in
-# autoplay mode (the muted, video-shaped playback at /story/<slug>?autoplay=1
-# and the rendered MP4 at /api/story-video/<slug>?aspect=9:16|16:9).
-# Scrollytelling readers see the unmodified <slug>.config.yaml.
-#
-# Identity: { parentIndex, subIndex? }. Omit subIndex to override the
-# parent section's map block; include it to override one subsection.
-# Field-level merge — only the keys you set are touched. pins / regions /
-# heatmap REPLACE (do not merge) so you can fully redraw a step.
-#
-# overrides:
-#   # Tighter zoom on section 0's map for autoplay only
-#   - target: { parentIndex: 0 }
-#     map:
-#       center: [-95.0, 40.0]
-#       zoom: 4
-#       pitch: 30
-#       bearing: 0
-#       flySpeed: 1.4
-#       opacity: 0.85
-#       pins:
-#         - coordinates: [-95.0, 40.0]
-#           label: "Mid-continent"
-#           color: "#D85A30"
-#           radius: 14
-#           pulse: true
-#           labelAnchor: top
-#       # Portrait-only (9:16) sub-layer — applied on top of the desktop
-#       # values when the autoplay render is vertical. Useful for cropping
-#       # tighter or moving the focal point lower so it clears the bottom
-#       # text card area.
-#       mobile:
-#         center: [-95.0, 38.0]
-#         zoom: 3.4
-#
-#   # Override one subsection step — same shape, with subIndex set
-#   - target: { parentIndex: 0, subIndex: 1 }
-#     map:
-#       zoom: 6
-`
-
-export default function MapEditor({ slug, initialYaml }: Props) {
-  const [draft, setDraft] = useState<string>(initialYaml ?? '')
-  const [savedYaml, setSavedYaml] = useState<string>(initialYaml ?? '')
-  const [aspect, setAspect] = useState<Aspect>('9:16')
+export default function MapEditor({ slug, targets, initialYaml, mapStyle }: Props) {
+  const initialState = useMemo(
+    () => hydrateOverrides(parseMapOverrides(initialYaml)),
+    [initialYaml]
+  )
+  const [overrides, setOverrides] = useState<Map<string, TargetCameraOverride>>(initialState)
+  const [savedSerialized, setSavedSerialized] = useState<string | null>(initialYaml)
+  const [editing, setEditing] = useState<string | null>(null) // target.key
   const [saving, setSaving] = useState(false)
-  const [iframeKey, setIframeKey] = useState(0)
-  const [status, setStatus] = useState<{
-    type: 'idle' | 'ok' | 'err'
-    msg?: string
-  }>({ type: 'idle' })
-  const onTabKey = useTabIndent()
+  const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err'; msg?: string }>({
+    type: 'idle',
+  })
 
-  const dirty = draft !== savedYaml
-
-  const overrideCount = useMemo(() => {
-    const parsed = parseMapOverrides(draft)
-    return parsed?.overrides.length ?? 0
-  }, [draft])
-
-  // Show parse errors inline so the editor catches typos immediately —
-  // saving still works (the API stores opaque YAML; the renderer falls
-  // through to the base config when parse fails) but the user usually
-  // wants to fix it first.
-  const parseError = useMemo(() => {
-    if (!draft.trim()) return null
-    const parsed = parseMapOverrides(draft)
-    if (parsed === null) return 'YAML failed to parse'
-    return null
-  }, [draft])
+  const currentSerialized = useMemo(
+    () => serializeOverrides(overrides, targets),
+    [overrides, targets]
+  )
+  const dirty = (currentSerialized ?? '') !== (savedSerialized ?? '')
+  const overrideCount = overrides.size
 
   // Warn before navigating away with unsaved work.
   useEffect(() => {
@@ -120,19 +77,14 @@ export default function MapEditor({ slug, initialYaml }: Props) {
       const res = await fetch(`/api/admin/stories/${slug}/map`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw: draft }),
+        body: JSON.stringify({ raw: currentSerialized ?? '' }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
-      setSavedYaml(draft)
+      setSavedSerialized(currentSerialized)
       setStatus({ type: 'ok', msg: 'Saved' })
-      // Reload the iframe so the saved overrides flow through. The story
-      // page is `revalidate: 60` so the iframe needs a key bump (cache
-      // busted by the inner request) — the new render reads the fresh
-      // map_yaml column on the server.
-      setIframeKey((k) => k + 1)
     } catch (err) {
       setStatus({
         type: 'err',
@@ -141,9 +93,9 @@ export default function MapEditor({ slug, initialYaml }: Props) {
     } finally {
       setSaving(false)
     }
-  }, [draft, slug])
+  }, [currentSerialized, slug])
 
-  // Cmd/Ctrl+S to save — same affordance as the main editor's Config tab.
+  // Cmd/Ctrl+S to save — same affordance as the Config tab.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -155,14 +107,59 @@ export default function MapEditor({ slug, initialYaml }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [dirty, saving, handleSave])
 
-  // Autoplay URLs match the AutoplayShell's iframe sources so what's
-  // previewed here is exactly what the muted video render will see.
-  // 9:16 uses `compose=vertical` which has the inner page self-frame to
-  // a 9:16 viewport via VerticalCaptureFrame.
-  const previewSrc =
-    aspect === '9:16'
-      ? `/story/${slug}?autoplay=1&compose=vertical`
-      : `/story/${slug}?autoplay=1`
+  const editingTarget = editing ? targets.find((t) => t.key === editing) ?? null : null
+
+  // Build the synthetic section YAML the modal expects: starts at the
+  // currently effective camera (override if set, else base) so dragging
+  // produces sensible diffs. Mobile block is only included when the user
+  // has an existing mobile override — otherwise the modal's "no mobile
+  // override yet" hint kicks in and gives the user a clean starting point.
+  const editingSectionRaw = useMemo(() => {
+    if (!editingTarget) return ''
+    const o = overrides.get(editingTarget.key)
+    const desktop = o?.desktop ?? editingTarget.baseDesktop
+    const mobile = o?.mobile ?? null
+    return buildSectionRaw(desktop, mobile)
+  }, [editingTarget, overrides])
+
+  const handleApply = useCallback(
+    (nextRaw: string) => {
+      if (!editingTarget) return
+      const desktopAfter = extractMapView(nextRaw)
+      const mobileAfter = extractMobileMapView(nextRaw)
+      setOverrides((prev) => {
+        const next = new Map(prev)
+        const entry: TargetCameraOverride = {}
+        if (desktopAfter) entry.desktop = desktopAfter
+        if (mobileAfter) entry.mobile = mobileAfter
+        if (entry.desktop || entry.mobile) {
+          next.set(editingTarget.key, entry)
+        } else {
+          next.delete(editingTarget.key)
+        }
+        return next
+      })
+      setEditing(null)
+    },
+    [editingTarget]
+  )
+
+  const handleReset = useCallback((key: string) => {
+    setOverrides((prev) => {
+      if (!prev.has(key)) return prev
+      const next = new Map(prev)
+      next.delete(key)
+      return next
+    })
+  }, [])
+
+  if (targets.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-neutral-500 text-sm p-8 text-center">
+        No story config — map overrides need a valid <code className="font-mono mx-1">{slug}.config.yaml</code> first.
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -172,19 +169,9 @@ export default function MapEditor({ slug, initialYaml }: Props) {
           <div className="text-xs text-neutral-500">
             {overrideCount > 0
               ? `${overrideCount} override${overrideCount === 1 ? '' : 's'} · applies in ?autoplay=1 only`
-              : 'No overrides · autoplay falls through to config.yaml'}
+              : `${targets.length} targets · all default · applies in ?autoplay=1 only`}
           </div>
         </div>
-        <AspectToggle value={aspect} onChange={setAspect} />
-        <a
-          href={previewSrc}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-neutral-400 hover:text-white shrink-0"
-          title="Open the autoplay preview in a new tab"
-        >
-          open ↗
-        </a>
         <button
           type="button"
           onClick={handleSave}
@@ -195,89 +182,99 @@ export default function MapEditor({ slug, initialYaml }: Props) {
         </button>
       </div>
 
-      {(status.type !== 'idle' || parseError) && (
+      {status.type !== 'idle' && (
         <div
           className={`px-4 py-2 text-xs border-b border-white/5 shrink-0 ${
-            status.type === 'err' || parseError
+            status.type === 'err'
               ? 'text-red-300 bg-red-950/20'
-              : status.type === 'ok'
-                ? 'text-emerald-300 bg-emerald-950/20'
-                : 'text-neutral-300 bg-neutral-900/40'
+              : 'text-emerald-300 bg-emerald-950/20'
           }`}
         >
-          {parseError ?? status.msg}
+          {status.msg}
         </div>
       )}
 
-      <div className="flex-1 grid grid-cols-1 [@media(min-aspect-ratio:1/1)]:grid-cols-2 min-h-0">
-        <div className="flex flex-col min-h-0 border-r border-white/5">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={onTabKey}
-            placeholder={PLACEHOLDER}
-            spellCheck={false}
-            autoCapitalize="none"
-            autoCorrect="off"
-            className="flex-1 min-h-0 w-full bg-neutral-950 text-neutral-100 placeholder:text-neutral-600 font-mono text-[13px] leading-relaxed p-4 resize-none outline-none focus:bg-neutral-900/40"
-          />
-        </div>
+      <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
+        {targets.map((t) => {
+          const o = overrides.get(t.key)
+          const overridden = !!o
+          return (
+            <li key={t.key} className="px-4 py-3 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm truncate flex items-center gap-2">
+                  <span>{t.label}</span>
+                  {overridden && (
+                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      override · {overrideMode(o)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-neutral-500 font-mono mt-0.5 truncate">
+                  16:9 {fmtView(o?.desktop ?? t.baseDesktop)}
+                  {(o?.mobile || t.baseMobile) && (
+                    <>
+                      {' · '}
+                      9:16 {fmtView(o?.mobile ?? t.baseMobile ?? t.baseDesktop)}
+                    </>
+                  )}
+                </div>
+              </div>
+              {overridden && (
+                <button
+                  type="button"
+                  onClick={() => handleReset(t.key)}
+                  className="text-xs text-neutral-400 hover:text-red-300 shrink-0"
+                  title="Drop this override; renderer falls back to config.yaml"
+                >
+                  reset
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditing(t.key)}
+                className="text-xs px-2 py-1 rounded border border-white/10 text-neutral-200 hover:bg-white/5 shrink-0"
+              >
+                edit ↗
+              </button>
+            </li>
+          )
+        })}
+      </ul>
 
-        <div className="flex flex-col min-h-0 bg-neutral-950">
-          <div className="flex-1 min-h-0 flex items-center justify-center p-3 overflow-hidden">
-            {/*
-              Frame the iframe in the chosen aspect ratio so the editor shows
-              the actual visible region the autoplay render will capture. Cap
-              by the smaller of width / height so neither orientation pushes
-              the iframe past the panel bounds.
-            */}
-            <div
-              className="bg-neutral-900 border border-white/5 rounded overflow-hidden"
-              style={{
-                aspectRatio: aspect === '9:16' ? '9 / 16' : '16 / 9',
-                ...(aspect === '9:16'
-                  ? { height: '100%', maxWidth: '100%' }
-                  : { width: '100%', maxHeight: '100%' }),
-              }}
-            >
-              <iframe
-                key={`${iframeKey}-${aspect}`}
-                src={previewSrc}
-                className="w-full h-full border-0 block"
-                title={`Autoplay preview · ${aspect}`}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      {editingTarget && (
+        <MapPickerModal
+          sectionRaw={editingSectionRaw}
+          sectionLabel={editingTarget.label}
+          style={mapStyle}
+          onApply={handleApply}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }
 
-function AspectToggle({
-  value,
-  onChange,
-}: {
-  value: Aspect
-  onChange: (v: Aspect) => void
-}) {
-  return (
-    <div className="flex rounded-md border border-white/10 overflow-hidden text-xs shrink-0">
-      {(['9:16', '16:9'] as const).map((a) => (
-        <button
-          key={a}
-          type="button"
-          onClick={() => onChange(a)}
-          className={`px-2 py-1 ${
-            value === a
-              ? 'bg-white/10 text-white'
-              : 'text-neutral-400 hover:text-white'
-          }`}
-          aria-pressed={value === a}
-        >
-          {a}
-        </button>
-      ))}
-    </div>
-  )
+function buildSectionRaw(desktop: MapView, mobile: MapView | null): string {
+  // Start with a `map:` block stub that yamlMapPatch.applyMapView will
+  // populate cleanly (it inserts under the parent when keys are missing).
+  // Round-tripping through applyMapView/applyMobileMapView keeps the
+  // exact format the modal expects — no precision drift between this
+  // path and the Config tab's modal usage.
+  let raw = 'map:\n'
+  raw = applyMapView(raw, desktop)
+  if (mobile) raw = applyMobileMapView(raw, mobile)
+  return raw
+}
+
+function overrideMode(o: TargetCameraOverride | undefined): string {
+  if (!o) return ''
+  if (o.desktop && o.mobile) return 'both'
+  if (o.mobile) return '9:16'
+  return '16:9'
+}
+
+function fmtView(v: MapView): string {
+  return `[${v.center[0].toFixed(2)},${v.center[1].toFixed(2)}] z${v.zoom.toFixed(1)}${
+    v.pitch ? ` p${v.pitch.toFixed(0)}` : ''
+  }${v.bearing ? ` b${v.bearing.toFixed(0)}` : ''}`
 }
