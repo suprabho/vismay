@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import MapStorySection from './MapStorySection'
 import ChartPanel from './ChartPanel'
 import { useIsMobile } from '@/lib/chartTheme'
@@ -11,7 +11,9 @@ import {
 import type {
   ResolvedUnit,
   StoryDefaults,
+  SubsectionMapOverride,
 } from '@/lib/storyConfig.types'
+import type { MapOverrideConfig } from '@/lib/storyMapOverrides'
 import type MapboxBackgroundType from './charts/MapboxBackground'
 import type { MapStep } from './charts/MapboxBackground'
 
@@ -51,6 +53,29 @@ interface Props {
   defaults: StoryDefaults
   /** Story slug — used by data-driven charts to locate their JSON config. */
   slug?: string
+  /**
+   * Per-(parentIndex, subIndex?) map override applied ONLY when the page
+   * is rendered with `?autoplay=1`. Edited via the admin Map tab. Lets the
+   * autoplay video have a different framing/zoom/pins than the shared
+   * scrollytelling config without forking it. Null = no overrides set.
+   */
+  mapOverrides?: MapOverrideConfig | null
+}
+
+/**
+ * Map override entries indexed by `${parentIndex}.${subIndex ?? '_'}`.
+ * Built once from `mapOverrides` and consumed in the `mapSteps` loop so
+ * each unit's lookup is O(1).
+ */
+function indexOverrides(
+  cfg: MapOverrideConfig | null | undefined
+): Map<string, SubsectionMapOverride> {
+  const map = new Map<string, SubsectionMapOverride>()
+  if (!cfg) return map
+  for (const o of cfg.overrides) {
+    map.set(`${o.parentIndex}.${o.subIndex ?? '_'}`, o.map)
+  }
+  return map
 }
 
 /**
@@ -79,6 +104,7 @@ export default function StoryMapShell({
   accessToken,
   defaults,
   slug,
+  mapOverrides,
 }: Props) {
   const [activeUnit, setActiveUnit] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -116,9 +142,24 @@ export default function StoryMapShell({
     }
   }, [isPortrait])
 
+  // Autoplay-only map override lookup. Indexed once per render — the
+  // `mapOverrides` prop is small (one entry per overridden unit) and
+  // referentially stable across renders unless the admin Map tab saves a
+  // new blob, so the cost is negligible.
+  const overrideIndex = useMemo(() => indexOverrides(mapOverrides), [mapOverrides])
+
   // One MapStep per unit. Subsections with a `map` override merge their
   // fields on top of the parent section's map state, so each unit can have
   // its own camera position and pins while still sharing the parent's chart.
+  //
+  // Layering, lowest → highest priority:
+  //   1. parent section `map`
+  //   2. subsection `map` (if any)
+  //   3. autoplay parent override   (only when isAutoplay)
+  //   4. autoplay subsection override (only when isAutoplay)
+  //   5. mobile layer (`.mobile` block from whichever level provided it)
+  //   6. autoplay mobile overrides at parent + sub level (only when both
+  //      isAutoplay AND isPortrait — i.e. 9:16 autoplay)
   //
   // When the viewport is portrait (mobile), `map.mobile` overrides are
   // layered on top of the resolved desktop values — so you can specify
@@ -128,19 +169,30 @@ export default function StoryMapShell({
     const parentMap = unit.parentConfig.map
     const sub = unit.parentConfig.subsections?.[unit.subIndex]
     const over = sub?.map
+    const apParent = isAutoplay
+      ? overrideIndex.get(`${unit.parentIndex}._`)
+      : undefined
+    const apSub = isAutoplay
+      ? overrideIndex.get(`${unit.parentIndex}.${unit.subIndex}`)
+      : undefined
 
-    // Desktop-resolved values (subsection overrides parent)
-    let center = over?.center ?? parentMap.center
-    let zoom = over?.zoom ?? parentMap.zoom
-    let pitch = over?.pitch ?? parentMap.pitch
-    let bearing = over?.bearing ?? parentMap.bearing
-    let flySpeed = over?.flySpeed ?? parentMap.flySpeed ?? defaults.flySpeed
-    let opacity = over?.opacity ?? parentMap.opacity ?? defaults.mapOpacity
-    let pins = over?.pins ?? parentMap.pins
-    let regions = over?.regions ?? parentMap.regions
-    let heatmap = over?.heatmap ?? parentMap.heatmap
+    // Desktop-resolved values: subsection overrides parent, then autoplay
+    // overrides (parent-level then sub-level) layer on top when active.
+    let center = apSub?.center ?? apParent?.center ?? over?.center ?? parentMap.center
+    let zoom = apSub?.zoom ?? apParent?.zoom ?? over?.zoom ?? parentMap.zoom
+    let pitch = apSub?.pitch ?? apParent?.pitch ?? over?.pitch ?? parentMap.pitch
+    let bearing = apSub?.bearing ?? apParent?.bearing ?? over?.bearing ?? parentMap.bearing
+    let flySpeed =
+      apSub?.flySpeed ?? apParent?.flySpeed ?? over?.flySpeed ?? parentMap.flySpeed ?? defaults.flySpeed
+    let opacity =
+      apSub?.opacity ?? apParent?.opacity ?? over?.opacity ?? parentMap.opacity ?? defaults.mapOpacity
+    let pins = apSub?.pins ?? apParent?.pins ?? over?.pins ?? parentMap.pins
+    let regions = apSub?.regions ?? apParent?.regions ?? over?.regions ?? parentMap.regions
+    let heatmap = apSub?.heatmap ?? apParent?.heatmap ?? over?.heatmap ?? parentMap.heatmap
 
-    // Mobile layer: subsection mobile > parent mobile
+    // Mobile layer: subsection mobile > parent mobile, then autoplay
+    // mobile overrides (parent then sub) on top when both autoplay AND
+    // portrait — i.e. the 9:16 video render.
     if (isPortrait) {
       const mob = over?.mobile ?? parentMap.mobile
       if (mob) {
@@ -153,6 +205,20 @@ export default function StoryMapShell({
         pins = mob.pins ?? pins
         regions = mob.regions ?? regions
         heatmap = mob.heatmap ?? heatmap
+      }
+      if (isAutoplay) {
+        for (const apMob of [apParent?.mobile, apSub?.mobile]) {
+          if (!apMob) continue
+          center = apMob.center ?? center
+          zoom = apMob.zoom ?? zoom
+          pitch = apMob.pitch ?? pitch
+          bearing = apMob.bearing ?? bearing
+          flySpeed = apMob.flySpeed ?? flySpeed
+          opacity = apMob.opacity ?? opacity
+          pins = apMob.pins ?? pins
+          regions = apMob.regions ?? regions
+          heatmap = apMob.heatmap ?? heatmap
+        }
       }
     }
 
@@ -261,7 +327,18 @@ export default function StoryMapShell({
           — text card stacks directly beneath in the bottom half. */}
       {showChart && (
         <div
-          className="
+          className={
+            isAutoplay
+              ? // Autoplay: text card is hidden, so the chart claims the
+                // viewport center. Square clamp keeps it inside the safe
+                // zone in both 16:9 and the 9:16 compose iframe.
+                `
+            fixed pointer-events-none z-10
+            top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+            w-[min(90vw,80vh)] h-[min(90vw,80vh)]
+            flex items-center justify-center backdrop-blur-3xl
+          `
+              : `
             fixed pointer-events-none z-10
             top-[72px] left-1/2 -translate-x-1/2
             w-[calc(100vw-1rem)] aspect-3/4 max-h-[calc(50svh-88px)]
@@ -274,10 +351,15 @@ export default function StoryMapShell({
             [@media(min-aspect-ratio:1/1)]:h-[50vh]
             [@media(min-aspect-ratio:1/1)]:max-h-none
             flex items-center justify-center backdrop-blur-3xl
-          "
+          `
+          }
         >
           <div
-            className="w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0"
+            className={
+              isAutoplay
+                ? 'w-full h-full rounded-lg overflow-hidden flex items-center justify-center p-1.5'
+                : 'w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0'
+            }
             style={{
               background: 'rgb(var(--color-panel-rgb) / 0.2)',
               border: '0.5px solid var(--color-line)',
@@ -305,6 +387,7 @@ export default function StoryMapShell({
             key={`${unit.parentIndex}-${unit.subIndex}-${i}`}
             unitIndex={i}
             unit={unit}
+            isAutoplay={isAutoplay}
           />
         ))}
       </div>
