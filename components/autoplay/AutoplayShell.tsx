@@ -10,8 +10,10 @@ import {
 } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import type { ResolvedUnit, StoryDefaults } from '@/lib/storyConfig.types'
+import type { MapTarget } from '@/lib/storyMapOverrides'
 import { usePollVideoRender } from '@/lib/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
+import AutoplayMapEditor from './AutoplayMapEditor'
 import TunePanel from './AutoplayTunePanel'
 
 /* ─── DB row shapes ────────────────────────────────────────────────── */
@@ -45,6 +47,23 @@ interface Props {
   desktopToMobile: number[][]
   accessToken: string
   defaults: StoryDefaults
+  /**
+   * Admin-only: if true, the "Map" header button is rendered and the
+   * AutoplayMapEditor side panel becomes available. Server-side check
+   * (cookies) gates this — non-admin viewers never see the toggle and
+   * never receive the map state below.
+   */
+  isAdmin?: boolean
+  /**
+   * Per-(parentIndex, subIndex?) overridable map targets. Built once on
+   * the server from the parsed StoryConfig so the editor renders flat.
+   * Empty when isAdmin is false or the story has no config.
+   */
+  mapTargets?: MapTarget[]
+  /** Mapbox style URL to use in the picker so its basemap matches the live render. */
+  mapStyle?: string
+  /** Currently saved `stories.map_yaml` blob, or null if no overrides. */
+  initialMapYaml?: string | null
 }
 
 /* ─── Fixed viewport dimensions per ratio ──────────────────────────── */
@@ -67,7 +86,13 @@ export default function AutoplayShell({
   units: desktopUnits,
   mobileUnits,
   desktopToMobile,
+  isAdmin = false,
+  mapTargets = [],
+  mapStyle = 'mapbox://styles/mapbox/dark-v11',
+  initialMapYaml = null,
 }: Props) {
+  /* ─── Map editor side panel (admin only) ─────────────────────────── */
+  const [mapEditorOpen, setMapEditorOpen] = useState(false)
   const [ratio, setRatio] = useState<AutoplayRatio>('9:16')
   const [activeUnit, setActiveUnit] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -646,6 +671,20 @@ export default function AutoplayShell({
             >
               Tune{cueOverrides.size > 0 ? ` · ${cueOverrides.size}*` : ''}
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => setMapEditorOpen((v) => !v)}
+                className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider border transition-colors"
+                style={{
+                  color: mapEditorOpen ? 'var(--color-bg)' : 'var(--color-text)',
+                  background: mapEditorOpen ? 'var(--color-accent)' : 'transparent',
+                  borderColor: mapEditorOpen ? 'var(--color-accent)' : 'var(--color-surface)',
+                }}
+                aria-pressed={mapEditorOpen}
+              >
+                Map
+              </button>
+            )}
             {/* Render-on-demand: button is disabled while there are unsaved
                 tune overrides so the rendered video can never lag behind
                 what the user sees in the player. Errors render inline below. */}
@@ -804,6 +843,25 @@ export default function AutoplayShell({
           onSave={handleSaveTunings}
           onReset={handleResetTunings}
         />
+      )}
+
+      {/* Map override editor — admin-only side panel anchored to the right
+          edge between the header and the playback controls. The iframe
+          keeps playing behind it; the panel overlays the right portion of
+          the stage. Below 1:1 aspect (portrait phones) the panel becomes
+          full-width so the editor stays usable. The top/bottom offsets
+          match the header (py-3 ≈ 52px) and footer (py-3 ≈ 64px) — header
+          can wrap on narrow viewports so leave a little extra room. */}
+      {isAdmin && mapEditorOpen && (
+        <div className="fixed top-[64px] bottom-[64px] right-0 z-40 w-full [@media(min-aspect-ratio:1/1)]:w-[420px] flex">
+          <AutoplayMapEditor
+            slug={slug}
+            targets={mapTargets}
+            initialYaml={initialMapYaml}
+            mapStyle={mapStyle}
+            onClose={() => setMapEditorOpen(false)}
+          />
+        </div>
       )}
 
       {/* Playback controls */}

@@ -7,15 +7,13 @@ import ThemeEditor from './ThemeEditor'
 import YamlCardsView from './YamlCardsView'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
-import MapEditor from './MapEditor'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
 import type { CachedVideo } from '@/lib/storyVideo'
 import type { CanvaDesignRow } from '@/lib/canva'
-import type { MapTarget } from '@/lib/storyMapOverrides'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'map' | 'settings'
+type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -29,9 +27,6 @@ interface InitialState {
   charts: ChartEntry[]
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
-  map_yaml: string | null
-  mapTargets: MapTarget[]
-  mapStyle: string
   videoCache: {
     '9:16': CachedVideo | null
     '16:9': CachedVideo | null
@@ -49,7 +44,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'share', label: 'Share' },
   { id: 'charts', label: 'Charts' },
   { id: 'narration', label: 'Narration' },
-  { id: 'map', label: 'Map' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -345,14 +339,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
             initialYaml={initial.tts_yaml}
             videoCache={initial.videoCache}
             canvaCache={initial.canvaCache}
-          />
-        )}
-        {tab === 'map' && (
-          <MapEditor
-            slug={slug}
-            targets={initial.mapTargets}
-            initialYaml={initial.map_yaml}
-            mapStyle={initial.mapStyle}
           />
         )}
         {tab === 'settings' && (

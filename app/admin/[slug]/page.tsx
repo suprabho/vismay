@@ -5,7 +5,6 @@ import { getContentSource } from '@/lib/contentSource'
 import EditorClient from '@/components/admin/EditorClient'
 import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
-import { buildMapTargets, type MapTarget } from '@/lib/storyMapOverrides'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { defaultNarrationText } from '@/lib/storyTts'
 import { getCachedVideo, type CachedVideo } from '@/lib/storyVideo'
@@ -54,15 +53,13 @@ export default async function EditStoryPage({ params }: Props) {
     loadVideoCache(slug),
     loadCanvaCache(slug),
   ])
-  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml, map_yaml] =
-    await Promise.all([
-      src.readMarkdown(slug),
-      src.readConfigYaml(slug),
-      src.readShareYaml(slug),
-      src.listChartIds(slug),
-      src.readTtsYaml(slug),
-      src.readMapYaml(slug),
-    ])
+  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml] = await Promise.all([
+    src.readMarkdown(slug),
+    src.readConfigYaml(slug),
+    src.readShareYaml(slug),
+    src.listChartIds(slug),
+    src.readTtsYaml(slug),
+  ])
   if (markdown == null) notFound()
 
   // Merge editable JSON-backed charts with YAML chart refs so stories whose
@@ -78,22 +75,14 @@ export default async function EditStoryPage({ params }: Props) {
     }),
   ]
 
-  // Build narration units for the Narration tab and map targets for the
-  // Map tab. Both depend on a parsed StoryConfig — load it once. Stories
-  // without a config (or with an invalid one) silently skip; both tabs
-  // handle the empty state.
+  // Build narration units for the Narration tab. Stories without a config
+  // (or with an invalid one) silently skip — the tab will render an empty
+  // state rather than 500ing.
   let narrationUnits: NarrationUnit[] = []
-  let mapTargets: MapTarget[] = []
-  let mapStyle = 'mapbox://styles/mapbox/dark-v11'
   try {
     if (await hasStoryConfig(slug)) {
       const story = await getStoryContent(slug)
-      // Map editor needs the BASE config (no overrides applied) so the
-      // "currently overridden vs default" comparison in the editor is
-      // meaningful — applyMapOverrides off keeps `section.map` as the
-      // ground truth.
       const config = await loadStoryConfig(slug)
-      mapStyle = config.defaults.mapStyle
       const { mobileUnits } = resolveUnits(slug, story.sections, config)
       narrationUnits = mobileUnits.map((u) => {
         const sliceIndex = u.sliceIndex ?? 0
@@ -115,10 +104,9 @@ export default async function EditStoryPage({ params }: Props) {
           preview: [u.heading, u.paragraphs[0]?.replace(/\*+/g, '')].filter(Boolean).join(' — '),
         }
       })
-      mapTargets = buildMapTargets(config)
     }
   } catch {
-    // Leave both empty; the tabs handle the empty state.
+    // Leave narrationUnits empty; the tab handles the empty state.
   }
 
   return (
@@ -131,9 +119,6 @@ export default async function EditStoryPage({ params }: Props) {
         charts,
         narrationUnits,
         tts_yaml: tts_yaml ?? null,
-        map_yaml: map_yaml ?? null,
-        mapTargets,
-        mapStyle,
         videoCache,
         canvaCache,
       }}
