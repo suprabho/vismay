@@ -120,25 +120,38 @@ export default function PdfMapBg({
   )
 
   const handleReady = useCallback(() => {
-    // Only freeze the canvas for the print path. Preview keeps the live map so
-    // edits and resizes flow through.
-    if (!lazy) {
-      const canvas = hostRef.current?.querySelector(
-        'canvas.mapboxgl-canvas'
-      )
-      if (canvas instanceof HTMLCanvasElement) {
-        try {
-          // `preserveDrawingBuffer: true` (set by MapboxBackground when
-          // `staticCapture`) keeps the WebGL buffer readable here — otherwise
-          // toDataURL returns transparent pixels.
-          setSnapshot(canvas.toDataURL('image/png'))
-        } catch {
-          // Tainted-canvas / OOM are non-fatal — fall back to the live canvas.
-        }
-      }
-    }
+    // Fire the readiness signal FIRST so the page-side fallback timer in
+    // lib/pdfReadiness can flip __pdfReady__ on schedule. The snapshot is a
+    // best-effort fallback for WebGL context eviction — it must never block
+    // or delay the gating signal, or the Playwright wait times out.
     onReady?.()
+    if (lazy) return
+    const canvas = hostRef.current?.querySelector('canvas.mapboxgl-canvas')
+    if (!(canvas instanceof HTMLCanvasElement)) return
+    // `toBlob` is async (background encoder thread in headless Chromium), so
+    // 20+ maps firing onReady within milliseconds don't pile up sync PNG
+    // encodes on the main thread. `preserveDrawingBuffer: true` (set by
+    // MapboxBackground when `staticCapture`) keeps the WebGL buffer readable
+    // here — otherwise the blob would be transparent.
+    try {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return
+          setSnapshot(URL.createObjectURL(blob))
+        },
+        'image/png'
+      )
+    } catch {
+      // Tainted-canvas / OOM are non-fatal — fall back to the live canvas.
+    }
   }, [lazy, onReady])
+
+  // Free the snapshot blob URL on unmount so long-lived previews don't leak.
+  useEffect(() => {
+    return () => {
+      if (snapshot) URL.revokeObjectURL(snapshot)
+    }
+  }, [snapshot])
 
   return (
     <div ref={hostRef} className="absolute inset-0">
