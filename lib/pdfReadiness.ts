@@ -37,20 +37,6 @@ declare global {
   }
 }
 
-// Temporary instrumentation toggle. Logs go to in-page console; Playwright
-// runner captures them via `page.on('console')`. Flip to false once we've
-// diagnosed the slides timeout.
-const PDF_READY_LOG = true
-const t0 =
-  typeof performance !== 'undefined' ? performance.now() : Date.now()
-function pdfLog(msg: string) {
-  if (!PDF_READY_LOG) return
-  const dt = (
-    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0
-  ).toFixed(0)
-  console.log(`[pdf-ready +${dt}ms] ${msg}`)
-}
-
 export function usePdfReadiness(expectedMaps: number): PdfReadinessApi {
   const stateRef = useRef({
     mapsReady: 0,
@@ -64,24 +50,19 @@ export function usePdfReadiness(expectedMaps: number): PdfReadinessApi {
     if (typeof window !== 'undefined') {
       window[READY_FLAG] = false
     }
-    pdfLog(`mount expectedMaps=${expectedMaps}`)
 
-    const finalize = (reason: string) => () => {
-      if (s.done) {
-        pdfLog(`finalize(${reason}) noop — already done`)
-        return
-      }
-      pdfLog(`finalize(${reason}) → __pdfReady__=true (mapsReady=${s.mapsReady}/${expectedMaps})`)
+    const finalize = () => {
+      if (s.done) return
       s.done = true
       if (s.fallbackTimer) clearTimeout(s.fallbackTimer)
       if (s.settleTimer) clearTimeout(s.settleTimer)
       window[READY_FLAG] = true
     }
 
-    s.fallbackTimer = setTimeout(finalize('fallback'), FALLBACK_TIMEOUT_MS)
+    s.fallbackTimer = setTimeout(finalize, FALLBACK_TIMEOUT_MS)
 
     if (expectedMaps === 0) {
-      s.settleTimer = setTimeout(finalize('no-maps'), POST_MAP_SETTLE_MS)
+      s.settleTimer = setTimeout(finalize, POST_MAP_SETTLE_MS)
     }
 
     return () => {
@@ -93,17 +74,12 @@ export function usePdfReadiness(expectedMaps: number): PdfReadinessApi {
   return {
     noteMapReady: () => {
       const s = stateRef.current
-      if (s.done) {
-        pdfLog('noteMapReady after done — ignored')
-        return
-      }
+      if (s.done) return
       s.mapsReady++
-      pdfLog(`noteMapReady → ${s.mapsReady}/${expectedMaps}`)
       if (s.mapsReady >= expectedMaps) {
         if (s.settleTimer) clearTimeout(s.settleTimer)
         s.settleTimer = setTimeout(() => {
           if (s.done) return
-          pdfLog(`settle done → __pdfReady__=true`)
           s.done = true
           if (s.fallbackTimer) clearTimeout(s.fallbackTimer)
           window[READY_FLAG] = true

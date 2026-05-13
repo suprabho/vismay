@@ -138,7 +138,18 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
   // names the chart JSON commonly uses (positive/text/bg).
   const palette = { ...cssVars, ...(colors as unknown as Record<string, string>) }
   const resolved = replaceColorTokens(step.option as unknown as JsonValue, palette) as EChartsOption
-  const option: EChartsOption = { backgroundColor: 'transparent', ...resolved }
+  // Slide PDFs (1920x1080 landscape) consistently render an opaque white
+  // chart canvas even with `backgroundColor: 'transparent'` set on the option
+  // — Chromium's PDF compositor doesn't preserve canvas alpha in the
+  // landscape path. A4-portrait reports are fine. Painting the canvas with
+  // the story's theme bg (--color-bg, resolved into cssVars) sidesteps the
+  // compositor entirely: the chart blends into the page background regardless
+  // of how alpha is handled.
+  const themeBg = cssVars.bg || cssVars.background
+  const option: EChartsOption = {
+    ...resolved,
+    backgroundColor: themeBg || 'transparent',
+  }
 
   return (
     <div
