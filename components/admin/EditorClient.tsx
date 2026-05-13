@@ -7,14 +7,12 @@ import ThemeEditor from './ThemeEditor'
 import YamlCardsView from './YamlCardsView'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
-import MapEditor from './MapEditor'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
 import type { CachedVideo } from '@/lib/storyVideo'
-import type { StoryConfig } from '@/lib/storyConfig.types'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'map' | 'settings'
+type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -28,10 +26,6 @@ interface InitialState {
   charts: ChartEntry[]
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
-  map_yaml: string | null
-  /** Base StoryConfig (without map overrides applied) — for the Map tab preview. */
-  mapConfig: StoryConfig | null
-  mapboxAccessToken: string
   videoCache: {
     '9:16': CachedVideo | null
     '16:9': CachedVideo | null
@@ -45,7 +39,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'share', label: 'Share' },
   { id: 'charts', label: 'Charts' },
   { id: 'narration', label: 'Narration' },
-  { id: 'map', label: 'Map' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -341,20 +334,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
             initialYaml={initial.tts_yaml}
             videoCache={initial.videoCache}
           />
-        )}
-        {tab === 'map' && (
-          initial.mapConfig ? (
-            <MapEditor
-              slug={slug}
-              config={initial.mapConfig}
-              initialYaml={initial.map_yaml}
-              accessToken={initial.mapboxAccessToken}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-neutral-500 text-sm p-8 text-center">
-              No story config — map overrides need a valid <code className="font-mono mx-1">{slug}.config.yaml</code> first.
-            </div>
-          )
         )}
         {tab === 'settings' && (
           <SettingsPanel

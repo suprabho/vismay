@@ -1,6 +1,5 @@
 import { parse as parseYaml } from 'yaml'
 import { getContentSource } from './contentSource'
-import { applyMapOverrides, parseMapOverrides } from './storyMapOverrides'
 import type {
   StoryConfig,
   StoryDefaults,
@@ -41,16 +40,8 @@ export async function hasStoryConfig(slug: string): Promise<boolean> {
  * Load and validate the YAML config for a story slug.
  * Throws if the file is missing, malformed, or missing required fields.
  */
-export async function loadStoryConfig(
-  slug: string,
-  options: { applyMapOverrides?: boolean } = {}
-): Promise<StoryConfig> {
-  const src = getContentSource()
-  const wantOverrides = options.applyMapOverrides !== false
-  const [file, mapYaml] = await Promise.all([
-    src.readConfigYaml(slug),
-    wantOverrides ? src.readMapYaml(slug) : Promise.resolve(null),
-  ])
+export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
+  const file = await getContentSource().readConfigYaml(slug)
   if (file == null) {
     throw new Error(`Story config for ${slug} is missing`)
   }
@@ -147,15 +138,10 @@ export async function loadStoryConfig(
     }
   })
 
-  const config: StoryConfig = {
+  return {
     defaults: { ...DEFAULTS, ...(raw.defaults ?? {}) },
     sections: raw.sections as StorySectionConfig[],
   }
-  if (!wantOverrides) return config
-  // Map override layer — admin Map tab persists `<slug>.map.yaml` (or
-  // stories.map_yaml). Validation skips entries that don't match a section
-  // so the file can lag behind config-yaml structural edits.
-  return applyMapOverrides(config, parseMapOverrides(mapYaml))
 }
 
 /**
