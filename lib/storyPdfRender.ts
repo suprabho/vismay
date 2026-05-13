@@ -55,7 +55,11 @@ const RENDER_CONFIG: Record<
   },
 }
 
-const READY_TIMEOUT_MS = 60_000
+// Must exceed the in-page fallback timer in lib/pdfReadiness.ts
+// (FALLBACK_TIMEOUT_MS = 60_000) so we can ride the fallback when a map
+// fails to fire onReady — pages with many maps can hit Chrome's WebGL
+// context limit and silently drop the oldest contexts.
+const READY_TIMEOUT_MS = 90_000
 
 export interface RenderResult {
   public_url: string
@@ -123,8 +127,12 @@ async function renderPdfBuffer(args: {
     // onReady callbacks AND a post-map settle window has elapsed (so ECharts
     // entrance animations finish). See lib/pdfReadiness.ts for the contract.
     args.log('waiting for window.__pdfReady__')
+    // Playwright's signature is (pageFunction, arg, options) — passing options
+    // as the 2nd arg silently turns into `arg` and the default 30s timeout
+    // applies. Use `undefined` for arg so the 3rd-position options stick.
     await page.waitForFunction(
       () => (window as unknown as { __pdfReady__?: boolean }).__pdfReady__ === true,
+      undefined,
       { timeout: READY_TIMEOUT_MS }
     )
 
