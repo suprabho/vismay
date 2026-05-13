@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapPinConfig, MapPalette } from '@/lib/storyConfig.types'
 import type { MapRegionLayer, HeatmapLayer, MapStep } from '@/types/story'
 import MapboxBackground from '@/components/story/charts/MapboxBackground'
@@ -52,15 +52,6 @@ const DEFAULT_FOCUS_AREA = { top: 0, left: 0, width: 1, height: 1 }
  *     keep mounted. Mirrors ShareMapBg. Avoids creating N simultaneous WebGL
  *     contexts on long reports — browsers cap at ~8–16 and evict the oldest,
  *     causing earlier sections to flash blank.
- *
- * Print-path persistence: as soon as a map fires `onReady` we snapshot its
- * canvas into a sibling `<img>` tucked behind the live WebGL canvas. Mapbox
- * keeps creating contexts for every map in the doc; when the cap is hit
- * Chromium silently drops the oldest, which turns the live canvas transparent.
- * The pre-snapshotted image then shines through, so the first maps in the
- * document don't end up blank in the captured PDF. Pin markers are DOM
- * elements managed by Mapbox and sit on top of both layers — they survive
- * context loss the same way.
  */
 export default function PdfMapBg({
   center,
@@ -85,7 +76,6 @@ export default function PdfMapBg({
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(!lazy)
-  const [snapshot, setSnapshot] = useState<string | null>(null)
 
   useEffect(() => {
     if (!lazy || mounted) return
@@ -119,83 +109,29 @@ export default function PdfMapBg({
     [center, zoom, pitch, bearing, pins, regions, heatmap]
   )
 
-  const handleReady = useCallback(() => {
-    // Fire the readiness signal FIRST so the page-side fallback timer in
-    // lib/pdfReadiness can flip __pdfReady__ on schedule. The snapshot is a
-    // best-effort fallback for WebGL context eviction — it must never block
-    // or delay the gating signal, or the Playwright wait times out.
-    onReady?.()
-    if (lazy) return
-    const canvas = hostRef.current?.querySelector('canvas.mapboxgl-canvas')
-    if (!(canvas instanceof HTMLCanvasElement)) return
-    // `toBlob` is async (background encoder thread in headless Chromium), so
-    // 20+ maps firing onReady within milliseconds don't pile up sync PNG
-    // encodes on the main thread. `preserveDrawingBuffer: true` (set by
-    // MapboxBackground when `staticCapture`) keeps the WebGL buffer readable
-    // here — otherwise the blob would be transparent.
-    try {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return
-          setSnapshot(URL.createObjectURL(blob))
-        },
-        'image/png'
-      )
-    } catch {
-      // Tainted-canvas / OOM are non-fatal — fall back to the live canvas.
-    }
-  }, [lazy, onReady])
-
-  // Free the snapshot blob URL on unmount so long-lived previews don't leak.
-  useEffect(() => {
-    return () => {
-      if (snapshot) URL.revokeObjectURL(snapshot)
-    }
-  }, [snapshot])
-
   return (
     <div ref={hostRef} className="absolute inset-0">
-      {snapshot && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={snapshot}
-          alt=""
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'fill',
-            zIndex: 0,
-            pointerEvents: 'none',
-          }}
+      {mounted && (
+        <MapboxBackground
+          accessToken={accessToken}
+          steps={steps}
+          activeStep={0}
+          style={style}
+          interactive={false}
+          staticCapture
+          onReady={onReady}
+          palette={palette}
+          fontstack={fontstack}
+          hideAllLabels
+          highlightCountry={highlightCountry}
+          highlightColor={highlightColor}
+          defaultOpacity={defaultOpacity}
+          defaultPinColor={defaultPinColor}
+          defaultPinRadius={defaultPinRadius}
+          landscapeFocusArea={focusArea}
+          portraitFocusArea={focusArea}
         />
       )}
-      <div
-        style={{ position: 'absolute', inset: 0, zIndex: 1 }}
-      >
-        {mounted && (
-          <MapboxBackground
-            accessToken={accessToken}
-            steps={steps}
-            activeStep={0}
-            style={style}
-            interactive={false}
-            staticCapture
-            onReady={handleReady}
-            palette={palette}
-            fontstack={fontstack}
-            hideAllLabels
-            highlightCountry={highlightCountry}
-            highlightColor={highlightColor}
-            defaultOpacity={defaultOpacity}
-            defaultPinColor={defaultPinColor}
-            defaultPinRadius={defaultPinRadius}
-            landscapeFocusArea={focusArea}
-            portraitFocusArea={focusArea}
-          />
-        )}
-      </div>
     </div>
   )
 }
