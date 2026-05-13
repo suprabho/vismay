@@ -48,6 +48,13 @@ interface Props {
     '9:16': CanvaDesignRow | null
     '16:9': CanvaDesignRow | null
   }
+  /**
+   * Fires after a successful save so the parent can refresh the baseline it
+   * passes back as `initialYaml`. Without this, switching off the Narration
+   * tab and back remounts this editor with the stale initial value and the
+   * textareas look empty even though the data is in the DB.
+   */
+  onSaved?: (yaml: string | null) => void
 }
 
 interface UnitState {
@@ -99,7 +106,7 @@ function serializeToYaml(states: UnitState[]): string {
   return stringifyYaml({ units: out })
 }
 
-export default function NarrationEditor({ slug, units, initialYaml, videoCache, canvaCache }: Props) {
+export default function NarrationEditor({ slug, units, initialYaml, videoCache, canvaCache, onSaved }: Props) {
   const [states, setStates] = useState<UnitState[]>(() =>
     buildInitialState(units, initialYaml)
   )
@@ -145,13 +152,14 @@ export default function NarrationEditor({ slug, units, initialYaml, videoCache, 
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
       setSavedYaml(draftYaml)
+      onSaved?.(draftYaml === '' ? null : draftYaml)
       setStatus({ type: 'ok', msg: 'Saved' })
     } catch (err) {
       setStatus({ type: 'err', msg: err instanceof Error ? err.message : 'Save failed' })
     } finally {
       setSaving(false)
     }
-  }, [draftYaml, slug])
+  }, [draftYaml, slug, onSaved])
 
   const handleRegenerate = useCallback(async () => {
     setRegenerating(true)

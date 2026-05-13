@@ -339,6 +339,9 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
             initialYaml={initial.tts_yaml}
             videoCache={initial.videoCache}
             canvaCache={initial.canvaCache}
+            onSaved={(yaml) => {
+              initial.tts_yaml = yaml
+            }}
           />
         )}
         {tab === 'settings' && (
