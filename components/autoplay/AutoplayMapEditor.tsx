@@ -397,7 +397,7 @@ function PanelShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="h-full flex flex-col bg-neutral-950 text-neutral-100 border-l border-white/10">
+    <div className="h-full w-full min-w-0 flex flex-col bg-neutral-950 text-neutral-100 border-l border-white/10">
       <header className="px-3 py-2.5 border-b border-white/10 flex items-center gap-2 shrink-0 bg-neutral-900/50">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium leading-tight">{title}</div>
