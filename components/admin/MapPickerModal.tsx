@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import {
@@ -262,7 +263,11 @@ export default function MapPickerModal({
   const dirty = desktopDirty || mobileDirty
   const showClearMobile = target === 'mobile' && (hadMobileOverride || mobileDirty)
 
-  return (
+  // Portal to <body> so the modal escapes any ancestor stacking context. The
+  // autoplay map editor renders this modal inside a `fixed z-40` side panel,
+  // which would otherwise trap the modal's `z-[100]` and hide the header
+  // behind the autoplay page's `z-50` top nav.
+  const modal = (
     <div className="fixed inset-0 z-[100] bg-neutral-950 flex flex-col">
       <header
         className="flex items-center gap-3 px-4 py-3 border-b border-white/10 pt-[max(env(safe-area-inset-top),0.75rem)]"
@@ -371,6 +376,9 @@ export default function MapPickerModal({
       </footer>
     </div>
   )
+
+  if (typeof document === 'undefined') return null
+  return createPortal(modal, document.body)
 }
 
 function TargetToggle({
