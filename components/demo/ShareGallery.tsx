@@ -19,7 +19,7 @@ const RATIO_BOX: Record<Ratio, string> = {
 const RATIO_GRID: Record<Ratio, string> = {
   '1:1': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
   '3:4': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-  '4:3': 'grid-cols-1 md:grid-cols-2',
+  '4:3': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
 }
 
 export default function ShareGallery({ assets }: Props) {
@@ -99,7 +99,7 @@ export default function ShareGallery({ assets }: Props) {
           {visible.map((item) => (
             <div key={item.card_id} className="flex flex-col gap-2">
               <div
-                className="relative w-full overflow-hidden"
+                className="relative w-full overflow-hidden rounded-2xl"
                 style={{
                   aspectRatio: RATIO_BOX[activeRatio],
                   background: 'var(--demo-bg-2)',

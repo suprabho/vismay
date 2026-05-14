@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Cached {
   public_url: string
@@ -48,14 +48,13 @@ export default function VideoGallery({ storySlug, v916, v169 }: Props) {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 items-end">
+        <div className="flex flex-col md:flex-row gap-8 md:gap-10 md:items-end md:justify-center">
           <VideoTile
             label="9:16 · vertical"
             aspect="9:16"
             ratio="9 / 16"
             cached={v916}
             storySlug={storySlug}
-            maxWidth={360}
           />
           <VideoTile
             label="16:9 · landscape"
@@ -76,18 +75,18 @@ function VideoTile({
   ratio,
   cached,
   storySlug,
-  maxWidth,
 }: {
   label: string
   aspect: '9:16' | '16:9'
   ratio: string
   cached: Cached | null
   storySlug: string
-  maxWidth?: number
 }) {
   const [status, setStatus] = useState<Status>(
     cached ? { kind: 'ready', public_url: cached.public_url } : { kind: 'idle' }
   )
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     // No render in flight on mount — sales presses "Render now" if needed.
@@ -119,24 +118,66 @@ function VideoTile({
     }
   }
 
+  function handlePlay() {
+    const v = videoRef.current
+    if (!v) return
+    v.play().catch(() => {})
+  }
+
   return (
-    <div className="flex flex-col gap-3" style={{ maxWidth }}>
+    <div className="flex flex-col gap-3 md:w-auto">
       <div
-        className="relative w-full overflow-hidden"
+        className="relative w-full overflow-hidden rounded-2xl mx-auto md:h-[440px] md:w-auto"
         style={{
           aspectRatio: ratio,
           background: '#000',
           border: '1px solid var(--demo-fg-line)',
+          boxShadow: '0 20px 60px -20px rgba(0,0,0,0.5)',
         }}
       >
         {status.kind === 'ready' ? (
-          <video
-            src={status.public_url}
-            controls
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <>
+            <video
+              ref={videoRef}
+              src={status.public_url}
+              controls={isPlaying}
+              playsInline
+              preload="metadata"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {!isPlaying && (
+              <button
+                type="button"
+                onClick={handlePlay}
+                aria-label="Play video"
+                className="absolute inset-0 flex items-center justify-center group cursor-pointer transition-colors"
+                style={{ background: 'rgba(0,0,0,0.18)' }}
+              >
+                <span
+                  className="flex items-center justify-center rounded-full transition-transform group-hover:scale-110"
+                  style={{
+                    width: 78,
+                    height: 78,
+                    background: 'rgba(255,255,255,0.92)',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
+                  }}
+                >
+                  <svg
+                    width="28"
+                    height="32"
+                    viewBox="0 0 28 32"
+                    fill="none"
+                    style={{ marginLeft: 4 }}
+                    aria-hidden="true"
+                  >
+                    <path d="M2 2L26 16L2 30V2Z" fill="#111" />
+                  </svg>
+                </span>
+              </button>
+            )}
+          </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-center px-4">
             <div>
@@ -153,7 +194,7 @@ function VideoTile({
               {status.kind === 'idle' || status.kind === 'error' ? (
                 <button
                   onClick={trigger}
-                  className="text-xs uppercase tracking-[0.2em] px-4 py-2"
+                  className="text-xs uppercase tracking-[0.2em] px-4 py-2 rounded-full"
                   style={{
                     border: '1px solid rgb(var(--demo-fg-rgb) / 0.3)',
                     color: 'var(--demo-fg)',

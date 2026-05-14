@@ -60,13 +60,13 @@ export default async function DemoRoute({ params }: Props) {
 
   // Pull every cached asset for the underlying story in parallel — the
   // gallery components handle missing rows gracefully.
-  const [shareAssets, videoFull, videoPreview, pdfReport, pdfSlides, storyTheme] = await Promise.all([
+  const [shareAssets, videoFull, videoPreview, pdfReport, pdfSlides, storyMeta] = await Promise.all([
     listShareAssetsForDemo(demo.id),
     fetchVideo(supabase, demo.story_slug, '9:16', true),
     fetchVideo(supabase, demo.story_slug, '16:9', true),
     fetchPdf(supabase, demo.story_slug, 'report'),
     fetchPdf(supabase, demo.story_slug, 'slides'),
-    fetchStoryTheme(demo.story_slug),
+    fetchStoryMeta(demo.story_slug),
   ])
 
   return (
@@ -80,21 +80,28 @@ export default async function DemoRoute({ params }: Props) {
       videoPreview169={videoPreview}
       pdfReport={pdfReport}
       pdfSlides={pdfSlides}
-      theme={storyTheme}
-      fontImportUrl={storyTheme ? getFontImportUrl(storyTheme.fonts) : null}
+      theme={storyMeta?.theme ?? null}
+      auraSlug={storyMeta?.aura ?? null}
+      fontImportUrl={storyMeta?.theme ? getFontImportUrl(storyMeta.theme.fonts) : null}
     />
   )
 }
 
 /**
- * Read the underlying story's theme so the demo wraps it in the same
- * palette + typography. If the story can't be loaded (e.g. its config
- * is broken), return null and let DemoPage fall back to its defaults.
+ * Read the underlying story's theme + aura slug so the demo wraps it in
+ * the same palette/typography and drops the same aura visual into the
+ * hero. If the story can't be loaded (e.g. its config is broken), return
+ * null and let DemoPage fall back to its defaults.
  */
-async function fetchStoryTheme(storySlug: string): Promise<Theme | null> {
+async function fetchStoryMeta(
+  storySlug: string
+): Promise<{ theme: Theme | null; aura: string | null } | null> {
   try {
     const story = await getStoryContent(storySlug)
-    return story.frontmatter.theme ?? null
+    return {
+      theme: story.frontmatter.theme ?? null,
+      aura: story.frontmatter.aura ?? null,
+    }
   } catch {
     return null
   }

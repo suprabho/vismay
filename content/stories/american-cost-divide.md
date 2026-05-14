@@ -3,6 +3,7 @@ title: "The American Cost Divide"
 subtitle: "Americans are moving — fast. But the data on where they're going, layered against where they should, says the wealth migration is downhill on quality. Out of the country's 10 most livable states, only one is gaining wealth at scale. A map of who's trading up, who's trading down, and the two states that break every rule."
 byline: "vizmaya · April 2026"
 date: "2026-04-28"
+aura: blue-abstract-background-patriotic-stars-flowing-lines
 theme:
   colors:
     background: "#0d1521"

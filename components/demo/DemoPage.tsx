@@ -12,6 +12,7 @@ import type { ComponentType } from 'react'
 import type { DemoContent, LucideIcon } from '@/lib/storyDemoConfig'
 import type { Theme } from '@/types/story'
 import VizmayaLogo from '@/components/VizmayaLogo'
+import AuraBackground from '@/components/AuraBackground'
 import StoryPreview from './StoryPreview'
 import ShareGallery from './ShareGallery'
 import VideoGallery from './VideoGallery'
@@ -84,6 +85,8 @@ interface Props {
   pdfSlides: { public_url: string; thumbnail_url: string | null } | null
   /** Theme of the underlying story — drives demo color tokens + fonts. */
   theme?: Theme | null
+  /** Aura embed slug for the underlying story — rendered behind the hero. */
+  auraSlug?: string | null
   /** Google Fonts import URL for the story's serif/sans/mono. */
   fontImportUrl?: string | null
 }
@@ -121,6 +124,7 @@ export default function DemoPage({
   pdfReport,
   pdfSlides,
   theme,
+  auraSlug,
   fontImportUrl,
 }: Props) {
   const effectiveTheme = theme ?? FALLBACK_THEME
@@ -151,7 +155,7 @@ export default function DemoPage({
     >
       <FontImports url={fontImportUrl ?? null} />
       <DemoNav logoPalette={logoPalette} />
-      <Hero content={content.hero} />
+      <Hero content={content.hero} auraSlug={auraSlug ?? null} />
       <DemoSection content={content.demo_section} storySlug={storySlug} />
       <ValueProps items={content.value_props} />
       <Offering content={content.offering} />
@@ -221,6 +225,8 @@ function FontImports({ url }: { url: string | null }) {
 ${fraunces}
 ${story}
 .demo-serif { font-family: var(--demo-serif-font, 'Fraunces', Georgia, serif); font-variation-settings: "opsz" 144; }
+.demo-hero-aura .bn-aura { position: absolute; inset: 0; overflow: hidden; }
+.demo-hero-aura .bn-aura iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent; }
         `,
       }}
     />
@@ -239,12 +245,35 @@ interface LogoPalette {
   line: string
 }
 
-function Hero({ content }: { content: DemoContent['hero'] }) {
+function Hero({
+  content,
+  auraSlug,
+}: {
+  content: DemoContent['hero']
+  auraSlug: string | null
+}) {
   return (
     <header
       className="relative overflow-hidden"
       style={{ background: 'var(--demo-bg)', minHeight: '92vh' }}
     >
+      {auraSlug && (
+        <div
+          className="absolute inset-0 pointer-events-none demo-hero-aura"
+          aria-hidden
+        >
+          <AuraBackground slug={auraSlug} />
+        </div>
+      )}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 1200px 700px at 75% 20%, rgb(var(--demo-bg-rgb) / 0.0), rgb(var(--demo-bg-rgb) / 0.55) 55%, rgb(var(--demo-bg-rgb) / 0.92) 100%),
+            linear-gradient(to bottom, rgb(var(--demo-bg-rgb) / 0.35), rgb(var(--demo-bg-rgb) / 0.85))
+          `,
+        }}
+      />
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
