@@ -1034,6 +1034,7 @@ export default function MapboxBackground({
 
       const color = pin.color ?? defaultPinColor
       const radius = pin.radius ?? defaultPinRadius
+      const opacity = pin.opacity ?? 0.85
       const pulse = pin.pulse !== false
 
       const el = document.createElement('div')
@@ -1043,7 +1044,7 @@ export default function MapboxBackground({
         height: ${radius * 2}px;
         border-radius: 50%;
         background: ${color};
-        opacity: 0.85;
+        opacity: ${opacity};
         ${pulse ? `box-shadow: 0 0 0 0 ${color}; animation: mapbox-pulse 2s ease-out infinite;` : ''}
       `
 

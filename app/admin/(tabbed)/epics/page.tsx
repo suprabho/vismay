@@ -31,16 +31,12 @@ export default async function AdminEpicsListPage() {
                   <div className="text-xs text-neutral-500 truncate mt-0.5">{e.slug}</div>
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
-                  {hasTheme ? (
-                    <Link
-                      href={`/admin/epics/${e.slug}`}
-                      className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
-                    >
-                      edit theme →
-                    </Link>
-                  ) : (
-                    <span className="text-xs text-neutral-600 px-3 py-1.5">no theme registered</span>
-                  )}
+                  <Link
+                    href={`/admin/epics/${e.slug}`}
+                    className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
+                  >
+                    {hasTheme ? 'edit →' : 'edit stories →'}
+                  </Link>
                 </div>
               </div>
             </li>

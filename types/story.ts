@@ -117,6 +117,7 @@ export interface MapPin {
   color?: string
   label?: string
   radius?: number
+  opacity?: number
   pulse?: boolean
   /** Preferred popup anchor direction. Controls which side of the pin the label appears on. */
   labelAnchor?: 'top' | 'bottom' | 'left' | 'right'

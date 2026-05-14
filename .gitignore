@@ -45,3 +45,5 @@ next-env.d.ts
 
 # local-only data repo (kept alongside project, not inside)
 epstein-network-data/
+
+vizmaya-data/

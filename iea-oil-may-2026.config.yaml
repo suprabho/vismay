@@ -1,0 +1,517 @@
+# Story config — iea-oil-may-2026
+#
+# The IEA's May 2026 Oil Market Report. The camera opens on the Strait
+# of Hormuz, descends into the Gulf to anchor the supply shock, walks
+# the OPEC+ ledger, then crosses to the Atlantic Basin (US, Brazil,
+# Canada, Kazakhstan, Venezuela) and Russia to show who is plugging the
+# gap. Act III flies east — Beijing, Tokyo, Seoul, Delhi — for the
+# demand collapse, then pulls back to a world view for prices,
+# inventories and the closing thesis.
+#
+# COORDINATES (focal points):
+#   Strait of Hormuz                 56.2500, 26.5700
+#   Riyadh, Saudi Arabia             46.6753, 24.7136
+#   Yanbu (Red Sea — pipeline outlet) 38.0582, 24.0895
+#   Abu Dhabi, UAE                   54.3773, 24.4539
+#   Fujairah (Indian Ocean outlet)   56.3265, 25.1288
+#   Basra, Iraq                      47.8000, 30.5000
+#   Kuwait City                      47.9774, 29.3759
+#   Tehran                           51.3890, 35.6892
+#   Houston, TX                     -95.3698, 29.7604
+#   Rio de Janeiro                  -43.1729, -22.9068
+#   Edmonton, Canada               -113.4938,  53.5461
+#   Tengiz (Kazakhstan CPC source)   53.4500, 46.0500
+#   Caracas, Venezuela              -66.9036,  10.4806
+#   Moscow                           37.6173,  55.7558
+#   Beijing                         116.4074,  39.9042
+#   Tokyo                           139.6917,  35.6895
+#   Seoul                           126.9780,  37.5665
+#   New Delhi                        77.2090,  28.6139
+#
+# Choropleth ramps:
+#   Shut-in severity (Gulf):  [-3.5, -2.0, -1.0, 0]  →  [$red, $accent, $amber, $surface]
+#   Atlantic Basin gains:     [0, 0.5, 1.5]           →  [$surface, $amber, $accent]
+#   Demand cuts (Asia):       [-3.5, -1.5, 0]         →  [$red, $accent, $surface]
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d68c3a"
+  pinRadius: 12
+  flySpeed: 1.2
+  mapPalette:
+    land: "#0b1013"
+    water: "#0d1418"
+    border: "#3a2a20"
+    labelText: "#d8cfc2"
+    labelHalo: "#0b1013"
+sections:
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+  - id: hero
+    kind: hero
+    text: "When the Strait Closed"
+    eyebrow: "Oil Market Report · May 2026"
+    map:
+      center: [50.0, 25.0]
+      zoom: 2.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 14.4 mb/d Gulf shut-in
+  # ═══════════════════════════════════════════════
+  - id: gulf-shut-in-stat
+    kind: stat
+    text: "14.4 mb/d"
+    color: red
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [52.0, 26.5]
+      zoom: 4.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        # Pin colors below are sampled from the choropleth ramp at each
+        # country's value — strait pin uses the strongest stop ($red) since
+        # it sits over open water.
+        - coordinates: [56.2500, 26.5700]
+          label: "Strait of Hormuz — closed"
+          color: "#E24B4A"   # $red — focal alarm
+          labelAnchor: right
+        - coordinates: [46.6753, 24.7136]
+          label: "Riyadh"
+          color: "#E64B3B"   # SA (-3.2) on red↔accent
+          labelAnchor: left
+        - coordinates: [54.3773, 24.4539]
+          label: "Abu Dhabi"
+          color: "#D7942C"   # AE (-0.9) on amber↔surface
+          labelAnchor: bottom
+        - coordinates: [47.8000, 30.5000]
+          label: "Basra"
+          color: "#EA4A2C"   # IQ (-2.9) on red↔accent
+          labelAnchor: top
+        - coordinates: [47.9774, 29.3759]
+          label: "Kuwait City"
+          color: "#F54900"   # KW (-2.0) — exact $accent stop
+          labelAnchor: left
+      regions:
+        level: country
+        ramp: [-3.5, -2.0, -1.0, 0]
+        colors: ["$red", "$accent", "$amber", "$surface"]
+        items:
+          - code: "SA"
+            value: -3.2
+          - code: "AE"
+            value: -0.9
+          - code: "IQ"
+            value: -2.9
+          - code: "KW"
+            value: -2.0
+          - code: "QA"
+            value: -1.4
+          - code: "IR"
+            value: -1.2
+      mobile:
+        center: [52.0, 27.5]
+        zoom: 3.8
+  - id: shape-of-shock
+    text: "The shape of the shock"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [50.0, 28.0]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [-3.5, -2.0, -1.0, 0]
+        colors: ["$red", "$accent", "$amber", "$surface"]
+        items:
+          - code: "SA"
+            value: -3.2
+          - code: "AE"
+            value: -0.9
+          - code: "IQ"
+            value: -2.9
+          - code: "KW"
+            value: -2.0
+          - code: "QA"
+            value: -1.4
+          - code: "IR"
+            value: -1.2
+  # ═══════════════════════════════════════════════
+  # ACT I — THE STRAIT
+  # ═══════════════════════════════════════════════
+  - id: act-i-strait
+    text: "Act I: The Strait"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [44.9857, 21.6386]
+      zoom: 3.26
+      pitch: 30
+      bearing: -10
+      opacity: 0.65
+      pins:
+        - coordinates: [56.2500, 26.5700]
+          label: "Strait of Hormuz"
+          radius: 20
+          opacity: 0.5
+          color: "#c0492e"
+          labelAnchor: right
+        - coordinates: [38.0582, 24.0895]
+          label: "Yanbu — Red Sea outlet"
+          color: "#7fa66a"
+          labelAnchor: left
+          pulse: false
+        - coordinates: [56.3265, 25.1288]
+          label: "Fujairah"
+          color: "#7fa66a"
+          labelAnchor: right
+          pulse: false
+        - coordinates: [46.6753, 24.7136]
+          label: "Riyadh"
+          color: "#d68c3a"
+          labelAnchor: bottom
+          pulse: false
+        - coordinates: [54.3773, 24.4539]
+          label: "Abu Dhabi"
+          color: "#d68c3a"
+          labelAnchor: bottom
+          pulse: false
+  - id: opec-ledger
+    text: "The OPEC+ ledger, April 2026"
+    chart: data:supply-shock
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [48.0, 28.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [-3.5, -2.0, -1.0, 0]
+        colors: ["$red", "$accent", "$amber", "$surface"]
+        items:
+          - code: "SA"
+            value: -3.2
+          - code: "AE"
+            value: -0.9
+          - code: "IQ"
+            value: -2.9
+          - code: "KW"
+            value: -2.0
+          - code: "QA"
+            value: -1.4
+          - code: "IR"
+            value: -1.2
+          - code: "RU"
+            value: -0.5
+  # ═══════════════════════════════════════════════
+  # ACT II — PLUGGING THE GAP
+  # ═══════════════════════════════════════════════
+  - id: act-ii-plugging
+    text: "Act II: Plugging the gap"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-30.0, 25.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [-95.3698, 29.7604]
+          label: "Houston — record US exports"
+          color: "#d68c3a"
+          labelAnchor: right
+        - coordinates: [-43.1729, -22.9068]
+          label: "Rio — pre-salt running flat-out"
+          color: "#d68c3a"
+          labelAnchor: top
+        - coordinates: [-113.4938, 53.5461]
+          label: "Edmonton — Canadian heavy"
+          color: "#d68c3a"
+          labelAnchor: bottom
+        - coordinates: [53.4500, 46.0500]
+          label: "Tengiz — CPC via Black Sea"
+          color: "#d68c3a"
+          labelAnchor: top
+        - coordinates: [-66.9036, 10.4806]
+          label: "Caracas — barrels back in the market"
+          color: "#d68c3a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [0, 0.5, 1.5]
+        colors: ["$surface", "$amber", "$accent"]
+        items:
+          - code: "US"
+            value: 1.5
+          - code: "BR"
+            value: 0.8
+          - code: "CA"
+            value: 0.4
+          - code: "KZ"
+            value: 0.5
+          - code: "VE"
+            value: 0.3
+          - code: "RU"
+            value: 0.2
+  - id: atlantic-stat
+    kind: stat
+    text: "3.5 mb/d"
+    color: accent
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-50.0, 20.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [-95.3698, 29.7604]
+          label: "Houston"
+          color: "#d68c3a"
+          labelAnchor: right
+        - coordinates: [-43.1729, -22.9068]
+          label: "Rio de Janeiro"
+          color: "#d68c3a"
+          labelAnchor: top
+        - coordinates: [-113.4938, 53.5461]
+          label: "Edmonton"
+          color: "#d68c3a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [0, 0.5, 1.5]
+        colors: ["$surface", "$amber", "$accent"]
+        items:
+          - code: "US"
+            value: 1.5
+          - code: "BR"
+            value: 0.8
+          - code: "CA"
+            value: 0.4
+          - code: "KZ"
+            value: 0.5
+          - code: "VE"
+            value: 0.3
+  # ═══════════════════════════════════════════════
+  # ACT III — DEMAND CRACKS TOO
+  # ═══════════════════════════════════════════════
+  - id: act-iii-demand
+    text: "Act III: Demand cracks too"
+    chart: data:asia-imports
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [110.0, 30.0]
+      zoom: 2.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [116.4074, 39.9042]
+          label: "Beijing — imports -3.6 mb/d"
+          color: "#c0492e"
+          labelAnchor: top
+        - coordinates: [139.6917, 35.6895]
+          label: "Tokyo — -1.9 mb/d"
+          color: "#d68c3a"
+          labelAnchor: right
+        - coordinates: [126.9780, 37.5665]
+          label: "Seoul — -1.0 mb/d"
+          color: "#d68c3a"
+          labelAnchor: left
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi — -0.76 mb/d"
+          color: "#d68c3a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [-3.5, -1.5, 0]
+        colors: ["$red", "$accent", "$surface"]
+        items:
+          - code: "CN"
+            value: -3.6
+          - code: "JP"
+            value: -1.9
+          - code: "KR"
+            value: -1.0
+          - code: "IN"
+            value: -0.76
+  - id: demand-stat
+    kind: stat
+    text: "-2.4 mb/d"
+    color: red
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [80.0, 25.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [-3.5, -1.5, 0]
+        colors: ["$red", "$accent", "$surface"]
+        items:
+          - code: "CN"
+            value: -3.6
+          - code: "JP"
+            value: -1.9
+          - code: "KR"
+            value: -1.0
+          - code: "IN"
+            value: -0.76
+          - code: "US"
+            value: -0.4
+          - code: "DE"
+            value: -0.2
+          - code: "FR"
+            value: -0.15
+          - code: "GB"
+            value: -0.15
+  - id: refineries
+    text: "Refineries, in retreat"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [60.0, 28.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+  # ═══════════════════════════════════════════════
+  # INVENTORIES + PRICES
+  # ═══════════════════════════════════════════════
+  - id: inventories
+    text: "Inventories, draining"
+    chart: data:inventory-draws
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [40.0, 30.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.30
+  - id: price-stat
+    kind: stat
+    text: "$120.36"
+    color: amber
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [50.0, 25.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.30
+      pins:
+        - coordinates: [56.2500, 26.5700]
+          label: "Hormuz — the pivot"
+          color: "#c0492e"
+          labelAnchor: right
+  # ═══════════════════════════════════════════════
+  # CLOSING
+  # ═══════════════════════════════════════════════
+  - id: assumptions
+    text: "What the May report assumes"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [50.0, 25.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.30
+  - id: closing
+    text: "The shape of the next six months"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [30.0, 25.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.25
+      regions:
+        level: country
+        ramp: [-3.5, -2.0, -1.0, 0, 0.5, 1.5]
+        colors: ["$red", "$accent", "$amber", "$surface", "$amber", "$accent"]
+        items:
+          - code: "SA"
+            value: -3.2
+          - code: "AE"
+            value: -0.9
+          - code: "IQ"
+            value: -2.9
+          - code: "KW"
+            value: -2.0
+          - code: "QA"
+            value: -1.4
+          - code: "IR"
+            value: -1.2
+          - code: "US"
+            value: 1.5
+          - code: "BR"
+            value: 0.8
+          - code: "KZ"
+            value: 0.5
+          - code: "CA"
+            value: 0.4
+          - code: "VE"
+            value: 0.3
+          - code: "RU"
+            value: 0.2
+          - code: "CN"
+            value: -3.6
+          - code: "JP"
+            value: -1.9
+          - code: "KR"
+            value: -1.0
+          - code: "IN"
+            value: -0.76
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [40.0, 25.0]
+      zoom: 1.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

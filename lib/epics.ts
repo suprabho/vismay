@@ -125,6 +125,85 @@ export async function getEpicStories(epicSlug: string): Promise<EpicStory[]> {
     }))
 }
 
+// Admin: every story plus whether it currently belongs to the given epic and
+// its position. Includes draft/archived stories so the editor can stage
+// memberships before publishing.
+export interface EpicMembershipRow {
+  slug: string
+  title: string
+  status: string
+  inEpic: boolean
+  position: number | null
+}
+
+export async function getEpicMemberships(epicSlug: string): Promise<EpicMembershipRow[]> {
+  const sb = createServiceClient()
+  const [storiesR, membersR] = await Promise.all([
+    sb.from('stories').select('slug, title, status'),
+    sb.from('story_epics').select('story_slug, position').eq('epic_slug', epicSlug),
+  ])
+  if (storiesR.error) throw new Error(`getEpicMemberships stories: ${storiesR.error.message}`)
+  if (membersR.error) throw new Error(`getEpicMemberships members: ${membersR.error.message}`)
+
+  const positions = new Map<string, number | null>()
+  for (const m of (membersR.data ?? []) as { story_slug: string; position: number | null }[]) {
+    positions.set(m.story_slug, m.position)
+  }
+
+  return ((storiesR.data ?? []) as { slug: string; title: string | null; status: string }[])
+    .map((s) => ({
+      slug: s.slug,
+      title: s.title ?? s.slug,
+      status: s.status,
+      inEpic: positions.has(s.slug),
+      position: positions.get(s.slug) ?? null,
+    }))
+    .sort((a, b) => {
+      // Members first, sorted by position; then non-members alphabetically.
+      if (a.inEpic !== b.inEpic) return a.inEpic ? -1 : 1
+      if (a.inEpic) {
+        const ap = a.position ?? Number.POSITIVE_INFINITY
+        const bp = b.position ?? Number.POSITIVE_INFINITY
+        if (ap !== bp) return ap - bp
+      }
+      return a.title.localeCompare(b.title)
+    })
+}
+
+// Replace the full set of story_epics rows for an epic with the given list.
+// Deletes anything not in the target, then upserts the target — Supabase JS
+// has no transactions, but the delete-then-upsert window is acceptable for
+// an admin-only tool.
+export async function setEpicMemberships(
+  epicSlug: string,
+  memberships: { storySlug: string; position: number | null }[],
+): Promise<void> {
+  const sb = createServiceClient()
+  const targetSlugs = memberships.map((m) => m.storySlug)
+
+  // Delete rows for this epic that aren't in the target list.
+  let del = sb.from('story_epics').delete().eq('epic_slug', epicSlug)
+  if (targetSlugs.length > 0) {
+    del = del.not('story_slug', 'in', `(${targetSlugs.map((s) => `"${s}"`).join(',')})`)
+  }
+  const { error: delError } = await del
+  if (delError) throw new Error(`setEpicMemberships delete: ${delError.message}`)
+
+  if (memberships.length === 0) return
+
+  const { error: upsertError } = await sb
+    .from('story_epics')
+    .upsert(
+      memberships.map((m) => ({
+        epic_slug: epicSlug,
+        story_slug: m.storySlug,
+        position: m.position,
+      })),
+      { onConflict: 'story_slug,epic_slug' },
+    )
+  if (upsertError) throw new Error(`setEpicMemberships upsert: ${upsertError.message}`)
+}
+
 // ---------------------------------------------------------------------------
 // IEA-specific reads.
 
