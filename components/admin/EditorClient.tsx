@@ -13,7 +13,7 @@ import type { Theme } from '@/types/story'
 import type { CachedVideo } from '@/lib/storyVideo'
 import type { CanvaDesignRow } from '@/lib/canva'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'share' | 'charts' | 'narration' | 'settings'
+type Tab = 'theme' | 'markdown' | 'config' | 'charts' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -23,7 +23,6 @@ interface ChartEntry {
 interface InitialState {
   markdown: string
   config_yaml: string
-  share_yaml: string
   charts: ChartEntry[]
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
@@ -41,7 +40,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'theme', label: 'Theme' },
   { id: 'markdown', label: 'Markdown' },
   { id: 'config', label: 'Config' },
-  { id: 'share', label: 'Share' },
   { id: 'charts', label: 'Charts' },
   { id: 'narration', label: 'Narration' },
   { id: 'settings', label: 'Settings' },
@@ -58,7 +56,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
   const [tab, setTab] = useState<Tab>('theme')
   const [markdown, setMarkdown] = useState(initial.markdown)
   const [config, setConfig] = useState(initial.config_yaml)
-  const [share, setShare] = useState(initial.share_yaml)
   const [charts, setCharts] = useState(initial.charts)
   const [saving, start] = useTransition()
   const [apiStatus, setApiStatus] = useState<{ type: 'idle' | 'ok' | 'err' | 'warn'; msg?: string }>({ type: 'idle' })
@@ -82,9 +79,8 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
   const dirty = useMemo(
     () =>
       markdown !== initial.markdown ||
-      config !== initial.config_yaml ||
-      share !== initial.share_yaml,
-    [markdown, config, share, initial]
+      config !== initial.config_yaml,
+    [markdown, config, initial]
   )
 
   // Warn before navigating away with unsaved work.
@@ -109,7 +105,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, saving, markdown, config, share])
+  }, [dirty, saving, markdown, config])
 
   function save() {
     start(async () => {
@@ -117,7 +113,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
       const payload: Record<string, any> = {}
       if (markdown !== initial.markdown) payload.markdown = markdown
       if (config !== initial.config_yaml) payload.config_yaml = config.length === 0 ? null : config
-      if (share !== initial.share_yaml) payload.share_yaml = share.length === 0 ? null : share
       if (parsed.data.status) payload.status = parsed.data.status
       if (parsed.data.listed !== undefined) payload.listed = parsed.data.listed
       if (parsed.data.displayOrder !== undefined) payload.displayOrder = parsed.data.displayOrder
@@ -139,7 +134,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
       // Update baseline so dirty goes false.
       initial.markdown = markdown
       initial.config_yaml = config
-      initial.share_yaml = share
     })
   }
 
@@ -160,7 +154,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
 
     let nextMd: string | null = null
     let nextConfig: string | null = null
-    let nextShare: string | null = null
 
     for (const file of files) {
       const name = file.name
@@ -170,8 +163,20 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           nextConfig = await file.text()
           applied.push(`config ← ${name}`)
         } else if (lower.endsWith('.share.yaml') || lower.endsWith('.share.yml')) {
-          nextShare = await file.text()
-          applied.push(`share ← ${name}`)
+          // Share has no editor buffer (it's edited on /story/<slug>/share),
+          // so persist directly — same pattern as chart JSON below.
+          const text = await file.text()
+          const res = await fetch(`/api/admin/stories/${slug}`, {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ share_yaml: text.length === 0 ? null : text }),
+          })
+          if (!res.ok) {
+            const body = await res.json().catch(() => null)
+            errors.push(`${name}: ${body?.error ?? `HTTP ${res.status}`}`)
+            continue
+          }
+          applied.push(`share ← ${name} (saved)`)
         } else if (lower.endsWith('.md') || lower.endsWith('.markdown')) {
           nextMd = await file.text()
           applied.push(`markdown ← ${name}`)
@@ -209,7 +214,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
 
     if (nextMd != null) setMarkdown(nextMd)
     if (nextConfig != null) setConfig(nextConfig)
-    if (nextShare != null) setShare(nextShare)
     if (chartIds.length > 0) {
       setCharts((prev) => {
         const existing = new Set(prev.map((c) => c.id))
@@ -310,22 +314,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
               value={config}
               onChange={setConfig}
               placeholder="# no config yet — paste YAML to create"
-            />
-          </>
-        )}
-        {tab === 'share' && (
-          <>
-            <FileActions
-              filename={`${slug}.share.yaml`}
-              accept=".yaml,.yml,text/yaml,application/yaml"
-              mime="application/yaml;charset=utf-8"
-              value={share}
-              onUpload={setShare}
-            />
-            <CodeArea
-              value={share}
-              onChange={setShare}
-              placeholder="# no share overrides — paste YAML to create"
             />
           </>
         )}

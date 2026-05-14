@@ -8,6 +8,7 @@ import type {
   MapPin,
   MapRegionLayer,
   HeatmapLayer,
+  MapTextLabel,
 } from '@/types/story'
 import type { MapPalette } from '@/lib/storyConfig.types'
 import { applyMapPalette, applyMapFontstack } from '@/lib/applyMapPalette'
@@ -63,6 +64,13 @@ interface MapboxBackgroundProps {
    */
   staticCapture?: boolean
   /**
+   * Override the WebGL canvas pixel ratio. Defaults to `window.devicePixelRatio`.
+   * Share-mode capture sets this to the export ratio so the rasterized map
+   * isn't upscaled (and pixelated) when html-to-image draws it into the
+   * higher-resolution output canvas.
+   */
+  pixelRatio?: number
+  /**
    * Fires once the map is idle AND the initial step's regions/pins/heatmap
    * have been applied. Share mode waits on this before toPng so captures
    * don't rasterize a half-built map.
@@ -94,6 +102,42 @@ function pinKey(pin: MapPin): string {
   return `${pin.coordinates[0]},${pin.coordinates[1]},${pin.label ?? ''}`
 }
 
+function textLabelKey(label: MapTextLabel): string {
+  return `${label.coordinates[0]},${label.coordinates[1]},${label.text}`
+}
+
+/** Mapbox Marker anchor describes which side of the marker sits at the LngLat
+ * — invert from our user-facing "anchor describes where the text sits". */
+function textLabelAnchor(
+  anchor: MapTextLabel['anchor']
+): 'top' | 'bottom' | 'left' | 'right' | 'center' {
+  if (!anchor) return 'center'
+  const invert = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const
+  return invert[anchor]
+}
+
+function buildTextLabelElement(label: MapTextLabel): HTMLDivElement {
+  const el = document.createElement('div')
+  el.className = 'mapbox-text-label'
+  const size = label.size ?? 11
+  const color = label.color ?? 'var(--color-text)'
+  el.style.cssText = `
+    font-family: var(--font-mono);
+    font-size: ${size}px;
+    font-weight: 600;
+    color: ${color};
+    text-shadow:
+      0 0 2px rgb(var(--color-bg-rgb, 255 255 255) / 0.9),
+      0 0 4px rgb(var(--color-bg-rgb, 255 255 255) / 0.7);
+    white-space: nowrap;
+    pointer-events: none;
+    line-height: 1.1;
+    text-align: center;
+  `
+  el.textContent = label.text
+  return el
+}
+
 /**
  * Mapbox paint properties don't accept CSS variables — extract the hex
  * fallback from `var(--name, #hex)` strings, otherwise return as-is.
@@ -115,6 +159,7 @@ function prefersReducedMotion(): boolean {
 
 const STORY_REGION_FILL_ID = 'story-regions-fill'
 const STORY_REGION_LINE_ID = 'story-regions-line'
+const STORY_REGION_LABEL_ID = 'story-regions-label'
 const STORY_CUSTOM_REGION_SRC_ID = 'story-regions-custom-src'
 const STORY_HEATMAP_LAYER_ID = 'story-heatmap'
 const STORY_HEATMAP_SRC_ID = 'story-heatmap-src'
@@ -236,12 +281,63 @@ function buildRegionColorMap(
 }
 
 function removeStoryLayers(map: mapboxgl.Map) {
-  for (const id of [STORY_REGION_FILL_ID, STORY_REGION_LINE_ID, STORY_HEATMAP_LAYER_ID]) {
+  for (const id of [STORY_REGION_LABEL_ID, STORY_REGION_FILL_ID, STORY_REGION_LINE_ID, STORY_HEATMAP_LAYER_ID]) {
     if (map.getLayer(id)) map.removeLayer(id)
   }
   for (const id of [STORY_CUSTOM_REGION_SRC_ID, STORY_HEATMAP_SRC_ID]) {
     if (map.getSource(id)) map.removeSource(id)
   }
+}
+
+/**
+ * Build a `text-field` match expression that maps each region's id to its
+ * display string ("name" or "name value"). Reading this client-side and
+ * baking it into the expression keeps us off `setFeatureState` (which has
+ * timing issues against country-boundaries-v1's lazy tile load).
+ */
+function buildRegionLabelTextField(
+  layer: MapRegionLayer,
+  idExpr: unknown[],
+  countryIsoNameMap?: Record<string, string>
+): unknown[] {
+  const labelCfg = layer.labels ?? {}
+  const decimals = labelCfg.valueDecimals ?? 0
+  const prefix = labelCfg.valuePrefix ?? ''
+  const suffix = labelCfg.valueSuffix ?? ''
+  const allow = labelCfg.codes ? new Set(labelCfg.codes) : null
+  // Mapbox text-field honors literal "\n" inside strings as a line break.
+  const separator = labelCfg.valueOnNewLine ? '\n' : ' '
+
+  const pairs: (string | number)[] = []
+  for (const item of layer.items) {
+    if (allow && !allow.has(item.code)) continue
+    const baseName = countryIsoNameMap?.[item.code.toUpperCase()] ?? item.code
+    let text = baseName
+    if (labelCfg.withValue && typeof item.value === 'number') {
+      const v = item.value.toFixed(decimals)
+      text = `${baseName}${separator}${prefix}${v}${suffix}`
+    }
+    pairs.push(item.code, text)
+  }
+  if (pairs.length === 0) return ['literal', ''] as unknown[]
+  return ['match', idExpr, ...pairs, ''] as unknown[]
+}
+
+/** Minimal ISO alpha-2 → English country name lookup for the regions we
+ * commonly highlight. Used to render readable country names instead of
+ * raw ISO codes on the auto-label symbol layer. Extend as needed. */
+const COUNTRY_ISO_TO_NAME: Record<string, string> = {
+  US: 'United States', CA: 'Canada', MX: 'Mexico', BR: 'Brazil', AR: 'Argentina',
+  GB: 'United Kingdom', FR: 'France', DE: 'Germany', IT: 'Italy', ES: 'Spain',
+  PT: 'Portugal', NL: 'Netherlands', BE: 'Belgium', CH: 'Switzerland', AT: 'Austria',
+  SE: 'Sweden', NO: 'Norway', FI: 'Finland', DK: 'Denmark', IE: 'Ireland',
+  PL: 'Poland', CZ: 'Czechia', RO: 'Romania', GR: 'Greece', TR: 'Turkey',
+  RU: 'Russia', UA: 'Ukraine', CN: 'China', JP: 'Japan', KR: 'South Korea',
+  KP: 'North Korea', IN: 'India', PK: 'Pakistan', BD: 'Bangladesh',
+  ID: 'Indonesia', TH: 'Thailand', VN: 'Vietnam', PH: 'Philippines', MY: 'Malaysia',
+  SG: 'Singapore', AU: 'Australia', NZ: 'New Zealand', ZA: 'South Africa',
+  EG: 'Egypt', NG: 'Nigeria', KE: 'Kenya', ET: 'Ethiopia', SA: 'Saudi Arabia',
+  AE: 'UAE', IR: 'Iran', IQ: 'Iraq', IL: 'Israel', QA: 'Qatar',
 }
 
 function firstLabelLayerId(map: mapboxgl.Map): string | undefined {
@@ -320,6 +416,18 @@ async function applyRegionLayer(
       },
       beforeId
     )
+    if (layer.labels?.show) {
+      addRegionLabelSymbolLayer(map, {
+        source: 'country-boundaries',
+        sourceLayer: 'country_boundaries',
+        idExpr: ['get', 'iso_3166_1'],
+        filter: fillFilter,
+        layer,
+        scope,
+        countryIsoNameMap: COUNTRY_ISO_TO_NAME,
+        beforeId,
+      })
+    }
     return
   }
 
@@ -375,9 +483,236 @@ async function applyRegionLayer(
       },
       beforeId
     )
+    if (layer.labels?.show) {
+      addRegionLabelSymbolLayer(map, {
+        source: STORY_CUSTOM_REGION_SRC_ID,
+        idExpr,
+        filter: ['in', idExpr, ['literal', codes]] as unknown as mapboxgl.FilterSpecification,
+        layer,
+        scope,
+        beforeId,
+      })
+    }
   } catch (err) {
     console.warn('[MapboxBackground] failed to load custom GeoJSON', layer.geojsonUrl, err)
   }
+}
+
+/**
+ * Add a collision-detected symbol layer that renders each region's name
+ * (and optional value) on top of the choropleth fill. Anchored at the
+ * polygon centroid that Mapbox derives from the source.
+ *
+ * When `labels.background` is set, registers a stretchable pill icon and
+ * wires `icon-text-fit` so each label gets a rounded-rect backdrop that
+ * auto-sizes around its text — corners stay crisp at any width because the
+ * stretchable regions are constrained to the icon's straight edges.
+ */
+function addRegionLabelSymbolLayer(
+  map: mapboxgl.Map,
+  args: {
+    source: string
+    sourceLayer?: string
+    idExpr: unknown
+    filter: mapboxgl.FilterSpecification
+    layer: MapRegionLayer
+    scope: HTMLElement | null
+    beforeId?: string
+    countryIsoNameMap?: Record<string, string>
+  }
+) {
+  const { source, sourceLayer, idExpr, filter, layer, scope, beforeId, countryIsoNameMap } = args
+  const labelCfg = layer.labels ?? {}
+  const textField = buildRegionLabelTextField(layer, idExpr as unknown[], countryIsoNameMap)
+  // No items left after filtering — skip the symbol layer entirely so we
+  // don't render an empty layer (Mapbox would accept it but it's wasted work).
+  if (Array.isArray(textField) && textField[0] === 'literal') return
+  const textColor = labelCfg.color
+    ? resolveThemeToken(labelCfg.color, scope)
+    : resolveThemeToken('$text', scope)
+  const haloColor = resolveThemeToken('$bg', scope)
+  const size = labelCfg.size ?? 11
+
+  // When the caller supplies an explicit allowlist (labels.codes), the set of
+  // visible labels is intentionally small and hand-curated. Force them to
+  // always render regardless of base-style place labels (city names, etc.)
+  // that would otherwise suppress them via Mapbox collision detection.
+  // Without an allowlist we let collision sort out a dense 50-state set, so
+  // we leave the defaults (false) in that case to avoid pile-ups.
+  const hasExplicitAllowlist = !!(labelCfg.codes && labelCfg.codes.length > 0)
+  const layout: Record<string, unknown> = {
+    'text-field': textField,
+    'text-size': size,
+    'text-anchor': 'center',
+    'text-justify': 'center',
+    'text-allow-overlap': hasExplicitAllowlist,
+    'text-ignore-placement': hasExplicitAllowlist,
+    'symbol-placement': 'point',
+  }
+  const paint: Record<string, unknown> = {
+    'text-color': textColor,
+  }
+
+  if (labelCfg.background) {
+    const bg = labelCfg.background
+    const bgColor = resolveThemeToken(bg.color ?? '$bg', scope)
+    const bgOpacity = bg.opacity ?? 1
+    const borderColor = bg.borderColor ? resolveThemeToken(bg.borderColor, scope) : null
+    const borderOpacity = bg.borderOpacity ?? 1
+    const borderWidth = bg.borderWidth ?? 0
+    const cornerRadius = bg.cornerRadius ?? 4
+    const padV = bg.padding?.[0] ?? 3
+    const padH = bg.padding?.[1] ?? 6
+
+    const iconName = ensurePillIcon(map, {
+      bgColor,
+      bgOpacity,
+      borderColor,
+      borderOpacity,
+      borderWidth,
+      cornerRadius,
+    })
+    layout['icon-image'] = iconName
+    layout['icon-text-fit'] = 'both'
+    // padding is `[top, right, bottom, left]` and EXPANDS the icon outward
+    // past the text box, so equal vertical/horizontal pads here grow the
+    // pill symmetrically around whatever string the label renders.
+    layout['icon-text-fit-padding'] = [padV, padH, padV, padH]
+    layout['icon-allow-overlap'] = hasExplicitAllowlist
+    layout['icon-ignore-placement'] = hasExplicitAllowlist
+    // Halo would fight the pill outline — drop it when a backdrop is present.
+  } else {
+    paint['text-halo-color'] = haloColor
+    paint['text-halo-width'] = 1.4
+    paint['text-halo-blur'] = 0.2
+  }
+
+  const layerSpec = {
+    id: STORY_REGION_LABEL_ID,
+    type: 'symbol' as const,
+    source,
+    filter,
+    layout,
+    paint,
+    ...(sourceLayer ? { 'source-layer': sourceLayer } : {}),
+  }
+  map.addLayer(layerSpec as unknown as mapboxgl.LayerSpecification, beforeId)
+}
+
+/**
+ * Generate (once per unique appearance) a stretchable pill image and register
+ * it with the map so symbol layers can reference it by name. The image is a
+ * rounded rect with the two corner caps marked non-stretchable; the middle
+ * 1px column stretches horizontally to fit the text. Same for Y.
+ *
+ * Returns the registered image name. Subsequent calls with the same args
+ * short-circuit on `map.hasImage`.
+ */
+function ensurePillIcon(
+  map: mapboxgl.Map,
+  args: {
+    bgColor: string
+    bgOpacity: number
+    borderColor: string | null
+    borderOpacity: number
+    borderWidth: number
+    cornerRadius: number
+  }
+): string {
+  const { bgColor, bgOpacity, borderColor, borderOpacity, borderWidth, cornerRadius } = args
+  const key = `story-pill-${bgColor}-${bgOpacity}-${borderColor ?? 'none'}-${borderOpacity}-${borderWidth}-${cornerRadius}`
+  if (map.hasImage(key)) return key
+
+  const r = Math.max(0, Math.round(cornerRadius))
+  // Base size: two corner caps + one stretchable middle pixel per axis.
+  const side = r * 2 + 1
+  // Round pixelRatio to avoid fractional canvas dimensions. Non-integer w/h
+  // cause canvas.width truncation to disagree with getImageData's size, which
+  // makes map.addImage throw "RangeError: mismatched image size".
+  const rawPixelRatio = typeof window !== 'undefined' ? Math.min(2, window.devicePixelRatio || 1) : 1
+  const pixelRatio = Math.round(rawPixelRatio) || 1
+  const w = side * pixelRatio
+  const h = side * pixelRatio
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return key
+  ctx.scale(pixelRatio, pixelRatio)
+  ctx.fillStyle = withAlpha(bgColor, bgOpacity)
+  drawRoundedRect(ctx, 0, 0, side, side, r)
+  ctx.fill()
+  if (borderColor && borderWidth > 0) {
+    ctx.strokeStyle = withAlpha(borderColor, borderOpacity)
+    ctx.lineWidth = borderWidth
+    // Inset by half a stroke width so the line stays inside the bitmap.
+    const inset = borderWidth / 2
+    drawRoundedRect(ctx, inset, inset, side - borderWidth, side - borderWidth, Math.max(0, r - inset))
+    ctx.stroke()
+  }
+
+  const imageData = ctx.getImageData(0, 0, w, h)
+  map.addImage(
+    key,
+    { width: w, height: h, data: new Uint8Array(imageData.data.buffer) },
+    {
+      pixelRatio,
+      // Stretch the middle pixel only — the corner caps stay rigid so the
+      // rounded radius doesn't ovalize as the icon scales to fit text.
+      stretchX: [[r * pixelRatio, (r + 1) * pixelRatio]],
+      stretchY: [[r * pixelRatio, (r + 1) * pixelRatio]],
+      // The full image is text-content area (padding is applied via
+      // `icon-text-fit-padding` on the layer).
+      content: [0, 0, w, h],
+    }
+  )
+  return key
+}
+
+/** Convert "#RRGGBB" / "#RGB" / "rgb(...)" + an alpha (0..1) into an
+ *  `rgba(r, g, b, a)` string that canvas accepts directly. Falls back to
+ *  the input untouched when the format isn't recognized — opacity won't
+ *  apply, but rendering still works. */
+function withAlpha(color: string, alpha: number): string {
+  if (alpha >= 1) return color
+  const clamped = Math.max(0, Math.min(1, alpha))
+  const hex = color.trim()
+  if (hex.startsWith('#')) {
+    const h = hex.slice(1)
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+    if (full.length !== 6) return color
+    const r = parseInt(full.slice(0, 2), 16)
+    const g = parseInt(full.slice(2, 4), 16)
+    const b = parseInt(full.slice(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, ${clamped})`
+  }
+  const rgbMatch = hex.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)$/)
+  if (rgbMatch) {
+    return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${clamped})`
+  }
+  return color
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.arcTo(x + w, y, x + w, y + radius, radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.arcTo(x + w, y + h, x + w - radius, y + h, radius)
+  ctx.lineTo(x + radius, y + h)
+  ctx.arcTo(x, y + h, x, y + h - radius, radius)
+  ctx.lineTo(x, y + radius)
+  ctx.arcTo(x, y, x + radius, y, radius)
+  ctx.closePath()
 }
 
 function applyHeatmapLayer(map: mapboxgl.Map, layer: HeatmapLayer) {
@@ -462,6 +797,7 @@ export default function MapboxBackground({
   landscapeFocusArea,
   portraitFocusArea,
   staticCapture = false,
+  pixelRatio,
   onReady,
   palette,
   fontstack,
@@ -470,6 +806,9 @@ export default function MapboxBackground({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
+  /** Free-floating text labels (no pin marker). Diffed across steps the same
+   * way as `markersRef` so unchanged labels survive step transitions. */
+  const textLabelMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
   /** Bumped on every step change; async layer appliers compare against it
    * to abort stale writes that would otherwise collide with newer ones. */
   const layerGenRef = useRef(0)
@@ -515,6 +854,7 @@ export default function MapboxBackground({
       attributionControl: false,
       fadeDuration: 0,
       preserveDrawingBuffer: staticCapture,
+      ...(pixelRatio != null ? { pixelRatio } : {}),
     })
 
     // Apply focal padding immediately so the first paint already has the
@@ -607,9 +947,12 @@ export default function MapboxBackground({
     mapRef.current = map
 
     const markers = markersRef.current
+    const textLabelMarkers = textLabelMarkersRef.current
     return () => {
       markers.forEach((m) => m.remove())
       markers.clear()
+      textLabelMarkers.forEach((m) => m.remove())
+      textLabelMarkers.clear()
       map.remove()
       mapRef.current = null
       setLoaded(false)
@@ -739,6 +1082,28 @@ export default function MapboxBackground({
       }
 
       markersRef.current.set(key, marker)
+    }
+
+    // Diff free-floating text labels (manual `textLabels`). Each label is a
+    // Mapbox Marker whose element is a styled DOM div — no circle marker.
+    const desiredLabels = step.textLabels ?? []
+    const desiredLabelKeys = new Set(desiredLabels.map(textLabelKey))
+    for (const [key, marker] of textLabelMarkersRef.current) {
+      if (!desiredLabelKeys.has(key)) {
+        marker.remove()
+        textLabelMarkersRef.current.delete(key)
+      }
+    }
+    for (const label of desiredLabels) {
+      const key = textLabelKey(label)
+      if (textLabelMarkersRef.current.has(key)) continue
+
+      const el = buildTextLabelElement(label)
+      const anchor = textLabelAnchor(label.anchor)
+      const marker = new mapboxgl.Marker({ element: el, anchor })
+        .setLngLat(label.coordinates)
+        .addTo(map)
+      textLabelMarkersRef.current.set(key, marker)
     }
   }, [activeStep, steps, loaded, defaultPinColor, defaultPinRadius, landscapeFocusArea, portraitFocusArea, staticCapture, onReady])
 

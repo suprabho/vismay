@@ -76,6 +76,43 @@ sections:
         idProperty: "name"
         ramp: [66000, 80000, 100000, 142000]
         colors: ["$teal", "$surface", "$amber", "$accent"]
+        labels:
+          show: true
+          withValue: true
+          valueOnNewLine: true
+          valuePrefix: "$"
+          valueDecimals: 0
+          size: 13
+          color: "$text"
+          background:
+            color: "$bg"
+            opacity: 0.55
+            padding: [4, 8]
+            cornerRadius: 6
+            borderColor: "$line"
+            borderOpacity: 0.4
+            borderWidth: 0.5
+          # Curated allowlist — 50 names won't fit at 390px share width even
+          # with collision detection. These eight tell the cost-divide story:
+          # extreme highs (HI, MA, CA), Florida + Idaho outliers, the deep
+          # south floor (OK, MS, AL).
+          codes:
+            - "Hawaii"
+            - "Massachusetts"
+            - "California"
+            - "New York"
+            - "Florida"
+            - "Idaho"
+            - "Mississippi"
+            - "Oklahoma"
+        legend:
+          show: true
+          title: "Living-wage threshold"
+          lowLabel: "Lower"
+          highLabel: "Higher"
+          valuePrefix: "$"
+          ticks: 4
+          position: "bottom"
         items:
           - { code: "Hawaii", value: 141127 }
           - { code: "Massachusetts", value: 118431 }

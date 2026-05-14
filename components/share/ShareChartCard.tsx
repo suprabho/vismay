@@ -22,23 +22,20 @@ interface Props {
 export default function ShareChartCard({ chartId, activeStep, slug, heading, subheading }: Props) {
   const hasText = !!(heading || subheading)
   return (
-    <div className="w-full h-full flex flex-col pt-8">
-      <div className="flex-1 min-h-0">
-        <ChartPanel chartId={chartId} activeStep={activeStep} slug={slug} />
-      </div>
+    <div className="w-full h-full flex flex-col p-2 pb-4">
       {hasText && (
-        <div className="px-6 py-6">
+        <div className="shrink-0">
           {heading && (
-            <h2
-              className="font-serif text-[1.6rem] font-bold leading-[1.2]"
+            <h4
+              className="font-serif text-[1rem] text-center texfont-bold leading-[1.2]"
               style={{ color: 'var(--color-accent)' }}
             >
               {heading}
-            </h2>
+            </h4>
           )}
           {subheading && (
             <p
-              className="text-[0.85rem] leading-[1.4] mt-2"
+              className="text-[0.85rem] text-center leading-[1.4]"
               style={{ color: 'var(--color-muted)' }}
             >
               {subheading}
@@ -46,6 +43,11 @@ export default function ShareChartCard({ chartId, activeStep, slug, heading, sub
           )}
         </div>
       )}
+      <div className="flex-1 min-h-0 relative">
+        <div className="absolute inset-0 overflow-hidden **:min-h-0!">
+          <ChartPanel chartId={chartId} activeStep={activeStep} slug={slug} />
+        </div>
+      </div>
     </div>
   )
 }

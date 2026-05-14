@@ -14,9 +14,9 @@ export default function ShareStatCard({ value, subheading, description, color: c
   const color = statColorVar(colorToken)
 
   return (
-    <div className="flex flex-col items-center justify-center text-center h-full px-10 pt-12 pb-8">
+    <div className="flex flex-col items-center justify-center text-center h-full px-8 pt-12 pb-8">
       <div
-        className="font-[family-name:var(--font-serif)] text-[5.5rem] font-bold leading-none mb-4"
+        className="font-[family-name:var(--font-serif)] text-[2.5rem] font-bold leading-none mb-4"
         style={{ color }}
       >
         {value}
@@ -30,7 +30,7 @@ export default function ShareStatCard({ value, subheading, description, color: c
         </div>
       )}
       <div
-        className="font-[family-name:var(--font-sans)] text-[0.95rem] max-w-[440px] leading-[1.55]"
+        className="font-[family-name:var(--font-sans)] text-[0.8rem] leading-[1.55]"
         style={{ color: 'var(--color-muted)' }}
       >
         {description}

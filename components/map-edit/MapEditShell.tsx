@@ -393,7 +393,7 @@ function PinEditor({
               <span className="text-neutral-500">Lng</span>
               <input
                 type="number"
-                step="0.001"
+                step="0.1"
                 value={pin.coordinates[0]}
                 onChange={(e) =>
                   updatePin(i, {
@@ -407,7 +407,7 @@ function PinEditor({
               <span className="text-neutral-500">Lat</span>
               <input
                 type="number"
-                step="0.001"
+                step="0.1"
                 value={pin.coordinates[1]}
                 onChange={(e) =>
                   updatePin(i, {
@@ -1205,7 +1205,7 @@ export default function MapEditShell({ accessToken }: { accessToken: string }) {
                 <span className="text-neutral-500">Lng</span>
                 <input
                   type="number"
-                  step="0.001"
+                  step="0.1"
                   value={mapState.center[0]}
                   onChange={(e) =>
                     patch({
@@ -1219,7 +1219,7 @@ export default function MapEditShell({ accessToken }: { accessToken: string }) {
                 <span className="text-neutral-500">Lat</span>
                 <input
                   type="number"
-                  step="0.001"
+                  step="0.1"
                   value={mapState.center[1]}
                   onChange={(e) =>
                     patch({

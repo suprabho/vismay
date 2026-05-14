@@ -1,7 +1,7 @@
 // Pure type definitions for story configs. No runtime imports — safe for
 // client components to import without dragging fs/path into the bundle.
 
-import type { MapRegionLayer, HeatmapLayer } from '@/types/story'
+import type { MapRegionLayer, HeatmapLayer, MapTextLabel } from '@/types/story'
 
 /**
  * Per-category show/hide/recolor override.
@@ -118,6 +118,8 @@ export interface MapOverrides {
   regions?: MapRegionLayer
   /** Optional heatmap layer. Replaces (does not merge) the parent's heatmap. */
   heatmap?: HeatmapLayer
+  /** Free-floating text labels (no pin marker beneath). Replaces the parent's textLabels. */
+  textLabels?: MapTextLabel[]
 }
 
 export interface SubsectionMapOverride extends MapOverrides {
@@ -220,6 +222,8 @@ export interface StorySectionConfig {
     pins?: MapPinConfig[]
     regions?: MapRegionLayer
     heatmap?: HeatmapLayer
+    /** Free-floating text labels (no pin marker beneath). */
+    textLabels?: MapTextLabel[]
     /** Overrides applied on portrait / mobile viewports. */
     mobile?: MapOverrides
   }
@@ -266,6 +270,66 @@ export interface ShareChartOverride {
   subheading?: string
 }
 
+/** Alias used for variant-scoped text slots that mirror the chart shape. */
+export type ShareTextOverride = ShareChartOverride
+
+/**
+ * Per-hero-card text overrides. Adds `dek` (the paragraph below the title)
+ * so the hero card can carry its own supporting copy independent of the
+ * map-title overlay or any other variant emitted from the same section.
+ */
+export interface ShareHeroOverride {
+  heading?: string
+  subheading?: string
+  dek?: string
+}
+
+/**
+ * Per-stat-card text overrides. Only `description` lives here for now —
+ * the stat card's big value and small label fall back to the section's bare
+ * `heading` / `subheading`, which keeps simple yaml short.
+ */
+export interface ShareStatOverride {
+  description?: string
+}
+
+/**
+ * Thin patch over a single resolved pin, keyed by the pin's `label` text in
+ * the parent override map. Only the fields a share-card author commonly
+ * tweaks per-aspect; the pin's coordinates and label text stay inherited.
+ */
+export interface MapPinOverride {
+  color?: string
+  radius?: number
+  pulse?: boolean
+  labelAnchor?: 'top' | 'bottom' | 'left' | 'right'
+  /** When true, the pin is suppressed entirely on this card (marker + label). */
+  hidden?: boolean
+}
+
+/**
+ * Aspect-ratio key for per-aspect map framing overrides. Matches
+ * `AspectRatio` in `components/share/AspectRatioToggle.tsx`. Re-declared
+ * here as a string union so this types-only module stays free of
+ * component imports.
+ */
+export type ShareAspectRatio = '1:1' | '3:4' | '4:3'
+
+/**
+ * Per-aspect camera override. Only framing fields (center/zoom/pitch/bearing)
+ * are aspect-specific — the underlying map data (pins, regions, heatmap,
+ * textLabels) is shared across all aspects on the same card.
+ *
+ * Applied on top of the base map override's same fields. Unset fields fall
+ * through to the base override, then the story config cascade.
+ */
+export interface ShareMapAspectOverride {
+  center?: [number, number]
+  zoom?: number
+  pitch?: number
+  bearing?: number
+}
+
 export interface ShareSubsectionOverride {
   /**
    * Literal replacement paragraphs for this subsection's share card(s).
@@ -285,6 +349,27 @@ export interface ShareSubsectionOverride {
   layers?: ShareLayerVisibility
   /** Heading/subheading shown on the chart card for this subsection. */
   chart?: ShareChartOverride
+  /** Heading / subheading / dek shown on the map-title overlay for this subsection. `dek` only renders on `kind: hero` sections; falls back to `hero.dek`. */
+  mapTitle?: ShareHeroOverride
+  /** Title / subheading / dek shown on the standalone hero card for this subsection. */
+  hero?: ShareHeroOverride
+  /** Description body text on the standalone stat card for this subsection. Falls back to the joined paragraphs. */
+  stat?: ShareStatOverride
+  /** Hide the body PretextBlock on this subsection's text card(s). */
+  hidePretext?: boolean
+  /**
+   * Thin patch over the parent's `regions.labels.codes` allowlist for this
+   * card only. When defined (even if empty), it REPLACES the parent's
+   * allowlist; the rest of the regions config (items, ramp, colors) is
+   * inherited. Use `map.regions` for a full replacement.
+   */
+  regionLabelCodes?: string[]
+  /**
+   * Per-pin patches keyed by the pin's `label` text. Each value is a thin
+   * patch (color / radius / pulse / labelAnchor) merged onto the resolved
+   * pin. Pins without a matching key inherit unchanged.
+   */
+  pinOverrides?: Record<string, MapPinOverride>
   /** Map override for this subsection's share cards (full set, including regions/heatmap). */
   map?: {
     center?: [number, number]
@@ -294,6 +379,13 @@ export interface ShareSubsectionOverride {
     pins?: MapPinConfig[]
     regions?: MapRegionLayer
     heatmap?: HeatmapLayer
+    textLabels?: MapTextLabel[]
+    /**
+     * Per-aspect camera framing. Each key's fields override the base camera
+     * for that aspect only; unset fields fall through to the base map
+     * override, then to the story-config cascade.
+     */
+    ratios?: Partial<Record<ShareAspectRatio, ShareMapAspectOverride>>
   }
 }
 
@@ -308,6 +400,14 @@ export interface ShareSectionOverride {
   layers?: ShareLayerVisibility
   /** Heading/subheading shown on this section's chart card(s). Falls back to per-subsection `chart` override. */
   chart?: ShareChartOverride
+  /** Heading / subheading / dek shown on this section's map-title overlay card(s). `dek` only renders on `kind: hero` sections; falls back to `hero.dek`. */
+  mapTitle?: ShareHeroOverride
+  /** Title / subheading / dek shown on this section's standalone hero card(s). Falls back to per-subsection `hero` override. */
+  hero?: ShareHeroOverride
+  /** Description body text on this section's standalone stat card(s). Falls back to per-subsection `stat` then the joined paragraphs. */
+  stat?: ShareStatOverride
+  /** Hide the body PretextBlock on this section's text card(s). */
+  hidePretext?: boolean
   /**
    * Override paragraph slices for share mode. When present, a single section
    * expands into multiple share cards — one per entry. Each entry follows
@@ -328,6 +428,16 @@ export interface ShareSectionOverride {
    * over the section-level `paragraphsOverride` / `shareParagraphs`.
    */
   subsections?: Record<number, ShareSubsectionOverride>
+  /**
+   * Thin patch over the parent's `regions.labels.codes` allowlist for this
+   * section's cards. Same semantics as `ShareSubsectionOverride.regionLabelCodes`.
+   */
+  regionLabelCodes?: string[]
+  /**
+   * Per-pin patches keyed by the pin's `label` text. Same semantics as
+   * `ShareSubsectionOverride.pinOverrides`.
+   */
+  pinOverrides?: Record<string, MapPinOverride>
   map?: {
     center?: [number, number]
     zoom?: number
@@ -336,6 +446,13 @@ export interface ShareSectionOverride {
     pins?: MapPinConfig[]
     regions?: MapRegionLayer
     heatmap?: HeatmapLayer
+    textLabels?: MapTextLabel[]
+    /**
+     * Per-aspect camera framing. Each key's fields override the base camera
+     * for that aspect only; unset fields fall through to the base map
+     * override, then to the story-config cascade.
+     */
+    ratios?: Partial<Record<ShareAspectRatio, ShareMapAspectOverride>>
   }
 }
 

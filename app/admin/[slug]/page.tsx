@@ -53,10 +53,9 @@ export default async function EditStoryPage({ params }: Props) {
     loadVideoCache(slug),
     loadCanvaCache(slug),
   ])
-  const [markdown, config_yaml, share_yaml, jsonChartIds, tts_yaml] = await Promise.all([
+  const [markdown, config_yaml, jsonChartIds, tts_yaml] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
-    src.readShareYaml(slug),
     src.listChartIds(slug),
     src.readTtsYaml(slug),
   ])
@@ -115,7 +114,6 @@ export default async function EditStoryPage({ params }: Props) {
       initial={{
         markdown,
         config_yaml: config_yaml ?? '',
-        share_yaml: share_yaml ?? '',
         charts,
         narrationUnits,
         tts_yaml: tts_yaml ?? null,

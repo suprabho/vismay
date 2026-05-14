@@ -176,13 +176,14 @@ function wrapTokens(tokens: Token[], maxWidth: number): RenderedLine[] {
 // ── Component ─────────────────────────────────────────────────
 interface Props {
   title: string
-  eyebrow?: string
+  /** Paragraph below the title (the "dek"). Optional. */
+  dek?: string
 }
 
 const MAX_WIDTH = 310
 const LINE_HEIGHT_RATIO = 1.2
 
-export default function ShareHeroCard({ title, eyebrow }: Props) {
+export default function ShareHeroCard({ title, dek }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [lines, setLines] = useState<RenderedLine[]>([])
   const [fontSize, setFontSize] = useState(28)
@@ -234,15 +235,7 @@ export default function ShareHeroCard({ title, eyebrow }: Props) {
   const svgHeight = cumY
 
   return (
-    <div ref={containerRef} className="flex flex-col justify-center h-full px-10 pt-12 pb-8">
-      {eyebrow && (
-        <div
-          className="font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-[0.15em] mb-4"
-          style={{ color: 'var(--color-accent)' }}
-        >
-          {eyebrow}
-        </div>
-      )}
+    <div ref={containerRef} className="flex flex-col justify-start h-full p-4">
       {lines.length > 0 && (
         <svg
           width={MAX_WIDTH}
@@ -420,6 +413,14 @@ export default function ShareHeroCard({ title, eyebrow }: Props) {
             )
           })}
         </svg>
+      )}
+      {dek && (
+        <p
+          className="font-serif text-[0.95rem] leading-[1.45] mt-4"
+          style={{ color: 'var(--color-muted)' }}
+        >
+          {dek}
+        </p>
       )}
     </div>
   )

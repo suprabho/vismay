@@ -3,11 +3,13 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
-import { stringify as stringifyYaml } from 'yaml'
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import type { ResolvedUnit, StoryConfig, ShareSectionOverride } from '@/lib/storyConfig.types'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
 import ShareEditDrawer, { type SelectedCard } from './ShareEditDrawer'
+
+type EditView = 'visual' | 'yaml'
 
 interface Props {
   slug: string
@@ -16,6 +18,10 @@ interface Props {
   title: string
   accessToken: string
   shareOverrides: Record<string, ShareSectionOverride> | null
+  /** Raw on-disk share.yaml text (or '' when none). Source of truth for YAML view. */
+  shareYamlText: string
+  /** Fully-populated template generated from the story config — fed to "Insert sample". */
+  sampleYaml: string
   logo?: string
   initialRatio: AspectRatio
 }
@@ -137,7 +143,18 @@ function buildCardList(
   return cards
 }
 
-export default function ShareShell({ slug, units, config, title, accessToken, shareOverrides, logo, initialRatio }: Props) {
+export default function ShareShell({
+  slug,
+  units,
+  config,
+  title,
+  accessToken,
+  shareOverrides,
+  shareYamlText,
+  sampleYaml,
+  logo,
+  initialRatio,
+}: Props) {
   // `initialRatio` is seeded by the server from `?ratio=` so the first paint
   // (and the Playwright share-render capture) has the correct card dimensions.
   // After mount, `setRatio` keeps the in-page AspectRatioToggle interactive.
@@ -154,20 +171,95 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
     [shareOverrides]
   )
   const [editMode, setEditMode] = useState(false)
+  const [view, setView] = useState<EditView>('visual')
   const [draftOverrides, setDraftOverrides] = useState<Record<string, ShareSectionOverride>>(initialOverrides)
+  const [draftYaml, setDraftYaml] = useState<string>(shareYamlText)
+  const [yamlError, setYamlError] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedCard | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const dirty = useMemo(
-    () => JSON.stringify(draftOverrides) !== JSON.stringify(initialOverrides),
-    [draftOverrides, initialOverrides]
+    () =>
+      view === 'yaml'
+        ? draftYaml !== shareYamlText
+        : JSON.stringify(draftOverrides) !== JSON.stringify(initialOverrides),
+    [view, draftYaml, shareYamlText, draftOverrides, initialOverrides],
   )
 
   // Reset draft when the saved baseline changes (e.g. after a successful save).
   useEffect(() => {
     setDraftOverrides(initialOverrides)
   }, [initialOverrides])
+  useEffect(() => {
+    setDraftYaml(shareYamlText)
+  }, [shareYamlText])
+
+  // Live-validate YAML so the toggle-back-to-visual button can refuse on
+  // bad input without surprising the user at save time.
+  useEffect(() => {
+    if (view !== 'yaml') {
+      setYamlError(null)
+      return
+    }
+    if (draftYaml.trim().length === 0) {
+      setYamlError(null)
+      return
+    }
+    try {
+      parseYaml(draftYaml)
+      setYamlError(null)
+    } catch (err) {
+      setYamlError(err instanceof Error ? err.message : 'YAML parse error')
+    }
+  }, [view, draftYaml])
+
+  const switchToYaml = useCallback(() => {
+    // Prefer the on-disk text so the user sees the actual file (logo, comments,
+    // ordering preserved). If they've made unsaved visual edits, serialize
+    // those into the textarea instead so they aren't lost.
+    if (JSON.stringify(draftOverrides) !== JSON.stringify(initialOverrides)) {
+      const serialized =
+        Object.keys(draftOverrides).length === 0
+          ? ''
+          : stringifyYaml({ sections: draftOverrides }, { lineWidth: 0, blockQuote: 'literal' })
+      setDraftYaml(serialized)
+    } else {
+      setDraftYaml(shareYamlText)
+    }
+    setSelected(null)
+    setView('yaml')
+  }, [draftOverrides, initialOverrides, shareYamlText])
+
+  const switchToVisual = useCallback(() => {
+    if (draftYaml.trim().length === 0) {
+      setDraftOverrides({})
+      setView('visual')
+      return
+    }
+    try {
+      const parsed = parseYaml(draftYaml) as { sections?: Record<string, ShareSectionOverride> } | null
+      const nextSections = parsed?.sections ?? {}
+      setDraftOverrides(structuredClone(nextSections))
+      setYamlError(null)
+      setView('visual')
+    } catch (err) {
+      setYamlError(err instanceof Error ? err.message : 'YAML parse error')
+    }
+  }, [draftYaml])
+
+  const insertSample = useCallback(() => {
+    if (draftYaml.trim().length > 0 && !confirm('Replace the current YAML with the sample template?')) {
+      return
+    }
+    setDraftYaml(sampleYaml)
+  }, [draftYaml, sampleYaml])
+
+  const downloadYaml = useCallback(() => {
+    const text = draftYaml.length > 0 ? draftYaml : sampleYaml
+    const blob = new Blob([text], { type: 'application/yaml;charset=utf-8' })
+    saveAs(blob, `${slug}.share.yaml`)
+  }, [draftYaml, sampleYaml, slug])
 
   // Warn before unloading if there are unsaved edits.
   useEffect(() => {
@@ -218,14 +310,20 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
   }, [cards, ratio])
 
   const handleSave = useCallback(async () => {
+    // In YAML mode, send the textarea verbatim so user-authored comments and
+    // top-level fields (e.g. `logo`) round-trip cleanly.
+    const share_yaml = view === 'yaml'
+      ? draftYaml
+      : Object.keys(draftOverrides).length === 0
+        ? ''
+        : stringifyYaml({ sections: draftOverrides })
+    if (view === 'yaml' && yamlError) {
+      setSaveError(`YAML invalid: ${yamlError}`)
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
-      // Empty overrides → empty share file (server treats absent body as no-op,
-      // so write '' explicitly).
-      const share_yaml = Object.keys(draftOverrides).length === 0
-        ? ''
-        : stringifyYaml({ sections: draftOverrides })
       const res = await fetch(`/api/admin/stories/${slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -241,7 +339,7 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
       setSaveError(err instanceof Error ? err.message : 'Save failed')
       setSaving(false)
     }
-  }, [draftOverrides, slug])
+  }, [view, draftYaml, draftOverrides, yamlError, slug])
 
   const handleDownloadAll = useCallback(async () => {
     setDownloading(true)
@@ -289,19 +387,45 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            {!editMode && <AspectRatioToggle value={ratio} onChange={setRatio} />}
+            <AspectRatioToggle value={ratio} onChange={setRatio} />
             {editMode ? (
               <>
-                {saveError && (
-                  <span className="text-[0.7rem]" style={{ color: 'var(--color-warn, #ff6b6b)' }}>
-                    {saveError}
+                {(yamlError || saveError) && (
+                  <span className="text-[0.7rem] max-w-[20rem] truncate" style={{ color: 'var(--color-warn, #ff6b6b)' }} title={yamlError ?? saveError ?? undefined}>
+                    {saveError ?? yamlError}
                   </span>
+                )}
+                <ViewToggle
+                  value={view}
+                  onVisual={switchToVisual}
+                  onYaml={switchToYaml}
+                />
+                {view === 'yaml' && (
+                  <>
+                    <button
+                      onClick={insertSample}
+                      className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider border"
+                      style={{ color: 'var(--color-text)', borderColor: 'var(--color-surface)' }}
+                    >
+                      Insert sample
+                    </button>
+                    <button
+                      onClick={downloadYaml}
+                      className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider border"
+                      style={{ color: 'var(--color-text)', borderColor: 'var(--color-surface)' }}
+                    >
+                      Download
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => {
                     if (dirty && !confirm('Discard unsaved edits?')) return
                     setDraftOverrides(initialOverrides)
+                    setDraftYaml(shareYamlText)
                     setSelected(null)
+                    setYamlError(null)
+                    setView('visual')
                     setEditMode(false)
                   }}
                   className="px-3 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-wider"
@@ -311,7 +435,7 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={!dirty || saving}
+                  disabled={!dirty || saving || (view === 'yaml' && !!yamlError)}
                   className="px-4 py-1.5 rounded-md font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-wider transition-opacity disabled:opacity-40"
                   style={{
                     background: 'var(--color-accent)',
@@ -350,64 +474,123 @@ export default function ShareShell({ slug, units, config, title, accessToken, sh
         </div>
       </div>
 
-      {/* Card grid */}
-      <div
-        className="max-w-7xl mx-auto px-6 py-8"
-        style={{ paddingRight: editMode && selected ? 'calc(1.5rem + 360px)' : undefined }}
-      >
-        <div className="flex flex-wrap gap-6 justify-center">
-          {cards.map((card, i) => {
-            const sectionId = card.unit.parentConfig.id
-            const isSelected =
-              editMode && selected !== null && selected.index === i
-            return (
-              <div
-                key={`${i}-${card.variant}-${ratio}`}
-                onClick={editMode ? () => setSelected({ index: i, unit: card.unit, variant: card.variant }) : undefined}
-                className={editMode ? 'cursor-pointer rounded-lg transition-shadow' : ''}
-                style={{
-                  boxShadow: isSelected
-                    ? '0 0 0 3px var(--color-accent)'
-                    : editMode
-                    ? '0 0 0 1px var(--color-surface)'
-                    : undefined,
-                }}
-              >
-                <ShareCard
-                  ref={(el) => { cardRefs.current[i] = el }}
-                  unit={card.unit}
-                  index={i}
-                  ratio={ratio}
-                  slug={slug}
-                  title={title}
-                  accessToken={accessToken}
-                  variant={card.variant}
-                  shareOverride={sectionId ? draftOverrides[sectionId] : undefined}
-                  palette={config.defaults.mapPalette}
-                  fontstack={config.defaults.mapFontstack}
-                  highlightCountry={config.defaults.highlightCountry}
-                  highlightColor={config.defaults.highlightColor}
-                  mapOpacity={config.defaults.mapOpacity}
-                  mapStyle={config.defaults.mapStyle}
-                  defaultPinColor={config.defaults.pinColor}
-                  defaultPinRadius={config.defaults.pinRadius}
-                  logo={logo}
-                  disableDownload={editMode}
-                />
-              </div>
-            )
-          })}
+      {editMode && view === 'yaml' ? (
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <textarea
+            value={draftYaml}
+            onChange={(e) => setDraftYaml(e.target.value)}
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
+            placeholder="# No share overrides yet. Click 'Insert sample' for a populated template."
+            className="w-full min-h-[70vh] rounded-md p-4 font-mono text-[13px] leading-relaxed outline-none"
+            style={{
+              background: 'var(--color-surface)',
+              color: 'var(--color-text)',
+              border: yamlError
+                ? '1px solid var(--color-warn, #ff6b6b)'
+                : '1px solid var(--color-surface)',
+            }}
+          />
+          <p className="mt-2 text-[0.65rem] font-[family-name:var(--font-mono)] uppercase tracking-wider opacity-60" style={{ color: 'var(--color-text)' }}>
+            Edits save to <code>{slug}.share.yaml</code>. Switch back to Visual to see the live preview.
+          </p>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Card grid */}
+          <div
+            className="max-w-7xl mx-auto px-6 py-8"
+            style={{ paddingRight: editMode && selected ? 'calc(1.5rem + 360px)' : undefined }}
+          >
+            <div className="flex flex-wrap gap-6 justify-center">
+              {cards.map((card, i) => {
+                const sectionId = card.unit.parentConfig.id
+                const isSelected =
+                  editMode && selected !== null && selected.index === i
+                return (
+                  <div
+                    key={`${i}-${card.variant}-${ratio}`}
+                    onClick={editMode ? () => setSelected({ index: i, unit: card.unit, variant: card.variant }) : undefined}
+                    className={editMode ? 'cursor-pointer rounded-lg transition-shadow' : ''}
+                    style={{
+                      boxShadow: isSelected
+                        ? '0 0 0 3px var(--color-accent)'
+                        : editMode
+                        ? '0 0 0 1px var(--color-surface)'
+                        : undefined,
+                    }}
+                  >
+                    <ShareCard
+                      ref={(el) => { cardRefs.current[i] = el }}
+                      unit={card.unit}
+                      index={i}
+                      ratio={ratio}
+                      slug={slug}
+                      title={title}
+                      accessToken={accessToken}
+                      variant={card.variant}
+                      shareOverride={sectionId ? draftOverrides[sectionId] : undefined}
+                      palette={config.defaults.mapPalette}
+                      fontstack={config.defaults.mapFontstack}
+                      highlightCountry={config.defaults.highlightCountry}
+                      highlightColor={config.defaults.highlightColor}
+                      mapOpacity={config.defaults.mapOpacity}
+                      mapStyle={config.defaults.mapStyle}
+                      defaultPinColor={config.defaults.pinColor}
+                      defaultPinRadius={config.defaults.pinRadius}
+                      logo={logo}
+                      disableDownload={editMode}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
 
-      {editMode && (
-        <ShareEditDrawer
-          selected={selected}
-          overrides={draftOverrides}
-          onChange={setDraftOverrides}
-          onClose={() => setSelected(null)}
-        />
+          {editMode && (
+            <ShareEditDrawer
+              selected={selected}
+              overrides={draftOverrides}
+              onChange={setDraftOverrides}
+              onClose={() => setSelected(null)}
+              ratio={ratio}
+            />
+          )}
+        </>
       )}
+    </div>
+  )
+}
+
+function ViewToggle({
+  value,
+  onVisual,
+  onYaml,
+}: {
+  value: EditView
+  onVisual: () => void
+  onYaml: () => void
+}) {
+  return (
+    <div
+      className="inline-flex rounded-md overflow-hidden border"
+      style={{ borderColor: 'var(--color-surface)' }}
+    >
+      {(['visual', 'yaml'] as const).map((v) => (
+        <button
+          key={v}
+          onClick={v === 'visual' ? onVisual : onYaml}
+          className="px-2.5 py-1 font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-wider transition-opacity"
+          style={{
+            background: value === v ? 'var(--color-accent)' : 'transparent',
+            color: value === v ? 'var(--color-bg)' : 'var(--color-text)',
+            opacity: value === v ? 1 : 0.7,
+          }}
+        >
+          {v}
+        </button>
+      ))}
     </div>
   )
 }

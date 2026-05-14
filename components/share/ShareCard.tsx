@@ -2,13 +2,15 @@
 
 import { useRef, useCallback, useMemo, useState, forwardRef, useImperativeHandle } from 'react'
 import { toPng } from 'html-to-image'
-import type { ResolvedUnit, MapPinConfig, MapPalette, ShareSectionOverride, ShareLayerVisibility } from '@/lib/storyConfig.types'
+import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility } from '@/lib/storyConfig.types'
+import type { MapTextLabel } from '@/types/story'
 import type { AspectRatio } from './AspectRatioToggle'
 import ShareTextCard from './ShareTextCard'
 import ShareStatCard from './ShareStatCard'
 import ShareHeroCard from './ShareHeroCard'
 import ShareChartCard from './ShareChartCard'
 import ShareMapBg from './ShareMapBg'
+import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
 
 /**
@@ -76,7 +78,7 @@ export interface ShareCardHandle {
 /**
  * Extract hero dek and byline from paragraphs (matches MapStorySection logic).
  */
-function extractHeroBits(paragraphs: string[]): { dek: string; byline: string } {
+export function extractHeroBits(paragraphs: string[]): { dek: string; byline: string } {
   const dek =
     paragraphs.find((p) => /^\*[^*]/.test(p))?.replace(/^\*+|\*+$/g, '').trim() ?? ''
   const byline =
@@ -138,26 +140,77 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   const chartHeading = shareSubOverride?.chart?.heading ?? shareOverride?.chart?.heading
   const chartSubheading = shareSubOverride?.chart?.subheading ?? shareOverride?.chart?.subheading
 
-  // Resolve map properties. Cascade: share-subsection > share-section >
-  // story-subsection > parent. The story-subsection override only applies
-  // when this card represents a specific subsection.
+  // Variant-scoped text overrides. Each falls back to the section-level
+  // heading/subheading cascade so existing yaml without these slots keeps
+  // working unchanged. `??` (not `||`) so explicit `""` blanks render blank.
+  const mapTitleHeading =
+    shareSubOverride?.mapTitle?.heading ?? shareOverride?.mapTitle?.heading ?? heading
+  const mapTitleSubheading =
+    shareSubOverride?.mapTitle?.subheading ?? shareOverride?.mapTitle?.subheading ?? subheading
+  const heroHeading =
+    shareSubOverride?.hero?.heading ?? shareOverride?.hero?.heading ?? heading
+  const heroDek =
+    shareSubOverride?.hero?.dek ?? shareOverride?.hero?.dek ?? extractHeroBits(paragraphs).dek
+  // Map-title overlay's dek can be overridden independently; falls back to
+  // `hero.dek` so a single `hero.dek` setting still controls both surfaces.
+  const mapTitleDek =
+    shareSubOverride?.mapTitle?.dek ?? shareOverride?.mapTitle?.dek ?? heroDek
+  const statDescription =
+    shareSubOverride?.stat?.description ?? shareOverride?.stat?.description ?? paragraphs.join(' ')
+
+  const hidePretext = shareSubOverride?.hidePretext ?? shareOverride?.hidePretext ?? false
+
+  // Resolve map properties. Cascade for camera (center/zoom/pitch/bearing):
+  //   share-subsection ratios[ratio] >
+  //   share-subsection base >
+  //   share-section ratios[ratio] >
+  //   share-section base >
+  //   story-subsection > parent
+  // Only the camera fields are aspect-specific — pins / regions / heatmap /
+  // textLabels are the same across aspects and use the original cascade.
   const subsectionMap = parentConfig.subsections?.[unit.subIndex]?.map
+  const subRatio = shareSubOverride?.map?.ratios?.[ratio]
+  const secRatio = shareOverride?.map?.ratios?.[ratio]
   const mapCenter =
-    shareSubOverride?.map?.center ?? shareOverride?.map?.center ?? subsectionMap?.center ?? parentConfig.map?.center
+    subRatio?.center ?? shareSubOverride?.map?.center ?? secRatio?.center ?? shareOverride?.map?.center ?? subsectionMap?.center ?? parentConfig.map?.center
   const mapZoom =
-    shareSubOverride?.map?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? parentConfig.map?.zoom
+    subRatio?.zoom ?? shareSubOverride?.map?.zoom ?? secRatio?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? parentConfig.map?.zoom
   const mapPitch =
-    shareSubOverride?.map?.pitch ?? shareOverride?.map?.pitch ?? subsectionMap?.pitch ?? parentConfig.map?.pitch
+    subRatio?.pitch ?? shareSubOverride?.map?.pitch ?? secRatio?.pitch ?? shareOverride?.map?.pitch ?? subsectionMap?.pitch ?? parentConfig.map?.pitch
   const mapBearing =
-    shareSubOverride?.map?.bearing ?? shareOverride?.map?.bearing ?? subsectionMap?.bearing ?? parentConfig.map?.bearing
+    subRatio?.bearing ?? shareSubOverride?.map?.bearing ?? secRatio?.bearing ?? shareOverride?.map?.bearing ?? subsectionMap?.bearing ?? parentConfig.map?.bearing
   // Regions / heatmap: share override layers can override either, with full
   // cascade. `layers.{regions,heatmap} === false` suppresses entirely below.
   const resolvedRegions =
     shareSubOverride?.map?.regions ?? shareOverride?.map?.regions ?? subsectionMap?.regions ?? parentConfig.map?.regions
   const resolvedHeatmap =
     shareSubOverride?.map?.heatmap ?? shareOverride?.map?.heatmap ?? subsectionMap?.heatmap ?? parentConfig.map?.heatmap
-  const mapRegions = layers.regions === false ? undefined : resolvedRegions
+  // Thin patch: `regionLabelCodes` replaces the parent's labels.codes allowlist
+  // without forcing the user to restate the whole regions block.
+  const labelCodesOverride =
+    shareSubOverride?.regionLabelCodes ?? shareOverride?.regionLabelCodes
+  const patchedRegions = useMemo(() => {
+    if (!resolvedRegions) return resolvedRegions
+    if (!labelCodesOverride) return resolvedRegions
+    return {
+      ...resolvedRegions,
+      labels: { ...(resolvedRegions.labels ?? {}), codes: labelCodesOverride },
+    }
+  }, [resolvedRegions, labelCodesOverride])
+  const mapRegions = layers.regions === false ? undefined : patchedRegions
   const mapHeatmap = layers.heatmap === false ? undefined : resolvedHeatmap
+
+  // Free-floating text labels. Same cascade as pins; not gated by layer
+  // visibility (textLabels are independent of the pins layer toggle).
+  const textLabels = useMemo<MapTextLabel[] | undefined>(() => {
+    if (shareSubOverride?.map?.textLabels) return shareSubOverride.map.textLabels
+    if (shareOverride?.map?.textLabels) return shareOverride.map.textLabels
+    if (subsectionMap?.textLabels) return subsectionMap.textLabels
+    if (parentConfig.map && 'textLabels' in parentConfig.map) {
+      return (parentConfig.map as { textLabels?: MapTextLabel[] }).textLabels
+    }
+    return undefined
+  }, [parentConfig, shareOverride, shareSubOverride, subsectionMap])
 
   // Collect pins for this card:
   //   • share-subsection pins (if set, replaces all)
@@ -165,26 +218,40 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   //   • else if this is a subsection map card with its own pins, use just those
   //   • else union of parent pins + all subsection pins (the parent overview card)
   // Then suppressed entirely if layers.pins === false.
+  // Finally, per-label patches from `pinOverrides` are merged on top so the
+  // share card can tweak color / anchor / radius / pulse without restating
+  // the whole pin list.
   const allPins = useMemo<MapPinConfig[]>(() => {
     if (layers.pins === false) return []
-    if (shareSubOverride?.map?.pins) return shareSubOverride.map.pins
-    if (shareOverride?.map?.pins) return shareOverride.map.pins
-    if (subsectionMap?.pins) return subsectionMap.pins
-
-    const pins: MapPinConfig[] = []
-    if (parentConfig.map?.pins) pins.push(...parentConfig.map.pins)
-    if (parentConfig.subsections) {
-      for (const sub of parentConfig.subsections) {
-        if (sub.map?.pins) pins.push(...sub.map.pins)
+    const base: MapPinConfig[] = (() => {
+      if (shareSubOverride?.map?.pins) return shareSubOverride.map.pins
+      if (shareOverride?.map?.pins) return shareOverride.map.pins
+      if (subsectionMap?.pins) return subsectionMap.pins
+      const pins: MapPinConfig[] = []
+      if (parentConfig.map?.pins) pins.push(...parentConfig.map.pins)
+      if (parentConfig.subsections) {
+        for (const sub of parentConfig.subsections) {
+          if (sub.map?.pins) pins.push(...sub.map.pins)
+        }
       }
+      // Deduplicate by coordinates
+      const seen = new Set<string>()
+      return pins.filter((p) => {
+        const key = `${p.coordinates[0]},${p.coordinates[1]}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+    })()
+    const overridesByLabel: Record<string, MapPinOverride> = {
+      ...(shareOverride?.pinOverrides ?? {}),
+      ...(shareSubOverride?.pinOverrides ?? {}),
     }
-    // Deduplicate by coordinates
-    const seen = new Set<string>()
-    return pins.filter((p) => {
-      const key = `${p.coordinates[0]},${p.coordinates[1]}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
+    if (Object.keys(overridesByLabel).length === 0) return base
+    return base.flatMap((p) => {
+      const patch = p.label ? overridesByLabel[p.label] : undefined
+      if (patch?.hidden) return []
+      return [patch ? { ...p, ...patch } : p]
     })
   }, [parentConfig, shareOverride, shareSubOverride, subsectionMap, layers.pins])
 
@@ -269,78 +336,113 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
       >
           {/* Map background layer — only on hero and map-title cards */}
           {showMap && (
-            <ShareMapBg
-              center={mapCenter!}
-              zoom={mapZoom!}
-              pitch={mapPitch}
-              bearing={mapBearing}
-              style={mapStyle}
-              accessToken={accessToken}
-              pins={allPins}
-              regions={mapRegions}
-              heatmap={mapHeatmap}
-              onReady={handleMapReady}
-              palette={palette}
-              fontstack={fontstack}
-              highlightCountry={highlightCountry}
-              highlightColor={highlightColor}
-              defaultOpacity={mapOpacity}
-              defaultPinColor={defaultPinColor}
-              defaultPinRadius={defaultPinRadius}
-            />
+            <>
+              <ShareMapBg
+                center={mapCenter!}
+                zoom={mapZoom!}
+                pitch={mapPitch}
+                bearing={mapBearing}
+                style={mapStyle}
+                accessToken={accessToken}
+                pins={allPins}
+                regions={mapRegions}
+                heatmap={mapHeatmap}
+                textLabels={textLabels}
+                onReady={handleMapReady}
+                palette={palette}
+                fontstack={fontstack}
+                highlightCountry={highlightCountry}
+                highlightColor={highlightColor}
+                defaultOpacity={mapOpacity}
+                defaultPinColor={defaultPinColor}
+                defaultPinRadius={defaultPinRadius}
+                pixelRatio={pixelRatio}
+              />
+              <MapLegend
+                regions={mapRegions}
+                pins={allPins}
+                leftColumn={isMapTitle && ratio === '4:3'}
+              />
+            </>
           )}
 
           {/* Content layer */}
           <div className="relative z-10 h-full flex flex-col">
             {isMapTitle ? (
-              /* Map + section heading overlay card — heading sits in a
-                 translucent panel mirroring MapStorySection on the story
-                 page so the share view matches the live story aesthetic.
-                 4:3 landscape gets a more compact caption (smaller heading,
-                 no hero dek) so the map isn't crowded out of view. */
-              <div className="flex flex-col justify-end h-full p-4">
-                <div
-                  className="rounded-lg p-5 backdrop-blur-sm"
-                  style={{
-                    background: 'rgb(var(--color-panel-rgb) / 0.2)',
-                    border: '0.5px solid var(--color-line)',
-                  }}
-                >
-                  {parentConfig.eyebrow && (
-                    <div
-                      className="font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-[0.15em] mb-2"
-                      style={{ color: 'var(--color-accent)' }}
-                    >
-                      {parentConfig.eyebrow}
-                    </div>
-                  )}
-                  <h2
-                    className={`font-serif font-bold leading-[1.2] ${ratio === '4:3' ? 'text-[1.25rem]' : 'text-[1.6rem]'}`}
-                    style={{ color: 'var(--color-text)' }}
+              /* Map + section heading overlay card. Portrait/square ratios:
+                 caption sits in a translucent panel along the top so the map
+                 (and any region labels / legend) sit unobstructed below.
+                 4:3 landscape: caption moves into a left-column panel
+                 occupying ~1/3 of the card width — the map takes the right 2/3
+                 and the legend (passed `leftColumn` above) sits beneath the
+                 caption in the same column. */
+              ratio === '4:3' ? (
+                <div className="flex justify-start h-full p-2 pt-3">
+                  <div
+                    className="rounded-lg p-2 backdrop-blur-sm w-1/3 self-start"
+                    style={{
+                      background: 'rgb(var(--color-panel-rgb) / 0.2)',
+                      border: '0.5px solid var(--color-line)',
+                    }}
                   >
-                    {heading || title}
-                  </h2>
-                  {subheading && (
-                    <p
-                      className="text-[0.85rem] leading-[1.4] mt-2"
-                      style={{ color: 'var(--color-muted)' }}
+                    <h2
+                      className="font-serif font-bold leading-[1.2] text-[1rem]"
+                      style={{ color: 'var(--color-text)' }}
                     >
-                      {subheading}
-                    </p>
-                  )}
-                  {kind === 'hero' && ratio !== '4:3' && (() => {
-                    const { dek } = extractHeroBits(paragraphs)
-                    return dek ? (
+                      {mapTitleHeading ?? title}
+                    </h2>
+                    {mapTitleSubheading && (
                       <p
-                        className="text-[0.8rem] leading-[1.4] mt-3 max-w-[80%]"
+                        className="text-[0.75rem] leading-[1.4] mt-1"
                         style={{ color: 'var(--color-muted)' }}
                       >
-                        {dek}
+                        {mapTitleSubheading}
                       </p>
-                    ) : null
-                  })()}
+                    )}
+                    {kind === 'hero' && mapTitleDek && (
+                      <p
+                        className="text-[0.8rem] leading-[1.4] mt-1"
+                        style={{ color: 'var(--color-muted)' }}
+                      >
+                        {mapTitleDek}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col justify-start h-full p-2 pt-3">
+                  <div
+                    className="rounded-lg p-2 backdrop-blur-sm"
+                    style={{
+                      background: 'rgb(var(--color-panel-rgb) / 0.2)',
+                      border: '0.5px solid var(--color-line)',
+                    }}
+                  >
+                    <h2
+                      className="font-serif font-bold leading-[1.2] text-[1rem]"
+                      style={{ color: 'var(--color-text)' }}
+                    >
+                      {mapTitleHeading ?? title}
+                    </h2>
+                    {mapTitleSubheading && (
+                      <p
+                        className="text-[0.75rem] leading-[1.4] mt-1"
+                        style={{ color: 'var(--color-muted)' }}
+                      >
+                        {mapTitleSubheading}
+                      </p>
+                    )}
+                    {kind === 'hero' && mapTitleDek && (
+                      <p
+                        className="text-[0.8rem] leading-[1.4] mt-1"
+                        style={{ color: 'var(--color-muted)' }}
+                      >
+                        {mapTitleDek}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
             ) : isGraph && hasChart ? (
               /* Chart-only card — one per subsection, with activeStep
                  driven by the unit's subIndex so each chart step renders
@@ -354,20 +456,17 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                   subheading={chartSubheading}
                 />
               </div>
-            ) : kind === 'hero' && heading ? (
-              <ShareHeroCard
-                title={heading}
-                eyebrow={parentConfig.eyebrow}
-              />
+            ) : kind === 'hero' && heroHeading ? (
+              <ShareHeroCard title={heroHeading} dek={heroDek} />
             ) : kind === 'stat' && heading ? (
               <ShareStatCard
                 value={heading}
                 subheading={subheading}
-                description={paragraphs.join(' ')}
+                description={statDescription}
                 color={parentConfig.color}
               />
             ) : (
-              <ShareTextCard heading={heading} subheading={subheading} paragraphs={paragraphs} />
+              <ShareTextCard heading={heading} subheading={subheading} paragraphs={paragraphs} hidePretext={hidePretext} />
             )}
           </div>
 

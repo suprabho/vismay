@@ -11,17 +11,27 @@ export default function BrandingHeader({
 }) {
   const logoSrc = logo ?? DEFAULT_SHARE_LOGO
   return (
-    <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-3 py-3">
+    <div className="absolute left-0 right-0 flex items-end justify-between" style={{ bottom: 12 }}>
+      {/* Title sits to the right of the Mapbox logo (~40px wide at scale 0.45
+          + 4px Mapbox margin) so the two read as a single bottom row. */}
       <span
-        className="font-[family-name:var(--font-mono)] text-[0.55rem] uppercase tracking-[0.15em] opacity-70"
-        style={{ color: 'var(--color-muted)' }}
+        className="font-[family-name:var(--font-mono)] uppercase tracking-[0.15em]"
+        style={{
+          color: 'var(--color-muted)',
+          paddingLeft: 100,
+          fontSize: '0.4rem',
+          lineHeight: '10px',
+          height: 1,
+          display: 'inline-flex',
+          alignItems: 'center',
+        }}
       >
         {title}
       </span>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1" style={{ height: 10 }}>
         <span
-          className="font-[family-name:var(--font-mono)] text-[0.55rem] uppercase tracking-[0.15em] opacity-70"
-          style={{ color: 'var(--color-accent)', marginTop: 3 }}
+          className="font-[family-name:var(--font-mono)] uppercase tracking-[0.15em] opacity-70"
+          style={{ color: 'var(--color-accent)', fontSize: '0.4rem', lineHeight: '10px' }}
         >
           vizmaya
         </span>
@@ -30,7 +40,7 @@ export default function BrandingHeader({
           src={logoSrc}
           alt=""
           className="block"
-          style={{ height: 24, width: 'auto' }}
+          style={{ height: 10, width: 'auto' }}
         />
       </div>
     </div>

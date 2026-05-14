@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapPinConfig, MapPalette } from '@/lib/storyConfig.types'
-import type { MapRegionLayer, HeatmapLayer, MapStep } from '@/types/story'
+import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel } from '@/types/story'
 import MapboxBackground from '@/components/story/charts/MapboxBackground'
 
 // Match the story page's camera framing so the share card shows the same
@@ -33,6 +33,7 @@ interface Props {
   pins?: MapPinConfig[]
   regions?: MapRegionLayer
   heatmap?: HeatmapLayer
+  textLabels?: MapTextLabel[]
   onReady?: () => void
   palette?: MapPalette
   fontstack?: string[]
@@ -46,6 +47,12 @@ interface Props {
   defaultPinColor?: string
   /** Story `defaults.pinRadius`. */
   defaultPinRadius?: number
+  /**
+   * WebGL canvas pixel ratio. Set to the share-card export ratio so the
+   * rasterized map isn't upscaled (and pixelated) when html-to-image draws
+   * the canvas into the higher-resolution output.
+   */
+  pixelRatio?: number
 }
 
 /**
@@ -72,6 +79,7 @@ export default function ShareMapBg({
   pins,
   regions,
   heatmap,
+  textLabels,
   onReady,
   palette,
   fontstack,
@@ -80,6 +88,7 @@ export default function ShareMapBg({
   defaultOpacity,
   defaultPinColor,
   defaultPinRadius,
+  pixelRatio,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
@@ -122,9 +131,10 @@ export default function ShareMapBg({
         pins: scaledPins,
         regions,
         heatmap,
+        textLabels,
       },
     ],
-    [center, zoom, pitch, bearing, scaledPins, regions, heatmap]
+    [center, zoom, pitch, bearing, scaledPins, regions, heatmap, textLabels]
   )
 
   return (
@@ -146,6 +156,7 @@ export default function ShareMapBg({
           defaultOpacity={defaultOpacity}
           defaultPinColor={defaultPinColor}
           defaultPinRadius={defaultPinRadius}
+          pixelRatio={pixelRatio}
           landscapeFocusArea={SHARE_FOCUS_AREA}
           portraitFocusArea={SHARE_FOCUS_AREA}
         />
