@@ -2,143 +2,47 @@
 
 A data-driven visual storytelling platform that pairs scroll-synced maps, charts, and prose to narrate complex geopolitical and market stories.
 
-Built with **Next.js 16**, **Mapbox GL**, **Apache ECharts**, and **GSAP ScrollTrigger**.
+Built with **Next.js 16**, **Mapbox GL**, **Apache ECharts**, **GSAP ScrollTrigger**, and **Supabase**.
+
+> **Editing stories, share cards, reports, autoplay videos, or demos? → See [instructions.md](./instructions.md).**
 
 ---
 
-## How It Works
+## How it works
 
 Each story is a full-viewport scroll-snap experience with three persistent layers:
 
-1. **Map background** (Mapbox GL) — flies between real-world coordinates as the reader scrolls
-2. **Foreground chart** (ECharts) — transitions between data steps without remounting
-3. **Text cards** — snap-locked prose that drives both layers via IntersectionObserver
+1. **Map background** (Mapbox GL) — flies between coordinates as the reader scrolls.
+2. **Foreground chart** (ECharts) — transitions between data steps without remounting.
+3. **Text cards** — snap-locked prose that drives both layers via IntersectionObserver.
 
-Stories are authored as **Markdown + YAML config** and statically generated at build time.
+Stories are authored as **Markdown + YAML config + chart JSON**, statically generated at build time, and editable through an admin UI (`/admin`). Content lives either on disk or in Supabase, switched by `CONTENT_SOURCE=fs|db`.
+
+For deeper architecture context see [CLAUDE.md](CLAUDE.md) and [docs/db-backed-content-plan.md](docs/db-backed-content-plan.md).
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
-app/
-  page.tsx                    # Home (story listing)
-  story/[slug]/page.tsx       # Dynamic story pages (SSG)
-  map-edit/                   # Map editing interface
-  api/                        # Mapbox + story endpoints
-
-components/
-  story/
-    StoryRenderer.tsx          # Block type -> component dispatcher
-    StoryMapShell.tsx          # Page-level orchestrator (map + chart + text)
-    MapStorySection.tsx        # Scroll-snap text cards
-    ChartPanel.tsx             # Chart registry (foreground)
-    ScrollySection.tsx         # Scroll-triggered animations
-    Hero.tsx                   # Title block
-    StatBlock.tsx              # Large number display
-    ActHeader.tsx              # Section headers ("Act I", "Act II")
-    ProseSection.tsx           # Text paragraphs
-    ScenarioToggle.tsx         # Multi-scenario selector
-    ThemeProvider.tsx           # CSS variable injection per story
-    charts/
-      MapboxBackground.tsx     # Persistent map layer (fixed, z-0)
-      StockCandlestickChart.tsx
-      HeliumPriceChart.tsx
-      DRAMPriceChart.tsx
-      DDR5AreaChart.tsx
-      PolarExposureChart.tsx
-      HBMDRAMTreemap.tsx
-      ...
-  share/                       # Social sharing cards + export
-  autoplay/                    # Video/autoplay mode
-
+app/                # Next.js routes (story pages, admin UI, API)
+components/         # React components (story renderer, charts, admin editor, share)
 content/
   stories/
-    south-korea-gpu-hour/
-      .md                      # Story prose (frontmatter + markdown)
-      .config.yaml             # Map states, chart steps, scroll units
-      .share.yaml              # Sharing card definitions
-
-lib/
-  content.ts                   # Story file reading & parsing
-  storyConfig.ts               # YAML config loader
-  storyConfig.types.ts         # TypeScript types for story structure
-  chartTheme.ts                # ECharts theme + responsive hooks
-  resolveUnits.ts              # Config -> snap targets
-  use-in-view.ts               # IntersectionObserver hook
-
-scripts/
-  generate-audio.ts            # TTS audio generation (Gemini API)
+    <slug>.md            # Story prose + frontmatter
+    <slug>.config.yaml   # Map states, chart steps, scroll units
+    <slug>.share.yaml    # Social card definitions
+    <slug>.report.yaml   # Report/slides PDF overrides
+    <slug>.tts.yaml      # Optional TTS narration overrides
+    <slug>/charts/*.json # Chart data (served at runtime)
+lib/                # Content loaders, render pipelines, helpers
+scripts/            # CLI utilities (audio gen, data ingestion, migrations)
+supabase/migrations # SQL migrations
 ```
 
 ---
 
-## Story Architecture
-
-### Content Authoring
-
-Each story lives in `content/stories/<slug>/` with three files:
-
-| File | Purpose |
-|------|---------|
-| `.md` | Prose content with YAML frontmatter (title, subtitle, colors, byline) |
-| `.config.yaml` | Scroll units, map states (center/zoom/pitch/pins), chart steps |
-| `.share.yaml` | Social sharing card definitions |
-
-### Scroll-Snap Model
-
-The config defines **sections**, each mapping to:
-
-- **One map state** — geographic center, zoom, pitch, bearing, pins, opacity
-- **Multiple subsections** — chart advances while the map holds steady
-- **Text references** — heading strings that resolve to markdown content
-
-At runtime, the config resolves into **units** (snap targets). Each unit occupies one full viewport. IntersectionObserver detects which unit is active and drives:
-
-- `activeParent` — triggers map `flyTo` transition
-- `activeStep` — advances the chart within the current section
-- `currentChart` — switches which foreground chart renders
-
-### Block Types
-
-The `StoryRenderer` maps content blocks to components:
-
-| Block | Component | Purpose |
-|-------|-----------|---------|
-| `hero` | Hero | Title + subtitle + byline |
-| `stat-block` | StatBlock | Large featured number |
-| `act-header` | ActHeader | Act dividers |
-| `prose` | ProseSection | Text paragraphs |
-| `data-table` | DataTable | Markdown tables |
-| `exposure-grid` | ExposureGrid | Risk/factor grid |
-| `scrolly-section` | ScrollySection | Scroll-triggered chart + text |
-| `scenario-toggle` | ScenarioToggle | Multi-scenario selector |
-| `takeaway-grid` | TakeawayGrid | Key takeaway cards |
-| `methodology` | MethodologySection | Sources & methods |
-
-### Responsive Strategy
-
-- **Desktop** (`desktopUnits`) — text cards in a right column (63vw), map fills left
-- **Mobile** (`mobileUnits`) — cards centered/fullscreen, map behind
-- Viewport change resets active unit and scrolls to top
-- Maps use `landscapeFocusArea` / `portraitFocusArea` to shift focal points
-
----
-
-## Theme System
-
-Story frontmatter defines theme colors as hex values. `ThemeProvider` injects them as CSS variables:
-
-```
---color-background, --color-foreground, --color-accent, --color-accent2,
---color-teal, --color-surface, --color-muted, --color-positive, --color-line
-```
-
-Charts, maps, and text all read from these variables, allowing per-story color customization without code changes.
-
----
-
-## Tech Stack
+## Tech stack
 
 | Category | Tool |
 |----------|------|
@@ -147,39 +51,43 @@ Charts, maps, and text all read from these variables, allowing per-story color c
 | Maps | Mapbox GL JS |
 | Charts | Apache ECharts |
 | Animations | GSAP (ScrollTrigger), Rive |
-| Icons | Phosphor Icons, Iconify |
-| Backend | Supabase |
-| Export | html-to-image, JSZip |
+| Backend | Supabase (Postgres + Storage + Auth) |
+| Rendering | Playwright (PDF/video), ffmpeg (video mux) |
+| TTS | Gemini API |
 | Analytics | Vercel Analytics, Google Analytics |
 
 ---
 
-## Getting Started
+## Getting started
 
 ```bash
-# Install dependencies
+# Install
 npm install
 
-# Set environment variables
+# Configure env
 cp .env.example .env.local
-# Required: NEXT_PUBLIC_MAPBOX_TOKEN
+# Required: NEXT_PUBLIC_MAPBOX_TOKEN, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Start dev server
+# Dev server
 npm run dev
 
-# Build for production
+# Production build
 npm run build
 ```
 
-### Environment Variables
+### Environment variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox GL map rendering |
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox GL rendering |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Database connection |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase public auth |
-| `SUPABASE_SERVICE_ROLE_KEY` | No | Server-side Supabase operations |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server | Server-side Supabase operations |
+| `CONTENT_SOURCE` | No | `fs` (default, local files) or `db` (Supabase) |
 | `GEMINI_API_KEY` | No | TTS audio generation |
+| `GITHUB_DISPATCH_TOKEN` | Prod | Fine-grained PAT for render dispatch (Actions: write) |
+| `GITHUB_DISPATCH_REPO` | Prod | `owner/repo` for the dispatch target |
+| `GITHUB_DISPATCH_REF` | No | Branch the workflow runs from (defaults to `main`) |
 | `NEXT_PUBLIC_GA_ID` | No | Google Analytics |
 
 ---
@@ -193,3 +101,29 @@ npm run build
 | `npm run start` | Production server |
 | `npm run lint` | ESLint checks |
 | `npm run generate-audio` | Generate TTS audio via Gemini API |
+| `npm run migrate-content` | Sync filesystem stories into Supabase |
+| `npm run energy-profile:scrape` | Scrape IEA-related news for `/energy-profile` |
+| `npm run energy-profile:import-owid` | Import OWID country energy data |
+
+---
+
+## Render pipelines
+
+Three async pipelines run via GitHub Actions in production and sync in local dev:
+
+| Pipeline | Endpoint | Workflow | Notes |
+|----------|----------|----------|-------|
+| Autoplay video (MP4) | `/api/story-video/[slug]?aspect=9:16\|16:9` | [render-video.yml](.github/workflows/render-video.yml) | Needs Playwright + ffmpeg |
+| Story PDF (report/slides) | `/api/story-pdf/[slug]?format=report\|slides` | [render-pdf.yml](.github/workflows/render-pdf.yml) | Chromium only |
+| TTS audio | (regen button in admin) | [render-audio.yml](.github/workflows/render-audio.yml) | Needs `GEMINI_API_KEY` |
+
+All three follow the same `{ status: 'ready' \| 'rendering', public_url? }` poll shape. See [CLAUDE.md](CLAUDE.md) for required GitHub repo secrets and Vercel env vars. For how to trigger each from the admin UI, see [instructions.md](./instructions.md).
+
+---
+
+## Further reading
+
+- [instructions.md](./instructions.md) — admin/editor guide
+- [CLAUDE.md](CLAUDE.md) — codebase context, deploy requirements, active initiatives
+- [docs/db-backed-content-plan.md](docs/db-backed-content-plan.md) — Supabase content cutover plan
+- [docs/share-card-doctor-plan.md](docs/share-card-doctor-plan.md) — share-card system design
