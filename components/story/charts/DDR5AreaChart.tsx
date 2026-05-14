@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
-import { useChartColors, useIsMobile } from '@/lib/chartTheme'
+import { chartTooltip, useChartColors, useIsMobile } from '@/lib/chartTheme'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 
@@ -32,7 +32,8 @@ const TITLES: Record<number, string> = {
 }
 
 export default function DDR5AreaChart({ activeStep }: { activeStep: number }) {
-  const { accent: ACCENT, accent2: ACCENT2, teal: TEAL, amber: AMBER, muted: MUTED, line: LINE } = useChartColors()
+  const colors = useChartColors()
+  const { accent: ACCENT, accent2: ACCENT2, teal: TEAL, amber: AMBER, muted: MUTED, line: LINE } = colors
   const mobile = useIsMobile()
 
   const annotations: { x: string; y: number; label: string; color: string }[] = [
@@ -231,7 +232,11 @@ export default function DDR5AreaChart({ activeStep }: { activeStep: number }) {
       },
     ],
     // Vertical line marking "pre-crisis floor"
-    tooltip: { show: false },
+    tooltip: chartTooltip(colors, mobile, {
+      trigger: 'axis',
+      valueFormatter: (v: number | string) =>
+        v == null ? '' : `$${Number(v).toFixed(2)}`,
+    }),
   }
 
   return (

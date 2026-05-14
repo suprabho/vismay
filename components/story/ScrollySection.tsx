@@ -70,7 +70,12 @@ export default function ScrollySection({ block }: { block: ScrollySectionBlock }
       {/* Sticky chart panel */}
       {hasChart && (
         <div className="sticky top-0 h-screen flex items-center justify-center pointer-events-none z-0">
-          <div className="w-full max-w-[860px] px-6">
+          {/* Inner card re-enables pointer events on desktop so ECharts can
+              capture hover for tooltips. Mobile/portrait keeps it disabled —
+              tooltips are off there anyway, and vertical swipes need to fall
+              through to page scroll. Step cards remain above the chart and
+              continue to receive their own events. */}
+          <div className="w-full max-w-[860px] px-6 [@media(min-aspect-ratio:1/1)]:pointer-events-auto">
             <ChartPanel chartId={block.chartId} activeStep={activeStep} />
           </div>
         </div>

@@ -94,6 +94,30 @@ export function useIsMobile(): boolean {
   return useSyncExternalStore(subscribeMobile, getMobileSnapshot, getMobileServerSnapshot)
 }
 
+/**
+ * Themed tooltip config used by every chart. Returns `{ show: false }` on
+ * mobile (no hover surface there) and a styled axis tooltip on desktop.
+ * Pass `extra` to override trigger, formatter, axisPointer, etc.
+ */
+export function chartTooltip(
+  colors: ChartColors,
+  mobile: boolean,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  if (mobile) return { show: false }
+  return {
+    show: true,
+    trigger: 'axis',
+    confine: true,
+    backgroundColor: colors.chromeBg,
+    borderColor: colors.line,
+    borderWidth: 1,
+    textStyle: { color: colors.chromeText, fontFamily: 'var(--font-mono)', fontSize: 11 },
+    axisPointer: { lineStyle: { color: colors.line } },
+    ...extra,
+  }
+}
+
 export function themeToChartColors(theme: Theme): ChartColors {
   return {
     accent: theme.colors.accent,

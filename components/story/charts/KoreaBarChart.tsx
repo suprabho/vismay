@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
-import { useChartColors, useIsMobile } from '@/lib/chartTheme'
+import { chartTooltip, useChartColors, useIsMobile } from '@/lib/chartTheme'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 
@@ -13,7 +13,8 @@ const TITLES: Record<number, string> = {
 }
 
 export default function KoreaBarChart({ activeStep }: { activeStep: number }) {
-  const { accent: ACCENT, amber: AMBER, red: RED, muted: MUTED, line: LINE } = useChartColors()
+  const colors = useChartColors()
+  const { accent: ACCENT, amber: AMBER, red: RED, muted: MUTED, line: LINE } = colors
   const mobile = useIsMobile()
 
   const items = [
@@ -111,7 +112,14 @@ export default function KoreaBarChart({ activeStep }: { activeStep: number }) {
         })),
       },
     ],
-    tooltip: { show: false },
+    tooltip: chartTooltip(colors, mobile, {
+      trigger: 'item',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      formatter: (params: any) => {
+        const label = String(params?.name ?? '').replace(/\n/g, ' ')
+        return `${label}: <strong>${params?.value}%</strong>`
+      },
+    }),
   }
 
   return (

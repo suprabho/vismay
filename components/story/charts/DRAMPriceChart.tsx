@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
-import { useChartColors, useIsMobile } from '@/lib/chartTheme'
+import { chartTooltip, useChartColors, useIsMobile } from '@/lib/chartTheme'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 
@@ -18,7 +18,8 @@ const TITLES: Record<number, string> = {
 }
 
 export default function DRAMPriceChart({ activeStep }: { activeStep: number }) {
-  const { accent: ACCENT, accent2: ACCENT2, muted: MUTED, line: LINE } = useChartColors()
+  const colors = useChartColors()
+  const { accent: ACCENT, accent2: ACCENT2, muted: MUTED, line: LINE } = colors
   const mobile = useIsMobile()
   const title = TITLES[activeStep] ?? TITLES[0]
   const showHormuzLegend = activeStep >= 1
@@ -107,7 +108,11 @@ export default function DRAMPriceChart({ activeStep }: { activeStep: number }) {
         })),
       },
     ],
-    tooltip: { show: false },
+    tooltip: chartTooltip(colors, mobile, {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (v: number | string) => `${v}%`,
+    }),
   }
 
   return (

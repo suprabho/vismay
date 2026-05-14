@@ -359,7 +359,15 @@ export default function StoryMapShell({
             className={
               isAutoplay && isPortrait
                 ? 'w-full h-full rounded-lg overflow-hidden flex items-center justify-center p-1.5'
-                : 'w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0'
+                : // `[@media(min-aspect-ratio:1/1)]:pointer-events-auto` re-enables
+                  // hover on the chart in landscape — the surrounding wrapper sets
+                  // `pointer-events-none` so wheel events on the map/text-card
+                  // regions still fall through to the snap-scroll container. The
+                  // chart area itself captures mouse hover for ECharts tooltips;
+                  // users scroll by moving the cursor off the chart card. Skipped
+                  // in portrait so vertical swipes through the chart strip still
+                  // pass through to the scroll container.
+                  'w-full h-full max-w-190 [@media(min-aspect-ratio:1/1)]:max-w-none rounded-lg overflow-hidden flex items-center justify-center p-1.5 [@media(min-aspect-ratio:1/1)]:p-0 [@media(min-aspect-ratio:1/1)]:pointer-events-auto'
             }
             style={{
               background: 'rgb(var(--color-panel-rgb) / 0.2)',

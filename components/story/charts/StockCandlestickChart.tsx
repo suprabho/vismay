@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
-import { useChartColors, useIsMobile } from '@/lib/chartTheme'
+import { chartTooltip, useChartColors, useIsMobile } from '@/lib/chartTheme'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 
@@ -62,7 +62,8 @@ const data2008Overlay = [0, 21, 42, 63, 84, 105, 126, 147, 168, 189, 210, 231, 2
 )
 
 export default function StockCandlestickChart({ activeStep }: { activeStep: number }) {
-  const { red: RED, accent2: ACCENT2, muted: MUTED, line: LINE, green: GREEN, amber: AMBER } = useChartColors()
+  const colors = useChartColors()
+  const { red: RED, accent2: ACCENT2, muted: MUTED, line: LINE, green: GREEN, amber: AMBER } = colors
   const mobile = useIsMobile()
   const title = TITLES[activeStep] ?? TITLES[0]
   const show2008 = activeStep >= 1
@@ -231,7 +232,10 @@ export default function StockCandlestickChart({ activeStep }: { activeStep: numb
           },
         },
       ],
-      tooltip: { show: false }, // hover tooltip disabled
+      tooltip: chartTooltip(colors, mobile, {
+        trigger: 'axis',
+        axisPointer: { type: 'cross', lineStyle: { color: LINE } },
+      }),
     }
 
     return (
@@ -427,7 +431,10 @@ export default function StockCandlestickChart({ activeStep }: { activeStep: numb
           ]
         : []),
     ],
-    tooltip: { show: false },
+    tooltip: chartTooltip(colors, mobile, {
+      trigger: 'axis',
+      axisPointer: { type: 'cross', lineStyle: { color: LINE } },
+    }),
   }
 
   return (

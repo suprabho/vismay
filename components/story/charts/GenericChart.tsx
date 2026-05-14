@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import type { EChartsOption } from 'echarts'
-import { useChartColors, useIsMobile } from '@/lib/chartTheme'
+import { chartTooltip, useChartColors, useIsMobile } from '@/lib/chartTheme'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 
@@ -146,9 +146,24 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
   // compositor entirely: the chart blends into the page background regardless
   // of how alpha is handled.
   const themeBg = cssVars.bg || cssVars.background
+  // Merge themed tooltip defaults under whatever the chart JSON specifies.
+  // Most ingest-generated JSONs define `tooltip: { trigger, formatter }` but
+  // skip styling — without this merge they'd render as ECharts' default white
+  // tooltip, inconsistent with the bespoke charts. JSON wins on collision
+  // (triggers/formatters/axis pointers preserved), except on mobile where
+  // `show: false` must hold regardless of what the JSON says.
+  const baseTooltip = chartTooltip(colors, mobile) as Record<string, unknown>
+  function mergeTooltip(json: unknown): Record<string, unknown> {
+    const j = (json && typeof json === 'object' && !Array.isArray(json) ? json : {}) as Record<string, unknown>
+    return mobile ? { ...j, show: false } : { ...baseTooltip, ...j }
+  }
+  const mergedTooltip = Array.isArray(resolved.tooltip)
+    ? (resolved.tooltip as unknown[]).map(mergeTooltip)
+    : mergeTooltip(resolved.tooltip)
   const option: EChartsOption = {
     ...resolved,
     backgroundColor: themeBg || 'transparent',
+    tooltip: mergedTooltip as EChartsOption['tooltip'],
   }
 
   return (
