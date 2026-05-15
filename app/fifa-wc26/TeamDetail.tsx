@@ -164,6 +164,11 @@ function Profile({ data }: { data: FifaWc26TeamProfile }) {
       value: fmtDecimal(data.eiuDemocracyIndex2024, 2),
     },
     { label: 'Regime', value: data.regimeType ?? '—' },
+    { label: 'GHI 2025', value: fmtDecimal(data.ghi2025Score, 1) },
+    {
+      label: 'WHR rank 2025',
+      value: data.whr2025Rank != null ? `#${data.whr2025Rank}` : '—',
+    },
   ]
 
   return (
@@ -241,7 +246,7 @@ function Profile({ data }: { data: FifaWc26TeamProfile }) {
         style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
       >
         Squad values: Transfermarkt (Oct–Nov 2025). GDP / population: IMF & World Bank 2024.
-        Democracy Index: EIU 2024.
+        Democracy Index: EIU 2024. FIFA rank: Apr 2026. GHI 2025, WHR 2025.
         {(data.shortfoot.fixtures.length > 0 || data.shortfoot.news.length > 0) && (
           <> Fixtures: football-data.org. News summaries: shortfoot RSS via Gemini.</>
         )}
