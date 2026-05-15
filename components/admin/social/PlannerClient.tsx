@@ -511,6 +511,22 @@ function DayDrawer({
   const titleFor = (slug: string | null) =>
     slug ? stories.find((s) => s.slug === slug)?.title ?? slug : '(story removed)'
   const d = new Date(`${dateKey}T00:00:00`)
+  const [channelFilter, setChannelFilter] = useState<Set<Channel>>(new Set())
+  useEffect(() => {
+    setChannelFilter(new Set())
+  }, [dateKey])
+  const channelsPresent = CHANNELS.filter((c) => posts.some((p) => p.channel === c))
+  const filteredPosts =
+    channelFilter.size === 0 ? posts : posts.filter((p) => channelFilter.has(p.channel))
+  const toggleChannel = (c: Channel) => {
+    setChannelFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(c)) next.delete(c)
+      else next.add(c)
+      return next
+    })
+  }
+  const CHANNEL_LABEL: Record<Channel, string> = { x: 'X', linkedin: 'in', youtube: 'YT' }
   return (
     <div
       className="fixed inset-0 z-40 bg-black/40"
@@ -543,11 +559,36 @@ function DayDrawer({
             </button>
           </div>
         </div>
+        {channelsPresent.length > 1 && (
+          <div className="shrink-0 px-3 py-2 border-b border-white/5 flex items-center gap-1.5 flex-wrap">
+            {channelsPresent.map((c) => {
+              const active = channelFilter.has(c)
+              const count = posts.filter((p) => p.channel === c).length
+              return (
+                <button
+                  key={c}
+                  onClick={() => toggleChannel(c)}
+                  aria-pressed={active}
+                  className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition ${
+                    active
+                      ? CHANNEL_COLORS[c]
+                      : 'border-white/10 text-neutral-400 hover:text-neutral-200 hover:border-white/20'
+                  }`}
+                >
+                  {CHANNEL_LABEL[c]} · {count}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <div className="flex-1 overflow-auto p-3 space-y-2">
           {posts.length === 0 && (
             <div className="text-sm text-neutral-500 py-8 text-center">No posts scheduled.</div>
           )}
-          {posts.map((p) => (
+          {posts.length > 0 && filteredPosts.length === 0 && (
+            <div className="text-sm text-neutral-500 py-8 text-center">No posts match the filter.</div>
+          )}
+          {filteredPosts.map((p) => (
             <PostCard
               key={p.id}
               post={p}
