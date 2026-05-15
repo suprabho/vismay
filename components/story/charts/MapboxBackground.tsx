@@ -150,6 +150,24 @@ function resolvePaintColor(color: string, fallback = '#D85A30'): string {
   return color
 }
 
+// Translate a $token shorthand (e.g. "$teal") to a concrete color by reading
+// the CSS custom property off the map container element.
+function resolveTokenColor(color: string, el: HTMLElement | null): string {
+  if (!color.startsWith('$')) return color
+  if (!el) return color
+  const cs = getComputedStyle(el)
+  const v = cs.getPropertyValue(`--color-${color.slice(1)}`).trim()
+  if (v.startsWith('var(')) {
+    const m = v.match(/^var\(\s*(--[\w-]+)(?:\s*,\s*(.+))?\s*\)$/)
+    if (m) {
+      const next = cs.getPropertyValue(m[1]).trim()
+      if (next && !next.startsWith('var(')) return next
+      return m[2]?.trim() ?? color
+    }
+  }
+  return v || color
+}
+
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -1032,7 +1050,7 @@ export default function MapboxBackground({
       const key = pinKey(pin)
       if (markersRef.current.has(key)) continue
 
-      const color = pin.color ?? defaultPinColor
+      const color = resolveTokenColor(pin.color ?? defaultPinColor, containerRef.current)
       const radius = pin.radius ?? defaultPinRadius
       const opacity = pin.opacity ?? 0.85
       const pulse = pin.pulse !== false
