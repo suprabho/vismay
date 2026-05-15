@@ -28,14 +28,12 @@ function describeAsset(ref: AssetRef): string {
 export function PostCard({
   post,
   storyTitle,
-  onEdit,
   onOpen,
   onChange,
 }: {
   post: SocialPostPlan
   storyTitle: string
-  onEdit: () => void
-  onOpen?: () => void
+  onOpen: () => void
   onChange: () => void
 }) {
   const [busy, setBusy] = useState(false)
@@ -96,8 +94,26 @@ export function PostCard({
     }
   }
 
+  function stop(handler: (e: React.MouseEvent) => void) {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handler(e)
+    }
+  }
+
   return (
-    <div className="border border-white/10 rounded-lg p-3 space-y-2 bg-white/[0.02]">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+      className="border border-white/10 rounded-lg p-3 space-y-2 bg-white/[0.02] cursor-pointer hover:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-white/20"
+    >
       <div className="flex items-center gap-2 flex-wrap">
         <span
           className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${CHANNEL_COLORS[post.channel]}`}
@@ -119,26 +135,9 @@ export function PostCard({
         </div>
       )}
       <div className="flex items-center gap-2 pt-1">
-        {onOpen && (
-          <button
-            onClick={onOpen}
-            disabled={busy}
-            className="px-2 py-1 text-xs bg-white/10 hover:bg-white/15 rounded font-medium"
-            title="Open detail view (render assets, links)"
-          >
-            Open
-          </button>
-        )}
-        <button
-          onClick={onEdit}
-          disabled={busy}
-          className="px-2 py-1 text-xs border border-white/10 rounded hover:bg-white/5"
-        >
-          Edit
-        </button>
         {showCanva && (
           <button
-            onClick={openInCanva}
+            onClick={stop(() => openInCanva())}
             disabled={canvaPushing || busy}
             title="Push the autoplay MP4 to Canva Uploads, then open the design for auto-captions. Reuses the existing design if one already exists."
             className="px-2 py-1 text-xs border border-white/10 rounded hover:bg-white/5 disabled:opacity-40"
@@ -148,7 +147,7 @@ export function PostCard({
         )}
         {post.status !== 'posted' && (
           <button
-            onClick={() => patch({ status: 'posted' })}
+            onClick={stop(() => patch({ status: 'posted' }))}
             disabled={busy}
             className="px-2 py-1 text-xs bg-emerald-600/30 text-emerald-100 hover:bg-emerald-600/40 rounded"
           >
@@ -157,7 +156,7 @@ export function PostCard({
         )}
         {post.status === 'posted' && (
           <button
-            onClick={() => patch({ status: 'scheduled' })}
+            onClick={stop(() => patch({ status: 'scheduled' }))}
             disabled={busy}
             className="px-2 py-1 text-xs border border-white/10 rounded hover:bg-white/5"
           >
@@ -165,7 +164,7 @@ export function PostCard({
           </button>
         )}
         <button
-          onClick={remove}
+          onClick={stop(() => remove())}
           disabled={busy}
           className="ml-auto px-2 py-1 text-xs text-red-300 hover:bg-red-500/10 rounded"
         >

@@ -109,10 +109,6 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
     setPanel({ mode: 'new', date: dateStr ?? todayKey })
   }
 
-  function openEdit(post: SocialPostPlan) {
-    setPanel({ mode: 'existing', postId: post.id, initialTab: 'edit' })
-  }
-
   function openDetail(post: SocialPostPlan) {
     setPanel({ mode: 'existing', postId: post.id, initialTab: 'details' })
   }
@@ -213,10 +209,6 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
           posts={postsByDay.get(drawerDate) ?? []}
           stories={stories}
           onClose={() => setDrawerDate(null)}
-          onEdit={(p) => {
-            setDrawerDate(null)
-            openEdit(p)
-          }}
           onOpen={(p) => {
             setDrawerDate(null)
             openDetail(p)
@@ -459,7 +451,6 @@ function DayDrawer({
   posts,
   stories,
   onClose,
-  onEdit,
   onOpen,
   onNew,
   onChange,
@@ -468,7 +459,6 @@ function DayDrawer({
   posts: SocialPostPlan[]
   stories: StoryOption[]
   onClose: () => void
-  onEdit: (p: SocialPostPlan) => void
   onOpen: (p: SocialPostPlan) => void
   onNew: () => void
   onChange: () => void
@@ -558,7 +548,6 @@ function DayDrawer({
               key={p.id}
               post={p}
               storyTitle={titleFor(p.storySlug)}
-              onEdit={() => onEdit(p)}
               onOpen={() => onOpen(p)}
               onChange={onChange}
             />
