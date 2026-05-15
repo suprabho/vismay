@@ -7,6 +7,7 @@ const TABS = [
   { href: '/admin', label: 'Stories' },
   { href: '/admin/epics', label: 'Epics' },
   { href: '/admin/demos', label: 'Demos' },
+  { href: '/admin/social', label: 'Social' },
 ]
 
 export function AdminTabs() {
@@ -14,7 +15,10 @@ export function AdminTabs() {
   return (
     <nav className="flex gap-1">
       {TABS.map((tab) => {
-        const active = pathname === tab.href
+        const active =
+          tab.href === '/admin'
+            ? pathname === '/admin'
+            : pathname === tab.href || pathname.startsWith(`${tab.href}/`)
         return (
           <Link
             key={tab.href}
