@@ -131,6 +131,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
   const [activeConfeds, setActiveConfeds] = useState<Set<string>>(
     () => new Set(CONFEDERATIONS),
   );
+  const [controlsOpen, setControlsOpen] = useState(false);
 
   const logoPalette = useMemo(() => fifaWc26LogoPalette(theme), [theme]);
   const mapPalette = useMemo(() => fifaWc26MapPalette(theme), [theme]);
@@ -488,12 +489,28 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
             </div>
           </div>
           <div className="min-w-0">
-            <h1
-              className="text-base md:text-lg leading-tight tracking-tight"
-              style={{ fontFamily: "var(--font-fraunces), serif", color: theme.bone, fontWeight: 500 }}
-            >
-              {epic.name}
-            </h1>
+            <div className="flex items-start gap-2">
+              <h1
+                className="text-base md:text-lg leading-tight tracking-tight min-w-0 flex-1"
+                style={{ fontFamily: "var(--font-fraunces), serif", color: theme.bone, fontWeight: 500 }}
+              >
+                {epic.name}
+              </h1>
+              <button
+                type="button"
+                onClick={() => setControlsOpen((o) => !o)}
+                aria-expanded={controlsOpen}
+                aria-controls="fifa-wc26-controls"
+                className="md:hidden pointer-events-auto shrink-0 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider transition-opacity hover:opacity-80"
+                style={{
+                  background: alpha(theme.surface, 85),
+                  border: `1px solid ${alpha(theme.bone, 12)}`,
+                  color: theme.bone,
+                }}
+              >
+                {controlsOpen ? "Hide" : "Filters"}
+              </button>
+            </div>
             {epic.description && (
               <p className="mt-0.5 text-[11px] md:text-xs max-w-xl" style={{ color: theme.muted }}>
                 {epic.description}
@@ -516,7 +533,8 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
 
       {/* Controls panel */}
       <div
-        className="absolute z-10 pointer-events-auto rounded-xl backdrop-blur p-3 md:p-4 right-3 left-3 bottom-[150px] md:left-auto md:right-4 md:top-24 md:bottom-auto md:w-[260px]"
+        id="fifa-wc26-controls"
+        className={`absolute z-10 pointer-events-auto rounded-xl backdrop-blur p-3 md:p-4 right-3 left-3 top-[112px] md:left-auto md:right-4 md:top-24 md:w-[260px] ${controlsOpen ? "" : "hidden"} md:block`}
         style={{
           background: alpha(theme.surface, 88),
           border: `1px solid ${alpha(theme.bone, 12)}`,
