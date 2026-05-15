@@ -12,7 +12,7 @@ export function SharePostRenderPanel({
   expectedCardIds: string[]
   ratio: string
 }) {
-  const { state, body, error, trigger, refresh } = usePollShareRender(postId)
+  const { state, body, error, renderTick, trigger, refresh } = usePollShareRender(postId)
 
   useEffect(() => {
     refresh()
@@ -57,7 +57,7 @@ export function SharePostRenderPanel({
       {body && body.assets.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {body.assets.map((a) => (
-            <AssetTile key={a.cardId} asset={a} />
+            <AssetTile key={a.cardId} asset={a} bust={renderTick} />
           ))}
         </div>
       )}
@@ -90,8 +90,10 @@ function StatusBadge({
 
 function AssetTile({
   asset,
+  bust,
 }: {
   asset: { cardId: string; ratio: string; public_url: string | null; fresh: boolean }
+  bust: number
 }) {
   if (!asset.public_url) {
     return (
@@ -103,11 +105,12 @@ function AssetTile({
       </div>
     )
   }
+  const src = bust > 0 ? `${asset.public_url}?v=${bust}` : asset.public_url
   return (
     <div className="border border-white/10 rounded overflow-hidden bg-black/40">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={asset.public_url}
+        src={src}
         alt={asset.cardId}
         className="w-full h-auto block"
         style={{ aspectRatio: ratioToAspect(asset.ratio) }}
@@ -115,7 +118,7 @@ function AssetTile({
       <div className="flex items-center justify-between px-2 py-1 border-t border-white/10 text-[10px]">
         <span className="font-mono text-neutral-400 truncate">{asset.cardId}</span>
         <a
-          href={asset.public_url}
+          href={src}
           download
           target="_blank"
           rel="noreferrer"

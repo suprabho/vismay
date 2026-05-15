@@ -28,6 +28,10 @@ export function usePollShareRender(postId: string) {
   const [state, setState] = useState<ShareStatus>('idle')
   const [body, setBody] = useState<ShareStateBody | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Bumped after every successful re-render trigger so the UI can append a
+  // cache-busting query param to the thumbnail URLs. Without this, Supabase
+  // serves the new PNG at the same URL and the browser keeps the cached one.
+  const [renderTick, setRenderTick] = useState(0)
   const cancelRef = useRef(false)
 
   useEffect(() => {
@@ -85,6 +89,7 @@ export function usePollShareRender(postId: string) {
       if (j.mode === 'sync') {
         // Sync renders complete before POST returns. Refresh once.
         await refresh()
+        setRenderTick((t) => t + 1)
         return
       }
 
@@ -97,6 +102,7 @@ export function usePollShareRender(postId: string) {
           const b = await fetchState()
           if (b && b.status === 'ready') {
             setState('ready')
+            setRenderTick((t) => t + 1)
             return
           }
         } catch {
@@ -105,6 +111,7 @@ export function usePollShareRender(postId: string) {
       }
       // Timed out — fall back to whatever state we last saw.
       await refresh()
+      setRenderTick((t) => t + 1)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'render failed'
       setError(msg)
@@ -112,5 +119,5 @@ export function usePollShareRender(postId: string) {
     }
   }, [postId, refresh, fetchState])
 
-  return { state, body, error, trigger, refresh }
+  return { state, body, error, renderTick, trigger, refresh }
 }
