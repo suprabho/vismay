@@ -29,11 +29,13 @@ export function PostCard({
   post,
   storyTitle,
   onEdit,
+  onOpen,
   onChange,
 }: {
   post: SocialPostPlan
   storyTitle: string
   onEdit: () => void
+  onOpen?: () => void
   onChange: () => void
 }) {
   const [busy, setBusy] = useState(false)
@@ -117,6 +119,16 @@ export function PostCard({
         </div>
       )}
       <div className="flex items-center gap-2 pt-1">
+        {onOpen && (
+          <button
+            onClick={onOpen}
+            disabled={busy}
+            className="px-2 py-1 text-xs bg-white/10 hover:bg-white/15 rounded font-medium"
+            title="Open detail view (render assets, links)"
+          >
+            Open
+          </button>
+        )}
         <button
           onClick={onEdit}
           disabled={busy}

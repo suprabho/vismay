@@ -1,14 +1,17 @@
 /**
- * Server-side: render a curated set of share cards (PNG) for a demo.
+ * Server-side: render a set of share cards (PNG) for a story.
  *
  * Drives the existing /story/<slug>/share page in headless Chromium, uses
  * the `window.__captureByIndex__` hook ShareShell exposes when it mounts,
  * and uploads each card's PNG to the `story-share` bucket.
  *
+ * The renderer is keyed on (story_slug, card_id, ratio). `demo_id` is an
+ * optional annotation written when the demo-curation path is the caller;
+ * the social-post path leaves it null. Storage paths are
+ * `{slug}/share/{cardId}__{ratio}.png`.
+ *
  * Mirrors lib/storyPdfRender.ts: same Playwright launch flags, same admin
- * cookie pre-auth (the share route doesn't actually require auth today,
- * but applying the cookie is harmless and future-proofs the path if we
- * gate the share page later).
+ * cookie pre-auth.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -78,7 +81,7 @@ async function captureOne(
 
 async function uploadCard(args: {
   supabase: SupabaseClient
-  demoId: number
+  demoId: number | null
   storySlug: string
   target: ShareRenderTarget
   pngBuffer: Buffer
@@ -86,7 +89,7 @@ async function uploadCard(args: {
 }): Promise<string> {
   const safeId = args.target.cardId.replace(/[^a-zA-Z0-9_-]/g, '_')
   const ratioKey = args.target.ratio.replace(':', 'x')
-  const storagePath = `${args.storySlug}/demo-${args.demoId}/${safeId}__${ratioKey}.png`
+  const storagePath = `${args.storySlug}/share/${safeId}__${ratioKey}.png`
 
   const { error: uploadErr } = await args.supabase.storage
     .from(SHARE_BUCKET)
@@ -101,6 +104,7 @@ async function uploadCard(args: {
 
   const { error: dbErr } = await args.supabase.from('story_share_assets').upsert(
     {
+      story_slug: args.storySlug,
       demo_id: args.demoId,
       card_id: args.target.cardId,
       ratio: args.target.ratio,
@@ -109,7 +113,7 @@ async function uploadCard(args: {
       content_revision_hash: args.contentRevisionHash,
       dispatched_at: null,
     },
-    { onConflict: 'demo_id,card_id,ratio' }
+    { onConflict: 'story_slug,card_id,ratio' }
   )
   if (dbErr) throw new Error(`db upsert: ${dbErr.message}`)
   return publicUrl
@@ -117,16 +121,20 @@ async function uploadCard(args: {
 
 export async function renderShareAssets(args: {
   supabase: SupabaseClient
-  demoId: number
   storySlug: string
   baseUrl: string
   cardIds: string[]
   contentRevisionHash: string
+  /** Restrict to a subset of ratios. Defaults to all three. */
+  ratios?: readonly ShareRatio[]
+  /** Optional annotation: which demo (if any) triggered this render. */
+  demoId?: number | null
   log?: (m: string) => void
 }): Promise<ShareRenderResult> {
   const log = args.log ?? (() => {})
   const result: ShareRenderResult = { rendered: 0, skipped: 0, errors: [] }
   if (args.cardIds.length === 0) return result
+  const ratios = args.ratios ?? SHARE_RATIOS
 
   const browser = await chromium.launch({
     args: ['--disable-blink-features=AutomationControlled'],
@@ -140,7 +148,7 @@ export async function renderShareAssets(args: {
 
     // One context per ratio so the viewport stays consistent across all
     // cards at that ratio. Cards re-render when ratio changes.
-    for (const ratio of SHARE_RATIOS) {
+    for (const ratio of ratios) {
       log(`ratio ${ratio}`)
       const context = await browser.newContext({
         viewport: VIEWPORT_FOR_RATIO[ratio],
@@ -185,7 +193,7 @@ export async function renderShareAssets(args: {
           const png = await captureOne(page, target, log)
           await uploadCard({
             supabase: args.supabase,
-            demoId: args.demoId,
+            demoId: args.demoId ?? null,
             storySlug: args.storySlug,
             target,
             pngBuffer: png,

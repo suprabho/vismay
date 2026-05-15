@@ -53,7 +53,10 @@ export async function POST(
 
   if (isShareDispatchConfigured()) {
     try {
-      await dispatchShareRenderJob({ demoId: id, baseUrl })
+      await dispatchShareRenderJob({
+        target: { mode: 'demo', demoId: id },
+        baseUrl,
+      })
       return NextResponse.json({ mode: 'dispatched' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'dispatch failed'

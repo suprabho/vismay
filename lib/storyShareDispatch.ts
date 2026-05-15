@@ -1,5 +1,9 @@
 /**
  * Dispatch a share-render job to GitHub Actions. Mirrors lib/storyPdfDispatch.ts.
+ *
+ * Two modes: render the curated card set for a demo, or render the cards
+ * referenced by a single social post. The workflow takes both inputs and
+ * branches on `mode` at the script level.
  */
 
 export function isShareDispatchConfigured(): boolean {
@@ -8,8 +12,12 @@ export function isShareDispatchConfigured(): boolean {
   )
 }
 
+export type ShareDispatchTarget =
+  | { mode: 'demo'; demoId: number }
+  | { mode: 'post'; postId: string }
+
 export async function dispatchShareRenderJob(args: {
-  demoId: number
+  target: ShareDispatchTarget
   baseUrl: string
 }): Promise<void> {
   const token = process.env.GITHUB_DISPATCH_TOKEN
@@ -19,6 +27,12 @@ export async function dispatchShareRenderJob(args: {
     throw new Error('GITHUB_DISPATCH_TOKEN and GITHUB_DISPATCH_REPO must be set')
   }
   const WORKFLOW_FILE = 'render-share.yml'
+  const inputs: Record<string, string> = {
+    mode: args.target.mode,
+    base_url: args.baseUrl,
+    demo_id: args.target.mode === 'demo' ? String(args.target.demoId) : '',
+    post_id: args.target.mode === 'post' ? args.target.postId : '',
+  }
   const res = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
     {
@@ -31,10 +45,7 @@ export async function dispatchShareRenderJob(args: {
       },
       body: JSON.stringify({
         ref,
-        inputs: {
-          demo_id: String(args.demoId),
-          base_url: args.baseUrl,
-        },
+        inputs,
       }),
     }
   )

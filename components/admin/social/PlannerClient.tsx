@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PostComposer } from './PostComposer'
 import { PostCard } from './PostCard'
+import { PostDetailDrawer } from './PostDetailDrawer'
 import type { Channel, SocialPostPlan } from '@/lib/socialPostPlans'
 
 export interface StoryOption {
@@ -65,6 +66,7 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
   const [composerDate, setComposerDate] = useState<string>(ymd(new Date()))
   const [editing, setEditing] = useState<SocialPostPlan | null>(null)
   const [drawerDate, setDrawerDate] = useState<string | null>(null)
+  const [openPostId, setOpenPostId] = useState<string | null>(null)
 
   const range = useMemo(() => {
     if (view === 'month') {
@@ -118,6 +120,20 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
     setComposerDate(post.scheduledDate)
     setComposerOpen(true)
   }
+
+  function openDetail(post: SocialPostPlan) {
+    setOpenPostId(post.id)
+  }
+
+  const openPost = useMemo(
+    () => (openPostId ? posts.find((p) => p.id === openPostId) ?? null : null),
+    [openPostId, posts]
+  )
+  const titleForOpen = openPost
+    ? openPost.storySlug
+      ? stories.find((s) => s.slug === openPost.storySlug)?.title ?? openPost.storySlug
+      : '(story removed)'
+    : ''
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -203,7 +219,7 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
             postsByDay={postsByDay}
             stories={stories}
             todayKey={todayKey}
-            onPostClick={openEdit}
+            onPostClick={openDetail}
             onCellPlus={openNew}
           />
         )}
@@ -219,10 +235,28 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
             setDrawerDate(null)
             openEdit(p)
           }}
+          onOpen={(p) => {
+            setDrawerDate(null)
+            openDetail(p)
+          }}
           onNew={() => {
             const d = drawerDate
             setDrawerDate(null)
             openNew(d)
+          }}
+          onChange={refresh}
+        />
+      )}
+
+      {openPost && (
+        <PostDetailDrawer
+          post={openPost}
+          storyTitle={titleForOpen}
+          onClose={() => setOpenPostId(null)}
+          onEdit={() => {
+            const p = openPost
+            setOpenPostId(null)
+            openEdit(p)
           }}
           onChange={refresh}
         />
@@ -461,6 +495,7 @@ function DayDrawer({
   stories,
   onClose,
   onEdit,
+  onOpen,
   onNew,
   onChange,
 }: {
@@ -469,6 +504,7 @@ function DayDrawer({
   stories: StoryOption[]
   onClose: () => void
   onEdit: (p: SocialPostPlan) => void
+  onOpen: (p: SocialPostPlan) => void
   onNew: () => void
   onChange: () => void
 }) {
@@ -517,6 +553,7 @@ function DayDrawer({
               post={p}
               storyTitle={titleFor(p.storySlug)}
               onEdit={() => onEdit(p)}
+              onOpen={() => onOpen(p)}
               onChange={onChange}
             />
           ))}

@@ -1,20 +1,37 @@
-name: Render demo share assets
+name: Render share assets
 
-# Triggered by /api/admin/demos/[id]/render-share when sales clicks
-# "Render share assets" in the admin demo editor. Runs Playwright on
-# ubuntu-latest to drive the existing /story/<slug>/share page and
-# upload PNGs to the story-share bucket.
+# Triggered by /api/admin/demos/[id]/render-share or
+# /api/admin/social/posts/[id]/render-share. Runs Playwright on
+# ubuntu-latest to drive /story/<slug>/share and upload PNGs to the
+# story-share bucket.
 #
-# Same secrets as render-pdf.yml: Supabase URL + service role + Mapbox.
-# No ffmpeg required.
+# Two modes: 'demo' renders a demo's curated card set at all 3 ratios;
+# 'post' renders the cards referenced by a single social post at the
+# post's ratio.
+#
+# Same secrets as render-pdf.yml. No ffmpeg required.
 
 on:
   workflow_dispatch:
     inputs:
-      demo_id:
-        description: Demo row id
+      mode:
+        description: demo | post
         required: true
+        type: choice
+        options:
+          - demo
+          - post
+        default: demo
+      demo_id:
+        description: Demo row id (when mode=demo)
+        required: false
         type: string
+        default: ''
+      post_id:
+        description: Social post id (when mode=post)
+        required: false
+        type: string
+        default: ''
       base_url:
         description: Site URL the headless browser should hit
         required: true
@@ -52,4 +69,9 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
           BASE_URL: ${{ inputs.base_url }}
-        run: pnpm exec tsx scripts/generate-share.ts "${{ inputs.demo_id }}"
+        run: |
+          if [ "${{ inputs.mode }}" = "demo" ]; then
+            pnpm exec tsx scripts/generate-share.ts demo "${{ inputs.demo_id }}"
+          else
+            pnpm exec tsx scripts/generate-share.ts post "${{ inputs.post_id }}"
+          fi

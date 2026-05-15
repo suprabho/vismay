@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import ThemeEditor from './ThemeEditor'
 import YamlCardsView from './YamlCardsView'
 import FileActions from './FileActions'
@@ -52,8 +52,18 @@ interface BulkResult {
   errors: string[]
 }
 
+const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'charts', 'narration', 'settings'])
+function isTab(v: string | null): v is Tab {
+  return v != null && TAB_IDS.has(v as Tab)
+}
+
 export default function EditorClient({ slug, initial }: { slug: string; initial: InitialState }) {
-  const [tab, setTab] = useState<Tab>('theme')
+  const searchParams = useSearchParams()
+  const initialTab: Tab = (() => {
+    const q = searchParams.get('tab')
+    return isTab(q) ? q : 'theme'
+  })()
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [markdown, setMarkdown] = useState(initial.markdown)
   const [config, setConfig] = useState(initial.config_yaml)
   const [charts, setCharts] = useState(initial.charts)
