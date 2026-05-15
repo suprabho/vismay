@@ -1,9 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PostComposer } from './PostComposer'
 import { PostCard } from './PostCard'
-import { PostDetailDrawer } from './PostDetailDrawer'
+import { PostPanel, type PanelState } from './PostPanel'
 import type { Channel, SocialPostPlan } from '@/lib/socialPostPlans'
 
 export interface StoryOption {
@@ -62,11 +61,8 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
   })
   const [posts, setPosts] = useState<SocialPostPlan[]>([])
   const [loading, setLoading] = useState(false)
-  const [composerOpen, setComposerOpen] = useState(false)
-  const [composerDate, setComposerDate] = useState<string>(ymd(new Date()))
-  const [editing, setEditing] = useState<SocialPostPlan | null>(null)
+  const [panel, setPanel] = useState<PanelState | null>(null)
   const [drawerDate, setDrawerDate] = useState<string | null>(null)
-  const [openPostId, setOpenPostId] = useState<string | null>(null)
 
   const range = useMemo(() => {
     if (view === 'month') {
@@ -110,30 +106,16 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
   const todayKey = ymd(new Date())
 
   function openNew(dateStr?: string) {
-    setEditing(null)
-    setComposerDate(dateStr ?? todayKey)
-    setComposerOpen(true)
+    setPanel({ mode: 'new', date: dateStr ?? todayKey })
   }
 
   function openEdit(post: SocialPostPlan) {
-    setEditing(post)
-    setComposerDate(post.scheduledDate)
-    setComposerOpen(true)
+    setPanel({ mode: 'existing', postId: post.id, initialTab: 'edit' })
   }
 
   function openDetail(post: SocialPostPlan) {
-    setOpenPostId(post.id)
+    setPanel({ mode: 'existing', postId: post.id, initialTab: 'details' })
   }
-
-  const openPost = useMemo(
-    () => (openPostId ? posts.find((p) => p.id === openPostId) ?? null : null),
-    [openPostId, posts]
-  )
-  const titleForOpen = openPost
-    ? openPost.storySlug
-      ? stories.find((s) => s.slug === openPost.storySlug)?.title ?? openPost.storySlug
-      : '(story removed)'
-    : ''
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -248,30 +230,13 @@ export function PlannerClient({ stories }: { stories: StoryOption[] }) {
         />
       )}
 
-      {openPost && (
-        <PostDetailDrawer
-          post={openPost}
-          storyTitle={titleForOpen}
-          onClose={() => setOpenPostId(null)}
-          onEdit={() => {
-            const p = openPost
-            setOpenPostId(null)
-            openEdit(p)
-          }}
-          onChange={refresh}
-        />
-      )}
-
-      {composerOpen && (
-        <PostComposer
+      {panel && (
+        <PostPanel
+          panel={panel}
+          posts={posts}
           stories={stories}
-          initialDate={composerDate}
-          editing={editing}
-          onClose={() => setComposerOpen(false)}
-          onSaved={() => {
-            setComposerOpen(false)
-            refresh()
-          }}
+          onClose={() => setPanel(null)}
+          onChange={refresh}
         />
       )}
     </div>
