@@ -19,7 +19,7 @@ export default function BrandingHeader({
         style={{
           color: 'var(--color-muted)',
           paddingLeft: 100,
-          fontSize: '0.4rem',
+          fontSize: 8,
           lineHeight: '10px',
           height: 1,
           display: 'inline-flex',
@@ -31,7 +31,7 @@ export default function BrandingHeader({
       <div className="flex items-center gap-1" style={{ height: 10 }}>
         <span
           className="font-[family-name:var(--font-mono)] uppercase tracking-[0.15em] opacity-70"
-          style={{ color: 'var(--color-accent)', fontSize: '0.4rem', lineHeight: '10px' }}
+          style={{ color: 'var(--color-accent)', fontSize: 8, lineHeight: '10px' }}
         >
           vizmaya
         </span>

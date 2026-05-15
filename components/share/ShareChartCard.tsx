@@ -22,12 +22,12 @@ interface Props {
 export default function ShareChartCard({ chartId, activeStep, slug, heading, subheading }: Props) {
   const hasText = !!(heading || subheading)
   return (
-    <div className="w-full h-full flex flex-col p-2 pb-4">
+    <div className="w-full h-full flex flex-col p-[10px] pb-[20px]">
       {hasText && (
         <div className="shrink-0">
           {heading && (
             <h4
-              className="font-serif text-[1rem] text-center texfont-bold leading-[1.2]"
+              className="font-serif text-[20px] text-center texfont-bold leading-[1.2]"
               style={{ color: 'var(--color-accent)' }}
             >
               {heading}
@@ -35,7 +35,7 @@ export default function ShareChartCard({ chartId, activeStep, slug, heading, sub
           )}
           {subheading && (
             <p
-              className="text-[0.85rem] text-center leading-[1.4]"
+              className="text-[17px] text-center leading-[1.4]"
               style={{ color: 'var(--color-muted)' }}
             >
               {subheading}

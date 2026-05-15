@@ -332,6 +332,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
           width: w,
           height: h,
           background: 'var(--color-bg)',
+          fontSize: 20,
         }}
       >
           {/* Map background layer — only on hero and map-title cards */}
@@ -377,23 +378,23 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                  and the legend (passed `leftColumn` above) sits beneath the
                  caption in the same column. */
               ratio === '4:3' ? (
-                <div className="flex justify-start h-full p-2 pt-3">
+                <div className="flex justify-start h-full p-[10px] pt-[15px]">
                   <div
-                    className="rounded-lg p-2 backdrop-blur-sm w-1/3 self-start"
+                    className="rounded-lg p-[10px] backdrop-blur-sm w-1/3 self-start"
                     style={{
                       background: 'rgb(var(--color-panel-rgb) / 0.2)',
                       border: '0.5px solid var(--color-line)',
                     }}
                   >
                     <h2
-                      className="font-serif font-bold leading-[1.2] text-[1rem]"
+                      className="font-serif font-bold leading-[1.2] text-[20px]"
                       style={{ color: 'var(--color-text)' }}
                     >
                       {mapTitleHeading ?? title}
                     </h2>
                     {mapTitleSubheading && (
                       <p
-                        className="text-[0.75rem] leading-[1.4] mt-1"
+                        className="text-[15px] leading-[1.4] mt-[5px]"
                         style={{ color: 'var(--color-muted)' }}
                       >
                         {mapTitleSubheading}
@@ -401,7 +402,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                     )}
                     {kind === 'hero' && mapTitleDek && (
                       <p
-                        className="text-[0.8rem] leading-[1.4] mt-1"
+                        className="text-[16px] leading-[1.4] mt-[5px]"
                         style={{ color: 'var(--color-muted)' }}
                       >
                         {mapTitleDek}
@@ -410,23 +411,23 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col justify-start h-full p-2 pt-3">
+                <div className="flex flex-col justify-start h-full p-[10px] pt-[15px]">
                   <div
-                    className="rounded-lg p-2 backdrop-blur-sm"
+                    className="rounded-lg p-[10px] backdrop-blur-sm"
                     style={{
                       background: 'rgb(var(--color-panel-rgb) / 0.2)',
                       border: '0.5px solid var(--color-line)',
                     }}
                   >
                     <h2
-                      className="font-serif font-bold leading-[1.2] text-[1rem]"
+                      className="font-serif font-bold leading-[1.2] text-[20px]"
                       style={{ color: 'var(--color-text)' }}
                     >
                       {mapTitleHeading ?? title}
                     </h2>
                     {mapTitleSubheading && (
                       <p
-                        className="text-[0.75rem] leading-[1.4] mt-1"
+                        className="text-[15px] leading-[1.4] mt-[5px]"
                         style={{ color: 'var(--color-muted)' }}
                       >
                         {mapTitleSubheading}
@@ -434,7 +435,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                     )}
                     {kind === 'hero' && mapTitleDek && (
                       <p
-                        className="text-[0.8rem] leading-[1.4] mt-1"
+                        className="text-[16px] leading-[1.4] mt-[5px]"
                         style={{ color: 'var(--color-muted)' }}
                       >
                         {mapTitleDek}

@@ -235,7 +235,7 @@ export default function ShareHeroCard({ title, dek }: Props) {
   const svgHeight = cumY
 
   return (
-    <div ref={containerRef} className="flex flex-col justify-start h-full p-4">
+    <div ref={containerRef} className="flex flex-col justify-start h-full p-[20px]">
       {lines.length > 0 && (
         <svg
           width={MAX_WIDTH}
@@ -416,7 +416,7 @@ export default function ShareHeroCard({ title, dek }: Props) {
       )}
       {dek && (
         <p
-          className="font-serif text-[0.95rem] leading-[1.45] mt-4"
+          className="font-serif text-[19px] leading-[1.45] mt-[20px]"
           style={{ color: 'var(--color-muted)' }}
         >
           {dek}
