@@ -185,43 +185,27 @@ export async function exchangeAuthCode(args: {
 }
 
 /**
- * Stream a video URL up to Canva and wait for the upload job to finish.
- * Returns the resulting asset id.
- *
- * `videoUrl` should be a publicly-reachable Supabase storage URL — we GET
- * it server-side and pipe the bytes into the Canva request. Canva's
- * asset-upload endpoint expects the binary in the body with the file name
- * in a header (Asset-Upload-Metadata).
+ * Upload a video to Canva by passing the public Supabase URL directly.
+ * Uses POST /v1/url-asset-uploads so Canva fetches the file from its CDN
+ * rather than us streaming bytes — more reliable and avoids the duplex-half
+ * fragility that caused assets to upload silently but never appear in the
+ * Canva editor's Uploads tab.
  */
 export async function uploadAssetFromUrl(args: {
   videoUrl: string
   accessToken: string
   name: string
 }): Promise<{ assetId: string; thumbnailUrl?: string }> {
-  const videoRes = await fetch(args.videoUrl)
-  if (!videoRes.ok || !videoRes.body) {
-    throw new CanvaApiError(`source video fetch failed: ${videoRes.status}`, videoRes.status)
-  }
+  const trimmedName = args.name.length > 255 ? args.name.slice(0, 255) : args.name
 
-  // Canva docs (rest/v1/asset-uploads): Asset-Upload-Metadata is RAW JSON,
-  // with only the `name_base64` value base64-encoded. The 50-char limit is
-  // on the unencoded name. Trim defensively — slug + aspect + extension is
-  // usually under 50 but a long slug would overflow.
-  const trimmedName = args.name.length > 50 ? args.name.slice(0, 50) : args.name
-  const nameB64 = Buffer.from(trimmedName, 'utf8').toString('base64')
-  const metadata = JSON.stringify({ name_base64: nameB64 })
-
-  const uploadRes = await fetch(`${CANVA_API}/asset-uploads`, {
+  const uploadRes = await fetch(`${CANVA_API}/url-asset-uploads`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${args.accessToken}`,
-      'Content-Type': 'application/octet-stream',
-      'Asset-Upload-Metadata': metadata,
+      'Content-Type': 'application/json',
     },
-    body: videoRes.body,
-    // Node fetch needs `duplex: 'half'` for a streaming request body.
-    duplex: 'half',
-  } as RequestInit & { duplex: 'half' })
+    body: JSON.stringify({ name: trimmedName, url: args.videoUrl }),
+  })
 
   if (!uploadRes.ok) {
     const text = await uploadRes.text()
@@ -234,11 +218,8 @@ export async function uploadAssetFromUrl(args: {
   const initial = (await uploadRes.json()) as {
     job: { id: string; status: string; asset?: { id: string; thumbnail?: { url: string } } }
   }
-  const jobId = initial.job.id
 
-  // Poll the job until it succeeds or fails. The first response sometimes
-  // already carries `status: success`; respect that and skip the loop.
-  const terminal = await pollAssetUpload(jobId, args.accessToken, initial.job)
+  const terminal = await pollUrlAssetUpload(initial.job.id, args.accessToken, initial.job)
   if (terminal.status !== 'success' || !terminal.asset) {
     throw new CanvaApiError(`asset upload did not succeed: ${terminal.status}`, 500)
   }
@@ -248,7 +229,7 @@ export async function uploadAssetFromUrl(args: {
   }
 }
 
-async function pollAssetUpload(
+async function pollUrlAssetUpload(
   jobId: string,
   accessToken: string,
   seed: { status: string; asset?: { id: string; thumbnail?: { url: string } } }
@@ -258,13 +239,13 @@ async function pollAssetUpload(
   const deadline = Date.now() + UPLOAD_POLL_TIMEOUT_MS
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, UPLOAD_POLL_INTERVAL_MS))
-    const res = await fetch(`${CANVA_API}/asset-uploads/${jobId}`, {
+    const res = await fetch(`${CANVA_API}/url-asset-uploads/${jobId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
     if (!res.ok) {
       const text = await res.text()
       throw new CanvaApiError(
-        `asset-upload poll failed: ${res.status} ${text.slice(0, 200)}`,
+        `url-asset-upload poll failed: ${res.status} ${text.slice(0, 200)}`,
         res.status
       )
     }
