@@ -11,7 +11,22 @@ export default function BrandingHeader({
 }) {
   const logoSrc = logo ?? DEFAULT_SHARE_LOGO
   return (
-    <div className="absolute left-0 right-0 flex items-center justify-between" style={{ bottom: 4 }}>
+    <div className="absolute left-0 right-0 flex items-center justify-start" style={{ bottom: 4 }}>
+      <div className="flex items-center gap-1 h-1.25">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoSrc}
+          alt=""
+          className="block"
+          style={{ height: 10, width: 'auto' }}
+        />
+        <span
+          className="font-[family-name:var(--font-mono)] uppercase tracking-[0.15em] opacity-70"
+          style={{ color: 'var(--color-accent)', fontSize: 8, lineHeight: '10px' }}
+        >
+          vizmaya
+        </span>
+      </div>
       <span
         className="font-[family-name:var(--font-mono)] uppercase tracking-[0.15em]"
         style={{
@@ -31,21 +46,6 @@ export default function BrandingHeader({
       >
         {title}
       </span>
-      <div className="flex items-center gap-1 h-1.25">
-        <span
-          className="font-[family-name:var(--font-mono)] uppercase tracking-[0.15em] opacity-70"
-          style={{ color: 'var(--color-accent)', fontSize: 8, lineHeight: '10px' }}
-        >
-          vizmaya
-        </span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoSrc}
-          alt=""
-          className="block"
-          style={{ height: 10, width: 'auto' }}
-        />
-      </div>
     </div>
   )
 }
