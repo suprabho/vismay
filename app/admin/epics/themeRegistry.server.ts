@@ -4,6 +4,7 @@
 
 import { EPSTEIN_THEME_DEFAULTS, EPSTEIN_THEME_LABELS } from '@/app/epstein/theme'
 import { ENERGY_PROFILE_THEME_DEFAULTS, ENERGY_PROFILE_THEME_LABELS } from '@/app/energy-profile/theme'
+import { FIFA_WC26_THEME_DEFAULTS, FIFA_WC26_THEME_LABELS } from '@/app/fifa-wc26/theme'
 
 export interface ThemeMeta {
   defaults: Record<string, string>
@@ -18,6 +19,10 @@ export const THEME_REGISTRY_SERVER: Record<string, ThemeMeta> = {
   'energy-profile': {
     defaults: ENERGY_PROFILE_THEME_DEFAULTS,
     labels: ENERGY_PROFILE_THEME_LABELS,
+  },
+  'fifa-wc26': {
+    defaults: FIFA_WC26_THEME_DEFAULTS,
+    labels: FIFA_WC26_THEME_LABELS,
   },
 }
 
