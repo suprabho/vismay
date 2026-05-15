@@ -22,28 +22,52 @@ interface UploadResult {
 
 export default function AdminHome() {
   const [stories, setStories] = useState<Story[]>([])
+  const [totalCount, setTotalCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [searching, setSearching] = useState(false)
+  const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
   const [uploadBusy, setUploadBusy] = useState(false)
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null)
   const uploadInputRef = useRef<HTMLInputElement>(null)
+  const latestRequestId = useRef(0)
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 200)
+    return () => clearTimeout(t)
+  }, [query])
+
+  useEffect(() => {
+    const requestId = ++latestRequestId.current
+    setSearching(true)
     async function load() {
-      const r = await fetch('/api/admin/stories')
+      const url = debouncedQuery
+        ? `/api/admin/stories?q=${encodeURIComponent(debouncedQuery)}`
+        : '/api/admin/stories'
+      const r = await fetch(url)
       const data = (await r.json()) as Story[]
+      if (requestId !== latestRequestId.current) return
       const sorted = data.sort((a, b) => a.title.localeCompare(b.title))
       setStories(sorted)
+      if (debouncedQuery === '') setTotalCount(sorted.length)
       setLoading(false)
+      setSearching(false)
     }
     load()
-  }, [])
+  }, [debouncedQuery])
 
   async function refreshStories() {
-    const r = await fetch('/api/admin/stories')
+    const requestId = ++latestRequestId.current
+    const url = debouncedQuery
+      ? `/api/admin/stories?q=${encodeURIComponent(debouncedQuery)}`
+      : '/api/admin/stories'
+    const r = await fetch(url)
     const data = (await r.json()) as Story[]
+    if (requestId !== latestRequestId.current) return
     const sorted = data.sort((a, b) => a.title.localeCompare(b.title))
     setStories(sorted)
+    if (debouncedQuery === '') setTotalCount(sorted.length)
   }
 
   async function updateMeta(
@@ -227,12 +251,25 @@ export default function AdminHome() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="shrink-0 px-4 py-5 border-b border-white/5 flex items-start justify-between gap-3">
+      <div className="shrink-0 px-4 py-5 border-b border-white/5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Stories</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">{stories.length} total</p>
+          <p className="text-sm text-neutral-400 mt-0.5 tabular-nums">
+            {searching
+              ? 'searching…'
+              : debouncedQuery
+                ? `${stories.length} of ${totalCount ?? stories.length} matching`
+                : `${totalCount ?? stories.length} total`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search title, slug, or body…"
+            className="w-64 text-sm bg-neutral-900 border border-white/10 rounded-lg px-3 py-1.5 text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-white/30"
+          />
           <button
             type="button"
             disabled={uploadBusy}
@@ -263,6 +300,11 @@ export default function AdminHome() {
           <div className="w-16 text-right">Order</div>
         </div>
       </div>
+      {stories.length === 0 && debouncedQuery !== '' ? (
+        <div className="flex-1 min-h-0 flex items-center justify-center text-sm text-neutral-500">
+          No stories match “{debouncedQuery}”.
+        </div>
+      ) : (
       <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
         {stories.map((s) => (
           <li key={s.slug}>
@@ -312,6 +354,7 @@ export default function AdminHome() {
           </li>
         ))}
       </ul>
+      )}
     </div>
   )
 }
