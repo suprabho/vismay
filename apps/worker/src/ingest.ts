@@ -43,8 +43,8 @@ function hashUrl(url: string): string {
   return crypto.createHash('sha256').update(url).digest('hex');
 }
 
-async function ingestSource(source: RssSource): Promise<{ fetched: number; new: number; errors: number }> {
-  const stats = { fetched: 0, new: 0, errors: 0 };
+async function ingestSource(source: RssSource): Promise<{ fetched: number; new: number; hidden: number; errors: number }> {
+  const stats = { fetched: 0, new: 0, hidden: 0, errors: 0 };
   
   let feed;
   try {
@@ -105,6 +105,26 @@ async function ingestSource(source: RssSource): Promise<{ fetched: number; new: 
         publisher: source.publisher,
       });
 
+      const summaryAt = new Date().toISOString();
+      const summaryModel = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+
+      if (!gemini.is_football_news) {
+        // Article isn't primarily about football — hide it from the feed. Stash the topic_category
+        // in failure_reason so we can audit drift in the eval HTML without a schema migration.
+        await supabase
+          .from('articles')
+          .update({
+            summary: gemini.summary,
+            summary_model: summaryModel,
+            summary_at: summaryAt,
+            status: 'hidden',
+            failure_reason: `not_football:${gemini.topic_category}`,
+          })
+          .eq('id', inserted.id);
+        stats.hidden++;
+        continue;
+      }
+
       const entityIds = await resolveEntities(supabase, gemini.entities);
 
       // Update article + link entities in a logical transaction
@@ -112,8 +132,8 @@ async function ingestSource(source: RssSource): Promise<{ fetched: number; new: 
         .from('articles')
         .update({
           summary: gemini.summary,
-          summary_model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
-          summary_at: new Date().toISOString(),
+          summary_model: summaryModel,
+          summary_at: summaryAt,
           status: 'summarized',
         })
         .eq('id', inserted.id);
@@ -169,17 +189,18 @@ export function extractImage(item: Parser.Item & Record<string, any>): string | 
 
 export async function runIngestion() {
   console.log(`[ingest] starting at ${new Date().toISOString()}`);
-  const totals = { fetched: 0, new: 0, errors: 0 };
+  const totals = { fetched: 0, new: 0, hidden: 0, errors: 0 };
 
   for (const source of RSS_SOURCES) {
     const stats = await ingestSource(source);
-    console.log(`[${source.id}] fetched=${stats.fetched} new=${stats.new} errors=${stats.errors}`);
+    console.log(`[${source.id}] fetched=${stats.fetched} new=${stats.new} hidden=${stats.hidden} errors=${stats.errors}`);
     totals.fetched += stats.fetched;
     totals.new += stats.new;
+    totals.hidden += stats.hidden;
     totals.errors += stats.errors;
   }
 
-  console.log(`[ingest] done: fetched=${totals.fetched} new=${totals.new} errors=${totals.errors}`);
+  console.log(`[ingest] done: fetched=${totals.fetched} new=${totals.new} hidden=${totals.hidden} errors=${totals.errors}`);
   return totals;
 }
 

@@ -76,7 +76,21 @@ export type FeedCard = z.infer<typeof FeedCardSchema>;
 // Gemini output schemas (structured output)
 // =====================================================
 
+export const TopicCategorySchema = z.enum([
+  'on_pitch',
+  'transfer',
+  'club_business',
+  'off_pitch_personal',
+  'other_sport',
+  'betting_odds',
+  'listicle',
+  'unrelated',
+]);
+export type TopicCategory = z.infer<typeof TopicCategorySchema>;
+
 export const GeminiSummarySchema = z.object({
+  is_football_news: z.boolean(),
+  topic_category: TopicCategorySchema,
   summary: z.string(),
   entities: z.object({
     leagues: z.array(z.string()),  // league names/slugs Gemini spotted
