@@ -25,21 +25,34 @@ const INITIAL_VIEW_STATE = {
 
 const alpha = (c: string, p: number) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
 
-type SizeMetric = "squad" | "gdp" | "population" | "land";
-type ColorMetric = "confederation" | "regime" | "debut";
+type ShadeMetric =
+  | "squad"
+  | "gdp"
+  | "population"
+  | "land"
+  | "democracy"
+  | "confederation"
+  | "regime"
+  | "debut";
 
-const SIZE_OPTIONS: { value: SizeMetric; label: string }[] = [
-  { value: "squad", label: "Squad value" },
-  { value: "gdp", label: "GDP" },
-  { value: "population", label: "Population" },
-  { value: "land", label: "Land area" },
+const SHADE_OPTIONS: { value: ShadeMetric; label: string; group: "continuous" | "categorical" }[] = [
+  { value: "squad", label: "Squad value", group: "continuous" },
+  { value: "gdp", label: "GDP", group: "continuous" },
+  { value: "population", label: "Population", group: "continuous" },
+  { value: "land", label: "Land area", group: "continuous" },
+  { value: "democracy", label: "Democracy index", group: "continuous" },
+  { value: "confederation", label: "Confederation", group: "categorical" },
+  { value: "regime", label: "Regime type", group: "categorical" },
+  { value: "debut", label: "Debut", group: "categorical" },
 ];
 
-const COLOR_OPTIONS: { value: ColorMetric; label: string }[] = [
-  { value: "confederation", label: "Confederation" },
-  { value: "regime", label: "Regime type" },
-  { value: "debut", label: "Debut" },
-];
+const CONTINUOUS_SHADE_LABELS: Record<Extract<ShadeMetric, "squad" | "gdp" | "population" | "land" | "democracy">, { short: string; unit: string }> = {
+  squad: { short: "Squad value", unit: "€mn" },
+  gdp: { short: "GDP", unit: "$bn" },
+  population: { short: "Population", unit: "mn" },
+  land: { short: "Land area", unit: "km²" },
+  democracy: { short: "Democracy", unit: "EIU" },
+};
 
 const CONFEDERATIONS = [
   "UEFA",
@@ -66,7 +79,7 @@ const REGIME_HUES: Record<string, string> = {
   "Authoritarian regime": "#c44a4a",
 };
 
-function pickMetric(t: FifaWc26Team, m: SizeMetric): number | null {
+function pickShadeValue(t: FifaWc26Team, m: ShadeMetric): number | null {
   switch (m) {
     case "squad":
       return t.squadValueEurMn;
@@ -76,28 +89,44 @@ function pickMetric(t: FifaWc26Team, m: SizeMetric): number | null {
       return t.populationMn;
     case "land":
       return t.landAreaSqKm;
+    case "democracy":
+      return t.eiuDemocracyIndex2024;
+    default:
+      return null;
   }
 }
 
-function colorFor(t: FifaWc26Team, m: ColorMetric, theme: FifaWc26Theme): string {
-  if (m === "confederation") {
-    return CONFEDERATION_HUES[t.confederation] ?? theme.accent;
-  }
+function categoricalColorFor(
+  t: FifaWc26Team,
+  m: Extract<ShadeMetric, "confederation" | "regime" | "debut">,
+  theme: FifaWc26Theme,
+): string {
+  if (m === "confederation") return CONFEDERATION_HUES[t.confederation] ?? theme.ramp3;
   if (m === "regime") {
     if (!t.regimeType) return theme.accentLo;
     return REGIME_HUES[t.regimeType] ?? theme.accentLo;
   }
-  // debut
-  return t.isDebut ? theme.accentHi : theme.accent;
+  return t.isDebut ? theme.ramp5 : theme.ramp3;
+}
+
+function isContinuousShade(m: ShadeMetric): boolean {
+  return m === "squad" || m === "gdp" || m === "population" || m === "land" || m === "democracy";
+}
+
+function formatTick(v: number): string {
+  if (!Number.isFinite(v)) return "—";
+  if (Math.abs(v) >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  if (Math.abs(v) >= 100) return v.toFixed(0);
+  if (Math.abs(v) >= 10) return v.toFixed(0);
+  return v.toFixed(1);
 }
 
 export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
-  const [hoveredCode, setHoveredCode] = useState<string | null>(null);
+  const [hoveredIso, setHoveredIso] = useState<string | null>(null);
   const [cursor, setCursor] = useState<"grab" | "pointer">("grab");
-  const [sizeMetric, setSizeMetric] = useState<SizeMetric>("squad");
-  const [colorMetric, setColorMetric] = useState<ColorMetric>("confederation");
+  const [shadeMetric, setShadeMetric] = useState<ShadeMetric>("squad");
   const [activeConfeds, setActiveConfeds] = useState<Set<string>>(
     () => new Set(CONFEDERATIONS),
   );
@@ -109,37 +138,93 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
     [teams, activeConfeds],
   );
 
-  const maxMetric = useMemo(() => {
-    let m = 1;
-    for (const t of filteredTeams) {
-      const v = pickMetric(t, sizeMetric);
-      if (v != null && v > m) m = v;
-    }
-    return m;
-  }, [filteredTeams, sizeMetric]);
-
-  const pinsGeoJson = useMemo(
-    () => ({
-      type: "FeatureCollection" as const,
-      features: filteredTeams.map((t) => {
-        const v = pickMetric(t, sizeMetric) ?? 0;
-        const ratio = Math.max(0, Math.min(1, v / maxMetric));
-        const radius = 5 + Math.sqrt(ratio) * 14;
-        return {
-          type: "Feature" as const,
-          geometry: { type: "Point" as const, coordinates: [t.lng, t.lat] },
-          properties: {
-            code: t.code,
-            name: t.name,
-            radius,
-            fill: colorFor(t, colorMetric, theme),
-            label: t.name,
-          },
-        };
-      }),
-    }),
-    [filteredTeams, sizeMetric, colorMetric, maxMetric, theme],
+  // Teams that participate in the choropleth (must have an ISO-2; SCO is null).
+  const teamsOnMap = useMemo(
+    () => filteredTeams.filter((t) => !!t.isoA2),
+    [filteredTeams],
   );
+
+  const teamIsoCodes = useMemo(
+    () => teamsOnMap.map((t) => t.isoA2 as string),
+    [teamsOnMap],
+  );
+
+  // Look up a team by its ISO-2 (used by the click/hover handlers).
+  const teamByIso = useMemo(() => {
+    const m: Record<string, FifaWc26Team> = {};
+    for (const t of teamsOnMap) if (t.isoA2) m[t.isoA2] = t;
+    return m;
+  }, [teamsOnMap]);
+
+  const selectedIso = selectedCode
+    ? (teams.find((t) => t.code === selectedCode)?.isoA2 ?? null)
+    : null;
+
+  // Build the continuous-ramp expression for the active shade metric. The
+  // domain is the filtered teams' min/max so the ramp always uses its full
+  // range, even when confederations are filtered.
+  const fillExpression = useMemo(() => {
+    if (isContinuousShade(shadeMetric)) {
+      const pairs: Array<[string, number]> = [];
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (const t of teamsOnMap) {
+        const v = pickShadeValue(t, shadeMetric);
+        if (v == null || !t.isoA2) continue;
+        pairs.push([t.isoA2, v]);
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+      if (pairs.length === 0 || !Number.isFinite(lo) || !Number.isFinite(hi) || lo === hi) {
+        // Flat fallback — single solid colour at the mid stop.
+        return theme.ramp3;
+      }
+      const valueExpr: (string | number | unknown[])[] = ["match", ["get", "iso_3166_1"]];
+      for (const [iso, val] of pairs) {
+        valueExpr.push(iso);
+        valueExpr.push(val);
+      }
+      valueExpr.push(lo); // fallback for any country slipping through the layer filter
+      const span = hi - lo;
+      const stops = [
+        { v: lo, c: theme.ramp1 },
+        { v: lo + span * 0.25, c: theme.ramp2 },
+        { v: lo + span * 0.5, c: theme.ramp3 },
+        { v: lo + span * 0.75, c: theme.ramp4 },
+        { v: hi, c: theme.ramp5 },
+      ];
+      const expr: (string | number | unknown[])[] = ["interpolate", ["linear"], valueExpr];
+      for (const s of stops) {
+        expr.push(s.v);
+        expr.push(s.c);
+      }
+      return expr;
+    }
+    // Categorical: build a match expression from iso_3166_1 → per-team hue.
+    const categorical = shadeMetric as Extract<ShadeMetric, "confederation" | "regime" | "debut">;
+    const expr: (string | number | unknown[])[] = ["match", ["get", "iso_3166_1"]];
+    for (const t of teamsOnMap) {
+      if (!t.isoA2) continue;
+      expr.push(t.isoA2);
+      expr.push(categoricalColorFor(t, categorical, theme));
+    }
+    expr.push(theme.ramp1);
+    return expr;
+  }, [shadeMetric, teamsOnMap, theme]);
+
+  const continuousDomain = useMemo(() => {
+    if (!isContinuousShade(shadeMetric)) return null;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const t of teamsOnMap) {
+      const v = pickShadeValue(t, shadeMetric);
+      if (v == null) continue;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || lo === hi) return null;
+    return { lo, hi };
+  }, [shadeMetric, teamsOnMap]);
 
   const toggleConfed = (c: string) => {
     setActiveConfeds((prev) => {
@@ -154,8 +239,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
 
   const resetFilters = () => {
     setActiveConfeds(new Set(CONFEDERATIONS));
-    setSizeMetric("squad");
-    setColorMetric("confederation");
+    setShadeMetric("squad");
   };
 
   const selectTeam = (code: string) => {
@@ -171,25 +255,48 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
     }
   };
 
-  // Legend buckets shown beneath the controls.
-  const legendItems = useMemo(() => {
-    if (colorMetric === "confederation") {
-      return CONFEDERATIONS.map((c) => ({ label: c, color: CONFEDERATION_HUES[c] }));
+  // Legend buckets shown beneath the controls. Continuous shade modes use the
+  // ramp gradient swatch; categorical modes mirror the discrete pin palette.
+  const legend = useMemo(() => {
+    if (isContinuousShade(shadeMetric)) {
+      const stops = [theme.ramp1, theme.ramp2, theme.ramp3, theme.ramp4, theme.ramp5];
+      const labels =
+        CONTINUOUS_SHADE_LABELS[shadeMetric as keyof typeof CONTINUOUS_SHADE_LABELS];
+      return {
+        kind: "continuous" as const,
+        stops,
+        unit: labels.unit,
+        title: labels.short,
+        lo: continuousDomain?.lo ?? null,
+        hi: continuousDomain?.hi ?? null,
+      };
     }
-    if (colorMetric === "regime") {
-      return [
-        { label: "Full democracy", color: REGIME_HUES["Full democracy"] },
-        { label: "Flawed democracy", color: REGIME_HUES["Flawed democracy"] },
-        { label: "Hybrid regime", color: REGIME_HUES["Hybrid regime"] },
-        { label: "Authoritarian regime", color: REGIME_HUES["Authoritarian regime"] },
-        { label: "No data", color: theme.accentLo },
-      ];
+    if (shadeMetric === "confederation") {
+      return {
+        kind: "categorical" as const,
+        items: CONFEDERATIONS.map((c) => ({ label: c, color: CONFEDERATION_HUES[c] })),
+      };
     }
-    return [
-      { label: "Returning", color: theme.accent },
-      { label: "Debut", color: theme.accentHi },
-    ];
-  }, [colorMetric, theme]);
+    if (shadeMetric === "regime") {
+      return {
+        kind: "categorical" as const,
+        items: [
+          { label: "Full democracy", color: REGIME_HUES["Full democracy"] },
+          { label: "Flawed democracy", color: REGIME_HUES["Flawed democracy"] },
+          { label: "Hybrid regime", color: REGIME_HUES["Hybrid regime"] },
+          { label: "Authoritarian regime", color: REGIME_HUES["Authoritarian regime"] },
+          { label: "No data", color: theme.accentLo },
+        ],
+      };
+    }
+    return {
+      kind: "categorical" as const,
+      items: [
+        { label: "Returning", color: theme.ramp3 },
+        { label: "Debut", color: theme.ramp5 },
+      ],
+    };
+  }, [shadeMetric, continuousDomain, theme]);
 
   return (
     <div
@@ -213,15 +320,15 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
         attributionControl={false}
         doubleClickZoom={false}
         cursor={cursor}
-        interactiveLayerIds={["wc26-pin"]}
+        interactiveLayerIds={["wc26-country-fill"]}
         onMouseMove={(e) => {
           const feat = e.features?.[0];
-          const code = feat?.properties?.code as string | undefined;
-          setHoveredCode(code ?? null);
+          const iso = feat?.properties?.iso_3166_1 as string | undefined;
+          setHoveredIso(iso ?? null);
           setCursor(feat ? "pointer" : "grab");
         }}
         onMouseLeave={() => {
-          setHoveredCode(null);
+          setHoveredIso(null);
           setCursor("grab");
         }}
         onClick={(e) => {
@@ -230,45 +337,67 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
             setSelectedCode(null);
             return;
           }
-          const code = feat.properties?.code as string | undefined;
-          if (code) selectTeam(code);
+          const iso = feat.properties?.iso_3166_1 as string | undefined;
+          if (!iso) return;
+          const team = teamByIso[iso];
+          if (team) selectTeam(team.code);
         }}
         style={{ position: "absolute", inset: 0 }}
       >
-        <Source id="wc26-pins" type="geojson" data={pinsGeoJson}>
+        <Source
+          id="wc26-country-boundaries"
+          type="vector"
+          url="mapbox://mapbox.country-boundaries-v1"
+        >
           <Layer
-            id="wc26-pin"
-            type="circle"
+            id="wc26-country-fill"
+            type="fill"
+            source-layer="country_boundaries"
+            filter={["in", ["get", "iso_3166_1"], ["literal", teamIsoCodes]]}
             paint={{
-              "circle-radius": ["get", "radius"],
-              "circle-color": [
+              "fill-color": fillExpression as never,
+              "fill-opacity": [
                 "case",
-                ["==", ["get", "code"], selectedCode ?? ""],
-                theme.accentHi,
-                ["==", ["get", "code"], hoveredCode ?? ""],
-                theme.accentMid,
-                ["get", "fill"],
+                ["==", ["get", "iso_3166_1"], selectedIso ?? ""],
+                0.85,
+                ["==", ["get", "iso_3166_1"], hoveredIso ?? ""],
+                0.7,
+                0.55,
               ],
-              "circle-opacity": 0.92,
-              "circle-stroke-color": theme.accentEdge,
-              "circle-stroke-width": 1,
-              "circle-stroke-opacity": 0.85,
             }}
           />
           <Layer
-            id="wc26-pin-label"
+            id="wc26-country-outline"
+            type="line"
+            source-layer="country_boundaries"
+            filter={["in", ["get", "iso_3166_1"], ["literal", teamIsoCodes]]}
+            paint={{
+              "line-color": theme.accentHi,
+              "line-width": [
+                "case",
+                ["==", ["get", "iso_3166_1"], selectedIso ?? ""],
+                1.6,
+                ["==", ["get", "iso_3166_1"], hoveredIso ?? ""],
+                1.0,
+                0.5,
+              ],
+              "line-opacity": 0.7,
+            }}
+          />
+          <Layer
+            id="wc26-country-label"
             type="symbol"
+            source-layer="country_boundaries"
             filter={[
               "any",
-              ["==", ["get", "code"], selectedCode ?? ""],
-              ["==", ["get", "code"], hoveredCode ?? ""],
+              ["==", ["get", "iso_3166_1"], selectedIso ?? ""],
+              ["==", ["get", "iso_3166_1"], hoveredIso ?? ""],
             ]}
             layout={{
-              "text-field": ["get", "label"],
+              "text-field": ["get", "name_en"],
               "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Regular"],
               "text-size": 11,
-              "text-offset": [0, -1.6],
-              "text-anchor": "bottom",
+              "text-anchor": "center",
               "text-allow-overlap": true,
             }}
             paint={{
@@ -308,7 +437,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
                 color: theme.accentHi,
               }}
             >
-              {filteredTeams.length} / {teams.length}
+              {teamsOnMap.length} / {teams.length}
             </div>
           </div>
           <div className="min-w-0">
@@ -334,7 +463,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
             color: theme.accentHi,
           }}
         >
-          {filteredTeams.length} of {teams.length} teams
+          {teamsOnMap.length} of {teams.length} teams
         </div>
       </div>
 
@@ -350,11 +479,11 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
         <div className="space-y-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-1.5" style={{ color: theme.muted }}>
-              Size by
+              Shade by
             </div>
             <select
-              value={sizeMetric}
-              onChange={(e) => setSizeMetric(e.target.value as SizeMetric)}
+              value={shadeMetric}
+              onChange={(e) => setShadeMetric(e.target.value as ShadeMetric)}
               className="w-full text-xs px-2 py-1.5 rounded outline-none"
               style={{
                 background: alpha(theme.elevated, 60),
@@ -362,32 +491,20 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
                 color: theme.bone,
               }}
             >
-              {SIZE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-1.5" style={{ color: theme.muted }}>
-              Color by
-            </div>
-            <select
-              value={colorMetric}
-              onChange={(e) => setColorMetric(e.target.value as ColorMetric)}
-              className="w-full text-xs px-2 py-1.5 rounded outline-none"
-              style={{
-                background: alpha(theme.elevated, 60),
-                border: `1px solid ${theme.line}`,
-                color: theme.bone,
-              }}
-            >
-              {COLOR_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+              <optgroup label="Continuous">
+                {SHADE_OPTIONS.filter((o) => o.group === "continuous").map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Categorical">
+                {SHADE_OPTIONS.filter((o) => o.group === "categorical").map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <div>
@@ -418,19 +535,35 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-1.5" style={{ color: theme.muted }}>
               Legend
             </div>
-            <div className="space-y-1">
-              {legendItems.map((item) => (
-                <div key={item.label} className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ background: item.color, border: `1px solid ${theme.accentEdge}` }}
-                  />
-                  <span className="text-[11px]" style={{ color: alpha(theme.bone, 70) }}>
-                    {item.label}
-                  </span>
+            {legend.kind === "continuous" ? (
+              <div>
+                <div
+                  className="h-2 rounded-full"
+                  style={{
+                    background: `linear-gradient(to right, ${legend.stops.join(", ")})`,
+                    border: `1px solid ${alpha(theme.bone, 10)}`,
+                  }}
+                />
+                <div className="flex justify-between mt-1 text-[10px] font-mono" style={{ color: alpha(theme.bone, 65) }}>
+                  <span>{legend.lo != null ? `${formatTick(legend.lo)} ${legend.unit}` : "—"}</span>
+                  <span>{legend.hi != null ? `${formatTick(legend.hi)} ${legend.unit}` : "—"}</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {legend.items.map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-sm shrink-0"
+                      style={{ background: item.color, border: `1px solid ${theme.accentEdge}` }}
+                    />
+                    <span className="text-[11px]" style={{ color: alpha(theme.bone, 70) }}>
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={resetFilters}

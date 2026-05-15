@@ -13,6 +13,7 @@ import { createServiceClient } from './supabase'
 
 export interface FifaWc26Team {
   code: string
+  isoA2: string | null
   name: string
   confederation: string
   qualification: string
@@ -32,6 +33,7 @@ export interface FifaWc26Team {
 
 interface TeamRow {
   code: string
+  iso_a2: string | null
   name: string
   confederation: string
   qualification: string
@@ -52,6 +54,7 @@ interface TeamRow {
 function shape(r: TeamRow): FifaWc26Team {
   return {
     code: r.code,
+    isoA2: r.iso_a2,
     name: r.name,
     confederation: r.confederation,
     qualification: r.qualification,
@@ -71,7 +74,7 @@ function shape(r: TeamRow): FifaWc26Team {
 }
 
 const SELECT_COLS =
-  'code, name, confederation, qualification, is_host, is_debut, lat, lng, ' +
+  'code, iso_a2, name, confederation, qualification, is_host, is_debut, lat, lng, ' +
   'squad_value_eur_mn, gdp_nominal_usd_bn, gdp_per_capita_ppp_usd, ' +
   'population_mn, land_area_sq_km, gini_index, eiu_democracy_index_2024, regime_type'
 
