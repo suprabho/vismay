@@ -24,7 +24,6 @@
     "energy-profile:import-owid": "npx tsx scripts/energy-profile/import-owid.ts",
     "energy-profile:generate-summaries": "npx tsx scripts/energy-profile/generate-summaries.ts",
     "fifa-wc26:import": "npx tsx scripts/fifa-wc26/import.ts",
-    "canva:bootstrap": "npx tsx scripts/canva-bootstrap.ts",
     "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts"
   },
   "dependencies": {

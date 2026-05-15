@@ -8,7 +8,6 @@ import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { defaultNarrationText } from '@/lib/storyTts'
 import { getCachedVideo, type CachedVideo } from '@/lib/storyVideo'
-import { getCanvaDesign, type CanvaDesignRow } from '@/lib/canva'
 import { createServiceClient } from '@/lib/supabase'
 import type { NarrationUnit } from '@/components/admin/NarrationEditor'
 
@@ -49,10 +48,7 @@ export default async function EditStoryPage({ params }: Props) {
   if (!(await isAuthed())) redirect(`/admin/login?next=/admin/${slug}`)
 
   const src = getContentSource()
-  const [videoCache, canvaCache] = await Promise.all([
-    loadVideoCache(slug),
-    loadCanvaCache(slug),
-  ])
+  const videoCache = await loadVideoCache(slug)
   const [markdown, config_yaml, jsonChartIds, tts_yaml] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
@@ -118,7 +114,6 @@ export default async function EditStoryPage({ params }: Props) {
         narrationUnits,
         tts_yaml: tts_yaml ?? null,
         videoCache,
-        canvaCache,
       }}
     />
   )
@@ -138,24 +133,6 @@ async function loadVideoCache(slug: string): Promise<VideoCache> {
     const [vert, horiz] = await Promise.all([
       getCachedVideo(supabase, slug, '9:16', false),
       getCachedVideo(supabase, slug, '16:9', false),
-    ])
-    return { '9:16': vert, '16:9': horiz }
-  } catch {
-    return { '9:16': null, '16:9': null }
-  }
-}
-
-export type CanvaCache = {
-  '9:16': CanvaDesignRow | null
-  '16:9': CanvaDesignRow | null
-}
-
-async function loadCanvaCache(slug: string): Promise<CanvaCache> {
-  try {
-    const supabase = createServiceClient()
-    const [vert, horiz] = await Promise.all([
-      getCanvaDesign(supabase, slug, '9:16'),
-      getCanvaDesign(supabase, slug, '16:9'),
     ])
     return { '9:16': vert, '16:9': horiz }
   } catch {
