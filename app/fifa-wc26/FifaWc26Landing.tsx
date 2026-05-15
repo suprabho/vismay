@@ -212,6 +212,23 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
     return expr;
   }, [shadeMetric, teamsOnMap, theme]);
 
+  // One label point per team, anchored at the imported country centroid
+  // (team.lat/lng). The country_boundaries tileset is split into many sub-
+  // features per country (one per island / coastline segment), so painting
+  // symbols off that source duplicates the label hundreds of times for
+  // archipelagic nations like Japan.
+  const labelsGeoJson = useMemo(
+    () => ({
+      type: "FeatureCollection" as const,
+      features: teamsOnMap.map((t) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [t.lng, t.lat] },
+        properties: { iso: t.isoA2, name: t.name },
+      })),
+    }),
+    [teamsOnMap],
+  );
+
   const continuousDomain = useMemo(() => {
     if (!isContinuousShade(shadeMetric)) return null;
     let lo = Infinity;
@@ -384,19 +401,21 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
               "line-opacity": 0.7,
             }}
           />
+        </Source>
+
+        <Source id="wc26-team-labels" type="geojson" data={labelsGeoJson}>
           <Layer
             id="wc26-country-label"
             type="symbol"
-            source-layer="country_boundaries"
             filter={[
               "any",
-              ["==", ["get", "iso_3166_1"], selectedIso ?? ""],
-              ["==", ["get", "iso_3166_1"], hoveredIso ?? ""],
+              ["==", ["get", "iso"], selectedIso ?? ""],
+              ["==", ["get", "iso"], hoveredIso ?? ""],
             ]}
             layout={{
-              "text-field": ["get", "name_en"],
+              "text-field": ["get", "name"],
               "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Regular"],
-              "text-size": 11,
+              "text-size": 12,
               "text-anchor": "center",
               "text-allow-overlap": true,
             }}
