@@ -16,8 +16,11 @@ type State =
   | { kind: 'missing' }
   | { kind: 'error'; message: string }
 
+type Tab = 'stats' | 'fixtures' | 'news'
+
 export default function TeamDetail({ code, onClose }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
+  const [tab, setTab] = useState<Tab>('stats')
 
   useEffect(() => {
     let cancelled = false
@@ -40,6 +43,20 @@ export default function TeamDetail({ code, onClose }: Props) {
     }
   }, [code])
 
+  useEffect(() => {
+    setTab('stats')
+  }, [code])
+
+  const availableTabs: Tab[] =
+    state.kind === 'ready'
+      ? [
+          'stats',
+          ...(state.data.shortfoot.fixtures.length > 0 ? (['fixtures'] as const) : []),
+          ...(state.data.shortfoot.news.length > 0 ? (['news'] as const) : []),
+        ]
+      : ['stats']
+  const activeTab: Tab = availableTabs.includes(tab) ? tab : 'stats'
+
   return (
     <DetailSheet>
       <Header
@@ -48,6 +65,15 @@ export default function TeamDetail({ code, onClose }: Props) {
         subtitle={state.kind === 'ready' ? state.data.confederation : undefined}
         onClose={onClose}
       />
+      {state.kind === 'ready' && availableTabs.length > 1 && (
+        <TabBar
+          tabs={availableTabs}
+          active={activeTab}
+          onChange={setTab}
+          fixturesCount={state.data.shortfoot.fixtures.length}
+          newsCount={state.data.shortfoot.news.length}
+        />
+      )}
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
         {state.kind === 'loading' && (
           <p className="text-xs font-mono text-zinc-500 mt-3">Loading profile…</p>
@@ -60,10 +86,73 @@ export default function TeamDetail({ code, onClose }: Props) {
             No profile data for this team yet.
           </p>
         )}
-        {state.kind === 'ready' && <Profile data={state.data} />}
+        {state.kind === 'ready' && <TabContent tab={activeTab} data={state.data} />}
       </div>
     </DetailSheet>
   )
+}
+
+function TabBar({
+  tabs,
+  active,
+  onChange,
+  fixturesCount,
+  newsCount,
+}: {
+  tabs: Tab[]
+  active: Tab
+  onChange: (t: Tab) => void
+  fixturesCount: number
+  newsCount: number
+}) {
+  const label = (t: Tab): string =>
+    t === 'stats' ? 'Stats' : t === 'fixtures' ? 'Fixtures' : 'News'
+  const count = (t: Tab): number | null =>
+    t === 'fixtures' ? fixturesCount : t === 'news' ? newsCount : null
+  return (
+    <div
+      className="flex px-4 shrink-0"
+      style={{ borderBottom: '1px solid color-mix(in srgb, var(--vmy-bone) 8%, transparent)' }}
+    >
+      {tabs.map((t) => {
+        const isActive = t === active
+        const n = count(t)
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange(t)}
+            className="text-[11px] font-mono uppercase tracking-[0.18em] py-2.5 px-2 transition-colors"
+            style={{
+              color: isActive
+                ? 'var(--vmy-bone)'
+                : 'color-mix(in srgb, var(--vmy-bone) 50%, transparent)',
+              borderBottom: isActive
+                ? '1.5px solid var(--vmy-ember)'
+                : '1.5px solid transparent',
+              marginBottom: '-1px',
+            }}
+          >
+            {label(t)}
+            {n != null && (
+              <span
+                className="ml-1.5"
+                style={{ color: 'color-mix(in srgb, var(--vmy-bone) 35%, transparent)' }}
+              >
+                {n}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function TabContent({ tab, data }: { tab: Tab; data: FifaWc26TeamProfile }) {
+  if (tab === 'fixtures') return <FixturesPanel data={data} />
+  if (tab === 'news') return <NewsPanel data={data} />
+  return <StatsPanel data={data} />
 }
 
 function Header({
@@ -148,7 +237,7 @@ function fmtLand(n: number | null): string {
   return `${(n / 1000).toFixed(0)}k`
 }
 
-function Profile({ data }: { data: FifaWc26TeamProfile }) {
+function StatsPanel({ data }: { data: FifaWc26TeamProfile }) {
   const tiles: { label: string; value: string; suffix?: string }[] = [
     { label: 'Squad value', value: fmtSquadValue(data.squadValueEurMn), suffix: '€' },
     { label: 'GDP nominal', value: fmtGdp(data.gdpNominalUsdBn), suffix: 'USD' },
@@ -235,47 +324,50 @@ function Profile({ data }: { data: FifaWc26TeamProfile }) {
         </div>
       </div>
 
-      {data.shortfoot.fixtures.length > 0 && (
-        <Fixtures fixtures={data.shortfoot.fixtures} teamName={data.name} />
-      )}
-
-      {data.shortfoot.news.length > 0 && <News items={data.shortfoot.news} />}
-
       <p
         className="text-[10px] font-mono leading-snug"
         style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
       >
         Squad values: Transfermarkt (Oct–Nov 2025). GDP / population: IMF & World Bank 2024.
         Democracy Index: EIU 2024. FIFA rank: Apr 2026. GHI 2025, WHR 2025.
-        {(data.shortfoot.fixtures.length > 0 || data.shortfoot.news.length > 0) && (
-          <> Fixtures: football-data.org. News summaries: shortfoot RSS via Gemini.</>
-        )}
       </p>
     </>
   )
 }
 
-function Fixtures({
-  fixtures,
-  teamName,
-}: {
-  fixtures: ShortfootFixture[]
-  teamName: string
-}) {
+function FixturesPanel({ data }: { data: FifaWc26TeamProfile }) {
   return (
-    <div>
-      <p
-        className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
-        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
-      >
-        — World Cup fixtures
-      </p>
-      <ul className="space-y-2">
-        {fixtures.map((f) => (
-          <FixtureRow key={f.id} fixture={f} teamName={teamName} />
+    <>
+      <ul className="space-y-2 mt-1">
+        {data.shortfoot.fixtures.map((f) => (
+          <FixtureRow key={f.id} fixture={f} teamName={data.name} />
         ))}
       </ul>
-    </div>
+      <p
+        className="text-[10px] font-mono leading-snug"
+        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
+      >
+        Fixtures: football-data.org.
+      </p>
+    </>
+  )
+}
+
+function NewsPanel({ data }: { data: FifaWc26TeamProfile }) {
+  return (
+    <>
+      <ul className="space-y-3 mt-1">
+        {data.shortfoot.news.map((n) => (
+          <NewsRow key={n.id} item={n} />
+        ))}
+      </ul>
+      <p
+        className="text-[10px] font-mono leading-snug"
+        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
+      >
+        News summaries: shortfoot RSS via Gemini.
+      </p>
+    </>
   )
 }
 
@@ -364,47 +456,33 @@ function FixtureRow({
   )
 }
 
-function News({ items }: { items: ShortfootNewsItem[] }) {
+function NewsRow({ item }: { item: ShortfootNewsItem }) {
+  const date = new Date(item.publishedAt).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
   return (
-    <div>
-      <p
-        className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
-        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
+    <li>
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block group"
       >
-        — Recent news
-      </p>
-      <ul className="space-y-3">
-        {items.map((n) => {
-          const date = new Date(n.publishedAt).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-          })
-          return (
-            <li key={n.id}>
-              <a
-                href={n.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block group"
-              >
-                <div className="text-[10px] uppercase tracking-widest text-zinc-600 mb-0.5 font-mono">
-                  {date}
-                  {n.publisher && <span className="ml-2">· {n.publisher}</span>}
-                </div>
-                <div className="text-sm text-zinc-200 group-hover:text-amber-200 leading-snug">
-                  {n.title}
-                </div>
-                {n.summary && (
-                  <div className="text-xs text-zinc-500 mt-1 leading-snug line-clamp-3">
-                    {n.summary}
-                  </div>
-                )}
-              </a>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+        <div className="text-[10px] uppercase tracking-widest text-zinc-600 mb-0.5 font-mono">
+          {date}
+          {item.publisher && <span className="ml-2">· {item.publisher}</span>}
+        </div>
+        <div className="text-sm text-zinc-200 group-hover:text-amber-200 leading-snug">
+          {item.title}
+        </div>
+        {item.summary && (
+          <div className="text-xs text-zinc-500 mt-1 leading-snug line-clamp-3">
+            {item.summary}
+          </div>
+        )}
+      </a>
+    </li>
   )
 }
 

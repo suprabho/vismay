@@ -26,34 +26,61 @@ const INITIAL_VIEW_STATE = {
 
 const alpha = (c: string, p: number) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
 
-type ShadeMetric =
+type ContinuousShadeMetric =
   | "squad"
   | "gdp"
+  | "gdpPerCapitaPpp"
   | "population"
   | "land"
   | "democracy"
+  | "gini"
+  | "ghi"
+  | "fifaRank"
+  | "whrRank";
+
+type ShadeMetric =
+  | ContinuousShadeMetric
   | "confederation"
   | "regime"
   | "debut";
 
-const SHADE_OPTIONS: { value: ShadeMetric; label: string; group: "continuous" | "categorical" }[] = [
+const SHADE_OPTIONS: {
+  value: ShadeMetric;
+  label: string;
+  group: "continuous" | "categorical";
+  invert?: boolean;
+}[] = [
+  { value: "fifaRank", label: "FIFA ranking", group: "continuous", invert: true },
   { value: "squad", label: "Squad value", group: "continuous" },
   { value: "gdp", label: "GDP", group: "continuous" },
+  { value: "gdpPerCapitaPpp", label: "GDP / capita PPP", group: "continuous" },
   { value: "population", label: "Population", group: "continuous" },
   { value: "land", label: "Land area", group: "continuous" },
   { value: "democracy", label: "Democracy index", group: "continuous" },
+  { value: "gini", label: "Gini index", group: "continuous" },
+  { value: "ghi", label: "GHI 2025", group: "continuous" },
+  { value: "whrRank", label: "WHR rank 2025", group: "continuous", invert: true },
   { value: "confederation", label: "Confederation", group: "categorical" },
   { value: "regime", label: "Regime type", group: "categorical" },
   { value: "debut", label: "Debut", group: "categorical" },
 ];
 
-const CONTINUOUS_SHADE_LABELS: Record<Extract<ShadeMetric, "squad" | "gdp" | "population" | "land" | "democracy">, { short: string; unit: string }> = {
+const CONTINUOUS_SHADE_LABELS: Record<ContinuousShadeMetric, { short: string; unit: string }> = {
   squad: { short: "Squad value", unit: "€mn" },
   gdp: { short: "GDP", unit: "$bn" },
+  gdpPerCapitaPpp: { short: "GDP / cap PPP", unit: "$" },
   population: { short: "Population", unit: "mn" },
   land: { short: "Land area", unit: "km²" },
   democracy: { short: "Democracy", unit: "EIU" },
+  gini: { short: "Gini", unit: "" },
+  ghi: { short: "GHI", unit: "" },
+  fifaRank: { short: "FIFA rank", unit: "#" },
+  whrRank: { short: "WHR rank", unit: "#" },
 };
+
+function isInvertedShade(m: ShadeMetric): boolean {
+  return SHADE_OPTIONS.find((o) => o.value === m)?.invert === true;
+}
 
 const CONFEDERATIONS = [
   "UEFA",
@@ -86,12 +113,22 @@ function pickShadeValue(t: FifaWc26Team, m: ShadeMetric): number | null {
       return t.squadValueEurMn;
     case "gdp":
       return t.gdpNominalUsdBn;
+    case "gdpPerCapitaPpp":
+      return t.gdpPerCapitaPppUsd;
     case "population":
       return t.populationMn;
     case "land":
       return t.landAreaSqKm;
     case "democracy":
       return t.eiuDemocracyIndex2024;
+    case "gini":
+      return t.giniIndex;
+    case "ghi":
+      return t.ghi2025Score;
+    case "fifaRank":
+      return t.fifaRanking;
+    case "whrRank":
+      return t.whr2025Rank;
     default:
       return null;
   }
@@ -110,8 +147,19 @@ function categoricalColorFor(
   return t.isDebut ? theme.ramp5 : theme.ramp3;
 }
 
-function isContinuousShade(m: ShadeMetric): boolean {
-  return m === "squad" || m === "gdp" || m === "population" || m === "land" || m === "democracy";
+function isContinuousShade(m: ShadeMetric): m is ContinuousShadeMetric {
+  return (
+    m === "squad" ||
+    m === "gdp" ||
+    m === "gdpPerCapitaPpp" ||
+    m === "population" ||
+    m === "land" ||
+    m === "democracy" ||
+    m === "gini" ||
+    m === "ghi" ||
+    m === "fifaRank" ||
+    m === "whrRank"
+  );
 }
 
 function formatTick(v: number): string {
@@ -120,6 +168,13 @@ function formatTick(v: number): string {
   if (Math.abs(v) >= 100) return v.toFixed(0);
   if (Math.abs(v) >= 10) return v.toFixed(0);
   return v.toFixed(1);
+}
+
+function formatLegendTick(v: number | null, unit: string): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (unit === "#") return `#${Math.round(v)}`;
+  if (unit === "") return formatTick(v);
+  return `${formatTick(v)} ${unit}`;
 }
 
 export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) {
@@ -215,12 +270,18 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
       }
       valueExpr.push(lo); // fallback for any country slipping through the layer filter
       const span = hi - lo;
+      const inverted = isInvertedShade(shadeMetric);
+      // For rank-based metrics (lower = better) we flip the ramp so #1 reads
+      // as the "bright" end and the worst rank as the dim end.
+      const ramp = inverted
+        ? [theme.ramp5, theme.ramp4, theme.ramp3, theme.ramp2, theme.ramp1]
+        : [theme.ramp1, theme.ramp2, theme.ramp3, theme.ramp4, theme.ramp5];
       const stops = [
-        { v: lo, c: theme.ramp1 },
-        { v: lo + span * 0.25, c: theme.ramp2 },
-        { v: lo + span * 0.5, c: theme.ramp3 },
-        { v: lo + span * 0.75, c: theme.ramp4 },
-        { v: hi, c: theme.ramp5 },
+        { v: lo, c: ramp[0] },
+        { v: lo + span * 0.25, c: ramp[1] },
+        { v: lo + span * 0.5, c: ramp[2] },
+        { v: lo + span * 0.75, c: ramp[3] },
+        { v: hi, c: ramp[4] },
       ];
       const expr: (string | number | unknown[])[] = ["interpolate", ["linear"], valueExpr];
       for (const s of stops) {
@@ -305,9 +366,11 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
   // ramp gradient swatch; categorical modes mirror the discrete pin palette.
   const legend = useMemo(() => {
     if (isContinuousShade(shadeMetric)) {
-      const stops = [theme.ramp1, theme.ramp2, theme.ramp3, theme.ramp4, theme.ramp5];
-      const labels =
-        CONTINUOUS_SHADE_LABELS[shadeMetric as keyof typeof CONTINUOUS_SHADE_LABELS];
+      const inverted = isInvertedShade(shadeMetric);
+      const stops = inverted
+        ? [theme.ramp5, theme.ramp4, theme.ramp3, theme.ramp2, theme.ramp1]
+        : [theme.ramp1, theme.ramp2, theme.ramp3, theme.ramp4, theme.ramp5];
+      const labels = CONTINUOUS_SHADE_LABELS[shadeMetric];
       return {
         kind: "continuous" as const,
         stops,
@@ -610,8 +673,8 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
                   }}
                 />
                 <div className="flex justify-between mt-1 text-[10px] font-mono" style={{ color: alpha(theme.bone, 65) }}>
-                  <span>{legend.lo != null ? `${formatTick(legend.lo)} ${legend.unit}` : "—"}</span>
-                  <span>{legend.hi != null ? `${formatTick(legend.hi)} ${legend.unit}` : "—"}</span>
+                  <span>{formatLegendTick(legend.lo, legend.unit)}</span>
+                  <span>{formatLegendTick(legend.hi, legend.unit)}</span>
                 </div>
               </div>
             ) : (
