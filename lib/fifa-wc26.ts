@@ -29,6 +29,7 @@ export interface FifaWc26Team {
   giniIndex: number | null
   eiuDemocracyIndex2024: number | null
   regimeType: string | null
+  fifaRanking: number | null
 }
 
 interface TeamRow {
@@ -49,6 +50,7 @@ interface TeamRow {
   gini_index: number | null
   eiu_democracy_index_2024: number | null
   regime_type: string | null
+  fifa_ranking: number | null
 }
 
 function shape(r: TeamRow): FifaWc26Team {
@@ -70,13 +72,14 @@ function shape(r: TeamRow): FifaWc26Team {
     giniIndex: r.gini_index,
     eiuDemocracyIndex2024: r.eiu_democracy_index_2024,
     regimeType: r.regime_type,
+    fifaRanking: r.fifa_ranking,
   }
 }
 
 const SELECT_COLS =
   'code, iso_a2, name, confederation, qualification, is_host, is_debut, lat, lng, ' +
   'squad_value_eur_mn, gdp_nominal_usd_bn, gdp_per_capita_ppp_usd, ' +
-  'population_mn, land_area_sq_km, gini_index, eiu_democracy_index_2024, regime_type'
+  'population_mn, land_area_sq_km, gini_index, eiu_democracy_index_2024, regime_type, fifa_ranking'
 
 export async function getFifaWc26Teams(): Promise<FifaWc26Team[]> {
   const sb = createServiceClient()

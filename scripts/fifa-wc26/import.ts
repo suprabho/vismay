@@ -148,6 +148,7 @@ interface TeamRow {
   gini_index: number | null
   eiu_democracy_index_2024: number | null
   regime_type: string | null
+  fifa_ranking: number | null
 }
 
 function parseNumber(s: string | undefined | null): number | null {
@@ -206,6 +207,7 @@ function parseRows(): TeamRow[] {
       gini_index: parseNumber(r['Gini index']),
       eiu_democracy_index_2024: parseNumber(r['EIU Dem. Index 2024']),
       regime_type: r['Regime type']?.trim() || null,
+      fifa_ranking: parseInteger(r['FIFA Ranking']),
     })
   }
   return out

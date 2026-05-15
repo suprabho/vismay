@@ -43,6 +43,7 @@ export default function TeamDetail({ code, onClose }: Props) {
     <DetailSheet>
       <Header
         title={state.kind === 'ready' ? state.data.name : code}
+        rank={state.kind === 'ready' ? state.data.fifaRanking : null}
         subtitle={state.kind === 'ready' ? state.data.confederation : undefined}
         onClose={onClose}
       />
@@ -66,10 +67,12 @@ export default function TeamDetail({ code, onClose }: Props) {
 
 function Header({
   title,
+  rank,
   subtitle,
   onClose,
 }: {
   title: string
+  rank: number | null
   subtitle?: string
   onClose: () => void
 }) {
@@ -89,6 +92,17 @@ function Header({
           className="text-lg leading-snug truncate"
           style={{ color: 'var(--vmy-bone)', fontWeight: 500 }}
         >
+          {rank != null && (
+            <span
+              style={{
+                color: 'color-mix(in srgb, var(--vmy-bone) 50%, transparent)',
+                fontVariantNumeric: 'tabular-nums',
+                marginRight: '0.4em',
+              }}
+            >
+              #{rank}
+            </span>
+          )}
           {title}
         </h2>
       </div>
