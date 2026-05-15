@@ -37,6 +37,37 @@ export function PostCard({
   onChange: () => void
 }) {
   const [busy, setBusy] = useState(false)
+  const [canvaPushing, setCanvaPushing] = useState(false)
+  const [canvaError, setCanvaError] = useState<string | null>(null)
+
+  const showCanva =
+    post.assetRef.kind === 'autoplay_video' &&
+    (post.channel === 'x' || post.channel === 'youtube')
+
+  async function openInCanva() {
+    if (post.assetRef.kind !== 'autoplay_video') return
+    const { slug, aspect } = post.assetRef
+    setCanvaPushing(true)
+    setCanvaError(null)
+    try {
+      const res = await fetch(
+        `/api/admin/canva/push/${encodeURIComponent(slug)}?aspect=${encodeURIComponent(aspect)}`,
+        { method: 'POST' }
+      )
+      const body = (await res.json().catch(() => ({}))) as {
+        edit_url?: string
+        error?: string
+      }
+      if (!res.ok || !body.edit_url) {
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
+      window.open(body.edit_url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      setCanvaError(err instanceof Error ? err.message : 'push failed')
+    } finally {
+      setCanvaPushing(false)
+    }
+  }
 
   async function patch(patch: { status?: PostStatus }) {
     setBusy(true)
@@ -93,6 +124,16 @@ export function PostCard({
         >
           Edit
         </button>
+        {showCanva && (
+          <button
+            onClick={openInCanva}
+            disabled={canvaPushing || busy}
+            title="Push the autoplay MP4 to Canva Uploads, then open the design for auto-captions. Reuses the existing design if one already exists."
+            className="px-2 py-1 text-xs border border-white/10 rounded hover:bg-white/5 disabled:opacity-40"
+          >
+            {canvaPushing ? 'Opening…' : 'Open in Canva'}
+          </button>
+        )}
         {post.status !== 'posted' && (
           <button
             onClick={() => patch({ status: 'posted' })}
@@ -119,6 +160,9 @@ export function PostCard({
           Delete
         </button>
       </div>
+      {canvaError && (
+        <div className="text-[11px] text-red-300/80">canva · {canvaError}</div>
+      )}
     </div>
   )
 }
