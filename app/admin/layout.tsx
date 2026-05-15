@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { isAuthed, expectedToken } from '@/lib/adminAuth'
 import LogoutButton from '@/components/admin/LogoutButton'
+import { AdminTabs } from '@/components/admin/AdminTabs'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,13 +10,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const authed = await isAuthed()
 
   return (
-    <div className="admin-root min-h-[100svh] bg-neutral-950 text-neutral-100 flex flex-col">
+    <div className="admin-root h-svh bg-neutral-950 text-neutral-100 flex flex-col overflow-hidden">
       <header
-        className="sticky top-0 z-50 flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 pt-[max(env(safe-area-inset-top),0.75rem)]"
+        className="shrink-0 flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 pt-[max(env(safe-area-inset-top),0.75rem)]"
       >
-        <Link href="/admin" className="font-medium tracking-tight">
-          admin
-        </Link>
+        <div className="flex items-center gap-4 min-w-0">
+          <Link href="/admin" className="font-medium tracking-tight">
+            admin
+          </Link>
+          {authed && configured && <AdminTabs />}
+        </div>
         <div className="flex items-center gap-3 text-sm">
           <Link
             href="/"
@@ -26,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {authed && <LogoutButton />}
         </div>
       </header>
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 min-h-0 flex flex-col">
         {configured ? children : <NotConfigured />}
       </main>
     </div>

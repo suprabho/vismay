@@ -12,14 +12,14 @@ const TABS = [
 export function AdminTabs() {
   const pathname = usePathname() ?? ''
   return (
-    <nav className="flex gap-1 px-2 py-2 border-b border-white/5">
+    <nav className="flex gap-1">
       {TABS.map((tab) => {
         const active = pathname === tab.href
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+            className={`shrink-0 px-2.5 py-1 rounded-md text-sm transition-colors ${
               active
                 ? 'bg-white/10 text-white'
                 : 'text-neutral-400 hover:text-white'
