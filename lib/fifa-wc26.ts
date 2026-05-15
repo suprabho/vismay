@@ -10,6 +10,10 @@
  */
 
 import { createServiceClient } from './supabase'
+import {
+  getShortfootDataForTeam,
+  type ShortfootTeamData,
+} from './shortfoot'
 
 export interface FifaWc26Team {
   code: string
@@ -102,6 +106,7 @@ export interface FifaWc26TeamProfile extends FifaWc26Team {
     giniIndex: number | null
   }
   total: number
+  shortfoot: ShortfootTeamData
 }
 
 // Rank a metric value (1 = highest) given a sorted-desc list of all values.
@@ -134,6 +139,20 @@ export async function getFifaWc26TeamProfile(
       .filter((v): v is number => v != null)
       .sort((a, b) => b - a)
 
+  // Static profile must render even if the shortfoot read errors out.
+  // allSettled lets the rest of the response come back on any query failure.
+  const shortfootResult = await Promise.allSettled([
+    getShortfootDataForTeam(team.name),
+  ])
+  const shortfoot =
+    shortfootResult[0].status === 'fulfilled'
+      ? shortfootResult[0].value
+      : (console.warn(
+          `[fifa-wc26] shortfoot lookup failed for ${team.name}:`,
+          shortfootResult[0].reason,
+        ),
+        { news: [], fixtures: [] })
+
   return {
     ...team,
     total: rows.length,
@@ -149,5 +168,6 @@ export async function getFifaWc26TeamProfile(
       ),
       giniIndex: rankOf(team.giniIndex, sortedDesc((t) => t.giniIndex)),
     },
+    shortfoot,
   }
 }

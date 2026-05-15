@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import DetailSheet from '@/components/DetailSheet'
 import type { FifaWc26TeamProfile } from '@/lib/fifa-wc26'
+import type { ShortfootFixture, ShortfootNewsItem } from '@/lib/shortfoot'
 
 interface Props {
   code: string
@@ -229,14 +230,176 @@ function Profile({ data }: { data: FifaWc26TeamProfile }) {
         </div>
       </div>
 
+      {data.shortfoot.fixtures.length > 0 && (
+        <Fixtures fixtures={data.shortfoot.fixtures} teamName={data.name} />
+      )}
+
+      {data.shortfoot.news.length > 0 && <News items={data.shortfoot.news} />}
+
       <p
         className="text-[10px] font-mono leading-snug"
         style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
       >
         Squad values: Transfermarkt (Oct–Nov 2025). GDP / population: IMF & World Bank 2024.
         Democracy Index: EIU 2024.
+        {(data.shortfoot.fixtures.length > 0 || data.shortfoot.news.length > 0) && (
+          <> Fixtures: football-data.org. News summaries: shortfoot RSS via Gemini.</>
+        )}
       </p>
     </>
+  )
+}
+
+function Fixtures({
+  fixtures,
+  teamName,
+}: {
+  fixtures: ShortfootFixture[]
+  teamName: string
+}) {
+  return (
+    <div>
+      <p
+        className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
+        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
+      >
+        — World Cup fixtures
+      </p>
+      <ul className="space-y-2">
+        {fixtures.map((f) => (
+          <FixtureRow key={f.id} fixture={f} teamName={teamName} />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function FixtureRow({
+  fixture,
+  teamName,
+}: {
+  fixture: ShortfootFixture
+  teamName: string
+}) {
+  const status = fixture.status.toLowerCase()
+  const isFinished = status === 'finished'
+  const isLive = status === 'live'
+  const opponent = fixture.isHome ? fixture.awayTeam : fixture.homeTeam
+  const venue = fixture.isHome ? 'vs' : '@'
+  const date = new Date(fixture.kickoffAt)
+  const dateLabel = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+  const timeLabel = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+  // Score from this team's perspective: ownGoals - oppGoals
+  let scoreLabel: string | null = null
+  if ((isFinished || isLive) && fixture.homeScore != null && fixture.awayScore != null) {
+    const own = fixture.isHome ? fixture.homeScore : fixture.awayScore
+    const opp = fixture.isHome ? fixture.awayScore : fixture.homeScore
+    scoreLabel = `${own}–${opp}`
+  }
+
+  const statusTone = isLive
+    ? 'var(--vmy-ember)'
+    : isFinished
+    ? 'color-mix(in srgb, var(--vmy-bone) 70%, transparent)'
+    : 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)'
+
+  return (
+    <li
+      className="rounded-md px-3 py-2"
+      style={{
+        background: 'color-mix(in srgb, var(--vmy-bone) 4%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--vmy-bone) 6%, transparent)',
+      }}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm leading-snug truncate" style={{ color: 'var(--vmy-bone)' }}>
+            <span
+              className="text-[10px] font-mono uppercase mr-1.5"
+              style={{ color: 'color-mix(in srgb, var(--vmy-bone) 50%, transparent)' }}
+            >
+              {venue}
+            </span>
+            {opponent}
+          </div>
+          <div
+            className="text-[10px] font-mono mt-0.5"
+            style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
+          >
+            {dateLabel}
+            {!isFinished && <> · {timeLabel}</>}
+            {fixture.venue && <> · {fixture.venue}</>}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          {scoreLabel && (
+            <div
+              className="text-base font-mono leading-none"
+              style={{ color: 'var(--vmy-bone)', fontWeight: 500 }}
+            >
+              {scoreLabel}
+            </div>
+          )}
+          <div
+            className="text-[9px] font-mono uppercase tracking-[0.18em] mt-1"
+            style={{ color: statusTone }}
+          >
+            {status}
+          </div>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function News({ items }: { items: ShortfootNewsItem[] }) {
+  return (
+    <div>
+      <p
+        className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
+        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
+      >
+        — Recent news
+      </p>
+      <ul className="space-y-3">
+        {items.map((n) => {
+          const date = new Date(n.publishedAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          })
+          return (
+            <li key={n.id}>
+              <a
+                href={n.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block group"
+              >
+                <div className="text-[10px] uppercase tracking-widest text-zinc-600 mb-0.5 font-mono">
+                  {date}
+                  {n.publisher && <span className="ml-2">· {n.publisher}</span>}
+                </div>
+                <div className="text-sm text-zinc-200 group-hover:text-amber-200 leading-snug">
+                  {n.title}
+                </div>
+                {n.summary && (
+                  <div className="text-xs text-zinc-500 mt-1 leading-snug line-clamp-3">
+                    {n.summary}
+                  </div>
+                )}
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 

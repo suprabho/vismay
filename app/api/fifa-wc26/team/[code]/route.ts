@@ -14,6 +14,6 @@ export async function GET(
     return NextResponse.json({ error: 'not_found', code }, { status: 404 })
   }
   return NextResponse.json(profile, {
-    headers: { 'cache-control': 's-maxage=3600, stale-while-revalidate=86400' },
+    headers: { 'cache-control': 's-maxage=900, stale-while-revalidate=86400' },
   })
 }
