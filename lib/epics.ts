@@ -270,7 +270,7 @@ export async function getIeaCountries(): Promise<IeaCountry[]> {
 // Stacked-area "energy mix" sources, in the order we want them to stack.
 // `key` is the suffix appended to `elec_share_*` and `primary_share_*` in the
 // indicator table.
-const MIX_SOURCES = [
+export const MIX_SOURCES = [
   { key: 'coal', label: 'Coal' },
   { key: 'gas', label: 'Gas' },
   { key: 'oil', label: 'Oil' },
@@ -281,6 +281,131 @@ const MIX_SOURCES = [
   { key: 'biofuel', label: 'Bioenergy' },
   { key: 'other_renew', label: 'Other renewables' },
 ] as const
+
+export type MixSourceKey = typeof MIX_SOURCES[number]['key']
+export type MixSourceLabel = typeof MIX_SOURCES[number]['label']
+
+export interface DominantEnergySource {
+  sourceKey: MixSourceKey
+  sourceLabel: MixSourceLabel
+  share: number
+  year: number
+  // 'primary' = derived from primary_share_* (full energy footprint, ~80 countries).
+  // 'electricity' = derived from elec_share_* (electricity generation only, ~190
+  // countries — used as fallback wherever OWID has no primary-mix coverage).
+  derivedFrom: 'primary' | 'electricity'
+}
+
+type EnergyRowRaw = { country_code: string; indicator: string; year: number; value: number }
+
+async function pageAllShareRows(
+  sb: ReturnType<typeof createServiceClient>,
+  prefix: 'primary_share' | 'elec_share',
+): Promise<EnergyRowRaw[]> {
+  const indicators = MIX_SOURCES.map((s) => `${prefix}_${s.key}`)
+  const rows: EnergyRowRaw[] = []
+  // PostgREST `max-rows` defaults to 1000 per response on Supabase. Page in
+  // 1000-row chunks until the batch is short. Sort is required so
+  // pagination is deterministic across requests.
+  const pageSize = 1000
+  for (let page = 0; page < 60; page++) {
+    const from = page * pageSize
+    const to = from + pageSize - 1
+    const { data, error } = await sb
+      .from('iea_country_energy')
+      .select('country_code, indicator, year, value')
+      .in('indicator', indicators)
+      .not('value', 'is', null)
+      .order('country_code', { ascending: true })
+      .order('indicator', { ascending: true })
+      .order('year', { ascending: true })
+      .range(from, to)
+    if (error) throw new Error(`pageAllShareRows(${prefix}): ${error.message}`)
+    const batch = (data ?? []) as EnergyRowRaw[]
+    rows.push(...batch)
+    if (batch.length < pageSize) break
+  }
+  return rows
+}
+
+function buildDominantFromRows(
+  rows: EnergyRowRaw[],
+  prefix: 'primary_share' | 'elec_share',
+  derivedFrom: 'primary' | 'electricity',
+): Record<string, DominantEnergySource> {
+  const indicatorToSource = new Map<string, { key: MixSourceKey; label: MixSourceLabel; order: number }>()
+  MIX_SOURCES.forEach((s, idx) => {
+    indicatorToSource.set(`${prefix}_${s.key}`, { key: s.key, label: s.label, order: idx })
+  })
+
+  // country_code -> year -> Map<sourceKey, { value, order }>
+  const byCountry = new Map<string, Map<number, Map<MixSourceKey, { value: number; order: number }>>>()
+  for (const row of rows) {
+    const src = indicatorToSource.get(row.indicator)
+    if (!src) continue
+    let yearMap = byCountry.get(row.country_code)
+    if (!yearMap) { yearMap = new Map(); byCountry.set(row.country_code, yearMap) }
+    let sourceMap = yearMap.get(row.year)
+    if (!sourceMap) { sourceMap = new Map(); yearMap.set(row.year, sourceMap) }
+    sourceMap.set(src.key, { value: row.value, order: src.order })
+  }
+
+  const result: Record<string, DominantEnergySource> = {}
+  for (const [code, yearMap] of byCountry.entries()) {
+    let bestYear = -Infinity
+    for (const y of yearMap.keys()) if (y > bestYear) bestYear = y
+    const sourceMap = yearMap.get(bestYear)
+    if (!sourceMap || sourceMap.size === 0) continue
+
+    let topKey: MixSourceKey | null = null
+    let topValue = -Infinity
+    let topOrder = Infinity
+    for (const [key, { value, order }] of sourceMap.entries()) {
+      if (value > topValue || (value === topValue && order < topOrder)) {
+        topKey = key
+        topValue = value
+        topOrder = order
+      }
+    }
+    if (!topKey) continue
+    const label = MIX_SOURCES[topOrder].label
+    result[code] = { sourceKey: topKey, sourceLabel: label, share: topValue, year: bestYear, derivedFrom }
+  }
+
+  return result
+}
+
+/**
+ * For every country in `iea_country_energy`, returns the source with the
+ * largest share in the latest year that has data. Used by the
+ * `/energy-profile` choropleth to color the world map.
+ *
+ * Source preference per country:
+ *   1. Primary energy mix (`primary_share_*`) — full footprint, ~80 countries.
+ *   2. Electricity mix (`elec_share_*`) — generation only, ~190 countries.
+ *      Used as fallback wherever OWID has no primary-mix coverage.
+ *
+ * Countries with neither family populated are absent from the result.
+ * Tie-breaker within a year: declaration order in MIX_SOURCES.
+ *
+ * Pagination: PostgREST caps responses (Supabase default ~1000 rows), so we
+ * page through both indicator families until exhausted.
+ */
+export async function getDominantEnergySourceByCountry(): Promise<
+  Record<string, DominantEnergySource>
+> {
+  const sb = createServiceClient()
+  const [primaryRows, elecRows] = await Promise.all([
+    pageAllShareRows(sb, 'primary_share'),
+    pageAllShareRows(sb, 'elec_share'),
+  ])
+  const primary = buildDominantFromRows(primaryRows, 'primary_share', 'primary')
+  const elec = buildDominantFromRows(elecRows, 'elec_share', 'electricity')
+
+  // Prefer primary; fall back to electricity where primary is missing.
+  const merged: Record<string, DominantEnergySource> = { ...elec, ...primary }
+  return merged
+}
 
 const TILE_INDICATORS = [
   'energy_per_capita_kwh',

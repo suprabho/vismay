@@ -5,7 +5,9 @@ import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
-import type { Epic, EpicStory, IeaCountry, IeaNewsItem } from "@/lib/epics";
+import type { DominantEnergySource, Epic, EpicStory, IeaCountry, IeaNewsItem } from "@/lib/epics";
+import { MIX_SOURCES } from "@/lib/epics";
+import { ENERGY_SOURCE_COLORS } from "@/components/energy-profile/charts/colors";
 import { COUNTRY_CENTROIDS } from "@/lib/energy-profile/countryCentroids";
 import { energyProfileLogoPalette, type EnergyProfileTheme } from "./theme";
 import CountryDetail from "./CountryDetail";
@@ -16,6 +18,7 @@ interface Props {
   news: IeaNewsItem[];
   stories: EpicStory[];
   theme: EnergyProfileTheme;
+  dominantSources: Record<string, DominantEnergySource>;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -30,7 +33,7 @@ interface CountryPin extends IeaCountry {
 
 const alpha = (c: string, p: number) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
 
-export default function EnergyProfileLanding({ epic, countries, news, stories, theme }: Props) {
+export default function EnergyProfileLanding({ epic, countries, news, stories, theme, dominantSources }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
@@ -83,6 +86,24 @@ export default function EnergyProfileLanding({ epic, countries, news, stories, t
     () => Object.keys(articleCountByCode).filter((c) => articleCountByCode[c] > 0),
     [articleCountByCode]
   );
+
+  // Only paint countries with actual primary-energy data. Featured editorial
+  // countries with no OWID coverage still render their pins; leaving their
+  // polygon transparent keeps the choropleth story honest (no false "fallback"
+  // color masquerading as a real fuel mix).
+  const codesWithData = useMemo(() => Object.keys(dominantSources), [dominantSources]);
+
+  const fillColorExpr = useMemo(() => {
+    const entries: string[] = [];
+    for (const [code, d] of Object.entries(dominantSources)) {
+      const hex = ENERGY_SOURCE_COLORS[d.sourceLabel];
+      if (!hex) continue;
+      entries.push(code, hex);
+    }
+    // Fallback never hits (filter excludes everything else) but Mapbox `match`
+    // requires it. Use a transparent black just in case.
+    return ["match", ["get", "iso_3166_1"], ...entries, "rgba(0,0,0,0)"] as any;
+  }, [dominantSources]);
 
   const maxCount = useMemo(
     () => Math.max(1, ...pins.map((p) => p.articleCount)),
@@ -208,23 +229,18 @@ export default function EnergyProfileLanding({ epic, countries, news, stories, t
             id="ep-country-fill"
             type="fill"
             source-layer="country_boundaries"
-            filter={["in", ["get", "iso_3166_1"], ["literal", featuredCodes]]}
+            filter={["in", ["get", "iso_3166_1"], ["literal", codesWithData]]}
             paint={{
-              "fill-color": [
-                "case",
-                ["in", ["get", "iso_3166_1"], ["literal", newsCodes]],
-                theme.accent,
-                theme.accentHi,
-              ],
+              "fill-color": fillColorExpr,
               "fill-opacity": [
                 "case",
                 ["==", ["get", "iso_3166_1"], selectedCode ?? ""],
-                0.35,
+                0.90,
                 ["==", ["get", "iso_3166_1"], hoveredCode ?? ""],
-                0.28,
+                0.78,
                 ["in", ["get", "iso_3166_1"], ["literal", newsCodes]],
-                0.2,
-                0.1,
+                0.72,
+                0.62,
               ],
             }}
           />
@@ -232,16 +248,23 @@ export default function EnergyProfileLanding({ epic, countries, news, stories, t
             id="ep-country-outline"
             type="line"
             source-layer="country_boundaries"
-            filter={["in", ["get", "iso_3166_1"], ["literal", featuredCodes]]}
+            filter={["in", ["get", "iso_3166_1"], ["literal", codesWithData]]}
             paint={{
               "line-color": theme.accentHi,
               "line-width": [
                 "case",
                 ["==", ["get", "iso_3166_1"], selectedCode ?? ""],
                 1.6,
+                ["in", ["get", "iso_3166_1"], ["literal", featuredCodes]],
                 0.6,
+                0.25,
               ],
-              "line-opacity": 0.65,
+              "line-opacity": [
+                "case",
+                ["in", ["get", "iso_3166_1"], ["literal", featuredCodes]],
+                0.65,
+                0.35,
+              ],
             }}
           />
         </Source>
@@ -318,6 +341,48 @@ export default function EnergyProfileLanding({ epic, countries, news, stories, t
           />
         </Source>
       </Map>
+
+      {/* ── Energy-source legend ────────────────────────────────────────── */}
+      <div
+        className={`absolute left-3 md:left-4 bottom-[96px] md:bottom-[88px] z-10 pointer-events-none ${
+          selectedCode ? "hidden md:block" : ""
+        }`}
+      >
+        <div
+          className="rounded-full px-3 py-1.5 flex items-center gap-x-3 gap-y-1 flex-wrap max-w-[calc(100vw-1.5rem)]"
+          style={{
+            background: alpha(theme.surface, 85),
+            border: `1px solid ${alpha(theme.bone, 12)}`,
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+          }}
+        >
+          <span
+            className="text-[9px] font-mono uppercase tracking-wider mr-1"
+            style={{ color: theme.muted }}
+          >
+            Dominant fuel
+          </span>
+          {MIX_SOURCES.map((src) => (
+            <span key={src.key} className="inline-flex items-center gap-1.5">
+              <span
+                className="inline-block rounded-full"
+                style={{
+                  width: 8,
+                  height: 8,
+                  background: ENERGY_SOURCE_COLORS[src.label],
+                }}
+              />
+              <span
+                className="text-[10px] tracking-tight"
+                style={{ color: alpha(theme.bone, 85) }}
+              >
+                {src.label}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div

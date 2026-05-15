@@ -1,5 +1,11 @@
 import type { Metadata } from 'next'
-import { getEpic, getEpicStories, getIeaCountries, getIeaNewsSince } from '@/lib/epics'
+import {
+  getDominantEnergySourceByCountry,
+  getEpic,
+  getEpicStories,
+  getIeaCountries,
+  getIeaNewsSince,
+} from '@/lib/epics'
 import EnergyProfileLanding from './EnergyProfileLanding'
 import { resolveEnergyProfileTheme } from './theme'
 
@@ -13,11 +19,12 @@ export const metadata: Metadata = {
 }
 
 export default async function EnergyProfilePage() {
-  const [epic, countries, news, stories] = await Promise.all([
+  const [epic, countries, news, stories, dominantSources] = await Promise.all([
     getEpic('energy-profile'),
     getIeaCountries(),
     getIeaNewsSince(7),
     getEpicStories('energy-profile'),
+    getDominantEnergySourceByCountry(),
   ])
 
   if (!epic) {
@@ -37,6 +44,7 @@ export default async function EnergyProfilePage() {
       news={news}
       stories={stories}
       theme={theme}
+      dominantSources={dominantSources}
     />
   )
 }
