@@ -255,6 +255,30 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           className="hidden"
         />
         <Link
+          href={`/reports/${slug}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-neutral-400 hover:text-white shrink-0"
+        >
+          report ↗
+        </Link>
+        <Link
+          href={`/story/${slug}/autoplay`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-neutral-400 hover:text-white shrink-0"
+        >
+          autoplay ↗
+        </Link>
+        <Link
+          href={`/story/${slug}/share`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-neutral-400 hover:text-white shrink-0"
+        >
+          share ↗
+        </Link>
+        <Link
           href={`/story/${slug}`}
           target="_blank"
           rel="noreferrer"
