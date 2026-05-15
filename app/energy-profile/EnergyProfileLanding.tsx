@@ -9,7 +9,8 @@ import type { DominantEnergySource, Epic, EpicStory, IeaCountry, IeaNewsItem } f
 import { MIX_SOURCES } from "@/lib/epics";
 import { ENERGY_SOURCE_COLORS } from "@/components/energy-profile/charts/colors";
 import { COUNTRY_CENTROIDS } from "@/lib/energy-profile/countryCentroids";
-import { energyProfileLogoPalette, type EnergyProfileTheme } from "./theme";
+import { applyMapPalette } from "@/lib/applyMapPalette";
+import { energyProfileLogoPalette, energyProfileMapPalette, type EnergyProfileTheme } from "./theme";
 import CountryDetail from "./CountryDetail";
 
 interface Props {
@@ -40,6 +41,35 @@ export default function EnergyProfileLanding({ epic, countries, news, stories, t
   const [cursor, setCursor] = useState<"grab" | "pointer">("grab");
 
   const logoPalette = useMemo(() => energyProfileLogoPalette(theme), [theme]);
+  const mapPalette = useMemo(() => energyProfileMapPalette(theme), [theme]);
+
+  // Restyle the stock dark-v11 base layers to match the epic palette. Polls
+  // for the Mapbox instance (the ref may not be set on the first effect tick)
+  // then applies on initial style load + on every subsequent style.load. Also
+  // re-applies whenever the palette changes via theme overrides.
+  useEffect(() => {
+    let cancelled = false;
+    let map: ReturnType<NonNullable<typeof mapRef.current>['getMap']> | null = null;
+    const apply = () => {
+      if (cancelled || !map) return;
+      const layers = map.getStyle()?.layers;
+      if (!layers || layers.length === 0) return;
+      applyMapPalette(map, mapPalette);
+    };
+    const tryBind = () => {
+      if (cancelled) return;
+      const m = mapRef.current?.getMap();
+      if (!m) { setTimeout(tryBind, 50); return; }
+      map = m;
+      apply();
+      m.on('style.load', apply);
+    };
+    tryBind();
+    return () => {
+      cancelled = true;
+      if (map) map.off('style.load', apply);
+    };
+  }, [mapPalette]);
 
   const articleCountByCode = useMemo(() => {
     const counts: Record<string, number> = {};

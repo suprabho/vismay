@@ -4,6 +4,8 @@
 // Admin override: each epic row in the DB carries a `theme` jsonb column. Any
 // keys present there win over these defaults — see resolveEpsteinTheme below.
 
+import type { MapPalette } from "@/lib/storyConfig.types";
+
 export type EpsteinTheme = {
   ink: string;
   surface: string;
@@ -15,6 +17,12 @@ export type EpsteinTheme = {
   steel: string;
   rose: string;
   signal: string;
+  mapLand: string;
+  mapWater: string;
+  mapBorder: string;
+  mapLabelText: string;
+  mapLabelHalo: string;
+  mapBuilding: string;
 };
 
 export const EPSTEIN_THEME_DEFAULTS: EpsteinTheme = {
@@ -28,6 +36,12 @@ export const EPSTEIN_THEME_DEFAULTS: EpsteinTheme = {
   steel: "#6ba3c4",
   rose: "#c97a9c",
   signal: "#d96548",
+  mapLand: "#1c2230",
+  mapWater: "#0a0d12",
+  mapBorder: "#1f2632",
+  mapLabelText: "#ede4d3",
+  mapLabelHalo: "#0a0d12",
+  mapBuilding: "#1c2230",
 };
 
 export const EPSTEIN_THEME_LABELS: Record<keyof EpsteinTheme, { label: string; hint: string }> = {
@@ -41,6 +55,12 @@ export const EPSTEIN_THEME_LABELS: Record<keyof EpsteinTheme, { label: string; h
   steel: { label: "Steel", hint: "Secondary accent — destinations" },
   rose: { label: "Rose", hint: "Black-book points and emails" },
   signal: { label: "Signal", hint: "Strong-warning highlight" },
+  mapLand: { label: "Map Land", hint: "Country / land fill on the base map" },
+  mapWater: { label: "Map Water", hint: "Ocean + waterway fill" },
+  mapBorder: { label: "Map Border", hint: "Country boundary lines" },
+  mapLabelText: { label: "Map Label Text", hint: "Country / place label color" },
+  mapLabelHalo: { label: "Map Label Halo", hint: "Outline behind label text" },
+  mapBuilding: { label: "Map Building", hint: "3D / 2D building fill (subtle at low zoom)" },
 };
 
 // Back-compat: a handful of imports still reference EPSTEIN_THEME as a static
@@ -57,6 +77,22 @@ export function resolveEpsteinTheme(override: unknown): EpsteinTheme {
     if (typeof v === "string" && HEX.test(v)) out[key] = v;
   }
   return out;
+}
+
+// Assembles the semantic Mapbox MapPalette used to restyle the stock
+// `mapbox/dark-v11` base layers (land/water/border/labels/buildings) so
+// the base map matches the dossier palette. Applied via `applyMapPalette`
+// in EpsteinMap's `onLoad` handler.
+export function epsteinMapPalette(theme: EpsteinTheme): MapPalette {
+  return {
+    land: theme.mapLand,
+    water: theme.mapWater,
+    border: theme.mapBorder,
+    labelText: theme.mapLabelText,
+    labelHalo: theme.mapLabelHalo,
+    building: theme.mapBuilding,
+    placeLabels: theme.mapLabelText,
+  };
 }
 
 // Maps the four recolorable slots in the Vizmaya Rive logo onto the dossier

@@ -2,6 +2,8 @@
 // app/energy-profile/theme.ts so the admin theme editor (themeRegistry) picks
 // it up without bespoke wiring. Greens + golds nod to the pitch + trophy.
 
+import type { MapPalette } from "@/lib/storyConfig.types";
+
 export type FifaWc26Theme = {
   ink: string;
   surface: string;
@@ -19,6 +21,12 @@ export type FifaWc26Theme = {
   ramp3: string;
   ramp4: string;
   ramp5: string;
+  mapLand: string;
+  mapWater: string;
+  mapBorder: string;
+  mapLabelText: string;
+  mapLabelHalo: string;
+  mapBuilding: string;
 };
 
 export const FIFA_WC26_THEME_DEFAULTS: FifaWc26Theme = {
@@ -41,6 +49,12 @@ export const FIFA_WC26_THEME_DEFAULTS: FifaWc26Theme = {
   ramp3: "#5f8a7a",
   ramp4: "#d4a84a",
   ramp5: "#f0c64b",
+  mapLand: "#13261b",
+  mapWater: "#0a1810",
+  mapBorder: "#1f3a2a",
+  mapLabelText: "#f4ecd2",
+  mapLabelHalo: "#06120a",
+  mapBuilding: "#13261b",
 };
 
 export const FIFA_WC26_THEME_LABELS: Record<keyof FifaWc26Theme, { label: string; hint: string }> = {
@@ -60,6 +74,12 @@ export const FIFA_WC26_THEME_LABELS: Record<keyof FifaWc26Theme, { label: string
   ramp3: { label: "Ramp 3 — mid", hint: "Choropleth mid stop" },
   ramp4: { label: "Ramp 4", hint: "Choropleth high-mid stop" },
   ramp5: { label: "Ramp 5 — peak", hint: "Choropleth peak stop (highest metric values)" },
+  mapLand: { label: "Map Land", hint: "Country / land fill on the base map" },
+  mapWater: { label: "Map Water", hint: "Ocean + waterway fill" },
+  mapBorder: { label: "Map Border", hint: "Country boundary lines" },
+  mapLabelText: { label: "Map Label Text", hint: "Country / place label color" },
+  mapLabelHalo: { label: "Map Label Halo", hint: "Outline behind label text" },
+  mapBuilding: { label: "Map Building", hint: "3D / 2D building fill (subtle at low zoom)" },
 };
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -72,6 +92,22 @@ export function resolveFifaWc26Theme(override: unknown): FifaWc26Theme {
     if (typeof v === "string" && HEX.test(v)) out[key] = v;
   }
   return out;
+}
+
+// Assembles the semantic Mapbox MapPalette used to restyle the stock
+// `mapbox/dark-v11` base layers (land/water/border/labels/buildings) so
+// the base map matches the epic's palette. Applied via `applyMapPalette`
+// in FifaWc26Landing's `onLoad` handler.
+export function fifaWc26MapPalette(theme: FifaWc26Theme): MapPalette {
+  return {
+    land: theme.mapLand,
+    water: theme.mapWater,
+    border: theme.mapBorder,
+    labelText: theme.mapLabelText,
+    labelHalo: theme.mapLabelHalo,
+    building: theme.mapBuilding,
+    placeLabels: theme.mapLabelText,
+  };
 }
 
 export function fifaWc26LogoPalette(theme: FifaWc26Theme) {

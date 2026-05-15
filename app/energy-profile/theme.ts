@@ -5,6 +5,8 @@
 // Admin override: each epic row in the DB carries a `theme` jsonb column. Any
 // keys present there win over these defaults — see resolveEnergyProfileTheme below.
 
+import type { MapPalette } from "@/lib/storyConfig.types";
+
 export type EnergyProfileTheme = {
   ink: string;
   surface: string;
@@ -17,6 +19,12 @@ export type EnergyProfileTheme = {
   accentHi: string;
   accentLo: string;
   accentEdge: string;
+  mapLand: string;
+  mapWater: string;
+  mapBorder: string;
+  mapLabelText: string;
+  mapLabelHalo: string;
+  mapBuilding: string;
 };
 
 export const ENERGY_PROFILE_THEME_DEFAULTS: EnergyProfileTheme = {
@@ -31,6 +39,12 @@ export const ENERGY_PROFILE_THEME_DEFAULTS: EnergyProfileTheme = {
   accentHi: "#ffc850",
   accentLo: "#b4a58c",
   accentEdge: "#ffdca0",
+  mapLand: "#18181b",
+  mapWater: "#0a0a0b",
+  mapBorder: "#27272a",
+  mapLabelText: "#f5e6cc",
+  mapLabelHalo: "#0a0a0a",
+  mapBuilding: "#18181b",
 };
 
 export const ENERGY_PROFILE_THEME_LABELS: Record<keyof EnergyProfileTheme, { label: string; hint: string }> = {
@@ -45,6 +59,12 @@ export const ENERGY_PROFILE_THEME_LABELS: Record<keyof EnergyProfileTheme, { lab
   accentHi: { label: "Accent High", hint: "Selected pin + outlines + featured fill" },
   accentLo: { label: "Accent Low", hint: "Inactive (no-news) pin" },
   accentEdge: { label: "Accent Edge", hint: "Pin stroke + label text" },
+  mapLand: { label: "Map Land", hint: "Country / land fill on the base map" },
+  mapWater: { label: "Map Water", hint: "Ocean + waterway fill" },
+  mapBorder: { label: "Map Border", hint: "Country boundary lines" },
+  mapLabelText: { label: "Map Label Text", hint: "Country / place label color" },
+  mapLabelHalo: { label: "Map Label Halo", hint: "Outline behind label text" },
+  mapBuilding: { label: "Map Building", hint: "3D / 2D building fill (subtle at low zoom)" },
 };
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -57,6 +77,22 @@ export function resolveEnergyProfileTheme(override: unknown): EnergyProfileTheme
     if (typeof v === "string" && HEX.test(v)) out[key] = v;
   }
   return out;
+}
+
+// Assembles the semantic Mapbox MapPalette used to restyle the stock
+// `mapbox/dark-v11` base layers (land/water/border/labels/buildings) so
+// the base map matches the epic's palette. Applied via `applyMapPalette`
+// in the landing component's `onLoad` handler.
+export function energyProfileMapPalette(theme: EnergyProfileTheme): MapPalette {
+  return {
+    land: theme.mapLand,
+    water: theme.mapWater,
+    border: theme.mapBorder,
+    labelText: theme.mapLabelText,
+    labelHalo: theme.mapLabelHalo,
+    building: theme.mapBuilding,
+    placeLabels: theme.mapLabelText,
+  };
 }
 
 // Maps the four recolorable slots in the Vizmaya Rive logo onto the Energy

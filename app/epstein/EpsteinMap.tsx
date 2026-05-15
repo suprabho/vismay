@@ -12,7 +12,8 @@ import PersonDetail from "./PersonDetail";
 import AirportDetail from "./AirportDetail";
 import BlackbookDetail from "./BlackbookDetail";
 import VizmayaLogo from "@/components/VizmayaLogo";
-import { epsteinLogoPalette, type EpsteinTheme } from "./theme";
+import { applyMapPalette } from "@/lib/applyMapPalette";
+import { epsteinLogoPalette, epsteinMapPalette, type EpsteinTheme } from "./theme";
 
 // Three-way discriminated union — one of these (or nothing) is open at a time.
 type Selection =
@@ -115,6 +116,7 @@ interface Props {
 
 export default function EpsteinMap({ airports, flights, blackbook, persons, theme }: Props) {
   const logoPalette = useMemo(() => epsteinLogoPalette(theme), [theme]);
+  const mapPalette = useMemo(() => epsteinMapPalette(theme), [theme]);
   // Keep latest theme accessible inside the once-only Mapbox load handler.
   const themeRef = useRef(theme);
   useEffect(() => { themeRef.current = theme; }, [theme]);
@@ -398,6 +400,33 @@ export default function EpsteinMap({ airports, flights, blackbook, persons, them
 
     setMapLoaded(true);
   }, []);
+
+  // Restyle the stock dark-v11 base layers to match the dossier palette.
+  // Polls for the Mapbox instance, then binds to style.load so the palette
+  // survives Mapbox style reloads + re-applies on every theme change.
+  useEffect(() => {
+    let cancelled = false;
+    let map: ReturnType<NonNullable<typeof mapRef.current>['getMap']> | null = null;
+    const apply = () => {
+      if (cancelled || !map) return;
+      const layers = map.getStyle()?.layers;
+      if (!layers || layers.length === 0) return;
+      applyMapPalette(map, mapPalette);
+    };
+    const tryBind = () => {
+      if (cancelled) return;
+      const m = mapRef.current?.getMap();
+      if (!m) { setTimeout(tryBind, 50); return; }
+      map = m;
+      apply();
+      m.on('style.load', apply);
+    };
+    tryBind();
+    return () => {
+      cancelled = true;
+      if (map) map.off('style.load', apply);
+    };
+  }, [mapPalette]);
 
   // Push fresh GeoJSON into the sources whenever the derived FCs change.
   useEffect(() => {

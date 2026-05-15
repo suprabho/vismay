@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
 import type { Epic, EpicStory } from "@/lib/epics";
 import type { FifaWc26Team } from "@/lib/fifa-wc26";
-import { fifaWc26LogoPalette, type FifaWc26Theme } from "./theme";
+import { applyMapPalette } from "@/lib/applyMapPalette";
+import { fifaWc26LogoPalette, fifaWc26MapPalette, type FifaWc26Theme } from "./theme";
 import TeamDetail from "./TeamDetail";
 
 interface Props {
@@ -132,6 +133,33 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
   );
 
   const logoPalette = useMemo(() => fifaWc26LogoPalette(theme), [theme]);
+  const mapPalette = useMemo(() => fifaWc26MapPalette(theme), [theme]);
+
+  // Restyle the stock dark-v11 base layers to match the epic palette. Polls
+  // for the Mapbox instance, then binds to style.load.
+  useEffect(() => {
+    let cancelled = false;
+    let map: ReturnType<NonNullable<typeof mapRef.current>['getMap']> | null = null;
+    const apply = () => {
+      if (cancelled || !map) return;
+      const layers = map.getStyle()?.layers;
+      if (!layers || layers.length === 0) return;
+      applyMapPalette(map, mapPalette);
+    };
+    const tryBind = () => {
+      if (cancelled) return;
+      const m = mapRef.current?.getMap();
+      if (!m) { setTimeout(tryBind, 50); return; }
+      map = m;
+      apply();
+      m.on('style.load', apply);
+    };
+    tryBind();
+    return () => {
+      cancelled = true;
+      if (map) map.off('style.load', apply);
+    };
+  }, [mapPalette]);
 
   const filteredTeams = useMemo(
     () => teams.filter((t) => activeConfeds.has(t.confederation)),

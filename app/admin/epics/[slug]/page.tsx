@@ -39,6 +39,7 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [tab, setTab] = useState<'stories' | 'theme'>('stories')
 
   useEffect(() => {
     async function load() {
@@ -221,6 +222,37 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
         </div>
       </div>
 
+      <div className="px-4 py-2 border-b border-white/5 flex gap-1">
+        <button
+          type="button"
+          onClick={() => setTab('stories')}
+          className={
+            'text-sm px-3 py-1 rounded-md ' +
+            (tab === 'stories'
+              ? 'bg-white/10 text-white'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5')
+          }
+          aria-pressed={tab === 'stories'}
+        >
+          Stories
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('theme')}
+          disabled={!themeEntry}
+          title={themeEntry ? undefined : 'No theme registered for this epic'}
+          className={
+            'text-sm px-3 py-1 rounded-md disabled:opacity-30 disabled:cursor-not-allowed ' +
+            (tab === 'theme'
+              ? 'bg-white/10 text-white'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5')
+          }
+          aria-pressed={tab === 'theme'}
+        >
+          Theme
+        </button>
+      </div>
+
       {error && (
         <div className="px-4 py-2 text-xs border-b border-white/5 bg-red-950/20 text-red-300">
           {error}
@@ -232,7 +264,7 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
         </div>
       )}
 
-      {stories && (
+      {tab === 'stories' && stories && (
         <section>
           <div className="px-4 py-3 border-b border-white/5 flex items-baseline justify-between">
             <h2 className="font-medium">Stories</h2>
@@ -285,9 +317,9 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
         </section>
       )}
 
-      {data && themeEntry && Preview && (
+      {tab === 'theme' && data && themeEntry && Preview && (
         <section>
-          <div className="px-4 py-3 border-b border-t border-white/5">
+          <div className="px-4 py-3 border-b border-white/5">
             <h2 className="font-medium">Theme</h2>
             <p className="text-xs text-neutral-500 mt-0.5">
               Override the palette. Leave a row blank to fall back to the default.
@@ -351,8 +383,8 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
         </section>
       )}
 
-      {data && !themeEntry && (
-        <section className="px-4 py-6 text-sm text-neutral-500 border-t border-white/5">
+      {tab === 'theme' && data && !themeEntry && (
+        <section className="px-4 py-6 text-sm text-neutral-500">
           No theme registered for &ldquo;{slug}&rdquo;.
         </section>
       )}
