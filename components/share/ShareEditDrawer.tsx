@@ -728,7 +728,9 @@ export default function ShareEditDrawer({ selected, overrides, onChange, onClose
               color: 'var(--color-text)',
               border: '1px solid var(--color-border, transparent)',
               resize: 'vertical',
-              whiteSpace: 'pre',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
             }}
           />
           {yamlError && (
