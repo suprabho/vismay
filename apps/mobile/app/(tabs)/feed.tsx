@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@shortfoot/brand/native';
 import { useAuth } from '@/lib/AuthProvider';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useFollowedStories } from '@/lib/useFollowedStories';
@@ -56,6 +57,7 @@ function ProfileButton() {
 
 function FeedBody({ tab }: { tab: Tab }) {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const discover = useDiscoverFeed();
   const stories = useFollowedStories();
   const { seen, markSeen } = useSeenArticles();
@@ -95,11 +97,17 @@ function FeedBody({ tab }: { tab: Tab }) {
         >
           <BlurView
             intensity={40}
-            tint="dark"
+            tint={theme.scheme === 'dark' ? 'dark' : 'light'}
             experimentalBlurMethod="dimezisBlurView"
             style={StyleSheet.absoluteFill}
           />
-          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,11,15,0.35)' }} />
+          <View
+            style={{
+              ...StyleSheet.absoluteFillObject,
+              backgroundColor:
+                theme.scheme === 'dark' ? 'rgba(11,11,15,0.35)' : 'rgba(250,247,242,0.55)',
+            }}
+          />
         </View>
         {showRings ? (
           <View

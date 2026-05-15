@@ -2,6 +2,7 @@ import type { Theme } from '../types';
 
 export const terrace: Theme = {
   name: 'terrace',
+  scheme: 'light',
   colors: {
     bg: '#FAF7F2',
     surface: '#FFFFFF',

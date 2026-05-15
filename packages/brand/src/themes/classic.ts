@@ -2,6 +2,7 @@ import type { Theme } from '../types';
 
 export const classic: Theme = {
   name: 'classic',
+  scheme: 'dark',
   colors: {
     bg: '#0B0B0F',
     surface: '#16161D',

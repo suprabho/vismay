@@ -171,7 +171,7 @@ export default function StoryScreen() {
   if (!groups || groups.length === 0 || !group || !story) {
     return (
       <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: '#000' }}>
-        <Text className="text-text text-lg mb-2">No stories</Text>
+        <Text className="text-lg mb-2" style={{ color: '#fff' }}>No stories</Text>
         <Pressable onPress={close} className="mt-4">
           <Text className="text-accent">Close</Text>
         </Pressable>
@@ -210,7 +210,7 @@ export default function StoryScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingHorizontal: 4 }}>
-          <View className="w-7 h-7 rounded-full overflow-hiddle bg-white">
+          <View className="w-7 h-7 rounded-full overflow-hidden bg-white">
             {group.entity.crest_url ? (
               <Image
                 source={{ uri: group.entity.crest_url }}
@@ -219,12 +219,18 @@ export default function StoryScreen() {
               />
             ) : null}
           </View>
-          <Text className="text-text text-sm font-semibold ml-2" numberOfLines={1} style={{ flex: 1 }}>
+          <Text
+            className="text-sm font-semibold ml-2"
+            numberOfLines={1}
+            style={{ flex: 1, color: '#fff' }}
+          >
             {group.entity.name}
           </Text>
-          <Text className="text-text/70 text-xs ml-2">{relativeTime(story.published_at)}</Text>
+          <Text className="text-xs ml-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            {relativeTime(story.published_at)}
+          </Text>
           <Pressable onPress={close} hitSlop={12} className="z-10 ml-3">
-            <Text className="text-text text-xl">✕</Text>
+            <Text className="text-xl" style={{ color: '#fff' }}>✕</Text>
           </Pressable>
         </View>
       </View>
@@ -237,12 +243,24 @@ export default function StoryScreen() {
           style={StyleSheet.absoluteFill}
         />
         <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(22,22,29,0.35)' }} />
-        <View className="bg-surface/80 self-start rounded-full px-3 py-1 mb-3 border border-border">
-          <Text className="text-text text-xs font-medium">{story.publisher}</Text>
+        <View
+          className="self-start rounded-full px-3 py-1 mb-3"
+          style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
+        >
+          <Text className="text-xs font-medium" style={{ color: '#fff' }}>{story.publisher}</Text>
         </View>
-        <Text className="text-text text-2xl font-bold leading-tight mb-3">{story.headline}</Text>
+        <Text
+          className="text-2xl font-bold leading-tight mb-3"
+          style={{ color: '#fff' }}
+        >
+          {story.headline}
+        </Text>
         {story.summary ? (
-          <Text className="text-text text-[15px] leading-[22px]" numberOfLines={6}>
+          <Text
+            className="text-[15px] leading-[22px]"
+            numberOfLines={6}
+            style={{ color: 'rgba(255,255,255,0.9)' }}
+          >
             {story.summary}
           </Text>
         ) : null}

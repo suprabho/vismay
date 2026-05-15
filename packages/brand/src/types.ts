@@ -52,6 +52,7 @@ export type TypographyTokens = {
 
 export type Theme = {
   name: string;
+  scheme: 'light' | 'dark';
   colors: ColorTokens;
   spacing: SpacingTokens;
   radius: RadiusTokens;

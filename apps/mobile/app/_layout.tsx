@@ -37,7 +37,7 @@ function ThemedStack() {
   const { theme } = useTheme();
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,

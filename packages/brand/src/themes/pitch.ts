@@ -2,6 +2,7 @@ import type { Theme } from '../types';
 
 export const pitch: Theme = {
   name: 'pitch',
+  scheme: 'dark',
   colors: {
     bg: '#06140C',
     surface: '#0E2517',
