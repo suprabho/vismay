@@ -370,7 +370,7 @@ export default function ShareShell({
     >
       {/* Header */}
       <div className="sticky top-0 z-30 backdrop-blur-md border-b" style={{ borderColor: 'var(--color-surface)', background: 'rgb(var(--color-bg-rgb) / 0.85)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <a
               href={`/story/${slug}`}
@@ -500,7 +500,7 @@ export default function ShareShell({
         <>
           {/* Card grid */}
           <div
-            className="max-w-7xl mx-auto px-6 py-8"
+            className="mx-auto px-6 py-8"
             style={{ paddingRight: editMode && selected ? 'calc(1.5rem + 360px)' : undefined }}
           >
             <div className="flex flex-wrap gap-6 justify-center">

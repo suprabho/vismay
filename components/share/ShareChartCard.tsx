@@ -22,7 +22,7 @@ interface Props {
 export default function ShareChartCard({ chartId, activeStep, slug, heading, subheading }: Props) {
   const hasText = !!(heading || subheading)
   return (
-    <div className="w-full h-full flex flex-col p-[10px] pb-[20px]">
+    <div className="w-full h-full flex flex-col p-[10px] pb-[32px]">
       {hasText && (
         <div className="shrink-0">
           {heading && (
