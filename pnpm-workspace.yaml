@@ -1,9 +1,6 @@
 packages:
   - 'apps/*'
-<<<<<<< HEAD
-  - 'apps/vizf1/*'
-=======
   - 'apps/footshort/*'
->>>>>>> origin/main
+  - 'apps/vizf1/*'
   - 'packages/*'
   - 'verticals/*'
