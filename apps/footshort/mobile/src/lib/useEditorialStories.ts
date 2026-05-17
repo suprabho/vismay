@@ -7,12 +7,15 @@ import {
   type EditorialStoryFull,
   type FetchEditorialStoriesOptions,
 } from '@shortfoot/shared'
-import { getVizmayaClient } from './vizmayaClient'
+import { supabase } from './supabase'
+
+// Mobile twin of apps/footshort/web/lib/useEditorialStories.ts. Reuses
+// Footshort's existing Supabase client — same project as vizmaya.fyi.
 
 export function useEditorialStories(opts?: FetchEditorialStoriesOptions) {
   return useQuery<EditorialStorySummary[]>({
     queryKey: EDITORIAL_QUERY_KEYS.stories(opts),
-    queryFn: () => fetchEditorialStories(getVizmayaClient(), opts),
+    queryFn: () => fetchEditorialStories(supabase, opts),
     staleTime: 5 * 60_000,
   })
 }
@@ -20,7 +23,7 @@ export function useEditorialStories(opts?: FetchEditorialStoriesOptions) {
 export function useEditorialStory(slug: string | null | undefined) {
   return useQuery<EditorialStoryFull | null>({
     queryKey: slug ? EDITORIAL_QUERY_KEYS.story(slug) : ['editorial', 'story', '__none__'],
-    queryFn: () => (slug ? fetchEditorialStory(getVizmayaClient(), slug) : Promise.resolve(null)),
+    queryFn: () => (slug ? fetchEditorialStory(supabase, slug) : Promise.resolve(null)),
     enabled: !!slug,
   })
 }
