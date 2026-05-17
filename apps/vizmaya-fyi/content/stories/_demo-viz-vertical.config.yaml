@@ -22,3 +22,41 @@ sections:
         away: "Chelsea"
         score: "2 – 1"
         competition: "Premier League · matchday 35"
+
+  - id: match-row
+    text: "Match row"
+    background:
+      - type: map
+        center: [-2.97, 53.41]
+        zoom: 8
+    foreground:
+      - type: fs:match-row
+        fixture:
+          id: liv-mci-2026-04
+          competition_slug: prem
+          season: '2025-26'
+          matchday: 33
+          stage: null
+          kickoff_at: '2026-04-13T15:30:00Z'
+          status: finished
+          home_score: 1
+          away_score: 1
+          home_team_name: Liverpool
+          away_team_name: Manchester City
+          home: { id: liverpool, slug: liverpool, name: Liverpool, crest_url: null }
+          away: { id: manchester-city, slug: manchester-city, name: Manchester City, crest_url: null }
+
+  - id: standings
+    text: "Standings table"
+    background:
+      - type: map
+        center: [-0.13, 51.5]
+        zoom: 5
+    foreground:
+      - type: fs:standings-table
+        rows:
+          - { competition_slug: prem, season: '2025-26', team_id: arsenal,         position: 1, played: 33, won: 25, draw: 5, lost: 3,  goals_for: 78, goals_against: 28, goal_difference: 50, points: 80, form: WWWDW, team: { id: arsenal,         slug: arsenal,         name: Arsenal,        crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: liverpool,       position: 2, played: 33, won: 23, draw: 6, lost: 4,  goals_for: 71, goals_against: 32, goal_difference: 39, points: 75, form: DWWWL, team: { id: liverpool,       slug: liverpool,       name: Liverpool,      crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: manchester-city, position: 3, played: 33, won: 22, draw: 5, lost: 6,  goals_for: 70, goals_against: 35, goal_difference: 35, points: 71, form: WWDLW, team: { id: manchester-city, slug: manchester-city, name: Manchester City, crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: chelsea,         position: 4, played: 33, won: 20, draw: 6, lost: 7,  goals_for: 62, goals_against: 38, goal_difference: 24, points: 66, form: WLWWD, team: { id: chelsea,         slug: chelsea,         name: Chelsea,        crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: tottenham,       position: 5, played: 33, won: 18, draw: 7, lost: 8,  goals_for: 58, goals_against: 41, goal_difference: 17, points: 61, form: DDWWL, team: { id: tottenham,       slug: tottenham,       name: Tottenham,      crest_url: null } }
