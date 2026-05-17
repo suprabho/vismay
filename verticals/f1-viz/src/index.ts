@@ -6,14 +6,27 @@
  * handed to `registerVizModule` so vizmaya.fyi (and any app that doesn't
  * use F1) tree-shakes it out of the bundle.
  *
- * Real engine integration arrives once @vismay/viz-engine exports
- * registerVizModule (Phase B). For now `register` is a no-op placeholder so
- * verticals/f1-viz can be wired into the workspace and consumed without
- * compile errors.
+ * Scaffold ships three modules — race-row, driver-standings, position-chart —
+ * proving the plugin boundary works end-to-end. Additional modules
+ * (race-card, constructor-standings, qualifying-results, fp-results,
+ * sprint-results, news-card) are TODOs greppable as `TODO(vizf1-scaffold)`.
  */
 
+import { registerVizModule } from '@vismay/viz-engine'
+
 export async function register(): Promise<void> {
-  // TODO(phase-b): once @vismay/viz-engine exports registerVizModule, do:
-  //   const [{ default: raceCard }] = await Promise.all([import('./modules/race-card')])
-  //   registerVizModule(raceCard)
+  const [
+    { default: raceRowModule },
+    { default: driverStandingsModule },
+    { default: positionChartModule },
+  ] = await Promise.all([
+    import('./modules/race-row'),
+    import('./modules/driver-standings'),
+    import('./modules/position-chart'),
+  ])
+  registerVizModule(raceRowModule)
+  registerVizModule(driverStandingsModule)
+  registerVizModule(positionChartModule)
+  // TODO(vizf1-scaffold): register race-card, constructor-standings,
+  // qualifying-results, fp-results, sprint-results, news-card.
 }

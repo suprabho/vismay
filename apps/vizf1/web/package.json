@@ -14,9 +14,11 @@
     "@vismay/f1-viz": "workspace:*",
     "@vizf1/brand": "workspace:*",
     "@vizf1/shared": "workspace:*",
+    "@tanstack/react-query": "^5.56.2",
     "next": "16.2.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

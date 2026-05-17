@@ -1,19 +1,10 @@
 /**
- * Shared types + helpers across VizF1 apps.
+ * Shared schemas + types across VizF1 apps.
  *
- * Mirrors apps/footshort/shared. Holds Supabase client factory, F1 domain
- * types (Race, Driver, Constructor, LapTime, …) once they exist.
+ * Source-of-truth API shapes live in ./schemas (Zod). Domain row types
+ * consumed by the UI live in @vismay/f1-viz/types — keeping the row shapes
+ * with the vertical lets vizmaya stories use the same contract without
+ * pulling in the Jolpica envelope plumbing.
  */
 
-export interface RaceMeta {
-  season: number
-  round: number
-  grandPrix: string
-  date: string
-}
-
-export interface DriverMeta {
-  id: string
-  name: string
-  constructor: string
-}
+export * from './schemas'
