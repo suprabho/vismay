@@ -1,3 +1,5 @@
 packages:
   - 'apps/*'
+  - 'apps/vizf1/*'
   - 'packages/*'
+  - 'verticals/*'

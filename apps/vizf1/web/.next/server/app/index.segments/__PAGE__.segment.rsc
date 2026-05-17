@@ -1,0 +1,5 @@
+1:"$Sreact.fragment"
+2:I[90522,["/_next/static/chunks/15k1xrfh8pcsr.js"],"OutletBoundary"]
+3:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","main",null,{"style":{"minHeight":"100vh","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center","padding":"2rem","gap":"1rem"},"children":[["$","div",null,{"style":{"fontSize":"0.75rem","textTransform":"uppercase","letterSpacing":"0.2em","color":"#e10600"},"children":"VizF1"}],["$","h1",null,{"style":{"fontSize":"2.5rem","fontWeight":700,"textAlign":"center","maxWidth":"24ch"},"children":"Data journalism for Formula 1"}],["$","p",null,{"style":{"opacity":0.7,"textAlign":"center","maxWidth":"52ch"},"children":"Scaffold. Hello-world page proves the workspace is wired. Real stories arrive after the engine adoption (Phase B) and a first F1 ingest pipeline land."}]]}],null,["$","$L2",null,{"children":["$","$3",null,{"name":"Next.MetadataOutlet","children":"$@4"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"CKSgtlOvF-xHiOTASj7dK"}
+4:null
