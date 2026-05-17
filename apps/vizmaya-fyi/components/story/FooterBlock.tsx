@@ -1,4 +1,4 @@
-import { FooterBlock as FooterBlockType } from '@/types/story'
+import { FooterBlock as FooterBlockType } from '@vismay/viz-engine'
 
 export default function FooterBlock({ block }: { block: FooterBlockType }) {
   return (

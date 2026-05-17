@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { MethodologyBlock } from '@/types/story'
+import { MethodologyBlock } from '@vismay/viz-engine'
 
 function formatBoldText(text: string) {
   const parts: ReactNode[] = []

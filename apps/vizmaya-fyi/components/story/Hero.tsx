@@ -1,4 +1,4 @@
-import { HeroBlock } from '@/types/story'
+import { HeroBlock } from '@vismay/viz-engine'
 import HeroTitle, {
   type TitleSegment,
   krFlag,

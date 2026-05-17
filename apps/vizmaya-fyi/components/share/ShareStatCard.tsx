@@ -1,6 +1,6 @@
 'use client'
 
-import type { StatColor } from '@/lib/storyConfig.types'
+import type { StatColor } from '@vismay/viz-engine'
 import { statColorVar } from '@/components/story/ThemeProvider'
 
 interface Props {

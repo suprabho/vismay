@@ -9,8 +9,8 @@ import {
   useState,
 } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
-import type { ResolvedUnit, StoryDefaults } from '@/lib/storyConfig.types'
-import type { MapTarget } from '@/lib/storyMapOverrides'
+import type { ResolvedUnit, StoryDefaults } from '@vismay/viz-engine'
+import type { MapTarget } from '@vismay/viz-engine'
 import { usePollVideoRender } from '@/lib/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
 import AutoplayMapEditor from './AutoplayMapEditor'

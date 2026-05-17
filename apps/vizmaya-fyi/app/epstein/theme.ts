@@ -4,8 +4,7 @@
 // Admin override: each epic row in the DB carries a `theme` jsonb column. Any
 // keys present there win over these defaults — see resolveEpsteinTheme below.
 
-import type { MapPalette } from "@/lib/storyConfig.types";
-
+import type { MapPalette } from "@vismay/viz-engine";
 export type EpsteinTheme = {
   ink: string;
   surface: string;

@@ -10,7 +10,7 @@ import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@/lib/contentSource'
-import { buildMapTargets } from '@/lib/storyMapOverrides'
+import { buildMapTargets } from '@vismay/viz-engine'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import AutoplayShell from '@/components/autoplay/AutoplayShell'
 

@@ -5,8 +5,7 @@
 // Admin override: each epic row in the DB carries a `theme` jsonb column. Any
 // keys present there win over these defaults — see resolveEnergyProfileTheme below.
 
-import type { MapPalette } from "@/lib/storyConfig.types";
-
+import type { MapPalette } from "@vismay/viz-engine";
 export type EnergyProfileTheme = {
   ink: string;
   surface: string;

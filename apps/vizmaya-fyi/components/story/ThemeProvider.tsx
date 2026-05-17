@@ -1,9 +1,9 @@
 'use client'
 
-import { Theme } from '@/types/story'
+import { Theme } from '@vismay/viz-engine'
 import { ReactNode, useMemo } from 'react'
-import { ChartColorsProvider, themeToChartColors } from '@/lib/chartTheme'
-import type { StatColor } from '@/lib/storyConfig.types'
+import { ChartColorsProvider, themeToChartColors } from '@vismay/viz-engine'
+import type { StatColor } from '@vismay/viz-engine'
 
 /**
  * Resolve a stat-panel color token to the CSS variable emitted by the

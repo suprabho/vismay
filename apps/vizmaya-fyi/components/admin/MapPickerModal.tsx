@@ -11,13 +11,13 @@ import {
   applyMobileMapView,
   removeMobileMapView,
   type MapView,
-} from '@/lib/yamlMapPatch'
+} from '@vismay/viz-engine'
 import {
   STORY_LANDSCAPE_FOCUS_AREA,
   STORY_PORTRAIT_FOCUS_AREA,
   computeStoryFocusPadding,
   type StoryFocusArea,
-} from '@/lib/storyFocusArea'
+} from '@vismay/viz-engine'
 
 /**
  * Section-scoped visual map editor. Reads center/zoom/pitch/bearing from the

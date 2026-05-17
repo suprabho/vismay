@@ -1,7 +1,7 @@
 'use client'
 
-import type { ResolvedUnit, StatColor } from '@/lib/storyConfig.types'
-import { resolveSlots } from '@/lib/resolveSlots'
+import type { ResolvedUnit, StatColor } from '@vismay/viz-engine'
+import { resolveSlots } from '@vismay/viz-engine'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
 import { HeroPanel, HeroPanelTitle, HeroPanelDek } from './Hero'
 import { statColorVar } from './ThemeProvider'

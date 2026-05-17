@@ -3,5 +3,34 @@
   "version": "0.0.0",
   "private": true,
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@deck.gl/aggregation-layers": "^9.3.0",
+    "@deck.gl/layers": "^9.3.0",
+    "@deck.gl/mapbox": "^9.3.0",
+    "@deck.gl/react": "^9.3.0",
+    "@iconify/react": "^6.0.2",
+    "@phosphor-icons/react": "^2.1.10",
+    "@rive-app/canvas": "^2.37.1",
+    "@rive-app/react-canvas": "^4.28.0",
+    "deck.gl": "^9.3.0",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
+    "gsap": "^3.14.2",
+    "html-to-image": "^1.11.13",
+    "mapbox-gl": "^3.21.0",
+    "react-map-gl": "^8.1.1",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
 }

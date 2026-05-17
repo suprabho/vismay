@@ -7,7 +7,7 @@ import {
   type PinOverride,
   type ReportPageOverride,
 } from '@/lib/storyReportConfig'
-import { extractMapView, type MapView } from '@/lib/yamlMapPatch'
+import { extractMapView, type MapView } from '@vismay/viz-engine'
 import MapPickerModal, {
   type PickerFrame,
 } from '@/components/admin/MapPickerModal'

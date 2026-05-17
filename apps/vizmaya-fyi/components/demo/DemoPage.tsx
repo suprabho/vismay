@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import type { DemoContent, LucideIcon } from '@/lib/storyDemoConfig'
-import type { Theme } from '@/types/story'
+import type { Theme } from '@vismay/viz-engine'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import AuraBackground from '@/components/AuraBackground'
 import StoryPreview from './StoryPreview'

@@ -1,5 +1,5 @@
-import type { Theme } from '@/types/story'
-import type { MapPalette } from './storyConfig.types'
+import type { Theme } from '@vismay/viz-engine'
+import type { MapPalette } from '@vismay/viz-engine'
 
 /**
  * Derive a Mapbox `MapPalette` from a story `Theme` so maps inherit the

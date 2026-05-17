@@ -13,8 +13,8 @@ import type {
   MapPinOverride,
   ShareMapAspectOverride,
   ShareAspectRatio,
-} from '@/lib/storyConfig.types'
-import type { MapRegion } from '@/types/story'
+} from '@vismay/viz-engine'
+import type { MapRegion } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
 import type { CardVariant } from './ShareCard'
 import { extractHeroBits } from './ShareCard'

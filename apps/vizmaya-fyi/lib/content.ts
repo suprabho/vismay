@@ -1,5 +1,5 @@
 import matter from 'gray-matter'
-import { Frontmatter } from '@/types/story'
+import { Frontmatter } from '@vismay/viz-engine'
 import { getContentSource } from './contentSource'
 
 export interface ContentSection {

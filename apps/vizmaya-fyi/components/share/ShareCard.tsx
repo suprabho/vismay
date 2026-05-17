@@ -2,8 +2,8 @@
 
 import { useRef, useCallback, useMemo, useState, forwardRef, useImperativeHandle } from 'react'
 import { toPng } from 'html-to-image'
-import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility } from '@/lib/storyConfig.types'
-import type { MapTextLabel } from '@/types/story'
+import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility } from '@vismay/viz-engine'
+import type { MapTextLabel } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
 import ShareTextCard from './ShareTextCard'
 import ShareStatCard from './ShareStatCard'
