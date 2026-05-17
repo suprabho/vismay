@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { FeedCard } from '@/components/FeedCard';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
 import { StoryRings } from '@/components/StoryRings';
+import { EditorialMagazine } from '@/components/EditorialMagazine';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useSeenArticles } from '@/lib/useSeenArticles';
 
-type Tab = 'forYou' | 'discover';
+type Tab = 'forYou' | 'discover' | 'editorial';
 
 const FEED_HEIGHT = 'h-[calc(100dvh-168px)] md:h-[calc(100dvh-104px)]';
 
@@ -15,6 +16,7 @@ function PillTabs({ active, onChange }: { active: Tab; onChange: (t: Tab) => voi
   const tabs: { key: Tab; label: string }[] = [
     { key: 'forYou', label: 'For you' },
     { key: 'discover', label: 'Discover' },
+    { key: 'editorial', label: 'Editorial' },
   ];
   return (
     <div className="mx-auto mb-4 inline-flex rounded-full border border-border bg-surface/60 p-1">
@@ -155,14 +157,14 @@ export default function FeedPage() {
       <div className="sticky top-[64px] z-10 -mx-4 flex justify-center bg-bg/80 px-4 pt-6 backdrop-blur md:top-0">
         <PillTabs active={tab} onChange={setTab} />
       </div>
-      {tab === 'forYou' ? (
+      {tab === 'forYou' && (
         <>
           <StoryRings />
           <ForYouMatchFeed />
         </>
-      ) : (
-        <DiscoverStack />
       )}
+      {tab === 'discover' && <DiscoverStack />}
+      {tab === 'editorial' && <EditorialMagazine />}
     </main>
   );
 }
