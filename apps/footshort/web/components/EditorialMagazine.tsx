@@ -4,17 +4,36 @@ import Link from 'next/link';
 import { useEditorialStories } from '@/lib/useEditorialStories';
 import type { EditorialStorySummary } from '@shortfoot/shared';
 
-// Hash slug → HSL hue so each story has a distinct, deterministic accent
-// gradient. Cover images live in story frontmatter and aren't fetched here
-// yet; a hash-based gradient gets us shippable cards without a schema change.
+// Each card has a deterministic gradient. If the story's frontmatter declared
+// a theme.colors.accent, use its hue so the card mirrors the story's identity.
+// Otherwise hash the slug. Cover images are a future iteration.
 function slugHue(slug: string): number {
   let hash = 0;
   for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) | 0;
   return Math.abs(hash) % 360;
 }
 
-function gradientFor(slug: string): string {
-  const hue = slugHue(slug);
+function hexToHue(hex: string): number | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return null;
+  const r = parseInt(m[1].slice(0, 2), 16) / 255;
+  const g = parseInt(m[1].slice(2, 4), 16) / 255;
+  const b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d === 0) return 0;
+  let h: number;
+  if (max === r) h = ((g - b) / d) % 6;
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  h = Math.round(h * 60);
+  if (h < 0) h += 360;
+  return h;
+}
+
+function gradientFor(slug: string, themeAccent: string | null): string {
+  const hue = (themeAccent ? hexToHue(themeAccent) : null) ?? slugHue(slug);
   return `linear-gradient(135deg, hsl(${hue} 70% 22%) 0%, hsl(${(hue + 60) % 360} 55% 12%) 100%)`;
 }
 
@@ -29,7 +48,7 @@ function HeroCard({ story }: { story: EditorialStorySummary }) {
     <Link
       href={`/editorial/${story.slug}`}
       className="group relative block overflow-hidden rounded-2xl border border-border"
-      style={{ background: gradientFor(story.slug), aspectRatio: '5 / 4' }}
+      style={{ background: gradientFor(story.slug, story.themeAccent), aspectRatio: '5 / 4' }}
     >
       <div className="flex h-full flex-col justify-between p-6 text-white">
         <div className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] opacity-80">
@@ -38,9 +57,20 @@ function HeroCard({ story }: { story: EditorialStorySummary }) {
           <time dateTime={story.publishedAt ?? story.createdAt}>
             {formatDate(story.publishedAt ?? story.createdAt)}
           </time>
+          {story.byline && (
+            <>
+              <span aria-hidden>·</span>
+              <span>{story.byline}</span>
+            </>
+          )}
         </div>
         <div>
           <h2 className="font-serif text-2xl leading-tight md:text-3xl">{story.title}</h2>
+          {story.subtitle && (
+            <p className="mt-2 max-w-prose text-sm leading-snug opacity-85 md:text-base">
+              {story.subtitle}
+            </p>
+          )}
           <div className="mt-3 inline-flex items-center gap-1.5 text-sm opacity-80 group-hover:opacity-100">
             Read story
             <span aria-hidden>→</span>
@@ -56,7 +86,7 @@ function GridCard({ story }: { story: EditorialStorySummary }) {
     <Link
       href={`/editorial/${story.slug}`}
       className="group relative block overflow-hidden rounded-xl border border-border"
-      style={{ background: gradientFor(story.slug), aspectRatio: '4 / 5' }}
+      style={{ background: gradientFor(story.slug, story.themeAccent), aspectRatio: '4 / 5' }}
     >
       <div className="flex h-full flex-col justify-between p-4 text-white">
         <time
@@ -65,7 +95,12 @@ function GridCard({ story }: { story: EditorialStorySummary }) {
         >
           {formatDate(story.publishedAt ?? story.createdAt)}
         </time>
-        <h3 className="font-serif text-base leading-snug">{story.title}</h3>
+        <div>
+          <h3 className="font-serif text-base leading-snug">{story.title}</h3>
+          {story.subtitle && (
+            <p className="mt-1 line-clamp-2 text-xs leading-snug opacity-75">{story.subtitle}</p>
+          )}
+        </div>
       </div>
     </Link>
   );

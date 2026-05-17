@@ -4,17 +4,36 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { EditorialStorySummary } from '@shortfoot/shared'
 import { useEditorialStories } from '@/lib/useEditorialStories'
 
-// Hash slug → HSL hue so each story gets a deterministic accent colour.
-// Mirrors the web magazine's approach. Cover images live in story
-// frontmatter and aren't fetched here yet.
+// Mirror of the web magazine's accent logic. Prefer the story's frontmatter
+// theme.colors.accent hue; fall back to a hashed slug hue. Cover images live
+// in story frontmatter and aren't fetched here yet — accent colour stands in.
 function slugHue(slug: string): number {
   let hash = 0
   for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) | 0
   return Math.abs(hash) % 360
 }
 
-function colorFor(slug: string): string {
-  const hue = slugHue(slug)
+function hexToHue(hex: string): number | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return null
+  const r = parseInt(m[1].slice(0, 2), 16) / 255
+  const g = parseInt(m[1].slice(2, 4), 16) / 255
+  const b = parseInt(m[1].slice(4, 6), 16) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  if (d === 0) return 0
+  let h: number
+  if (max === r) h = ((g - b) / d) % 6
+  else if (max === g) h = (b - r) / d + 2
+  else h = (r - g) / d + 4
+  h = Math.round(h * 60)
+  if (h < 0) h += 360
+  return h
+}
+
+function colorFor(slug: string, themeAccent: string | null): string {
+  const hue = (themeAccent ? hexToHue(themeAccent) : null) ?? slugHue(slug)
   // hsl(...) is a valid CSS color literal that React Native accepts.
   return `hsl(${hue}, 60%, 22%)`
 }
@@ -29,12 +48,13 @@ function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
   return (
     <Pressable
       onPress={onPress}
-      style={{ backgroundColor: colorFor(story.slug), aspectRatio: 5 / 4 }}
+      style={{ backgroundColor: colorFor(story.slug, story.themeAccent), aspectRatio: 5 / 4 }}
       className="rounded-2xl overflow-hidden border border-border"
     >
       <View className="flex-1 p-5 justify-between">
         <Text className="text-white/80 text-[10px] tracking-[2px] uppercase">
           Editorial · {formatDate(story.publishedAt ?? story.createdAt)}
+          {story.byline ? ` · ${story.byline}` : ''}
         </Text>
         <View>
           <Text
@@ -44,6 +64,15 @@ function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
           >
             {story.title}
           </Text>
+          {story.subtitle && (
+            <Text
+              className="text-white/80 text-sm mt-2"
+              numberOfLines={3}
+              style={{ lineHeight: 20 }}
+            >
+              {story.subtitle}
+            </Text>
+          )}
           <Text className="text-white/80 text-sm mt-2">Read story →</Text>
         </View>
       </View>
@@ -55,16 +84,23 @@ function GridCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
   return (
     <Pressable
       onPress={onPress}
-      style={{ backgroundColor: colorFor(story.slug), aspectRatio: 4 / 5 }}
+      style={{ backgroundColor: colorFor(story.slug, story.themeAccent), aspectRatio: 4 / 5 }}
       className="rounded-xl overflow-hidden border border-border flex-1"
     >
       <View className="flex-1 p-3 justify-between">
         <Text className="text-white/70 text-[9px] tracking-[2px] uppercase">
           {formatDate(story.publishedAt ?? story.createdAt)}
         </Text>
-        <Text className="text-white text-sm font-semibold" numberOfLines={4}>
-          {story.title}
-        </Text>
+        <View>
+          <Text className="text-white text-sm font-semibold" numberOfLines={3}>
+            {story.title}
+          </Text>
+          {story.subtitle && (
+            <Text className="text-white/70 text-xs mt-1" numberOfLines={2}>
+              {story.subtitle}
+            </Text>
+          )}
+        </View>
       </View>
     </Pressable>
   )

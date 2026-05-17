@@ -119,7 +119,7 @@ function FixtureList({
   return (
     <View>
       {data.map((f) => (
-        <MatchRow key={f.id} fixture={f} />
+        <MatchRow key={f.id} fixture={f} onTeamPress={(s) => router.push(`/team/${s}`)} />
       ))}
     </View>
   );

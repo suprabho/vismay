@@ -3,7 +3,14 @@ import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { StandingRow } from '../types';
 
-type Props = { rows: StandingRow[] };
+type Props = {
+  rows: StandingRow[];
+  /**
+   * Compact layout for narrow containers. Drops the W/D/L/GD columns;
+   * keeps position, team, played, and points. Default false.
+   */
+  compact?: boolean;
+};
 
 function HeaderCell({ label, width }: { label: string; width: number }) {
   return (
@@ -21,7 +28,7 @@ function NumCell({ value, width, bold }: { value: number | string; width: number
   );
 }
 
-export function StandingsTable({ rows }: Props) {
+export function StandingsTable({ rows, compact = false }: Props) {
   const router = useRouter();
 
   return (
@@ -34,10 +41,10 @@ export function StandingsTable({ rows }: Props) {
           <Text className="text-muted text-[10px]">Team</Text>
         </View>
         <HeaderCell label="P" width={28} />
-        <HeaderCell label="W" width={24} />
-        <HeaderCell label="D" width={24} />
-        <HeaderCell label="L" width={24} />
-        <HeaderCell label="GD" width={32} />
+        {!compact && <HeaderCell label="W" width={24} />}
+        {!compact && <HeaderCell label="D" width={24} />}
+        {!compact && <HeaderCell label="L" width={24} />}
+        {!compact && <HeaderCell label="GD" width={32} />}
         <HeaderCell label="Pts" width={32} />
       </View>
 
@@ -61,10 +68,10 @@ export function StandingsTable({ rows }: Props) {
               </Text>
             </View>
             <NumCell value={r.played} width={28} />
-            <NumCell value={r.won} width={24} />
-            <NumCell value={r.draw} width={24} />
-            <NumCell value={r.lost} width={24} />
-            <NumCell value={r.goal_difference} width={32} />
+            {!compact && <NumCell value={r.won} width={24} />}
+            {!compact && <NumCell value={r.draw} width={24} />}
+            {!compact && <NumCell value={r.lost} width={24} />}
+            {!compact && <NumCell value={r.goal_difference} width={32} />}
             <NumCell value={r.points} width={32} bold />
           </View>
         );

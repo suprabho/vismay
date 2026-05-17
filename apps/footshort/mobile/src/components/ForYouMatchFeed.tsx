@@ -592,7 +592,7 @@ function TeamCardContent({ section, expanded }: { section: TeamSection; expanded
           <View className="mt-4">
             <SectionLabel text="Next 3" />
             {upcoming.map((f) => (
-              <MatchRow key={f.id} fixture={f} />
+              <MatchRow key={f.id} fixture={f} onTeamPress={(s) => router.push(`/team/${s}`)} />
             ))}
           </View>
         ) : null}
@@ -738,7 +738,7 @@ function MatchdayPager({ fixtures }: { fixtures: FixtureRow[] }) {
     return (
       <View className='bg-white/20 border-1 border-white/50'>
         {(pages[0] ?? []).map((f) => (
-          <MatchRow key={f.id} fixture={f} />
+          <MatchRow key={f.id} fixture={f} onTeamPress={(s) => router.push(`/team/${s}`)} />
         ))}
       </View>
     );
@@ -809,7 +809,7 @@ function Carousel({ pages }: { pages: FixtureRow[][] }) {
               {pages.map((pg, i) => (
                 <View key={i} style={{ width }}>
                   {pg.map((f) => (
-                    <MatchRow key={f.id} fixture={f} />
+                    <MatchRow key={f.id} fixture={f} onTeamPress={(s) => router.push(`/team/${s}`)} />
                   ))}
                 </View>
               ))}
@@ -819,7 +819,7 @@ function Carousel({ pages }: { pages: FixtureRow[][] }) {
           // First paint: render page 1 inline to capture width, then swap to carousel
           <View>
             {(pages[0] ?? []).map((f) => (
-              <MatchRow key={f.id} fixture={f} />
+              <MatchRow key={f.id} fixture={f} onTeamPress={(s) => router.push(`/team/${s}`)} />
             ))}
           </View>
         )}
