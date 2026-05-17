@@ -22,6 +22,7 @@
     "epstein:import-curated": "npx tsx scripts/epstein/import-curated.ts",
     "energy-profile:scrape": "npx tsx scripts/energy-profile/scrape-news.ts",
     "energy-profile:import-owid": "npx tsx scripts/energy-profile/import-owid.ts",
+    "energy-profile:import-iea-oil-prices": "npx tsx scripts/energy-profile/import-iea-oil-prices.ts",
     "energy-profile:generate-summaries": "npx tsx scripts/energy-profile/generate-summaries.ts",
     "fifa-wc26:import": "npx tsx scripts/fifa-wc26/import.ts",
     "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts"

@@ -6,6 +6,7 @@ import ElectricityMixChart from '@/components/energy-profile/charts/ElectricityM
 import PrimaryEnergyMixChart from '@/components/energy-profile/charts/PrimaryEnergyMixChart'
 import Co2Chart from '@/components/energy-profile/charts/Co2Chart'
 import RenewablesShareChart from '@/components/energy-profile/charts/RenewablesShareChart'
+import OilPricesChart from '@/components/energy-profile/charts/OilPricesChart'
 import type { IeaCountryProfile } from '@/lib/epics'
 
 interface Props {
@@ -151,6 +152,15 @@ function Profile({ data }: { data: IeaCountryProfile }) {
               <EmptyChart />
             )}
           </ChartBlock>
+          {data.timeseries.oilPrices.months.length > 0 && (
+            <ChartBlock title="Retail fuel prices" subtitle="Pump price, USD per litre, monthly (IEA)">
+              <OilPricesChart
+                months={data.timeseries.oilPrices.months}
+                gasoline={data.timeseries.oilPrices.gasoline}
+                diesel={data.timeseries.oilPrices.diesel}
+              />
+            </ChartBlock>
+          )}
         </>
       ) : (
         <p className="text-xs font-mono text-zinc-500">
@@ -205,6 +215,9 @@ function Profile({ data }: { data: IeaCountryProfile }) {
 
       <p className="text-[10px] font-mono leading-snug" style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}>
         Energy data: <a className="underline" href="https://github.com/owid/energy-data" target="_blank" rel="noopener noreferrer">Our World in Data</a> (CC BY 4.0).
+        {data.timeseries.oilPrices.months.length > 0 && (
+          <> Retail fuel prices: <a className="underline" href="https://www.iea.org/data-and-statistics/data-product/monthly-oil-price-statistics-2" target="_blank" rel="noopener noreferrer">IEA Monthly Oil Prices</a>.</>
+        )}
       </p>
     </>
   )

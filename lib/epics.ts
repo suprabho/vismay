@@ -431,6 +431,14 @@ export interface IeaCountryProfile {
     primaryEnergyMix: { years: number[]; series: ChartSeries[] }
     co2: { years: number[]; values: (number | null)[] }
     renewablesShare: { years: number[]; values: (number | null)[] }
+    // Monthly IEA retail prices, last ~60 months (USD/L).
+    // `months` is ISO YYYY-MM. Empty for countries outside the IEA monthly
+    // excerpt (only ~33 countries are covered).
+    oilPrices: {
+      months: string[]
+      gasoline: (number | null)[]
+      diesel: (number | null)[]
+    }
   }
   news: IeaNewsItem[]
 }
@@ -453,7 +461,7 @@ export async function getIeaCountryProfile(
   const sb = createServiceClient()
   const newsDays = opts?.newsDays ?? 30
 
-  const [countryR, energyR, newsR] = await Promise.all([
+  const [countryR, energyR, newsR, oilR] = await Promise.all([
     sb
       .from('iea_countries')
       .select('code, name, summary')
@@ -473,12 +481,22 @@ export async function getIeaCountryProfile(
         new Date(Date.now() - newsDays * 24 * 60 * 60 * 1000).toISOString(),
       )
       .order('published_at', { ascending: false }),
+    sb
+      .from('iea_oil_prices_monthly')
+      .select('product, month, value')
+      .eq('country_code', code)
+      .eq('currency', 'USD')
+      .in('product', ['gasoline', 'diesel'])
+      .order('month', { ascending: true }),
   ])
 
   if (countryR.error) throw new Error(`getIeaCountryProfile(${code}) country: ${countryR.error.message}`)
   if (!countryR.data) return null
   if (energyR.error) throw new Error(`getIeaCountryProfile(${code}) energy: ${energyR.error.message}`)
   if (newsR.error) throw new Error(`getIeaCountryProfile(${code}) news: ${newsR.error.message}`)
+  // Oil prices are optional — only the 33 IEA-excerpt countries have rows.
+  // Treat a query error as "no data" rather than failing the whole profile.
+  if (oilR.error) console.warn(`getIeaCountryProfile(${code}) oil prices: ${oilR.error.message}`)
 
   const rows = (energyR.data ?? []) as EnergyRow[]
 
@@ -526,6 +544,27 @@ export async function getIeaCountryProfile(
       : null
   }
 
+  // Shape the oil-price rows for the chart. Keep the last 60 months so the
+  // chart stays readable on a small panel; older history is still in the
+  // table for stories that want a longer window.
+  const oilRows = (oilR.data ?? []) as { product: string; month: string; value: number }[]
+  const monthsSet = new Set<string>()
+  for (const row of oilRows) monthsSet.add(row.month.slice(0, 7))
+  const allMonths = [...monthsSet].sort()
+  const recentMonths = allMonths.slice(-60)
+  const gasolineByMonth = new Map<string, number>()
+  const dieselByMonth = new Map<string, number>()
+  for (const row of oilRows) {
+    const m = row.month.slice(0, 7)
+    if (row.product === 'gasoline') gasolineByMonth.set(m, row.value)
+    else if (row.product === 'diesel') dieselByMonth.set(m, row.value)
+  }
+  const oilPrices = {
+    months: recentMonths,
+    gasoline: recentMonths.map((m) => gasolineByMonth.get(m) ?? null),
+    diesel: recentMonths.map((m) => dieselByMonth.get(m) ?? null),
+  }
+
   return {
     code: countryR.data.code as string,
     name: countryR.data.name as string,
@@ -536,6 +575,7 @@ export async function getIeaCountryProfile(
       primaryEnergyMix: buildMix('primary_share'),
       co2: buildSingle('ghg_from_energy_mt'),
       renewablesShare: buildSingle('renewables_share_elec'),
+      oilPrices,
     },
     news: (newsR.data ?? []).map((r: any) => ({
       id: r.id as number,

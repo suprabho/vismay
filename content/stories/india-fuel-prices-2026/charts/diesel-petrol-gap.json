@@ -1,0 +1,139 @@
+{
+  "steps": [
+    {
+      "title": "Petrol minus diesel, US$/litre, April 2026. Positive bars: diesel is cheaper. India taxes diesel less because trucks, tractors and trains run on it.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}: ${c}/L gap"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "${value}"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "United Kingdom",
+            "United States",
+            "France",
+            "Romania",
+            "Brazil",
+            "Germany",
+            "Netherlands",
+            "Japan",
+            "India"
+          ],
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          }
+        },
+        "series": [
+          {
+            "name": "Petrol \u2212 diesel",
+            "type": "bar",
+            "barWidth": 14,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "formatter": "${c}"
+            },
+            "data": [
+              {
+                "value": -0.45,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.37,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.25,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.19,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.11,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.11,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.11,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": 0.07,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "value": 0.12,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
