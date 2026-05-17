@@ -1,9 +1,10 @@
 /**
- * `f1:race-card` — minimum-viable F1 viz module.
+ * `f1:race-card` — placeholder.
  *
- * Mirrors the shape of footshort-viz's match-card. Once @vismay/viz-engine
- * exports VizModule / VizRenderProps, swap the placeholder types out for the
- * real ones and wire it through registerVizModule from src/index.ts.
+ * TODO(vizf1-scaffold): wire as a full VizModule (parseConfig + load +
+ * stableIdentity) and register it from src/index.ts. Skipped in the initial
+ * scaffold to keep the surface small — the working three are race-row,
+ * driver-standings, and position-chart.
  */
 
 export interface RaceCardConfig {

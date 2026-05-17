@@ -3,8 +3,11 @@
 @theme {
   --color-bg: #0b0d12;
   --color-surface: #13161d;
-  --color-accent: #e10600; /* F1 red */
+  --color-border: #1f2330;
   --color-text: #f5f5f5;
+  --color-muted: #8e8e99;
+  --color-accent: #e10600;
+  --color-accent-text: #ffffff;
 }
 
 html,

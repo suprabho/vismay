@@ -31,6 +31,7 @@
   "dependencies": {
     "@vismay/viz-engine": "workspace:*",
     "@vismay/footshort-viz": "workspace:*",
+    "@vismay/f1-viz": "workspace:*",
     "@anthropic-ai/sdk": "^0.95.1",
     "@base-ui/react": "^1.3.0",
     "@chenglou/pretext": "^0.0.4",
