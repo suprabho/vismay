@@ -1,9 +1,19 @@
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import type { FixtureRow } from '../types';
 
-type Props = { fixture: FixtureRow };
+/**
+ * Called when the user taps a team. Consumers decide where the tap goes
+ * (e.g. Footshort routes to `/team/<slug>` via expo-router). Omit to disable
+ * tap-to-navigate — useful when the row is embedded in a context with no
+ * team-detail screen.
+ */
+type OnTeamPress = (slug: string) => void;
+
+type Props = {
+  fixture: FixtureRow;
+  onTeamPress?: OnTeamPress;
+};
 
 function kickoffLabel(iso: string, status: FixtureRow['status']): string {
   const d = new Date(iso);
@@ -25,15 +35,14 @@ function kickoffLabel(iso: string, status: FixtureRow['status']): string {
 function TeamCell({
   name,
   crest,
-  slug,
+  onPress,
   align,
 }: {
   name: string;
   crest: string | null;
-  slug: string | null;
+  onPress: (() => void) | null;
   align: 'left' | 'right';
 }) {
-  const router = useRouter();
   const body = (
     <View className={`flex-row items-center flex-1 ${align === 'right' ? 'justify-end' : ''}`}>
       {align === 'left' && crest ? (
@@ -47,17 +56,19 @@ function TeamCell({
       ) : null}
     </View>
   );
-  if (!slug) return body;
+  if (!onPress) return body;
   return (
-    <Pressable onPress={() => router.push(`/team/${slug}`)} className="flex-1" hitSlop={4}>
+    <Pressable onPress={onPress} className="flex-1" hitSlop={4}>
       {body}
     </Pressable>
   );
 }
 
-export function MatchRow({ fixture }: Props) {
+export function MatchRow({ fixture, onTeamPress }: Props) {
   const homeName = fixture.home?.name ?? fixture.home_team_name ?? 'TBD';
   const awayName = fixture.away?.name ?? fixture.away_team_name ?? 'TBD';
+  const homeSlug = fixture.home?.slug ?? null;
+  const awaySlug = fixture.away?.slug ?? null;
   const isFinished = fixture.status === 'finished';
   const scoreText =
     isFinished && fixture.home_score !== null && fixture.away_score !== null
@@ -69,7 +80,7 @@ export function MatchRow({ fixture }: Props) {
       <TeamCell
         name={homeName}
         crest={fixture.home?.crest_url ?? null}
-        slug={fixture.home?.slug ?? null}
+        onPress={homeSlug && onTeamPress ? () => onTeamPress(homeSlug) : null}
         align="left"
       />
       <View className="px-3 items-center min-w-[72px]">
@@ -83,7 +94,7 @@ export function MatchRow({ fixture }: Props) {
       <TeamCell
         name={awayName}
         crest={fixture.away?.crest_url ?? null}
-        slug={fixture.away?.slug ?? null}
+        onPress={awaySlug && onTeamPress ? () => onTeamPress(awaySlug) : null}
         align="right"
       />
     </View>

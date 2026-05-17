@@ -264,7 +264,7 @@ function LeagueCardContent({ section }: { section: LeagueSection }) {
             />
             <div className="rounded-lg border border-white/20 bg-white/10">
               {section.lastMatchday.map((f) => (
-                <MatchRow key={f.id} fixture={f} />
+                <MatchRow key={f.id} fixture={f} resolveTeamHref={(s) => `/team/${s}`} />
               ))}
             </div>
           </div>
@@ -282,7 +282,7 @@ function LeagueCardContent({ section }: { section: LeagueSection }) {
               }
             />
             {section.nextMatchday.map((f) => (
-              <MatchRow key={f.id} fixture={f} />
+              <MatchRow key={f.id} fixture={f} resolveTeamHref={(s) => `/team/${s}`} />
             ))}
           </div>
         ) : null}
@@ -337,7 +337,7 @@ function TeamCardContent({ section }: { section: TeamSection }) {
           <div className="mt-4">
             <SectionLabel text="Next 3" />
             {upcoming.map((f) => (
-              <MatchRow key={f.id} fixture={f} />
+              <MatchRow key={f.id} fixture={f} resolveTeamHref={(s) => `/team/${s}`} />
             ))}
           </div>
         ) : null}

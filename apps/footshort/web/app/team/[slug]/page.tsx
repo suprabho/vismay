@@ -38,7 +38,7 @@ function FixtureList({
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
       {data.map((f) => (
-        <MatchRow key={f.id} fixture={f} />
+        <MatchRow key={f.id} fixture={f} resolveTeamHref={(s) => `/team/${s}`} />
       ))}
     </div>
   );
