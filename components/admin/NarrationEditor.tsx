@@ -20,6 +20,7 @@ import { stringify as stringifyYaml } from 'yaml'
 import { parseTtsConfig, TTS_SKIP_IDS } from '@/lib/storyTts'
 import { usePollVideoRender } from '@/lib/usePollVideoRender'
 import type { CachedVideo, VideoAspect } from '@/lib/storyVideo'
+import { RangeRenderPanel } from '@/components/admin/video/RangeRenderPanel'
 
 export interface NarrationUnit {
   parentIndex: number
@@ -282,6 +283,9 @@ function VideoRenderPanel({
         initial={initial['16:9']}
         dirty={dirty}
       />
+      <div className="pt-3 mt-2 border-t border-white/5">
+        <RangeRenderPanel slug={slug} availableAspects={['9:16', '16:9']} />
+      </div>
     </div>
   )
 }

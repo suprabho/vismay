@@ -12,15 +12,16 @@
  * Usage:
  *   npx tsx scripts/generate-video.ts <slug> 9:16
  *   npx tsx scripts/generate-video.ts <slug> 16:9
- *   npx tsx scripts/generate-video.ts <slug> 9:16 --force        # ignore cache
- *   PORT=3001 npx tsx scripts/generate-video.ts <slug> 9:16     # custom dev port
+ *   npx tsx scripts/generate-video.ts <slug> 9:16 --force                       # ignore cache
+ *   npx tsx scripts/generate-video.ts <slug> 9:16 --start-ms 5000 --end-ms 18000 # sub-range render
+ *   PORT=3001 npx tsx scripts/generate-video.ts <slug> 9:16                     # custom dev port
  */
 
 import fs from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { renderStoryVideo } from '../lib/storyVideoRender'
-import type { VideoAspect } from '../lib/storyVideo'
+import type { VideoAspect, VideoRange } from '../lib/storyVideo'
 
 /* ─── Env loading (same simple parser as generate-audio.ts) ─────────── */
 
@@ -47,14 +48,39 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   process.exit(1)
 }
 
+function readFlagValue(args: string[], flag: string): string | undefined {
+  // Accept both `--flag value` and `--flag=value`.
+  const joined = args.find((a) => a.startsWith(`${flag}=`))
+  if (joined) return joined.slice(flag.length + 1)
+  const idx = args.indexOf(flag)
+  if (idx >= 0 && idx < args.length - 1) return args[idx + 1]
+  return undefined
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const force = args.includes('--force')
+  // Legacy: `--preview` is a shorthand for `--end-ms 20000`.
   const preview = args.includes('--preview')
-  const positional = args.filter((a) => !a.startsWith('--'))
+  const startMsArg = readFlagValue(args, '--start-ms')
+  const endMsArg = readFlagValue(args, '--end-ms')
+
+  // Positional = anything that isn't a flag or a value consumed by a flag.
+  const flagsWithValues = new Set(['--start-ms', '--end-ms'])
+  const positional: string[] = []
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]
+    if (a.startsWith('--')) {
+      const eq = a.indexOf('=')
+      const name = eq === -1 ? a : a.slice(0, eq)
+      if (flagsWithValues.has(name) && eq === -1) i++ // skip the value
+      continue
+    }
+    positional.push(a)
+  }
 
   if (positional.length < 2) {
-    console.error('Usage: npx tsx scripts/generate-video.ts <slug> <9:16|16:9> [--force] [--preview]')
+    console.error('Usage: npx tsx scripts/generate-video.ts <slug> <9:16|16:9> [--force] [--preview] [--start-ms N] [--end-ms N]')
     process.exit(1)
   }
   const [slug, aspectArg] = positional
@@ -64,11 +90,29 @@ async function main() {
   }
   const aspect = aspectArg as VideoAspect
 
+  let range: VideoRange | undefined
+  if (preview) {
+    range = { startMs: 0, endMs: 20_000 }
+  } else if (startMsArg !== undefined || endMsArg !== undefined) {
+    const startMs = startMsArg !== undefined ? Number(startMsArg) : 0
+    const endMs = endMsArg !== undefined ? Number(endMsArg) : NaN
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+      console.error('--start-ms and --end-ms must be integers in milliseconds')
+      process.exit(1)
+    }
+    if (endMs <= startMs) {
+      console.error('--end-ms must be greater than --start-ms')
+      process.exit(1)
+    }
+    range = { startMs: Math.max(0, Math.floor(startMs)), endMs: Math.floor(endMs) }
+  }
+
   const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!)
   const baseUrl =
     process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
 
-  console.log(`\n━━━ ${slug} · ${aspect}${preview ? ' · preview (20s)' : ''} ━━━`)
+  const label = range ? ` · range ${range.startMs}–${range.endMs}ms` : ''
+  console.log(`\n━━━ ${slug} · ${aspect}${label} ━━━`)
   console.log(`  baseUrl: ${baseUrl}`)
 
   const result = await renderStoryVideo({
@@ -77,7 +121,7 @@ async function main() {
     aspect,
     baseUrl,
     force,
-    preview,
+    range,
     log: (msg) => console.log(`  ${msg}`),
   })
 

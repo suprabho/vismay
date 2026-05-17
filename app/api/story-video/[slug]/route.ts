@@ -3,10 +3,12 @@ import { createServiceClient } from '@/lib/supabase'
 import {
   classifyVideoState,
   computeAudioRevisionHash,
+  computeTimeline,
   getCachedVideo,
   loadChunksAndCues,
   markDispatched,
   type VideoAspect,
+  type VideoRange,
 } from '@/lib/storyVideo'
 import {
   dispatchRenderJob,
@@ -40,13 +42,25 @@ function isAspect(v: string | null): v is VideoAspect {
   return v === '9:16' || v === '16:9'
 }
 
+function parseIntParam(v: string | null): number | undefined {
+  if (v === null || v === '') return undefined
+  const n = Number(v)
+  if (!Number.isFinite(n) || n < 0) return undefined
+  return Math.floor(n)
+}
+
 /**
- * GET /api/story-video/[slug]?aspect=9:16|16:9[&force=1]
+ * GET /api/story-video/[slug]?aspect=9:16|16:9
+ *   [&force=1]                       bypass cache
+ *   [&preview=1]                     legacy alias for startMs=0&endMs=20000
+ *   [&startMs=N&endMs=N]             render a sub-clip of the cumulative
+ *                                     audio timeline (ms). Omit both for the
+ *                                     full render. Validated against totalMs.
  *
  * Responses:
  *   200 { status: 'ready', public_url, cached, duration_ms }
  *   202 { status: 'rendering' }     dispatch fired (or already in flight)
- *   400 { error }                   bad slug or aspect
+ *   400 { error }                   bad slug, aspect, or range
  *   404 { error }                   no audio for slug
  *   500 { error }                   render or dispatch failed
  */
@@ -68,7 +82,9 @@ export async function GET(
     )
   }
   const force = url.searchParams.get('force') === '1'
-  const preview = url.searchParams.get('preview') === '1'
+  const previewLegacy = url.searchParams.get('preview') === '1'
+  const startMsParam = parseIntParam(url.searchParams.get('startMs'))
+  const endMsParam = parseIntParam(url.searchParams.get('endMs'))
 
   // The headless browser fetches `/story/<slug>?autoplay=1` from this same
   // app — derive the base URL from the incoming request so it works in dev,
@@ -78,20 +94,49 @@ export async function GET(
   const supabase = createServiceClient()
 
   let hash: string
+  let totalMs: number
   try {
     const { chunks, cues } = await loadChunksAndCues(supabase, slug)
     if (chunks.length === 0 || cues.length === 0) {
       return NextResponse.json({ error: 'no audio for slug' }, { status: 404 })
     }
     hash = computeAudioRevisionHash(chunks, cues)
+    totalMs = computeTimeline(chunks).totalMs
   } catch (err) {
     const message = err instanceof Error ? err.message : 'audio lookup failed'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 
+  // Resolve the requested range. Priority:
+  //   1. explicit startMs/endMs
+  //   2. legacy preview=1 → [0, 20000]
+  //   3. no params → full render [0, totalMs]
+  let range: VideoRange
+  if (startMsParam !== undefined || endMsParam !== undefined) {
+    const startMs = startMsParam ?? 0
+    const endMs = endMsParam ?? totalMs
+    if (endMs <= startMs) {
+      return NextResponse.json(
+        { error: 'endMs must be greater than startMs' },
+        { status: 400 }
+      )
+    }
+    if (endMs > totalMs) {
+      return NextResponse.json(
+        { error: `endMs ${endMs} exceeds totalMs ${totalMs}` },
+        { status: 400 }
+      )
+    }
+    range = { startMs, endMs }
+  } else if (previewLegacy) {
+    range = { startMs: 0, endMs: Math.min(20_000, totalMs) }
+  } else {
+    range = { startMs: 0, endMs: totalMs }
+  }
+
   // Inspect the existing row (if any) and decide what to do.
   if (!force) {
-    const row = await getCachedVideo(supabase, slug, aspect, preview)
+    const row = await getCachedVideo(supabase, slug, aspect, range)
     const state = classifyVideoState(row, hash)
     if (state.kind === 'ready') {
       return NextResponse.json({
@@ -102,18 +147,30 @@ export async function GET(
       })
     }
     if (state.kind === 'rendering') {
-      // A workflow is already in flight for this (slug, aspect, preview, hash).
+      // A workflow is already in flight for this (slug, aspect, range, hash).
       // The 202 keeps the client polling, but we don't fire another dispatch.
       return NextResponse.json({ status: 'rendering' }, { status: 202 })
     }
     // 'stale' falls through to a fresh dispatch; 'missing' too.
   }
 
+  // The workflow always renders explicitly, so pass the range. For full
+  // renders, range = { 0, totalMs }; the dispatch payload conveys it
+  // verbatim and the runner reproduces the same cache key.
+  const dispatchRange =
+    range.startMs === 0 && range.endMs === totalMs ? undefined : range
+
   // Async path: hand the work to GitHub Actions.
   if (isDispatchConfigured()) {
     try {
-      await markDispatched(supabase, { slug, aspect, audioRevisionHash: hash, preview })
-      await dispatchRenderJob({ slug, aspect, baseUrl, preview })
+      await markDispatched(supabase, {
+        slug,
+        aspect,
+        audioRevisionHash: hash,
+        range,
+        totalMs,
+      })
+      await dispatchRenderJob({ slug, aspect, baseUrl, range: dispatchRange })
       return NextResponse.json({ status: 'rendering' }, { status: 202 })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'dispatch failed'
@@ -129,7 +186,7 @@ export async function GET(
       aspect,
       baseUrl,
       force,
-      preview,
+      range,
     })
     return NextResponse.json({ status: 'ready', ...result })
   } catch (err) {

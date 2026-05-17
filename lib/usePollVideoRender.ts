@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import type { VideoAspect } from './storyVideo'
+import type { VideoAspect, VideoRange } from './storyVideo'
 
 export type PollState = 'idle' | 'rendering' | 'error'
 
@@ -9,6 +9,12 @@ export interface PollVideoArgs {
   slug: string
   aspect: VideoAspect
   force?: boolean
+  /**
+   * Sub-range to render. Omit for a full render. When set, the hook appends
+   * `startMs` / `endMs` to the request and caches against that key on the
+   * server, so the same range hit twice short-circuits to the cached MP4.
+   */
+  range?: VideoRange
 }
 
 export interface PollVideoResult {
@@ -38,12 +44,16 @@ export function usePollVideoRender(): {
   }, [])
 
   const poll = useCallback(
-    async ({ slug, aspect, force }: PollVideoArgs): Promise<PollVideoResult> => {
+    async ({ slug, aspect, force, range }: PollVideoArgs): Promise<PollVideoResult> => {
       setState('rendering')
       setError(null)
 
       const params = new URLSearchParams({ aspect })
       if (force) params.set('force', '1')
+      if (range) {
+        params.set('startMs', String(range.startMs))
+        params.set('endMs', String(range.endMs))
+      }
       const endpoint = `/api/story-video/${slug}?${params.toString()}`
 
       try {

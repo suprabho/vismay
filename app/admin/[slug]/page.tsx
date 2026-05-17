@@ -7,7 +7,7 @@ import { getStoryContent } from '@/lib/content'
 import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { defaultNarrationText } from '@/lib/storyTts'
-import { getCachedVideo, type CachedVideo } from '@/lib/storyVideo'
+import { getFullVideo, type CachedVideo } from '@/lib/storyVideo'
 import { createServiceClient } from '@/lib/supabase'
 import { buildAssetRef, resolveAssetUrl } from '@/lib/assetUrl'
 import type { NarrationUnit } from '@/components/admin/NarrationEditor'
@@ -135,8 +135,8 @@ async function loadVideoCache(slug: string): Promise<VideoCache> {
   try {
     const supabase = createServiceClient()
     const [vert, horiz] = await Promise.all([
-      getCachedVideo(supabase, slug, '9:16', false),
-      getCachedVideo(supabase, slug, '16:9', false),
+      getFullVideo(supabase, slug, '9:16'),
+      getFullVideo(supabase, slug, '16:9'),
     ])
     return { '9:16': vert, '16:9': horiz }
   } catch {

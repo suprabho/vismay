@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { usePollVideoRender } from '@/lib/usePollVideoRender'
 import type { VideoAspect } from '@/lib/socialPostPlans'
+import { RangeRenderPanel } from '@/components/admin/video/RangeRenderPanel'
 
 export function VideoPostRenderPanel({
   slug,
@@ -129,6 +130,9 @@ export function VideoPostRenderPanel({
         </Link>
       </div>
       {error && <div className="text-[11px] text-red-300">{error}</div>}
+      <div className="pt-3 border-t border-white/5">
+        <RangeRenderPanel slug={slug} availableAspects={[aspect]} />
+      </div>
     </div>
   )
 }

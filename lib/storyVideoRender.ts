@@ -22,9 +22,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { chromium, type Frame } from 'playwright'
 import {
   computeAudioRevisionHash,
+  computeTimeline,
   getCachedVideo,
   loadChunksAndCues,
+  videoStoragePath,
   type VideoAspect,
+  type VideoRange,
 } from './storyVideo'
 
 interface CueRow {
@@ -145,10 +148,12 @@ interface PlaywrightRenderResult {
  * `[data-unit-index="<n>"]` selector, same smooth scrollIntoView. Hold time
  * per unit equals (end_ms - start_ms) so the recorded footage shares the
  * same timeline as the audio.
+ *
+ * A `range` of `{ startMs, endMs }` over the cumulative audio timeline lets
+ * callers render a sub-clip. Cues outside the window are skipped; the first
+ * in-range cue's unit is scrolled into view *before* recording starts (so the
+ * MP4 opens on the right frame), and the final hold clamps to range.endMs.
  */
-/** Cap length for the demo preview render. Plan locked at 20s. */
-const PREVIEW_CAP_MS = 20_000
-
 async function walkAndRecord(args: {
   slug: string
   aspect: VideoAspect
@@ -156,8 +161,8 @@ async function walkAndRecord(args: {
   workDir: string
   chunks: ChunkRow[]
   cues: CueRow[]
-  /** When true, cap the walk + audio at PREVIEW_CAP_MS for short previews. */
-  preview?: boolean
+  /** Cumulative-timeline window to render. */
+  range: VideoRange
 }): Promise<PlaywrightRenderResult> {
   const cfg = RENDER_CONFIG[args.aspect]
 
@@ -181,18 +186,22 @@ async function walkAndRecord(args: {
   // additive approach the walk overruns audio total and the `-shortest` mux
   // crops the last chunk of footage. With absolute targets, a slow scroll
   // shortens that cue's hold instead of pushing the whole timeline back.
-  const chunkOffsetMs = new Map<number, number>()
-  let totalAudioMs = 0
-  for (const c of [...args.chunks].sort((a, b) => a.chunk_index - b.chunk_index)) {
-    chunkOffsetMs.set(c.chunk_index, totalAudioMs)
-    totalAudioMs += c.duration_ms
-  }
+  const { chunkOffsetMs, totalMs: totalAudioMs } = computeTimeline(args.chunks)
 
-  // For preview renders we cap the walk at PREVIEW_CAP_MS. The cue list is
-  // truncated to whatever falls inside that window (we keep any cue whose
-  // *start* is < cap; the in-loop hold then clamps to cap below).
-  const targetWalkMs = args.preview ? Math.min(PREVIEW_CAP_MS, totalAudioMs) : totalAudioMs
-  const isPreview = !!args.preview
+  // Clamp range to actual audio bounds (route layer also validates, but be
+  // defensive — a 100ms overshoot caused by audio re-render shouldn't crash).
+  const rangeStart = Math.max(0, Math.min(args.range.startMs, totalAudioMs))
+  const rangeEnd = Math.max(rangeStart + 1, Math.min(args.range.endMs, totalAudioMs))
+  const targetWalkMs = rangeEnd - rangeStart
+  const isSubRange = !(rangeStart === 0 && rangeEnd === totalAudioMs)
+
+  // Cues whose [absStart, absEnd) intersects the window — i.e. anything we
+  // need to scroll to during the recording.
+  const inRange = ordered.filter((c) => {
+    const absStart = (chunkOffsetMs.get(c.chunk_index) ?? 0) + c.start_ms
+    const absEnd = (chunkOffsetMs.get(c.chunk_index) ?? 0) + c.end_ms
+    return absEnd > rangeStart && absStart < rangeEnd
+  })
 
   const browser = await chromium.launch({
     args: [
@@ -338,12 +347,29 @@ async function walkAndRecord(args: {
   // tile rendering after `loaded()` flips true.
   await page.waitForTimeout(800)
 
+  // For sub-range renders, jump the first in-range unit into view *without*
+  // smooth scrolling before declaring walkStartMs. The recording is still
+  // active (Playwright can't pause its recorder), but everything before
+  // walkStartMs is trimmed by ffmpeg below — so the trimmed MP4 opens on
+  // the right frame instead of partway through a smooth scroll from the
+  // top of the page.
+  if (isSubRange && inRange.length > 0) {
+    await walkFrame.evaluate((idx) => {
+      const el = document.querySelector(
+        `[data-unit-index="${idx}"]`
+      ) as HTMLElement | null
+      if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }, inRange[0].unit_index)
+    // Brief settle for any map camera + chart transitions that re-fire on
+    // scroll. Same beat as the post-load wait above.
+    await page.waitForTimeout(800)
+  }
+
   const walkStartMs = Date.now()
 
-  for (const cue of ordered) {
-    const cueStartAbs = (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.start_ms
-    // Skip cues whose start is past the preview cap.
-    if (isPreview && cueStartAbs >= targetWalkMs) break
+  for (const cue of inRange) {
+    const offset = chunkOffsetMs.get(cue.chunk_index) ?? 0
+    const cueEndAbs = offset + cue.end_ms
 
     await walkFrame.evaluate((idx) => {
       const el = document.querySelector(
@@ -352,9 +378,11 @@ async function walkAndRecord(args: {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, cue.unit_index)
 
-    const cueEndAbs = (chunkOffsetMs.get(cue.chunk_index) ?? 0) + cue.end_ms
-    const cappedEndAbs = isPreview ? Math.min(cueEndAbs, targetWalkMs) : cueEndAbs
-    const targetWallMs = walkStartMs + cappedEndAbs
+    // Translate the absolute cue-end into wall-clock relative to walkStart,
+    // by subtracting the range's start offset. Clamp to the window end so
+    // the last cue stops on schedule even when its absEnd extends past it.
+    const cueEndInWindow = Math.min(cueEndAbs, rangeEnd) - rangeStart
+    const targetWallMs = walkStartMs + cueEndInWindow
 
     // Wait for any active Mapbox camera transition to settle before
     // counting hold time, but cap at the smaller of 1.5s and the remaining
@@ -460,15 +488,13 @@ async function uploadAndRecord(args: {
   supabase: SupabaseClient
   slug: string
   aspect: VideoAspect
-  preview: boolean
+  range: VideoRange
+  totalAudioMs: number
   audioRevisionHash: string
   durationMs: number
   mp4Buffer: Buffer
 }): Promise<string> {
-  // 16:9 contains a slash that's invalid in storage paths.
-  const aspectKey = args.aspect === '9:16' ? '9x16' : '16x9'
-  const suffix = args.preview ? '__preview' : ''
-  const storagePath = `${args.slug}/${aspectKey}${suffix}.mp4`
+  const storagePath = videoStoragePath(args.slug, args.aspect, args.range, args.totalAudioMs)
 
   const { error: uploadErr } = await args.supabase.storage
     .from(VIDEO_BUCKET)
@@ -485,7 +511,8 @@ async function uploadAndRecord(args: {
     {
       slug: args.slug,
       aspect: args.aspect,
-      preview: args.preview,
+      range_start_ms: args.range.startMs,
+      range_end_ms: args.range.endMs,
       storage_path: storagePath,
       public_url: publicUrl,
       audio_revision_hash: args.audioRevisionHash,
@@ -495,7 +522,7 @@ async function uploadAndRecord(args: {
       // but nulling this keeps the row's state unambiguous in DB readers.
       dispatched_at: null,
     },
-    { onConflict: 'slug,aspect,preview' }
+    { onConflict: 'slug,aspect,range_start_ms,range_end_ms' }
   )
   if (dbErr) throw new Error(`db upsert: ${dbErr.message}`)
 
@@ -516,11 +543,15 @@ export async function renderStoryVideo(args: {
   aspect: VideoAspect
   baseUrl: string
   force?: boolean
-  preview?: boolean
+  /**
+   * Cumulative-timeline window to render. Omit for a full render — the
+   * function resolves it to `{ startMs: 0, endMs: totalAudioMs }` after
+   * loading the chunks.
+   */
+  range?: VideoRange
   log?: (msg: string) => void
 }): Promise<RenderResult> {
   const log = args.log ?? (() => {})
-  const preview = !!args.preview
 
   const { chunks, cues } = await loadChunksAndCues(args.supabase, args.slug)
   if (chunks.length === 0 || cues.length === 0) {
@@ -530,9 +561,12 @@ export async function renderStoryVideo(args: {
   }
 
   const audioRevisionHash = computeAudioRevisionHash(chunks, cues)
+  const { totalMs: totalAudioMs } = computeTimeline(chunks)
+  const range: VideoRange = args.range ?? { startMs: 0, endMs: totalAudioMs }
+  const isSubRange = !(range.startMs === 0 && range.endMs === totalAudioMs)
 
   if (!args.force) {
-    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect, preview)
+    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect, range)
     if (existing && existing.audio_revision_hash === audioRevisionHash) {
       log(`cached (hash match) → ${existing.public_url}`)
       return {
@@ -553,8 +587,11 @@ export async function renderStoryVideo(args: {
     const combinedAudioPath = await buildCombinedAudio(chunks, workDir)
 
     const cfg = RENDER_CONFIG[args.aspect]
+    const rangeLabel = isSubRange
+      ? ` [range ${range.startMs}–${range.endMs}ms of ${totalAudioMs}ms]`
+      : ''
     log(
-      `rendering ${cues.length} cue(s)${preview ? ' [preview, capped at 20s]' : ''}: viewport ${cfg.viewport.width}×${cfg.viewport.height} → output ${cfg.output.width}×${cfg.output.height} (lanczos upscale)`
+      `rendering ${cues.length} cue(s)${rangeLabel}: viewport ${cfg.viewport.width}×${cfg.viewport.height} → output ${cfg.output.width}×${cfg.output.height} (lanczos upscale)`
     )
     const { videoPath, durationMs } = await walkAndRecord({
       slug: args.slug,
@@ -563,25 +600,26 @@ export async function renderStoryVideo(args: {
       workDir,
       chunks,
       cues,
-      preview,
+      range,
     })
 
-    // For preview renders, trim the combined audio to durationMs so the
-    // mux doesn't tail off into post-cap audio. mux's `-shortest` would
-    // chop one or the other regardless, but explicit trim makes the
-    // output exact and avoids surprise frame-of-silence padding.
+    // For sub-range renders, crop the combined audio to the requested
+    // window before mux so the MP4's audio is the synced TTS for exactly
+    // [startMs, endMs]. `-shortest` would chop one stream or the other to
+    // match anyway, but an explicit crop avoids surprise silence padding.
     let muxAudioPath = combinedAudioPath
-    if (preview) {
-      muxAudioPath = path.join(workDir, 'audio-preview.wav')
+    if (isSubRange) {
+      muxAudioPath = path.join(workDir, 'audio-range.wav')
       await runFfmpeg(
         [
           '-y',
+          '-ss', (range.startMs / 1000).toFixed(3),
           '-i', combinedAudioPath,
-          '-t', (durationMs / 1000).toFixed(3),
+          '-t', ((range.endMs - range.startMs) / 1000).toFixed(3),
           '-c', 'copy',
           muxAudioPath,
         ],
-        'audio-trim'
+        'audio-crop'
       )
     }
 
@@ -595,7 +633,8 @@ export async function renderStoryVideo(args: {
       supabase: args.supabase,
       slug: args.slug,
       aspect: args.aspect,
-      preview,
+      range,
+      totalAudioMs,
       audioRevisionHash,
       durationMs,
       mp4Buffer,

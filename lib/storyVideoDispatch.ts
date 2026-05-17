@@ -17,7 +17,7 @@
  * sane default for local dev.
  */
 
-import type { VideoAspect } from './storyVideo'
+import type { VideoAspect, VideoRange } from './storyVideo'
 
 export function isDispatchConfigured(): boolean {
   return Boolean(
@@ -29,7 +29,8 @@ export async function dispatchRenderJob(args: {
   slug: string
   aspect: VideoAspect
   baseUrl: string
-  preview?: boolean
+  /** Sub-range to render. Omit for a full render. */
+  range?: VideoRange
 }): Promise<void> {
   const token = process.env.GITHUB_DISPATCH_TOKEN
   const repo = process.env.GITHUB_DISPATCH_REPO
@@ -41,6 +42,11 @@ export async function dispatchRenderJob(args: {
   // Workflow file name is fixed — the route doesn't need to know about it
   // beyond this constant. Keeping it here means the route file stays generic.
   const WORKFLOW_FILE = 'render-video.yml'
+
+  // workflow_dispatch inputs only support strings. Empty string = full render
+  // on the runner side; the script reads them via process.env / argv.
+  const startMsInput = args.range ? String(args.range.startMs) : ''
+  const endMsInput = args.range ? String(args.range.endMs) : ''
 
   const res = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
@@ -58,7 +64,8 @@ export async function dispatchRenderJob(args: {
           slug: args.slug,
           aspect: args.aspect,
           base_url: args.baseUrl,
-          preview: args.preview ? '1' : '0',
+          start_ms: startMsInput,
+          end_ms: endMsInput,
         },
       }),
     }

@@ -29,11 +29,16 @@ on:
         required: true
         type: string
         default: https://vizmaya.fyi
-      preview:
-        description: 1 = render 20-second preview clip; 0 = full-length
+      start_ms:
+        description: Sub-range start (ms on cumulative audio timeline). Blank = 0.
         required: false
         type: string
-        default: '0'
+        default: ''
+      end_ms:
+        description: Sub-range end (ms on cumulative audio timeline). Blank = full length.
+        required: false
+        type: string
+        default: ''
 
 jobs:
   render:
@@ -76,4 +81,13 @@ jobs:
         # `--force` because cache-miss is the only reason this workflow runs.
         # The API route only dispatches after confirming the cached row's
         # hash doesn't match the current audio_revision_hash.
-        run: pnpm exec tsx scripts/generate-video.ts "${{ inputs.slug }}" "${{ inputs.aspect }}" --force ${{ inputs.preview == '1' && '--preview' || '' }}
+        # When start_ms / end_ms are blank the script falls through to a
+        # full render; non-blank values become an explicit `[startMs, endMs]`
+        # sub-range (see scripts/generate-video.ts).
+        run: |
+          pnpm exec tsx scripts/generate-video.ts \
+            "${{ inputs.slug }}" \
+            "${{ inputs.aspect }}" \
+            --force \
+            ${{ inputs.start_ms != '' && format('--start-ms {0}', inputs.start_ms) || '' }} \
+            ${{ inputs.end_ms != '' && format('--end-ms {0}', inputs.end_ms) || '' }}
