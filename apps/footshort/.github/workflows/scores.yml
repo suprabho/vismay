@@ -1,0 +1,35 @@
+name: scores
+
+on:
+  schedule:
+    # Every 12 hours at 00:00 and 12:00 UTC. GH cron is UTC and can drift up to ~15 min under load.
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: scores
+  cancel-in-progress: false
+
+jobs:
+  scores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install worker deps
+        # Only install what the worker needs — skip mobile's huge tree.
+        run: npm ci --workspace=@shortfoot/worker --workspace=@shortfoot/shared --include-workspace-root
+
+      - name: Refresh scores
+        working-directory: apps/worker
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+        run: npm run scores:ci
