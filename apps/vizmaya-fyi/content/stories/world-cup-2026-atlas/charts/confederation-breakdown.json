@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "title": "Slots in the 2026 field, by confederation (inter-confederation playoff winners counted at home)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} teams"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 17,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "OFC",
+            "CONCACAF",
+            "CONMEBOL",
+            "AFC",
+            "CAF",
+            "UEFA"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Slots in 2026",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 1, "itemStyle": { "color": "$amber" } },
+              { "value": 6, "itemStyle": { "color": "$teal" } },
+              { "value": 6, "itemStyle": { "color": "$red" } },
+              { "value": 9, "itemStyle": { "color": "$accent2" } },
+              { "value": 10, "itemStyle": { "color": "$positive" } },
+              { "value": 16, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

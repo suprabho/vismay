@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--color-bg, #0a0e14);
+  --color-foreground: var(--color-text, #e0ddd5);
+  --color-accent: var(--color-accent, #D85A30);
+  --color-accent2: var(--color-accent2, #534AB7);
+  --color-teal: var(--color-teal, #1D9E75);
+  --color-surface: var(--color-surface, #111820);
+  --color-muted: var(--color-muted, #5a6a70);
+  --color-positive: var(--color-positive, #34D399);
+  --color-line: #1a2830;
+  --font-sans: var(--font-sans, 'Inter', -apple-system, 'Segoe UI', Helvetica, sans-serif);
+  --font-serif: var(--font-serif, 'Georgia', 'Times New Roman', serif);
+  --font-mono: var(--font-mono, var(--font-jetbrains-mono), 'Courier New', Consolas, monospace);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tailwind v4 emits `.snap-y` (scroll-snap-type: y var(--tw-scroll-snap-strictness))
+   but does not emit a `.snap-mandatory` rule that flips the variable off the
+   `proximity` default declared on the `*` selector. Without this override the
+   story page's snap container falls back to proximity snapping, which feels
+   broken — drags don't lock to a section. */
+.snap-mandatory {
+  --tw-scroll-snap-strictness: mandatory;
+}
+
+.admin-root ::selection,
+.admin-root textarea::selection,
+.admin-root input::selection {
+  background: #fde047;
+  color: #0a0a0a;
+}
+
+body {
+  background: var(--color-bg, #fff);
+  color: var(--color-text, #0c0c10);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 20px;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  html {
+    font-size: 14px;
+  }
+}

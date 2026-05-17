@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "title": "Projected population change, 2025–2050 — ten fastest-growing countries",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: +{c}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "+{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Mauritania",
+            "Mozambique",
+            "Mali",
+            "Tanzania",
+            "Chad",
+            "Niger",
+            "Somalia",
+            "Angola",
+            "Central African Rep.",
+            "DR Congo"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Population change",
+            "type": "bar",
+            "barWidth": 20,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "+{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 77.1, "itemStyle": { "color": "$amber" } },
+              { "value": 78.3, "itemStyle": { "color": "$amber" } },
+              { "value": 83.2, "itemStyle": { "color": "$accent" } },
+              { "value": 83.7, "itemStyle": { "color": "$accent" } },
+              { "value": 85.0, "itemStyle": { "color": "$accent" } },
+              { "value": 88.1, "itemStyle": { "color": "$accent" } },
+              { "value": 89.3, "itemStyle": { "color": "$red" } },
+              { "value": 90.3, "itemStyle": { "color": "$red" } },
+              { "value": 92.6, "itemStyle": { "color": "$red" } },
+              { "value": 93.4, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

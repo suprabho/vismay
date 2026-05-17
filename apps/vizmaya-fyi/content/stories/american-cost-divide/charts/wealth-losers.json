@@ -1,0 +1,78 @@
+{
+  "steps": [
+    {
+      "title": "Net interstate income outflow, 2023 — eight largest losers (USD billions)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: -${c}B"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "-${value}B",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Minnesota",
+            "Pennsylvania",
+            "Ohio",
+            "New Jersey",
+            "Massachusetts",
+            "Illinois",
+            "New York",
+            "California"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Net outflow",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "-${c}B",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 1, "itemStyle": { "color": "$amber" } },
+              { "value": 2, "itemStyle": { "color": "$amber" } },
+              { "value": 2, "itemStyle": { "color": "$amber" } },
+              { "value": 3, "itemStyle": { "color": "$amber" } },
+              { "value": 4, "itemStyle": { "color": "$accent" } },
+              { "value": 6, "itemStyle": { "color": "$accent" } },
+              { "value": 10, "itemStyle": { "color": "$red" } },
+              { "value": 12, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

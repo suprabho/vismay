@@ -1,0 +1,714 @@
+# Story config — american-economic-divide
+#
+# The reader walks through the economic divide across U.S. states.
+# Act I opens on cost of living extremes (Hawaii vs Oklahoma).
+# Act II moves through wealth migration patterns (Florida inflows, California outflows).
+# Act III reveals the livability paradox: cheap states rank low, expensive states don't
+# always rank high. The final beat pulls back to show the true reorganization underway.
+#
+# US STATE COORDINATES (approximate geographic centers):
+#   Hawaii               -157.5, 20.8
+#   Alaska               -151.0, 64.0
+#   California           -119.4, 36.1
+#   Texas                -99.0, 31.9
+#   Florida              -81.5, 27.9
+#   New York            -75.7, 42.9
+#   Massachusetts        -71.8, 42.2
+#   Arkansas            -92.3, 34.8
+#   Mississippi         -89.6, 32.7
+#   Oklahoma            -96.9, 35.5
+#   South Carolina      -80.9, 33.8
+#   North Carolina      -79.8, 35.6
+#   Minnesota           -93.9, 45.7
+#   Wisconsin           -89.6, 44.3
+#   Idaho               -114.7, 44.4
+#   Mountain West center: -107.0, 39.0
+#   South/Southwest center: -93.0, 31.0
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.50
+  pinColor: "#d9a84a"
+  pinRadius: 10
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Great American Divide"
+    eyebrow: "Economics · April 2026"
+    map:
+      center: [-95.0, 37.0]
+      zoom: 3.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+
+  # ═══════════════════════════════════════════════
+  # ACT I: THE COST REALITY
+  # ═══════════════════════════════════════════════
+
+  - id: cost-gap-stat
+    kind: stat
+    text: "$75,000"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-110.0, 30.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-157.5, 20.8]
+          label: "Hawaii — $141,127/year"
+          color: "#c26a4a"
+        - coordinates: [-96.9, 35.5]
+          label: "Oklahoma — $66,284/year"
+          color: "#7fb07a"
+      regions:
+        level: state
+        ramp: [66000, 80000, 95000, 110000, 141000]
+        colors: ["$positive", "$accent2", "$muted", "$accent", "$red"]
+        items:
+          - code: "HI"
+            value: 141127
+          - code: "MA"
+            value: 118431
+          - code: "CA"
+            value: 107357
+          - code: "AK"
+            value: 100289
+          - code: "NY"
+            value: 99425
+          - code: "MD"
+            value: 93378
+          - code: "NJ"
+            value: 90001
+          - code: "CT"
+            value: 89608
+          - code: "WA"
+            value: 89451
+          - code: "VT"
+            value: 89294
+          - code: "ME"
+            value: 89687
+          - code: "RI"
+            value: 89059
+          - code: "OR"
+            value: 87231
+          - code: "MT"
+            value: 86231
+          - code: "NH"
+            value: 85760
+          - code: "AZ"
+            value: 85446
+          - code: "DE"
+            value: 80734
+          - code: "CO"
+            value: 80655
+          - code: "VA"
+            value: 78614
+          - code: "FL"
+            value: 78142
+          - code: "UT"
+            value: 77828
+          - code: "ID"
+            value: 77750
+          - code: "NV"
+            value: 77436
+          - code: "WI"
+            value: 76729
+          - code: "NC"
+            value: 76493
+          - code: "PA"
+            value: 76257
+          - code: "IL"
+            value: 75315
+          - code: "WY"
+            value: 74844
+          - code: "MI"
+            value: 74373
+          - code: "MN"
+            value: 73980
+          - code: "OH"
+            value: 72880
+          - code: "LA"
+            value: 72802
+          - code: "NM"
+            value: 72645
+          - code: "SC"
+            value: 72645
+          - code: "KY"
+            value: 72174
+          - code: "GA"
+            value: 72095
+          - code: "SD"
+            value: 72095
+          - code: "NE"
+            value: 71938
+          - code: "ND"
+            value: 71702
+          - code: "TX"
+            value: 71310
+          - code: "IN"
+            value: 71153
+          - code: "IA"
+            value: 70917
+          - code: "TN"
+            value: 70917
+          - code: "AR"
+            value: 70132
+          - code: "MO"
+            value: 69896
+          - code: "KS"
+            value: 69818
+          - code: "WV"
+            value: 69189
+          - code: "AL"
+            value: 69032
+          - code: "MS"
+            value: 67147
+          - code: "OK"
+            value: 66284
+
+  - id: upper-middle-class
+    text: "The Income Threshold Spread"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-95.0, 37.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [-71.8, 42.2]
+          label: "Massachusetts — $163K to reach upper-middle class"
+          color: "#c26a4a"
+        - coordinates: [-89.6, 32.7]
+          label: "Mississippi — $91K to reach same tier"
+          color: "#7fb07a"
+      regions:
+        level: state
+        ramp: [90000, 110000, 130000, 150000, 163000]
+        colors: ["$positive", "$accent2", "$muted", "$accent", "$red"]
+        items:
+          - code: "MA"
+            value: 163066
+          - code: "NJ"
+            value: 162235
+          - code: "MD"
+            value: 160074
+          - code: "HI"
+            value: 156714
+          - code: "CA"
+            value: 155787
+          - code: "NH"
+            value: 155216
+          - code: "WA"
+            value: 154605
+          - code: "CO"
+            value: 151065
+          - code: "UT"
+            value: 150357
+          - code: "CT"
+            value: 149410
+          - code: "AK"
+            value: 148812
+          - code: "VA"
+            value: 143251
+          - code: "DE"
+            value: 136164
+          - code: "MN"
+            value: 135515
+          - code: "NY"
+            value: 133498
+          - code: "OR"
+            value: 132564
+          - code: "RI"
+            value: 129895
+          - code: "IL"
+            value: 129439
+          - code: "VT"
+            value: 128691
+          - code: "AZ"
+            value: 126756
+          - code: "ID"
+            value: 126258
+          - code: "NV"
+            value: 126208
+          - code: "GA"
+            value: 124430
+          - code: "TX"
+            value: 124010
+          - code: "ND"
+            value: 121133
+          - code: "FL"
+            value: 120921
+          - code: "PA"
+            value: 120626
+          - code: "WI"
+            value: 120537
+          - code: "SD"
+            value: 119593
+          - code: "ME"
+            value: 118910
+          - code: "NE"
+            value: 118807
+          - code: "WY"
+            value: 117494
+          - code: "KS"
+            value: 117466
+          - code: "MT"
+            value: 117196
+          - code: "NC"
+            value: 115046
+          - code: "MI"
+            value: 112605
+          - code: "SC"
+            value: 112544
+          - code: "OH"
+            value: 112330
+          - code: "TN"
+            value: 111995
+          - code: "IN"
+            value: 111936
+          - code: "MO"
+            value: 111361
+          - code: "NM"
+            value: 105492
+          - code: "AL"
+            value: 103692
+          - code: "OK"
+            value: 102897
+          - code: "KY"
+            value: 100374
+          - code: "AR"
+            value: 96609
+          - code: "LA"
+            value: 94867
+          - code: "WV"
+            value: 94575
+          - code: "MS"
+            value: 91975
+          - code: "IA"
+            value: 112450
+
+  # ═══════════════════════════════════════════════
+  # ACT II: THE MIGRATION PIVOT
+  # ═══════════════════════════════════════════════
+
+  - id: migration-flows
+    text: "Act II: The Migration Pivot"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-90.0, 30.0]
+      zoom: 3.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: state
+        ramp: [-12000000000, -4000000000, 0, 4000000000, 21000000000]
+        colors: ["$red", "$amber", "$surface", "$accent2", "$positive"]
+        items:
+          - code: "FL"
+            value: 21000000000
+          - code: "TX"
+            value: 6000000000
+          - code: "NC"
+            value: 4000000000
+          - code: "SC"
+            value: 4000000000
+          - code: "AZ"
+            value: 3000000000
+          - code: "TN"
+            value: 3000000000
+          - code: "NV"
+            value: 2000000000
+          - code: "ID"
+            value: 988000000
+          - code: "GA"
+            value: 746000000
+          - code: "CO"
+            value: 715000000
+          - code: "AL"
+            value: 540000000
+          - code: "ME"
+            value: 502000000
+          - code: "MT"
+            value: 500000000
+          - code: "UT"
+            value: 477000000
+          - code: "AR"
+            value: 447000000
+          - code: "OK"
+            value: 261000000
+          - code: "SD"
+            value: 256000000
+          - code: "WY"
+            value: 149000000
+          - code: "VT"
+            value: 93000000
+          - code: "WV"
+            value: 11000000
+          - code: "HI"
+            value: -3000000
+          - code: "MS"
+            value: -66000000
+          - code: "WI"
+            value: -76000000
+          - code: "NM"
+            value: -93000000
+          - code: "KY"
+            value: -112000000
+          - code: "ND"
+            value: -144000000
+          - code: "AK"
+            value: -210000000
+          - code: "MO"
+            value: -215000000
+          - code: "NE"
+            value: -244000000
+          - code: "WA"
+            value: -265000000
+          - code: "IA"
+            value: -266000000
+          - code: "IN"
+            value: -326000000
+          - code: "KS"
+            value: -361000000
+          - code: "CT"
+            value: -460000000
+          - code: "OR"
+            value: -476000000
+          - code: "LA"
+            value: -799000000
+          - code: "VA"
+            value: -912000000
+          - code: "MI"
+            value: -956000000
+          - code: "MN"
+            value: -1000000000
+          - code: "PA"
+            value: -2000000000
+          - code: "OH"
+            value: -2000000000
+          - code: "NJ"
+            value: -3000000000
+          - code: "MA"
+            value: -4000000000
+          - code: "IL"
+            value: -6000000000
+          - code: "NY"
+            value: -10000000000
+          - code: "CA"
+            value: -12000000000
+
+  - id: florida-inflow
+    kind: stat
+    text: "$21B"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-81.5, 27.9]
+      zoom: 6.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [-81.5, 27.9]
+          label: "Miami metro — $21B net inflow 2023"
+          color: "#7fb07a"
+      regions:
+        level: state
+        ramp: [-2000000000, 0, 10000000000, 21000000000]
+        colors: ["$red", "$surface", "$accent2", "$positive"]
+        items:
+          - code: "FL"
+            value: 21000000000
+
+  - id: california-outflow
+    kind: stat
+    text: "-$12B"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-119.4, 36.1]
+      zoom: 5.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [-119.4, 36.1]
+          label: "California — $91B total outflow (2019-2023)"
+          color: "#c26a4a"
+      regions:
+        level: state
+        ramp: [-15000000000, -8000000000, 0]
+        colors: ["$red", "$amber", "$surface"]
+        items:
+          - code: "CA"
+            value: -12000000000
+
+  # ═══════════════════════════════════════════════
+  # ACT III: THE LIVABILITY PARADOX
+  # ═══════════════════════════════════════════════
+
+  - id: livability-paradox
+    text: "Act III: The Livability Paradox"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-95.0, 37.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: state
+        ramp: [39, 45, 52, 58, 60]
+        colors: ["$red", "$amber", "$muted", "$accent2", "$positive"]
+        items:
+          - code: "MA"
+            value: 60.2
+          - code: "ID"
+            value: 60.2
+          - code: "NJ"
+            value: 59.8
+          - code: "WI"
+            value: 59.7
+          - code: "MN"
+            value: 58.7
+          - code: "FL"
+            value: 58.5
+          - code: "NH"
+            value: 58.2
+          - code: "UT"
+            value: 57.9
+          - code: "NY"
+            value: 57.9
+          - code: "PA"
+            value: 57.9
+          - code: "WY"
+            value: 57.9
+          - code: "IA"
+            value: 56.2
+          - code: "ME"
+            value: 56.2
+          - code: "VA"
+            value: 56.2
+          - code: "MT"
+            value: 55.2
+          - code: "ND"
+            value: 54.6
+          - code: "IL"
+            value: 54.6
+          - code: "SD"
+            value: 54.1
+          - code: "CO"
+            value: 53.6
+          - code: "NE"
+            value: 52.9
+          - code: "VT"
+            value: 52.7
+          - code: "NC"
+            value: 52.3
+          - code: "KS"
+            value: 52.2
+          - code: "CT"
+            value: 52.1
+          - code: "RI"
+            value: 52.1
+          - code: "OH"
+            value: 51.6
+          - code: "GA"
+            value: 51.6
+          - code: "MO"
+            value: 51.2
+          - code: "IN"
+            value: 51.2
+          - code: "MI"
+            value: 51.1
+          - code: "AZ"
+            value: 51.0
+          - code: "CA"
+            value: 50.5
+          - code: "DE"
+            value: 50.0
+          - code: "MD"
+            value: 49.8
+          - code: "HI"
+            value: 49.4
+          - code: "WA"
+            value: 49.2
+          - code: "KY"
+            value: 47.5
+          - code: "TX"
+            value: 47.2
+          - code: "OR"
+            value: 47.2
+          - code: "TN"
+            value: 47.0
+          - code: "AL"
+            value: 47.0
+          - code: "WV"
+            value: 47.0
+          - code: "OK"
+            value: 46.3
+          - code: "SC"
+            value: 45.7
+          - code: "NV"
+            value: 44.6
+          - code: "AK"
+            value: 44.2
+          - code: "MS"
+            value: 43.5
+          - code: "AR"
+            value: 42.1
+          - code: "LA"
+            value: 40.6
+          - code: "NM"
+            value: 39.7
+
+  - id: cheap-vs-good
+    text: "The Paradox Revealed"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-95.0, 37.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-92.3, 34.8]
+          label: "Arkansas — cheapest to live, #48 quality"
+          color: "#c26a4a"
+        - coordinates: [-71.8, 42.2]
+          label: "Massachusetts — #1 quality of life"
+          color: "#7fb07a"
+        - coordinates: [-114.7, 44.4]
+          label: "Idaho — #2 quality, much more affordable"
+          color: "#d9a84a"
+      regions:
+        level: state
+        ramp: [39, 45, 52, 58, 60]
+        colors: ["$red", "$amber", "$muted", "$accent2", "$positive"]
+        items:
+          - code: "MA"
+            value: 60.2
+          - code: "ID"
+            value: 60.2
+          - code: "NJ"
+            value: 59.8
+          - code: "WI"
+            value: 59.7
+          - code: "MN"
+            value: 58.7
+          - code: "FL"
+            value: 58.5
+          - code: "NH"
+            value: 58.2
+          - code: "UT"
+            value: 57.9
+          - code: "NY"
+            value: 57.9
+          - code: "PA"
+            value: 57.9
+          - code: "WY"
+            value: 57.9
+          - code: "IA"
+            value: 56.2
+          - code: "ME"
+            value: 56.2
+          - code: "VA"
+            value: 56.2
+          - code: "MT"
+            value: 55.2
+          - code: "ND"
+            value: 54.6
+          - code: "IL"
+            value: 54.6
+          - code: "SD"
+            value: 54.1
+          - code: "CO"
+            value: 53.6
+          - code: "NE"
+            value: 52.9
+          - code: "VT"
+            value: 52.7
+          - code: "NC"
+            value: 52.3
+          - code: "KS"
+            value: 52.2
+          - code: "CT"
+            value: 52.1
+          - code: "RI"
+            value: 52.1
+          - code: "OH"
+            value: 51.6
+          - code: "GA"
+            value: 51.6
+          - code: "MO"
+            value: 51.2
+          - code: "IN"
+            value: 51.2
+          - code: "MI"
+            value: 51.1
+          - code: "AZ"
+            value: 51.0
+          - code: "CA"
+            value: 50.5
+          - code: "DE"
+            value: 50.0
+          - code: "MD"
+            value: 49.8
+          - code: "HI"
+            value: 49.4
+          - code: "WA"
+            value: 49.2
+          - code: "KY"
+            value: 47.5
+          - code: "TX"
+            value: 47.2
+          - code: "OR"
+            value: 47.2
+          - code: "TN"
+            value: 47.0
+          - code: "AL"
+            value: 47.0
+          - code: "WV"
+            value: 47.0
+          - code: "OK"
+            value: 46.3
+          - code: "SC"
+            value: 45.7
+          - code: "NV"
+            value: 44.6
+          - code: "AK"
+            value: 44.2
+          - code: "MS"
+            value: 43.5
+          - code: "AR"
+            value: 42.1
+          - code: "LA"
+            value: 40.6
+          - code: "NM"
+            value: 39.7

@@ -1,0 +1,71 @@
+{
+  "steps": [
+    {
+      "title": "Cumulative net losses per user, first 3 months (Citizens Bank analyst report, indexed)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "line" }
+        },
+        "legend": {
+          "top": 0,
+          "textStyle": { "color": "$muted", "fontSize": 11 }
+        },
+        "grid": {
+          "left": "4%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": [
+            "Week 1",
+            "Week 2",
+            "Week 4",
+            "Week 6",
+            "Week 8",
+            "Week 10",
+            "Week 12"
+          ],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$muted", "fontSize": 11 }
+        },
+        "yAxis": {
+          "type": "value",
+          "axisLabel": {
+            "color": "$muted",
+            "formatter": "-${value}"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Prediction-market platforms",
+            "type": "line",
+            "smooth": true,
+            "symbol": "circle",
+            "symbolSize": 6,
+            "lineStyle": { "width": 2.5, "color": "$red" },
+            "itemStyle": { "color": "$red" },
+            "areaStyle": { "color": "$red", "opacity": 0.12 },
+            "data": [18, 42, 96, 168, 248, 330, 410]
+          },
+          {
+            "name": "Traditional state-licensed sportsbooks",
+            "type": "line",
+            "smooth": true,
+            "symbol": "circle",
+            "symbolSize": 6,
+            "lineStyle": { "width": 2.5, "color": "$amber" },
+            "itemStyle": { "color": "$amber" },
+            "areaStyle": { "color": "$amber", "opacity": 0.08 },
+            "data": [10, 24, 54, 94, 140, 190, 244]
+          }
+        ]
+      }
+    }
+  ]
+}

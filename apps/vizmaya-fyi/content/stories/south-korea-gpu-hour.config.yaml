@@ -1,0 +1,1114 @@
+# Story config — persistent-map architecture v2.
+#
+# ARCHITECTURE PRINCIPLES:
+#   1. One location = one scroll beat. Pins arrive one at a time.
+#   2. Pins accumulate within a section cluster (previous pins persist).
+#   3. subsections[] = same map state, chart steps forward. Use for charts only.
+#   4. Separate top-level sections = different map centre. Use for location reveals.
+#   5. Every text: value must exactly match a ## heading in the markdown file.
+#   6. kind: stat  → renders heading as a giant number.
+#   7. kind: hero  → animated title entrance.
+#
+# COORDINATE SOURCES: verified against satellite imagery + OpenStreetMap.
+#   SK Hynix Icheon M16 fab        127.4350,  37.2720
+#   SK Hynix Cheongju M15X fab     127.7137,  36.6370
+#   Samsung Pyeongtaek P3/P4       127.0823,  37.0793
+#   HD Hyundai Ulsan HHI           129.3110,  35.5400
+#   Samsung Heavy Industries Geoje 128.6210,  34.8820
+#   Hanwha Ocean Geoje             128.6800,  34.8600
+#   Ras Laffan Industrial City      51.5488,  25.8972
+#   Strait of Hormuz (centre)       56.2700,  26.5700
+#   Abu Dhabi (UAE crude)           54.3660,  24.4660
+#   Futtsu LNG Terminal Japan      139.8650,  35.3140
+#   CNOOC Tianjin LNG              117.7870,  38.9820
+#   Gate Terminal Rotterdam          4.0180,  51.9580
+#   Sabine Pass LNG Louisiana      -93.8680,  29.7310
+#   Mundra LNG Terminal India       69.7060,  22.8380
+#   Hudong-Zhonghua Shanghai       121.4990,  31.3050
+#   Amur GPP Russia                141.0490,  53.3200
+#   Federal Helium Reserve Amarillo-101.8310, 35.2220
+#   NVIDIA HQ Santa Clara         -121.9630,  37.3700
+#   AWS us-east-1 Ashburn VA       -77.4770,  39.0440
+#   TSMC Hsinchu Science Park      120.9680,  24.7930
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#155dfc"
+  pinRadius: 12
+  flySpeed: 1.2
+  highlightCountry: "KR"
+  highlightColor: "#155dfc"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "South Korea Makes the Memory and Builds the Ships"
+    eyebrow: "Cost Analysis · March 2026"
+    map:
+      center: [127.5, 32.5]
+      zoom: 5
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # GPU HOUR ANCHOR — the baseline price. Map opens on Santa Clara.
+  # ═══════════════════════════════════════════════
+
+  - id: gpu-anchor
+    kind: stat
+    text: "$2.49"
+    paragraphs: [0, 3]         # desktop: all 6 paragraphs, one snap
+    mobileParagraphs:           # mobile: 2 snaps
+    - [0, 1]
+    - [1, 2]
+    - [2, 3]
+    map:
+      center: [-121.963, 37.170]
+      zoom: 10.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-121.963, 37.370]
+          label: "NVIDIA HQ, Santa Clara, CA"
+          color: "#00d5be"
+      mobile:
+        center: [-121.961, 37.402]
+
+
+  # ═══════════════════════════════════════════════
+  # THE CRASH — map flies to Seoul
+  # ═══════════════════════════════════════════════
+
+  - id: crash-context
+    text: "The crash nobody expected"
+    paragraphs: [0, 2]         # desktop: all 6 paragraphs, one snap
+    mobileParagraphs:           # mobile: 2 snaps
+    - [0, 1]
+    - [1, 2]
+    map:
+      center: [126.741, 36.838]
+      zoom: 7.5
+      pitch: 30
+      opacity: 0.50
+      pins:
+        - coordinates: [126.9780, 37.5660]
+          label: "KOSPI, Seoul"
+          color: "#155dfc"
+      mobile:
+        center: [127.016, 37.392]
+
+  - id: market-crash
+    kind: stat
+    text: "18%"
+    map:
+      center: [126.741, 36.838]
+      zoom: 7.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [126.978, 37.566]
+          label: "KOSPI, Seoul"
+          color: "#155dfc"
+      mobile:
+        center: [127.016, 37.392]
+
+  # Stock candlestick chart — 2 steps, map stays on Seoul
+  - id: stock-history
+    chart: stock-candlestick
+    map:
+      center: [126.741, 36.838]
+      zoom: 7.5
+      pitch: 32
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [126.978, 37.566]
+          label: "Seoul"
+          color: "#155dfc"
+      mobile:
+        center: [127.016, 37.392]
+
+    subsections:
+      - text: "Worst since 2008"  
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "Act I: The most consequential industrial economy in this crisis"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+
+  # ═══════════════════════════════════════════════
+  # ACT I — TRIPLE EXPOSURE
+  # Map builds from Gulf → Qatar → Hormuz, one energy per beat.
+  # ═══════════════════════════════════════════════
+
+  - id: exposure
+    chart: polar-exposure
+    map:
+      center: [53.000, 20.500]
+      zoom: 5.5
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [54.366, 24.466]
+          label: "Crude oil origin | Abu Dhabi, UAE"
+          color: "#f54900"
+      mobile:
+        center: [54.366, 24.466]
+        zoom: 4.2
+
+    subsections:
+      - text: "Oil: 70%"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "Helium: 64.7%"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+        map:
+          center: [51.548, 25.897]
+          zoom: 7.0
+          pitch: 25
+          bearing: -10
+          opacity: 0.60
+          pins:
+            - coordinates: [54.366, 24.466]
+              label: "Oil"
+              color: "#f54900"
+            - coordinates: [51.548, 25.897]
+              label: "LNG origin | North Field, Qatar"
+              color: "#009966"
+          mobile:
+            center: [52.688, 24.232]
+            zoom: 4.2
+      - text: "Gas: 26%"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+        map:
+          center: [55.500, 22.000]
+          zoom: 6
+          pitch: 30
+          bearing: -15
+          opacity: 0.60
+          pins:
+            - coordinates: [54.366, 24.466]
+              label: "Oil"
+              color: "#f54900"
+            - coordinates: [51.548, 25.897]
+              label: "LNG + helium | Qatar"
+              color: "#00d5be"
+            - coordinates: [56.270, 26.570]
+              label: "Strait of Hormuz — the chokepoint"
+              color: "#EF9F27"
+          mobile:
+            center: [55.300, 26.329]
+            bearing: -113
+            zoom: 4.2
+            pins:
+            - coordinates: [54.366, 24.466]
+              label: "Oil"
+              color: "#f54900"
+              labelAnchor: "bottom"
+            - coordinates: [51.548, 25.897]
+              label: "LNG + helium | Qatar"
+              color: "#00d5be"
+              labelAnchor: "top"
+            - coordinates: [56.270, 26.570]
+              label: "Strait of Hormuz — the chokepoint"
+              color: "#EF9F27"
+              labelAnchor: "bottom"
+
+  # ═══════════════════════════════════════════════
+  # ACT I — MEMORY DOMINANCE
+  # Map flies to South Korea. One fab per beat.
+  # ═══════════════════════════════════════════════
+
+  - id: fab-icheon
+    text: "Icheon: 62% of global HBM"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [127.455, 37.195]
+      zoom: 11.0
+      pitch: 50
+      bearing: -15
+      opacity: 0.70
+      pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon M16"
+          color: "#155dfc"
+
+  - id: fab-cheongju
+    text: "Cheongju: the M15X expansion"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [127.574, 36.5]
+      zoom: 9.0
+      pitch: 45
+      bearing: -10
+      opacity: 0.65
+      pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju M15X"
+          color: "#155dfc"
+      mobile:
+        center: [127.453, 36.436]
+        zoom: 7.8
+        pitch: 57
+
+  - id: fab-pyeongtaek
+    text: "Pyeongtaek: Samsung's 33% of global DRAM"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [127.280, 37.050]
+      zoom: 8.5
+      pitch: 45
+      bearing: 10
+      opacity: 0.65
+      pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+          labelAnchor: right
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju"
+          color: "#155dfc"
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek P3/P4"
+          color: "#00d5be"
+          labelAnchor: left
+      mobile:
+        center: [127.232, 36.602]
+        zoom: 6.7
+        pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+          labelAnchor: top
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju"
+          color: "#155dfc"
+          labelAnchor: bottom
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek P3/P4"
+          color: "#00d5be"
+          labelAnchor: bottom
+
+  # HBM treemap — 2 chart steps, map holds on fab cluster
+  - id: hbm-chart
+    chart: hbm-treemap
+    map:
+      center: [127.280, 37.050]
+      zoom: 8.5
+      pitch: 45
+      bearing: 10
+      opacity: 0.65
+      pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+          labelAnchor: right
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju"
+          color: "#155dfc"
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek P3/P4"
+          color: "#00d5be"
+          labelAnchor: left
+      mobile:
+        center: [127.451, 36.628]
+        zoom: 7.5
+        pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+          labelAnchor: top
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju"
+          color: "#155dfc"
+          labelAnchor: bottom
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek P3/P4"
+          color: "#00d5be"
+          labelAnchor: right
+    subsections:
+      - text: "HBM sold out through 2026"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "The $54.6 billion supercycle"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+
+  # ═══════════════════════════════════════════════
+  # ACT I — SHIPBUILDING DOMINANCE
+  # Map moves south to the coast. One yard per beat.
+  # ═══════════════════════════════════════════════
+
+  - id: yard-ulsan
+    text: "Ulsan: HD Hyundai"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [129.261, 35.370]
+      zoom: 11.5
+      pitch: 55
+      bearing: 20
+      opacity: 0.70
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "HD Hyundai Heavy Industries — Ulsan"
+          color: "#f54900"
+      mobile:
+        center: [129.311, 35.540]
+        zoom: 12.1
+
+  - id: yard-geoje
+    text: "Geoje: Samsung Heavy and Hanwha Ocean"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [128.160, 34.30]
+      zoom: 8
+      pitch: 50
+      bearing: 10
+      opacity: 0.65
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "HD Hyundai — Ulsan"
+          color: "#f54900"
+        - coordinates: [128.621, 34.882]
+          label: "Samsung Heavy Industries — Geoje"
+          color: "#155dfc"
+          labelAnchor: left
+        - coordinates: [128.680, 34.860]
+          label: "Hanwha Ocean — Geoje"
+          color: "#00d5be"
+          labelAnchor: right
+      mobile:
+        center: [128.717, 34.476]
+        zoom: 8.1
+        pins:
+        - coordinates: [129.311, 35.540]
+          label: "HD Hyundai — Ulsan"
+          color: "#f54900"
+        - coordinates: [128.621, 34.882]
+          label: "Samsung Heavy Industries — Geoje"
+          color: "#155dfc"
+          labelAnchor: top
+        - coordinates: [128.680, 34.860]
+          label: "Hanwha Ocean — Geoje"
+          color: "#00d5be"
+          labelAnchor: bottom
+
+
+  # Pull back — show all four industry pins across Korea
+  - id: one-grid
+    text: "One grid, two industries, one crisis"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [127.800, 35.500]
+      zoom: 6.5
+      pitch: 20
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+          labelAnchor: right
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju"
+          color: "#155dfc"
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek"
+          color: "#00d5be"
+          labelAnchor: left
+        - coordinates: [129.311, 35.540]
+          label: "HD Hyundai — Ulsan"
+          color: "#f54900"
+          labelAnchor: right
+        - coordinates: [128.621, 34.882]
+          label: "Samsung Heavy + Hanwha — Geoje"
+          color: "#f54900"
+          labelAnchor: left
+      mobile:
+        center: [128.117, 34.353]
+        zoom: 4.9
+        pins:
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#155dfc"
+          labelAnchor: bottom
+        - coordinates: [127.714, 36.637]
+          label: "SK Hynix — Cheongju"
+          color: "#155dfc"
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek"
+          color: "#00d5be"
+          labelAnchor: left
+        - coordinates: [129.311, 35.540]
+          label: "HD Hyundai — Ulsan"
+          color: "#f54900"
+          labelAnchor: top
+        - coordinates: [128.621, 34.882]
+          label: "Samsung Heavy + Hanwha — Geoje"
+          color: "#f54900"
+          labelAnchor:  bottom
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE CHOKEPOINT
+  # Map flies to the Strait. Ras Laffan helium plants
+  # appear one at a time.
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii-intro
+    text: "Act II: The chokepoint"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [56.270, 25.570]
+      zoom: 6.5
+      pitch: 40
+      bearing: -20
+      opacity: 0.60
+      pins:
+        - coordinates: [56.270, 26.570]
+          label: "Strait of Hormuz"
+          color: "#EF9F27"
+
+  - id: helium-plant-1
+    text: "Helium Plant 1: offline since March 2"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [51.549, 25.890]
+      zoom: 11.0
+      pitch: 35
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [56.270, 26.570]
+          label: "Strait of Hormuz"
+          color: "#E24B4A"
+        - coordinates: [51.545, 25.893]
+          label: "Helium 1 — 660M scf/yr · offline"
+          color: "#E24B4A"
+
+  - id: helium-plant-2
+    text: "Helium Plant 2: the world's largest"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [51.548, 25.900]
+      zoom: 13.5
+      pitch: 35
+      bearing: 5
+      opacity: 0.65
+      pins:
+        - coordinates: [56.270, 26.570]
+          label: "Strait of Hormuz"
+          color: "#E24B4A"
+        - coordinates: [51.545, 25.893]
+          label: "Helium 1 · offline"
+          color: "#E24B4A"
+          labelAnchor: bottom
+        - coordinates: [51.552, 25.901]
+          label: "Helium 2 — 1.3B scf/yr · world's largest · offline"
+          color: "#E24B4A"
+          labelAnchor: top
+    mobile:
+      center: [51.543, 25.891]
+      pins:
+        - coordinates: [56.270, 26.570]
+          label: "Strait of Hormuz"
+          color: "#E24B4A"
+        - coordinates: [51.545, 25.893]
+          label: "Helium 1 · offline"
+          color: "#E24B4A"
+          labelAnchor: bottom
+        - coordinates: [51.552, 25.901]
+          label: "Helium 2 — 1.3B scf/yr · world's largest · offline"
+          color: "#E24B4A"
+          labelAnchor: top
+
+  - id: helium-plant-3
+    text: "Helium Plant 3: all three offline"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [51.548, 25.897]
+      zoom: 13.5
+      pitch: 35
+      bearing: 5
+      opacity: 0.65
+      pins:
+        - coordinates: [56.270, 26.570]
+          label: "Strait of Hormuz"
+          color: "#E24B4A"
+        - coordinates: [51.545, 25.893]
+          label: "Helium 1 · offline"
+          color: "#E24B4A"
+          labelAnchor: bottom
+        - coordinates: [51.552, 25.901]
+          label: "Helium 2 · offline"
+          color: "#E24B4A"
+          labelAnchor: right
+        - coordinates: [51.541, 25.903]
+          label: "Helium 3 — 400M scf/yr · offline"
+          color: "#E24B4A"
+          labelAnchor: left
+
+  # Helium price chart — 2 chart steps, map holds on Ras Laffan
+  - id: helium-price-chart
+    chart: helium-price
+    map:
+      center: [51.548, 25.897]
+      zoom: 9.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [51.548, 25.897]
+          label: "Ras Laffan — all three plants offline"
+          color: "#E24B4A"
+        - coordinates: [56.270, 26.570]
+          label: "Strait of Hormuz"
+          color: "#E24B4A"
+    subsections:
+      - text: "The misleading spike"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "The 6-month inflection"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+
+  # ═══════════════════════════════════════════════
+  # ACT II — STOCKPILE RUNWAY
+  # Each buffer location arrives one at a time.
+  # ═══════════════════════════════════════════════
+
+  - id: stockpile-samsung
+    text: "Samsung's buffer: six months"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [127.082, 37.079]
+      zoom: 9.5
+      pitch: 35
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "Samsung Pyeongtaek — 6-month stockpile"
+          color: "#155dfc"
+
+  - id: stockpile-tsmc
+    text: "TSMC's recycling edge"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [122.800, 36.400]
+      zoom: 6.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — 6-month stockpile"
+          color: "#155dfc"
+        - coordinates: [120.968, 24.793]
+          label: "TSMC Hsinchu — 60-75% recycling"
+          color: "#f54900"
+
+  - id: stockpile-amarillo
+    text: "The Amarillo mistake"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [-101.831, 35.222]
+      zoom: 7.5
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — stockpile"
+          color: "#D85A30"
+        - coordinates: [120.968, 24.793]
+          label: "TSMC — recycling"
+          color: "#00d5be"
+        - coordinates: [-101.831, 35.222]
+          label: "Amarillo TX — former Federal Reserve, privatised June 2024"
+          color: "#EF9F27"
+
+  - id: stockpile-russia
+    text: "Month 7: no easy solution"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [141.049, 53.320]
+      zoom: 5.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — countdown running"
+          color: "#D85A30"
+        - coordinates: [120.968, 24.793]
+          label: "TSMC — recycling buffer"
+          color: "#00d5be"
+        - coordinates: [-101.831, 35.222]
+          label: "Amarillo — privatised, unavailable"
+          color: "#EF9F27"
+        - coordinates: [141.049, 53.320]
+          label: "Amur GPP Russia — sanctioned"
+          color: "#E24B4A"
+
+  # ═══════════════════════════════════════════════
+  # TRANSMISSION CHAIN — geographic pull-back shows
+  # the full Qatar → Korea → Santa Clara chain.
+  # ═══════════════════════════════════════════════
+
+  - id: transmission-chain
+    text: "The transmission chain"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [60.000, 30.000]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [51.548, 25.897]
+          label: "① Helium stops → etch degrades"
+          color: "#E24B4A"
+        - coordinates: [127.082, 37.079]
+          label: "② Yield loss → cost-per-die rises"
+          color: "#155dfc"
+          labelAnchor: bottom
+        - coordinates: [127.435, 37.272]
+          label: "③ DRAM spot price moves"
+          color: "#00d5be"
+          labelAnchor: top
+        - coordinates: [-121.963, 37.370]
+          label: "④ GPU hour reprices"
+          color: "#155dfc"
+
+  # ═══════════════════════════════════════════════
+  # ACT III — DRAM TRENDLINE + SCENARIOS
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii-intro
+    text: "Act III: One chip price tells the whole story"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [127.082, 37.079]
+      zoom: 7.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "Samsung Pyeongtaek — the price origin"
+          color: "#D85A30"
+
+  # DRAM price line chart — 2 chart steps, map on fab cluster
+  - id: dram-arc
+    chart: dram-price
+    map:
+      center: [127.082, 37.079]
+      zoom: 8.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "Samsung — Pyeongtaek"
+          color: "#D85A30"
+          labelAnchor: left
+        - coordinates: [127.435, 37.272]
+          label: "SK Hynix — Icheon"
+          color: "#D85A30"
+          labelAnchor: right
+    subsections:
+      - text: "From $6.84 to $27.20"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "The pre-existing fire"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+  # DDR5 area chart — 3 scenario bands, map pulls back to global
+  - id: ddr5-arc
+    chart: ddr5-area
+    map:
+      center: [30.000, 25.000]
+      zoom: 2.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      pins:
+        - coordinates: [127.082, 37.079]
+          label: "DDR5 origin — Samsung Pyeongtaek"
+          color: "#D85A30"
+        - coordinates: [-121.963, 37.370]
+          label: "GPU hour destination — Santa Clara"
+          color: "#155dfc"
+    subsections:
+      - text: "60-day resolution: +2-4% GPU cost"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "6-month scenario: +12-20% GPU cost"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+      - text: "3-5 year force majeure: +30-50% GPU cost"
+        mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+
+  # GPU hour cost in real dollars — map flies to AWS data centre
+  - id: gpu-hour-cost
+    text: "What +30% means in dollars"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [-77.477, 39.044]
+      zoom: 8.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-77.477, 39.044]
+          label: "AWS us-east-1 — Northern Virginia"
+          color: "#155dfc"
+        - coordinates: [-121.963, 37.370]
+          label: "NVIDIA HQ — Santa Clara"
+          color: "#155dfc"
+
+  - id: assumption
+    text: "The assumption nobody is stress-testing"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [0.000, 20.000]
+      zoom: 2.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.30
+
+  # ═══════════════════════════════════════════════
+  # BRIDGE — ACT III → ACT IV
+  # Map returns to Korean shipyards to set up the second story.
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii-iv-bridge
+    text: "Here is the story nobody has told"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [128.950, 35.200]
+      zoom: 7.0
+      pitch: 30
+      bearing: 10
+      opacity: 0.55
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Ulsan"
+          color: "#1D9E75"
+        - coordinates: [128.621, 34.882]
+          label: "Geoje"
+          color: "#1D9E75"
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — THE SLOW BLEED
+  # ═══════════════════════════════════════════════
+
+  - id: act-iv-intro
+    text: "Act IV: Decisions made now, deliveries missed in 2028"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [129.311, 35.540]
+      zoom: 10.0
+      pitch: 50
+      bearing: 20
+      opacity: 0.65
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "HD Hyundai Ulsan — $71.3B backlog"
+          color: "#1D9E75"
+
+  - id: causal-step
+    text: "One causal step, thirty-six months of consequence"
+    map:
+      center: [128.538, 34.760]
+      zoom: 8.0
+      pitch: 49
+      bearing: 10
+      opacity: 0.65
+      pins:
+        - coordinates: [129.3110, 35.5400]
+          label: "HD Hyundai — Ulsan"
+          color: "#1D9E75"
+          radius: 12
+        - coordinates: [128.6210, 34.8820]
+          label: "Samsung Heavy Industries — Geoje"
+          color: "#1D9E75"
+          radius: 12
+          labelAnchor: left
+        - coordinates: [128.6800, 34.8600]
+          label: "Hanwha Ocean — Geoje"
+          color: "#1D9E75"
+          radius: 12
+          labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # WHERE KOREAN SHIPS GO — one destination per beat.
+  # The Ulsan yard pin persists throughout. The map
+  # flies to each customer country, adding one new pin.
+  # ═══════════════════════════════════════════════
+
+  - id: ships-japan
+    text: "Japan: the largest buyer"
+    map:
+      center: [139.865, 35.314]
+      zoom: 8.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Origin: Ulsan yards"
+          color: "#1D9E75"
+        - coordinates: [139.865, 35.314]
+          label: "Futtsu LNG Terminal — world's largest LNG importer"
+          color: "#155dfc"
+
+  - id: ships-china
+    text: "China: fastest-growing buyer"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [117.787, 38.982]
+      zoom: 7.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Origin: Ulsan yards"
+          color: "#1D9E75"
+        - coordinates: [139.865, 35.314]
+          label: "Japan — Futtsu"
+          color: "#155dfc"
+        - coordinates: [117.787, 38.982]
+          label: "CNOOC Tianjin LNG — China"
+          color: "#155dfc"
+
+  - id: ships-europe
+    text: "Europe: rerouting from Russian gas"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [4.018, 51.958]
+      zoom: 8.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Origin: Ulsan yards"
+          color: "#1D9E75"
+        - coordinates: [139.865, 35.314]
+          label: "Japan"
+          color: "#155dfc"
+        - coordinates: [117.787, 38.982]
+          label: "China"
+          color: "#155dfc"
+        - coordinates: [4.018, 51.958]
+          label: "Gate Terminal Rotterdam — Europe"
+          color: "#155dfc"
+
+  - id: ships-usa
+    text: "USA: Sabine Pass"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [-93.868, 29.731]
+      zoom: 9.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Origin: Ulsan yards"
+          color: "#1D9E75"
+        - coordinates: [139.865, 35.314]
+          label: "Japan"
+          color: "#155dfc"
+        - coordinates: [117.787, 38.982]
+          label: "China"
+          color: "#155dfc"
+        - coordinates: [4.018, 51.958]
+          label: "Rotterdam"
+          color: "#155dfc"
+        - coordinates: [-93.868, 29.731]
+          label: "Sabine Pass LNG — Cheniere Energy"
+          color: "#155dfc"
+
+  - id: ships-india
+    text: "India: the last buyer"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [69.706, 22.838]
+      zoom: 8.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Origin: Ulsan yards"
+          color: "#1D9E75"
+        - coordinates: [139.865, 35.314]
+          label: "Japan"
+          color: "#155dfc"
+        - coordinates: [117.787, 38.982]
+          label: "China"
+          color: "#155dfc"
+        - coordinates: [4.018, 51.958]
+          label: "Rotterdam"
+          color: "#155dfc"
+        - coordinates: [-93.868, 29.731]
+          label: "Sabine Pass"
+          color: "#155dfc"
+        - coordinates: [69.706, 22.838]
+          label: "Mundra LNG Terminal — India"
+          color: "#155dfc"
+
+  # ═══════════════════════════════════════════════
+  # SIGNAL TO WATCH — Korean vs Chinese yard order flow
+  # ═══════════════════════════════════════════════
+
+  - id: signal-watch
+    text: "The signal to watch now"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+    map:
+      center: [124.500, 33.500]
+      zoom: 5
+      pitch: 20
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [129.311, 35.540]
+          label: "Korean yards — watch Q2-Q3 order flow"
+          color: "#EF9F27"
+          labelAnchor: right
+        - coordinates: [128.621, 34.882]
+          label: "Geoje — Samsung Heavy + Hanwha"
+          color: "#EF9F27"
+          labelAnchor: left
+        - coordinates: [121.499, 31.305]
+          label: "Hudong-Zhonghua Shanghai — gaining share"
+          color: "#E24B4A"
+
+  # ═══════════════════════════════════════════════
+  # CLOSING IMAGE — three signal pins, global view
+  # ═══════════════════════════════════════════════
+
+  - id: closing
+    text: "The slow bleed"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+        - [2, 3]
+    map:
+      center: [55.000, 25.000]
+      zoom: 2.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+      pins:
+        - coordinates: [51.548, 25.897]
+          label: "Watch: helium contract renewals"
+          color: "#1D9E75"
+        - coordinates: [127.082, 37.079]
+          label: "Watch: DRAM utilisation rates"
+          color: "#D85A30"
+        - coordinates: [-77.477, 39.044]
+          label: "Watch: GPU hour unit economics"
+          color: "#155dfc"
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY — minimal, near-invisible map
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:           # mobile: 2 snaps
+        - [0, 1]
+        - [1, 2]
+        - [2, 3]
+        - [3, 4]
+        - [4, 5]
+    map:
+      center: [55.000, 20.000]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

@@ -1,0 +1,85 @@
+{
+  "steps": [
+    {
+      "title": "Net interstate income flow, 2023 — top 10 most livable states (excluding New Hampshire, no flow data)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}B"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": -13,
+          "max": 22,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}B",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "inverse": true,
+          "data": [
+            "Massachusetts (#1)",
+            "Idaho (#2)",
+            "New Jersey (#3)",
+            "Wisconsin (#4)",
+            "Minnesota (#5)",
+            "Florida (#6)",
+            "Utah (#8)",
+            "New York (#9)",
+            "Pennsylvania (#10)",
+            "Wyoming (#11)"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Net flow",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "color": "$text",
+              "formatter": "{c}B",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": -4.0, "label": { "position": "left" }, "itemStyle": { "color": "$accent" } },
+              { "value": 1.0, "label": { "position": "right" }, "itemStyle": { "color": "$teal" } },
+              { "value": -3.0, "label": { "position": "left" }, "itemStyle": { "color": "$accent" } },
+              { "value": -0.1, "label": { "position": "left" }, "itemStyle": { "color": "$muted" } },
+              { "value": -1.0, "label": { "position": "left" }, "itemStyle": { "color": "$accent" } },
+              { "value": 21.0, "label": { "position": "right" }, "itemStyle": { "color": "$positive", "borderColor": "$text", "borderWidth": 1 } },
+              { "value": 0.5, "label": { "position": "right" }, "itemStyle": { "color": "$teal" } },
+              { "value": -10.0, "label": { "position": "left" }, "itemStyle": { "color": "$red" } },
+              { "value": -2.0, "label": { "position": "left" }, "itemStyle": { "color": "$accent" } },
+              { "value": 0.15, "label": { "position": "right" }, "itemStyle": { "color": "$teal" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

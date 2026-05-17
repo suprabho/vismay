@@ -1,0 +1,111 @@
+{
+  "steps": [
+    {
+      "title": "Change in Lok Sabha Seats vs. Proportional Increase",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "4%",
+          "bottom": "3%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "boundaryGap": [
+            0,
+            0.01
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Tamil Nadu",
+            "Kerala",
+            "Andhra Pradesh",
+            "Madhya Pradesh",
+            "Delhi",
+            "Rajasthan",
+            "Bihar",
+            "Uttar Pradesh"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text"
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Seat Change",
+            "type": "bar",
+            "data": [
+              {
+                "value": -11,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -8,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -5,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": 5,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "value": 5,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "value": 8,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "value": 10,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "value": 13,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

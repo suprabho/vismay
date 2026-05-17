@@ -1,0 +1,85 @@
+{
+  "steps": [
+    {
+      "title": "AI use, last three months (cyan) · youth social-media use, 16-29 (purple) · Europe's largest economies · early 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}<br/>{a0}: {c0}%<br/>{a1}: {c1}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Italy",
+            "Poland",
+            "Germany",
+            "UK",
+            "France",
+            "Spain"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "AI use",
+            "type": "bar",
+            "barWidth": 9,
+            "barGap": "20%",
+            "itemStyle": { "color": "$accent" },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [19.9, 22.7, 32.3, 34.3, 37.5, 37.9]
+          },
+          {
+            "name": "Social media (16-29)",
+            "type": "bar",
+            "barWidth": 9,
+            "itemStyle": { "color": "$accent2" },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [80.3, 90.5, 84.2, 97.0, 93.9, 91.6]
+          }
+        ]
+      }
+    }
+  ]
+}

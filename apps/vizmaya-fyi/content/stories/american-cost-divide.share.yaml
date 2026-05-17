@@ -1,0 +1,34 @@
+sections:
+  hero:
+    mapTitle:
+      heading: ""
+  gap-stat:
+    map:
+      center:
+        - -98.5
+        - 57
+      pitch: 28
+      zoom: 1.8
+      ratios:
+        4:3:
+          center:
+            - -111.1
+            - 57
+          zoom: 2.02
+    regionLabelCodes:
+      - Oklahoma
+  where-money-going:
+    pinOverrides:
+      Florida · +$21B:
+        labelAnchor: bottom
+      Arizona · +$3B:
+        labelAnchor: top
+      Tennessee · +$3B:
+        labelAnchor: bottom
+    map:
+      center:
+        - -92.8
+        - 49.8
+      zoom: 2.16
+      pitch: 24
+      bearing: 17

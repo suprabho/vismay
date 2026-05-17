@@ -1,0 +1,625 @@
+# Story config — europe-ai-adoption-2026
+#
+# Two indicators, one map. Map beats trace Eurostat's early-2026 release on
+# individuals' use of AI tools in the preceding three months. The story now
+# pairs that with Eurostat's youth (16-29) social-network use figures plus an
+# Ofcom UK supplement, so each act compares both waves on the same continent.
+# The opening choropleth keeps the AI ramp; later beats zoom into the Nordic
+# and Baltic lead, the Mediterranean split (Malta / Cyprus / Greece vs Italy
+# / Turkey), the lagging large economies (Germany, UK, France), the youth
+# social-media floor (Cyprus 98.3 ceiling, Italy 80.3 floor), and the eastern
+# edge — where the two waves come apart most sharply (Balkans top on social,
+# bottom on AI).
+#
+# COORDINATES (capitals):
+#   Oslo, Norway             10.7522, 59.9139
+#   Copenhagen, Denmark      12.5683, 55.6761
+#   Bern, Switzerland         7.4474, 46.9480
+#   Tallinn, Estonia         24.7536, 59.4370
+#   Helsinki, Finland        24.9384, 60.1699
+#   Valletta, Malta          14.5146, 35.8997
+#   Nicosia, Cyprus          33.3823, 35.1856
+#   Athens, Greece           23.7275, 37.9838
+#   Rome, Italy              12.4964, 41.9028
+#   Ankara, Turkey           32.8541, 39.9334
+#   Berlin, Germany          13.4050, 52.5200
+#   Paris, France             2.3522, 48.8566
+#   London, UK               -0.1278, 51.5074
+#   Madrid, Spain            -3.7038, 40.4168
+#   Lisbon, Portugal         -9.1393, 38.7223
+#   Warsaw, Poland           21.0122, 52.2297
+#   Bucharest, Romania       26.1025, 44.4268
+#   Sofia, Bulgaria          23.3219, 42.6977
+#   Skopje, North Macedonia  21.4254, 41.9981
+#   Belgrade, Serbia         20.4489, 44.7872
+#
+# AI choropleth ramp (share of residents using AI in last three months, %):
+#   [18, 30, 42, 56]  →  [$red, $surface, $accent2, $accent]
+#   Red = bottom tier, surface = mid-band, purple → cyan = top tier.
+#
+# Social-media ramp (share of 16-29-year-olds using social networks, %):
+#   [80, 88, 92, 97]  →  [$red, $surface, $accent2, $accent]
+#   Same color tokens, narrower band — only used where the section spotlights
+#   the social-media indicator (cyprus-stat, italy-stat).
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#5ac8d4"
+  pinRadius: 12
+  flySpeed: 1.2
+  mapPalette:
+    land: "#0f1419"
+    water: "#0a1018"
+    border: "#2a3545"
+    labelText: "#c8d1dc"
+    labelHalo: "#0a1018"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "Mapped: Europe's Two Digital Waves"
+    eyebrow: "Technology · April 2026"
+    map:
+      center: [15.0, 54.0]
+      zoom: 3.1
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 56.3% (Norway)
+  # ═══════════════════════════════════════════════
+
+  - id: norway-stat
+    kind: stat
+    text: "56.3%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.7522, 60.5]
+      zoom: 4.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [10.7522, 59.9139]
+          label: "Oslo — 56.3% AI · 95.7% social"
+          color: "#5ac8d4"
+      regions:
+        level: country
+        ramp: [40, 58]
+        colors: ["$accent2", "$accent"]
+        items:
+          - code: "NO"
+            value: 56.3
+
+  - id: continent-tiers
+    text: "A continent splitting in tiers"
+    chart: data:digital-geography
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.0, 52.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.60
+      regions:
+        level: country
+        ramp: [18, 30, 42, 56]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "NO"
+            value: 56.3
+          - code: "DK"
+            value: 48.4
+          - code: "CH"
+            value: 47.0
+          - code: "EE"
+            value: 46.6
+          - code: "MT"
+            value: 46.5
+          - code: "FI"
+            value: 46.3
+          - code: "IE"
+            value: 44.9
+          - code: "NL"
+            value: 44.7
+          - code: "CY"
+            value: 44.2
+          - code: "GR"
+            value: 44.1
+          - code: "LU"
+            value: 42.5
+          - code: "BE"
+            value: 42.0
+          - code: "SE"
+            value: 42.0
+          - code: "AT"
+            value: 39.4
+          - code: "PT"
+            value: 38.7
+          - code: "ES"
+            value: 37.9
+          - code: "SI"
+            value: 37.6
+          - code: "FR"
+            value: 37.5
+          - code: "LT"
+            value: 36.9
+          - code: "CZ"
+            value: 35.4
+          - code: "GB"
+            value: 34.3
+          - code: "LV"
+            value: 33.4
+          - code: "DE"
+            value: 32.3
+          - code: "SK"
+            value: 30.8
+          - code: "HU"
+            value: 29.6
+          - code: "HR"
+            value: 27.5
+          - code: "PL"
+            value: 22.7
+          - code: "BG"
+            value: 22.5
+          - code: "MK"
+            value: 22.0
+          - code: "BA"
+            value: 20.3
+          - code: "IT"
+            value: 19.9
+          - code: "TR"
+            value: 18.6
+          - code: "RO"
+            value: 17.8
+
+  # ═══════════════════════════════════════════════
+  # ACT I — NORDIC & BALTIC LEAD
+  # ═══════════════════════════════════════════════
+
+  - id: act-i
+    text: "Act I: The Nordic and Baltic lead"
+    chart: data:top-adopters
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [18.0, 60.0]
+      zoom: 3.8
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [10.7522, 59.9139]
+          label: "Oslo — 56.3% AI · 95.7% social"
+          color: "#5ac8d4"
+        - coordinates: [12.5683, 55.6761]
+          label: "Copenhagen — 48.4% AI · 96.9% social"
+          color: "#5ac8d4"
+          labelAnchor: bottom
+        - coordinates: [24.7536, 59.4370]
+          label: "Tallinn — 46.6% AI · 91.4% social"
+          color: "#5ac8d4"
+      regions:
+        level: country
+        ramp: [40, 58]
+        colors: ["$accent2", "$accent"]
+        items:
+          - code: "NO"
+            value: 56.3
+          - code: "DK"
+            value: 48.4
+          - code: "EE"
+            value: 46.6
+          - code: "FI"
+            value: 46.3
+          - code: "IE"
+            value: 44.9
+          - code: "SE"
+            value: 42.0
+
+  - id: swiss-stat
+    kind: stat
+    text: "47.0%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [8.2, 46.9]
+      zoom: 6.2
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [7.4474, 46.9480]
+          label: "Bern — 47.0% AI · 95.8% social"
+          color: "#5ac8d4"
+      regions:
+        level: country
+        ramp: [40, 58]
+        colors: ["$accent2", "$accent"]
+        items:
+          - code: "CH"
+            value: 47.0
+
+  # ═══════════════════════════════════════════════
+  # ACT II — MEDITERRANEAN SPLIT
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii
+    text: "Act II: The Mediterranean split"
+    chart: data:mediterranean-split
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [20.0, 38.0]
+      zoom: 4.2
+      pitch: 10
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [14.5146, 35.8997]
+          label: "Malta — 46.5% AI · 91.9% social"
+          color: "#5ac8d4"
+        - coordinates: [33.3823, 35.1856]
+          label: "Nicosia — 44.2% AI · 98.3% social"
+          color: "#5ac8d4"
+          labelAnchor: bottom
+        - coordinates: [23.7275, 37.9838]
+          label: "Athens — 44.1% AI · 90.6% social"
+          color: "#5ac8d4"
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome — 19.9% AI · 80.3% social"
+          color: "#d96548"
+          labelAnchor: top
+        - coordinates: [32.8541, 39.9334]
+          label: "Ankara — 18.6% AI · 93.4% social"
+          color: "#d96548"
+      regions:
+        level: country
+        ramp: [18, 30, 42, 56]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "MT"
+            value: 46.5
+          - code: "CY"
+            value: 44.2
+          - code: "GR"
+            value: 44.1
+          - code: "IT"
+            value: 19.9
+          - code: "TR"
+            value: 18.6
+          - code: "ES"
+            value: 37.9
+          - code: "PT"
+            value: 38.7
+
+  - id: malta-stat
+    kind: stat
+    text: "46.5%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.5, 35.9]
+      zoom: 8.2
+      pitch: 35
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [14.5146, 35.8997]
+          label: "Valletta — 46.5% AI · 91.9% social"
+          color: "#5ac8d4"
+      regions:
+        level: country
+        ramp: [40, 58]
+        colors: ["$accent2", "$accent"]
+        items:
+          - code: "MT"
+            value: 46.5
+
+  # ═══════════════════════════════════════════════
+  # ACT III — LARGEST ECONOMIES LAG
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii
+    text: "Act III: The largest economies lag"
+    chart: data:major-economies
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [8.0, 50.0]
+      zoom: 3.8
+      pitch: 10
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [13.4050, 52.5200]
+          label: "Berlin — 32.3% AI · 84.2% social"
+          color: "#d96548"
+        - coordinates: [-0.1278, 51.5074]
+          label: "London — 34.3% AI · 97.0% social"
+          color: "#d96548"
+          labelAnchor: top
+        - coordinates: [2.3522, 48.8566]
+          label: "Paris — 37.5% AI · 93.9% social"
+          color: "#d9a84a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [18, 30, 42, 56]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "DE"
+            value: 32.3
+          - code: "FR"
+            value: 37.5
+          - code: "GB"
+            value: 34.3
+          - code: "ES"
+            value: 37.9
+          - code: "IT"
+            value: 19.9
+          - code: "PL"
+            value: 22.7
+
+  - id: germany-stat
+    kind: stat
+    text: "32.3%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.5, 51.5]
+      zoom: 5.4
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [13.4050, 52.5200]
+          label: "Berlin — 32.3% AI · 84.2% social"
+          color: "#d96548"
+      regions:
+        level: country
+        ramp: [18, 42]
+        colors: ["$red", "$accent2"]
+        items:
+          - code: "DE"
+            value: 32.3
+
+  # ═══════════════════════════════════════════════
+  # YOUTH SOCIAL-MEDIA BEAT
+  # ═══════════════════════════════════════════════
+
+  - id: social-media-youth
+    text: "The youth on every platform"
+    chart: data:social-media-ranking
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [14.0, 51.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [80, 88, 92, 97]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "CY"
+            value: 98.3
+          - code: "MK"
+            value: 97.7
+          - code: "CZ"
+            value: 97.2
+          - code: "RS"
+            value: 97.2
+          - code: "GB"
+            value: 97.0
+          - code: "DK"
+            value: 96.9
+          - code: "FI"
+            value: 96.6
+          - code: "AT"
+            value: 96.1
+          - code: "ME"
+            value: 96.1
+          - code: "CH"
+            value: 95.8
+          - code: "NO"
+            value: 95.7
+          - code: "IE"
+            value: 94.4
+          - code: "NL"
+            value: 94.2
+          - code: "FR"
+            value: 93.9
+          - code: "LV"
+            value: 93.8
+          - code: "TR"
+            value: 93.4
+          - code: "RO"
+            value: 92.1
+          - code: "MT"
+            value: 91.9
+          - code: "ES"
+            value: 91.6
+          - code: "PT"
+            value: 91.6
+          - code: "EE"
+            value: 91.4
+          - code: "HU"
+            value: 91.1
+          - code: "SI"
+            value: 91.0
+          - code: "HR"
+            value: 90.7
+          - code: "GR"
+            value: 90.6
+          - code: "PL"
+            value: 90.5
+          - code: "LT"
+            value: 89.8
+          - code: "BG"
+            value: 89.4
+          - code: "SK"
+            value: 88.7
+          - code: "SE"
+            value: 88.4
+          - code: "BE"
+            value: 88.3
+          - code: "LU"
+            value: 84.8
+          - code: "DE"
+            value: 84.2
+          - code: "IT"
+            value: 80.3
+
+  - id: cyprus-stat
+    kind: stat
+    text: "98.3%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [33.3823, 35.1856]
+      zoom: 7.8
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [33.3823, 35.1856]
+          label: "Nicosia — 98.3% youth social"
+          color: "#5ac8d4"
+      regions:
+        level: country
+        ramp: [80, 88, 92, 97]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "CY"
+            value: 98.3
+
+  - id: italy-stat
+    kind: stat
+    text: "80.3%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [12.4964, 42.5]
+      zoom: 5.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome — 80.3% youth social"
+          color: "#d96548"
+      regions:
+        level: country
+        ramp: [80, 88, 92, 97]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "IT"
+            value: 80.3
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — EASTERN EDGE FRAGMENTS
+  # ═══════════════════════════════════════════════
+
+  - id: act-iv
+    text: "Act IV: The eastern edge fragments"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [22.0, 46.0]
+      zoom: 4.1
+      pitch: 10
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [21.0122, 52.2297]
+          label: "Warsaw — 22.7% AI · 90.5% social"
+          color: "#d96548"
+        - coordinates: [23.3219, 42.6977]
+          label: "Sofia — 22.5% AI · 89.4% social"
+          color: "#d96548"
+          labelAnchor: bottom
+        - coordinates: [26.1025, 44.4268]
+          label: "Bucharest — 17.8% AI · 92.1% social"
+          color: "#d96548"
+        - coordinates: [21.4254, 41.9981]
+          label: "Skopje — 22.0% AI · 97.7% social"
+          color: "#5ac8d4"
+          labelAnchor: bottom
+        - coordinates: [20.4489, 44.7872]
+          label: "Belgrade — 97.2% social"
+          color: "#5ac8d4"
+      regions:
+        level: country
+        ramp: [18, 30, 42, 56]
+        colors: ["$red", "$surface", "$accent2", "$accent"]
+        items:
+          - code: "PL"
+            value: 22.7
+          - code: "BG"
+            value: 22.5
+          - code: "MK"
+            value: 22.0
+          - code: "BA"
+            value: 20.3
+          - code: "RO"
+            value: 17.8
+          - code: "HU"
+            value: 29.6
+          - code: "HR"
+            value: 27.5
+          - code: "SK"
+            value: 30.8
+
+  - id: map-misses
+    text: "What the map misses"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [14.0, 51.0]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [14.0, 51.0]
+      zoom: 2.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

@@ -1,0 +1,676 @@
+# Story config — projected-population-2050
+#
+# Map beats trace the UN medium-fertility projection 2025–2050: a global
+# choropleth reveals sub-Saharan Africa as the only region doing the work,
+# then the camera descends to Kinshasa (the single biggest grower), the
+# Sahel (Niger/Chad/Mali), and rebounds across Beijing → Delhi, Rome →
+# Athens, Kyiv → Chisinau, and Tokyo to show the contracting world.
+#
+# COORDINATES (capitals / focal cities):
+#   Kinshasa, DRC            15.2663,  -4.4419
+#   Bangui, CAR              18.5582,   4.3947
+#   Niamey, Niger             2.1098,  13.5116
+#   N'Djamena, Chad          15.0557,  12.1348
+#   Bamako, Mali             -8.0029,  12.6392
+#   Khartoum, Sudan          32.5599,  15.5007
+#   Luanda, Angola           13.2343,  -8.8383
+#   Mogadishu, Somalia       45.3182,   2.0469
+#   Lagos, Nigeria            3.3792,   6.5244
+#   New Delhi, India         77.2090,  28.6139
+#   Beijing, China          116.4074,  39.9042
+#   Tokyo, Japan            139.6917,  35.6895
+#   Seoul, South Korea      126.9780,  37.5665
+#   Rome, Italy              12.4964,  41.9028
+#   Athens, Greece           23.7275,  37.9838
+#   Kyiv, Ukraine            30.5234,  50.4501
+#   Chisinau, Moldova        28.8638,  47.0105
+#   Sofia, Bulgaria          23.3219,  42.6977
+#   Vilnius, Lithuania       25.2797,  54.6872
+#   Sarajevo, BiH            18.4131,  43.8563
+#
+# Choropleth ramp is shared across the world-view beats:
+#   [-22, -5, 0, 30, 95]  →  [$accent2 (teal), $surface, $surface, $amber, $accent]
+# Teal = shrinking, warm ramber → accent = growing.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#e07b39"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "Where the Next Billion Are Born"
+    eyebrow: "Demography · April 2026"
+    map:
+      center: [20.0, 15.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 1.4B
+  # ═══════════════════════════════════════════════
+
+  - id: global-total
+    kind: stat
+    text: "1.4B"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [20.0, 5.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [-22, -5, 0, 30, 95]
+        colors: ["$accent2", "$surface", "$surface", "$amber", "$accent"]
+        items:
+          # Fastest growers
+          - code: "CD"
+            value: 93.4
+          - code: "CF"
+            value: 92.6
+          - code: "AO"
+            value: 90.3
+          - code: "SO"
+            value: 89.3
+          - code: "NE"
+            value: 88.1
+          - code: "TD"
+            value: 85.0
+          - code: "TZ"
+            value: 83.7
+          - code: "ML"
+            value: 83.2
+          - code: "MZ"
+            value: 78.3
+          - code: "MR"
+            value: 77.1
+          - code: "AF"
+            value: 75.4
+          - code: "ZM"
+            value: 73.8
+          - code: "CM"
+            value: 71.0
+          - code: "CI"
+            value: 70.4
+          - code: "YE"
+            value: 69.9
+          - code: "CG"
+            value: 69.7
+          - code: "MW"
+            value: 68.2
+          - code: "BI"
+            value: 67.7
+          - code: "UG"
+            value: 66.3
+          - code: "ET"
+            value: 66.1
+          - code: "SD"
+            value: 64.9
+          - code: "BJ"
+            value: 64.9
+          - code: "MG"
+            value: 62.4
+          - code: "SN"
+            value: 60.4
+          - code: "TG"
+            value: 60.3
+          - code: "ER"
+            value: 57.9
+          - code: "GA"
+            value: 57.5
+          - code: "RW"
+            value: 55.9
+          - code: "LR"
+            value: 55.5
+          - code: "BF"
+            value: 55.0
+          - code: "GN"
+            value: 55.0
+          - code: "IQ"
+            value: 53.0
+          - code: "ZW"
+            value: 52.6
+          - code: "NG"
+            value: 51.2
+          - code: "SS"
+            value: 50.5
+          - code: "SY"
+            value: 47.5
+          - code: "SL"
+            value: 46.8
+          - code: "NA"
+            value: 45.9
+          - code: "PK"
+            value: 45.7
+          - code: "KE"
+            value: 45.3
+          - code: "GH"
+            value: 44.2
+          - code: "JO"
+            value: 42.1
+          - code: "UZ"
+            value: 40.9
+          - code: "SA"
+            value: 38.0
+          - code: "EG"
+            value: 36.6
+          - code: "GT"
+            value: 32.0
+          - code: "KZ"
+            value: 27.3
+          - code: "DZ"
+            value: 25.6
+          - code: "MY"
+            value: 23.1
+          - code: "BD"
+            value: 22.2
+          - code: "AU"
+            value: 20.5
+          - code: "PH"
+            value: 15.1
+          - code: "IN"
+            value: 14.7
+          - code: "MX"
+            value: 12.9
+          - code: "ID"
+            value: 12.2
+          - code: "US"
+            value: 9.7
+          - code: "GB"
+            value: 8.6
+          - code: "VN"
+            value: 8.3
+          - code: "FR"
+            value: 2.4
+          - code: "BR"
+            value: 2.2
+          - code: "CA"
+            value: 13.7
+          # Shrinkers (negative values)
+          - code: "RU"
+            value: -5.5
+          - code: "DE"
+            value: -6.9
+          - code: "TH"
+            value: -7.3
+          - code: "HU"
+            value: -9.4
+          - code: "CN"
+            value: -11.0
+          - code: "GR"
+            value: -11.3
+          - code: "IT"
+            value: -12.3
+          - code: "KR"
+            value: -12.6
+          - code: "EE"
+            value: -12.6
+          - code: "PL"
+            value: -14.0
+          - code: "CU"
+            value: -14.2
+          - code: "JP"
+            value: -14.6
+          - code: "RO"
+            value: -15.2
+          - code: "HR"
+            value: -16.0
+          - code: "MK"
+            value: -16.6
+          - code: "BY"
+            value: -17.2
+          - code: "RS"
+            value: -17.3
+          - code: "UA"
+            value: -17.9
+          - code: "LV"
+            value: -18.3
+          - code: "AL"
+            value: -19.2
+          - code: "BG"
+            value: -19.5
+          - code: "LT"
+            value: -20.2
+          - code: "MD"
+            value: -21.5
+          - code: "BA"
+            value: -21.8
+          - code: "ES"
+            value: -6.2
+          - code: "PT"
+            value: -6.2
+
+  - id: one-story
+    text: "The map has one story"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [15.0, 5.0]
+      zoom: 2.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [0, 30, 95]
+        colors: ["$surface", "$amber", "$accent"]
+        items:
+          - code: "CD"
+            value: 93.4
+          - code: "CF"
+            value: 92.6
+          - code: "AO"
+            value: 90.3
+          - code: "SO"
+            value: 89.3
+          - code: "NE"
+            value: 88.1
+          - code: "TD"
+            value: 85.0
+          - code: "TZ"
+            value: 83.7
+          - code: "ML"
+            value: 83.2
+          - code: "MZ"
+            value: 78.3
+          - code: "MR"
+            value: 77.1
+          - code: "ZM"
+            value: 73.8
+          - code: "CM"
+            value: 71.0
+          - code: "CI"
+            value: 70.4
+          - code: "CG"
+            value: 69.7
+          - code: "MW"
+            value: 68.2
+          - code: "BI"
+            value: 67.7
+          - code: "UG"
+            value: 66.3
+          - code: "ET"
+            value: 66.1
+          - code: "SD"
+            value: 64.9
+          - code: "BJ"
+            value: 64.9
+          - code: "MG"
+            value: 62.4
+          - code: "SN"
+            value: 60.4
+          - code: "TG"
+            value: 60.3
+          - code: "ER"
+            value: 57.9
+          - code: "GA"
+            value: 57.5
+          - code: "RW"
+            value: 55.9
+          - code: "LR"
+            value: 55.5
+          - code: "BF"
+            value: 55.0
+          - code: "GN"
+            value: 55.0
+          - code: "ZW"
+            value: 52.6
+          - code: "NG"
+            value: 51.2
+          - code: "SS"
+            value: 50.5
+          - code: "SL"
+            value: 46.8
+          - code: "NA"
+            value: 45.9
+          - code: "KE"
+            value: 45.3
+          - code: "GH"
+            value: 44.2
+          - code: "YE"
+            value: 69.9
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THE AFRICAN CENTURY
+  # ═══════════════════════════════════════════════
+
+  - id: act-i
+    text: "Act I: The African century"
+    chart: data:top-growers
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [20.0, 5.0]
+      zoom: 2.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+
+  - id: drc-stat
+    kind: stat
+    text: "+93.4%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [23.0, -2.0]
+      zoom: 4.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [15.2663, -4.4419]
+          label: "Kinshasa — 215M by 2050"
+          color: "#e07b39"
+      regions:
+        level: country
+        ramp: [0, 100]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "CD"
+            value: 93.4
+
+  - id: sahel
+    text: "The Sahel belt"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [5.0, 15.0]
+      zoom: 3.4
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [2.1098, 13.5116]
+          label: "Niamey — +88%"
+          color: "#e07b39"
+        - coordinates: [15.0557, 12.1348]
+          label: "N'Djamena — +85%"
+          color: "#e07b39"
+          labelAnchor: bottom
+        - coordinates: [-8.0029, 12.6392]
+          label: "Bamako — +83%"
+          color: "#d9a84a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [50, 90]
+        colors: ["$amber", "$accent"]
+        items:
+          - code: "NE"
+            value: 88.1
+          - code: "TD"
+            value: 85.0
+          - code: "ML"
+            value: 83.2
+          - code: "BF"
+            value: 55.0
+          - code: "MR"
+            value: 77.1
+          - code: "SD"
+            value: 64.9
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE COUNTRIES GETTING SMALLER
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii
+    text: "Act II: The countries getting smaller"
+    chart: data:biggest-declines
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 40.0]
+      zoom: 2.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: china-pivot
+    text: "The China pivot"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [95.0, 30.0]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [116.4074, 39.9042]
+          label: "Beijing — -11%"
+          color: "#4a8a7a"
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi — +14.7%"
+          color: "#e07b39"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [-15, 0, 20]
+        colors: ["$accent2", "$surface", "$accent"]
+        items:
+          - code: "CN"
+            value: -11.0
+          - code: "IN"
+            value: 14.7
+
+  - id: mediterranean
+    text: "The Mediterranean drought"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [12.0, 40.0]
+      zoom: 4.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome — -12.3%"
+          color: "#4a8a7a"
+        - coordinates: [23.7275, 37.9838]
+          label: "Athens — -11.3%"
+          color: "#4a8a7a"
+          labelAnchor: right
+        - coordinates: [-3.7038, 40.4168]
+          label: "Madrid — -6.2%"
+          color: "#4a8a7a"
+          labelAnchor: left
+      regions:
+        level: country
+        ramp: [-15, 0]
+        colors: ["$accent2", "$surface"]
+        items:
+          - code: "IT"
+            value: -12.3
+          - code: "GR"
+            value: -11.3
+          - code: "ES"
+            value: -6.2
+          - code: "PT"
+            value: -6.2
+
+  - id: eastern-europe
+    text: "Eastern Europe"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [27.0, 48.0]
+      zoom: 3.8
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [30.5234, 50.4501]
+          label: "Kyiv — -17.9%"
+          color: "#c4604a"
+        - coordinates: [28.8638, 47.0105]
+          label: "Chisinau — -21.5%"
+          color: "#c4604a"
+          labelAnchor: bottom
+        - coordinates: [23.3219, 42.6977]
+          label: "Sofia — -19.5%"
+          color: "#c4604a"
+          labelAnchor: right
+        - coordinates: [25.2797, 54.6872]
+          label: "Vilnius — -20.2%"
+          color: "#c4604a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [-22, 0]
+        colors: ["$red", "$surface"]
+        items:
+          - code: "UA"
+            value: -17.9
+          - code: "MD"
+            value: -21.5
+          - code: "BG"
+            value: -19.5
+          - code: "LT"
+            value: -20.2
+          - code: "LV"
+            value: -18.3
+          - code: "BA"
+            value: -21.8
+          - code: "RS"
+            value: -17.3
+          - code: "BY"
+            value: -17.2
+          - code: "MK"
+            value: -16.6
+          - code: "HR"
+            value: -16.0
+          - code: "AL"
+            value: -19.2
+          - code: "RO"
+            value: -15.2
+
+  - id: japan
+    text: "Japan, at the edge"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [138.0, 37.0]
+      zoom: 4.2
+      pitch: 20
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [139.6917, 35.6895]
+          label: "Tokyo — 104M by 2050"
+          color: "#4a8a7a"
+        - coordinates: [126.9780, 37.5665]
+          label: "Seoul — -12.6%"
+          color: "#4a8a7a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [-15, 0]
+        colors: ["$accent2", "$surface"]
+        items:
+          - code: "JP"
+            value: -14.6
+          - code: "KR"
+            value: -12.6
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE WORLD WE ARE GIVEN
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii
+    text: "Act III: The world we are given"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [30.0, 15.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [-22, -5, 0, 30, 95]
+        colors: ["$accent2", "$surface", "$surface", "$amber", "$accent"]
+        items:
+          - code: "IN"
+            value: 14.7
+          - code: "CN"
+            value: -11.0
+          - code: "US"
+            value: 9.7
+          - code: "NG"
+            value: 51.2
+          - code: "PK"
+            value: 45.7
+          - code: "ID"
+            value: 12.2
+          - code: "CD"
+            value: 93.4
+          - code: "ET"
+            value: 66.1
+          - code: "BD"
+            value: 22.2
+          - code: "BR"
+            value: 2.2
+
+  - id: medium-projection
+    text: "What the medium projection hides"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [15.0, 5.0]
+      zoom: 2.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: closing
+    text: "The map as a forecast"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [20.0, 15.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.25
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [20.0, 15.0]
+      zoom: 1.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

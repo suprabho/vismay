@@ -1,0 +1,86 @@
+{
+  "steps": [
+    {
+      "title": "Total military personnel — active + reserves/paramilitary, 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}<br/>{a0}: {c0}M<br/>{a1}: {c1}M"
+        },
+        "legend": {
+          "bottom": 0,
+          "textStyle": { "color": "$muted", "fontSize": 11 },
+          "data": ["Active", "Reserves + Paramilitary"]
+        },
+        "grid": {
+          "left": "3%",
+          "right": "6%",
+          "bottom": "12%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}M",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Pakistan",
+            "North Korea",
+            "U.S.",
+            "China",
+            "Russia",
+            "South Korea",
+            "India",
+            "Ukraine",
+            "Vietnam",
+            "Bangladesh"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Active",
+            "type": "bar",
+            "stack": "total",
+            "barWidth": 18,
+            "itemStyle": { "color": "$red" },
+            "data": [0.7, 1.3, 1.3, 2.0, 1.3, 0.5, 1.4, 0.9, 0.5, 0.2]
+          },
+          {
+            "name": "Reserves + Paramilitary",
+            "type": "bar",
+            "stack": "total",
+            "barWidth": 18,
+            "itemStyle": { "color": "$positive" },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{@[0]}M",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [1.1, 0.7, 0.8, 1.1, 2.3, 3.2, 3.5, 4.1, 5.3, 6.8]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,557 @@
+# Story config — american-cost-divide
+#
+# A wealth-vs-quality argument across U.S. states. The map carries the case:
+# cost choropleth, then quality choropleth, then wealth-flow choropleth, then
+# zooms into the two states that break the pattern (Florida and Idaho) and
+# the trap states (Hawaii). Each text card holds ~1 paragraph; clusters of
+# related cards share a map so the camera stays still while text advances.
+#
+# COORDINATES
+#   Continental US center      [-98.5,  39.0]
+#   Florida (Miami)            [-80.193, 25.762]
+#   Florida center              [-83.0,  29.0]
+#   Idaho (Boise)              [-116.200, 43.617]
+#   Idaho center                [-114.7,  44.4]
+#   Hawaii (Honolulu)          [-157.857, 21.307]
+#   Hawaii center               [-157.0,  20.5]
+#   Anchorage, AK              [-149.864, 61.218]
+#   Las Vegas, NV              [-115.139, 36.169]
+#   Seattle, WA                [-122.332, 47.606]
+#
+# CHOROPLETH RAMPS (codeforgermany US states geojson keyed by state name)
+#   total cost ($): [66000, 80000, 100000, 142000]   teal → surface → amber → accent
+#   grocery: [94, 100, 110, 132]   teal → surface → amber → accent
+#   livability score: [40, 50, 56, 61]   red → surface → amber → teal
+#   wealth flow ($B): [-12, 0, 5, 21]   red → surface → teal → positive
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d96548"
+  pinRadius: 10
+  flySpeed: 1.2
+  mapPalette:
+    land: "#0d1521"
+    water: "#06101a"
+    border: "#243349"
+    labelText: "#c8d1dc"
+    labelHalo: "#06101a"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The American Cost Divide"
+    eyebrow: "Economy · April 2026"
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      mobile:
+        center: [-98.5, 39.0]
+        zoom: 2.6
+
+  # ═══════════════════════════════════════════════
+  # ACT I OPENERS — the trade exists (cost stats)
+  # ═══════════════════════════════════════════════
+
+  - id: gap-stat
+    kind: stat
+    text: "$75,000"
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        ramp: [66000, 80000, 100000, 142000]
+        colors: ["$teal", "$surface", "$amber", "$accent"]
+        labels:
+          show: true
+          withValue: true
+          valueOnNewLine: true
+          valuePrefix: "$"
+          valueDecimals: 0
+          size: 13
+          color: "$text"
+          background:
+            color: "$bg"
+            opacity: 0.55
+            padding: [4, 8]
+            cornerRadius: 6
+            borderColor: "$line"
+            borderOpacity: 0.4
+            borderWidth: 0.5
+          # Curated allowlist — 50 names won't fit at 390px share width even
+          # with collision detection. These eight tell the cost-divide story:
+          # extreme highs (HI, MA, CA), Florida + Idaho outliers, the deep
+          # south floor (OK, MS, AL).
+          codes:
+            - "Hawaii"
+            - "Massachusetts"
+            - "California"
+            - "New York"
+            - "Florida"
+            - "Idaho"
+            - "Mississippi"
+            - "Oklahoma"
+        legend:
+          show: true
+          title: "Living-wage threshold"
+          lowLabel: "Lower"
+          highLabel: "Higher"
+          valuePrefix: "$"
+          ticks: 4
+          position: "bottom"
+        items:
+          - { code: "Hawaii", value: 141127 }
+          - { code: "Massachusetts", value: 118431 }
+          - { code: "California", value: 107357 }
+          - { code: "Alaska", value: 100289 }
+          - { code: "New York", value: 99425 }
+          - { code: "Maryland", value: 93378 }
+          - { code: "New Jersey", value: 90001 }
+          - { code: "Maine", value: 89687 }
+          - { code: "Connecticut", value: 89608 }
+          - { code: "Washington", value: 89451 }
+          - { code: "Vermont", value: 89294 }
+          - { code: "Rhode Island", value: 89059 }
+          - { code: "Oregon", value: 87231 }
+          - { code: "Montana", value: 86231 }
+          - { code: "New Hampshire", value: 85760 }
+          - { code: "Arizona", value: 85446 }
+          - { code: "Delaware", value: 80734 }
+          - { code: "Colorado", value: 80655 }
+          - { code: "Virginia", value: 78614 }
+          - { code: "Florida", value: 78142 }
+          - { code: "Utah", value: 77828 }
+          - { code: "Idaho", value: 77750 }
+          - { code: "Nevada", value: 77436 }
+          - { code: "Wisconsin", value: 76729 }
+          - { code: "North Carolina", value: 76493 }
+          - { code: "Pennsylvania", value: 76257 }
+          - { code: "Illinois", value: 75315 }
+          - { code: "Wyoming", value: 74844 }
+          - { code: "Michigan", value: 74373 }
+          - { code: "Minnesota", value: 73980 }
+          - { code: "Ohio", value: 72880 }
+          - { code: "Louisiana", value: 72802 }
+          - { code: "New Mexico", value: 72645 }
+          - { code: "South Carolina", value: 72645 }
+          - { code: "Kentucky", value: 72174 }
+          - { code: "Georgia", value: 72095 }
+          - { code: "South Dakota", value: 72095 }
+          - { code: "Nebraska", value: 71938 }
+          - { code: "North Dakota", value: 71702 }
+          - { code: "Texas", value: 71310 }
+          - { code: "Indiana", value: 71153 }
+          - { code: "Iowa", value: 70917 }
+          - { code: "Tennessee", value: 70917 }
+          - { code: "Arkansas", value: 70132 }
+          - { code: "Missouri", value: 69896 }
+          - { code: "Kansas", value: 69818 }
+          - { code: "West Virginia", value: 69189 }
+          - { code: "Alabama", value: 69032 }
+          - { code: "Mississippi", value: 67147 }
+          - { code: "Oklahoma", value: 66284 }
+
+  - id: grocery-stat
+    kind: stat
+    text: "40%"
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        ramp: [94, 100, 110, 132]
+        colors: ["$teal", "$surface", "$amber", "$accent"]
+        items:
+          - { code: "Hawaii", value: 131.4 }
+          - { code: "Alaska", value: 125.0 }
+          - { code: "California", value: 109.3 }
+          - { code: "Washington", value: 108.0 }
+          - { code: "Oregon", value: 106.8 }
+          - { code: "Vermont", value: 105.5 }
+          - { code: "Maryland", value: 105.4 }
+          - { code: "Florida", value: 104.3 }
+          - { code: "Connecticut", value: 103.6 }
+          - { code: "New Jersey", value: 103.5 }
+          - { code: "New York", value: 103.3 }
+          - { code: "Nevada", value: 102.7 }
+          - { code: "Massachusetts", value: 102.7 }
+          - { code: "Arkansas", value: 94.3 }
+          - { code: "Texas", value: 95.3 }
+          - { code: "Oklahoma", value: 95.4 }
+          - { code: "Mississippi", value: 95.5 }
+          - { code: "Kansas", value: 95.9 }
+          - { code: "Missouri", value: 95.9 }
+          - { code: "West Virginia", value: 96.3 }
+
+  # ═══════════════════════════════════════════════
+  # ACT I CLUSTER — Two Maps (cost / quality / layered)
+  # Each subsection swaps the choropleth so the eye sees both
+  # dimensions and then the disagreement.
+  # ═══════════════════════════════════════════════
+
+  - id: cost-vs-quality-cluster
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+    subsections:
+      - text: "The Map of Cost"
+        map:
+          regions:
+            level: custom
+            geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+            idProperty: "name"
+            ramp: [66000, 80000, 100000, 142000]
+            colors: ["$teal", "$surface", "$amber", "$accent"]
+            items:
+              - { code: "Hawaii", value: 141127 }
+              - { code: "Massachusetts", value: 118431 }
+              - { code: "California", value: 107357 }
+              - { code: "Alaska", value: 100289 }
+              - { code: "New York", value: 99425 }
+              - { code: "Maryland", value: 93378 }
+              - { code: "New Jersey", value: 90001 }
+              - { code: "Connecticut", value: 89608 }
+              - { code: "Washington", value: 89451 }
+              - { code: "Florida", value: 78142 }
+              - { code: "Idaho", value: 77750 }
+              - { code: "Texas", value: 71310 }
+              - { code: "Tennessee", value: 70917 }
+              - { code: "Mississippi", value: 67147 }
+              - { code: "Oklahoma", value: 66284 }
+              - { code: "Arkansas", value: 70132 }
+              - { code: "West Virginia", value: 69189 }
+              - { code: "Alabama", value: 69032 }
+      - text: "The Map of Quality"
+        map:
+          regions:
+            level: custom
+            geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+            idProperty: "name"
+            ramp: [40, 50, 56, 61]
+            colors: ["$red", "$surface", "$amber", "$teal"]
+            items:
+              - { code: "Massachusetts", value: 60.2 }
+              - { code: "Idaho", value: 60.2 }
+              - { code: "New Jersey", value: 59.8 }
+              - { code: "Wisconsin", value: 59.7 }
+              - { code: "Minnesota", value: 58.7 }
+              - { code: "Florida", value: 58.5 }
+              - { code: "New Hampshire", value: 58.2 }
+              - { code: "Utah", value: 57.9 }
+              - { code: "New York", value: 57.9 }
+              - { code: "Pennsylvania", value: 57.9 }
+              - { code: "Wyoming", value: 57.9 }
+              - { code: "Hawaii", value: 49.4 }
+              - { code: "California", value: 50.5 }
+              - { code: "Texas", value: 47.2 }
+              - { code: "Tennessee", value: 47.0 }
+              - { code: "South Carolina", value: 45.7 }
+              - { code: "Nevada", value: 44.6 }
+              - { code: "Alaska", value: 44.2 }
+              - { code: "Mississippi", value: 43.5 }
+              - { code: "Arkansas", value: 42.1 }
+              - { code: "Louisiana", value: 40.6 }
+              - { code: "New Mexico", value: 39.7 }
+      - text: "Two Maps, Layered"
+        map:
+          regions:
+            level: custom
+            geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+            idProperty: "name"
+            # Color by the agreement gap. Green = quality outruns cost (deals).
+            # Red = cost outruns quality (traps). Surface = balanced (you pay, you get).
+            items:
+              # The deals — quality much better than cost would predict
+              - { code: "Idaho", color: "$teal", opacity: 0.75 }
+              - { code: "Florida", color: "$teal", opacity: 0.75 }
+              - { code: "Wisconsin", color: "$teal", opacity: 0.55 }
+              - { code: "Iowa", color: "$teal", opacity: 0.45 }
+              - { code: "Wyoming", color: "$teal", opacity: 0.45 }
+              - { code: "Pennsylvania", color: "$teal", opacity: 0.40 }
+              # Balanced — high cost, high quality (you pay, you get)
+              - { code: "Massachusetts", color: "$surface", opacity: 0.85 }
+              - { code: "New Jersey", color: "$surface", opacity: 0.85 }
+              - { code: "New Hampshire", color: "$surface", opacity: 0.85 }
+              # The traps — cost outruns quality
+              - { code: "Hawaii", color: "$red", opacity: 0.85 }
+              - { code: "Alaska", color: "$red", opacity: 0.75 }
+              - { code: "Nevada", color: "$red", opacity: 0.75 }
+              - { code: "Washington", color: "$red", opacity: 0.55 }
+              - { code: "California", color: "$red", opacity: 0.45 }
+              # The bottom — cheap and underserved
+              - { code: "Mississippi", color: "$amber", opacity: 0.55 }
+              - { code: "Louisiana", color: "$amber", opacity: 0.55 }
+              - { code: "Arkansas", color: "$amber", opacity: 0.55 }
+              - { code: "New Mexico", color: "$amber", opacity: 0.55 }
+
+  # ═══════════════════════════════════════════════
+  # ACT II — the migration data (Florida → outflow)
+  # ═══════════════════════════════════════════════
+
+  - id: florida-stat
+    kind: stat
+    text: "$21 Billion"
+    map:
+      center: [-83.0, 28.5]
+      zoom: 5.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-80.193, 25.762]
+          label: "Florida · +$21B"
+          pulse: true
+
+  - id: where-money-going
+    text: "Where the Money Is Going"
+    chart: data:wealth-gainers
+    map:
+      center: [-92.0, 33.5]
+      zoom: 3.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - { coordinates: [-80.193, 25.762], label: "Florida · +$21B", labelAnchor: "right" }
+        - { coordinates: [-97.743, 30.267], label: "Texas · +$6B" }
+        - { coordinates: [-80.843, 35.227], label: "N. Carolina · +$4B", labelAnchor: "top" }
+        - { coordinates: [-81.166, 33.836], label: "S. Carolina · +$4B", labelAnchor: "right" }
+        - { coordinates: [-112.074, 33.448], label: "Arizona · +$3B", labelAnchor: "top" }
+        - { coordinates: [-86.781, 36.162], label: "Tennessee · +$3B", labelAnchor: "top" }
+
+  - id: where-money-leaving
+    text: "Where the Money Is Leaving"
+    chart: data:wealth-losers
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - { coordinates: [-119.418, 36.778], label: "California · -$12B", labelAnchor: "right" }
+        - { coordinates: [-74.006, 40.713], label: "New York · -$10B", labelAnchor: "right" }
+        - { coordinates: [-89.398, 40.633], label: "Illinois · -$6B", labelAnchor: "top" }
+        - { coordinates: [-71.057, 42.361], label: "Mass. · -$4B", labelAnchor: "right" }
+        - { coordinates: [-74.566, 40.220], label: "New Jersey · -$3B", labelAnchor: "right" }
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE REVELATION (the wealth migration is downhill)
+  # ═══════════════════════════════════════════════
+
+  - id: revelation-stat
+    kind: stat
+    text: "$18 Billion"
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        # Highlight the top-10 livability states; their wealth flow color.
+        items:
+          - { code: "Massachusetts", color: "$accent", opacity: 0.80 }
+          - { code: "Idaho", color: "$teal", opacity: 0.55 }
+          - { code: "New Jersey", color: "$accent", opacity: 0.70 }
+          - { code: "Wisconsin", color: "$muted", opacity: 0.45 }
+          - { code: "Minnesota", color: "$accent", opacity: 0.50 }
+          - { code: "Florida", color: "$positive", opacity: 0.85 }
+          - { code: "Utah", color: "$teal", opacity: 0.45 }
+          - { code: "New York", color: "$red", opacity: 0.85 }
+          - { code: "Pennsylvania", color: "$accent", opacity: 0.55 }
+          - { code: "Wyoming", color: "$teal", opacity: 0.40 }
+
+  - id: wealth-downhill
+    text: "The Wealth Migration Is Downhill"
+    chart: data:livability-vs-flow
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: sunbelt-floor
+    text: "The Sun Belt's Quality Floor"
+    chart: data:top-livable-bleeding
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — TWO EXCEPTIONS (Florida + Idaho)
+  # ═══════════════════════════════════════════════
+
+  - id: florida-cluster
+    map:
+      center: [-83.0, 28.5]
+      zoom: 5.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      pins:
+        - coordinates: [-80.193, 25.762]
+          label: "Florida · #6 livability · +$21B"
+          pulse: true
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        items:
+          - { code: "Florida", color: "$positive", opacity: 0.75 }
+    subsections:
+      - text: "Florida Is Alone"
+      - text: "Why Florida Works"
+
+  - id: idaho-cluster
+    map:
+      center: [-114.7, 44.4]
+      zoom: 5.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      pins:
+        - coordinates: [-116.200, 43.617]
+          label: "Idaho · #2 livability · +$1B"
+          pulse: true
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        items:
+          - { code: "Idaho", color: "$teal", opacity: 0.75 }
+    subsections:
+      - text: "The Idaho Paradox"
+      - text: "The Scale Problem"
+        map:
+          # Pull back to show the population size disparity vs Florida
+          center: [-100.0, 36.0]
+          zoom: 3.6
+
+  # ═══════════════════════════════════════════════
+  # ACT V — THE TRAPS
+  # ═══════════════════════════════════════════════
+
+  - id: hawaii-section
+    text: "The Hawaii Trade"
+    map:
+      center: [-157.0, 20.5]
+      zoom: 6.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.6
+      pins:
+        - coordinates: [-157.857, 21.307]
+          label: "Honolulu · cost #1 · livability #35"
+          pulse: true
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        items:
+          - { code: "Hawaii", color: "$red", opacity: 0.75 }
+
+  - id: trap-states
+    text: "Quality Without Quantity"
+    map:
+      center: [-115.0, 40.0]
+      zoom: 3.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - { coordinates: [-115.139, 36.169], label: "Nevada · cost mid · liv. #45", labelAnchor: "right" }
+        - { coordinates: [-149.864, 61.218], label: "Alaska · cost #4 · liv. #46", labelAnchor: "right" }
+        - { coordinates: [-122.332, 47.606], label: "Washington · cost top-10 · liv. #36", labelAnchor: "right" }
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        items:
+          - { code: "Hawaii", color: "$red", opacity: 0.70 }
+          - { code: "Alaska", color: "$red", opacity: 0.70 }
+          - { code: "Nevada", color: "$red", opacity: 0.70 }
+          - { code: "Washington", color: "$red", opacity: 0.50 }
+
+  # ═══════════════════════════════════════════════
+  # ACT VI — SYNTHESIS
+  # ═══════════════════════════════════════════════
+
+  - id: closing-cluster
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        ramp: [-12, 0, 5, 21]
+        colors: ["$red", "$surface", "$teal", "$positive"]
+        items:
+          - { code: "Florida", value: 21 }
+          - { code: "Texas", value: 6 }
+          - { code: "North Carolina", value: 4 }
+          - { code: "South Carolina", value: 4 }
+          - { code: "Arizona", value: 3 }
+          - { code: "Tennessee", value: 3 }
+          - { code: "Nevada", value: 2 }
+          - { code: "Idaho", value: 1.0 }
+          - { code: "California", value: -12 }
+          - { code: "New York", value: -10 }
+          - { code: "Illinois", value: -6 }
+          - { code: "Massachusetts", value: -4 }
+          - { code: "New Jersey", value: -3 }
+          - { code: "Pennsylvania", value: -2 }
+          - { code: "Ohio", value: -2 }
+    subsections:
+      - text: "What People Are Actually Buying"
+      - text: "The Cascade"
+      - text: "The Question Ahead"
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.40

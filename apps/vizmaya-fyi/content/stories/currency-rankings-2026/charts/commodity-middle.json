@@ -1,0 +1,68 @@
+{
+  "steps": [
+    {
+      "title": "The commodity middle — year-over-year gain vs USD (April 6, 2026)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: +{c}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Nigerian naira",
+            "Brazilian real",
+            "Australian dollar"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "YoY gain vs USD",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 13.5, "itemStyle": { "color": "$amber" } },
+              { "value": 14.5, "itemStyle": { "color": "$amber" } },
+              { "value": 14.8, "itemStyle": { "color": "$amber" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "title": "Trees to be felled — official vs independent estimates (lakh)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} lakh"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "14%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 110,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "formatter": "{value} L" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Ecologist-cited (Scroll.in, 2024)",
+            "Independent — high (op-ed, Sept 2025)",
+            "Independent — low (op-ed, Sept 2025)",
+            "Govt — Aug 2023 (full project)",
+            "Govt — May 2026 revision (Phase I)"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Estimate",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c} L"
+            },
+            "data": [
+              { "value": 100, "itemStyle": { "color": "$red" } },
+              { "value": 58, "itemStyle": { "color": "$accent" } },
+              { "value": 32, "itemStyle": { "color": "$accent" } },
+              { "value": 9.64, "itemStyle": { "color": "$muted" } },
+              { "value": 7.11, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

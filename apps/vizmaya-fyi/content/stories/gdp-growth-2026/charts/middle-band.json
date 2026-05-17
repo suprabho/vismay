@@ -1,0 +1,74 @@
+{
+  "steps": [
+    {
+      "title": "Projected real GDP growth, 2026 — the middle band (2–4%)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Australia",
+            "Spain",
+            "U.S.",
+            "Saudi Arabia",
+            "Poland",
+            "Türkiye"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Projected GDP growth",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 2.0, "itemStyle": { "color": "$muted" } },
+              { "value": 2.1, "itemStyle": { "color": "$muted" } },
+              { "value": 2.3, "itemStyle": { "color": "$amber" } },
+              { "value": 3.1, "itemStyle": { "color": "$amber" } },
+              { "value": 3.3, "itemStyle": { "color": "$accent" } },
+              { "value": 3.4, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

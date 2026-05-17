@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "title": "Year-over-year gain against the U.S. dollar — top ten large-economy currencies (April 6, 2026)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: +{c}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Malaysian ringgit",
+            "Kazakhstani tenge",
+            "Norwegian krone",
+            "Nigerian naira",
+            "Brazilian real",
+            "Australian dollar",
+            "Mexican peso",
+            "South African rand",
+            "Colombian peso",
+            "Israeli shekel"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "YoY gain vs USD",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 11.2, "itemStyle": { "color": "$accent2" } },
+              { "value": 12.3, "itemStyle": { "color": "$accent2" } },
+              { "value": 12.7, "itemStyle": { "color": "$accent2" } },
+              { "value": 13.5, "itemStyle": { "color": "$amber" } },
+              { "value": 14.5, "itemStyle": { "color": "$amber" } },
+              { "value": 14.8, "itemStyle": { "color": "$amber" } },
+              { "value": 16.4, "itemStyle": { "color": "$accent" } },
+              { "value": 16.4, "itemStyle": { "color": "$accent" } },
+              { "value": 19.7, "itemStyle": { "color": "$red" } },
+              { "value": 20.2, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

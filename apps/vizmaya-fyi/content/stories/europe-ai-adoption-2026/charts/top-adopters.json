@@ -1,0 +1,107 @@
+{
+  "steps": [
+    {
+      "title": "AI use, last three months (cyan) · youth social-media use, 16-29 (purple) · top of the AI ranking · early 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Greece",
+            "Cyprus",
+            "Netherlands",
+            "Ireland",
+            "Finland",
+            "Malta",
+            "Estonia",
+            "Switzerland",
+            "Denmark",
+            "Norway"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "AI use",
+            "type": "bar",
+            "barWidth": 9,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [
+              { "value": 44.1, "itemStyle": { "color": "$accent" } },
+              { "value": 44.2, "itemStyle": { "color": "$accent" } },
+              { "value": 44.7, "itemStyle": { "color": "$accent" } },
+              { "value": 44.9, "itemStyle": { "color": "$accent" } },
+              { "value": 46.3, "itemStyle": { "color": "$accent" } },
+              { "value": 46.5, "itemStyle": { "color": "$accent" } },
+              { "value": 46.6, "itemStyle": { "color": "$accent" } },
+              { "value": 47.0, "itemStyle": { "color": "$accent" } },
+              { "value": 48.4, "itemStyle": { "color": "$accent" } },
+              { "value": 56.3, "itemStyle": { "color": "$accent" } }
+            ]
+          },
+          {
+            "name": "Social media (16-29)",
+            "type": "bar",
+            "barWidth": 9,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [
+              { "value": 90.6, "itemStyle": { "color": "$accent2" } },
+              { "value": 98.3, "itemStyle": { "color": "$accent2" } },
+              { "value": 94.2, "itemStyle": { "color": "$accent2" } },
+              { "value": 94.4, "itemStyle": { "color": "$accent2" } },
+              { "value": 96.6, "itemStyle": { "color": "$accent2" } },
+              { "value": 91.9, "itemStyle": { "color": "$accent2" } },
+              { "value": 91.4, "itemStyle": { "color": "$accent2" } },
+              { "value": 95.8, "itemStyle": { "color": "$accent2" } },
+              { "value": 96.9, "itemStyle": { "color": "$accent2" } },
+              { "value": 95.7, "itemStyle": { "color": "$accent2" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

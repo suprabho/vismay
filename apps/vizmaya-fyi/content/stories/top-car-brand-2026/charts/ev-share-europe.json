@@ -1,0 +1,94 @@
+{
+  "steps": [
+    {
+      "title": "EV sales share in 2024, by European country — with the country's #1 brand",
+      "subtitle": "IEA Global EV Outlook 2025 · Focus2Move 2025 brand ranking",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 95,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Bulgaria · Škoda",
+            "Poland · Toyota",
+            "Czech Rep. · Škoda",
+            "Greece · Toyota",
+            "Italy · Fiat",
+            "Spain · Toyota",
+            "Germany · Volkswagen",
+            "Austria · Volkswagen",
+            "UK · Volkswagen",
+            "France · Renault",
+            "Portugal · Peugeot",
+            "Netherlands · Kia",
+            "Denmark · Volkswagen",
+            "Sweden · Volvo",
+            "Norway · Tesla"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 11
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "EV sales share 2024",
+            "type": "bar",
+            "barWidth": 14,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [
+              { "value": 3, "itemStyle": { "color": "$accent2" } },
+              { "value": 4, "itemStyle": { "color": "$accent2" } },
+              { "value": 6, "itemStyle": { "color": "$accent2" } },
+              { "value": 6, "itemStyle": { "color": "$accent2" } },
+              { "value": 9, "itemStyle": { "color": "$accent2" } },
+              { "value": 12, "itemStyle": { "color": "$amber" } },
+              { "value": 19, "itemStyle": { "color": "$amber" } },
+              { "value": 19, "itemStyle": { "color": "$amber" } },
+              { "value": 22, "itemStyle": { "color": "$amber" } },
+              { "value": 24, "itemStyle": { "color": "$amber" } },
+              { "value": 32, "itemStyle": { "color": "$teal" } },
+              { "value": 34, "itemStyle": { "color": "$teal" } },
+              { "value": 57, "itemStyle": { "color": "$accent" } },
+              { "value": 60, "itemStyle": { "color": "$accent" } },
+              { "value": 89, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

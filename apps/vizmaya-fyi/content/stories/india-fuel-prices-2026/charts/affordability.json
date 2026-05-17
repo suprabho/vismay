@@ -1,0 +1,161 @@
+{
+  "steps": [
+    {
+      "title": "Litres of petrol a day's per-capita income buys. An Indian buys roughly seven litres a day; an American, more than two hundred.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}: {c} L"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "{value} L"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "India",
+            "Brazil",
+            "Romania",
+            "Hungary",
+            "France",
+            "Spain",
+            "Germany",
+            "Netherlands",
+            "United Kingdom",
+            "Japan",
+            "Canada",
+            "United States"
+          ],
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          }
+        },
+        "series": [
+          {
+            "name": "Litres per day",
+            "type": "bar",
+            "barWidth": 14,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "formatter": "{c} L"
+            },
+            "data": [
+              {
+                "value": 7.4,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "value": 22.6,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 26.0,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 32.7,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 55.0,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 57.5,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 60.3,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 68.7,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 70.5,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 87.9,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 118.4,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 225.3,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

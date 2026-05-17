@@ -1,0 +1,88 @@
+{
+  "steps": [
+    {
+      "title": "Projected population change, 2025–2050 — largest national declines",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "China",
+            "Italy",
+            "Japan",
+            "Poland",
+            "Romania",
+            "Belarus",
+            "Serbia",
+            "Ukraine",
+            "Latvia",
+            "Bulgaria",
+            "Lithuania",
+            "Moldova",
+            "Bosnia & Herz."
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Population change",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "left",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": -11.0, "itemStyle": { "color": "$amber" } },
+              { "value": -12.3, "itemStyle": { "color": "$amber" } },
+              { "value": -14.6, "itemStyle": { "color": "$amber" } },
+              { "value": -14.0, "itemStyle": { "color": "$amber" } },
+              { "value": -15.2, "itemStyle": { "color": "$accent2" } },
+              { "value": -17.2, "itemStyle": { "color": "$accent2" } },
+              { "value": -17.3, "itemStyle": { "color": "$accent2" } },
+              { "value": -17.9, "itemStyle": { "color": "$accent2" } },
+              { "value": -18.3, "itemStyle": { "color": "$red" } },
+              { "value": -19.5, "itemStyle": { "color": "$red" } },
+              { "value": -20.2, "itemStyle": { "color": "$red" } },
+              { "value": -21.5, "itemStyle": { "color": "$red" } },
+              { "value": -21.8, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

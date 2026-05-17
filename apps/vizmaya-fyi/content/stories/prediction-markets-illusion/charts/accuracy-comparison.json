@@ -1,0 +1,68 @@
+{
+  "steps": [
+    {
+      "title": "Election accuracy vs. baseline (Vanderbilt study)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "6%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Polymarket",
+            "Kalshi",
+            "Strong poll aggregator"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 13
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Accuracy",
+            "type": "bar",
+            "barWidth": 28,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12
+            },
+            "data": [
+              { "value": 67, "itemStyle": { "color": "$red" } },
+              { "value": 78, "itemStyle": { "color": "$amber" } },
+              { "value": 85, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

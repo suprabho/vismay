@@ -1,0 +1,220 @@
+{
+  "steps": [
+    {
+      "title": "Bottom 10 — 2026 RSF Press Freedom Index — China at #178",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 30,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Eritrea",
+            "North Korea",
+            "China",
+            "Iran",
+            "Saudi Arabia",
+            "Afghanistan",
+            "Vietnam",
+            "Turkmenistan",
+            "Russia",
+            "Azerbaijan"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Score",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 10.24, "itemStyle": { "color": "$muted" } },
+              { "value": 12.67, "itemStyle": { "color": "$muted" } },
+              { "value": 13.85, "itemStyle": { "color": "$red" } },
+              { "value": 17.45, "itemStyle": { "color": "$muted" } },
+              { "value": 19.11, "itemStyle": { "color": "$muted" } },
+              { "value": 19.51, "itemStyle": { "color": "$muted" } },
+              { "value": 21.15, "itemStyle": { "color": "$muted" } },
+              { "value": 23.06, "itemStyle": { "color": "$muted" } },
+              { "value": 23.15, "itemStyle": { "color": "$muted" } },
+              { "value": 23.95, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Bottom 10 — 2026 RSF Press Freedom Index — the Gulf and Iran",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 30,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Eritrea",
+            "North Korea",
+            "China",
+            "Iran",
+            "Saudi Arabia",
+            "Afghanistan",
+            "Vietnam",
+            "Turkmenistan",
+            "Russia",
+            "Azerbaijan"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Score",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 10.24, "itemStyle": { "color": "$muted" } },
+              { "value": 12.67, "itemStyle": { "color": "$muted" } },
+              { "value": 13.85, "itemStyle": { "color": "$muted" } },
+              { "value": 17.45, "itemStyle": { "color": "$red" } },
+              { "value": 19.11, "itemStyle": { "color": "$red" } },
+              { "value": 19.51, "itemStyle": { "color": "$muted" } },
+              { "value": 21.15, "itemStyle": { "color": "$muted" } },
+              { "value": 23.06, "itemStyle": { "color": "$muted" } },
+              { "value": 23.15, "itemStyle": { "color": "$muted" } },
+              { "value": 23.95, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Bottom 10 — 2026 RSF Press Freedom Index — Eritrea, the floor",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 30,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Eritrea",
+            "North Korea",
+            "China",
+            "Iran",
+            "Saudi Arabia",
+            "Afghanistan",
+            "Vietnam",
+            "Turkmenistan",
+            "Russia",
+            "Azerbaijan"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Score",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 10.24, "itemStyle": { "color": "$red" } },
+              { "value": 12.67, "itemStyle": { "color": "$muted" } },
+              { "value": 13.85, "itemStyle": { "color": "$muted" } },
+              { "value": 17.45, "itemStyle": { "color": "$muted" } },
+              { "value": 19.11, "itemStyle": { "color": "$muted" } },
+              { "value": 19.51, "itemStyle": { "color": "$muted" } },
+              { "value": 21.15, "itemStyle": { "color": "$muted" } },
+              { "value": 23.06, "itemStyle": { "color": "$muted" } },
+              { "value": 23.15, "itemStyle": { "color": "$muted" } },
+              { "value": 23.95, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

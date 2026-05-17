@@ -1,0 +1,83 @@
+{
+  "steps": [
+    {
+      "title": "WalletHub Quality of Life Score, 2025 — five highest and lowest states (out of 100)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 35,
+          "max": 65,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "New Mexico",
+            "Louisiana",
+            "Arkansas",
+            "Mississippi",
+            "Alaska",
+            "New Hampshire",
+            "Wisconsin",
+            "New Jersey",
+            "Idaho",
+            "Massachusetts"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Quality of Life",
+            "type": "bar",
+            "barWidth": 20,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 39.7, "itemStyle": { "color": "$red" } },
+              { "value": 40.6, "itemStyle": { "color": "$red" } },
+              { "value": 42.1, "itemStyle": { "color": "$accent" } },
+              { "value": 43.5, "itemStyle": { "color": "$accent" } },
+              { "value": 44.2, "itemStyle": { "color": "$amber" } },
+              { "value": 58.2, "itemStyle": { "color": "$positive" } },
+              { "value": 59.7, "itemStyle": { "color": "$positive" } },
+              { "value": 59.8, "itemStyle": { "color": "$teal" } },
+              { "value": 60.2, "itemStyle": { "color": "$teal" } },
+              { "value": 60.2, "itemStyle": { "color": "$teal" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

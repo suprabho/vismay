@@ -1,0 +1,46 @@
+# Share mode overrides for american-economic-divide.
+#
+# Each key matches a section `id` from the main .config.yaml.
+# Only fields you specify are overridden — everything else falls
+# back to the main config.
+#
+# Available overrides per section:
+#   heading: "Custom heading"     # Override the heading on the map-title card
+#   hide: true                    # Exclude this section from share mode
+#   shareParagraphs:              # Split paragraphs into multiple share cards
+#     - [0, 3]                    # Card 1: paragraphs 0-2
+#     - [3, 6]                    # Card 2: paragraphs 3-5
+#   paragraphsOverride:           # Literal text replacement — each entry is one card.
+#     - "Short rewritten paragraph."
+#     - ["Card 2 paragraph 1", "Card 2 paragraph 2"]
+
+sections:
+  cost-gap-stat:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "Where you live in 2026 determines your financial reality. Hawaii costs $141,127 annually. Oklahoma costs $66,284. That $75K gap rivals the median household income."
+
+  upper-middle-class:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "To reach upper-middle class: **$163K in Massachusetts**. **$91K in Mississippi**. A $72,000 spread just to reach the same economic tier."
+
+  florida-inflow:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "Between 2019–2023, Florida captured $137 billion from interstate moves. California lost $91 billion. New York shed $10 billion. High-income households are fleeing coasts."
+
+  california-outflow:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "California has lost $91 billion in net interstate income (2019–2023), far exceeding any other state. Yet it remains the second-largest economy in America."
+
+  cheap-vs-good:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "**The paradox:** Arkansas is cheapest to live in (rank #48 quality). Massachusetts is most expensive (#1 quality). Idaho ranks #2 in quality and costs far less than either coast."

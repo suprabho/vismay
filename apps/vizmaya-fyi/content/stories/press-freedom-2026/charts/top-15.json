@@ -1,0 +1,250 @@
+{
+  "steps": [
+    {
+      "title": "Top 15 — 2026 RSF Press Freedom Index — Norway, the constant",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 78,
+          "max": 95,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Lithuania",
+            "Germany",
+            "Liechtenstein",
+            "Iceland",
+            "Czechia",
+            "Portugal",
+            "Luxembourg",
+            "Switzerland",
+            "Ireland",
+            "Finland",
+            "Sweden",
+            "Denmark",
+            "Estonia",
+            "Netherlands",
+            "Norway"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Score",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 81.34, "itemStyle": { "color": "$muted" } },
+              { "value": 82.17, "itemStyle": { "color": "$muted" } },
+              { "value": 82.62, "itemStyle": { "color": "$muted" } },
+              { "value": 82.77, "itemStyle": { "color": "$muted" } },
+              { "value": 83.01, "itemStyle": { "color": "$muted" } },
+              { "value": 83.71, "itemStyle": { "color": "$muted" } },
+              { "value": 84.14, "itemStyle": { "color": "$muted" } },
+              { "value": 84.83, "itemStyle": { "color": "$muted" } },
+              { "value": 85.93, "itemStyle": { "color": "$muted" } },
+              { "value": 86.22, "itemStyle": { "color": "$muted" } },
+              { "value": 87.61, "itemStyle": { "color": "$muted" } },
+              { "value": 88.47, "itemStyle": { "color": "$muted" } },
+              { "value": 88.54, "itemStyle": { "color": "$muted" } },
+              { "value": 88.92, "itemStyle": { "color": "$muted" } },
+              { "value": 92.72, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Top 15 — 2026 RSF Press Freedom Index — the Baltic surprise",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 78,
+          "max": 95,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Lithuania",
+            "Germany",
+            "Liechtenstein",
+            "Iceland",
+            "Czechia",
+            "Portugal",
+            "Luxembourg",
+            "Switzerland",
+            "Ireland",
+            "Finland",
+            "Sweden",
+            "Denmark",
+            "Estonia",
+            "Netherlands",
+            "Norway"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Score",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 81.34, "itemStyle": { "color": "$accent" } },
+              { "value": 82.17, "itemStyle": { "color": "$muted" } },
+              { "value": 82.62, "itemStyle": { "color": "$muted" } },
+              { "value": 82.77, "itemStyle": { "color": "$muted" } },
+              { "value": 83.01, "itemStyle": { "color": "$muted" } },
+              { "value": 83.71, "itemStyle": { "color": "$muted" } },
+              { "value": 84.14, "itemStyle": { "color": "$muted" } },
+              { "value": 84.83, "itemStyle": { "color": "$muted" } },
+              { "value": 85.93, "itemStyle": { "color": "$muted" } },
+              { "value": 86.22, "itemStyle": { "color": "$muted" } },
+              { "value": 87.61, "itemStyle": { "color": "$muted" } },
+              { "value": 88.47, "itemStyle": { "color": "$muted" } },
+              { "value": 88.54, "itemStyle": { "color": "$accent" } },
+              { "value": 88.92, "itemStyle": { "color": "$muted" } },
+              { "value": 92.72, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Top 15 — 2026 RSF Press Freedom Index — the Low Countries and Nordics",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 78,
+          "max": 95,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Lithuania",
+            "Germany",
+            "Liechtenstein",
+            "Iceland",
+            "Czechia",
+            "Portugal",
+            "Luxembourg",
+            "Switzerland",
+            "Ireland",
+            "Finland",
+            "Sweden",
+            "Denmark",
+            "Estonia",
+            "Netherlands",
+            "Norway"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Score",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 81.34, "itemStyle": { "color": "$muted" } },
+              { "value": 82.17, "itemStyle": { "color": "$muted" } },
+              { "value": 82.62, "itemStyle": { "color": "$muted" } },
+              { "value": 82.77, "itemStyle": { "color": "$muted" } },
+              { "value": 83.01, "itemStyle": { "color": "$muted" } },
+              { "value": 83.71, "itemStyle": { "color": "$muted" } },
+              { "value": 84.14, "itemStyle": { "color": "$muted" } },
+              { "value": 84.83, "itemStyle": { "color": "$muted" } },
+              { "value": 85.93, "itemStyle": { "color": "$accent" } },
+              { "value": 86.22, "itemStyle": { "color": "$accent" } },
+              { "value": 87.61, "itemStyle": { "color": "$accent" } },
+              { "value": 88.47, "itemStyle": { "color": "$accent" } },
+              { "value": 88.54, "itemStyle": { "color": "$muted" } },
+              { "value": 88.92, "itemStyle": { "color": "$accent" } },
+              { "value": 92.72, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

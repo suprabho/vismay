@@ -1,0 +1,118 @@
+{
+  "steps": [
+    {
+      "title": "Each dot is a 2026 qualifier. X-axis: GDP nominal ($bn, log). Y-axis: squad value (€mn, log). The diagonal cloud is the relationship; the labelled dots are the residuals.",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}<br/>GDP: ${@[0]}B · Squad: €{@[1]}M"
+        },
+        "grid": {
+          "left": "8%",
+          "right": "6%",
+          "top": "8%",
+          "bottom": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "log",
+          "logBase": 10,
+          "name": "GDP nominal ($bn)",
+          "nameLocation": "middle",
+          "nameGap": 32,
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "min": 2,
+          "max": 50000,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "formatter": "${value}B"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "log",
+          "logBase": 10,
+          "name": "Squad value (€mn)",
+          "nameLocation": "middle",
+          "nameGap": 45,
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "min": 10,
+          "max": 2000,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "formatter": "€{value}M"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Qualifiers",
+            "type": "scatter",
+            "symbolSize": 11,
+            "label": { "show": false },
+            "emphasis": {
+              "label": { "show": true, "color": "$text", "fontFamily": "Inter", "fontSize": 11, "position": "top" }
+            },
+            "data": [
+              { "value": [287, 850], "name": "Portugal", "itemStyle": { "color": "$accent", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 20, "label": { "show": true, "formatter": "Portugal", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "top" } },
+              { "value": [88, 320], "name": "Croatia", "itemStyle": { "color": "$accent", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 18, "label": { "show": true, "formatter": "Croatia", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "top" } },
+              { "value": [31, 260], "name": "Senegal", "itemStyle": { "color": "$accent", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 18, "label": { "show": true, "formatter": "Senegal", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "top" } },
+              { "value": [152, 403], "name": "Morocco", "itemStyle": { "color": "$accent", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 18, "label": { "show": true, "formatter": "Morocco", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "top" } },
+
+              { "value": [1100, 31], "name": "Saudi Arabia", "itemStyle": { "color": "$red", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 20, "label": { "show": true, "formatter": "Saudi Arabia", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "bottom" } },
+              { "value": [434, 30], "name": "Iran", "itemStyle": { "color": "$red", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 18, "label": { "show": true, "formatter": "Iran", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "bottom" } },
+              { "value": [348, 85], "name": "Egypt", "itemStyle": { "color": "$red", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 18, "label": { "show": true, "formatter": "Egypt", "color": "$text", "fontSize": 12, "fontFamily": "Inter", "position": "bottom" } },
+              { "value": [400, 26], "name": "South Africa", "itemStyle": { "color": "$red" }, "symbolSize": 14, "label": { "show": true, "formatter": "S. Africa", "color": "$muted", "fontSize": 10, "fontFamily": "Inter", "position": "bottom" } },
+
+              { "value": [3380, 1300], "name": "England", "itemStyle": { "color": "$accent2", "borderColor": "$text", "borderWidth": 1 }, "symbolSize": 16, "label": { "show": true, "formatter": "England", "color": "$muted", "fontSize": 11, "fontFamily": "Inter", "position": "top" } },
+              { "value": [3030, 1280], "name": "France", "itemStyle": { "color": "$accent2" }, "symbolSize": 14, "label": { "show": true, "formatter": "France", "color": "$muted", "fontSize": 10, "fontFamily": "Inter", "position": "right" } },
+              { "value": [4460, 750], "name": "Germany", "itemStyle": { "color": "$accent2" }, "symbolSize": 13, "label": { "show": true, "formatter": "Germany", "color": "$muted", "fontSize": 10, "fontFamily": "Inter", "position": "right" } },
+              { "value": [29017, 315], "name": "United States", "itemStyle": { "color": "$teal", "borderColor": "$text", "borderWidth": 1 }, "symbolSize": 16, "label": { "show": true, "formatter": "U.S.", "color": "$muted", "fontSize": 11, "fontFamily": "Inter", "position": "right" } },
+              { "value": [4070, 214], "name": "Japan", "itemStyle": { "color": "$accent2" }, "symbolSize": 13, "label": { "show": true, "formatter": "Japan", "color": "$muted", "fontSize": 10, "fontFamily": "Inter", "position": "bottom" } },
+
+              { "value": [3.6, 20], "name": "Curaçao", "itemStyle": { "color": "$amber", "borderColor": "$text", "borderWidth": 1.5 }, "symbolSize": 16, "label": { "show": true, "formatter": "Curaçao", "color": "$text", "fontSize": 11, "fontFamily": "Inter", "position": "right" } },
+              { "value": [2.6, 28], "name": "Cape Verde", "itemStyle": { "color": "$amber" }, "symbolSize": 12, "label": { "show": true, "formatter": "Cape Verde", "color": "$muted", "fontSize": 10, "fontFamily": "Inter", "position": "left" } },
+
+              { "value": [1620, 920], "name": "Spain", "itemStyle": { "color": "$accent2" }, "symbolSize": 13 },
+              { "value": [2174, 915], "name": "Brazil", "itemStyle": { "color": "$accent2" }, "symbolSize": 13 },
+              { "value": [640, 770], "name": "Argentina", "itemStyle": { "color": "$accent2" }, "symbolSize": 13 },
+              { "value": [1218, 720], "name": "Netherlands", "itemStyle": { "color": "$accent2" }, "symbolSize": 12 },
+              { "value": [651, 470], "name": "Belgium", "itemStyle": { "color": "$accent2" }, "symbolSize": 12 },
+              { "value": [1340, 460], "name": "Türkiye", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [526, 380], "name": "Norway", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [938, 350], "name": "Switzerland", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [609, 320], "name": "Sweden", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [1789, 198], "name": "Mexico", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [2140, 133], "name": "Canada", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [386, 290], "name": "Colombia", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [516, 280], "name": "Austria", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [335, 260], "name": "Czechia", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [29, 130], "name": "Bosnia & Herz.", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [82, 102], "name": "Uruguay", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [121, 188], "name": "Ecuador", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [44, 104], "name": "Paraguay", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [87, 278], "name": "Ivory Coast", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [267, 204], "name": "Algeria", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [76, 199], "name": "Ghana", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [54, 68], "name": "Tunisia", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [1870, 129], "name": "South Korea", "itemStyle": { "color": "$accent2" }, "symbolSize": 11 },
+              { "value": [1700, 46], "name": "Australia", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [221, 21], "name": "Qatar", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [115, 28], "name": "Uzbekistan", "itemStyle": { "color": "$amber" }, "symbolSize": 11 },
+              { "value": [52, 16], "name": "Jordan", "itemStyle": { "color": "$amber" }, "symbolSize": 10 },
+              { "value": [89, 50], "name": "Panama", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [12, 35], "name": "Haiti", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [258, 25], "name": "New Zealand", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [72, 80], "name": "DR Congo", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 },
+              { "value": [254, 22], "name": "Iraq", "itemStyle": { "color": "$accent2" }, "symbolSize": 10 }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

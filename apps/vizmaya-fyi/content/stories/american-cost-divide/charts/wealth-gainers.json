@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "title": "Net interstate income inflow, 2023 — top ten gainers (USD billions)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: +${c}B"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "+${value}B",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Colorado",
+            "Georgia",
+            "Idaho",
+            "Nevada",
+            "Tennessee",
+            "Arizona",
+            "South Carolina",
+            "North Carolina",
+            "Texas",
+            "Florida"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Net inflow",
+            "type": "bar",
+            "barWidth": 20,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "+${c}B",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 0.7, "itemStyle": { "color": "$teal" } },
+              { "value": 0.7, "itemStyle": { "color": "$teal" } },
+              { "value": 1.0, "itemStyle": { "color": "$teal" } },
+              { "value": 2.0, "itemStyle": { "color": "$teal" } },
+              { "value": 3.0, "itemStyle": { "color": "$teal" } },
+              { "value": 3.0, "itemStyle": { "color": "$positive" } },
+              { "value": 4.0, "itemStyle": { "color": "$positive" } },
+              { "value": 4.0, "itemStyle": { "color": "$positive" } },
+              { "value": 6.0, "itemStyle": { "color": "$positive" } },
+              { "value": 21.0, "itemStyle": { "color": "$positive" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "steps": [
+    {
+      "title": "AI use (x) vs youth social-media use (y) across 33 European countries · the same diagonal seen twice",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}<br/>AI: {c0}%<br/>Social: {c1}%"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "8%",
+          "bottom": "12%",
+          "top": "6%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 10,
+          "max": 60,
+          "name": "AI use (%)",
+          "nameLocation": "middle",
+          "nameGap": 30,
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 78,
+          "max": 100,
+          "name": "Youth social media (%)",
+          "nameLocation": "middle",
+          "nameGap": 42,
+          "nameRotate": 90,
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "series": [
+          {
+            "name": "Country",
+            "type": "scatter",
+            "symbolSize": 9,
+            "label": {
+              "show": true,
+              "formatter": "{b}",
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "distance": 4
+            },
+            "data": [
+              { "value": [17.8, 92.1], "name": "RO", "itemStyle": { "color": "$accent2" } },
+              { "value": [18.6, 93.4], "name": "TR", "itemStyle": { "color": "$accent2" } },
+              { "value": [19.9, 80.3], "name": "IT", "itemStyle": { "color": "$red" } },
+              { "value": [22.0, 97.7], "name": "MK", "itemStyle": { "color": "$accent2" } },
+              { "value": [22.5, 89.4], "name": "BG", "itemStyle": { "color": "$red" } },
+              { "value": [22.7, 90.5], "name": "PL", "itemStyle": { "color": "$red" } },
+              { "value": [27.5, 90.7], "name": "HR", "itemStyle": { "color": "$red" } },
+              { "value": [29.6, 91.1], "name": "HU", "itemStyle": { "color": "$red" } },
+              { "value": [30.8, 88.7], "name": "SK", "itemStyle": { "color": "$red" } },
+              { "value": [32.3, 84.2], "name": "DE", "itemStyle": { "color": "$red" } },
+              { "value": [33.4, 93.8], "name": "LV", "itemStyle": { "color": "$accent2" } },
+              { "value": [34.3, 97.0], "name": "GB", "itemStyle": { "color": "$accent2" } },
+              { "value": [35.4, 97.2], "name": "CZ", "itemStyle": { "color": "$accent2" } },
+              { "value": [36.9, 89.8], "name": "LT", "itemStyle": { "color": "$red" } },
+              { "value": [37.5, 93.9], "name": "FR", "itemStyle": { "color": "$accent" } },
+              { "value": [37.6, 91.0], "name": "SI", "itemStyle": { "color": "$amber" } },
+              { "value": [37.9, 91.6], "name": "ES", "itemStyle": { "color": "$amber" } },
+              { "value": [38.7, 91.6], "name": "PT", "itemStyle": { "color": "$amber" } },
+              { "value": [39.4, 96.1], "name": "AT", "itemStyle": { "color": "$accent" } },
+              { "value": [42.0, 88.3], "name": "BE", "itemStyle": { "color": "$amber" } },
+              { "value": [42.0, 88.4], "name": "SE", "itemStyle": { "color": "$amber" } },
+              { "value": [42.5, 84.8], "name": "LU", "itemStyle": { "color": "$amber" } },
+              { "value": [44.1, 90.6], "name": "GR", "itemStyle": { "color": "$amber" } },
+              { "value": [44.2, 98.3], "name": "CY", "itemStyle": { "color": "$accent" } },
+              { "value": [44.7, 94.2], "name": "NL", "itemStyle": { "color": "$accent" } },
+              { "value": [44.9, 94.4], "name": "IE", "itemStyle": { "color": "$accent" } },
+              { "value": [46.3, 96.6], "name": "FI", "itemStyle": { "color": "$accent" } },
+              { "value": [46.5, 91.9], "name": "MT", "itemStyle": { "color": "$amber" } },
+              { "value": [46.6, 91.4], "name": "EE", "itemStyle": { "color": "$amber" } },
+              { "value": [47.0, 95.8], "name": "CH", "itemStyle": { "color": "$accent" } },
+              { "value": [48.4, 96.9], "name": "DK", "itemStyle": { "color": "$accent" } },
+              { "value": [56.3, 95.7], "name": "NO", "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

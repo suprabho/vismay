@@ -1,0 +1,292 @@
+{
+  "steps": [
+    {
+      "title": "Biggest rank losses, 2025 → 2026 — Niger's free fall",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} ranks"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": -40,
+          "max": 0,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Armenia",
+            "Zimbabwe",
+            "Algeria",
+            "Belize",
+            "Benin",
+            "Georgia",
+            "Tanzania",
+            "Sierra Leone",
+            "Ecuador",
+            "Niger"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Rank evolution",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "left",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": -16, "itemStyle": { "color": "$muted" } },
+              { "value": -18, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -22, "itemStyle": { "color": "$muted" } },
+              { "value": -23, "itemStyle": { "color": "$muted" } },
+              { "value": -31, "itemStyle": { "color": "$muted" } },
+              { "value": -37, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Biggest rank losses, 2025 → 2026 — Ecuador's spiral",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} ranks"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": -40,
+          "max": 0,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Armenia",
+            "Zimbabwe",
+            "Algeria",
+            "Belize",
+            "Benin",
+            "Georgia",
+            "Tanzania",
+            "Sierra Leone",
+            "Ecuador",
+            "Niger"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Rank evolution",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "left",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": -16, "itemStyle": { "color": "$muted" } },
+              { "value": -18, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -22, "itemStyle": { "color": "$muted" } },
+              { "value": -23, "itemStyle": { "color": "$muted" } },
+              { "value": -31, "itemStyle": { "color": "$red" } },
+              { "value": -37, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Biggest rank losses, 2025 → 2026 — Sierra Leone and Tanzania",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} ranks"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": -40,
+          "max": 0,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Armenia",
+            "Zimbabwe",
+            "Algeria",
+            "Belize",
+            "Benin",
+            "Georgia",
+            "Tanzania",
+            "Sierra Leone",
+            "Ecuador",
+            "Niger"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Rank evolution",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "left",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": -16, "itemStyle": { "color": "$muted" } },
+              { "value": -18, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -22, "itemStyle": { "color": "$red" } },
+              { "value": -23, "itemStyle": { "color": "$red" } },
+              { "value": -31, "itemStyle": { "color": "$muted" } },
+              { "value": -37, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Biggest rank losses, 2025 → 2026 — Georgia, drifting",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} ranks"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": -40,
+          "max": 0,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Armenia",
+            "Zimbabwe",
+            "Algeria",
+            "Belize",
+            "Benin",
+            "Georgia",
+            "Tanzania",
+            "Sierra Leone",
+            "Ecuador",
+            "Niger"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Rank evolution",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "left",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": -16, "itemStyle": { "color": "$muted" } },
+              { "value": -18, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -19, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$muted" } },
+              { "value": -21, "itemStyle": { "color": "$red" } },
+              { "value": -22, "itemStyle": { "color": "$muted" } },
+              { "value": -23, "itemStyle": { "color": "$muted" } },
+              { "value": -31, "itemStyle": { "color": "$muted" } },
+              { "value": -37, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

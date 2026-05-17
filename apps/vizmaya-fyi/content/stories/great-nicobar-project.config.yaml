@@ -1,0 +1,361 @@
+# Story config — great-nicobar-project
+#
+# Source: research brief on India's "Holistic Development of Great Nicobar Island"
+# (commissioned compass artifact, May 2026). Cross-checked figures against PIB
+# releases, the NGT order of 16 Feb 2026, the Sanctuary Nature Foundation
+# corpus, and the 7 Feb 2024 39-scholars' letter to President Murmu.
+#
+# Custom GeoJSON: /public/data/great-nicobar-zones.geojson
+#   features:
+#     - id: project_envelope     (~166.10 sq km)
+#     - id: denotified_reserve   (~84.10 sq km, of 853 sq km PAT'56 reserve)
+#
+# Coordinates of repeating pins:
+#   Indira Point      93.830  6.750
+#   Galathea Bay      93.860  6.830
+#   Singapore        103.820  1.352
+#   Port Klang       101.400  3.000
+#   Colombo           79.860  6.927
+#   Gwadar            62.322 25.126
+#   Hambantota        81.131  6.124
+#   Kyaukpyu          93.553 19.428
+#   Djibouti port     43.146 11.589
+#   Vizhinjam         76.992  8.371
+#   Sabang            95.319  5.889
+#   Aravalli (HR)     76.500 28.000
+#   2004 epicentre    95.854  3.316
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d97a3c"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO — Indo-Pacific frame, single pin on Indira Point
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Last Forest Before the Strait"
+    eyebrow: "Indo-Pacific · Megaproject · 2026"
+    map:
+      center: [92.0, 8.0]
+      zoom: 3.5
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [93.830, 6.750]
+          label: "Indira Point — Great Nicobar"
+          color: "#d97a3c"
+          radius: 14
+          pulse: true
+
+  # ═══════════════════════════════════════════════
+  # ACT I.1 — THE MALACCA LENS — chokepoint + String of Pearls
+  # ═══════════════════════════════════════════════
+
+  - id: malacca-lens
+    text: "The Malacca lens"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [85.0, 12.0]
+      zoom: 3.1
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        # India / strategic
+        - coordinates: [93.830, 6.750]
+          label: "Indira Point"
+          color: "#d97a3c"
+          radius: 14
+          pulse: true
+        # India's existing transhipment alternatives + Malacca chokepoint hubs
+        - coordinates: [103.820, 1.352]
+          label: "Singapore"
+          color: "#3a7a8c"
+          labelAnchor: bottom
+        - coordinates: [101.400, 3.000]
+          label: "Port Klang"
+          color: "#3a7a8c"
+          labelAnchor: top
+        - coordinates: [79.860, 6.927]
+          label: "Colombo"
+          color: "#3a7a8c"
+          labelAnchor: left
+        # China's "String of Pearls"
+        - coordinates: [62.322, 25.126]
+          label: "Gwadar"
+          color: "#b04a3a"
+          labelAnchor: top
+        - coordinates: [81.131, 6.124]
+          label: "Hambantota"
+          color: "#b04a3a"
+          labelAnchor: bottom
+        - coordinates: [93.553, 19.428]
+          label: "Kyaukpyu"
+          color: "#b04a3a"
+          labelAnchor: right
+        - coordinates: [43.146, 11.589]
+          label: "Djibouti"
+          color: "#b04a3a"
+          labelAnchor: left
+
+  # ═══════════════════════════════════════════════
+  # ACT I.2 — A QUARTER-BILLION IN FEES — transhipment chart
+  # ═══════════════════════════════════════════════
+
+  - id: transshipment-leakage
+    text: "A quarter-billion in fees"
+    chart: data:transshipment-leakage
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [82.0, 9.0]
+      zoom: 3.6
+      pitch: 10
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [79.860, 6.927]
+          label: "Colombo — handles ~38% of India-bound transhipment"
+          color: "#d97a3c"
+          labelAnchor: left
+        - coordinates: [103.820, 1.352]
+          label: "Singapore — ~19%"
+          color: "#3a7a8c"
+          labelAnchor: top
+        - coordinates: [76.992, 8.371]
+          label: "Vizhinjam — 1.32 mn TEU, year one"
+          color: "#7d9a6f"
+          labelAnchor: left
+
+  # ═══════════════════════════════════════════════
+  # ACT I.3 — 166 SQUARE KILOMETRES — project envelope, components, cost
+  # ═══════════════════════════════════════════════
+
+  - id: project-envelope
+    text: "166 square kilometres"
+    chart: data:cost-creep
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [93.850, 6.900]
+      zoom: 9.4
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [93.860, 6.830]
+          label: "ICTT — Galathea Bay (Phase 1: 4 mn TEU)"
+          color: "#d97a3c"
+          labelAnchor: bottom
+        - coordinates: [93.890, 6.910]
+          label: "Greenfield airport (3,300 m, dual-use)"
+          color: "#d97a3c"
+          labelAnchor: right
+        - coordinates: [93.825, 6.945]
+          label: "450-MVA gas-and-solar plant"
+          color: "#d97a3c"
+          labelAnchor: left
+        - coordinates: [93.860, 6.985]
+          label: "Township (build-out: 6.5 lakh)"
+          color: "#d97a3c"
+          labelAnchor: top
+      regions:
+        level: custom
+        geojsonUrl: "/data/great-nicobar-zones.geojson"
+        idProperty: "id"
+        items:
+          - code: "project_envelope"
+            color: "$accent"
+            opacity: 0.35
+
+  # ═══════════════════════════════════════════════
+  # ACT II.1 — WHAT 130 SQ KM HOLDS — forest, biodiversity, trees-felled chart
+  # ═══════════════════════════════════════════════
+
+  - id: forest-and-trees
+    text: "What 130 square kilometres holds"
+    chart: data:trees-felled
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [93.850, 6.950]
+      zoom: 8.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [95.854, 3.316]
+          label: "2004 Sumatra–Andaman quake — M9.1 epicentre"
+          color: "#b04a3a"
+          labelAnchor: right
+      regions:
+        level: custom
+        geojsonUrl: "/data/great-nicobar-zones.geojson"
+        idProperty: "id"
+        items:
+          - code: "project_envelope"
+            color: "$amber"
+            opacity: 0.55
+
+  # ═══════════════════════════════════════════════
+  # ACT II.2 — GALATHEA BAY — leatherbacks, corals
+  # ═══════════════════════════════════════════════
+
+  - id: galathea-bay
+    text: "Galathea Bay"
+    chart: data:corals
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [93.860, 6.830]
+      zoom: 11.0
+      pitch: 35
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [93.860, 6.830]
+          label: "Galathea Bay — 619 leatherback nests, 2024"
+          color: "#d97a3c"
+          radius: 14
+          pulse: true
+          labelAnchor: bottom
+
+  # ═══════════════════════════════════════════════
+  # ACT II.3 — 229 — the Shompen, denotified reserve
+  # ═══════════════════════════════════════════════
+
+  - id: shompen
+    kind: stat
+    text: "229"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [93.850, 7.000]
+      zoom: 8.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      regions:
+        level: custom
+        geojsonUrl: "/data/great-nicobar-zones.geojson"
+        idProperty: "id"
+        items:
+          - code: "denotified_reserve"
+            color: "$red"
+            opacity: 0.65
+          - code: "project_envelope"
+            color: "$muted"
+            opacity: 0.20
+
+  # ═══════════════════════════════════════════════
+  # ACT III.1 — TWENTY-FOUR MONTHS — regulatory timeline
+  # ═══════════════════════════════════════════════
+
+  - id: regulatory-timeline
+    text: "Twenty-four months"
+    chart: data:regulatory-timeline
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [85.0, 12.0]
+      zoom: 3.1
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      pins:
+        - coordinates: [93.830, 6.750]
+          label: "Indira Point"
+          color: "#d97a3c"
+          pulse: true
+
+  # ═══════════════════════════════════════════════
+  # ACT III.2 — SUNDALAND TO SCRUB — afforestation, CRZ remap
+  # ═══════════════════════════════════════════════
+
+  - id: afforestation
+    text: "Sundaland to scrub"
+    chart: data:afforestation-comparison
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [85.0, 18.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [93.860, 6.830]
+          label: "Galathea Bay — 49.86 sq km felled (Phase I)"
+          color: "#b04a3a"
+          labelAnchor: right
+        - coordinates: [76.500, 28.000]
+          label: "Aravalli, Haryana — 97.30 sq km offset"
+          color: "#7a8794"
+          labelAnchor: bottom
+
+  # ═══════════════════════════════════════════════
+  # CLOSE — WHAT CAN STILL BE SALVAGED — Vizhinjam, Sabang, Great Nicobar
+  # ═══════════════════════════════════════════════
+
+  - id: close
+    text: "What can still be salvaged"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [85.0, 12.0]
+      zoom: 3.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [76.992, 8.371]
+          label: "Vizhinjam — 1.32 mn TEU, year one"
+          color: "#7d9a6f"
+          labelAnchor: left
+        - coordinates: [95.319, 5.889]
+          label: "Sabang — upgraded 2019"
+          color: "#3a7a8c"
+          labelAnchor: bottom
+        - coordinates: [93.830, 6.750]
+          label: "Great Nicobar — planned"
+          color: "#d97a3c"
+          radius: 14
+          pulse: true
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [85.0, 12.0]
+      zoom: 2.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.30

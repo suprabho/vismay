@@ -1,0 +1,83 @@
+{
+  "steps": [
+    {
+      "title": "Share of population living in houses, 2024 — top ten",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}% in houses"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Denmark",
+            "Norway",
+            "Slovenia",
+            "Hungary",
+            "Cyprus",
+            "Croatia",
+            "Belgium",
+            "Netherlands",
+            "North Macedonia",
+            "Ireland"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Share living in houses",
+            "type": "bar",
+            "barWidth": 20,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 67.7, "itemStyle": { "color": "$surface" } },
+              { "value": 72.0, "itemStyle": { "color": "$amber" } },
+              { "value": 72.1, "itemStyle": { "color": "$amber" } },
+              { "value": 73.3, "itemStyle": { "color": "$amber" } },
+              { "value": 74.1, "itemStyle": { "color": "$amber" } },
+              { "value": 75.8, "itemStyle": { "color": "$amber" } },
+              { "value": 76.8, "itemStyle": { "color": "$accent" } },
+              { "value": 77.1, "itemStyle": { "color": "$accent" } },
+              { "value": 82.1, "itemStyle": { "color": "$accent" } },
+              { "value": 90.2, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "steps": [
+    {
+      "title": "Change in house-share, 2010 → 2024 (percentage points) — steepest drops and strongest gains",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}pp"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}pp",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Malta",
+            "Portugal",
+            "Norway",
+            "Luxembourg",
+            "Germany",
+            "Austria",
+            "Finland",
+            "Sweden",
+            "Ireland",
+            "Italy",
+            "North Macedonia",
+            "Estonia",
+            "Hungary",
+            "Slovakia",
+            "Poland"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Change, 2010 → 2024",
+            "type": "bar",
+            "barWidth": 16,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}pp",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": -14.3, "itemStyle": { "color": "$red" } },
+              { "value": -11.5, "itemStyle": { "color": "$red" } },
+              { "value": -10.0, "itemStyle": { "color": "$red" } },
+              { "value": -8.5, "itemStyle": { "color": "$accent2" } },
+              { "value": -6.5, "itemStyle": { "color": "$accent2" } },
+              { "value": -6.4, "itemStyle": { "color": "$accent2" } },
+              { "value": -5.8, "itemStyle": { "color": "$accent2" } },
+              { "value": -5.4, "itemStyle": { "color": "$accent2" } },
+              { "value": -5.4, "itemStyle": { "color": "$accent2" } },
+              { "value": -4.4, "itemStyle": { "color": "$accent2" } },
+              { "value": 3.0, "itemStyle": { "color": "$positive" } },
+              { "value": 3.7, "itemStyle": { "color": "$positive" } },
+              { "value": 3.7, "itemStyle": { "color": "$positive" } },
+              { "value": 4.3, "itemStyle": { "color": "$positive" } },
+              { "value": 5.4, "itemStyle": { "color": "$positive" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

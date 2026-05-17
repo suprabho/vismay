@@ -1,0 +1,72 @@
+{
+  "steps": [
+    {
+      "title": "The four 2026 debutants, by population (millions). Curaçao is the smallest country to qualify in tournament history.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}M people"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 40,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "formatter": "{value}M"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Curaçao",
+            "Cape Verde",
+            "Jordan",
+            "Uzbekistan"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Population",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}M",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 0.15, "itemStyle": { "color": "$accent" } },
+              { "value": 0.5, "itemStyle": { "color": "$accent" } },
+              { "value": 11.5, "itemStyle": { "color": "$amber" } },
+              { "value": 36.4, "itemStyle": { "color": "$amber" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

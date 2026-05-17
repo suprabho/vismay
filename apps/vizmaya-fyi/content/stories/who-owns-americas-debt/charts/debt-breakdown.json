@@ -1,0 +1,107 @@
+{
+  "steps": [
+    {
+      "title": "U.S. Debt Distribution — Public Debt ($31.4T) vs. Intragovernmental ($7.6T)",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: ${c}T"
+        },
+        "series": [
+          {
+            "type": "sunburst",
+            "data": [
+              {
+                "name": "Total U.S. Debt ($39T)",
+                "children": [
+                  {
+                    "name": "Public Debt ($31.4T)",
+                    "children": [
+                      {
+                        "name": "Domestic Holders ($17.7T)",
+                        "children": [
+                          {
+                            "name": "Mutual & Pension Funds",
+                            "value": 6.6,
+                            "itemStyle": { "color": "$accent" }
+                          },
+                          {
+                            "name": "Individual Investors",
+                            "value": 3.0,
+                            "itemStyle": { "color": "$teal" }
+                          },
+                          {
+                            "name": "Banking Institutions",
+                            "value": 2.4,
+                            "itemStyle": { "color": "$accent2" }
+                          },
+                          {
+                            "name": "Other Domestic",
+                            "value": 5.7,
+                            "itemStyle": { "color": "$muted" }
+                          }
+                        ]
+                      },
+                      {
+                        "name": "Federal Reserve ($4.4T)",
+                        "value": 4.4,
+                        "itemStyle": { "color": "#ff9f43" }
+                      },
+                      {
+                        "name": "Foreign Holders ($9.3T)",
+                        "children": [
+                          {
+                            "name": "Japan",
+                            "value": 1.2,
+                            "itemStyle": { "color": "$red" }
+                          },
+                          {
+                            "name": "United Kingdom",
+                            "value": 0.9,
+                            "itemStyle": { "color": "#d46a6a" }
+                          },
+                          {
+                            "name": "China",
+                            "value": 0.7,
+                            "itemStyle": { "color": "#c24545" }
+                          },
+                          {
+                            "name": "Other Nations",
+                            "value": 6.5,
+                            "itemStyle": { "color": "$muted" }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Intragovernmental Debt ($7.6T)",
+                    "children": [
+                      {
+                        "name": "Social Security Trust Fund",
+                        "value": 2.6,
+                        "itemStyle": { "color": "$positive" }
+                      },
+                      {
+                        "name": "Other Government Trust Funds",
+                        "value": 5.1,
+                        "itemStyle": { "color": "#5eb89c" }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "radius": [0, "90%"],
+            "label": {
+              "rotate": "radial",
+              "color": "$text",
+              "fontSize": 11,
+              "fontFamily": "Inter"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

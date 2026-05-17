@@ -1,0 +1,427 @@
+# Story config — prediction-markets-illusion
+#
+# Map beats walk the reader from Wall Street (where the platforms live) to
+# Washington DC (the CFTC shield), to Nashville (the Vanderbilt accuracy study),
+# to Atlantic City / Las Vegas (the state gambling regulators being routed around).
+#
+# COORDINATES (approximate, public landmarks):
+#   Wall Street, NYC                 -74.0090, 40.7069
+#   Polymarket HQ area (Soho/NYC)    -74.0020, 40.7230
+#   Kalshi HQ area (NYC/SF)          -122.4037, 37.7948   # SF office
+#   CFTC HQ Washington DC             -77.0487, 38.9043
+#   BLS (Francis Perkins Bldg), DC    -77.0132, 38.8929
+#   Vanderbilt University, Nashville  -86.8027, 36.1447
+#   Atlantic City, NJ                 -74.4229, 39.3643
+#   Las Vegas Strip, NV              -115.1723, 36.1147
+#   US Capitol (context)              -77.0091, 38.8899
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#dc2626"
+  pinRadius: 12
+  flySpeed: 1.2
+  highlightCountry: "US"
+  highlightColor: "#2a0f0f"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Oracle Is a Slot Machine"
+    eyebrow: "Opinion · April 2026"
+    map:
+      center: [-74.0060, 40.7128]
+      zoom: 10
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 0.04%
+  # ═══════════════════════════════════════════════
+
+  - id: concentration
+    kind: stat
+    text: "0.04%"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.0090, 40.7069]
+      zoom: 13.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-74.0090, 40.7069]
+          label: "Wall Street — where the winners live"
+          color: "#dc2626"
+      mobile:
+        center: [-74.0090, 40.7069]
+        zoom: 12.0
+
+  - id: house-oracle
+    text: "The house, dressed as an oracle"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.0020, 40.7230]
+      zoom: 11.5
+      pitch: 20
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [-74.0020, 40.7230]
+          label: "Polymarket — NYC"
+          color: "#dc2626"
+          labelAnchor: top
+        - coordinates: [-122.4037, 37.7948]
+          label: "Kalshi — SF"
+          color: "#f59e0b"
+          labelAnchor: top
+      mobile:
+        center: [-98.0, 39.0]
+        zoom: 3.0
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THE ACCURACY PROBLEM
+  # Map flies to Nashville (Vanderbilt).
+  # ═══════════════════════════════════════════════
+
+  - id: act-i-intro
+    text: "Act I: The accuracy problem"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-86.8027, 36.1447]
+      zoom: 10.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-86.8027, 36.1447]
+          label: "Vanderbilt University — accuracy study"
+          color: "#14b8a6"
+
+  - id: jobs-miss
+    kind: stat
+    text: "150,000"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-77.0132, 38.8929]
+      zoom: 12.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-77.0132, 38.8929]
+          label: "Bureau of Labor Statistics — Feb 2026 payrolls"
+          color: "#dc2626"
+        - coordinates: [-86.8027, 36.1447]
+          label: "Vanderbilt — accuracy study"
+          color: "#14b8a6"
+
+  - id: accuracy-chart
+    chart: data:accuracy-comparison
+    text: "67% and 78%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-86.8027, 36.1447]
+      zoom: 6.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [-86.8027, 36.1447]
+          label: "Vanderbilt"
+          color: "#14b8a6"
+        - coordinates: [-77.0132, 38.8929]
+          label: "BLS"
+          color: "#dc2626"
+          labelAnchor: right
+        - coordinates: [-74.0020, 40.7230]
+          label: "Polymarket"
+          color: "#dc2626"
+          labelAnchor: right
+        - coordinates: [-122.4037, 37.7948]
+          label: "Kalshi"
+          color: "#f59e0b"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE INSIDER ADVANTAGE
+  # Map tightens back on NYC — this is where the order book lives.
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii-intro
+    text: "Act II: The insider advantage"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.0060, 40.7128]
+      zoom: 11.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-74.0090, 40.7069]
+          label: "The order book"
+          color: "#dc2626"
+
+  - id: feature-bug
+    text: "The feature is the bug"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.0090, 40.7069]
+      zoom: 13.0
+      pitch: 40
+      bearing: 20
+      opacity: 0.60
+      pins:
+        - coordinates: [-74.0090, 40.7069]
+          label: "NYSE — informed vs uninformed"
+          color: "#dc2626"
+
+  - id: cards
+    text: "Who holds the cards"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.0090, 40.7069]
+      zoom: 12.5
+      pitch: 35
+      bearing: 10
+      opacity: 0.55
+      pins:
+        - coordinates: [-74.0090, 40.7069]
+          label: "Information asymmetry — as a product"
+          color: "#f59e0b"
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE CASINO BENEATH
+  # Map flies west to Las Vegas, then Atlantic City.
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii-intro
+    text: "Act III: The casino beneath"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-115.1723, 36.1147]
+      zoom: 10.5
+      pitch: 40
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-115.1723, 36.1147]
+          label: "Las Vegas — the regulated comparison"
+          color: "#f59e0b"
+
+  - id: kalshi-composition
+    kind: stat
+    text: "85–90%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-115.1723, 36.1147]
+      zoom: 11.0
+      pitch: 45
+      bearing: 10
+      opacity: 0.55
+      pins:
+        - coordinates: [-115.1723, 36.1147]
+          label: "Las Vegas — what a sportsbook looks like"
+          color: "#f59e0b"
+        - coordinates: [-122.4037, 37.7948]
+          label: "Kalshi — by volume, the same"
+          color: "#dc2626"
+          labelAnchor: top
+
+  - id: kalshi-composition-chart
+    chart: data:kalshi-composition
+    text: "What a market is, really"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.4229, 39.3643]
+      zoom: 10.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [-74.4229, 39.3643]
+          label: "Atlantic City — what the state regulates"
+          color: "#f59e0b"
+
+  - id: three-months
+    kind: stat
+    text: "3 months"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.4229, 39.3643]
+      zoom: 9.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-74.4229, 39.3643]
+          label: "Atlantic City — state-licensed sportsbooks"
+          color: "#f59e0b"
+        - coordinates: [-115.1723, 36.1147]
+          label: "Las Vegas"
+          color: "#f59e0b"
+
+  - id: user-losses-chart
+    chart: data:user-losses
+    text: "The worse deal, legally"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-95.0, 37.0]
+      zoom: 3.8
+      pitch: 15
+      bearing: 0
+      opacity: 0.40
+      pins:
+        - coordinates: [-74.4229, 39.3643]
+          label: "Atlantic City"
+          color: "#f59e0b"
+        - coordinates: [-115.1723, 36.1147]
+          label: "Las Vegas"
+          color: "#f59e0b"
+        - coordinates: [-74.0020, 40.7230]
+          label: "Polymarket"
+          color: "#dc2626"
+          labelAnchor: top
+        - coordinates: [-122.4037, 37.7948]
+          label: "Kalshi"
+          color: "#dc2626"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — THE REGULATORY ARBITRAGE
+  # Map flies to Washington DC: CFTC HQ.
+  # ═══════════════════════════════════════════════
+
+  - id: act-iv-intro
+    text: "Act IV: The regulatory arbitrage"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-77.0487, 38.9043]
+      zoom: 13.0
+      pitch: 40
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [-77.0487, 38.9043]
+          label: "CFTC HQ — the federal shield"
+          color: "#dc2626"
+
+  - id: shield
+    text: "The shield"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-77.0487, 38.9043]
+      zoom: 12.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-77.0487, 38.9043]
+          label: "CFTC — commodity, not wager"
+          color: "#dc2626"
+        - coordinates: [-77.0091, 38.8899]
+          label: "U.S. Capitol"
+          color: "#f59e0b"
+          labelAnchor: bottom
+
+  - id: states-lose
+    text: "What the states lose"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.6
+      pitch: 10
+      bearing: 0
+      opacity: 0.40
+      pins:
+        - coordinates: [-77.0487, 38.9043]
+          label: "CFTC — federal route"
+          color: "#dc2626"
+        - coordinates: [-74.4229, 39.3643]
+          label: "New Jersey — state regulator"
+          color: "#f59e0b"
+          labelAnchor: right
+        - coordinates: [-115.1723, 36.1147]
+          label: "Nevada — state regulator"
+          color: "#f59e0b"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # CLOSING
+  # ═══════════════════════════════════════════════
+
+  - id: closing
+    text: "Truth machines, meet truth"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-95.0, 39.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.30
+      pins:
+        - coordinates: [-74.0020, 40.7230]
+          label: "Polymarket"
+          color: "#dc2626"
+        - coordinates: [-122.4037, 37.7948]
+          label: "Kalshi"
+          color: "#dc2626"
+        - coordinates: [-77.0487, 38.9043]
+          label: "CFTC"
+          color: "#f59e0b"
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+      - [4, 5]
+    map:
+      center: [-95.0, 39.0]
+      zoom: 2.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

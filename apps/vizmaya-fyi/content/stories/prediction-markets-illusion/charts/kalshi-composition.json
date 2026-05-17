@@ -1,0 +1,56 @@
+{
+  "steps": [
+    {
+      "title": "Kalshi activity by contract type (volume, approx.)",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: {c}%"
+        },
+        "legend": {
+          "bottom": 0,
+          "textStyle": { "color": "$muted", "fontSize": 11 }
+        },
+        "series": [
+          {
+            "name": "Volume share",
+            "type": "pie",
+            "radius": ["45%", "70%"],
+            "center": ["50%", "45%"],
+            "avoidLabelOverlap": true,
+            "itemStyle": {
+              "borderColor": "$background",
+              "borderWidth": 2
+            },
+            "label": {
+              "show": true,
+              "color": "$text",
+              "fontSize": 12,
+              "formatter": "{b}\n{c}%"
+            },
+            "labelLine": {
+              "lineStyle": { "color": "$muted" }
+            },
+            "data": [
+              {
+                "value": 87,
+                "name": "Sports betting",
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "value": 8,
+                "name": "Economics / data",
+                "itemStyle": { "color": "$amber" }
+              },
+              {
+                "value": 5,
+                "name": "Politics / elections",
+                "itemStyle": { "color": "$teal" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

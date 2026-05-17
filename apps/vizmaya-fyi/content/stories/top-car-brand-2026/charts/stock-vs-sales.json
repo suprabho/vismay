@@ -1,0 +1,96 @@
+{
+  "steps": [
+    {
+      "title": "EV sales share vs EV stock share, 2024 — the new-car decision and the on-road fleet",
+      "subtitle": "IEA Global EV Outlook 2025 · selected markets",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "legend": {
+          "data": ["Sales share (new cars 2024)", "Stock share (cars on road 2024)"],
+          "top": "0%",
+          "textStyle": { "color": "$text", "fontSize": 11 }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 95,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "India",
+            "Japan",
+            "United States",
+            "World",
+            "France",
+            "Germany",
+            "United Kingdom",
+            "Netherlands",
+            "China",
+            "Denmark",
+            "Sweden",
+            "Iceland",
+            "Norway"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 11
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Sales share (new cars 2024)",
+            "type": "bar",
+            "barWidth": 10,
+            "itemStyle": { "color": "$accent" },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [2, 3, 10, 20, 24, 19, 22, 34, 48, 57, 60, 71, 89]
+          },
+          {
+            "name": "Stock share (cars on road 2024)",
+            "type": "bar",
+            "barWidth": 10,
+            "itemStyle": { "color": "$amber" },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$muted",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            },
+            "data": [0.3, 1, 2, 4, 4, 4, 3, 6, 7, 8, 9, 14, 30]
+          }
+        ]
+      }
+    }
+  ]
+}

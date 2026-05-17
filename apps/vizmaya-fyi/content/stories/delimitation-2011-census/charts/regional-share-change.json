@@ -1,0 +1,78 @@
+{
+  "steps": [
+    {
+      "title": "Change in Regional Share of Lok Sabha Seats (%)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "4%",
+          "bottom": "3%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "South",
+            "North-East",
+            "East",
+            "Hindi Heartland"
+          ],
+          "axisLabel": {
+            "color": "$text",
+            "interval": 0,
+            "fontSize": 10,
+            "rotate": 45,
+            "hideOverlap": false,
+            "showMaxLabel": true,
+            "showMinLabel": true
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "axisLabel": {
+            "formatter": "{value} %",
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Share Change",
+            "type": "bar",
+            "data": [
+              {
+                "value": -3.6,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": -0.6,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": -0.7,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 5,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

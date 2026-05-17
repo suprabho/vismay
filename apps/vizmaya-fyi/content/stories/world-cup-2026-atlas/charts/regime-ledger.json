@@ -1,0 +1,73 @@
+{
+  "steps": [
+    {
+      "title": "The 48 qualifiers, by EIU 2024 regime classification (Curaçao and Scotland sit unclassified)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c} teams"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 18,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Unclassified",
+            "Hybrid regime",
+            "Authoritarian regime",
+            "Flawed democracy",
+            "Full democracy"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Teams in 2026",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 2, "itemStyle": { "color": "$muted" } },
+              { "value": 7, "itemStyle": { "color": "$amber" } },
+              { "value": 10, "itemStyle": { "color": "$red" } },
+              { "value": 14, "itemStyle": { "color": "$teal" } },
+              { "value": 15, "itemStyle": { "color": "$positive" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

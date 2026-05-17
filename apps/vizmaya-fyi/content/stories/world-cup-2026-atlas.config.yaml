@@ -1,0 +1,730 @@
+# Story config — world-cup-2026-atlas
+#
+# The reader walks across the 48-team field of the 2026 World Cup, but
+# never as a football tournament. The arc instead reads the qualifying
+# list as a sample of the world: scale (Curaçao vs the United States),
+# squad-value-to-GDP residuals (Portugal, Croatia, Senegal, Morocco
+# above the line; Saudi Arabia, Iran, Egypt below), regime spectrum
+# (15 full / 14 flawed / 7 hybrid / 10 authoritarian), and the four
+# debutants. The camera opens on the world, dips into Willemstad,
+# Lisbon, Riyadh, and the MENA belt, and pulls back to the full
+# bracket as census.
+#
+# COORDINATES (capital / focal points):
+#   Washington DC, USA        -77.0369, 38.9072
+#   Willemstad, Curaçao       -68.9728, 12.1224
+#   Lisbon, Portugal           -9.1393, 38.7223
+#   Zagreb, Croatia            15.9819, 45.8150
+#   Dakar, Senegal            -17.4441, 14.6928
+#   Rabat, Morocco             -6.8498, 33.9716
+#   Riyadh, Saudi Arabia       46.6753, 24.7136
+#   Tehran, Iran               51.3890, 35.6892
+#   Cairo, Egypt               31.2357, 30.0444
+#   Doha, Qatar                51.5310, 25.2854
+#   Amman, Jordan              35.9106, 31.9544
+#   Tashkent, Uzbekistan       69.2401, 41.2995
+#   Praia, Cape Verde         -23.5087, 14.9330
+#
+# REGION RAMPS used in this story:
+#   Squad value (€mn) :  [20, 100, 300, 600, 1300] → [$surface, $accent2, $teal, $amber, $accent]
+#   Confederation     :  [1, 2, 3, 4, 5, 6]        → [UEFA gold, CONMEBOL red, CAF green, AFC blue, CONCACAF teal, OFC amber]
+#   EIU 2024 score    :  [0, 4, 6, 8, 10]          → [$red, $amber, $teal, $positive, $positive]
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d4a84a"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Atlas of the 2026 Field"
+    eyebrow: "World Cup · May 2026"
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 48 teams, the whole field
+  # ═══════════════════════════════════════════════
+
+  - id: forty-eight-stat
+    kind: stat
+    text: "48"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [5.0, 20.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [20, 100, 300, 600, 1300]
+        colors: ["$surface", "$accent2", "$teal", "$amber", "$accent"]
+        items:
+          - { code: "US", value: 315 }
+          - { code: "MX", value: 198 }
+          - { code: "CA", value: 133 }
+          - { code: "GB", value: 1300 }
+          - { code: "FR", value: 1280 }
+          - { code: "ES", value: 920 }
+          - { code: "PT", value: 850 }
+          - { code: "DE", value: 750 }
+          - { code: "NL", value: 720 }
+          - { code: "BE", value: 470 }
+          - { code: "HR", value: 320 }
+          - { code: "TR", value: 460 }
+          - { code: "CH", value: 350 }
+          - { code: "NO", value: 380 }
+          - { code: "SE", value: 320 }
+          - { code: "AT", value: 280 }
+          - { code: "CZ", value: 260 }
+          - { code: "BA", value: 130 }
+          - { code: "AR", value: 770 }
+          - { code: "BR", value: 915 }
+          - { code: "CO", value: 290 }
+          - { code: "UY", value: 102 }
+          - { code: "EC", value: 188 }
+          - { code: "PY", value: 104 }
+          - { code: "MA", value: 403 }
+          - { code: "SN", value: 260 }
+          - { code: "CI", value: 278 }
+          - { code: "DZ", value: 204 }
+          - { code: "GH", value: 199 }
+          - { code: "EG", value: 85 }
+          - { code: "TN", value: 68 }
+          - { code: "ZA", value: 26 }
+          - { code: "CV", value: 28 }
+          - { code: "JP", value: 214 }
+          - { code: "KR", value: 129 }
+          - { code: "IR", value: 30 }
+          - { code: "AU", value: 46 }
+          - { code: "SA", value: 31 }
+          - { code: "QA", value: 21 }
+          - { code: "UZ", value: 28 }
+          - { code: "JO", value: 16 }
+          - { code: "PA", value: 50 }
+          - { code: "HT", value: 35 }
+          - { code: "CW", value: 20 }
+          - { code: "NZ", value: 25 }
+          - { code: "CD", value: 80 }
+          - { code: "IQ", value: 22 }
+
+  # ═══════════════════════════════════════════════
+  # ROSTER, BY CONFEDERATION
+  # ═══════════════════════════════════════════════
+
+  - id: roster-confederation
+    text: "The roster, by confederation"
+    chart: data:confederation-breakdown
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 15.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [1, 2, 3, 4, 5, 6]
+        colors: ["$accent", "$red", "$positive", "$accent2", "$teal", "$amber"]
+        items:
+          # UEFA = 1
+          - { code: "GB", value: 1 }
+          - { code: "FR", value: 1 }
+          - { code: "ES", value: 1 }
+          - { code: "PT", value: 1 }
+          - { code: "DE", value: 1 }
+          - { code: "NL", value: 1 }
+          - { code: "BE", value: 1 }
+          - { code: "HR", value: 1 }
+          - { code: "TR", value: 1 }
+          - { code: "CH", value: 1 }
+          - { code: "NO", value: 1 }
+          - { code: "SE", value: 1 }
+          - { code: "AT", value: 1 }
+          - { code: "CZ", value: 1 }
+          - { code: "BA", value: 1 }
+          # CONMEBOL = 2
+          - { code: "AR", value: 2 }
+          - { code: "BR", value: 2 }
+          - { code: "CO", value: 2 }
+          - { code: "UY", value: 2 }
+          - { code: "EC", value: 2 }
+          - { code: "PY", value: 2 }
+          # CAF = 3
+          - { code: "MA", value: 3 }
+          - { code: "SN", value: 3 }
+          - { code: "CI", value: 3 }
+          - { code: "DZ", value: 3 }
+          - { code: "GH", value: 3 }
+          - { code: "EG", value: 3 }
+          - { code: "TN", value: 3 }
+          - { code: "ZA", value: 3 }
+          - { code: "CV", value: 3 }
+          - { code: "CD", value: 3 }
+          # AFC = 4
+          - { code: "JP", value: 4 }
+          - { code: "KR", value: 4 }
+          - { code: "IR", value: 4 }
+          - { code: "AU", value: 4 }
+          - { code: "SA", value: 4 }
+          - { code: "QA", value: 4 }
+          - { code: "UZ", value: 4 }
+          - { code: "JO", value: 4 }
+          - { code: "IQ", value: 4 }
+          # CONCACAF = 5
+          - { code: "US", value: 5 }
+          - { code: "MX", value: 5 }
+          - { code: "CA", value: 5 }
+          - { code: "PA", value: 5 }
+          - { code: "HT", value: 5 }
+          - { code: "CW", value: 5 }
+          # OFC = 6
+          - { code: "NZ", value: 6 }
+
+  # ═══════════════════════════════════════════════
+  # STAT — 2,232x (population gap, USA vs Curaçao)
+  # ═══════════════════════════════════════════════
+
+  - id: population-gap-stat
+    kind: stat
+    text: "2,232×"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-72.0, 25.0]
+      zoom: 3.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [-77.0369, 38.9072]
+          label: "Washington — pop. 334.9M"
+          color: "#d4a84a"
+        - coordinates: [-68.9728, 12.1224]
+          label: "Willemstad — pop. 0.15M"
+          color: "#c26a4a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [0, 350]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "US", value: 334.9 }
+          - { code: "CW", value: 0.15 }
+
+  # ═══════════════════════════════════════════════
+  # CURAÇAO PARADOX
+  # ═══════════════════════════════════════════════
+
+  - id: curacao-paradox
+    text: "The Curaçao paradox"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-68.9728, 12.1224]
+      zoom: 6.5
+      pitch: 35
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [-68.9728, 12.1224]
+          label: "Willemstad, Curaçao"
+          color: "#d4a84a"
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "CW", value: 1 }
+
+  # ═══════════════════════════════════════════════
+  # THE SQUAD-VALUE CURVE
+  # ═══════════════════════════════════════════════
+
+  - id: squad-value-curve
+    text: "The squad-value curve"
+    chart: data:squad-vs-gdp
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [20, 100, 300, 600, 1300]
+        colors: ["$surface", "$accent2", "$teal", "$amber", "$accent"]
+        items:
+          - { code: "GB", value: 1300 }
+          - { code: "FR", value: 1280 }
+          - { code: "ES", value: 920 }
+          - { code: "BR", value: 915 }
+          - { code: "PT", value: 850 }
+          - { code: "AR", value: 770 }
+          - { code: "DE", value: 750 }
+          - { code: "NL", value: 720 }
+          - { code: "BE", value: 470 }
+          - { code: "TR", value: 460 }
+          - { code: "MA", value: 403 }
+          - { code: "NO", value: 380 }
+          - { code: "CH", value: 350 }
+          - { code: "HR", value: 320 }
+          - { code: "SE", value: 320 }
+          - { code: "US", value: 315 }
+          - { code: "CO", value: 290 }
+          - { code: "AT", value: 280 }
+          - { code: "CI", value: 278 }
+          - { code: "SN", value: 260 }
+          - { code: "CZ", value: 260 }
+          - { code: "JP", value: 214 }
+          - { code: "DZ", value: 204 }
+          - { code: "GH", value: 199 }
+          - { code: "MX", value: 198 }
+          - { code: "EC", value: 188 }
+          - { code: "CA", value: 133 }
+          - { code: "BA", value: 130 }
+          - { code: "KR", value: 129 }
+          - { code: "PY", value: 104 }
+          - { code: "UY", value: 102 }
+          - { code: "EG", value: 85 }
+          - { code: "CD", value: 80 }
+          - { code: "TN", value: 68 }
+          - { code: "PA", value: 50 }
+          - { code: "AU", value: 46 }
+          - { code: "HT", value: 35 }
+          - { code: "SA", value: 31 }
+          - { code: "IR", value: 30 }
+          - { code: "CV", value: 28 }
+          - { code: "UZ", value: 28 }
+          - { code: "ZA", value: 26 }
+          - { code: "NZ", value: 25 }
+          - { code: "IQ", value: 22 }
+          - { code: "QA", value: 21 }
+          - { code: "CW", value: 20 }
+          - { code: "JO", value: 16 }
+
+  # ═══════════════════════════════════════════════
+  # STAT — €82 (Portugal & Croatia per-capita)
+  # ═══════════════════════════════════════════════
+
+  - id: per-capita-stat
+    kind: stat
+    text: "€82"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [5.0, 42.0]
+      zoom: 3.7
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [-9.1393, 38.7223]
+          label: "Lisbon — €82/person"
+          color: "#d4a84a"
+          labelAnchor: left
+        - coordinates: [15.9819, 45.8150]
+          label: "Zagreb — €82/person"
+          color: "#d4a84a"
+          labelAnchor: right
+      regions:
+        level: country
+        ramp: [0, 82]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "PT", value: 82 }
+          - { code: "HR", value: 82 }
+
+  # ═══════════════════════════════════════════════
+  # ABOVE THE LINE — Portugal, Croatia, Senegal, Morocco
+  # ═══════════════════════════════════════════════
+
+  - id: above-the-line
+    text: "Above the line — Portugal, Croatia, Senegal, Morocco"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-2.0, 30.0]
+      zoom: 2.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-9.1393, 38.7223]
+          label: "Portugal"
+          color: "#d4a84a"
+          labelAnchor: left
+        - coordinates: [15.9819, 45.8150]
+          label: "Croatia"
+          color: "#d4a84a"
+          labelAnchor: right
+        - coordinates: [-17.4441, 14.6928]
+          label: "Senegal"
+          color: "#d4a84a"
+          labelAnchor: left
+        - coordinates: [-6.8498, 33.9716]
+          label: "Morocco"
+          color: "#d4a84a"
+          labelAnchor: right
+      regions:
+        level: country
+        ramp: [0, 100]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "PT", value: 100 }
+          - { code: "HR", value: 100 }
+          - { code: "SN", value: 100 }
+          - { code: "MA", value: 100 }
+
+  # ═══════════════════════════════════════════════
+  # BELOW THE LINE — Saudi Arabia, Iran, Egypt
+  # ═══════════════════════════════════════════════
+
+  - id: below-the-line
+    text: "Below the line — Saudi Arabia, Iran, Egypt"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [40.0, 28.0]
+      zoom: 2.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [46.6753, 24.7136]
+          label: "Riyadh"
+          color: "#c26a4a"
+          labelAnchor: bottom
+        - coordinates: [51.3890, 35.6892]
+          label: "Tehran"
+          color: "#c26a4a"
+          labelAnchor: top
+        - coordinates: [31.2357, 30.0444]
+          label: "Cairo"
+          color: "#c26a4a"
+          labelAnchor: left
+      regions:
+        level: country
+        ramp: [0, 100]
+        colors: ["$surface", "$red"]
+        items:
+          - { code: "SA", value: 100 }
+          - { code: "IR", value: 100 }
+          - { code: "EG", value: 100 }
+
+  # ═══════════════════════════════════════════════
+  # STAT — €31M (Saudi Arabia)
+  # ═══════════════════════════════════════════════
+
+  - id: saudi-stat
+    kind: stat
+    text: "€31M"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [46.6753, 24.7136]
+      zoom: 4.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [46.6753, 24.7136]
+          label: "Riyadh — €31M squad, $1.1T GDP"
+          color: "#c26a4a"
+      regions:
+        level: country
+        ramp: [0, 100]
+        colors: ["$surface", "$red"]
+        items:
+          - { code: "SA", value: 100 }
+
+  # ═══════════════════════════════════════════════
+  # THE REGIME LEDGER
+  # ═══════════════════════════════════════════════
+
+  - id: regime-ledger
+    text: "The regime ledger"
+    chart: data:regime-ledger
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [1, 4, 6, 8, 10]
+        colors: ["$red", "$amber", "$teal", "$positive", "$positive"]
+        items:
+          - { code: "NO", value: 9.81 }
+          - { code: "SE", value: 9.39 }
+          - { code: "CH", value: 9.32 }
+          - { code: "NL", value: 9.00 }
+          - { code: "NZ", value: 8.88 }
+          - { code: "AU", value: 8.85 }
+          - { code: "DE", value: 8.73 }
+          - { code: "CA", value: 8.69 }
+          - { code: "JP", value: 8.40 }
+          - { code: "AT", value: 8.34 }
+          - { code: "UY", value: 8.29 }
+          - { code: "GB", value: 8.28 }
+          - { code: "CZ", value: 8.08 }
+          - { code: "FR", value: 8.07 }
+          - { code: "ES", value: 8.07 }
+          - { code: "PT", value: 7.93 }
+          - { code: "US", value: 7.85 }
+          - { code: "KR", value: 7.75 }
+          - { code: "CV", value: 7.65 }
+          - { code: "BE", value: 7.59 }
+          - { code: "PA", value: 7.40 }
+          - { code: "HR", value: 7.40 }
+          - { code: "ZA", value: 7.16 }
+          - { code: "AR", value: 6.84 }
+          - { code: "CO", value: 6.49 }
+          - { code: "BR", value: 6.35 }
+          - { code: "MX", value: 6.27 }
+          - { code: "EC", value: 6.11 }
+          - { code: "GH", value: 6.06 }
+          - { code: "TN", value: 5.51 }
+          - { code: "PY", value: 5.32 }
+          - { code: "SN", value: 5.05 }
+          - { code: "MA", value: 5.04 }
+          - { code: "BA", value: 4.97 }
+          - { code: "TR", value: 4.26 }
+          - { code: "CI", value: 4.22 }
+          - { code: "DZ", value: 3.66 }
+          - { code: "QA", value: 3.65 }
+          - { code: "IQ", value: 3.62 }
+          - { code: "JO", value: 3.17 }
+          - { code: "EG", value: 2.93 }
+          - { code: "HT", value: 2.74 }
+          - { code: "UZ", value: 2.10 }
+          - { code: "SA", value: 2.08 }
+          - { code: "IR", value: 1.96 }
+          - { code: "CD", value: 1.18 }
+
+  # ═══════════════════════════════════════════════
+  # STAT — 8 (Arab nations)
+  # ═══════════════════════════════════════════════
+
+  - id: arab-bloc-stat
+    kind: stat
+    text: "8"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [25.0, 28.0]
+      zoom: 2.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.60
+      regions:
+        level: country
+        ramp: [0, 100]
+        colors: ["$surface", "$red"]
+        items:
+          - { code: "SA", value: 100 }
+          - { code: "QA", value: 100 }
+          - { code: "EG", value: 100 }
+          - { code: "DZ", value: 100 }
+          - { code: "TN", value: 100 }
+          - { code: "MA", value: 100 }
+          - { code: "JO", value: 100 }
+          - { code: "IQ", value: 100 }
+      pins:
+        - coordinates: [-6.8498, 33.9716]
+          label: "Morocco"
+          color: "#c26a4a"
+          labelAnchor: left
+        - coordinates: [9.5375, 33.8869]
+          label: "Tunisia"
+          color: "#c26a4a"
+          labelAnchor: top
+        - coordinates: [3.0588, 36.7538]
+          label: "Algeria"
+          color: "#c26a4a"
+          labelAnchor: bottom
+        - coordinates: [31.2357, 30.0444]
+          label: "Egypt"
+          color: "#c26a4a"
+          labelAnchor: bottom
+        - coordinates: [35.9106, 31.9544]
+          label: "Jordan"
+          color: "#c26a4a"
+          labelAnchor: top
+        - coordinates: [44.3661, 33.3152]
+          label: "Iraq"
+          color: "#c26a4a"
+          labelAnchor: top
+        - coordinates: [46.6753, 24.7136]
+          label: "Saudi Arabia"
+          color: "#c26a4a"
+          labelAnchor: right
+        - coordinates: [51.5310, 25.2854]
+          label: "Qatar"
+          color: "#c26a4a"
+          labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # THE FOUR DEBUTANTS
+  # ═══════════════════════════════════════════════
+
+  - id: four-debutants
+    text: "The four debutants"
+    chart: data:debutants
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [25.0, 25.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-23.5087, 14.9330]
+          label: "Cape Verde"
+          color: "#d4a84a"
+          labelAnchor: right
+        - coordinates: [-68.9728, 12.1224]
+          label: "Curaçao"
+          color: "#d4a84a"
+          labelAnchor: left
+        - coordinates: [69.2401, 41.2995]
+          label: "Uzbekistan"
+          color: "#d4a84a"
+          labelAnchor: top
+        - coordinates: [35.9106, 31.9544]
+          label: "Jordan"
+          color: "#d4a84a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [0, 100]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "CV", value: 100 }
+          - { code: "CW", value: 100 }
+          - { code: "UZ", value: 100 }
+          - { code: "JO", value: 100 }
+
+  # ═══════════════════════════════════════════════
+  # CLOSING — bracket as census
+  # ═══════════════════════════════════════════════
+
+  - id: tournament-as-census
+    text: "One tournament, every world"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [20, 100, 300, 600, 1300]
+        colors: ["$surface", "$accent2", "$teal", "$amber", "$accent"]
+        items:
+          - { code: "US", value: 315 }
+          - { code: "MX", value: 198 }
+          - { code: "CA", value: 133 }
+          - { code: "GB", value: 1300 }
+          - { code: "FR", value: 1280 }
+          - { code: "ES", value: 920 }
+          - { code: "PT", value: 850 }
+          - { code: "DE", value: 750 }
+          - { code: "NL", value: 720 }
+          - { code: "BE", value: 470 }
+          - { code: "HR", value: 320 }
+          - { code: "TR", value: 460 }
+          - { code: "CH", value: 350 }
+          - { code: "NO", value: 380 }
+          - { code: "SE", value: 320 }
+          - { code: "AT", value: 280 }
+          - { code: "CZ", value: 260 }
+          - { code: "BA", value: 130 }
+          - { code: "AR", value: 770 }
+          - { code: "BR", value: 915 }
+          - { code: "CO", value: 290 }
+          - { code: "UY", value: 102 }
+          - { code: "EC", value: 188 }
+          - { code: "PY", value: 104 }
+          - { code: "MA", value: 403 }
+          - { code: "SN", value: 260 }
+          - { code: "CI", value: 278 }
+          - { code: "DZ", value: 204 }
+          - { code: "GH", value: 199 }
+          - { code: "EG", value: 85 }
+          - { code: "TN", value: 68 }
+          - { code: "ZA", value: 26 }
+          - { code: "CV", value: 28 }
+          - { code: "JP", value: 214 }
+          - { code: "KR", value: 129 }
+          - { code: "IR", value: 30 }
+          - { code: "AU", value: 46 }
+          - { code: "SA", value: 31 }
+          - { code: "QA", value: 21 }
+          - { code: "UZ", value: 28 }
+          - { code: "JO", value: 16 }
+          - { code: "PA", value: 50 }
+          - { code: "HT", value: 35 }
+          - { code: "CW", value: 20 }
+          - { code: "NZ", value: 25 }
+          - { code: "CD", value: 80 }
+          - { code: "IQ", value: 22 }
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

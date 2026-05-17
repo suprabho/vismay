@@ -1,0 +1,969 @@
+# Story config — press-freedom-2026
+#
+# Source: RSF 2026 World Press Freedom Index — https://rsf.org/en/index
+# Data: vizmaya-data/2026.csv  (regenerate items[] with scripts/rsf-csv-to-yaml.mjs)
+#
+# CHOROPLETH DIRECTION (important):
+#   Higher RSF score = MORE press freedom.
+#   Ramp goes red (low/repressed) → through neutral → green/accent (high/free).
+#   This is INVERTED from typical "danger ramp" intuition. Verify on first paint
+#   that Norway (92.7) shows green and China (13.9) shows red.
+#
+# Choropleth ramp (used in hero/closing/intros):
+#   [15, 35, 55, 75, 90]  →  [$red, $amber, $surface, $accent2, $accent]
+#
+# CAPITALS / FOCAL CITIES:
+#   Oslo               10.7522, 59.9139
+#   Tallinn            24.7536, 59.4370
+#   Vilnius            25.2797, 54.6872
+#   Amsterdam           4.9041, 52.3676
+#   Copenhagen         12.5683, 55.6761
+#   Stockholm          18.0686, 59.3293
+#   Helsinki           24.9384, 60.1699
+#   Asmara             38.9251, 15.3229
+#   Beijing           116.4074, 39.9042
+#   Pyongyang         125.7625, 39.0392
+#   Tehran             51.3890, 35.6892
+#   Riyadh             46.6753, 24.7136
+#   Dubai              55.2708, 25.2048
+#   Damascus           36.2765, 33.5138
+#   Washington DC     -77.0369, 38.9072
+#   Berlin             13.4050, 52.5200
+#   Budapest           19.0402, 47.4979
+#   Tel Aviv           34.7818, 32.0853
+#   Buenos Aires      -58.3816, -34.6037
+#   Niamey              2.1098, 13.5128
+#   Quito             -78.4678, -0.1807
+#   Freetown          -13.2317,  8.4657
+#   Dar es Salaam      39.2083, -6.7924
+#   Tbilisi            44.7931, 41.7151
+#   Gaborone           25.9231, -24.6282
+#   Maseru             27.4869, -29.3151
+#   Ulaanbaatar       106.9057, 47.8864
+#   Suva              178.4419, -18.1416
+#   Seoul             126.9780, 37.5665
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/light-v11
+  mapOpacity: 0.55
+  pinColor: "#d4a04a"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO — global choropleth dimmed
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Pressure Index"
+    eyebrow: "Press Freedom · May 2026"
+    map:
+      center: [20.0, 25.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [15, 35, 55, 75, 90]
+        colors: ["$red", "$amber", "$surface", "$accent2", "$accent"]
+        # Generated from RSF 2026.csv via scripts/rsf-csv-to-yaml.mjs (178 entries)
+        items: &globalItems
+          - { code: "NO", value: 92.72 }   # Norway (1)
+          - { code: "NL", value: 88.92 }   # Netherlands (2)
+          - { code: "EE", value: 88.54 }   # Estonia (3)
+          - { code: "DK", value: 88.47 }   # Denmark (4)
+          - { code: "SE", value: 87.61 }   # Sweden (5)
+          - { code: "FI", value: 86.22 }   # Finland (6)
+          - { code: "IE", value: 85.93 }   # Ireland (7)
+          - { code: "CH", value: 84.83 }   # Switzerland (8)
+          - { code: "LU", value: 84.14 }   # Luxembourg (9)
+          - { code: "PT", value: 83.71 }   # Portugal (10)
+          - { code: "CZ", value: 83.01 }   # Czechia (11)
+          - { code: "IS", value: 82.77 }   # Iceland (12)
+          - { code: "LI", value: 82.62 }   # Liechtenstein (13)
+          - { code: "DE", value: 82.17 }   # Germany (14)
+          - { code: "LT", value: 81.34 }   # Lithuania (15)
+          - { code: "BE", value: 81.17 }   # Belgium (16)
+          - { code: "LV", value: 81.00 }   # Latvia (17)
+          - { code: "GB", value: 79.45 }   # United Kingdom (18)
+          - { code: "AT", value: 79.43 }   # Austria (19)
+          - { code: "CA", value: 78.76 }   # Canada (20)
+          - { code: "ZA", value: 77.95 }   # South Africa (21)
+          - { code: "NZ", value: 77.38 }   # New Zealand (22)
+          - { code: "NA", value: 76.97 }   # Namibia (23)
+          - { code: "FJ", value: 76.76 }   # Fiji (24)
+          - { code: "FR", value: 76.68 }   # France (25)
+          - { code: "JM", value: 75.87 }   # Jamaica (26)
+          - { code: "PL", value: 75.52 }   # Poland (27)
+          - { code: "TW", value: 75.44 }   # Taiwan (28)
+          - { code: "ES", value: 75.42 }   # Spain (29)
+          - { code: "TL", value: 75.29 }   # East Timor (30)
+          - { code: "MD", value: 74.77 }   # Moldova (31)
+          - { code: "TT", value: 74.70 }   # Trinidad and Tobago (32)
+          - { code: "AU", value: 74.58 }   # Australia (33)
+          - { code: "SR", value: 73.20 }   # Suriname (34)
+          - { code: "SC", value: 73.04 }   # Seychelles (35)
+          - { code: "SI", value: 72.88 }   # Slovenia (36)
+          - { code: "SK", value: 72.71 }   # Slovakia (37)
+          - { code: "CR", value: 72.35 }   # Costa Rica (38)
+          - { code: "GH", value: 72.20 }   # Ghana (39)
+          - { code: "CV", value: 71.98 }   # Cabo Verde (40)
+          - { code: "ME", value: 71.80 }   # Montenegro (41)
+          - { code: "MU", value: 70.92 }   # Mauritius (42)
+          - { code: "GA", value: 70.57 }   # Gabon (43)
+          - { code: "DO", value: 69.73 }   # Dominican Republic (44)
+          - { code: "MK", value: 69.49 }   # North Macedonia (45)
+          - { code: "GM", value: 69.42 }   # Gambia (46)
+          - { code: "KR", value: 69.12 }   # South Korea (47)
+          - { code: "UY", value: 68.72 }   # Uruguay (48)
+          - { code: "RO", value: 67.71 }   # Romania (49)
+          - { code: "AM", value: 67.02 }   # Armenia (50)
+          - { code: "TO", value: 66.62 }   # Tonga (51)
+          - { code: "BR", value: 66.37 }   # Brazil (52)
+          - { code: "HR", value: 66.31 }   # Croatia (53)
+          - { code: "CI", value: 66.27 }   # Côte d'Ivoire (54)
+          - { code: "UA", value: 66.10 }   # Ukraine (55)
+          - { code: "IT", value: 65.16 }   # Italy (56)
+          - { code: "LR", value: 64.54 }   # Liberia (58)
+          - { code: "WS", value: 64.53 }   # Samoa (59)
+          - { code: "AD", value: 63.91 }   # Andorra (60)
+          - { code: "MR", value: 63.36 }   # Mauritania (61)
+          - { code: "JP", value: 62.90 }   # Japan (62)
+          - { code: "BW", value: 62.89 }   # Botswana (63)
+          - { code: "US", value: 62.61 }   # United States (64)
+          - { code: "PA", value: 62.14 }   # Panama (65)
+          - { code: "BZ", value: 61.66 }   # Belize (66)
+          - { code: "MT", value: 61.44 }   # Malta (67)
+          - { code: "CG", value: 61.21 }   # Congo-Brazzaville (68)
+          - { code: "MW", value: 60.96 }   # Malawi (69)
+          - { code: "CL", value: 60.84 }   # Chile (70)
+          - { code: "BG", value: 60.28 }   # Bulgaria (71)
+          - { code: "KM", value: 60.23 }   # Comoros (72)
+          - { code: "PG", value: 60.11 }   # Papua New Guinea (73)
+          - { code: "HU", value: 59.85 }   # Hungary (74)
+          - { code: "QA", value: 59.79 }   # Qatar (75)
+          - { code: "GY", value: 59.58 }   # Guyana (76)
+          - { code: "ZM", value: 58.58 }   # Zambia (77)
+          - { code: "SN", value: 58.11 }   # Senegal (78)
+          - { code: "SL", value: 57.06 }   # Sierra Leone (79)
+          - { code: "CY", value: 56.91 }   # Cyprus (80)
+          - { code: "CF", value: 56.73 }   # Central African Republic (81)
+          - { code: "AL", value: 56.52 }   # Albania (83)
+          - { code: "XK", value: 55.89 }   # Kosovo (84)
+          - { code: "MN", value: 55.79 }   # Mongolia (85)
+          - { code: "GR", value: 55.05 }   # Greece (86)
+          - { code: "NP", value: 54.80 }   # Nepal (87)
+          - { code: "PY", value: 54.67 }   # Paraguay (88)
+          - { code: "LS", value: 54.37 }   # Lesotho (89)
+          - { code: "BA", value: 54.29 }   # Bosnia-Herzegovina (90)
+          - { code: "BO", value: 54.25 }   # Bolivia (91)
+          - { code: "TH", value: 53.97 }   # Thailand (92)
+          - { code: "TD", value: 53.90 }   # Chad (93)
+          - { code: "GQ", value: 52.79 }   # Equatorial Guinea (94)
+          - { code: "MY", value: 52.73 }   # Malaysia (95)
+          - { code: "BN", value: 52.58 }   # Brunei (96)
+          - { code: "TG", value: 52.56 }   # Togo (97)
+          - { code: "AR", value: 52.44 }   # Argentina (98)
+          - { code: "MZ", value: 52.27 }   # Mozambique (99)
+          - { code: "GW", value: 51.99 }   # Guinea-Bissau (100)
+          - { code: "SZ", value: 51.94 }   # Eswatini (101)
+          - { code: "CO", value: 51.66 }   # Colombia (102)
+          - { code: "MG", value: 50.95 }   # Madagascar (103)
+          - { code: "RS", value: 50.79 }   # Serbia (104)
+          - { code: "MA", value: 50.55 }   # Morocco / W. Sahara (105)
+          - { code: "KE", value: 50.51 }   # Kenya (106)
+          - { code: "HT", value: 50.32 }   # Haiti (107)
+          - { code: "MV", value: 49.23 }   # Maldives (108)
+          - { code: "AO", value: 48.82 }   # Angola (109)
+          - { code: "BF", value: 48.52 }   # Burkina Faso (110)
+          - { code: "GN", value: 48.45 }   # Guinea (111)
+          - { code: "NG", value: 48.11 }   # Nigeria (112)
+          - { code: "BJ", value: 47.39 }   # Benin (113)
+          - { code: "PH", value: 46.79 }   # Philippines (114)
+          - { code: "LB", value: 46.49 }   # Lebanon (115)
+          - { code: "IL", value: 46.46 }   # Israel (116)
+          - { code: "TZ", value: 46.22 }   # Tanzania (117)
+          - { code: "SS", value: 46.16 }   # South Sudan (118)
+          - { code: "BI", value: 46.14 }   # Burundi (119)
+          - { code: "NE", value: 46.02 }   # Niger (120)
+          - { code: "ML", value: 45.63 }   # Mali (121)
+          - { code: "MX", value: 45.23 }   # Mexico (122)
+          - { code: "SG", value: 44.57 }   # Singapore (123)
+          - { code: "ZW", value: 44.37 }   # Zimbabwe (124)
+          - { code: "EC", value: 44.37 }   # Ecuador (125)
+          - { code: "SO", value: 43.84 }   # Somalia (126)
+          - { code: "OM", value: 43.67 }   # Oman (127)
+          - { code: "GT", value: 43.21 }   # Guatemala (128)
+          - { code: "ID", value: 43.02 }   # Indonesia (129)
+          - { code: "CD", value: 42.16 }   # DR Congo (130)
+          - { code: "UG", value: 41.98 }   # Uganda (131)
+          - { code: "HN", value: 41.02 }   # Honduras (132)
+          - { code: "CM", value: 40.88 }   # Cameroon (133)
+          - { code: "LK", value: 40.77 }   # Sri Lanka (134)
+          - { code: "GE", value: 40.77 }   # Georgia (135)
+          - { code: "KW", value: 40.44 }   # Kuwait (136)
+          - { code: "TN", value: 40.43 }   # Tunisia (137)
+          - { code: "LY", value: 40.34 }   # Libya (138)
+          - { code: "RW", value: 39.58 }   # Rwanda (139)
+          - { code: "HK", value: 39.49 }   # Hong Kong (140)
+          - { code: "SY", value: 39.44 }   # Syria (141)
+          - { code: "JO", value: 39.33 }   # Jordan (142)
+          - { code: "SV", value: 38.88 }   # El Salvador (143)
+          - { code: "PE", value: 37.86 }   # Peru (144)
+          - { code: "DZ", value: 37.38 }   # Algeria (145)
+          - { code: "KG", value: 35.06 }   # Kyrgyzstan (146)
+          - { code: "UZ", value: 34.95 }   # Uzbekistan (147)
+          - { code: "ET", value: 34.66 }   # Ethiopia (148)
+          - { code: "KZ", value: 34.41 }   # Kazakhstan (149)
+          - { code: "BT", value: 33.50 }   # Bhutan (150)
+          - { code: "KH", value: 33.28 }   # Cambodia (151)
+          - { code: "BD", value: 33.05 }   # Bangladesh (152)
+          - { code: "PK", value: 32.61 }   # Pakistan (153)
+          - { code: "LA", value: 32.54 }   # Laos (154)
+          - { code: "TJ", value: 32.22 }   # Tajikistan (155)
+          - { code: "PS", value: 32.09 }   # Palestine (156)
+          - { code: "IN", value: 31.96 }   # India (157)
+          - { code: "AE", value: 30.86 }   # United Arab Emirates (158)
+          - { code: "VE", value: 30.48 }   # Venezuela (159)
+          - { code: "CU", value: 29.22 }   # Cuba (160)
+          - { code: "SD", value: 29.02 }   # Sudan (161)
+          - { code: "IQ", value: 28.85 }   # Iraq (162)
+          - { code: "TR", value: 27.94 }   # Türkiye (163)
+          - { code: "YE", value: 27.89 }   # Yemen (164)
+          - { code: "BY", value: 27.72 }   # Belarus (165)
+          - { code: "MM", value: 26.38 }   # Myanmar (166)
+          - { code: "DJ", value: 25.04 }   # Djibouti (167)
+          - { code: "NI", value: 24.98 }   # Nicaragua (168)
+          - { code: "EG", value: 24.92 }   # Egypt (169)
+          - { code: "BH", value: 24.84 }   # Bahrain (170)
+          - { code: "AZ", value: 23.95 }   # Azerbaijan (171)
+          - { code: "RU", value: 23.15 }   # Russia (172)
+          - { code: "TM", value: 23.06 }   # Turkmenistan (173)
+          - { code: "VN", value: 21.15 }   # Vietnam (174)
+          - { code: "AF", value: 19.51 }   # Afghanistan (175)
+          - { code: "SA", value: 19.11 }   # Saudi Arabia (176)
+          - { code: "IR", value: 17.45 }   # Iran (177)
+          - { code: "CN", value: 13.85 }   # China (178)
+          - { code: "KP", value: 12.67 }   # North Korea (179)
+          - { code: "ER", value: 10.24 }   # Eritrea (180)
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 92.7 (Norway)
+  # ═══════════════════════════════════════════════
+
+  - id: stat-norway
+    kind: stat
+    text: "92.7"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.7522, 62.0]
+      zoom: 4.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [10.7522, 59.9139]
+          label: "Oslo — 92.7"
+          color: "#3d8d6e"
+      regions:
+        level: country
+        ramp: [70, 95]
+        colors: ["$surface", "$accent"]
+        items:
+          - { code: "NO", value: 92.72 }
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 10.2 (Eritrea)
+  # ═══════════════════════════════════════════════
+
+  - id: stat-eritrea
+    kind: stat
+    text: "10.2"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [38.9251, 13.5]
+      zoom: 4.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [38.9251, 15.3229]
+          label: "Asmara — 10.2"
+          color: "#bf4f3a"
+      regions:
+        level: country
+        ramp: [10, 30]
+        colors: ["$red", "$surface"]
+        items:
+          - { code: "ER", value: 10.24 }
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THE FROZEN POLES (top)
+  # ═══════════════════════════════════════════════
+
+  - id: frozen-poles-intro
+    text: "The frozen poles"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [12.0, 58.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [80, 90]
+        colors: ["$accent2", "$accent"]
+        items:
+          - { code: "NO", value: 92.72 }
+          - { code: "NL", value: 88.92 }
+          - { code: "EE", value: 88.54 }
+          - { code: "DK", value: 88.47 }
+          - { code: "SE", value: 87.61 }
+          - { code: "FI", value: 86.22 }
+          - { code: "IE", value: 85.93 }
+          - { code: "LU", value: 84.14 }
+          - { code: "DE", value: 82.17 }
+          - { code: "LT", value: 81.34 }
+          - { code: "LV", value: 81.00 }
+          - { code: "BE", value: 81.17 }
+
+  - id: frozen-poles
+    chart: data:top-15
+    map:
+      center: [12.0, 58.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [80, 90]
+        colors: ["$accent2", "$accent"]
+        items:
+          - { code: "NO", value: 92.72 }
+          - { code: "NL", value: 88.92 }
+          - { code: "EE", value: 88.54 }
+          - { code: "DK", value: 88.47 }
+          - { code: "SE", value: 87.61 }
+          - { code: "FI", value: 86.22 }
+          - { code: "IE", value: 85.93 }
+          - { code: "LU", value: 84.14 }
+          - { code: "DE", value: 82.17 }
+          - { code: "LT", value: 81.34 }
+          - { code: "LV", value: 81.00 }
+          - { code: "BE", value: 81.17 }
+    subsections:
+      - text: "Norway, the constant"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [10.5, 62.5]
+          zoom: 4.2
+          pitch: 20
+          opacity: 0.65
+          pins:
+            - coordinates: [10.7522, 59.9139]
+              label: "Oslo — 92.7 (rank 1)"
+              color: "#3d8d6e"
+
+      - text: "The Baltic surprise"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [25.0, 58.0]
+          zoom: 4.6
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [24.7536, 59.4370]
+              label: "Tallinn — 88.5 (rank 3)"
+              color: "#3d8d6e"
+            - coordinates: [24.1052, 56.9496]
+              label: "Riga — 81.0 (rank 17)"
+              color: "#3d8d6e"
+              labelAnchor: bottom
+            - coordinates: [25.2797, 54.6872]
+              label: "Vilnius — 81.3 (rank 15)"
+              color: "#3d8d6e"
+              labelAnchor: right
+
+      - text: "The Low Countries hold"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [10.0, 56.0]
+          zoom: 4.2
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [4.9041, 52.3676]
+              label: "Amsterdam — 88.9 (rank 2)"
+              color: "#3d8d6e"
+            - coordinates: [12.5683, 55.6761]
+              label: "Copenhagen — 88.5 (rank 4)"
+              color: "#3d8d6e"
+              labelAnchor: top
+            - coordinates: [18.0686, 59.3293]
+              label: "Stockholm — 87.6 (rank 5)"
+              color: "#3d8d6e"
+              labelAnchor: right
+            - coordinates: [24.9384, 60.1699]
+              label: "Helsinki — 86.2 (rank 6)"
+              color: "#3d8d6e"
+              labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE AUTHORITARIAN FLOOR (bottom)
+  # ═══════════════════════════════════════════════
+
+  - id: authoritarian-floor-intro
+    text: "The authoritarian floor"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [70.0, 25.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [10, 25]
+        colors: ["$red", "$amber"]
+        items:
+          - { code: "ER", value: 10.24 }
+          - { code: "KP", value: 12.67 }
+          - { code: "CN", value: 13.85 }
+          - { code: "IR", value: 17.45 }
+          - { code: "SA", value: 19.11 }
+          - { code: "AF", value: 19.51 }
+          - { code: "VN", value: 21.15 }
+          - { code: "TM", value: 23.06 }
+          - { code: "RU", value: 23.15 }
+          - { code: "AZ", value: 23.95 }
+
+  - id: authoritarian-floor
+    chart: data:bottom-10
+    map:
+      center: [70.0, 25.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [10, 25]
+        colors: ["$red", "$amber"]
+        items:
+          - { code: "ER", value: 10.24 }
+          - { code: "KP", value: 12.67 }
+          - { code: "CN", value: 13.85 }
+          - { code: "IR", value: 17.45 }
+          - { code: "SA", value: 19.11 }
+          - { code: "AF", value: 19.51 }
+          - { code: "VN", value: 21.15 }
+          - { code: "TM", value: 23.06 }
+          - { code: "RU", value: 23.15 }
+          - { code: "AZ", value: 23.95 }
+    subsections:
+      - text: "China at #178"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [105.0, 35.0]
+          zoom: 3.0
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [116.4074, 39.9042]
+              label: "Beijing — 13.9 (rank 178)"
+              color: "#bf4f3a"
+
+      - text: "Iran, Saudi, the Gulf"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [50.0, 28.0]
+          zoom: 3.4
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [51.3890, 35.6892]
+              label: "Tehran — 17.5 (rank 177)"
+              color: "#bf4f3a"
+            - coordinates: [46.6753, 24.7136]
+              label: "Riyadh — 19.1 (rank 176)"
+              color: "#bf4f3a"
+              labelAnchor: bottom
+            - coordinates: [55.2708, 25.2048]
+              label: "Dubai — 30.9 (rank 158)"
+              color: "#d4a04a"
+              labelAnchor: right
+
+      - text: "Eritrea, the floor"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [38.9251, 13.5]
+          zoom: 4.4
+          pitch: 25
+          opacity: 0.70
+          pins:
+            - coordinates: [38.9251, 15.3229]
+              label: "Asmara — 10.2 (rank 180)"
+              color: "#bf4f3a"
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE YEAR'S EARTHQUAKE (Syria)
+  # ═══════════════════════════════════════════════
+
+  - id: syria-earthquake
+    text: "The year's earthquake"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [37.5, 34.0]
+      zoom: 4.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.65
+      pins:
+        - coordinates: [36.2765, 33.5138]
+          label: "Damascus — 39.4 (rank 141, +36)"
+          color: "#3d8d6e"
+      regions:
+        level: country
+        ramp: [15, 40]
+        colors: ["$red", "$accent2"]
+        items:
+          - { code: "SY", value: 39.44 }
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — THE DEMOCRATIC BACKSLIDE
+  # ═══════════════════════════════════════════════
+
+  - id: backslide-intro
+    text: "The democratic backslide"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 25.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [40, 65, 85]
+        colors: ["$red", "$amber", "$accent2"]
+        items:
+          - { code: "US", value: 62.61 }
+          - { code: "DE", value: 82.17 }
+          - { code: "HU", value: 59.85 }
+          - { code: "IL", value: 46.46 }
+          - { code: "AR", value: 52.44 }
+
+  - id: backslide
+    chart: data:democratic-backslide
+    map:
+      center: [10.0, 25.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [40, 65, 85]
+        colors: ["$red", "$amber", "$accent2"]
+        items:
+          - { code: "US", value: 62.61 }
+          - { code: "DE", value: 82.17 }
+          - { code: "HU", value: 59.85 }
+          - { code: "IL", value: 46.46 }
+          - { code: "AR", value: 52.44 }
+    subsections:
+      - text: "America at 64"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [-96.0, 39.0]
+          zoom: 3.2
+          pitch: 20
+          opacity: 0.65
+          pins:
+            - coordinates: [-77.0369, 38.9072]
+              label: "Washington DC — 62.6 (rank 64, −7)"
+              color: "#d4a04a"
+
+      - text: "Germany, slipping"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [10.5, 51.0]
+          zoom: 4.6
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [13.4050, 52.5200]
+              label: "Berlin — 82.2 (rank 14, −3)"
+              color: "#d4a04a"
+
+      - text: "Hungary, sealed"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [19.0402, 47.4]
+          zoom: 5.0
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [19.0402, 47.4979]
+              label: "Budapest — 59.9 (rank 74, −6)"
+              color: "#d4a04a"
+
+      - text: "Israel at war"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [34.7818, 31.5]
+          zoom: 6.0
+          pitch: 20
+          opacity: 0.70
+          pins:
+            - coordinates: [34.7818, 32.0853]
+              label: "Tel Aviv — 46.5 (rank 116, −4)"
+              color: "#bf4f3a"
+
+      - text: "Argentina under Milei"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [-64.0, -36.0]
+          zoom: 3.4
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [-58.3816, -34.6037]
+              label: "Buenos Aires — 52.4 (rank 98, −11)"
+              color: "#d4a04a"
+
+  # ═══════════════════════════════════════════════
+  # ACT V — THE CRASHES
+  # ═══════════════════════════════════════════════
+
+  - id: crashes-intro
+    text: "The crashes"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [25.0, 10.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [40, 50, 60]
+        colors: ["$red", "$amber", "$surface"]
+        items:
+          - { code: "NE", value: 46.02 }
+          - { code: "EC", value: 44.37 }
+          - { code: "SL", value: 57.06 }
+          - { code: "TZ", value: 46.22 }
+          - { code: "GE", value: 40.77 }
+          - { code: "BJ", value: 47.39 }
+
+  - id: crashes
+    chart: data:biggest-droppers
+    map:
+      center: [25.0, 10.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [40, 50, 60]
+        colors: ["$red", "$amber", "$surface"]
+        items:
+          - { code: "NE", value: 46.02 }
+          - { code: "EC", value: 44.37 }
+          - { code: "SL", value: 57.06 }
+          - { code: "TZ", value: 46.22 }
+          - { code: "GE", value: 40.77 }
+    subsections:
+      - text: "Niger's free fall"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [8.0, 16.0]
+          zoom: 4.0
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [2.1098, 13.5128]
+              label: "Niamey — 46.0 (rank 120, −37)"
+              color: "#bf4f3a"
+
+      - text: "Ecuador's spiral"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [-78.0, -1.5]
+          zoom: 5.0
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [-78.4678, -0.1807]
+              label: "Quito — 44.4 (rank 125, −31)"
+              color: "#bf4f3a"
+
+      - text: "Sierra Leone and Tanzania"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [12.0, 0.0]
+          zoom: 2.6
+          pitch: 0
+          opacity: 0.55
+          pins:
+            - coordinates: [-13.2317, 8.4657]
+              label: "Freetown — 57.1 (rank 79, −23)"
+              color: "#d4a04a"
+            - coordinates: [39.2083, -6.7924]
+              label: "Dar es Salaam — 46.2 (rank 117, −22)"
+              color: "#bf4f3a"
+              labelAnchor: right
+
+      - text: "Georgia, drifting"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [44.7931, 42.0]
+          zoom: 5.4
+          pitch: 15
+          opacity: 0.65
+          pins:
+            - coordinates: [44.7931, 41.7151]
+              label: "Tbilisi — 40.8 (rank 135, −21)"
+              color: "#bf4f3a"
+
+  # ═══════════════════════════════════════════════
+  # ACT VI — THE RISERS
+  # ═══════════════════════════════════════════════
+
+  - id: risers
+    text: "The risers"
+    chart: data:biggest-risers
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [60.0, 10.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [25.9231, -24.6282]
+          label: "Gaborone — 62.9 (+18)"
+          color: "#3d8d6e"
+        - coordinates: [27.4869, -29.3151]
+          label: "Maseru — 54.4 (+18)"
+          color: "#3d8d6e"
+          labelAnchor: bottom
+        - coordinates: [106.9057, 47.8864]
+          label: "Ulaanbaatar — 55.8 (+17)"
+          color: "#3d8d6e"
+          labelAnchor: top
+        - coordinates: [178.4419, -18.1416]
+          label: "Suva — 76.8 (+16)"
+          color: "#3d8d6e"
+          labelAnchor: left
+        - coordinates: [126.9780, 37.5665]
+          label: "Seoul — 69.1 (+14)"
+          color: "#3d8d6e"
+      regions:
+        level: country
+        ramp: [50, 70, 80]
+        colors: ["$amber", "$accent2", "$accent"]
+        items:
+          - { code: "BW", value: 62.89 }
+          - { code: "LS", value: 54.37 }
+          - { code: "MN", value: 55.79 }
+          - { code: "FJ", value: 76.76 }
+          - { code: "KR", value: 69.12 }
+
+  # ═══════════════════════════════════════════════
+  # ACT VII — THE INDIAN SUBCONTINENT
+  # ═══════════════════════════════════════════════
+
+  - id: indian-subcontinent-intro
+    text: "The Indian subcontinent"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [82.0, 20.0]
+      zoom: 2.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [20, 35, 55]
+        colors: ["$red", "$amber", "$accent2"]
+        items:
+          - { code: "NP", value: 54.80 }   # Nepal — the regional outlier
+          - { code: "MV", value: 49.23 }
+          - { code: "LK", value: 40.77 }
+          - { code: "BT", value: 33.50 }
+          - { code: "BD", value: 33.05 }
+          - { code: "PK", value: 32.61 }
+          - { code: "IN", value: 31.96 }
+          - { code: "AF", value: 19.51 }
+
+  - id: indian-subcontinent
+    chart: data:south-asia
+    map:
+      center: [82.0, 20.0]
+      zoom: 2.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [20, 35, 55]
+        colors: ["$red", "$amber", "$accent2"]
+        items:
+          - { code: "NP", value: 54.80 }
+          - { code: "MV", value: 49.23 }
+          - { code: "LK", value: 40.77 }
+          - { code: "BT", value: 33.50 }
+          - { code: "BD", value: 33.05 }
+          - { code: "PK", value: 32.61 }
+          - { code: "IN", value: 31.96 }
+          - { code: "AF", value: 19.51 }
+    subsections:
+      - text: "India, the world's largest exception"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [80.0, 22.0]
+          zoom: 3.8
+          pitch: 20
+          opacity: 0.65
+          pins:
+            - coordinates: [77.2090, 28.6139]
+              label: "New Delhi — 32.0 (rank 157, −6)"
+              color: "#bf4f3a"
+
+      - text: "Nepal, the regional outlier"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [85.0, 28.0]
+          zoom: 5.2
+          pitch: 25
+          opacity: 0.65
+          pins:
+            - coordinates: [85.3240, 27.7172]
+              label: "Kathmandu — 54.8 (rank 87, +3)"
+              color: "#3d8d6e"
+
+      - text: "Pakistan, Bangladesh, and the islands"
+        mobileParagraphs:
+          - [0, 1]
+          - [1, 2]
+        map:
+          center: [82.0, 18.0]
+          zoom: 3.0
+          pitch: 10
+          opacity: 0.55
+          pins:
+            - coordinates: [73.0479, 33.6844]
+              label: "Islamabad — 32.6 (rank 153, +5)"
+              color: "#d4a04a"
+            - coordinates: [90.4125, 23.8103]
+              label: "Dhaka — 33.1 (rank 152, −3)"
+              color: "#d4a04a"
+              labelAnchor: right
+            - coordinates: [79.8612, 6.9271]
+              label: "Colombo — 40.8 (rank 134, +5)"
+              color: "#d4a04a"
+              labelAnchor: bottom
+            - coordinates: [73.5093, 4.1755]
+              label: "Malé — 49.2 (rank 108, −4)"
+              color: "#d4a04a"
+              labelAnchor: left
+            - coordinates: [89.6362, 27.4728]
+              label: "Thimphu — 33.5 (rank 150, +2)"
+              color: "#d4a04a"
+              labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # CLOSING — full world view, full choropleth
+  # ═══════════════════════════════════════════════
+
+  - id: closing
+    text: "The map remains"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [20.0, 20.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [15, 35, 55, 75, 90]
+        colors: ["$red", "$amber", "$surface", "$accent2", "$accent"]
+        items: *globalItems
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [20.0, 20.0]
+      zoom: 1.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.30

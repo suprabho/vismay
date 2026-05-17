@@ -1,0 +1,338 @@
+# Story config — largest-armies-2026
+#
+# Map beats walk the reader from Dhaka (the surprise #1) across Southeast
+# Asia, to Kyiv (wartime mobilisation), to Beijing (the real professional
+# force), Washington DC (the reserve-heavy US), and the Korean peninsula
+# (the most militarised border on Earth).
+#
+# COORDINATES (capitals):
+#   Dhaka, Bangladesh       90.4125, 23.8103
+#   Hanoi, Vietnam         105.8342, 21.0278
+#   Kyiv, Ukraine           30.5234, 50.4501
+#   New Delhi, India        77.2090, 28.6139
+#   Seoul, South Korea     126.9780, 37.5665
+#   Moscow, Russia          37.6173, 55.7558
+#   Beijing, China         116.4074, 39.9042
+#   Washington DC, USA     -77.0369, 38.9072
+#   Pyongyang, North Korea 125.7625, 39.0392
+#   Taipei, Taiwan         121.5654, 25.0330
+#   Jerusalem, Israel       35.2137, 31.7683
+#   Islamabad, Pakistan     73.0479, 33.6844
+#   Jakarta, Indonesia     106.8456, -6.2088
+#   Manila, Philippines    120.9842, 14.5995
+#   DMZ (approx)           127.5, 38.0
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#c9302c"
+  pinRadius: 12
+  flySpeed: 1.2
+  # Demo palette — restyles the stock dark-v11 at runtime to match the story's
+  # tone. Every field is optional; unset fields keep the base Mapbox colors.
+  mapPalette:
+    land: "#0b0f14"
+    water: "#0f1a22"
+    border: "#4a2a2a"
+    labelText: "#d8cfc2"
+    labelHalo: "#0b0f14"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Army That Isn't There"
+    eyebrow: "Analysis · April 2026"
+    map:
+      center: [60.0, 25.0]
+      zoom: 2.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 7.0M (Bangladesh)
+  # ═══════════════════════════════════════════════
+
+  - id: bangladesh-total
+    kind: stat
+    text: "7.0M"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [90.4125, 23.8103]
+      zoom: 6.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [90.4125, 23.8103]
+          label: "Dhaka — Ansar-VDP, BGB, Army"
+          color: "#c9302c"
+      mobile:
+        center: [90.4125, 23.8103]
+        zoom: 5.5
+
+  - id: headline-footnote
+    text: "The headline, and the footnote"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [80.0, 25.0]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+
+  # ═══════════════════════════════════════════════
+  # ACT I — WHERE THE DEFINITION LEADS
+  # ═══════════════════════════════════════════════
+
+  - id: act-i-intro
+    text: "Act I: Where the definition leads"
+    chart: data:total-personnel
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [60.0, 25.0]
+      zoom: 2.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: bangladesh-paramilitary
+    kind: stat
+    text: "6.8M"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [90.4125, 23.8103]
+      zoom: 7.0
+      pitch: 35
+      bearing: 10
+      opacity: 0.60
+      pins:
+        - coordinates: [90.4125, 23.8103]
+          label: "Ansar-VDP HQ — Dhaka"
+          color: "#c9302c"
+
+  - id: southeast-asia
+    text: "The long tail of Southeast Asia"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [110.0, 12.0]
+      zoom: 3.6
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [105.8342, 21.0278]
+          label: "Hanoi — 5.3M reserves"
+          color: "#c9302c"
+        - coordinates: [120.9842, 14.5995]
+          label: "Manila — 1.5M reserves"
+          color: "#d4a84a"
+        - coordinates: [106.8456, -6.2088]
+          label: "Jakarta"
+          color: "#d4a84a"
+          labelAnchor: top
+        - coordinates: [73.0479, 33.6844]
+          label: "Islamabad"
+          color: "#d4a84a"
+          labelAnchor: top
+
+  - id: ukraine-wartime
+    text: "Ukraine, at war"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [30.5234, 50.4501]
+      zoom: 5.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [30.5234, 50.4501]
+          label: "Kyiv — wartime mobilisation"
+          color: "#c9302c"
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE ACTIVE-DUTY MAP
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii-intro
+    text: "Act II: The active-duty map"
+    chart: data:active-personnel
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [90.0, 35.0]
+      zoom: 2.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: china-active
+    kind: stat
+    text: "2.0M"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [116.4074, 39.9042]
+      zoom: 6.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [116.4074, 39.9042]
+          label: "Beijing — the PLA"
+          color: "#c9302c"
+
+  - id: us-reverse
+    text: "The United States, in reverse"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-77.0369, 38.9072]
+      zoom: 5.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-77.0369, 38.9072]
+          label: "Pentagon — 0.8M active / 1.3M reserves"
+          color: "#c9302c"
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE PENINSULA
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii-intro
+    text: "Act III: The peninsula"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [127.5, 38.0]
+      zoom: 6.2
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [125.7625, 39.0392]
+          label: "Pyongyang"
+          color: "#c9302c"
+        - coordinates: [126.9780, 37.5665]
+          label: "Seoul"
+          color: "#d4a84a"
+          labelAnchor: bottom
+
+  - id: north-korea-active
+    kind: stat
+    text: "1.3M"
+    chart: data:peninsula
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [127.5, 38.0]
+      zoom: 6.5
+      pitch: 40
+      bearing: 15
+      opacity: 0.60
+      pins:
+        - coordinates: [125.7625, 39.0392]
+          label: "Pyongyang — 1.3M active"
+          color: "#c9302c"
+        - coordinates: [126.9780, 37.5665]
+          label: "Seoul — 0.5M active / 3.2M reserves"
+          color: "#d4a84a"
+          labelAnchor: bottom
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — PER-CAPITA REALITY
+  # ═══════════════════════════════════════════════
+
+  - id: act-iv-intro
+    text: "Act IV: Per-capita power"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [35.2137, 31.7683]
+      zoom: 6.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [35.2137, 31.7683]
+          label: "Israel — ~10M people, ~0.5M under arms"
+          color: "#c9302c"
+
+  - id: size-meaning
+    text: "What size means, and what it doesn't"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [90.0, 30.0]
+      zoom: 2.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+      pins:
+        - coordinates: [116.4074, 39.9042]
+          label: "China — professional"
+          color: "#c9302c"
+        - coordinates: [90.4125, 23.8103]
+          label: "Bangladesh — reservist"
+          color: "#d4a84a"
+          labelAnchor: bottom
+        - coordinates: [35.2137, 31.7683]
+          label: "Israel — mobilisation"
+          color: "#a68a5f"
+          labelAnchor: left
+
+  # ═══════════════════════════════════════════════
+  # CLOSING
+  # ═══════════════════════════════════════════════
+
+  - id: closing
+    text: "The ranking as a mirror"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [60.0, 25.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.25
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [60.0, 25.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

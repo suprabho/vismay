@@ -1,0 +1,284 @@
+{
+  "steps": [
+    {
+      "title": "United States — five-pillar breakdown — 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Economic", "Political", "Social", "Safety", "Legal"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Pillar score",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 55.05, "itemStyle": { "color": "$red" } },
+              { "value": 53.59, "itemStyle": { "color": "$red" } },
+              { "value": 64.27, "itemStyle": { "color": "$amber" } },
+              { "value": 69.68, "itemStyle": { "color": "$amber" } },
+              { "value": 70.47, "itemStyle": { "color": "$amber" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Germany — five-pillar breakdown — 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Economic", "Social", "Political", "Legal", "Safety"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Pillar score",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 75.87, "itemStyle": { "color": "$amber" } },
+              { "value": 77.66, "itemStyle": { "color": "$accent2" } },
+              { "value": 82.38, "itemStyle": { "color": "$accent2" } },
+              { "value": 84.82, "itemStyle": { "color": "$accent2" } },
+              { "value": 90.14, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Hungary — five-pillar breakdown — 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Political", "Economic", "Legal", "Social", "Safety"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Pillar score",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 33.89, "itemStyle": { "color": "$red" } },
+              { "value": 44.98, "itemStyle": { "color": "$red" } },
+              { "value": 63.84, "itemStyle": { "color": "$amber" } },
+              { "value": 70.35, "itemStyle": { "color": "$amber" } },
+              { "value": 86.17, "itemStyle": { "color": "$accent2" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Israel — five-pillar breakdown — 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Legal", "Safety", "Political", "Economic", "Social"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Pillar score",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 39.06, "itemStyle": { "color": "$red" } },
+              { "value": 42.22, "itemStyle": { "color": "$red" } },
+              { "value": 46.45, "itemStyle": { "color": "$red" } },
+              { "value": 51.02, "itemStyle": { "color": "$red" } },
+              { "value": 53.53, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Argentina — five-pillar breakdown — 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Economic", "Political", "Social", "Legal", "Safety"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Pillar score",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "{c}"
+            },
+            "data": [
+              { "value": 31.85, "itemStyle": { "color": "$red" } },
+              { "value": 34.90, "itemStyle": { "color": "$red" } },
+              { "value": 54.12, "itemStyle": { "color": "$amber" } },
+              { "value": 66.23, "itemStyle": { "color": "$amber" } },
+              { "value": 75.09, "itemStyle": { "color": "$accent2" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

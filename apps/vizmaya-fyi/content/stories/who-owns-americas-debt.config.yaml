@@ -1,0 +1,176 @@
+# Story config — who-owns-americas-debt
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#4a9eff"
+  pinRadius: 10
+  flySpeed: 1.2
+  mapPalette:
+    land: "#0d1b2a"
+    water: "#061220"
+    border: "#1f3a52"
+    labelText: "#c8d1dc"
+    labelHalo: "#061220"
+
+sections:
+
+  - id: total-debt
+    kind: stat
+    text: "$39 Trillion"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 3]
+    map:
+      center: [-95.0, 40.0]
+      zoom: 3.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+    pins:
+      - lng: -77.0091
+        lat: 38.8899
+        label: "U.S. Treasury, Washington D.C."
+
+  - id: debt-breakdown
+    text: "$31.4 Trillion held by the public"
+    chart: data:debt-breakdown
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-95.0, 40.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: domestic-majority
+    text: "The Domestic Majority"
+    chart: data:domestic-holders
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-95.0, 40.0]
+      zoom: 3.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: mutual-pension
+    kind: stat
+    text: "$6.6 Trillion"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-74.006, 40.7128]
+      zoom: 5
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+    pins:
+      - lng: -74.006
+        lat: 40.7128
+        label: "Wall Street, NYC"
+
+  - id: federal-reserve
+    text: "The Federal Reserve's $4.4 Trillion"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-77.0425, 38.8925]
+      zoom: 6
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+    pins:
+      - lng: -77.0425
+        lat: 38.8925
+        label: "Federal Reserve, Washington D.C."
+
+  - id: foreign-holders
+    text: "$9.3 Trillion from Foreigners"
+    chart: data:foreign-holders
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [139.6917, 35.6895]
+      zoom: 2.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+    pins:
+      - lng: 139.6917
+        lat: 35.6895
+        label: "Japan — $1.2T"
+      - lng: -0.1276
+        lat: 51.5074
+        label: "United Kingdom — $0.9T"
+      - lng: 116.4074
+        lat: 39.9042
+        label: "China — $0.7T"
+
+  - id: china-question
+    text: "The China Question"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [116.4074, 39.9042]
+      zoom: 4
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+    pins:
+      - lng: 116.4074
+        lat: 39.9042
+        label: "Beijing"
+
+  - id: intragovernmental
+    text: "$7.6 Trillion: The Government Owes Itself"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-77.0365, 38.8977]
+      zoom: 5
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+
+  - id: implications
+    text: "What High Debt Means"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-95.0, 40.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+
+  - id: why-it-matters
+    text: "Why This Matters Now"
+    mobileParagraphs:
+      - [0, 2]
+      - [2, 4]
+    map:
+      center: [-95.0, 40.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+
+  - id: methodology
+    text: "Methodology & sources"
+    map:
+      center: [-95.0, 40.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.35

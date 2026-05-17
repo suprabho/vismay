@@ -1,0 +1,54 @@
+name: Render story audio
+
+# Triggered by the API route's `workflow_dispatch` POST when an admin clicks
+# "Regenerate audio" on the /admin/<slug> Narration tab. Runs scripts/generate-audio.ts
+# with `--force` so the override changes are picked up regardless of the cached
+# chunk hash.
+#
+# Required repo secrets (under the `Production` environment so the same
+# secrets work for the PDF / video workflows):
+#   NEXT_PUBLIC_SUPABASE_URL    — same value as in Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY   — service role key for storage writes
+#   GEMINI_API_KEY              — Google Generative Language API key for TTS
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: Story slug
+        required: true
+        type: string
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate audio
+        env:
+          # Story content (markdown, config.yaml, tts.yaml) lives in Postgres
+          # in production. Stories created via the admin portal won't exist on
+          # this runner's checkout, so the script must read from the DB.
+          CONTENT_SOURCE: db
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        # `--force` because the dispatch is triggered by an explicit admin
+        # action; we want every chunk re-checked against current overrides
+        # rather than relying on the chunk-hash cache.
+        run: pnpm exec tsx scripts/generate-audio.ts "${{ inputs.slug }}" --force

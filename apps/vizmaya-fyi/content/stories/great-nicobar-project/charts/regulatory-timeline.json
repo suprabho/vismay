@@ -1,0 +1,117 @@
+{
+  "steps": [
+    {
+      "title": "Twenty-four months of regulatory clearance — January 2021 to March 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}<br/>{c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "5%",
+          "bottom": "12%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "time",
+          "min": "2020-11-01",
+          "max": "2026-06-01",
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "PPPAC clears port (Mar 2026)",
+            "NGT upholds EC (Feb 2026)",
+            "13th Major Port notified (Sep 2024)",
+            "FCA Amendment (Aug 2023)",
+            "Tribal Council NOC withdrawn (Nov 2022)",
+            "Environmental clearance (Nov 2022)",
+            "Stage-I forest clearance (Oct 2022)",
+            "AECOM pre-feasibility (Mar 2021)",
+            "NMTAP lists Galathea as Important MTH (Feb 2021)",
+            "Galathea NP ESZ → zero (Jan 2021)",
+            "Galathea Bay Sanctuary denotified (Jan 2021)"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } }
+        },
+        "series": [
+          {
+            "name": "Event",
+            "type": "scatter",
+            "symbolSize": 14,
+            "data": [
+              {
+                "name": "Galathea Bay Sanctuary denotified",
+                "value": ["2021-01-15", "Galathea Bay Sanctuary denotified (Jan 2021)"],
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "name": "Galathea NP ESZ to zero",
+                "value": ["2021-01-18", "Galathea NP ESZ → zero (Jan 2021)"],
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "name": "NMTAP lists Galathea as Important Marine Turtle Habitat",
+                "value": ["2021-02-01", "NMTAP lists Galathea as Important MTH (Feb 2021)"],
+                "itemStyle": { "color": "$amber" }
+              },
+              {
+                "name": "AECOM pre-feasibility report",
+                "value": ["2021-03-15", "AECOM pre-feasibility (Mar 2021)"],
+                "itemStyle": { "color": "$accent2" }
+              },
+              {
+                "name": "Stage-I forest clearance",
+                "value": ["2022-10-27", "Stage-I forest clearance (Oct 2022)"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "Environmental clearance issued",
+                "value": ["2022-11-11", "Environmental clearance (Nov 2022)"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "Tribal Council NOC withdrawn",
+                "value": ["2022-11-22", "Tribal Council NOC withdrawn (Nov 2022)"],
+                "itemStyle": { "color": "$amber" }
+              },
+              {
+                "name": "Forest (Conservation) Amendment Act",
+                "value": ["2023-08-04", "FCA Amendment (Aug 2023)"],
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "name": "Galathea Bay notified as 13th Major Port",
+                "value": ["2024-09-15", "13th Major Port notified (Sep 2024)"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "NGT upholds environmental clearance",
+                "value": ["2026-02-16", "NGT upholds EC (Feb 2026)"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "PPPAC clears port at ₹48,862 cr",
+                "value": ["2026-03-15", "PPPAC clears port (Mar 2026)"],
+                "itemStyle": { "color": "$accent" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

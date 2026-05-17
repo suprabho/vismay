@@ -1,0 +1,6 @@
+# Share-mode overrides for prediction-markets-illusion.
+#
+# Keys match section `id` values from the main .config.yaml.
+# Only fields you set override the main config; everything else falls through.
+
+sections: {}

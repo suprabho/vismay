@@ -1,0 +1,446 @@
+# Story config — currency-rankings-2026
+#
+# The reader walks through the ten large-economy currencies that have
+# gained the most against the U.S. dollar in the year to April 2026.
+# The camera opens on a world view, descends into Tel Aviv (the shekel
+# at the top), then Bogotá (the peso at #2), Johannesburg and Mexico
+# City (tied at #3/4). Act II holds over the commodity middle — Sydney,
+# Brasília, Abuja — before Act III moves through Oslo, Astana, and
+# Kuala Lumpur. The closing beats pull back to Washington: the weakening
+# counterparty the entire ranking is measured against.
+#
+# COORDINATES (financial or capital focal points):
+#   Jerusalem, Israel         35.2137, 31.7683
+#   Tel Aviv, Israel          34.7818, 32.0853
+#   Bogotá, Colombia         -74.0721,  4.7110
+#   Pretoria, South Africa    28.2293, -25.7479
+#   Johannesburg, S. Africa   28.0473, -26.2041
+#   Mexico City, Mexico      -99.1332, 19.4326
+#   Canberra, Australia      149.1300, -35.2809
+#   Sydney, Australia        151.2093, -33.8688
+#   Brasília, Brazil         -47.9292, -15.7801
+#   Abuja, Nigeria             7.4951,  9.0765
+#   Lagos, Nigeria             3.3792,  6.5244
+#   Oslo, Norway              10.7522, 59.9139
+#   Astana, Kazakhstan        71.4491, 51.1694
+#   Kuala Lumpur, Malaysia   101.6869,  3.1390
+#   Washington DC, USA       -77.0369, 38.9072
+#
+# Choropleth ramp is shared across world-view beats:
+#   [0, 8, 12, 16, 21]  →  [$surface, $accent2, $amber, $accent, $red]
+#   Low appreciation = cool surface/teal; high appreciation = warm accent/red.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d9a84a"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Year the Dollar Lost"
+    eyebrow: "FX · April 2026"
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 20.2% (Israeli shekel)
+  # ═══════════════════════════════════════════════
+
+  - id: shekel-stat
+    kind: stat
+    text: "20.2%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [35.0, 31.5]
+      zoom: 5.2
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [34.7818, 32.0853]
+          label: "Tel Aviv — shekel +20.2% vs USD"
+          color: "#d9a84a"
+      regions:
+        level: country
+        ramp: [0, 21]
+        colors: ["$surface", "$red"]
+        items:
+          - code: "IL"
+            value: 20.2
+      mobile:
+        center: [35.0, 31.5]
+        zoom: 4.2
+
+  - id: ranking-published
+    text: "The ranking, as published"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [0, 8, 12, 16, 21]
+        colors: ["$surface", "$accent2", "$amber", "$accent", "$red"]
+        items:
+          - code: "IL"
+            value: 20.2
+          - code: "CO"
+            value: 19.7
+          - code: "ZA"
+            value: 16.4
+          - code: "MX"
+            value: 16.4
+          - code: "AU"
+            value: 14.8
+          - code: "BR"
+            value: 14.5
+          - code: "NG"
+            value: 13.5
+          - code: "NO"
+            value: 12.7
+          - code: "KZ"
+            value: 12.3
+          - code: "MY"
+            value: 11.2
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THE TOP OF THE TABLE
+  # ═══════════════════════════════════════════════
+
+  - id: act-i-top
+    text: "Act I: The top of the table"
+    chart: data:top-gainers
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [0.0, 15.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+      regions:
+        level: country
+        ramp: [12, 21]
+        colors: ["$amber", "$red"]
+        items:
+          - code: "IL"
+            value: 20.2
+          - code: "CO"
+            value: 19.7
+          - code: "ZA"
+            value: 16.4
+          - code: "MX"
+            value: 16.4
+
+  - id: colombia-stat
+    kind: stat
+    text: "19.7%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-74.0, 4.7]
+      zoom: 4.8
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [-74.0721, 4.7110]
+          label: "Bogotá — peso +19.7% vs USD"
+          color: "#d9a84a"
+      regions:
+        level: country
+        ramp: [0, 21]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "CO"
+            value: 19.7
+
+  - id: sa-mx-tie
+    text: "The South African and Mexican tie"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-30.0, -5.0]
+      zoom: 1.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [28.0473, -26.2041]
+          label: "Johannesburg — rand +16.4%"
+          color: "#d9a84a"
+        - coordinates: [-99.1332, 19.4326]
+          label: "Mexico City — peso +16.4%"
+          color: "#d9a84a"
+          labelAnchor: right
+      regions:
+        level: country
+        ramp: [0, 16]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "ZA"
+            value: 16.4
+          - code: "MX"
+            value: 16.4
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE COMMODITY MIDDLE
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii-middle
+    text: "Act II: The commodity middle"
+    chart: data:commodity-middle
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, -10.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [10, 16]
+        colors: ["$accent2", "$amber"]
+        items:
+          - code: "AU"
+            value: 14.8
+          - code: "BR"
+            value: 14.5
+          - code: "NG"
+            value: 13.5
+
+  - id: aud-stat
+    kind: stat
+    text: "14.8%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [140.0, -28.0]
+      zoom: 3.5
+      pitch: 20
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [151.2093, -33.8688]
+          label: "Sydney — AUD +14.8% vs USD"
+          color: "#d9a84a"
+      regions:
+        level: country
+        ramp: [0, 16]
+        colors: ["$surface", "$amber"]
+        items:
+          - code: "AU"
+            value: 14.8
+
+  - id: naira-regime
+    text: "The naira, in a new regime"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [5.0, 7.0]
+      zoom: 4.8
+      pitch: 20
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [7.4951, 9.0765]
+          label: "Abuja — naira +13.5%"
+          color: "#d9a84a"
+        - coordinates: [3.3792, 6.5244]
+          label: "Lagos"
+          color: "#4f8aa8"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [0, 16]
+        colors: ["$surface", "$amber"]
+        items:
+          - code: "NG"
+            value: 13.5
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE CARRY AND COMMODITY FRONTIER
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii-frontier
+    text: "Act III: The carry and commodity frontier"
+    chart: data:frontier
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [50.0, 30.0]
+      zoom: 1.9
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [10.7522, 59.9139]
+          label: "Oslo — krone +12.7%"
+          color: "#d9a84a"
+        - coordinates: [71.4491, 51.1694]
+          label: "Astana — tenge +12.3%"
+          color: "#d9a84a"
+          labelAnchor: top
+        - coordinates: [101.6869, 3.1390]
+          label: "Kuala Lumpur — ringgit +11.2%"
+          color: "#d9a84a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [10, 14]
+        colors: ["$accent2", "$amber"]
+        items:
+          - code: "NO"
+            value: 12.7
+          - code: "KZ"
+            value: 12.3
+          - code: "MY"
+            value: 11.2
+
+  # ═══════════════════════════════════════════════
+  # THE OTHER SIDE OF EVERY PAIR — THE DOLLAR
+  # ═══════════════════════════════════════════════
+
+  - id: dollar-weaker
+    text: "A weaker dollar, in detail"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [-77.0369, 38.9072]
+      zoom: 3.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-77.0369, 38.9072]
+          label: "Washington — DXY -9% YoY"
+          color: "#c26a4a"
+      regions:
+        level: country
+        ramp: [0, 10]
+        colors: ["$surface", "$accent2"]
+        items:
+          - code: "US"
+            value: 0
+
+  - id: global-markets
+    text: "What it means for global markets"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [0.0, 25.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [0, 8, 12, 16, 21]
+        colors: ["$surface", "$accent2", "$amber", "$accent", "$red"]
+        items:
+          - code: "IL"
+            value: 20.2
+          - code: "CO"
+            value: 19.7
+          - code: "ZA"
+            value: 16.4
+          - code: "MX"
+            value: 16.4
+          - code: "AU"
+            value: 14.8
+          - code: "BR"
+            value: 14.5
+          - code: "NG"
+            value: 13.5
+          - code: "NO"
+            value: 12.7
+          - code: "KZ"
+            value: 12.3
+          - code: "MY"
+            value: 11.2
+
+  # ═══════════════════════════════════════════════
+  # CLOSING
+  # ═══════════════════════════════════════════════
+
+  - id: coincident-indicator
+    text: "The ranking as a coincident indicator"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.30
+      regions:
+        level: country
+        ramp: [0, 8, 12, 16, 21]
+        colors: ["$surface", "$accent2", "$amber", "$accent", "$red"]
+        items:
+          - code: "IL"
+            value: 20.2
+          - code: "CO"
+            value: 19.7
+          - code: "ZA"
+            value: 16.4
+          - code: "MX"
+            value: 16.4
+          - code: "AU"
+            value: 14.8
+          - code: "BR"
+            value: 14.5
+          - code: "NG"
+            value: 13.5
+          - code: "NO"
+            value: 12.7
+          - code: "KZ"
+            value: 12.3
+          - code: "MY"
+            value: 11.2
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 20.0]
+      zoom: 1.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

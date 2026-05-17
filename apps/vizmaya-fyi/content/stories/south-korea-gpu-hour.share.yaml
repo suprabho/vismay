@@ -1,0 +1,37 @@
+# Share mode overrides for south-korea-gpu-hour.
+#
+# Each key matches a section `id` from the main .config.yaml.
+# Only fields you specify are overridden — everything else falls
+# back to the main config.
+#
+# Available overrides per section:
+#   heading: "Custom heading"     # Override the heading on the map-title card
+#   hide: true                    # Exclude this section from share mode
+#   shareParagraphs:              # Split paragraphs into multiple share cards
+#     - [0, 3]                    # Card 1: paragraphs 0-2
+#     - [3, 6]                    # Card 2: paragraphs 3-5
+#   paragraphsOverride:           # Literal text replacement — each entry is one card.
+#     - "Short rewritten paragraph."
+#     - ["Card 2 paragraph 1", "Card 2 paragraph 2"]
+#   subsections:                  # Per-subsection overrides, keyed by subIndex.
+#     0:
+#       paragraphsOverride:
+#         - "Rewrite only the first subsection."
+#   map:
+#     center: [lng, lat]          # Override map center
+#     zoom: 5                     # Override zoom level
+#     pitch: 0                    # Override pitch
+#     bearing: 0                  # Override bearing
+#     pins:                       # Replace all pins (not merged — full override)
+#       - coordinates: [lng, lat]
+#         label: "Label"
+#         color: "#hex"
+
+sections:
+  # "Oil: 70%" chart card — the MD paragraph (~255 chars) overflows line-clamp-2
+  # at 3:4. Shortened copy preserves the punchline (naphtha → chip feedstock).
+  exposure:
+    subsections:
+      0:
+        paragraphsOverride:
+          - "70% of South Korea's crude is Middle Eastern — not just fuel, but **naphtha**: the feedstock every chip depends on."

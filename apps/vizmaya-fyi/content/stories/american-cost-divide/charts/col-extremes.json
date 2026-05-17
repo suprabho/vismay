@@ -1,0 +1,82 @@
+{
+  "steps": [
+    {
+      "title": "Annual household expenditure, 2026 — five most and least expensive states (USD)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ${c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "14%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "${value}",
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Oklahoma",
+            "Mississippi",
+            "Alabama",
+            "West Virginia",
+            "Kansas",
+            "Maryland",
+            "Alaska",
+            "California",
+            "Massachusetts",
+            "Hawaii"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Annual Expenditure",
+            "type": "bar",
+            "barWidth": 20,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "${c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 66284, "itemStyle": { "color": "$teal" } },
+              { "value": 67147, "itemStyle": { "color": "$teal" } },
+              { "value": 69032, "itemStyle": { "color": "$teal" } },
+              { "value": 69189, "itemStyle": { "color": "$teal" } },
+              { "value": 69818, "itemStyle": { "color": "$teal" } },
+              { "value": 93378, "itemStyle": { "color": "$amber" } },
+              { "value": 100289, "itemStyle": { "color": "$accent" } },
+              { "value": 107357, "itemStyle": { "color": "$accent" } },
+              { "value": 118431, "itemStyle": { "color": "$accent" } },
+              { "value": 141127, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

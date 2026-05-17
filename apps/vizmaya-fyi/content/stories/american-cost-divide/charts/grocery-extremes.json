@@ -1,0 +1,87 @@
+{
+  "steps": [
+    {
+      "title": "Grocery Price Index, 2025 — five most and least expensive states (U.S. baseline = 100)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 90,
+          "max": 135,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Arkansas",
+            "Texas",
+            "Oklahoma",
+            "Mississippi",
+            "Kansas",
+            "Maryland",
+            "Vermont",
+            "Oregon",
+            "Washington",
+            "California",
+            "Alaska",
+            "Hawaii"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Grocery Price Index",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 94.3, "itemStyle": { "color": "$teal" } },
+              { "value": 95.3, "itemStyle": { "color": "$teal" } },
+              { "value": 95.4, "itemStyle": { "color": "$teal" } },
+              { "value": 95.5, "itemStyle": { "color": "$teal" } },
+              { "value": 95.9, "itemStyle": { "color": "$teal" } },
+              { "value": 105.4, "itemStyle": { "color": "$amber" } },
+              { "value": 105.5, "itemStyle": { "color": "$amber" } },
+              { "value": 106.8, "itemStyle": { "color": "$amber" } },
+              { "value": 108.0, "itemStyle": { "color": "$amber" } },
+              { "value": 109.3, "itemStyle": { "color": "$accent" } },
+              { "value": 125.0, "itemStyle": { "color": "$accent" } },
+              { "value": 131.4, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

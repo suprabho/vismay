@@ -1,0 +1,614 @@
+# Story config — housing-trends-europe
+#
+# Map beats trace Eurostat's 2024 dwelling-type release. The opening
+# choropleth colours each country by its share of residents living in
+# houses; later beats zoom into the outliers (Ireland, Netherlands,
+# Eastern Europe), the apartment majority (Germany, Italy, Spain,
+# Switzerland), and the steepest shifts since 2010 (Malta, Portugal,
+# Norway). The closing beats pull back to a Europe-wide change
+# choropleth.
+#
+# COORDINATES (capitals):
+#   Dublin, Ireland          -6.2603, 53.3498
+#   Amsterdam, Netherlands    4.8952, 52.3676
+#   Brussels, Belgium         4.3517, 50.8503
+#   Skopje, North Macedonia  21.4254, 41.9981
+#   Zagreb, Croatia          15.9819, 45.8150
+#   Budapest, Hungary        19.0402, 47.4979
+#   Berlin, Germany          13.4050, 52.5200
+#   Rome, Italy              12.4964, 41.9028
+#   Madrid, Spain            -3.7038, 40.4168
+#   Bern, Switzerland         7.4474, 46.9480
+#   Valletta, Malta          14.5146, 35.8997
+#   Lisbon, Portugal         -9.1393, 38.7223
+#   Porto, Portugal          -8.6291, 41.1579
+#   Oslo, Norway             10.7522, 59.9139
+#   Helsinki, Finland        24.9384, 60.1699
+#   Warsaw, Poland           21.0122, 52.2297
+#
+# Choropleth ramps:
+#   Snapshot ramp (share living in houses, 2024):
+#     [33, 50, 75, 92]  →  [$accent2, $surface, $amber, $accent]
+#     Teal = apartment-majority, warm amber → accent = house-majority.
+#   Shift ramp (percentage-point change 2010 → 2024):
+#     [-15, -5, 0, 6]   →  [$red, $accent2, $surface, $positive]
+#     Red / teal = falling house-share, green = rising.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#c77a48"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Shrinking European House"
+    eyebrow: "Housing · April 2026"
+    map:
+      center: [15.0, 52.0]
+      zoom: 3.1
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 51.4% (Europe-wide house share)
+  # ═══════════════════════════════════════════════
+
+  - id: europe-share
+    kind: stat
+    text: "51.4%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [15.0, 51.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.60
+      regions:
+        level: country
+        ramp: [33, 50, 75, 92]
+        colors: ["$accent2", "$surface", "$amber", "$accent"]
+        items:
+          - code: "IE"
+            value: 90.2
+          - code: "MK"
+            value: 82.1
+          - code: "NL"
+            value: 77.1
+          - code: "BE"
+            value: 76.8
+          - code: "HR"
+            value: 75.8
+          - code: "CY"
+            value: 74.1
+          - code: "HU"
+            value: 73.3
+          - code: "SI"
+            value: 72.1
+          - code: "NO"
+            value: 72.0
+          - code: "DK"
+            value: 67.7
+          - code: "FR"
+            value: 63.5
+          - code: "RO"
+            value: 63.0
+          - code: "FI"
+            value: 60.7
+          - code: "PL"
+            value: 58.4
+          - code: "LU"
+            value: 57.8
+          - code: "SK"
+            value: 54.6
+          - code: "BG"
+            value: 52.9
+          - code: "SE"
+            value: 51.2
+          - code: "PT"
+            value: 51.0
+          - code: "AT"
+            value: 50.4
+          - code: "CZ"
+            value: 48.7
+          - code: "IT"
+            value: 40.8
+          - code: "GR"
+            value: 40.6
+          - code: "LT"
+            value: 39.5
+          - code: "EE"
+            value: 38.7
+          - code: "DE"
+            value: 38.5
+          - code: "MT"
+            value: 36.6
+          - code: "LV"
+            value: 34.7
+          - code: "ES"
+            value: 34.6
+          - code: "CH"
+            value: 33.7
+
+  - id: two-europes
+    text: "The two Europes, by roof"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.0, 50.0]
+      zoom: 3.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [33, 50, 75, 92]
+        colors: ["$accent2", "$surface", "$amber", "$accent"]
+        items:
+          - code: "IE"
+            value: 90.2
+          - code: "CH"
+            value: 33.7
+          - code: "ES"
+            value: 34.6
+          - code: "LV"
+            value: 34.7
+          - code: "DE"
+            value: 38.5
+          - code: "NL"
+            value: 77.1
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THE LAST HOUSE COUNTRIES
+  # ═══════════════════════════════════════════════
+
+  - id: act-i
+    text: "Act I: The last house countries"
+    chart: data:house-countries
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [7.0, 52.0]
+      zoom: 4.1
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: country
+        ramp: [70, 92]
+        colors: ["$amber", "$accent"]
+        items:
+          - code: "IE"
+            value: 90.2
+          - code: "MK"
+            value: 82.1
+          - code: "NL"
+            value: 77.1
+          - code: "BE"
+            value: 76.8
+          - code: "HR"
+            value: 75.8
+
+  - id: ireland-stat
+    kind: stat
+    text: "90.2%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-7.5, 53.2]
+      zoom: 5.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [-6.2603, 53.3498]
+          label: "Dublin — 95.6% → 90.2%"
+          color: "#c77a48"
+      regions:
+        level: country
+        ramp: [80, 96]
+        colors: ["$amber", "$accent"]
+        items:
+          - code: "IE"
+            value: 90.2
+
+  - id: dutch-exception
+    text: "The Dutch exception"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [5.5, 52.1]
+      zoom: 6.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [4.8952, 52.3676]
+          label: "Amsterdam — rijtjeshuis"
+          color: "#c77a48"
+      regions:
+        level: country
+        ramp: [70, 90]
+        colors: ["$amber", "$accent"]
+        items:
+          - code: "NL"
+            value: 77.1
+
+  - id: eastern-europe
+    text: "Eastern Europe, inherited"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [19.0, 46.5]
+      zoom: 4.8
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [19.0402, 47.4979]
+          label: "Budapest — +3.7pp"
+          color: "#8ba17a"
+        - coordinates: [15.9819, 45.8150]
+          label: "Zagreb — 75.8%"
+          color: "#d9a84a"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [55, 80]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "HU"
+            value: 73.3
+          - code: "SI"
+            value: 72.1
+          - code: "HR"
+            value: 75.8
+          - code: "RO"
+            value: 63.0
+          - code: "SK"
+            value: 54.6
+
+  # ═══════════════════════════════════════════════
+  # ACT II — THE APARTMENT MAJORITY
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii
+    text: "Act II: The apartment majority"
+    chart: data:apartment-majority
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [10.0, 47.0]
+      zoom: 3.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [33, 50]
+        colors: ["$accent2", "$surface"]
+        items:
+          - code: "CH"
+            value: 33.7
+          - code: "ES"
+            value: 34.6
+          - code: "LV"
+            value: 34.7
+          - code: "MT"
+            value: 36.6
+          - code: "DE"
+            value: 38.5
+          - code: "EE"
+            value: 38.7
+          - code: "LT"
+            value: 39.5
+          - code: "GR"
+            value: 40.6
+          - code: "IT"
+            value: 40.8
+          - code: "CZ"
+            value: 48.7
+
+  - id: germany-stat
+    kind: stat
+    text: "38.5%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.5, 51.5]
+      zoom: 5.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [13.4050, 52.5200]
+          label: "Berlin — <20% houses"
+          color: "#4a6b8a"
+      regions:
+        level: country
+        ramp: [35, 50]
+        colors: ["$accent2", "$surface"]
+        items:
+          - code: "DE"
+            value: 38.5
+
+  - id: urbanisation-pressure
+    text: "The urbanisation pressure"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.0, 46.0]
+      zoom: 4.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.50
+      regions:
+        level: country
+        ramp: [33, 50]
+        colors: ["$accent2", "$surface"]
+        items:
+          - code: "CH"
+            value: 33.7
+          - code: "ES"
+            value: 34.6
+          - code: "DE"
+            value: 38.5
+          - code: "IT"
+            value: 40.8
+          - code: "GR"
+            value: 40.6
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE BIGGEST SHIFTS SINCE 2010
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii
+    text: "Act III: The biggest shifts since 2010"
+    chart: data:biggest-shifts
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [12.0, 52.0]
+      zoom: 3.3
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      regions:
+        level: country
+        ramp: [-15, -5, 0, 6]
+        colors: ["$red", "$accent2", "$surface", "$positive"]
+        items:
+          - code: "MT"
+            value: -14.3
+          - code: "PT"
+            value: -11.5
+          - code: "NO"
+            value: -10.0
+          - code: "LU"
+            value: -8.5
+          - code: "DE"
+            value: -6.5
+          - code: "AT"
+            value: -6.4
+          - code: "FI"
+            value: -5.8
+          - code: "IE"
+            value: -5.4
+          - code: "SE"
+            value: -5.4
+          - code: "CH"
+            value: -3.7
+          - code: "BG"
+            value: -3.9
+          - code: "DK"
+            value: -3.6
+          - code: "LT"
+            value: -3.4
+          - code: "HR"
+            value: -2.6
+          - code: "BE"
+            value: -2.4
+          - code: "FR"
+            value: -2.4
+          - code: "CY"
+            value: -2.3
+          - code: "GR"
+            value: -1.2
+          - code: "IT"
+            value: -4.4
+          - code: "ES"
+            value: -0.3
+          - code: "NL"
+            value: 0.0
+          - code: "RO"
+            value: 0.4
+          - code: "LV"
+            value: 0.4
+          - code: "SI"
+            value: 1.0
+          - code: "CZ"
+            value: 2.0
+          - code: "MK"
+            value: 3.0
+          - code: "HU"
+            value: 3.7
+          - code: "EE"
+            value: 3.7
+          - code: "SK"
+            value: 4.3
+          - code: "PL"
+            value: 5.4
+
+  - id: malta-stat
+    kind: stat
+    text: "-14.3pp"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.5, 35.9]
+      zoom: 8.5
+      pitch: 35
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [14.5146, 35.8997]
+          label: "Valletta — 50.9% → 36.6%"
+          color: "#b55942"
+      regions:
+        level: country
+        ramp: [-15, 0]
+        colors: ["$red", "$surface"]
+        items:
+          - code: "MT"
+            value: -14.3
+
+  - id: portugal-lisbon
+    text: "Portugal's Lisbon effect"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-8.5, 39.5]
+      zoom: 5.8
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [-9.1393, 38.7223]
+          label: "Lisbon — 62.5% → 51.0%"
+          color: "#b55942"
+        - coordinates: [-8.6291, 41.1579]
+          label: "Porto"
+          color: "#d9a84a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [-12, 0]
+        colors: ["$red", "$surface"]
+        items:
+          - code: "PT"
+            value: -11.5
+
+  - id: norway-spacious
+    text: "Norway, less spacious than it looks"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [12.0, 60.0]
+      zoom: 4.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [10.7522, 59.9139]
+          label: "Oslo — +15% population, -10pp houses"
+          color: "#b55942"
+      regions:
+        level: country
+        ramp: [-12, 0]
+        colors: ["$red", "$surface"]
+        items:
+          - code: "NO"
+            value: -10.0
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — THE 2030s CROSSOVER
+  # ═══════════════════════════════════════════════
+
+  - id: act-iv
+    text: "Act IV: The 2030s crossover"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.0, 51.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [33, 50, 75, 92]
+        colors: ["$accent2", "$surface", "$amber", "$accent"]
+        items:
+          - code: "IE"
+            value: 90.2
+          - code: "NL"
+            value: 77.1
+          - code: "DE"
+            value: 38.5
+          - code: "IT"
+            value: 40.8
+          - code: "ES"
+            value: 34.6
+          - code: "FR"
+            value: 63.5
+          - code: "PL"
+            value: 58.4
+          - code: "SE"
+            value: 51.2
+          - code: "CH"
+            value: 33.7
+          - code: "AT"
+            value: 50.4
+
+  - id: bends-back
+    text: "What bends the line back"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.0, 51.0]
+      zoom: 3.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: closing
+    text: "The continent the chart describes"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [14.0, 51.0]
+      zoom: 2.9
+      pitch: 0
+      bearing: 0
+      opacity: 0.25
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [14.0, 51.0]
+      zoom: 2.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

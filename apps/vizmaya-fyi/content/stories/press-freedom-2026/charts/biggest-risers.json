@@ -1,0 +1,68 @@
+{
+  "steps": [
+    {
+      "title": "Biggest rank gains, 2025 → 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: +{c} ranks"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 40,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "South Korea",
+            "Fiji",
+            "Mongolia",
+            "Lesotho",
+            "Botswana",
+            "Syria"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Rank evolution",
+            "type": "bar",
+            "barWidth": 18,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "+{c}"
+            },
+            "data": [
+              { "value": 14, "itemStyle": { "color": "$accent2" } },
+              { "value": 16, "itemStyle": { "color": "$accent2" } },
+              { "value": 17, "itemStyle": { "color": "$accent" } },
+              { "value": 18, "itemStyle": { "color": "$accent" } },
+              { "value": 18, "itemStyle": { "color": "$accent" } },
+              { "value": 36, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
