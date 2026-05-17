@@ -6,7 +6,7 @@ import { useTeams } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
-import { EntityChip } from '@/components/EntityChip';
+import { EntityChip } from '@vismay/footshort-viz/native';
 
 const MIN_TEAMS = 3;
 

@@ -32,7 +32,7 @@ import {
 } from '@/lib/useFollowedFixtures';
 import type { FixtureRow } from '@/lib/useFixtures';
 import type { Entity } from '@/lib/useEntities';
-import { MatchRow } from './MatchRow';
+import { MatchRow } from '@vismay/footshort-viz/native';
 
 type Card =
   | { kind: 'league'; id: string; entity: Entity; section: LeagueSection }

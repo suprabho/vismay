@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEntity, usePlayersInTeam } from '@/lib/useEntity';
 import { useTeamStanding } from '@/lib/useStandings';
 import { useTeamFixtures } from '@/lib/useFixtures';
-import { MatchRow } from '@/components/MatchRow';
+import { MatchRow } from '@vismay/footshort-viz/native';
 
 export default function TeamScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();

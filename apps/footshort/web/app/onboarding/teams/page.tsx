@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { EntityChip } from '@/components/EntityChip';
+import { EntityChip } from '@vismay/footshort-viz/web';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useTeams } from '@/lib/useEntities';

@@ -3,28 +3,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
 
-export type FixtureTeamRef = {
-  id: string;
-  slug: string;
-  name: string;
-  crest_url: string | null;
-} | null;
-
-export type FixtureRow = {
-  id: string;
-  competition_slug: string;
-  season: string;
-  matchday: number | null;
-  stage: string | null;
-  kickoff_at: string;
-  status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
-  home_score: number | null;
-  away_score: number | null;
-  home_team_name: string | null;
-  away_team_name: string | null;
-  home: FixtureTeamRef;
-  away: FixtureTeamRef;
-};
+// Football-domain types now live in @vismay/footshort-viz so MatchRow and
+// any vertical components share a single source of truth. Imported for
+// internal use AND re-exported so existing call sites in this app keep working.
+import type { FixtureRow, FixtureTeamRef, FixtureStatus } from '@vismay/footshort-viz/types';
+export type { FixtureRow, FixtureTeamRef, FixtureStatus };
 
 const FIXTURE_COLS = `
   id, competition_slug, season, matchday, stage, kickoff_at, status,

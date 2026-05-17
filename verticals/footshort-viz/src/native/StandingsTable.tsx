@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import type { StandingRow } from '@/lib/useStandings';
+import type { StandingRow } from '../types';
 
 type Props = { rows: StandingRow[] };
 

@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFollows, useFollowMutation } from '@/lib/useFollows';
-import { EntityChip } from '@/components/EntityChip';
+import { EntityChip } from '@vismay/footshort-viz/native';
 
 export default function FollowingScreen() {
   const router = useRouter();

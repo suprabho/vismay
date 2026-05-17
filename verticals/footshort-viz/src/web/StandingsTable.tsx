@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { StandingRow } from '@/lib/useStandings';
+import type { StandingRow } from '../types';
 
 type Props = { rows: StandingRow[] };
 

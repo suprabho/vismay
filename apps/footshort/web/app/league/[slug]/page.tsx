@@ -1,8 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { MatchRow } from '@/components/MatchRow';
-import { StandingsTable } from '@/components/StandingsTable';
+import { MatchRow } from '@vismay/footshort-viz/web';
+import { StandingsTable } from '@vismay/footshort-viz/web';
 import { useEntity } from '@/lib/useEntity';
 import { useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
 import { useStandings } from '@/lib/useStandings';

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MatchRow } from './MatchRow';
+import { MatchRow } from '@vismay/footshort-viz/web';
 import {
   useFollowedFixtures,
   type LeagueSection,
