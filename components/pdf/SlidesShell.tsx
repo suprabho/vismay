@@ -2,10 +2,11 @@
 
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@/lib/storyConfig.types'
-import ChartPanel from '@/components/story/ChartPanel'
+import ForegroundVizSlot from '@/components/story/viz/ForegroundVizSlot'
+import { resolveSlots } from '@/lib/resolveSlots'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
-import { usePdfReadiness } from '@/lib/pdfReadiness'
+import { useStoryReadiness } from '@/lib/storyReadiness'
 import {
   getReportMapOverride,
   getReportPins,
@@ -72,17 +73,26 @@ export default function SlidesShell({
     })
   }, [units])
 
-  const expectedMaps = useMemo(
-    () =>
-      slides.filter(
-        (s) =>
-          !!s.center &&
-          typeof s.zoom === 'number' &&
-          !isReportMapHidden(s.unit.parentConfig)
-      ).length,
-    [slides]
-  )
-  const { noteMapReady } = usePdfReadiness(expectedMaps)
+  // Count each capture-blocking element: every visible map + every foreground
+  // viz layer (chart / image / video / rive / embed). The slot's
+  // `noteLayerReady` fires once per layer when its first paintable state lands.
+  const expectedSignals = useMemo(() => {
+    let total = 0
+    for (const s of slides) {
+      if (
+        !!s.center &&
+        typeof s.zoom === 'number' &&
+        !isReportMapHidden(s.unit.parentConfig)
+      ) {
+        total++
+      }
+      total += resolveSlots(s.unit.parentConfig).foreground.length
+    }
+    return total
+  }, [slides])
+  const { noteReady } = useStoryReadiness(expectedSignals)
+  // Keep the legacy alias so the JSX below doesn't have to thread a renamed prop.
+  const noteMapReady = noteReady
 
   const renderSlideContent = (
     {
@@ -100,6 +110,7 @@ export default function SlidesShell({
     const heading = unit.heading
     const subheading = unit.subheading
     const chartId = unit.parentConfig.chart
+    const foregroundLayers = resolveSlots(unit.parentConfig).foreground
     const showMap =
       !!center && typeof zoom === 'number' && !isReportMapHidden(unit.parentConfig)
     return (
@@ -206,9 +217,16 @@ export default function SlidesShell({
                   {stripMarkdown(p)}
                 </p>
               ))}
-              {chartId && (
-                <div className="flex-1 min-h-[240px] mt-4">
-                  <ChartPanel chartId={chartId} activeStep={unit.subIndex} slug={slug} />
+              {(chartId || foregroundLayers.length > 0) && (
+                <div className="relative flex-1 min-h-[240px] mt-4">
+                  <ForegroundVizSlot
+                    slug={slug}
+                    layers={foregroundLayers}
+                    unitKey={`${unit.parentIndex}-${unit.subIndex}`}
+                    activeStep={unit.subIndex}
+                    mode="print"
+                    noteLayerReady={noteReady}
+                  />
                 </div>
               )}
             </div>

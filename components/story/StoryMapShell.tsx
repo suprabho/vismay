@@ -1,49 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapStorySection from './MapStorySection'
-import ChartPanel from './ChartPanel'
+import ForegroundVizSlot from './viz/ForegroundVizSlot'
+import BackgroundVizSlot from './viz/BackgroundVizSlot'
+import { StoryShellProvider } from './viz/StoryShellContext'
+import { resolveSlots } from '@/lib/resolveSlots'
 import { useIsMobile } from '@/lib/chartTheme'
-import {
-  STORY_LANDSCAPE_FOCUS_AREA,
-  STORY_PORTRAIT_FOCUS_AREA,
-} from '@/lib/storyFocusArea'
-import type {
-  ResolvedUnit,
-  StoryDefaults,
-  SubsectionMapOverride,
-} from '@/lib/storyConfig.types'
+import type { ResolvedUnit, StoryDefaults } from '@/lib/storyConfig.types'
 import type { MapOverrideConfig } from '@/lib/storyMapOverrides'
-import type MapboxBackgroundType from './charts/MapboxBackground'
-import type { MapStep } from './charts/MapboxBackground'
-
-type MapboxBackgroundProps = React.ComponentProps<typeof MapboxBackgroundType>
-
-/**
- * Client-only loader for MapboxBackground.
- *
- * We can't use `next/dynamic({ ssr: false })` here: in Next 16 + Turbopack
- * that throws `BailoutToCSR` during the server render of any client component
- * that references it, and the recovery path inside the affected Suspense
- * boundary can drop sibling DOM at hydration time. Instead, we hold the
- * component in state and import it from a `useEffect` so the module is only
- * ever evaluated in the browser — `mapbox-gl` touches `window` at import
- * time, which would crash a plain server-side import.
- */
-function MapboxBackground(props: MapboxBackgroundProps) {
-  const [Comp, setComp] = useState<ComponentType<MapboxBackgroundProps> | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    import('./charts/MapboxBackground').then((m) => {
-      if (!cancelled) setComp(() => m.default)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-  if (!Comp) return null
-  return <Comp {...props} />
-}
 
 interface Props {
   units: ResolvedUnit[]
@@ -63,40 +28,23 @@ interface Props {
 }
 
 /**
- * Map override entries indexed by `${parentIndex}.${subIndex ?? '_'}`.
- * Built once from `mapOverrides` and consumed in the `mapSteps` loop so
- * each unit's lookup is O(1).
- */
-function indexOverrides(
-  cfg: MapOverrideConfig | null | undefined
-): Map<string, SubsectionMapOverride> {
-  const map = new Map<string, SubsectionMapOverride>()
-  if (!cfg) return map
-  for (const o of cfg.overrides) {
-    map.set(`${o.parentIndex}.${o.subIndex ?? '_'}`, o.map)
-  }
-  return map
-}
-
-/**
  * Page-level orchestrator.
  *
  * Owns:
- *   - The persistent Mapbox background (fixed inset-0, z-0).
- *   - The persistent foreground ChartPanel (fixed, z-10) — keyed by chartId
- *     so it stays mounted across subsections of the same parent, letting
- *     echarts smoothly tween between activeStep values.
  *   - The IntersectionObserver tracking each unit's snap target.
- *   - activeUnit state, derived into:
- *       - activeParent → drives map flyTo
- *       - activeSub    → drives chart activeStep
- *       - currentChart → drives which ChartPanel renders (and its `key`,
- *                        which forces a fresh mount when chartId changes)
+ *   - `activeUnit` state, fed into both slot dispatchers below.
+ *   - `<BackgroundVizSlot>`: routes every unit's `background:` layer stack
+ *     through the registry. The map module mounts persistent-aggregated,
+ *     keeping one WebGL context alive across all scroll snaps.
+ *   - `<ForegroundVizSlot>`: routes the active unit's `foreground:` layer
+ *     stack through the registry. The chart module persists across
+ *     subsections of the same parent via stableIdentity keying so ECharts
+ *     animations tween smoothly.
  *
  * Critical positioning detail: the scrollable element is the inner snap
  * container (NOT the body). The IntersectionObserver uses
- * `root: containerRef.current` so the fixed map/chart stay stable on iOS
- * Safari and the observer fires reliably as snap settles.
+ * `root: containerRef.current` so the fixed background/foreground stay
+ * stable on iOS Safari and the observer fires reliably as snap settles.
  */
 export default function StoryMapShell({
   units: desktopUnits,
@@ -142,109 +90,16 @@ export default function StoryMapShell({
     }
   }, [isPortrait])
 
-  // Autoplay-only map override lookup. Indexed once per render — the
-  // `mapOverrides` prop is small (one entry per overridden unit) and
-  // referentially stable across renders unless the admin Map tab saves a
-  // new blob, so the cost is negligible.
-  const overrideIndex = useMemo(() => indexOverrides(mapOverrides), [mapOverrides])
-
-  // One MapStep per unit. Subsections with a `map` override merge their
-  // fields on top of the parent section's map state, so each unit can have
-  // its own camera position and pins while still sharing the parent's chart.
-  //
-  // Layering, lowest → highest priority:
-  //   1. parent section `map`
-  //   2. subsection `map` (if any)
-  //   3. autoplay parent override   (only when isAutoplay)
-  //   4. autoplay subsection override (only when isAutoplay)
-  //   5. mobile layer (`.mobile` block from whichever level provided it)
-  //   6. autoplay mobile overrides at parent + sub level (only when both
-  //      isAutoplay AND isPortrait — i.e. 9:16 autoplay)
-  //
-  // When the viewport is portrait (mobile), `map.mobile` overrides are
-  // layered on top of the resolved desktop values — so you can specify
-  // only the fields that differ (e.g. a lower zoom) and everything else
-  // falls through from the desktop config.
-  const mapSteps: MapStep[] = units.map((unit) => {
-    const parentMap = unit.parentConfig.map
-    const sub = unit.parentConfig.subsections?.[unit.subIndex]
-    const over = sub?.map
-    const apParent = isAutoplay
-      ? overrideIndex.get(`${unit.parentIndex}._`)
-      : undefined
-    const apSub = isAutoplay
-      ? overrideIndex.get(`${unit.parentIndex}.${unit.subIndex}`)
-      : undefined
-
-    // Desktop-resolved values: subsection overrides parent, then autoplay
-    // overrides (parent-level then sub-level) layer on top when active.
-    let center = apSub?.center ?? apParent?.center ?? over?.center ?? parentMap.center
-    let zoom = apSub?.zoom ?? apParent?.zoom ?? over?.zoom ?? parentMap.zoom
-    let pitch = apSub?.pitch ?? apParent?.pitch ?? over?.pitch ?? parentMap.pitch
-    let bearing = apSub?.bearing ?? apParent?.bearing ?? over?.bearing ?? parentMap.bearing
-    let flySpeed =
-      apSub?.flySpeed ?? apParent?.flySpeed ?? over?.flySpeed ?? parentMap.flySpeed ?? defaults.flySpeed
-    let opacity =
-      apSub?.opacity ?? apParent?.opacity ?? over?.opacity ?? parentMap.opacity ?? defaults.mapOpacity
-    let pins = apSub?.pins ?? apParent?.pins ?? over?.pins ?? parentMap.pins
-    let regions = apSub?.regions ?? apParent?.regions ?? over?.regions ?? parentMap.regions
-    let heatmap = apSub?.heatmap ?? apParent?.heatmap ?? over?.heatmap ?? parentMap.heatmap
-
-    // Mobile layer: subsection mobile > parent mobile, then autoplay
-    // mobile overrides (parent then sub) on top when both autoplay AND
-    // portrait — i.e. the 9:16 video render.
-    if (isPortrait) {
-      const mob = over?.mobile ?? parentMap.mobile
-      if (mob) {
-        center = mob.center ?? center
-        zoom = mob.zoom ?? zoom
-        pitch = mob.pitch ?? pitch
-        bearing = mob.bearing ?? bearing
-        flySpeed = mob.flySpeed ?? flySpeed
-        opacity = mob.opacity ?? opacity
-        pins = mob.pins ?? pins
-        regions = mob.regions ?? regions
-        heatmap = mob.heatmap ?? heatmap
-      }
-      if (isAutoplay) {
-        for (const apMob of [apParent?.mobile, apSub?.mobile]) {
-          if (!apMob) continue
-          center = apMob.center ?? center
-          zoom = apMob.zoom ?? zoom
-          pitch = apMob.pitch ?? pitch
-          bearing = apMob.bearing ?? bearing
-          flySpeed = apMob.flySpeed ?? flySpeed
-          opacity = apMob.opacity ?? opacity
-          pins = apMob.pins ?? pins
-          regions = apMob.regions ?? regions
-          heatmap = apMob.heatmap ?? heatmap
-        }
-      }
-    }
-
-    return {
-      center,
-      zoom,
-      pitch,
-      bearing,
-      flySpeed,
-      opacity,
-      pins: pins?.map((p) => ({
-        coordinates: p.coordinates,
-        label: p.label,
-        color: p.color ?? defaults.pinColor,
-        radius: p.radius ?? defaults.pinRadius,
-        pulse: p.pulse,
-        labelAnchor: p.labelAnchor,
-      })),
-      regions,
-      heatmap,
-    }
-  })
+  // The map-step layering (parent/sub/autoplay/mobile) now lives inside the
+  // map module's PersistentComponent — it reads `units`, `mapOverrides`,
+  // `isAutoplay`, and `isPortrait` off `<StoryShellProvider>`.
 
   const current = units[activeUnit] ?? units[0]
   const activeSub = current?.subIndex ?? 0
-  const currentChartId = current?.parentConfig.chart
+  const currentForeground = useMemo(
+    () => (current ? resolveSlots(current.parentConfig).foreground : []),
+    [current]
+  )
 
   // On portrait, a subsection split into multiple slices via `mobileParagraphs`
   // produces consecutive units that share the same (parentIndex, subIndex).
@@ -265,7 +120,7 @@ export default function StoryMapShell({
       prev.subIndex === current.subIndex
     return sharesNext && !sharesPrev
   })()
-  const showChart = !!currentChartId && !isFirstOfMultiSlice
+  const showChart = currentForeground.length > 0 && !isFirstOfMultiSlice
 
   // Single IntersectionObserver across every unit element.
   useEffect(() => {
@@ -291,32 +146,34 @@ export default function StoryMapShell({
     return () => observer.disconnect()
   }, [units.length, isPortrait])
 
+  const mode: 'scroll' | 'autoplay' | 'capture' | 'print' = isCapture
+    ? 'capture'
+    : isAutoplay
+      ? 'autoplay'
+      : 'scroll'
+
   return (
-    <>
-      {/* ─── Persistent Mapbox background ───────────────────────────────
-          Always full-viewport. In landscape, `landscapeFocusArea` tells
-          Mapbox to treat the bottom-left 37%×60% region as the camera
-          focal box (via map.setPadding internally), so the YAML `center`
-          of each section lands inside that visible card. In portrait,
-          the focal area is ignored and the map fills naturally. */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <MapboxBackground
-          accessToken={accessToken}
-          steps={mapSteps}
-          activeStep={activeUnit}
-          style={defaults.mapStyle}
-          defaultPinColor={defaults.pinColor}
-          defaultPinRadius={defaults.pinRadius}
-          defaultOpacity={defaults.mapOpacity}
-          highlightCountry={defaults.highlightCountry}
-          highlightColor={defaults.highlightColor}
-          palette={defaults.mapPalette}
-          fontstack={defaults.mapFontstack}
-          landscapeFocusArea={STORY_LANDSCAPE_FOCUS_AREA}
-          portraitFocusArea={STORY_PORTRAIT_FOCUS_AREA}
-          staticCapture={isCapture}
-        />
-      </div>
+    <StoryShellProvider
+      value={{
+        accessToken,
+        defaults,
+        mapOverrides,
+        isAutoplay,
+        isPortrait,
+        isCapture,
+        units,
+      }}
+    >
+      {/* ─── Persistent background slot ──────────────────────────────────
+          Dispatches every unit's `background:` layer stack through the
+          registry. The map module's persistent-aggregated mount keeps a
+          single Mapbox WebGL context alive across all scroll snaps. */}
+      <BackgroundVizSlot
+        slug={slug ?? ''}
+        units={units}
+        activeUnit={activeUnit}
+        mode={mode}
+      />
 
       {/* ─── Persistent foreground chart panel ──────────────────────────
           Keyed by chartId so the instance persists across subsections of
@@ -374,11 +231,12 @@ export default function StoryMapShell({
               border: '0.5px solid var(--color-line)',
             }}
           >
-            <ChartPanel
-              key={currentChartId}
-              chartId={currentChartId}
+            <ForegroundVizSlot
+              slug={slug ?? ''}
+              layers={currentForeground}
+              unitKey={`${current?.parentIndex ?? 0}-${current?.subIndex ?? 0}`}
               activeStep={activeSub}
-              slug={slug}
+              mode={mode}
             />
           </div>
         </div>
@@ -403,6 +261,6 @@ export default function StoryMapShell({
           />
         ))}
       </div>
-    </>
+    </StoryShellProvider>
   )
 }

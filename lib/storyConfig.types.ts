@@ -3,6 +3,37 @@
 
 import type { MapRegionLayer, HeatmapLayer, MapTextLabel } from '@/types/story'
 
+/* ─── Viz layer schema ─────────────────────────────────────────────
+ * Each section has two slots — `foreground` and `background` — and each slot
+ * is a stack of layers. Layers render in array order (first = bottom). The
+ * `chart:` / `map:` legacy fields synthesize into single-layer arrays via
+ * `resolveSlots` so existing YAML keeps rendering.
+ */
+
+export interface VizLayerStyle {
+  position?: { x?: 'left' | 'center' | 'right' | string; y?: 'top' | 'center' | 'bottom' | string }
+  size?: { width?: string; height?: string }
+  opacity?: number
+  blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'difference'
+  pointerEvents?: 'auto' | 'none'
+  zIndex?: number
+}
+
+export interface VizRef<TKind extends string = string> {
+  type: TKind
+  [key: string]: unknown
+}
+
+export type VizLayer = VizRef & { style?: VizLayerStyle }
+
+/** A whole-slot opt-out (e.g. `background: { type: 'none' }`). */
+export interface VizSlotNone {
+  type: 'none'
+}
+
+export type ForegroundSlotInput = VizLayer | VizLayer[]
+export type BackgroundSlotInput = VizLayer | VizLayer[] | VizSlotNone
+
 /**
  * Per-category show/hide/recolor override.
  *
@@ -206,12 +237,27 @@ export interface StorySectionConfig {
   heading?: string
   /** Optional short label displayed below the stat number (kind: stat only). */
   subheading?: string
-  /** Optional foreground chart id; resolved by ChartPanel registry. */
+  /** Optional foreground chart id; resolved by ChartPanel registry. Legacy — prefer `foreground`. */
   chart?: string
   /** Optional eyebrow line shown above the hero title (kind: hero only). */
   eyebrow?: string
   /** Theme palette token for the stat number's color (kind: stat only). Defaults to `accent2`. */
   color?: StatColor
+  /**
+   * Persistent backdrop layer stack. When absent and `map` is set, the back-compat
+   * shim in `resolveSlots()` synthesizes a single-element map layer array. When set to
+   * `{ type: 'none' }`, the persistent map is suppressed for this section.
+   */
+  background?: BackgroundSlotInput
+  /**
+   * Per-unit foreground layer stack. When absent and `chart` is set, the shim
+   * synthesizes a single-element chart layer array.
+   */
+  foreground?: ForegroundSlotInput
+  /**
+   * Legacy map field. Kept indefinitely for back-compat; required iff no `background`
+   * declares a different layer type (the shim derives the background layer from this).
+   */
   map: {
     center: [number, number]
     zoom: number

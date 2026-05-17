@@ -1,0 +1,24 @@
+# Phase 6 demo — proves the vertical plugin scaffold.
+# `vertical: 'footshort'` in the frontmatter is what registers the
+# `fs:match-card` module before the slot looks it up.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.45
+  pinColor: "#d8804a"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+  - id: match
+    text: "Match card"
+    background:
+      - type: map
+        center: [-0.13, 51.5]
+        zoom: 8
+    foreground:
+      - type: fs:match-card
+        home: "Arsenal"
+        away: "Chelsea"
+        score: "2 – 1"
+        competition: "Premier League · matchday 35"

@@ -12,6 +12,7 @@ import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@/lib/getFontImports'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import StoryMapShell from '@/components/story/StoryMapShell'
+import VerticalLoader from '@/components/story/viz/VerticalLoader'
 import VerticalCaptureFrame from '@/components/story/VerticalCaptureFrame'
 import VizmayaLogo from '@/components/VizmayaLogo'
 
@@ -80,6 +81,7 @@ export default async function StoryPage({ params }: RouteParams) {
     notFound()
   }
 
+
   const mapOverrides = parseMapOverrides(mapYaml)
 
   const { units, mobileUnits, hasMobileOverrides } = resolveUnits(
@@ -124,14 +126,16 @@ export default async function StoryPage({ params }: RouteParams) {
             }}
           />
         </Link>
-        <StoryMapShell
-          units={units}
-          mobileUnits={hasMobileOverrides ? mobileUnits : undefined}
-          accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
-          defaults={defaults}
-          slug={slug}
-          mapOverrides={mapOverrides}
-        />
+        <VerticalLoader vertical={story.frontmatter.vertical}>
+          <StoryMapShell
+            units={units}
+            mobileUnits={hasMobileOverrides ? mobileUnits : undefined}
+            accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+            defaults={defaults}
+            slug={slug}
+            mapOverrides={mapOverrides}
+          />
+        </VerticalLoader>
       </VerticalCaptureFrame>
     </ThemeProvider>
   )

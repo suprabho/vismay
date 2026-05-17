@@ -1,6 +1,7 @@
 'use client'
 
 import type { ResolvedUnit, StatColor } from '@/lib/storyConfig.types'
+import { resolveSlots } from '@/lib/resolveSlots'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
 import { HeroPanel, HeroPanelTitle, HeroPanelDek } from './Hero'
 import { statColorVar } from './ThemeProvider'
@@ -56,7 +57,11 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
   const { parentConfig, heading, subheading, paragraphs, heroPart } = unit
   const kind = parentConfig.kind ?? 'text'
   const heroBits = kind === 'hero' ? extractHeroBits(paragraphs) : null
-  const hasChart = !!parentConfig.chart
+  // `hasChart` historically gated by the legacy `chart:` field — it really
+  // means "is the foreground slot occupied", since the text card needs to
+  // dodge the foreground card's top-half real estate in landscape. After the
+  // viz-registry refactor, sections can fill the slot via `foreground:` too.
+  const hasChart = !!parentConfig.chart || resolveSlots(parentConfig).foreground.length > 0
 
   // Autoplay mode: render only the snap target (no text card, no hero panel).
   // Stat sections are an exception — the number IS the visual, so it renders

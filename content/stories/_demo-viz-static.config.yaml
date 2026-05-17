@@ -1,0 +1,138 @@
+# Phase 3 demo — exercises the image + embed viz modules in both slots.
+# Not listed on the home grid (status: draft, listed: false in frontmatter).
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d8804a"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+  # 1. Hero — keeps legacy `map:` so the back-compat shim synthesizes a
+  # `background: [{ type: map, ... }]` layer. No foreground.
+  - id: hero
+    kind: hero
+    text: "Viz demo"
+    map:
+      center: [0, 20]
+      zoom: 1.4
+
+  # 2. Image fills the background, no foreground. Tests image module in the
+  # background slot, single-layer.
+  - id: image-bg
+    text: "Image as the backdrop"
+    background:
+      - type: image
+        src: "https://picsum.photos/seed/vizmaya-bg/1600/900"
+        fit: cover
+        focus: center
+
+  # 3. Composition demo: map + multiple image overlays at different positions,
+  # sizes, opacities, and z-indexes. Each `style:` block on a background layer
+  # accepts:
+  #   position: { x: left|center|right|<css>, y: top|center|bottom|<css> }
+  #   size:     { width: <css>, height: <css> }   # e.g. "240px", "20vw", "auto"
+  #   opacity:  number 0..1
+  #   blendMode: normal|multiply|screen|overlay|soft-light|difference
+  #   pointerEvents: auto|none   (use 'none' so overlays don't block scrolling)
+  #   zIndex:   number   (defaults to the layer's position in the array)
+  #
+  # Layers are positioned in the left 37vw column to stay clear of the text
+  # card on the right (no foreground on this section → text card takes the
+  # full right column).
+  - id: image-on-map
+    text: "Image overlay on map"
+    background:
+      # Layer 0 — base map
+      - type: map
+        center: [10, 50]
+        zoom: 4
+      # Layer 1 — large square pinned bottom-left, 60% opacity
+      - type: image
+        src: "https://picsum.photos/seed/viz-a/600/600"
+        style:
+          position: { x: left, y: bottom }
+          size: { width: "240px", height: "240px" }
+          opacity: 0.6
+          pointerEvents: none
+      # Layer 2 — narrow strip pinned top-left, offset 80px down
+      - type: image
+        src: "https://picsum.photos/seed/viz-b/800/300"
+        style:
+          position: { x: left, y: "80px" }
+          size: { width: "300px", height: "120px" }
+          opacity: 0.9
+          pointerEvents: none
+      # Layer 3 — small circle-ish thumbnail in the middle of the left column,
+      # multiply blend so it tints the map tiles beneath
+      - type: image
+        src: "https://picsum.photos/seed/viz-c/400/400"
+        style:
+          position: { x: "60px", y: center }
+          size: { width: "160px", height: "160px" }
+          opacity: 0.85
+          blendMode: multiply
+          zIndex: 10
+          pointerEvents: none
+
+  # 4. Embed in the foreground card, map in the background. Tests embed
+  # module with iframe ↔ poster swap.
+  - id: embed-fg
+    text: "Embed in the foreground"
+    background:
+      - type: map
+        center: [-95, 40]
+        zoom: 3
+    foreground:
+      - type: embed
+        src: "https://en.wikipedia.org/wiki/Data_visualization"
+        poster: "https://picsum.photos/seed/vizmaya-embed/1200/675"
+        aspect: "16 / 9"
+        sandbox: "allow-scripts allow-same-origin"
+
+  # 5. Video in the foreground, looping muted MP4. Map continues behind.
+  # Demonstrates the video module — loop / muted / autoplay defaults, plus
+  # `posterTime: 1.5` so capture/print mode freezes on a representative frame.
+  - id: video-fg
+    text: "Video in the foreground"
+    background:
+      - type: map
+        center: [120, 22]
+        zoom: 3
+    foreground:
+      - type: video
+        src: "https://media.w3.org/2010/05/sintel/trailer.mp4"
+        poster: "https://picsum.photos/seed/viz-video-poster/1200/675"
+        loop: true
+        muted: true
+        autoplay: true
+        posterTime: 1.5
+
+  # 6. Rive in the foreground. Reuses /public/vizmaya-logo.riv plus its known
+  # view-model color bindings (textColor, accentColor, …). Theme colors are
+  # hex-coded inline so the demo doesn't depend on a theme-token resolver.
+  - id: rive-fg
+    text: "Rive in the foreground"
+    background:
+      - type: map
+        center: [-20, 0]
+        zoom: 2
+    foreground:
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout:
+          fit: contain
+          alignment: center
+        viewModel:
+          bindings:
+            textColor:    "#f1ecdf"
+            tealColor:    "#7faecf"
+            accentColor:  "#d8804a"
+            accent2Color: "#7faecf"
+            surfaceColor: "#1d2026"
+            mutedColor:   "#8a8e96"
+            lineColor:    "#2c303a"
+        capture:
+          mode: currentFrame

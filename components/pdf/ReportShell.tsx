@@ -2,10 +2,11 @@
 
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@/lib/storyConfig.types'
-import ChartPanel from '@/components/story/ChartPanel'
+import ForegroundVizSlot from '@/components/story/viz/ForegroundVizSlot'
+import { resolveSlots } from '@/lib/resolveSlots'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
-import { usePdfReadiness } from '@/lib/pdfReadiness'
+import { useStoryReadiness } from '@/lib/storyReadiness'
 import {
   getReportMapOverride,
   getReportPins,
@@ -66,20 +67,25 @@ export default function ReportShell({
   embed = false,
 }: Props) {
   const byline = useMemo(() => extractByline(units), [units])
-  const expectedMaps = useMemo(
-    () =>
-      units.filter((u) => {
-        const subMap = u.parentConfig.subsections?.[u.subIndex]?.map
-        const ov = getReportMapOverride(u.parentConfig)
-        const center = ov?.center ?? subMap?.center ?? u.parentConfig.map?.center
-        const zoom = ov?.zoom ?? subMap?.zoom ?? u.parentConfig.map?.zoom
-        return (
-          !!center && typeof zoom === 'number' && !isReportMapHidden(u.parentConfig)
-        )
-      }).length,
-    [units]
-  )
-  const { noteMapReady } = usePdfReadiness(expectedMaps)
+  // Sum capture-blocking signals: each visible map page + each foreground
+  // viz layer (chart / image / video / rive / embed). Matches the unified
+  // readiness model in `lib/storyReadiness.ts`.
+  const expectedSignals = useMemo(() => {
+    let total = 0
+    for (const u of units) {
+      const subMap = u.parentConfig.subsections?.[u.subIndex]?.map
+      const ov = getReportMapOverride(u.parentConfig)
+      const center = ov?.center ?? subMap?.center ?? u.parentConfig.map?.center
+      const zoom = ov?.zoom ?? subMap?.zoom ?? u.parentConfig.map?.zoom
+      if (!!center && typeof zoom === 'number' && !isReportMapHidden(u.parentConfig)) {
+        total++
+      }
+      total += resolveSlots(u.parentConfig).foreground.length
+    }
+    return total
+  }, [units])
+  const { noteReady } = useStoryReadiness(expectedSignals)
+  const noteMapReady = noteReady
 
   const renderCover = (): ReactNode => (
     <section
@@ -157,6 +163,7 @@ export default function ReportShell({
     const heading = unit.heading
     const subheading = unit.subheading
     const chartId = unit.parentConfig.chart
+    const foregroundLayers = resolveSlots(unit.parentConfig).foreground
 
     return (
       <section
@@ -233,12 +240,19 @@ export default function ReportShell({
                   {stripMarkdown(p)}
                 </p>
               ))}
-              {chartId && (
+              {(chartId || foregroundLayers.length > 0) && (
                 <div
-                  className="mt-3"
+                  className="relative mt-3"
                   style={{ width: '100%', height: '3.8in', overflow: 'hidden', breakInside: 'avoid' }}
                 >
-                  <ChartPanel chartId={chartId} activeStep={unit.subIndex} slug={slug} />
+                  <ForegroundVizSlot
+                    slug={slug}
+                    layers={foregroundLayers}
+                    unitKey={`${unit.parentIndex}-${unit.subIndex}`}
+                    activeStep={unit.subIndex}
+                    mode="print"
+                    noteLayerReady={noteReady}
+                  />
                 </div>
               )}
             </div>

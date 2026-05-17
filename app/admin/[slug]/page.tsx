@@ -9,7 +9,9 @@ import { resolveUnits } from '@/lib/resolveUnits'
 import { defaultNarrationText } from '@/lib/storyTts'
 import { getCachedVideo, type CachedVideo } from '@/lib/storyVideo'
 import { createServiceClient } from '@/lib/supabase'
+import { buildAssetRef, resolveAssetUrl } from '@/lib/assetUrl'
 import type { NarrationUnit } from '@/components/admin/NarrationEditor'
+import type { AssetListEntry } from '@/app/api/admin/stories/[slug]/assets/route'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,11 +51,12 @@ export default async function EditStoryPage({ params }: Props) {
 
   const src = getContentSource()
   const videoCache = await loadVideoCache(slug)
-  const [markdown, config_yaml, jsonChartIds, tts_yaml] = await Promise.all([
+  const [markdown, config_yaml, jsonChartIds, tts_yaml, assets] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
     src.listChartIds(slug),
     src.readTtsYaml(slug),
+    loadAssets(slug),
   ])
   if (markdown == null) notFound()
 
@@ -111,6 +114,7 @@ export default async function EditStoryPage({ params }: Props) {
         markdown,
         config_yaml: config_yaml ?? '',
         charts,
+        assets,
         narrationUnits,
         tts_yaml: tts_yaml ?? null,
         videoCache,
@@ -137,5 +141,35 @@ async function loadVideoCache(slug: string): Promise<VideoCache> {
     return { '9:16': vert, '16:9': horiz }
   } catch {
     return { '9:16': null, '16:9': null }
+  }
+}
+
+// Same best-effort pattern as loadVideoCache — if the bucket / env / RLS
+// isn't reachable, the Assets tab renders an empty grid rather than failing
+// the whole admin page.
+async function loadAssets(slug: string): Promise<AssetListEntry[]> {
+  try {
+    const supabase = createServiceClient()
+    const { data, error } = await supabase.storage.from('story-assets').list(slug, {
+      limit: 1000,
+      sortBy: { column: 'name', order: 'asc' },
+    })
+    if (error || !data) return []
+    return data
+      .filter((row) => row.name && row.name !== '.emptyFolderPlaceholder' && (row.metadata?.size ?? 0) > 0)
+      .map((row) => {
+        const ref = buildAssetRef(slug, row.name)
+        return {
+          key: `${slug}/${row.name}`,
+          filename: row.name,
+          assetRef: ref,
+          url: resolveAssetUrl(ref),
+          size: (row.metadata?.size as number | undefined) ?? null,
+          contentType: (row.metadata?.mimetype as string | undefined) ?? null,
+          updatedAt: row.updated_at ?? row.created_at ?? null,
+        }
+      })
+  } catch {
+    return []
   }
 }

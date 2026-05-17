@@ -7,12 +7,14 @@ import ThemeEditor from './ThemeEditor'
 import YamlCardsView from './YamlCardsView'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
+import AssetsPanel from './AssetsPanel'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
 import type { Theme } from '@/types/story'
 import type { CachedVideo } from '@/lib/storyVideo'
+import type { AssetListEntry } from '@/app/api/admin/stories/[slug]/assets/route'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'charts' | 'narration' | 'settings'
+type Tab = 'theme' | 'markdown' | 'config' | 'charts' | 'assets' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -23,6 +25,7 @@ interface InitialState {
   markdown: string
   config_yaml: string
   charts: ChartEntry[]
+  assets: AssetListEntry[]
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
   videoCache: {
@@ -36,6 +39,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'markdown', label: 'Markdown' },
   { id: 'config', label: 'Config' },
   { id: 'charts', label: 'Charts' },
+  { id: 'assets', label: 'Assets' },
   { id: 'narration', label: 'Narration' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -47,7 +51,7 @@ interface BulkResult {
   errors: string[]
 }
 
-const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'charts', 'narration', 'settings'])
+const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'charts', 'assets', 'narration', 'settings'])
 function isTab(v: string | null): v is Tab {
   return v != null && TAB_IDS.has(v as Tab)
 }
@@ -312,6 +316,9 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
             {t.id === 'charts' && charts.length > 0 && (
               <span className="ml-1.5 text-xs text-neutral-500">{charts.length}</span>
             )}
+            {t.id === 'assets' && initial.assets.length > 0 && (
+              <span className="ml-1.5 text-xs text-neutral-500">{initial.assets.length}</span>
+            )}
           </button>
         ))}
       </nav>
@@ -348,6 +355,9 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
         )}
         {tab === 'charts' && (
           <ChartsList slug={slug} charts={charts} onChartsChange={setCharts} />
+        )}
+        {tab === 'assets' && (
+          <AssetsPanel slug={slug} initialAssets={initial.assets} />
         )}
         {tab === 'narration' && (
           <NarrationEditor

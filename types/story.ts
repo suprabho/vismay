@@ -33,6 +33,13 @@ export interface Frontmatter {
   listed?: boolean
   /** Aura embed slug (https://aura.promad.design/embed/<slug>) used as the home tile background. */
   aura?: string
+  /**
+   * Vertical bundle to load for this story. When set, the page loads the
+   * matching `components/story/viz/verticals/<vertical>/` module bundle so
+   * its viz types are available to the registry. Unknown verticals are
+   * ignored with a console warning. See `components/story/viz/verticals.ts`.
+   */
+  vertical?: string
 }
 
 export type BlockType =

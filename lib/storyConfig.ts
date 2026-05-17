@@ -130,11 +130,17 @@ export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
         )
       })
     }
-    if (!s.map || !Array.isArray(s.map.center) || s.map.center.length !== 2) {
-      throw new Error(`Section ${i} in ${slug}.config.yaml is missing 'map.center'`)
-    }
-    if (typeof s.map.zoom !== 'number') {
-      throw new Error(`Section ${i} in ${slug}.config.yaml is missing 'map.zoom'`)
+    // Legacy `map:` block is only required when the section doesn't declare a
+    // `background:` slot. New stories using the layered schema validate their
+    // background layers downstream via each module's `parseConfig`.
+    const usesNewBackgroundSlot = (s as { background?: unknown }).background !== undefined
+    if (!usesNewBackgroundSlot) {
+      if (!s.map || !Array.isArray(s.map.center) || s.map.center.length !== 2) {
+        throw new Error(`Section ${i} in ${slug}.config.yaml is missing 'map.center'`)
+      }
+      if (typeof s.map.zoom !== 'number') {
+        throw new Error(`Section ${i} in ${slug}.config.yaml is missing 'map.zoom'`)
+      }
     }
   })
 
