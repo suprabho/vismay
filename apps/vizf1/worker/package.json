@@ -1,0 +1,17 @@
+{
+  "name": "@vizf1/worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "ingest": "tsx --env-file=.env src/ingest.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vizf1/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}
