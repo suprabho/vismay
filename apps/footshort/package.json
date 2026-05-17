@@ -1,0 +1,25 @@
+{
+  "name": "shortfoot",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "worker:seed": "npm run seed --workspace=@shortfoot/worker",
+    "worker:ingest": "npm run ingest --workspace=@shortfoot/worker",
+    "mobile:start": "npm run start --workspace=@shortfoot/mobile",
+    "mobile:android": "npm run android --workspace=@shortfoot/mobile",
+    "mobile:release": "npm run release --workspace=@shortfoot/mobile",
+    "web:dev": "npm run dev --workspace=@shortfoot/web",
+    "web:build": "npm run build --workspace=@shortfoot/web",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

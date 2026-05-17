@@ -1,0 +1,12 @@
+name: Publish OTA update
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  publish:
+    name: Publish update to production
+    type: update
+    params:
+      branch: production

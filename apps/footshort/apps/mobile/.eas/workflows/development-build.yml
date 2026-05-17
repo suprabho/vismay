@@ -1,0 +1,19 @@
+name: Development build
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build_android:
+    name: Build Android development
+    type: build
+    params:
+      platform: android
+      profile: development
+
+  build_ios:
+    name: Build iOS development
+    type: build
+    params:
+      platform: ios
+      profile: development
