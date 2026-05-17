@@ -1,5 +1,5 @@
 import { stringify as stringifyYaml } from 'yaml'
-import type { ResolvedUnit } from './storyConfig.types'
+import type { ResolvedUnit } from '@vismay/viz-engine'
 
 const HEADER = `# Sample share.yaml for this story.
 #

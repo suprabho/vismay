@@ -13,7 +13,7 @@ import Link from 'next/link'
 import matter from 'gray-matter'
 import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource, type StoryMeta } from '@/lib/contentSource'
-import type { Frontmatter } from '@/types/story'
+import type { Frontmatter } from '@vismay/viz-engine'
 
 export const dynamic = 'force-dynamic'
 

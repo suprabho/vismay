@@ -7,7 +7,7 @@ import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
 import { resolveUnits } from '@/lib/resolveUnits'
 import { buildShareCardList } from '@/lib/shareCardList'
 import { getContentSource } from '@/lib/contentSource'
-import type { ShareConfig } from '@/lib/storyConfig.types'
+import type { ShareConfig } from '@vismay/viz-engine'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

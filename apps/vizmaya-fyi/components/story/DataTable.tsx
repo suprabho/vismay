@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from 'react'
 import { useInView } from '@/lib/use-in-view'
-import { DataTableBlock } from '@/types/story'
+import { DataTableBlock } from '@vismay/viz-engine'
 import dynamic from 'next/dynamic'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })

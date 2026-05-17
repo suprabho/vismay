@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import type { Theme } from '@/types/story'
+import type { Theme } from '@vismay/viz-engine'
 
 export const DEFAULT_LOGO_PATH = '/vizmaya-logo-01.svg'
 

@@ -1,12 +1,12 @@
 'use client'
 
 import { useMemo, type ReactNode } from 'react'
-import type { ResolvedUnit, StoryConfig } from '@/lib/storyConfig.types'
-import ForegroundVizSlot from '@/components/story/viz/ForegroundVizSlot'
-import { resolveSlots } from '@/lib/resolveSlots'
+import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
+import { ForegroundVizSlot } from '@vismay/viz-engine'
+import { resolveSlots } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
-import { useStoryReadiness } from '@/lib/storyReadiness'
+import { useStoryReadiness } from '@vismay/viz-engine'
 import {
   getReportMapOverride,
   getReportPins,

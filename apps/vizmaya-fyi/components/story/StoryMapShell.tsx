@@ -2,13 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapStorySection from './MapStorySection'
-import ForegroundVizSlot from './viz/ForegroundVizSlot'
-import BackgroundVizSlot from './viz/BackgroundVizSlot'
-import { StoryShellProvider } from './viz/StoryShellContext'
-import { resolveSlots } from '@/lib/resolveSlots'
-import { useIsMobile } from '@/lib/chartTheme'
-import type { ResolvedUnit, StoryDefaults } from '@/lib/storyConfig.types'
-import type { MapOverrideConfig } from '@/lib/storyMapOverrides'
+import { ForegroundVizSlot, BackgroundVizSlot, StoryShellProvider } from '@vismay/viz-engine'
+import { resolveSlots } from '@vismay/viz-engine'
+import { useIsMobile } from '@vismay/viz-engine'
+import type { ResolvedUnit, StoryDefaults } from '@vismay/viz-engine'
+import type { MapOverrideConfig } from '@vismay/viz-engine'
 
 interface Props {
   units: ResolvedUnit[]

@@ -9,7 +9,7 @@ import { resolveUnits } from '@/lib/resolveUnits'
 import { defaultNarrationText } from '@/lib/storyTts'
 import { getFullVideo, type CachedVideo } from '@/lib/storyVideo'
 import { createServiceClient } from '@/lib/supabase'
-import { buildAssetRef, resolveAssetUrl } from '@/lib/assetUrl'
+import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
 import type { NarrationUnit } from '@/components/admin/NarrationEditor'
 import type { AssetListEntry } from '@/app/api/admin/stories/[slug]/assets/route'
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServiceClient } from '@/lib/supabase'
-import { buildAssetRef, resolveAssetUrl } from '@/lib/assetUrl'
+import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 const SAFE_FILENAME = /^[a-zA-Z0-9._-]+$/

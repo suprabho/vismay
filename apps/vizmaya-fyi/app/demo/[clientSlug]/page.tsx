@@ -11,7 +11,7 @@ import { createServiceClient } from '@/lib/supabase'
 import DemoPage from '@/components/demo/DemoPage'
 import { getStoryContent } from '@/lib/content'
 import { getFontImportUrl } from '@/lib/getFontImports'
-import type { Theme } from '@/types/story'
+import type { Theme } from '@vismay/viz-engine'
 
 export const dynamic = 'force-dynamic'
 
