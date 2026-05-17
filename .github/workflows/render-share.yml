@@ -43,6 +43,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
 
     steps:
       - uses: actions/checkout@v4

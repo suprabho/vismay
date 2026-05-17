@@ -1,5 +1,5 @@
 {
-  "name": "vizmaya-fyi-scaffold",
+  "name": "vizmaya-fyi",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "generate-audio": "npx tsx scripts/generate-audio.ts",
     "generate-video": "npx tsx scripts/generate-video.ts",
     "ingest": "npx tsx scripts/ingest-source.ts",

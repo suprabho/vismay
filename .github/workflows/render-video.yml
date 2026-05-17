@@ -1,21 +1,14 @@
-name: Render story PDF
+name: Render autoplay video
 
 # Triggered by the API route's `workflow_dispatch` POST when an end user
-# clicks "Download" on the /reports builder. Runs on ubuntu-latest because
-# we need real Chromium binaries — Vercel-style serverless can't host this
-# synchronously, and GitHub Actions runners can. Strictly cheaper than the
-# video workflow (no ffmpeg, no audio).
+# clicks "Download" on the autoplay page. Runs on ubuntu-latest because we
+# need real ffmpeg + Chromium binaries — Vercel-style serverless can't host
+# this synchronously, and GitHub Actions runners can.
 #
 # Required repo secrets:
 #   NEXT_PUBLIC_SUPABASE_URL       — same value as in Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY      — service role key for storage writes
 #   NEXT_PUBLIC_MAPBOX_TOKEN       — story page renders Mapbox tiles
-#   ADMIN_PASSWORD                 — Playwright pre-sets the admin cookie
-#                                    so the gated /story/<slug>/<format>
-#                                    route accepts the screenshot request.
-#                                    MUST exactly match Vercel's value.
-#   ADMIN_SESSION_SECRET           — optional; if set on Vercel, must match
-#                                    here too. Defaults to ADMIN_PASSWORD.
 
 on:
   workflow_dispatch:
@@ -24,28 +17,41 @@ on:
         description: Story slug
         required: true
         type: string
-      format:
-        description: Output PDF format
+      aspect:
+        description: Output aspect ratio
         required: true
         type: choice
         options:
-          - report
-          - slides
+          - '9:16'
+          - '16:9'
       base_url:
         description: Site URL the headless browser should hit
         required: true
         type: string
         default: https://vizmaya.fyi
+      start_ms:
+        description: Sub-range start (ms on cumulative audio timeline). Blank = 0.
+        required: false
+        type: string
+        default: ''
+      end_ms:
+        description: Sub-range end (ms on cumulative audio timeline). Blank = full length.
+        required: false
+        type: string
+        default: ''
 
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     # Pull NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY /
     # NEXT_PUBLIC_MAPBOX_TOKEN from the `Production` environment's secrets,
     # which is where they're already configured. Without this line `secrets.X`
     # only resolves repo-level secrets, which would be empty.
     environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
 
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +67,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       # `--with-deps` pulls the system libs Chromium needs (libnss3, etc.).
+      # Cheap on Ubuntu runners that already have most of them; ~15s.
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium --with-deps
 
@@ -70,10 +80,17 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
           BASE_URL: ${{ inputs.base_url }}
         # `--force` because cache-miss is the only reason this workflow runs.
         # The API route only dispatches after confirming the cached row's
-        # hash doesn't match the current content_revision_hash.
-        run: pnpm exec tsx scripts/generate-pdf.ts "${{ inputs.slug }}" "${{ inputs.format }}" --force
+        # hash doesn't match the current audio_revision_hash.
+        # When start_ms / end_ms are blank the script falls through to a
+        # full render; non-blank values become an explicit `[startMs, endMs]`
+        # sub-range (see scripts/generate-video.ts).
+        run: |
+          pnpm exec tsx scripts/generate-video.ts \
+            "${{ inputs.slug }}" \
+            "${{ inputs.aspect }}" \
+            --force \
+            ${{ inputs.start_ms != '' && format('--start-ms {0}', inputs.start_ms) || '' }} \
+            ${{ inputs.end_ms != '' && format('--end-ms {0}', inputs.end_ms) || '' }}
