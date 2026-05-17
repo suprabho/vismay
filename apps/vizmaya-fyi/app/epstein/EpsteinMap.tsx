@@ -12,7 +12,7 @@ import PersonDetail from "./PersonDetail";
 import AirportDetail from "./AirportDetail";
 import BlackbookDetail from "./BlackbookDetail";
 import VizmayaLogo from "@/components/VizmayaLogo";
-import { applyMapPalette } from "@/lib/applyMapPalette";
+import { applyMapPalette } from "@vismay/viz-engine";
 import { epsteinLogoPalette, epsteinMapPalette, type EpsteinTheme } from "./theme";
 
 // Three-way discriminated union — one of these (or nothing) is open at a time.

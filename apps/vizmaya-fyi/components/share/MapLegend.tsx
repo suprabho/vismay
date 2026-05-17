@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MapPinConfig } from '@/lib/storyConfig.types'
-import type { MapRegionLayer, MapLegendConfig } from '@/types/story'
+import type { MapPinConfig } from '@vismay/viz-engine'
+import type { MapRegionLayer, MapLegendConfig } from '@vismay/viz-engine'
 
 interface Props {
   regions?: MapRegionLayer

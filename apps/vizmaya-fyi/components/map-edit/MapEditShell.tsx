@@ -11,12 +11,12 @@ import type {
   ResolvedUnit,
   StoryDefaults,
   StatColor,
-} from '@/lib/storyConfig.types'
+} from '@vismay/viz-engine'
 import ShareMapBg from '@/components/share/ShareMapBg'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
-import { applyMapPalette, applyMapFontstack } from '@/lib/applyMapPalette'
-import { applyAdminWorldview, buildCountryFilter } from '@/lib/mapboxWorldview'
-import { STORY_LANDSCAPE_FOCUS_AREA } from '@/lib/storyFocusArea'
+import { applyMapPalette, applyMapFontstack } from '@vismay/viz-engine'
+import { applyAdminWorldview, buildCountryFilter } from '@vismay/viz-engine'
+import { STORY_LANDSCAPE_FOCUS_AREA } from '@vismay/viz-engine'
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 

@@ -1,4 +1,4 @@
-import { ActHeaderBlock } from '@/types/story'
+import { ActHeaderBlock } from '@vismay/viz-engine'
 
 export default function ActHeader({ block }: { block: ActHeaderBlock }) {
   return (

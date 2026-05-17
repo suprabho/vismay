@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 import { createServiceClient } from './supabase'
-import type { Frontmatter } from '@/types/story'
+import type { Frontmatter } from '@vismay/viz-engine'
 
 const STORIES_DIR = path.join(process.cwd(), 'content/stories')
 

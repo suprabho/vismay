@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Theme } from '@/types/story'
+import { Theme } from '@vismay/viz-engine'
 
 interface StoryThemeEntry {
   slug: string

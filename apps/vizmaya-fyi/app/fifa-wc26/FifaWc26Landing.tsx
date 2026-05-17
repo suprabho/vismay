@@ -7,7 +7,7 @@ import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
 import type { Epic, EpicStory } from "@/lib/epics";
 import type { FifaWc26Team } from "@/lib/fifa-wc26";
-import { applyMapPalette } from "@/lib/applyMapPalette";
+import { applyMapPalette } from "@vismay/viz-engine";
 import { fifaWc26LogoPalette, fifaWc26MapPalette, type FifaWc26Theme } from "./theme";
 import TeamDetail from "./TeamDetail";
 

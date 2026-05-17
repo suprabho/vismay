@@ -6,8 +6,8 @@ import {
   allRegisteredTypes,
   getVizModule,
   listModulesForSlot,
-} from '@/components/story/viz/registry'
-import type { VizSlot } from '@/components/story/viz/types'
+} from '@vismay/viz-engine'
+import type { VizSlot } from '@vismay/viz-engine'
 import VizConfigForm from './VizConfigForm'
 
 /**

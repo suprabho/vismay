@@ -1,7 +1,7 @@
 import { getParagraphs } from '@/lib/content'
 import { resolveAnchor } from '@/lib/contentAnchors'
 import type { ContentSection } from '@/lib/content'
-import type { StoryConfig, ResolvedUnit } from '@/lib/storyConfig.types'
+import type { StoryConfig, ResolvedUnit } from '@vismay/viz-engine'
 
 /**
  * Slice paragraphs according to a spec:

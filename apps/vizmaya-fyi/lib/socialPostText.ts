@@ -3,7 +3,7 @@ import { loadStoryConfig, loadShareConfig } from './storyConfig'
 import { resolveUnits } from './resolveUnits'
 import { buildShareCardList } from './shareCardList'
 import type { AssetRef, Channel } from './socialPostPlans'
-import type { ResolvedUnit } from './storyConfig.types'
+import type { ResolvedUnit } from '@vismay/viz-engine'
 
 const SITE_BASE = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://vizmaya.fyi'
 

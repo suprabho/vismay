@@ -9,7 +9,7 @@ import type { DominantEnergySource, Epic, EpicStory, IeaCountry, IeaNewsItem } f
 import { MIX_SOURCES } from "@/lib/epics";
 import { ENERGY_SOURCE_COLORS } from "@/components/energy-profile/charts/colors";
 import { COUNTRY_CENTROIDS } from "@/lib/energy-profile/countryCentroids";
-import { applyMapPalette } from "@/lib/applyMapPalette";
+import { applyMapPalette } from "@vismay/viz-engine";
 import { energyProfileLogoPalette, energyProfileMapPalette, type EnergyProfileTheme } from "./theme";
 import CountryDetail from "./CountryDetail";
 

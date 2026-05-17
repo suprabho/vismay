@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { useInView } from '@/lib/use-in-view'
-import { StatBlock as StatBlockType } from '@/types/story'
+import { StatBlock as StatBlockType } from '@vismay/viz-engine'
 
 export default function StatBlock({ block }: { block: StatBlockType }) {
   const ref = useRef<HTMLDivElement>(null)

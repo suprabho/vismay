@@ -1,4 +1,4 @@
-import { UnknownBlock } from '@/types/story'
+import { UnknownBlock } from '@vismay/viz-engine'
 
 export default function GenericBlock({ block }: { block: UnknownBlock }) {
   return (
