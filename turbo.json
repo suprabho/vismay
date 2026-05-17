@@ -3,7 +3,28 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_MAPBOX_TOKEN",
+        "NEXT_PUBLIC_SITE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "CONTENT_SOURCE",
+        "ADMIN_PASSWORD",
+        "ADMIN_SESSION_SECRET",
+        "GEMINI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GITHUB_DISPATCH_TOKEN",
+        "GITHUB_DISPATCH_REPO",
+        "GITHUB_DISPATCH_REF",
+        "YOUTUBE_API_KEY",
+        "YOUTUBE_CHANNEL_ID",
+        "CANVA_CLIENT_ID",
+        "CANVA_CLIENT_SECRET",
+        "CANVA_REDIRECT_URI",
+        "SOCIAL_INGEST_SECRET"
+      ]
     },
     "dev": {
       "cache": false,
