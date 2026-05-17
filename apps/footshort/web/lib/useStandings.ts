@@ -3,27 +3,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
 
-export type StandingRow = {
-  competition_slug: string;
-  season: string;
-  team_id: string;
-  position: number;
-  played: number;
-  won: number;
-  draw: number;
-  lost: number;
-  goals_for: number;
-  goals_against: number;
-  goal_difference: number;
-  points: number;
-  form: string | null;
-  team: {
-    id: string;
-    slug: string;
-    name: string;
-    crest_url: string | null;
-  } | null;
-};
+// StandingRow lives in @vismay/footshort-viz so StandingsTable can be reused.
+// Imported for internal use AND re-exported for app call sites.
+import type { StandingRow, StandingTeamRef } from '@vismay/footshort-viz/types';
+export type { StandingRow, StandingTeamRef };
 
 const STANDING_COLS = `
   competition_slug, season, team_id, position, played, won, draw, lost,

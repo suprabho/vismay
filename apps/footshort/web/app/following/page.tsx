@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { EntityChip } from '@/components/EntityChip';
+import { EntityChip } from '@vismay/footshort-viz/web';
 import { useFollows, useFollowMutation } from '@/lib/useFollows';
 
 export default function FollowingPage() {

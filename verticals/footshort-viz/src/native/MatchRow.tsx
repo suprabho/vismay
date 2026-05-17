@@ -1,7 +1,7 @@
-'use client';
-
-import Link from 'next/link';
-import type { FixtureRow } from '@/lib/useFixtures';
+import { Image } from 'expo-image';
+import { Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import type { FixtureRow } from '../types';
 
 type Props = { fixture: FixtureRow };
 
@@ -13,6 +13,7 @@ function kickoffLabel(iso: string, status: FixtureRow['status']): string {
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
+  // scheduled: show date + time
   return d.toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -32,24 +33,25 @@ function TeamCell({
   slug: string | null;
   align: 'left' | 'right';
 }) {
-  const inner = (
-    <span className={`flex flex-1 items-center gap-2 ${align === 'right' ? 'justify-end' : ''}`}>
+  const router = useRouter();
+  const body = (
+    <View className={`flex-row items-center flex-1 ${align === 'right' ? 'justify-end' : ''}`}>
       {align === 'left' && crest ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={crest} alt="" className="h-[22px] w-[22px] object-contain" />
+        <Image source={{ uri: crest }} style={{ width: 22, height: 22, marginRight: 8 }} contentFit="contain" />
       ) : null}
-      <span className="truncate text-sm text-text">{name}</span>
+      <Text className="text-text text-sm flex-shrink" numberOfLines={1}>
+        {name}
+      </Text>
       {align === 'right' && crest ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={crest} alt="" className="h-[22px] w-[22px] object-contain" />
+        <Image source={{ uri: crest }} style={{ width: 22, height: 22, marginLeft: 8 }} contentFit="contain" />
       ) : null}
-    </span>
+    </View>
   );
-  if (!slug) return <div className="flex-1">{inner}</div>;
+  if (!slug) return body;
   return (
-    <Link href={`/team/${slug}`} className="flex-1">
-      {inner}
-    </Link>
+    <Pressable onPress={() => router.push(`/team/${slug}`)} className="flex-1" hitSlop={4}>
+      {body}
+    </Pressable>
   );
 }
 
@@ -63,27 +65,27 @@ export function MatchRow({ fixture }: Props) {
       : 'vs';
 
   return (
-    <div className="flex items-center border-b border-white/20 p-2 last:border-b-0">
+    <View className="flex-row items-center p-2 border-b-2 border-white/30">
       <TeamCell
         name={homeName}
         crest={fixture.home?.crest_url ?? null}
         slug={fixture.home?.slug ?? null}
         align="left"
       />
-      <div className="flex min-w-[72px] flex-col items-center px-3">
-        <span className={isFinished ? 'text-sm font-semibold text-text' : 'text-xs text-text/80'}>
+      <View className="px-3 items-center min-w-[72px]">
+        <Text className={isFinished ? 'text-text text-sm font-semibold' : 'text-text/80 text-xs'}>
           {scoreText}
-        </span>
-        <span className="mt-0.5 text-[10px] text-text/50">
+        </Text>
+        <Text className="text-text/50 text-[10px] mt-0.5">
           {kickoffLabel(fixture.kickoff_at, fixture.status)}
-        </span>
-      </div>
+        </Text>
+      </View>
       <TeamCell
         name={awayName}
         crest={fixture.away?.crest_url ?? null}
         slug={fixture.away?.slug ?? null}
         align="right"
       />
-    </div>
+    </View>
   );
 }

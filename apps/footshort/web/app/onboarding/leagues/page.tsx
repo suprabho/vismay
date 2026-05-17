@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { EntityChip } from '@/components/EntityChip';
+import { EntityChip } from '@vismay/footshort-viz/web';
 import { useLeagues } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 

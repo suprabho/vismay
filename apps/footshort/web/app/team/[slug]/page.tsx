@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { MatchRow } from '@/components/MatchRow';
+import { MatchRow } from '@vismay/footshort-viz/web';
 import { useEntity, usePlayersInTeam } from '@/lib/useEntity';
 import { useTeamFixtures, type FixtureRow } from '@/lib/useFixtures';
 import { useTeamStanding } from '@/lib/useStandings';

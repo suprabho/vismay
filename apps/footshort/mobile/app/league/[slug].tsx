@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEntity } from '@/lib/useEntity';
 import { useStandings } from '@/lib/useStandings';
 import { useLeagueFixtures } from '@/lib/useFixtures';
-import { StandingsTable } from '@/components/StandingsTable';
-import { MatchRow } from '@/components/MatchRow';
+import { StandingsTable } from '@vismay/footshort-viz/native';
+import { MatchRow } from '@vismay/footshort-viz/native';
 
 export default function LeagueScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
