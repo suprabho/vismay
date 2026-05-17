@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { useInView } from '@/lib/use-in-view'
-import { ProseBlock } from '@/types/story'
+import { ProseBlock } from '@vismay/viz-engine'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
 
 export default function ProseSection({ block }: { block: ProseBlock }) {

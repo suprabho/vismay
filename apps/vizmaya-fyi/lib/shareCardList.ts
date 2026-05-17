@@ -10,7 +10,7 @@
 import type {
   ResolvedUnit,
   ShareSectionOverride,
-} from './storyConfig.types'
+} from '@vismay/viz-engine'
 
 export interface ShareCardEntry {
   /** Stable identity used for storage paths and share_card_ids. */

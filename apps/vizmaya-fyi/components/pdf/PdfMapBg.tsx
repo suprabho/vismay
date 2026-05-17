@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MapPinConfig, MapPalette } from '@/lib/storyConfig.types'
-import type { MapRegionLayer, HeatmapLayer, MapStep } from '@/types/story'
-import MapboxBackground from '@/components/story/charts/MapboxBackground'
+import type { MapPinConfig, MapPalette } from '@vismay/viz-engine'
+import type { MapRegionLayer, HeatmapLayer, MapStep } from '@vismay/viz-engine'
+import { MapboxBackground } from '@vismay/viz-engine'
 
 interface Props {
   center: [number, number]

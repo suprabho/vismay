@@ -2,8 +2,7 @@
 // app/energy-profile/theme.ts so the admin theme editor (themeRegistry) picks
 // it up without bespoke wiring. Greens + golds nod to the pitch + trophy.
 
-import type { MapPalette } from "@/lib/storyConfig.types";
-
+import type { MapPalette } from "@vismay/viz-engine";
 export type FifaWc26Theme = {
   ink: string;
   surface: string;

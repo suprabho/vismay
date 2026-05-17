@@ -1,4 +1,4 @@
-import { Block, Frontmatter, Theme } from '@/types/story'
+import { Block, Frontmatter, Theme } from '@vismay/viz-engine'
 import ThemeProvider from './ThemeProvider'
 import Hero from './Hero'
 import StatBlock from './StatBlock'

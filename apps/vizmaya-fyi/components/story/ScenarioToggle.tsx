@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react'
 import { useInView } from '@/lib/use-in-view'
-import { ScenarioToggleBlock } from '@/types/story'
-import { useChartColors } from '@/lib/chartTheme'
+import { ScenarioToggleBlock } from '@vismay/viz-engine'
+import { useChartColors } from '@vismay/viz-engine'
 import dynamic from 'next/dynamic'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })

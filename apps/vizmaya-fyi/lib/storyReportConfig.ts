@@ -41,7 +41,7 @@
  */
 
 import { parse as parseYaml } from 'yaml'
-import type { ResolvedUnit, MapPalette, MapPinConfig } from './storyConfig.types'
+import type { ResolvedUnit, MapPalette, MapPinConfig } from '@vismay/viz-engine'
 
 export type PinAnchor = 'top' | 'bottom' | 'left' | 'right'
 

@@ -5,7 +5,7 @@ import type {
   StoryDefaults,
   StorySectionConfig,
   ShareConfig,
-} from './storyConfig.types'
+} from '@vismay/viz-engine'
 
 export type {
   StoryConfig,
@@ -18,7 +18,7 @@ export type {
   ResolvedUnit,
   ShareConfig,
   ShareSectionOverride,
-} from './storyConfig.types'
+} from '@vismay/viz-engine'
 
 const DEFAULTS: StoryDefaults = {
   mapStyle: 'mapbox://styles/mapbox/dark-v11',

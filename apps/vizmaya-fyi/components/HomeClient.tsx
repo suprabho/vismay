@@ -4,7 +4,7 @@ import { useEffect, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import AuraBackground from '@/components/AuraBackground'
-import type { Theme } from '@/types/story'
+import type { Theme } from '@vismay/viz-engine'
 
 export interface HomeStory {
   slug: string

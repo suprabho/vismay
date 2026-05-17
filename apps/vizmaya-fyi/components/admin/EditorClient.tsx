@@ -10,7 +10,7 @@ import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
 import { parseFrontmatter, serializeFrontmatter } from '@/lib/frontmatter'
 import { useTabIndent } from '@/lib/useTabIndent'
-import type { Theme } from '@/types/story'
+import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@/lib/storyVideo'
 import type { AssetListEntry } from '@/app/api/admin/stories/[slug]/assets/route'
 

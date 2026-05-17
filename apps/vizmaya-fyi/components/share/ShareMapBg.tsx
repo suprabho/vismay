@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MapPinConfig, MapPalette } from '@/lib/storyConfig.types'
-import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel } from '@/types/story'
-import MapboxBackground from '@/components/story/charts/MapboxBackground'
+import type { MapPinConfig, MapPalette } from '@vismay/viz-engine'
+import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel } from '@vismay/viz-engine'
+import { MapboxBackground } from '@vismay/viz-engine'
 
 // Match the story page's camera framing so the share card shows the same
 // visible region. The story applies a focus area via `map.setPadding` so the

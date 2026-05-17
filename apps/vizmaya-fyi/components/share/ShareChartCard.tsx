@@ -1,6 +1,6 @@
 'use client'
 
-import ChartPanel from '@/components/story/ChartPanel'
+import { ChartPanel } from '@vismay/viz-engine'
 
 interface Props {
   chartId: string

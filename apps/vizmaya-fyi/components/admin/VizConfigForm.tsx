@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import type { AdminFormField, VizModule } from '@/components/story/viz/types'
+import type { AdminFormField, VizModule } from '@vismay/viz-engine'
 
 /**
  * Renders a viz module's adminForm() schema as a stack of input rows. Authors

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ScrollySectionBlock } from '@/types/story'
+import { ScrollySectionBlock } from '@vismay/viz-engine'
 import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
-import ChartPanel from './ChartPanel'
+import { ChartPanel } from '@vismay/viz-engine'
 
 export default function ScrollySection({ block }: { block: ScrollySectionBlock }) {
   const [activeStep, setActiveStep] = useState(0)

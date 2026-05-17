@@ -31,14 +31,14 @@ import {
   serializeOverrides,
   type MapTarget,
   type TargetCameraOverride,
-} from '@/lib/storyMapOverrides'
+} from '@vismay/viz-engine'
 import {
   applyMapView,
   applyMobileMapView,
   extractMapView,
   extractMobileMapView,
   type MapView,
-} from '@/lib/yamlMapPatch'
+} from '@vismay/viz-engine'
 import { useTabIndent } from '@/lib/useTabIndent'
 
 interface Props {

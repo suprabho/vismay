@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useEffect, useState } from 'react'
-import type { Theme } from '@/types/story'
+import type { Theme } from '@vismay/viz-engine'
 import { getFontImportUrl } from '@/lib/getFontImports'
 
 interface Props {

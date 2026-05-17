@@ -1,4 +1,4 @@
-import { SubsectionHeaderBlock } from '@/types/story'
+import { SubsectionHeaderBlock } from '@vismay/viz-engine'
 
 export default function SubsectionHeader({ block }: { block: SubsectionHeaderBlock }) {
   return (
