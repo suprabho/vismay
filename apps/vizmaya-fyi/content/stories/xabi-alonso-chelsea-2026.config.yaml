@@ -1,0 +1,136 @@
+# Story config — xabi-alonso-chelsea-2026
+# Clean football layout: persistent map suppressed on every section via
+# `background: { type: none }`. The `map` field is still set to a placeholder
+# because StorySectionConfig.map is non-optional in storyConfig.types.ts.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.0
+  pinColor: "#d4af37"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  - id: hero
+    kind: hero
+    text: "Welcome home, Xabi"
+    eyebrow: "Chelsea · May 2026"
+    background:
+      type: none
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: the-deal
+    text: "The deal"
+    background:
+      type: none
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: invincible
+    kind: stat
+    text: "0"
+    subheading: "losses in a Bundesliga season"
+    color: amber
+    background:
+      type: none
+    foreground:
+      - type: fs:standings-table
+        rows:
+          - { competition_slug: bundesliga, season: '2023-24', team_id: bayer-leverkusen,    position: 1, played: 34, won: 28, draw: 6, lost: 0, goals_for: 89, goals_against: 24, goal_difference: 65, points: 90, form: WWWWW, team: { id: bayer-leverkusen,    slug: bayer-leverkusen,    name: Bayer Leverkusen,    crest_url: null } }
+          - { competition_slug: bundesliga, season: '2023-24', team_id: vfb-stuttgart,       position: 2, played: 34, won: 23, draw: 4, lost: 7, goals_for: 78, goals_against: 39, goal_difference: 39, points: 73, form: WWDWL, team: { id: vfb-stuttgart,       slug: vfb-stuttgart,       name: VfB Stuttgart,       crest_url: null } }
+          - { competition_slug: bundesliga, season: '2023-24', team_id: bayern-munich,       position: 3, played: 34, won: 23, draw: 3, lost: 8, goals_for: 94, goals_against: 45, goal_difference: 49, points: 72, form: WLWWD, team: { id: bayern-munich,       slug: bayern-munich,       name: Bayern Munich,       crest_url: null } }
+          - { competition_slug: bundesliga, season: '2023-24', team_id: rb-leipzig,          position: 4, played: 34, won: 19, draw: 8, lost: 7, goals_for: 77, goals_against: 39, goal_difference: 38, points: 65, form: WDWDL, team: { id: rb-leipzig,          slug: rb-leipzig,          name: RB Leipzig,          crest_url: null } }
+          - { competition_slug: bundesliga, season: '2023-24', team_id: borussia-dortmund,   position: 5, played: 34, won: 18, draw: 9, lost: 7, goals_for: 68, goals_against: 43, goal_difference: 25, points: 63, form: DWWLD, team: { id: borussia-dortmund,   slug: borussia-dortmund,   name: Borussia Dortmund,   crest_url: null } }
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: fifty-one
+    kind: stat
+    text: "51"
+    subheading: "matches unbeaten — a European record"
+    color: accent
+    background:
+      type: none
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: title-clinch
+    text: "The night they clinched it"
+    background:
+      type: none
+    foreground:
+      - type: fs:match-row
+        fixture:
+          id: bay-svw-2024-04-14
+          competition_slug: bundesliga
+          season: '2023-24'
+          matchday: 29
+          stage: null
+          kickoff_at: '2024-04-14T15:30:00Z'
+          status: finished
+          home_score: 5
+          away_score: 0
+          home_team_name: Bayer Leverkusen
+          away_team_name: Werder Bremen
+          home: { id: bayer-leverkusen, slug: bayer-leverkusen, name: Bayer Leverkusen, crest_url: null }
+          away: { id: werder-bremen,    slug: werder-bremen,    name: Werder Bremen,    crest_url: null }
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: the-kids
+    text: "The players he built"
+    background:
+      type: none
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: madrid-footnote
+    text: "The Madrid footnote"
+    background:
+      type: none
+    foreground:
+      - type: fs:match-row
+        fixture:
+          id: bar-rm-supercopa-2026-01-11
+          competition_slug: supercopa
+          season: '2025-26'
+          matchday: null
+          stage: final
+          kickoff_at: '2026-01-11T19:00:00Z'
+          status: finished
+          home_score: 3
+          away_score: 2
+          home_team_name: Barcelona
+          away_team_name: Real Madrid
+          home: { id: barcelona,    slug: barcelona,    name: Barcelona,    crest_url: null }
+          away: { id: real-madrid,  slug: real-madrid,  name: Real Madrid,  crest_url: null }
+    map:
+      center: [0, 0]
+      zoom: 1
+
+  - id: chelsea-fit
+    kind: stat
+    text: "23.4"
+    subheading: "the average age of Chelsea's squad — youngest in Premier League history"
+    color: accent2
+    background:
+      type: none
+    foreground:
+      - type: fs:standings-table
+        rows:
+          - { competition_slug: prem, season: '2025-26', team_id: arsenal,         position: 1, played: 33, won: 25, draw: 5, lost: 3, goals_for: 78, goals_against: 28, goal_difference: 50, points: 80, form: WWWDW, team: { id: arsenal,         slug: arsenal,         name: Arsenal,         crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: liverpool,       position: 2, played: 33, won: 23, draw: 6, lost: 4, goals_for: 71, goals_against: 32, goal_difference: 39, points: 75, form: DWWWL, team: { id: liverpool,       slug: liverpool,       name: Liverpool,       crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: manchester-city, position: 3, played: 33, won: 22, draw: 5, lost: 6, goals_for: 70, goals_against: 35, goal_difference: 35, points: 71, form: WWDLW, team: { id: manchester-city, slug: manchester-city, name: Manchester City, crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: chelsea,         position: 4, played: 33, won: 20, draw: 6, lost: 7, goals_for: 62, goals_against: 38, goal_difference: 24, points: 66, form: WLWWD, team: { id: chelsea,         slug: chelsea,         name: Chelsea,         crest_url: null } }
+          - { competition_slug: prem, season: '2025-26', team_id: tottenham,       position: 5, played: 33, won: 18, draw: 7, lost: 8, goals_for: 58, goals_against: 41, goal_difference: 17, points: 61, form: DDWWL, team: { id: tottenham,       slug: tottenham,       name: Tottenham,       crest_url: null } }
+    map:
+      center: [0, 0]
+      zoom: 1
