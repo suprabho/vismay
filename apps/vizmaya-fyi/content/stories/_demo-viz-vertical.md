@@ -35,4 +35,12 @@ theme:
 
 ## Match card
 
-A `fs:match-card` viz mounted via the new Footshort vertical bundle. The core dispatcher routes by string discriminator; the module itself lives in `components/story/viz/verticals/footshort/modules/match-card/`. No core file was touched to add this type.
+A `fs:match-card` viz mounted via the new Footshort vertical bundle. The core dispatcher routes by string discriminator; the module itself lives in `verticals/footshort-viz/src/modules/match-card/`. No core file was touched to add this type.
+
+## Match row
+
+`fs:match-row` reuses the `MatchRow` component extracted in E4. It accepts the full `FixtureRow` shape as inline YAML, the same data contract Footshort's own league pages render against.
+
+## Standings table
+
+`fs:standings-table` wraps the `StandingsTable` component. YAML carries the rows array inline. Future iterations will support `data:` references that pull from the live standings table.

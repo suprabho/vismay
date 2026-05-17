@@ -15,6 +15,16 @@
 import { registerVizModule } from '@vismay/viz-engine'
 
 export async function register(): Promise<void> {
-  const [{ default: matchCardModule }] = await Promise.all([import('./modules/match-card')])
+  const [
+    { default: matchCardModule },
+    { default: matchRowModule },
+    { default: standingsTableModule },
+  ] = await Promise.all([
+    import('./modules/match-card'),
+    import('./modules/match-row'),
+    import('./modules/standings-table'),
+  ])
   registerVizModule(matchCardModule)
+  registerVizModule(matchRowModule)
+  registerVizModule(standingsTableModule)
 }
