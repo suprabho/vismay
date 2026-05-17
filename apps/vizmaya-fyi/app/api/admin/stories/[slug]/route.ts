@@ -5,6 +5,7 @@ import matter from 'gray-matter'
 import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@/lib/contentSource'
 import { loadStoryConfig } from '@/lib/storyConfig'
+import { getApp } from '@/lib/apps'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 
@@ -15,6 +16,7 @@ interface UpdateBody {
   status?: string
   listed?: boolean
   displayOrder?: number | null
+  appSlug?: string
 }
 
 /** Validate payloads before writing so the save action doesn't corrupt a
@@ -82,16 +84,30 @@ export async function PUT(
     if (err) return NextResponse.json({ error: `share_yaml: ${err}` }, { status: 400 })
   }
 
+  if (body.appSlug !== undefined) {
+    if (typeof body.appSlug !== 'string' || !SAFE_SLUG.test(body.appSlug)) {
+      return NextResponse.json({ error: 'appSlug: bad value' }, { status: 400 })
+    }
+    const app = await getApp(body.appSlug)
+    if (!app) return NextResponse.json({ error: `unknown app: ${body.appSlug}` }, { status: 400 })
+  }
+
   const src = getContentSource()
   try {
     if (typeof body.markdown === 'string') await src.writeMarkdown(slug, body.markdown)
     if (body.config_yaml !== undefined) await src.writeConfigYaml(slug, body.config_yaml)
     if (body.share_yaml !== undefined) await src.writeShareYaml(slug, body.share_yaml)
-    if (body.status !== undefined || body.listed !== undefined || body.displayOrder !== undefined) {
+    if (
+      body.status !== undefined ||
+      body.listed !== undefined ||
+      body.displayOrder !== undefined ||
+      body.appSlug !== undefined
+    ) {
       await src.updateMetadata(slug, {
         status: body.status as any,
         listed: body.listed,
         displayOrder: body.displayOrder,
+        appSlug: body.appSlug,
       })
     }
 

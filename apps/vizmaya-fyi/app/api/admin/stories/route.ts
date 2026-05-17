@@ -5,10 +5,12 @@ import { getContentSource } from '@/lib/contentSource'
 export async function GET(request: NextRequest) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const q = (request.nextUrl.searchParams.get('q') ?? '').trim().toLowerCase()
+  const appFilter = (request.nextUrl.searchParams.get('app') ?? '').trim()
   const src = getContentSource()
   const stories = await src.listStories()
+  const filteredByApp = appFilter ? stories.filter((s) => s.appSlug === appFilter) : stories
   const withTitles = await Promise.all(
-    stories.map(async (s) => {
+    filteredByApp.map(async (s) => {
       const md = await src.readMarkdown(s.slug)
       const titleMatch = md?.match(/^title:\s*(?:"([^"]+)"|'([^']+)'|([^\n]+))/m)
       const title = titleMatch?.[1] ?? titleMatch?.[2] ?? titleMatch?.[3] ?? s.slug

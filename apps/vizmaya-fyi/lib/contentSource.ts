@@ -22,6 +22,7 @@ export interface StoryMeta {
   status: StoryStatus
   listed: boolean
   displayOrder: number | null
+  appSlug: string
 }
 
 export interface ContentSource {
@@ -44,7 +45,7 @@ export interface ContentSource {
   writeMapYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
   deleteChart(slug: string, chartId: string): Promise<void>
-  updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder'>>): Promise<void>
+  updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder' | 'appSlug'>>): Promise<void>
   listChartIds(slug: string): Promise<string[]>
 }
 
@@ -73,7 +74,8 @@ const fsSource: ContentSource = {
       const status = (data.status ?? 'published') as StoryStatus
       const listed = data.listed !== false
       const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : null
-      return { slug, status, listed, displayOrder }
+      // fs mode is vizmaya-fyi-only; surface the app slug for type parity with db mode.
+      return { slug, status, listed, displayOrder, appSlug: 'vizmaya-fyi' }
     })
   },
   async readMarkdown(slug) {
@@ -165,6 +167,9 @@ const fsSource: ContentSource = {
       .map((f) => f.replace(/\.json$/, ''))
   },
   async updateMetadata(slug, meta) {
+    // fs mode is vizmaya-fyi-only: silently ignore appSlug writes here so the
+    // shared admin code path doesn't need to branch.
+    if (meta.status === undefined && meta.listed === undefined && meta.displayOrder === undefined) return
     const { default: matter } = await import('gray-matter')
     const { stringify } = await import('yaml')
     const mdPath = path.join(STORIES_DIR, `${slug}.md`)
@@ -185,13 +190,20 @@ const fsSource: ContentSource = {
 const dbSource: ContentSource = {
   async listStories() {
     const sb = createServiceClient()
-    // Try to select with display_order column; fall back to without if column doesn't exist yet
+    // Try the latest column set; fall back if app_slug or display_order columns
+    // aren't applied yet (older deploys).
     let { data, error } = await sb
       .from('stories')
-      .select('slug, status, listed, display_order')
+      .select('slug, status, listed, display_order, app_slug')
 
+    if (error?.message?.includes('app_slug')) {
+      const fallback = await sb
+        .from('stories')
+        .select('slug, status, listed, display_order')
+      data = (fallback.data as any)
+      error = fallback.error
+    }
     if (error?.message?.includes('display_order')) {
-      // display_order column doesn't exist yet (migration not applied), query without it
       const fallback = await sb
         .from('stories')
         .select('slug, status, listed')
@@ -205,6 +217,7 @@ const dbSource: ContentSource = {
       status: row.status,
       listed: row.listed,
       displayOrder: typeof row.display_order === 'number' ? row.display_order : null,
+      appSlug: (row.app_slug as string | undefined) ?? 'vizmaya-fyi',
     }))
   },
   async readMarkdown(slug) {
@@ -384,6 +397,7 @@ const dbSource: ContentSource = {
     if (meta.status !== undefined) updates.status = meta.status
     if (meta.listed !== undefined) updates.listed = meta.listed
     if (meta.displayOrder !== undefined) updates.display_order = meta.displayOrder
+    if (meta.appSlug !== undefined) updates.app_slug = meta.appSlug
     const { error } = await sb
       .from('stories')
       .update(updates)

@@ -9,7 +9,10 @@ type Story = {
   status: string
   listed: boolean
   displayOrder: number | null
+  appSlug: string
 }
+
+type AppOption = { slug: string; name: string }
 
 interface UploadResult {
   ok: boolean
@@ -20,8 +23,18 @@ interface UploadResult {
   errors: string[]
 }
 
+function buildStoriesUrl(query: string, appFilter: string): string {
+  const params = new URLSearchParams()
+  if (query) params.set('q', query)
+  if (appFilter) params.set('app', appFilter)
+  const qs = params.toString()
+  return qs ? `/api/admin/stories?${qs}` : '/api/admin/stories'
+}
+
 export default function AdminHome() {
   const [stories, setStories] = useState<Story[]>([])
+  const [apps, setApps] = useState<AppOption[]>([])
+  const [appFilter, setAppFilter] = useState<string>('')
   const [totalCount, setTotalCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
@@ -39,13 +52,20 @@ export default function AdminHome() {
   }, [query])
 
   useEffect(() => {
+    async function loadApps() {
+      const r = await fetch('/api/admin/apps')
+      if (!r.ok) return
+      const data = (await r.json()) as Array<{ slug: string; name: string }>
+      setApps(data.map((a) => ({ slug: a.slug, name: a.name })))
+    }
+    loadApps()
+  }, [])
+
+  useEffect(() => {
     const requestId = ++latestRequestId.current
     setSearching(true)
     async function load() {
-      const url = debouncedQuery
-        ? `/api/admin/stories?q=${encodeURIComponent(debouncedQuery)}`
-        : '/api/admin/stories'
-      const r = await fetch(url)
+      const r = await fetch(buildStoriesUrl(debouncedQuery, appFilter))
       const data = (await r.json()) as Story[]
       if (requestId !== latestRequestId.current) return
       const sorted = data.sort((a, b) => a.title.localeCompare(b.title))
@@ -55,14 +75,11 @@ export default function AdminHome() {
       setSearching(false)
     }
     load()
-  }, [debouncedQuery])
+  }, [debouncedQuery, appFilter])
 
   async function refreshStories() {
     const requestId = ++latestRequestId.current
-    const url = debouncedQuery
-      ? `/api/admin/stories?q=${encodeURIComponent(debouncedQuery)}`
-      : '/api/admin/stories'
-    const r = await fetch(url)
+    const r = await fetch(buildStoriesUrl(debouncedQuery, appFilter))
     const data = (await r.json()) as Story[]
     if (requestId !== latestRequestId.current) return
     const sorted = data.sort((a, b) => a.title.localeCompare(b.title))
@@ -72,7 +89,7 @@ export default function AdminHome() {
 
   async function updateMeta(
     slug: string,
-    meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>
+    meta: Partial<{ status: string; listed: boolean; displayOrder: number | null; appSlug: string }>
   ) {
     setUpdating(slug)
     const res = await fetch(`/api/admin/stories/${slug}`, {
@@ -263,6 +280,19 @@ export default function AdminHome() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <select
+            value={appFilter}
+            onChange={(e) => setAppFilter(e.target.value)}
+            className="text-sm bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-neutral-100 cursor-pointer focus:outline-none focus:border-white/30"
+            title="Filter by app"
+          >
+            <option value="">All apps</option>
+            {apps.map((a) => (
+              <option key={a.slug} value={a.slug}>
+                {a.name}
+              </option>
+            ))}
+          </select>
           <input
             type="search"
             value={query}
@@ -295,6 +325,7 @@ export default function AdminHome() {
       <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2 border-b border-white/5 text-xs uppercase tracking-wider text-neutral-500">
         <div className="flex-1">Title</div>
         <div className="flex items-center gap-3 shrink-0">
+          <div className="w-[120px] text-right">App</div>
           <div className="w-[104px] text-right">Status</div>
           <div className="w-4 text-center" title="Listed on home">L</div>
           <div className="w-16 text-right">Order</div>
@@ -317,6 +348,20 @@ export default function AdminHome() {
                 <div className="text-xs text-neutral-500 truncate mt-0.5">{s.slug}</div>
               </Link>
               <div className="flex items-center gap-3 shrink-0">
+                <select
+                  value={s.appSlug}
+                  onChange={(e) => updateMeta(s.slug, { appSlug: e.target.value })}
+                  disabled={updating === s.slug || apps.length === 0}
+                  className="w-[120px] text-xs bg-neutral-900 border border-white/10 rounded px-2 py-1 text-neutral-300 cursor-pointer disabled:opacity-50"
+                  title="App this story belongs to"
+                >
+                  {apps.length === 0 && <option value={s.appSlug}>{s.appSlug}</option>}
+                  {apps.map((a) => (
+                    <option key={a.slug} value={a.slug}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
                 <div className="flex items-center gap-1">
                   <select
                     value={s.status}

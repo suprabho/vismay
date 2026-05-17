@@ -15,6 +15,7 @@ interface ThemePayload {
 interface StoriesPayload {
   slug: string
   name: string
+  appSlug: string
   stories: {
     slug: string
     title: string
@@ -22,6 +23,11 @@ interface StoriesPayload {
     inEpic: boolean
     position: number | null
   }[]
+}
+
+interface AppOption {
+  slug: string
+  name: string
 }
 
 interface MembershipEdit {
@@ -40,6 +46,9 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [tab, setTab] = useState<'stories' | 'theme'>('stories')
+  const [apps, setApps] = useState<AppOption[]>([])
+  const [appSlug, setAppSlug] = useState<string>('')
+  const [savingApp, setSavingApp] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -62,6 +71,7 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       const sPayload = (await storiesR.json()) as StoriesPayload
       setStories(sPayload.stories)
       setEpicName(sPayload.name)
+      setAppSlug(sPayload.appSlug)
       setMemberships(
         Object.fromEntries(
           sPayload.stories.map((s) => [s.slug, { inEpic: s.inEpic, position: s.position }]),
@@ -70,6 +80,35 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
     }
     load()
   }, [slug])
+
+  useEffect(() => {
+    async function loadApps() {
+      const r = await fetch('/api/admin/apps')
+      if (!r.ok) return
+      const data = (await r.json()) as Array<{ slug: string; name: string }>
+      setApps(data.map((a) => ({ slug: a.slug, name: a.name })))
+    }
+    loadApps()
+  }, [])
+
+  async function changeApp(nextApp: string) {
+    if (nextApp === appSlug) return
+    setSavingApp(true)
+    setError(null)
+    const res = await fetch(`/api/admin/epics/${slug}/app`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ appSlug: nextApp }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      setError(body?.error ?? `HTTP ${res.status}`)
+    } else {
+      setAppSlug(nextApp)
+      setSavedAt(Date.now())
+    }
+    setSavingApp(false)
+  }
 
   function effectiveValue(key: string): string {
     return overrides[key] ?? data?.defaults[key] ?? '#000000'
@@ -204,6 +243,22 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+            <span className="uppercase tracking-wider">App</span>
+            <select
+              value={appSlug}
+              onChange={(e) => changeApp(e.target.value)}
+              disabled={savingApp || apps.length === 0}
+              className="text-sm bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-neutral-100 cursor-pointer disabled:opacity-50"
+            >
+              {apps.length === 0 && appSlug && <option value={appSlug}>{appSlug}</option>}
+              {apps.map((a) => (
+                <option key={a.slug} value={a.slug}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <Link
             href={`/${slug}`}
             target="_blank"
