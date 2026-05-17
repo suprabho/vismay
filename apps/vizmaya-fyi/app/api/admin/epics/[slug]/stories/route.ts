@@ -21,7 +21,12 @@ export async function GET(
   if (!epic) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
   const stories = await getEpicMemberships(slug)
-  return NextResponse.json({ slug: epic.slug, name: epic.name, stories })
+  return NextResponse.json({
+    slug: epic.slug,
+    name: epic.name,
+    appSlug: epic.appSlug,
+    stories,
+  })
 }
 
 export async function PUT(

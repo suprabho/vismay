@@ -16,13 +16,14 @@ export interface Epic {
   description: string | null
   landingComponent: string
   theme: Record<string, unknown>
+  appSlug: string
 }
 
 export async function getEpic(slug: string): Promise<Epic | null> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name, description, landing_component, theme')
+    .select('slug, name, description, landing_component, theme, app_slug')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
@@ -34,6 +35,7 @@ export async function getEpic(slug: string): Promise<Epic | null> {
     description: data.description,
     landingComponent: data.landing_component,
     theme: (data.theme as Record<string, unknown>) ?? {},
+    appSlug: (data.app_slug as string | undefined) ?? 'vizmaya-fyi',
   }
 }
 
@@ -42,7 +44,7 @@ export async function getEpicForAdmin(slug: string): Promise<Epic | null> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name, description, landing_component, theme')
+    .select('slug, name, description, landing_component, theme, app_slug')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error(`getEpicForAdmin ${slug}: ${error.message}`)
@@ -53,17 +55,31 @@ export async function getEpicForAdmin(slug: string): Promise<Epic | null> {
     description: data.description,
     landingComponent: data.landing_component,
     theme: (data.theme as Record<string, unknown>) ?? {},
+    appSlug: (data.app_slug as string | undefined) ?? 'vizmaya-fyi',
   }
 }
 
-export async function listEpics(): Promise<Pick<Epic, 'slug' | 'name'>[]> {
+export async function listEpics(): Promise<Pick<Epic, 'slug' | 'name' | 'appSlug'>[]> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name')
+    .select('slug, name, app_slug')
     .order('name', { ascending: true })
   if (error) throw new Error(`listEpics: ${error.message}`)
-  return (data ?? []).map((r: any) => ({ slug: r.slug, name: r.name }))
+  return (data ?? []).map((r: any) => ({
+    slug: r.slug,
+    name: r.name,
+    appSlug: (r.app_slug as string | undefined) ?? 'vizmaya-fyi',
+  }))
+}
+
+export async function setEpicApp(epicSlug: string, appSlug: string): Promise<void> {
+  const sb = createServiceClient()
+  const { error } = await sb
+    .from('epics')
+    .update({ app_slug: appSlug, updated_at: new Date().toISOString() })
+    .eq('slug', epicSlug)
+  if (error) throw new Error(`setEpicApp ${epicSlug}: ${error.message}`)
 }
 
 export interface PublishedEpic {
