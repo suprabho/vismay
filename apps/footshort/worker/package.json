@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "@shortfoot/shared": "*",
+    "@shortfoot/shared": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
     "rss-parser": "^3.13.0",
     "sharp": "^0.34.5",
