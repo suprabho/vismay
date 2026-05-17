@@ -28,25 +28,20 @@
  *   4. Stories opt in via `vertical: '<slug>'` in the frontmatter.
  */
 
-type VerticalLoader = () => Promise<void>
+export type VerticalLoader = () => Promise<void>
 
 /**
- * Static map of vertical → loader. Dynamic imports keep each vertical's
- * bundle out of the SSG client bundle for stories that don't reference it.
- *
- * Verticals that don't ship yet are commented out so a typo in YAML
- * frontmatter surfaces as a clean "unknown vertical" warning instead of a
- * module-not-found build failure.
+ * Registry of vertical → loader. Populated by the app at boot via
+ * `registerVerticalLoader`, NOT statically inside the engine. This keeps the
+ * engine package free of any forward reference to specific vertical packages
+ * (which would create a Turborepo build-graph cycle, since each vertical
+ * declares `@vismay/viz-engine` as a dependency).
  */
-// Each vertical is its own workspace package. Engine does NOT declare them as
-// dependencies — they'd create a circular workspace ref (each vertical
-// depends on @vismay/viz-engine). The dynamic import resolves at runtime via
-// the app's node_modules; the `@ts-expect-error` is required because engine
-// has no type knowledge of the vertical package.
-const VERTICAL_LOADERS: Record<string, VerticalLoader> = {
-  footshort: () => import('@vismay/footshort-viz').then((m) => m.register()),
-  // f1: () => import('@vismay/f1-viz').then((m) => m.register()),
-  // cricket: () => import('@vismay/cricket-viz').then((m) => m.register()),
+const VERTICAL_LOADERS: Record<string, VerticalLoader> = {}
+
+/** App boot wires verticals here, e.g. `registerVerticalLoader('footshort', () => import('@vismay/footshort-viz').then(m => m.register()))`. */
+export function registerVerticalLoader(slug: string, loader: VerticalLoader): void {
+  VERTICAL_LOADERS[slug] = loader
 }
 
 // One promise per vertical so concurrent loads dedupe and the second story

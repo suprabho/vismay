@@ -1,7 +1,8 @@
 // Core engine surface
 export * from './types'
 export * from './registry'
-export { loadVertical, _resetVerticalsForTesting } from './verticals'
+export { loadVertical, registerVerticalLoader, _resetVerticalsForTesting } from './verticals'
+export type { VerticalLoader as VerticalLoaderFn } from './verticals'
 export * from './StoryShellContext'
 
 // Slot dispatchers + page-level loader

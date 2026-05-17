@@ -12,7 +12,7 @@ import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@/lib/getFontImports'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import StoryMapShell from '@/components/story/StoryMapShell'
-import { VerticalLoader } from '@vismay/viz-engine'
+import VerticalLoader from '@/components/VerticalLoader'
 import VerticalCaptureFrame from '@/components/story/VerticalCaptureFrame'
 import VizmayaLogo from '@/components/VizmayaLogo'
 
