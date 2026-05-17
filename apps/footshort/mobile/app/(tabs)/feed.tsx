@@ -11,8 +11,9 @@ import { useSeenArticles } from '@/lib/useSeenArticles';
 import { CardSwiper } from '@/components/CardSwiper';
 import { StoryRings } from '@/components/StoryRings';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
+import { EditorialMagazine } from '@/components/EditorialMagazine';
 
-type Tab = 'discover' | 'forYou';
+type Tab = 'discover' | 'forYou' | 'editorial';
 
 const RINGS_HEIGHT = 104;
 
@@ -22,6 +23,7 @@ function PillTabs({ active, onChange }: { active: Tab; onChange: (t: Tab) => voi
       {([
         { key: 'forYou', label: 'For you' },
         { key: 'discover', label: 'Discover' },
+        { key: 'editorial', label: 'Editorial' },
       ] as const).map((t) => {
         const selected = active === t.key;
         return (
@@ -119,6 +121,10 @@ function FeedBody({ tab }: { tab: Tab }) {
         ) : null}
       </>
     );
+  }
+
+  if (tab === 'editorial') {
+    return <EditorialMagazine topGap={topGap} />;
   }
 
   if (discover.isLoading) {
