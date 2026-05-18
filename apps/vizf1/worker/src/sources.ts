@@ -50,7 +50,7 @@ export const RSS_SOURCES: RssSource[] = [
   {
     id: 'the-race-f1',
     publisher: 'The Race',
-    feedUrl: 'https://www.the-race.com/formula-1/feed/',
+    feedUrl: 'https://the-race.com/rss',
     tier: 2,
   },
   {
