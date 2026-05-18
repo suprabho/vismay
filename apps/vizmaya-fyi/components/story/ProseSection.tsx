@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { useInView } from '@/lib/use-in-view'
 import { ProseBlock } from '@vismay/viz-engine'
-import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
+import { formatInlineMarkdown } from '@vismay/viz-engine'
 
 export default function ProseSection({ block }: { block: ProseBlock }) {
   const ref = useRef<HTMLDivElement>(null)

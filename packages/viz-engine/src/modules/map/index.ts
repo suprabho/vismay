@@ -28,16 +28,23 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MapLay
 const mapModule: VizModule<MapLayerConfig> = {
   type: 'map',
   label: 'Map',
-  slots: ['background'],
+  slots: ['background', 'foreground'],
   parseConfig,
   load: () => import('./Component'),
   loadPersistent: () => import('./PersistentComponent'),
+  // `persistent-aggregated` is the BackgroundVizSlot mounting strategy: ONE
+  // Mapbox WebGL context for the whole story, every unit's config in one
+  // array. ForegroundVizSlot ignores this flag and uses per-unit `load` —
+  // foreground maps own their own WebGL context (React reuses the instance
+  // across units via `stableIdentity` keying, so a story with a single
+  // foreground-region map still spins up exactly one context).
   mountingMode: 'persistent-aggregated',
   readinessProfile: 'tiles-then-settle',
   // The map instance is shared across every unit that references "a map" — the
   // identity is the slug-scoped persistent instance, not the per-unit config.
-  // BackgroundVizSlot uses this to dedupe.
+  // Both BackgroundVizSlot and ForegroundVizSlot use this to dedupe.
   stableIdentity: () => 'map:default',
+  regionPreferences: ['lead'],
 }
 
 export default mapModule

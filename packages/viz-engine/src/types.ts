@@ -1,6 +1,43 @@
-import type { ComponentType, RefObject } from 'react'
+import type { CSSProperties, ComponentType, RefObject } from 'react'
 
 export type VizSlot = 'foreground' | 'background'
+
+/**
+ * Identifier for a named region inside a foreground layout (e.g. 'lead',
+ * 'chart', 'body'). Authors slot modules into regions; regions exist only
+ * within the foreground container — `VizSlot` stays binary so the registry
+ * and background dispatch don't need to learn about region semantics.
+ */
+export type ForegroundRegionName = string
+
+/**
+ * One named region inside a `ForegroundLayoutDef`. The layout slot renders an
+ * absolutely-positioned wrapper per region using `style`, then mounts the
+ * region's foreground layers inside.
+ */
+export interface ForegroundLayoutRegion {
+  /** CSS positioning + sizing for the region's wrapper box. Applied as inline style. */
+  style: CSSProperties
+  /** Optional viz-type allowlist. Empty/omitted = any module that lists 'foreground' in `slots`. */
+  accepts?: readonly string[]
+  /** Authoring hints used by the admin form / preview. Not enforced at runtime. */
+  hints?: { aspect?: 'auto' | 'square' | 'wide' | 'tall'; minHeight?: string }
+}
+
+/**
+ * A reusable foreground composition. Defines the named regions that make up
+ * the layout and the CSS box for each. Layouts register at startup
+ * (`registerForegroundLayout`) — verticals can ship their own without
+ * touching core, mirroring how `registerVizModule` works.
+ *
+ * `portrait` is the variant used when `useIsMobile()` is true; falls back
+ * to the landscape definition when omitted.
+ */
+export interface ForegroundLayoutDef {
+  name: string
+  regions: Record<ForegroundRegionName, ForegroundLayoutRegion>
+  portrait?: ForegroundLayoutDef
+}
 
 export interface VizCaptureHandle {
   freeze: () => Promise<void> | void
@@ -93,4 +130,11 @@ export interface VizModule<TConfig = unknown> {
   collectAssetKeys?: (config: TConfig) => string[]
   /** Deterministic identity string used by BackgroundVizSlot to dedupe persistent instances. */
   stableIdentity?: (config: TConfig) => string
+  /**
+   * Optional list of region names this module is best suited to. Used by the
+   * admin form to guide authors when picking where to drop a module — not
+   * enforced at runtime (the layout's per-region `accepts` allowlist is the
+   * authoritative gate).
+   */
+  regionPreferences?: readonly ForegroundRegionName[]
 }
