@@ -2,7 +2,8 @@
  * Gemini summarisation + entity tagging for F1 articles.
  *
  * Uses the @google/genai SDK (gemma/gemini 3.x line — 2.5 is deprecated as of
- * 2026). Defaults to `gemini-3.1-flash`; override with GEMINI_MODEL.
+ * 2026). Defaults to `gemini-3.1-flash-lite` (cheaper, plenty good for 60-word
+ * summaries); override with GEMINI_MODEL.
  *
  * Returns a strict JSON shape:
  *   - is_f1_news: drops non-F1 cross-sport / generic listicle articles
@@ -14,7 +15,7 @@
 import { GoogleGenAI, Type } from '@google/genai'
 import { z } from 'zod'
 
-const MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.1-flash'
+const MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-lite'
 const API_KEY = process.env.GEMINI_API_KEY
 
 if (!API_KEY) {
