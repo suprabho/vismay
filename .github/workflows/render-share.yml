@@ -56,7 +56,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
