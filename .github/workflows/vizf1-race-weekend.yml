@@ -7,9 +7,10 @@ name: VizF1 - race-weekend ingest
 # Runs every 6h on Fri/Sat/Sun (race-weekend cadence). On other days, the daily
 # news ingest is enough; race data won't change.
 #
-# Required repo secrets (in `Production`):
-#   NEXT_PUBLIC_SUPABASE_URL_VIZF1
-#   SUPABASE_SERVICE_ROLE_KEY_VIZF1
+# Required repo secrets (in `Production` — shared project-wide with vizmaya /
+# energy-profile workflows):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
 
 on:
   schedule:
@@ -52,13 +53,13 @@ jobs:
 
       - name: Ingest sessions
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_VIZF1 }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_VIZF1 }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           VIZF1_YEAR: ${{ inputs.year }}
         run: pnpm ingest:sessions:ci
 
       - name: Derive circuit outlines
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_VIZF1 }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_VIZF1 }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: pnpm ingest:circuits:ci

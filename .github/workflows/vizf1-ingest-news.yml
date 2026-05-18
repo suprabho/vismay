@@ -6,10 +6,11 @@ name: VizF1 - daily news ingest
 #
 # Idempotent on url_hash, safe to re-run.
 #
-# Required repo secrets (in the `Production` environment):
-#   NEXT_PUBLIC_SUPABASE_URL_VIZF1   - vizf1 Supabase project URL
-#   SUPABASE_SERVICE_ROLE_KEY_VIZF1  - service role key
-#   GEMINI_API_KEY                   - Gemini API key
+# Required repo secrets (in the `Production` environment — shared project-wide
+# with vizmaya / energy-profile workflows):
+#   NEXT_PUBLIC_SUPABASE_URL    - Supabase project URL
+#   SUPABASE_SERVICE_ROLE_KEY   - service role key
+#   GEMINI_API_KEY              - Gemini API key
 
 on:
   schedule:
@@ -48,13 +49,13 @@ jobs:
 
       - name: Ingest news
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_VIZF1 }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_VIZF1 }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: pnpm ingest:news:ci
 
       - name: Rebuild story segments
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_VIZF1 }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_VIZF1 }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: pnpm build:story-segments:ci
