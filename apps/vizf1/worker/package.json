@@ -3,11 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "ingest": "tsx --env-file=.env src/ingest.ts",
+    "ingest:news": "tsx --env-file=.env src/ingestNews.ts",
+    "ingest:news:ci": "tsx src/ingestNews.ts",
+    "ingest:sessions": "tsx --env-file=.env src/ingestSessions.ts",
+    "ingest:sessions:ci": "tsx src/ingestSessions.ts",
+    "ingest:circuits": "tsx --env-file=.env src/ingestCircuits.ts",
+    "ingest:circuits:ci": "tsx src/ingestCircuits.ts",
+    "build:story-segments": "tsx --env-file=.env src/buildStorySegments.ts",
+    "build:story-segments:ci": "tsx src/buildStorySegments.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@vizf1/shared": "workspace:*"
+    "@google/genai": "^1.50.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "@vizf1/shared": "workspace:*",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",

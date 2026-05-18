@@ -1,0 +1,65 @@
+name: VizF1 - race-weekend ingest
+
+# Pulls the current season from OpenF1: meetings, sessions (FP1/FP2/FP3/Quali/
+# Sprint Q/Sprint/Race), per-driver lap data, and final positions. After session
+# data lands, derives circuit outlines for any new circuits.
+#
+# Runs every 6h on Fri/Sat/Sun (race-weekend cadence). On other days, the daily
+# news ingest is enough; race data won't change.
+#
+# Required repo secrets (in `Production` — shared project-wide with vizmaya /
+# energy-profile workflows):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+
+on:
+  schedule:
+    # Every 6h on Fri (5), Sat (6), Sun (0). 30-minute offset to avoid top-of-hour spikes.
+    - cron: '30 */6 * * 5,6,0'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Season year (defaults to current)'
+        required: false
+
+concurrency:
+  group: vizf1-race-weekend
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizf1/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Ingest sessions
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VIZF1_YEAR: ${{ inputs.year }}
+        run: pnpm ingest:sessions:ci
+
+      - name: Derive circuit outlines
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm ingest:circuits:ci

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useSchedule } from '@/lib/useSchedule'
 import { RaceWeekendTabs } from '@/components/RaceWeekendTabs'
+import { CircuitMap } from '@/components/CircuitMap'
 
 export default function RaceDetail({ round }: { round: number }) {
   const q = useSchedule()
@@ -34,7 +35,13 @@ export default function RaceDetail({ round }: { round: number }) {
       <p className="text-xs text-muted">
         Round {race.round} · {race.circuitName}
         {race.locality ? ` · ${race.locality}` : ''}
+        {race.hasSprint ? ' · Sprint' : ''}
       </p>
+      {race.circuitId ? (
+        <div className="mt-4">
+          <CircuitMap circuitId={race.circuitId} />
+        </div>
+      ) : null}
       <div className="mt-6">
         <RaceWeekendTabs race={race} />
       </div>

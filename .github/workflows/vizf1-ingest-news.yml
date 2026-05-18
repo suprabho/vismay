@@ -1,0 +1,61 @@
+name: VizF1 - daily news ingest
+
+# Pulls F1 RSS feeds, hands each new article to Gemini for a 55-60 word summary
+# + driver/team/circuit tagging, upserts into the vizf1 Supabase. Then refreshes
+# story_segments so the StoryRings on /feed reflect the day's news.
+#
+# Idempotent on url_hash, safe to re-run.
+#
+# Required repo secrets (in the `Production` environment — shared project-wide
+# with vizmaya / energy-profile workflows):
+#   NEXT_PUBLIC_SUPABASE_URL    - Supabase project URL
+#   SUPABASE_SERVICE_ROLE_KEY   - service role key
+#   GEMINI_API_KEY              - Gemini API key
+
+on:
+  schedule:
+    # 06:15 UTC daily — picks up overnight news before US/EU work hours.
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: vizf1-ingest-news
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizf1/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Ingest news
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm ingest:news:ci
+
+      - name: Rebuild story segments
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm build:story-segments:ci
