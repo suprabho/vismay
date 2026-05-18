@@ -1,0 +1,264 @@
+# Story config — kimi-antonelli-f1-2026
+# Map flies between the four 2026 circuits (Melbourne → Shanghai → Suzuka →
+# Miami), with a detour to show the cancelled Bahrain + Jeddah rounds as
+# muted ghost pins, then closes at Montreal for the Round 5 outlook.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#00d2be"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  - id: hero
+    kind: hero
+    text: "Four poles. Three wins. Twenty grid spots lost."
+    eyebrow: "F1 · 2026 Season"
+    map:
+      center: [100, 15]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: pre-season
+    text: "The Brackley winter"
+    map:
+      center: [-1.158, 51.953]
+      zoom: 7
+      opacity: 0.55
+      pins:
+        - coordinates: [-1.158, 51.953]
+          label: "Mercedes-AMG · Brackley"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: right
+
+  - id: w17-specs
+    kind: stat
+    text: "350"
+    subheading: "kilowatts of MGU-K — nearly triple the 2025 unit"
+    color: amber
+    map:
+      center: [10, 30]
+      zoom: 2
+      opacity: 0.40
+
+  - id: australia-qualifying
+    text: "Albert Park, Q3"
+    map:
+      center: [144.968, -37.849]
+      zoom: 10
+      opacity: 0.55
+      pins:
+        - coordinates: [144.968, -37.849]
+          label: "Albert Park · Australian GP"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+
+  - id: australia-start
+    kind: stat
+    text: "P2 → P7"
+    subheading: "by Turn 3, with the battery in the dirt"
+    color: red
+    map:
+      center: [144.968, -37.849]
+      zoom: 10
+      opacity: 0.50
+      pins:
+        - coordinates: [144.968, -37.849]
+          label: "Albert Park"
+          color: "#00d2be"
+          radius: 10
+          labelAnchor: top
+
+  - id: australia-recovery
+    text: "Hadjar's smoke, Bottas's tow"
+    map:
+      center: [144.968, -37.849]
+      zoom: 11
+      pitch: 30
+      opacity: 0.55
+      pins:
+        - coordinates: [144.968, -37.849]
+          label: "Albert Park · Australian GP"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+
+  - id: china-pole
+    kind: stat
+    text: "19y 6m 18d"
+    subheading: "youngest pole-sitter in Formula 1 history"
+    color: accent
+    map:
+      center: [121.220, 31.342]
+      zoom: 10
+      opacity: 0.55
+      pins:
+        - coordinates: [121.220, 31.342]
+          label: "Shanghai International Circuit"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+
+  - id: china-race
+    text: "Shanghai, lights to flag"
+    map:
+      center: [121.220, 31.342]
+      zoom: 11
+      pitch: 25
+      opacity: 0.55
+      pins:
+        - coordinates: [121.220, 31.342]
+          label: "Shanghai · Chinese GP"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+    foreground:
+      - type: f1:race-row
+        race:
+          id: '2026-2'
+          season: '2026'
+          round: 2
+          raceName: 'Chinese Grand Prix'
+          circuitId: shanghai
+          circuitName: 'Shanghai International Circuit'
+          country: China
+          locality: Shanghai
+          date: '2026-03-15'
+          time: '07:00:00Z'
+          status: finished
+          hasSprint: true
+
+  - id: japan
+    text: "Suzuka, dropped clutch and a Spoon Curve gift"
+    map:
+      center: [136.541, 34.844]
+      zoom: 10
+      opacity: 0.55
+      pins:
+        - coordinates: [136.541, 34.844]
+          label: "Suzuka · Japanese GP"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+
+  - id: championship-lead
+    kind: stat
+    text: "19y 7m 4d"
+    subheading: "youngest championship leader in Formula 1 history"
+    color: amber
+    map:
+      center: [136.541, 34.844]
+      zoom: 10
+      opacity: 0.50
+      pins:
+        - coordinates: [136.541, 34.844]
+          label: "Suzuka"
+          color: "#d4a93a"
+          radius: 14
+          pulse: true
+          labelAnchor: top
+
+  - id: the-pause
+    text: "The five-week silence"
+    map:
+      center: [44, 25]
+      zoom: 4.2
+      opacity: 0.55
+      pins:
+        - coordinates: [50.510, 26.032]
+          label: "Bahrain (cancelled)"
+          color: "#7f8a9c"
+          radius: 10
+          pulse: false
+          labelAnchor: bottom
+        - coordinates: [39.103, 21.632]
+          label: "Jeddah (cancelled)"
+          color: "#7f8a9c"
+          radius: 10
+          pulse: false
+          labelAnchor: bottom
+
+  - id: miami
+    text: "Miami, the undercut, the third pole"
+    map:
+      center: [-80.238, 25.957]
+      zoom: 11
+      pitch: 25
+      opacity: 0.55
+      pins:
+        - coordinates: [-80.238, 25.957]
+          label: "Miami International Autodrome"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+    foreground:
+      - type: f1:race-row
+        race:
+          id: '2026-4'
+          season: '2026'
+          round: 4
+          raceName: 'Miami Grand Prix'
+          circuitId: miami
+          circuitName: 'Miami International Autodrome'
+          country: United States
+          locality: Miami
+          date: '2026-05-03'
+          time: '19:30:00Z'
+          status: finished
+          hasSprint: true
+
+  - id: three-from-three
+    kind: stat
+    text: "3 / 3"
+    subheading: "first ever to convert his first three poles into wins"
+    color: accent
+    map:
+      center: [-80.238, 25.957]
+      zoom: 10
+      opacity: 0.50
+      pins:
+        - coordinates: [-80.238, 25.957]
+          label: "Miami"
+          color: "#00d2be"
+          radius: 14
+          pulse: true
+          labelAnchor: top
+
+  - id: start-problem
+    kind: stat
+    text: "−20"
+    subheading: "grid spots lost at the lights, across five 2026 starts"
+    color: red
+    map:
+      center: [60, 20]
+      zoom: 1.8
+      opacity: 0.40
+
+  - id: standings-canada
+    text: "Montreal, twenty clear"
+    map:
+      center: [-73.526, 45.508]
+      zoom: 9
+      pitch: 20
+      opacity: 0.55
+      pins:
+        - coordinates: [-73.5228, 45.5006]
+          label: "Circuit Gilles Villeneuve · Canadian GP"
+          color: "#00d2be"
+          radius: 12
+          labelAnchor: top
+    foreground:
+      - type: f1:driver-standings
+        rows:
+          - { position: 1, driverId: kimi_antonelli, driverCode: ANT, driverName: 'Andrea Kimi Antonelli', constructorId: mercedes, constructorName: Mercedes, points: 100, wins: 3 }
+          - { position: 2, driverId: george_russell,  driverCode: RUS, driverName: 'George Russell',         constructorId: mercedes, constructorName: Mercedes, points: 80,  wins: 1 }
+          - { position: 3, driverId: charles_leclerc, driverCode: LEC, driverName: 'Charles Leclerc',        constructorId: ferrari,  constructorName: Ferrari,  points: 59,  wins: 0 }
+          - { position: 4, driverId: lando_norris,    driverCode: NOR, driverName: 'Lando Norris',           constructorId: mclaren,  constructorName: McLaren,  points: 51,  wins: 0 }
+          - { position: 5, driverId: lewis_hamilton,  driverCode: HAM, driverName: 'Lewis Hamilton',         constructorId: ferrari,  constructorName: Ferrari,  points: 51,  wins: 0 }
+          - { position: 6, driverId: oscar_piastri,   driverCode: PIA, driverName: 'Oscar Piastri',          constructorId: mclaren,  constructorName: McLaren,  points: 43,  wins: 0 }
