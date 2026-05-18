@@ -21,7 +21,10 @@ import { summariseAndTag, GEMINI_MODEL } from './gemini'
 import { resolveEntities } from './entityResolver'
 
 const parser = new Parser({
-  headers: { 'User-Agent': 'VizF1/1.0 (+https://vizf1.app)' },
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (compatible; VizF1/1.0; +https://vizf1.app)',
+    'Accept': 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5',
+  },
   timeout: 10000,
   customFields: {
     item: [
@@ -60,13 +63,91 @@ export function extractImage(
   return match?.[1] ?? null
 }
 
-type Stats = { fetched: number; new: number; hidden: number; errors: number }
+type Stats = {
+  fetched: number
+  new: number
+  requeuedSummarized: number
+  hidden: number
+  errors: number
+}
+
+async function summariseArticle(
+  sb: ReturnType<typeof getSupabase>,
+  source: RssSource,
+  articleId: string,
+  payload: { headline: string; body: string; url: string },
+): Promise<'summarized' | 'hidden' | 'failed'> {
+  try {
+    const gemini = await summariseAndTag({
+      headline: payload.headline,
+      body: payload.body,
+      publisher: source.publisher,
+    })
+
+    const summaryAt = new Date().toISOString()
+    const summaryModel = GEMINI_MODEL
+
+    if (!gemini.is_f1_news) {
+      await sb
+        .from('vizf1_articles')
+        .update({
+          summary: gemini.summary,
+          summary_model: summaryModel,
+          summary_at: summaryAt,
+          status: 'hidden',
+          failure_reason: `not_f1:${gemini.topic_category}`,
+          topic_category: gemini.topic_category,
+        })
+        .eq('id', articleId)
+      return 'hidden'
+    }
+
+    const entities = await resolveEntities(sb, gemini.entities)
+
+    await sb
+      .from('vizf1_articles')
+      .update({
+        summary: gemini.summary,
+        summary_model: summaryModel,
+        summary_at: summaryAt,
+        status: 'summarized',
+        failure_reason: null,
+        topic_category: gemini.topic_category,
+      })
+      .eq('id', articleId)
+
+    if (entities.length > 0) {
+      await sb.from('vizf1_article_entities').insert(
+        entities.map((e) => ({
+          article_id: articleId,
+          entity_type: e.entity_type,
+          entity_id: e.entity_id,
+        })),
+      )
+    }
+    return 'summarized'
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error(`[${source.id}] summarisation failed for ${payload.url}:`, msg)
+    await sb
+      .from('vizf1_articles')
+      .update({ status: 'failed', failure_reason: msg.slice(0, 500) })
+      .eq('id', articleId)
+    return 'failed'
+  }
+}
 
 async function ingestSource(
   sb: ReturnType<typeof getSupabase>,
   source: RssSource,
 ): Promise<Stats> {
-  const stats: Stats = { fetched: 0, new: 0, hidden: 0, errors: 0 }
+  const stats: Stats = {
+    fetched: 0,
+    new: 0,
+    requeuedSummarized: 0,
+    hidden: 0,
+    errors: 0,
+  }
 
   let feed
   try {
@@ -83,10 +164,23 @@ async function ingestSource(
 
     const { data: existing } = await sb
       .from('vizf1_articles')
-      .select('id')
+      .select('id, status')
       .eq('url_hash', urlHash)
       .maybeSingle()
-    if (existing) continue
+
+    if (existing) {
+      if (existing.status === 'summarized' || existing.status === 'hidden') continue
+      const body = item.content ?? item.contentSnippet ?? item.title
+      const result = await summariseArticle(sb, source, existing.id, {
+        headline: item.title,
+        body,
+        url: item.link,
+      })
+      if (result === 'summarized') stats.requeuedSummarized++
+      else if (result === 'hidden') stats.hidden++
+      else stats.errors++
+      continue
+    }
 
     const imageUrl = extractImage(item)
 
@@ -112,64 +206,14 @@ async function ingestSource(
     }
     stats.new++
 
-    try {
-      const body = item.content ?? item.contentSnippet ?? item.title
-      const gemini = await summariseAndTag({
-        headline: item.title,
-        body,
-        publisher: source.publisher,
-      })
-
-      const summaryAt = new Date().toISOString()
-      const summaryModel = GEMINI_MODEL
-
-      if (!gemini.is_f1_news) {
-        await sb
-          .from('vizf1_articles')
-          .update({
-            summary: gemini.summary,
-            summary_model: summaryModel,
-            summary_at: summaryAt,
-            status: 'hidden',
-            failure_reason: `not_f1:${gemini.topic_category}`,
-            topic_category: gemini.topic_category,
-          })
-          .eq('id', inserted.id)
-        stats.hidden++
-        continue
-      }
-
-      const entities = await resolveEntities(sb, gemini.entities)
-
-      await sb
-        .from('vizf1_articles')
-        .update({
-          summary: gemini.summary,
-          summary_model: summaryModel,
-          summary_at: summaryAt,
-          status: 'summarized',
-          topic_category: gemini.topic_category,
-        })
-        .eq('id', inserted.id)
-
-      if (entities.length > 0) {
-        await sb.from('vizf1_article_entities').insert(
-          entities.map((e) => ({
-            article_id: inserted.id,
-            entity_type: e.entity_type,
-            entity_id: e.entity_id,
-          })),
-        )
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error(`[${source.id}] summarisation failed for ${item.link}:`, msg)
-      await sb
-        .from('vizf1_articles')
-        .update({ status: 'failed', failure_reason: msg.slice(0, 500) })
-        .eq('id', inserted.id)
-      stats.errors++
-    }
+    const body = item.content ?? item.contentSnippet ?? item.title
+    const result = await summariseArticle(sb, source, inserted.id, {
+      headline: item.title,
+      body,
+      url: item.link,
+    })
+    if (result === 'hidden') stats.hidden++
+    else if (result === 'failed') stats.errors++
   }
 
   return stats
@@ -178,19 +222,26 @@ async function ingestSource(
 export async function runIngestion() {
   const sb = getSupabase()
   console.log(`[ingest:news] starting at ${new Date().toISOString()}`)
-  const totals: Stats = { fetched: 0, new: 0, hidden: 0, errors: 0 }
+  const totals: Stats = {
+    fetched: 0,
+    new: 0,
+    requeuedSummarized: 0,
+    hidden: 0,
+    errors: 0,
+  }
   for (const source of RSS_SOURCES) {
     const stats = await ingestSource(sb, source)
     console.log(
-      `[${source.id}] fetched=${stats.fetched} new=${stats.new} hidden=${stats.hidden} errors=${stats.errors}`,
+      `[${source.id}] fetched=${stats.fetched} new=${stats.new} requeuedSummarized=${stats.requeuedSummarized} hidden=${stats.hidden} errors=${stats.errors}`,
     )
     totals.fetched += stats.fetched
     totals.new += stats.new
+    totals.requeuedSummarized += stats.requeuedSummarized
     totals.hidden += stats.hidden
     totals.errors += stats.errors
   }
   console.log(
-    `[ingest:news] done: fetched=${totals.fetched} new=${totals.new} hidden=${totals.hidden} errors=${totals.errors}`,
+    `[ingest:news] done: fetched=${totals.fetched} new=${totals.new} requeuedSummarized=${totals.requeuedSummarized} hidden=${totals.hidden} errors=${totals.errors}`,
   )
   return totals
 }
