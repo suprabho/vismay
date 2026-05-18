@@ -1,0 +1,57 @@
+import type { DriverStandingsConfig } from './index'
+
+export const sample: DriverStandingsConfig = {
+  type: 'f1:driver-standings',
+  rows: [
+    {
+      position: 1,
+      driverId: 'max_verstappen',
+      driverCode: 'VER',
+      driverName: 'Max Verstappen',
+      constructorId: 'red_bull',
+      constructorName: 'Red Bull',
+      points: 437,
+      wins: 9,
+    },
+    {
+      position: 2,
+      driverId: 'lando_norris',
+      driverCode: 'NOR',
+      driverName: 'Lando Norris',
+      constructorId: 'mclaren',
+      constructorName: 'McLaren',
+      points: 374,
+      wins: 4,
+    },
+    {
+      position: 3,
+      driverId: 'charles_leclerc',
+      driverCode: 'LEC',
+      driverName: 'Charles Leclerc',
+      constructorId: 'ferrari',
+      constructorName: 'Ferrari',
+      points: 356,
+      wins: 3,
+    },
+    {
+      position: 4,
+      driverId: 'oscar_piastri',
+      driverCode: 'PIA',
+      driverName: 'Oscar Piastri',
+      constructorId: 'mclaren',
+      constructorName: 'McLaren',
+      points: 292,
+      wins: 2,
+    },
+    {
+      position: 5,
+      driverId: 'carlos_sainz',
+      driverCode: 'SAI',
+      driverName: 'Carlos Sainz',
+      constructorId: 'ferrari',
+      constructorName: 'Ferrari',
+      points: 290,
+      wins: 2,
+    },
+  ],
+}

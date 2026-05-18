@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./web": "./src/web/index.ts",
-    "./native": "./src/native/index.ts"
+    "./native": "./src/native/index.ts",
+    "./modules/*/sample": "./src/modules/*/sample.ts"
   },
   "peerDependencies": {
     "next": "^15.0.0 || ^16.0.0",
