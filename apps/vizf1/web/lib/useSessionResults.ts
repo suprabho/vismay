@@ -72,23 +72,23 @@ export function useSessionResults(round: number | null, type: SessionType) {
       // Resolve race id, then session id, then results — keeps the join shallow
       // and tolerant of races/sessions being upserted by different jobs.
       const { data: race } = await sb
-        .from('races')
+        .from('vizf1_races')
         .select('id')
         .eq('season', year)
         .eq('round', round!)
         .maybeSingle()
       if (!race) return []
       const { data: session } = await sb
-        .from('sessions')
+        .from('vizf1_sessions')
         .select('id')
         .eq('race_id', race.id)
         .eq('session_type', type)
         .maybeSingle()
       if (!session) return []
       const { data, error } = await sb
-        .from('session_results')
+        .from('vizf1_session_results')
         .select(
-          'driver_id, position, best_lap_ms, gap_to_leader_ms, laps_completed, status, points, grid, drivers(given_name, family_name, code, headshot_url, constructor_id, primary_color, constructors(name))',
+          'driver_id, position, best_lap_ms, gap_to_leader_ms, laps_completed, status, points, grid, drivers:vizf1_drivers(given_name, family_name, code, headshot_url, constructor_id, primary_color, constructors:vizf1_constructors(name))',
         )
         .eq('session_id', session.id)
         .order('position', { ascending: true, nullsFirst: false })

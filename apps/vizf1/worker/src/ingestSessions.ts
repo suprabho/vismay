@@ -45,7 +45,7 @@ function looksFinished(s: OpenF1Session): boolean {
 async function upsertCircuit(sb: SupabaseClient, m: OpenF1Meeting) {
   const circuitId = slug(m.circuit_short_name || m.meeting_name)
   await sb
-    .from('circuits')
+    .from('vizf1_circuits')
     .upsert(
       {
         circuit_id: circuitId,
@@ -70,7 +70,7 @@ async function upsertRace(
   const raceSession = sessions.find((s) => normaliseSessionName(s.session_name) === 'race')
   const hasSprint = sessions.some((s) => normaliseSessionName(s.session_name) === 'sprint')
   const { data, error } = await sb
-    .from('races')
+    .from('vizf1_races')
     .upsert(
       {
         season: String(m.year),
@@ -112,7 +112,7 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
     primary_color: d.team_colour ? `#${d.team_colour}` : null,
     updated_at: new Date().toISOString(),
   }))
-  const { error } = await sb.from('drivers').upsert(rows, { onConflict: 'driver_id' })
+  const { error } = await sb.from('vizf1_drivers').upsert(rows, { onConflict: 'driver_id' })
   if (error) console.error('[ingest:sessions] drivers upsert failed:', error)
 
   // And constructors (derived from team_name + team_colour)
@@ -133,7 +133,7 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
     logo_slug: constructor_id,
     updated_at: new Date().toISOString(),
   }))
-  await sb.from('constructors').upsert(constructorRows, { onConflict: 'constructor_id' })
+  await sb.from('vizf1_constructors').upsert(constructorRows, { onConflict: 'constructor_id' })
 }
 
 async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: OpenF1Session) {
@@ -143,7 +143,7 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
   const status = looksFinished(openf1Session) ? 'finished' : 'pending'
 
   const { data: row, error: sErr } = await sb
-    .from('sessions')
+    .from('vizf1_sessions')
     .upsert(
       {
         race_id: raceId,
@@ -208,7 +208,7 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
 
   if (results.length === 0) return
   const { error: rErr } = await sb
-    .from('session_results')
+    .from('vizf1_session_results')
     .upsert(results, { onConflict: 'session_id,driver_id' })
   if (rErr) console.error(`[session_results] upsert failed (${sessionType}):`, rErr)
 }

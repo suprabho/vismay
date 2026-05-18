@@ -1,15 +1,27 @@
 -- VizF1 schema v1
--- Mirrors apps/footshort/supabase/migrations/20260420000000_init.sql in spirit,
--- but F1's entities have such different shapes (drivers have portraits, teams
--- have constructor colors, circuits have geometry) that one polymorphic table
--- would be a leaky abstraction. Each entity gets its own table, and
--- article_entities polymorphically references them by (entity_type, entity_id).
+-- All tables and enums are namespaced with `vizf1_` so they can co-exist in
+-- the project-wide Supabase project alongside vizmaya and footshort schemas.
+-- footshort's existing `articles` / `article_entities` would otherwise collide.
+
+-- One-time cleanup of un-prefixed tables from a previous (failed) draft run.
+-- These names are NOT used by vizmaya or footshort (verified at migration
+-- time) so it's safe to drop them. Do NOT add `articles` / `article_entities`
+-- here — those belong to footshort.
+drop table if exists session_results cascade;
+drop table if exists sessions cascade;
+drop table if exists story_segments cascade;
+drop table if exists races cascade;
+drop table if exists circuits cascade;
+drop table if exists drivers cascade;
+drop table if exists constructors cascade;
+drop type if exists session_type cascade;
+drop type if exists article_entity_type cascade;
 
 -- =====================================================
 -- DRIVERS
 -- =====================================================
 
-create table drivers (
+create table vizf1_drivers (
   driver_id         text primary key,                   -- jolpica/ergast id, e.g. "max_verstappen"
   given_name        text not null,
   family_name       text not null,
@@ -21,17 +33,17 @@ create table drivers (
   headshot_url      text,                               -- from OpenF1
   -- denormalised current-season team for fast joins
   constructor_id    text,
-  primary_color     text,                               -- hex, mirrors constructors.primary_color
+  primary_color     text,                               -- hex, mirrors vizf1_constructors.primary_color
   updated_at        timestamptz not null default now()
 );
 
-create index idx_drivers_constructor on drivers (constructor_id);
+create index idx_vizf1_drivers_constructor on vizf1_drivers (constructor_id);
 
 -- =====================================================
 -- CONSTRUCTORS
 -- =====================================================
 
-create table constructors (
+create table vizf1_constructors (
   constructor_id    text primary key,                   -- jolpica id, e.g. "red_bull"
   name              text not null,
   nationality       text,
@@ -44,7 +56,7 @@ create table constructors (
 -- CIRCUITS
 -- =====================================================
 
-create table circuits (
+create table vizf1_circuits (
   circuit_id        text primary key,                   -- jolpica id, e.g. "monza"
   name              text not null,
   locality          text,
@@ -61,12 +73,12 @@ create table circuits (
 -- RACES
 -- =====================================================
 
-create table races (
+create table vizf1_races (
   id                uuid primary key default gen_random_uuid(),
   season            text not null,                      -- "2026"
   round             int not null,                       -- 1..24
   race_name         text not null,
-  circuit_id        text references circuits(circuit_id),
+  circuit_id        text references vizf1_circuits(circuit_id),
   date              date not null,                      -- race day
   time              text,                               -- "13:00:00Z" or null
   has_sprint        boolean not null default false,
@@ -74,18 +86,18 @@ create table races (
   unique (season, round)
 );
 
-create index idx_races_date on races (date);
+create index idx_vizf1_races_date on vizf1_races (date);
 
 -- =====================================================
 -- SESSIONS: FP1, FP2, FP3, Qualifying, Sprint Q, Sprint, Race
 -- =====================================================
 
-create type session_type as enum ('fp1', 'fp2', 'fp3', 'quali', 'sprint_quali', 'sprint', 'race');
+create type vizf1_session_type as enum ('fp1', 'fp2', 'fp3', 'quali', 'sprint_quali', 'sprint', 'race');
 
-create table sessions (
+create table vizf1_sessions (
   id                  uuid primary key default gen_random_uuid(),
-  race_id             uuid not null references races(id) on delete cascade,
-  session_type        session_type not null,
+  race_id             uuid not null references vizf1_races(id) on delete cascade,
+  session_type        vizf1_session_type not null,
   -- OpenF1 keys for cross-referencing
   session_key_openf1  int,                              -- /sessions session_key
   started_at          timestamptz,
@@ -94,17 +106,17 @@ create table sessions (
   unique (race_id, session_type)
 );
 
-create index idx_sessions_race on sessions (race_id);
-create index idx_sessions_type on sessions (session_type);
+create index idx_vizf1_sessions_race on vizf1_sessions (race_id);
+create index idx_vizf1_sessions_type on vizf1_sessions (session_type);
 
 -- =====================================================
 -- SESSION RESULTS: per-driver row per session
 -- Race + sprint use position + points; practice uses best_lap_ms.
 -- =====================================================
 
-create table session_results (
-  session_id        uuid not null references sessions(id) on delete cascade,
-  driver_id         text not null references drivers(driver_id),
+create table vizf1_session_results (
+  session_id        uuid not null references vizf1_sessions(id) on delete cascade,
+  driver_id         text not null references vizf1_drivers(driver_id),
   position          int,
   best_lap_ms       int,                                -- practice & qualifying
   laps_completed    int,
@@ -120,13 +132,13 @@ create table session_results (
   primary key (session_id, driver_id)
 );
 
-create index idx_session_results_driver on session_results (driver_id);
+create index idx_vizf1_session_results_driver on vizf1_session_results (driver_id);
 
 -- =====================================================
 -- ARTICLES: RSS-ingested + Gemini-summarised F1 news
 -- =====================================================
 
-create table articles (
+create table vizf1_articles (
   id                uuid primary key default gen_random_uuid(),
   url               text not null unique,
   url_hash          text not null unique,               -- sha256 of url
@@ -146,63 +158,63 @@ create table articles (
   topic_category    text                                -- on_track | off_track | transfer | regs | other
 );
 
-create index idx_articles_published_at on articles (published_at desc);
-create index idx_articles_status on articles (status);
+create index idx_vizf1_articles_published_at on vizf1_articles (published_at desc);
+create index idx_vizf1_articles_status on vizf1_articles (status);
 
 -- =====================================================
 -- ARTICLE → ENTITY tagging (polymorphic)
 -- =====================================================
 
-create type article_entity_type as enum ('driver', 'constructor', 'circuit');
+create type vizf1_article_entity_type as enum ('driver', 'constructor', 'circuit');
 
-create table article_entities (
-  article_id        uuid not null references articles(id) on delete cascade,
-  entity_type       article_entity_type not null,
+create table vizf1_article_entities (
+  article_id        uuid not null references vizf1_articles(id) on delete cascade,
+  entity_type       vizf1_article_entity_type not null,
   entity_id         text not null,                      -- driver_id / constructor_id / circuit_id
   confidence        real not null default 1.0,
   primary key (article_id, entity_type, entity_id)
 );
 
-create index idx_article_entities_entity on article_entities (entity_type, entity_id);
+create index idx_vizf1_article_entities_entity on vizf1_article_entities (entity_type, entity_id);
 
 -- =====================================================
 -- STORY SEGMENTS: pre-computed rings → article order
 -- Regenerated nightly so the front page doesn't fan out a heavy join.
 -- =====================================================
 
-create table story_segments (
+create table vizf1_story_segments (
   id                uuid primary key default gen_random_uuid(),
-  entity_type       article_entity_type not null,
+  entity_type       vizf1_article_entity_type not null,
   entity_id         text not null,
-  article_id        uuid not null references articles(id) on delete cascade,
+  article_id        uuid not null references vizf1_articles(id) on delete cascade,
   rank              int not null,                       -- 0..4 within an entity
   created_at        timestamptz not null default now(),
   unique (entity_type, entity_id, article_id)
 );
 
-create index idx_story_segments_entity on story_segments (entity_type, entity_id, rank);
+create index idx_vizf1_story_segments_entity on vizf1_story_segments (entity_type, entity_id, rank);
 
 -- =====================================================
 -- RLS — public read everywhere, service-role writes
 -- (no user accounts yet; auth comes in a later pass).
 -- =====================================================
 
-alter table drivers          enable row level security;
-alter table constructors     enable row level security;
-alter table circuits         enable row level security;
-alter table races            enable row level security;
-alter table sessions         enable row level security;
-alter table session_results  enable row level security;
-alter table articles         enable row level security;
-alter table article_entities enable row level security;
-alter table story_segments   enable row level security;
+alter table vizf1_drivers          enable row level security;
+alter table vizf1_constructors     enable row level security;
+alter table vizf1_circuits         enable row level security;
+alter table vizf1_races            enable row level security;
+alter table vizf1_sessions         enable row level security;
+alter table vizf1_session_results  enable row level security;
+alter table vizf1_articles         enable row level security;
+alter table vizf1_article_entities enable row level security;
+alter table vizf1_story_segments   enable row level security;
 
-create policy "drivers: public read"          on drivers          for select using (true);
-create policy "constructors: public read"     on constructors     for select using (true);
-create policy "circuits: public read"         on circuits         for select using (true);
-create policy "races: public read"            on races            for select using (true);
-create policy "sessions: public read"         on sessions         for select using (true);
-create policy "session_results: public read"  on session_results  for select using (true);
-create policy "articles: public read"         on articles         for select using (status = 'summarized');
-create policy "article_entities: public read" on article_entities for select using (true);
-create policy "story_segments: public read"   on story_segments   for select using (true);
+create policy "vizf1_drivers: public read"          on vizf1_drivers          for select using (true);
+create policy "vizf1_constructors: public read"     on vizf1_constructors     for select using (true);
+create policy "vizf1_circuits: public read"         on vizf1_circuits         for select using (true);
+create policy "vizf1_races: public read"            on vizf1_races            for select using (true);
+create policy "vizf1_sessions: public read"         on vizf1_sessions         for select using (true);
+create policy "vizf1_session_results: public read"  on vizf1_session_results  for select using (true);
+create policy "vizf1_articles: public read"         on vizf1_articles         for select using (status = 'summarized');
+create policy "vizf1_article_entities: public read" on vizf1_article_entities for select using (true);
+create policy "vizf1_story_segments: public read"   on vizf1_story_segments   for select using (true);

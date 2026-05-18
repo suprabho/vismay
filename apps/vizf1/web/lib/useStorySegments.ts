@@ -44,9 +44,9 @@ export function useStorySegments(entityType: EntityKind, entityId: string) {
     queryFn: async (): Promise<NewsCard[]> => {
       const sb = supabaseBrowser()
       const { data, error } = await sb
-        .from('story_segments')
+        .from('vizf1_story_segments')
         .select(
-          'rank, articles(id, headline, summary, publisher, url, published_at, image_url, topic_category)',
+          'rank, articles:vizf1_articles(id, headline, summary, publisher, url, published_at, image_url, topic_category)',
         )
         .eq('entity_type', entityType)
         .eq('entity_id', entityId)

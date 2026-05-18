@@ -72,8 +72,8 @@ async function findRepresentativeSession(
   circuitId: string,
 ): Promise<SessionRow | null> {
   const { data, error } = await sb
-    .from('sessions')
-    .select('id, session_key_openf1, started_at, race_id, races!inner(circuit_id)')
+    .from('vizf1_sessions')
+    .select('id, session_key_openf1, started_at, race_id, races:vizf1_races!inner(circuit_id)')
     .eq('session_type', 'race')
     .eq('status', 'finished')
     .eq('races.circuit_id', circuitId)
@@ -118,7 +118,7 @@ async function deriveTrack(sb: SupabaseClient, c: CircuitRow): Promise<boolean> 
   const { d, bounds } = toSvgPath(reduced)
 
   const { error } = await sb
-    .from('circuits')
+    .from('vizf1_circuits')
     .update({
       track_path_svg: d,
       track_bounds: bounds,
@@ -137,7 +137,7 @@ export async function runIngestCircuits() {
   const sb = getSupabase()
   console.log(`[ingest:circuits] start ${new Date().toISOString()}`)
   const { data, error } = await sb
-    .from('circuits')
+    .from('vizf1_circuits')
     .select('circuit_id, name, track_path_svg')
     .is('track_path_svg', null)
   if (error) throw error

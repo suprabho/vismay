@@ -12,7 +12,7 @@ function useTeamName(teamId: string) {
     queryFn: async (): Promise<string> => {
       const sb = supabaseBrowser()
       const { data } = await sb
-        .from('constructors')
+        .from('vizf1_constructors')
         .select('name')
         .eq('constructor_id', teamId)
         .maybeSingle()

@@ -62,11 +62,11 @@ export function useFollowedEntities(): FollowedEntities {
       const sb = supabaseBrowser()
       const [drivers, constructors] = await Promise.all([
         sb
-          .from('drivers')
+          .from('vizf1_drivers')
           .select('driver_id, given_name, family_name, code, headshot_url, primary_color')
           .in('driver_id', STATIC_DRIVER_IDS as unknown as string[]),
         sb
-          .from('constructors')
+          .from('vizf1_constructors')
           .select('constructor_id, name, primary_color')
           .in('constructor_id', STATIC_CONSTRUCTOR_IDS as unknown as string[]),
       ])

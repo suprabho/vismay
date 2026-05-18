@@ -22,7 +22,7 @@ function useCircuitGeometry(circuitId: string) {
     queryFn: async (): Promise<CircuitGeom | null> => {
       const sb = supabaseBrowser()
       const { data, error } = await sb
-        .from('circuits')
+        .from('vizf1_circuits')
         .select('track_path_svg, track_bounds')
         .eq('circuit_id', circuitId)
         .maybeSingle()

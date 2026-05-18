@@ -27,8 +27,8 @@ type LinkRow = {
 async function loadLinks(sb: SupabaseClient): Promise<LinkRow[]> {
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString()
   const { data, error } = await sb
-    .from('article_entities')
-    .select('entity_type, entity_id, article_id, articles!inner(published_at, status)')
+    .from('vizf1_article_entities')
+    .select('entity_type, entity_id, article_id, articles:vizf1_articles!inner(published_at, status)')
     .eq('articles.status', 'summarized')
     .gte('articles.published_at', since)
   if (error) throw error
@@ -71,7 +71,7 @@ export async function runBuildStorySegments() {
 
   // Wipe-and-replace is cleaner than diffing — table is small (~100 rows).
   const { error: delErr } = await sb
-    .from('story_segments')
+    .from('vizf1_story_segments')
     .delete()
     .not('id', 'is', null) // delete all rows
   if (delErr) console.warn('[story-segments] truncate failed (ok if first run):', delErr)
@@ -80,7 +80,7 @@ export async function runBuildStorySegments() {
     console.log('[story-segments] no rows to insert')
     return
   }
-  const { error: insErr } = await sb.from('story_segments').insert(rows)
+  const { error: insErr } = await sb.from('vizf1_story_segments').insert(rows)
   if (insErr) {
     console.error('[story-segments] insert failed:', insErr)
     throw insErr

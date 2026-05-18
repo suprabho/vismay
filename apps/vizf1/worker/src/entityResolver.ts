@@ -44,9 +44,9 @@ let cache: {
 async function loadCache(sb: SupabaseClient) {
   if (cache) return cache
   const [drivers, constructors, circuits] = await Promise.all([
-    sb.from('drivers').select('driver_id, given_name, family_name, code'),
-    sb.from('constructors').select('constructor_id, name'),
-    sb.from('circuits').select('circuit_id, name, locality, country'),
+    sb.from('vizf1_drivers').select('driver_id, given_name, family_name, code'),
+    sb.from('vizf1_constructors').select('constructor_id, name'),
+    sb.from('vizf1_circuits').select('circuit_id, name, locality, country'),
   ])
   cache = {
     drivers: (drivers.data ?? []) as DriverRow[],

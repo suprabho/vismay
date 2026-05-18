@@ -45,7 +45,7 @@ export function useNewsFeed(limit = 50) {
     queryFn: async (): Promise<NewsCard[]> => {
       const sb = supabaseBrowser()
       const { data, error } = await sb
-        .from('articles')
+        .from('vizf1_articles')
         .select('id, headline, summary, publisher, url, published_at, image_url, topic_category')
         .eq('status', 'summarized')
         .order('published_at', { ascending: false })

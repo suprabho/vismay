@@ -82,7 +82,7 @@ async function ingestSource(
     const urlHash = hashUrl(item.link)
 
     const { data: existing } = await sb
-      .from('articles')
+      .from('vizf1_articles')
       .select('id')
       .eq('url_hash', urlHash)
       .maybeSingle()
@@ -91,7 +91,7 @@ async function ingestSource(
     const imageUrl = extractImage(item)
 
     const { data: inserted, error: insertError } = await sb
-      .from('articles')
+      .from('vizf1_articles')
       .insert({
         url: item.link,
         url_hash: urlHash,
@@ -125,7 +125,7 @@ async function ingestSource(
 
       if (!gemini.is_f1_news) {
         await sb
-          .from('articles')
+          .from('vizf1_articles')
           .update({
             summary: gemini.summary,
             summary_model: summaryModel,
@@ -142,7 +142,7 @@ async function ingestSource(
       const entities = await resolveEntities(sb, gemini.entities)
 
       await sb
-        .from('articles')
+        .from('vizf1_articles')
         .update({
           summary: gemini.summary,
           summary_model: summaryModel,
@@ -153,7 +153,7 @@ async function ingestSource(
         .eq('id', inserted.id)
 
       if (entities.length > 0) {
-        await sb.from('article_entities').insert(
+        await sb.from('vizf1_article_entities').insert(
           entities.map((e) => ({
             article_id: inserted.id,
             entity_type: e.entity_type,
@@ -165,7 +165,7 @@ async function ingestSource(
       const msg = e instanceof Error ? e.message : String(e)
       console.error(`[${source.id}] summarisation failed for ${item.link}:`, msg)
       await sb
-        .from('articles')
+        .from('vizf1_articles')
         .update({ status: 'failed', failure_reason: msg.slice(0, 500) })
         .eq('id', inserted.id)
       stats.errors++

@@ -29,9 +29,9 @@ function useDriver(driverId: string) {
     queryFn: async (): Promise<DriverRow | null> => {
       const sb = supabaseBrowser()
       const { data, error } = await sb
-        .from('drivers')
+        .from('vizf1_drivers')
         .select(
-          'driver_id, given_name, family_name, code, permanent_number, nationality, headshot_url, constructor_id, primary_color, constructors(name)',
+          'driver_id, given_name, family_name, code, permanent_number, nationality, headshot_url, constructor_id, primary_color, constructors:vizf1_constructors(name)',
         )
         .eq('driver_id', driverId)
         .maybeSingle()

@@ -81,9 +81,9 @@ export function useSchedule() {
         const sb = supabaseBrowser()
         const year = String(new Date().getFullYear())
         const { data, error } = await sb
-          .from('races')
+          .from('vizf1_races')
           .select(
-            'id, season, round, race_name, circuit_id, date, time, has_sprint, circuits(name, locality, country)',
+            'id, season, round, race_name, circuit_id, date, time, has_sprint, circuits:vizf1_circuits(name, locality, country)',
           )
           .eq('season', year)
           .order('round', { ascending: true })

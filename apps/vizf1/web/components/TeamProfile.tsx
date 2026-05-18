@@ -35,12 +35,12 @@ function useTeam(teamId: string) {
       const sb = supabaseBrowser()
       const [team, drivers] = await Promise.all([
         sb
-          .from('constructors')
+          .from('vizf1_constructors')
           .select('constructor_id, name, nationality, primary_color')
           .eq('constructor_id', teamId)
           .maybeSingle(),
         sb
-          .from('drivers')
+          .from('vizf1_drivers')
           .select('driver_id, given_name, family_name, code, headshot_url, primary_color')
           .eq('constructor_id', teamId),
       ])

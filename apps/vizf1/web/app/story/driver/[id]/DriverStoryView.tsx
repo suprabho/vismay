@@ -12,7 +12,7 @@ function useDriverName(driverId: string) {
     queryFn: async (): Promise<string> => {
       const sb = supabaseBrowser()
       const { data } = await sb
-        .from('drivers')
+        .from('vizf1_drivers')
         .select('given_name, family_name')
         .eq('driver_id', driverId)
         .maybeSingle()
