@@ -5,20 +5,34 @@ import type { FixtureRow } from '../types';
 
 type Props = { fixture: FixtureRow };
 
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
 function kickoffLabel(iso: string, status: FixtureRow['status']): string {
   const d = new Date(iso);
   if (status === 'finished') {
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    // Locale-independent — toLocaleDateString(undefined, ...) produced
+    // server/client mismatches ("26 May" vs "May 26") that broke hydration.
+    return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}`;
   }
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()} ${hh}:${mm}`;
 }
 
 function TeamCell({

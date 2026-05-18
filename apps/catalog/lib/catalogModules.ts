@@ -33,7 +33,13 @@ export const catalogModules: CatalogEntry[] = [
     previewNotice:
       'Chart preview is unavailable in the catalog — it loads runtime chart data per story.',
   },
-  { type: 'map', category: 'Core', sample: mapSample },
+  {
+    type: 'map',
+    category: 'Core',
+    sample: mapSample,
+    previewNotice:
+      'Map preview requires a <StoryShellProvider> with a Mapbox token. See the schema + YAML on the detail page.',
+  },
   { type: 'image', category: 'Core', sample: imageSample },
   { type: 'embed', category: 'Core', sample: embedSample },
   { type: 'video', category: 'Core', sample: videoSample },

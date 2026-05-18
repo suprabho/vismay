@@ -5,13 +5,28 @@ import type { RaceRow as RaceRowData } from '../types'
 
 type Props = { race: RaceRowData }
 
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
 function dateLabel(iso: string, status: RaceRowData['status']): string {
   if (status === 'live') return 'LIVE'
   const d = new Date(`${iso}T00:00:00Z`)
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
+  // Locale-independent: previously used `toLocaleDateString(undefined, ...)`
+  // which produced different output on server vs client when their default
+  // locales differed (e.g. "May 26" vs "26 May"), causing hydration mismatch.
+  return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}`
 }
 
 function statusBadge(status: RaceRowData['status']): string {
