@@ -3,7 +3,7 @@
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
 import { ForegroundVizSlot } from '@vismay/viz-engine'
-import { resolveSlots } from '@vismay/viz-engine'
+import { resolveSlotsFlat } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
 import { useStoryReadiness } from '@vismay/viz-engine'
@@ -86,7 +86,7 @@ export default function SlidesShell({
       ) {
         total++
       }
-      total += resolveSlots(s.unit.parentConfig).foreground.length
+      total += resolveSlotsFlat(s.unit.parentConfig).foreground.length
     }
     return total
   }, [slides])
@@ -110,7 +110,7 @@ export default function SlidesShell({
     const heading = unit.heading
     const subheading = unit.subheading
     const chartId = unit.parentConfig.chart
-    const foregroundLayers = resolveSlots(unit.parentConfig).foreground
+    const foregroundLayers = resolveSlotsFlat(unit.parentConfig).foreground
     const showMap =
       !!center && typeof zoom === 'number' && !isReportMapHidden(unit.parentConfig)
     return (

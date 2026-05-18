@@ -5,6 +5,7 @@ import imageModule from './modules/image'
 import embedModule from './modules/embed'
 import videoModule from './modules/video'
 import riveModule from './modules/rive'
+import textModule from './modules/text'
 
 // The registry stores modules with the config generic erased — different
 // modules carry incompatible config types, and `parseConfig`'s input position
@@ -14,7 +15,15 @@ import riveModule from './modules/rive'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyVizModule = VizModule<any>
 
-const core: AnyVizModule[] = [chartModule, mapModule, imageModule, embedModule, videoModule, riveModule]
+const core: AnyVizModule[] = [
+  chartModule,
+  mapModule,
+  imageModule,
+  embedModule,
+  videoModule,
+  riveModule,
+  textModule,
+]
 
 const registry = new Map<string, AnyVizModule>(core.map((m) => [m.type, m]))
 

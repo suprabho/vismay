@@ -3,7 +3,7 @@
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
 import { ForegroundVizSlot } from '@vismay/viz-engine'
-import { resolveSlots } from '@vismay/viz-engine'
+import { resolveSlotsFlat } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
 import { useStoryReadiness } from '@vismay/viz-engine'
@@ -80,7 +80,7 @@ export default function ReportShell({
       if (!!center && typeof zoom === 'number' && !isReportMapHidden(u.parentConfig)) {
         total++
       }
-      total += resolveSlots(u.parentConfig).foreground.length
+      total += resolveSlotsFlat(u.parentConfig).foreground.length
     }
     return total
   }, [units])
@@ -163,7 +163,7 @@ export default function ReportShell({
     const heading = unit.heading
     const subheading = unit.subheading
     const chartId = unit.parentConfig.chart
-    const foregroundLayers = resolveSlots(unit.parentConfig).foreground
+    const foregroundLayers = resolveSlotsFlat(unit.parentConfig).foreground
 
     return (
       <section

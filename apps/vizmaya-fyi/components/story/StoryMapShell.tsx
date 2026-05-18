@@ -2,8 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapStorySection from './MapStorySection'
-import { ForegroundVizSlot, BackgroundVizSlot, StoryShellProvider } from '@vismay/viz-engine'
-import { resolveSlots } from '@vismay/viz-engine'
+import {
+  ForegroundVizSlot,
+  ForegroundLayoutSlot,
+  BackgroundVizSlot,
+  StoryShellProvider,
+} from '@vismay/viz-engine'
+import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
 import type { ResolvedUnit, StoryDefaults } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
@@ -94,10 +99,22 @@ export default function StoryMapShell({
 
   const current = units[activeUnit] ?? units[0]
   const activeSub = current?.subIndex ?? 0
-  const currentForeground = useMemo(
-    () => (current ? resolveSlots(current.parentConfig).foreground : []),
+  // Full resolved shape so we can dispatch between the legacy flat chart-panel
+  // path and the region-aware ForegroundLayoutSlot. Legacy stories stay on the
+  // flat path (zero-visible-change); stories that opt in to
+  // `foreground: { layout, regions }` go through the layout slot.
+  const currentResolvedForeground = useMemo(
+    () =>
+      current
+        ? resolveSlots(current.parentConfig).foreground
+        : ({ kind: 'flat', layers: [] } as const),
     [current]
   )
+  const currentForeground = useMemo(
+    () => (current ? resolveSlotsFlat(current.parentConfig).foreground : []),
+    [current]
+  )
+  const usesRegions = currentResolvedForeground.kind === 'regions'
 
   // On portrait, a subsection split into multiple slices via `mobileParagraphs`
   // produces consecutive units that share the same (parentIndex, subIndex).
@@ -118,7 +135,10 @@ export default function StoryMapShell({
       prev.subIndex === current.subIndex
     return sharesNext && !sharesPrev
   })()
-  const showChart = currentForeground.length > 0 && !isFirstOfMultiSlice
+  // Legacy chart panel renders only for flat-mode units. Regions-mode units
+  // route through `<ForegroundLayoutSlot>` instead.
+  const showChart = !usesRegions && currentForeground.length > 0 && !isFirstOfMultiSlice
+  const showRegions = usesRegions && !isFirstOfMultiSlice && current != null
 
   // Single IntersectionObserver across every unit element.
   useEffect(() => {
@@ -237,6 +257,26 @@ export default function StoryMapShell({
               mode={mode}
             />
           </div>
+        </div>
+      )}
+
+      {/* ─── Region-aware foreground (opt-in via `foreground: { layout, regions }`)
+          Renders the active unit's layout — each region's CSS box is sized
+          against this fixed wrapper so viewport-unit coords (37vw, 50vh)
+          resolve consistently with the rest of the shell. Layers inside each
+          region inherit the region's pointer-events default; layer-level
+          style can re-enable interaction (matching the legacy chart panel's
+          `[@media(min-aspect-ratio:1/1)]:pointer-events-auto` trick). */}
+      {showRegions && current && (
+        <div className="fixed inset-0 z-10 pointer-events-none">
+          <ForegroundLayoutSlot
+            slug={slug ?? ''}
+            foreground={currentResolvedForeground}
+            unit={current}
+            activeStep={activeSub}
+            mode={mode}
+            isPortrait={isPortrait}
+          />
         </div>
       )}
 

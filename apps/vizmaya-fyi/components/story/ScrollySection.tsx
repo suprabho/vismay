@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { ScrollySectionBlock } from '@vismay/viz-engine'
-import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
+import { formatInlineMarkdown } from '@vismay/viz-engine'
 import { ChartPanel } from '@vismay/viz-engine'
 
 export default function ScrollySection({ block }: { block: ScrollySectionBlock }) {

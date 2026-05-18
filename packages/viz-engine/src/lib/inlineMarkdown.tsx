@@ -4,8 +4,9 @@ import { ReactNode } from 'react'
  * Render a string of inline markdown with **bold** and *italic* support.
  * Bold renders with the accent color and mono font; italic renders as <em>.
  *
- * Used by ProseSection, ScrollySection, and MapStorySection so the inline
- * formatting is consistent across all story prose.
+ * Lives in the engine so the text module and the various app-level prose
+ * renderers (ProseSection, ScrollySection, MapEditShell) all share one
+ * implementation and can't drift apart.
  */
 export function formatInlineMarkdown(text: string): ReactNode[] {
   const parts: ReactNode[] = []

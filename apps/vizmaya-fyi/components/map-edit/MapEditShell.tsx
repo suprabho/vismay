@@ -13,7 +13,7 @@ import type {
   StatColor,
 } from '@vismay/viz-engine'
 import ShareMapBg from '@/components/share/ShareMapBg'
-import { formatInlineMarkdown } from '@/lib/formatInlineMarkdown'
+import { formatInlineMarkdown } from '@vismay/viz-engine'
 import { applyMapPalette, applyMapFontstack } from '@vismay/viz-engine'
 import { applyAdminWorldview, buildCountryFilter } from '@vismay/viz-engine'
 import { STORY_LANDSCAPE_FOCUS_AREA } from '@vismay/viz-engine'

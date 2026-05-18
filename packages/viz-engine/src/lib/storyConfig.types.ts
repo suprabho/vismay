@@ -11,7 +11,17 @@ export interface VizSlotNone {
   type: 'none'
 }
 
-export type ForegroundSlotInput = VizLayer | VizLayer[]
+/**
+ * Region-aware foreground input. Authors declare a layout name (resolved via
+ * the `foregroundLayouts` registry) and a map from region name to its layer
+ * stack. A single `VizLayer` per region is sugar for a one-element array.
+ */
+export interface ForegroundRegionsInput {
+  layout: string
+  regions: Record<string, VizLayer | VizLayer[]>
+}
+
+export type ForegroundSlotInput = VizLayer | VizLayer[] | ForegroundRegionsInput
 export type BackgroundSlotInput = VizLayer | VizLayer[] | VizSlotNone
 
 /**
