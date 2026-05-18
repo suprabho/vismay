@@ -144,17 +144,17 @@ function ViewModelBindings({
   bindings,
   instance,
 }: {
-  bindings: Record<string, RiveBindingValue> | undefined
+  bindings: Record<string, RiveBindingValue>
   instance: ViewModelInstance | null
 }) {
   // Stable key order: sort by name so the React reconciler renders the
   // sub-components in a deterministic sequence across renders. This is
   // required for the rules-of-hooks contract since each sub-component
   // owns its own hook call.
-  const entries = useMemo(() => {
-    if (!bindings) return [] as Array<[string, RiveBindingValue]>
-    return Object.entries(bindings).sort(([a], [b]) => a.localeCompare(b))
-  }, [bindings])
+  const entries = useMemo(
+    () => Object.entries(bindings).sort(([a], [b]) => a.localeCompare(b)),
+    [bindings],
+  )
   return (
     <>
       {entries.map(([path, value]) => {
@@ -172,6 +172,25 @@ function ViewModelBindings({
       })}
     </>
   )
+}
+
+/**
+ * Holds the `useViewModel` + `useViewModelInstance` hook pair. Only mounted
+ * when the layer actually declares bindings — calling `useViewModel` on a
+ * .riv that lacks a default view-model logs a Rive runtime warning
+ * ("Could not find a View Model linked to Artboard X."), which is noise on
+ * stories that don't drive Rive via view-models.
+ */
+function ViewModelBindingsHost({
+  rive,
+  bindings,
+}: {
+  rive: Rive | null
+  bindings: Record<string, RiveBindingValue>
+}) {
+  const viewModel = useViewModel(rive, { useDefault: true })
+  const instance = useViewModelInstance(viewModel, { rive })
+  return <ViewModelBindings bindings={bindings} instance={instance} />
 }
 
 /* ─── Step input driver ────────────────────────────────────────── */
@@ -243,8 +262,8 @@ export default function RiveLayerComponent({
     onLoad: () => noteReady(),
   })
 
-  const viewModel = useViewModel(rive, { useDefault: true })
-  const instance = useViewModelInstance(viewModel, { rive })
+  const bindings = config.viewModel?.bindings
+  const hasBindings = bindings != null && Object.keys(bindings).length > 0
 
   useImperativeHandle<VizCaptureHandle | null, VizCaptureHandle>(
     captureRef ?? { current: null },
@@ -318,7 +337,7 @@ export default function RiveLayerComponent({
   return (
     <div style={wrapperStyle}>
       <RiveComponent style={{ width: '100%', height: '100%' }} />
-      <ViewModelBindings bindings={config.viewModel?.bindings} instance={instance} />
+      {hasBindings && bindings && <ViewModelBindingsHost rive={rive} bindings={bindings} />}
       {config.stepInput && (
         <StepInputDriver
           rive={rive}
