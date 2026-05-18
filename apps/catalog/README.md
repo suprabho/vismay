@@ -13,7 +13,12 @@ Open <http://localhost:3000>.
 
 ## Env vars
 
-- `NEXT_PUBLIC_MAPBOX_TOKEN` — optional. Without it, the map module preview shows a fallback chip instead of rendering. Set it to your Mapbox public token to enable the live map preview.
+None required. The catalog is fully static and reads no secrets.
+
+Two modules ship as opt-out placeholders rather than live previews:
+
+- **`map`** — `MapPersistentComponent` calls `useStoryShell()`, which requires a story-level `<StoryShellProvider>` the catalog has no clean way to fabricate. The catalog renders a chip; the detail page still shows schema + sample YAML. Setting `NEXT_PUBLIC_MAPBOX_TOKEN` has no effect here — adding a real preview would also require wrapping the renderer in a minimal `StoryShellProvider` carrying the token. Follow-up.
+- **`chart`** — `ChartPanel` fetches runtime chart data from `/api/chart-data/<slug>/<id>.json`, which the catalog app doesn't serve. Follow-up: ship a static fixture in `public/chart-data/`.
 
 ## Auth (follow-up)
 
