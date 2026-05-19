@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { listAppEpics } from '@vismay/content-source/apps'
-import { getThemeMeta } from '@/app/vizmaya/epics/themeRegistry.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,31 +18,27 @@ export default async function AdminEpicsListPage() {
         <p className="text-sm text-neutral-400 mt-0.5">{epics.length} total</p>
       </div>
       <ul className="divide-y divide-white/5">
-        {epics.map((e) => {
-          const hasTheme = getThemeMeta(e.slug) !== null
-          return (
-            <li key={e.slug}>
-              <div className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-white/2.5 transition-colors">
-                <Link
-                  href={`/${e.slug}`}
-                  target="_blank"
-                  className="flex-1 min-w-0 flex flex-col"
-                >
-                  <div className="font-medium truncate">{e.name}</div>
-                  <div className="text-xs text-neutral-500 truncate mt-0.5">{e.slug}</div>
-                </Link>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href={`/vizmaya/epics/${e.slug}`}
-                    className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
-                  >
-                    {hasTheme ? 'edit →' : 'edit stories →'}
-                  </Link>
-                </div>
-              </div>
-            </li>
-          )
-        })}
+        {epics.map((e) => (
+          <li key={e.slug}>
+            <div className="flex items-center justify-between gap-3 hover:bg-white/[0.025] transition-colors">
+              <Link
+                href={`/vizmaya/epics/${e.slug}`}
+                className="flex-1 min-w-0 flex flex-col px-4 py-4"
+              >
+                <div className="font-medium truncate">{e.name}</div>
+                <div className="text-xs text-neutral-500 truncate mt-0.5">{e.slug}</div>
+              </Link>
+              <Link
+                href={`https://vizmaya.fyi/epic/${e.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 mr-4 border border-white/10 rounded-lg hover:bg-white/5 shrink-0"
+              >
+                preview →
+              </Link>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   )

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { usePollPdfRender } from '@vismay/content-source/usePollPdfRender'
+import { vizmayaUrl } from '@/lib/publicSite'
 
 export function SlidesPostRenderPanel({ slug }: { slug: string }) {
   const { state, publicUrl, error, trigger, refresh } = usePollPdfRender(slug, 'slides')
@@ -71,7 +72,7 @@ export function SlidesPostRenderPanel({ slug }: { slug: string }) {
       )}
       <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
         <Link
-          href={`/reports/${encodeURIComponent(slug)}`}
+          href={vizmayaUrl(`/reports/${encodeURIComponent(slug)}`)}
           target="_blank"
           rel="noreferrer"
           className="text-[11px] px-2 py-1 border border-white/10 rounded hover:bg-white/5"
@@ -79,7 +80,7 @@ export function SlidesPostRenderPanel({ slug }: { slug: string }) {
           Open report builder ↗
         </Link>
         <Link
-          href={`/story/${encodeURIComponent(slug)}/slides`}
+          href={vizmayaUrl(`/story/${encodeURIComponent(slug)}/slides`)}
           target="_blank"
           rel="noreferrer"
           className="text-[11px] px-2 py-1 border border-white/10 rounded hover:bg-white/5"

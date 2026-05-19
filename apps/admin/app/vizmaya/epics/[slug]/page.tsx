@@ -260,11 +260,12 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
             </select>
           </label>
           <Link
-            href={`/${slug}`}
+            href={`https://vizmaya.fyi/epic/${slug}`}
             target="_blank"
+            rel="noopener noreferrer"
             className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
           >
-            view page →
+            preview →
           </Link>
           <button
             type="button"

@@ -12,6 +12,7 @@ import {
   type VideoAspect,
 } from '@vismay/content-source/socialPostPlans'
 import type { StoryOption } from './PlannerClient'
+import { vizmayaUrl } from '@/lib/publicSite'
 
 type AssetKind = AssetRef['kind']
 
@@ -463,7 +464,7 @@ export function PostEditForm({
             )}
             {draft.storySlug && (
               <a
-                href={`/story/${draft.storySlug}/share`}
+                href={vizmayaUrl(`/story/${draft.storySlug}/share`)}
                 target="_blank"
                 rel="noreferrer"
                 className="text-[11px] text-neutral-500 hover:text-white inline-block mt-1"

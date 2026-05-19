@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { DemoListItem } from '@vismay/content-source/demos'
+import { vizmayaUrl } from '@/lib/publicSite'
 
 interface Props {
   initialDemos: DemoListItem[]
@@ -95,7 +96,7 @@ export default function DemosListClient({ initialDemos }: Props) {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
-                    href={`/demo/${d.client_slug}`}
+                    href={vizmayaUrl(`/demo/${d.client_slug}`)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-xs text-neutral-300 hover:text-white px-2 py-1"
