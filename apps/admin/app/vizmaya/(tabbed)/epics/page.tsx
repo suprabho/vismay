@@ -1,14 +1,16 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { listEpics } from '@vismay/content-source/epics'
+import { listAppEpics } from '@vismay/content-source/apps'
 import { getThemeMeta } from '@/app/vizmaya/epics/themeRegistry.server'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminEpicsListPage() {
   if (!(await isAuthed())) redirect('/login?next=/vizmaya/epics')
-  const epics = await listEpics()
+  // vizf1 and footshort epics now live in their own /<appSlug>/epics
+  // sections — scope vizmaya admin to its own app.
+  const epics = await listAppEpics('vizmaya-fyi')
 
   return (
     <div className="flex-1 flex flex-col">

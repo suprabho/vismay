@@ -14,6 +14,18 @@ const APPS: AppEntry[] = [
     description: 'Stories, epics, demos, charts, social, narration.',
     status: 'available',
   },
+  {
+    href: '/vizf1',
+    name: 'VizF1',
+    description: 'F1 stories and epics tagged to the vizf1 app.',
+    status: 'available',
+  },
+  {
+    href: '/footshort',
+    name: 'Footshort',
+    description: 'Football stories and epics tagged to the footshort app.',
+    status: 'available',
+  },
 ]
 
 export default function DashboardPage() {
