@@ -6,6 +6,13 @@ import { getThemeMeta } from '@/app/vizmaya/epics/themeRegistry.server'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+// Map style URLs are either Mapbox-hosted (mapbox://styles/owner/id) or a
+// raw http(s) URL to a style JSON. Cap length so a paste-bomb can't blow up
+// the JSONB row.
+const MAP_STYLE = /^(mapbox:\/\/styles\/[\w-]+\/[\w-]+|https?:\/\/[^\s]+)$/
+const MAX_FONT_LEN = 60
+const MAX_MAP_STYLE_LEN = 500
+const FONT_KEYS = ['serif', 'sans', 'mono'] as const
 
 export async function GET(
   _req: Request,
@@ -23,6 +30,8 @@ export async function GET(
     name: epic.name,
     defaults: meta.defaults,
     labels: meta.labels,
+    fontDefaults: meta.fontDefaults,
+    mapStyleDefault: meta.mapStyleDefault,
     theme: epic.theme,
   })
 }
@@ -37,17 +46,43 @@ export async function PUT(
 
   const meta = getThemeMeta(slug)
   if (!meta) return NextResponse.json({ error: 'no theme registered for this epic' }, { status: 404 })
-  const allowedKeys = Object.keys(meta.defaults)
+  const allowedColorKeys = Object.keys(meta.defaults)
 
   const body = (await req.json().catch(() => null)) as { theme?: unknown } | null
   if (!body || typeof body.theme !== 'object' || body.theme === null) {
     return NextResponse.json({ error: 'expected { theme: {...} }' }, { status: 400 })
   }
 
-  // Validate: only known keys, only hex strings. Empty string clears the key.
-  const sanitized: Record<string, string> = {}
+  // Known color keys must be hex; `fonts` must be { serif?, sans?, mono? } strings;
+  // `mapStyle` must be a mapbox:// or http(s) URL. Empty values clear the override.
+  const sanitized: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(body.theme as Record<string, unknown>)) {
-    if (!allowedKeys.includes(key)) continue
+    if (key === 'fonts') {
+      if (value === '' || value == null) continue
+      if (typeof value !== 'object' || Array.isArray(value)) {
+        return NextResponse.json({ error: 'fonts: expected { serif?, sans?, mono? }' }, { status: 400 })
+      }
+      const fonts: Record<string, string> = {}
+      for (const fk of FONT_KEYS) {
+        const fv = (value as Record<string, unknown>)[fk]
+        if (fv === '' || fv == null) continue
+        if (typeof fv !== 'string' || fv.length > MAX_FONT_LEN) {
+          return NextResponse.json({ error: `fonts.${fk}: expected non-empty string ≤${MAX_FONT_LEN} chars` }, { status: 400 })
+        }
+        fonts[fk] = fv
+      }
+      if (Object.keys(fonts).length > 0) sanitized.fonts = fonts
+      continue
+    }
+    if (key === 'mapStyle') {
+      if (value === '' || value == null) continue
+      if (typeof value !== 'string' || value.length > MAX_MAP_STYLE_LEN || !MAP_STYLE.test(value)) {
+        return NextResponse.json({ error: 'mapStyle: expected a mapbox:// or http(s) URL' }, { status: 400 })
+      }
+      sanitized.mapStyle = value
+      continue
+    }
+    if (!allowedColorKeys.includes(key)) continue
     if (value === '' || value == null) continue
     if (typeof value !== 'string' || !HEX.test(value)) {
       return NextResponse.json({ error: `${key}: expected hex like #aabbcc` }, { status: 400 })

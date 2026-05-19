@@ -103,7 +103,7 @@ export async function listPublishedEpics(): Promise<PublishedEpic[]> {
   }))
 }
 
-export async function updateEpicTheme(slug: string, theme: Record<string, string>): Promise<void> {
+export async function updateEpicTheme(slug: string, theme: Record<string, unknown>): Promise<void> {
   const sb = createServiceClient()
   const { error } = await sb
     .from('epics')
