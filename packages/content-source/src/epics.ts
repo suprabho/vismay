@@ -17,13 +17,14 @@ export interface Epic {
   landingComponent: string
   theme: Record<string, unknown>
   appSlug: string
+  showOnHome: boolean
 }
 
 export async function getEpic(slug: string): Promise<Epic | null> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name, description, landing_component, theme, app_slug')
+    .select('slug, name, description, landing_component, theme, app_slug, show_on_home')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
@@ -36,6 +37,7 @@ export async function getEpic(slug: string): Promise<Epic | null> {
     landingComponent: data.landing_component,
     theme: (data.theme as Record<string, unknown>) ?? {},
     appSlug: (data.app_slug as string | undefined) ?? 'vizmaya-fyi',
+    showOnHome: (data.show_on_home as boolean | undefined) ?? true,
   }
 }
 
@@ -44,7 +46,7 @@ export async function getEpicForAdmin(slug: string): Promise<Epic | null> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name, description, landing_component, theme, app_slug')
+    .select('slug, name, description, landing_component, theme, app_slug, show_on_home')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error(`getEpicForAdmin ${slug}: ${error.message}`)
@@ -56,6 +58,7 @@ export async function getEpicForAdmin(slug: string): Promise<Epic | null> {
     landingComponent: data.landing_component,
     theme: (data.theme as Record<string, unknown>) ?? {},
     appSlug: (data.app_slug as string | undefined) ?? 'vizmaya-fyi',
+    showOnHome: (data.show_on_home as boolean | undefined) ?? true,
   }
 }
 
@@ -101,6 +104,34 @@ export async function listPublishedEpics(): Promise<PublishedEpic[]> {
     name: r.name,
     description: r.description ?? null,
   }))
+}
+
+// Subset of listPublishedEpics that respects the per-epic `show_on_home`
+// flag. Used by the vizmaya.fyi home page Epics grid only — the sitemap and
+// direct /epic/<slug> URLs still surface every published epic.
+export async function listEpicsForHome(): Promise<PublishedEpic[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('epics')
+    .select('slug, name, description')
+    .eq('status', 'published')
+    .eq('show_on_home', true)
+    .order('name', { ascending: true })
+  if (error) throw new Error(`listEpicsForHome: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    slug: r.slug,
+    name: r.name,
+    description: r.description ?? null,
+  }))
+}
+
+export async function setEpicShowOnHome(slug: string, showOnHome: boolean): Promise<void> {
+  const sb = createServiceClient()
+  const { error } = await sb
+    .from('epics')
+    .update({ show_on_home: showOnHome, updated_at: new Date().toISOString() })
+    .eq('slug', slug)
+  if (error) throw new Error(`setEpicShowOnHome ${slug}: ${error.message}`)
 }
 
 export async function updateEpicTheme(slug: string, theme: Record<string, unknown>): Promise<void> {

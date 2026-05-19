@@ -25,6 +25,7 @@ export async function GET(
     slug: epic.slug,
     name: epic.name,
     appSlug: epic.appSlug,
+    showOnHome: epic.showOnHome,
     stories,
   })
 }

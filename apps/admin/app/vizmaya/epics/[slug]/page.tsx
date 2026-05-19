@@ -4,6 +4,19 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState, use } from 'react'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { THEME_REGISTRY } from '../themeRegistry'
+import EmbedPreview from './EmbedPreview'
+
+// Epics whose public landing supports iframe embedding via `?embed=1`. The
+// value is the public-site path and the camera the preview opens to.
+const EMBED_REGISTRY: Record<
+  string,
+  { path: string; defaultView: { longitude: number; latitude: number; zoom: number; pitch: number; bearing: number } }
+> = {
+  'wallet-geo': {
+    path: '/wallet-geo',
+    defaultView: { longitude: 30, latitude: 22, zoom: 1.3, pitch: 0, bearing: 0 },
+  },
+}
 
 type FontKey = 'serif' | 'sans' | 'mono'
 const FONT_KEYS: readonly FontKey[] = ['serif', 'sans', 'mono'] as const
@@ -31,6 +44,7 @@ interface StoriesPayload {
   slug: string
   name: string
   appSlug: string
+  showOnHome: boolean
   stories: {
     slug: string
     title: string
@@ -90,10 +104,12 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
-  const [tab, setTab] = useState<'stories' | 'theme'>('stories')
+  const [tab, setTab] = useState<'stories' | 'theme' | 'embed'>('stories')
   const [apps, setApps] = useState<AppOption[]>([])
   const [appSlug, setAppSlug] = useState<string>('')
   const [savingApp, setSavingApp] = useState(false)
+  const [showOnHome, setShowOnHome] = useState<boolean>(true)
+  const [savingShowOnHome, setSavingShowOnHome] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -120,6 +136,7 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       setStories(sPayload.stories)
       setEpicName(sPayload.name)
       setAppSlug(sPayload.appSlug)
+      setShowOnHome(sPayload.showOnHome)
       setMemberships(
         Object.fromEntries(
           sPayload.stories.map((s) => [s.slug, { inEpic: s.inEpic, position: s.position }]),
@@ -197,6 +214,26 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       cancelled = true
     }
   }, [effectiveFonts])
+
+  async function toggleShowOnHome(next: boolean) {
+    const prev = showOnHome
+    setShowOnHome(next)
+    setSavingShowOnHome(true)
+    setError(null)
+    const res = await fetch(`/api/vizmaya/epics/${slug}/show-on-home`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ showOnHome: next }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      setError(body?.error ?? `HTTP ${res.status}`)
+      setShowOnHome(prev)
+    } else {
+      setSavedAt(Date.now())
+    }
+    setSavingShowOnHome(false)
+  }
 
   async function changeApp(nextApp: string) {
     if (nextApp === appSlug) return
@@ -339,6 +376,7 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
   const themeEntry = data ? THEME_REGISTRY[slug] : null
   const themeKeys = themeEntry ? Object.keys(themeEntry.defaults) : []
   const Preview = themeEntry?.Preview
+  const embedEntry = EMBED_REGISTRY[slug] ?? null
 
   // Sort stories: members (by current edited position) first, then others alphabetically.
   const sortedStories = stories
@@ -356,7 +394,7 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
     : []
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="px-4 py-5 border-b border-white/5 flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-xs text-neutral-500 mb-1">
@@ -370,6 +408,19 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <label
+            className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer select-none"
+            title="Show this epic in the vizmaya.fyi home page Epics grid"
+          >
+            <input
+              type="checkbox"
+              checked={showOnHome}
+              onChange={(e) => toggleShowOnHome(e.target.checked)}
+              disabled={savingShowOnHome}
+              className="w-3.5 h-3.5 accent-white cursor-pointer disabled:opacity-50"
+            />
+            <span className="uppercase tracking-wider">Show on home</span>
+          </label>
           <label className="flex items-center gap-1.5 text-xs text-neutral-500">
             <span className="uppercase tracking-wider">App</span>
             <select
@@ -433,6 +484,21 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
           aria-pressed={tab === 'theme'}
         >
           Theme
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('embed')}
+          disabled={!embedEntry}
+          title={embedEntry ? undefined : 'Embedding not supported for this epic'}
+          className={
+            'text-sm px-3 py-1 rounded-md disabled:opacity-30 disabled:cursor-not-allowed ' +
+            (tab === 'embed'
+              ? 'bg-white/10 text-white'
+              : 'text-neutral-400 hover:text-white hover:bg-white/5')
+          }
+          aria-pressed={tab === 'embed'}
+        >
+          Embed
         </button>
       </div>
 
@@ -501,20 +567,20 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       )}
 
       {tab === 'theme' && data && themeEntry && Preview && (
-        <section className="flex-1 overflow-y-auto min-h-0">
-          <div className="mx-auto max-w-5xl p-4 space-y-8">
-            <div>
+        <section className="flex-1 min-h-0 flex">
+          <div className="flex flex-1 min-h-0 flex-col p-8 space-y-8 w-full">
+            <div className="flex flex-col">
               <h2 className="font-medium">Theme</h2>
               <p className="text-xs text-neutral-500 mt-0.5">
                 Override the palette, fonts, and base map. Leave a field blank or hit
                 {' '}reset to fall back to the default.
               </p>
             </div>
+            <div className="flex flex-1 min-h-0 gap-8">
 
-            <Preview theme={Object.fromEntries(themeKeys.map((k) => [k, effectiveValue(k)]))} />
-
-            <ThemeSection title="Colors">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex flex-1 min-h-0 overflow-y-auto flex-col">
+                <ThemeSection title="Colors">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {themeKeys.map((key) => {
                   const value = effectiveValue(key)
                   const meta = themeEntry.labels[key]
@@ -533,71 +599,77 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
                     />
                   )
                 })}
-              </div>
-            </ThemeSection>
+                  </div>
+                </ThemeSection>
 
-            <ThemeSection title="Fonts">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {FONT_KEYS.map((k) => (
-                  <FontTile
-                    key={k}
-                    family={k}
-                    value={effectiveFont(k)}
-                    presets={FONT_PRESETS[k]}
-                    status={fontStatus[k]}
-                    overridden={fontOverrides[k] != null}
-                    onChange={(v) => setFont(k, v)}
-                    onReset={() => resetFont(k)}
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-neutral-500 mt-2">
-                Free-text font names. Anything on Google Fonts (or already loaded on the page)
-                renders; others fall back.
-              </p>
-            </ThemeSection>
+                <ThemeSection title="Fonts">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {FONT_KEYS.map((k) => (
+                      <FontTile
+                        key={k}
+                        family={k}
+                        value={effectiveFont(k)}
+                        presets={FONT_PRESETS[k]}
+                        status={fontStatus[k]}
+                        overridden={fontOverrides[k] != null}
+                        onChange={(v) => setFont(k, v)}
+                        onReset={() => resetFont(k)}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-2">
+                    Free-text font names. Anything on Google Fonts (or already loaded on the page)
+                    renders; others fall back.
+                  </p>
+                </ThemeSection>
 
-            <ThemeSection title="Map">
-              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium">Mapbox style URL</div>
-                    <div className="text-[11px] text-neutral-500 truncate">
-                      Base map style for this epic
+                <ThemeSection title="Map">
+                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">Mapbox style URL</div>
+                        <div className="text-[11px] text-neutral-500 truncate">
+                          Base map style for this epic
+                        </div>
+                      </div>
+                      {mapStyleOverridden && (
+                        <span className="text-[10px] uppercase tracking-wider text-amber-300 font-mono shrink-0">
+                          overridden
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={mapStyleOverride}
+                        onChange={(e) => setMapStyleOverride(e.target.value)}
+                        placeholder={data.mapStyleDefault}
+                        spellCheck={false}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        className="flex-1 min-w-0 bg-black/30 rounded px-2 py-1.5 font-mono text-[13px] border border-white/10 focus:outline-none focus:border-white/30"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setMapStyleOverride('')}
+                        disabled={!mapStyleOverridden}
+                        className="text-xs text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 px-2"
+                        title="Reset to default"
+                      >
+                        reset
+                      </button>
+                    </div>
+                    <div className="text-[11px] font-mono text-neutral-500 truncate">
+                      effective: {effectiveMapStyle || '(none)'}
                     </div>
                   </div>
-                  {mapStyleOverridden && (
-                    <span className="text-[10px] uppercase tracking-wider text-amber-300 font-mono shrink-0">
-                      overridden
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={mapStyleOverride}
-                    onChange={(e) => setMapStyleOverride(e.target.value)}
-                    placeholder={data.mapStyleDefault}
-                    spellCheck={false}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    className="flex-1 min-w-0 bg-black/30 rounded px-2 py-1.5 font-mono text-[13px] border border-white/10 focus:outline-none focus:border-white/30"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setMapStyleOverride('')}
-                    disabled={!mapStyleOverridden}
-                    className="text-xs text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 px-2"
-                    title="Reset to default"
-                  >
-                    reset
-                  </button>
-                </div>
-                <div className="text-[11px] font-mono text-neutral-500 truncate">
-                  effective: {effectiveMapStyle || '(none)'}
-                </div>
+                </ThemeSection>
               </div>
-            </ThemeSection>
+              <Preview theme={Object.fromEntries(themeKeys.map((k) => [k, effectiveValue(k)]))} />
+            </div>
+            
+
+            
           </div>
         </section>
       )}
@@ -606,6 +678,10 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
         <section className="px-4 py-6 text-sm text-neutral-500">
           No theme registered for &ldquo;{slug}&rdquo;.
         </section>
+      )}
+
+      {tab === 'embed' && embedEntry && (
+        <EmbedPreview path={embedEntry.path} defaultView={embedEntry.defaultView} />
       )}
     </div>
   )
