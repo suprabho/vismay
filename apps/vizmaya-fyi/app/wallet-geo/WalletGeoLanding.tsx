@@ -7,7 +7,7 @@ import type mapboxgl from "mapbox-gl";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
 import { applyMapPalette } from "@vismay/viz-engine";
-import type { Epic, EpicStory } from "@/lib/epics";
+import type { Epic, EpicStory } from "@vismay/content-source/epics";
 import type { WalletGeoSummary } from "@/lib/wallet-geo/data";
 import {
   walletGeoChoroplethStops,

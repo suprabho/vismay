@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getEpic, getEpicStories } from "@/lib/epics";
+import { getEpic, getEpicStories } from "@vismay/content-source/epics";
 import { listWalletGeoSummaries } from "@/lib/wallet-geo/data";
 import WalletGeoLanding from "./WalletGeoLanding";
 import { resolveWalletGeoTheme } from "./theme";
