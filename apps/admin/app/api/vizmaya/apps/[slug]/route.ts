@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { getApp, listAppEpics, listAppStories } from '@/lib/apps'
+import { getApp, listAppEpics, listAppStories } from '@vismay/content-source/apps'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 

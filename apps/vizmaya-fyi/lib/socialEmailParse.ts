@@ -13,7 +13,7 @@
 
 import { type ParsedMail, simpleParser } from 'mailparser'
 import { GoogleGenAI } from '@google/genai'
-import type { NormalizedEvent, Platform } from './socialEngagement'
+import type { NormalizedEvent, Platform } from '@vismay/content-source/socialEngagement'
 
 export interface ParsedEmail {
   /** Detected platform from the From: header, or null if neither. */

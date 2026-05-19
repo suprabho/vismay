@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@/lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

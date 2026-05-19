@@ -16,7 +16,7 @@
  *   SUPABASE_SERVICE_ROLE_KEY
  */
 
-import { createServiceClient } from "../../lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 // ---------------------------------------------------------------------------
 // Types

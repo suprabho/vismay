@@ -11,7 +11,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getContentSource } from '@/lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 import { checkSameOriginReferer } from '@/lib/requireSameOriginReferer'
 
 export const runtime = 'nodejs'

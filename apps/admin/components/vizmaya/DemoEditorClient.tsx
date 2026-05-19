@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, useTransition } from 'react'
-import type { DemoStatus } from '@/lib/demos'
-import type { ShareCardEntry } from '@/lib/shareCardList'
+import type { DemoStatus } from '@vismay/content-source/demos'
+import type { ShareCardEntry } from '@vismay/content-source/shareCardList'
 
 interface ShareCardId {
   parentIndex: number

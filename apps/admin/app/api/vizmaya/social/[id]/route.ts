@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { STATUSES, updateStatus, type Status } from '@/lib/socialEngagement'
+import { STATUSES, updateStatus, type Status } from '@vismay/content-source/socialEngagement'
 
 export const dynamic = 'force-dynamic'
 

@@ -16,7 +16,16 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chromium, type Page } from 'playwright'
-import { ADMIN_COOKIE_NAME, expectedToken } from './adminAuth'
+
+/**
+ * Minimal auth surface needed by the headless render: the cookie name + a
+ * way to compute the current admin token. Callers pass their own admin
+ * instance (e.g. the auth created via @vismay/admin-core/auth).
+ */
+export interface ShareRenderAuth {
+  cookieName: string
+  expectedToken(): string | null
+}
 
 export const SHARE_BUCKET = 'story-share'
 export const SHARE_RATIOS = ['1:1', '3:4', '4:3'] as const
@@ -121,6 +130,8 @@ async function uploadCard(args: {
 
 export async function renderShareAssets(args: {
   supabase: SupabaseClient
+  /** Admin auth used to pre-cookie the headless context. */
+  auth: ShareRenderAuth
   storySlug: string
   baseUrl: string
   cardIds: string[]
@@ -143,7 +154,7 @@ export async function renderShareAssets(args: {
   try {
     // The share page is public, but pre-applying the admin cookie costs
     // nothing and future-proofs against later gating.
-    const adminToken = expectedToken()
+    const adminToken = args.auth.expectedToken()
     const cookieUrl = new URL(args.baseUrl)
 
     // One context per ratio so the viewport stays consistent across all
@@ -158,7 +169,7 @@ export async function renderShareAssets(args: {
       if (adminToken) {
         await context.addCookies([
           {
-            name: ADMIN_COOKIE_NAME,
+            name: args.auth.cookieName,
             value: adminToken,
             domain: cookieUrl.hostname,
             path: '/',

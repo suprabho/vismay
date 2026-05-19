@@ -8,7 +8,7 @@ import {
   type AssetRef,
   type Channel,
   type UpdateSocialPostPlan,
-} from '@/lib/socialPostPlans'
+} from '@vismay/content-source/socialPostPlans'
 
 export async function PATCH(
   request: NextRequest,

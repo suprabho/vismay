@@ -98,10 +98,10 @@ const boolOrNull = (s: string | undefined): boolean | null => {
 
 // Defer service-client creation until we know we need it — lets --dry-run work
 // without SUPABASE env vars set.
-let _sb: ReturnType<typeof import("../../lib/supabase").createServiceClient> | null = null;
+let _sb: ReturnType<typeof import("@vismay/content-source/supabase").createServiceClient> | null = null;
 async function sb() {
   if (!_sb) {
-    const { createServiceClient } = await import("../../lib/supabase");
+    const { createServiceClient } = await import("@vismay/content-source/supabase");
     _sb = createServiceClient();
   }
   return _sb;

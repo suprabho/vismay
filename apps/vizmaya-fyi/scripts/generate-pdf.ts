@@ -20,7 +20,7 @@ import fs from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { renderStoryPdf } from '../lib/storyPdfRender'
-import { isPdfFormat } from '../lib/storyPdf'
+import { isPdfFormat } from '@vismay/content-source/storyPdf'
 
 const envPath = path.resolve(__dirname, '..', '.env')
 if (fs.existsSync(envPath)) {

@@ -24,7 +24,7 @@ import { loadEnvConfig } from '@next/env'
 loadEnvConfig(process.cwd())
 
 import { parse, stringify } from 'yaml'
-import { createServiceClient } from '../lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 const SLUG = 'delimitation-2011-census'
 const CHART_ID = 'regional-share-change'

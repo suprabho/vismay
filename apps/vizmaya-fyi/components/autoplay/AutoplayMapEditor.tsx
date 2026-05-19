@@ -39,7 +39,7 @@ import {
   extractMobileMapView,
   type MapView,
 } from '@vismay/viz-engine'
-import { useTabIndent } from '@/lib/useTabIndent'
+import { useTabIndent } from '@vismay/content-source/useTabIndent'
 
 interface Props {
   slug: string

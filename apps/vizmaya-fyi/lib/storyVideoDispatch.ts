@@ -17,7 +17,7 @@
  * sane default for local dev.
  */
 
-import type { VideoAspect, VideoRange } from './storyVideo'
+import type { VideoAspect, VideoRange } from '@vismay/content-source/storyVideo'
 
 export function isDispatchConfigured(): boolean {
   return Boolean(

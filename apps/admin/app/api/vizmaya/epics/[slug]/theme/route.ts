@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
-import { getEpicForAdmin, updateEpicTheme } from '@/lib/epics'
+import { getEpicForAdmin, updateEpicTheme } from '@vismay/content-source/epics'
 import { getThemeMeta } from '@/app/vizmaya/epics/themeRegistry.server'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/

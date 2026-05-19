@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { Channel, PostStatus, SocialPostPlan } from '@/lib/socialPostPlans'
+import type { Channel, PostStatus, SocialPostPlan } from '@vismay/content-source/socialPostPlans'
 import { PostEditForm } from './PostEditForm'
 import { PostOverview } from './PostOverview'
 import { SharePostRenderPanel } from './SharePostRenderPanel'

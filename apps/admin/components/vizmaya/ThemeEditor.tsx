@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
-import { getFontImportUrl } from '@/lib/getFontImports'
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 
 interface Props {
   theme: Partial<Theme> | undefined

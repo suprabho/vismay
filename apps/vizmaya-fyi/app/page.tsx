@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import { getAllStories } from '@/lib/content'
-import { listPublishedEpics } from '@/lib/epics'
+import { getAllStories } from '@vismay/content-source/content'
+import { listPublishedEpics } from '@vismay/content-source/epics'
 import HomeClient, { type HomeStory, type HomeEpic } from '@/components/HomeClient'
 
 export const revalidate = 0

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePollShareRender } from '@/lib/usePollShareRender'
+import { usePollShareRender } from '@vismay/content-source/usePollShareRender'
 
 export function SharePostRenderPanel({
   postId,

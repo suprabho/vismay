@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { getDemoById, type DemoStatus } from '@/lib/demos'
-import { defaultDemoContentYaml } from '@/lib/storyDemoConfig'
+import { getDemoById, type DemoStatus } from '@vismay/content-source/demos'
+import { defaultDemoContentYaml } from '@vismay/content-source/storyDemoConfig'
 import DemoEditorClient from '@/components/vizmaya/DemoEditorClient'
 
 export const dynamic = 'force-dynamic'

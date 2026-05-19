@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { usePollVideoRender } from '@/lib/usePollVideoRender'
-import type { VideoAspect } from '@/lib/socialPostPlans'
+import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
+import type { VideoAspect } from '@vismay/content-source/socialPostPlans'
 import { RangeRenderPanel } from '@/components/vizmaya/video/RangeRenderPanel'
 
 export function VideoPostRenderPanel({

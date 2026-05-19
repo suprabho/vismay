@@ -8,8 +8,8 @@ import {
   moveSection,
   replaceSection,
   type SectionBlock,
-} from '@/lib/yamlSections'
-import { useTabIndent } from '@/lib/useTabIndent'
+} from '@vismay/content-source/yamlSections'
+import { useTabIndent } from '@vismay/content-source/useTabIndent'
 import MapPickerModal from './MapPickerModal'
 
 interface Props {

@@ -1,4 +1,4 @@
-import { getViewableStorySlugs, getStoryContent } from '@/lib/content'
+import { getViewableStorySlugs, getStoryContent } from '@vismay/content-source/content'
 import { NextResponse } from 'next/server'
 
 export async function GET() {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getIeaCountryProfile } from '@/lib/epics'
+import { getIeaCountryProfile } from '@vismay/content-source/epics'
 
 export const dynamic = 'force-dynamic'
 

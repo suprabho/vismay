@@ -5,7 +5,7 @@ import {
   getEpicStories,
   getIeaCountries,
   getIeaNewsSince,
-} from '@/lib/epics'
+} from '@vismay/content-source/epics'
 import EnergyProfileLanding from './EnergyProfileLanding'
 import { resolveEnergyProfileTheme } from './theme'
 

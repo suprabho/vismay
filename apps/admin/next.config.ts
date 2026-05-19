@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['playwright', 'playwright-core'],
   // Workspace packages ship TS source; Next must transpile them so `'use client'`
   // directives, JSX, and TS syntax all work when imported from this app.
-  transpilePackages: ['@vismay/admin-core', '@vismay/viz-engine'],
+  transpilePackages: ['@vismay/admin-core', '@vismay/content-source', '@vismay/viz-engine'],
 }
 
 export default nextConfig

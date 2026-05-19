@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import {
   computeTimeline,
   listRangeRenders,
   loadChunksAndCues,
-} from '@/lib/storyVideo'
+} from '@vismay/content-source/storyVideo'
 
 /**
  * Surface the cumulative audio timeline for a slug so the admin

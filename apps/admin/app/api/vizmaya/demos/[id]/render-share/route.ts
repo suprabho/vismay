@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
-import { isAuthed } from '@/lib/adminAuth'
-import { getDemoById } from '@/lib/demos'
-import { computeContentRevisionHash } from '@/lib/storyPdf'
-import { getContentSource } from '@/lib/contentSource'
-import { createServiceClient } from '@/lib/supabase'
-import { renderShareAssets } from '@/lib/storyShareRender'
+import { isAuthed, auth } from '@/lib/adminAuth'
+import { getDemoById } from '@vismay/content-source/demos'
+import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
+import { getContentSource } from '@vismay/content-source/contentSource'
+import { createServiceClient } from '@vismay/content-source/supabase'
+import { renderShareAssets } from '@vismay/content-source/storyShareRender'
 import {
   dispatchShareRenderJob,
   isShareDispatchConfigured,
-} from '@/lib/storyShareDispatch'
+} from '@vismay/content-source/storyShareDispatch'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -70,6 +70,7 @@ export async function POST(
     const contentRevisionHash = await computeContentRevisionHash(source, demo.story_slug)
     const result = await renderShareAssets({
       supabase,
+      auth,
       demoId: id,
       storySlug: demo.story_slug,
       baseUrl,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { AssetRef, Channel, PostStatus, SocialPostPlan } from '@/lib/socialPostPlans'
+import type { AssetRef, Channel, PostStatus, SocialPostPlan } from '@vismay/content-source/socialPostPlans'
 
 const CHANNEL_COLORS: Record<Channel, string> = {
   x: 'bg-sky-500/15 text-sky-200 border-sky-500/30',

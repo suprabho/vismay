@@ -1,6 +1,6 @@
-import { getParagraphs } from '@/lib/content'
-import { resolveAnchor } from '@/lib/contentAnchors'
-import type { ContentSection } from '@/lib/content'
+import { getParagraphs } from './content'
+import { resolveAnchor } from './contentAnchors'
+import type { ContentSection } from './content'
 import type { StoryConfig, ResolvedUnit } from '@vismay/viz-engine'
 
 /**

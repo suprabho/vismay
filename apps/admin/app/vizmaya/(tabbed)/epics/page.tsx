@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { listEpics } from '@/lib/epics'
+import { listEpics } from '@vismay/content-source/epics'
 import { getThemeMeta } from '@/app/vizmaya/epics/themeRegistry.server'
 
 export const dynamic = 'force-dynamic'

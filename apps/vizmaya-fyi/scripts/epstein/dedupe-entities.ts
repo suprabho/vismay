@@ -18,7 +18,7 @@
  *   npx tsx --env-file=.env scripts/epstein/dedupe-entities.ts --apply   # write changes
  */
 
-import { createServiceClient } from "../../lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 type EntityKind = "person" | "location" | "event";
 

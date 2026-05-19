@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { listShareCards } from '@/lib/socialPostText'
+import { listShareCards } from '@vismay/content-source/socialPostText'
 
 export async function GET(
   _request: NextRequest,

@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@vismay/admin-core": "workspace:*",
+    "@vismay/content-source": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/footshort-viz": "workspace:*",
     "@vismay/f1-viz": "workspace:*",

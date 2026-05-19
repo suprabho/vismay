@@ -1,6 +1,6 @@
 'use client'
 
-import type { AssetRef, SocialPostPlan } from '@/lib/socialPostPlans'
+import type { AssetRef, SocialPostPlan } from '@vismay/content-source/socialPostPlans'
 
 function describeAsset(ref: AssetRef): string {
   if (ref.kind === 'share_card') return `Share card · ${ref.cardId} (${ref.ratio})`

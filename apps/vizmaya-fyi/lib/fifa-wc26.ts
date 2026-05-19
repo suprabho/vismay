@@ -9,7 +9,7 @@
  * Schema: supabase/migrations/025_fifa_wc26.sql
  */
 
-import { createServiceClient } from './supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import {
   getShortfootDataForTeam,
   type ShortfootTeamData,

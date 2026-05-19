@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
-import { getContentSource } from '@/lib/contentSource'
+import { createServiceClient } from '@vismay/content-source/supabase'
+import { getContentSource } from '@vismay/content-source/contentSource'
 import {
   classifyPdfState,
   computeContentRevisionHash,
   getCachedPdf,
   isPdfFormat,
   markPdfDispatched,
-} from '@/lib/storyPdf'
+} from '@vismay/content-source/storyPdf'
 import {
   dispatchPdfRenderJob,
   isPdfDispatchConfigured,

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@/lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 
 const SAFE_ID = /^[a-zA-Z0-9_-]+$/
 

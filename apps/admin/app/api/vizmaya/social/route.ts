@@ -7,7 +7,7 @@ import {
   STATUSES,
   type Platform,
   type Status,
-} from '@/lib/socialEngagement'
+} from '@vismay/content-source/socialEngagement'
 
 export const dynamic = 'force-dynamic'
 

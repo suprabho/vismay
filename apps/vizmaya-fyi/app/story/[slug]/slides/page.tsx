@@ -10,12 +10,12 @@
 
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@/lib/contentSource'
-import { getStoryContent } from '@/lib/content'
-import { loadStoryConfig, hasStoryConfig } from '@/lib/storyConfig'
-import { resolveUnits } from '@/lib/resolveUnits'
+import { getContentSource } from '@vismay/content-source/contentSource'
+import { getStoryContent } from '@vismay/content-source/content'
+import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
+import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { themeToMapPalette } from '@/lib/themeToMapPalette'
-import { getFontImportUrl } from '@/lib/getFontImports'
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { themedLogoDataUrl } from '@/lib/themeLogo'
 import {
   applyReportOverrides,

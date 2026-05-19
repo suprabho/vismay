@@ -15,7 +15,7 @@
 
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { dispatchAudioRenderJob, isAudioDispatchConfigured } from '@/lib/storyAudioDispatch'
+import { dispatchAudioRenderJob, isAudioDispatchConfigured } from '@vismay/content-source/storyAudioDispatch'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

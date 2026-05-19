@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { ShareCardEntry } from '@/lib/shareCardList'
+import type { ShareCardEntry } from '@vismay/content-source/shareCardList'
 import {
   CHANNEL_TEXT_LIMITS,
   isAssetAllowedForChannel,
@@ -10,7 +10,7 @@ import {
   type ShareCardRatio,
   type SocialPostPlan,
   type VideoAspect,
-} from '@/lib/socialPostPlans'
+} from '@vismay/content-source/socialPostPlans'
 import type { StoryOption } from './PlannerClient'
 
 type AssetKind = AssetRef['kind']

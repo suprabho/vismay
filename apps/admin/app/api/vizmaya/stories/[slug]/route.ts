@@ -3,9 +3,9 @@ import { revalidatePath } from 'next/cache'
 import { parse as parseYaml } from 'yaml'
 import matter from 'gray-matter'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@/lib/contentSource'
-import { loadStoryConfig } from '@/lib/storyConfig'
-import { getApp } from '@/lib/apps'
+import { getContentSource } from '@vismay/content-source/contentSource'
+import { loadStoryConfig } from '@vismay/content-source/storyConfig'
+import { getApp } from '@vismay/content-source/apps'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 

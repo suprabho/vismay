@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { listAppsWithCounts } from '@/lib/apps'
+import { listAppsWithCounts } from '@vismay/content-source/apps'
 
 export async function GET() {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })

@@ -23,8 +23,8 @@
  *   because each reply has its own ID.
  */
 
-import { createServiceClient } from '../../lib/supabase'
-import { upsertEvents, type NormalizedEvent } from '../../lib/socialEngagement'
+import { createServiceClient } from '@vismay/content-source/supabase'
+import { upsertEvents, type NormalizedEvent } from '@vismay/content-source/socialEngagement'
 
 const API = 'https://www.googleapis.com/youtube/v3'
 

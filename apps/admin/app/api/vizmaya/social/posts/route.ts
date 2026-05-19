@@ -8,7 +8,7 @@ import {
   type Channel,
   type NewSocialPostPlan,
   type PostStatus,
-} from '@/lib/socialPostPlans'
+} from '@vismay/content-source/socialPostPlans'
 
 export async function GET(request: NextRequest) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })

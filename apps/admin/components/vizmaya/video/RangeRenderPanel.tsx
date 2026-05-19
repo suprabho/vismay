@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { VideoAspect } from '@/lib/storyVideo'
+import type { VideoAspect } from '@vismay/content-source/storyVideo'
 
 interface TimelineUnit {
   unitIndex: number

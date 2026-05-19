@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 

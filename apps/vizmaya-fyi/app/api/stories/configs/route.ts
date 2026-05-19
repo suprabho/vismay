@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getViewableStorySlugs, getStoryContent } from '@/lib/content'
-import { hasStoryConfig, loadStoryConfig, loadShareConfig } from '@/lib/storyConfig'
-import { resolveUnits } from '@/lib/resolveUnits'
+import { getViewableStorySlugs, getStoryContent } from '@vismay/content-source/content'
+import { hasStoryConfig, loadStoryConfig, loadShareConfig } from '@vismay/content-source/storyConfig'
+import { resolveUnits } from '@vismay/content-source/resolveUnits'
 
 export async function GET() {
   const allSlugs = await getViewableStorySlugs()

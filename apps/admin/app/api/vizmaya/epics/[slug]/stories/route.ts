@@ -5,7 +5,7 @@ import {
   getEpicForAdmin,
   getEpicMemberships,
   setEpicMemberships,
-} from '@/lib/epics'
+} from '@vismay/content-source/epics'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 

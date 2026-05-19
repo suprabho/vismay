@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@/lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 import { PlannerClient, type StoryOption } from '@/components/vizmaya/social/PlannerClient'
 
 export const dynamic = 'force-dynamic'

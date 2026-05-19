@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import {
   classifyVideoState,
   computeAudioRevisionHash,
@@ -9,7 +9,7 @@ import {
   markDispatched,
   type VideoAspect,
   type VideoRange,
-} from '@/lib/storyVideo'
+} from '@vismay/content-source/storyVideo'
 import {
   dispatchRenderJob,
   isDispatchConfigured,

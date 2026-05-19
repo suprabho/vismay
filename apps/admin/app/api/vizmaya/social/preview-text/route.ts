@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { derivePostText } from '@/lib/socialPostText'
-import { validateAssetRef, type AssetRef, type Channel } from '@/lib/socialPostPlans'
+import { derivePostText } from '@vismay/content-source/socialPostText'
+import { validateAssetRef, type AssetRef, type Channel } from '@vismay/content-source/socialPostPlans'
 
 export async function POST(request: NextRequest) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })

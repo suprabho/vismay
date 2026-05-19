@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { listAppsWithCounts } from '@/lib/apps'
+import { listAppsWithCounts } from '@vismay/content-source/apps'
 
 export const dynamic = 'force-dynamic'
 

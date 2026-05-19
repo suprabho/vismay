@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { DemoListItem } from '@/lib/demos'
+import type { DemoListItem } from '@vismay/content-source/demos'
 
 interface Props {
   initialDemos: DemoListItem[]

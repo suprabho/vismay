@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
-import { getEpicForAdmin, setEpicApp } from '@/lib/epics'
-import { getApp } from '@/lib/apps'
+import { getEpicForAdmin, setEpicApp } from '@vismay/content-source/epics'
+import { getApp } from '@vismay/content-source/apps'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 

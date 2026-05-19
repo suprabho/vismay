@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PostCard } from './PostCard'
 import { PostPanel, type PanelState } from './PostPanel'
-import type { Channel, SocialPostPlan } from '@/lib/socialPostPlans'
+import type { Channel, SocialPostPlan } from '@vismay/content-source/socialPostPlans'
 
 export interface StoryOption {
   slug: string

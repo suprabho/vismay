@@ -14,7 +14,7 @@
  */
 
 import { JSDOM } from "jsdom";
-import { createServiceClient } from "../../lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 // ---------------------------------------------------------------------------
 // Source definitions

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
-import { hashPassword } from '@/lib/demoAuth'
+import { hashPassword } from '@vismay/content-source/demoAuth'
 import {
   deleteDemo,
   getDemoById,
@@ -10,8 +10,8 @@ import {
   type DemoCardId,
   type DemoStatus,
   type UpdateDemoInput,
-} from '@/lib/demos'
-import { validateDemoContentYaml } from '@/lib/storyDemoConfig'
+} from '@vismay/content-source/demos'
+import { validateDemoContentYaml } from '@vismay/content-source/storyDemoConfig'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

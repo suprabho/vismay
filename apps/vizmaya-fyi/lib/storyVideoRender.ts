@@ -28,7 +28,7 @@ import {
   videoStoragePath,
   type VideoAspect,
   type VideoRange,
-} from './storyVideo'
+} from '@vismay/content-source/storyVideo'
 
 interface CueRow {
   unit_index: number

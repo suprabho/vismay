@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getContentSource } from '@/lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 
 const SAFE_ID = /^[a-zA-Z0-9_-]+$/
 

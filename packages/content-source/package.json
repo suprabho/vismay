@@ -3,5 +3,56 @@
   "version": "0.0.0",
   "private": true,
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./apps": "./src/apps.ts",
+    "./content": "./src/content.ts",
+    "./contentAnchors": "./src/contentAnchors.ts",
+    "./contentSource": "./src/contentSource.ts",
+    "./demoAuth": "./src/demoAuth.ts",
+    "./demos": "./src/demos.ts",
+    "./epics": "./src/epics.ts",
+    "./frontmatter": "./src/frontmatter.ts",
+    "./getFontImports": "./src/getFontImports.ts",
+    "./resolveUnits": "./src/resolveUnits.ts",
+    "./shareCardList": "./src/shareCardList.ts",
+    "./socialEngagement": "./src/socialEngagement.ts",
+    "./socialPostPlans": "./src/socialPostPlans.ts",
+    "./socialPostText": "./src/socialPostText.ts",
+    "./storyAudioDispatch": "./src/storyAudioDispatch.ts",
+    "./storyConfig": "./src/storyConfig.ts",
+    "./storyDemoConfig": "./src/storyDemoConfig.ts",
+    "./storyPdf": "./src/storyPdf.ts",
+    "./storyShareDispatch": "./src/storyShareDispatch.ts",
+    "./storyShareRender": "./src/storyShareRender.ts",
+    "./storyTts": "./src/storyTts.ts",
+    "./storyVideo": "./src/storyVideo.ts",
+    "./supabase": "./src/supabase.ts",
+    "./usePollPdfRender": "./src/usePollPdfRender.ts",
+    "./usePollShareRender": "./src/usePollShareRender.ts",
+    "./usePollVideoRender": "./src/usePollVideoRender.ts",
+    "./useTabIndent": "./src/useTabIndent.ts",
+    "./yamlSections": "./src/yamlSections.ts"
+  },
+  "peerDependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "playwright": "^1.0.0"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vismay/viz-engine": "workspace:*",
+    "next": "16.2.2",
+    "playwright": "^1.59.1",
+    "typescript": "^5"
+  }
 }

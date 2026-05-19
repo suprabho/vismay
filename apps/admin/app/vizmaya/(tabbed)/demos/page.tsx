@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { listDemos } from '@/lib/demos'
+import { listDemos } from '@vismay/content-source/demos'
 import DemosListClient from '@/components/vizmaya/DemosListClient'
 
 export const dynamic = 'force-dynamic'

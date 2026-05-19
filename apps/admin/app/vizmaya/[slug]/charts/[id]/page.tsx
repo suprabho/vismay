@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@/lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 import ChartEditorClient from '@/components/vizmaya/ChartEditorClient'
 
 export const dynamic = 'force-dynamic'

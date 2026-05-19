@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
-import { isAuthed } from '@/lib/adminAuth'
-import { getPost } from '@/lib/socialPostPlans'
-import { computeContentRevisionHash } from '@/lib/storyPdf'
-import { getContentSource } from '@/lib/contentSource'
-import { createServiceClient } from '@/lib/supabase'
+import { isAuthed, auth } from '@/lib/adminAuth'
+import { getPost } from '@vismay/content-source/socialPostPlans'
+import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
+import { getContentSource } from '@vismay/content-source/contentSource'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import {
   renderShareAssets,
   type ShareRatio,
-} from '@/lib/storyShareRender'
+} from '@vismay/content-source/storyShareRender'
 import {
   dispatchShareRenderJob,
   isShareDispatchConfigured,
-} from '@/lib/storyShareDispatch'
+} from '@vismay/content-source/storyShareDispatch'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -94,6 +94,7 @@ export async function POST(
     )
     const result = await renderShareAssets({
       supabase,
+      auth,
       demoId: null,
       storySlug: target.storySlug,
       baseUrl,

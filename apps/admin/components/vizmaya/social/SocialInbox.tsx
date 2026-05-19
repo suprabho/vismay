@@ -9,7 +9,7 @@ import {
   type EngagementSummary,
   type Platform,
   type Status,
-} from '@/lib/socialEngagement'
+} from '@vismay/content-source/socialEngagement'
 
 interface Resp {
   events: EngagementEvent[]

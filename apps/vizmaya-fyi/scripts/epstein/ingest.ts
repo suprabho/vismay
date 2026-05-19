@@ -14,7 +14,7 @@
  */
 
 import { createHash } from "crypto";
-import { createServiceClient } from "../../lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 // Rough token estimate: 1 token ≈ 4 chars
 const TARGET_TOKENS = 2000;

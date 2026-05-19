@@ -12,7 +12,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import matter from 'gray-matter'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource, type StoryMeta } from '@/lib/contentSource'
+import { getContentSource, type StoryMeta } from '@vismay/content-source/contentSource'
 import type { Frontmatter } from '@vismay/viz-engine'
 
 export const dynamic = 'force-dynamic'

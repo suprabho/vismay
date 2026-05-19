@@ -10,7 +10,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createServiceClient } from './supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 export interface ShortfootNewsItem {
   id: string

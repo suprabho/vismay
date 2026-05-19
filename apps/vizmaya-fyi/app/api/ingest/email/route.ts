@@ -21,7 +21,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { emailToEvent } from '@/lib/socialEmailParse'
-import { upsertEvents } from '@/lib/socialEngagement'
+import { upsertEvents } from '@vismay/content-source/socialEngagement'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

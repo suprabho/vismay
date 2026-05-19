@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect } from 'react'
-import { usePollPdfRender } from '@/lib/usePollPdfRender'
+import { usePollPdfRender } from '@vismay/content-source/usePollPdfRender'
 
 export function SlidesPostRenderPanel({ slug }: { slug: string }) {
   const { state, publicUrl, error, trigger, refresh } = usePollPdfRender(slug, 'slides')

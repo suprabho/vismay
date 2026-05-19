@@ -17,9 +17,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { stringify as stringifyYaml } from 'yaml'
-import { parseTtsConfig, TTS_SKIP_IDS } from '@/lib/storyTts'
-import { usePollVideoRender } from '@/lib/usePollVideoRender'
-import type { CachedVideo, VideoAspect } from '@/lib/storyVideo'
+import { parseTtsConfig, TTS_SKIP_IDS } from '@vismay/content-source/storyTts'
+import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
+import type { CachedVideo, VideoAspect } from '@vismay/content-source/storyVideo'
 import { RangeRenderPanel } from '@/components/vizmaya/video/RangeRenderPanel'
 
 export interface NarrationUnit {

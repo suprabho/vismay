@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { hashPassword } from '@/lib/demoAuth'
-import { createDemo, isValidClientSlug, listDemos } from '@/lib/demos'
+import { hashPassword } from '@vismay/content-source/demoAuth'
+import { createDemo, isValidClientSlug, listDemos } from '@vismay/content-source/demos'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

@@ -8,10 +8,10 @@ import {
   useRef,
   useState,
 } from 'react'
-import { createBrowserClient } from '@/lib/supabase'
+import { createBrowserClient } from '@vismay/content-source/supabase'
 import type { ResolvedUnit, StoryDefaults } from '@vismay/viz-engine'
 import type { MapTarget } from '@vismay/viz-engine'
-import { usePollVideoRender } from '@/lib/usePollVideoRender'
+import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
 import AutoplayMapEditor from './AutoplayMapEditor'
 import TunePanel from './AutoplayTunePanel'
