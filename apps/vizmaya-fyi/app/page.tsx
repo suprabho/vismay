@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getAllStories } from '@vismay/content-source/content'
-import { listPublishedEpics } from '@vismay/content-source/epics'
+import { listEpicsForHome } from '@vismay/content-source/epics'
 import HomeClient, { type HomeStory, type HomeEpic } from '@/components/HomeClient'
 
 export const revalidate = 0
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [stories, epics] = await Promise.all([getAllStories(), listPublishedEpics()])
+  const [stories, epics] = await Promise.all([getAllStories(), listEpicsForHome()])
   const homeStories: HomeStory[] = stories.map((s) => ({
     slug: s.slug,
     title: s.title,

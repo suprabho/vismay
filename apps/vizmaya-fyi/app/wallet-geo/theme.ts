@@ -84,7 +84,6 @@ export function walletGeoMapPalette(theme: WalletGeoTheme): MapPalette {
     labelText: theme.mapLabelText,
     labelHalo: theme.mapLabelHalo,
     building: theme.mapBuilding,
-    placeLabels: theme.mapLabelText,
   };
 }
 

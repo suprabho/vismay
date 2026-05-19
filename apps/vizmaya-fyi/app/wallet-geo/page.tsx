@@ -13,10 +13,29 @@ export const metadata: Metadata = {
   alternates: { canonical: "/wallet-geo" },
 };
 
-export default async function WalletGeoPage() {
-  const [epic, stories] = await Promise.all([
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function num(v: string | string[] | undefined): number | undefined {
+  const s = Array.isArray(v) ? v[0] : v;
+  if (s === undefined || s === "") return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function bool(v: string | string[] | undefined): boolean {
+  const s = Array.isArray(v) ? v[0] : v;
+  return s === "1" || s === "true";
+}
+
+export default async function WalletGeoPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const [epic, stories, sp] = await Promise.all([
     getEpic("wallet-geo"),
     getEpicStories("wallet-geo"),
+    searchParams,
   ]);
 
   if (!epic) {
@@ -32,12 +51,25 @@ export default async function WalletGeoPage() {
   const theme = resolveWalletGeoTheme(epic.theme);
   const summaries = listWalletGeoSummaries();
 
+  // ?lng=&lat=&zoom=&pitch=&bearing= override the default view; any missing
+  // axis falls through to the hardcoded default inside WalletGeoLanding.
+  // ?embed=1 strips the header + story footer for clean iframe embeds.
+  const initialView = {
+    longitude: num(sp.lng),
+    latitude: num(sp.lat),
+    zoom: num(sp.zoom),
+    pitch: num(sp.pitch),
+    bearing: num(sp.bearing),
+  };
+
   return (
     <WalletGeoLanding
       epic={epic}
       summaries={summaries}
       stories={stories}
       theme={theme}
+      embed={bool(sp.embed)}
+      initialView={initialView}
     />
   );
 }

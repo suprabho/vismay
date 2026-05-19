@@ -22,9 +22,17 @@ interface Props {
   summaries: WalletGeoSummary[];
   stories: EpicStory[];
   theme: WalletGeoTheme;
+  embed?: boolean;
+  initialView?: {
+    longitude?: number;
+    latitude?: number;
+    zoom?: number;
+    pitch?: number;
+    bearing?: number;
+  };
 }
 
-const INITIAL_VIEW_STATE = {
+const DEFAULT_VIEW_STATE = {
   longitude: 30,
   latitude: 22,
   zoom: 1.3,
@@ -49,11 +57,32 @@ function formatCount(n: number): string {
   return n.toString();
 }
 
-export default function WalletGeoLanding({ epic, summaries, stories, theme }: Props) {
+export default function WalletGeoLanding({
+  epic,
+  summaries,
+  stories,
+  theme,
+  embed = false,
+  initialView,
+}: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
   const [cursor, setCursor] = useState<"grab" | "pointer">("grab");
+
+  const initialViewState = useMemo(
+    () => ({
+      longitude: initialView?.longitude ?? DEFAULT_VIEW_STATE.longitude,
+      latitude: initialView?.latitude ?? DEFAULT_VIEW_STATE.latitude,
+      zoom: initialView?.zoom ?? DEFAULT_VIEW_STATE.zoom,
+      ...(initialView?.pitch !== undefined ? { pitch: initialView.pitch } : {}),
+      ...(initialView?.bearing !== undefined ? { bearing: initialView.bearing } : {}),
+    }),
+    // initialViewState is only read by Map on first render — recomputing later
+    // has no effect, so we intentionally snapshot once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   const logoPalette = useMemo(() => walletGeoLogoPalette(theme), [theme]);
   const mapPalette = useMemo(() => walletGeoMapPalette(theme), [theme]);
@@ -86,6 +115,76 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
     };
   }, [mapPalette]);
 
+  // Two-way bridge for the admin embed previewer: when running inside an
+  // iframe in embed mode, emit the camera on every moveend and accept
+  // `vizmaya:setview` messages from the parent to drive the camera. The
+  // contract is intentionally minimal so any external integrator can use it
+  // too — message names are namespaced under `vizmaya:`.
+  useEffect(() => {
+    if (!embed) return;
+    if (typeof window === "undefined") return;
+    if (window.parent === window) return;
+
+    let cancelled = false;
+    let map: ReturnType<NonNullable<typeof mapRef.current>["getMap"]> | null = null;
+
+    const emitView = () => {
+      if (!map) return;
+      const c = map.getCenter();
+      window.parent.postMessage(
+        {
+          type: "vizmaya:view",
+          longitude: c.lng,
+          latitude: c.lat,
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        },
+        "*",
+      );
+    };
+
+    const handleMessage = (e: MessageEvent) => {
+      if (!map) return;
+      const d = e.data as Record<string, unknown> | null;
+      if (!d || typeof d !== "object" || d.type !== "vizmaya:setview") return;
+      const opts: { center?: [number, number]; zoom?: number; pitch?: number; bearing?: number } = {};
+      const lng = typeof d.longitude === "number" ? d.longitude : undefined;
+      const lat = typeof d.latitude === "number" ? d.latitude : undefined;
+      if (lng !== undefined || lat !== undefined) {
+        const c = map.getCenter();
+        opts.center = [lng ?? c.lng, lat ?? c.lat];
+      }
+      if (typeof d.zoom === "number") opts.zoom = d.zoom;
+      if (typeof d.pitch === "number") opts.pitch = d.pitch;
+      if (typeof d.bearing === "number") opts.bearing = d.bearing;
+      if (Object.keys(opts).length === 0) return;
+      map.jumpTo(opts);
+    };
+
+    const tryBind = () => {
+      if (cancelled) return;
+      const m = mapRef.current?.getMap();
+      if (!m) {
+        setTimeout(tryBind, 50);
+        return;
+      }
+      map = m;
+      m.on("moveend", emitView);
+      window.addEventListener("message", handleMessage);
+      // Emit once so the parent sees the initial camera without waiting for a
+      // user interaction.
+      emitView();
+    };
+    tryBind();
+
+    return () => {
+      cancelled = true;
+      if (map) map.off("moveend", emitView);
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [embed]);
+
   const codesWithData = useMemo(() => summaries.map((s) => s.code), [summaries]);
 
   // Mapbox `step` expression: addressCount → bucket color. We push the value
@@ -106,6 +205,22 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
       BUCKETS[4].min, stops[4],
     ] as unknown as mapboxgl.ExpressionSpecification;
   }, [summaries, stops]);
+
+  // Same bucketing as the country choropleth, but reading `addressCount`
+  // directly off the pin feature so the pin tints match the country below it.
+  const pinColorExpr = useMemo(
+    () =>
+      [
+        "step",
+        ["get", "addressCount"],
+        stops[0],
+        BUCKETS[1].min, stops[1],
+        BUCKETS[2].min, stops[2],
+        BUCKETS[3].min, stops[3],
+        BUCKETS[4].min, stops[4],
+      ] as unknown as mapboxgl.ExpressionSpecification,
+    [stops],
+  );
 
   // Pin sizing: sqrt of address count, normalized to a soft 5–18 px range.
   const maxCount = useMemo(
@@ -165,9 +280,9 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
       <Map
         ref={mapRef}
         reuseMaps
-        initialViewState={INITIAL_VIEW_STATE}
+        initialViewState={initialViewState}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle="mapbox://styles/mapbox/light-v11"
         projection="globe"
         attributionControl={false}
         doubleClickZoom={false}
@@ -249,7 +364,7 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
                 theme.accentHi,
                 ["==", ["get", "code"], hoveredCode ?? ""],
                 theme.accentMid,
-                theme.accent,
+                pinColorExpr,
               ],
               "circle-opacity": 0.9,
               "circle-stroke-color": theme.accentEdge,
@@ -270,20 +385,21 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
               "text-allow-overlap": false,
             }}
             paint={{
-              "text-color": theme.accentEdge,
+              "text-color": theme.bone,
               "text-halo-color": theme.ink,
-              "text-halo-width": 1.5,
-              "text-halo-blur": 0.5,
+              "text-halo-width": 0.8,
+              "text-halo-blur": 0.3,
             }}
           />
         </Source>
       </Map>
 
-      {/* Choropleth legend */}
+      {/* Choropleth legend — sits above the story footer; in embed mode the
+          footer is gone so it can hug the bottom edge. */}
       <div
-        className={`absolute left-3 md:left-4 bottom-[96px] md:bottom-[88px] z-10 pointer-events-none ${
-          selectedCode ? "hidden md:block" : ""
-        }`}
+        className={`absolute left-3 md:left-4 ${
+          embed ? "bottom-3 md:bottom-4" : "bottom-[96px] md:bottom-[88px]"
+        } z-10 pointer-events-none ${selectedCode ? "hidden md:block" : ""}`}
       >
         <div
           className="rounded-full px-3 py-1.5 flex items-center gap-x-3 gap-y-1 flex-wrap max-w-[calc(100vw-1.5rem)]"
@@ -317,7 +433,8 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
         </div>
       </div>
 
-      {/* Header */}
+      {/* Header — hidden in embed mode so iframes are map-only. */}
+      {!embed && (
       <div
         className="absolute top-0 left-0 right-0 z-10 px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 pointer-events-none"
         style={{
@@ -391,6 +508,7 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
           Off-chain signal
         </div>
       </div>
+      )}
 
       {selectedCode && (
         <CountryDetail
@@ -401,6 +519,7 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
         />
       )}
 
+      {!embed && (
       <footer
         className="absolute left-0 right-0 bottom-0 z-10 px-6 py-4"
         style={{
@@ -436,6 +555,7 @@ export default function WalletGeoLanding({ epic, summaries, stories, theme }: Pr
           </div>
         )}
       </footer>
+      )}
 
       <style jsx>{`
         .wg-story-chip:hover {

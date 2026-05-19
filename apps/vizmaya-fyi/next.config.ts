@@ -8,6 +8,21 @@ const nextConfig: NextConfig = {
   // Workspace packages ship TS source (no build step). Next must transpile
   // them so the `'use client'` directives, JSX, and TS syntax work in the app.
   transpilePackages: ["@vismay/admin-core", "@vismay/content-source", "@vismay/viz-engine", "@vismay/footshort-viz", "@vismay/f1-viz"],
+  async headers() {
+    return [
+      {
+        // /wallet-geo is iframe-embeddable from any origin (epic landing
+        // pages are designed to be dropped into partner sites). The default
+        // Next.js response has no frame-ancestors CSP, but we set it
+        // explicitly so any reverse proxy / platform default that adds
+        // `frame-ancestors 'self'` gets overridden in our favor.
+        source: "/wallet-geo",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
