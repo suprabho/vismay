@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vismay — One-pager</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  :root {
+    --ink: #0F1419;
+    --ink-soft: #2A2F3A;
+    --paper: #F5F1E8;
+    --paper-soft: #EBE3D2;
+    --paper-dark: #C9BFA8;
+    --terra: #C84B31;
+    --terra-soft: #E07A60;
+    --sage: #5A7A6B;
+    --muted: #6E635A;
+    --muted-light: #B5A99C;
+    --live: #5D8B5C;
+    --prod: #B88830;
+    --pipe: #4F8C95;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: 'Calibri', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    font-size: 9.5pt;
+    line-height: 1.4;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ───── Masthead ───── */
+  .masthead {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14mm 14mm 12mm 14mm;
+    position: relative;
+  }
+
+  .stamp {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 8pt;
+    letter-spacing: 1.5px;
+    font-weight: bold;
+    color: var(--terra-soft);
+    text-transform: uppercase;
+  }
+  .stamp .v {
+    font-family: var(--serif);
+    font-size: 18pt;
+    font-weight: normal;
+    letter-spacing: 0;
+  }
+
+  .wordmark {
+    font-family: var(--serif);
+    font-size: 84pt;
+    color: var(--paper);
+    line-height: 1;
+    margin: 8mm 0 4mm 0;
+  }
+
+  .dek {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16pt;
+    color: var(--paper-soft);
+    line-height: 1.3;
+    max-width: 160mm;
+  }
+
+  .terra-rule {
+    width: 28mm;
+    height: 1.6px;
+    background: var(--terra);
+    margin-top: 8mm;
+  }
+
+  /* ───── Body ───── */
+  .body {
+    padding: 10mm 14mm 0 14mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10mm;
+    flex: 1;
+  }
+
+  .col { display: flex; flex-direction: column; gap: 6mm; }
+
+  section .eyebrow {
+    font-family: var(--sans);
+    font-size: 7.5pt;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: var(--terra);
+    text-transform: uppercase;
+    margin-bottom: 2mm;
+  }
+
+  section h2 {
+    font-family: var(--serif);
+    font-size: 16pt;
+    font-weight: normal;
+    color: var(--ink);
+    line-height: 1.2;
+    margin-bottom: 3mm;
+  }
+
+  section p {
+    font-family: var(--serif);
+    font-size: 10pt;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin-bottom: 2mm;
+  }
+
+  section p em { color: var(--ink); }
+
+  /* ───── Portfolio ───── */
+  .portfolio-section .group {
+    margin-bottom: 4mm;
+  }
+
+  .portfolio-section .group-head {
+    font-family: var(--sans);
+    font-size: 7.5pt;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 2mm;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .portfolio-section .group-head .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+
+  .group-live .group-head      { color: var(--live); }
+  .group-live .dot             { background: var(--live); }
+  .group-prod .group-head      { color: var(--prod); }
+  .group-prod .dot             { background: var(--prod); }
+  .group-pipe .group-head      { color: var(--pipe); }
+  .group-pipe .dot             { background: var(--pipe); }
+  .group-bench .group-head     { color: var(--muted); }
+  .group-bench .dot            { background: var(--muted-light); }
+
+  .portfolio-section .items {
+    font-family: var(--serif);
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .portfolio-section .items .item {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 0.5px dotted var(--paper-dark);
+    padding: 1mm 0;
+  }
+  .portfolio-section .items .item:last-child { border-bottom: none; }
+  .portfolio-section .items .item .partner {
+    font-family: var(--sans);
+    font-size: 7.5pt;
+    letter-spacing: 1.5px;
+    color: var(--terra);
+    text-transform: uppercase;
+    align-self: center;
+  }
+  .portfolio-section .items .item .partner.open {
+    color: var(--muted-light);
+  }
+  .portfolio-section .items .item .domain {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 9pt;
+    margin-left: 6px;
+  }
+
+  /* ───── Process diagram ───── */
+  .pipeline {
+    background: var(--paper-soft);
+    padding: 5mm 5mm;
+    margin-top: 3mm;
+    border-left: 3px solid var(--terra);
+  }
+  .pipeline-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .pipeline-stage {
+    flex: 1;
+    min-width: 28mm;
+    text-align: center;
+    padding: 2mm 1mm;
+    background: #fff;
+    border-top: 2px solid var(--paper-dark);
+  }
+  .pipeline-stage.s-ingest    { border-top-color: var(--terra); }
+  .pipeline-stage.s-store     { border-top-color: var(--sage); }
+  .pipeline-stage.s-author    { border-top-color: var(--ink-soft); }
+  .pipeline-stage.s-render    { border-top-color: var(--terra); }
+  .pipeline-stage.s-surface   { border-top-color: var(--sage); }
+
+  .pipeline-stage .label {
+    font-family: var(--sans);
+    font-size: 7pt;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    color: var(--ink);
+  }
+  .pipeline-stage .sub {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 7.5pt;
+    color: var(--muted);
+    margin-top: 1mm;
+    line-height: 1.2;
+  }
+  .pipeline-arrow {
+    color: var(--ink-soft);
+    font-size: 11pt;
+  }
+  .pipeline-caption {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 8.5pt;
+    color: var(--muted);
+    margin-top: 3mm;
+  }
+
+  /* ───── Engine stack strip ───── */
+  .stack {
+    font-family: var(--sans);
+    font-size: 8pt;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-top: 3mm;
+    padding-top: 2mm;
+    border-top: 0.5px solid var(--paper-dark);
+  }
+
+  /* ───── Proof list ───── */
+  .proof-list {
+    font-family: var(--serif);
+    font-size: 9pt;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin-top: 1mm;
+  }
+  .proof-list .head {
+    font-family: var(--sans);
+    font-size: 7.5pt;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    color: var(--sage);
+    text-transform: uppercase;
+    margin-top: 2mm;
+  }
+
+  /* ───── Footer ───── */
+  .footer {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 7mm 14mm;
+    margin-top: 10mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .footer .name {
+    font-family: var(--serif);
+    font-size: 16pt;
+    color: var(--paper);
+  }
+  .footer .contact {
+    font-family: var(--sans);
+    font-size: 9.5pt;
+    color: var(--terra-soft);
+    letter-spacing: 1px;
+    margin-top: 1mm;
+  }
+  .footer .right {
+    font-family: var(--sans);
+    font-size: 8pt;
+    color: var(--muted-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ───── MASTHEAD ───── -->
+    <header class="masthead">
+      <div class="stamp">
+        <span class="v">V.</span>
+        <span>Vismay  ·  A studio for human-built IP</span>
+      </div>
+      <div class="wordmark">Vismay.</div>
+      <div class="dek">A studio for human-built IP on a reclaimed internet. I partner with friends to build long-term brands around what they actually care about — and a shared engine carries the storytelling, the data, and the distribution.</div>
+      <div class="terra-rule"></div>
+    </header>
+
+    <!-- ───── BODY ───── -->
+    <div class="body">
+
+      <!-- LEFT COLUMN -->
+      <div class="col">
+
+        <section>
+          <div class="eyebrow">Why</div>
+          <h2>The internet stopped being ours.</h2>
+          <p>The internet, digital media, and distribution are owned by a handful of feudal techlords. Almost everything we read or watch is shaped by algorithms optimizing for something other than us. No platform feels truly authentic anymore.</p>
+          <p>At the same time, AI is taking over the parts of work that were never the point. Which means the moment is right for humans to do the opposite — reconnect with what we actually care about and build on it, slowly, in public, with our names on it.</p>
+          <p><em>Vismay is my answer. It's my life's work.</em></p>
+        </section>
+
+        <section>
+          <div class="eyebrow">The Model</div>
+          <h2>Partner brings taste — I bring the engine.</h2>
+          <p>I pair with a friend who has a real, durable interest in a domain — football, finance, F1, fashion, kids, music, travel, spirituality, food, manufacturing — and we build an IP together. They bring taste, voice, and obsession. I bring the engine, the production pipeline, and the time horizon.</p>
+          <p><em>The deal:</em> they own the brand and the community. I help them grow it, and I grow with them. For me, that's what success looks like.</p>
+        </section>
+
+        <section>
+          <div class="eyebrow">The Repeatable Process</div>
+          <h2>Same pipeline for every IP.</h2>
+          <div class="pipeline">
+            <div class="pipeline-row">
+              <div class="pipeline-stage s-ingest"><div class="label">INGEST</div><div class="sub">scraping<br>+ tagging</div></div>
+              <div class="pipeline-arrow">›</div>
+              <div class="pipeline-stage s-store"><div class="label">STORE</div><div class="sub">supabase<br>postgres</div></div>
+              <div class="pipeline-arrow">›</div>
+              <div class="pipeline-stage s-author"><div class="label">AUTHOR</div><div class="sub">human<br>instructions</div></div>
+              <div class="pipeline-arrow">›</div>
+              <div class="pipeline-stage s-render"><div class="label">RENDER</div><div class="sub">the engine</div></div>
+              <div class="pipeline-arrow">›</div>
+              <div class="pipeline-stage s-surface"><div class="label">DISTRIBUTE</div><div class="sub">video · pdf<br>social · web</div></div>
+            </div>
+          </div>
+          <p class="pipeline-caption">Ingest is the only thing that changes per IP. Storage, engine, and surfaces are shared infrastructure — partners never touch code.</p>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col">
+
+        <section class="portfolio-section">
+          <div class="eyebrow">The Portfolio</div>
+          <h2>What's running, what's coming.</h2>
+
+          <div class="group group-live">
+            <div class="group-head"><span class="dot"></span>LIVE</div>
+            <div class="items">
+              <div class="item"><span><strong>vizmaya.fyi</strong><span class="domain">geopolitics · economics · technology</span></span><span class="partner">SUPRO</span></div>
+              <div class="item"><span><strong>Footshort</strong><span class="domain">football</span></span><span class="partner">SUPRO</span></div>
+            </div>
+          </div>
+
+          <div class="group group-prod">
+            <div class="group-head"><span class="dot"></span>IN PRODUCTION</div>
+            <div class="items">
+              <div class="item"><span><strong>Kidzovo</strong><span class="domain">kids</span></span><span class="partner open">OPEN</span></div>
+              <div class="item"><span><strong>Protrip</strong><span class="domain">travel</span></span><span class="partner open">OPEN</span></div>
+              <div class="item"><span><strong>F1</strong><span class="domain">formula 1</span></span><span class="partner">ROHIT</span></div>
+              <div class="item"><span><strong>Enterprise + Finance</strong><span class="domain">markets</span></span><span class="partner">SHASHANK</span></div>
+            </div>
+          </div>
+
+          <div class="group group-pipe">
+            <div class="group-head"><span class="dot"></span>IN PIPELINE</div>
+            <div class="items">
+              <div class="item"><span><strong>Skincare + Beauty</strong><span class="domain">beauty</span></span><span class="partner">VANSHIKA</span></div>
+              <div class="item"><span><strong>Fashion + Styling</strong><span class="domain">style</span></span><span class="partner">VANSHIKA</span></div>
+              <div class="item"><span><strong>Music &amp; Events</strong><span class="domain">culture</span></span><span class="partner">RETRO BLXXD</span></div>
+            </div>
+          </div>
+
+          <div class="group group-bench">
+            <div class="group-head"><span class="dot"></span>ON THE BENCH</div>
+            <div class="items">
+              <div class="item"><span><strong>Architecture</strong></span><span class="partner open">OPEN</span></div>
+              <div class="item"><span><strong>Cricket</strong></span><span class="partner">SACHIN / SHUBHAM</span></div>
+              <div class="item"><span><strong>Spirituality</strong></span><span class="partner">ROHIT</span></div>
+              <div class="item"><span><strong>Art · Entertainment · Food · Science / Space · Pets</strong></span><span class="partner open">OPEN</span></div>
+              <div class="item"><span><strong>Manufacturing — India</strong></span><span class="partner">PADMA</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="eyebrow">The Engine</div>
+          <h2><code style="font-family:var(--serif); font-style:italic;">@vismay/viz-engine</code> — one runtime, many stories.</h2>
+          <p>A registry-based runtime for scroll-driven, three-layer data stories: a persistent map background (Mapbox GL), a chart foreground that transitions without remounting (ECharts), and snap-locked text that drives both. Core modules: <em>map · chart · image · video · embed · rive</em>. Verticals plug in as tree-shaken bundles. Three render pipelines — <em>autoplay MP4 · story PDF · TTS audio</em> — all dispatched through GitHub Actions. Edit in <code>/admin</code> with no redeploys.</p>
+          <div class="stack">Next.js 16  ·  React 19  ·  TypeScript  ·  Supabase  ·  Mapbox GL  ·  Apache ECharts  ·  GSAP  ·  Rive  ·  Playwright  ·  Gemini</div>
+        </section>
+
+        <section>
+          <div class="eyebrow">Proof: vizmaya.fyi</div>
+          <h2>17+ live stories. One engine.</h2>
+          <p>Currency rankings · Who owns America's debt · Projected population 2050 · World Cup 2026 atlas · India fuel prices · South Korea GPU-hour · European AI adoption · Prediction markets illusion · The Great Nicobar project · Press freedom · GDP growth · Largest armies — and more.</p>
+          <div class="proof-list">
+            <div class="head">Epics</div>
+            <p><strong>/energy-profile</strong> — daily IEA news ingest + 33-country OWID energy data. <strong>/epstein</strong> — curated story set with bespoke landing.</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ───── FOOTER ───── -->
+    <footer class="footer">
+      <div>
+        <div class="name">Supro</div>
+        <div class="contact">hello@promad.design</div>
+      </div>
+      <div class="right">
+        Looking for friends with an obsession ·<br>
+        Collaborators on the engine ·<br>
+        People who want a piece of the internet back
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>
