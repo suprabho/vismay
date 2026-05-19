@@ -95,21 +95,9 @@ export default function WalletGeoLanding({
     let map: ReturnType<NonNullable<typeof mapRef.current>["getMap"]> | null = null;
     const apply = () => {
       if (cancelled || !map) return;
-      // getStyle() throws "Style is not done loading" if called before the
-      // style is ready. The style.load handler will re-run apply later.
-      if (!map.isStyleLoaded()) return;
       const layers = map.getStyle()?.layers;
       if (!layers || layers.length === 0) return;
       applyMapPalette(map, mapPalette);
-      // With projection="globe", Mapbox paints its own dark space around the
-      // planet. Match it to the page background so the globe sits cleanly.
-      map.setFog({
-        "space-color": theme.ink,
-        "color": theme.ink,
-        "high-color": theme.ink,
-        "horizon-blend": 0.02,
-        "star-intensity": 0,
-      });
     };
     const tryBind = () => {
       if (cancelled) return;

@@ -35,11 +35,13 @@ export default function ModuleCard({
         className="block p-3 border-t border-[color:var(--color-line)] hover:bg-white/[0.02]"
       >
         <div className="flex flex-col gap-1.5">
-          <h3 className="text-sm font-medium truncate">{label}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium truncate">{label}</h3>
+            <MetaPills slots={slots} mountingMode={mountingMode} />
+          </div>
           <code className="text-[11px] font-mono text-[color:var(--color-muted)] truncate">
             {type}
           </code>
-          <MetaPills slots={slots} mountingMode={mountingMode} />
         </div>
       </Link>
     </div>
