@@ -45,8 +45,15 @@ export default function ObservationCalendar({
         backgroundColor: "#18181b",
         borderColor: line,
         textStyle: { color: "#f4f4f5", fontSize: 11 },
-        formatter: (p: { value: [string, number] }) => {
-          const [date, value] = p.value;
+        // ECharts' formatter param is broadly typed (`value: OptionDataValue
+        // | OptionDataValue[]`), so we narrow at runtime. Our data is always
+        // `[date, count]` tuples — see the heatmap series below.
+        formatter: (params) => {
+          const single = Array.isArray(params) ? params[0] : params;
+          const raw = single?.value;
+          if (!Array.isArray(raw) || raw.length < 2) return "";
+          const date = String(raw[0]);
+          const value = Number(raw[1]);
           const d = new Date(`${date}T00:00:00Z`);
           const human = d.toLocaleDateString("en-US", {
             weekday: "short",
