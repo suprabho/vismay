@@ -34,7 +34,7 @@ function buildStoriesUrl(query: string, appFilter: string): string {
 export default function AdminHome() {
   const [stories, setStories] = useState<Story[]>([])
   const [apps, setApps] = useState<AppOption[]>([])
-  const [appFilter, setAppFilter] = useState<string>('')
+  const [appFilter, setAppFilter] = useState<string>('vizmaya-fyi')
   const [totalCount, setTotalCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
