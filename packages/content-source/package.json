@@ -33,7 +33,11 @@
     "./usePollShareRender": "./src/usePollShareRender.ts",
     "./usePollVideoRender": "./src/usePollVideoRender.ts",
     "./useTabIndent": "./src/useTabIndent.ts",
-    "./yamlSections": "./src/yamlSections.ts"
+    "./yamlSections": "./src/yamlSections.ts",
+    "./handlers/chartData": "./src/handlers/chartData.ts",
+    "./handlers/storyPdf": "./src/handlers/storyPdf.ts",
+    "./handlers/storyVideo": "./src/handlers/storyVideo.ts",
+    "./handlers/storyVideoTimeline": "./src/handlers/storyVideoTimeline.ts"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0",
