@@ -16,6 +16,7 @@ interface Props {
   teams: FifaWc26Team[];
   stories: EpicStory[];
   theme: FifaWc26Theme;
+  mapStyle: string;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -177,7 +178,7 @@ function formatLegendTick(v: number | null, unit: string): string {
   return `${formatTick(v)} ${unit}`;
 }
 
-export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) {
+export default function FifaWc26Landing({ epic, teams, stories, theme, mapStyle }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [hoveredIso, setHoveredIso] = useState<string | null>(null);
@@ -424,7 +425,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme }: Props) 
         reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle={mapStyle}
         projection="globe"
         attributionControl={false}
         doubleClickZoom={false}

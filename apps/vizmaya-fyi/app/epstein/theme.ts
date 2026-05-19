@@ -78,6 +78,14 @@ export function resolveEpsteinTheme(override: unknown): EpsteinTheme {
   return out;
 }
 
+export const EPSTEIN_MAP_STYLE_DEFAULT = "mapbox://styles/mapbox/dark-v11";
+
+export function resolveEpsteinMapStyle(override: unknown): string {
+  if (!override || typeof override !== "object") return EPSTEIN_MAP_STYLE_DEFAULT;
+  const v = (override as Record<string, unknown>).mapStyle;
+  return typeof v === "string" && v.length > 0 ? v : EPSTEIN_MAP_STYLE_DEFAULT;
+}
+
 // Assembles the semantic Mapbox MapPalette used to restyle the stock
 // `mapbox/dark-v11` base layers (land/water/border/labels/buildings) so
 // the base map matches the dossier palette. Applied via `applyMapPalette`

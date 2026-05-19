@@ -108,13 +108,14 @@ interface Props {
   blackbook: BlackbookPoint[];
   persons: PersonSummary[];
   theme: EpsteinTheme;
+  mapStyle: string;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function EpsteinMap({ airports, flights, blackbook, persons, theme }: Props) {
+export default function EpsteinMap({ airports, flights, blackbook, persons, theme, mapStyle }: Props) {
   const logoPalette = useMemo(() => epsteinLogoPalette(theme), [theme]);
   const mapPalette = useMemo(() => epsteinMapPalette(theme), [theme]);
   // Keep latest theme accessible inside the once-only Mapbox load handler.
@@ -542,7 +543,7 @@ export default function EpsteinMap({ airports, flights, blackbook, persons, them
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle={mapStyle}
         projection="globe"
         doubleClickZoom={false}
         onLoad={onMapLoad}

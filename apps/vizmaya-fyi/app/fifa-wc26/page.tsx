@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { getEpic, getEpicStories } from '@vismay/content-source/epics'
 import { getFifaWc26Teams } from '@/lib/fifa-wc26'
 import FifaWc26Landing from './FifaWc26Landing'
-import { resolveFifaWc26Theme } from './theme'
+import { resolveFifaWc26MapStyle, resolveFifaWc26Theme } from './theme'
 
 export const revalidate = 0
 
@@ -29,8 +29,9 @@ export default async function FifaWc26Page() {
   }
 
   const theme = resolveFifaWc26Theme(epic.theme)
+  const mapStyle = resolveFifaWc26MapStyle(epic.theme)
 
   return (
-    <FifaWc26Landing epic={epic} teams={teams} stories={stories} theme={theme} />
+    <FifaWc26Landing epic={epic} teams={teams} stories={stories} theme={theme} mapStyle={mapStyle} />
   )
 }

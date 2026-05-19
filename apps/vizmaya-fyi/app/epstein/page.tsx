@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import EpsteinMap from "./EpsteinMap";
 import { getEpic } from "@vismay/content-source/epics";
-import { resolveEpsteinTheme } from "./theme";
+import { resolveEpsteinMapStyle, resolveEpsteinTheme } from "./theme";
 
 const title = "Epstein Flight Network — vizmaya";
 const description =
@@ -174,5 +174,6 @@ async function loadData() {
 export default async function EpsteinPage() {
   const [data, epic] = await Promise.all([loadData(), getEpic("epstein")]);
   const theme = resolveEpsteinTheme(epic?.theme);
-  return <EpsteinMap {...data} theme={theme} />;
+  const mapStyle = resolveEpsteinMapStyle(epic?.theme);
+  return <EpsteinMap {...data} theme={theme} mapStyle={mapStyle} />;
 }

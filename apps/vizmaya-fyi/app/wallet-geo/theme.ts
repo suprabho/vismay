@@ -76,6 +76,14 @@ export function resolveWalletGeoTheme(override: unknown): WalletGeoTheme {
   return out;
 }
 
+export const WALLET_GEO_MAP_STYLE_DEFAULT = "mapbox://styles/mapbox/light-v11";
+
+export function resolveWalletGeoMapStyle(override: unknown): string {
+  if (!override || typeof override !== "object") return WALLET_GEO_MAP_STYLE_DEFAULT;
+  const v = (override as Record<string, unknown>).mapStyle;
+  return typeof v === "string" && v.length > 0 ? v : WALLET_GEO_MAP_STYLE_DEFAULT;
+}
+
 export function walletGeoMapPalette(theme: WalletGeoTheme): MapPalette {
   return {
     land: theme.mapLand,

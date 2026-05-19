@@ -19,6 +19,7 @@ interface Props {
   news: IeaNewsItem[];
   stories: EpicStory[];
   theme: EnergyProfileTheme;
+  mapStyle: string;
   dominantSources: Record<string, DominantEnergySource>;
 }
 
@@ -34,7 +35,7 @@ interface CountryPin extends IeaCountry {
 
 const alpha = (c: string, p: number) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
 
-export default function EnergyProfileLanding({ epic, countries, news, stories, theme, dominantSources }: Props) {
+export default function EnergyProfileLanding({ epic, countries, news, stories, theme, mapStyle, dominantSources }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
@@ -215,7 +216,7 @@ export default function EnergyProfileLanding({ epic, countries, news, stories, t
         reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle={mapStyle}
         projection="globe"
         attributionControl={false}
         doubleClickZoom={false}

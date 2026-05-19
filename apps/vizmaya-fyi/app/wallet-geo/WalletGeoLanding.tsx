@@ -22,6 +22,7 @@ interface Props {
   summaries: WalletGeoSummary[];
   stories: EpicStory[];
   theme: WalletGeoTheme;
+  mapStyle: string;
   embed?: boolean;
   initialView?: {
     longitude?: number;
@@ -62,6 +63,7 @@ export default function WalletGeoLanding({
   summaries,
   stories,
   theme,
+  mapStyle,
   embed = false,
   initialView,
 }: Props) {
@@ -282,7 +284,7 @@ export default function WalletGeoLanding({
         reuseMaps
         initialViewState={initialViewState}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle={mapStyle}
         projection="globe"
         attributionControl={false}
         doubleClickZoom={false}

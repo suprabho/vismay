@@ -7,7 +7,7 @@ import {
   getIeaNewsSince,
 } from '@vismay/content-source/epics'
 import EnergyProfileLanding from './EnergyProfileLanding'
-import { resolveEnergyProfileTheme } from './theme'
+import { resolveEnergyProfileMapStyle, resolveEnergyProfileTheme } from './theme'
 
 export const revalidate = 0
 
@@ -36,6 +36,7 @@ export default async function EnergyProfilePage() {
   }
 
   const theme = resolveEnergyProfileTheme(epic.theme)
+  const mapStyle = resolveEnergyProfileMapStyle(epic.theme)
 
   return (
     <EnergyProfileLanding
@@ -44,6 +45,7 @@ export default async function EnergyProfilePage() {
       news={news}
       stories={stories}
       theme={theme}
+      mapStyle={mapStyle}
       dominantSources={dominantSources}
     />
   )

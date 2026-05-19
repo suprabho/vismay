@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getEpic, getEpicStories } from "@vismay/content-source/epics";
 import { listWalletGeoSummaries } from "@/lib/wallet-geo/data";
 import WalletGeoLanding from "./WalletGeoLanding";
-import { resolveWalletGeoTheme } from "./theme";
+import { resolveWalletGeoMapStyle, resolveWalletGeoTheme } from "./theme";
 
 export const revalidate = 0;
 
@@ -49,6 +49,7 @@ export default async function WalletGeoPage({
   }
 
   const theme = resolveWalletGeoTheme(epic.theme);
+  const mapStyle = resolveWalletGeoMapStyle(epic.theme);
   const summaries = listWalletGeoSummaries();
 
   // ?lng=&lat=&zoom=&pitch=&bearing= override the default view; any missing
@@ -68,6 +69,7 @@ export default async function WalletGeoPage({
       summaries={summaries}
       stories={stories}
       theme={theme}
+      mapStyle={mapStyle}
       embed={bool(sp.embed)}
       initialView={initialView}
     />
