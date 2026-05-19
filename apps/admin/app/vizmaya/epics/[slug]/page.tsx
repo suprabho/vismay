@@ -1,15 +1,30 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useMemo, useState, use } from 'react'
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { THEME_REGISTRY } from '../themeRegistry'
+
+type FontKey = 'serif' | 'sans' | 'mono'
+const FONT_KEYS: readonly FontKey[] = ['serif', 'sans', 'mono'] as const
+type FontStatus = 'loading' | 'loaded' | 'error'
+
+const FONT_PRESETS: Record<FontKey, string[]> = {
+  serif: ['Merriweather', 'Instrument Serif', 'Playfair Display', 'Fraunces', 'Lora', 'EB Garamond'],
+  sans: ['Inter', 'Geist', 'IBM Plex Sans', 'Work Sans', 'Manrope'],
+  mono: ['JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Geist Mono'],
+}
 
 interface ThemePayload {
   slug: string
   name: string
   defaults: Record<string, string>
   labels: Record<string, { label: string; hint: string }>
-  theme: Record<string, string>
+  fontDefaults: Record<FontKey, string>
+  mapStyleDefault: string
+  // Persisted overrides. Colors are flat hex strings; `fonts` and `mapStyle`
+  // are nested non-color keys, hence the `unknown` value type.
+  theme: Record<string, unknown>
 }
 
 interface StoriesPayload {
@@ -35,10 +50,40 @@ interface MembershipEdit {
   position: number | null
 }
 
+// Pull color/font/map overrides out of the persisted JSON. Colors are flat
+// hex strings; `fonts` is a nested object; `mapStyle` is a string. Anything
+// shaped unexpectedly is ignored rather than blowing up the editor.
+function splitPersisted(theme: Record<string, unknown>): {
+  colors: Record<string, string>
+  fonts: Partial<Record<FontKey, string>>
+  mapStyle: string
+} {
+  const colors: Record<string, string> = {}
+  const fonts: Partial<Record<FontKey, string>> = {}
+  let mapStyle = ''
+  for (const [key, value] of Object.entries(theme)) {
+    if (key === 'fonts' && value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const fk of FONT_KEYS) {
+        const fv = (value as Record<string, unknown>)[fk]
+        if (typeof fv === 'string' && fv) fonts[fk] = fv
+      }
+      continue
+    }
+    if (key === 'mapStyle') {
+      if (typeof value === 'string') mapStyle = value
+      continue
+    }
+    if (typeof value === 'string' && value) colors[key] = value
+  }
+  return { colors, fonts, mapStyle }
+}
+
 export default function EpicAdminPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params)
   const [data, setData] = useState<ThemePayload | null>(null)
   const [overrides, setOverrides] = useState<Record<string, string>>({})
+  const [fontOverrides, setFontOverrides] = useState<Partial<Record<FontKey, string>>>({})
+  const [mapStyleOverride, setMapStyleOverride] = useState<string>('')
   const [stories, setStories] = useState<StoriesPayload['stories'] | null>(null)
   const [epicName, setEpicName] = useState<string>(slug)
   const [memberships, setMemberships] = useState<Record<string, MembershipEdit>>({})
@@ -59,7 +104,10 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       if (themeR.ok) {
         const payload = (await themeR.json()) as ThemePayload
         setData(payload)
-        setOverrides({ ...payload.theme })
+        const split = splitPersisted(payload.theme ?? {})
+        setOverrides(split.colors)
+        setFontOverrides(split.fonts)
+        setMapStyleOverride(split.mapStyle)
       } else if (themeR.status !== 404) {
         setError(`theme load failed: ${themeR.status}`)
         return
@@ -90,6 +138,65 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
     }
     loadApps()
   }, [])
+
+  const effectiveFonts = useMemo<Record<FontKey, string>>(
+    () => ({
+      serif: fontOverrides.serif ?? data?.fontDefaults.serif ?? '',
+      sans: fontOverrides.sans ?? data?.fontDefaults.sans ?? '',
+      mono: fontOverrides.mono ?? data?.fontDefaults.mono ?? '',
+    }),
+    [fontOverrides, data?.fontDefaults],
+  )
+
+  // Inject Google Fonts so the FontField previews can actually render the
+  // chosen face. Same pattern as ThemeEditor.tsx.
+  useEffect(() => {
+    const url = getFontImportUrl(effectiveFonts)
+    const existing = document.getElementById('admin-epic-theme-fonts')
+    if (existing) existing.remove()
+    if (!url) return
+    const link = document.createElement('link')
+    link.id = 'admin-epic-theme-fonts'
+    link.rel = 'stylesheet'
+    link.href = url
+    document.head.appendChild(link)
+    return () => {
+      link.remove()
+    }
+  }, [effectiveFonts])
+
+  const [fontStatus, setFontStatus] = useState<Record<FontKey, FontStatus>>({
+    serif: 'loading',
+    sans: 'loading',
+    mono: 'loading',
+  })
+  useEffect(() => {
+    let cancelled = false
+    FONT_KEYS.forEach(async (k) => {
+      const name = effectiveFonts[k]
+      if (!name) {
+        if (!cancelled) setFontStatus((s) => ({ ...s, [k]: 'error' }))
+        return
+      }
+      try {
+        if (document.fonts.check(`16px "${name}"`)) {
+          if (!cancelled) setFontStatus((s) => ({ ...s, [k]: 'loaded' }))
+          return
+        }
+        await document.fonts.load(`16px "${name}"`)
+        if (!cancelled)
+          setFontStatus((s) => ({
+            ...s,
+            [k]: document.fonts.check(`16px "${name}"`) ? 'loaded' : 'error',
+          }))
+      } catch {
+        if (!cancelled) setFontStatus((s) => ({ ...s, [k]: 'error' }))
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [effectiveFonts])
 
   async function changeApp(nextApp: string) {
     if (nextApp === appSlug) return
@@ -126,6 +233,21 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       return next
     })
   }
+  function effectiveFont(key: FontKey): string {
+    return fontOverrides[key] ?? data?.fontDefaults[key] ?? ''
+  }
+  function setFont(key: FontKey, value: string) {
+    setFontOverrides((prev) => ({ ...prev, [key]: value }))
+  }
+  function resetFont(key: FontKey) {
+    setFontOverrides((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+  const effectiveMapStyle = mapStyleOverride || data?.mapStyleDefault || ''
+  const mapStyleOverridden = mapStyleOverride !== ''
 
   function toggleMember(storySlug: string) {
     setMemberships((prev) => {
@@ -159,11 +281,16 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
 
     const calls: Promise<Response>[] = []
     if (data) {
+      // Merge color overrides with the nested fonts/mapStyle overrides into
+      // one theme payload — the API splits them apart on validation.
+      const themeBody: Record<string, unknown> = { ...overrides }
+      if (Object.keys(fontOverrides).length > 0) themeBody.fonts = fontOverrides
+      if (mapStyleOverride) themeBody.mapStyle = mapStyleOverride
       calls.push(
         fetch(`/api/vizmaya/epics/${slug}/theme`, {
           method: 'PUT',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ theme: overrides }),
+          body: JSON.stringify({ theme: themeBody }),
         }),
       )
     }
@@ -374,67 +501,103 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
       )}
 
       {tab === 'theme' && data && themeEntry && Preview && (
-        <section>
-          <div className="px-4 py-3 border-b border-white/5">
-            <h2 className="font-medium">Theme</h2>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Override the palette. Leave a row blank to fall back to the default.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_minmax(0,360px)] gap-0">
-            <ul className="divide-y divide-white/5">
-              {themeKeys.map((key) => {
-                const value = effectiveValue(key)
-                const overridden = isOverridden(key)
-                const meta = themeEntry.labels[key]
-                return (
-                  <li key={key} className="px-4 py-3 flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-md border border-white/10 shrink-0"
-                      style={{ background: value }}
-                      title={value}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-medium">{meta.label}</span>
-                        <span className="text-xs text-neutral-500 font-mono">{key}</span>
-                        {overridden && (
-                          <span className="text-[10px] uppercase tracking-wider text-amber-300 font-mono">
-                            overridden
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-neutral-500 mt-0.5">{meta.hint}</p>
-                    </div>
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={(e) => setValue(key, e.target.value)}
-                      className="w-9 h-9 rounded cursor-pointer bg-transparent shrink-0"
-                      aria-label={`${meta.label} color picker`}
-                    />
-                    <input
-                      type="text"
-                      value={overrides[key] ?? ''}
-                      onChange={(e) => setValue(key, e.target.value)}
-                      placeholder={data.defaults[key]}
-                      className="w-24 text-sm font-mono bg-neutral-900 border border-white/10 rounded px-2 py-1 text-white placeholder:text-neutral-600 shrink-0"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => resetKey(key)}
-                      disabled={!overridden}
-                      className="text-xs text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 shrink-0 px-2"
-                      title="Reset to default"
-                    >
-                      reset
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+        <section className="flex-1 overflow-y-auto min-h-0">
+          <div className="mx-auto max-w-5xl p-4 space-y-8">
+            <div>
+              <h2 className="font-medium">Theme</h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Override the palette, fonts, and base map. Leave a field blank or hit
+                {' '}reset to fall back to the default.
+              </p>
+            </div>
 
             <Preview theme={Object.fromEntries(themeKeys.map((k) => [k, effectiveValue(k)]))} />
+
+            <ThemeSection title="Colors">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {themeKeys.map((key) => {
+                  const value = effectiveValue(key)
+                  const meta = themeEntry.labels[key]
+                  return (
+                    <ColorTile
+                      key={key}
+                      tokenKey={key}
+                      label={meta.label}
+                      hint={meta.hint}
+                      value={value}
+                      rawOverride={overrides[key] ?? ''}
+                      placeholder={data.defaults[key]}
+                      overridden={isOverridden(key)}
+                      onChange={(v) => setValue(key, v)}
+                      onReset={() => resetKey(key)}
+                    />
+                  )
+                })}
+              </div>
+            </ThemeSection>
+
+            <ThemeSection title="Fonts">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {FONT_KEYS.map((k) => (
+                  <FontTile
+                    key={k}
+                    family={k}
+                    value={effectiveFont(k)}
+                    presets={FONT_PRESETS[k]}
+                    status={fontStatus[k]}
+                    overridden={fontOverrides[k] != null}
+                    onChange={(v) => setFont(k, v)}
+                    onReset={() => resetFont(k)}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-neutral-500 mt-2">
+                Free-text font names. Anything on Google Fonts (or already loaded on the page)
+                renders; others fall back.
+              </p>
+            </ThemeSection>
+
+            <ThemeSection title="Map">
+              <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">Mapbox style URL</div>
+                    <div className="text-[11px] text-neutral-500 truncate">
+                      Base map style for this epic
+                    </div>
+                  </div>
+                  {mapStyleOverridden && (
+                    <span className="text-[10px] uppercase tracking-wider text-amber-300 font-mono shrink-0">
+                      overridden
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={mapStyleOverride}
+                    onChange={(e) => setMapStyleOverride(e.target.value)}
+                    placeholder={data.mapStyleDefault}
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    className="flex-1 min-w-0 bg-black/30 rounded px-2 py-1.5 font-mono text-[13px] border border-white/10 focus:outline-none focus:border-white/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMapStyleOverride('')}
+                    disabled={!mapStyleOverridden}
+                    className="text-xs text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 px-2"
+                    title="Reset to default"
+                  >
+                    reset
+                  </button>
+                </div>
+                <div className="text-[11px] font-mono text-neutral-500 truncate">
+                  effective: {effectiveMapStyle || '(none)'}
+                </div>
+              </div>
+            </ThemeSection>
           </div>
         </section>
       )}
@@ -445,5 +608,158 @@ export default function EpicAdminPage({ params }: { params: Promise<{ slug: stri
         </section>
       )}
     </div>
+  )
+}
+
+function ThemeSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs uppercase tracking-[0.18em] text-neutral-400">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+function ColorTile({
+  tokenKey,
+  label,
+  hint,
+  value,
+  rawOverride,
+  placeholder,
+  overridden,
+  onChange,
+  onReset,
+}: {
+  tokenKey: string
+  label: string
+  hint: string
+  value: string
+  rawOverride: string
+  placeholder: string
+  overridden: boolean
+  onChange: (v: string) => void
+  onReset: () => void
+}) {
+  return (
+    <label className="block bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-sm font-medium truncate">{label}</span>
+            <span className="text-[10px] font-mono text-neutral-500 truncate">{tokenKey}</span>
+          </div>
+          <div className="text-[11px] text-neutral-500 truncate">{hint}</div>
+        </div>
+        {overridden && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              onReset()
+            }}
+            className="text-[11px] text-neutral-500 hover:text-white px-2 py-0.5 rounded border border-white/10 shrink-0"
+            title="Reset to default"
+          >
+            reset
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 w-10 rounded cursor-pointer bg-transparent border border-white/10"
+          style={{ padding: 0 }}
+          aria-label={`${label} color`}
+        />
+        <input
+          type="text"
+          value={rawOverride}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+          className="flex-1 min-w-0 bg-black/30 rounded px-2 py-1.5 font-mono text-[13px] border border-white/10 focus:outline-none focus:border-white/30"
+        />
+      </div>
+    </label>
+  )
+}
+
+function FontTile({
+  family,
+  value,
+  presets,
+  status,
+  overridden,
+  onChange,
+  onReset,
+}: {
+  family: FontKey
+  value: string
+  presets: string[]
+  status: FontStatus
+  overridden: boolean
+  onChange: (v: string) => void
+  onReset: () => void
+}) {
+  return (
+    <label className="block bg-white/[0.03] border border-white/10 rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-sm font-medium capitalize shrink-0">{family}</span>
+          {status === 'error' && (
+            <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 rounded px-1.5 py-0.5 shrink-0">
+              not loaded
+            </span>
+          )}
+          {status === 'loading' && (
+            <span className="text-[10px] text-neutral-500 shrink-0">…</span>
+          )}
+          {overridden && (
+            <span className="text-[10px] uppercase tracking-wider text-amber-300 font-mono shrink-0">
+              overridden
+            </span>
+          )}
+        </div>
+        <span
+          className="text-[11px] text-neutral-400 truncate max-w-[40%]"
+          style={{ fontFamily: `"${value}", ${family}` }}
+        >
+          AaBb 123
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          list={`epic-font-${family}`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+          className="flex-1 min-w-0 bg-black/30 rounded px-2 py-1.5 text-sm border border-white/10 focus:outline-none focus:border-white/30"
+        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            onReset()
+          }}
+          disabled={!overridden}
+          className="text-xs text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 px-2"
+          title="Reset to default"
+        >
+          reset
+        </button>
+      </div>
+      <datalist id={`epic-font-${family}`}>
+        {presets.map((p) => (
+          <option key={p} value={p} />
+        ))}
+      </datalist>
+    </label>
   )
 }
