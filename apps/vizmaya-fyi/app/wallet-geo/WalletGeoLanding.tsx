@@ -96,9 +96,15 @@ export default function WalletGeoLanding({
     const apply = () => {
       if (cancelled || !map) return;
       // getStyle() throws "Style is not done loading" if called before the
-      // style is ready. The style.load handler will re-run apply later.
-      if (!map.isStyleLoaded()) return;
-      const layers = map.getStyle()?.layers;
+      // style is ready. Catch and bail — the style.load handler will re-run
+      // apply. (isStyleLoaded() is not a reliable substitute: it can return
+      // false even inside style.load while sprites/glyphs finish loading.)
+      let layers;
+      try {
+        layers = map.getStyle()?.layers;
+      } catch {
+        return;
+      }
       if (!layers || layers.length === 0) return;
       applyMapPalette(map, mapPalette);
       // With projection="globe", Mapbox paints its own dark space around the
