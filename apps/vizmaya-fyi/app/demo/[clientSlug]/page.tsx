@@ -1,16 +1,16 @@
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { isDemoAuthed } from '@/lib/demoAuth'
+import { isDemoAuthed } from '@vismay/content-source/demoAuth'
 import {
   getDemoByClientSlug,
   isValidClientSlug,
   listShareAssetsForDemo,
-} from '@/lib/demos'
-import { parseDemoContent } from '@/lib/storyDemoConfig'
-import { createServiceClient } from '@/lib/supabase'
+} from '@vismay/content-source/demos'
+import { parseDemoContent } from '@vismay/content-source/storyDemoConfig'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import DemoPage from '@/components/demo/DemoPage'
-import { getStoryContent } from '@/lib/content'
-import { getFontImportUrl } from '@/lib/getFontImports'
+import { getStoryContent } from '@vismay/content-source/content'
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import type { Theme } from '@vismay/viz-engine'
 
 export const dynamic = 'force-dynamic'

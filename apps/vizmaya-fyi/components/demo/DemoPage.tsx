@@ -9,7 +9,7 @@ import {
   Quote,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
-import type { DemoContent, LucideIcon } from '@/lib/storyDemoConfig'
+import type { DemoContent, LucideIcon } from '@vismay/content-source/storyDemoConfig'
 import type { Theme } from '@vismay/viz-engine'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import AuraBackground from '@/components/AuraBackground'

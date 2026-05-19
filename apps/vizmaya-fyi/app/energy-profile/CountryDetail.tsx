@@ -7,7 +7,7 @@ import PrimaryEnergyMixChart from '@/components/energy-profile/charts/PrimaryEne
 import Co2Chart from '@/components/energy-profile/charts/Co2Chart'
 import RenewablesShareChart from '@/components/energy-profile/charts/RenewablesShareChart'
 import OilPricesChart from '@/components/energy-profile/charts/OilPricesChart'
-import type { IeaCountryProfile } from '@/lib/epics'
+import type { IeaCountryProfile } from '@vismay/content-source/epics'
 
 interface Props {
   code: string

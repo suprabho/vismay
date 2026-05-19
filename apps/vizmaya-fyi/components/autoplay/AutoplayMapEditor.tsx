@@ -24,7 +24,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import MapPickerModal from '@/components/admin/MapPickerModal'
+import MapPickerModal from '@/components/MapPickerModal'
 import {
   hydrateOverrides,
   parseMapOverrides,
@@ -39,7 +39,7 @@ import {
   extractMobileMapView,
   type MapView,
 } from '@vismay/viz-engine'
-import { useTabIndent } from '@/lib/useTabIndent'
+import { useTabIndent } from '@vismay/content-source/useTabIndent'
 
 interface Props {
   slug: string

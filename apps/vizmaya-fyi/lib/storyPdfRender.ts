@@ -19,13 +19,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chromium } from 'playwright'
 import { ADMIN_COOKIE_NAME, expectedToken } from './adminAuth'
-import { getContentSource } from './contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 import {
   computeContentRevisionHash,
   getCachedPdf,
   PDF_BUCKET,
   type PdfFormat,
-} from './storyPdf'
+} from '@vismay/content-source/storyPdf'
 
 /**
  * Per-format render config. Letter portrait for the report; 1920×1080 fixed

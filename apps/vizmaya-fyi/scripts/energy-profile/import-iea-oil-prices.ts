@@ -20,7 +20,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parse as parseCsv } from 'csv-parse/sync'
 import { config as loadEnv } from 'dotenv'
-import { createServiceClient } from '../../lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })

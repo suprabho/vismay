@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getEpic, getEpicStories } from '@/lib/epics'
+import { getEpic, getEpicStories } from '@vismay/content-source/epics'
 import { getFifaWc26Teams } from '@/lib/fifa-wc26'
 import FifaWc26Landing from './FifaWc26Landing'
 import { resolveFifaWc26Theme } from './theme'

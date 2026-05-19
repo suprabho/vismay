@@ -20,9 +20,9 @@ import path from 'path'
 import { parse as parseYaml } from 'yaml'
 import matter from 'gray-matter'
 import { createClient } from '@supabase/supabase-js'
-import { resolveUnits } from '../lib/resolveUnits'
-import { getStoryContent } from '../lib/content'
-import { loadStoryConfig } from '../lib/storyConfig'
+import { resolveUnits } from '@vismay/content-source/resolveUnits'
+import { getStoryContent } from '@vismay/content-source/content'
+import { loadStoryConfig } from '@vismay/content-source/storyConfig'
 
 // Load .env
 for (const line of fs.readFileSync(path.resolve(__dirname, '..', '.env'), 'utf8').split('\n')) {

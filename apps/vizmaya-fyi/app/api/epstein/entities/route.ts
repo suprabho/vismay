@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createBrowserClient } from "@/lib/supabase";
+import { createBrowserClient } from "@vismay/content-source/supabase";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

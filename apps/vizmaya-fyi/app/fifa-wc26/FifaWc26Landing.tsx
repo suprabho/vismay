@@ -5,7 +5,7 @@ import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
-import type { Epic, EpicStory } from "@/lib/epics";
+import type { Epic, EpicStory } from "@vismay/content-source/epics";
 import type { FifaWc26Team } from "@/lib/fifa-wc26";
 import { applyMapPalette } from "@vismay/viz-engine";
 import { fifaWc26LogoPalette, fifaWc26MapPalette, type FifaWc26Theme } from "./theme";

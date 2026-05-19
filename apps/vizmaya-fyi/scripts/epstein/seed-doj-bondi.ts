@@ -7,7 +7,7 @@
  *   pnpm epstein:seed-bondi
  */
 
-import { createServiceClient } from "../../lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 const TITLE = "DOJ Releases Epstein Files Under Bondi (2025)";
 

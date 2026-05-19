@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

@@ -17,10 +17,11 @@ import {
   renderShareAssets,
   type ShareRatio,
   SHARE_RATIOS,
-} from '../lib/storyShareRender'
-import { computeContentRevisionHash } from '../lib/storyPdf'
-import { getContentSource } from '../lib/contentSource'
-import type { AssetRef, ShareCardRatio } from '../lib/socialPostPlans'
+} from '@vismay/content-source/storyShareRender'
+import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
+import { getContentSource } from '@vismay/content-source/contentSource'
+import type { AssetRef, ShareCardRatio } from '@vismay/content-source/socialPostPlans'
+import { auth } from '../lib/adminAuth'
 
 const envPath = path.resolve(__dirname, '..', '.env')
 if (fs.existsSync(envPath)) {
@@ -119,6 +120,7 @@ async function runForDemo(
 
   const result = await renderShareAssets({
     supabase,
+    auth,
     demoId,
     storySlug: demo.story_slug as string,
     baseUrl,
@@ -182,6 +184,7 @@ async function runForPost(
 
   const result = await renderShareAssets({
     supabase,
+    auth,
     demoId: null,
     storySlug: post.story_slug as string,
     baseUrl,

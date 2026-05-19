@@ -22,7 +22,7 @@
 
 import { parse as parseCsv } from 'csv-parse/sync'
 import { config as loadEnv } from 'dotenv'
-import { createServiceClient } from '../../lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import { COUNTRY_CENTROIDS } from '../../lib/energy-profile/countryCentroids'
 
 loadEnv({ path: '.env.local' })

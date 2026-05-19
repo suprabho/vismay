@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background: #0a0a0a;
+  color: #f5f5f5;
+  font-family: var(--font-inter, 'Inter', -apple-system, 'Segoe UI', Helvetica, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #fde047;
+  color: #0a0a0a;
+}

@@ -22,7 +22,7 @@
 
 import { GoogleGenAI } from '@google/genai'
 import { config as loadEnv } from 'dotenv'
-import { createServiceClient } from '../../lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })

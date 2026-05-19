@@ -3,8 +3,8 @@ import {
   checkRateLimit,
   setDemoCookie,
   verifyPassword,
-} from '@/lib/demoAuth'
-import { getDemoByClientSlug, isValidClientSlug } from '@/lib/demos'
+} from '@vismay/content-source/demoAuth'
+import { getDemoByClientSlug, isValidClientSlug } from '@vismay/content-source/demos'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

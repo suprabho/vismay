@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
-import { createServiceClient } from './supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import type { Frontmatter } from '@vismay/viz-engine'
 
 const STORIES_DIR = path.join(process.cwd(), 'content/stories')

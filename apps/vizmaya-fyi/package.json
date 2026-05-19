@@ -29,6 +29,8 @@
     "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts"
   },
   "dependencies": {
+    "@vismay/admin-core": "workspace:*",
+    "@vismay/content-source": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/footshort-viz": "workspace:*",
     "@vismay/f1-viz": "workspace:*",

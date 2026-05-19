@@ -1,0 +1,135 @@
+import { NextResponse } from 'next/server'
+import { createServiceClient } from '../supabase'
+import { getContentSource } from '../contentSource'
+import {
+  classifyPdfState,
+  computeContentRevisionHash,
+  getCachedPdf,
+  isPdfFormat,
+  markPdfDispatched,
+  type PdfFormat,
+} from '../storyPdf'
+
+export interface StoryPdfHandlerOptions {
+  isDispatchConfigured: () => boolean
+  dispatch: (args: {
+    slug: string
+    format: PdfFormat
+    baseUrl: string
+  }) => Promise<void>
+  /** Local-dev fallback (Playwright sync render). Optional. */
+  render?: (args: {
+    supabase: ReturnType<typeof createServiceClient>
+    slug: string
+    format: PdfFormat
+    baseUrl: string
+    force?: boolean
+  }) => Promise<{
+    public_url: string
+    content_revision_hash: string
+    cached: boolean
+  }>
+}
+
+const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
+
+/**
+ * GET /api/story-pdf/[slug]?format=report|slides[&force=1]
+ *
+ *   200 { status: 'ready', public_url, cached, content_revision_hash }
+ *   202 { status: 'rendering' }      dispatch fired, poll again later
+ *   400 { error }                    bad slug or format
+ *   500 { error }                    render or dispatch failed
+ */
+export function createStoryPdfHandler(opts: StoryPdfHandlerOptions) {
+  return {
+    async GET(
+      req: Request,
+      { params }: { params: Promise<{ slug: string }> }
+    ) {
+      const { slug } = await params
+      if (!SAFE_SLUG.test(slug)) {
+        return NextResponse.json({ error: 'bad slug' }, { status: 400 })
+      }
+
+      const url = new URL(req.url)
+      const format = url.searchParams.get('format')
+      if (!isPdfFormat(format)) {
+        return NextResponse.json(
+          { error: 'format must be report or slides' },
+          { status: 400 }
+        )
+      }
+      const force = url.searchParams.get('force') === '1'
+
+      const baseUrl = `${url.protocol}//${url.host}`
+      const supabase = createServiceClient()
+
+      let hash: string
+      try {
+        const source = getContentSource()
+        hash = await computeContentRevisionHash(source, slug)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'hash compute failed'
+        return NextResponse.json({ error: message }, { status: 500 })
+      }
+
+      if (!force) {
+        const cached = await getCachedPdf(supabase, slug, format)
+        const state = classifyPdfState(cached, hash)
+        if (state.kind === 'ready') {
+          return NextResponse.json({
+            status: 'ready',
+            public_url: state.row.public_url,
+            cached: true,
+            content_revision_hash: hash,
+          })
+        }
+        if (state.kind === 'rendering') {
+          return NextResponse.json({ status: 'rendering' }, { status: 202 })
+        }
+      }
+
+      // Async path: GitHub Actions
+      if (opts.isDispatchConfigured()) {
+        try {
+          await markPdfDispatched(supabase, {
+            slug,
+            format,
+            contentRevisionHash: hash,
+          })
+          await opts.dispatch({ slug, format, baseUrl })
+          return NextResponse.json({ status: 'rendering' }, { status: 202 })
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'dispatch failed'
+          return NextResponse.json({ error: message }, { status: 500 })
+        }
+      }
+
+      // Sync path: host must provide a render function
+      if (!opts.render) {
+        return NextResponse.json(
+          {
+            error:
+              'No render function configured and GITHUB_DISPATCH_TOKEN/REPO not set',
+          },
+          { status: 500 }
+        )
+      }
+
+      try {
+        const result = await opts.render({
+          supabase,
+          slug,
+          format,
+          baseUrl,
+          force,
+        })
+        return NextResponse.json({ status: 'ready', ...result })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'render failed'
+        return NextResponse.json({ error: message }, { status: 500 })
+      }
+    },
+  }
+}

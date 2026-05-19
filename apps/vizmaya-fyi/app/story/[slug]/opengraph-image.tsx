@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { notFound } from 'next/navigation'
-import { getStoryContent, getViewableStorySlugs } from '@/lib/content'
-import { hasStoryConfig } from '@/lib/storyConfig'
+import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
+import { hasStoryConfig } from '@vismay/content-source/storyConfig'
 import { StoryOgCard } from '@/components/seo/StoryOgCard'
 
 export const runtime = 'nodejs'

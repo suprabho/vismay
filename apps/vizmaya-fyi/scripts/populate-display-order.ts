@@ -20,7 +20,7 @@ import { loadEnvConfig } from '@next/env'
 loadEnvConfig(process.cwd())
 
 import matter from 'gray-matter'
-import { getContentSource } from '../lib/contentSource'
+import { getContentSource } from '@vismay/content-source/contentSource'
 
 type OrderBy = 'date' | 'title' | 'slug'
 

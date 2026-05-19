@@ -21,7 +21,7 @@ import fs from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { renderStoryVideo } from '../lib/storyVideoRender'
-import type { VideoAspect, VideoRange } from '../lib/storyVideo'
+import type { VideoAspect, VideoRange } from '@vismay/content-source/storyVideo'
 
 /* ─── Env loading (same simple parser as generate-audio.ts) ─────────── */
 

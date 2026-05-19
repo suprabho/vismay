@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
-import type { ChartSeries } from '@/lib/epics'
+import type { ChartSeries } from '@vismay/content-source/epics'
 import { CHART_AXIS_COLOR, CHART_LINE_COLOR, ENERGY_SOURCE_COLORS } from './colors'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getAllStories } from '@/lib/content'
+import { getAllStories } from '@vismay/content-source/content'
 import AllStoriesClient, { type ArchiveStory } from '@/components/AllStoriesClient'
 
 export const revalidate = 0

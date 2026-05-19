@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import EpsteinMap from "./EpsteinMap";
-import { getEpic } from "@/lib/epics";
+import { getEpic } from "@vismay/content-source/epics";
 import { resolveEpsteinTheme } from "./theme";
 
 const title = "Epstein Flight Network — vizmaya";

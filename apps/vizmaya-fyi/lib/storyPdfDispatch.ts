@@ -18,7 +18,7 @@
  * sane default for local dev.
  */
 
-import type { PdfFormat } from './storyPdf'
+import type { PdfFormat } from '@vismay/content-source/storyPdf'
 
 export function isPdfDispatchConfigured(): boolean {
   return Boolean(

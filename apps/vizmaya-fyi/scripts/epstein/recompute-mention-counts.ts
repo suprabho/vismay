@@ -4,7 +4,7 @@
  *
  * Safe to run any time; idempotent.
  */
-import { createServiceClient } from "../../lib/supabase";
+import { createServiceClient } from "@vismay/content-source/supabase";
 
 async function rebuildFor(
   table: "epstein_people" | "epstein_locations" | "epstein_events",

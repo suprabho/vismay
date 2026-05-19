@@ -1,36 +1,23 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import crypto from 'crypto'
-import { ADMIN_COOKIE_NAME, expectedToken } from '@/lib/adminAuth'
+import { createAdminMiddleware } from '@vismay/admin-core/middleware'
+import { auth } from '@/lib/adminAuth'
 
 export const runtime = 'nodejs'
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl
-  if (pathname === '/admin/login') return NextResponse.next()
+/**
+ * After the admin lift, only signed share/autoplay routes need a gate here.
+ * Unauthed visitors are bounced to the central admin login (configured via
+ * ADMIN_LOGIN_URL — set to admin.vizmaya.fyi/login in prod, localhost:3001/login
+ * in local dev).
+ */
+const ADMIN_LOGIN_URL = process.env.ADMIN_LOGIN_URL || 'http://localhost:3001/login'
 
-  const expected = expectedToken()
-  if (!expected) return NextResponse.next()
-
-  const cookie = req.cookies.get(ADMIN_COOKIE_NAME)
-  if (cookie) {
-    const a = Buffer.from(cookie.value)
-    const b = Buffer.from(expected)
-    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
-      return NextResponse.next()
-    }
-  }
-
-  const url = req.nextUrl.clone()
-  url.pathname = '/admin/login'
-  url.searchParams.set('next', pathname)
-  return NextResponse.redirect(url)
-}
+export const middleware = createAdminMiddleware({
+  auth,
+  loginPath: ADMIN_LOGIN_URL,
+})
 
 export const config = {
   matcher: [
-    '/admin',
-    '/admin/:path*',
     '/story/:slug/share',
     '/story/:slug/autoplay',
   ],

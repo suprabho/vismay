@@ -22,7 +22,7 @@
 
 import { GoogleGenAI } from '@google/genai'
 import { JSDOM } from 'jsdom'
-import { createServiceClient } from '../../lib/supabase'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 const FEED_URL =
   'https://news.google.com/rss/search?q=%22International+Energy+Agency%22&hl=en-US&gl=US&ceid=US:en'

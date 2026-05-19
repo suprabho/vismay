@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
-import { getDemoByClientSlug, isValidClientSlug } from '@/lib/demos'
-import { isDemoAuthed } from '@/lib/demoAuth'
-import { getStoryContent } from '@/lib/content'
+import { getDemoByClientSlug, isValidClientSlug } from '@vismay/content-source/demos'
+import { isDemoAuthed } from '@vismay/content-source/demoAuth'
+import { getStoryContent } from '@vismay/content-source/content'
 import DemoLoginForm from '@/components/demo/DemoLoginForm'
 
 export const dynamic = 'force-dynamic'
