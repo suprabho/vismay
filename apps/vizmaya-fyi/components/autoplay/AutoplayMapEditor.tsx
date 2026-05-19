@@ -24,7 +24,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import MapPickerModal from '@/components/admin/MapPickerModal'
+import MapPickerModal from '@/components/MapPickerModal'
 import {
   hydrateOverrides,
   parseMapOverrides,

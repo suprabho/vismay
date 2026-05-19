@@ -10,7 +10,7 @@ import {
 import { extractMapView, type MapView } from '@vismay/viz-engine'
 import MapPickerModal, {
   type PickerFrame,
-} from '@/components/admin/MapPickerModal'
+} from '@/components/MapPickerModal'
 
 export interface BuilderUnit {
   parentIndex: number
