@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import type { DemoStatus } from '@vismay/content-source/demos'
 import type { ShareCardEntry } from '@vismay/content-source/shareCardList'
+import { vizmayaUrl } from '@/lib/publicSite'
 
 interface ShareCardId {
   parentIndex: number
@@ -127,7 +128,7 @@ export default function DemoEditorClient({ demoId, initial, defaultContentYaml }
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href={`/demo/${clientSlug}`}
+            href={vizmayaUrl(`/demo/${clientSlug}`)}
             target="_blank"
             rel="noreferrer"
             className="text-xs text-neutral-300 hover:text-white"

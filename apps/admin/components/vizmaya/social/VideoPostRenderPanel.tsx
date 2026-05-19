@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
 import type { VideoAspect } from '@vismay/content-source/socialPostPlans'
 import { RangeRenderPanel } from '@/components/vizmaya/video/RangeRenderPanel'
+import { vizmayaUrl } from '@/lib/publicSite'
 
 export function VideoPostRenderPanel({
   slug,
@@ -121,7 +122,7 @@ export function VideoPostRenderPanel({
           Open Narration editor ↗
         </Link>
         <Link
-          href={`/story/${encodeURIComponent(slug)}/autoplay`}
+          href={vizmayaUrl(`/story/${encodeURIComponent(slug)}/autoplay`)}
           target="_blank"
           rel="noreferrer"
           className="text-[11px] px-2 py-1 border border-white/10 rounded hover:bg-white/5"

@@ -8,6 +8,7 @@ import YamlCardsView from './YamlCardsView'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
+import { vizmayaUrl } from '@/lib/publicSite'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import { useTabIndent } from '@vismay/content-source/useTabIndent'
 import type { Theme } from '@vismay/viz-engine'
@@ -264,7 +265,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           className="hidden"
         />
         <Link
-          href={`/reports/${slug}`}
+          href={vizmayaUrl(`/reports/${slug}`)}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
@@ -272,7 +273,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           report ↗
         </Link>
         <Link
-          href={`/story/${slug}/autoplay`}
+          href={vizmayaUrl(`/story/${slug}/autoplay`)}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
@@ -280,7 +281,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           autoplay ↗
         </Link>
         <Link
-          href={`/story/${slug}/share`}
+          href={vizmayaUrl(`/story/${slug}/share`)}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
@@ -288,7 +289,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           share ↗
         </Link>
         <Link
-          href={`/story/${slug}`}
+          href={vizmayaUrl(`/story/${slug}`)}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
