@@ -29,6 +29,58 @@ type LandingEntity = {
   primary_color: string | null;
 };
 
+// Curated by recognizable-club / top-league slug. Slugs come from the worker's
+// commonName + slugify pipeline (strips FC/CF/SSC/AS/AC/... and trailing years),
+// so "Arsenal FC" → "arsenal", "FC Barcelona" → "barcelona", etc.
+const POPULAR_TEAM_SLUGS = [
+  'arsenal',
+  'chelsea',
+  'liverpool',
+  'manchester-city',
+  'manchester-united',
+  'tottenham-hotspur',
+  'real-madrid',
+  'barcelona',
+  'atletico-de-madrid',
+  'club-atletico-de-madrid',
+  'bayern-munchen',
+  'borussia-dortmund',
+  'juventus',
+  'milan',
+  'internazionale-milano',
+  'napoli',
+  'roma',
+  'paris-saint-germain',
+];
+
+const POPULAR_LEAGUE_SLUGS = [
+  'premier-league',
+  'primera-division',
+  'bundesliga',
+  'serie-a',
+  'ligue-1',
+  'champions-league',
+  'europa-league',
+  'primeira-liga',
+  'eredivisie',
+  'championship',
+  'campeonato-brasileiro-serie-a',
+  'european-championship',
+  'world-cup',
+];
+
+const FIXTURE_COLS = `
+  id, competition_slug, season, matchday, stage, kickoff_at, status,
+  home_score, away_score, home_team_name, away_team_name,
+  home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
+  away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
+`;
+
+function priorityIndex(slug: string, list: string[]): number {
+  const i = list.indexOf(slug);
+  return i === -1 ? Number.POSITIVE_INFINITY : i;
+}
+
 function useLandingArticles(limit = 6) {
   return useQuery({
     queryKey: ['landing', 'articles', limit],
@@ -56,16 +108,22 @@ function useLandingLeagues() {
         .select('id, slug, name, country, crest_url, primary_color')
         .eq('type', 'league')
         .not('crest_url', 'is', null)
-        .order('name')
-        .limit(12);
+        .limit(30);
       if (error) throw error;
-      return (data ?? []) as LandingEntity[];
+      return ((data ?? []) as LandingEntity[])
+        .sort((a, b) => {
+          const pa = priorityIndex(a.slug, POPULAR_LEAGUE_SLUGS);
+          const pb = priorityIndex(b.slug, POPULAR_LEAGUE_SLUGS);
+          if (pa !== pb) return pa - pb;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 12);
     },
     staleTime: 60 * 60 * 1000,
   });
 }
 
-function useLandingTeams(limit = 5) {
+function useLandingTeams(limit = 6) {
   return useQuery({
     queryKey: ['landing', 'teams', limit],
     queryFn: async (): Promise<LandingEntity[]> => {
@@ -73,13 +131,51 @@ function useLandingTeams(limit = 5) {
         .from('entities')
         .select('id, slug, name, country, crest_url, primary_color')
         .eq('type', 'team')
-        .not('crest_url', 'is', null)
-        .order('name')
-        .limit(limit);
+        .in('slug', POPULAR_TEAM_SLUGS)
+        .not('crest_url', 'is', null);
       if (error) throw error;
-      return (data ?? []) as LandingEntity[];
+      return ((data ?? []) as LandingEntity[])
+        .sort(
+          (a, b) =>
+            priorityIndex(a.slug, POPULAR_TEAM_SLUGS) -
+            priorityIndex(b.slug, POPULAR_TEAM_SLUGS),
+        )
+        .slice(0, limit);
     },
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+// Recent results + next upcoming — for the top-of-page snapshot strip.
+function useLandingMatchSnapshot() {
+  return useQuery({
+    queryKey: ['landing', 'snapshot'],
+    queryFn: async (): Promise<FixtureRow[]> => {
+      const now = new Date().toISOString();
+      const [past, upcoming] = await Promise.all([
+        supabase
+          .from('fixtures')
+          .select(FIXTURE_COLS)
+          .eq('status', 'finished')
+          .lt('kickoff_at', now)
+          .order('kickoff_at', { ascending: false })
+          .limit(2),
+        supabase
+          .from('fixtures')
+          .select(FIXTURE_COLS)
+          .gte('kickoff_at', now)
+          .order('kickoff_at', { ascending: true })
+          .limit(4),
+      ]);
+      if (past.error) throw past.error;
+      if (upcoming.error) throw upcoming.error;
+      const merged = [
+        ...((past.data ?? []) as unknown as FixtureRow[]).reverse(),
+        ...((upcoming.data ?? []) as unknown as FixtureRow[]),
+      ];
+      return merged;
+    },
+    staleTime: 60 * 1000,
   });
 }
 
@@ -87,12 +183,6 @@ function useLandingFixtures(limit = 4) {
   return useQuery({
     queryKey: ['landing', 'fixtures', limit],
     queryFn: async (): Promise<FixtureRow[]> => {
-      const FIXTURE_COLS = `
-        id, competition_slug, season, matchday, stage, kickoff_at, status,
-        home_score, away_score, home_team_name, away_team_name,
-        home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
-        away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
-      `;
       const { data, error } = await supabase
         .from('fixtures')
         .select(FIXTURE_COLS)
@@ -185,9 +275,18 @@ export default function Index() {
           </div>
         </div>
 
-        <div className="relative mx-auto mt-16 max-w-5xl">
+        <div className="relative mx-auto mt-16 max-w-6xl">
           <div className="absolute inset-x-10 -bottom-6 h-24 rounded-full bg-accent/20 blur-3xl" />
-          <HeroPreview />
+          <div className="relative grid gap-4 md:grid-cols-5 lg:gap-6">
+            <div className="md:col-span-2">
+              <PreviewLabel icon="schedule">Matches &amp; results</PreviewLabel>
+              <HeroMatchSnapshot />
+            </div>
+            <div className="md:col-span-3">
+              <PreviewLabel icon="news">Latest news</PreviewLabel>
+              <HeroNewsStack />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -455,55 +554,117 @@ function kickoffFromNow(iso: string): string {
 
 /* ---------- previews fed by real data ---------- */
 
-function HeroPreview() {
-  const { data: articles = [], isLoading } = useLandingArticles(3);
+function PreviewLabel({
+  icon,
+  children,
+}: {
+  icon: 'schedule' | 'news';
+  children: React.ReactNode;
+}) {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {isLoading || articles.length === 0
-        ? Array.from({ length: 3 }).map((_, i) => <ArticleSkeleton key={i} />)
-        : articles.map((a) => <ArticleHeroCard key={a.id} article={a} />)}
+    <div className="mb-3 flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-accent">
+        {icon === 'schedule' ? (
+          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="currentColor" aria-hidden>
+            <path d="M5 1.5v1H3.5A1.5 1.5 0 0 0 2 4v9.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V4a1.5 1.5 0 0 0-1.5-1.5H11v-1a.5.5 0 0 0-1 0v1H6v-1a.5.5 0 0 0-1 0Zm-2 4H13v8H3v-8Z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="currentColor" aria-hidden>
+            <path d="M2.5 3h11v10h-11V3Zm1.5 1.5v1.5h8V4.5H4Zm0 3v1.5h5V7.5H4Zm0 3v1.5h5V10.5H4Zm6 0v1.5h3V10.5h-3Zm0-3v1.5h3V7.5h-3Z" />
+          </svg>
+        )}
+      </span>
+      {children}
     </div>
   );
 }
 
-function ArticleHeroCard({ article }: { article: LandingArticle }) {
+function HeroMatchSnapshot() {
+  const { data: fixtures = [], isLoading } = useLandingMatchSnapshot();
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-      <div className="aspect-[16/10] overflow-hidden bg-bg">
-        {article.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={article.image_url}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </div>
-      <div className="p-4">
-        <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted">
-          <span className="rounded-full border border-border bg-bg/60 px-2 py-0.5 text-text">
-            {article.publisher}
-          </span>
-          <span>{relativeTime(article.published_at)}</span>
+    <div className="rounded-2xl border border-border bg-surface shadow-2xl">
+      {isLoading || fixtures.length === 0 ? (
+        <div className="space-y-1 p-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-md bg-bg/40 px-3 py-3"
+            >
+              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
+              <div className="h-3 w-12 animate-pulse rounded bg-surface" />
+              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
+            </div>
+          ))}
         </div>
-        <h3 className="line-clamp-3 text-sm font-semibold leading-snug text-text">
-          {article.headline}
-        </h3>
-      </div>
-    </article>
+      ) : (
+        <div>
+          {fixtures.map((f) => (
+            <MatchRow key={f.id} fixture={f} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-function ArticleSkeleton() {
+function HeroNewsStack() {
+  const { data: articles = [], isLoading } = useLandingArticles(5);
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
-      <div className="aspect-[16/10] animate-pulse bg-bg" />
-      <div className="space-y-2 p-4">
-        <div className="h-3 w-24 animate-pulse rounded bg-bg" />
-        <div className="h-3 w-full animate-pulse rounded bg-bg" />
-        <div className="h-3 w-3/4 animate-pulse rounded bg-bg" />
+    <ul className="space-y-3">
+      {isLoading || articles.length === 0
+        ? Array.from({ length: 5 }).map((_, i) => <NewsStackSkeleton key={i} />)
+        : articles.map((a) => <NewsStackCard key={a.id} article={a} />)}
+    </ul>
+  );
+}
+
+function NewsStackCard({ article }: { article: LandingArticle }) {
+  return (
+    <li className="overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+      <div className="flex gap-4 p-3">
+        <div className="h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-bg sm:h-20 sm:w-28">
+          {article.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={article.image_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted">
+            <span className="rounded-full border border-border bg-bg/60 px-2 py-0.5 text-text">
+              {article.publisher}
+            </span>
+            <span>{relativeTime(article.published_at)}</span>
+          </div>
+          <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-text">
+            {article.headline}
+          </h3>
+          {article.summary ? (
+            <p className="mt-1 line-clamp-2 text-xs text-muted">
+              {article.summary}
+            </p>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </li>
+  );
+}
+
+function NewsStackSkeleton() {
+  return (
+    <li className="overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+      <div className="flex gap-4 p-3">
+        <div className="h-24 w-32 shrink-0 animate-pulse rounded-lg bg-bg sm:h-20 sm:w-28" />
+        <div className="flex-1 space-y-2 py-1">
+          <div className="h-3 w-24 animate-pulse rounded bg-bg" />
+          <div className="h-3 w-full animate-pulse rounded bg-bg" />
+          <div className="h-3 w-3/4 animate-pulse rounded bg-bg" />
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -733,11 +894,8 @@ function CoverageGrid() {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-lg border border-border bg-surface/60 px-3 py-3"
-          >
-            <div className="h-9 w-9 animate-pulse rounded-full bg-bg" />
-            <div className="h-3 w-24 animate-pulse rounded bg-bg" />
-          </div>
+            className="aspect-[4/3] animate-pulse rounded-xl border border-border bg-surface/60"
+          />
         ))}
       </div>
     );
@@ -746,21 +904,34 @@ function CoverageGrid() {
   return (
     <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
       {leagues.map((l) => (
-        <div
-          key={l.id}
-          className="flex items-center gap-3 rounded-lg border border-border bg-surface/60 px-3 py-3 backdrop-blur"
-        >
-          <CrestAvatar url={l.crest_url} size={36} />
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-text">
-              {l.name}
-            </div>
-            {l.country ? (
-              <div className="truncate text-[11px] text-muted">{l.country}</div>
-            ) : null}
-          </div>
-        </div>
+        <LeagueTile key={l.id} league={l} />
       ))}
+    </div>
+  );
+}
+
+function LeagueTile({ league }: { league: LandingEntity }) {
+  return (
+    <div className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-surface">
+      {league.crest_url ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={league.crest_url}
+            alt=""
+            className="h-[78%] w-[78%] object-contain opacity-30 transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+      ) : null}
+      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-bg via-bg/80 to-transparent" />
+      <div className="absolute inset-x-3 bottom-3">
+        <div className="truncate text-sm font-bold leading-tight text-text">
+          {league.name}
+        </div>
+        {league.country ? (
+          <div className="truncate text-[11px] text-muted">{league.country}</div>
+        ) : null}
+      </div>
     </div>
   );
 }
