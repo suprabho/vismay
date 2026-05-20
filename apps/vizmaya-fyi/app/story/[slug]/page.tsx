@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
+import { hydrateFootshortConfig } from '@vismay/content-source/hydrateFootshortConfig'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { parseMapOverrides } from '@vismay/viz-engine'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
@@ -72,6 +73,18 @@ export default async function StoryPage({ params }: RouteParams) {
     story = await getStoryContent(slug)
     if (!(await hasStoryConfig(slug))) notFound()
     config = await loadStoryConfig(slug)
+    // Hydrate footshort stories with real team data from Supabase
+    // (`entities` table). YAML-explicit overrides win; Supabase fills the
+    // gaps; the bundled palette is the final fallback at render time. A
+    // missing Supabase config is a no-op, so dev without env vars still
+    // renders the story with monogram placeholders.
+    if (story.frontmatter.vertical === 'footshort') {
+      try {
+        config = await hydrateFootshortConfig(config)
+      } catch {
+        // Hydration must never block rendering — fall back silently.
+      }
+    }
     // Autoplay map overrides — read here so they ship in the SSG bundle
     // alongside the resolved config; StoryMapShell only applies them when
     // it sees `?autoplay=1` in the URL (client-side detection). Scroll

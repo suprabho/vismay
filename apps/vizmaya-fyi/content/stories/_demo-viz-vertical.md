@@ -33,9 +33,21 @@ theme:
 
 ---
 
-## Match card
+## Match card — score
 
-A `fs:match-card` viz mounted via the new Footshort vertical bundle. The core dispatcher routes by string discriminator; the module itself lives in `verticals/footshort-viz/src/modules/match-card/`. No core file was touched to add this type.
+The default `fs:match-card` layout: editorial panel with crests, score, and competition kicker. Use it where the score (or pre-match `vs`) is the headline.
+
+## Match card — compact
+
+A small chip with kickoff time, the two teams, and a competition footnote. Drops naturally into a sidebar or as a dense list item.
+
+## Match card — horizontal
+
+Hero treatment that spans wide, with a split home/away gradient and the competition tag watermarked behind. Good for headers and social cards.
+
+## Match card — portrait
+
+Tall sheet with crests side-by-side, big kickoff stack, and an optional "Watch on …" line. Use it for matchday spotlights.
 
 ## Match row
 

@@ -5,6 +5,7 @@ import { sample as embedSample } from '@vismay/viz-engine/src/modules/embed/samp
 import { sample as videoSample } from '@vismay/viz-engine/src/modules/video/sample'
 import { sample as riveSample } from '@vismay/viz-engine/src/modules/rive/sample'
 import { sample as raceRowSample } from '@vismay/f1-viz/modules/race-row/sample'
+import { sample as raceCardSample } from '@vismay/f1-viz/modules/race-card/sample'
 import { sample as driverStandingsSample } from '@vismay/f1-viz/modules/driver-standings/sample'
 import { sample as positionChartSample } from '@vismay/f1-viz/modules/position-chart/sample'
 import { sample as matchCardSample } from '@vismay/footshort-viz/modules/match-card/sample'
@@ -45,6 +46,7 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'video', category: 'Core', sample: videoSample },
   { type: 'rive', category: 'Core', sample: riveSample },
   { type: 'f1:race-row', category: 'F1', sample: raceRowSample },
+  { type: 'f1:race-card', category: 'F1', sample: raceCardSample },
   { type: 'f1:driver-standings', category: 'F1', sample: driverStandingsSample },
   { type: 'f1:position-chart', category: 'F1', sample: positionChartSample },
   { type: 'fs:match-card', category: 'Footshort', sample: matchCardSample },
