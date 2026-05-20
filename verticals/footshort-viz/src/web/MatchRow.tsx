@@ -46,8 +46,14 @@ function TeamCell({
   slug: string | null;
   align: 'left' | 'right';
 }) {
-  const inner = (
-    <span className={`flex flex-1 items-center gap-2 ${align === 'right' ? 'justify-end' : ''}`}>
+  // Flat structure: flex + flex-1 + justify go directly on the link/div so
+  // the img and name are real flex children. The previous nested-span layout
+  // had two flex-1 boxes fighting over width (the <a> as a flex item, and an
+  // inner span re-declaring flex-1) which silently collapsed `justify-end`
+  // because the inner span never actually stretched to the cell's width.
+  const className = `flex flex-1 items-center gap-2 ${align === 'right' ? 'justify-end' : ''}`;
+  const children = (
+    <>
       {align === 'left' && crest ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={crest} alt="" className="h-[22px] w-[22px] object-contain" />
@@ -57,12 +63,12 @@ function TeamCell({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={crest} alt="" className="h-[22px] w-[22px] object-contain" />
       ) : null}
-    </span>
+    </>
   );
-  if (!slug) return <div className="flex flex-1">{inner}</div>;
+  if (!slug) return <div className={className}>{children}</div>;
   return (
-    <Link href={`/team/${slug}`} className="flex flex-1">
-      {inner}
+    <Link href={`/team/${slug}`} className={className}>
+      {children}
     </Link>
   );
 }
