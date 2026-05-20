@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const middleware = createAdminMiddleware({
   auth,
   loginPath: '/login',
-  bypassPaths: ['/login'],
+  bypassPaths: ['/', '/login'],
 })
 
 export const config = {
