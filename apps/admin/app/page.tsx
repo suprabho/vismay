@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { LandingPage } from '@/components/landing/LandingPage'
+import { isAuthed } from '@/lib/adminAuth'
 
 interface AppEntry {
   href: string
@@ -28,7 +30,13 @@ const APPS: AppEntry[] = [
   },
 ]
 
-export default function DashboardPage() {
+export default async function HomePage() {
+  const authed = await isAuthed()
+  if (!authed) return <LandingPage />
+  return <Dashboard />
+}
+
+function Dashboard() {
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto w-full max-w-3xl space-y-6">
