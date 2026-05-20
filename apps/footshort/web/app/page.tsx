@@ -3,7 +3,110 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { MatchRow } from '@vismay/footshort-viz/web';
 import { useAuth } from '@/lib/AuthProvider';
+import { supabase } from '@/lib/supabase';
+import type { FixtureRow } from '@/lib/useFixtures';
+
+/* ---------- data hooks (anon-readable: articles, entities, fixtures) ---------- */
+
+type LandingArticle = {
+  id: string;
+  headline: string;
+  summary: string | null;
+  image_url: string | null;
+  publisher: string;
+  published_at: string;
+};
+
+type LandingEntity = {
+  id: string;
+  slug: string;
+  name: string;
+  country: string | null;
+  crest_url: string | null;
+  primary_color: string | null;
+};
+
+function useLandingArticles(limit = 6) {
+  return useQuery({
+    queryKey: ['landing', 'articles', limit],
+    queryFn: async (): Promise<LandingArticle[]> => {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('id, headline, summary, image_url, publisher, published_at')
+        .eq('status', 'summarized')
+        .not('image_url', 'is', null)
+        .order('published_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as LandingArticle[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+function useLandingLeagues() {
+  return useQuery({
+    queryKey: ['landing', 'leagues'],
+    queryFn: async (): Promise<LandingEntity[]> => {
+      const { data, error } = await supabase
+        .from('entities')
+        .select('id, slug, name, country, crest_url, primary_color')
+        .eq('type', 'league')
+        .not('crest_url', 'is', null)
+        .order('name')
+        .limit(12);
+      if (error) throw error;
+      return (data ?? []) as LandingEntity[];
+    },
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+function useLandingTeams(limit = 5) {
+  return useQuery({
+    queryKey: ['landing', 'teams', limit],
+    queryFn: async (): Promise<LandingEntity[]> => {
+      const { data, error } = await supabase
+        .from('entities')
+        .select('id, slug, name, country, crest_url, primary_color')
+        .eq('type', 'team')
+        .not('crest_url', 'is', null)
+        .order('name')
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as LandingEntity[];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+function useLandingFixtures(limit = 4) {
+  return useQuery({
+    queryKey: ['landing', 'fixtures', limit],
+    queryFn: async (): Promise<FixtureRow[]> => {
+      const FIXTURE_COLS = `
+        id, competition_slug, season, matchday, stage, kickoff_at, status,
+        home_score, away_score, home_team_name, away_team_name,
+        home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
+        away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
+      `;
+      const { data, error } = await supabase
+        .from('fixtures')
+        .select(FIXTURE_COLS)
+        .gte('kickoff_at', new Date().toISOString())
+        .order('kickoff_at', { ascending: true })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as unknown as FixtureRow[];
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
+/* ---------- page ---------- */
 
 export default function Index() {
   const { session, profile, loading } = useAuth();
@@ -39,19 +142,10 @@ export default function Index() {
             Short<span className="text-accent">Foot</span>
           </span>
         </Link>
-
         <nav className="hidden items-center gap-7 text-sm text-muted sm:flex">
-          <a href="#features" className="hover:text-text">
-            Features
-          </a>
-          <a href="#how-it-works" className="hover:text-text">
-            How it works
-          </a>
-          <a href="#coverage" className="hover:text-text">
-            Coverage
-          </a>
+          <a href="#features" className="hover:text-text">Features</a>
+          <a href="#coverage" className="hover:text-text">Coverage</a>
         </nav>
-
         <Link
           href="/login"
           className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90"
@@ -66,18 +160,15 @@ export default function Index() {
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             Football, distilled
           </span>
-
           <h1 className="mt-6 text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
             Your football
             <br />
             <span className="text-accent">in short.</span>
           </h1>
-
           <p className="mx-auto mt-6 max-w-xl text-base text-muted sm:text-lg">
-            The simple way to follow every team, league, and headline you care
-            about — fixtures, form, and AI-summarized news in one calm feed.
+            Every team, every league, every headline you care about — fixtures,
+            form, and AI-summarized news in one calm feed.
           </p>
-
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/login"
@@ -94,9 +185,9 @@ export default function Index() {
           </div>
         </div>
 
-        <div className="relative mx-auto mt-16 max-w-4xl">
+        <div className="relative mx-auto mt-16 max-w-5xl">
           <div className="absolute inset-x-10 -bottom-6 h-24 rounded-full bg-accent/20 blur-3xl" />
-          <HeroMockup />
+          <HeroPreview />
         </div>
       </section>
 
@@ -116,32 +207,32 @@ export default function Index() {
           </p>
         </div>
 
-        <div id="how-it-works" className="mt-20 space-y-24">
+        <div className="mt-20 space-y-24">
           <FeatureRow
             label="Step 01 — Watchlist"
             title="Set up your watchlist."
-            body="Search for your favourite clubs and leagues, or quickly discover new ones. We'll keep the feed focused on them — no noise."
-            visual={<WatchlistMockup />}
+            body="Search for the clubs and leagues you already follow, or discover new ones. We'll keep the feed focused on them — no noise."
+            visual={<WatchlistPreview />}
           />
           <FeatureRow
             reverse
             label="Step 02 — Schedule"
             title="Your personal football schedule."
-            body="Every game that matters to you, in one single view. Kick-off times, broadcast info, and live scores — right from your calendar."
-            visual={<ScheduleMockup />}
+            body="Every game that matters to you, in one single view. Kick-off times and live scores — right from your calendar."
+            visual={<SchedulePreview />}
           />
           <FeatureRow
             label="Step 03 — Briefs"
             title="Shorter than a halftime."
-            body="Headlines from 10+ publishers, summarized into bite-sized briefs you can read between trains. The news, in short."
-            visual={<BriefsMockup />}
+            body="Headlines from 10+ publishers, summarized into bite-sized briefs you can read between trains."
+            visual={<BriefsPreview />}
           />
           <FeatureRow
             reverse
             label="Step 04 — Stay on top"
             title="Keep on top."
-            body="Never miss a game with a daily digest, match reminders, and team-form alerts that arrive when you actually want them."
-            visual={<NotificationsMockup />}
+            body="Never miss a game with a daily digest and match reminders that arrive when you actually want them."
+            visual={<NotificationsPreview />}
           />
         </div>
       </section>
@@ -160,18 +251,7 @@ export default function Index() {
               kick-off to full-time.
             </p>
           </div>
-
-          <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {COVERAGE.map((name) => (
-              <div
-                key={name}
-                className="flex items-center gap-3 rounded-lg border border-border bg-surface/60 px-3 py-3 backdrop-blur"
-              >
-                <CompetitionBadge name={name} size={32} />
-                <span className="text-sm font-medium text-text">{name}</span>
-              </div>
-            ))}
-          </div>
+          <CoverageGrid />
         </div>
       </section>
 
@@ -209,11 +289,9 @@ export default function Index() {
                 Football, distilled. Every match, every headline — in short.
               </p>
             </div>
-
             <FooterColumn
               heading="Product"
               links={[
-                { label: 'Overview', href: '#' },
                 { label: 'Features', href: '#features' },
                 { label: 'Coverage', href: '#coverage' },
               ]}
@@ -233,7 +311,6 @@ export default function Index() {
               ]}
             />
           </div>
-
           <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted sm:flex-row sm:items-center">
             <span>© ShortFoot</span>
             <span>Made for fans.</span>
@@ -244,7 +321,7 @@ export default function Index() {
   );
 }
 
-/* ---------- shared layout pieces ---------- */
+/* ---------- layout primitives ---------- */
 
 function BackgroundGlow() {
   return (
@@ -324,383 +401,116 @@ function FooterColumn({
   );
 }
 
-/* ---------- crest + competition system ----------
-   Stylized brand-color marks (not real licensed logos). Mirrors the
-   approach Linear / Stripe / Notion use on marketing surfaces. */
-
-type TeamStyle = {
-  short: string;
-  primary: string;
-  secondary?: string;
-  textColor?: string;
-  pattern?: 'solid' | 'split' | 'stripes' | 'ring';
-};
-
-const TEAMS: Record<string, TeamStyle> = {
-  Arsenal: { short: 'ARS', primary: '#EF0107', pattern: 'solid' },
-  Chelsea: { short: 'CHE', primary: '#034694', pattern: 'solid' },
-  Liverpool: { short: 'LIV', primary: '#C8102E', pattern: 'solid' },
-  'Man City': {
-    short: 'MCI',
-    primary: '#6CABDD',
-    textColor: '#0B0B0F',
-    pattern: 'solid',
-  },
-  'Real Madrid': {
-    short: 'RMA',
-    primary: '#FEBE10',
-    secondary: '#FFFFFF',
-    textColor: '#0B0B0F',
-    pattern: 'ring',
-  },
-  Barcelona: {
-    short: 'BAR',
-    primary: '#A50044',
-    secondary: '#004D98',
-    pattern: 'split',
-  },
-  'Inter Milan': {
-    short: 'INT',
-    primary: '#0068A8',
-    secondary: '#0B0B0F',
-    pattern: 'stripes',
-  },
-  'Bayern München': { short: 'FCB', primary: '#DC052D', pattern: 'solid' },
-  PSG: {
-    short: 'PSG',
-    primary: '#004170',
-    secondary: '#DA291C',
-    pattern: 'split',
-  },
-};
-
-function TeamCrest({ team, size = 28 }: { team: string; size?: number }) {
-  const t = TEAMS[team];
-  if (!t) {
-    return (
-      <div
-        className="rounded-full bg-surface ring-1 ring-border"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  const text = t.textColor ?? '#FFFFFF';
-  const monoSize = Math.max(8, Math.round(size * 0.34));
-
-  if (t.pattern === 'split' && t.secondary) {
-    return (
-      <div
-        className="relative flex overflow-hidden rounded-full ring-1 ring-border"
-        style={{ width: size, height: size }}
-        aria-label={team}
-      >
-        <div className="flex-1" style={{ background: t.primary }} />
-        <div className="flex-1" style={{ background: t.secondary }} />
-        <span
-          className="absolute inset-0 flex items-center justify-center font-bold leading-none"
-          style={{ color: text, fontSize: monoSize }}
-        >
-          {t.short}
-        </span>
-      </div>
-    );
-  }
-
-  if (t.pattern === 'stripes' && t.secondary) {
-    return (
-      <div
-        className="relative overflow-hidden rounded-full ring-1 ring-border"
-        style={{
-          width: size,
-          height: size,
-          background: `repeating-linear-gradient(90deg, ${t.primary} 0 ${Math.max(2, Math.round(size / 8))}px, ${t.secondary} ${Math.max(2, Math.round(size / 8))}px ${Math.max(4, Math.round(size / 4))}px)`,
-        }}
-        aria-label={team}
-      >
-        <span
-          className="absolute inset-0 flex items-center justify-center font-bold leading-none"
-          style={{ color: '#FFFFFF', fontSize: monoSize }}
-        >
-          {t.short}
-        </span>
-      </div>
-    );
-  }
-
-  if (t.pattern === 'ring' && t.secondary) {
-    return (
-      <div
-        className="flex items-center justify-center rounded-full font-bold leading-none ring-1 ring-border"
-        style={{
-          width: size,
-          height: size,
-          background: t.secondary,
-          color: text,
-          fontSize: monoSize,
-          boxShadow: `inset 0 0 0 ${Math.max(2, Math.round(size / 10))}px ${t.primary}`,
-        }}
-        aria-label={team}
-      >
-        {t.short}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="flex items-center justify-center rounded-full font-bold leading-none ring-1 ring-border"
-      style={{
-        width: size,
-        height: size,
-        background: t.primary,
-        color: text,
-        fontSize: monoSize,
-      }}
-      aria-label={team}
-    >
-      {t.short}
-    </div>
-  );
-}
-
-type CompetitionStyle = {
-  short: string;
-  primary: string;
-  secondary?: string;
-  textColor?: string;
-  pattern?: 'solid' | 'diagonal';
-};
-
-const COMPETITIONS: Record<string, CompetitionStyle> = {
-  'Premier League': { short: 'PL', primary: '#3D195B' },
-  'La Liga': { short: 'LL', primary: '#E2231A' },
-  'Serie A': { short: 'SA', primary: '#008FD7' },
-  Bundesliga: { short: 'BL', primary: '#D20515' },
-  'Ligue 1': {
-    short: 'L1',
-    primary: '#091C3E',
-    secondary: '#DA291C',
-    pattern: 'diagonal',
-  },
-  'UEFA Champions League': { short: 'UCL', primary: '#001489' },
-  'UEFA Europa League': { short: 'UEL', primary: '#FF6900' },
-  'FA Cup': { short: 'FA', primary: '#1A2A6C' },
-  'Copa del Rey': {
-    short: 'CDR',
-    primary: '#AA151B',
-    secondary: '#F1BF00',
-    pattern: 'diagonal',
-  },
-  'Coppa Italia': { short: 'CI', primary: '#008C45' },
-  MLS: {
-    short: 'MLS',
-    primary: '#001489',
-    secondary: '#DA291C',
-    pattern: 'diagonal',
-  },
-  'World Cup': {
-    short: 'WC',
-    primary: '#D4AF37',
-    textColor: '#0B0B0F',
-  },
-};
-
-const COVERAGE = [
-  'Premier League',
-  'La Liga',
-  'Serie A',
-  'Bundesliga',
-  'Ligue 1',
-  'UEFA Champions League',
-  'UEFA Europa League',
-  'FA Cup',
-  'Copa del Rey',
-  'Coppa Italia',
-  'MLS',
-  'World Cup',
-] as const;
-
-function CompetitionBadge({
-  name,
-  size = 24,
+function CrestAvatar({
+  url,
+  size = 40,
+  ring = true,
 }: {
-  name: string;
+  url: string | null;
   size?: number;
+  ring?: boolean;
 }) {
-  const c = COMPETITIONS[name];
-  if (!c) {
-    return (
-      <div
-        className="rounded-md bg-surface ring-1 ring-border"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  const text = c.textColor ?? '#FFFFFF';
-  const fontSize = Math.max(8, Math.round(size * 0.32));
-
-  if (c.pattern === 'diagonal' && c.secondary) {
-    return (
-      <div
-        className="flex items-center justify-center rounded-md font-bold leading-none tracking-tight ring-1 ring-border"
-        style={{
-          width: size,
-          height: size,
-          background: `linear-gradient(135deg, ${c.primary} 0%, ${c.primary} 50%, ${c.secondary} 50%, ${c.secondary} 100%)`,
-          color: text,
-          fontSize,
-        }}
-        aria-label={name}
-      >
-        {c.short}
-      </div>
-    );
-  }
-
+  // Mirrors the chrome the in-app feed uses (white-tinted circle so any-color
+  // crests stay visible on the dark background).
   return (
     <div
-      className="flex items-center justify-center rounded-md font-bold leading-none tracking-tight ring-1 ring-border"
-      style={{
-        width: size,
-        height: size,
-        background: c.primary,
-        color: text,
-        fontSize,
-      }}
-      aria-label={name}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-white/40 ${
+        ring ? 'ring-1 ring-border' : ''
+      }`}
+      style={{ width: size, height: size }}
     >
-      {c.short}
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt=""
+          style={{ width: size * 0.78, height: size * 0.78 }}
+          className="object-contain"
+        />
+      ) : null}
     </div>
   );
 }
 
-/* ---------- mockups ---------- */
+function relativeTime(iso: string): string {
+  const d = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(d / 60_000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
-function MockShell({ children }: { children: React.ReactNode }) {
+function kickoffFromNow(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms < 0) return 'now';
+  const m = Math.floor(ms / 60_000);
+  if (m < 60) return `in ${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `in ${h}h`;
+  const d = Math.floor(h / 24);
+  return `in ${d}d`;
+}
+
+/* ---------- previews fed by real data ---------- */
+
+function HeroPreview() {
+  const { data: articles = [], isLoading } = useLandingArticles(3);
   return (
-    <div className="relative rounded-2xl border border-border bg-surface/80 p-4 shadow-2xl backdrop-blur">
-      <div className="mb-3 flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full bg-border" />
-        <span className="h-2 w-2 rounded-full bg-border" />
-        <span className="h-2 w-2 rounded-full bg-border" />
-      </div>
-      {children}
+    <div className="grid gap-4 md:grid-cols-3">
+      {isLoading || articles.length === 0
+        ? Array.from({ length: 3 }).map((_, i) => <ArticleSkeleton key={i} />)
+        : articles.map((a) => <ArticleHeroCard key={a.id} article={a} />)}
     </div>
   );
 }
 
-function MatchCard({
-  competition,
-  home,
-  away,
-  homeScore,
-  awayScore,
-  status,
-  venue,
-  live,
-}: {
-  competition: string;
-  home: string;
-  away: string;
-  homeScore?: number;
-  awayScore?: number;
-  status: string;
-  venue: string;
-  live?: boolean;
-}) {
-  const homeColor = TEAMS[home]?.primary ?? 'var(--sf-color-border)';
-  const awayColor = TEAMS[away]?.primary ?? 'var(--sf-color-border)';
+function ArticleHeroCard({ article }: { article: LandingArticle }) {
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border bg-bg/60 p-4">
-      <div
-        className="absolute inset-x-0 top-0 h-0.5"
-        style={{
-          background: `linear-gradient(90deg, ${homeColor} 0%, ${homeColor} 50%, ${awayColor} 50%, ${awayColor} 100%)`,
-        }}
-      />
-      <div className="flex items-center gap-2">
-        <CompetitionBadge name={competition} size={16} />
-        <span className="text-[10px] uppercase tracking-wider text-muted">
-          {competition}
-        </span>
-        {live ? (
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-accent/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-accent">
-            <span className="h-1 w-1 animate-pulse rounded-full bg-accent" />
-            Live
-          </span>
+    <article className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+      <div className="aspect-[16/10] overflow-hidden bg-bg">
+        {article.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={article.image_url}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         ) : null}
       </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <TeamCrest team={home} size={28} />
-          <span className="truncate text-sm font-semibold">{home}</span>
+      <div className="p-4">
+        <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted">
+          <span className="rounded-full border border-border bg-bg/60 px-2 py-0.5 text-text">
+            {article.publisher}
+          </span>
+          <span>{relativeTime(article.published_at)}</span>
         </div>
-        <span className="shrink-0 text-base font-bold tabular-nums text-text">
-          {homeScore !== undefined && awayScore !== undefined
-            ? `${homeScore} – ${awayScore}`
-            : status}
-        </span>
-        <div className="flex min-w-0 items-center justify-end gap-2">
-          <span className="truncate text-sm font-semibold">{away}</span>
-          <TeamCrest team={away} size={28} />
-        </div>
+        <h3 className="line-clamp-3 text-sm font-semibold leading-snug text-text">
+          {article.headline}
+        </h3>
       </div>
-      <div className="mt-2 text-xs text-muted">{venue}</div>
+    </article>
+  );
+}
+
+function ArticleSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+      <div className="aspect-[16/10] animate-pulse bg-bg" />
+      <div className="space-y-2 p-4">
+        <div className="h-3 w-24 animate-pulse rounded bg-bg" />
+        <div className="h-3 w-full animate-pulse rounded bg-bg" />
+        <div className="h-3 w-3/4 animate-pulse rounded bg-bg" />
+      </div>
     </div>
   );
 }
 
-function HeroMockup() {
+function WatchlistPreview() {
+  const { data: teams = [], isLoading } = useLandingTeams(5);
   return (
-    <MockShell>
-      <div className="grid gap-3 md:grid-cols-3">
-        <MatchCard
-          competition="Premier League"
-          home="Arsenal"
-          away="Chelsea"
-          homeScore={2}
-          awayScore={1}
-          status="FT"
-          venue="Today · Emirates"
-          live
-        />
-        <MatchCard
-          competition="La Liga"
-          home="Barcelona"
-          away="Real Madrid"
-          status="20:00"
-          venue="Tomorrow · Camp Nou"
-        />
-        <div className="relative overflow-hidden rounded-lg border border-border bg-bg/60 p-4">
-          <div
-            className="absolute inset-x-0 top-0 h-0.5"
-            style={{ background: TEAMS['Arsenal']!.primary }}
-          />
-          <div className="flex items-center gap-2">
-            <TeamCrest team="Arsenal" size={20} />
-            <span className="text-[10px] uppercase tracking-wider text-muted">
-              Brief · 30s read
-            </span>
-          </div>
-          <div className="mt-3 text-sm font-semibold leading-snug">
-            Saka returns to full training ahead of Madrid tie.
-          </div>
-          <div className="mt-2 text-xs text-muted">Arsenal · 2h ago</div>
-        </div>
-      </div>
-    </MockShell>
-  );
-}
-
-function WatchlistMockup() {
-  const teams: { name: string; league: string; followed: boolean }[] = [
-    { name: 'Arsenal', league: 'Premier League', followed: true },
-    { name: 'Real Madrid', league: 'La Liga', followed: true },
-    { name: 'Inter Milan', league: 'Serie A', followed: false },
-    { name: 'Bayern München', league: 'Bundesliga', followed: false },
-  ];
-  return (
-    <MockShell>
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-2xl">
       <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-bg/60 px-3 py-2 text-xs text-muted">
         <svg
           className="h-3.5 w-3.5"
@@ -716,218 +526,241 @@ function WatchlistMockup() {
         Search teams, leagues…
       </div>
       <ul className="space-y-2">
-        {teams.map((t) => (
-          <li
-            key={t.name}
-            className="flex items-center justify-between rounded-md border border-border bg-bg/60 px-3 py-2"
-          >
-            <div className="flex items-center gap-3">
-              <TeamCrest team={t.name} size={32} />
-              <div>
-                <div className="text-sm font-semibold">{t.name}</div>
-                <div className="flex items-center gap-1.5 text-xs text-muted">
-                  <CompetitionBadge name={t.league} size={12} />
-                  {t.league}
+        {isLoading || teams.length === 0
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 rounded-md border border-border bg-bg/60 px-3 py-2"
+              >
+                <div className="h-9 w-9 animate-pulse rounded-full bg-surface" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-32 animate-pulse rounded bg-surface" />
+                  <div className="h-2.5 w-20 animate-pulse rounded bg-surface" />
                 </div>
-              </div>
-            </div>
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                t.followed
-                  ? 'bg-accent text-bg'
-                  : 'border border-border text-muted'
-              }`}
-            >
-              {t.followed ? 'Following' : 'Follow'}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </MockShell>
-  );
-}
-
-function ScheduleMockup() {
-  const fixtures = [
-    {
-      day: 'Sat',
-      date: '22',
-      home: 'Arsenal',
-      away: 'Liverpool',
-      time: '17:30',
-      comp: 'Premier League',
-    },
-    {
-      day: 'Sun',
-      date: '23',
-      home: 'Real Madrid',
-      away: 'Barcelona',
-      time: '20:00',
-      comp: 'La Liga',
-    },
-    {
-      day: 'Tue',
-      date: '25',
-      home: 'Man City',
-      away: 'PSG',
-      time: '21:00',
-      comp: 'UEFA Champions League',
-    },
-  ];
-  return (
-    <MockShell>
-      <ul className="space-y-2">
-        {fixtures.map((f) => (
-          <li
-            key={`${f.home}-${f.away}`}
-            className="flex items-center gap-3 rounded-md border border-border bg-bg/60 px-3 py-2"
-          >
-            <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-surface text-center">
-              <span className="text-[10px] uppercase tracking-wider text-muted">
-                {f.day}
-              </span>
-              <span className="text-sm font-bold leading-none">{f.date}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <CompetitionBadge name={f.comp} size={12} />
-                <span className="text-[10px] uppercase tracking-wider text-muted">
-                  {f.comp} · {f.time}
-                </span>
-              </div>
-              <div className="mt-1.5 flex items-center gap-2">
-                <TeamCrest team={f.home} size={20} />
-                <span className="text-sm font-semibold">{f.home}</span>
-                <span className="text-xs text-muted">vs</span>
-                <span className="text-sm font-semibold">{f.away}</span>
-                <TeamCrest team={f.away} size={20} />
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </MockShell>
-  );
-}
-
-function BriefsMockup() {
-  type Brief =
-    | { kind: 'team'; team: string; title: string }
-    | { kind: 'comp'; comp: string; title: string };
-
-  const briefs: Brief[] = [
-    {
-      kind: 'team',
-      team: 'Arsenal',
-      title: 'Saka returns to full training ahead of Madrid tie.',
-    },
-    {
-      kind: 'comp',
-      comp: 'La Liga',
-      title: 'Bellingham extends scoring streak to seven.',
-    },
-    {
-      kind: 'team',
-      team: 'Inter Milan',
-      title: 'Inter close to deal for free-agent striker.',
-    },
-  ];
-  return (
-    <MockShell>
-      <ul className="space-y-2">
-        {briefs.map((b, i) => (
-          <li
-            key={i}
-            className="flex items-start gap-3 rounded-md border border-border bg-bg/60 px-3 py-3"
-          >
-            {b.kind === 'team' ? (
-              <TeamCrest team={b.team} size={32} />
-            ) : (
-              <CompetitionBadge name={b.comp} size={32} />
-            )}
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-accent">
-                {b.kind === 'team' ? b.team : b.comp}
-              </span>
-              <div className="mt-0.5 text-sm font-semibold leading-snug">
-                {b.title}
-              </div>
-              <div className="mt-1 text-xs text-muted">30s read · 2h ago</div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </MockShell>
-  );
-}
-
-function NotificationsMockup() {
-  type Item =
-    | { kind: 'digest'; title: string; body: string }
-    | {
-        kind: 'kickoff';
-        home: string;
-        away: string;
-        title: string;
-        body: string;
-      }
-    | { kind: 'form'; team: string; title: string; body: string };
-
-  const items: Item[] = [
-    {
-      kind: 'digest',
-      title: 'Daily digest is ready',
-      body: '6 stories across your teams.',
-    },
-    {
-      kind: 'kickoff',
-      home: 'Arsenal',
-      away: 'Liverpool',
-      title: 'Kick-off in 15 min',
-      body: 'Arsenal vs Liverpool · Anfield.',
-    },
-    {
-      kind: 'form',
-      team: 'Real Madrid',
-      title: 'Form alert',
-      body: 'Real Madrid on a 5-match win streak.',
-    },
-  ];
-  return (
-    <MockShell>
-      <ul className="space-y-2">
-        {items.map((n, i) => (
-          <li
-            key={i}
-            className="flex items-start gap-3 rounded-md border border-border bg-bg/60 px-3 py-2.5"
-          >
-            {n.kind === 'digest' ? (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
-                <svg
-                  viewBox="0 0 16 16"
-                  className="h-4 w-4"
-                  fill="currentColor"
-                  aria-hidden
+              </li>
+            ))
+          : teams.map((t, i) => (
+              <li
+                key={t.id}
+                className="flex items-center justify-between rounded-md border border-border bg-bg/60 px-3 py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <CrestAvatar url={t.crest_url} size={36} />
+                  <div>
+                    <div className="text-sm font-semibold text-text">{t.name}</div>
+                    {t.country ? (
+                      <div className="text-xs text-muted">{t.country}</div>
+                    ) : null}
+                  </div>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    i < 2
+                      ? 'bg-accent text-bg'
+                      : 'border border-border text-muted'
+                  }`}
                 >
-                  <path d="M3 4h10v1.5H3V4Zm0 3.25h10v1.5H3v-1.5Zm0 3.25h7V12H3v-1.5Z" />
-                </svg>
-              </span>
-            ) : n.kind === 'kickoff' ? (
-              <div className="flex shrink-0 -space-x-2">
-                <TeamCrest team={n.home} size={28} />
-                <TeamCrest team={n.away} size={28} />
-              </div>
-            ) : (
-              <TeamCrest team={n.team} size={28} />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold">{n.title}</div>
-              <div className="text-xs text-muted">{n.body}</div>
-            </div>
-            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
-          </li>
-        ))}
+                  {i < 2 ? 'Following' : 'Follow'}
+                </span>
+              </li>
+            ))}
       </ul>
-    </MockShell>
+    </div>
+  );
+}
+
+function SchedulePreview() {
+  const { data: fixtures = [], isLoading } = useLandingFixtures(4);
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-2xl">
+      {isLoading || fixtures.length === 0 ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-md border border-border bg-bg/60 px-3 py-3"
+            >
+              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
+              <div className="h-3 w-12 animate-pulse rounded bg-surface" />
+              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-bg/60">
+          {fixtures.map((f) => (
+            <MatchRow key={f.id} fixture={f} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BriefsPreview() {
+  const { data: articles = [], isLoading } = useLandingArticles(4);
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-2xl">
+      <ul className="space-y-2">
+        {isLoading || articles.length === 0
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <li
+                key={i}
+                className="flex gap-3 rounded-md border border-border bg-bg/60 p-3"
+              >
+                <div className="h-16 w-16 shrink-0 animate-pulse rounded-md bg-surface" />
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-surface" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-surface" />
+                </div>
+              </li>
+            ))
+          : articles.slice(0, 3).map((a) => (
+              <li
+                key={a.id}
+                className="flex gap-3 rounded-md border border-border bg-bg/60 p-3"
+              >
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-surface">
+                  {a.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={a.image_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-accent">
+                    {a.publisher}
+                  </div>
+                  <div className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-text">
+                    {a.headline}
+                  </div>
+                  {a.summary ? (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted">
+                      {a.summary}
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+      </ul>
+    </div>
+  );
+}
+
+function NotificationsPreview() {
+  const { data: fixtures = [], isLoading } = useLandingFixtures(2);
+  const { data: articles = [] } = useLandingArticles(1);
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-2xl">
+      <ul className="space-y-2">
+        <li className="flex items-start gap-3 rounded-md border border-border bg-bg/60 px-3 py-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+            <svg
+              viewBox="0 0 16 16"
+              className="h-4 w-4"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path d="M3 4h10v1.5H3V4Zm0 3.25h10v1.5H3v-1.5Zm0 3.25h7V12H3v-1.5Z" />
+            </svg>
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-text">
+              Daily digest is ready
+            </div>
+            <div className="text-xs text-muted">
+              {articles.length > 0
+                ? `Including: ${articles[0]!.headline.slice(0, 60)}${articles[0]!.headline.length > 60 ? '…' : ''}`
+                : '6 stories across your teams.'}
+            </div>
+          </div>
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
+        </li>
+
+        {isLoading || fixtures.length === 0
+          ? Array.from({ length: 2 }).map((_, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-md border border-border bg-bg/60 px-3 py-2.5"
+              >
+                <div className="flex shrink-0 -space-x-2">
+                  <div className="h-8 w-8 animate-pulse rounded-full bg-surface" />
+                  <div className="h-8 w-8 animate-pulse rounded-full bg-surface" />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-32 animate-pulse rounded bg-surface" />
+                  <div className="h-2.5 w-48 animate-pulse rounded bg-surface" />
+                </div>
+              </li>
+            ))
+          : fixtures.slice(0, 2).map((f) => {
+              const home = f.home?.name ?? f.home_team_name ?? 'TBD';
+              const away = f.away?.name ?? f.away_team_name ?? 'TBD';
+              return (
+                <li
+                  key={f.id}
+                  className="flex items-start gap-3 rounded-md border border-border bg-bg/60 px-3 py-2.5"
+                >
+                  <div className="flex shrink-0 -space-x-2">
+                    <CrestAvatar url={f.home?.crest_url ?? null} size={32} />
+                    <CrestAvatar url={f.away?.crest_url ?? null} size={32} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-text">
+                      Kick-off {kickoffFromNow(f.kickoff_at)}
+                    </div>
+                    <div className="truncate text-xs text-muted">
+                      {home} vs {away}
+                    </div>
+                  </div>
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                </li>
+              );
+            })}
+      </ul>
+    </div>
+  );
+}
+
+function CoverageGrid() {
+  const { data: leagues = [], isLoading } = useLandingLeagues();
+  if (isLoading) {
+    return (
+      <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-lg border border-border bg-surface/60 px-3 py-3"
+          >
+            <div className="h-9 w-9 animate-pulse rounded-full bg-bg" />
+            <div className="h-3 w-24 animate-pulse rounded bg-bg" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (leagues.length === 0) return null;
+  return (
+    <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      {leagues.map((l) => (
+        <div
+          key={l.id}
+          className="flex items-center gap-3 rounded-lg border border-border bg-surface/60 px-3 py-3 backdrop-blur"
+        >
+          <CrestAvatar url={l.crest_url} size={36} />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-text">
+              {l.name}
+            </div>
+            {l.country ? (
+              <div className="truncate text-[11px] text-muted">{l.country}</div>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
