@@ -211,6 +211,28 @@ function useLandingTeams(limit = 6) {
   });
 }
 
+// Slug → crest_url for every seeded league. Tiny query (≤30 rows) used to
+// theme each MatchTile's watermark with the right competition logo.
+function useLeagueCrestMap() {
+  return useQuery({
+    queryKey: ['landing', 'leagueCrestMap'],
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await supabase
+        .from('entities')
+        .select('slug, crest_url')
+        .eq('type', 'league')
+        .not('crest_url', 'is', null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const row of (data ?? []) as { slug: string; crest_url: string }[]) {
+        map[row.slug] = row.crest_url;
+      }
+      return map;
+    },
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
 // Recent results + next upcoming — for the top-of-page snapshot strip.
 function useLandingMatchSnapshot() {
   return useQuery({
@@ -644,6 +666,7 @@ function PreviewLabel({
 
 function HeroMatchTiles() {
   const { data: fixtures = [], isLoading } = useLandingMatchSnapshot();
+  const { data: leagueCrests = {} } = useLeagueCrestMap();
   if (isLoading || fixtures.length === 0) {
     return (
       <div className="-mx-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -663,7 +686,10 @@ function HeroMatchTiles() {
       <div className="flex gap-3">
         {fixtures.map((f) => (
           <div key={f.id} className="w-56 shrink-0 sm:w-60">
-            <MatchTile fixture={f} />
+            <MatchTile
+              fixture={f}
+              competitionCrest={leagueCrests[f.competition_slug ?? ''] ?? null}
+            />
           </div>
         ))}
       </div>
@@ -671,7 +697,13 @@ function HeroMatchTiles() {
   );
 }
 
-function MatchTile({ fixture }: { fixture: SnapshotFixture }) {
+function MatchTile({
+  fixture,
+  competitionCrest,
+}: {
+  fixture: SnapshotFixture;
+  competitionCrest: string | null;
+}) {
   const home = fixture.home;
   const away = fixture.away;
   const isFinished = fixture.status === 'finished';
@@ -733,22 +765,16 @@ function MatchTile({ fixture }: { fixture: SnapshotFixture }) {
       className="relative h-32 overflow-hidden rounded-xl p-4 text-white shadow-xl"
       style={{ background }}
     >
-      {/* Watermark: enlarged away crest fades into the bottom-right corner. */}
-      {away?.crest_url ? (
+      {/* Watermark: the competition crest, enlarged and faded into the
+          bottom-right corner. Mirrors the NHL/NBA/UCL logo washes on the
+          reference deck. */}
+      {competitionCrest ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={away.crest_url}
+          src={competitionCrest}
           alt=""
           aria-hidden
-          className="pointer-events-none absolute -right-4 -bottom-4 h-28 w-28 object-contain opacity-20"
-        />
-      ) : home?.crest_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={home.crest_url}
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute -right-4 -bottom-4 h-28 w-28 object-contain opacity-15"
+          className="pointer-events-none absolute -right-4 -bottom-4 h-28 w-28 object-contain opacity-25"
         />
       ) : null}
 
