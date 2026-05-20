@@ -100,8 +100,18 @@ const COMPETITION_PALETTE: Record<string, string> = {
   eredivisie: '#F47C20',
   'primeira-liga': '#006B3F',
   championship: '#1A1A1A',
-  'campeonato-brasileiro-serie-a': '#FFCB04',
+  // CBF green — original yellow killed white-text contrast on the league tile.
+  'campeonato-brasileiro-serie-a': '#009C3B',
 };
+
+// Quick darken helper for two-stop competition gradients on the league tiles.
+function darkenHex(hex: string, amount = 0.35): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+  const r = Math.max(0, Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount)));
+  const g = Math.max(0, Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount)));
+  const b = Math.max(0, Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount)));
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 const FIXTURE_COLS = `
   id, competition_slug, season, matchday, stage, kickoff_at, status,
@@ -1124,26 +1134,37 @@ function CoverageGrid() {
 }
 
 function LeagueTile({ league }: { league: LandingEntity }) {
+  const base = COMPETITION_PALETTE[league.slug];
+  const background = base
+    ? `linear-gradient(135deg, ${base} 0%, ${darkenHex(base, 0.4)} 100%)`
+    : 'var(--sf-color-surface)';
+
   return (
-    <div className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-surface">
-      {league.crest_url ? (
-        <div className="absolute inset-0 flex items-center justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={league.crest_url}
-            alt=""
-            className="h-[78%] w-[78%] object-contain opacity-30 transition-transform duration-300 group-hover:scale-105"
-          />
+    <div
+      className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-border shadow-lg"
+      style={{ background }}
+    >
+      <div className="flex h-full flex-col items-center p-4">
+        <div className="flex flex-1 items-center justify-center">
+          {league.crest_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={league.crest_url}
+              alt=""
+              className="h-full max-h-32 w-auto max-w-[80%] object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : null}
         </div>
-      ) : null}
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-bg via-bg/80 to-transparent" />
-      <div className="absolute inset-x-3 bottom-3">
-        <div className="truncate text-sm font-bold leading-tight text-text">
-          {league.name}
+        <div className="w-full text-center">
+          <div className="truncate text-sm font-bold leading-tight text-white">
+            {league.name}
+          </div>
+          {league.country ? (
+            <div className="truncate text-[11px] text-white/75">
+              {league.country}
+            </div>
+          ) : null}
         </div>
-        {league.country ? (
-          <div className="truncate text-[11px] text-muted">{league.country}</div>
-        ) : null}
       </div>
     </div>
   );
