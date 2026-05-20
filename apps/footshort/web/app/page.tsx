@@ -69,12 +69,77 @@ const POPULAR_LEAGUE_SLUGS = [
   'world-cup',
 ];
 
+// Display name + fallback color per competition slug. Used by the colorful
+// hero match tiles when a team is missing a primary_color of its own.
+const LEAGUE_NAME_BY_SLUG: Record<string, string> = {
+  'premier-league': 'Premier League',
+  'primera-division': 'La Liga',
+  bundesliga: 'Bundesliga',
+  'serie-a': 'Serie A',
+  'ligue-1': 'Ligue 1',
+  'champions-league': 'Champions League',
+  'europa-league': 'Europa League',
+  'world-cup': 'World Cup',
+  'european-championship': 'Euros',
+  eredivisie: 'Eredivisie',
+  'primeira-liga': 'Primeira Liga',
+  championship: 'Championship',
+  'campeonato-brasileiro-serie-a': 'Brasileirão',
+};
+
+const COMPETITION_PALETTE: Record<string, string> = {
+  'premier-league': '#3D195B',
+  'primera-division': '#E2231A',
+  bundesliga: '#D20515',
+  'serie-a': '#0066CC',
+  'ligue-1': '#091C3E',
+  'champions-league': '#0E1E5B',
+  'europa-league': '#FF6900',
+  'world-cup': '#7B2D26',
+  'european-championship': '#001A70',
+  eredivisie: '#F47C20',
+  'primeira-liga': '#006B3F',
+  championship: '#1A1A1A',
+  'campeonato-brasileiro-serie-a': '#FFCB04',
+};
+
 const FIXTURE_COLS = `
   id, competition_slug, season, matchday, stage, kickoff_at, status,
   home_score, away_score, home_team_name, away_team_name,
   home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url),
   away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
 `;
+
+// Snapshot query adds primary_color so the colorful match tiles can theme
+// themselves to each team. Kept separate from FIXTURE_COLS so the existing
+// MatchRow paths (which type against FixtureTeamRef) stay typed correctly.
+const SNAPSHOT_COLS = `
+  id, competition_slug, kickoff_at, status,
+  home_score, away_score, home_team_name, away_team_name,
+  home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url, primary_color),
+  away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url, primary_color)
+`;
+
+type SnapshotTeam = {
+  id: string;
+  slug: string;
+  name: string;
+  crest_url: string | null;
+  primary_color: string | null;
+};
+
+type SnapshotFixture = {
+  id: string;
+  competition_slug: string | null;
+  kickoff_at: string;
+  status: string;
+  home_score: number | null;
+  away_score: number | null;
+  home_team_name: string | null;
+  away_team_name: string | null;
+  home: SnapshotTeam | null;
+  away: SnapshotTeam | null;
+};
 
 function priorityIndex(slug: string, list: string[]): number {
   const i = list.indexOf(slug);
@@ -150,28 +215,28 @@ function useLandingTeams(limit = 6) {
 function useLandingMatchSnapshot() {
   return useQuery({
     queryKey: ['landing', 'snapshot'],
-    queryFn: async (): Promise<FixtureRow[]> => {
+    queryFn: async (): Promise<SnapshotFixture[]> => {
       const now = new Date().toISOString();
       const [past, upcoming] = await Promise.all([
         supabase
           .from('fixtures')
-          .select(FIXTURE_COLS)
+          .select(SNAPSHOT_COLS)
           .eq('status', 'finished')
           .lt('kickoff_at', now)
           .order('kickoff_at', { ascending: false })
-          .limit(2),
+          .limit(3),
         supabase
           .from('fixtures')
-          .select(FIXTURE_COLS)
+          .select(SNAPSHOT_COLS)
           .gte('kickoff_at', now)
           .order('kickoff_at', { ascending: true })
-          .limit(4),
+          .limit(6),
       ]);
       if (past.error) throw past.error;
       if (upcoming.error) throw upcoming.error;
       const merged = [
-        ...((past.data ?? []) as unknown as FixtureRow[]).reverse(),
-        ...((upcoming.data ?? []) as unknown as FixtureRow[]),
+        ...((past.data ?? []) as unknown as SnapshotFixture[]).reverse(),
+        ...((upcoming.data ?? []) as unknown as SnapshotFixture[]),
       ];
       return merged;
     },
@@ -275,17 +340,15 @@ export default function Index() {
           </div>
         </div>
 
-        <div className="relative mx-auto mt-16 max-w-6xl">
+        <div className="relative mx-auto mt-16 max-w-6xl space-y-10">
           <div className="absolute inset-x-10 -bottom-6 h-24 rounded-full bg-accent/20 blur-3xl" />
-          <div className="relative grid gap-4 md:grid-cols-5 lg:gap-6">
-            <div className="md:col-span-2">
-              <PreviewLabel icon="schedule">Matches &amp; results</PreviewLabel>
-              <HeroMatchSnapshot />
-            </div>
-            <div className="md:col-span-3">
-              <PreviewLabel icon="news">Latest news</PreviewLabel>
-              <HeroNewsStack />
-            </div>
+          <div className="relative">
+            <PreviewLabel icon="schedule">Matches &amp; results</PreviewLabel>
+            <HeroMatchTiles />
+          </div>
+          <div className="relative">
+            <PreviewLabel icon="news">Latest news</PreviewLabel>
+            <HeroNewsStack />
           </div>
         </div>
       </section>
@@ -579,30 +642,154 @@ function PreviewLabel({
   );
 }
 
-function HeroMatchSnapshot() {
+function HeroMatchTiles() {
   const { data: fixtures = [], isLoading } = useLandingMatchSnapshot();
-  return (
-    <div className="rounded-2xl border border-border bg-surface shadow-2xl">
-      {isLoading || fixtures.length === 0 ? (
-        <div className="space-y-1 p-2">
+  if (isLoading || fixtures.length === 0) {
+    return (
+      <div className="-mx-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-md bg-bg/40 px-3 py-3"
-            >
-              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
-              <div className="h-3 w-12 animate-pulse rounded bg-surface" />
-              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
-            </div>
+              className="h-32 w-56 shrink-0 animate-pulse rounded-xl bg-surface sm:w-60"
+            />
           ))}
         </div>
-      ) : (
-        <div>
-          {fixtures.map((f) => (
-            <MatchRow key={f.id} fixture={f} />
-          ))}
+      </div>
+    );
+  }
+  return (
+    <div className="-mx-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-3">
+        {fixtures.map((f) => (
+          <div key={f.id} className="w-56 shrink-0 sm:w-60">
+            <MatchTile fixture={f} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MatchTile({ fixture }: { fixture: SnapshotFixture }) {
+  const home = fixture.home;
+  const away = fixture.away;
+  const isFinished = fixture.status === 'finished';
+  const isLive = fixture.status === 'live';
+
+  // Background: home primary as base, away primary as gradient tail. Fall back
+  // to the per-competition palette if no team color is known.
+  const fallback =
+    COMPETITION_PALETTE[fixture.competition_slug ?? ''] ?? '#1F2030';
+  const homeColor = home?.primary_color ?? fallback;
+  const awayColor = away?.primary_color;
+  const background =
+    awayColor && awayColor.toLowerCase() !== homeColor.toLowerCase()
+      ? `linear-gradient(135deg, ${homeColor} 0%, ${homeColor} 55%, ${awayColor} 100%)`
+      : homeColor;
+
+  // Top-left label: score for finished games, LIVE pill, or local kick-off
+  // time. Day label for non-today fixtures so the strip self-orients.
+  let topLabel: React.ReactNode;
+  if (isFinished && fixture.home_score !== null && fixture.away_score !== null) {
+    topLabel = (
+      <span className="font-bold tabular-nums">
+        {fixture.home_score} – {fixture.away_score}
+      </span>
+    );
+  } else if (isLive) {
+    topLabel = (
+      <span className="inline-flex items-center gap-1">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+        LIVE
+      </span>
+    );
+  } else {
+    const d = new Date(fixture.kickoff_at);
+    const today = new Date();
+    const isToday = d.toDateString() === today.toDateString();
+    topLabel = isToday
+      ? d.toLocaleTimeString(undefined, {
+          hour: 'numeric',
+          minute: '2-digit',
+        })
+      : d.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        });
+  }
+
+  const competitionName =
+    LEAGUE_NAME_BY_SLUG[fixture.competition_slug ?? ''] ??
+    fixture.competition_slug ??
+    '';
+
+  const homeName = home?.name ?? fixture.home_team_name ?? 'TBD';
+  const awayName = away?.name ?? fixture.away_team_name ?? 'TBD';
+
+  return (
+    <div
+      className="relative h-32 overflow-hidden rounded-xl p-4 text-white shadow-xl"
+      style={{ background }}
+    >
+      {/* Watermark: enlarged away crest fades into the bottom-right corner. */}
+      {away?.crest_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={away.crest_url}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-4 -bottom-4 h-28 w-28 object-contain opacity-20"
+        />
+      ) : home?.crest_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={home.crest_url}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-4 -bottom-4 h-28 w-28 object-contain opacity-15"
+        />
+      ) : null}
+
+      <div className="relative flex h-full flex-col">
+        <div className="text-xs font-bold uppercase tracking-wider">
+          {topLabel}
         </div>
-      )}
+
+        <div className="mt-2 flex-1 space-y-1.5 overflow-hidden">
+          <TeamRow name={homeName} crest={home?.crest_url ?? null} />
+          <TeamRow name={awayName} crest={away?.crest_url ?? null} />
+        </div>
+
+        <div className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/80">
+          {competitionName}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamRow({
+  name,
+  crest,
+}: {
+  name: string;
+  crest: string | null;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/85">
+        {crest ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={crest}
+            alt=""
+            className="h-4 w-4 object-contain"
+          />
+        ) : null}
+      </span>
+      <span className="truncate text-sm font-semibold">{name}</span>
     </div>
   );
 }
@@ -610,7 +797,7 @@ function HeroMatchSnapshot() {
 function HeroNewsStack() {
   const { data: articles = [], isLoading } = useLandingArticles(5);
   return (
-    <ul className="space-y-3">
+    <ul className="grid gap-3 sm:grid-cols-2">
       {isLoading || articles.length === 0
         ? Array.from({ length: 5 }).map((_, i) => <NewsStackSkeleton key={i} />)
         : articles.map((a) => <NewsStackCard key={a.id} article={a} />)}
