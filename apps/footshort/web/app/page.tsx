@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MatchRow } from '@vismay/footshort-viz/web';
 import { useAuth } from '@/lib/AuthProvider';
@@ -372,15 +372,11 @@ export default function Index() {
           </div>
         </div>
 
-        <div className="relative mx-auto mt-16 max-w-6xl space-y-10">
+        <div className="relative mx-auto mt-16 max-w-6xl">
           <div className="absolute inset-x-10 -bottom-6 h-24 rounded-full bg-accent/20 blur-3xl" />
           <div className="relative">
             <PreviewLabel icon="schedule">Matches &amp; results</PreviewLabel>
             <HeroMatchTiles />
-          </div>
-          <div className="relative">
-            <PreviewLabel icon="news">Latest news</PreviewLabel>
-            <HeroNewsStack />
           </div>
         </div>
       </section>
@@ -418,8 +414,8 @@ export default function Index() {
           <FeatureRow
             label="Step 03 — Briefs"
             title="Shorter than a halftime."
-            body="Headlines from 10+ publishers, summarized into bite-sized briefs you can read between trains."
-            visual={<BriefsPreview />}
+            body="Headlines from 10+ publishers, summarized into bite-sized briefs you can read between trains. Swipe through the day's stories."
+            visual={<BriefsCardStack />}
           />
           <FeatureRow
             reverse
@@ -830,66 +826,6 @@ function TeamRow({
   );
 }
 
-function HeroNewsStack() {
-  const { data: articles = [], isLoading } = useLandingArticles(5);
-  return (
-    <ul className="grid gap-3 sm:grid-cols-2">
-      {isLoading || articles.length === 0
-        ? Array.from({ length: 5 }).map((_, i) => <NewsStackSkeleton key={i} />)
-        : articles.map((a) => <NewsStackCard key={a.id} article={a} />)}
-    </ul>
-  );
-}
-
-function NewsStackCard({ article }: { article: LandingArticle }) {
-  return (
-    <li className="overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
-      <div className="flex gap-4 p-3">
-        <div className="h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-bg sm:h-20 sm:w-28">
-          {article.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={article.image_url}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : null}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted">
-            <span className="rounded-full border border-border bg-bg/60 px-2 py-0.5 text-text">
-              {article.publisher}
-            </span>
-            <span>{relativeTime(article.published_at)}</span>
-          </div>
-          <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-text">
-            {article.headline}
-          </h3>
-          {article.summary ? (
-            <p className="mt-1 line-clamp-2 text-xs text-muted">
-              {article.summary}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function NewsStackSkeleton() {
-  return (
-    <li className="overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
-      <div className="flex gap-4 p-3">
-        <div className="h-24 w-32 shrink-0 animate-pulse rounded-lg bg-bg sm:h-20 sm:w-28" />
-        <div className="flex-1 space-y-2 py-1">
-          <div className="h-3 w-24 animate-pulse rounded bg-bg" />
-          <div className="h-3 w-full animate-pulse rounded bg-bg" />
-          <div className="h-3 w-3/4 animate-pulse rounded bg-bg" />
-        </div>
-      </div>
-    </li>
-  );
-}
 
 function WatchlistPreview() {
   const { data: teams = [], isLoading } = useLandingTeams(5);
@@ -984,56 +920,166 @@ function SchedulePreview() {
   );
 }
 
-function BriefsPreview() {
-  const { data: articles = [], isLoading } = useLandingArticles(4);
+function BriefsCardStack() {
+  const { data: articles = [], isLoading } = useLandingArticles(6);
+  const [index, setIndex] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef(0);
+
+  if (isLoading || articles.length === 0) {
+    return (
+      <div className="relative mx-auto h-[420px] max-w-sm">
+        <div className="absolute inset-0 animate-pulse rounded-2xl border border-border bg-surface shadow-2xl" />
+      </div>
+    );
+  }
+
+  const total = articles.length;
+  const advance = (dir: 1 | -1) => {
+    setIndex((prev) => (prev + dir + total) % total);
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setDragging(true);
+    startX.current = e.clientX;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    setDragX(e.clientX - startX.current);
+  };
+
+  const finishDrag = () => {
+    if (!dragging) return;
+    setDragging(false);
+    const threshold = 80;
+    if (dragX > threshold) advance(-1);
+    else if (dragX < -threshold) advance(1);
+    setDragX(0);
+  };
+
+  // Front + 2 cards peeking behind. Render back-to-front so DOM order
+  // matches stacking order (back card first, front card last).
+  const visible: { article: LandingArticle; depth: number }[] = [];
+  for (let i = 2; i >= 0; i--) {
+    const articleIdx = (index + i) % total;
+    visible.push({ article: articles[articleIdx]!, depth: i });
+  }
+
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4 shadow-2xl">
-      <ul className="space-y-2">
-        {isLoading || articles.length === 0
-          ? Array.from({ length: 3 }).map((_, i) => (
-              <li
-                key={i}
-                className="flex gap-3 rounded-md border border-border bg-bg/60 p-3"
-              >
-                <div className="h-16 w-16 shrink-0 animate-pulse rounded-md bg-surface" />
-                <div className="flex-1 space-y-2 py-1">
-                  <div className="h-3 w-3/4 animate-pulse rounded bg-surface" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-surface" />
-                </div>
-              </li>
-            ))
-          : articles.slice(0, 3).map((a) => (
-              <li
-                key={a.id}
-                className="flex gap-3 rounded-md border border-border bg-bg/60 p-3"
-              >
-                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-surface">
-                  {a.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={a.image_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-accent">
-                    {a.publisher}
-                  </div>
-                  <div className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-text">
-                    {a.headline}
-                  </div>
-                  {a.summary ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted">
-                      {a.summary}
-                    </p>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-      </ul>
+    <div className="flex flex-col items-center gap-4">
+      <div
+        className="relative mx-auto h-[420px] w-full max-w-sm touch-pan-y select-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={finishDrag}
+        onPointerCancel={finishDrag}
+      >
+        {visible.map(({ article, depth }) => (
+          <BriefStackCard
+            key={`${article.id}-${depth}`}
+            article={article}
+            depth={depth}
+            dragX={depth === 0 ? dragX : 0}
+            isDragging={dragging && depth === 0}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => advance(-1)}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text hover:border-muted"
+          aria-label="Previous brief"
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden>
+            <path d="M10.5 3 6 8l4.5 5 1-1L8 8l3.5-4-1-1Z" />
+          </svg>
+        </button>
+        <span className="min-w-[3rem] text-center text-xs font-medium tabular-nums text-muted">
+          {index + 1} / {total}
+        </span>
+        <button
+          type="button"
+          onClick={() => advance(1)}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-text hover:border-muted"
+          aria-label="Next brief"
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden>
+            <path d="M5.5 3 10 8l-4.5 5-1-1L8 8 4.5 4l1-1Z" />
+          </svg>
+        </button>
+      </div>
     </div>
+  );
+}
+
+function BriefStackCard({
+  article,
+  depth,
+  dragX,
+  isDragging,
+}: {
+  article: LandingArticle;
+  depth: number;
+  dragX: number;
+  isDragging: boolean;
+}) {
+  const translateY = depth * -10;
+  const scale = 1 - depth * 0.04;
+  const opacity = 1 - depth * 0.3;
+  const rotate = dragX * 0.04;
+
+  const transform =
+    depth === 0
+      ? `translate3d(${dragX}px, ${translateY}px, 0) rotate(${rotate}deg)`
+      : `translate3d(0, ${translateY}px, 0) scale(${scale})`;
+
+  return (
+    <article
+      className="absolute inset-0 overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+      style={{
+        transform,
+        opacity,
+        zIndex: 10 - depth,
+        transition: isDragging
+          ? 'none'
+          : 'transform 0.3s ease, opacity 0.3s ease',
+        cursor: depth === 0 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+        pointerEvents: depth === 0 ? 'auto' : 'none',
+      }}
+    >
+      <div className="aspect-[16/10] overflow-hidden bg-bg">
+        {article.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={article.image_url}
+            alt=""
+            className="h-full w-full object-cover"
+            draggable={false}
+          />
+        ) : null}
+      </div>
+      <div className="p-5">
+        <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted">
+          <span className="rounded-full border border-border bg-bg/60 px-2 py-0.5 text-text">
+            {article.publisher}
+          </span>
+          <span>{relativeTime(article.published_at)}</span>
+        </div>
+        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-text">
+          {article.headline}
+        </h3>
+        {article.summary ? (
+          <p className="mt-2 line-clamp-3 text-sm text-muted">
+            {article.summary}
+          </p>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
