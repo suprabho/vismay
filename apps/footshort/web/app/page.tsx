@@ -956,22 +956,22 @@ function WatchlistPreview() {
 function SchedulePreview() {
   const { data: fixtures = [], isLoading } = useLandingFixtures(4);
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4 shadow-2xl">
+    <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
       {isLoading || fixtures.length === 0 ? (
-        <div className="space-y-2">
+        <div>
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-md border border-border bg-bg/60 px-3 py-3"
+              className="flex items-center justify-between border-b border-white/10 px-2 py-3 last:border-b-0"
             >
-              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
-              <div className="h-3 w-12 animate-pulse rounded bg-surface" />
-              <div className="h-3 w-24 animate-pulse rounded bg-surface" />
+              <div className="h-3 w-24 animate-pulse rounded bg-bg" />
+              <div className="h-3 w-12 animate-pulse rounded bg-bg" />
+              <div className="h-3 w-24 animate-pulse rounded bg-bg" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-bg/60">
+        <div>
           {fixtures.map((f) => (
             <MatchRow key={f.id} fixture={f} />
           ))}
