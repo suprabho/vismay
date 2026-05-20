@@ -56,6 +56,7 @@ export async function fetchEditorialStories(
     .select('slug, title, status, listed, published_at, updated_at, created_at')
     .eq('status', 'published')
     .eq('listed', true)
+    .eq('app_slug', 'footshort')
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit)
 
@@ -86,6 +87,7 @@ export async function fetchEditorialStory(
     .eq('slug', slug)
     .eq('status', 'published')
     .eq('listed', true)
+    .eq('app_slug', 'footshort')
     .maybeSingle()
 
   if (error || !data) return null
