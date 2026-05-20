@@ -971,7 +971,10 @@ function SchedulePreview() {
           ))}
         </div>
       ) : (
-        <div>
+        // -mx-2 absorbs MatchRow's internal p-2 so the away crest sits flush
+        // with the card's inner edge. The outer card's overflow-hidden clips
+        // the row's overhang at the rounded corners.
+        <div className="-mx-2">
           {fixtures.map((f) => (
             <MatchRow key={f.id} fixture={f} />
           ))}
