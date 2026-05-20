@@ -1,0 +1,75 @@
+'use client'
+
+import type { CSSProperties } from 'react'
+import { Crest } from '../../../data/Crest'
+import type { MatchCardConfig } from '../index'
+import { resolveFixture, teamWash } from './shared'
+
+/**
+ * Compact chip — small fixture badge like the reference Real-Madrid vs
+ * Barcelona / Monaco GP cards. Single home-team wash background, two crests
+ * stacked on the left, score or kickoff on the right.
+ */
+export default function CompactLayout({ config }: { config: MatchCardConfig }) {
+  const f = resolveFixture(config)
+  const wrap: CSSProperties = {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.75rem',
+  }
+  const card: CSSProperties = {
+    width: 'min(280px, 100%)',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    background: teamWash(f.homeColor),
+    color: 'var(--color-text, #fff)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+  }
+  const kickoff: CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '11px',
+    letterSpacing: '0.16em',
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: 600,
+  }
+  const teamRow: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontFamily: 'var(--font-sans, system-ui)',
+    fontSize: '15px',
+    fontWeight: 600,
+  }
+  const compLine: CSSProperties = {
+    marginTop: '2px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '10px',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.7)',
+  }
+  return (
+    <div style={wrap}>
+      <div style={card}>
+        {(config.kickoff || config.score) && (
+          <div style={kickoff}>{config.kickoff ?? config.score}</div>
+        )}
+        <div style={teamRow}>
+          <Crest team={config.home} size={22} crestUrl={config.homeCrestUrl} />
+          <span>{f.homeShort}</span>
+        </div>
+        <div style={teamRow}>
+          <Crest team={config.away} size={22} crestUrl={config.awayCrestUrl} />
+          <span>{f.awayShort}</span>
+        </div>
+        {f.competitionName && <div style={compLine}>{f.competitionName}</div>}
+      </div>
+    </div>
+  )
+}

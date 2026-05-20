@@ -10,18 +10,68 @@ defaults:
   flySpeed: 1.2
 
 sections:
-  - id: match
-    text: "Match card"
+  - id: match-score
+    text: "Match card — score"
     background:
       - type: map
         center: [-0.13, 51.5]
         zoom: 8
     foreground:
       - type: fs:match-card
+        layout: score
         home: "Arsenal"
         away: "Chelsea"
         score: "2 – 1"
-        competition: "Premier League · matchday 35"
+        kickoff: "FT"
+        competition: "Premier League"
+        competitionSlug: prem
+
+  - id: match-compact
+    text: "Match card — compact"
+    background:
+      - type: map
+        center: [-3.7, 40.4]
+        zoom: 5
+    foreground:
+      - type: fs:match-card
+        layout: compact
+        home: "Real Madrid"
+        away: "Barcelona"
+        kickoff: "1:30 PM"
+        competition: "La Liga"
+        competitionSlug: la-liga
+
+  - id: match-horizontal
+    text: "Match card — horizontal"
+    background:
+      - type: map
+        center: [2.35, 48.85]
+        zoom: 5
+    foreground:
+      - type: fs:match-card
+        layout: horizontal
+        home: "PSG"
+        away: "Liverpool"
+        kickoff: "3:00 PM"
+        competition: "UEFA Champions League"
+        competitionSlug: ucl
+
+  - id: match-portrait
+    text: "Match card — portrait"
+    background:
+      - type: map
+        center: [-0.13, 51.5]
+        zoom: 7
+    foreground:
+      - type: fs:match-card
+        layout: portrait
+        home: "Manchester City"
+        away: "Tottenham"
+        kickoff: "8:30 PM"
+        dateLabel: "Thursday, Jun 5"
+        competition: "Premier League"
+        competitionSlug: prem
+        watchOn: "Sky Sports"
 
   - id: match-row
     text: "Match row"

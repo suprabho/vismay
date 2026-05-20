@@ -240,6 +240,65 @@ sections:
       zoom: 1.8
       opacity: 0.40
 
+  - id: card-compact
+    text: "Race card — compact"
+    map:
+      center: [7.42, 43.74]
+      zoom: 11
+      opacity: 0.45
+    foreground:
+      - type: f1:race-card
+        layout: compact
+        grandPrix: "Monaco Grand Prix"
+        season: 2026
+        round: 7
+        sessionLabel: "2:00 PM"
+
+  - id: card-horizontal
+    text: "Race card — horizontal"
+    map:
+      center: [-1.0169, 52.0786]
+      zoom: 9
+      opacity: 0.45
+    foreground:
+      - type: f1:race-card
+        layout: horizontal
+        grandPrix: "British Grand Prix"
+        season: 2026
+        round: 11
+        date: "2026-07-05"
+        sessionLabel: "Race · 14:00 BST"
+
+  - id: card-portrait
+    text: "Race card — portrait"
+    map:
+      center: [136.541, 34.844]
+      zoom: 10
+      opacity: 0.45
+    foreground:
+      - type: f1:race-card
+        layout: portrait
+        grandPrix: "Japanese Grand Prix"
+        season: 2026
+        round: 3
+        date: "2026-04-12"
+        sessionLabel: "Sun · 14:00"
+        winner: "Andrea Kimi Antonelli"
+
+  - id: card-score
+    text: "Race card — score"
+    map:
+      center: [121.220, 31.342]
+      zoom: 10
+      opacity: 0.45
+    foreground:
+      - type: f1:race-card
+        layout: score
+        grandPrix: "Chinese Grand Prix"
+        season: 2026
+        round: 2
+        winner: "Andrea Kimi Antonelli"
+
   - id: standings-canada
     text: "Montreal, twenty clear"
     map:

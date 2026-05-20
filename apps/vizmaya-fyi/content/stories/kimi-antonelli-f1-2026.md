@@ -133,6 +133,22 @@ He is the only driver on the grid who has lost places at every single start of 2
 
 Wolff to Sky Sports Germany after Miami: "Not good at all. That's unacceptable if you want to win a world championship. We just have to dig even deeper to try to understand how we can fix that, because the gaps to Mercedes' rivals are not big enough to cruise into the sunset, and therefore you can't be missing starts." The FIA, meanwhile, is testing a low-power start-detection system that will push Mercedes toward a procedural solution rather than letting them software-patch around it.
 
+## Race card — compact
+
+A `f1:race-card` chip — kickoff time, GP name, country flag. Drops naturally into a sidebar or as a dense list item.
+
+## Race card — horizontal
+
+Wide hero with the country flag, large GP name, circuit kicker, and round watermark behind. Good for headers and social cards.
+
+## Race card — portrait
+
+Tall sheet with the flag centered, GP name, session/kickoff stack, and an optional winner pill for post-race recaps.
+
+## Race card — score
+
+Editorial panel on a blurred neutral surface — flag, GP name, optional winner. Sister to the football match-card's score layout.
+
 ## Montreal, twenty clear
 
 The standings after four rounds: Antonelli 100, Russell 80, Leclerc 59, Norris 51, Hamilton 51, Piastri 43. From Round 2 onward, Antonelli has out-qualified Russell at every Grand Prix. Russell's Miami GP qualifying deficit of 0.416 s — on a circuit where he had finished strongly the year before — is the most concerning data point of his season. Wolff to *La Gazzetta dello Sport*: "what we love about this sport is that the clock never lies at the end of the race, and the clock says Kimi deservedly won the last three GPs."
