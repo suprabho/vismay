@@ -59,9 +59,9 @@ function TeamCell({
       ) : null}
     </span>
   );
-  if (!slug) return <div className="flex-1">{inner}</div>;
+  if (!slug) return <div className="flex flex-1">{inner}</div>;
   return (
-    <Link href={`/team/${slug}`} className="flex-1">
+    <Link href={`/team/${slug}`} className="flex flex-1">
       {inner}
     </Link>
   );
