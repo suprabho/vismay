@@ -18,7 +18,7 @@ export function brandPreset(opts?: {
   return {
     theme: {
       extend: {
-        colors: cssVarMap(seed.colors, 'color'),
+        colors: colorVarMap(seed.colors),
         spacing: cssVarMap(seed.spacing, 'spacing'),
         borderRadius: cssVarMap(seed.radius, 'radius'),
         fontFamily: {
@@ -51,6 +51,17 @@ function cssVarMap<T extends Record<string, unknown>>(
   for (const key of Object.keys(source)) {
     const slug = kebab(key);
     out[slug] = `var(--sf-${prefix}-${slug})`;
+  }
+  return out;
+}
+
+// Colors need an alpha-aware wrapper so `bg-accent/20` etc. resolve. The
+// underlying var holds space-separated RGB channels (see `vars.ts`).
+function colorVarMap<T extends Record<string, unknown>>(source: T): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of Object.keys(source)) {
+    const slug = kebab(key);
+    out[slug] = `rgb(var(--sf-color-${slug}) / <alpha-value>)`;
   }
   return out;
 }

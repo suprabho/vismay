@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { EntityChip } from '@vismay/footshort-viz/web';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
@@ -38,9 +38,11 @@ function OnboardingTeamsInner() {
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
-    if (seeded || !teams) return;
-    if (edit && !follows) return;
+  // Seed `picked`/`initial` from the user's existing follows the first render
+  // after teams (and, in edit mode, follows) arrive. Render-time setState is
+  // the canonical React idiom for one-shot init from async data and avoids
+  // the `react-hooks/set-state-in-effect` cascading-renders rule.
+  if (!seeded && teams && (!edit || follows)) {
     if (edit && follows) {
       const followed = new Set(follows.map((f) => f.entity_id));
       const seed = new Set(teams.filter((t) => followed.has(t.id)).map((t) => t.id));
@@ -48,7 +50,7 @@ function OnboardingTeamsInner() {
       setInitial(seed);
     }
     setSeeded(true);
-  }, [teams, follows, edit, seeded]);
+  }
 
   const filtered = useMemo(() => {
     const list = teams ?? [];

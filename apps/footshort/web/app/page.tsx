@@ -4,9 +4,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MatchRow } from '@vismay/footshort-viz/web';
+import {
+  MatchRow,
+  MatchTile,
+  darkenHex,
+  getCompetitionPalette,
+} from '@vismay/footshort-viz/web';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
+import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
 import type { FixtureRow } from '@/lib/useFixtures';
 
 /* ---------- data hooks (anon-readable: articles, entities, fixtures) ---------- */
@@ -69,50 +75,6 @@ const POPULAR_LEAGUE_SLUGS = [
   'world-cup',
 ];
 
-// Display name + fallback color per competition slug. Used by the colorful
-// hero match tiles when a team is missing a primary_color of its own.
-const LEAGUE_NAME_BY_SLUG: Record<string, string> = {
-  'premier-league': 'Premier League',
-  'primera-division': 'La Liga',
-  bundesliga: 'Bundesliga',
-  'serie-a': 'Serie A',
-  'ligue-1': 'Ligue 1',
-  'champions-league': 'Champions League',
-  'europa-league': 'Europa League',
-  'world-cup': 'World Cup',
-  'european-championship': 'Euros',
-  eredivisie: 'Eredivisie',
-  'primeira-liga': 'Primeira Liga',
-  championship: 'Championship',
-  'campeonato-brasileiro-serie-a': 'Brasileirão',
-};
-
-const COMPETITION_PALETTE: Record<string, string> = {
-  'premier-league': '#3D195B',
-  'primera-division': '#E2231A',
-  bundesliga: '#D20515',
-  'serie-a': '#0066CC',
-  'ligue-1': '#091C3E',
-  'champions-league': '#0E1E5B',
-  'europa-league': '#FF6900',
-  'world-cup': '#7B2D26',
-  'european-championship': '#001A70',
-  eredivisie: '#F47C20',
-  'primeira-liga': '#006B3F',
-  championship: '#1A1A1A',
-  // CBF green — original yellow killed white-text contrast on the league tile.
-  'campeonato-brasileiro-serie-a': '#009C3B',
-};
-
-// Quick darken helper for two-stop competition gradients on the league tiles.
-function darkenHex(hex: string, amount = 0.35): string {
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
-  const r = Math.max(0, Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount)));
-  const g = Math.max(0, Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount)));
-  const b = Math.max(0, Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount)));
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
 const FIXTURE_COLS = `
   id, competition_slug, season, matchday, stage, kickoff_at, status,
   home_score, away_score, home_team_name, away_team_name,
@@ -120,36 +82,15 @@ const FIXTURE_COLS = `
   away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url)
 `;
 
-// Snapshot query adds primary_color so the colorful match tiles can theme
-// themselves to each team. Kept separate from FIXTURE_COLS so the existing
-// MatchRow paths (which type against FixtureTeamRef) stay typed correctly.
+// Snapshot query adds primary_color so MatchTile can theme itself to each
+// team. Otherwise identical to FIXTURE_COLS — both shapes satisfy FixtureRow
+// (primary_color is optional on FixtureTeamRef).
 const SNAPSHOT_COLS = `
-  id, competition_slug, kickoff_at, status,
+  id, competition_slug, season, matchday, stage, kickoff_at, status,
   home_score, away_score, home_team_name, away_team_name,
   home:entities!fixtures_home_team_id_fkey(id, slug, name, crest_url, primary_color),
   away:entities!fixtures_away_team_id_fkey(id, slug, name, crest_url, primary_color)
 `;
-
-type SnapshotTeam = {
-  id: string;
-  slug: string;
-  name: string;
-  crest_url: string | null;
-  primary_color: string | null;
-};
-
-type SnapshotFixture = {
-  id: string;
-  competition_slug: string | null;
-  kickoff_at: string;
-  status: string;
-  home_score: number | null;
-  away_score: number | null;
-  home_team_name: string | null;
-  away_team_name: string | null;
-  home: SnapshotTeam | null;
-  away: SnapshotTeam | null;
-};
 
 function priorityIndex(slug: string, list: string[]): number {
   const i = list.indexOf(slug);
@@ -221,33 +162,11 @@ function useLandingTeams(limit = 6) {
   });
 }
 
-// Slug → crest_url for every seeded league. Tiny query (≤30 rows) used to
-// theme each MatchTile's watermark with the right competition logo.
-function useLeagueCrestMap() {
-  return useQuery({
-    queryKey: ['landing', 'leagueCrestMap'],
-    queryFn: async (): Promise<Record<string, string>> => {
-      const { data, error } = await supabase
-        .from('entities')
-        .select('slug, crest_url')
-        .eq('type', 'league')
-        .not('crest_url', 'is', null);
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      for (const row of (data ?? []) as { slug: string; crest_url: string }[]) {
-        map[row.slug] = row.crest_url;
-      }
-      return map;
-    },
-    staleTime: 60 * 60 * 1000,
-  });
-}
-
 // Recent results + next upcoming — for the top-of-page snapshot strip.
 function useLandingMatchSnapshot() {
   return useQuery({
     queryKey: ['landing', 'snapshot'],
-    queryFn: async (): Promise<SnapshotFixture[]> => {
+    queryFn: async (): Promise<FixtureRow[]> => {
       const now = new Date().toISOString();
       const [past, upcoming] = await Promise.all([
         supabase
@@ -267,8 +186,8 @@ function useLandingMatchSnapshot() {
       if (past.error) throw past.error;
       if (upcoming.error) throw upcoming.error;
       const merged = [
-        ...((past.data ?? []) as unknown as SnapshotFixture[]).reverse(),
-        ...((upcoming.data ?? []) as unknown as SnapshotFixture[]),
+        ...((past.data ?? []) as unknown as FixtureRow[]).reverse(),
+        ...((upcoming.data ?? []) as unknown as FixtureRow[]),
       ];
       return merged;
     },
@@ -393,7 +312,7 @@ export default function Index() {
             More than just a feed.
           </h2>
           <p className="mt-4 text-muted">
-            Everything a fan needs, nothing they don't.
+            Everything a fan needs, nothing they don&apos;t.
           </p>
         </div>
 
@@ -702,130 +621,6 @@ function HeroMatchTiles() {
     </div>
   );
 }
-
-function MatchTile({
-  fixture,
-  competitionCrest,
-}: {
-  fixture: SnapshotFixture;
-  competitionCrest: string | null;
-}) {
-  const home = fixture.home;
-  const away = fixture.away;
-  const isFinished = fixture.status === 'finished';
-  const isLive = fixture.status === 'live';
-
-  // Background: home primary as base, away primary as gradient tail. Fall back
-  // to the per-competition palette if no team color is known.
-  const fallback =
-    COMPETITION_PALETTE[fixture.competition_slug ?? ''] ?? '#1F2030';
-  const homeColor = home?.primary_color ?? fallback;
-  const awayColor = away?.primary_color;
-  const background =
-    awayColor && awayColor.toLowerCase() !== homeColor.toLowerCase()
-      ? `linear-gradient(135deg, ${homeColor} 0%, ${homeColor} 55%, ${awayColor} 100%)`
-      : homeColor;
-
-  // Top-left label: score for finished games, LIVE pill, or local kick-off
-  // time. Day label for non-today fixtures so the strip self-orients.
-  let topLabel: React.ReactNode;
-  if (isFinished && fixture.home_score !== null && fixture.away_score !== null) {
-    topLabel = (
-      <span className="font-bold tabular-nums">
-        {fixture.home_score} – {fixture.away_score}
-      </span>
-    );
-  } else if (isLive) {
-    topLabel = (
-      <span className="inline-flex items-center gap-1">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-        LIVE
-      </span>
-    );
-  } else {
-    const d = new Date(fixture.kickoff_at);
-    const today = new Date();
-    const isToday = d.toDateString() === today.toDateString();
-    topLabel = isToday
-      ? d.toLocaleTimeString(undefined, {
-          hour: 'numeric',
-          minute: '2-digit',
-        })
-      : d.toLocaleDateString(undefined, {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-        });
-  }
-
-  const competitionName =
-    LEAGUE_NAME_BY_SLUG[fixture.competition_slug ?? ''] ??
-    fixture.competition_slug ??
-    '';
-
-  const homeName = home?.name ?? fixture.home_team_name ?? 'TBD';
-  const awayName = away?.name ?? fixture.away_team_name ?? 'TBD';
-
-  return (
-    <div
-      className="relative h-32 overflow-hidden rounded-xl p-4 text-white shadow-xl"
-      style={{ background }}
-    >
-      {/* Watermark: the competition crest, enlarged and faded into the
-          bottom-right corner. Mirrors the NHL/NBA/UCL logo washes on the
-          reference deck. */}
-      {competitionCrest ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={competitionCrest}
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute -right-4 -bottom-4 h-28 w-28 object-contain opacity-25"
-        />
-      ) : null}
-
-      <div className="relative flex h-full flex-col">
-        <div className="text-xs font-bold uppercase tracking-wider">
-          {topLabel}
-        </div>
-
-        <div className="mt-2 flex-1 space-y-1.5 overflow-hidden">
-          <TeamRow name={homeName} crest={home?.crest_url ?? null} />
-          <TeamRow name={awayName} crest={away?.crest_url ?? null} />
-        </div>
-
-        <div className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/80">
-          {competitionName}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TeamRow({
-  name,
-  crest,
-}: {
-  name: string;
-  crest: string | null;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/85">
-        {crest ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={crest}
-            alt=""
-            className="h-4 w-4 object-contain"
-          />
-        ) : null}
-      </span>
-      <span className="truncate text-sm font-semibold">{name}</span>
-    </div>
-  );
-}
-
 
 function WatchlistPreview() {
   const { data: teams = [], isLoading } = useLandingTeams(5);
@@ -1183,10 +978,10 @@ function CoverageGrid() {
 }
 
 function LeagueTile({ league }: { league: LandingEntity }) {
-  const base = COMPETITION_PALETTE[league.slug];
+  const base = getCompetitionPalette(league.slug);
   const background = base
     ? `linear-gradient(135deg, ${base} 0%, ${darkenHex(base, 0.4)} 100%)`
-    : 'var(--sf-color-surface)';
+    : 'rgb(var(--sf-color-surface))';
 
   return (
     <div

@@ -2,16 +2,13 @@
 
 import { useEffect } from 'react'
 import type { VizRenderProps } from '@vismay/viz-engine'
-import { MatchRow } from '../../web/MatchRow'
-import type { MatchRowConfig } from './index'
+import { MatchTile } from '../../web/MatchTile'
+import type { MatchTileConfig } from './index'
 
-// Web wrapper around the MatchRow component. Mobile rendering goes through
-// the WebView shell in Footshort, so a native VizModule variant isn't needed
-// for v1.
-export default function MatchRowVizComponent({
+export default function MatchTileVizComponent({
   config,
   noteReady,
-}: VizRenderProps<MatchRowConfig>) {
+}: VizRenderProps<MatchTileConfig>) {
   useEffect(() => {
     const h = requestAnimationFrame(() => noteReady())
     return () => cancelAnimationFrame(h)
@@ -28,8 +25,11 @@ export default function MatchRowVizComponent({
         padding: '1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '480px' }}>
-        <MatchRow fixture={config.fixture} variant={config.variant} />
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <MatchTile
+          fixture={config.fixture}
+          competitionCrest={config.competitionCrest ?? null}
+        />
       </div>
     </div>
   )

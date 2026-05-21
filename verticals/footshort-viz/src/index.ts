@@ -18,13 +18,19 @@ export async function register(): Promise<void> {
   const [
     { default: matchCardModule },
     { default: matchRowModule },
+    { default: matchTileModule },
     { default: standingsTableModule },
+    { default: bracketModule },
   ] = await Promise.all([
     import('./modules/match-card'),
     import('./modules/match-row'),
+    import('./modules/match-tile'),
     import('./modules/standings-table'),
+    import('./modules/bracket'),
   ])
   registerVizModule(matchCardModule)
   registerVizModule(matchRowModule)
+  registerVizModule(matchTileModule)
   registerVizModule(standingsTableModule)
+  registerVizModule(bracketModule)
 }

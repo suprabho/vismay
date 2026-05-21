@@ -14,18 +14,58 @@ const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SE
 });
 
 const SAMPLE_SIZE = 64;
+// White text sits on top of this color in the UI (MatchTile etc.), so the
+// chosen color must clear WCAG AA body-text contrast (4.5:1) against #FFFFFF.
+const MIN_CONTRAST = 4.5;
 
 function toHex(r: number, g: number, b: number): string {
   const h = (n: number) => n.toString(16).padStart(2, '0');
   return `#${h(r)}${h(g)}${h(b)}`.toUpperCase();
 }
 
+function srgbToLinear(c: number): number {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(r: number, g: number, b: number): number {
+  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+}
+
+// White has relative luminance 1, so contrast simplifies to 1.05 / (L + 0.05).
+function contrastWithWhite(r: number, g: number, b: number): number {
+  return 1.05 / (relativeLuminance(r, g, b) + 0.05);
+}
+
+// Scale RGB toward black (preserving hue) until the result clears `minContrast`
+// against white. Binary-searches the largest scale factor that still passes —
+// i.e. the lightest possible darkening — so the brand color stays recognizable.
+function darkenToContrast(
+  r: number,
+  g: number,
+  b: number,
+  minContrast: number,
+): { r: number; g: number; b: number } {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (contrastWithWhite(r * mid, g * mid, b * mid) >= minContrast) lo = mid;
+    else hi = mid;
+  }
+  return { r: r * lo, g: g * lo, b: b * lo };
+}
+
 /**
  * Pick the dominant color from a raw RGBA pixel buffer. We:
  *  - Skip fully/mostly-transparent pixels (crests often have alpha cutouts).
  *  - Bucket colors into 5-bit-per-channel bins (32³ = 32k buckets) and count.
- *  - Rank buckets by count, but down-weight near-white and near-black so a
- *    brand color wins over the page/transparent-fill color.
+ *  - Rank buckets by `count * (0.3 + saturation)` so a brand color wins over
+ *    the page/transparent-fill color.
+ *  - Prefer the highest-ranked bucket whose contrast against white already
+ *    meets MIN_CONTRAST (e.g. Brazil → blue secondary instead of yellow).
+ *  - If no bucket qualifies, darken the top-ranked bucket toward black until
+ *    it does, preserving hue so the brand identity is still recognizable.
  */
 function dominantColor(data: Buffer, channels: number): string | null {
   const counts = new Map<number, { r: number; g: number; b: number; n: number }>();
@@ -48,7 +88,8 @@ function dominantColor(data: Buffer, channels: number): string | null {
     }
   }
 
-  let best: { r: number; g: number; b: number; score: number } | null = null;
+  type Candidate = { r: number; g: number; b: number; score: number };
+  const candidates: Candidate[] = [];
   for (const v of counts.values()) {
     const r = v.r / v.n;
     const g = v.g / v.n;
@@ -61,13 +102,20 @@ function dominantColor(data: Buffer, channels: number): string | null {
     const isNearBlack = max < 30;
     if (isNearWhite || isNearBlack) continue;
 
-    // Favor saturated, frequent colors.
-    const score = v.n * (0.3 + saturation);
-    if (!best || score > best.score) best = { r, g, b, score };
+    candidates.push({ r, g, b, score: v.n * (0.3 + saturation) });
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.score - a.score);
+
+  for (const c of candidates) {
+    if (contrastWithWhite(c.r, c.g, c.b) >= MIN_CONTRAST) {
+      return toHex(Math.round(c.r), Math.round(c.g), Math.round(c.b));
+    }
   }
 
-  if (!best) return null;
-  return toHex(Math.round(best.r), Math.round(best.g), Math.round(best.b));
+  const top = candidates[0]!;
+  const d = darkenToContrast(top.r, top.g, top.b, MIN_CONTRAST);
+  return toHex(Math.round(d.r), Math.round(d.g), Math.round(d.b));
 }
 
 async function extractColor(url: string): Promise<string | null> {
