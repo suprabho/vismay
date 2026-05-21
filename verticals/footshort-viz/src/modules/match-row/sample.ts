@@ -2,6 +2,7 @@ import type { MatchRowConfig } from './index'
 
 export const sample: MatchRowConfig = {
   type: 'fs:match-row',
+  variant: 'compact',
   fixture: {
     id: 'sample-arsenal-chelsea',
     competition_slug: 'prem',
