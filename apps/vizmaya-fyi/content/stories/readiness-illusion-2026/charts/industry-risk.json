@@ -1,0 +1,80 @@
+{
+  "steps": [
+    {
+      "title": "Industry compliance risk profiles (relative exposure, indexed)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "legend": {
+          "top": 0,
+          "textStyle": { "color": "$muted", "fontSize": 11 }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "8%",
+          "bottom": "3%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Manufacturing",
+            "Retail",
+            "Logistics",
+            "E-commerce",
+            "FMCG"
+          ],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 11 }
+        },
+        "yAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}",
+            "color": "$muted"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Notice incidence",
+            "type": "bar",
+            "barWidth": 18,
+            "itemStyle": {
+              "color": "$red",
+              "borderRadius": [4, 4, 0, 0]
+            },
+            "data": [92, 78, 84, 71, 88]
+          },
+          {
+            "name": "ITC at risk",
+            "type": "bar",
+            "barWidth": 18,
+            "itemStyle": {
+              "color": "$accent2",
+              "borderRadius": [4, 4, 0, 0]
+            },
+            "data": [74, 68, 81, 89, 95]
+          },
+          {
+            "name": "IMS blind spot",
+            "type": "bar",
+            "barWidth": 18,
+            "itemStyle": {
+              "color": "$accent",
+              "borderRadius": [4, 4, 0, 0]
+            },
+            "data": [82, 76, 64, 93, 70]
+          }
+        ]
+      }
+    }
+  ]
+}

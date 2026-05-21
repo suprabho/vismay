@@ -1,0 +1,61 @@
+{
+  "steps": [
+    {
+      "title": "Enterprise GST notices issued per year (estimate)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "8%",
+          "bottom": "3%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 220000,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}",
+            "color": "$muted"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["FY 2021", "FY 2023", "FY 2025"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 13 }
+        },
+        "series": [
+          {
+            "name": "Notices",
+            "type": "bar",
+            "barWidth": 36,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12
+            },
+            "itemStyle": {
+              "borderRadius": [0, 6, 6, 0]
+            },
+            "data": [
+              { "value": 10000, "itemStyle": { "color": "$muted" } },
+              { "value": 150000, "itemStyle": { "color": "$amber" } },
+              { "value": 200000, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

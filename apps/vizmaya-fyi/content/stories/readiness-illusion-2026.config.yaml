@@ -1,0 +1,479 @@
+# Story config — readiness-illusion-2026
+#
+# Map beats walk through the geography of India's tax compliance landscape:
+# the four CFO roundtable cities (Delhi NCR, Mumbai, Bengaluru, Chennai),
+# the Pune CFO quoted in Act I, and the Supreme Court / North Block in Delhi
+# where the ₹5.76 lakh crore disputed-capital narrative lives.
+#
+# COORDINATES (approximate, public landmarks):
+#   New Delhi (North Block / Ministry of Finance)   77.2147, 28.6131
+#   Supreme Court of India, New Delhi               77.2398, 28.6224
+#   Mumbai (Nariman Point — CFO district)           72.8226, 18.9256
+#   Bengaluru (CGST Bengaluru North office)         77.5946, 12.9716
+#   Chennai (Anna Salai — finance corridor)         80.2707, 13.0827
+#   Pune (Hinjewadi — manufacturing CFO quote)      73.7400, 18.5908
+#   India centroid                                  78.9629, 22.5937
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#7c3aed"
+  pinRadius: 12
+  flySpeed: 1.2
+  highlightCountry: "IN"
+  highlightColor: "#2a1a6a"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Readiness Illusion"
+    eyebrow: "State of Tax Assurance · 2026"
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING — THE CONFIDENCE GAP (63% / 33%)
+  # ═══════════════════════════════════════════════
+
+  - id: stat-63
+    kind: stat
+    text: "63%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [72.8226, 18.9256]
+      zoom: 11.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi NCR — roundtable"
+          color: "#7c3aed"
+        - coordinates: [72.8226, 18.9256]
+          label: "Mumbai — roundtable"
+          color: "#7c3aed"
+        - coordinates: [77.5946, 12.9716]
+          label: "Bengaluru — roundtable"
+          color: "#7c3aed"
+        - coordinates: [80.2707, 13.0827]
+          label: "Chennai — roundtable"
+          color: "#7c3aed"
+
+  - id: stat-33
+    kind: stat
+    text: "33%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [72.8226, 18.9256]
+          label: "Mumbai"
+          color: "#7c3aed"
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi NCR"
+          color: "#7c3aed"
+        - coordinates: [77.5946, 12.9716]
+          label: "Bengaluru"
+          color: "#7c3aed"
+        - coordinates: [80.2707, 13.0827]
+          label: "Chennai"
+          color: "#7c3aed"
+
+  - id: era-over
+    text: "That era is over"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [77.2147, 28.6131]
+      zoom: 13.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.2147, 28.6131]
+          label: "North Block — Ministry of Finance"
+          color: "#f97316"
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THE COMPLIANCE LANDSCAPE
+  # Map sits on Delhi, the regulator's centre of gravity, then opens out.
+  # ═══════════════════════════════════════════════
+
+  - id: landscape-intro
+    text: "Act I: The compliance landscape"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [77.2147, 28.6131]
+          label: "Ministry of Finance"
+          color: "#f97316"
+
+  - id: stat-disputed-capital
+    kind: stat
+    text: "₹5.76 lakh crore"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [77.2398, 28.6224]
+      zoom: 13.5
+      pitch: 35
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [77.2398, 28.6224]
+          label: "Supreme Court of India"
+          color: "#ec4899"
+
+  - id: collections-chart
+    chart: data:gst-collections
+    text: "The system caught up. Collections doubled."
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [77.2147, 28.6131]
+          label: "GST Council — New Delhi"
+          color: "#f97316"
+
+  - id: stat-notices
+    kind: stat
+    text: "200,000"
+    chart: data:notice-volumes
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [77.2147, 28.6131]
+          label: "GSTN — surveillance network"
+          color: "#ec4899"
+
+  - id: friday-notice
+    text: "The Friday notice"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [73.7400, 18.5908]
+      zoom: 11.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [73.7400, 18.5908]
+          label: "Pune — mid-market manufacturing CFO"
+          color: "#fbbf24"
+
+  # ═══════════════════════════════════════════════
+  # ACT II — WHY ENTERPRISES GET NOTICES
+  # Wide India shot, then chart, then a tight close-up on the insight.
+  # ═══════════════════════════════════════════════
+
+  - id: notices-intro
+    text: "Act II: Why enterprises get notices"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: stat-system-triggered
+    kind: stat
+    text: "80%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [77.2147, 28.6131]
+          label: "GSTN reconciliation engine"
+          color: "#ec4899"
+
+  - id: notice-causes-chart
+    chart: data:notice-causes
+    text: "The hierarchy of failure"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+
+  - id: internal-mismatch
+    text: "The most common cause is entirely internal"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+
+  # ═══════════════════════════════════════════════
+  # ACT III — THE ITC ASSURANCE GAP
+  # Map flies to Mumbai for the ₹43 Cr quote.
+  # ═══════════════════════════════════════════════
+
+  - id: itc-intro
+    text: "Act III: The ITC assurance gap"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [72.8226, 18.9256]
+      zoom: 10.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [72.8226, 18.9256]
+          label: "Mumbai — Nariman Point"
+          color: "#7c3aed"
+
+  - id: stat-three-crore
+    kind: stat
+    text: "₹3 crore+"
+    chart: data:itc-recovery
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [72.8226, 18.9256]
+      zoom: 11.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [72.8226, 18.9256]
+          label: "Mumbai CFO study sample"
+          color: "#ec4899"
+
+  - id: stat-forty-three
+    kind: stat
+    text: "₹43 crore"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [72.8226, 18.9256]
+      zoom: 13.0
+      pitch: 40
+      bearing: 15
+      opacity: 0.60
+      pins:
+        - coordinates: [72.8226, 18.9256]
+          label: "Large FMCG enterprise — Mumbai"
+          color: "#f97316"
+
+  # ═══════════════════════════════════════════════
+  # ACT IV — THE IMS BLIND SPOT
+  # ═══════════════════════════════════════════════
+
+  - id: ims-intro
+    text: "Act IV: The IMS blind spot"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: stat-71
+    kind: stat
+    text: "71%"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [72.8226, 18.9256]
+          label: "Mumbai"
+          color: "#ec4899"
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi NCR"
+          color: "#ec4899"
+        - coordinates: [77.5946, 12.9716]
+          label: "Bengaluru"
+          color: "#ec4899"
+        - coordinates: [80.2707, 13.0827]
+          label: "Chennai"
+          color: "#ec4899"
+
+  # ═══════════════════════════════════════════════
+  # ACT V — INDUSTRY RISK
+  # ═══════════════════════════════════════════════
+
+  - id: industry-intro
+    text: "Act V: Industry risk is not uniform"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: industry-chart
+    chart: data:industry-risk
+    text: "Five sectors, five signatures"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+      - [4, 5]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+
+  # ═══════════════════════════════════════════════
+  # ACT VI — AI vs AI
+  # Map flies to Bengaluru, the tech capital where AI-led compliance lives.
+  # ═══════════════════════════════════════════════
+
+  - id: ai-intro
+    text: "Act VI: AI vs AI"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [77.5946, 12.9716]
+      zoom: 11.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.5946, 12.9716]
+          label: "Bengaluru — CGST Bengaluru North"
+          color: "#7c3aed"
+
+  - id: stat-18-to-3
+    kind: stat
+    text: "18 days → 3 days"
+    chart: data:ai-productivity
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [77.5946, 12.9716]
+      zoom: 11.5
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.5946, 12.9716]
+          label: "Bengaluru — early-mover deployments"
+          color: "#06b6d4"
+
+  # ═══════════════════════════════════════════════
+  # CLOSING
+  # ═══════════════════════════════════════════════
+
+  - id: closing
+    text: "What great looks like in 2026"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 4.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+      pins:
+        - coordinates: [72.8226, 18.9256]
+          label: "Mumbai"
+          color: "#7c3aed"
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi NCR"
+          color: "#7c3aed"
+        - coordinates: [77.5946, 12.9716]
+          label: "Bengaluru"
+          color: "#7c3aed"
+        - coordinates: [80.2707, 13.0827]
+          label: "Chennai"
+          color: "#7c3aed"
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+      - [4, 5]
+    map:
+      center: [78.9629, 22.5937]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.25

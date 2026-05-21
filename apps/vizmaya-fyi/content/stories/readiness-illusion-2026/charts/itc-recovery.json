@@ -1,0 +1,60 @@
+{
+  "steps": [
+    {
+      "title": "ITC matching rate — basic reconciliation vs AI-led reconciliation",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "8%",
+          "bottom": "3%",
+          "top": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Basic reconciliation", "AI-led reconciliation"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 13 }
+        },
+        "series": [
+          {
+            "name": "ITC matched",
+            "type": "bar",
+            "barWidth": 32,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 13
+            },
+            "itemStyle": {
+              "borderRadius": [0, 6, 6, 0]
+            },
+            "data": [
+              { "value": 80, "itemStyle": { "color": "$muted" } },
+              { "value": 98, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

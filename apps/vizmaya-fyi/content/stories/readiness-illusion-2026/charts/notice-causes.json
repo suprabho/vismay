@@ -1,0 +1,71 @@
+{
+  "steps": [
+    {
+      "title": "What triggers an enterprise GST notice (share of system-driven notices)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 40,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Others",
+            "E-way bills",
+            "Direct tax — 26AS",
+            "GST liability",
+            "Inaccurate TDS",
+            "Incorrect ITC claims"
+          ],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 12 }
+        },
+        "series": [
+          {
+            "name": "Share",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "{c}%",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12
+            },
+            "itemStyle": {
+              "borderRadius": [0, 4, 4, 0]
+            },
+            "data": [
+              { "value": 3, "itemStyle": { "color": "$muted" } },
+              { "value": 6, "itemStyle": { "color": "$teal" } },
+              { "value": 12, "itemStyle": { "color": "$amber" } },
+              { "value": 12, "itemStyle": { "color": "$amber" } },
+              { "value": 12, "itemStyle": { "color": "$accent2" } },
+              { "value": 35, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

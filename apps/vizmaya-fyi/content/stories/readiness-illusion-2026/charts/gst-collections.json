@@ -1,0 +1,67 @@
+{
+  "steps": [
+    {
+      "title": "GST collections, FY 2021 — FY 2025 (₹ lakh crore)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": {
+          "left": "3%",
+          "right": "8%",
+          "bottom": "3%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["FY 2021", "FY 2022", "FY 2023", "FY 2024", "FY 2025"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "fontSize": 12 }
+        },
+        "yAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "formatter": "₹{value}L Cr",
+            "color": "$muted"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "GST collections",
+            "type": "bar",
+            "barWidth": 36,
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "formatter": "₹{c}L",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12
+            },
+            "itemStyle": {
+              "borderRadius": [6, 6, 0, 0],
+              "color": {
+                "type": "linear",
+                "x": 0,
+                "y": 0,
+                "x2": 0,
+                "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "$accent2" },
+                  { "offset": 1, "color": "$accent" }
+                ]
+              }
+            },
+            "data": [11.37, 14.83, 18.08, 20.18, 22.08]
+          }
+        ]
+      }
+    }
+  ]
+}
