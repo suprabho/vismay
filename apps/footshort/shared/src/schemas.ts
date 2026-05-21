@@ -58,6 +58,17 @@ export type Article = z.infer<typeof ArticleSchema>;
 // Feed card (what the app actually renders)
 // =====================================================
 
+export const FeedCardEntitySchema = z.object({
+  id: z.string().uuid(),
+  type: EntityTypeSchema,
+  slug: z.string(),
+  name: z.string(),
+  crest_url: z.string().url().nullable(),
+  league_slug: z.string().nullable(),
+  primary_color: z.string().nullable().optional(),
+});
+export type FeedCardEntity = z.infer<typeof FeedCardEntitySchema>;
+
 export const FeedCardSchema = z.object({
   article_id: z.string().uuid(),
   headline: z.string(),
@@ -67,8 +78,7 @@ export const FeedCardSchema = z.object({
   url: z.string().url(),
   published_at: z.string(),
   cluster_id: z.string().uuid().nullable(),
-  // joined on client or via RPC
-  entities: z.array(EntitySchema).optional(),
+  entities: z.array(FeedCardEntitySchema).optional(),
 });
 export type FeedCard = z.infer<typeof FeedCardSchema>;
 

@@ -11,6 +11,7 @@ export type { StandingRow, StandingTeamRef };
 const STANDING_COLS = `
   competition_slug, season, team_id, position, played, won, draw, lost,
   goals_for, goals_against, goal_difference, points, form,
+  phase, group_label,
   team:entities!standings_team_id_fkey(id, slug, name, crest_url)
 `;
 
@@ -37,12 +38,33 @@ export function useStandings(competitionSlug: string | undefined, season?: strin
         .select(STANDING_COLS)
         .eq('competition_slug', competitionSlug!)
         .eq('season', s)
+        // group_label first so group-stage cups return Group A then Group B etc.
+        // intact. For league standings group_label is '' so this is a no-op.
+        .order('group_label', { ascending: true })
         .order('position', { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as StandingRow[];
     },
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/**
+ * Bucket a flat standing list into one table per group. For league standings
+ * (group_label === '') this returns a single bucket. Caller renders each
+ * bucket as its own StandingsTable.
+ */
+export function groupStandings(
+  rows: StandingRow[],
+): { label: string; rows: StandingRow[] }[] {
+  const buckets = new Map<string, StandingRow[]>();
+  for (const r of rows) {
+    const key = r.group_label ?? '';
+    const list = buckets.get(key) ?? [];
+    list.push(r);
+    buckets.set(key, list);
+  }
+  return Array.from(buckets.entries()).map(([label, rows]) => ({ label, rows }));
 }
 
 export function useTeamStanding(teamId: string | undefined, competitionSlug: string | undefined) {

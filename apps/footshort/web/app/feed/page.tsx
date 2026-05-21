@@ -132,6 +132,7 @@ function DiscoverStack() {
               publisher={item.publisher}
               url={item.url}
               publishedAt={item.published_at}
+              entities={item.entities}
               onSeen={markSeen}
             />
           </div>
