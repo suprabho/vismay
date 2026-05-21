@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEditorialStories } from '@/lib/useEditorialStories';
-import type { EditorialStorySummary } from '@shortfoot/shared';
+import { useEditorialEpics, useEditorialStories } from '@/lib/useEditorialStories';
+import type { EditorialEpicSummary, EditorialStorySummary } from '@shortfoot/shared';
 
 // Hash slug → HSL hue so each story has a distinct, deterministic accent
 // gradient. Cover images live in story frontmatter and aren't fetched here
@@ -51,6 +51,26 @@ function HeroCard({ story }: { story: EditorialStorySummary }) {
   );
 }
 
+function EpicCard({ epic }: { epic: EditorialEpicSummary }) {
+  return (
+    <Link
+      href={`/editorial/epic/${epic.slug}`}
+      className="group relative block flex-shrink-0 snap-start overflow-hidden rounded-xl border border-border"
+      style={{ background: gradientFor(epic.slug), width: '78%', maxWidth: 320, aspectRatio: '16 / 9' }}
+    >
+      <div className="flex h-full flex-col justify-between p-4 text-white">
+        <div className="text-[0.65rem] uppercase tracking-[0.18em] opacity-80">Epic</div>
+        <div>
+          <h3 className="font-serif text-lg leading-tight">{epic.name}</h3>
+          {epic.description && (
+            <p className="mt-1 line-clamp-2 text-xs opacity-80">{epic.description}</p>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function GridCard({ story }: { story: EditorialStorySummary }) {
   return (
     <Link
@@ -72,7 +92,11 @@ function GridCard({ story }: { story: EditorialStorySummary }) {
 }
 
 export function EditorialMagazine() {
-  const { data, isLoading, error } = useEditorialStories({ limit: 24 });
+  const { data: stories, isLoading, error } = useEditorialStories({ limit: 24 });
+  // Epics load independently of stories — they're a separate strip and
+  // shouldn't block the magazine from rendering when the stories query
+  // returns first.
+  const { data: epics } = useEditorialEpics();
 
   if (isLoading) {
     return (
@@ -91,9 +115,10 @@ export function EditorialMagazine() {
     );
   }
 
-  const stories = data ?? [];
+  const safeStories = stories ?? [];
+  const safeEpics = epics ?? [];
 
-  if (stories.length === 0) {
+  if (safeStories.length === 0 && safeEpics.length === 0) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center px-4 text-center">
         <p className="mb-2 text-lg text-text">No stories yet</p>
@@ -104,12 +129,23 @@ export function EditorialMagazine() {
     );
   }
 
-  const [hero, ...rest] = stories;
-  if (!hero) return null;
+  const [hero, ...rest] = safeStories;
 
   return (
     <div className="pb-12">
-      <HeroCard story={hero} />
+      {safeEpics.length > 0 && (
+        <div className="mb-6">
+          <div className="mb-2 text-[0.7rem] uppercase tracking-[0.18em] text-muted">Epics</div>
+          {/* Horizontal scroll on every viewport — Footshort web is mobile-first
+              and an Epic strip with 3+ entries would otherwise crowd the hero. */}
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {safeEpics.map((e) => (
+              <EpicCard key={e.slug} epic={e} />
+            ))}
+          </div>
+        </div>
+      )}
+      {hero && <HeroCard story={hero} />}
       {rest.length > 0 && (
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
           {rest.map((s) => (
