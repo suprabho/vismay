@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { EntityChip } from '@vismay/footshort-viz/web';
 import { useLeagues } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
@@ -28,9 +28,13 @@ function OnboardingLeaguesInner() {
   const [seeded, setSeeded] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (seeded || !leagues) return;
-    if (edit && !follows) return;
+  // Seed `picked`/`initial` from the user's existing follows the first render
+  // after leagues (and, in edit mode, follows) arrive. Done at render time
+  // rather than in useEffect — the render-time `if (!seeded) setState()`
+  // pattern is React's canonical idiom for one-shot init from async data, and
+  // it avoids the cascading-renders that `react-hooks/set-state-in-effect`
+  // flags inside useEffect bodies.
+  if (!seeded && leagues && (!edit || follows)) {
     if (edit && follows) {
       const followed = new Set(follows.map((f) => f.entity_id));
       const seed = new Set(leagues.filter((l) => followed.has(l.id)).map((l) => l.id));
@@ -38,7 +42,7 @@ function OnboardingLeaguesInner() {
       setInitial(seed);
     }
     setSeeded(true);
-  }, [leagues, follows, edit, seeded]);
+  }
 
   function toggle(id: string) {
     setPicked((prev) => {

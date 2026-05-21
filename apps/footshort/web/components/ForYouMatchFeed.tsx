@@ -136,11 +136,6 @@ function CardShell({ entity, children }: { entity: Entity; children: React.React
         className="pointer-events-none absolute inset-x-0 top-0 h-[120px]"
         style={{ backgroundColor: palette.top, opacity: 0.35 }}
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px"
-        style={{ backgroundColor: palette.hairline }}
-      />
       <div className="relative p-4">{children}</div>
     </div>
   );
@@ -216,15 +211,15 @@ function TeamFormPill({ fixture, teamId }: { fixture: FixtureRow; teamId: string
   const scoreText = teamGoals !== null && oppGoals !== null ? `${teamGoals}–${oppGoals}` : '—';
 
   return (
-    <div className="mr-2 flex min-w-[80px] flex-col items-center rounded-xl border border-border px-3 py-2">
-      <div className="mb-1 h-[22px] w-[22px]">
+    <div className="mr-2 flex min-w-[80px] flex-col items-center rounded-xl border border-white/20 bg-white/10 px-3 py-2">
+      <div className="mb-1 h-[40px] w-[40px]">
         {opp?.crest_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={opp.crest_url} alt="" className="h-full w-full object-contain" />
         ) : null}
       </div>
-      <div className="text-xs font-semibold text-text">{scoreText}</div>
-      <div className="mt-0.5 max-w-[62px] truncate text-[10px] text-muted">
+      <div className="text-base font-semibold text-text">{scoreText}</div>
+      <div className="mt-0.5 max-w-[62px] truncate text-xs text-text">
         {isHome ? 'vs ' : '@ '}
         {oppName}
       </div>

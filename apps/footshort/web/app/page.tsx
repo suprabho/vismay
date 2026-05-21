@@ -393,7 +393,7 @@ export default function Index() {
             More than just a feed.
           </h2>
           <p className="mt-4 text-muted">
-            Everything a fan needs, nothing they don't.
+            Everything a fan needs, nothing they don&apos;t.
           </p>
         </div>
 
@@ -1186,7 +1186,7 @@ function LeagueTile({ league }: { league: LandingEntity }) {
   const base = COMPETITION_PALETTE[league.slug];
   const background = base
     ? `linear-gradient(135deg, ${base} 0%, ${darkenHex(base, 0.4)} 100%)`
-    : 'var(--sf-color-surface)';
+    : 'rgb(var(--sf-color-surface))';
 
   return (
     <div

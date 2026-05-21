@@ -18,22 +18,6 @@ const FIXTURE_COLS = `
 
 export type FixtureKind = 'past' | 'upcoming' | 'all';
 
-function applyKind<T extends { lt: Function; gte: Function; order: Function }>(
-  q: T,
-  kind: FixtureKind,
-  limit: number
-): any {
-  const now = new Date().toISOString();
-  const qAny = q as any;
-  if (kind === 'past') {
-    return qAny.lt('kickoff_at', now).order('kickoff_at', { ascending: false }).limit(limit);
-  }
-  if (kind === 'upcoming') {
-    return qAny.gte('kickoff_at', now).order('kickoff_at', { ascending: true }).limit(limit);
-  }
-  return qAny.order('kickoff_at', { ascending: false }).limit(limit);
-}
-
 export function useLeagueFixtures(
   competitionSlug: string | undefined,
   kind: FixtureKind = 'past',
@@ -43,8 +27,17 @@ export function useLeagueFixtures(
     queryKey: ['fixtures', 'league', competitionSlug, kind, limit],
     enabled: !!competitionSlug,
     queryFn: async (): Promise<FixtureRow[]> => {
-      let q = supabase.from('fixtures').select(FIXTURE_COLS).eq('competition_slug', competitionSlug!);
-      q = applyKind(q, kind, limit);
+      const now = new Date().toISOString();
+      const base = supabase
+        .from('fixtures')
+        .select(FIXTURE_COLS)
+        .eq('competition_slug', competitionSlug!);
+      const q =
+        kind === 'past'
+          ? base.lt('kickoff_at', now).order('kickoff_at', { ascending: false }).limit(limit)
+          : kind === 'upcoming'
+            ? base.gte('kickoff_at', now).order('kickoff_at', { ascending: true }).limit(limit)
+            : base.order('kickoff_at', { ascending: false }).limit(limit);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as FixtureRow[];
@@ -62,11 +55,17 @@ export function useTeamFixtures(
     queryKey: ['fixtures', 'team', teamId, kind, limit],
     enabled: !!teamId,
     queryFn: async (): Promise<FixtureRow[]> => {
-      let q = supabase
+      const now = new Date().toISOString();
+      const base = supabase
         .from('fixtures')
         .select(FIXTURE_COLS)
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
-      q = applyKind(q, kind, limit);
+      const q =
+        kind === 'past'
+          ? base.lt('kickoff_at', now).order('kickoff_at', { ascending: false }).limit(limit)
+          : kind === 'upcoming'
+            ? base.gte('kickoff_at', now).order('kickoff_at', { ascending: true }).limit(limit)
+            : base.order('kickoff_at', { ascending: false }).limit(limit);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as FixtureRow[];
