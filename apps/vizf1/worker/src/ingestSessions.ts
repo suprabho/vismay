@@ -13,6 +13,7 @@
  * In CI:   .github/workflows/vizf1-race-weekend.yml (every 6h Fri/Sat/Sun)
  */
 
+import { F1_BRAND } from '@vizf1/brand'
 import { getSupabase } from './supabase'
 import {
   listMeetings,
@@ -130,7 +131,7 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
     constructor_id,
     name: c.name,
     primary_color: c.color,
-    logo_slug: constructor_id,
+    logo_url: F1_BRAND.constructorLogos[constructor_id] ?? null,
     updated_at: new Date().toISOString(),
   }))
   await sb.from('vizf1_constructors').upsert(constructorRows, { onConflict: 'constructor_id' })

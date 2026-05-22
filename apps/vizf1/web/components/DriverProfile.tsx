@@ -19,7 +19,7 @@ type DriverRow = {
   headshot_url: string | null
   constructor_id: string | null
   primary_color: string | null
-  constructors: { name: string } | null
+  constructors: { name: string; logo_url: string | null } | null
 }
 
 function useDriver(driverId: string) {
@@ -31,7 +31,7 @@ function useDriver(driverId: string) {
       const { data, error } = await sb
         .from('vizf1_drivers')
         .select(
-          'driver_id, given_name, family_name, code, permanent_number, nationality, headshot_url, constructor_id, primary_color, constructors:vizf1_constructors(name)',
+          'driver_id, given_name, family_name, code, permanent_number, nationality, headshot_url, constructor_id, primary_color, constructors:vizf1_constructors(name, logo_url)',
         )
         .eq('driver_id', driverId)
         .maybeSingle()
@@ -87,6 +87,7 @@ export function DriverProfile({ driverId }: { driverId: string }) {
                   constructorId={d.constructor_id}
                   name={d.constructors?.name ?? d.constructor_id}
                   color={d.primary_color ?? null}
+                  logoUrl={d.constructors?.logo_url ?? null}
                   size="sm"
                   showName
                 />

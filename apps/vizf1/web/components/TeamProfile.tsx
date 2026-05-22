@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { TeamBadge } from '@/components/TeamBadge'
+import { ConstructorLogo } from '@/components/ConstructorLogo'
 import { DriverAvatar } from '@/components/DriverAvatar'
 import { NewsReelCard } from '@/components/NewsReelCard'
 import { useConstructorStandings } from '@/lib/useConstructorStandings'
@@ -14,6 +14,7 @@ type ConstructorDbRow = {
   name: string
   nationality: string | null
   primary_color: string | null
+  logo_url: string | null
 }
 type DriverDbRow = {
   driver_id: string
@@ -36,7 +37,7 @@ function useTeam(teamId: string) {
       const [team, drivers] = await Promise.all([
         sb
           .from('vizf1_constructors')
-          .select('constructor_id, name, nationality, primary_color')
+          .select('constructor_id, name, nationality, primary_color, logo_url')
           .eq('constructor_id', teamId)
           .maybeSingle(),
         sb
@@ -68,6 +69,7 @@ export function TeamProfile({ teamId }: { teamId: string }) {
   const drivers = team.data?.drivers ?? []
   const name = t?.name ?? teamId
   const color = t?.primary_color ?? null
+  const logoUrl = t?.logo_url ?? null
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-4 pb-12">
@@ -76,7 +78,13 @@ export function TeamProfile({ teamId }: { teamId: string }) {
       </Link>
 
       <header className="mt-3 flex items-center gap-4">
-        <TeamBadge constructorId={teamId} name={name} color={color} size="lg" />
+        <ConstructorLogo
+          constructorId={teamId}
+          name={name}
+          color={color}
+          logoUrl={logoUrl}
+          size="xl"
+        />
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-semibold leading-tight text-text">{name}</h1>
           <p className="text-xs text-muted">{t?.nationality ?? ''}</p>
