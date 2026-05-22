@@ -55,6 +55,20 @@ const textModule: VizModule<TextLayerConfig> = {
   // No stableIdentity — text remounts cheaply, and distinct text layers in
   // different regions of the same unit should NOT share a single instance.
   regionPreferences: ['body', 'lead'],
+  // Default card chrome — mirrors the legacy `MapStorySection` text card so a
+  // bare `- type: text` in a region looks framed out of the box. Authors who
+  // want bare text, a different background, or extra blur override per-field
+  // via `style.panel` in YAML — the merge in ForegroundVizSlot is sub-field,
+  // so overriding `panel.background` alone keeps the default border + blur.
+  defaultStyle: {
+    panel: {
+      background: 'rgb(var(--color-panel-rgb) / 0.2)',
+      border: '0.5px solid var(--color-line)',
+      borderRadius: '8px',
+      padding: '1.5rem 1.75rem',
+      backdropBlur: '20px',
+    },
+  },
   adminForm: () => [
     {
       kind: 'select',

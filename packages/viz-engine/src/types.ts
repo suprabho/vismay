@@ -44,6 +44,30 @@ export interface VizCaptureHandle {
   resume?: () => void
 }
 
+/**
+ * Optional chrome rendered around a layer's wrapper box. Every field is
+ * forwarded straight to CSS, so the full vocabulary (theme vars, gradients,
+ * oklch, calc(), …) is available — no DSL.
+ *
+ * Authors typically set this on text/image layers that want a card frame; the
+ * text module ships sensible defaults via `VizModule.defaultStyle.panel`, and
+ * any field set here overrides the module default.
+ */
+export interface VizLayerPanel {
+  /** CSS `background` shorthand — color, gradient, rgb()/oklch with var(), … */
+  background?: string
+  /** CSS `border` shorthand. */
+  border?: string
+  /** CSS `border-radius` (e.g. '8px', '0.5rem'). */
+  borderRadius?: string
+  /** CSS `padding` shorthand. */
+  padding?: string
+  /** Radius for `backdrop-filter: blur(<value>)`. */
+  backdropBlur?: string
+  /** CSS `box-shadow` shorthand. */
+  shadow?: string
+}
+
 export interface VizLayerStyle {
   position?: { x?: 'left' | 'center' | 'right' | string; y?: 'top' | 'center' | 'bottom' | string }
   size?: { width?: string; height?: string }
@@ -51,6 +75,8 @@ export interface VizLayerStyle {
   blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'difference'
   pointerEvents?: 'auto' | 'none'
   zIndex?: number
+  /** Optional chrome around the layer's wrapper box. */
+  panel?: VizLayerPanel
 }
 
 export interface VizRef<TKind extends string = string> {
@@ -130,6 +156,14 @@ export interface VizModule<TConfig = unknown> {
   collectAssetKeys?: (config: TConfig) => string[]
   /** Deterministic identity string used by BackgroundVizSlot to dedupe persistent instances. */
   stableIdentity?: (config: TConfig) => string
+  /**
+   * Module-level default for `VizLayer.style`. Merged shallowly under any
+   * `style` the author sets on the layer — per-field, so a YAML `style.panel`
+   * overrides only the panel default while leaving e.g. `pointerEvents`
+   * unchanged. Use this to ship sensible chrome (text panels get a card frame
+   * by default) without forcing every YAML to repeat it.
+   */
+  defaultStyle?: VizLayerStyle
   /**
    * Optional list of region names this module is best suited to. Used by the
    * admin form to guide authors when picking where to drop a module — not
