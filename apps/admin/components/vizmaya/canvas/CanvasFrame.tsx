@@ -1,58 +1,53 @@
 'use client'
 
-import type {
-  MapOverrideConfig,
-  ResolvedUnit,
-  StoryDefaults,
-  Theme,
-} from '@vismay/viz-engine'
-import SectionPreview from './SectionPreview'
+import type { ResolvedUnit } from '@vismay/viz-engine'
 
 interface Props {
   slug: string
+  /** Full vizmaya-fyi base URL (e.g. `http://localhost:3000`). */
+  publicSiteUrl: string
+  /** Stable id matching the canvas-frame route's expectation. */
+  sectionId: string
   unit: ResolvedUnit
   index: number
   focused: boolean
-  accessToken: string
-  defaults: StoryDefaults
-  mapOverrides: MapOverrideConfig | null | undefined
-  theme: Theme
-  vertical: string | undefined
-  fontImportUrl: string | null
 }
 
 /**
- * Figma-style frame. The label and category tag sit ABOVE the rectangle
- * (positioned with negative top), so the inner box is reserved entirely
- * for the rendered output — no card chrome, no badges intruding on the
- * preview. Matches the Reference / Image Model / Video Model frames in
- * the user's diagram reference.
+ * Figma-style frame. Label and category tag sit ABOVE the rectangle; the
+ * inner box is the output — pure render, no internal chrome.
  *
- * Inputs that feed this frame (content, config, chart, share, report)
+ * Focused frames embed vizmaya-fyi's single-section render route in an
+ * iframe. The iframe IS the section's viewport — its `window`,
+ * `matchMedia`, and `@media` rules respond to the iframe's dimensions,
+ * which is what makes "resizing the frame behaves like resizing the
+ * viewport" work without rewriting the engine's media queries.
+ *
+ * Inputs feeding this frame (content / config / chart / share / report)
  * live as separate <InputNode>s rendered by <CanvasClient> and wired in
- * by <CanvasWires>. The frame itself only knows it's the OUTPUT — the
- * subgraph topology is the canvas's job.
+ * by <CanvasWires>.
  */
 export default function CanvasFrame({
   slug,
+  publicSiteUrl,
+  sectionId,
   unit,
   index,
   focused,
-  accessToken,
-  defaults,
-  mapOverrides,
-  theme,
-  vertical,
-  fontImportUrl,
 }: Props) {
   const kind = (unit.parentConfig.kind ?? 'text').toUpperCase()
   const heading =
-    unit.heading || unit.paragraphs[0]?.replace(/\*+/g, '') || `Section ${index + 1}`
+    unit.heading ||
+    unit.paragraphs[0]?.replace(/\*+/g, '') ||
+    `Section ${index + 1}`
+
+  const iframeSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(
+    slug
+  )}/canvas-frame/${encodeURIComponent(sectionId)}`
 
   return (
     <>
-      {/* Label row — ABOVE the frame, not inside. Renders outside the
-          wrapper's geometric box but still inside the click target. */}
+      {/* Label row — outside the rectangle. */}
       <div
         style={{
           position: 'absolute',
@@ -91,7 +86,7 @@ export default function CanvasFrame({
         </span>
       </div>
 
-      {/* Frame body — pure output rectangle. No internal chrome. */}
+      {/* Frame body — iframe when focused, placeholder otherwise. */}
       <div
         style={{
           position: 'absolute',
@@ -103,16 +98,22 @@ export default function CanvasFrame({
         }}
       >
         {focused ? (
-          <SectionPreview
-            slug={slug}
-            unit={unit}
-            accessToken={accessToken}
-            defaults={defaults}
-            mapOverrides={mapOverrides}
-            mode="live"
-            theme={theme}
-            vertical={vertical}
-            fontImportUrl={fontImportUrl}
+          <iframe
+            // Key includes sectionId so focus changes remount the iframe
+            // (releases the previous Mapbox WebGL context cleanly).
+            key={sectionId}
+            src={iframeSrc}
+            title={`section preview · ${sectionId}`}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 0,
+              display: 'block',
+              background: '#0a0a0a',
+            }}
+            // No sandbox — vizmaya-fyi pages need full JS + WebGL + cookies
+            // for Mapbox and chart modules to work. Cross-origin is fine
+            // because the iframe parent doesn't need DOM access into it.
           />
         ) : (
           <div
