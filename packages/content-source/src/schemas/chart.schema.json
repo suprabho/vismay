@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "vismay://schemas/chart.schema.json",
+  "title": "Vizmaya chart (ECharts steps)",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["steps"],
+  "properties": {
+    "steps": {
+      "type": "array",
+      "description": "Ordered animation steps for the chart. Each step is one ECharts option snapshot.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["option"],
+        "properties": {
+          "title": { "type": "string", "description": "Optional step caption shown in the editor." },
+          "option": {
+            "type": "object",
+            "description": "ECharts option object — full schema lives at echarts.apache.org/option.html.",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}

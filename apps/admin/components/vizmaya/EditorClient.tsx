@@ -4,13 +4,13 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ThemeEditor from './ThemeEditor'
-import YamlCardsView from './YamlCardsView'
+import CodeEditor from './CodeEditor'
+import YamlConfigEditor from './YamlConfigEditor'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
 import { vizmayaUrl } from '@/lib/publicSite'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
-import { useTabIndent } from '@vismay/content-source/useTabIndent'
 import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
 import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
@@ -335,7 +335,12 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
               value={markdown}
               onUpload={setMarkdown}
             />
-            <CodeArea value={markdown} onChange={setMarkdown} />
+            <CodeEditor
+              value={markdown}
+              onChange={setMarkdown}
+              language="markdown"
+              path={`${slug}.md`}
+            />
           </>
         )}
         {tab === 'config' && (
@@ -347,10 +352,10 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
               value={config}
               onUpload={setConfig}
             />
-            <YamlCardsView
+            <YamlConfigEditor
               value={config}
               onChange={setConfig}
-              placeholder="# no config yet — paste YAML to create"
+              path={`${slug}.config.yaml`}
             />
           </>
         )}
@@ -395,30 +400,6 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
         </button>
       </div>
     </div>
-  )
-}
-
-function CodeArea({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  const onKeyDown = useTabIndent()
-  return (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={onKeyDown}
-      placeholder={placeholder}
-      spellCheck={false}
-      autoCapitalize="none"
-      autoCorrect="off"
-      className="flex-1 min-h-0 w-full bg-neutral-950 text-neutral-100 font-mono text-[13px] leading-relaxed p-4 resize-none outline-none focus:bg-neutral-900/40"
-    />
   )
 }
 
