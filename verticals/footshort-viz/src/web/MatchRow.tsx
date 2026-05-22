@@ -84,24 +84,33 @@ function TeamCell({
   align: 'left' | 'right' | 'stack';
   sizes: Sizes;
 }) {
-  // Flat structure: flex + flex-1 + justify go directly on the link/div so
-  // the img and name are real flex children. The previous nested-span layout
-  // had two flex-1 boxes fighting over width (the <a> as a flex item, and an
-  // inner span re-declaring flex-1) which silently collapsed `justify-end`
-  // because the inner span never actually stretched to the cell's width.
-  const innerClassName = `flex items-center ${sizes.gap} ${align === 'stack' ? 'flex-col' : align === 'right' ? 'flex-row-reverse' : 'flex-row'}`;
+  // On mobile the compact row stacks crest above name so the name gets the
+  // cell's full width instead of competing with the 22px crest + gap; from
+  // `sm:` upward it lays out horizontally. `min-w-0` is required at every
+  // flex level so `truncate` can actually shrink the nowrap text.
+  const directionClass =
+    align === 'stack'
+      ? 'flex-col'
+      : align === 'right'
+        ? 'flex-col sm:flex-row-reverse'
+        : 'flex-col sm:flex-row';
+  const innerClassName = `flex min-w-0 items-center ${sizes.gap} ${directionClass}`;
   const children = (
     <div className={innerClassName}>
       {crest ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={crest} alt="" className={`${sizes.crest} object-contain`} />
+        <img src={crest} alt="" className={`${sizes.crest} shrink-0 object-contain`} />
       ) : null}
-      <span className={`flex-row truncate ${sizes.teamText} text-text`}>{name}</span>
+      <span
+        className={`min-w-0 max-w-full truncate text-center sm:text-left ${sizes.teamText} text-text`}
+      >
+        {name}
+      </span>
     </div>
   );
-  if (!slug) return <div className="flex-1">{children}</div>;
+  if (!slug) return <div className="min-w-0 flex-1">{children}</div>;
   return (
-    <Link href={`/team/${slug}`} className="flex-1">
+    <Link href={`/team/${slug}`} className="min-w-0 flex-1">
       {children}
     </Link>
   );
