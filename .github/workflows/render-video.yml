@@ -78,6 +78,13 @@ jobs:
 
       - name: Render
         env:
+          # Story content lives in Postgres in production. The video render
+          # itself navigates to the deployed /story/<slug> URL (so the
+          # CONTENT_SOURCE on this runner isn't load-bearing today) but
+          # generate-video.ts may grow content-source reads — set it here so
+          # it stays consistent with render-pdf.yml and render-share.yml and
+          # works for stories that only exist in the DB.
+          CONTENT_SOURCE: db
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
