@@ -25,20 +25,30 @@ export type FollowedEntities = {
 // TODO(vizf1): replace with auth-backed follows once we port AuthProvider +
 // onboarding from footshort. For now we just hydrate the static list with DB
 // metadata so portraits and team colours appear once the worker has run.
-const STATIC_DRIVER_IDS = ['max_verstappen', 'norris', 'leclerc', 'hamilton', 'piastri'] as const
-const STATIC_CONSTRUCTOR_IDS = ['mclaren', 'red_bull', 'ferrari', 'mercedes'] as const
+// IDs must match the slugs the worker writes to vizf1_drivers / vizf1_constructors:
+//   driver_id      = slug(`${first_name}_${last_name}`)   e.g. "lando_norris"
+//   constructor_id = slug(team_name)                       e.g. "red_bull_racing"
+// See apps/vizf1/worker/src/ingestSessions.ts (upsertDrivers).
+const STATIC_DRIVER_IDS = [
+  'max_verstappen',
+  'lando_norris',
+  'charles_leclerc',
+  'lewis_hamilton',
+  'oscar_piastri',
+] as const
+const STATIC_CONSTRUCTOR_IDS = ['mclaren', 'red_bull_racing', 'ferrari', 'mercedes'] as const
 
 const STATIC_FALLBACK: FollowedEntities = {
   drivers: [
     { id: 'max_verstappen', name: 'Max Verstappen', code: 'VER', headshotUrl: null, primaryColor: null },
-    { id: 'norris', name: 'Lando Norris', code: 'NOR', headshotUrl: null, primaryColor: null },
-    { id: 'leclerc', name: 'Charles Leclerc', code: 'LEC', headshotUrl: null, primaryColor: null },
-    { id: 'hamilton', name: 'Lewis Hamilton', code: 'HAM', headshotUrl: null, primaryColor: null },
-    { id: 'piastri', name: 'Oscar Piastri', code: 'PIA', headshotUrl: null, primaryColor: null },
+    { id: 'lando_norris', name: 'Lando Norris', code: 'NOR', headshotUrl: null, primaryColor: null },
+    { id: 'charles_leclerc', name: 'Charles Leclerc', code: 'LEC', headshotUrl: null, primaryColor: null },
+    { id: 'lewis_hamilton', name: 'Lewis Hamilton', code: 'HAM', headshotUrl: null, primaryColor: null },
+    { id: 'oscar_piastri', name: 'Oscar Piastri', code: 'PIA', headshotUrl: null, primaryColor: null },
   ],
   constructors: [
     { id: 'mclaren', name: 'McLaren', primaryColor: null },
-    { id: 'red_bull', name: 'Red Bull', primaryColor: null },
+    { id: 'red_bull_racing', name: 'Red Bull Racing', primaryColor: null },
     { id: 'ferrari', name: 'Ferrari', primaryColor: null },
     { id: 'mercedes', name: 'Mercedes', primaryColor: null },
   ],
