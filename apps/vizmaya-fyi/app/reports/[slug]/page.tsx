@@ -44,10 +44,19 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
 
   const { units } = resolveUnits(slug, story.sections, config)
   const source = getContentSource()
-  const [reportYaml, chartIds] = await Promise.all([
-    source.readReportYaml(slug),
-    source.listChartIds(slug),
-  ])
+  // readReportYaml / listChartIds talk to Supabase in db mode. Don't crash
+  // the page if they throw — fall back to no override + no chart ids so the
+  // builder still renders. Saving and rendering will surface the real error.
+  let reportYaml: string | null = null
+  let chartIds: string[] = []
+  try {
+    ;[reportYaml, chartIds] = await Promise.all([
+      source.readReportYaml(slug),
+      source.listChartIds(slug),
+    ])
+  } catch (err) {
+    console.error('[reports/[slug]] content-source read failed:', err)
+  }
 
   // Surface the stable Supabase URL for any render that exists so the
   // builder can link to it even when the saved content has drifted past
@@ -55,14 +64,27 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
   // uploads upsert, so the URL never changes — we just append a short
   // `?v=<hash>` cache-buster so a fresh render shows up immediately even
   // when Supabase's CDN still has the old bytes.
-  const supabase = createServiceClient()
-  const [reportRow, slidesRow] = await Promise.all([
-    getCachedPdf(supabase, slug, 'report'),
-    getCachedPdf(supabase, slug, 'slides'),
-  ])
-  const initialPdfs = {
-    report: cacheBustedUrl(reportRow),
-    slides: cacheBustedUrl(slidesRow),
+  //
+  // Don't let a missing SUPABASE_SERVICE_ROLE_KEY (or any other Supabase
+  // failure) crash the whole builder page — the cached-PDF link is a
+  // convenience, not a hard requirement. Fall back to null and let the
+  // builder's own download button surface the env error directly.
+  let initialPdfs: { report: string | null; slides: string | null } = {
+    report: null,
+    slides: null,
+  }
+  try {
+    const supabase = createServiceClient()
+    const [reportRow, slidesRow] = await Promise.all([
+      getCachedPdf(supabase, slug, 'report'),
+      getCachedPdf(supabase, slug, 'slides'),
+    ])
+    initialPdfs = {
+      report: cacheBustedUrl(reportRow),
+      slides: cacheBustedUrl(slidesRow),
+    }
+  } catch (err) {
+    console.error('[reports/[slug]] cached-pdf lookup failed:', err)
   }
 
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
