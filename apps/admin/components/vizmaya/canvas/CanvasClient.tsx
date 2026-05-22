@@ -1,12 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ResolvedUnit } from '@vismay/viz-engine'
+import type {
+  MapOverrideConfig,
+  ResolvedUnit,
+  StoryDefaults,
+} from '@vismay/viz-engine'
 import CanvasTile from './CanvasTile'
 
 interface Props {
   slug: string
   units: ResolvedUnit[]
+  defaults: StoryDefaults
+  mapOverrides: MapOverrideConfig | null | undefined
+  accessToken: string
 }
 
 const TILE_W = 360
@@ -42,7 +49,13 @@ function autoLayout(sectionUnits: ResolvedUnit[]): TilePlacement[] {
   }))
 }
 
-export default function CanvasClient({ slug, units }: Props) {
+export default function CanvasClient({
+  slug,
+  units,
+  defaults,
+  mapOverrides,
+  accessToken,
+}: Props) {
   const sectionUnits = useMemo(() => units.filter((u) => u.subIndex === 0), [units])
   const tiles = useMemo(() => autoLayout(sectionUnits), [sectionUnits])
 
@@ -219,9 +232,13 @@ export default function CanvasClient({ slug, units }: Props) {
               onClick={() => setFocusedId(tile.id)}
             >
               <CanvasTile
+                slug={slug}
                 unit={tile.unit}
                 index={tile.unit.parentIndex}
                 focused={focusedId === tile.id}
+                accessToken={accessToken}
+                defaults={defaults}
+                mapOverrides={mapOverrides}
               />
             </div>
           ))}

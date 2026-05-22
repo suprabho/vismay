@@ -2,27 +2,50 @@
 
 import { useMemo } from 'react'
 import { resolveSlotsFlat } from '@vismay/viz-engine'
-import type { ResolvedUnit } from '@vismay/viz-engine'
+import type {
+  MapOverrideConfig,
+  ResolvedUnit,
+  StoryDefaults,
+} from '@vismay/viz-engine'
+import SectionPreview from './SectionPreview'
 
 interface Props {
+  slug: string
   unit: ResolvedUnit
   index: number
   focused: boolean
+  accessToken: string
+  defaults: StoryDefaults
+  mapOverrides: MapOverrideConfig | null | undefined
 }
 
 /**
- * Static tile placeholder. Shows section metadata only — no live render. The
- * shape is meant to evoke the eventual live preview: kind badge + headline +
- * module pills, with the body region intentionally blank so the difference
- * between this mock and a wired tile is obvious.
+ * Canvas tile: chrome around a swappable body region.
+ *
+ * The chrome (index pill, kind badge, heading line, fg/bg module pills) is
+ * always the same so the layout doesn't shift between focused and unfocused
+ * states. The body is the only thing that changes:
+ *   - focused   → <SectionPreview mode="live"> — real engine render, tile-scoped
+ *   - unfocused → dashed placeholder — stands in for the eventual cached snapshot
+ *
+ * Mounting live render only for the focused tile keeps the WebGL context count
+ * bounded. Sections with map backgrounds otherwise blow the per-page Mapbox
+ * cap once the canvas grows past a handful of sections.
  */
-export default function CanvasTile({ unit, index, focused }: Props) {
+export default function CanvasTile({
+  slug,
+  unit,
+  index,
+  focused,
+  accessToken,
+  defaults,
+  mapOverrides,
+}: Props) {
   const slots = useMemo(() => resolveSlotsFlat(unit.parentConfig), [unit])
   const fgTypes = uniqTypes(slots.foreground)
   const bgTypes = uniqTypes(slots.background)
   const kind = unit.parentConfig.kind ?? 'text'
   const heading = unit.heading || unit.paragraphs[0]?.replace(/\*+/g, '') || '(no heading)'
-  const subheading = unit.subheading
 
   return (
     <div
@@ -40,69 +63,85 @@ export default function CanvasTile({ unit, index, focused }: Props) {
         color: '#ccc',
       }}
     >
-      {/* Header row — index + kind */}
+      {/* Chrome header — index, id, kind, heading. Always visible so the
+          tile stays identifiable regardless of body state. */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 14px',
+          padding: '8px 12px 10px 12px',
           borderBottom: '1px solid #1f1f1f',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
         }}
       >
-        <span style={{ fontSize: 10, color: '#666', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-          §{index + 1}
-          {unit.parentConfig.id ? `  ·  ${unit.parentConfig.id}` : ''}
-        </span>
-        <Pill tone={KIND_TONE[kind]} text={kind} />
-      </div>
-
-      {/* Body — heading + subheading */}
-      <div style={{ flex: 1, padding: '14px 14px 8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span
+            style={{
+              fontSize: 10,
+              color: '#666',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+            }}
+          >
+            §{index + 1}
+            {unit.parentConfig.id ? `  ·  ${unit.parentConfig.id}` : ''}
+          </span>
+          <Pill tone={KIND_TONE[kind]} text={kind} />
+        </div>
         <div
           style={{
-            fontSize: 18,
-            fontWeight: 600,
-            color: '#eee',
-            lineHeight: 1.25,
+            fontSize: 13,
+            color: focused ? '#888' : '#ddd',
+            lineHeight: 1.3,
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 1,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}
         >
           {heading}
         </div>
-        {subheading && (
-          <div style={{ fontSize: 12, color: '#888', lineHeight: 1.35 }}>{subheading}</div>
-        )}
-        <div style={{ flex: 1 }} />
-        {/* Body region — intentionally blank. This is where the live preview
-            (or cached snapshot) will eventually paint. */}
-        <div
-          style={{
-            border: '1px dashed #2a2a2a',
-            borderRadius: 4,
-            height: 80,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#444',
-            fontSize: 10,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          preview · not wired
-        </div>
       </div>
 
-      {/* Footer — module pills */}
+      {/* Body — live preview when focused, placeholder otherwise. */}
+      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        {focused ? (
+          <SectionPreview
+            slug={slug}
+            unit={unit}
+            accessToken={accessToken}
+            defaults={defaults}
+            mapOverrides={mapOverrides}
+            mode="live"
+          />
+        ) : (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 8,
+              border: '1px dashed #2a2a2a',
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#444',
+              fontSize: 10,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            snapshot · pending
+          </div>
+        )}
+      </div>
+
+      {/* Chrome footer — module pills */}
       <div
         style={{
           display: 'flex',
           gap: 6,
-          padding: '8px 14px 12px 14px',
+          padding: '8px 12px 10px 12px',
+          borderTop: '1px solid #1f1f1f',
           flexWrap: 'wrap',
           alignItems: 'center',
         }}

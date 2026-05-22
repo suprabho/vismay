@@ -5,7 +5,9 @@ import {
   loadStoryConfig,
   hasStoryConfig,
 } from '@vismay/content-source/storyConfig'
+import { getContentSource } from '@vismay/content-source/contentSource'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
+import { parseMapOverrides } from '@vismay/viz-engine'
 import CanvasClient from '@/components/vizmaya/canvas/CanvasClient'
 
 export const dynamic = 'force-dynamic'
@@ -19,12 +21,23 @@ export default async function CanvasPage({ params }: Props) {
   if (!(await isAuthed())) redirect(`/login?next=/vizmaya/${slug}/canvas`)
   if (!(await hasStoryConfig(slug))) notFound()
 
-  const [story, config] = await Promise.all([
+  const [story, config, mapYaml] = await Promise.all([
     getStoryContent(slug),
     loadStoryConfig(slug),
+    getContentSource().readMapYaml(slug),
   ])
 
   const { units } = resolveUnits(slug, story.sections, config)
+  const mapOverrides = parseMapOverrides(mapYaml)
+  const accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 
-  return <CanvasClient slug={slug} units={units} />
+  return (
+    <CanvasClient
+      slug={slug}
+      units={units}
+      defaults={config.defaults}
+      mapOverrides={mapOverrides}
+      accessToken={accessToken}
+    />
+  )
 }
