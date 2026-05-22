@@ -8,7 +8,7 @@ export function AppHeader() {
   const letter = (session?.user?.email ?? '?').charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur">
+    <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur md:hidden">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
         <Link href="/feed" className="text-lg font-bold text-text">
           ShortFoot
