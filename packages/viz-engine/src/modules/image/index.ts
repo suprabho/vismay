@@ -51,6 +51,13 @@ const imageModule: VizModule<ImageLayerConfig> = {
   stableIdentity: (config) =>
     `image:${config.src}::${config.fit ?? 'cover'}::${config.focus ?? 'center'}::${config.background ?? ''}`,
   collectAssetKeys: (config) => (config.src.startsWith('assets://') ? [config.src] : []),
+  // Images are non-interactive by default so scroll/wheel events pass through
+  // to the snap-scroll container — critical when an image fills a foreground
+  // region edge-to-edge (otherwise the user can't scroll past that section).
+  // Authors who want a clickable image opt back in via `style.pointerEvents: 'auto'`.
+  defaultStyle: {
+    pointerEvents: 'none',
+  },
   adminForm: () => [
     { kind: 'asset', key: 'src', label: 'Image source', accept: ['image/*'], required: true },
     { kind: 'text', key: 'alt', label: 'Alt text', placeholder: 'Describe the image…' },

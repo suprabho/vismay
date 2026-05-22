@@ -85,7 +85,15 @@ export default function ForegroundLayoutSlot({
           <div
             key={regionName}
             data-foreground-region={regionName}
-            style={{ ...regionDef.style, pointerEvents: layers.length > 0 ? undefined : 'none' }}
+            // Region wrappers are ALWAYS click-through. Without this, the
+            // `fixed inset-0 pointer-events-none` parent gets overridden by any
+            // child that has `pointer-events: auto` set (CSS pointer-events is
+            // not inherited), which causes the region to swallow scroll/wheel
+            // events that should pass through to the snap-scroll container
+            // behind. Individual layers re-enable pointer events for their own
+            // wrappers when they need interactivity (chart hover, embed clicks,
+            // map drag) — see `layerWrapperStyle` in ForegroundVizSlot.
+            style={{ ...regionDef.style, pointerEvents: 'none' }}
           >
             <ForegroundVizSlot
               slug={slug}
