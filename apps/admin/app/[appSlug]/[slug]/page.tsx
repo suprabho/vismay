@@ -6,13 +6,13 @@ import EditorClient from '@/components/vizmaya/EditorClient'
 export const dynamic = 'force-dynamic'
 
 interface Props {
-  params: Promise<{ slug: string }>
+  params: Promise<{ appSlug: string; slug: string }>
 }
 
-export default async function EditStoryPage({ params }: Props) {
-  const { slug } = await params
-  if (!(await isAuthed())) redirect(`/login?next=/vizmaya/${slug}`)
+export default async function AppEditStoryPage({ params }: Props) {
+  const { appSlug, slug } = await params
+  if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/${slug}`)
   const initial = await loadStoryEditorData(slug)
   if (initial == null) notFound()
-  return <EditorClient slug={slug} sectionHref="/vizmaya" initial={initial} />
+  return <EditorClient slug={slug} sectionHref={`/${appSlug}`} initial={initial} />
 }

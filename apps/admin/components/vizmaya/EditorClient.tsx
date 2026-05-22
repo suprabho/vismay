@@ -57,7 +57,15 @@ function isTab(v: string | null): v is Tab {
   return v != null && TAB_IDS.has(v as Tab)
 }
 
-export default function EditorClient({ slug, initial }: { slug: string; initial: InitialState }) {
+export default function EditorClient({
+  slug,
+  sectionHref,
+  initial,
+}: {
+  slug: string
+  sectionHref: string
+  initial: InitialState
+}) {
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
@@ -241,7 +249,7 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
-        <Link href="/vizmaya" className="text-neutral-400 hover:text-white text-sm shrink-0">
+        <Link href={sectionHref} className="text-neutral-400 hover:text-white text-sm shrink-0">
           ← all
         </Link>
         <div className="min-w-0 flex-1">
@@ -355,7 +363,12 @@ export default function EditorClient({ slug, initial }: { slug: string; initial:
           </>
         )}
         {tab === 'charts' && (
-          <ChartsList slug={slug} charts={charts} onChartsChange={setCharts} />
+          <ChartsList
+            slug={slug}
+            sectionHref={sectionHref}
+            charts={charts}
+            onChartsChange={setCharts}
+          />
         )}
         {tab === 'assets' && (
           <AssetsPanel slug={slug} initialAssets={initial.assets} />
@@ -424,10 +437,12 @@ function CodeArea({
 
 function ChartsList({
   slug,
+  sectionHref,
   charts,
   onChartsChange,
 }: {
   slug: string
+  sectionHref: string
   charts: ChartEntry[]
   onChartsChange: (next: ChartEntry[]) => void
 }) {
@@ -506,7 +521,7 @@ function ChartsList({
         )
       )
     }
-    router.push(`/vizmaya/${slug}/charts/${id}`)
+    router.push(`${sectionHref}/${slug}/charts/${id}`)
   }
 
   return (
@@ -544,7 +559,7 @@ function ChartsList({
             c.editable ? (
               <li key={c.id} className="flex items-center">
                 <Link
-                  href={`/vizmaya/${slug}/charts/${c.id}`}
+                  href={`${sectionHref}/${slug}/charts/${c.id}`}
                   className="flex-1 flex items-center justify-between px-4 py-4 active:bg-white/5 min-w-0"
                 >
                   <span className="font-mono text-sm truncate">{c.id}.json</span>

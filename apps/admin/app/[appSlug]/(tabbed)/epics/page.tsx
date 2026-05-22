@@ -34,7 +34,7 @@ export default async function AppEpicsListPage({ params }: Props) {
             <li key={e.slug}>
               <div className="flex items-center justify-between gap-3 hover:bg-white/[0.025] transition-colors">
                 <Link
-                  href={`/vizmaya/epics/${e.slug}`}
+                  href={`/${appSlug}/epics/${e.slug}`}
                   className="flex-1 min-w-0 flex flex-col px-4 py-4"
                 >
                   <div className="font-medium truncate">{e.name}</div>
