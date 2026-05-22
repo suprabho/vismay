@@ -13,23 +13,50 @@ interface Props {
   publicSiteUrl: string
 }
 
-const DEFAULT_W = 480
-const DEFAULT_H = 320
-// Generous horizontal gap so each frame's input subgraph fans in to the
-// left without colliding with the previous frame in row order.
-const FRAME_GAP_X = 560
-const FRAME_GAP_Y = 200
+const DEFAULT_W = 1920
+const DEFAULT_H = 1080
+// Gap scales with the bigger frames so the input subgraph has room to fan
+// in without colliding with the previous row.
+const FRAME_GAP_X = 720
+const FRAME_GAP_Y = 360
 const COLS = 3
 
-const INPUT_W = 280
-const INPUT_H = 88
-const INPUT_GAP_Y = 28
-const INPUT_TO_FRAME_GAP = 96
+const INPUT_W = 320
+const INPUT_H = 110
+const INPUT_GAP_Y = 36
+const INPUT_TO_FRAME_GAP = 120
 
-const MIN_ZOOM = 0.15
+const MIN_ZOOM = 0.05
 const MAX_ZOOM = 3
-const MIN_FRAME_W = 240
-const MIN_FRAME_H = 180
+const MIN_FRAME_W = 360
+const MIN_FRAME_H = 240
+
+/**
+ * Frame-size presets matching every dimension the engine renders into
+ * downstream. Lets the user flip a focused section between, e.g., its
+ * 1920×1080 story render and its 1080×1920 autoplay render without
+ * leaving the canvas — same iframe, same source, the viewport-flip work
+ * is what catches the responsive layout.
+ */
+interface SizePreset {
+  id: string
+  label: string
+  w: number
+  h: number
+  /** Short context tag rendered under the label (e.g. "story · slides · 16:9"). */
+  tag: string
+}
+
+const SIZE_PRESETS: SizePreset[] = [
+  // 1920×1080 covers story page, slides PDF, and 16:9 autoplay — one preset.
+  { id: 'story', label: '16:9', w: 1920, h: 1080, tag: 'story · slides' },
+  { id: 'share-1-1', label: '1:1', w: 1080, h: 1080, tag: 'share' },
+  { id: 'share-4-3', label: '4:3', w: 1440, h: 1080, tag: 'share' },
+  { id: 'share-3-4', label: '3:4', w: 1080, h: 1440, tag: 'share' },
+  { id: 'autoplay-9-16', label: '9:16', w: 1080, h: 1920, tag: 'autoplay · vertical' },
+  // Report PDF: US letter portrait at 96 DPI ≈ 816×1056.
+  { id: 'report', label: 'Letter', w: 816, h: 1056, tag: 'report' },
+]
 
 interface FramePlacement {
   id: string
@@ -259,6 +286,44 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
     setPan({ x: padding - minX * z, y: padding - minY * z })
   }, [frames])
 
+  // Auto-fit on mount — 1920x1080 frames at default zoom would blow the
+  // viewport. fitAll's [frames] dep would re-fit on every resize too; use
+  // a ref-based guard so we only auto-fit once at startup.
+  const didInitialFitRef = useRef(false)
+  useEffect(() => {
+    if (didInitialFitRef.current) return
+    if (frames.length === 0) return
+    didInitialFitRef.current = true
+    // Defer one frame so the surface ref has measured its container.
+    requestAnimationFrame(fitAll)
+  }, [frames, fitAll])
+
+  /** Resize the focused frame to a preset's dimensions. No-op if no focus. */
+  const applyPreset = useCallback(
+    (preset: SizePreset) => {
+      if (!focusedId) return
+      setFrames((prev) =>
+        prev.map((f) =>
+          f.id === focusedId ? { ...f, w: preset.w, h: preset.h } : f
+        )
+      )
+    },
+    [focusedId]
+  )
+
+  /** Match a frame's dimensions to a known preset, if any. Used for the
+   *  "selected" state on the preset bar. Exact match — no fuzzy aspect
+   *  comparison, since two presets can share the same aspect ratio. */
+  const activePresetId = useMemo(() => {
+    if (!focusedFrame) return null
+    const match = SIZE_PRESETS.find(
+      (p) =>
+        Math.round(p.w) === Math.round(focusedFrame.w) &&
+        Math.round(p.h) === Math.round(focusedFrame.h)
+    )
+    return match?.id ?? null
+  }, [focusedFrame])
+
   return (
     <div
       style={{
@@ -278,51 +343,113 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
           right: 16,
           zIndex: 10,
           display: 'flex',
-          gap: 16,
-          alignItems: 'center',
+          flexDirection: 'column',
+          gap: 10,
+          alignItems: 'stretch',
           pointerEvents: 'none',
         }}
       >
-        <div
-          style={{
-            background: 'rgba(20, 20, 20, 0.8)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid #2a2a2a',
-            borderRadius: 6,
-            padding: '8px 14px',
-            display: 'flex',
-            gap: 16,
-            alignItems: 'baseline',
-            pointerEvents: 'auto',
-          }}
-        >
-          <strong style={{ fontSize: 13 }}>{slug}</strong>
-          <span style={{ fontSize: 11, color: '#888' }}>
-            {frames.length} sections · {(zoom * 100).toFixed(0)}%
-            {focusedFrame &&
-              ` · ${Math.round(focusedFrame.w)}×${Math.round(focusedFrame.h)}`}
-          </span>
-        </div>
-        <div
-          style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            gap: 8,
-            pointerEvents: 'auto',
-          }}
-        >
-          <Btn onClick={() => setZoom((z) => clamp(z * 0.9, MIN_ZOOM, MAX_ZOOM))}>−</Btn>
-          <Btn onClick={() => setZoom((z) => clamp(z * 1.1, MIN_ZOOM, MAX_ZOOM))}>+</Btn>
-          <Btn onClick={fitAll}>fit</Btn>
-          <Btn
-            onClick={() => {
-              setZoom(1)
-              setPan({ x: 400, y: 120 })
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div
+            style={{
+              background: 'rgba(20, 20, 20, 0.8)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid #2a2a2a',
+              borderRadius: 6,
+              padding: '8px 14px',
+              display: 'flex',
+              gap: 16,
+              alignItems: 'baseline',
+              pointerEvents: 'auto',
             }}
           >
-            1:1
-          </Btn>
+            <strong style={{ fontSize: 13 }}>{slug}</strong>
+            <span style={{ fontSize: 11, color: '#888' }}>
+              {frames.length} sections · {(zoom * 100).toFixed(0)}%
+              {focusedFrame &&
+                ` · ${Math.round(focusedFrame.w)}×${Math.round(focusedFrame.h)}`}
+            </span>
+          </div>
+          <div
+            style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              gap: 8,
+              pointerEvents: 'auto',
+            }}
+          >
+            <Btn onClick={() => setZoom((z) => clamp(z * 0.9, MIN_ZOOM, MAX_ZOOM))}>−</Btn>
+            <Btn onClick={() => setZoom((z) => clamp(z * 1.1, MIN_ZOOM, MAX_ZOOM))}>+</Btn>
+            <Btn onClick={fitAll}>fit</Btn>
+            <Btn
+              onClick={() => {
+                setZoom(1)
+                setPan({ x: 400, y: 120 })
+              }}
+            >
+              1:1
+            </Btn>
+          </div>
         </div>
+
+        {/* Preset bar — visible whenever a frame is focused. Clicking sets
+            the focused frame's dimensions to that preset. The iframe's
+            window resizes with it, which is where matchMedia and the
+            engine's @media rules pick up the new viewport shape. */}
+        {focusedFrame && (
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              alignSelf: 'flex-start',
+              background: 'rgba(20, 20, 20, 0.8)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid #2a2a2a',
+              borderRadius: 8,
+              padding: 6,
+              pointerEvents: 'auto',
+            }}
+          >
+            {SIZE_PRESETS.map((preset) => {
+              const isActive = activePresetId === preset.id
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  title={`${preset.w} × ${preset.h}  ·  ${preset.tag}`}
+                  style={{
+                    background: isActive ? '#2a2a2a' : 'transparent',
+                    color: isActive ? '#fff' : '#bbb',
+                    border: `1px solid ${isActive ? '#555' : 'transparent'}`,
+                    borderRadius: 5,
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  <span>{preset.label}</span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: isActive ? '#888' : '#555',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {preset.tag}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </header>
 
       <div
