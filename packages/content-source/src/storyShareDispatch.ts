@@ -1,5 +1,5 @@
 /**
- * Dispatch a share-render job to GitHub Actions. Mirrors lib/storyPdfDispatch.ts.
+ * Dispatch a share-render job to GitHub Actions. Mirrors storyPdfDispatch.ts.
  *
  * Two modes: render the curated card set for a demo, or render the cards
  * referenced by a single social post. The workflow takes both inputs and

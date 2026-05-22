@@ -1,36 +1,35 @@
 /**
- * Dispatch a video-render job to GitHub Actions.
+ * Dispatch a PDF-render job to GitHub Actions.
  *
- * The render itself takes several minutes and needs ffmpeg + Chromium, which
- * Vercel-style serverless can't host. Instead, when `GITHUB_DISPATCH_TOKEN`
- * is configured we fire a `workflow_dispatch` and let a real Linux runner do
- * the work. The runner uploads the MP4 to the same `story-video` bucket the
+ * Mirrors storyVideoDispatch.ts. The PDF render needs Playwright Chromium,
+ * which Vercel-style serverless can't host reliably (no system libs for
+ * Chromium). When the dispatch envs are configured, we POST a
+ * `workflow_dispatch` to render-pdf.yml and let a GitHub Actions runner do
+ * the work. The runner uploads the PDF to the same `story-pdf` bucket the
  * sync path uses, so callers just keep polling the cache lookup until the
  * row appears.
  *
  * Required env (server only):
  *   GITHUB_DISPATCH_TOKEN  fine-grained PAT with `workflow` write on the repo
- *   GITHUB_DISPATCH_REPO   "owner/repo" (e.g. "suprabho/vizmaya-fyi")
+ *   GITHUB_DISPATCH_REPO   "owner/repo" (e.g. "suprabho/vismay")
  *   GITHUB_DISPATCH_REF    branch/tag the workflow runs from (default: "main")
  *
  * Without these set, the API route falls back to synchronous rendering — the
  * sane default for local dev.
  */
 
-import type { VideoAspect, VideoRange } from '@vismay/content-source/storyVideo'
+import type { PdfFormat } from './storyPdf'
 
-export function isDispatchConfigured(): boolean {
+export function isPdfDispatchConfigured(): boolean {
   return Boolean(
     process.env.GITHUB_DISPATCH_TOKEN && process.env.GITHUB_DISPATCH_REPO
   )
 }
 
-export async function dispatchRenderJob(args: {
+export async function dispatchPdfRenderJob(args: {
   slug: string
-  aspect: VideoAspect
+  format: PdfFormat
   baseUrl: string
-  /** Sub-range to render. Omit for a full render. */
-  range?: VideoRange
 }): Promise<void> {
   const token = process.env.GITHUB_DISPATCH_TOKEN
   const repo = process.env.GITHUB_DISPATCH_REPO
@@ -39,14 +38,7 @@ export async function dispatchRenderJob(args: {
     throw new Error('GITHUB_DISPATCH_TOKEN and GITHUB_DISPATCH_REPO must be set')
   }
 
-  // Workflow file name is fixed — the route doesn't need to know about it
-  // beyond this constant. Keeping it here means the route file stays generic.
-  const WORKFLOW_FILE = 'render-video.yml'
-
-  // workflow_dispatch inputs only support strings. Empty string = full render
-  // on the runner side; the script reads them via process.env / argv.
-  const startMsInput = args.range ? String(args.range.startMs) : ''
-  const endMsInput = args.range ? String(args.range.endMs) : ''
+  const WORKFLOW_FILE = 'render-pdf.yml'
 
   const res = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
@@ -62,10 +54,8 @@ export async function dispatchRenderJob(args: {
         ref,
         inputs: {
           slug: args.slug,
-          aspect: args.aspect,
+          format: args.format,
           base_url: args.baseUrl,
-          start_ms: startMsInput,
-          end_ms: endMsInput,
         },
       }),
     }
@@ -77,5 +67,4 @@ export async function dispatchRenderJob(args: {
       `GitHub workflow dispatch failed: ${res.status} ${body.slice(0, 300)}`
     )
   }
-  // 204 No Content on success — nothing to parse.
 }

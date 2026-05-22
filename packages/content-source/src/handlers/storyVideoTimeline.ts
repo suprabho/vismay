@@ -32,8 +32,11 @@ export function createStoryVideoTimelineHandler() {
         return NextResponse.json({ error: 'bad slug' }, { status: 400 })
       }
 
-      const supabase = createServiceClient()
       try {
+        // createServiceClient() throws synchronously when SUPABASE_SERVICE_ROLE_KEY
+        // is missing. Catch it so the client sees a real error message instead of
+        // an opaque Next.js 500.
+        const supabase = createServiceClient()
         const { chunks, cues } = await loadChunksAndCues(supabase, slug)
         if (chunks.length === 0 || cues.length === 0) {
           return NextResponse.json({ error: 'no audio for slug' }, { status: 404 })

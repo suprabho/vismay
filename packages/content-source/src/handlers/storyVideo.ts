@@ -90,11 +90,14 @@ export function createStoryVideoHandler(opts: StoryVideoHandlerOptions) {
       // without env plumbing.
       const baseUrl = `${url.protocol}//${url.host}`
 
-      const supabase = createServiceClient()
-
+      let supabase: ReturnType<typeof createServiceClient>
       let hash: string
       let totalMs: number
       try {
+        // createServiceClient() throws synchronously when SUPABASE_SERVICE_ROLE_KEY
+        // is missing. Catch it so the client sees a real error message instead of
+        // an opaque Next.js 500.
+        supabase = createServiceClient()
         const { chunks, cues } = await loadChunksAndCues(supabase, slug)
         if (chunks.length === 0 || cues.length === 0) {
           return NextResponse.json({ error: 'no audio for slug' }, { status: 404 })

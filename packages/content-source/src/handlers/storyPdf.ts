@@ -63,10 +63,14 @@ export function createStoryPdfHandler(opts: StoryPdfHandlerOptions) {
       const force = url.searchParams.get('force') === '1'
 
       const baseUrl = `${url.protocol}//${url.host}`
-      const supabase = createServiceClient()
 
+      let supabase: ReturnType<typeof createServiceClient>
       let hash: string
       try {
+        // createServiceClient() throws synchronously when SUPABASE_SERVICE_ROLE_KEY
+        // is missing. Catch it so the client sees a real error message instead of
+        // an opaque Next.js 500.
+        supabase = createServiceClient()
         const source = getContentSource()
         hash = await computeContentRevisionHash(source, slug)
       } catch (err) {
