@@ -33,7 +33,7 @@ export default async function AppStoriesListPage({ params }: Props) {
           {stories.map((s) => (
             <li key={s.slug}>
               <Link
-                href={`/vizmaya/${s.slug}`}
+                href={`/${appSlug}/${s.slug}`}
                 className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-white/[0.025] transition-colors"
               >
                 <div className="min-w-0 flex flex-col">

@@ -6,10 +6,12 @@ import FileActions from './FileActions'
 
 export default function ChartEditorClient({
   slug,
+  sectionHref,
   chartId,
   initial,
 }: {
   slug: string
+  sectionHref: string
   chartId: string
   initial: string
 }) {
@@ -72,7 +74,7 @@ export default function ChartEditorClient({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
-        <Link href={`/vizmaya/${slug}`} className="text-neutral-400 hover:text-white text-sm">
+        <Link href={`${sectionHref}/${slug}`} className="text-neutral-400 hover:text-white text-sm">
           ←
         </Link>
         <div className="min-w-0 flex-1">
