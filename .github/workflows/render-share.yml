@@ -67,6 +67,13 @@ jobs:
 
       - name: Render share assets
         env:
+          # Story content (markdown, config.yaml, share.yaml, report.yaml,
+          # chart JSON) lives in Postgres in production. Without this, the
+          # script defaults to CONTENT_SOURCE=fs and reads from the runner's
+          # git checkout — which (a) misses stories created via the admin
+          # portal, and (b) computes a different content_revision_hash than
+          # the Vercel API route, so the share-card cache never matches.
+          CONTENT_SOURCE: db
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
