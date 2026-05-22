@@ -8,6 +8,7 @@ import OutputNode, { type OutputNodeData } from './OutputNode'
 import OutputGroupHeader, {
   type OutputGroupHeaderData,
 } from './OutputGroupHeader'
+import OutputTabBar, { type OutputTab } from './OutputTabBar'
 import CanvasWires, { type Wire } from './CanvasWires'
 import {
   buildInputsForUnit,
@@ -64,6 +65,12 @@ const OUTPUT_OVERRIDE_W = 320
 const OUTPUT_OVERRIDE_H = 140
 const OUTPUT_OVERRIDE_GAP_Y = 28
 const OUTPUT_OVERRIDE_TO_NODE_GAP = 80
+
+// Tab strip placed directly above a tabbed group's active iframe. Width
+// follows the widest sibling in the group so layout doesn't shift when
+// the user switches tabs.
+const TAB_BAR_H = 88
+const TAB_BAR_TO_IFRAME_GAP = 28
 
 const MIN_ZOOM = 0.05
 const MAX_ZOOM = 3
@@ -131,6 +138,16 @@ interface OutputHeaderPlacement {
   h: number
 }
 
+interface OutputTabBarPlacement {
+  id: string
+  group: OutputGroupId
+  tabs: OutputTab[]
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 function autoLayout(sectionUnits: ResolvedUnit[]): FramePlacement[] {
   return sectionUnits.map((unit, i) => ({
     id: unit.parentConfig.id ?? `section-${unit.parentIndex}`,
@@ -150,6 +167,9 @@ interface Subgraph {
    *  expanded output node). Shaped like InputPlacement so they reuse the
    *  same renderer as the frame-level input column. */
   outputOverrideInputs: InputPlacement[]
+  /** Tab strips for tabbed groups (one per expanded tabbed group, anchored
+   *  above the active iframe). Empty for non-tabbed groups. */
+  outputTabBars: OutputTabBarPlacement[]
   wires: Wire[]
 }
 
@@ -158,7 +178,8 @@ function buildSubgraph(
   parsed: ReturnType<typeof parseCanvasSources>,
   slug: string,
   publicSiteUrl: string,
-  expandedGroup: OutputGroupId | null
+  expandedGroup: OutputGroupId | null,
+  activeTabByGroup: Partial<Record<OutputGroupId, string>>
 ): Subgraph {
   /* ─── Inputs (left of frame) ────────────────────────────────────── */
   const inputs = buildInputsForUnit(frame.unit, parsed)
@@ -184,10 +205,28 @@ function buildSubgraph(
     outputsByGroup.set(o.group, arr)
   }
 
+  // Resolve which output is "active" for each tabbed group. Default to the
+  // first sibling so the canvas isn't blank on first expand. We compute
+  // this up front so both the height pass and the placement pass see the
+  // same active sibling.
+  const activeOutputByGroup = new Map<OutputGroupId, OutputNodeData>()
+  for (const group of OUTPUT_GROUPS) {
+    const list = outputsByGroup.get(group.id)
+    if (!list || list.length === 0) continue
+    if (group.tabbed) {
+      const chosenId = activeTabByGroup[group.id]
+      const match = chosenId ? list.find((o) => o.id === chosenId) : undefined
+      activeOutputByGroup.set(group.id, match ?? list[0])
+    } else {
+      // Sentinel for non-tabbed; placement loop just renders the whole list.
+      activeOutputByGroup.set(group.id, list[0])
+    }
+  }
+
   // First pass: compute total stack height so we can vertical-center it
-  // against the frame. Groups always contribute a header; expanded groups
-  // additionally contribute the sum of their iframe heights + intra-group
-  // gaps + header-to-body gap.
+  // against the frame. Groups always contribute a header. Expanded groups
+  // additionally contribute their body — full stack for non-tabbed,
+  // tab-bar + one iframe for tabbed.
   let totalH = 0
   for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
     const group = OUTPUT_GROUPS[i]
@@ -195,8 +234,13 @@ function buildSubgraph(
     totalH += GROUP_HEADER_H
     if (expandedGroup === group.id && groupOutputs.length > 0) {
       totalH += HEADER_TO_BODY_GAP
-      totalH += groupOutputs.reduce((acc, o) => acc + o.h, 0)
-      totalH += Math.max(0, groupOutputs.length - 1) * OUTPUT_GAP_Y
+      if (group.tabbed && groupOutputs.length > 1) {
+        const active = activeOutputByGroup.get(group.id) ?? groupOutputs[0]
+        totalH += TAB_BAR_H + TAB_BAR_TO_IFRAME_GAP + active.h
+      } else {
+        totalH += groupOutputs.reduce((acc, o) => acc + o.h, 0)
+        totalH += Math.max(0, groupOutputs.length - 1) * OUTPUT_GAP_Y
+      }
     }
     if (i < OUTPUT_GROUPS.length - 1) totalH += GROUP_GAP_Y
   }
@@ -206,6 +250,7 @@ function buildSubgraph(
 
   const outputPlacements: OutputPlacement[] = []
   const outputHeaders: OutputHeaderPlacement[] = []
+  const outputTabBars: OutputTabBarPlacement[] = []
   // Per-output override inputs (right column, attached to each expanded
   // output node). Modelled as InputPlacement so they reuse the same
   // <InputNode> component as the left column.
@@ -214,6 +259,55 @@ function buildSubgraph(
   // left edge. Kept separate from the main `wires` array so we can
   // append it at the end alongside the frame→header wires.
   const outputOverrideWires: Wire[] = []
+
+  /**
+   * Place one iframe node + its per-output override column. Used by both
+   * the non-tabbed branch (called per sibling) and the tabbed branch
+   * (called once for the active sibling). Mutates `cursor` is the caller's
+   * responsibility — this helper only knows about its own y.
+   */
+  const placeOutput = (data: OutputNodeData, y: number) => {
+    outputPlacements.push({
+      id: data.id,
+      data,
+      x: outputX,
+      y,
+      w: data.w,
+      h: data.h,
+    })
+
+    const overrideData = buildOverridesForOutput(
+      data.id,
+      data.group,
+      frame.unit,
+      parsed
+    )
+    if (overrideData.length > 0) {
+      const colTotalH =
+        overrideData.length * OUTPUT_OVERRIDE_H +
+        (overrideData.length - 1) * OUTPUT_OVERRIDE_GAP_Y
+      const colStartY = y + data.h / 2 - colTotalH / 2
+      const colX = outputX - OUTPUT_OVERRIDE_W - OUTPUT_OVERRIDE_TO_NODE_GAP
+      overrideData.forEach((nd, idx) => {
+        const ny = colStartY + idx * (OUTPUT_OVERRIDE_H + OUTPUT_OVERRIDE_GAP_Y)
+        outputOverrideInputs.push({
+          id: nd.id,
+          data: nd,
+          x: colX,
+          y: ny,
+          w: OUTPUT_OVERRIDE_W,
+          h: OUTPUT_OVERRIDE_H,
+        })
+        outputOverrideWires.push({
+          id: `${data.id}:override:${nd.id}`,
+          x1: colX + OUTPUT_OVERRIDE_W,
+          y1: ny + OUTPUT_OVERRIDE_H / 2,
+          x2: outputX,
+          y2: y + data.h / 2,
+        })
+      })
+    }
+  }
 
   let cursor = startY
   for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
@@ -238,56 +332,39 @@ function buildSubgraph(
 
     if (expanded) {
       cursor += HEADER_TO_BODY_GAP
-      for (const data of groupOutputs) {
-        outputPlacements.push({
-          id: data.id,
-          data,
+
+      if (group.tabbed && groupOutputs.length > 1) {
+        // Tab bar width follows the WIDEST sibling so it doesn't visibly
+        // shrink when the user switches to a narrower ratio. The active
+        // iframe is positioned right below, left-aligned with the bar.
+        const active = activeOutputByGroup.get(group.id) ?? groupOutputs[0]
+        const tabBarW = Math.max(...groupOutputs.map((o) => o.w))
+        outputTabBars.push({
+          id: `${group.id}:tabs`,
+          group: group.id,
+          tabs: groupOutputs.map((o) => ({
+            id: o.id,
+            label: o.label,
+            tag: o.tag,
+            active: o.id === active.id,
+          })),
           x: outputX,
           y: cursor,
-          w: data.w,
-          h: data.h,
+          w: tabBarW,
+          h: TAB_BAR_H,
         })
-
-        // Per-output override input column on the left of this output
-        // node. Cards stack vertically and are centered vertically
-        // against the output's height so they read as "feeding into" it.
-        const overrideData = buildOverridesForOutput(
-          data.id,
-          data.group,
-          frame.unit,
-          parsed
-        )
-        if (overrideData.length > 0) {
-          const colTotalH =
-            overrideData.length * OUTPUT_OVERRIDE_H +
-            (overrideData.length - 1) * OUTPUT_OVERRIDE_GAP_Y
-          const colStartY = cursor + data.h / 2 - colTotalH / 2
-          const colX = outputX - OUTPUT_OVERRIDE_W - OUTPUT_OVERRIDE_TO_NODE_GAP
-          overrideData.forEach((nd, idx) => {
-            const ny = colStartY + idx * (OUTPUT_OVERRIDE_H + OUTPUT_OVERRIDE_GAP_Y)
-            outputOverrideInputs.push({
-              id: nd.id,
-              data: nd,
-              x: colX,
-              y: ny,
-              w: OUTPUT_OVERRIDE_W,
-              h: OUTPUT_OVERRIDE_H,
-            })
-            outputOverrideWires.push({
-              id: `${data.id}:override:${nd.id}`,
-              x1: colX + OUTPUT_OVERRIDE_W,
-              y1: ny + OUTPUT_OVERRIDE_H / 2,
-              x2: outputX,
-              y2: cursor + data.h / 2,
-            })
-          })
+        cursor += TAB_BAR_H + TAB_BAR_TO_IFRAME_GAP
+        placeOutput(active, cursor)
+        cursor += active.h
+      } else {
+        for (const data of groupOutputs) {
+          placeOutput(data, cursor)
+          cursor += data.h + OUTPUT_GAP_Y
         }
-
-        cursor += data.h + OUTPUT_GAP_Y
+        // Strip the trailing OUTPUT_GAP_Y so the next group starts after a
+        // consistent GROUP_GAP_Y rather than gap + gap.
+        cursor -= OUTPUT_GAP_Y
       }
-      // Strip the trailing OUTPUT_GAP_Y so the next group starts after a
-      // consistent GROUP_GAP_Y rather than gap + gap.
-      cursor -= OUTPUT_GAP_Y
     }
 
     if (i < OUTPUT_GROUPS.length - 1) cursor += GROUP_GAP_Y
@@ -325,6 +402,7 @@ function buildSubgraph(
     outputs: outputPlacements,
     outputHeaders,
     outputOverrideInputs,
+    outputTabBars,
     wires,
   }
 }
@@ -365,6 +443,12 @@ export default function CanvasClient({
   const [expandedGroup, setExpandedGroup] = useState<OutputGroupId | null>(
     DEFAULT_EXPANDED_GROUP
   )
+  // Active sibling per tabbed group. Stored as a record so we can flip
+  // tabs without disturbing other groups' state. Empty entries fall back
+  // to the first sibling — see buildSubgraph.
+  const [activeTabByGroup, setActiveTabByGroup] = useState<
+    Partial<Record<OutputGroupId, string>>
+  >({})
 
   const surfaceRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ x: number; y: number } | null>(null)
@@ -393,16 +477,25 @@ export default function CanvasClient({
             parsedSources,
             slug,
             publicSiteUrl,
-            expandedGroup
+            expandedGroup,
+            activeTabByGroup
           )
         : ({
             inputs: [],
             outputs: [],
             outputHeaders: [],
             outputOverrideInputs: [],
+            outputTabBars: [],
             wires: [],
           } satisfies Subgraph),
-    [focusedFrame, parsedSources, slug, publicSiteUrl, expandedGroup]
+    [
+      focusedFrame,
+      parsedSources,
+      slug,
+      publicSiteUrl,
+      expandedGroup,
+      activeTabByGroup,
+    ]
   )
 
   // Non-passive wheel listener — React's onWheel is passive in modern Next,
@@ -543,6 +636,11 @@ export default function CanvasClient({
         ...subgraph.outputOverrideInputs.map((o) => o.y + o.h)
       )
     }
+    if (subgraph.outputTabBars.length > 0) {
+      maxX = Math.max(maxX, ...subgraph.outputTabBars.map((b) => b.x + b.w))
+      minY = Math.min(minY, ...subgraph.outputTabBars.map((b) => b.y))
+      maxY = Math.max(maxY, ...subgraph.outputTabBars.map((b) => b.y + b.h))
+    }
     const padding = 80
     const w = maxX - minX
     const h = maxY - minY
@@ -556,6 +654,7 @@ export default function CanvasClient({
     subgraph.outputs,
     subgraph.outputHeaders,
     subgraph.outputOverrideInputs,
+    subgraph.outputTabBars,
   ])
 
   // Auto-fit on mount — 1920x1080 frames at default zoom would blow the
@@ -877,6 +976,30 @@ export default function CanvasClient({
               }}
             >
               <InputNode data={node.data} />
+            </div>
+          ))}
+
+          {subgraph.outputTabBars.map((bar) => (
+            <div
+              key={bar.id}
+              style={{
+                position: 'absolute',
+                left: bar.x,
+                top: bar.y,
+                width: bar.w,
+                height: bar.h,
+                pointerEvents: 'auto',
+              }}
+            >
+              <OutputTabBar
+                tabs={bar.tabs}
+                onSelect={(outputId) =>
+                  setActiveTabByGroup((prev) => ({
+                    ...prev,
+                    [bar.group]: outputId,
+                  }))
+                }
+              />
             </div>
           ))}
         </div>

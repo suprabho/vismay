@@ -11,13 +11,23 @@ export type OutputGroupId = 'share' | 'slides' | 'report' | 'autoplay'
 export interface OutputGroup {
   id: OutputGroupId
   label: string
+  /** When true, the group's outputs are aspect-ratio siblings of the
+   *  same underlying render — show one at a time with a tab strip. Saves
+   *  iframe mounts (Share = 1 iframe instead of 3). When false, the
+   *  group's outputs are distinct enough to stack side-by-side. */
+  tabbed: boolean
 }
 
 export const OUTPUT_GROUPS: readonly OutputGroup[] = [
-  { id: 'share', label: 'Share' },
-  { id: 'slides', label: 'Slides' },
-  { id: 'report', label: 'Report' },
-  { id: 'autoplay', label: 'Autoplay' },
+  // Share cards are just aspect-ratio variants of the same render — tab
+  // them so only the active ratio's iframe mounts.
+  { id: 'share', label: 'Share', tabbed: true },
+  { id: 'slides', label: 'Slides', tabbed: false },
+  { id: 'report', label: 'Report', tabbed: false },
+  // Autoplay 9:16 vs 16:9 are visually different enough (mobile portrait
+  // vs widescreen layout) that side-by-side comparison is the point.
+  // Keep them stacked.
+  { id: 'autoplay', label: 'Autoplay', tabbed: false },
 ] as const
 
 /** Default group to load on mount. The other three stay collapsed until
