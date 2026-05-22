@@ -35,6 +35,7 @@
     "./usePollVideoRender": "./src/usePollVideoRender.ts",
     "./useTabIndent": "./src/useTabIndent.ts",
     "./yamlSections": "./src/yamlSections.ts",
+    "./schemas": "./src/schemas/index.ts",
     "./handlers/chartData": "./src/handlers/chartData.ts",
     "./handlers/storyPdf": "./src/handlers/storyPdf.ts",
     "./handlers/storyVideo": "./src/handlers/storyVideo.ts",

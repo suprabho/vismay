@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import FileActions from './FileActions'
+import CodeEditor, { type CodeEditorMarker } from './CodeEditor'
 
 export default function ChartEditorClient({
   slug,
@@ -19,17 +20,12 @@ export default function ChartEditorClient({
   const [baseline, setBaseline] = useState(initial)
   const [saving, start] = useTransition()
   const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err'; msg?: string }>({ type: 'idle' })
+  const [markers, setMarkers] = useState<CodeEditorMarker[]>([])
 
   const dirty = value !== baseline
-
-  let parseError: string | null = null
-  if (dirty) {
-    try {
-      JSON.parse(value)
-    } catch (e) {
-      parseError = e instanceof Error ? e.message : 'invalid JSON'
-    }
-  }
+  const errorMarkers = useMemo(() => markers.filter((m) => m.severity === 'error'), [markers])
+  const hasErrors = errorMarkers.length > 0
+  const firstError = errorMarkers[0]
 
   useEffect(() => {
     if (!dirty) return
@@ -45,13 +41,13 @@ export default function ChartEditorClient({
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        if (dirty && !parseError && !saving) save()
+        if (dirty && !hasErrors && !saving) save()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, parseError, saving, value])
+  }, [dirty, hasErrors, saving, value])
 
   function save() {
     start(async () => {
@@ -92,29 +88,30 @@ export default function ChartEditorClient({
         onUpload={setValue}
       />
 
-      <textarea
+      <CodeEditor
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-        spellCheck={false}
-        autoCapitalize="none"
-        autoCorrect="off"
-        className="flex-1 min-h-0 w-full bg-neutral-950 text-neutral-100 font-mono text-[13px] leading-relaxed p-4 resize-none outline-none focus:bg-neutral-900/40"
+        onChange={setValue}
+        language="json"
+        path={`${chartId}.json`}
+        onValidate={setMarkers}
       />
 
       <div className="sticky bottom-0 border-t border-white/10 bg-neutral-950/95 backdrop-blur flex items-center gap-3 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         <div className="text-sm truncate flex-1">
           {status.type === 'err' && <span className="text-red-400">{status.msg}</span>}
           {status.type === 'ok' && <span className="text-emerald-400">{status.msg}</span>}
-          {status.type === 'idle' && parseError && (
-            <span className="text-amber-400">JSON: {parseError}</span>
+          {status.type === 'idle' && hasErrors && firstError && (
+            <span className="text-amber-400">
+              JSON: {firstError.message} (line {firstError.startLineNumber})
+            </span>
           )}
-          {status.type === 'idle' && !parseError && (
+          {status.type === 'idle' && !hasErrors && (
             <span className="text-neutral-500">{dirty ? 'Unsaved changes' : 'No changes'}</span>
           )}
         </div>
         <button
           type="button"
-          disabled={!dirty || !!parseError || saving}
+          disabled={!dirty || hasErrors || saving}
           onClick={save}
           className="bg-white text-neutral-950 rounded-lg px-5 py-2.5 font-medium disabled:opacity-40 active:bg-neutral-200"
         >
