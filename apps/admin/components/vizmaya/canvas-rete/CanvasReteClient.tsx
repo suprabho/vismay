@@ -1,13 +1,22 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useReducer, useRef } from 'react'
 import type { ResolvedUnit } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
-  buildInputsForUnit,
+  contentNode,
+  configNode,
+  chartNode,
+  shareNode,
+  reportNodeFormat,
+  mapOverrideNode,
+  narrationNode,
   parseCanvasSources,
   type CanvasSources,
 } from '../canvas/canvasInputs'
+import type { InputNodeData } from '../canvas/InputNode'
+import { buildOutputsForUnit } from '../canvas/canvasOutputs'
+import type { OutputNodeData } from '../canvas/OutputNode'
 
 interface Props {
   slug: string
@@ -16,29 +25,37 @@ interface Props {
   publicSiteUrl: string
 }
 
-/* ─── Layout constants ──────────────────────────────────────────────
- * Same scale as the custom canvas so the visual feel matches: each
- * section gets a 1920×1080 frame, input cards sit to the left, sections
- * tile horizontally with generous breathing room.
- */
+/* ─── Layout constants (per section) ─────────────────────────────── */
 const FRAME_W = 1920
 const FRAME_H = 1080
-const FRAME_GAP_X = 720
+const FRAME_MIN_W = 480
+const FRAME_MIN_H = 270
+
 const INPUT_W = 320
-const INPUT_H = 140
+const INPUT_H = 150
 const INPUT_GAP_Y = 36
-const INPUT_TO_FRAME_GAP = 220
+
+const COL_GAP = 280
+const SECTION_GAP = 700
+
+const OUTPUT_GAP_Y = 100
+const OVERRIDE_GAP_Y = 36
 
 /**
- * First-spike Rete editor. Goal: prove that the framework can render our
- * shape — section frame nodes with iframe content, 7 input nodes per
- * frame, connections between them — at the dimensions we need
- * (1920×1080 iframes, ~320×140 input cards). Pan/zoom and connection
- * routing come from Rete's area + connection plugins.
+ * Round-2 Rete spike. Adds:
+ *   1. Output nodes — one per export (share×3 / slides / report / autoplay×2)
+ *      at native dimensions, fed from the section frame's `render` socket.
+ *   2. Per-output override nodes — Share Variants, Report Override,
+ *      Slides Override, Map Override, Narration. These connect ONLY to
+ *      their downstream outputs, not to the frame (the user's call —
+ *      cleaner semantics than the custom canvas, where overrides were
+ *      duplicated on both the frame's left and each output's left).
+ *   3. Frame resize — drag the bottom-right corner of a section frame
+ *      to resize. Rete handles re-routing connections on the fly.
  *
- * Deliberately NOT in this round: output nodes, group collapse, tabs,
- * resize handles, focus state, per-output override columns. Those layer
- * on top once the primitive is confirmed workable.
+ * Still out of scope: group collapse, tabbing share aspects, focus state,
+ * per-section auto-layout when frames are resized. Free-form positions
+ * — user drags nodes around as needed.
  */
 export default function CanvasReteClient({
   slug,
@@ -60,8 +77,6 @@ export default function CanvasReteClient({
     let disposed = false
 
     ;(async () => {
-      // Dynamic import keeps Rete out of the SSR bundle and avoids
-      // module-init side effects firing on the server build.
       const { createRoot } = await import('react-dom/client')
       const { NodeEditor, ClassicPreset } = await import('rete')
       const { AreaPlugin, AreaExtensions } = await import('rete-area-plugin')
@@ -69,17 +84,38 @@ export default function CanvasReteClient({
         await import('rete-connection-plugin')
       const { ReactPlugin, Presets: ReactPresets } =
         await import('rete-react-plugin')
-      // React 19 needs the JSX runtime imported in this client module
-      // so the dynamically-injected node components can render.
-      const React = await import('react')
 
       if (disposed) return
 
-      /* ─── Custom controls (the node body content) ──────────────── */
+      /* ─── Custom controls ───────────────────────────────────────
+       * Each Rete node uses the default classic chrome (label bar +
+       * sockets), but the body comes from one of these custom controls.
+       * The control owns its visual size, which lets us mix native-sized
+       * iframes (giant) with text-preview cards (small) in the same
+       * editor.
+       */
 
       class IframeControl extends ClassicPreset.Control {
-        constructor(public src: string, public w: number, public h: number) {
+        // Mutable so the resize handle can change them; React component
+        // reads these at render time and is force-updated on drag.
+        width: number
+        height: number
+        // Optional callback wired up by the editor setup — lets us notify
+        // the area plugin so connections re-route on resize.
+        onResize?: (w: number, h: number) => void
+        // True only for the section frame's iframe; the smaller output
+        // iframes use this same control type but without a handle.
+        resizable: boolean
+        constructor(
+          public src: string,
+          w: number,
+          h: number,
+          opts: { resizable?: boolean } = {}
+        ) {
           super()
+          this.width = w
+          this.height = h
+          this.resizable = opts.resizable ?? false
         }
       }
 
@@ -93,44 +129,56 @@ export default function CanvasReteClient({
         }
       }
 
-      /* ─── Custom node classes (distinguish for renderer dispatch) ─ */
+      /* ─── Node classes ────────────────────────────────────────── */
 
       const socket = new ClassicPreset.Socket('canvas')
 
+      // Section frame: 3 inputs (content/config/chart), 1 output (render).
+      // The render output fans out to every downstream output node.
       class FrameNode extends ClassicPreset.Node {
         kind = 'frame' as const
-        width = FRAME_W
-        height = FRAME_H
-        constructor(label: string, iframeSrc: string) {
+        constructor(label: string, iframeCtrl: IframeControl) {
           super(label)
-          // 7 named input sockets to mirror the custom canvas's input
-          // column. Ordering matches buildInputsForUnit so connections
-          // line up by index.
-          for (const key of [
-            'content',
-            'config',
+          this.addInput('content', new ClassicPreset.Input(socket, 'Content'))
+          this.addInput('config', new ClassicPreset.Input(socket, 'Config'))
+          this.addInput(
             'chart',
-            'share',
-            'report',
-            'map-override',
-            'narration',
-          ]) {
-            this.addInput(
-              key,
-              new ClassicPreset.Input(socket, prettyLabel(key))
-            )
-          }
-          this.addControl(
-            'iframe',
-            new IframeControl(iframeSrc, FRAME_W, FRAME_H)
+            new ClassicPreset.Input(socket, 'Chart Data')
           )
+          this.addOutput(
+            'render',
+            new ClassicPreset.Output(socket, 'render', true)
+          )
+          this.addControl('iframe', iframeCtrl)
         }
       }
 
-      class InputDataNode extends ClassicPreset.Node {
-        kind = 'input' as const
-        width = INPUT_W
-        height = INPUT_H
+      // Output node: iframe at native dims, plus N input sockets — one
+      // for the frame's render and one per relevant override.
+      class OutputNode extends ClassicPreset.Node {
+        kind = 'output' as const
+        constructor(
+          label: string,
+          iframeCtrl: IframeControl,
+          overrideKeys: string[]
+        ) {
+          super(label)
+          this.addInput(
+            'render',
+            new ClassicPreset.Input(socket, 'render')
+          )
+          for (const key of overrideKeys) {
+            this.addInput(key, new ClassicPreset.Input(socket, key))
+          }
+          this.addControl('iframe', iframeCtrl)
+        }
+      }
+
+      // Pure-data node: a single output socket emitting a preview string.
+      // Used for both the frame's left-column inputs (Content / Config /
+      // Chart) and the right-side overrides (Share Variants / Map / etc.).
+      class DataNode extends ClassicPreset.Node {
+        kind = 'data' as const
         constructor(
           label: string,
           tag: string,
@@ -140,7 +188,7 @@ export default function CanvasReteClient({
           super(label)
           this.addOutput(
             'value',
-            new ClassicPreset.Output(socket, 'value')
+            new ClassicPreset.Output(socket, 'value', true)
           )
           this.addControl(
             'preview',
@@ -149,44 +197,97 @@ export default function CanvasReteClient({
         }
       }
 
-      /* ─── React components for the custom controls ────────────── */
+      /* ─── React renderers for the controls ─────────────────────── */
 
       function IframeControlView({ data }: { data: IframeControl }) {
-        return React.createElement(
-          'div',
-          {
-            style: {
-              width: data.w,
-              height: data.h,
+        const [, force] = useReducer((n: number) => n + 1, 0)
+
+        const onResizeStart = (e: React.MouseEvent) => {
+          if (!data.resizable) return
+          // Stop the area plugin from picking this up as a node drag.
+          e.preventDefault()
+          e.stopPropagation()
+          const startX = e.clientX
+          const startY = e.clientY
+          const startW = data.width
+          const startH = data.height
+
+          const onMove = (ev: MouseEvent) => {
+            data.width = Math.max(FRAME_MIN_W, startW + (ev.clientX - startX))
+            data.height = Math.max(
+              FRAME_MIN_H,
+              startH + (ev.clientY - startY)
+            )
+            data.onResize?.(data.width, data.height)
+            force()
+          }
+          const onUp = () => {
+            window.removeEventListener('mousemove', onMove)
+            window.removeEventListener('mouseup', onUp)
+          }
+          window.addEventListener('mousemove', onMove)
+          window.addEventListener('mouseup', onUp)
+        }
+
+        return (
+          <div
+            style={{
+              width: data.width,
+              height: data.height,
               background: '#0a0a0a',
               border: '1px solid #262626',
               borderRadius: 8,
               overflow: 'hidden',
-            },
-          },
-          React.createElement('iframe', {
-            src: data.src,
-            style: {
-              width: '100%',
-              height: '100%',
-              border: 0,
-              display: 'block',
-              background: '#0a0a0a',
-              // Same trick as the custom canvas — pan-drag passes through
-              // the iframe so the canvas-bg drag listener still fires.
-              pointerEvents: 'none',
-            },
-          })
+              position: 'relative',
+            }}
+          >
+            <iframe
+              src={data.src}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 0,
+                display: 'block',
+                background: '#0a0a0a',
+                // Same trick as the custom canvas — pan-drag passes through
+                // the iframe so node drag still fires.
+                pointerEvents: 'none',
+              }}
+            />
+            {data.resizable && (
+              <div
+                onMouseDown={onResizeStart}
+                onPointerDown={(e) => e.stopPropagation()}
+                title="drag to resize"
+                style={{
+                  position: 'absolute',
+                  right: -7,
+                  bottom: -7,
+                  width: 16,
+                  height: 16,
+                  background: '#fff',
+                  border: '2px solid #888',
+                  borderRadius: 3,
+                  cursor: 'nwse-resize',
+                  zIndex: 5,
+                  pointerEvents: 'auto',
+                }}
+              />
+            )}
+          </div>
         )
       }
 
-      function TextPreviewControlView({ data }: { data: TextPreviewControl }) {
-        return React.createElement(
-          'div',
-          {
-            style: {
+      function TextPreviewControlView({
+        data,
+      }: {
+        data: TextPreviewControl
+      }) {
+        return (
+          <div
+            style={{
               width: INPUT_W - 24,
-              minHeight: 70,
+              minHeight: 96,
               padding: 8,
               background: '#0a0a0a',
               border: '1px solid #262626',
@@ -201,31 +302,25 @@ export default function CanvasReteClient({
               whiteSpace: 'pre-wrap',
               fontStyle: data.variant === 'muted' ? 'italic' : 'normal',
               overflow: 'hidden',
-            },
-          },
-          React.createElement(
-            'div',
-            {
-              style: {
+            }}
+          >
+            <div
+              style={{
                 fontSize: 9,
                 color: '#666',
                 letterSpacing: '0.14em',
                 marginBottom: 4,
-              },
-            },
-            data.tag
-          ),
-          data.body
+              }}
+            >
+              {data.tag}
+            </div>
+            {data.body}
+          </div>
         )
       }
 
       /* ─── Editor + plugin wiring ──────────────────────────────── */
 
-      // The plugin generics all key off `ClassicScheme` — Rete's stock
-      // shape (Classic.Node + Classic.Connection). Our concrete classes
-      // (FrameNode / InputDataNode) extend ClassicPreset.Node so they
-      // satisfy that shape at runtime; we discriminate via `instanceof`
-      // in the custom-control branch.
       type Schemes = ClassicScheme
       type AreaExtra = ReactArea2D<Schemes>
 
@@ -262,6 +357,17 @@ export default function CanvasReteClient({
 
       /* ─── Build the graph ────────────────────────────────────── */
 
+      // Pre-compute column positions: each section gets four vertical
+      // lanes side-by-side, then a SECTION_GAP, then the next section.
+      const inputColX = 0
+      const frameColX = INPUT_W + COL_GAP
+      const overrideColX = frameColX + FRAME_W + COL_GAP
+      const outputColX = overrideColX + INPUT_W + COL_GAP
+
+      // Outputs vary in width — max is slides @ 1920. Use that for the
+      // section's effective right edge so the next section starts cleanly.
+      const sectionPitch = outputColX + 1920 + SECTION_GAP
+
       for (let i = 0; i < sectionUnits.length; i++) {
         const unit = sectionUnits[i]
         const sectionId =
@@ -270,53 +376,182 @@ export default function CanvasReteClient({
           unit.heading ||
           unit.paragraphs[0]?.replace(/\*+/g, '') ||
           `Section ${unit.parentIndex + 1}`
-        const iframeSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`
+        const sectionX = i * sectionPitch
+        const frameTopY = 0
+        const frameSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`
 
-        const frame = new FrameNode(heading, iframeSrc)
+        /* ── Frame ─────────────────────────────────────────────── */
+        const iframeCtrl = new IframeControl(frameSrc, FRAME_W, FRAME_H, {
+          resizable: true,
+        })
+        const frame = new FrameNode(heading, iframeCtrl)
+        // Closure captures `frame` + `area` so resize updates feed back
+        // into Rete's node geometry — connection routing follows.
+        iframeCtrl.onResize = (w, h) => {
+          void area.resize(frame.id, w, h)
+        }
         await editor.addNode(frame)
-        const fx = i * (FRAME_W + FRAME_GAP_X)
-        const fy = 0
-        await area.translate(frame.id, { x: fx, y: fy })
+        await area.translate(frame.id, {
+          x: sectionX + frameColX,
+          y: frameTopY,
+        })
 
-        // Build the 7 inputs as separate nodes vertically stacked to the
-        // left of the frame. We reuse the slicers from canvasInputs so
-        // the data shown matches the custom-canvas exactly.
-        const inputData = buildInputsForUnit(unit, parsedSources)
-        const totalH =
-          inputData.length * INPUT_H +
-          (inputData.length - 1) * INPUT_GAP_Y
-        const startY = fy + FRAME_H / 2 - totalH / 2
-        const inputX = fx - INPUT_W - INPUT_TO_FRAME_GAP
-
-        for (let j = 0; j < inputData.length; j++) {
-          const d = inputData[j]
-          const node = new InputDataNode(d.label, d.tag, d.body, d.variant)
+        /* ── Frame inputs (Content / Config / Chart) ──────────── */
+        // Just three nodes now — the override-type inputs have moved to
+        // be attached directly to their downstream outputs instead.
+        const frameInputs: { key: string; data: InputNodeData }[] = [
+          { key: 'content', data: contentNode(unit) },
+          { key: 'config', data: configNode(unit) },
+          { key: 'chart', data: chartNode(unit, parsedSources) },
+        ]
+        const inputColTotalH =
+          frameInputs.length * INPUT_H +
+          (frameInputs.length - 1) * INPUT_GAP_Y
+        const inputStartY = frameTopY + FRAME_H / 2 - inputColTotalH / 2
+        for (let j = 0; j < frameInputs.length; j++) {
+          const { key, data } = frameInputs[j]
+          const node = new DataNode(
+            data.label,
+            data.tag,
+            data.body,
+            data.variant
+          )
           await editor.addNode(node)
           await area.translate(node.id, {
-            x: inputX,
-            y: startY + j * (INPUT_H + INPUT_GAP_Y),
+            x: sectionX + inputColX,
+            y: inputStartY + j * (INPUT_H + INPUT_GAP_Y),
           })
           await editor.addConnection(
             new ClassicPreset.Connection(
               node,
-              'value' as never,
+              'value',
               frame,
-              d.id as never
+              key
             ) as Schemes['Connection']
           )
         }
+
+        /* ── Output nodes ─────────────────────────────────────── */
+        // Output kind → which override socket names it accepts. This is
+        // the schema that defines "which override connects to which
+        // output" — the connection list below reads from it too.
+        const overrideKeysByGroup: Record<string, string[]> = {
+          share: ['variants'],
+          slides: ['override'],
+          report: ['override'],
+          autoplay: ['map', 'narration'],
+        }
+
+        const outputData = buildOutputsForUnit(unit, slug, publicSiteUrl)
+        const outputNodesById = new Map<string, OutputNode>()
+        // Stack outputs vertically starting from the frame's top edge.
+        // They'll extend well below the frame — that's expected (slides +
+        // report + autoplay × 2 is ~5500px tall stacked); user pans.
+        let outY = frameTopY
+        for (const o of outputData) {
+          const ctrl = new IframeControl(o.src, o.w, o.h)
+          const node = new OutputNode(
+            o.label,
+            ctrl,
+            overrideKeysByGroup[o.group] ?? []
+          )
+          outputNodesById.set(o.id, node)
+          await editor.addNode(node)
+          await area.translate(node.id, {
+            x: sectionX + outputColX,
+            y: outY,
+          })
+          await editor.addConnection(
+            new ClassicPreset.Connection(
+              frame,
+              'render',
+              node,
+              'render'
+            ) as Schemes['Connection']
+          )
+          outY += o.h + OUTPUT_GAP_Y
+        }
+
+        /* ── Override nodes (column 3, between frame and outputs) ─ */
+        // Each override entry: which slicer to call, the target output
+        // group, and the override socket name on the target node.
+        interface OverrideSpec {
+          data: InputNodeData
+          targetGroup: 'share' | 'slides' | 'report' | 'autoplay'
+          targetSocket: string
+        }
+        const overrideSpecs: OverrideSpec[] = [
+          {
+            data: shareNode(unit, parsedSources),
+            targetGroup: 'share',
+            targetSocket: 'variants',
+          },
+          {
+            data: reportNodeFormat(unit, parsedSources, 'slides'),
+            targetGroup: 'slides',
+            targetSocket: 'override',
+          },
+          {
+            data: reportNodeFormat(unit, parsedSources, 'report'),
+            targetGroup: 'report',
+            targetSocket: 'override',
+          },
+          {
+            data: mapOverrideNode(unit, parsedSources),
+            targetGroup: 'autoplay',
+            targetSocket: 'map',
+          },
+          {
+            data: narrationNode(unit, parsedSources),
+            targetGroup: 'autoplay',
+            targetSocket: 'narration',
+          },
+        ]
+        // Override label collisions are possible (e.g. two report formats
+        // both named "Override"); we already namespace via the slicers'
+        // shape so it's fine, but rename label-defaults for clarity.
+        const overrideTotalH =
+          overrideSpecs.length * INPUT_H +
+          (overrideSpecs.length - 1) * OVERRIDE_GAP_Y
+        const overrideStartY = frameTopY + FRAME_H / 2 - overrideTotalH / 2
+        for (let j = 0; j < overrideSpecs.length; j++) {
+          const spec = overrideSpecs[j]
+          const node = new DataNode(
+            spec.data.label,
+            spec.data.tag,
+            spec.data.body,
+            spec.data.variant
+          )
+          await editor.addNode(node)
+          await area.translate(node.id, {
+            x: sectionX + overrideColX,
+            y: overrideStartY + j * (INPUT_H + OVERRIDE_GAP_Y),
+          })
+          // Fan out to every output in the target group.
+          for (const target of outputData) {
+            if (target.group !== spec.targetGroup) continue
+            const targetNode = outputNodesById.get(target.id)
+            if (!targetNode) continue
+            await editor.addConnection(
+              new ClassicPreset.Connection(
+                node,
+                'value',
+                targetNode,
+                spec.targetSocket
+              ) as Schemes['Connection']
+            )
+          }
+        }
       }
 
-      // One auto-fit after the graph is built so the user sees the
-      // whole story instead of a single zoomed-in frame.
+      // Auto-fit after the whole graph is built so the user sees more
+      // than one section on first paint. They can pan/zoom from there.
       await AreaExtensions.zoomAt(area, editor.getNodes())
 
       teardown = () => {
         area.destroy()
       }
     })().catch((err) => {
-      // Spike-only: log instead of crashing the page so we can iterate
-      // without bricking the route.
       console.error('[CanvasReteClient] setup failed', err)
     })
 
@@ -339,7 +574,6 @@ export default function CanvasReteClient({
     >
       <div
         ref={containerRef}
-        // Rete fills its container; we let it own the full viewport.
         style={{ position: 'absolute', inset: 0 }}
       />
       <header
@@ -358,30 +592,10 @@ export default function CanvasReteClient({
       >
         <strong style={{ fontSize: 13 }}>{slug}</strong>
         <span style={{ marginLeft: 12, color: '#888' }}>
-          rete spike · {sectionUnits.length} sections
+          rete spike · {sectionUnits.length} sections · drag frame corner
+          to resize
         </span>
       </header>
-      <footer
-        style={{
-          position: 'absolute',
-          bottom: 16,
-          left: 16,
-          right: 16,
-          fontSize: 11,
-          color: '#555',
-          pointerEvents: 'none',
-        }}
-      >
-        scroll to zoom · drag to pan · spike scope: frames + 7 inputs each ·
-        no outputs / groups / tabs yet
-      </footer>
     </div>
   )
-}
-
-function prettyLabel(key: string): string {
-  return key
-    .split('-')
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ')
 }
