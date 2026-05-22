@@ -5,6 +5,7 @@ import type {
   MapOverrideConfig,
   ResolvedUnit,
   StoryDefaults,
+  Theme,
 } from '@vismay/viz-engine'
 import CanvasFrame from './CanvasFrame'
 import InputNode, { type InputNodeData } from './InputNode'
@@ -17,6 +18,9 @@ interface Props {
   defaults: StoryDefaults
   mapOverrides: MapOverrideConfig | null | undefined
   accessToken: string
+  theme: Theme
+  vertical: string | undefined
+  fontImportUrl: string | null
 }
 
 const FRAME_W = 480
@@ -110,6 +114,9 @@ export default function CanvasClient({
   defaults,
   mapOverrides,
   accessToken,
+  theme,
+  vertical,
+  fontImportUrl,
 }: Props) {
   const sectionUnits = useMemo(() => units.filter((u) => u.subIndex === 0), [units])
   const frames = useMemo(() => autoLayout(sectionUnits), [sectionUnits])
@@ -303,6 +310,9 @@ export default function CanvasClient({
                 accessToken={accessToken}
                 defaults={defaults}
                 mapOverrides={mapOverrides}
+                theme={theme}
+                vertical={vertical}
+                fontImportUrl={fontImportUrl}
               />
             </div>
           ))}

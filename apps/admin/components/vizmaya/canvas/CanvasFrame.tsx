@@ -4,6 +4,7 @@ import type {
   MapOverrideConfig,
   ResolvedUnit,
   StoryDefaults,
+  Theme,
 } from '@vismay/viz-engine'
 import SectionPreview from './SectionPreview'
 
@@ -15,6 +16,9 @@ interface Props {
   accessToken: string
   defaults: StoryDefaults
   mapOverrides: MapOverrideConfig | null | undefined
+  theme: Theme
+  vertical: string | undefined
+  fontImportUrl: string | null
 }
 
 /**
@@ -37,6 +41,9 @@ export default function CanvasFrame({
   accessToken,
   defaults,
   mapOverrides,
+  theme,
+  vertical,
+  fontImportUrl,
 }: Props) {
   const kind = (unit.parentConfig.kind ?? 'text').toUpperCase()
   const heading =
@@ -103,6 +110,9 @@ export default function CanvasFrame({
             defaults={defaults}
             mapOverrides={mapOverrides}
             mode="live"
+            theme={theme}
+            vertical={vertical}
+            fontImportUrl={fontImportUrl}
           />
         ) : (
           <div

@@ -35,6 +35,12 @@ importers:
       '@vismay/content-source':
         specifier: workspace:*
         version: link:../../packages/content-source
+      '@vismay/f1-viz':
+        specifier: workspace:*
+        version: link:../../verticals/f1-viz
+      '@vismay/footshort-viz':
+        specifier: workspace:*
+        version: link:../../verticals/footshort-viz
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
