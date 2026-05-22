@@ -41,16 +41,17 @@ export const F1_BRAND = {
    * abbreviation chip when logo_url is null.
    */
   constructorLogos: {
-    red_bull_racing: 'https://upload.wikimedia.org/wikipedia/en/c/c6/Red_Bull_Racing_logo.svg',
-    ferrari: 'https://upload.wikimedia.org/wikipedia/commons/c/c0/Scuderia_Ferrari_Logo.svg',
-    mercedes: 'https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes_AMG_Petronas_F1_Logo.svg',
+    red_bull_racing: 'https://upload.wikimedia.org/wikipedia/en/f/fa/Red_Bull_Racing_Logo_2026.svg',
+    ferrari: 'https://upload.wikimedia.org/wikipedia/en/d/df/Scuderia_Ferrari_HP_logo_24.svg',
+    mercedes:
+      'https://upload.wikimedia.org/wikipedia/commons/f/fc/Mercedes-AMG_Petronas_F1_Team_logo_%282026%29.svg',
     mclaren: 'https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg',
-    aston_martin: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Aston_Martin_Cognizant_F1.svg',
-    alpine: 'https://upload.wikimedia.org/wikipedia/commons/9/9d/Alpine_F1_Team_Logo.svg',
-    williams: 'https://upload.wikimedia.org/wikipedia/en/4/49/Williams_Racing_2020.png',
-    rb: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Visa_Cash_App_RB_F1_Team_logo.svg',
-    kick_sauber: 'https://upload.wikimedia.org/wikipedia/commons/8/86/Stake_F1_Team_Kick_Sauber_logo.svg',
-    haas: 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Haas_F1_Team_logo.svg',
+    aston_martin: 'https://upload.wikimedia.org/wikipedia/en/1/15/Aston_Martin_Aramco_2024_logo.png',
+    alpine: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/BWT_Alpine_F1_Team_Logo.png',
+    williams: 'https://upload.wikimedia.org/wikipedia/commons/1/12/Atlassian_Williams_F1_Team_logo.svg',
+    rb: 'https://upload.wikimedia.org/wikipedia/en/2/2b/VCARB_F1_logo.svg',
+    kick_sauber: 'https://upload.wikimedia.org/wikipedia/commons/9/94/Logo_sauber_2023.jpg',
+    haas: 'https://upload.wikimedia.org/wikipedia/commons/1/18/TGR_Haas_F1_Team_Logo_%282026%29.svg',
   } as Record<string, string>,
 } as const
 
