@@ -61,6 +61,10 @@ const textModule: VizModule<TextLayerConfig> = {
   // via `style.panel` in YAML — the merge in ForegroundVizSlot is sub-field,
   // so overriding `panel.background` alone keeps the default border + blur.
   defaultStyle: {
+    // Text is non-interactive by default so scroll/wheel events pass through
+    // to the snap-scroll container. Authors can opt back into selection or
+    // click handlers via `style.pointerEvents: 'auto'` in YAML.
+    pointerEvents: 'none',
     panel: {
       background: 'rgb(var(--color-panel-rgb) / 0.2)',
       border: '0.5px solid var(--color-line)',
