@@ -165,10 +165,15 @@ export async function getAllStorySlugs(): Promise<string[]> {
 /**
  * Get summary info for stories shown on the home grid. Filters out drafts,
  * archived stories, and anything explicitly marked `listed: false`.
+ *
+ * Pass `appSlug` to scope the result to one app — without it, stories from
+ * every app come back, which is what a sitemap or cross-app admin view wants
+ * but not what a per-app home grid wants.
  */
-export async function getAllStories() {
+export async function getAllStories(appSlug?: string) {
   const metas = await getContentSource().listStories()
-  const listed = metas.filter((m) => isListed({ status: m.status, listed: m.listed }))
+  const scoped = appSlug ? metas.filter((m) => m.appSlug === appSlug) : metas
+  const listed = scoped.filter((m) => isListed({ status: m.status, listed: m.listed }))
   const sorted = listed.sort((a, b) => {
     const aOrder = a.displayOrder ?? Infinity
     const bOrder = b.displayOrder ?? Infinity

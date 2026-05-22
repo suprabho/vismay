@@ -58,6 +58,24 @@ function fsReadIfExists(filePath: string): string | null {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null
 }
 
+// Mirror of the `apps` rows seeded by migrations/039_content_apps.sql. Used in
+// fs mode where stories don't carry an `app_slug` column — instead the
+// frontmatter declares a `vertical` and we map it to the owning app.
+const VERTICAL_TO_APP_SLUG: Record<string, string> = {
+  footshort: 'footshort',
+  f1: 'vizf1',
+}
+
+function deriveAppSlugFromFrontmatter(data: Record<string, unknown>): string {
+  const explicit = data.appSlug ?? data.app_slug
+  if (typeof explicit === 'string' && explicit.length > 0) return explicit
+  const vertical = data.vertical
+  if (typeof vertical === 'string' && VERTICAL_TO_APP_SLUG[vertical]) {
+    return VERTICAL_TO_APP_SLUG[vertical]
+  }
+  return 'vizmaya-fyi'
+}
+
 const fsSource: ContentSource = {
   async listStories(): Promise<StoryMeta[]> {
     if (!fs.existsSync(STORIES_DIR)) return []
@@ -74,8 +92,8 @@ const fsSource: ContentSource = {
       const status = (data.status ?? 'published') as StoryStatus
       const listed = data.listed !== false
       const displayOrder = typeof data.displayOrder === 'number' ? data.displayOrder : null
-      // fs mode is vizmaya-fyi-only; surface the app slug for type parity with db mode.
-      return { slug, status, listed, displayOrder, appSlug: 'vizmaya-fyi' }
+      const appSlug = deriveAppSlugFromFrontmatter(data)
+      return { slug, status, listed, displayOrder, appSlug }
     })
   },
   async readMarkdown(slug) {

@@ -109,14 +109,18 @@ export async function listPublishedEpics(): Promise<PublishedEpic[]> {
 // Subset of listPublishedEpics that respects the per-epic `show_on_home`
 // flag. Used by the vizmaya.fyi home page Epics grid only — the sitemap and
 // direct /epic/<slug> URLs still surface every published epic.
-export async function listEpicsForHome(): Promise<PublishedEpic[]> {
+//
+// Pass `appSlug` to scope the result to a single app's epics. Without it the
+// query returns every published, home-listed epic across all apps.
+export async function listEpicsForHome(appSlug?: string): Promise<PublishedEpic[]> {
   const sb = createServiceClient()
-  const { data, error } = await sb
+  let query = sb
     .from('epics')
     .select('slug, name, description')
     .eq('status', 'published')
     .eq('show_on_home', true)
-    .order('name', { ascending: true })
+  if (appSlug) query = query.eq('app_slug', appSlug)
+  const { data, error } = await query.order('name', { ascending: true })
   if (error) throw new Error(`listEpicsForHome: ${error.message}`)
   return (data ?? []).map((r: any) => ({
     slug: r.slug,
