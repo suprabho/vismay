@@ -5,13 +5,22 @@ import type { ResolvedUnit } from '@vismay/viz-engine'
 import CanvasFrame from './CanvasFrame'
 import InputNode, { type InputNodeData } from './InputNode'
 import OutputNode, { type OutputNodeData } from './OutputNode'
+import OutputGroupHeader, {
+  type OutputGroupHeaderData,
+} from './OutputGroupHeader'
 import CanvasWires, { type Wire } from './CanvasWires'
 import {
   buildInputsForUnit,
+  buildOverridesForOutput,
   parseCanvasSources,
   type CanvasSources,
 } from './canvasInputs'
-import { buildOutputsForUnit } from './canvasOutputs'
+import {
+  buildOutputsForUnit,
+  OUTPUT_GROUPS,
+  DEFAULT_EXPANDED_GROUP,
+  type OutputGroupId,
+} from './canvasOutputs'
 
 interface Props {
   slug: string
@@ -39,6 +48,22 @@ const INPUT_TO_FRAME_GAP = 120
 // column.
 const OUTPUT_TO_FRAME_GAP = 240
 const OUTPUT_GAP_Y = 120
+// Group headers stack vertically. Width matches the widest possible output
+// (slides @ 1920) so headers always span their group's content cleanly.
+const GROUP_HEADER_W = 1920
+const GROUP_HEADER_H = 100
+const GROUP_GAP_Y = 64
+const HEADER_TO_BODY_GAP = 40
+
+// Per-output override inputs: a small column attached to the LEFT of each
+// expanded output node, showing the specific override(s) that output
+// consumes (e.g. Share 3:4 → Share Variants slice; Autoplay → Map +
+// Narration). Sized to match frame-level input nodes so the visual
+// language stays consistent.
+const OUTPUT_OVERRIDE_W = 320
+const OUTPUT_OVERRIDE_H = 140
+const OUTPUT_OVERRIDE_GAP_Y = 28
+const OUTPUT_OVERRIDE_TO_NODE_GAP = 80
 
 const MIN_ZOOM = 0.05
 const MAX_ZOOM = 3
@@ -97,6 +122,15 @@ interface OutputPlacement {
   h: number
 }
 
+interface OutputHeaderPlacement {
+  id: OutputGroupId
+  data: OutputGroupHeaderData
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 function autoLayout(sectionUnits: ResolvedUnit[]): FramePlacement[] {
   return sectionUnits.map((unit, i) => ({
     id: unit.parentConfig.id ?? `section-${unit.parentIndex}`,
@@ -108,16 +142,24 @@ function autoLayout(sectionUnits: ResolvedUnit[]): FramePlacement[] {
   }))
 }
 
+interface Subgraph {
+  inputs: InputPlacement[]
+  outputs: OutputPlacement[]
+  outputHeaders: OutputHeaderPlacement[]
+  /** Per-output override input cards (right column, one stack per
+   *  expanded output node). Shaped like InputPlacement so they reuse the
+   *  same renderer as the frame-level input column. */
+  outputOverrideInputs: InputPlacement[]
+  wires: Wire[]
+}
+
 function buildSubgraph(
   frame: FramePlacement,
   parsed: ReturnType<typeof parseCanvasSources>,
   slug: string,
-  publicSiteUrl: string
-): {
-  inputs: InputPlacement[]
-  outputs: OutputPlacement[]
-  wires: Wire[]
-} {
+  publicSiteUrl: string,
+  expandedGroup: OutputGroupId | null
+): Subgraph {
   /* ─── Inputs (left of frame) ────────────────────────────────────── */
   const inputs = buildInputsForUnit(frame.unit, parsed)
   const inputTotalH = inputs.length * INPUT_H + (inputs.length - 1) * INPUT_GAP_Y
@@ -133,29 +175,125 @@ function buildSubgraph(
     h: INPUT_H,
   }))
 
-  /* ─── Outputs (right of frame) ──────────────────────────────────── */
-  const outputs = buildOutputsForUnit(frame.unit, slug, publicSiteUrl)
-  const outputTotalH =
-    outputs.reduce((acc, o) => acc + o.h, 0) +
-    Math.max(0, outputs.length - 1) * OUTPUT_GAP_Y
-  const outputStartY = frame.y + frame.h / 2 - outputTotalH / 2
-  const outputX = frame.x + frame.w + OUTPUT_TO_FRAME_GAP
-
-  const outputPlacements: OutputPlacement[] = []
-  let cursor = outputStartY
-  for (const data of outputs) {
-    outputPlacements.push({
-      id: data.id,
-      data,
-      x: outputX,
-      y: cursor,
-      w: data.w,
-      h: data.h,
-    })
-    cursor += data.h + OUTPUT_GAP_Y
+  /* ─── Outputs (right of frame, grouped + collapsible) ──────────── */
+  const allOutputs = buildOutputsForUnit(frame.unit, slug, publicSiteUrl)
+  const outputsByGroup = new Map<OutputGroupId, OutputNodeData[]>()
+  for (const o of allOutputs) {
+    const arr = outputsByGroup.get(o.group) ?? []
+    arr.push(o)
+    outputsByGroup.set(o.group, arr)
   }
 
-  /* ─── Wires (inputs → frame, frame → outputs) ──────────────────── */
+  // First pass: compute total stack height so we can vertical-center it
+  // against the frame. Groups always contribute a header; expanded groups
+  // additionally contribute the sum of their iframe heights + intra-group
+  // gaps + header-to-body gap.
+  let totalH = 0
+  for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
+    const group = OUTPUT_GROUPS[i]
+    const groupOutputs = outputsByGroup.get(group.id) ?? []
+    totalH += GROUP_HEADER_H
+    if (expandedGroup === group.id && groupOutputs.length > 0) {
+      totalH += HEADER_TO_BODY_GAP
+      totalH += groupOutputs.reduce((acc, o) => acc + o.h, 0)
+      totalH += Math.max(0, groupOutputs.length - 1) * OUTPUT_GAP_Y
+    }
+    if (i < OUTPUT_GROUPS.length - 1) totalH += GROUP_GAP_Y
+  }
+
+  const outputX = frame.x + frame.w + OUTPUT_TO_FRAME_GAP
+  const startY = frame.y + frame.h / 2 - totalH / 2
+
+  const outputPlacements: OutputPlacement[] = []
+  const outputHeaders: OutputHeaderPlacement[] = []
+  // Per-output override inputs (right column, attached to each expanded
+  // output node). Modelled as InputPlacement so they reuse the same
+  // <InputNode> component as the left column.
+  const outputOverrideInputs: InputPlacement[] = []
+  // Wires from each per-output override input to its parent output's
+  // left edge. Kept separate from the main `wires` array so we can
+  // append it at the end alongside the frame→header wires.
+  const outputOverrideWires: Wire[] = []
+
+  let cursor = startY
+  for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
+    const group = OUTPUT_GROUPS[i]
+    const groupOutputs = outputsByGroup.get(group.id) ?? []
+    const expanded = expandedGroup === group.id && groupOutputs.length > 0
+
+    outputHeaders.push({
+      id: group.id,
+      data: {
+        id: group.id,
+        label: group.label,
+        childTags: groupOutputs.map((o) => o.tag),
+        expanded,
+      },
+      x: outputX,
+      y: cursor,
+      w: GROUP_HEADER_W,
+      h: GROUP_HEADER_H,
+    })
+    cursor += GROUP_HEADER_H
+
+    if (expanded) {
+      cursor += HEADER_TO_BODY_GAP
+      for (const data of groupOutputs) {
+        outputPlacements.push({
+          id: data.id,
+          data,
+          x: outputX,
+          y: cursor,
+          w: data.w,
+          h: data.h,
+        })
+
+        // Per-output override input column on the left of this output
+        // node. Cards stack vertically and are centered vertically
+        // against the output's height so they read as "feeding into" it.
+        const overrideData = buildOverridesForOutput(
+          data.id,
+          data.group,
+          frame.unit,
+          parsed
+        )
+        if (overrideData.length > 0) {
+          const colTotalH =
+            overrideData.length * OUTPUT_OVERRIDE_H +
+            (overrideData.length - 1) * OUTPUT_OVERRIDE_GAP_Y
+          const colStartY = cursor + data.h / 2 - colTotalH / 2
+          const colX = outputX - OUTPUT_OVERRIDE_W - OUTPUT_OVERRIDE_TO_NODE_GAP
+          overrideData.forEach((nd, idx) => {
+            const ny = colStartY + idx * (OUTPUT_OVERRIDE_H + OUTPUT_OVERRIDE_GAP_Y)
+            outputOverrideInputs.push({
+              id: nd.id,
+              data: nd,
+              x: colX,
+              y: ny,
+              w: OUTPUT_OVERRIDE_W,
+              h: OUTPUT_OVERRIDE_H,
+            })
+            outputOverrideWires.push({
+              id: `${data.id}:override:${nd.id}`,
+              x1: colX + OUTPUT_OVERRIDE_W,
+              y1: ny + OUTPUT_OVERRIDE_H / 2,
+              x2: outputX,
+              y2: cursor + data.h / 2,
+            })
+          })
+        }
+
+        cursor += data.h + OUTPUT_GAP_Y
+      }
+      // Strip the trailing OUTPUT_GAP_Y so the next group starts after a
+      // consistent GROUP_GAP_Y rather than gap + gap.
+      cursor -= OUTPUT_GAP_Y
+    }
+
+    if (i < OUTPUT_GROUPS.length - 1) cursor += GROUP_GAP_Y
+  }
+
+  /* ─── Wires (inputs → frame, frame → each group header) ───────── */
   const frameLeftX = frame.x
   const frameRightX = frame.x + frame.w
   const frameMidY = frame.y + frame.h / 2
@@ -170,7 +308,7 @@ function buildSubgraph(
         y2: frameMidY,
       })
     ),
-    ...outputPlacements.map(
+    ...outputHeaders.map(
       (p): Wire => ({
         id: `${frame.id}:out:${p.id}`,
         x1: frameRightX,
@@ -179,9 +317,16 @@ function buildSubgraph(
         y2: p.y + p.h / 2,
       })
     ),
+    ...outputOverrideWires,
   ]
 
-  return { inputs: inputPlacements, outputs: outputPlacements, wires }
+  return {
+    inputs: inputPlacements,
+    outputs: outputPlacements,
+    outputHeaders,
+    outputOverrideInputs,
+    wires,
+  }
 }
 
 export default function CanvasClient({
@@ -213,6 +358,13 @@ export default function CanvasClient({
   )
   const [isPanning, setIsPanning] = useState(false)
   const [resizingId, setResizingId] = useState<string | null>(null)
+  // Only one output group is expanded at a time so the canvas mounts at
+  // most one group's worth of iframes (e.g. share = 3 iframes, autoplay =
+  // 2). `null` means all collapsed. Clicking a collapsed header swaps
+  // expansion; clicking the expanded header collapses everything.
+  const [expandedGroup, setExpandedGroup] = useState<OutputGroupId | null>(
+    DEFAULT_EXPANDED_GROUP
+  )
 
   const surfaceRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ x: number; y: number } | null>(null)
@@ -236,9 +388,21 @@ export default function CanvasClient({
   const subgraph = useMemo(
     () =>
       focusedFrame
-        ? buildSubgraph(focusedFrame, parsedSources, slug, publicSiteUrl)
-        : { inputs: [], outputs: [], wires: [] },
-    [focusedFrame, parsedSources, slug, publicSiteUrl]
+        ? buildSubgraph(
+            focusedFrame,
+            parsedSources,
+            slug,
+            publicSiteUrl,
+            expandedGroup
+          )
+        : ({
+            inputs: [],
+            outputs: [],
+            outputHeaders: [],
+            outputOverrideInputs: [],
+            wires: [],
+          } satisfies Subgraph),
+    [focusedFrame, parsedSources, slug, publicSiteUrl, expandedGroup]
   )
 
   // Non-passive wheel listener — React's onWheel is passive in modern Next,
@@ -355,10 +519,29 @@ export default function CanvasClient({
     let maxX = Math.max(...frames.map((f) => f.x + f.w))
     let minY = Math.min(...frames.map((f) => f.y)) - 60
     let maxY = Math.max(...frames.map((f) => f.y + f.h))
+    // Headers are always present; iframe nodes only when expanded.
+    if (subgraph.outputHeaders.length > 0) {
+      maxX = Math.max(maxX, ...subgraph.outputHeaders.map((h) => h.x + h.w))
+      minY = Math.min(minY, ...subgraph.outputHeaders.map((h) => h.y))
+      maxY = Math.max(maxY, ...subgraph.outputHeaders.map((h) => h.y + h.h))
+    }
     if (subgraph.outputs.length > 0) {
       maxX = Math.max(maxX, ...subgraph.outputs.map((o) => o.x + o.w))
       minY = Math.min(minY, ...subgraph.outputs.map((o) => o.y))
       maxY = Math.max(maxY, ...subgraph.outputs.map((o) => o.y + o.h))
+    }
+    if (subgraph.outputOverrideInputs.length > 0) {
+      // Per-output override column sits BETWEEN the section frame and
+      // its outputs (positive x), so it can't push minX. It can push y
+      // bounds if the override column is taller than the iframe it
+      // attaches to (rare but possible for outputs shorter than its
+      // override stack — e.g. report A4 with 0 overrides won't trigger,
+      // but autoplay 9:16 with 2 overrides could).
+      minY = Math.min(minY, ...subgraph.outputOverrideInputs.map((o) => o.y))
+      maxY = Math.max(
+        maxY,
+        ...subgraph.outputOverrideInputs.map((o) => o.y + o.h)
+      )
     }
     const padding = 80
     const w = maxX - minX
@@ -368,7 +551,12 @@ export default function CanvasClient({
     const z = clamp(Math.min(zx, zy), MIN_ZOOM, MAX_ZOOM)
     setZoom(z)
     setPan({ x: padding - minX * z, y: padding - minY * z })
-  }, [frames, subgraph.outputs])
+  }, [
+    frames,
+    subgraph.outputs,
+    subgraph.outputHeaders,
+    subgraph.outputOverrideInputs,
+  ])
 
   // Auto-fit on mount — 1920x1080 frames at default zoom would blow the
   // viewport. fitAll's [frames] dep would re-fit on every resize too; use
@@ -650,6 +838,45 @@ export default function CanvasClient({
               }}
             >
               <OutputNode data={node.data} />
+            </div>
+          ))}
+
+          {subgraph.outputHeaders.map((header) => (
+            <div
+              key={header.id}
+              style={{
+                position: 'absolute',
+                left: header.x,
+                top: header.y,
+                width: header.w,
+                height: header.h,
+                pointerEvents: 'auto',
+              }}
+            >
+              <OutputGroupHeader
+                data={header.data}
+                onClick={() =>
+                  setExpandedGroup((prev) =>
+                    prev === header.id ? null : header.id
+                  )
+                }
+              />
+            </div>
+          ))}
+
+          {subgraph.outputOverrideInputs.map((node) => (
+            <div
+              key={node.id}
+              style={{
+                position: 'absolute',
+                left: node.x,
+                top: node.y,
+                width: node.w,
+                height: node.h,
+                pointerEvents: 'auto',
+              }}
+            >
+              <InputNode data={node.data} />
             </div>
           ))}
         </div>

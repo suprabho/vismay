@@ -69,128 +69,239 @@ export function buildInputsForUnit(
   unit: ResolvedUnit,
   parsed: ParsedCanvasSources
 ): InputNodeData[] {
-  const section = unit.parentConfig
+  return [
+    contentNode(unit),
+    configNode(unit),
+    chartNode(unit, parsed),
+    shareNode(unit, parsed),
+    reportNode(unit, parsed),
+    mapOverrideNode(unit, parsed),
+    narrationNode(unit, parsed),
+  ]
+}
 
-  const contentBody =
+/* ─── Individual input builders ───────────────────────────────────────
+ * Exported separately so the per-output override columns (right side of
+ * the canvas, attached to each expanded output node) can reuse the same
+ * slicing without duplicating the YAML extraction logic.
+ */
+
+export function contentNode(unit: ResolvedUnit): InputNodeData {
+  const body =
     unit.paragraphs.length > 0
       ? truncateLines(unit.paragraphs.join('\n\n'), 8)
       : '(no markdown anchored)'
-
-  let configBody: string
-  try {
-    configBody = truncateLines(yamlStringify(section, { lineWidth: 60 }), 10)
-  } catch {
-    configBody = '(failed to serialise config slice)'
+  return {
+    id: 'content',
+    label: 'Content',
+    tag: 'MARKDOWN',
+    body,
+    variant: 'mono',
   }
+}
 
-  // ── Chart Data ────────────────────────────────────────────────────
-  const chartId = section.chart
-  let chartBody: string
-  let chartHasData = false
+export function configNode(unit: ResolvedUnit): InputNodeData {
+  let body: string
+  try {
+    body = truncateLines(yamlStringify(unit.parentConfig, { lineWidth: 60 }), 10)
+  } catch {
+    body = '(failed to serialise config slice)'
+  }
+  return {
+    id: 'config',
+    label: 'Config',
+    tag: 'YAML',
+    body,
+    variant: 'mono',
+  }
+}
+
+export function chartNode(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData {
+  const chartId = unit.parentConfig.chart
   if (!chartId) {
-    chartBody = '(no chart in this section)'
-  } else {
-    const data = parsed.charts[chartId]
-    if (data === undefined) {
-      chartBody = `chart: ${chartId}\n\n(JSON not found)`
-    } else {
-      chartHasData = true
-      chartBody = `// ${chartId}\n${truncateLines(safeJsonStringify(data), 12)}`
+    return {
+      id: 'chart',
+      label: 'Chart Data',
+      tag: '—',
+      body: '(no chart in this section)',
+      variant: 'muted',
     }
   }
+  const data = parsed.charts[chartId]
+  if (data === undefined) {
+    return {
+      id: 'chart',
+      label: 'Chart Data',
+      tag: '—',
+      body: `chart: ${chartId}\n\n(JSON not found)`,
+      variant: 'muted',
+    }
+  }
+  return {
+    id: 'chart',
+    label: 'Chart Data',
+    tag: 'JSON',
+    body: `// ${chartId}\n${truncateLines(safeJsonStringify(data), 12)}`,
+    variant: 'mono',
+  }
+}
 
-  // ── Share Variants ────────────────────────────────────────────────
-  const sectionId = section.id ?? `section-${unit.parentIndex}`
-  const shareSlice = sliceShareForSection(parsed.share, sectionId)
-  const shareBody =
-    shareSlice === null
-      ? '(no override for this section)'
-      : truncateLines(safeYamlStringify(shareSlice), 12)
+export function shareNode(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData {
+  const sectionId =
+    unit.parentConfig.id ?? `section-${unit.parentIndex}`
+  const slice = sliceShareForSection(parsed.share, sectionId)
+  return {
+    id: 'share',
+    label: 'Share Variants',
+    tag: slice ? 'YAML' : '—',
+    body:
+      slice === null
+        ? '(no override for this section)'
+        : truncateLines(safeYamlStringify(slice), 12),
+    variant: slice ? 'mono' : 'muted',
+  }
+}
 
-  // ── Report Override (report + slides combined) ───────────────────
-  const reportSlice = sliceReportForUnit(
+export function reportNode(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData {
+  const slice = sliceReportForUnit(
     parsed.report,
     unit.parentIndex,
     unit.subIndex
   )
-  const reportBody =
-    reportSlice === null
-      ? '(no override for this section)'
-      : truncateLines(safeYamlStringify(reportSlice), 12)
+  return {
+    id: 'report',
+    label: 'Report Override',
+    tag: slice ? 'YAML' : '—',
+    body:
+      slice === null
+        ? '(no override for this section)'
+        : truncateLines(safeYamlStringify(slice), 12),
+    variant: slice ? 'mono' : 'muted',
+  }
+}
 
-  // ── Map Override (autoplay) ──────────────────────────────────────
-  const mapSlice = sliceMapForUnit(
+/**
+ * Variant of <reportNode> scoped to a single output format. The right-side
+ * per-output input column attaches one of these (rather than the combined
+ * report+slides node) so the Report output shows its `report` slice and
+ * the Slides output shows its `slides` slice — visually disaggregated to
+ * match what each output actually consumes.
+ */
+export function reportNodeFormat(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources,
+  format: 'report' | 'slides'
+): InputNodeData {
+  const slice = sliceReportForUnit(
+    parsed.report,
+    unit.parentIndex,
+    unit.subIndex
+  )
+  let formatted: unknown | null = null
+  if (slice && typeof slice === 'object') {
+    formatted = (slice as Record<string, unknown>)[format] ?? null
+  }
+  return {
+    id: `report-${format}`,
+    label: format === 'report' ? 'Report Override' : 'Slides Override',
+    tag: formatted ? 'YAML' : '—',
+    body:
+      formatted == null
+        ? '(no override for this section)'
+        : truncateLines(safeYamlStringify(formatted), 12),
+    variant: formatted ? 'mono' : 'muted',
+  }
+}
+
+export function mapOverrideNode(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData {
+  const slice = sliceMapForUnit(
     parsed.mapOverrides,
     unit.parentIndex,
     unit.subIndex
   )
-  const mapBody =
-    mapSlice === null
-      ? '(no override for this section)'
-      : truncateLines(safeYamlStringify(mapSlice), 12)
+  return {
+    id: 'map-override',
+    label: 'Map Override',
+    tag: slice ? 'YAML' : '—',
+    body:
+      slice === null
+        ? '(no override for this section)'
+        : truncateLines(safeYamlStringify(slice), 12),
+    variant: slice ? 'mono' : 'muted',
+  }
+}
 
-  // ── Narration (autoplay TTS) ─────────────────────────────────────
+export function narrationNode(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData {
   const tts = findTtsOverride(
     parsed.tts,
     unit.parentIndex,
     unit.subIndex,
     unit.sliceIndex ?? 0
   )
-  const narrationBody = tts
-    ? truncateLines(tts.script, 10)
-    : '(no override for this section)'
+  return {
+    id: 'narration',
+    label: 'Narration',
+    tag: tts ? 'TEXT' : '—',
+    body: tts ? truncateLines(tts.script, 10) : '(no override for this section)',
+    variant: tts ? 'mono' : 'muted',
+  }
+}
 
-  return [
-    {
-      id: 'content',
-      label: 'Content',
-      tag: 'MARKDOWN',
-      body: contentBody,
-      variant: 'mono',
-    },
-    {
-      id: 'config',
-      label: 'Config',
-      tag: 'YAML',
-      body: configBody,
-      variant: 'mono',
-    },
-    {
-      id: 'chart',
-      label: 'Chart Data',
-      tag: chartHasData ? 'JSON' : '—',
-      body: chartBody,
-      variant: chartHasData ? 'mono' : 'muted',
-    },
-    {
-      id: 'share',
-      label: 'Share Variants',
-      tag: shareSlice ? 'YAML' : '—',
-      body: shareBody,
-      variant: shareSlice ? 'mono' : 'muted',
-    },
-    {
-      id: 'report',
-      label: 'Report Override',
-      tag: reportSlice ? 'YAML' : '—',
-      body: reportBody,
-      variant: reportSlice ? 'mono' : 'muted',
-    },
-    {
-      id: 'map-override',
-      label: 'Map Override',
-      tag: mapSlice ? 'YAML' : '—',
-      body: mapBody,
-      variant: mapSlice ? 'mono' : 'muted',
-    },
-    {
-      id: 'narration',
-      label: 'Narration',
-      tag: tts ? 'TEXT' : '—',
-      body: narrationBody,
-      variant: tts ? 'mono' : 'muted',
-    },
-  ]
+/**
+ * Per-output override inputs: which input nodes feed a given output.
+ *
+ * The frame-level input column (left of the section frame) shows the
+ * full source data — every override the section can have. Each expanded
+ * output on the right then shows just the override(s) it actually
+ * consumes, attached to that output's left edge:
+ *   share-*    → Share Variants slice
+ *   slides     → report.yaml slides slice
+ *   report     → report.yaml report slice
+ *   autoplay-* → Map Override + Narration
+ *
+ * Reuses the same slicers as the frame-level column so the per-output
+ * cards always agree with the frame-level cards. Node ids are namespaced
+ * with the output id so React keys stay unique when multiple outputs
+ * share an override (e.g. both autoplay nodes have a Map Override card).
+ */
+export function buildOverridesForOutput(
+  outputId: string,
+  outputGroup: string,
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData[] {
+  const nodes: InputNodeData[] = []
+  switch (outputGroup) {
+    case 'share':
+      nodes.push(shareNode(unit, parsed))
+      break
+    case 'slides':
+      nodes.push(reportNodeFormat(unit, parsed, 'slides'))
+      break
+    case 'report':
+      nodes.push(reportNodeFormat(unit, parsed, 'report'))
+      break
+    case 'autoplay':
+      nodes.push(mapOverrideNode(unit, parsed))
+      nodes.push(narrationNode(unit, parsed))
+      break
+  }
+  return nodes.map((n) => ({ ...n, id: `${outputId}:${n.id}` }))
 }
 
 /* ─── Slicers ──────────────────────────────────────────────────────── */

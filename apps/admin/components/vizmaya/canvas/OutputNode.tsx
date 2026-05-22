@@ -1,7 +1,12 @@
 'use client'
 
+import type { OutputGroupId } from './canvasOutputs'
+
 export interface OutputNodeData {
   id: string
+  /** Which output group this node belongs to. Used by <CanvasClient> to
+   *  expand / collapse outputs as a unit. */
+  group: OutputGroupId
   label: string
   tag: string
   /** Full iframe URL (vizmaya-fyi route + query). */
