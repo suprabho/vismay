@@ -4,14 +4,23 @@ import { loadStoryConfig, hasStoryConfig, loadShareConfig } from '@vismay/conten
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import type { ResolvedUnit } from '@vismay/viz-engine'
 import { themedLogoDataUrl } from '@/lib/themeLogo'
 import { buildShareSampleYaml } from '@/lib/shareSampleYaml'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import ShareShell from '@/components/share/ShareShell'
 
+function filterBySection(units: ResolvedUnit[], sectionId: string): ResolvedUnit[] {
+  return units.filter(
+    (u) =>
+      u.parentConfig.id === sectionId ||
+      `section-${u.parentIndex}` === sectionId
+  )
+}
+
 interface RouteParams {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ ratio?: string }>
+  searchParams: Promise<{ ratio?: string; section?: string }>
 }
 
 export default async function SharePage({ params, searchParams }: RouteParams) {
@@ -19,6 +28,7 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
   const sp = await searchParams
   const initialRatio: '1:1' | '3:4' | '4:3' =
     sp.ratio === '1:1' || sp.ratio === '4:3' ? sp.ratio : '3:4'
+  const sectionFilter = typeof sp.section === 'string' ? sp.section : null
 
   let story
   let config
@@ -30,7 +40,15 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
     notFound()
   }
 
-  const { units, shareUnits, hasShareOverrides } = resolveUnits(slug, story.sections, config)
+  const { units: allUnits, shareUnits: allShareUnits, hasShareOverrides } =
+    resolveUnits(slug, story.sections, config)
+  // `?section=<id>` scopes the page to a single section. Matches the
+  // canvas-frame route's identity rule — `parentConfig.id` if set,
+  // otherwise the auto-generated `section-<parentIndex>` slug.
+  const units = sectionFilter ? filterBySection(allUnits, sectionFilter) : allUnits
+  const shareUnits = sectionFilter
+    ? filterBySection(allShareUnits, sectionFilter)
+    : allShareUnits
   const [shareConfig, shareYamlText] = await Promise.all([
     loadShareConfig(slug),
     getContentSource().readShareYaml(slug),

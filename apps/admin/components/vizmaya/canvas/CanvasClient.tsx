@@ -4,12 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ResolvedUnit } from '@vismay/viz-engine'
 import CanvasFrame from './CanvasFrame'
 import InputNode, { type InputNodeData } from './InputNode'
+import OutputNode, { type OutputNodeData } from './OutputNode'
 import CanvasWires, { type Wire } from './CanvasWires'
-import { buildInputsForUnit } from './canvasInputs'
+import {
+  buildInputsForUnit,
+  parseCanvasSources,
+  type CanvasSources,
+} from './canvasInputs'
+import { buildOutputsForUnit } from './canvasOutputs'
 
 interface Props {
   slug: string
   units: ResolvedUnit[]
+  sources: CanvasSources
   publicSiteUrl: string
 }
 
@@ -25,6 +32,13 @@ const INPUT_W = 320
 const INPUT_H = 110
 const INPUT_GAP_Y = 36
 const INPUT_TO_FRAME_GAP = 120
+
+// Outputs sit to the right of the focused frame at their native dimensions
+// (1920×1080, 1440×1080, …). Gap is generous because the nodes themselves
+// are huge — at 1:1 zoom one slides node alone is wider than the input
+// column.
+const OUTPUT_TO_FRAME_GAP = 240
+const OUTPUT_GAP_Y = 120
 
 const MIN_ZOOM = 0.05
 const MAX_ZOOM = 3
@@ -74,6 +88,15 @@ interface InputPlacement {
   h: number
 }
 
+interface OutputPlacement {
+  id: string
+  data: OutputNodeData
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 function autoLayout(sectionUnits: ResolvedUnit[]): FramePlacement[] {
   return sectionUnits.map((unit, i) => ({
     id: unit.parentConfig.id ?? `section-${unit.parentIndex}`,
@@ -85,42 +108,95 @@ function autoLayout(sectionUnits: ResolvedUnit[]): FramePlacement[] {
   }))
 }
 
-function buildSubgraph(frame: FramePlacement): {
+function buildSubgraph(
+  frame: FramePlacement,
+  parsed: ReturnType<typeof parseCanvasSources>,
+  slug: string,
+  publicSiteUrl: string
+): {
   inputs: InputPlacement[]
+  outputs: OutputPlacement[]
   wires: Wire[]
 } {
-  const inputs = buildInputsForUnit(frame.unit)
-  const totalH = inputs.length * INPUT_H + (inputs.length - 1) * INPUT_GAP_Y
-  const startY = frame.y + frame.h / 2 - totalH / 2
-  const x = frame.x - INPUT_W - INPUT_TO_FRAME_GAP
+  /* ─── Inputs (left of frame) ────────────────────────────────────── */
+  const inputs = buildInputsForUnit(frame.unit, parsed)
+  const inputTotalH = inputs.length * INPUT_H + (inputs.length - 1) * INPUT_GAP_Y
+  const inputStartY = frame.y + frame.h / 2 - inputTotalH / 2
+  const inputX = frame.x - INPUT_W - INPUT_TO_FRAME_GAP
 
-  const placements: InputPlacement[] = inputs.map((data, i) => ({
+  const inputPlacements: InputPlacement[] = inputs.map((data, i) => ({
     id: data.id,
     data,
-    x,
-    y: startY + i * (INPUT_H + INPUT_GAP_Y),
+    x: inputX,
+    y: inputStartY + i * (INPUT_H + INPUT_GAP_Y),
     w: INPUT_W,
     h: INPUT_H,
   }))
 
-  const targetX = frame.x
-  const targetY = frame.y + frame.h / 2
-  const wires: Wire[] = placements.map((p) => ({
-    id: `${frame.id}:${p.id}`,
-    x1: p.x + p.w,
-    y1: p.y + p.h / 2,
-    x2: targetX,
-    y2: targetY,
-  }))
+  /* ─── Outputs (right of frame) ──────────────────────────────────── */
+  const outputs = buildOutputsForUnit(frame.unit, slug, publicSiteUrl)
+  const outputTotalH =
+    outputs.reduce((acc, o) => acc + o.h, 0) +
+    Math.max(0, outputs.length - 1) * OUTPUT_GAP_Y
+  const outputStartY = frame.y + frame.h / 2 - outputTotalH / 2
+  const outputX = frame.x + frame.w + OUTPUT_TO_FRAME_GAP
 
-  return { inputs: placements, wires }
+  const outputPlacements: OutputPlacement[] = []
+  let cursor = outputStartY
+  for (const data of outputs) {
+    outputPlacements.push({
+      id: data.id,
+      data,
+      x: outputX,
+      y: cursor,
+      w: data.w,
+      h: data.h,
+    })
+    cursor += data.h + OUTPUT_GAP_Y
+  }
+
+  /* ─── Wires (inputs → frame, frame → outputs) ──────────────────── */
+  const frameLeftX = frame.x
+  const frameRightX = frame.x + frame.w
+  const frameMidY = frame.y + frame.h / 2
+
+  const wires: Wire[] = [
+    ...inputPlacements.map(
+      (p): Wire => ({
+        id: `${frame.id}:in:${p.id}`,
+        x1: p.x + p.w,
+        y1: p.y + p.h / 2,
+        x2: frameLeftX,
+        y2: frameMidY,
+      })
+    ),
+    ...outputPlacements.map(
+      (p): Wire => ({
+        id: `${frame.id}:out:${p.id}`,
+        x1: frameRightX,
+        y1: frameMidY,
+        x2: p.x,
+        y2: p.y + p.h / 2,
+      })
+    ),
+  ]
+
+  return { inputs: inputPlacements, outputs: outputPlacements, wires }
 }
 
-export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
+export default function CanvasClient({
+  slug,
+  units,
+  sources,
+  publicSiteUrl,
+}: Props) {
   const sectionUnits = useMemo(
     () => units.filter((u) => u.subIndex === 0),
     [units]
   )
+  // Parse the per-frame override sources once at the top — buildSubgraph
+  // re-runs on every focus change but reuses the same parsed objects.
+  const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   // Frame placements are state, not memo — resize handles mutate w/h per
   // frame. Initial layout still comes from the autoLayout grid.
   const [frames, setFrames] = useState<FramePlacement[]>(() =>
@@ -159,8 +235,10 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
   )
   const subgraph = useMemo(
     () =>
-      focusedFrame ? buildSubgraph(focusedFrame) : { inputs: [], wires: [] },
-    [focusedFrame]
+      focusedFrame
+        ? buildSubgraph(focusedFrame, parsedSources, slug, publicSiteUrl)
+        : { inputs: [], outputs: [], wires: [] },
+    [focusedFrame, parsedSources, slug, publicSiteUrl]
   )
 
   // Non-passive wheel listener — React's onWheel is passive in modern Next,
@@ -269,11 +347,19 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
   const fitAll = useCallback(() => {
     const el = surfaceRef.current
     if (!el || frames.length === 0) return
+    // Bounds include the input column to the left and (if a frame is
+    // focused) the output stack to the right. Without folding outputs into
+    // the bounds, "fit" clips the giant slides / share / autoplay nodes.
     const minX =
       Math.min(...frames.map((f) => f.x)) - (INPUT_W + INPUT_TO_FRAME_GAP)
-    const maxX = Math.max(...frames.map((f) => f.x + f.w))
-    const minY = Math.min(...frames.map((f) => f.y)) - 60
-    const maxY = Math.max(...frames.map((f) => f.y + f.h))
+    let maxX = Math.max(...frames.map((f) => f.x + f.w))
+    let minY = Math.min(...frames.map((f) => f.y)) - 60
+    let maxY = Math.max(...frames.map((f) => f.y + f.h))
+    if (subgraph.outputs.length > 0) {
+      maxX = Math.max(maxX, ...subgraph.outputs.map((o) => o.x + o.w))
+      minY = Math.min(minY, ...subgraph.outputs.map((o) => o.y))
+      maxY = Math.max(maxY, ...subgraph.outputs.map((o) => o.y + o.h))
+    }
     const padding = 80
     const w = maxX - minX
     const h = maxY - minY
@@ -282,7 +368,7 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
     const z = clamp(Math.min(zx, zy), MIN_ZOOM, MAX_ZOOM)
     setZoom(z)
     setPan({ x: padding - minX * z, y: padding - minY * z })
-  }, [frames])
+  }, [frames, subgraph.outputs])
 
   // Auto-fit on mount — 1920x1080 frames at default zoom would blow the
   // viewport. fitAll's [frames] dep would re-fit on every resize too; use
@@ -544,6 +630,26 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
               }}
             >
               <InputNode data={node.data} />
+            </div>
+          ))}
+
+          {subgraph.outputs.map((node) => (
+            <div
+              key={node.id}
+              style={{
+                position: 'absolute',
+                left: node.x,
+                top: node.y,
+                width: node.w,
+                height: node.h,
+                // Containing div doesn't need pointer events — the iframe
+                // inside is the only interactive surface, and we've set
+                // pointer-events: none on it so canvas pan-drag passes
+                // through.
+                pointerEvents: 'none',
+              }}
+            >
+              <OutputNode data={node.data} />
             </div>
           ))}
         </div>

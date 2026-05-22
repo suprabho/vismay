@@ -17,6 +17,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { themedLogoDataUrl } from '@/lib/themeLogo'
+import type { ResolvedUnit } from '@vismay/viz-engine'
 import {
   applyReportOverrides,
   parseReportConfig,
@@ -26,7 +27,15 @@ import SlidesShell from '@/components/pdf/SlidesShell'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
-  searchParams?: Promise<{ print?: string; embed?: string }>
+  searchParams?: Promise<{ print?: string; embed?: string; section?: string }>
+}
+
+function filterBySection(units: ResolvedUnit[], sectionId: string): ResolvedUnit[] {
+  return units.filter(
+    (u) =>
+      u.parentConfig.id === sectionId ||
+      `section-${u.parentIndex}` === sectionId
+  )
 }
 
 export const dynamic = 'force-dynamic'
@@ -36,6 +45,7 @@ export default async function StorySlidesPage({ params, searchParams }: RoutePar
   const sp = (await searchParams) ?? {}
   const print = sp.print === '1'
   const embed = sp.embed === '1'
+  const sectionFilter = typeof sp.section === 'string' ? sp.section : null
 
   if (!(await isAuthed()))
     redirect(`/admin/login?next=${encodeURIComponent(`/story/${slug}/slides${print ? '?print=1' : ''}`)}`)
@@ -58,7 +68,13 @@ export default async function StorySlidesPage({ params, searchParams }: RoutePar
   const baseSlideUnits = hasShareOverrides ? shareUnits : units
   const reportConfigRaw = await getContentSource().readReportYaml(slug)
   const reportConfig = parseReportConfig(reportConfigRaw, 'slides')
-  const slideUnits = applyReportOverrides(baseSlideUnits, reportConfig)
+  const allSlideUnits = applyReportOverrides(baseSlideUnits, reportConfig)
+  // `?section=<id>` scopes the deck to one slide — the canvas embeds this
+  // route to preview a single section's slide. Run the filter AFTER report
+  // overrides so include:false units are correctly excluded first.
+  const slideUnits = sectionFilter
+    ? filterBySection(allSlideUnits, sectionFilter)
+    : allSlideUnits
 
   const configWithDefaults = {
     ...config,
