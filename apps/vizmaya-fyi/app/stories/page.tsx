@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 }
 
 export default async function AllStoriesPage() {
-  const stories = await getAllStories()
+  const stories = await getAllStories('vizmaya-fyi')
   const archive: ArchiveStory[] = stories.map((s) => ({
     slug: s.slug,
     title: s.title,

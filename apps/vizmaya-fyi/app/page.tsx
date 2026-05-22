@@ -13,7 +13,10 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const [stories, epics] = await Promise.all([getAllStories(), listEpicsForHome()])
+  const [stories, epics] = await Promise.all([
+    getAllStories('vizmaya-fyi'),
+    listEpicsForHome('vizmaya-fyi'),
+  ])
   const homeStories: HomeStory[] = stories.map((s) => ({
     slug: s.slug,
     title: s.title,
