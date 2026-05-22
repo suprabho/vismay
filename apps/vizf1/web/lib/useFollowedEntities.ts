@@ -25,18 +25,15 @@ export type FollowedEntities = {
 // TODO(vizf1): replace with auth-backed follows once we port AuthProvider +
 // onboarding from footshort. For now we just hydrate the static list with DB
 // metadata so portraits and team colours appear once the worker has run.
-// IDs must match the slugs the worker writes to vizf1_drivers / vizf1_constructors:
-//   driver_id      = slug(`${first_name}_${last_name}`)   e.g. "lando_norris"
-//   constructor_id = slug(team_name)                       e.g. "red_bull_racing"
-// See apps/vizf1/worker/src/ingestSessions.ts (upsertDrivers).
-const STATIC_DRIVER_IDS = [
-  'max_verstappen',
-  'lando_norris',
-  'charles_leclerc',
-  'lewis_hamilton',
-  'oscar_piastri',
-] as const
-const STATIC_CONSTRUCTOR_IDS = ['mclaren', 'red_bull_racing', 'ferrari', 'mercedes'] as const
+//
+// Look up drivers by `code` (VER/NOR/LEC/HAM/PIA) and constructors by `name`
+// rather than by primary key, because the worker derives driver_id from
+// OpenF1's `first_name`/`last_name` (e.g. `lando_norris`) and constructor_id
+// from `team_name` (e.g. `red_bull_racing`) — formats that have shifted
+// historically and don't match the Jolpica-style slugs the SQL comments imply.
+// `code` and `name` are stable across sources.
+const STATIC_DRIVER_CODES = ['VER', 'NOR', 'LEC', 'HAM', 'PIA'] as const
+const STATIC_CONSTRUCTOR_NAMES = ['McLaren', 'Red Bull Racing', 'Ferrari', 'Mercedes'] as const
 
 const STATIC_FALLBACK: FollowedEntities = {
   drivers: [
@@ -66,7 +63,7 @@ type ConstructorDbRow = { constructor_id: string; name: string; primary_color: s
 
 export function useFollowedEntities(): FollowedEntities {
   const q = useQuery({
-    queryKey: ['vizf1', 'followed', 'static'],
+    queryKey: ['vizf1', 'followed', 'static', 'v2'],
     staleTime: 10 * 60_000,
     queryFn: async (): Promise<FollowedEntities> => {
       const sb = supabaseBrowser()
@@ -74,19 +71,23 @@ export function useFollowedEntities(): FollowedEntities {
         sb
           .from('vizf1_drivers')
           .select('driver_id, given_name, family_name, code, headshot_url, primary_color')
-          .in('driver_id', STATIC_DRIVER_IDS as unknown as string[]),
+          .in('code', STATIC_DRIVER_CODES as unknown as string[]),
         sb
           .from('vizf1_constructors')
           .select('constructor_id, name, primary_color')
-          .in('constructor_id', STATIC_CONSTRUCTOR_IDS as unknown as string[]),
+          .in('name', STATIC_CONSTRUCTOR_NAMES as unknown as string[]),
       ])
-      const dById = new Map(((drivers.data ?? []) as DriverDbRow[]).map((r) => [r.driver_id, r]))
-      const cById = new Map(
-        ((constructors.data ?? []) as ConstructorDbRow[]).map((r) => [r.constructor_id, r]),
+      const dByCode = new Map(
+        ((drivers.data ?? []) as DriverDbRow[])
+          .filter((r) => r.code)
+          .map((r) => [r.code as string, r]),
+      )
+      const cByName = new Map(
+        ((constructors.data ?? []) as ConstructorDbRow[]).map((r) => [r.name, r]),
       )
       return {
         drivers: STATIC_FALLBACK.drivers.map((s) => {
-          const r = dById.get(s.id)
+          const r = dByCode.get(s.code)
           return r
             ? {
                 id: r.driver_id,
@@ -98,7 +99,7 @@ export function useFollowedEntities(): FollowedEntities {
             : s
         }),
         constructors: STATIC_FALLBACK.constructors.map((s) => {
-          const r = cById.get(s.id)
+          const r = cByName.get(s.name)
           return r ? { id: r.constructor_id, name: r.name, primaryColor: r.primary_color } : s
         }),
       }
