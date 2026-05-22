@@ -58,32 +58,45 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
       if (list.length === 0) return
       setError(null)
       setUploading(true)
-      // Serial uploads — Supabase Storage handles parallel fine, but a serial
-      // loop gives the UI deterministic ordering and lets a single rejected
-      // file stop the batch with a clear message instead of mixing errors.
-      for (const file of list) {
-        const form = new FormData()
-        form.append('file', file)
-        const res = await fetch(`/api/vizmaya/stories/${slug}/assets`, {
-          method: 'POST',
-          body: form,
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => null)
-          setError(body?.error ?? `Upload of "${file.name}" failed (HTTP ${res.status})`)
-          break
+      try {
+        // Serial uploads — Supabase Storage handles parallel fine, but a serial
+        // loop gives the UI deterministic ordering and lets a single rejected
+        // file stop the batch with a clear message instead of mixing errors.
+        for (const file of list) {
+          const form = new FormData()
+          form.append('file', file)
+          let res: Response
+          try {
+            res = await fetch(`/api/vizmaya/stories/${slug}/assets`, {
+              method: 'POST',
+              body: form,
+            })
+          } catch (err) {
+            setError(`Upload of "${file.name}" failed: ${err instanceof Error ? err.message : 'network error'}`)
+            break
+          }
+          if (!res.ok) {
+            const body = await res.json().catch(() => null)
+            setError(body?.error ?? `Upload of "${file.name}" failed (HTTP ${res.status})`)
+            break
+          }
         }
+      } finally {
+        setUploading(false)
       }
-      setUploading(false)
       await refresh()
     },
     [slug, refresh]
   )
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    // Copy the FileList into a plain array BEFORE clearing the input.
+    // `input.files` is a live FileList in most browsers — setting `value = ''`
+    // empties the same object we just captured, so reading `files.length`
+    // afterwards would return 0 and the upload would silently no-op.
+    const picked = e.target.files ? Array.from(e.target.files) : []
     e.target.value = ''
-    if (files && files.length > 0) void upload(files)
+    if (picked.length > 0) void upload(picked)
   }
 
   // Drag-and-drop wiring. The drop zone covers the whole panel so authors can
