@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "title": "Indian FDI stock in Italy · € billion · pre- and post-Tata–Iveco close (Italian Embassy data; closure expected 2026)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: €{c}B"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "6%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "max": 5,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "€{value}B"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["End-2024 stock", "After Tata–Iveco close"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12
+          },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Indian FDI stock in Italy",
+            "type": "bar",
+            "barWidth": 36,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "formatter": "€{c}B",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12
+            },
+            "data": [
+              { "value": 0.49, "itemStyle": { "color": "$muted" } },
+              { "value": 4.29, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
