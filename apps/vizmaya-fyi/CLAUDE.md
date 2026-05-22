@@ -31,7 +31,7 @@ Readers: `lib/content.ts`, `lib/storyConfig.ts`. Rendering: SSG via `generateSta
 
 **Vercel env vars** (production):
 - `GITHUB_DISPATCH_TOKEN` — fine-grained PAT with `Actions: write` on this repo
-- `GITHUB_DISPATCH_REPO` — `owner/repo` (e.g. `suprabho/vizmaya-fyi`)
+- `GITHUB_DISPATCH_REPO` — `owner/repo` (e.g. `suprabho/vismay`)
 - `GITHUB_DISPATCH_REF` — branch the workflow runs from (defaults to `main`)
 - `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — already required for other paths
 

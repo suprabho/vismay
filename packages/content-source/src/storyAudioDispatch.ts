@@ -10,7 +10,7 @@
  *
  * Required env (server only):
  *   GITHUB_DISPATCH_TOKEN  fine-grained PAT with `workflow` write on the repo
- *   GITHUB_DISPATCH_REPO   "owner/repo" (e.g. "suprabho/vizmaya-fyi")
+ *   GITHUB_DISPATCH_REPO   "owner/repo" (e.g. "suprabho/vismay")
  *   GITHUB_DISPATCH_REF    branch/tag the workflow runs from (default: "main")
  */
 
