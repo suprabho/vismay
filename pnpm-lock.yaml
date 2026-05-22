@@ -459,6 +459,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.105.4
+      '@vizf1/brand':
+        specifier: workspace:*
+        version: link:../brand
       '@vizf1/shared':
         specifier: workspace:*
         version: link:../shared

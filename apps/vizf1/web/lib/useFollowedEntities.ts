@@ -15,6 +15,7 @@ export type FollowedConstructor = {
   id: string
   name: string
   primaryColor: string | null
+  logoUrl: string | null
 }
 
 export type FollowedEntities = {
@@ -44,10 +45,10 @@ const STATIC_FALLBACK: FollowedEntities = {
     { id: 'oscar_piastri', name: 'Oscar Piastri', code: 'PIA', headshotUrl: null, primaryColor: null },
   ],
   constructors: [
-    { id: 'mclaren', name: 'McLaren', primaryColor: null },
-    { id: 'red_bull_racing', name: 'Red Bull Racing', primaryColor: null },
-    { id: 'ferrari', name: 'Ferrari', primaryColor: null },
-    { id: 'mercedes', name: 'Mercedes', primaryColor: null },
+    { id: 'mclaren', name: 'McLaren', primaryColor: null, logoUrl: null },
+    { id: 'red_bull_racing', name: 'Red Bull Racing', primaryColor: null, logoUrl: null },
+    { id: 'ferrari', name: 'Ferrari', primaryColor: null, logoUrl: null },
+    { id: 'mercedes', name: 'Mercedes', primaryColor: null, logoUrl: null },
   ],
 }
 
@@ -59,7 +60,12 @@ type DriverDbRow = {
   headshot_url: string | null
   primary_color: string | null
 }
-type ConstructorDbRow = { constructor_id: string; name: string; primary_color: string | null }
+type ConstructorDbRow = {
+  constructor_id: string
+  name: string
+  primary_color: string | null
+  logo_url: string | null
+}
 
 export function useFollowedEntities(): FollowedEntities {
   const q = useQuery({
@@ -74,7 +80,7 @@ export function useFollowedEntities(): FollowedEntities {
           .in('code', STATIC_DRIVER_CODES as unknown as string[]),
         sb
           .from('vizf1_constructors')
-          .select('constructor_id, name, primary_color')
+          .select('constructor_id, name, primary_color, logo_url')
           .in('name', STATIC_CONSTRUCTOR_NAMES as unknown as string[]),
       ])
       const dByCode = new Map(
@@ -100,7 +106,14 @@ export function useFollowedEntities(): FollowedEntities {
         }),
         constructors: STATIC_FALLBACK.constructors.map((s) => {
           const r = cByName.get(s.name)
-          return r ? { id: r.constructor_id, name: r.name, primaryColor: r.primary_color } : s
+          return r
+            ? {
+                id: r.constructor_id,
+                name: r.name,
+                primaryColor: r.primary_color,
+                logoUrl: r.logo_url,
+              }
+            : s
         }),
       }
     },

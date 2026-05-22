@@ -38,7 +38,13 @@ export function StoryRings() {
             href={`/story/team/${c.id}`}
             className="flex w-16 flex-shrink-0 flex-col items-center gap-1"
           >
-            <TeamBadge constructorId={c.id} name={c.name} color={c.primaryColor ?? null} size="md" />
+            <TeamBadge
+              constructorId={c.id}
+              name={c.name}
+              color={c.primaryColor ?? null}
+              logoUrl={c.logoUrl ?? null}
+              size="md"
+            />
             <span className="w-full truncate text-center text-[10px] text-muted">{c.name}</span>
           </Link>
         ))}
