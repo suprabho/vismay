@@ -112,9 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="md:pl-60 lg:pl-64">
       <Sidebar />
-      <div className="md:hidden">
-        <AppHeader />
-      </div>
+      <AppHeader />
       {children}
     </div>
   );
