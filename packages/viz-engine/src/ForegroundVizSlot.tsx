@@ -4,7 +4,7 @@ import { Suspense, lazy, useMemo, useRef } from 'react'
 import type { CSSProperties, ComponentType } from 'react'
 import type { VizLayer } from './lib/storyConfig.types'
 import { getVizModule } from './registry'
-import type { VizCaptureHandle, VizModule, VizRenderProps } from './types'
+import type { VizCaptureHandle, VizLayerPanel, VizLayerStyle, VizModule, VizRenderProps } from './types'
 
 interface ForegroundVizSlotProps {
   slug: string
@@ -22,8 +22,23 @@ interface ForegroundVizSlotProps {
   noteLayerReady?: (layerKey: string) => void
 }
 
-function layerWrapperStyle(layer: VizLayer, index: number): CSSProperties {
-  const s = layer.style ?? {}
+/**
+ * Merge a module's `defaultStyle` under a layer's authored `style`. Per-field
+ * shallow merge — `panel` is merged sub-field so an author can override only
+ * the background without losing the default border/blur.
+ */
+function resolveLayerStyle(layer: VizLayer, module: VizModule | undefined): VizLayerStyle {
+  const layerStyle = layer.style ?? {}
+  const defaults = module?.defaultStyle ?? {}
+  const panel: VizLayerPanel | undefined =
+    defaults.panel || layerStyle.panel
+      ? { ...defaults.panel, ...layerStyle.panel }
+      : undefined
+  return { ...defaults, ...layerStyle, panel }
+}
+
+function layerWrapperStyle(layer: VizLayer, index: number, module: VizModule | undefined): CSSProperties {
+  const s = resolveLayerStyle(layer, module)
   const isPositioned = s.position != null || s.size != null
   const css: CSSProperties = {
     position: 'absolute',
@@ -51,6 +66,22 @@ function layerWrapperStyle(layer: VizLayer, index: number): CSSProperties {
     } else if (typeof y === 'string') css.top = y
     if (x == null) css.left = 0
     if (y == null) css.top = 0
+  }
+  // Panel chrome — every field is optional; unset values fall through and the
+  // wrapper renders bare (matching pre-panel behavior).
+  const p = s.panel
+  if (p) {
+    if (p.background != null) css.background = p.background
+    if (p.border != null) css.border = p.border
+    if (p.borderRadius != null) css.borderRadius = p.borderRadius
+    if (p.padding != null) css.padding = p.padding
+    if (p.shadow != null) css.boxShadow = p.shadow
+    if (p.backdropBlur != null) {
+      const blur = `blur(${p.backdropBlur})`
+      css.backdropFilter = blur
+      // Safari still needs the prefixed property.
+      ;(css as CSSProperties & { WebkitBackdropFilter?: string }).WebkitBackdropFilter = blur
+    }
   }
   return css
 }
@@ -84,7 +115,7 @@ function ForegroundLayer({ slug, layer, module, index, unitKey, activeStep, mode
   }, [layer, module, slug, index])
   if (config == null) return null
   return (
-    <div style={layerWrapperStyle(layer, index)}>
+    <div style={layerWrapperStyle(layer, index, module)}>
       <Suspense fallback={null}>
         <LazyComponent
           slug={slug}
