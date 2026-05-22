@@ -32,30 +32,28 @@ const MIN_FRAME_W = 360
 const MIN_FRAME_H = 240
 
 /**
- * Frame-size presets matching every dimension the engine renders into
- * downstream. Lets the user flip a focused section between, e.g., its
- * 1920×1080 story render and its 1080×1920 autoplay render without
- * leaving the canvas — same iframe, same source, the viewport-flip work
- * is what catches the responsive layout.
+ * Frame-size presets matching real device viewports, not aspect ratios.
+ * 1:1 / 9:16 / A4 / etc. live downstream as output nodes (share cards,
+ * autoplay videos, report PDFs) — those are derived renders, not
+ * preview surfaces.
+ *
+ * The two "demo" dimensions match vizmaya-fyi's StoryPreview component
+ * exactly, so the section in a canvas tile and the section behind that
+ * demo's bezel see the same viewport.
  */
 interface SizePreset {
   id: string
   label: string
   w: number
   h: number
-  /** Short context tag rendered under the label (e.g. "story · slides · 16:9"). */
+  /** Short device name rendered under the dimensions, e.g. "iPhone 14". */
   tag: string
 }
 
 const SIZE_PRESETS: SizePreset[] = [
-  // 1920×1080 covers story page, slides PDF, and 16:9 autoplay — one preset.
-  { id: 'story', label: '16:9', w: 1920, h: 1080, tag: 'story · slides' },
-  { id: 'share-1-1', label: '1:1', w: 1080, h: 1080, tag: 'share' },
-  { id: 'share-4-3', label: '4:3', w: 1440, h: 1080, tag: 'share' },
-  { id: 'share-3-4', label: '3:4', w: 1080, h: 1440, tag: 'share' },
-  { id: 'autoplay-9-16', label: '9:16', w: 1080, h: 1920, tag: 'autoplay · vertical' },
-  // Report PDF: US letter portrait at 96 DPI ≈ 816×1056.
-  { id: 'report', label: 'Letter', w: 816, h: 1056, tag: 'report' },
+  { id: 'desktop-fhd', label: '1920 × 1080', w: 1920, h: 1080, tag: 'Desktop FHD' },
+  { id: 'desktop-demo', label: '1440 × 810', w: 1440, h: 810, tag: 'vizmaya demo' },
+  { id: 'phone', label: '390 × 844', w: 390, h: 844, tag: 'iPhone 14' },
 ]
 
 interface FramePlacement {
@@ -416,7 +414,7 @@ export default function CanvasClient({ slug, units, publicSiteUrl }: Props) {
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
-                  title={`${preset.w} × ${preset.h}  ·  ${preset.tag}`}
+                  title={preset.tag}
                   style={{
                     background: isActive ? '#2a2a2a' : 'transparent',
                     color: isActive ? '#fff' : '#bbb',
