@@ -1,0 +1,72 @@
+{
+  "steps": [
+    {
+      "title": "India–Italy bilateral merchandise trade · calendar year, € billion · Eurostat / Indian Embassy in Rome · 2029 target set on 20 May 2026",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: €{c}B"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "8%",
+          "bottom": "8%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["2020", "2021", "2024", "2025", "2029 target"],
+          "axisLine": {
+            "lineStyle": { "color": "$line" }
+          },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11,
+            "interval": 0
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "max": 22,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "€{value}B"
+          },
+          "splitLine": {
+            "lineStyle": { "color": "$line" }
+          }
+        },
+        "series": [
+          {
+            "name": "Bilateral trade",
+            "type": "bar",
+            "barWidth": 42,
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "formatter": "€{c}B",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [
+              { "value": 7.27, "itemStyle": { "color": "$red" } },
+              { "value": 10.49, "itemStyle": { "color": "$amber" } },
+              { "value": 14.37, "itemStyle": { "color": "$accent" } },
+              { "value": 14.25, "itemStyle": { "color": "$accent" } },
+              { "value": 20.00, "itemStyle": { "color": "$accent2" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

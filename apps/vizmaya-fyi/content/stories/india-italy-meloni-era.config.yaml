@@ -1,0 +1,570 @@
+# Story config — india-italy-meloni-era
+#
+# Reader walks from the Delhi-to-Rome arc into the cadence of Modi-Meloni
+# meetings (Bali, Delhi, Dubai, Borgo Egnazia, Rio, Joburg, Rome); descends
+# into the trade story (Italy choropleth, India-Italy comparison); pivots
+# through the megadeals (Tata-Iveco in Turin, Leonardo-Adani out of Rome);
+# pans across the IMEC corridor (Mumbai/Mundra → UAE → Israel → Trieste);
+# and closes on the diaspora and the Melodi soft-power moment in Rome.
+#
+# COORDINATES (capitals / focal cities):
+#   New Delhi, India          77.2090, 28.6139
+#   Mumbai, India             72.8777, 19.0760
+#   Mundra (Gujarat port)     69.7177, 22.8394
+#   Goa (Panaji), India       73.8278, 15.4909
+#   Amritsar, India           74.8723, 31.6340
+#   Rome, Italy               12.4964, 41.9028
+#   Milan, Italy               9.1900, 45.4642
+#   Turin, Italy (Iveco HQ)    7.6869, 45.0703
+#   Trieste, Italy            13.7768, 45.6495
+#   Genoa, Italy               8.9463, 44.4056
+#   Naples, Italy             14.2681, 40.8518
+#   Taranto, Italy            17.2473, 40.4640
+#   Borgo Egnazia, Apulia     17.3589, 40.8417
+#   Bergamo, Italy             9.6773, 45.6983
+#   Denpasar, Bali           115.2126, -8.6705
+#   Dubai, UAE                55.2708, 25.2048
+#   Abu Dhabi, UAE            54.3773, 24.4539
+#   Haifa, Israel             34.9896, 32.7940
+#   Rio de Janeiro           -43.1729, -22.9068
+#   Johannesburg, South Africa 28.0473, -26.2041
+#
+# Trade choropleth ramp (€ billion, bilateral merchandise trade calendar year):
+#   IT, IN both highlighted in $accent (saffron) — the two-nation pair holds
+#   the whole story; neighbours stay $surface.
+#
+# Megadeals beat colors:
+#   Saffron $accent for the Indian principals (Tata in Mumbai, Adani in Delhi);
+#   Italian green $accent2 for the Italian counterparts (Iveco in Turin,
+#   Leonardo in Rome). Red $red is reserved for the Mediterranean disruption
+#   marker (Suez/Red Sea) in the IMEC beat.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#e8a13a"
+  pinRadius: 12
+  flySpeed: 1.2
+  mapPalette:
+    land: "#0a1722"
+    water: "#06101a"
+    border: "#28384a"
+    labelText: "#c8d1dc"
+    labelHalo: "#06101a"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "Mapped: The Melodi Era"
+    eyebrow: "India · Italy · May 2026"
+    map:
+      center: [40.0, 32.0]
+      zoom: 2.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 10 (Modi-Meloni interactions)
+  # ═══════════════════════════════════════════════
+
+  - id: meetings-stat
+    kind: stat
+    text: "10"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 15.0]
+      zoom: 1.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [115.2126, -8.6705]
+          label: "Bali · Nov 2022"
+          color: "#e8a13a"
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi · Mar 2023 / Sep 2023"
+          color: "#e8a13a"
+        - coordinates: [55.2708, 25.2048]
+          label: "Dubai · Dec 2023"
+          color: "#e8a13a"
+        - coordinates: [17.3589, 40.8417]
+          label: "Borgo Egnazia · Jun 2024"
+          color: "#e8a13a"
+          labelAnchor: top
+        - coordinates: [-43.1729, -22.9068]
+          label: "Rio · Nov 2024"
+          color: "#e8a13a"
+        - coordinates: [28.0473, -26.2041]
+          label: "Johannesburg · Nov 2025"
+          color: "#e8a13a"
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome · May 2026"
+          color: "#e8a13a"
+          labelAnchor: bottom
+      mobile:
+        center: [50.0, 15.0]
+        zoom: 1.2
+
+  # ═══════════════════════════════════════════════
+  # BEAT — A RELATIONSHIP REDRAWN
+  # ═══════════════════════════════════════════════
+
+  - id: relationship-redrawn
+    text: "A relationship redrawn"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 35.0]
+      zoom: 2.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi"
+          color: "#e8a13a"
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome"
+          color: "#3e8770"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent2"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+
+  # ═══════════════════════════════════════════════
+  # ACT I — THREE ARCHITECTURES IN THREE YEARS
+  # ═══════════════════════════════════════════════
+
+  - id: act-i
+    text: "Act I: Three architectures in three years"
+    chart: data:meeting-cadence
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 35.0]
+      zoom: 2.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent2"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+
+  # ═══════════════════════════════════════════════
+  # STAT — €14.25B BILATERAL TRADE
+  # ═══════════════════════════════════════════════
+
+  - id: trade-stat
+    kind: stat
+    text: "€14.25B"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [12.5, 42.5]
+      zoom: 5.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome"
+          color: "#e8a13a"
+        - coordinates: [9.1900, 45.4642]
+          label: "Milan"
+          color: "#e8a13a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "IT"
+            value: 1
+      mobile:
+        center: [12.5, 43.0]
+        zoom: 4.2
+
+  - id: trade-doubled
+    text: "Trade, nearly doubled"
+    chart: data:trade-trajectory
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 35.0]
+      zoom: 2.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.40
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+
+  # ═══════════════════════════════════════════════
+  # STAT — €3.8B (TATA-IVECO)
+  # ═══════════════════════════════════════════════
+
+  - id: tata-iveco-stat
+    kind: stat
+    text: "€3.8B"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 35.0]
+      zoom: 3.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai · Tata Motors"
+          color: "#e8a13a"
+        - coordinates: [7.6869, 45.0703]
+          label: "Turin · Iveco"
+          color: "#3e8770"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+      mobile:
+        center: [40.0, 32.0]
+        zoom: 2.2
+
+  # ═══════════════════════════════════════════════
+  # ACT II — MEGADEALS THAT ANCHOR A DECADE
+  # ═══════════════════════════════════════════════
+
+  - id: act-ii
+    text: "Act II: Megadeals that anchor a decade"
+    chart: data:megadeals
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [11.5, 44.0]
+      zoom: 5.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [7.6869, 45.0703]
+          label: "Turin · Iveco"
+          color: "#3e8770"
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome · Leonardo"
+          color: "#3e8770"
+          labelAnchor: top
+        - coordinates: [8.9463, 44.4056]
+          label: "Genoa · Fincantieri"
+          color: "#3e8770"
+          labelAnchor: left
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent2"]
+        items:
+          - code: "IT"
+            value: 1
+      mobile:
+        center: [12.0, 44.0]
+        zoom: 4.2
+
+  # ═══════════════════════════════════════════════
+  # DEFENCE BEAT — PORT CALLS
+  # ═══════════════════════════════════════════════
+
+  - id: defence-file
+    text: "The defence file reopens"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [28.0, 30.0]
+      zoom: 3.0
+      pitch: 15
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome · Oct 2023 Defence MoU"
+          color: "#3e8770"
+          labelAnchor: top
+        - coordinates: [73.8278, 15.4909]
+          label: "Goa · ITS Cavour, Oct 2024"
+          color: "#e8a13a"
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai · Vespucci, Nov 2024"
+          color: "#e8a13a"
+          labelAnchor: top
+        - coordinates: [14.2681, 40.8518]
+          label: "Naples · INS Tamal, Aug 2025"
+          color: "#3e8770"
+        - coordinates: [17.2473, 40.4640]
+          label: "Taranto · INS Trikand, Sep 2025"
+          color: "#3e8770"
+          labelAnchor: bottom
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent2"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+      mobile:
+        center: [40.0, 30.0]
+        zoom: 2.3
+
+  # ═══════════════════════════════════════════════
+  # ACT III — IMEC LANDFALL
+  # ═══════════════════════════════════════════════
+
+  - id: act-iii-imec
+    text: "Act III: India's Mediterranean landfall"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [42.0, 28.0]
+      zoom: 2.9
+      pitch: 0
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai"
+          color: "#e8a13a"
+        - coordinates: [69.7177, 22.8394]
+          label: "Mundra"
+          color: "#e8a13a"
+          labelAnchor: top
+        - coordinates: [54.3773, 24.4539]
+          label: "Abu Dhabi"
+          color: "#d9a84a"
+          labelAnchor: bottom
+        - coordinates: [34.9896, 32.7940]
+          label: "Haifa"
+          color: "#d9a84a"
+        - coordinates: [13.7768, 45.6495]
+          label: "Trieste"
+          color: "#3e8770"
+          labelAnchor: top
+        - coordinates: [8.9463, 44.4056]
+          label: "Genoa"
+          color: "#3e8770"
+          labelAnchor: left
+      regions:
+        level: country
+        ramp: [0, 1, 2]
+        colors: ["$surface", "$amber", "$accent2"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "AE"
+            value: 1
+          - code: "SA"
+            value: 1
+          - code: "IL"
+            value: 1
+          - code: "IT"
+            value: 2
+          - code: "GR"
+            value: 1
+          - code: "FR"
+            value: 1
+      mobile:
+        center: [45.0, 25.0]
+        zoom: 2.0
+
+  # ═══════════════════════════════════════════════
+  # STAT — €20B (2029 TARGET)
+  # ═══════════════════════════════════════════════
+
+  - id: target-stat
+    kind: stat
+    text: "€20B"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 32.0]
+      zoom: 2.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi"
+          color: "#e8a13a"
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome · 20 May 2026"
+          color: "#e8a13a"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+
+  # ═══════════════════════════════════════════════
+  # STAT — 186,833 (DIASPORA)
+  # ═══════════════════════════════════════════════
+
+  - id: diaspora-stat
+    kind: stat
+    text: "186,833"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [10.5, 44.5]
+      zoom: 5.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [9.1900, 45.4642]
+          label: "Milan · Consulate General of India"
+          color: "#e8a13a"
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome"
+          color: "#3e8770"
+          labelAnchor: top
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent"]
+        items:
+          - code: "IT"
+            value: 1
+      mobile:
+        center: [11.5, 43.5]
+        zoom: 4.4
+
+  # ═══════════════════════════════════════════════
+  # PEOPLE-TO-PEOPLE WAVE — TOURISM CHART
+  # ═══════════════════════════════════════════════
+
+  - id: people-to-people
+    text: "A people-to-people wave"
+    chart: data:tourism-recovery
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [40.0, 35.0]
+      zoom: 2.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi"
+          color: "#e8a13a"
+        - coordinates: [74.8723, 31.6340]
+          label: "Amritsar"
+          color: "#e8a13a"
+          labelAnchor: top
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome"
+          color: "#3e8770"
+        - coordinates: [9.1900, 45.4642]
+          label: "Milan"
+          color: "#3e8770"
+          labelAnchor: top
+        - coordinates: [9.6773, 45.6983]
+          label: "Bergamo"
+          color: "#3e8770"
+          labelAnchor: right
+      regions:
+        level: country
+        ramp: [0, 1]
+        colors: ["$surface", "$accent2"]
+        items:
+          - code: "IN"
+            value: 1
+          - code: "IT"
+            value: 1
+
+  # ═══════════════════════════════════════════════
+  # MELODI MEME — ROME ZOOM
+  # ═══════════════════════════════════════════════
+
+  - id: melodi-meme
+    text: "A meme as a soft-power instrument"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [12.4964, 41.9028]
+      zoom: 9.5
+      pitch: 35
+      bearing: 0
+      opacity: 0.60
+      pins:
+        - coordinates: [12.4964, 41.9028]
+          label: "Rome · 20 May 2026"
+          color: "#e8a13a"
+          labelAnchor: top
+      mobile:
+        center: [12.4964, 41.9028]
+        zoom: 7.5
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [40.0, 30.0]
+      zoom: 1.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.20
