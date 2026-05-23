@@ -36,6 +36,19 @@ const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '4:3': { w: 1440, h: 1080 },
 }
 
+/**
+ * Default zoom-out applied on top of the story's configured zoom when a card
+ * doesn't ship its own per-ratio override. Share cards are much smaller than
+ * the interactive viewport, so pulling the camera back a bit keeps the
+ * subject from cropping into the title overlay. Each unit is logarithmic
+ * (≈23% smaller per −0.3).
+ */
+const SHARE_ZOOM_DELTA: Record<AspectRatio, number> = {
+  '1:1': -0.3,
+  '3:4': -0.3,
+  '4:3': -0.3,
+}
+
 export type CardVariant = 'auto' | 'map-title' | 'graph'
 
 interface Props {
@@ -173,8 +186,18 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   const secRatio = shareOverride?.map?.ratios?.[ratio]
   const mapCenter =
     subRatio?.center ?? shareSubOverride?.map?.center ?? secRatio?.center ?? shareOverride?.map?.center ?? subsectionMap?.center ?? parentConfig.map?.center
+  // Zoom cascade: a per-ratio override wins outright. Otherwise resolve the
+  // base zoom and apply the share-card default zoom-out so cards pull back a
+  // bit from the story's interactive framing.
+  const ratioZoomOverride = subRatio?.zoom ?? secRatio?.zoom
+  const baseZoom =
+    shareSubOverride?.map?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? parentConfig.map?.zoom
   const mapZoom =
-    subRatio?.zoom ?? shareSubOverride?.map?.zoom ?? secRatio?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? parentConfig.map?.zoom
+    ratioZoomOverride !== undefined
+      ? ratioZoomOverride
+      : baseZoom !== undefined
+        ? baseZoom + SHARE_ZOOM_DELTA[ratio]
+        : undefined
   const mapPitch =
     subRatio?.pitch ?? shareSubOverride?.map?.pitch ?? secRatio?.pitch ?? shareOverride?.map?.pitch ?? subsectionMap?.pitch ?? parentConfig.map?.pitch
   const mapBearing =
@@ -339,6 +362,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
           {showMap && (
             <>
               <ShareMapBg
+                ratio={ratio}
                 center={mapCenter!}
                 zoom={mapZoom!}
                 pitch={mapPitch}
