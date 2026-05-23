@@ -37,6 +37,10 @@ export type DriverStandingRow = {
   driverName: string
   constructorId: string
   constructorName: string
+  /** Constructor primary colour (e.g. `#27F4D2`). Used to tint standings rows. */
+  constructorColor: string | null
+  /** Driver headshot URL. */
+  headshotUrl: string | null
   points: number
   wins: number
 }
@@ -46,6 +50,10 @@ export type ConstructorStandingRow = {
   constructorId: string
   constructorName: string
   nationality: string | null
+  /** Constructor primary colour (e.g. `#27F4D2`). Used to tint standings rows. */
+  primaryColor: string | null
+  /** Team logo URL — usually a Wikimedia/CDN SVG. */
+  logoUrl: string | null
   points: number
   wins: number
 }

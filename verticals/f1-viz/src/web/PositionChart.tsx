@@ -7,13 +7,23 @@ type Props = {
   lanes: DriverLane[]
   /** Optional total laps. Falls back to max lap across lanes. */
   totalLaps?: number
+  /** Header label above the chart. Defaults to "Position by lap". */
+  title?: string
+  /** Formatter for the three x-axis ticks. Defaults to `L${n}`. */
+  xTickFormat?: (value: number) => string
 }
 
 const PADDING = { top: 16, right: 12, bottom: 24, left: 28 }
 const VIEW_W = 640
 const VIEW_H = 320
 
-export function PositionChart({ raceLabel, lanes, totalLaps }: Props) {
+export function PositionChart({
+  raceLabel,
+  lanes,
+  totalLaps,
+  title = 'Position by lap',
+  xTickFormat = (n) => `L${n}`,
+}: Props) {
   if (lanes.length === 0) {
     return (
       <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-surface text-sm text-muted">
@@ -36,7 +46,7 @@ export function PositionChart({ raceLabel, lanes, totalLaps }: Props) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wider text-muted">Position by lap</span>
+        <span className="text-xs uppercase tracking-wider text-muted">{title}</span>
         <span className="truncate text-xs text-text">{raceLabel}</span>
       </div>
       <svg
@@ -68,7 +78,7 @@ export function PositionChart({ raceLabel, lanes, totalLaps }: Props) {
             />
           </g>
         ))}
-        {/* X axis labels — lap 1, mid, last */}
+        {/* X axis labels — first, mid, last */}
         {[1, Math.ceil(maxLap / 2), maxLap].map((lap) => (
           <text
             key={lap}
@@ -78,7 +88,7 @@ export function PositionChart({ raceLabel, lanes, totalLaps }: Props) {
             className="fill-muted"
             style={{ fontSize: 10 }}
           >
-            L{lap}
+            {xTickFormat(lap)}
           </text>
         ))}
         {/* Lanes */}

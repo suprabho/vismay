@@ -26,8 +26,15 @@ type RawRow = {
     given_name: string
     family_name: string
     code: string | null
+    headshot_url: string | null
+    primary_color: string | null
     constructor_id: string | null
-    constructors: { name: string; nationality: string | null } | null
+    constructors: {
+      name: string
+      nationality: string | null
+      primary_color: string | null
+      logo_url: string | null
+    } | null
   } | null
 }
 
@@ -45,7 +52,7 @@ async function fetchStandings(): Promise<StandingsBundle> {
   const { data, error } = await sb
     .from('vizf1_session_results')
     .select(
-      'position, driver_id, vizf1_sessions!inner(session_type, vizf1_races!inner(season)), drivers:vizf1_drivers!inner(given_name, family_name, code, constructor_id, constructors:vizf1_constructors(name, nationality))',
+      'position, driver_id, vizf1_sessions!inner(session_type, vizf1_races!inner(season)), drivers:vizf1_drivers!inner(given_name, family_name, code, headshot_url, primary_color, constructor_id, constructors:vizf1_constructors(name, nationality, primary_color, logo_url))',
     )
     .in('vizf1_sessions.session_type', ['race', 'sprint'])
     .eq('vizf1_sessions.vizf1_races.season', year)
@@ -68,6 +75,8 @@ async function fetchStandings(): Promise<StandingsBundle> {
     driverName: string
     constructorId: string
     constructorName: string
+    constructorColor: string | null
+    headshotUrl: string | null
     points: number
     wins: number
   }
@@ -75,6 +84,8 @@ async function fetchStandings(): Promise<StandingsBundle> {
     constructorId: string
     constructorName: string
     nationality: string | null
+    primaryColor: string | null
+    logoUrl: string | null
     points: number
     wins: number
   }
@@ -97,6 +108,8 @@ async function fetchStandings(): Promise<StandingsBundle> {
       driverName: `${d.given_name} ${d.family_name}`,
       constructorId,
       constructorName,
+      constructorColor: d.primary_color,
+      headshotUrl: d.headshot_url,
       points: 0,
       wins: 0,
     }
@@ -108,6 +121,11 @@ async function fetchStandings(): Promise<StandingsBundle> {
       constructorId,
       constructorName,
       nationality: d.constructors?.nationality ?? null,
+      // Per-driver `primary_color` is the closest match to OpenF1's team
+      // colour. Fall back to the constructor-table value if the driver row
+      // is missing it.
+      primaryColor: d.primary_color ?? d.constructors?.primary_color ?? null,
+      logoUrl: d.constructors?.logo_url ?? null,
       points: 0,
       wins: 0,
     }
