@@ -1,24 +1,29 @@
-import { createAdminMiddleware } from '@vismay/admin-core/middleware'
-import { auth } from '@/lib/adminAuth'
+import { createSignedOutputMiddleware } from '@vismay/admin-core/signedMiddleware'
 
 export const runtime = 'nodejs'
 
 /**
- * After the admin lift, only signed share/autoplay routes need a gate here.
- * Unauthed visitors are bounced to the central admin login (configured via
- * ADMIN_LOGIN_URL — set to admin.vizmaya.fyi/login in prod, localhost:3001/login
- * in local dev).
+ * Gated "output" routes are rendered on this domain but only ever requested
+ * by admin (canvas iframe, share-card preview, autoplay capture, PDF render).
+ * Admin signs the URL with HMAC(ADMIN_SESSION_SECRET, path|exp) via
+ * `signOutputUrl()` and middleware verifies the token.
+ *
+ * Stateless — no cookie, no cross-domain hand-off. The same factory wires up
+ * vizf1.com / footshorts.com / any future consumer with one line.
+ *
+ * In dev without ADMIN_SESSION_SECRET set, requests fall through so the local
+ * loop isn't blocked. Prod fails closed.
  */
-const ADMIN_LOGIN_URL = process.env.ADMIN_LOGIN_URL || 'http://localhost:3001/login'
-
-export const middleware = createAdminMiddleware({
-  auth,
-  loginPath: ADMIN_LOGIN_URL,
+export const middleware = createSignedOutputMiddleware({
+  passThroughWhenUnconfigured: process.env.NODE_ENV !== 'production',
 })
 
 export const config = {
   matcher: [
     '/story/:slug/share',
     '/story/:slug/autoplay',
+    '/story/:slug/canvas-frame/:id',
+    '/story/:slug/report',
+    '/story/:slug/slides',
   ],
 }

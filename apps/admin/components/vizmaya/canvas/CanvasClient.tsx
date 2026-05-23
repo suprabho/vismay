@@ -24,6 +24,7 @@ import {
 import type { InputNodeData } from './InputNode'
 import {
   buildOutputsForUnit,
+  canvasFrameId,
   OUTPUT_GROUPS,
   type OutputGroupId,
 } from './canvasOutputs'
@@ -40,7 +41,13 @@ interface Props {
   slug: string
   units: ResolvedUnit[]
   sources: CanvasSources
-  publicSiteUrl: string
+  /**
+   * Pre-signed iframe URLs keyed by output id (e.g. `section-1:share-3-4`)
+   * and canvas-frame id (`canvas-frame:section-1`). Server signs at request
+   * time with a long TTL so the canvas can stay open without re-signing.
+   * Empty values fall back to a blank src.
+   */
+  signedSrcById: Record<string, string>
 }
 
 /* ─── Layout constants ───────────────────────────────────────────── */
@@ -167,7 +174,7 @@ function buildSectionView(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>,
   slug: string,
-  publicSiteUrl: string,
+  signedSrcById: Record<string, string>,
   dataNonce: number
 ): SectionView {
   const sectionId =
@@ -177,10 +184,10 @@ function buildSectionView(
     unit.paragraphs[0]?.replace(/\*+/g, '') ||
     `Section ${unit.parentIndex + 1}`
   const frameSrc = withCacheBust(
-    `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
+    signedSrcById[canvasFrameId(sectionId)] ?? '',
     dataNonce
   )
-  const allOutputs = buildOutputsForUnit(unit, slug, publicSiteUrl).map(
+  const allOutputs = buildOutputsForUnit(unit, slug, signedSrcById).map(
     (o) => ({ ...o, src: withCacheBust(o.src, dataNonce) })
   )
   const outputs: SectionView['outputs'] = {
@@ -229,7 +236,7 @@ export default function CanvasClient({
   slug,
   units,
   sources: initialSources,
-  publicSiteUrl,
+  signedSrcById,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
@@ -250,9 +257,9 @@ export default function CanvasClient({
   const sectionViews = useMemo(
     () =>
       sectionUnits.map((u) =>
-        buildSectionView(u, parsedSources, slug, publicSiteUrl, dataNonce)
+        buildSectionView(u, parsedSources, slug, signedSrcById, dataNonce)
       ),
-    [sectionUnits, parsedSources, slug, publicSiteUrl, dataNonce]
+    [sectionUnits, parsedSources, slug, signedSrcById, dataNonce]
   )
   // Latest sectionViews available to closures captured during the
   // initial build (which only runs once per `units` change). Without
@@ -1216,10 +1223,10 @@ export default function CanvasClient({
       sceneRef.current = null
     }
     // Rebuild only when the structural inputs change (different story
-    // slug, different unit list, or different public-site host). Source
-    // edits + nonce bumps don't trigger a rebuild — they flow through
-    // the `sources changed` effect below.
-  }, [slug, sectionUnits, publicSiteUrl])
+    // slug, different unit list, or fresh signed-URL set). Source edits
+    // + nonce bumps don't trigger a rebuild — they flow through the
+    // `sources changed` effect below.
+  }, [slug, sectionUnits, signedSrcById])
 
   /* ─── Apply state changes (without rebuilding the editor) ───── */
   useEffect(() => {

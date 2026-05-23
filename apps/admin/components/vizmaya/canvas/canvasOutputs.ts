@@ -17,10 +17,29 @@ export interface OutputNodeData {
   label: string
   /** Short dims string shown under the label, e.g. "1080 × 1440". */
   tag: string
-  /** Full iframe URL (vizmaya-fyi route + query). */
+  /** Full iframe URL (vizmaya-fyi route + signed token + query). */
   src: string
   w: number
   h: number
+}
+
+/**
+ * Pure spec for one output — path + query on the consumer domain, plus
+ * presentation metadata. URL signing happens server-side using these specs
+ * (so the HMAC secret never touches client code); the resulting signed URLs
+ * are passed back as a map keyed by `id` and read by `buildOutputsForUnit`.
+ */
+export interface OutputSpec {
+  id: string
+  group: OutputGroupId
+  label: string
+  tag: string
+  w: number
+  h: number
+  /** Pathname on the consumer domain, no host, no query. */
+  path: string
+  /** Query params for the URL. NOT covered by the signature — safe to vary. */
+  query: Record<string, string>
 }
 
 export interface OutputGroup {
@@ -51,91 +70,115 @@ export const OUTPUT_GROUPS: readonly OutputGroup[] = [
 export const DEFAULT_EXPANDED_GROUP: OutputGroupId = 'share'
 
 /**
- * Derive the output subgraph for a section frame. Each output is a live
- * iframe pointed at vizmaya-fyi's existing render route, scoped to this
- * section via a `?section=<id>` query (or `?start=<id>` for autoplay,
- * which doesn't slice but seeks to the section).
- *
- * Native dimensions match each output's real export size — the iframe
- * renders at exactly w×h, so what's visible in the canvas IS what gets
- * exported. The canvas's pan+zoom scales them for viewing without
- * distorting the captured pixels.
+ * Build the canonical id for a section's canvas-frame URL. The same id is
+ * the key used in the signed-URL map.
  */
-export function buildOutputsForUnit(
-  unit: ResolvedUnit,
-  slug: string,
-  publicSiteUrl: string
-): OutputNodeData[] {
-  const sectionId = unit.parentConfig.id ?? `section-${unit.parentIndex}`
-  const base = publicSiteUrl.replace(/\/$/, '')
-  const slugPath = encodeURIComponent(slug)
-  const sectionParam = encodeURIComponent(sectionId)
+export function canvasFrameId(sectionId: string): string {
+  return `canvas-frame:${sectionId}`
+}
 
+/**
+ * Specs for the 7 outputs of one section. Pure data — no host, no signing.
+ * Both server (for pre-signing) and client (for layout) iterate this.
+ */
+export function outputSpecsForUnit(
+  unit: ResolvedUnit,
+  slug: string
+): OutputSpec[] {
+  const sectionId = unit.parentConfig.id ?? `section-${unit.parentIndex}`
+  const slugPath = encodeURIComponent(slug)
   return [
     {
       id: `${sectionId}:share-3-4`,
       group: 'share',
       label: 'Share 3:4',
       tag: '1080 × 1440',
-      src: `${base}/story/${slugPath}/share?ratio=3:4&section=${sectionParam}`,
       w: 1080,
       h: 1440,
+      path: `/story/${slugPath}/share`,
+      query: { ratio: '3:4', section: sectionId },
     },
     {
       id: `${sectionId}:share-1-1`,
       group: 'share',
       label: 'Share 1:1',
       tag: '1080 × 1080',
-      src: `${base}/story/${slugPath}/share?ratio=1:1&section=${sectionParam}`,
       w: 1080,
       h: 1080,
+      path: `/story/${slugPath}/share`,
+      query: { ratio: '1:1', section: sectionId },
     },
     {
       id: `${sectionId}:share-4-3`,
       group: 'share',
       label: 'Share 4:3',
       tag: '1440 × 1080',
-      src: `${base}/story/${slugPath}/share?ratio=4:3&section=${sectionParam}`,
       w: 1440,
       h: 1080,
+      path: `/story/${slugPath}/share`,
+      query: { ratio: '4:3', section: sectionId },
     },
     {
       id: `${sectionId}:slides`,
       group: 'slides',
       label: 'Slides',
       tag: '1920 × 1080',
-      src: `${base}/story/${slugPath}/slides?embed=1&section=${sectionParam}`,
       w: 1920,
       h: 1080,
+      path: `/story/${slugPath}/slides`,
+      query: { embed: '1', section: sectionId },
     },
     {
       id: `${sectionId}:report`,
       group: 'report',
       label: 'Report',
       tag: '794 × 1123',
-      src: `${base}/story/${slugPath}/report?embed=1&section=${sectionParam}`,
       // A4 portrait at 96dpi — matches ReportShell's print layout.
       w: 794,
       h: 1123,
+      path: `/story/${slugPath}/report`,
+      query: { embed: '1', section: sectionId },
     },
     {
       id: `${sectionId}:autoplay-9-16`,
       group: 'autoplay',
       label: 'Autoplay 9:16',
       tag: '414 × 736',
-      src: `${base}/story/${slugPath}/autoplay?aspect=9:16&start=${sectionParam}`,
       w: 414,
       h: 736,
+      path: `/story/${slugPath}/autoplay`,
+      query: { aspect: '9:16', start: sectionId },
     },
     {
       id: `${sectionId}:autoplay-16-9`,
       group: 'autoplay',
       label: 'Autoplay 16:9',
       tag: '1280 × 720',
-      src: `${base}/story/${slugPath}/autoplay?aspect=16:9&start=${sectionParam}`,
       w: 1280,
       h: 720,
+      path: `/story/${slugPath}/autoplay`,
+      query: { aspect: '16:9', start: sectionId },
     },
   ]
 }
 
+/**
+ * Derive the output subgraph for a section frame. Each output's `src` comes
+ * from the `signedSrcById` map (built server-side); missing entries fall
+ * back to an empty src so the layout still renders.
+ */
+export function buildOutputsForUnit(
+  unit: ResolvedUnit,
+  slug: string,
+  signedSrcById: Record<string, string>
+): OutputNodeData[] {
+  return outputSpecsForUnit(unit, slug).map((s) => ({
+    id: s.id,
+    group: s.group,
+    label: s.label,
+    tag: s.tag,
+    w: s.w,
+    h: s.h,
+    src: signedSrcById[s.id] ?? '',
+  }))
+}

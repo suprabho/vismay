@@ -10,6 +10,7 @@ import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
 import { vizmayaUrl } from '@/lib/publicSite'
+import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
@@ -61,10 +62,14 @@ export default function EditorClient({
   slug,
   sectionHref,
   initial,
+  signedLinks,
 }: {
   slug: string
   sectionHref: string
   initial: InitialState
+  /** Pre-signed URLs for the gated open-in-tab links (autoplay, share).
+   *  Server signs on each page render so admin always gets a fresh token. */
+  signedLinks: SignedStoryLinks
 }) {
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
@@ -281,7 +286,7 @@ export default function EditorClient({
           report ↗
         </Link>
         <Link
-          href={vizmayaUrl(`/story/${slug}/autoplay`)}
+          href={signedLinks.autoplay}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
@@ -289,7 +294,7 @@ export default function EditorClient({
           autoplay ↗
         </Link>
         <Link
-          href={vizmayaUrl(`/story/${slug}/share`)}
+          href={signedLinks.share}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"

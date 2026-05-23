@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
+import { signOutputUrl } from '@vismay/admin-core/signedUrl'
 import { getStoryContent } from '@vismay/content-source/content'
 import {
   loadStoryConfig,
@@ -8,6 +9,10 @@ import {
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import CanvasClient from '@/components/vizmaya/canvas/CanvasClient'
+import {
+  canvasFrameId,
+  outputSpecsForUnit,
+} from '@/components/vizmaya/canvas/canvasOutputs'
 import type { CanvasSources } from '@/components/vizmaya/canvas/canvasInputs'
 
 export const dynamic = 'force-dynamic'
@@ -66,12 +71,36 @@ export default async function CanvasPage({ params }: Props) {
   const publicSiteUrl =
     process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
+  // Pre-sign every iframe URL the canvas can mount. 24h TTL — well past
+  // any plausible single editing session, refreshed on every page reload.
+  // The HMAC secret stays server-side; only the resulting URLs cross to
+  // the client.
+  const sectionUnits = units.filter((u) => u.subIndex === 0)
+  const SIGN_TTL_SECONDS = 24 * 60 * 60
+  const signedSrcById: Record<string, string> = {}
+  for (const u of sectionUnits) {
+    const sectionId = u.parentConfig.id ?? `section-${u.parentIndex}`
+    signedSrcById[canvasFrameId(sectionId)] = signOutputUrl({
+      baseUrl: publicSiteUrl,
+      path: `/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
+      ttlSeconds: SIGN_TTL_SECONDS,
+    })
+    for (const spec of outputSpecsForUnit(u, slug)) {
+      signedSrcById[spec.id] = signOutputUrl({
+        baseUrl: publicSiteUrl,
+        path: spec.path,
+        ttlSeconds: SIGN_TTL_SECONDS,
+        query: spec.query,
+      })
+    }
+  }
+
   return (
     <CanvasClient
       slug={slug}
       units={units}
       sources={sources}
-      publicSiteUrl={publicSiteUrl}
+      signedSrcById={signedSrcById}
     />
   )
 }
