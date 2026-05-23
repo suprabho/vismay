@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ConstructorLogo } from '@/components/ConstructorLogo'
 import { DriverAvatar } from '@/components/DriverAvatar'
 import { NewsReelCard } from '@/components/NewsReelCard'
-import { useConstructorStandings } from '@/lib/useConstructorStandings'
+import { useConstructorStandings } from '@/lib/useStandings'
 import { useStorySegments } from '@/lib/useStorySegments'
 import { supabaseBrowser } from '@/lib/supabaseBrowser'
 

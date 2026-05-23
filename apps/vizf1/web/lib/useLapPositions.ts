@@ -1,38 +1,26 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { LapSchema, type LapApi } from '@vizf1/shared'
-import type { DriverLane, LapPosition } from '@vismay/f1-viz/types'
-import { F1_BRAND, type ConstructorId } from '@vizf1/brand'
-import { fetchJolpicaPaginated } from './jolpica'
-
-type LapsEnvelope = {
-  RaceTable: {
-    season: string
-    round: string
-    Races: Array<{ Laps: LapApi[] }>
-  }
-}
+import type { DriverLane } from '@vismay/f1-viz/types'
+import { supabaseBrowser } from './supabaseBrowser'
 
 type DriverMeta = {
   driverId: string
   driverCode: string | null
   driverName: string
   constructorId: string
+  constructorColor?: string | null
 }
 
-function laneColor(constructorId: string): string {
-  const key = constructorId as ConstructorId
-  return F1_BRAND.constructors[key] ?? F1_BRAND.colors.muted
+type LapRow = {
+  driver_id: string
+  lap: number
+  position: number
 }
 
 /**
- * Build per-driver lane series from the paginated /laps payload.
- *
- * Jolpica's /laps response is a list of lap objects; each lap has Timings
- * with `driverId + position`. We pivot to `driverId -> [{lap, position}]`.
- * Driver names and constructor associations are passed in (from race results)
- * because /laps itself only has IDs.
+ * Per-lap finishing order for the given race, charted as DriverLane[].
+ * Source: vizf1_session_lap_positions, populated by the worker.
  */
 export function useLapPositions(
   round: number | string | null,
@@ -42,30 +30,49 @@ export function useLapPositions(
     enabled: round != null && drivers.length > 0,
     queryKey: ['vizf1', 'laps', String(round)],
     queryFn: async (): Promise<{ totalLaps: number; lanes: DriverLane[] }> => {
-      const laps = await fetchJolpicaPaginated<LapApi, LapsEnvelope>(
-        `current/${round}/laps`,
-        (m) => m.RaceTable.Races[0]?.Laps ?? [],
-        LapSchema,
-      )
+      const sb = supabaseBrowser()
+      const year = String(new Date().getFullYear())
 
-      const byDriver = new Map<string, LapPosition[]>()
+      const { data: race } = await sb
+        .from('vizf1_races')
+        .select('id')
+        .eq('season', year)
+        .eq('round', Number(round))
+        .maybeSingle()
+      if (!race) return { totalLaps: 0, lanes: [] }
+
+      const { data: session } = await sb
+        .from('vizf1_sessions')
+        .select('id')
+        .eq('race_id', race.id)
+        .eq('session_type', 'race')
+        .maybeSingle()
+      if (!session) return { totalLaps: 0, lanes: [] }
+
+      const { data, error } = await sb
+        .from('vizf1_session_lap_positions')
+        .select('driver_id, lap, position')
+        .eq('session_id', session.id)
+      if (error) throw error
+
+      const rows = (data ?? []) as LapRow[]
+
+      const byDriver = new Map<string, { lap: number; position: number }[]>()
       let totalLaps = 0
-      for (const lap of laps) {
-        const lapNum = Number(lap.number)
-        if (lapNum > totalLaps) totalLaps = lapNum
-        for (const t of lap.Timings) {
-          const points = byDriver.get(t.driverId) ?? []
-          points.push({ lap: lapNum, position: Number(t.position) })
-          byDriver.set(t.driverId, points)
-        }
+      for (const r of rows) {
+        if (r.lap > totalLaps) totalLaps = r.lap
+        const arr = byDriver.get(r.driver_id) ?? []
+        arr.push({ lap: r.lap, position: r.position })
+        byDriver.set(r.driver_id, arr)
       }
+      for (const arr of byDriver.values()) arr.sort((a, b) => a.lap - b.lap)
 
       const lanes: DriverLane[] = drivers
         .map((d) => ({
           driverId: d.driverId,
           driverCode: d.driverCode,
           driverName: d.driverName,
-          color: laneColor(d.constructorId),
+          color: d.constructorColor ?? '#9ca3af',
           points: byDriver.get(d.driverId) ?? [],
         }))
         .filter((l) => l.points.length > 0)

@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { DriverAvatar } from '@/components/DriverAvatar'
 import { TeamBadge } from '@/components/TeamBadge'
 import { NewsReelCard } from '@/components/NewsReelCard'
-import { useDriverStandings } from '@/lib/useDriverStandings'
+import { useDriverStandings } from '@/lib/useStandings'
 import { useStorySegments } from '@/lib/useStorySegments'
 import { supabaseBrowser } from '@/lib/supabaseBrowser'
 

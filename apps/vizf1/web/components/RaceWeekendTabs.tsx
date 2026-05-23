@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import type { RaceRow } from '@vismay/f1-viz/types'
-import { useRaceResults } from '@/lib/useRaceResults'
-import { useQualifying } from '@/lib/useQualifying'
 import {
   useSessionResults,
   formatLapMs,
@@ -45,92 +43,118 @@ function Empty({ label }: { label: string }) {
   )
 }
 
-function ResultsTable({ round }: { round: number }) {
-  const q = useRaceResults(round)
-  if (q.isLoading) return <Empty label="Loading results" />
-  if (q.error) return <Empty label="No results yet" />
-  const rows = q.data ?? []
-  if (rows.length === 0) return <Empty label="No results yet" />
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="grid grid-cols-[28px_1fr_60px_40px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
-        <span>#</span>
-        <span>Driver</span>
-        <span>Team</span>
-        <span className="text-center">Laps</span>
-        <span className="text-center">Pts</span>
-      </div>
-      {rows.map((r) => (
-        <div
-          key={r.driverId}
-          className="grid grid-cols-[28px_1fr_60px_40px_40px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
-        >
-          <span className="text-text">{r.position}</span>
-          <span className="flex min-w-0 items-center gap-2">
-            {r.driverCode ? (
-              <span className="rounded bg-bg px-1.5 py-0.5 font-mono text-[10px] text-text/70">
-                {r.driverCode}
-              </span>
-            ) : null}
-            <span className="truncate text-text">{r.driverName}</span>
-          </span>
-          <span className="truncate text-muted">{r.constructorName}</span>
-          <span className="text-center text-text">{r.laps}</span>
-          <span className="text-center font-semibold text-text">{r.points}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function QualifyingTable({ round }: { round: number }) {
-  const q = useQualifying(round)
-  if (q.isLoading) return <Empty label="Loading qualifying" />
-  if (q.error) return <Empty label="No qualifying yet" />
-  const rows = q.data ?? []
-  if (rows.length === 0) return <Empty label="No qualifying yet" />
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="grid grid-cols-[28px_1fr_64px_64px_64px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
-        <span>#</span>
-        <span>Driver</span>
-        <span className="text-center">Q1</span>
-        <span className="text-center">Q2</span>
-        <span className="text-center">Q3</span>
-      </div>
-      {rows.map((r) => (
-        <div
-          key={r.driverId}
-          className="grid grid-cols-[28px_1fr_64px_64px_64px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
-        >
-          <span className="text-text">{r.position}</span>
-          <span className="flex min-w-0 items-center gap-2">
-            {r.driverCode ? (
-              <span className="rounded bg-bg px-1.5 py-0.5 font-mono text-[10px] text-text/70">
-                {r.driverCode}
-              </span>
-            ) : null}
-            <span className="truncate text-text">{r.driverName}</span>
-          </span>
-          <span className="text-center font-mono text-[11px] text-text/80">{r.q1 ?? '—'}</span>
-          <span className="text-center font-mono text-[11px] text-text/80">{r.q2 ?? '—'}</span>
-          <span className="text-center font-mono text-[11px] text-text/80">{r.q3 ?? '—'}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 /**
- * Practice & Sprint tables fetch from Supabase (populated by ingestSessions).
- * Practice + sprint qualifying show best lap + gap; Sprint shows position + points.
+ * All session tables share the same Supabase source (ingestSessions). The only
+ * difference between them is which columns make sense for the session type:
+ *   race / sprint  — pos | driver+team-color | team | laps | best lap
+ *   quali / sprintQ — pos | driver+team-color | team | best lap | gap
+ *   fp1 / fp2 / fp3 — pos | driver+team-color | best lap | gap | laps
  */
-function PracticeTable({ round, type }: { round: number; type: SessionType }) {
+
+const RACE_LIKE: SessionType[] = ['race', 'sprint']
+const QUALI_LIKE: SessionType[] = ['quali', 'sprint_quali']
+
+function DriverCell({
+  code,
+  name,
+  color,
+}: {
+  code: string | null
+  name: string
+  color: string | null
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {code ? (
+        <span
+          className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+          style={{
+            backgroundColor: color ? `${color}22` : 'var(--color-bg)',
+            color: color ?? 'var(--color-text)',
+          }}
+        >
+          {code}
+        </span>
+      ) : null}
+      <span className="truncate text-text">{name}</span>
+    </span>
+  )
+}
+
+function SessionTable({
+  round,
+  type,
+  emptyLabel,
+}: {
+  round: number
+  type: SessionType
+  emptyLabel: string
+}) {
   const q = useSessionResults(round, type)
-  if (q.isLoading) return <Empty label="Loading session" />
-  if (q.error) return <Empty label="Session unavailable" />
+  if (q.isLoading) return <Empty label={`Loading ${emptyLabel}`} />
+  if (q.error) return <Empty label={`No ${emptyLabel} yet`} />
   const rows = q.data ?? []
-  if (rows.length === 0) return <Empty label="Not yet ingested" />
+  if (rows.length === 0) return <Empty label={`No ${emptyLabel} yet`} />
+
+  if (RACE_LIKE.includes(type)) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="grid grid-cols-[28px_1fr_70px_40px_56px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
+          <span>#</span>
+          <span>Driver</span>
+          <span>Team</span>
+          <span className="text-center">Laps</span>
+          <span className="text-center">Best</span>
+        </div>
+        {rows.map((r, i) => (
+          <div
+            key={r.driverId}
+            className="grid grid-cols-[28px_1fr_70px_40px_56px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
+          >
+            <span className="text-text">{r.position ?? i + 1}</span>
+            <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
+            <span className="truncate text-muted">{r.constructorName ?? ''}</span>
+            <span className="text-center text-text">{r.lapsCompleted ?? '—'}</span>
+            <span className="text-center font-mono text-[11px] text-text/80">
+              {formatLapMs(r.bestLapMs)}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (QUALI_LIKE.includes(type)) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="grid grid-cols-[28px_1fr_70px_70px_56px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
+          <span>#</span>
+          <span>Driver</span>
+          <span>Team</span>
+          <span className="text-center">Best</span>
+          <span className="text-center">Gap</span>
+        </div>
+        {rows.map((r, i) => (
+          <div
+            key={r.driverId}
+            className="grid grid-cols-[28px_1fr_70px_70px_56px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
+          >
+            <span className="text-text">{r.position ?? i + 1}</span>
+            <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
+            <span className="truncate text-muted">{r.constructorName ?? ''}</span>
+            <span className="text-center font-mono text-[11px] text-text/80">
+              {formatLapMs(r.bestLapMs)}
+            </span>
+            <span className="text-center font-mono text-[11px] text-muted">
+              {formatGapMs(r.gapToLeaderMs)}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Practice: pos | driver | best | gap | laps
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
       <div className="grid grid-cols-[28px_1fr_70px_60px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
@@ -146,20 +170,7 @@ function PracticeTable({ round, type }: { round: number; type: SessionType }) {
           className="grid grid-cols-[28px_1fr_70px_60px_40px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
         >
           <span className="text-text">{r.position ?? i + 1}</span>
-          <span className="flex min-w-0 items-center gap-2">
-            {r.driverCode ? (
-              <span
-                className="rounded px-1.5 py-0.5 font-mono text-[10px]"
-                style={{
-                  backgroundColor: r.constructorColor ? `${r.constructorColor}22` : 'var(--color-bg)',
-                  color: r.constructorColor ?? 'var(--color-text)',
-                }}
-              >
-                {r.driverCode}
-              </span>
-            ) : null}
-            <span className="truncate text-text">{r.driverName}</span>
-          </span>
+          <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
           <span className="text-center font-mono text-[11px] text-text/80">
             {formatLapMs(r.bestLapMs)}
           </span>
@@ -167,44 +178,6 @@ function PracticeTable({ round, type }: { round: number; type: SessionType }) {
             {formatGapMs(r.gapToLeaderMs)}
           </span>
           <span className="text-center text-muted">{r.lapsCompleted ?? '—'}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SprintTable({ round }: { round: number }) {
-  const q = useSessionResults(round, 'sprint')
-  if (q.isLoading) return <Empty label="Loading sprint" />
-  if (q.error) return <Empty label="Sprint unavailable" />
-  const rows = q.data ?? []
-  if (rows.length === 0) return <Empty label="Not yet ingested" />
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="grid grid-cols-[28px_1fr_60px_40px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
-        <span>#</span>
-        <span>Driver</span>
-        <span>Team</span>
-        <span className="text-center">Laps</span>
-        <span className="text-center">Pts</span>
-      </div>
-      {rows.map((r, i) => (
-        <div
-          key={r.driverId}
-          className="grid grid-cols-[28px_1fr_60px_40px_40px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
-        >
-          <span className="text-text">{r.position ?? i + 1}</span>
-          <span className="flex min-w-0 items-center gap-2">
-            {r.driverCode ? (
-              <span className="rounded bg-bg px-1.5 py-0.5 font-mono text-[10px] text-text/70">
-                {r.driverCode}
-              </span>
-            ) : null}
-            <span className="truncate text-text">{r.driverName}</span>
-          </span>
-          <span className="truncate text-muted">{r.constructorName ?? ''}</span>
-          <span className="text-center text-text">{r.lapsCompleted ?? '—'}</span>
-          <span className="text-center font-semibold text-text">{r.points ?? '—'}</span>
         </div>
       ))}
     </div>
@@ -246,13 +219,13 @@ export function RaceWeekendTabs({ race }: { race: RaceRow }) {
         ) : null}
       </div>
 
-      {tab === 'standings' && <ResultsTable round={race.round} />}
-      {tab === 'qualifying' && <QualifyingTable round={race.round} />}
-      {tab === 'fp1' && <PracticeTable round={race.round} type="fp1" />}
-      {tab === 'fp2' && <PracticeTable round={race.round} type="fp2" />}
-      {tab === 'fp3' && <PracticeTable round={race.round} type="fp3" />}
-      {tab === 'sprintQ' && <PracticeTable round={race.round} type="sprint_quali" />}
-      {tab === 'sprint' && <SprintTable round={race.round} />}
+      {tab === 'standings' && <SessionTable round={race.round} type="race" emptyLabel="results" />}
+      {tab === 'qualifying' && <SessionTable round={race.round} type="quali" emptyLabel="qualifying" />}
+      {tab === 'fp1' && <SessionTable round={race.round} type="fp1" emptyLabel="FP1 data" />}
+      {tab === 'fp2' && <SessionTable round={race.round} type="fp2" emptyLabel="FP2 data" />}
+      {tab === 'fp3' && <SessionTable round={race.round} type="fp3" emptyLabel="FP3 data" />}
+      {tab === 'sprintQ' && <SessionTable round={race.round} type="sprint_quali" emptyLabel="sprint quali" />}
+      {tab === 'sprint' && <SessionTable round={race.round} type="sprint" emptyLabel="sprint" />}
     </div>
   )
 }
