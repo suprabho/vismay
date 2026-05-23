@@ -21,6 +21,43 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors *" },
         ],
       },
+      {
+        // Gated "output" routes are designed to be embedded by admin
+        // (canvas iframes, share-card preview, autoplay capture, PDF
+        // render). Admin lives on a different TLD (vismay.xyz) in prod,
+        // so cross-origin embedding must be allowed — the signed-URL
+        // token in the query string is the access control here, not
+        // frame-ancestors. Without this override Vercel's default
+        // `frame-ancestors 'self'` blocks the iframe.
+        source: "/story/:slug/share",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
+      {
+        source: "/story/:slug/autoplay",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
+      {
+        source: "/story/:slug/canvas-frame/:id",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
+      {
+        source: "/story/:slug/report",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
+      {
+        source: "/story/:slug/slides",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+        ],
+      },
     ];
   },
 };
