@@ -1,0 +1,282 @@
+# Story config — airtel-fy26
+#
+# Bharti Airtel Q4 / FY26 results scrollytelling.
+# 18 config sections map 1:1 to 18 markdown headings (1 hero + 17 ##).
+#
+# Acts:
+#   1  hero                    — intro, India map atmospheric
+#   2  revenue-stat            — ₹2.1Tn stat, India pins
+#   3  revenue-momentum        — quarterly revenue line chart (5 quarters)
+#   4  ebitda-margin-stat      — 57.8% stat
+#   5  margins-built-to-last   — EBITDA grouped bar + margin bar (2 subsection steps)
+#   6  arpu-stat               — ₹257 stat
+#   7  the-data-explosion      — ARPU bar (step 1) → data usage bar (step 2)
+#   8  homes-stat              — +41.7% stat
+#   9  homes-juggernaut        — homes subscribers + ARPU dual-axis chart
+#   10 africa-stat             — +22% stat, map pivots to Africa
+#   11 africa-turns-corner     — CC revenue bar (step 1)
+#   12 airtel-money            — Airtel Money MAUs + margin (step 2 of africa chart)
+#   13 debt-stat               — -19% stat, back to India
+#   14 demolishing-debt        — net debt vs operating FCF bar
+#   15 profit-stat             — +51% stat
+#   16 profit-surge            — annual PAT FY24→FY26 bar
+#   17 stock-stat              — ₹1,784 stat
+#   18 what-market-sees        — Airtel vs Nifty indexed line chart
+#
+# MAP COORDINATES
+#   India center   [82.5, 22.5]  zoom 3.6
+#   India mobile   [78.9, 22.5]  zoom 4.2
+#   Africa         [20.0,  2.0]  zoom 2.8
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.50
+  pinColor: "#E8365D"
+  pinRadius: 10
+  flySpeed: 1.4
+  mapPalette:
+    land: "#0a0f1e"
+    water: "#050c17"
+    border: "#1e3050"
+    labelText: "#7a8ea8"
+    labelHalo: "#050c17"
+    road: "#0f1c30"
+
+sections:
+
+  # 1 ─── HERO
+  - id: hero
+    kind: hero
+    text: "Airtel's ₹2.1 Trillion Year"
+    eyebrow: "Finance · Q4 FY26 Results · May 2026"
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      mobile:
+        center: [82.5, 20.0]
+        zoom: 2.9
+
+  # 2 ─── REVENUE STAT
+  - id: rs-21-trillion
+    kind: stat
+    text: "₹2.1Tn"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.50
+      pins:
+        - { lng: 77.209, lat: 28.613, label: "Delhi" }
+        - { lng: 72.877, lat: 19.076, label: "Mumbai" }
+        - { lng: 80.270, lat: 13.082, label: "Chennai" }
+        - { lng: 88.363, lat: 22.572, label: "Kolkata" }
+        - { lng: 77.594, lat: 12.971, label: "Bengaluru" }
+        - { lng: 78.486, lat: 17.385, label: "Hyderabad" }
+        - { lng: 73.856, lat: 18.520, label: "Pune" }
+        - { lng: 72.571, lat: 23.022, label: "Ahmedabad" }
+
+  # 3 ─── REVENUE TREND CHART
+  - id: five-quarters-of-acceleration
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.30
+    foreground:
+      - type: chart
+        id: "revenue-trend"
+
+  # 4 ─── EBITDA MARGIN STAT
+  - id: 578-ebitda-margin
+    kind: stat
+    text: "57.8%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.45
+
+  # 5 ─── EBITDA SCALE CHART (2 steps via subsections)
+  - id: margins-built-to-last
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.28
+    subsections:
+      - text: "Annual EBITDA scaled from ₹889 billion in FY24 to ₹1,213 billion in FY26 — 36% growth in absolute EBITDA over three years. Revenue: ₹1,644Bn → ₹2,110Bn. The infrastructure advantage is now a money-printing advantage."
+        foreground:
+          - type: chart
+            id: "ebitda-scale"
+      - text: "Margin held firm at 57–58% across all three years despite accelerating capex. Operating leverage is structural: every new subscriber uses an existing tower, an existing fibre strand, an existing spectrum licence. The incremental cost of one more customer is close to zero."
+        foreground:
+          - type: chart
+            id: "ebitda-scale"
+
+  # 6 ─── ARPU STAT
+  - id: rs-257-arpu
+    kind: stat
+    text: "₹257"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.45
+      mobile:
+        center: [78.9, 20.0]
+        zoom: 3.4
+
+  # 7 ─── ARPU + DATA CHART (2 steps via subsections)
+  - id: the-data-explosion
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.28
+    subsections:
+      - text: "India mobile ARPU: ₹257 in Q4 FY26, up from ₹245 a year ago. The July 2024 tariff hike worked. Monthly churn remained at 2.4%. Postpaid subscribers — the premium tier — jumped 74.6% year-on-year to 106 million."
+        foreground:
+          - type: chart
+            id: "arpu-data"
+      - text: "Data consumption per user: 31.4 GB/month in Q4 FY26, up 25% from 25.1 GB/month a year ago. Total network traffic grew 32.8%. 80.1% of the base is now on 4G or 5G. Airtel has 1.19 million broadband base stations — and each one is doing more work every quarter."
+        foreground:
+          - type: chart
+            id: "arpu-data"
+
+  # 8 ─── HOMES STAT
+  - id: 417-homes-subscribers
+    kind: stat
+    text: "+41.7%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.45
+
+  # 9 ─── HOMES CHART
+  - id: homes-the-quiet-juggernaut
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.28
+    foreground:
+      - type: chart
+        id: "homes-growth"
+
+  # 10 ─── AFRICA STAT (map pivots to Africa)
+  - id: plus-22-africa-revenue
+    kind: stat
+    text: "+22%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [20.0, 2.0]
+      zoom: 2.8
+      opacity: 0.50
+      pins:
+        - { lng: 3.389,   lat: 6.524,   label: "Nigeria" }
+        - { lng: 36.817,  lat: -1.286,  label: "Kenya" }
+        - { lng: 39.200,  lat: -6.173,  label: "Tanzania" }
+        - { lng: 30.060,  lat: -1.944,  label: "Rwanda" }
+        - { lng: 28.283,  lat: -15.417, label: "Zambia" }
+        - { lng: -4.023,  lat: 5.345,   label: "Côte d'Ivoire" }
+        - { lng: 15.058,  lat: 4.360,   label: "DRC" }
+        - { lng: 14.460,  lat: 12.105,  label: "Chad" }
+        - { lng: 2.213,   lat: 13.515,  label: "Niger" }
+        - { lng: -12.364, lat: 12.364,  label: "Guinea" }
+        - { lng: -3.960,  lat: 12.364,  label: "Mali" }
+        - { lng: 34.888,  lat: -13.254, label: "Malawi" }
+        - { lng: 47.521,  lat: -18.914, label: "Madagascar" }
+      mobile:
+        center: [20.0, 0.0]
+        zoom: 2.2
+
+  # 11 ─── AFRICA: BOTH CHART STEPS (CC revenue + margin/Airtel Money)
+  - id: africa-turns-the-corner
+    map:
+      center: [20.0, 2.0]
+      zoom: 2.8
+      opacity: 0.30
+    subsections:
+      - text: "Q4 FY26 constant-currency revenue hit $1,610 million — up 22% from $1,317 million a year ago. Full-year growth: 24% in constant currency. The Africa business has reached critical mass."
+        foreground:
+          - type: chart
+            id: "africa-comeback"
+      - text: "EBITDA margin expanded 2.2 percentage points to 50.4%. Airtel Money: 54.1 million monthly active users (+21.3%), $49 billion in transactions (+34% YoY). The fintech embedded in Africa is systematically underpriced."
+        foreground:
+          - type: chart
+            id: "africa-comeback"
+
+  # 12 ─── AIRTEL MONEY: PROSE SECTION (no additional chart — prose + Africa map)
+  - id: airtel-money-africas-hidden-compounding-engine
+    map:
+      center: [20.0, 2.0]
+      zoom: 2.8
+      opacity: 0.30
+
+  # 13 ─── DEBT STAT (map returns to India)
+  - id: minus-19-net-debt
+    kind: stat
+    text: "-19%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.45
+
+  # 14 ─── DEBT + FCF CHART
+  - id: demolishing-the-debt
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.28
+    foreground:
+      - type: chart
+        id: "debt-fcf"
+
+  # 15 ─── NET INCOME STAT
+  - id: plus-51-net-income
+    kind: stat
+    text: "+51%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.45
+
+  # 16 ─── PAT PROGRESSION CHART
+  - id: the-profit-surge
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.28
+    foreground:
+      - type: chart
+        id: "profit-leap"
+
+  # 17 ─── STOCK PRICE STAT
+  - id: rs-1784
+    kind: stat
+    text: "₹1,784"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.40
+
+  # 18 ─── MARKET SCORECARD CHART
+  - id: what-the-market-sees-in-airtel
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.28
+    foreground:
+      - type: chart
+        id: "market-scorecard"

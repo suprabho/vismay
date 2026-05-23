@@ -1,0 +1,98 @@
+{
+  "steps": [
+    {
+      "title": "Net debt vs operating free cash flow — ₹ Billion",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}<br/>{a0}: ₹{c0}Bn<br/>{a1}: ₹{c1}Bn"
+        },
+        "legend": {
+          "data": ["Net Debt", "Operating Free Cash Flow"],
+          "top": 4,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "4%",
+          "bottom": "8%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["FY 2025", "FY 2026"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 14, "fontFamily": "Inter", "fontWeight": "bold" }
+        },
+        "yAxis": {
+          "type": "value",
+          "axisLabel": {
+            "formatter": "₹{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Net Debt",
+            "type": "bar",
+            "barWidth": "28%",
+            "itemStyle": {
+              "borderRadius": [6, 6, 0, 0],
+              "color": {
+                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(232,54,93,0.85)" },
+                  { "offset": 1, "color": "rgba(232,54,93,0.3)" }
+                ]
+              }
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$accent",
+              "fontSize": 14,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "₹{c}Bn"
+            },
+            "data": [2038.4, 1647.9]
+          },
+          {
+            "name": "Operating Free Cash Flow",
+            "type": "bar",
+            "barWidth": "28%",
+            "itemStyle": {
+              "borderRadius": [6, 6, 0, 0],
+              "color": {
+                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(43,223,168,0.9)" },
+                  { "offset": 1, "color": "rgba(43,223,168,0.35)" }
+                ]
+              }
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$teal",
+              "fontSize": 14,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "₹{c}Bn"
+            },
+            "data": [627.1, 737.5]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "steps": [
+    {
+      "title": "Quarterly consolidated revenue — ₹ Billion",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross", "label": { "backgroundColor": "#1e3050" } },
+          "formatter": "{b}<br/>Revenue: ₹{c} Bn"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Q4 FY25", "Q1 FY26", "Q2 FY26", "Q3 FY26", "Q4 FY26"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 12,
+            "fontFamily": "JetBrains Mono"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 440,
+          "max": 580,
+          "axisLabel": {
+            "formatter": "₹{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Revenue",
+            "type": "line",
+            "smooth": true,
+            "symbolSize": 8,
+            "symbol": "circle",
+            "itemStyle": { "color": "$teal", "borderWidth": 2 },
+            "lineStyle": { "color": "$teal", "width": 3 },
+            "areaStyle": {
+              "color": {
+                "type": "linear",
+                "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(43,223,168,0.35)" },
+                  { "offset": 1, "color": "rgba(43,223,168,0.02)" }
+                ]
+              }
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontSize": 13,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "₹{c}"
+            },
+            "data": [478.8, 494.6, 521.5, 539.8, 553.8],
+            "markLine": {
+              "silent": true,
+              "lineStyle": { "color": "$accent", "type": "dashed", "width": 1.5 },
+              "data": [{ "type": "average", "name": "Average" }],
+              "label": {
+                "formatter": "Avg ₹{c}",
+                "color": "$accent",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 11
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

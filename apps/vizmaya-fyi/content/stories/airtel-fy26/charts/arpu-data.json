@@ -1,0 +1,158 @@
+{
+  "steps": [
+    {
+      "title": "India mobile ARPU — ₹ per subscriber per month",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ₹{c} per user/month"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Q4 FY25\n(Mar-25)", "Q3 FY26\n(Dec-25)", "Q4 FY26\n(Mar-26)"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 11,
+            "fontFamily": "JetBrains Mono",
+            "lineHeight": 16
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 220,
+          "max": 280,
+          "axisLabel": {
+            "formatter": "₹{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "40%",
+            "itemStyle": {
+              "borderRadius": [6, 6, 0, 0],
+              "color": {
+                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(232,54,93,0.9)" },
+                  { "offset": 1, "color": "rgba(232,54,93,0.4)" }
+                ]
+              }
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontSize": 18,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "₹{c}"
+            },
+            "data": [
+              { "value": 245, "itemStyle": { "color": "rgba(122,142,168,0.6)", "borderRadius": [6, 6, 0, 0] } },
+              { "value": 259, "itemStyle": {
+                "borderRadius": [6, 6, 0, 0],
+                "color": {
+                  "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                  "colorStops": [
+                    { "offset": 0, "color": "rgba(232,54,93,0.7)" },
+                    { "offset": 1, "color": "rgba(232,54,93,0.35)" }
+                  ]
+                }
+              }},
+              { "value": 257, "itemStyle": {
+                "borderRadius": [6, 6, 0, 0],
+                "color": {
+                  "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                  "colorStops": [
+                    { "offset": 0, "color": "rgba(232,54,93,1.0)" },
+                    { "offset": 1, "color": "rgba(232,54,93,0.5)" }
+                  ]
+                }
+              }}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Monthly data usage per subscriber — GB/month",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "formatter": "{b}: {c} GB/month"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Q4 FY25\n(Mar-25)", "Q3 FY26\n(Dec-25)", "Q4 FY26\n(Mar-26)"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 11,
+            "fontFamily": "JetBrains Mono",
+            "lineHeight": 16
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 40,
+          "axisLabel": {
+            "formatter": "{value} GB",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "40%",
+            "itemStyle": { "color": "$teal", "borderRadius": [6, 6, 0, 0] },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$teal",
+              "fontSize": 18,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "{c} GB"
+            },
+            "data": [
+              { "value": 25.1, "itemStyle": { "color": "rgba(43,223,168,0.45)", "borderRadius": [6, 6, 0, 0] } },
+              { "value": 29.8, "itemStyle": { "color": "rgba(43,223,168,0.7)", "borderRadius": [6, 6, 0, 0] } },
+              { "value": 31.4, "itemStyle": { "color": "rgba(43,223,168,1.0)", "borderRadius": [6, 6, 0, 0] } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
