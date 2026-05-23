@@ -1,6 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useReducer, useRef } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react'
 import type { ResolvedUnit } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
@@ -15,8 +22,11 @@ import {
   type CanvasSources,
 } from '../canvas/canvasInputs'
 import type { InputNodeData } from '../canvas/InputNode'
-import { buildOutputsForUnit } from '../canvas/canvasOutputs'
-import type { OutputNodeData } from '../canvas/OutputNode'
+import {
+  buildOutputsForUnit,
+  OUTPUT_GROUPS,
+  type OutputGroupId,
+} from '../canvas/canvasOutputs'
 
 interface Props {
   slug: string
@@ -25,7 +35,7 @@ interface Props {
   publicSiteUrl: string
 }
 
-/* ─── Layout constants (per section) ─────────────────────────────── */
+/* ─── Layout constants ───────────────────────────────────────────── */
 const FRAME_W = 1920
 const FRAME_H = 1080
 const FRAME_MIN_W = 480
@@ -36,26 +46,128 @@ const INPUT_H = 150
 const INPUT_GAP_Y = 36
 
 const COL_GAP = 280
-const SECTION_GAP = 700
+
+const HEADER_W = 320
+const HEADER_H = 88
+const HEADER_GAP_Y = 28
 
 const OUTPUT_GAP_Y = 100
 const OVERRIDE_GAP_Y = 36
 
+const SHARE_PREVIEW_PADDING_TOP = 56 // for the tab strip
+
+/** Which override input sockets each output group exposes. Drives both
+ *  socket creation on the OutputNode and the override → output wiring. */
+const OVERRIDE_SOCKETS_BY_GROUP: Record<OutputGroupId, string[]> = {
+  share: ['variants'],
+  slides: ['override'],
+  report: ['override'],
+  autoplay: ['map', 'narration'],
+}
+
 /**
- * Round-2 Rete spike. Adds:
- *   1. Output nodes — one per export (share×3 / slides / report / autoplay×2)
- *      at native dimensions, fed from the section frame's `render` socket.
- *   2. Per-output override nodes — Share Variants, Report Override,
- *      Slides Override, Map Override, Narration. These connect ONLY to
- *      their downstream outputs, not to the frame (the user's call —
- *      cleaner semantics than the custom canvas, where overrides were
- *      duplicated on both the frame's left and each output's left).
- *   3. Frame resize — drag the bottom-right corner of a section frame
- *      to resize. Rete handles re-routing connections on the fly.
+ * Per-group override builder: how to slice the parsed sources into the
+ * override input cards that feed each output group's iframe(s).
+ */
+interface OverrideSpec {
+  data: InputNodeData
+  socket: string
+}
+function buildOverridesForGroup(
+  groupId: OutputGroupId,
+  unit: ResolvedUnit,
+  parsed: ReturnType<typeof parseCanvasSources>
+): OverrideSpec[] {
+  switch (groupId) {
+    case 'share':
+      return [{ data: shareNode(unit, parsed), socket: 'variants' }]
+    case 'slides':
+      return [
+        { data: reportNodeFormat(unit, parsed, 'slides'), socket: 'override' },
+      ]
+    case 'report':
+      return [
+        { data: reportNodeFormat(unit, parsed, 'report'), socket: 'override' },
+      ]
+    case 'autoplay':
+      return [
+        { data: mapOverrideNode(unit, parsed), socket: 'map' },
+        { data: narrationNode(unit, parsed), socket: 'narration' },
+      ]
+  }
+}
+
+/**
+ * Section-derived data bundle: everything the editor needs to render one
+ * section's nodes. Recomputed on section switch; passed to the in-place
+ * update path so no Rete nodes get remounted.
+ */
+interface SectionView {
+  sectionId: string
+  heading: string
+  frameSrc: string
+  inputs: { content: InputNodeData; config: InputNodeData; chart: InputNodeData }
+  /** Override card data per group; only the expanded group's is actually
+   *  read at any moment, but we precompute all four so toggling is cheap. */
+  overrides: Record<OutputGroupId, OverrideSpec[]>
+  /** Output iframe URLs + dims per group. Same: all four precomputed. */
+  outputs: Record<OutputGroupId, ReturnType<typeof buildOutputsForUnit>>
+}
+
+function buildSectionView(
+  unit: ResolvedUnit,
+  parsed: ReturnType<typeof parseCanvasSources>,
+  slug: string,
+  publicSiteUrl: string
+): SectionView {
+  const sectionId =
+    unit.parentConfig.id ?? `section-${unit.parentIndex}`
+  const heading =
+    unit.heading ||
+    unit.paragraphs[0]?.replace(/\*+/g, '') ||
+    `Section ${unit.parentIndex + 1}`
+  const frameSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`
+  const allOutputs = buildOutputsForUnit(unit, slug, publicSiteUrl)
+  const outputs: SectionView['outputs'] = {
+    share: allOutputs.filter((o) => o.group === 'share'),
+    slides: allOutputs.filter((o) => o.group === 'slides'),
+    report: allOutputs.filter((o) => o.group === 'report'),
+    autoplay: allOutputs.filter((o) => o.group === 'autoplay'),
+  }
+  return {
+    sectionId,
+    heading,
+    frameSrc,
+    inputs: {
+      content: contentNode(unit),
+      config: configNode(unit),
+      chart: chartNode(unit, parsed),
+    },
+    overrides: {
+      share: buildOverridesForGroup('share', unit, parsed),
+      slides: buildOverridesForGroup('slides', unit, parsed),
+      report: buildOverridesForGroup('report', unit, parsed),
+      autoplay: buildOverridesForGroup('autoplay', unit, parsed),
+    },
+    outputs,
+  }
+}
+
+/**
+ * Optimized Rete spike. Three big wins over round 2:
  *
- * Still out of scope: group collapse, tabbing share aspects, focus state,
- * per-section auto-layout when frames are resized. Free-form positions
- * — user drags nodes around as needed.
+ *   1. Output group collapse — only one group's iframes mount at a time.
+ *      Group headers always exist as Rete nodes; clicking one expands its
+ *      output(s) and removes whatever was previously expanded. Override
+ *      nodes that feed the collapsed group also vanish.
+ *   2. Share aspect tabs — Share group renders as ONE iframe node with
+ *      an internal tab strip (3:4 / 1:1 / 4:3); only one mounted.
+ *   3. Single frame iframe — instead of N section frames, one frame at
+ *      a time with a pagination overlay (◀ §3 of 5 ▶) on the iframe.
+ *      Section switch updates the same nodes in place; no Rete remount.
+ *
+ * Net iframe count: 2 typically (frame + tabbed share), 3 max (autoplay
+ * expanded, 9:16 + 16:9 stacked). Independent of section count.
  */
 export default function CanvasReteClient({
   slug,
@@ -69,11 +181,54 @@ export default function CanvasReteClient({
     () => units.filter((u) => u.subIndex === 0),
     [units]
   )
+  // Section views are pure data; cheap to memoise once and index into.
+  const sectionViews = useMemo(
+    () =>
+      sectionUnits.map((u) =>
+        buildSectionView(u, parsedSources, slug, publicSiteUrl)
+      ),
+    [sectionUnits, parsedSources, slug, publicSiteUrl]
+  )
 
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0)
+  const [expandedGroup, setExpandedGroup] = useState<OutputGroupId | null>(
+    'share'
+  )
+
+  // Latest setters via refs so callbacks captured during initial editor
+  // build always dispatch to the current React state, not stale closures.
+  const setActiveSectionIndexRef = useRef(setActiveSectionIndex)
+  const setExpandedGroupRef = useRef(setExpandedGroup)
+  useEffect(() => {
+    setActiveSectionIndexRef.current = setActiveSectionIndex
+  }, [setActiveSectionIndex])
+  useEffect(() => {
+    setExpandedGroupRef.current = setExpandedGroup
+  }, [setExpandedGroup])
+
+  // Mirror state into refs so the build effect can read initial values
+  // and the apply-* effects can read latest values.
+  const stateRef = useRef({ activeSectionIndex: 0, expandedGroup: 'share' as OutputGroupId | null })
+  useEffect(() => {
+    stateRef.current.activeSectionIndex = activeSectionIndex
+  }, [activeSectionIndex])
+  useEffect(() => {
+    stateRef.current.expandedGroup = expandedGroup
+  }, [expandedGroup])
+
+  // The editor scene — populated by the build effect, consumed by the
+  // apply-* effects. `null` until the async setup completes.
+  type Scene = {
+    applySection: (idx: number) => Promise<void>
+    applyExpandedGroup: (group: OutputGroupId | null) => Promise<void>
+    destroy: () => void
+  }
+  const sceneRef = useRef<Scene | null>(null)
+
+  /* ─── Build editor (once per data version) ───────────────────── */
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    let teardown: (() => void) | null = null
     let disposed = false
 
     ;(async () => {
@@ -87,32 +242,35 @@ export default function CanvasReteClient({
 
       if (disposed) return
 
-      /* ─── Custom controls ───────────────────────────────────────
-       * Each Rete node uses the default classic chrome (label bar +
-       * sockets), but the body comes from one of these custom controls.
-       * The control owns its visual size, which lets us mix native-sized
-       * iframes (giant) with text-preview cards (small) in the same
-       * editor.
-       */
+      /* ── Custom controls ─────────────────────────────────────── */
 
+      // For the frame iframe + the output iframes. Supports optional
+      // tab strip (for Share aspect tabs) and an optional pagination
+      // overlay (only the frame uses it for section navigation).
       class IframeControl extends ClassicPreset.Control {
-        // Mutable so the resize handle can change them; React component
-        // reads these at render time and is force-updated on drag.
+        src: string
         width: number
         height: number
-        // Optional callback wired up by the editor setup — lets us notify
-        // the area plugin so connections re-route on resize.
-        onResize?: (w: number, h: number) => void
-        // True only for the section frame's iframe; the smaller output
-        // iframes use this same control type but without a handle.
         resizable: boolean
+        onResize?: (w: number, h: number) => void
+        // Tab support — when set, control renders a tab strip above
+        // the iframe and the iframe src follows activeTabId.
+        tabs?: Array<{ id: string; label: string; tag: string; src: string; w: number; h: number }>
+        activeTabId?: string
+        // Pagination overlay — only used on the frame iframe.
+        pagination?: {
+          current: number
+          total: number
+          label: string
+        }
         constructor(
-          public src: string,
+          src: string,
           w: number,
           h: number,
           opts: { resizable?: boolean } = {}
         ) {
           super()
+          this.src = src
           this.width = w
           this.height = h
           this.resizable = opts.resizable ?? false
@@ -121,6 +279,7 @@ export default function CanvasReteClient({
 
       class TextPreviewControl extends ClassicPreset.Control {
         constructor(
+          public label: string,
           public tag: string,
           public body: string,
           public variant: 'mono' | 'muted'
@@ -129,22 +288,29 @@ export default function CanvasReteClient({
         }
       }
 
-      /* ─── Node classes ────────────────────────────────────────── */
+      // Group header — click to expand/collapse. No data flow.
+      class GroupHeaderControl extends ClassicPreset.Control {
+        constructor(
+          public groupId: OutputGroupId,
+          public label: string,
+          public expanded: boolean,
+          public childCount: number
+        ) {
+          super()
+        }
+      }
+
+      /* ── Node classes ────────────────────────────────────────── */
 
       const socket = new ClassicPreset.Socket('canvas')
 
-      // Section frame: 3 inputs (content/config/chart), 1 output (render).
-      // The render output fans out to every downstream output node.
       class FrameNode extends ClassicPreset.Node {
         kind = 'frame' as const
-        constructor(label: string, iframeCtrl: IframeControl) {
-          super(label)
+        constructor(iframeCtrl: IframeControl) {
+          super('Frame')
           this.addInput('content', new ClassicPreset.Input(socket, 'Content'))
           this.addInput('config', new ClassicPreset.Input(socket, 'Config'))
-          this.addInput(
-            'chart',
-            new ClassicPreset.Input(socket, 'Chart Data')
-          )
+          this.addInput('chart', new ClassicPreset.Input(socket, 'Chart Data'))
           this.addOutput(
             'render',
             new ClassicPreset.Output(socket, 'render', true)
@@ -153,8 +319,6 @@ export default function CanvasReteClient({
         }
       }
 
-      // Output node: iframe at native dims, plus N input sockets — one
-      // for the frame's render and one per relevant override.
       class OutputNode extends ClassicPreset.Node {
         kind = 'output' as const
         constructor(
@@ -163,10 +327,7 @@ export default function CanvasReteClient({
           overrideKeys: string[]
         ) {
           super(label)
-          this.addInput(
-            'render',
-            new ClassicPreset.Input(socket, 'render')
-          )
+          this.addInput('render', new ClassicPreset.Input(socket, 'render'))
           for (const key of overrideKeys) {
             this.addInput(key, new ClassicPreset.Input(socket, key))
           }
@@ -174,11 +335,9 @@ export default function CanvasReteClient({
         }
       }
 
-      // Pure-data node: a single output socket emitting a preview string.
-      // Used for both the frame's left-column inputs (Content / Config /
-      // Chart) and the right-side overrides (Share Variants / Map / etc.).
       class DataNode extends ClassicPreset.Node {
         kind = 'data' as const
+        previewCtrl: TextPreviewControl
         constructor(
           label: string,
           tag: string,
@@ -190,28 +349,201 @@ export default function CanvasReteClient({
             'value',
             new ClassicPreset.Output(socket, 'value', true)
           )
-          this.addControl(
-            'preview',
-            new TextPreviewControl(tag, body, variant)
-          )
+          this.previewCtrl = new TextPreviewControl(label, tag, body, variant)
+          this.addControl('preview', this.previewCtrl)
         }
       }
 
-      /* ─── React renderers for the controls ─────────────────────── */
+      class GroupHeaderNode extends ClassicPreset.Node {
+        kind = 'header' as const
+        headerCtrl: GroupHeaderControl
+        constructor(
+          public groupId: OutputGroupId,
+          label: string,
+          expanded: boolean,
+          childCount: number
+        ) {
+          super(label)
+          this.headerCtrl = new GroupHeaderControl(
+            groupId,
+            label,
+            expanded,
+            childCount
+          )
+          this.addControl('header', this.headerCtrl)
+        }
+      }
+
+      /* ── React control renderers ────────────────────────────── */
+
+      function PaginationStrip({
+        current,
+        total,
+        label,
+        onPrev,
+        onNext,
+      }: {
+        current: number
+        total: number
+        label: string
+        onPrev: () => void
+        onNext: () => void
+      }) {
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        return (
+          <div
+            onPointerDown={stop}
+            onMouseDown={stop}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: SHARE_PREVIEW_PADDING_TOP - 8,
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              background: 'rgba(20,20,20,0.85)',
+              backdropFilter: 'blur(8px)',
+              borderBottom: '1px solid #1f1f1f',
+              borderRadius: '8px 8px 0 0',
+              zIndex: 4,
+              pointerEvents: 'auto',
+              color: '#ccc',
+              fontFamily: 'system-ui, sans-serif',
+              fontSize: 14,
+            }}
+          >
+            <button
+              onClick={onPrev}
+              disabled={current === 0}
+              style={{
+                background: 'transparent',
+                color: current === 0 ? '#444' : '#ddd',
+                border: '1px solid #2a2a2a',
+                borderRadius: 4,
+                padding: '4px 12px',
+                cursor: current === 0 ? 'default' : 'pointer',
+                fontSize: 16,
+                lineHeight: 1,
+              }}
+            >
+              ◀
+            </button>
+            <span style={{ fontWeight: 500, flex: 1 }}>
+              §{current + 1} of {total}
+              <span style={{ marginLeft: 12, color: '#888', fontWeight: 400 }}>
+                {label}
+              </span>
+            </span>
+            <button
+              onClick={onNext}
+              disabled={current === total - 1}
+              style={{
+                background: 'transparent',
+                color: current === total - 1 ? '#444' : '#ddd',
+                border: '1px solid #2a2a2a',
+                borderRadius: 4,
+                padding: '4px 12px',
+                cursor:
+                  current === total - 1 ? 'default' : 'pointer',
+                fontSize: 16,
+                lineHeight: 1,
+              }}
+            >
+              ▶
+            </button>
+          </div>
+        )
+      }
+
+      function TabStrip({
+        tabs,
+        activeId,
+        onSelect,
+      }: {
+        tabs: NonNullable<IframeControl['tabs']>
+        activeId: string | undefined
+        onSelect: (id: string) => void
+      }) {
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        return (
+          <div
+            onPointerDown={stop}
+            onMouseDown={stop}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: SHARE_PREVIEW_PADDING_TOP - 8,
+              padding: 4,
+              display: 'flex',
+              gap: 4,
+              background: 'rgba(20,20,20,0.85)',
+              backdropFilter: 'blur(8px)',
+              borderBottom: '1px solid #1f1f1f',
+              borderRadius: '8px 8px 0 0',
+              zIndex: 4,
+              pointerEvents: 'auto',
+              fontFamily: 'system-ui, sans-serif',
+            }}
+          >
+            {tabs.map((t) => {
+              const active = t.id === activeId
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onSelect(t.id)}
+                  style={{
+                    flex: 1,
+                    background: active ? '#222' : 'transparent',
+                    color: active ? '#fff' : '#888',
+                    border: `1px solid ${active ? '#555' : 'transparent'}`,
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    fontFamily: 'inherit',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 1,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  <span>{t.label}</span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: active ? '#888' : '#555',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    {t.tag}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )
+      }
 
       function IframeControlView({ data }: { data: IframeControl }) {
         const [, force] = useReducer((n: number) => n + 1, 0)
 
         const onResizeStart = (e: React.MouseEvent) => {
           if (!data.resizable) return
-          // Stop the area plugin from picking this up as a node drag.
           e.preventDefault()
           e.stopPropagation()
           const startX = e.clientX
           const startY = e.clientY
           const startW = data.width
           const startH = data.height
-
           const onMove = (ev: MouseEvent) => {
             data.width = Math.max(FRAME_MIN_W, startW + (ev.clientX - startX))
             data.height = Math.max(
@@ -229,31 +561,80 @@ export default function CanvasReteClient({
           window.addEventListener('mouseup', onUp)
         }
 
+        const onSelectTab = (id: string) => {
+          if (!data.tabs) return
+          const tab = data.tabs.find((t) => t.id === id)
+          if (!tab) return
+          data.activeTabId = id
+          data.src = tab.src
+          data.width = tab.w
+          data.height = tab.h
+          force()
+        }
+
+        const hasOverlay = data.tabs != null || data.pagination != null
+        const overlayPad = hasOverlay ? SHARE_PREVIEW_PADDING_TOP : 0
+
         return (
           <div
             style={{
               width: data.width,
-              height: data.height,
+              height: data.height + overlayPad,
               background: '#0a0a0a',
               border: '1px solid #262626',
               borderRadius: 8,
-              overflow: 'hidden',
+              overflow: 'visible',
               position: 'relative',
             }}
           >
-            <iframe
-              src={data.src}
+            {data.pagination && (
+              <PaginationStrip
+                current={data.pagination.current}
+                total={data.pagination.total}
+                label={data.pagination.label}
+                onPrev={() =>
+                  setActiveSectionIndexRef.current((i) => Math.max(0, i - 1))
+                }
+                onNext={() =>
+                  setActiveSectionIndexRef.current((i) =>
+                    Math.min(data.pagination!.total - 1, i + 1)
+                  )
+                }
+              />
+            )}
+            {data.tabs && (
+              <TabStrip
+                tabs={data.tabs}
+                activeId={data.activeTabId}
+                onSelect={onSelectTab}
+              />
+            )}
+            <div
               style={{
-                width: '100%',
-                height: '100%',
-                border: 0,
-                display: 'block',
-                background: '#0a0a0a',
-                // Same trick as the custom canvas — pan-drag passes through
-                // the iframe so node drag still fires.
-                pointerEvents: 'none',
+                position: 'absolute',
+                top: overlayPad,
+                left: 0,
+                width: data.width,
+                height: data.height,
+                overflow: 'hidden',
               }}
-            />
+            >
+              <iframe
+                // Keyed by src so a tab switch genuinely remounts the
+                // iframe (otherwise some browsers keep the prior render
+                // until the next paint, and Mapbox especially leaks).
+                key={data.src}
+                src={data.src}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 0,
+                  display: 'block',
+                  background: '#0a0a0a',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
             {data.resizable && (
               <div
                 onMouseDown={onResizeStart}
@@ -319,7 +700,78 @@ export default function CanvasReteClient({
         )
       }
 
-      /* ─── Editor + plugin wiring ──────────────────────────────── */
+      function GroupHeaderControlView({
+        data,
+      }: {
+        data: GroupHeaderControl
+      }) {
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        const onClick = (e: React.MouseEvent) => {
+          stop(e)
+          setExpandedGroupRef.current((prev) =>
+            prev === data.groupId ? null : data.groupId
+          )
+        }
+        return (
+          <button
+            type="button"
+            onPointerDown={stop}
+            onMouseDown={stop}
+            onClick={onClick}
+            style={{
+              width: HEADER_W - 24,
+              height: HEADER_H - 20,
+              background: data.expanded ? '#161616' : '#0e0e0e',
+              border: `1px solid ${data.expanded ? '#555' : '#262626'}`,
+              borderRadius: 8,
+              color: '#ddd',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              padding: '8px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              textAlign: 'left',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 18,
+                color: data.expanded ? '#fff' : '#888',
+                width: 14,
+                lineHeight: 1,
+              }}
+            >
+              {data.expanded ? '▾' : '▸'}
+            </span>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 500,
+                color: data.expanded ? '#fff' : '#bbb',
+              }}
+            >
+              {data.label}
+            </span>
+            <span
+              style={{
+                marginLeft: 'auto',
+                fontSize: 10,
+                color: '#555',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {data.expanded
+                ? 'loaded'
+                : `${data.childCount} · click`}
+            </span>
+          </button>
+        )
+      }
+
+      /* ── Plugin wiring ───────────────────────────────────────── */
 
       type Schemes = ClassicScheme
       type AreaExtra = ReactArea2D<Schemes>
@@ -339,6 +791,9 @@ export default function CanvasReteClient({
               if (data.payload instanceof TextPreviewControl) {
                 return TextPreviewControlView as never
               }
+              if (data.payload instanceof GroupHeaderControl) {
+                return GroupHeaderControlView as never
+              }
               return null
             },
           },
@@ -355,112 +810,184 @@ export default function CanvasReteClient({
         accumulating: AreaExtensions.accumulateOnCtrl(),
       })
 
-      /* ─── Build the graph ────────────────────────────────────── */
+      /* ── Initial build (single section) ──────────────────────── */
 
-      // Pre-compute column positions: each section gets four vertical
-      // lanes side-by-side, then a SECTION_GAP, then the next section.
+      const initialView = sectionViews[stateRef.current.activeSectionIndex] ?? sectionViews[0]
+
+      // Column X coords. Outputs sit to the right of the headers column,
+      // far enough that even the slides node (1920 wide) doesn't reach
+      // back into the header lane.
       const inputColX = 0
-      const frameColX = INPUT_W + COL_GAP
-      const overrideColX = frameColX + FRAME_W + COL_GAP
+      const frameColX = inputColX + INPUT_W + COL_GAP
+      const headerColX = frameColX + FRAME_W + COL_GAP
+      const overrideColX = headerColX + HEADER_W + COL_GAP
       const outputColX = overrideColX + INPUT_W + COL_GAP
 
-      // Outputs vary in width — max is slides @ 1920. Use that for the
-      // section's effective right edge so the next section starts cleanly.
-      const sectionPitch = outputColX + 1920 + SECTION_GAP
+      /* Frame (always present) */
+      const frameIframeCtrl = new IframeControl(
+        initialView.frameSrc,
+        FRAME_W,
+        FRAME_H,
+        { resizable: true }
+      )
+      frameIframeCtrl.pagination = {
+        current: stateRef.current.activeSectionIndex,
+        total: sectionViews.length,
+        label: initialView.heading,
+      }
+      const frame = new FrameNode(frameIframeCtrl)
+      frameIframeCtrl.onResize = (w, h) => {
+        void area.resize(frame.id, w, h)
+      }
+      await editor.addNode(frame)
+      await area.translate(frame.id, { x: frameColX, y: 0 })
 
-      for (let i = 0; i < sectionUnits.length; i++) {
-        const unit = sectionUnits[i]
-        const sectionId =
-          unit.parentConfig.id ?? `section-${unit.parentIndex}`
-        const heading =
-          unit.heading ||
-          unit.paragraphs[0]?.replace(/\*+/g, '') ||
-          `Section ${unit.parentIndex + 1}`
-        const sectionX = i * sectionPitch
-        const frameTopY = 0
-        const frameSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`
-
-        /* ── Frame ─────────────────────────────────────────────── */
-        const iframeCtrl = new IframeControl(frameSrc, FRAME_W, FRAME_H, {
-          resizable: true,
+      /* Frame inputs (3 fixed nodes) */
+      const inputEntries: Array<{ key: string; data: InputNodeData }> = [
+        { key: 'content', data: initialView.inputs.content },
+        { key: 'config', data: initialView.inputs.config },
+        { key: 'chart', data: initialView.inputs.chart },
+      ]
+      const inputTotalH =
+        inputEntries.length * INPUT_H +
+        (inputEntries.length - 1) * INPUT_GAP_Y
+      const inputStartY = 0 + FRAME_H / 2 - inputTotalH / 2
+      const inputNodes: Record<string, DataNode> = {}
+      for (let i = 0; i < inputEntries.length; i++) {
+        const { key, data } = inputEntries[i]
+        const node = new DataNode(
+          data.label,
+          data.tag,
+          data.body,
+          data.variant
+        )
+        inputNodes[key] = node
+        await editor.addNode(node)
+        await area.translate(node.id, {
+          x: inputColX,
+          y: inputStartY + i * (INPUT_H + INPUT_GAP_Y),
         })
-        const frame = new FrameNode(heading, iframeCtrl)
-        // Closure captures `frame` + `area` so resize updates feed back
-        // into Rete's node geometry — connection routing follows.
-        iframeCtrl.onResize = (w, h) => {
-          void area.resize(frame.id, w, h)
-        }
-        await editor.addNode(frame)
-        await area.translate(frame.id, {
-          x: sectionX + frameColX,
-          y: frameTopY,
-        })
+        await editor.addConnection(
+          new ClassicPreset.Connection(
+            node,
+            'value',
+            frame,
+            key
+          ) as Schemes['Connection']
+        )
+      }
 
-        /* ── Frame inputs (Content / Config / Chart) ──────────── */
-        // Just three nodes now — the override-type inputs have moved to
-        // be attached directly to their downstream outputs instead.
-        const frameInputs: { key: string; data: InputNodeData }[] = [
-          { key: 'content', data: contentNode(unit) },
-          { key: 'config', data: configNode(unit) },
-          { key: 'chart', data: chartNode(unit, parsedSources) },
-        ]
-        const inputColTotalH =
-          frameInputs.length * INPUT_H +
-          (frameInputs.length - 1) * INPUT_GAP_Y
-        const inputStartY = frameTopY + FRAME_H / 2 - inputColTotalH / 2
-        for (let j = 0; j < frameInputs.length; j++) {
-          const { key, data } = frameInputs[j]
+      /* Group header column (always present, 4 headers) */
+      const headerNodes: Record<OutputGroupId, GroupHeaderNode> = {} as Record<
+        OutputGroupId,
+        GroupHeaderNode
+      >
+      const headersTotalH =
+        OUTPUT_GROUPS.length * HEADER_H +
+        (OUTPUT_GROUPS.length - 1) * HEADER_GAP_Y
+      const headersStartY = 0 + FRAME_H / 2 - headersTotalH / 2
+      for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
+        const group = OUTPUT_GROUPS[i]
+        const childCount = initialView.outputs[group.id].length
+        // For tabbed groups the visual count is 1 (the tabbed node);
+        // for stacked groups it's the actual number of outputs.
+        const displayedCount = group.tabbed ? 1 : childCount
+        const expanded = stateRef.current.expandedGroup === group.id
+        const node = new GroupHeaderNode(
+          group.id,
+          group.label,
+          expanded,
+          displayedCount
+        )
+        headerNodes[group.id] = node
+        await editor.addNode(node)
+        await area.translate(node.id, {
+          x: headerColX,
+          y: headersStartY + i * (HEADER_H + HEADER_GAP_Y),
+        })
+      }
+
+      /* ── Mutable per-group expanded content ─────────────────── */
+
+      // Holds the currently-rendered override + output nodes for the
+      // expanded group. Mutated by applyExpandedGroup; consulted by
+      // applySection so it can update the iframe srcs in place.
+      interface ExpandedSlot {
+        // Override nodes by socket name; e.g. autoplay has 'map' + 'narration'.
+        overrides: Map<string, DataNode>
+        // Output nodes: stacked (one per output) for non-tabbed groups;
+        // a single tabbed node for share. Key = output id; share's
+        // single-node key is the first share output id.
+        outputs: Map<string, OutputNode>
+      }
+      let expandedSlot: { group: OutputGroupId; nodes: ExpandedSlot } | null = null
+
+      /**
+       * Build the override + output nodes for one group, hook up their
+       * connections, and place them in columns 4 + 5 aligned with the
+       * group's header Y. Mutates `expandedSlot` so subsequent calls can
+       * tear them down. Tabbed groups (Share) produce ONE OutputNode
+       * with internal aspect tabs.
+       */
+      async function mountGroup(groupId: OutputGroupId): Promise<void> {
+        const view = sectionViews[stateRef.current.activeSectionIndex]
+        const group = OUTPUT_GROUPS.find((g) => g.id === groupId)!
+        const groupOutputs = view.outputs[groupId]
+        if (groupOutputs.length === 0) return
+
+        const overrideSpecs = view.overrides[groupId]
+        const overrideMap = new Map<string, DataNode>()
+        const outputMap = new Map<string, OutputNode>()
+
+        // Y baseline: align with the group's header. Override + output
+        // columns extend down from that anchor.
+        const baseY =
+          headersStartY +
+          OUTPUT_GROUPS.findIndex((g) => g.id === groupId) *
+            (HEADER_H + HEADER_GAP_Y)
+
+        /* Overrides column */
+        let overrideY = baseY
+        for (const spec of overrideSpecs) {
           const node = new DataNode(
-            data.label,
-            data.tag,
-            data.body,
-            data.variant
+            spec.data.label,
+            spec.data.tag,
+            spec.data.body,
+            spec.data.variant
           )
+          overrideMap.set(spec.socket, node)
           await editor.addNode(node)
           await area.translate(node.id, {
-            x: sectionX + inputColX,
-            y: inputStartY + j * (INPUT_H + INPUT_GAP_Y),
+            x: overrideColX,
+            y: overrideY,
           })
-          await editor.addConnection(
-            new ClassicPreset.Connection(
-              node,
-              'value',
-              frame,
-              key
-            ) as Schemes['Connection']
-          )
+          overrideY += INPUT_H + OVERRIDE_GAP_Y
         }
 
-        /* ── Output nodes ─────────────────────────────────────── */
-        // Output kind → which override socket names it accepts. This is
-        // the schema that defines "which override connects to which
-        // output" — the connection list below reads from it too.
-        const overrideKeysByGroup: Record<string, string[]> = {
-          share: ['variants'],
-          slides: ['override'],
-          report: ['override'],
-          autoplay: ['map', 'narration'],
-        }
-
-        const outputData = buildOutputsForUnit(unit, slug, publicSiteUrl)
-        const outputNodesById = new Map<string, OutputNode>()
-        // Stack outputs vertically starting from the frame's top edge.
-        // They'll extend well below the frame — that's expected (slides +
-        // report + autoplay × 2 is ~5500px tall stacked); user pans.
-        let outY = frameTopY
-        for (const o of outputData) {
-          const ctrl = new IframeControl(o.src, o.w, o.h)
+        /* Outputs column */
+        let outY = baseY
+        if (group.tabbed) {
+          // ONE tabbed iframe for the whole group.
+          const first = groupOutputs[0]
+          const ctrl = new IframeControl(first.src, first.w, first.h)
+          ctrl.tabs = groupOutputs.map((o) => ({
+            id: o.id,
+            label: o.label,
+            tag: o.tag,
+            src: o.src,
+            w: o.w,
+            h: o.h,
+          }))
+          ctrl.activeTabId = first.id
           const node = new OutputNode(
-            o.label,
+            group.label,
             ctrl,
-            overrideKeysByGroup[o.group] ?? []
+            OVERRIDE_SOCKETS_BY_GROUP[groupId]
           )
-          outputNodesById.set(o.id, node)
+          outputMap.set(first.id, node)
           await editor.addNode(node)
-          await area.translate(node.id, {
-            x: sectionX + outputColX,
-            y: outY,
-          })
+          await area.translate(node.id, { x: outputColX, y: outY })
+          // Frame → output
           await editor.addConnection(
             new ClassicPreset.Connection(
               frame,
@@ -469,87 +996,188 @@ export default function CanvasReteClient({
               'render'
             ) as Schemes['Connection']
           )
-          outY += o.h + OUTPUT_GAP_Y
-        }
-
-        /* ── Override nodes (column 3, between frame and outputs) ─ */
-        // Each override entry: which slicer to call, the target output
-        // group, and the override socket name on the target node.
-        interface OverrideSpec {
-          data: InputNodeData
-          targetGroup: 'share' | 'slides' | 'report' | 'autoplay'
-          targetSocket: string
-        }
-        const overrideSpecs: OverrideSpec[] = [
-          {
-            data: shareNode(unit, parsedSources),
-            targetGroup: 'share',
-            targetSocket: 'variants',
-          },
-          {
-            data: reportNodeFormat(unit, parsedSources, 'slides'),
-            targetGroup: 'slides',
-            targetSocket: 'override',
-          },
-          {
-            data: reportNodeFormat(unit, parsedSources, 'report'),
-            targetGroup: 'report',
-            targetSocket: 'override',
-          },
-          {
-            data: mapOverrideNode(unit, parsedSources),
-            targetGroup: 'autoplay',
-            targetSocket: 'map',
-          },
-          {
-            data: narrationNode(unit, parsedSources),
-            targetGroup: 'autoplay',
-            targetSocket: 'narration',
-          },
-        ]
-        // Override label collisions are possible (e.g. two report formats
-        // both named "Override"); we already namespace via the slicers'
-        // shape so it's fine, but rename label-defaults for clarity.
-        const overrideTotalH =
-          overrideSpecs.length * INPUT_H +
-          (overrideSpecs.length - 1) * OVERRIDE_GAP_Y
-        const overrideStartY = frameTopY + FRAME_H / 2 - overrideTotalH / 2
-        for (let j = 0; j < overrideSpecs.length; j++) {
-          const spec = overrideSpecs[j]
-          const node = new DataNode(
-            spec.data.label,
-            spec.data.tag,
-            spec.data.body,
-            spec.data.variant
-          )
-          await editor.addNode(node)
-          await area.translate(node.id, {
-            x: sectionX + overrideColX,
-            y: overrideStartY + j * (INPUT_H + OVERRIDE_GAP_Y),
-          })
-          // Fan out to every output in the target group.
-          for (const target of outputData) {
-            if (target.group !== spec.targetGroup) continue
-            const targetNode = outputNodesById.get(target.id)
-            if (!targetNode) continue
+          // Each override → output (single node, multiple incoming wires
+          // for groups like autoplay that have multiple overrides; here
+          // share has just one, but the loop generalises).
+          for (const spec of overrideSpecs) {
+            const overrideNode = overrideMap.get(spec.socket)!
             await editor.addConnection(
               new ClassicPreset.Connection(
-                node,
+                overrideNode,
                 'value',
-                targetNode,
-                spec.targetSocket
+                node,
+                spec.socket
               ) as Schemes['Connection']
             )
+          }
+        } else {
+          // Stacked: one OutputNode per output, all connected from the
+          // same overrides and the same frame render socket.
+          for (const o of groupOutputs) {
+            const ctrl = new IframeControl(o.src, o.w, o.h)
+            const node = new OutputNode(
+              o.label,
+              ctrl,
+              OVERRIDE_SOCKETS_BY_GROUP[groupId]
+            )
+            outputMap.set(o.id, node)
+            await editor.addNode(node)
+            await area.translate(node.id, { x: outputColX, y: outY })
+            await editor.addConnection(
+              new ClassicPreset.Connection(
+                frame,
+                'render',
+                node,
+                'render'
+              ) as Schemes['Connection']
+            )
+            for (const spec of overrideSpecs) {
+              const overrideNode = overrideMap.get(spec.socket)!
+              await editor.addConnection(
+                new ClassicPreset.Connection(
+                  overrideNode,
+                  'value',
+                  node,
+                  spec.socket
+                ) as Schemes['Connection']
+              )
+            }
+            outY += o.h + OUTPUT_GAP_Y
+          }
+        }
+
+        expandedSlot = {
+          group: groupId,
+          nodes: { overrides: overrideMap, outputs: outputMap },
+        }
+      }
+
+      async function unmountGroup(): Promise<void> {
+        if (!expandedSlot) return
+        // Remove connections involving any of these nodes first — Rete
+        // requires connections to be cleared before their endpoints.
+        const slotNodeIds = new Set<string>()
+        for (const n of expandedSlot.nodes.overrides.values())
+          slotNodeIds.add(n.id)
+        for (const n of expandedSlot.nodes.outputs.values())
+          slotNodeIds.add(n.id)
+        for (const conn of [...editor.getConnections()]) {
+          if (slotNodeIds.has(conn.source) || slotNodeIds.has(conn.target)) {
+            await editor.removeConnection(conn.id)
+          }
+        }
+        for (const id of slotNodeIds) {
+          await editor.removeNode(id)
+        }
+        expandedSlot = null
+      }
+
+      /* ── Apply* methods exposed to the React effects ─────────── */
+
+      async function applyExpandedGroup(
+        next: OutputGroupId | null
+      ): Promise<void> {
+        const currentlyExpanded = expandedSlot?.group ?? null
+        if (currentlyExpanded === next) return
+
+        await unmountGroup()
+        if (next) await mountGroup(next)
+
+        // Refresh header labels so their "loaded / click" subtext + caret
+        // reflect the new state.
+        for (const group of OUTPUT_GROUPS) {
+          const node = headerNodes[group.id]
+          node.headerCtrl.expanded = next === group.id
+          await area.update('control', node.headerCtrl.id)
+        }
+      }
+
+      async function applySection(idx: number): Promise<void> {
+        const view = sectionViews[idx]
+        if (!view) return
+
+        // Frame iframe + pagination overlay
+        frameIframeCtrl.src = view.frameSrc
+        frameIframeCtrl.pagination = {
+          current: idx,
+          total: sectionViews.length,
+          label: view.heading,
+        }
+        await area.update('control', frameIframeCtrl.id)
+
+        // Input nodes (preview content)
+        for (const key of ['content', 'config', 'chart'] as const) {
+          const node = inputNodes[key]
+          const data = view.inputs[key]
+          node.previewCtrl.label = data.label
+          node.previewCtrl.tag = data.tag
+          node.previewCtrl.body = data.body
+          node.previewCtrl.variant = data.variant
+          await area.update('control', node.previewCtrl.id)
+        }
+
+        // Expanded group's overrides + output iframes (if any group open)
+        if (expandedSlot) {
+          const groupId = expandedSlot.group
+          const overrideSpecs = view.overrides[groupId]
+          for (const spec of overrideSpecs) {
+            const node = expandedSlot.nodes.overrides.get(spec.socket)
+            if (!node) continue
+            node.previewCtrl.label = spec.data.label
+            node.previewCtrl.tag = spec.data.tag
+            node.previewCtrl.body = spec.data.body
+            node.previewCtrl.variant = spec.data.variant
+            await area.update('control', node.previewCtrl.id)
+          }
+          const group = OUTPUT_GROUPS.find((g) => g.id === groupId)!
+          const newOutputs = view.outputs[groupId]
+          if (group.tabbed) {
+            // Single tabbed output — rewrite the tab src list and pick
+            // up the previously-active tab (matched by id; if the new
+            // section's tab ids match — they do, since ids derive from
+            // section id + ratio — we land on the same aspect).
+            const node = [...expandedSlot.nodes.outputs.values()][0]
+            if (node) {
+              const ctrl = node.controls.iframe as IframeControl
+              ctrl.tabs = newOutputs.map((o) => ({
+                id: o.id,
+                label: o.label,
+                tag: o.tag,
+                src: o.src,
+                w: o.w,
+                h: o.h,
+              }))
+              // Output ids are namespaced by section, so the prior
+              // activeTabId is stale after a section switch — default
+              // back to the first tab.
+              const first = newOutputs[0]
+              ctrl.activeTabId = first.id
+              ctrl.src = first.src
+              ctrl.width = first.w
+              ctrl.height = first.h
+              await area.update('control', ctrl.id)
+            }
+          } else {
+            // Stacked — outputs are keyed by output id, but a section
+            // switch changes those ids. Easiest correct path: tear down
+            // and rebuild this group with the new section's data.
+            await unmountGroup()
+            await mountGroup(groupId)
           }
         }
       }
 
-      // Auto-fit after the whole graph is built so the user sees more
-      // than one section on first paint. They can pan/zoom from there.
+      // Bootstrap: mount the initial expanded group (if any).
+      if (stateRef.current.expandedGroup) {
+        await mountGroup(stateRef.current.expandedGroup)
+      }
+
       await AreaExtensions.zoomAt(area, editor.getNodes())
 
-      teardown = () => {
-        area.destroy()
+      sceneRef.current = {
+        applySection,
+        applyExpandedGroup,
+        destroy: () => area.destroy(),
       }
     })().catch((err) => {
       console.error('[CanvasReteClient] setup failed', err)
@@ -557,9 +1185,39 @@ export default function CanvasReteClient({
 
     return () => {
       disposed = true
-      teardown?.()
+      sceneRef.current?.destroy()
+      sceneRef.current = null
     }
-  }, [slug, sectionUnits, parsedSources, publicSiteUrl])
+  }, [sectionViews])
+
+  /* ─── Apply state changes (without rebuilding the editor) ───── */
+  useEffect(() => {
+    void sceneRef.current?.applySection(activeSectionIndex)
+  }, [activeSectionIndex])
+
+  useEffect(() => {
+    void sceneRef.current?.applyExpandedGroup(expandedGroup)
+  }, [expandedGroup])
+
+  /* ─── Keyboard pagination (← / →) ────────────────────────────── */
+  const onKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return
+      if (e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'ArrowLeft') {
+        setActiveSectionIndex((i) => Math.max(0, i - 1))
+      } else if (e.key === 'ArrowRight') {
+        setActiveSectionIndex((i) =>
+          Math.min(sectionViews.length - 1, i + 1)
+        )
+      }
+    },
+    [sectionViews.length]
+  )
+  useEffect(() => {
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onKey])
 
   return (
     <div
@@ -572,10 +1230,7 @@ export default function CanvasReteClient({
         overflow: 'hidden',
       }}
     >
-      <div
-        ref={containerRef}
-        style={{ position: 'absolute', inset: 0 }}
-      />
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <header
         style={{
           position: 'absolute',
@@ -592,8 +1247,7 @@ export default function CanvasReteClient({
       >
         <strong style={{ fontSize: 13 }}>{slug}</strong>
         <span style={{ marginLeft: 12, color: '#888' }}>
-          rete spike · {sectionUnits.length} sections · drag frame corner
-          to resize
+          rete spike · {sectionViews.length} sections · ← / → to paginate
         </span>
       </header>
     </div>
