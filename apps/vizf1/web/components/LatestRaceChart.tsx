@@ -2,7 +2,7 @@
 
 import { PositionChart } from '@vismay/f1-viz/web'
 import { useSchedule } from '@/lib/useSchedule'
-import { useRaceResults } from '@/lib/useRaceResults'
+import { useSessionResults } from '@/lib/useSessionResults'
 import { useLapPositions } from '@/lib/useLapPositions'
 
 function Loading({ label }: { label: string }) {
@@ -30,7 +30,7 @@ export function LatestRaceChart({ topN = 6 }: { topN?: number }) {
   const finished = (schedule.data ?? []).filter((r) => r.status === 'finished')
   const latest = finished[finished.length - 1] ?? null
 
-  const results = useRaceResults(latest?.round ?? null)
+  const results = useSessionResults(latest?.round ?? null, 'race')
 
   const driverMeta =
     (results.data ?? [])
@@ -39,7 +39,8 @@ export function LatestRaceChart({ topN = 6 }: { topN?: number }) {
         driverId: r.driverId,
         driverCode: r.driverCode,
         driverName: r.driverName,
-        constructorId: r.constructorId,
+        constructorId: r.constructorId ?? 'unknown',
+        constructorColor: r.constructorColor,
       }))
 
   const laps = useLapPositions(latest?.round ?? null, driverMeta)

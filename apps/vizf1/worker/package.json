@@ -17,7 +17,6 @@
     "@google/genai": "^1.50.1",
     "@supabase/supabase-js": "^2.45.4",
     "@vizf1/brand": "workspace:*",
-    "@vizf1/shared": "workspace:*",
     "rss-parser": "^3.13.0",
     "zod": "^3.23.8"
   },

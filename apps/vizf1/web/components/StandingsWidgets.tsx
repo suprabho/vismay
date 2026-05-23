@@ -2,8 +2,7 @@
 
 import { DriverStandings } from '@vismay/f1-viz/web'
 import type { ConstructorStandingRow } from '@vismay/f1-viz/types'
-import { useDriverStandings } from '@/lib/useDriverStandings'
-import { useConstructorStandings } from '@/lib/useConstructorStandings'
+import { useDriverStandings, useConstructorStandings } from '@/lib/useStandings'
 
 function Loading() {
   return (

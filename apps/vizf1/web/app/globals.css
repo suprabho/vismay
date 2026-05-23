@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* Tailwind v4 JIT only scans the importing package by default. Shared UI in
+ * the f1-viz vertical (DriverStandings, PositionChart, RaceRow, EntityChip)
+ * uses Tailwind classes too, so point the scanner at its source. */
+@source '../../../../verticals/f1-viz/src';
+
 @theme {
   --color-bg: #0b0d12;
   --color-surface: #13161d;

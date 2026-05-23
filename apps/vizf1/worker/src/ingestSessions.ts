@@ -95,7 +95,33 @@ async function upsertRace(
 
 async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
   if (drivers.length === 0) return
-  // Dedupe by name_acronym → driver_id slug.
+
+  // Constructors first — vizf1_drivers.constructor_id has a FK referencing
+  // vizf1_constructors(constructor_id) (added in 002_drivers_constructor_fk.sql),
+  // so the parent rows must exist before drivers upsert.
+  const constructors = new Map<string, { name: string; color: string | null }>()
+  for (const d of drivers) {
+    const id = slug(d.team_name)
+    if (!constructors.has(id)) {
+      constructors.set(id, {
+        name: d.team_name,
+        color: d.team_colour ? `#${d.team_colour}` : null,
+      })
+    }
+  }
+  const constructorRows = Array.from(constructors.entries()).map(([constructor_id, c]) => ({
+    constructor_id,
+    name: c.name,
+    primary_color: c.color,
+    logo_url: F1_BRAND.constructorLogos[constructor_id] ?? null,
+    updated_at: new Date().toISOString(),
+  }))
+  const { error: cErr } = await sb
+    .from('vizf1_constructors')
+    .upsert(constructorRows, { onConflict: 'constructor_id' })
+  if (cErr) console.error('[ingest:sessions] constructors upsert failed:', cErr)
+
+  // Dedupe drivers by slug, then upsert.
   const byId = new Map<string, OpenF1Driver>()
   for (const d of drivers) {
     const id = slug(`${d.first_name}_${d.last_name}`)
@@ -115,26 +141,6 @@ async function upsertDrivers(sb: SupabaseClient, drivers: OpenF1Driver[]) {
   }))
   const { error } = await sb.from('vizf1_drivers').upsert(rows, { onConflict: 'driver_id' })
   if (error) console.error('[ingest:sessions] drivers upsert failed:', error)
-
-  // And constructors (derived from team_name + team_colour)
-  const constructors = new Map<string, { name: string; color: string | null }>()
-  for (const d of drivers) {
-    const id = slug(d.team_name)
-    if (!constructors.has(id)) {
-      constructors.set(id, {
-        name: d.team_name,
-        color: d.team_colour ? `#${d.team_colour}` : null,
-      })
-    }
-  }
-  const constructorRows = Array.from(constructors.entries()).map(([constructor_id, c]) => ({
-    constructor_id,
-    name: c.name,
-    primary_color: c.color,
-    logo_url: F1_BRAND.constructorLogos[constructor_id] ?? null,
-    updated_at: new Date().toISOString(),
-  }))
-  await sb.from('vizf1_constructors').upsert(constructorRows, { onConflict: 'constructor_id' })
 }
 
 async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: OpenF1Session) {
@@ -212,6 +218,61 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
     .from('vizf1_session_results')
     .upsert(results, { onConflict: 'session_id,driver_id' })
   if (rErr) console.error(`[session_results] upsert failed (${sessionType}):`, rErr)
+
+  // Race + sprint: precompute per-lap position so the client chart needs a
+  // single round-trip instead of pivoting raw /position events itself.
+  if (sessionType === 'race' || sessionType === 'sprint') {
+    await upsertLapPositions(sb, sessionId, laps, positions, driverNumberToId)
+  }
+}
+
+async function upsertLapPositions(
+  sb: SupabaseClient,
+  sessionId: string,
+  laps: Awaited<ReturnType<typeof listLaps>>,
+  positions: Awaited<ReturnType<typeof listPositions>>,
+  driverNumberToId: Map<number, string>,
+) {
+  if (positions.length === 0 || laps.length === 0) return
+
+  // Group position events by driver (sorted ascending by date).
+  const posByDriver = new Map<number, { t: number; pos: number }[]>()
+  for (const p of positions) {
+    const arr = posByDriver.get(p.driver_number) ?? []
+    arr.push({ t: new Date(p.date).getTime(), pos: p.position })
+    posByDriver.set(p.driver_number, arr)
+  }
+  for (const arr of posByDriver.values()) arr.sort((a, b) => a.t - b.t)
+
+  const rows: { session_id: string; driver_id: string; lap: number; position: number }[] = []
+  for (const lap of laps) {
+    const driverId = driverNumberToId.get(lap.driver_number)
+    if (!driverId || !lap.date_start) continue
+    const events = posByDriver.get(lap.driver_number)
+    if (!events || events.length === 0) continue
+
+    // "Position at start of lap N" = the latest position event at or before
+    // this lap's date_start. Equivalent to "position at the end of lap N-1".
+    const t = new Date(lap.date_start).getTime()
+    let pos: number | null = null
+    for (const ev of events) {
+      if (ev.t <= t) pos = ev.pos
+      else break
+    }
+    if (pos == null) continue
+    rows.push({ session_id: sessionId, driver_id: driverId, lap: lap.lap_number, position: pos })
+  }
+
+  if (rows.length === 0) return
+  // Chunk to stay under PostgREST's 1000-row body limit comfortably.
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const slice = rows.slice(i, i + CHUNK)
+    const { error } = await sb
+      .from('vizf1_session_lap_positions')
+      .upsert(slice, { onConflict: 'session_id,driver_id,lap' })
+    if (error) console.error('[session_lap_positions] upsert failed:', error)
+  }
 }
 
 export async function runIngestSessions(year?: number) {

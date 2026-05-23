@@ -1,14 +1,8 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { RaceSchema, type RaceApi } from '@vizf1/shared'
 import type { RaceRow } from '@vismay/f1-viz/types'
-import { fetchJolpica } from './jolpica'
 import { supabaseBrowser } from './supabaseBrowser'
-
-type RaceTableEnvelope = {
-  RaceTable: { season: string; Races: RaceApi[] }
-}
 
 type RaceDbRow = {
   id: string
@@ -24,17 +18,26 @@ type RaceDbRow = {
     locality: string | null
     country: string | null
   } | null
+  // Inner-joined race session, used to surface the *real* finished/pending
+  // state — race day passing isn't enough, OpenF1 also has to have published
+  // the results.
+  vizf1_sessions: { status: string }[]
 }
 
-function statusFor(date: string, time: string | undefined | null): RaceRow['status'] {
+function statusFor(
+  date: string,
+  time: string | undefined | null,
+  raceSessionStatus: string | undefined,
+): RaceRow['status'] {
+  if (raceSessionStatus === 'finished') return 'finished'
   const now = Date.now()
   const start = new Date(`${date}T${time ?? '00:00:00Z'}`).getTime()
-  if (start + 4 * 60 * 60 * 1000 < now) return 'finished'
   if (start < now) return 'live'
   return 'upcoming'
 }
 
 function dbRowToRow(r: RaceDbRow): RaceRow {
+  const raceSession = r.vizf1_sessions?.[0]
   return {
     id: `${r.season}-${r.round}`,
     season: r.season,
@@ -46,60 +49,30 @@ function dbRowToRow(r: RaceDbRow): RaceRow {
     locality: r.circuits?.locality ?? null,
     date: r.date,
     time: r.time,
-    status: statusFor(r.date, r.time),
+    status: statusFor(r.date, r.time, raceSession?.status),
     hasSprint: r.has_sprint,
   }
 }
 
-export function raceApiToRow(r: RaceApi): RaceRow {
-  return {
-    id: `${r.season}-${r.round}`,
-    season: r.season,
-    round: Number(r.round),
-    raceName: r.raceName,
-    circuitId: r.Circuit.circuitId,
-    circuitName: r.Circuit.circuitName,
-    country: r.Circuit.Location.country,
-    locality: r.Circuit.Location.locality ?? null,
-    date: r.date,
-    time: r.time ?? null,
-    status: statusFor(r.date, r.time),
-    hasSprint: Boolean(r.Sprint),
-  }
-}
-
-/**
- * Read schedule from Supabase first; fall back to Jolpica if the DB hasn't
- * been seeded yet (cold-start). This keeps `pnpm dev` usable before the
- * worker has ever run.
- */
 export function useSchedule() {
   return useQuery({
     queryKey: ['vizf1', 'schedule', 'current'],
     queryFn: async (): Promise<RaceRow[]> => {
-      try {
-        const sb = supabaseBrowser()
-        const year = String(new Date().getFullYear())
-        const { data, error } = await sb
-          .from('vizf1_races')
-          .select(
-            'id, season, round, race_name, circuit_id, date, time, has_sprint, circuits:vizf1_circuits(name, locality, country)',
-          )
-          .eq('season', year)
-          .order('round', { ascending: true })
-        if (error) throw error
-        if (data && data.length > 0) {
-          return (data as unknown as RaceDbRow[]).map(dbRowToRow)
-        }
-      } catch (e) {
-        console.warn('[useSchedule] Supabase read failed, falling back to Jolpica:', e)
-      }
-      const races = await fetchJolpica<RaceApi, RaceTableEnvelope>(
-        'current',
-        (m) => m.RaceTable.Races,
-        RaceSchema,
-      )
-      return races.map(raceApiToRow)
+      const sb = supabaseBrowser()
+      const year = String(new Date().getFullYear())
+      const { data, error } = await sb
+        .from('vizf1_races')
+        .select(
+          "id, season, round, race_name, circuit_id, date, time, has_sprint, circuits:vizf1_circuits(name, locality, country), vizf1_sessions(status, session_type)",
+        )
+        .eq('season', year)
+        .eq('vizf1_sessions.session_type', 'race')
+        // Pre-season testing meetings come from OpenF1 alongside real GPs but
+        // they aren't races — no race session, no quali, no points. Hide them.
+        .neq('race_name', 'Pre-Season Testing')
+        .order('round', { ascending: true })
+      if (error) throw error
+      return ((data ?? []) as unknown as RaceDbRow[]).map(dbRowToRow)
     },
   })
 }

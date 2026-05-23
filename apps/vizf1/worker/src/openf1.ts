@@ -1,26 +1,64 @@
 /**
- * Thin typed wrapper over OpenF1 (https://openf1.org).
- *
- * Jolpica/Ergast doesn't expose practice sessions, headshots, or per-driver
- * team colours — OpenF1 does. We use it for everything live-shaped (FP, sprint,
- * race-weekend metadata) and complement Jolpica's authoritative race results
- * where they overlap.
+ * Thin typed wrapper over OpenF1 (https://openf1.org). VizF1's sole upstream
+ * data source: meetings, sessions, drivers, laps, positions, locations.
  *
  * Rate limit: undocumented, treat as ~60/min. The ingesters fetch sequentially
- * per session and cache aggressively.
+ * via a serialised request gate and back off on 429/5xx.
  */
 
 const BASE_URL = 'https://api.openf1.org/v1'
 
-async function fetchOpenF1<T>(path: string): Promise<T[]> {
+// OpenF1 rate-limits aggressively (undocumented, treat as ~60/min). A bulk
+// re-ingest of a full season hammers ~400 requests in <2min so we get throttled.
+// Conservatively pause between calls and retry 429/5xx with exponential backoff.
+const REQUEST_SPACING_MS = 500
+const MAX_RETRIES = 8
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// Serialised request gate — even when Promise.all fires multiple fetchOpenF1
+// calls concurrently, this chained promise enforces real spacing between them.
+// Without this, parallel callers race on a shared lastRequestAt and the spacing
+// degenerates to "all fire at once" which trips the rate limiter.
+let requestGate: Promise<void> = Promise.resolve()
+function nextSlot(): Promise<void> {
+  const slot = requestGate.then(() => sleep(REQUEST_SPACING_MS))
+  requestGate = slot
+  return slot
+}
+
+async function fetchOpenF1<T>(path: string, opts: { treat404AsEmpty?: boolean } = {}): Promise<T[]> {
   const url = path.startsWith('http') ? path : `${BASE_URL}${path}`
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'VizF1/1.0 (+https://vizf1.app)' },
-  })
-  if (!res.ok) {
-    throw new Error(`OpenF1 ${res.status} ${path}`)
+
+  let lastErr: Error | null = null
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    // Wait for our turn in the serialised request queue.
+    await nextSlot()
+
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'VizF1/1.0 (+https://vizf1.app)' },
+    })
+    if (res.ok) return (await res.json()) as T[]
+
+    // OpenF1 returns 404 (not []) when an endpoint has no rows for a session.
+    // For per-session telemetry endpoints, that's expected — treat as empty.
+    if (res.status === 404 && opts.treat404AsEmpty) return []
+
+    // 429 / 5xx are transient — back off and retry. Other 4xx is fatal.
+    if (res.status !== 429 && res.status < 500) {
+      throw new Error(`OpenF1 ${res.status} ${path}`)
+    }
+    lastErr = new Error(`OpenF1 ${res.status} ${path}`)
+    if (attempt === MAX_RETRIES) break
+
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s (plus ±20% jitter).
+    const base = 1000 * Math.pow(2, attempt)
+    const jitter = base * (Math.random() * 0.4 - 0.2)
+    await sleep(base + jitter)
   }
-  return (await res.json()) as T[]
+  throw lastErr ?? new Error(`OpenF1 unknown error ${path}`)
 }
 
 // =====================================================
@@ -99,10 +137,11 @@ export type OpenF1Lap = {
   duration_sector_1: number | null
   duration_sector_2: number | null
   duration_sector_3: number | null
+  date_start: string | null // ISO timestamp when the lap began
 }
 
 export function listLaps(sessionKey: number): Promise<OpenF1Lap[]> {
-  return fetchOpenF1<OpenF1Lap>(`/laps?session_key=${sessionKey}`)
+  return fetchOpenF1<OpenF1Lap>(`/laps?session_key=${sessionKey}`, { treat404AsEmpty: true })
 }
 
 // =====================================================
@@ -117,7 +156,7 @@ export type OpenF1Position = {
 }
 
 export function listPositions(sessionKey: number): Promise<OpenF1Position[]> {
-  return fetchOpenF1<OpenF1Position>(`/position?session_key=${sessionKey}`)
+  return fetchOpenF1<OpenF1Position>(`/position?session_key=${sessionKey}`, { treat404AsEmpty: true })
 }
 
 // =====================================================
@@ -143,6 +182,7 @@ export function listLocations(
     `/location?session_key=${sessionKey}&driver_number=${driverNumber}&date>=${encodeURIComponent(
       fromIso,
     )}&date<=${encodeURIComponent(toIso)}`,
+    { treat404AsEmpty: true },
   )
 }
 
