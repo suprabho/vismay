@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { PositionChart } from '@vismay/f1-viz/web'
 import type { RaceRow } from '@vismay/f1-viz/types'
 import {
   useSessionResults,
@@ -8,6 +9,7 @@ import {
   formatGapMs,
   type SessionType,
 } from '@/lib/useSessionResults'
+import { useLapPositions } from '@/lib/useLapPositions'
 
 type Tab = 'standings' | 'qualifying' | 'fp1' | 'fp2' | 'fp3' | 'sprintQ' | 'sprint'
 
@@ -184,6 +186,33 @@ function SessionTable({
   )
 }
 
+function PositionByLap({ round, raceLabel, topN = 6 }: {
+  round: number
+  raceLabel: string
+  topN?: number
+}) {
+  // Reuse useSessionResults to pick the top finishers, then feed their meta
+  // into useLapPositions for the per-lap series.
+  const results = useSessionResults(round, 'race')
+  const driverMeta =
+    (results.data ?? [])
+      .slice(0, topN)
+      .map((r) => ({
+        driverId: r.driverId,
+        driverCode: r.driverCode,
+        driverName: r.driverName,
+        constructorId: r.constructorId ?? 'unknown',
+        constructorColor: r.constructorColor,
+      }))
+  const laps = useLapPositions(round, driverMeta)
+  if (results.isLoading || laps.isLoading) return null
+  const lanes = laps.data?.lanes ?? []
+  if (lanes.length === 0) return null
+  return (
+    <PositionChart raceLabel={raceLabel} lanes={lanes} totalLaps={laps.data?.totalLaps} />
+  )
+}
+
 export function RaceWeekendTabs({ race }: { race: RaceRow }) {
   const [tab, setTab] = useState<Tab>('standings')
 
@@ -219,7 +248,12 @@ export function RaceWeekendTabs({ race }: { race: RaceRow }) {
         ) : null}
       </div>
 
-      {tab === 'standings' && <SessionTable round={race.round} type="race" emptyLabel="results" />}
+      {tab === 'standings' && (
+        <div className="space-y-3">
+          <PositionByLap round={race.round} raceLabel={`${race.season} ${race.raceName}`} />
+          <SessionTable round={race.round} type="race" emptyLabel="results" />
+        </div>
+      )}
       {tab === 'qualifying' && <SessionTable round={race.round} type="quali" emptyLabel="qualifying" />}
       {tab === 'fp1' && <SessionTable round={race.round} type="fp1" emptyLabel="FP1 data" />}
       {tab === 'fp2' && <SessionTable round={race.round} type="fp2" emptyLabel="FP2 data" />}

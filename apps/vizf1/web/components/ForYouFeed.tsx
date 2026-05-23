@@ -6,7 +6,7 @@ import {
   DriverStandingsWidget,
   ConstructorStandingsWidget,
 } from '@/components/StandingsWidgets'
-import { LatestRaceChart } from '@/components/LatestRaceChart'
+import { SeasonStandingsChart } from '@/components/SeasonStandingsChart'
 
 export function ForYouFeed() {
   return (
@@ -20,8 +20,8 @@ export function ForYouFeed() {
       <SectionHeader title="Constructors' standings" href="/feed#constructors" />
       <ConstructorStandingsWidget />
 
-      <SectionHeader title="Position over time" hint="Most recent race" />
-      <LatestRaceChart />
+      <SectionHeader title="Standings over time" hint="Season so far" />
+      <SeasonStandingsChart />
     </div>
   )
 }
