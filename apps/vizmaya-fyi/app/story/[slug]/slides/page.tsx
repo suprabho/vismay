@@ -8,8 +8,7 @@
  * calls `page.pdf({ landscape: true, width: 1920px, height: 1080px })`.
  */
 
-import { notFound, redirect } from 'next/navigation'
-import { isAuthed } from '@/lib/adminAuth'
+import { notFound } from 'next/navigation'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { getStoryContent } from '@vismay/content-source/content'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
@@ -47,8 +46,7 @@ export default async function StorySlidesPage({ params, searchParams }: RoutePar
   const embed = sp.embed === '1'
   const sectionFilter = typeof sp.section === 'string' ? sp.section : null
 
-  if (!(await isAuthed()))
-    redirect(`/admin/login?next=${encodeURIComponent(`/story/${slug}/slides${print ? '?print=1' : ''}`)}`)
+  // Auth handled by middleware (signed URL token).
 
   let story
   let config

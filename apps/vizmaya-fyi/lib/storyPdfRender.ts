@@ -18,7 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chromium } from 'playwright'
-import { ADMIN_COOKIE_NAME, expectedToken } from './adminAuth'
+import { signOutputUrl } from '@vismay/admin-core/signedUrl'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import {
   computeContentRevisionHash,
@@ -102,31 +102,6 @@ async function renderPdfBuffer(args: {
       reducedMotion: 'no-preference',
     })
 
-    // Pre-authenticate as admin so the gated /story/<slug>/<format> route
-    // accepts the request. Computes the same hmac the auth lib expects from
-    // an /api/admin/login round-trip — skipping that round-trip avoids a
-    // dependency on the Next dev server being able to set cookies on us.
-    // Throws if ADMIN_PASSWORD isn't configured: in that case the route
-    // would redirect us to /admin/login and the render would fail anyway.
-    const adminToken = expectedToken()
-    if (!adminToken) {
-      throw new Error(
-        'ADMIN_PASSWORD not set — cannot authenticate Playwright against gated /story/<slug>/<format> route'
-      )
-    }
-    const cookieUrl = new URL(args.baseUrl)
-    await context.addCookies([
-      {
-        name: ADMIN_COOKIE_NAME,
-        value: adminToken,
-        domain: cookieUrl.hostname,
-        path: '/',
-        httpOnly: true,
-        secure: cookieUrl.protocol === 'https:',
-        sameSite: 'Lax',
-      },
-    ])
-
     const page = await context.newPage()
 
     // Surface runtime exceptions and GL/WebGL warnings to the runner stdout.
@@ -143,7 +118,16 @@ async function renderPdfBuffer(args: {
       args.log(`pageerror: ${err.message}`)
     })
 
-    const url = `${args.baseUrl}/story/${args.slug}/${args.format}?print=1`
+    // The /story/<slug>/<format> route is gated by signed-URL middleware.
+    // Mint a short-lived HMAC token (5 min — plenty for one render) and
+    // append it to the URL Playwright navigates to. Same secret is used by
+    // the consumer middleware to verify.
+    const url = signOutputUrl({
+      baseUrl: args.baseUrl,
+      path: `/story/${args.slug}/${args.format}`,
+      ttlSeconds: 5 * 60,
+      query: { print: '1' },
+    })
     args.log(`navigating: ${url}`)
     await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
 

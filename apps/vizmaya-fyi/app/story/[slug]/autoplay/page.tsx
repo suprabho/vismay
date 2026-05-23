@@ -1,14 +1,12 @@
-// Was `revalidate = 60`. The admin check below reads cookies, which
-// implicitly marks each request dynamic — the page no longer benefits
-// from ISR caching. Set `force-dynamic` so that's explicit and there's
-// no surprise when Next tries to (and can't) cache a per-cookie response.
+// Middleware gates this route via signed URL; anyone reaching the page
+// is an admin viewer. Dynamic because the signed URL is per-request and
+// the page reads override yaml unconditionally.
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
 import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
-import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { buildMapTargets } from '@vismay/viz-engine'
 import ThemeProvider from '@/components/story/ThemeProvider'
@@ -49,17 +47,11 @@ export default async function AutoplayPage({ params, searchParams }: RouteParams
     config
   )
 
-  // Admin viewers see the Map editor side panel. Public viewers never get
-  // the toggle or the map state, so the page payload stays small for them.
-  // The map_yaml override itself still applies to everyone in autoplay
-  // mode — that's read by the inner story page via StoryMapShell.
-  const admin = await isAuthed()
-  let mapTargets: ReturnType<typeof buildMapTargets> = []
-  let initialMapYaml: string | null = null
-  if (admin) {
-    mapTargets = buildMapTargets(config)
-    initialMapYaml = await getContentSource().readMapYaml(slug)
-  }
+  // The middleware gate guarantees anyone reaching this page is an admin
+  // viewer (signed URL required). Always load the map editor side panel
+  // payload — there's no public-viewer case anymore.
+  const mapTargets = buildMapTargets(config)
+  const initialMapYaml = await getContentSource().readMapYaml(slug)
 
   return (
     <ThemeProvider theme={story.frontmatter.theme}>
@@ -71,7 +63,7 @@ export default async function AutoplayPage({ params, searchParams }: RouteParams
         desktopToMobile={desktopToMobile}
         accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
         defaults={config.defaults}
-        isAdmin={admin}
+        isAdmin={true}
         mapTargets={mapTargets}
         mapStyle={config.defaults.mapStyle}
         initialMapYaml={initialMapYaml}

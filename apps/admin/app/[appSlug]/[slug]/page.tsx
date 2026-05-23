@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { loadStoryEditorData } from '@/lib/storyEditorData'
+import { signStoryLinks } from '@/lib/signedConsumerLinks'
 import EditorClient from '@/components/vizmaya/EditorClient'
 
 export const dynamic = 'force-dynamic'
@@ -14,5 +15,13 @@ export default async function AppEditStoryPage({ params }: Props) {
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/${slug}`)
   const initial = await loadStoryEditorData(slug)
   if (initial == null) notFound()
-  return <EditorClient slug={slug} sectionHref={`/${appSlug}`} initial={initial} />
+  const signedLinks = signStoryLinks(slug)
+  return (
+    <EditorClient
+      slug={slug}
+      sectionHref={`/${appSlug}`}
+      initial={initial}
+      signedLinks={signedLinks}
+    />
+  )
 }

@@ -7,7 +7,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
-    "./middleware": "./src/middleware.ts"
+    "./middleware": "./src/middleware.ts",
+    "./signedUrl": "./src/signedUrl.ts",
+    "./signedMiddleware": "./src/signedMiddleware.ts"
   },
   "peerDependencies": {
     "next": "^16.0.0",
