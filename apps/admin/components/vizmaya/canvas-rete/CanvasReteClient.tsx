@@ -160,13 +160,15 @@ function buildSectionView(
  *      Group headers always exist as Rete nodes; clicking one expands its
  *      output(s) and removes whatever was previously expanded. Override
  *      nodes that feed the collapsed group also vanish.
- *   2. Share aspect tabs — Share group renders as ONE iframe node with
- *      an internal tab strip (3:4 / 1:1 / 4:3); only one mounted.
+ *   2. Share collapses to one iframe — the share page already has its
+ *      own aspect-ratio toggle inside, so a Rete-side tab strip just
+ *      duplicates that control. We mount the default 3:4 variant; the
+ *      user switches ratios from inside the iframe.
  *   3. Single frame iframe — instead of N section frames, one frame at
  *      a time with a pagination overlay (◀ §3 of 5 ▶) on the iframe.
  *      Section switch updates the same nodes in place; no Rete remount.
  *
- * Net iframe count: 2 typically (frame + tabbed share), 3 max (autoplay
+ * Net iframe count: 2 typically (frame + share), 3 max (autoplay
  * expanded, 9:16 + 16:9 stacked). Independent of section count.
  */
 export default function CanvasReteClient({
@@ -244,19 +246,14 @@ export default function CanvasReteClient({
 
       /* ── Custom controls ─────────────────────────────────────── */
 
-      // For the frame iframe + the output iframes. Supports optional
-      // tab strip (for Share aspect tabs) and an optional pagination
-      // overlay (only the frame uses it for section navigation).
+      // For the frame iframe + the output iframes. Optional pagination
+      // overlay is only used on the frame (for section navigation).
       class IframeControl extends ClassicPreset.Control {
         src: string
         width: number
         height: number
         resizable: boolean
         onResize?: (w: number, h: number) => void
-        // Tab support — when set, control renders a tab strip above
-        // the iframe and the iframe src follows activeTabId.
-        tabs?: Array<{ id: string; label: string; tag: string; src: string; w: number; h: number }>
-        activeTabId?: string
         // Pagination overlay — only used on the frame iframe.
         pagination?: {
           current: number
@@ -459,80 +456,6 @@ export default function CanvasReteClient({
         )
       }
 
-      function TabStrip({
-        tabs,
-        activeId,
-        onSelect,
-      }: {
-        tabs: NonNullable<IframeControl['tabs']>
-        activeId: string | undefined
-        onSelect: (id: string) => void
-      }) {
-        const stop = (e: React.MouseEvent | React.PointerEvent) =>
-          e.stopPropagation()
-        return (
-          <div
-            onPointerDown={stop}
-            onMouseDown={stop}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: SHARE_PREVIEW_PADDING_TOP - 8,
-              padding: 4,
-              display: 'flex',
-              gap: 4,
-              background: 'rgba(20,20,20,0.85)',
-              backdropFilter: 'blur(8px)',
-              borderBottom: '1px solid #1f1f1f',
-              borderRadius: '8px 8px 0 0',
-              zIndex: 4,
-              pointerEvents: 'auto',
-              fontFamily: 'system-ui, sans-serif',
-            }}
-          >
-            {tabs.map((t) => {
-              const active = t.id === activeId
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => onSelect(t.id)}
-                  style={{
-                    flex: 1,
-                    background: active ? '#222' : 'transparent',
-                    color: active ? '#fff' : '#888',
-                    border: `1px solid ${active ? '#555' : 'transparent'}`,
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    padding: '6px 10px',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    fontFamily: 'inherit',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 1,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  <span>{t.label}</span>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: active ? '#888' : '#555',
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    {t.tag}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )
-      }
-
       function IframeControlView({ data }: { data: IframeControl }) {
         const [, force] = useReducer((n: number) => n + 1, 0)
 
@@ -561,19 +484,7 @@ export default function CanvasReteClient({
           window.addEventListener('mouseup', onUp)
         }
 
-        const onSelectTab = (id: string) => {
-          if (!data.tabs) return
-          const tab = data.tabs.find((t) => t.id === id)
-          if (!tab) return
-          data.activeTabId = id
-          data.src = tab.src
-          data.width = tab.w
-          data.height = tab.h
-          force()
-        }
-
-        const hasOverlay = data.tabs != null || data.pagination != null
-        const overlayPad = hasOverlay ? SHARE_PREVIEW_PADDING_TOP : 0
+        const overlayPad = data.pagination ? SHARE_PREVIEW_PADDING_TOP : 0
 
         return (
           <div
@@ -600,13 +511,6 @@ export default function CanvasReteClient({
                     Math.min(data.pagination!.total - 1, i + 1)
                   )
                 }
-              />
-            )}
-            {data.tabs && (
-              <TabStrip
-                tabs={data.tabs}
-                activeId={data.activeTabId}
-                onSelect={onSelectTab}
               />
             )}
             <div
@@ -967,18 +871,13 @@ export default function CanvasReteClient({
         /* Outputs column */
         let outY = baseY
         if (group.tabbed) {
-          // ONE tabbed iframe for the whole group.
+          // "Tabbed" groups (just Share for now) collapse to a SINGLE
+          // iframe — the underlying page has its own aspect toggle, so
+          // a Rete-side tab strip would just duplicate it. We mount the
+          // default first variant (Share 3:4) and let the user switch
+          // ratios from inside the iframe.
           const first = groupOutputs[0]
           const ctrl = new IframeControl(first.src, first.w, first.h)
-          ctrl.tabs = groupOutputs.map((o) => ({
-            id: o.id,
-            label: o.label,
-            tag: o.tag,
-            src: o.src,
-            w: o.w,
-            h: o.h,
-          }))
-          ctrl.activeTabId = first.id
           const node = new OutputNode(
             group.label,
             ctrl,
@@ -996,9 +895,8 @@ export default function CanvasReteClient({
               'render'
             ) as Schemes['Connection']
           )
-          // Each override → output (single node, multiple incoming wires
-          // for groups like autoplay that have multiple overrides; here
-          // share has just one, but the loop generalises).
+          // Overrides → output (share has one, but the loop generalises
+          // if other groups ever collapse to a single iframe).
           for (const spec of overrideSpecs) {
             const overrideNode = overrideMap.get(spec.socket)!
             await editor.addConnection(
@@ -1132,26 +1030,12 @@ export default function CanvasReteClient({
           const group = OUTPUT_GROUPS.find((g) => g.id === groupId)!
           const newOutputs = view.outputs[groupId]
           if (group.tabbed) {
-            // Single tabbed output — rewrite the tab src list and pick
-            // up the previously-active tab (matched by id; if the new
-            // section's tab ids match — they do, since ids derive from
-            // section id + ratio — we land on the same aspect).
+            // Single-iframe group (Share). The output node persists; we
+            // just point it at the new section's default variant.
             const node = [...expandedSlot.nodes.outputs.values()][0]
             if (node) {
               const ctrl = node.controls.iframe as IframeControl
-              ctrl.tabs = newOutputs.map((o) => ({
-                id: o.id,
-                label: o.label,
-                tag: o.tag,
-                src: o.src,
-                w: o.w,
-                h: o.h,
-              }))
-              // Output ids are namespaced by section, so the prior
-              // activeTabId is stale after a section switch — default
-              // back to the first tab.
               const first = newOutputs[0]
-              ctrl.activeTabId = first.id
               ctrl.src = first.src
               ctrl.width = first.w
               ctrl.height = first.h
