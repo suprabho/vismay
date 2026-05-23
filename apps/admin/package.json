@@ -16,6 +16,8 @@
     "@supabase/supabase-js": "^2.103.0",
     "@vismay/admin-core": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/f1-viz": "workspace:*",
+    "@vismay/footshort-viz": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "gray-matter": "^4.0.3",
     "mapbox-gl": "^3.21.0",
@@ -24,6 +26,12 @@
     "playwright": "^1.59.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "rete": "^2.0.6",
+    "rete-area-plugin": "^2.1.5",
+    "rete-connection-plugin": "^2.0.5",
+    "rete-react-plugin": "^2.1.0",
+    "rete-render-utils": "^2.0.3",
+    "styled-components": "^6.4.2",
     "yaml": "^2.8.3"
   },
   "devDependencies": {

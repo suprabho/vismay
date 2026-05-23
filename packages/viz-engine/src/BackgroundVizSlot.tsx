@@ -18,6 +18,15 @@ interface BackgroundVizSlotProps {
   activeUnit: number
   mode: 'scroll' | 'autoplay' | 'capture' | 'print'
   noteLayerReady?: (key: string) => void
+  /**
+   * Where the background stack paints.
+   *   - 'viewport' (default): `position: fixed; inset: 0`. The story page sits
+   *     a scroll-snap container above this and lets the map show through.
+   *   - 'tile': `position: absolute; inset: 0`. Confines the stack to the
+   *     nearest positioned ancestor so the canvas editor can mount one
+   *     instance per tile without each one painting full-viewport.
+   */
+  containerMode?: 'viewport' | 'tile'
 }
 
 /**
@@ -265,11 +274,20 @@ export default function BackgroundVizSlot({
   activeUnit,
   mode,
   noteLayerReady,
+  containerMode = 'viewport',
 }: BackgroundVizSlotProps) {
   const instances = useMemo(() => buildInstances(units), [units])
   if (instances.length === 0) return null
+  const isViewport = containerMode === 'viewport'
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none" style={{ position: 'fixed' }}>
+    <div
+      className={
+        isViewport
+          ? 'fixed inset-0 z-0 pointer-events-none'
+          : 'absolute inset-0 z-0 pointer-events-none'
+      }
+      style={{ position: isViewport ? 'fixed' : 'absolute' }}
+    >
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         {instances.map((entry) => {
           const noteReady = () => noteLayerReady?.(entry.identity)

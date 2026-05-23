@@ -1,0 +1,77 @@
+import { notFound, redirect } from 'next/navigation'
+import { isAuthed } from '@/lib/adminAuth'
+import { getStoryContent } from '@vismay/content-source/content'
+import {
+  loadStoryConfig,
+  hasStoryConfig,
+} from '@vismay/content-source/storyConfig'
+import { resolveUnits } from '@vismay/content-source/resolveUnits'
+import { getContentSource } from '@vismay/content-source/contentSource'
+import CanvasClient from '@/components/vizmaya/canvas/CanvasClient'
+import type { CanvasSources } from '@/components/vizmaya/canvas/canvasInputs'
+
+export const dynamic = 'force-dynamic'
+
+interface Props {
+  params: Promise<{ slug: string }>
+}
+
+export default async function CanvasPage({ params }: Props) {
+  const { slug } = await params
+  if (!(await isAuthed())) redirect(`/login?next=/vizmaya/${slug}/canvas`)
+  if (!(await hasStoryConfig(slug))) notFound()
+
+  const [story, config] = await Promise.all([
+    getStoryContent(slug),
+    loadStoryConfig(slug),
+  ])
+
+  const { units } = resolveUnits(slug, story.sections, config)
+
+  // Per-frame override sources. Loaded once on the server so the client can
+  // slice per-section without round-tripping the file system. Failures
+  // shouldn't break the canvas — fall through to `null` and the input node
+  // for that source renders its "no override" placeholder.
+  const cs = getContentSource()
+  const chartIds = Array.from(
+    new Set(
+      units
+        .map((u) => u.parentConfig.chart)
+        .filter((id): id is string => typeof id === 'string')
+    )
+  )
+  const [shareYaml, reportYaml, mapYaml, ttsYaml, chartEntries] = await Promise.all([
+    cs.readShareYaml(slug).catch(() => null),
+    cs.readReportYaml(slug).catch(() => null),
+    cs.readMapYaml(slug).catch(() => null),
+    cs.readTtsYaml(slug).catch(() => null),
+    Promise.all(
+      chartIds.map(
+        async (id) => [id, await cs.readChart(slug, id).catch(() => null)] as const
+      )
+    ),
+  ])
+
+  const sources: CanvasSources = {
+    chartsById: Object.fromEntries(chartEntries.filter(([, v]) => v != null)),
+    shareYaml,
+    reportYaml,
+    mapYaml,
+    ttsYaml,
+  }
+
+  // The canvas iframes vizmaya-fyi's single-section render route. URL
+  // comes from env so dev (localhost:3000) and prod (subdomain) both
+  // work without code changes; default keeps the dev loop unblocked.
+  const publicSiteUrl =
+    process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+
+  return (
+    <CanvasClient
+      slug={slug}
+      units={units}
+      sources={sources}
+      publicSiteUrl={publicSiteUrl}
+    />
+  )
+}

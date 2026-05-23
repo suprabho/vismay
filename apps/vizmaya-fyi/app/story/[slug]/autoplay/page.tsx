@@ -16,6 +16,7 @@ import AutoplayShell from '@/components/autoplay/AutoplayShell'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
+  searchParams?: Promise<{ aspect?: string; start?: string }>
 }
 
 export async function generateStaticParams() {
@@ -26,8 +27,11 @@ export async function generateStaticParams() {
   return withConfig.filter((s): s is string => s !== null).map((slug) => ({ slug }))
 }
 
-export default async function AutoplayPage({ params }: RouteParams) {
+export default async function AutoplayPage({ params, searchParams }: RouteParams) {
   const { slug } = await params
+  const sp = (await searchParams) ?? {}
+  const initialRatio: '9:16' | '16:9' = sp.aspect === '16:9' ? '16:9' : '9:16'
+  const initialSectionId = typeof sp.start === 'string' ? sp.start : null
 
   let story
   let config
@@ -71,6 +75,8 @@ export default async function AutoplayPage({ params }: RouteParams) {
         mapTargets={mapTargets}
         mapStyle={config.defaults.mapStyle}
         initialMapYaml={initialMapYaml}
+        initialRatio={initialRatio}
+        initialSectionId={initialSectionId}
       />
     </ThemeProvider>
   )

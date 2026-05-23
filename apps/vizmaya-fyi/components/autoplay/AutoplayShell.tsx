@@ -64,6 +64,15 @@ interface Props {
   mapStyle?: string
   /** Currently saved `stories.map_yaml` blob, or null if no overrides. */
   initialMapYaml?: string | null
+  /**
+   * Section id (from `parentConfig.id` or `section-<parentIndex>`) to seek to
+   * on mount. The shell resolves it to a unit index and sets that as the
+   * initial active unit — playback still requires a Play press. Used by the
+   * admin canvas to preview a single section's autoplay.
+   */
+  initialSectionId?: string | null
+  /** Initial aspect ratio. Defaults to '9:16'. */
+  initialRatio?: AutoplayRatio
 }
 
 /* ─── Fixed viewport dimensions per ratio ──────────────────────────── */
@@ -90,6 +99,8 @@ export default function AutoplayShell({
   mapTargets = [],
   mapStyle = 'mapbox://styles/mapbox/dark-v11',
   initialMapYaml = null,
+  initialSectionId = null,
+  initialRatio = '9:16',
 }: Props) {
   /* ─── Map editor side panel (admin only) ─────────────────────────── */
   const [mapEditorOpen, setMapEditorOpen] = useState(false)
@@ -99,8 +110,32 @@ export default function AutoplayShell({
    * persisted overrides flow through StoryMapShell — no waiting for ISR.
    */
   const [mapReloadNonce, setMapReloadNonce] = useState(0)
-  const [ratio, setRatio] = useState<AutoplayRatio>('9:16')
-  const [activeUnit, setActiveUnit] = useState(0)
+  const [ratio, setRatio] = useState<AutoplayRatio>(initialRatio)
+  // Resolve `initialSectionId` to a visible-unit index for the chosen
+  // ratio. The identity rule mirrors the canvas-frame route (parentConfig.id
+  // or auto-generated section-<parentIndex>). In 9:16 the visible list is
+  // mobileUnits; we walk the first matching desktop unit's mobile expansion
+  // via desktopToMobile so we land on the first mobile slice of that
+  // section. Falls back to 0 when not provided or not found.
+  const resolvedInitialUnit = useMemo(() => {
+    if (!initialSectionId) return 0
+    const desktopIdx = desktopUnits.findIndex(
+      (u) =>
+        u.parentConfig.id === initialSectionId ||
+        `section-${u.parentIndex}` === initialSectionId
+    )
+    if (desktopIdx < 0) return 0
+    // When `mobileUnits` is provided AND we're starting in 9:16, the
+    // visible unit list is the mobile expansion. Walk into the desktop
+    // unit's first mobile slice. Without mobile overrides, 9:16 falls
+    // back to desktopUnits, so the desktop index IS the visible index.
+    if (initialRatio === '9:16' && mobileUnits) {
+      const mobileIdx = desktopToMobile[desktopIdx]?.[0]
+      return typeof mobileIdx === 'number' ? mobileIdx : 0
+    }
+    return desktopIdx
+  }, [desktopUnits, mobileUnits, desktopToMobile, initialSectionId, initialRatio])
+  const [activeUnit, setActiveUnit] = useState(resolvedInitialUnit)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioLoading, setAudioLoading] = useState(false)
   const [iframeReady, setIframeReady] = useState(false)
