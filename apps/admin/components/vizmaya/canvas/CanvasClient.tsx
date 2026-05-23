@@ -1,25 +1,30 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ResolvedUnit } from '@vismay/viz-engine'
-import CanvasFrame from './CanvasFrame'
-import InputNode, { type InputNodeData } from './InputNode'
-import OutputNode, { type OutputNodeData } from './OutputNode'
-import OutputGroupHeader, {
-  type OutputGroupHeaderData,
-} from './OutputGroupHeader'
-import OutputTabBar, { type OutputTab } from './OutputTabBar'
-import CanvasWires, { type Wire } from './CanvasWires'
 import {
-  buildInputsForUnit,
-  buildOverridesForOutput,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react'
+import type { ResolvedUnit } from '@vismay/viz-engine'
+import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
+import {
+  contentNode,
+  configNode,
+  chartNode,
+  shareNode,
+  reportNodeFormat,
+  mapOverrideNode,
+  narrationNode,
   parseCanvasSources,
   type CanvasSources,
 } from './canvasInputs'
+import type { InputNodeData } from './InputNode'
 import {
   buildOutputsForUnit,
   OUTPUT_GROUPS,
-  DEFAULT_EXPANDED_GROUP,
   type OutputGroupId,
 } from './canvasOutputs'
 
@@ -30,670 +35,1074 @@ interface Props {
   publicSiteUrl: string
 }
 
-const DEFAULT_W = 1920
-const DEFAULT_H = 1080
-// Gap scales with the bigger frames so the input subgraph has room to fan
-// in without colliding with the previous row.
-const FRAME_GAP_X = 720
-const FRAME_GAP_Y = 360
-const COLS = 3
+/* ─── Layout constants ───────────────────────────────────────────── */
+const FRAME_W = 1920
+const FRAME_H = 1080
+const FRAME_MIN_W = 480
+const FRAME_MIN_H = 270
 
 const INPUT_W = 320
-const INPUT_H = 110
+const INPUT_H = 150
 const INPUT_GAP_Y = 36
-const INPUT_TO_FRAME_GAP = 120
 
-// Outputs sit to the right of the focused frame at their native dimensions
-// (1920×1080, 1440×1080, …). Gap is generous because the nodes themselves
-// are huge — at 1:1 zoom one slides node alone is wider than the input
-// column.
-const OUTPUT_TO_FRAME_GAP = 240
-const OUTPUT_GAP_Y = 120
-// Group headers stack vertically. Width matches the widest possible output
-// (slides @ 1920) so headers always span their group's content cleanly.
-const GROUP_HEADER_W = 1920
-const GROUP_HEADER_H = 100
-const GROUP_GAP_Y = 64
-const HEADER_TO_BODY_GAP = 40
+const COL_GAP = 280
 
-// Per-output override inputs: a small column attached to the LEFT of each
-// expanded output node, showing the specific override(s) that output
-// consumes (e.g. Share 3:4 → Share Variants slice; Autoplay → Map +
-// Narration). Sized to match frame-level input nodes so the visual
-// language stays consistent.
-const OUTPUT_OVERRIDE_W = 320
-const OUTPUT_OVERRIDE_H = 140
-const OUTPUT_OVERRIDE_GAP_Y = 28
-const OUTPUT_OVERRIDE_TO_NODE_GAP = 80
+const HEADER_W = 320
+const HEADER_H = 88
+const HEADER_GAP_Y = 28
 
-// Tab strip placed directly above a tabbed group's active iframe. Width
-// follows the widest sibling in the group so layout doesn't shift when
-// the user switches tabs.
-const TAB_BAR_H = 88
-const TAB_BAR_TO_IFRAME_GAP = 28
+const OUTPUT_GAP_Y = 100
+const OVERRIDE_GAP_Y = 36
 
-const MIN_ZOOM = 0.05
-const MAX_ZOOM = 3
-const MIN_FRAME_W = 360
-const MIN_FRAME_H = 240
+// Reserved strip across the top of the frame iframe for the pagination
+// overlay (◀ §3 of 5 — heading ▶). Other iframes have no overlay.
+const FRAME_OVERLAY_H = 56
+
+/** Which override input sockets each output group exposes. Drives both
+ *  socket creation on the OutputNode and the override → output wiring. */
+const OVERRIDE_SOCKETS_BY_GROUP: Record<OutputGroupId, string[]> = {
+  share: ['variants'],
+  slides: ['override'],
+  report: ['override'],
+  autoplay: ['map', 'narration'],
+}
 
 /**
- * Frame-size presets matching real device viewports, not aspect ratios.
- * 1:1 / 9:16 / A4 / etc. live downstream as output nodes (share cards,
- * autoplay videos, report PDFs) — those are derived renders, not
- * preview surfaces.
- *
- * The two "demo" dimensions match vizmaya-fyi's StoryPreview component
- * exactly, so the section in a canvas tile and the section behind that
- * demo's bezel see the same viewport.
+ * Per-group override builder: how to slice the parsed sources into the
+ * override input cards that feed each output group's iframe(s).
  */
-interface SizePreset {
-  id: string
-  label: string
-  w: number
-  h: number
-  /** Short device name rendered under the dimensions, e.g. "iPhone 14". */
-  tag: string
-}
-
-const SIZE_PRESETS: SizePreset[] = [
-  { id: 'desktop-fhd', label: '1920 × 1080', w: 1920, h: 1080, tag: 'Desktop FHD' },
-  { id: 'desktop-demo', label: '1440 × 810', w: 1440, h: 810, tag: 'vizmaya demo' },
-  { id: 'phone', label: '390 × 844', w: 390, h: 844, tag: 'iPhone 14' },
-]
-
-interface FramePlacement {
-  id: string
-  unit: ResolvedUnit
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-interface InputPlacement {
-  id: string
+interface OverrideSpec {
   data: InputNodeData
-  x: number
-  y: number
-  w: number
-  h: number
+  socket: string
+}
+function buildOverridesForGroup(
+  groupId: OutputGroupId,
+  unit: ResolvedUnit,
+  parsed: ReturnType<typeof parseCanvasSources>
+): OverrideSpec[] {
+  switch (groupId) {
+    case 'share':
+      return [{ data: shareNode(unit, parsed), socket: 'variants' }]
+    case 'slides':
+      return [
+        { data: reportNodeFormat(unit, parsed, 'slides'), socket: 'override' },
+      ]
+    case 'report':
+      return [
+        { data: reportNodeFormat(unit, parsed, 'report'), socket: 'override' },
+      ]
+    case 'autoplay':
+      return [
+        { data: mapOverrideNode(unit, parsed), socket: 'map' },
+        { data: narrationNode(unit, parsed), socket: 'narration' },
+      ]
+  }
 }
 
-interface OutputPlacement {
-  id: string
-  data: OutputNodeData
-  x: number
-  y: number
-  w: number
-  h: number
+/**
+ * Section-derived data bundle: everything the editor needs to render one
+ * section's nodes. Recomputed on section switch; passed to the in-place
+ * update path so no Rete nodes get remounted.
+ */
+interface SectionView {
+  sectionId: string
+  heading: string
+  frameSrc: string
+  inputs: { content: InputNodeData; config: InputNodeData; chart: InputNodeData }
+  /** Override card data per group; only the expanded group's is actually
+   *  read at any moment, but we precompute all four so toggling is cheap. */
+  overrides: Record<OutputGroupId, OverrideSpec[]>
+  /** Output iframe URLs + dims per group. Same: all four precomputed. */
+  outputs: Record<OutputGroupId, ReturnType<typeof buildOutputsForUnit>>
 }
 
-interface OutputHeaderPlacement {
-  id: OutputGroupId
-  data: OutputGroupHeaderData
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-interface OutputTabBarPlacement {
-  id: string
-  group: OutputGroupId
-  tabs: OutputTab[]
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-function autoLayout(sectionUnits: ResolvedUnit[]): FramePlacement[] {
-  return sectionUnits.map((unit, i) => ({
-    id: unit.parentConfig.id ?? `section-${unit.parentIndex}`,
-    unit,
-    x: (i % COLS) * (DEFAULT_W + FRAME_GAP_X),
-    y: Math.floor(i / COLS) * (DEFAULT_H + FRAME_GAP_Y),
-    w: DEFAULT_W,
-    h: DEFAULT_H,
-  }))
-}
-
-interface Subgraph {
-  inputs: InputPlacement[]
-  outputs: OutputPlacement[]
-  outputHeaders: OutputHeaderPlacement[]
-  /** Per-output override input cards (right column, one stack per
-   *  expanded output node). Shaped like InputPlacement so they reuse the
-   *  same renderer as the frame-level input column. */
-  outputOverrideInputs: InputPlacement[]
-  /** Tab strips for tabbed groups (one per expanded tabbed group, anchored
-   *  above the active iframe). Empty for non-tabbed groups. */
-  outputTabBars: OutputTabBarPlacement[]
-  wires: Wire[]
-}
-
-function buildSubgraph(
-  frame: FramePlacement,
+function buildSectionView(
+  unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>,
   slug: string,
-  publicSiteUrl: string,
-  expandedGroup: OutputGroupId | null,
-  activeTabByGroup: Partial<Record<OutputGroupId, string>>
-): Subgraph {
-  /* ─── Inputs (left of frame) ────────────────────────────────────── */
-  const inputs = buildInputsForUnit(frame.unit, parsed)
-  const inputTotalH = inputs.length * INPUT_H + (inputs.length - 1) * INPUT_GAP_Y
-  const inputStartY = frame.y + frame.h / 2 - inputTotalH / 2
-  const inputX = frame.x - INPUT_W - INPUT_TO_FRAME_GAP
-
-  const inputPlacements: InputPlacement[] = inputs.map((data, i) => ({
-    id: data.id,
-    data,
-    x: inputX,
-    y: inputStartY + i * (INPUT_H + INPUT_GAP_Y),
-    w: INPUT_W,
-    h: INPUT_H,
-  }))
-
-  /* ─── Outputs (right of frame, grouped + collapsible) ──────────── */
-  const allOutputs = buildOutputsForUnit(frame.unit, slug, publicSiteUrl)
-  const outputsByGroup = new Map<OutputGroupId, OutputNodeData[]>()
-  for (const o of allOutputs) {
-    const arr = outputsByGroup.get(o.group) ?? []
-    arr.push(o)
-    outputsByGroup.set(o.group, arr)
+  publicSiteUrl: string
+): SectionView {
+  const sectionId =
+    unit.parentConfig.id ?? `section-${unit.parentIndex}`
+  const heading =
+    unit.heading ||
+    unit.paragraphs[0]?.replace(/\*+/g, '') ||
+    `Section ${unit.parentIndex + 1}`
+  const frameSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`
+  const allOutputs = buildOutputsForUnit(unit, slug, publicSiteUrl)
+  const outputs: SectionView['outputs'] = {
+    share: allOutputs.filter((o) => o.group === 'share'),
+    slides: allOutputs.filter((o) => o.group === 'slides'),
+    report: allOutputs.filter((o) => o.group === 'report'),
+    autoplay: allOutputs.filter((o) => o.group === 'autoplay'),
   }
-
-  // Resolve which output is "active" for each tabbed group. Default to the
-  // first sibling so the canvas isn't blank on first expand. We compute
-  // this up front so both the height pass and the placement pass see the
-  // same active sibling.
-  const activeOutputByGroup = new Map<OutputGroupId, OutputNodeData>()
-  for (const group of OUTPUT_GROUPS) {
-    const list = outputsByGroup.get(group.id)
-    if (!list || list.length === 0) continue
-    if (group.tabbed) {
-      const chosenId = activeTabByGroup[group.id]
-      const match = chosenId ? list.find((o) => o.id === chosenId) : undefined
-      activeOutputByGroup.set(group.id, match ?? list[0])
-    } else {
-      // Sentinel for non-tabbed; placement loop just renders the whole list.
-      activeOutputByGroup.set(group.id, list[0])
-    }
-  }
-
-  // First pass: compute total stack height so we can vertical-center it
-  // against the frame. Groups always contribute a header. Expanded groups
-  // additionally contribute their body — full stack for non-tabbed,
-  // tab-bar + one iframe for tabbed.
-  let totalH = 0
-  for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
-    const group = OUTPUT_GROUPS[i]
-    const groupOutputs = outputsByGroup.get(group.id) ?? []
-    totalH += GROUP_HEADER_H
-    if (expandedGroup === group.id && groupOutputs.length > 0) {
-      totalH += HEADER_TO_BODY_GAP
-      if (group.tabbed && groupOutputs.length > 1) {
-        const active = activeOutputByGroup.get(group.id) ?? groupOutputs[0]
-        totalH += TAB_BAR_H + TAB_BAR_TO_IFRAME_GAP + active.h
-      } else {
-        totalH += groupOutputs.reduce((acc, o) => acc + o.h, 0)
-        totalH += Math.max(0, groupOutputs.length - 1) * OUTPUT_GAP_Y
-      }
-    }
-    if (i < OUTPUT_GROUPS.length - 1) totalH += GROUP_GAP_Y
-  }
-
-  const outputX = frame.x + frame.w + OUTPUT_TO_FRAME_GAP
-  const startY = frame.y + frame.h / 2 - totalH / 2
-
-  const outputPlacements: OutputPlacement[] = []
-  const outputHeaders: OutputHeaderPlacement[] = []
-  const outputTabBars: OutputTabBarPlacement[] = []
-  // Per-output override inputs (right column, attached to each expanded
-  // output node). Modelled as InputPlacement so they reuse the same
-  // <InputNode> component as the left column.
-  const outputOverrideInputs: InputPlacement[] = []
-  // Wires from each per-output override input to its parent output's
-  // left edge. Kept separate from the main `wires` array so we can
-  // append it at the end alongside the frame→header wires.
-  const outputOverrideWires: Wire[] = []
-
-  /**
-   * Place one iframe node + its per-output override column. Used by both
-   * the non-tabbed branch (called per sibling) and the tabbed branch
-   * (called once for the active sibling). Mutates `cursor` is the caller's
-   * responsibility — this helper only knows about its own y.
-   */
-  const placeOutput = (data: OutputNodeData, y: number) => {
-    outputPlacements.push({
-      id: data.id,
-      data,
-      x: outputX,
-      y,
-      w: data.w,
-      h: data.h,
-    })
-
-    const overrideData = buildOverridesForOutput(
-      data.id,
-      data.group,
-      frame.unit,
-      parsed
-    )
-    if (overrideData.length > 0) {
-      const colTotalH =
-        overrideData.length * OUTPUT_OVERRIDE_H +
-        (overrideData.length - 1) * OUTPUT_OVERRIDE_GAP_Y
-      const colStartY = y + data.h / 2 - colTotalH / 2
-      const colX = outputX - OUTPUT_OVERRIDE_W - OUTPUT_OVERRIDE_TO_NODE_GAP
-      overrideData.forEach((nd, idx) => {
-        const ny = colStartY + idx * (OUTPUT_OVERRIDE_H + OUTPUT_OVERRIDE_GAP_Y)
-        outputOverrideInputs.push({
-          id: nd.id,
-          data: nd,
-          x: colX,
-          y: ny,
-          w: OUTPUT_OVERRIDE_W,
-          h: OUTPUT_OVERRIDE_H,
-        })
-        outputOverrideWires.push({
-          id: `${data.id}:override:${nd.id}`,
-          x1: colX + OUTPUT_OVERRIDE_W,
-          y1: ny + OUTPUT_OVERRIDE_H / 2,
-          x2: outputX,
-          y2: y + data.h / 2,
-        })
-      })
-    }
-  }
-
-  let cursor = startY
-  for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
-    const group = OUTPUT_GROUPS[i]
-    const groupOutputs = outputsByGroup.get(group.id) ?? []
-    const expanded = expandedGroup === group.id && groupOutputs.length > 0
-
-    outputHeaders.push({
-      id: group.id,
-      data: {
-        id: group.id,
-        label: group.label,
-        childTags: groupOutputs.map((o) => o.tag),
-        expanded,
-      },
-      x: outputX,
-      y: cursor,
-      w: GROUP_HEADER_W,
-      h: GROUP_HEADER_H,
-    })
-    cursor += GROUP_HEADER_H
-
-    if (expanded) {
-      cursor += HEADER_TO_BODY_GAP
-
-      if (group.tabbed && groupOutputs.length > 1) {
-        // Tab bar width follows the WIDEST sibling so it doesn't visibly
-        // shrink when the user switches to a narrower ratio. The active
-        // iframe is positioned right below, left-aligned with the bar.
-        const active = activeOutputByGroup.get(group.id) ?? groupOutputs[0]
-        const tabBarW = Math.max(...groupOutputs.map((o) => o.w))
-        outputTabBars.push({
-          id: `${group.id}:tabs`,
-          group: group.id,
-          tabs: groupOutputs.map((o) => ({
-            id: o.id,
-            label: o.label,
-            tag: o.tag,
-            active: o.id === active.id,
-          })),
-          x: outputX,
-          y: cursor,
-          w: tabBarW,
-          h: TAB_BAR_H,
-        })
-        cursor += TAB_BAR_H + TAB_BAR_TO_IFRAME_GAP
-        placeOutput(active, cursor)
-        cursor += active.h
-      } else {
-        for (const data of groupOutputs) {
-          placeOutput(data, cursor)
-          cursor += data.h + OUTPUT_GAP_Y
-        }
-        // Strip the trailing OUTPUT_GAP_Y so the next group starts after a
-        // consistent GROUP_GAP_Y rather than gap + gap.
-        cursor -= OUTPUT_GAP_Y
-      }
-    }
-
-    if (i < OUTPUT_GROUPS.length - 1) cursor += GROUP_GAP_Y
-  }
-
-  /* ─── Wires (inputs → frame, frame → each group header) ───────── */
-  const frameLeftX = frame.x
-  const frameRightX = frame.x + frame.w
-  const frameMidY = frame.y + frame.h / 2
-
-  const wires: Wire[] = [
-    ...inputPlacements.map(
-      (p): Wire => ({
-        id: `${frame.id}:in:${p.id}`,
-        x1: p.x + p.w,
-        y1: p.y + p.h / 2,
-        x2: frameLeftX,
-        y2: frameMidY,
-      })
-    ),
-    ...outputHeaders.map(
-      (p): Wire => ({
-        id: `${frame.id}:out:${p.id}`,
-        x1: frameRightX,
-        y1: frameMidY,
-        x2: p.x,
-        y2: p.y + p.h / 2,
-      })
-    ),
-    ...outputOverrideWires,
-  ]
-
   return {
-    inputs: inputPlacements,
-    outputs: outputPlacements,
-    outputHeaders,
-    outputOverrideInputs,
-    outputTabBars,
-    wires,
+    sectionId,
+    heading,
+    frameSrc,
+    inputs: {
+      content: contentNode(unit),
+      config: configNode(unit),
+      chart: chartNode(unit, parsed),
+    },
+    overrides: {
+      share: buildOverridesForGroup('share', unit, parsed),
+      slides: buildOverridesForGroup('slides', unit, parsed),
+      report: buildOverridesForGroup('report', unit, parsed),
+      autoplay: buildOverridesForGroup('autoplay', unit, parsed),
+    },
+    outputs,
   }
 }
 
+/**
+ * Section canvas, powered by Rete v2.
+ *
+ * Layout (single section at a time):
+ *   col 1 — frame inputs (Content / Config / Chart Data)
+ *   col 2 — section frame iframe (resizable, with pagination overlay)
+ *   col 3 — output group headers (Share / Slides / Report / Autoplay)
+ *   col 4 — override input(s) for the expanded group
+ *   col 5 — output iframe(s) for the expanded group
+ *
+ * Iframe count is bounded: 2 in the default state (frame + share),
+ * 3 max when Autoplay is expanded (9:16 + 16:9 stacked), 1 with all
+ * groups collapsed. Independent of section count — navigation between
+ * sections happens via the ◀ § N of M ▶ overlay on the frame iframe
+ * (or ← / → keys), updating the same Rete nodes in place rather than
+ * mounting fresh ones.
+ */
 export default function CanvasClient({
   slug,
   units,
   sources,
   publicSiteUrl,
 }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
     () => units.filter((u) => u.subIndex === 0),
     [units]
   )
-  // Parse the per-frame override sources once at the top — buildSubgraph
-  // re-runs on every focus change but reuses the same parsed objects.
-  const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
-  // Frame placements are state, not memo — resize handles mutate w/h per
-  // frame. Initial layout still comes from the autoLayout grid.
-  const [frames, setFrames] = useState<FramePlacement[]>(() =>
-    autoLayout(sectionUnits)
-  )
-  useEffect(() => {
-    setFrames(autoLayout(sectionUnits))
-  }, [sectionUnits])
-
-  const [pan, setPan] = useState({ x: 400, y: 120 })
-  const [zoom, setZoom] = useState(0.7)
-  const [focusedId, setFocusedId] = useState<string | null>(
-    frames[0]?.id ?? null
-  )
-  const [isPanning, setIsPanning] = useState(false)
-  const [resizingId, setResizingId] = useState<string | null>(null)
-  // Only one output group is expanded at a time so the canvas mounts at
-  // most one group's worth of iframes (e.g. share = 3 iframes, autoplay =
-  // 2). `null` means all collapsed. Clicking a collapsed header swaps
-  // expansion; clicking the expanded header collapses everything.
-  const [expandedGroup, setExpandedGroup] = useState<OutputGroupId | null>(
-    DEFAULT_EXPANDED_GROUP
-  )
-  // Active sibling per tabbed group. Stored as a record so we can flip
-  // tabs without disturbing other groups' state. Empty entries fall back
-  // to the first sibling — see buildSubgraph.
-  const [activeTabByGroup, setActiveTabByGroup] = useState<
-    Partial<Record<OutputGroupId, string>>
-  >({})
-
-  const surfaceRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{ x: number; y: number } | null>(null)
-  const resizeStartRef = useRef<{
-    x: number
-    y: number
-    w: number
-    h: number
-  } | null>(null)
-  // Live zoom in a ref so the resize handler can read it without re-binding
-  // on every zoom change — the listener attaches once per resize start.
-  const zoomRef = useRef(zoom)
-  useEffect(() => {
-    zoomRef.current = zoom
-  }, [zoom])
-
-  const focusedFrame = useMemo(
-    () => frames.find((f) => f.id === focusedId) ?? null,
-    [frames, focusedId]
-  )
-  const subgraph = useMemo(
+  // Section views are pure data; cheap to memoise once and index into.
+  const sectionViews = useMemo(
     () =>
-      focusedFrame
-        ? buildSubgraph(
-            focusedFrame,
-            parsedSources,
-            slug,
-            publicSiteUrl,
-            expandedGroup,
-            activeTabByGroup
+      sectionUnits.map((u) =>
+        buildSectionView(u, parsedSources, slug, publicSiteUrl)
+      ),
+    [sectionUnits, parsedSources, slug, publicSiteUrl]
+  )
+
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0)
+  const [expandedGroup, setExpandedGroup] = useState<OutputGroupId | null>(
+    'share'
+  )
+
+  // Latest setters via refs so callbacks captured during initial editor
+  // build always dispatch to the current React state, not stale closures.
+  const setActiveSectionIndexRef = useRef(setActiveSectionIndex)
+  const setExpandedGroupRef = useRef(setExpandedGroup)
+  useEffect(() => {
+    setActiveSectionIndexRef.current = setActiveSectionIndex
+  }, [setActiveSectionIndex])
+  useEffect(() => {
+    setExpandedGroupRef.current = setExpandedGroup
+  }, [setExpandedGroup])
+
+  // Mirror state into refs so the build effect can read initial values
+  // and the apply-* effects can read latest values.
+  const stateRef = useRef({ activeSectionIndex: 0, expandedGroup: 'share' as OutputGroupId | null })
+  useEffect(() => {
+    stateRef.current.activeSectionIndex = activeSectionIndex
+  }, [activeSectionIndex])
+  useEffect(() => {
+    stateRef.current.expandedGroup = expandedGroup
+  }, [expandedGroup])
+
+  // The editor scene — populated by the build effect, consumed by the
+  // apply-* effects. `null` until the async setup completes.
+  type Scene = {
+    applySection: (idx: number) => Promise<void>
+    applyExpandedGroup: (group: OutputGroupId | null) => Promise<void>
+    destroy: () => void
+  }
+  const sceneRef = useRef<Scene | null>(null)
+
+  /* ─── Build editor (once per data version) ───────────────────── */
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    let disposed = false
+
+    ;(async () => {
+      const { createRoot } = await import('react-dom/client')
+      const { NodeEditor, ClassicPreset } = await import('rete')
+      const { AreaPlugin, AreaExtensions } = await import('rete-area-plugin')
+      const { ConnectionPlugin, Presets: ConnectionPresets } =
+        await import('rete-connection-plugin')
+      const { ReactPlugin, Presets: ReactPresets } =
+        await import('rete-react-plugin')
+
+      if (disposed) return
+
+      /* ── Custom controls ─────────────────────────────────────── */
+
+      // For the frame iframe + the output iframes. Optional pagination
+      // overlay is only used on the frame (for section navigation).
+      class IframeControl extends ClassicPreset.Control {
+        src: string
+        width: number
+        height: number
+        resizable: boolean
+        onResize?: (w: number, h: number) => void
+        // Pagination overlay — only used on the frame iframe.
+        pagination?: {
+          current: number
+          total: number
+          label: string
+        }
+        constructor(
+          src: string,
+          w: number,
+          h: number,
+          opts: { resizable?: boolean } = {}
+        ) {
+          super()
+          this.src = src
+          this.width = w
+          this.height = h
+          this.resizable = opts.resizable ?? false
+        }
+      }
+
+      class TextPreviewControl extends ClassicPreset.Control {
+        constructor(
+          public label: string,
+          public tag: string,
+          public body: string,
+          public variant: 'mono' | 'muted'
+        ) {
+          super()
+        }
+      }
+
+      // Group header — click to expand/collapse. No data flow.
+      class GroupHeaderControl extends ClassicPreset.Control {
+        constructor(
+          public groupId: OutputGroupId,
+          public label: string,
+          public expanded: boolean,
+          public childCount: number
+        ) {
+          super()
+        }
+      }
+
+      /* ── Node classes ────────────────────────────────────────── */
+
+      const socket = new ClassicPreset.Socket('canvas')
+
+      class FrameNode extends ClassicPreset.Node {
+        kind = 'frame' as const
+        constructor(iframeCtrl: IframeControl) {
+          super('Frame')
+          this.addInput('content', new ClassicPreset.Input(socket, 'Content'))
+          this.addInput('config', new ClassicPreset.Input(socket, 'Config'))
+          this.addInput('chart', new ClassicPreset.Input(socket, 'Chart Data'))
+          this.addOutput(
+            'render',
+            new ClassicPreset.Output(socket, 'render', true)
           )
-        : ({
-            inputs: [],
-            outputs: [],
-            outputHeaders: [],
-            outputOverrideInputs: [],
-            outputTabBars: [],
-            wires: [],
-          } satisfies Subgraph),
-    [
-      focusedFrame,
-      parsedSources,
-      slug,
-      publicSiteUrl,
-      expandedGroup,
-      activeTabByGroup,
-    ]
-  )
-
-  // Non-passive wheel listener — React's onWheel is passive in modern Next,
-  // making preventDefault() a no-op there. Attaching directly lets us block
-  // browser pinch-zoom on cmd/ctrl + wheel.
-  useEffect(() => {
-    const el = surfaceRef.current
-    if (!el) return
-    const handler = (e: WheelEvent) => {
-      e.preventDefault()
-      if (e.ctrlKey || e.metaKey) {
-        const rect = el.getBoundingClientRect()
-        const cx = e.clientX - rect.left
-        const cy = e.clientY - rect.top
-        setZoom((z) => {
-          const next = clamp(z * (1 - e.deltaY * 0.0015), MIN_ZOOM, MAX_ZOOM)
-          if (next === z) return z
-          setPan((p) => ({
-            x: cx - ((cx - p.x) * next) / z,
-            y: cy - ((cy - p.y) * next) / z,
-          }))
-          return next
-        })
-      } else {
-        setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }))
+          this.addControl('iframe', iframeCtrl)
+        }
       }
-    }
-    el.addEventListener('wheel', handler, { passive: false })
-    return () => el.removeEventListener('wheel', handler)
-  }, [])
 
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (!target.hasAttribute('data-canvas-bg')) return
-    dragRef.current = { x: e.clientX, y: e.clientY }
-    setIsPanning(true)
-  }, [])
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    const drag = dragRef.current
-    if (!drag) return
-    setPan((p) => ({
-      x: p.x + (e.clientX - drag.x),
-      y: p.y + (e.clientY - drag.y),
-    }))
-    dragRef.current = { x: e.clientX, y: e.clientY }
-  }, [])
-
-  const onMouseUp = useCallback(() => {
-    dragRef.current = null
-    setIsPanning(false)
-  }, [])
-
-  // Resize is a corner drag. Window-level listeners so the gesture survives
-  // the cursor wandering off the small handle, and we can release on mouseup
-  // anywhere. Coordinates are screen-space; we divide deltas by `zoom` to
-  // translate back into canvas-space dimensions.
-  const startResize = useCallback(
-    (frameId: string, e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      const frame = frames.find((f) => f.id === frameId)
-      if (!frame) return
-      resizeStartRef.current = {
-        x: e.clientX,
-        y: e.clientY,
-        w: frame.w,
-        h: frame.h,
+      class OutputNode extends ClassicPreset.Node {
+        kind = 'output' as const
+        constructor(
+          label: string,
+          iframeCtrl: IframeControl,
+          overrideKeys: string[]
+        ) {
+          super(label)
+          this.addInput('render', new ClassicPreset.Input(socket, 'render'))
+          for (const key of overrideKeys) {
+            this.addInput(key, new ClassicPreset.Input(socket, key))
+          }
+          this.addControl('iframe', iframeCtrl)
+        }
       }
-      setResizingId(frameId)
-    },
-    [frames]
-  )
 
-  useEffect(() => {
-    if (!resizingId) return
-    const onMove = (e: MouseEvent) => {
-      const start = resizeStartRef.current
-      if (!start) return
-      const dx = (e.clientX - start.x) / zoomRef.current
-      const dy = (e.clientY - start.y) / zoomRef.current
-      setFrames((prev) =>
-        prev.map((f) =>
-          f.id === resizingId
-            ? {
-                ...f,
-                w: Math.max(MIN_FRAME_W, start.w + dx),
-                h: Math.max(MIN_FRAME_H, start.h + dy),
+      class DataNode extends ClassicPreset.Node {
+        kind = 'data' as const
+        previewCtrl: TextPreviewControl
+        constructor(
+          label: string,
+          tag: string,
+          body: string,
+          variant: 'mono' | 'muted'
+        ) {
+          super(label)
+          this.addOutput(
+            'value',
+            new ClassicPreset.Output(socket, 'value', true)
+          )
+          this.previewCtrl = new TextPreviewControl(label, tag, body, variant)
+          this.addControl('preview', this.previewCtrl)
+        }
+      }
+
+      class GroupHeaderNode extends ClassicPreset.Node {
+        kind = 'header' as const
+        headerCtrl: GroupHeaderControl
+        constructor(
+          public groupId: OutputGroupId,
+          label: string,
+          expanded: boolean,
+          childCount: number
+        ) {
+          super(label)
+          this.headerCtrl = new GroupHeaderControl(
+            groupId,
+            label,
+            expanded,
+            childCount
+          )
+          this.addControl('header', this.headerCtrl)
+        }
+      }
+
+      /* ── React control renderers ────────────────────────────── */
+
+      function PaginationStrip({
+        current,
+        total,
+        label,
+        onPrev,
+        onNext,
+      }: {
+        current: number
+        total: number
+        label: string
+        onPrev: () => void
+        onNext: () => void
+      }) {
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        return (
+          <div
+            onPointerDown={stop}
+            onMouseDown={stop}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: FRAME_OVERLAY_H - 8,
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              background: 'rgba(20,20,20,0.85)',
+              backdropFilter: 'blur(8px)',
+              borderBottom: '1px solid #1f1f1f',
+              borderRadius: '8px 8px 0 0',
+              zIndex: 4,
+              pointerEvents: 'auto',
+              color: '#ccc',
+              fontFamily: 'system-ui, sans-serif',
+              fontSize: 14,
+            }}
+          >
+            <button
+              onClick={onPrev}
+              disabled={current === 0}
+              style={{
+                background: 'transparent',
+                color: current === 0 ? '#444' : '#ddd',
+                border: '1px solid #2a2a2a',
+                borderRadius: 4,
+                padding: '4px 12px',
+                cursor: current === 0 ? 'default' : 'pointer',
+                fontSize: 16,
+                lineHeight: 1,
+              }}
+            >
+              ◀
+            </button>
+            <span style={{ fontWeight: 500, flex: 1 }}>
+              §{current + 1} of {total}
+              <span style={{ marginLeft: 12, color: '#888', fontWeight: 400 }}>
+                {label}
+              </span>
+            </span>
+            <button
+              onClick={onNext}
+              disabled={current === total - 1}
+              style={{
+                background: 'transparent',
+                color: current === total - 1 ? '#444' : '#ddd',
+                border: '1px solid #2a2a2a',
+                borderRadius: 4,
+                padding: '4px 12px',
+                cursor:
+                  current === total - 1 ? 'default' : 'pointer',
+                fontSize: 16,
+                lineHeight: 1,
+              }}
+            >
+              ▶
+            </button>
+          </div>
+        )
+      }
+
+      function IframeControlView({ data }: { data: IframeControl }) {
+        const [, force] = useReducer((n: number) => n + 1, 0)
+
+        const onResizeStart = (e: React.MouseEvent) => {
+          if (!data.resizable) return
+          e.preventDefault()
+          e.stopPropagation()
+          const startX = e.clientX
+          const startY = e.clientY
+          const startW = data.width
+          const startH = data.height
+          const onMove = (ev: MouseEvent) => {
+            data.width = Math.max(FRAME_MIN_W, startW + (ev.clientX - startX))
+            data.height = Math.max(
+              FRAME_MIN_H,
+              startH + (ev.clientY - startY)
+            )
+            data.onResize?.(data.width, data.height)
+            force()
+          }
+          const onUp = () => {
+            window.removeEventListener('mousemove', onMove)
+            window.removeEventListener('mouseup', onUp)
+          }
+          window.addEventListener('mousemove', onMove)
+          window.addEventListener('mouseup', onUp)
+        }
+
+        const overlayPad = data.pagination ? FRAME_OVERLAY_H : 0
+
+        return (
+          <div
+            style={{
+              width: data.width,
+              height: data.height + overlayPad,
+              background: '#0a0a0a',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              overflow: 'visible',
+              position: 'relative',
+            }}
+          >
+            {data.pagination && (
+              <PaginationStrip
+                current={data.pagination.current}
+                total={data.pagination.total}
+                label={data.pagination.label}
+                onPrev={() =>
+                  setActiveSectionIndexRef.current((i) => Math.max(0, i - 1))
+                }
+                onNext={() =>
+                  setActiveSectionIndexRef.current((i) =>
+                    Math.min(data.pagination!.total - 1, i + 1)
+                  )
+                }
+              />
+            )}
+            <div
+              style={{
+                position: 'absolute',
+                top: overlayPad,
+                left: 0,
+                width: data.width,
+                height: data.height,
+                overflow: 'hidden',
+              }}
+            >
+              <iframe
+                // Keyed by src so a tab switch genuinely remounts the
+                // iframe (otherwise some browsers keep the prior render
+                // until the next paint, and Mapbox especially leaks).
+                key={data.src}
+                src={data.src}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 0,
+                  display: 'block',
+                  background: '#0a0a0a',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+            {data.resizable && (
+              <div
+                onMouseDown={onResizeStart}
+                onPointerDown={(e) => e.stopPropagation()}
+                title="drag to resize"
+                style={{
+                  position: 'absolute',
+                  right: -7,
+                  bottom: -7,
+                  width: 16,
+                  height: 16,
+                  background: '#fff',
+                  border: '2px solid #888',
+                  borderRadius: 3,
+                  cursor: 'nwse-resize',
+                  zIndex: 5,
+                  pointerEvents: 'auto',
+                }}
+              />
+            )}
+          </div>
+        )
+      }
+
+      function TextPreviewControlView({
+        data,
+      }: {
+        data: TextPreviewControl
+      }) {
+        return (
+          <div
+            style={{
+              width: INPUT_W - 24,
+              minHeight: 96,
+              padding: 8,
+              background: '#0a0a0a',
+              border: '1px solid #262626',
+              borderRadius: 6,
+              fontFamily:
+                data.variant === 'mono'
+                  ? 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+                  : 'system-ui, sans-serif',
+              fontSize: data.variant === 'mono' ? 10 : 11,
+              color: data.variant === 'mono' ? '#9a9a9a' : '#555',
+              lineHeight: 1.5,
+              whiteSpace: 'pre-wrap',
+              fontStyle: data.variant === 'muted' ? 'italic' : 'normal',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 9,
+                color: '#666',
+                letterSpacing: '0.14em',
+                marginBottom: 4,
+              }}
+            >
+              {data.tag}
+            </div>
+            {data.body}
+          </div>
+        )
+      }
+
+      function GroupHeaderControlView({
+        data,
+      }: {
+        data: GroupHeaderControl
+      }) {
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        const onClick = (e: React.MouseEvent) => {
+          stop(e)
+          setExpandedGroupRef.current((prev) =>
+            prev === data.groupId ? null : data.groupId
+          )
+        }
+        return (
+          <button
+            type="button"
+            onPointerDown={stop}
+            onMouseDown={stop}
+            onClick={onClick}
+            style={{
+              width: HEADER_W - 24,
+              height: HEADER_H - 20,
+              background: data.expanded ? '#161616' : '#0e0e0e',
+              border: `1px solid ${data.expanded ? '#555' : '#262626'}`,
+              borderRadius: 8,
+              color: '#ddd',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              padding: '8px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              textAlign: 'left',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 18,
+                color: data.expanded ? '#fff' : '#888',
+                width: 14,
+                lineHeight: 1,
+              }}
+            >
+              {data.expanded ? '▾' : '▸'}
+            </span>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 500,
+                color: data.expanded ? '#fff' : '#bbb',
+              }}
+            >
+              {data.label}
+            </span>
+            <span
+              style={{
+                marginLeft: 'auto',
+                fontSize: 10,
+                color: '#555',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {data.expanded
+                ? 'loaded'
+                : `${data.childCount} · click`}
+            </span>
+          </button>
+        )
+      }
+
+      /* ── Plugin wiring ───────────────────────────────────────── */
+
+      type Schemes = ClassicScheme
+      type AreaExtra = ReactArea2D<Schemes>
+
+      const editor = new NodeEditor<Schemes>()
+      const area = new AreaPlugin<Schemes, AreaExtra>(container)
+      const connection = new ConnectionPlugin<Schemes, AreaExtra>()
+      const reactPlugin = new ReactPlugin<Schemes, AreaExtra>({ createRoot })
+
+      reactPlugin.addPreset(
+        ReactPresets.classic.setup({
+          customize: {
+            control(data) {
+              if (data.payload instanceof IframeControl) {
+                return IframeControlView as never
               }
-            : f
-        )
+              if (data.payload instanceof TextPreviewControl) {
+                return TextPreviewControlView as never
+              }
+              if (data.payload instanceof GroupHeaderControl) {
+                return GroupHeaderControlView as never
+              }
+              return null
+            },
+          },
+        })
       )
-    }
-    const onUp = () => {
-      resizeStartRef.current = null
-      setResizingId(null)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+      connection.addPreset(ConnectionPresets.classic.setup())
+
+      editor.use(area)
+      area.use(connection)
+      area.use(reactPlugin)
+
+      AreaExtensions.simpleNodesOrder(area)
+      AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
+        accumulating: AreaExtensions.accumulateOnCtrl(),
+      })
+
+      /* ── Initial build (single section) ──────────────────────── */
+
+      const initialView = sectionViews[stateRef.current.activeSectionIndex] ?? sectionViews[0]
+
+      // Column X coords. Outputs sit to the right of the headers column,
+      // far enough that even the slides node (1920 wide) doesn't reach
+      // back into the header lane.
+      const inputColX = 0
+      const frameColX = inputColX + INPUT_W + COL_GAP
+      const headerColX = frameColX + FRAME_W + COL_GAP
+      const overrideColX = headerColX + HEADER_W + COL_GAP
+      const outputColX = overrideColX + INPUT_W + COL_GAP
+
+      /* Frame (always present) */
+      const frameIframeCtrl = new IframeControl(
+        initialView.frameSrc,
+        FRAME_W,
+        FRAME_H,
+        { resizable: true }
+      )
+      frameIframeCtrl.pagination = {
+        current: stateRef.current.activeSectionIndex,
+        total: sectionViews.length,
+        label: initialView.heading,
+      }
+      const frame = new FrameNode(frameIframeCtrl)
+      frameIframeCtrl.onResize = (w, h) => {
+        void area.resize(frame.id, w, h)
+      }
+      await editor.addNode(frame)
+      await area.translate(frame.id, { x: frameColX, y: 0 })
+
+      /* Frame inputs (3 fixed nodes) */
+      const inputEntries: Array<{ key: string; data: InputNodeData }> = [
+        { key: 'content', data: initialView.inputs.content },
+        { key: 'config', data: initialView.inputs.config },
+        { key: 'chart', data: initialView.inputs.chart },
+      ]
+      const inputTotalH =
+        inputEntries.length * INPUT_H +
+        (inputEntries.length - 1) * INPUT_GAP_Y
+      const inputStartY = 0 + FRAME_H / 2 - inputTotalH / 2
+      const inputNodes: Record<string, DataNode> = {}
+      for (let i = 0; i < inputEntries.length; i++) {
+        const { key, data } = inputEntries[i]
+        const node = new DataNode(
+          data.label,
+          data.tag,
+          data.body,
+          data.variant
+        )
+        inputNodes[key] = node
+        await editor.addNode(node)
+        await area.translate(node.id, {
+          x: inputColX,
+          y: inputStartY + i * (INPUT_H + INPUT_GAP_Y),
+        })
+        await editor.addConnection(
+          new ClassicPreset.Connection(
+            node,
+            'value',
+            frame,
+            key
+          ) as Schemes['Connection']
+        )
+      }
+
+      /* Group header column (always present, 4 headers) */
+      const headerNodes: Record<OutputGroupId, GroupHeaderNode> = {} as Record<
+        OutputGroupId,
+        GroupHeaderNode
+      >
+      const headersTotalH =
+        OUTPUT_GROUPS.length * HEADER_H +
+        (OUTPUT_GROUPS.length - 1) * HEADER_GAP_Y
+      const headersStartY = 0 + FRAME_H / 2 - headersTotalH / 2
+      for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
+        const group = OUTPUT_GROUPS[i]
+        const childCount = initialView.outputs[group.id].length
+        // For tabbed groups the visual count is 1 (the tabbed node);
+        // for stacked groups it's the actual number of outputs.
+        const displayedCount = group.tabbed ? 1 : childCount
+        const expanded = stateRef.current.expandedGroup === group.id
+        const node = new GroupHeaderNode(
+          group.id,
+          group.label,
+          expanded,
+          displayedCount
+        )
+        headerNodes[group.id] = node
+        await editor.addNode(node)
+        await area.translate(node.id, {
+          x: headerColX,
+          y: headersStartY + i * (HEADER_H + HEADER_GAP_Y),
+        })
+      }
+
+      /* ── Mutable per-group expanded content ─────────────────── */
+
+      // Holds the currently-rendered override + output nodes for the
+      // expanded group. Mutated by applyExpandedGroup; consulted by
+      // applySection so it can update the iframe srcs in place.
+      interface ExpandedSlot {
+        // Override nodes by socket name; e.g. autoplay has 'map' + 'narration'.
+        overrides: Map<string, DataNode>
+        // Output nodes: stacked (one per output) for non-tabbed groups;
+        // a single tabbed node for share. Key = output id; share's
+        // single-node key is the first share output id.
+        outputs: Map<string, OutputNode>
+      }
+      let expandedSlot: { group: OutputGroupId; nodes: ExpandedSlot } | null = null
+
+      /**
+       * Build the override + output nodes for one group, hook up their
+       * connections, and place them in columns 4 + 5 aligned with the
+       * group's header Y. Mutates `expandedSlot` so subsequent calls can
+       * tear them down. Tabbed groups (Share) produce ONE OutputNode
+       * with internal aspect tabs.
+       */
+      async function mountGroup(groupId: OutputGroupId): Promise<void> {
+        const view = sectionViews[stateRef.current.activeSectionIndex]
+        const group = OUTPUT_GROUPS.find((g) => g.id === groupId)!
+        const groupOutputs = view.outputs[groupId]
+        if (groupOutputs.length === 0) return
+
+        const overrideSpecs = view.overrides[groupId]
+        const overrideMap = new Map<string, DataNode>()
+        const outputMap = new Map<string, OutputNode>()
+
+        // Y baseline: align with the group's header. Override + output
+        // columns extend down from that anchor.
+        const baseY =
+          headersStartY +
+          OUTPUT_GROUPS.findIndex((g) => g.id === groupId) *
+            (HEADER_H + HEADER_GAP_Y)
+
+        /* Overrides column */
+        let overrideY = baseY
+        for (const spec of overrideSpecs) {
+          const node = new DataNode(
+            spec.data.label,
+            spec.data.tag,
+            spec.data.body,
+            spec.data.variant
+          )
+          overrideMap.set(spec.socket, node)
+          await editor.addNode(node)
+          await area.translate(node.id, {
+            x: overrideColX,
+            y: overrideY,
+          })
+          overrideY += INPUT_H + OVERRIDE_GAP_Y
+        }
+
+        /* Outputs column */
+        let outY = baseY
+        if (group.tabbed) {
+          // "Tabbed" groups (just Share for now) collapse to a SINGLE
+          // iframe — the underlying page has its own aspect toggle, so
+          // a Rete-side tab strip would just duplicate it. We mount the
+          // default first variant (Share 3:4) and let the user switch
+          // ratios from inside the iframe.
+          const first = groupOutputs[0]
+          const ctrl = new IframeControl(first.src, first.w, first.h)
+          const node = new OutputNode(
+            group.label,
+            ctrl,
+            OVERRIDE_SOCKETS_BY_GROUP[groupId]
+          )
+          outputMap.set(first.id, node)
+          await editor.addNode(node)
+          await area.translate(node.id, { x: outputColX, y: outY })
+          // Frame → output
+          await editor.addConnection(
+            new ClassicPreset.Connection(
+              frame,
+              'render',
+              node,
+              'render'
+            ) as Schemes['Connection']
+          )
+          // Overrides → output (share has one, but the loop generalises
+          // if other groups ever collapse to a single iframe).
+          for (const spec of overrideSpecs) {
+            const overrideNode = overrideMap.get(spec.socket)!
+            await editor.addConnection(
+              new ClassicPreset.Connection(
+                overrideNode,
+                'value',
+                node,
+                spec.socket
+              ) as Schemes['Connection']
+            )
+          }
+        } else {
+          // Stacked: one OutputNode per output, all connected from the
+          // same overrides and the same frame render socket.
+          for (const o of groupOutputs) {
+            const ctrl = new IframeControl(o.src, o.w, o.h)
+            const node = new OutputNode(
+              o.label,
+              ctrl,
+              OVERRIDE_SOCKETS_BY_GROUP[groupId]
+            )
+            outputMap.set(o.id, node)
+            await editor.addNode(node)
+            await area.translate(node.id, { x: outputColX, y: outY })
+            await editor.addConnection(
+              new ClassicPreset.Connection(
+                frame,
+                'render',
+                node,
+                'render'
+              ) as Schemes['Connection']
+            )
+            for (const spec of overrideSpecs) {
+              const overrideNode = overrideMap.get(spec.socket)!
+              await editor.addConnection(
+                new ClassicPreset.Connection(
+                  overrideNode,
+                  'value',
+                  node,
+                  spec.socket
+                ) as Schemes['Connection']
+              )
+            }
+            outY += o.h + OUTPUT_GAP_Y
+          }
+        }
+
+        expandedSlot = {
+          group: groupId,
+          nodes: { overrides: overrideMap, outputs: outputMap },
+        }
+      }
+
+      async function unmountGroup(): Promise<void> {
+        if (!expandedSlot) return
+        // Remove connections involving any of these nodes first — Rete
+        // requires connections to be cleared before their endpoints.
+        const slotNodeIds = new Set<string>()
+        for (const n of expandedSlot.nodes.overrides.values())
+          slotNodeIds.add(n.id)
+        for (const n of expandedSlot.nodes.outputs.values())
+          slotNodeIds.add(n.id)
+        for (const conn of [...editor.getConnections()]) {
+          if (slotNodeIds.has(conn.source) || slotNodeIds.has(conn.target)) {
+            await editor.removeConnection(conn.id)
+          }
+        }
+        for (const id of slotNodeIds) {
+          await editor.removeNode(id)
+        }
+        expandedSlot = null
+      }
+
+      /* ── Apply* methods exposed to the React effects ─────────── */
+
+      async function applyExpandedGroup(
+        next: OutputGroupId | null
+      ): Promise<void> {
+        const currentlyExpanded = expandedSlot?.group ?? null
+        if (currentlyExpanded === next) return
+
+        await unmountGroup()
+        if (next) await mountGroup(next)
+
+        // Refresh header labels so their "loaded / click" subtext + caret
+        // reflect the new state.
+        for (const group of OUTPUT_GROUPS) {
+          const node = headerNodes[group.id]
+          node.headerCtrl.expanded = next === group.id
+          await area.update('control', node.headerCtrl.id)
+        }
+      }
+
+      async function applySection(idx: number): Promise<void> {
+        const view = sectionViews[idx]
+        if (!view) return
+
+        // Frame iframe + pagination overlay
+        frameIframeCtrl.src = view.frameSrc
+        frameIframeCtrl.pagination = {
+          current: idx,
+          total: sectionViews.length,
+          label: view.heading,
+        }
+        await area.update('control', frameIframeCtrl.id)
+
+        // Input nodes (preview content)
+        for (const key of ['content', 'config', 'chart'] as const) {
+          const node = inputNodes[key]
+          const data = view.inputs[key]
+          node.previewCtrl.label = data.label
+          node.previewCtrl.tag = data.tag
+          node.previewCtrl.body = data.body
+          node.previewCtrl.variant = data.variant
+          await area.update('control', node.previewCtrl.id)
+        }
+
+        // Expanded group's overrides + output iframes (if any group open)
+        if (expandedSlot) {
+          const groupId = expandedSlot.group
+          const overrideSpecs = view.overrides[groupId]
+          for (const spec of overrideSpecs) {
+            const node = expandedSlot.nodes.overrides.get(spec.socket)
+            if (!node) continue
+            node.previewCtrl.label = spec.data.label
+            node.previewCtrl.tag = spec.data.tag
+            node.previewCtrl.body = spec.data.body
+            node.previewCtrl.variant = spec.data.variant
+            await area.update('control', node.previewCtrl.id)
+          }
+          const group = OUTPUT_GROUPS.find((g) => g.id === groupId)!
+          const newOutputs = view.outputs[groupId]
+          if (group.tabbed) {
+            // Single-iframe group (Share). The output node persists; we
+            // just point it at the new section's default variant.
+            const node = [...expandedSlot.nodes.outputs.values()][0]
+            if (node) {
+              const ctrl = node.controls.iframe as IframeControl
+              const first = newOutputs[0]
+              ctrl.src = first.src
+              ctrl.width = first.w
+              ctrl.height = first.h
+              await area.update('control', ctrl.id)
+            }
+          } else {
+            // Stacked — outputs are keyed by output id, but a section
+            // switch changes those ids. Easiest correct path: tear down
+            // and rebuild this group with the new section's data.
+            await unmountGroup()
+            await mountGroup(groupId)
+          }
+        }
+      }
+
+      // Bootstrap: mount the initial expanded group (if any).
+      if (stateRef.current.expandedGroup) {
+        await mountGroup(stateRef.current.expandedGroup)
+      }
+
+      await AreaExtensions.zoomAt(area, editor.getNodes())
+
+      sceneRef.current = {
+        applySection,
+        applyExpandedGroup,
+        destroy: () => area.destroy(),
+      }
+    })().catch((err) => {
+      console.error('[CanvasClient] setup failed', err)
+    })
+
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      disposed = true
+      sceneRef.current?.destroy()
+      sceneRef.current = null
     }
-  }, [resizingId])
+  }, [sectionViews])
 
-  const fitAll = useCallback(() => {
-    const el = surfaceRef.current
-    if (!el || frames.length === 0) return
-    // Bounds include the input column to the left and (if a frame is
-    // focused) the output stack to the right. Without folding outputs into
-    // the bounds, "fit" clips the giant slides / share / autoplay nodes.
-    const minX =
-      Math.min(...frames.map((f) => f.x)) - (INPUT_W + INPUT_TO_FRAME_GAP)
-    let maxX = Math.max(...frames.map((f) => f.x + f.w))
-    let minY = Math.min(...frames.map((f) => f.y)) - 60
-    let maxY = Math.max(...frames.map((f) => f.y + f.h))
-    // Headers are always present; iframe nodes only when expanded.
-    if (subgraph.outputHeaders.length > 0) {
-      maxX = Math.max(maxX, ...subgraph.outputHeaders.map((h) => h.x + h.w))
-      minY = Math.min(minY, ...subgraph.outputHeaders.map((h) => h.y))
-      maxY = Math.max(maxY, ...subgraph.outputHeaders.map((h) => h.y + h.h))
-    }
-    if (subgraph.outputs.length > 0) {
-      maxX = Math.max(maxX, ...subgraph.outputs.map((o) => o.x + o.w))
-      minY = Math.min(minY, ...subgraph.outputs.map((o) => o.y))
-      maxY = Math.max(maxY, ...subgraph.outputs.map((o) => o.y + o.h))
-    }
-    if (subgraph.outputOverrideInputs.length > 0) {
-      // Per-output override column sits BETWEEN the section frame and
-      // its outputs (positive x), so it can't push minX. It can push y
-      // bounds if the override column is taller than the iframe it
-      // attaches to (rare but possible for outputs shorter than its
-      // override stack — e.g. report A4 with 0 overrides won't trigger,
-      // but autoplay 9:16 with 2 overrides could).
-      minY = Math.min(minY, ...subgraph.outputOverrideInputs.map((o) => o.y))
-      maxY = Math.max(
-        maxY,
-        ...subgraph.outputOverrideInputs.map((o) => o.y + o.h)
-      )
-    }
-    if (subgraph.outputTabBars.length > 0) {
-      maxX = Math.max(maxX, ...subgraph.outputTabBars.map((b) => b.x + b.w))
-      minY = Math.min(minY, ...subgraph.outputTabBars.map((b) => b.y))
-      maxY = Math.max(maxY, ...subgraph.outputTabBars.map((b) => b.y + b.h))
-    }
-    const padding = 80
-    const w = maxX - minX
-    const h = maxY - minY
-    const zx = (el.clientWidth - padding * 2) / w
-    const zy = (el.clientHeight - padding * 2) / h
-    const z = clamp(Math.min(zx, zy), MIN_ZOOM, MAX_ZOOM)
-    setZoom(z)
-    setPan({ x: padding - minX * z, y: padding - minY * z })
-  }, [
-    frames,
-    subgraph.outputs,
-    subgraph.outputHeaders,
-    subgraph.outputOverrideInputs,
-    subgraph.outputTabBars,
-  ])
-
-  // Auto-fit on mount — 1920x1080 frames at default zoom would blow the
-  // viewport. fitAll's [frames] dep would re-fit on every resize too; use
-  // a ref-based guard so we only auto-fit once at startup.
-  const didInitialFitRef = useRef(false)
+  /* ─── Apply state changes (without rebuilding the editor) ───── */
   useEffect(() => {
-    if (didInitialFitRef.current) return
-    if (frames.length === 0) return
-    didInitialFitRef.current = true
-    // Defer one frame so the surface ref has measured its container.
-    requestAnimationFrame(fitAll)
-  }, [frames, fitAll])
+    void sceneRef.current?.applySection(activeSectionIndex)
+  }, [activeSectionIndex])
 
-  /** Resize the focused frame to a preset's dimensions. No-op if no focus. */
-  const applyPreset = useCallback(
-    (preset: SizePreset) => {
-      if (!focusedId) return
-      setFrames((prev) =>
-        prev.map((f) =>
-          f.id === focusedId ? { ...f, w: preset.w, h: preset.h } : f
+  useEffect(() => {
+    void sceneRef.current?.applyExpandedGroup(expandedGroup)
+  }, [expandedGroup])
+
+  /* ─── Keyboard pagination (← / →) ────────────────────────────── */
+  const onKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return
+      if (e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'ArrowLeft') {
+        setActiveSectionIndex((i) => Math.max(0, i - 1))
+      } else if (e.key === 'ArrowRight') {
+        setActiveSectionIndex((i) =>
+          Math.min(sectionViews.length - 1, i + 1)
         )
-      )
+      }
     },
-    [focusedId]
+    [sectionViews.length]
   )
-
-  /** Match a frame's dimensions to a known preset, if any. Used for the
-   *  "selected" state on the preset bar. Exact match — no fuzzy aspect
-   *  comparison, since two presets can share the same aspect ratio. */
-  const activePresetId = useMemo(() => {
-    if (!focusedFrame) return null
-    const match = SIZE_PRESETS.find(
-      (p) =>
-        Math.round(p.w) === Math.round(focusedFrame.w) &&
-        Math.round(p.h) === Math.round(focusedFrame.h)
-    )
-    return match?.id ?? null
-  }, [focusedFrame])
+  useEffect(() => {
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onKey])
 
   return (
     <div
@@ -701,362 +1110,31 @@ export default function CanvasClient({
         position: 'fixed',
         inset: 0,
         background: '#0a0a0a',
-        overflow: 'hidden',
         color: '#ccc',
         fontFamily: 'system-ui, sans-serif',
+        overflow: 'hidden',
       }}
     >
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
       <header
         style={{
           position: 'absolute',
           top: 16,
           left: 16,
-          right: 16,
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          alignItems: 'stretch',
+          background: 'rgba(20,20,20,0.8)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid #2a2a2a',
+          borderRadius: 6,
+          padding: '8px 14px',
+          fontSize: 12,
           pointerEvents: 'none',
         }}
       >
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div
-            style={{
-              background: 'rgba(20, 20, 20, 0.8)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid #2a2a2a',
-              borderRadius: 6,
-              padding: '8px 14px',
-              display: 'flex',
-              gap: 16,
-              alignItems: 'baseline',
-              pointerEvents: 'auto',
-            }}
-          >
-            <strong style={{ fontSize: 13 }}>{slug}</strong>
-            <span style={{ fontSize: 11, color: '#888' }}>
-              {frames.length} sections · {(zoom * 100).toFixed(0)}%
-              {focusedFrame &&
-                ` · ${Math.round(focusedFrame.w)}×${Math.round(focusedFrame.h)}`}
-            </span>
-          </div>
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              gap: 8,
-              pointerEvents: 'auto',
-            }}
-          >
-            <Btn onClick={() => setZoom((z) => clamp(z * 0.9, MIN_ZOOM, MAX_ZOOM))}>−</Btn>
-            <Btn onClick={() => setZoom((z) => clamp(z * 1.1, MIN_ZOOM, MAX_ZOOM))}>+</Btn>
-            <Btn onClick={fitAll}>fit</Btn>
-            <Btn
-              onClick={() => {
-                setZoom(1)
-                setPan({ x: 400, y: 120 })
-              }}
-            >
-              1:1
-            </Btn>
-          </div>
-        </div>
-
-        {/* Preset bar — visible whenever a frame is focused. Clicking sets
-            the focused frame's dimensions to that preset. The iframe's
-            window resizes with it, which is where matchMedia and the
-            engine's @media rules pick up the new viewport shape. */}
-        {focusedFrame && (
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              alignSelf: 'flex-start',
-              background: 'rgba(20, 20, 20, 0.8)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid #2a2a2a',
-              borderRadius: 8,
-              padding: 6,
-              pointerEvents: 'auto',
-            }}
-          >
-            {SIZE_PRESETS.map((preset) => {
-              const isActive = activePresetId === preset.id
-              return (
-                <button
-                  key={preset.id}
-                  onClick={() => applyPreset(preset)}
-                  title={preset.tag}
-                  style={{
-                    background: isActive ? '#2a2a2a' : 'transparent',
-                    color: isActive ? '#fff' : '#bbb',
-                    border: `1px solid ${isActive ? '#555' : 'transparent'}`,
-                    borderRadius: 5,
-                    padding: '6px 12px',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  <span>{preset.label}</span>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: isActive ? '#888' : '#555',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {preset.tag}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )}
+        <strong style={{ fontSize: 13 }}>{slug}</strong>
+        <span style={{ marginLeft: 12, color: '#888' }}>
+          {sectionViews.length} sections · ← / → to paginate
+        </span>
       </header>
-
-      <div
-        ref={surfaceRef}
-        data-canvas-bg
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          cursor: isPanning ? 'grabbing' : 'grab',
-          backgroundImage:
-            'radial-gradient(circle, #1f1f1f 1px, transparent 1px)',
-          backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
-          backgroundPosition: `${pan.x}px ${pan.y}px`,
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            transformOrigin: '0 0',
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            willChange: 'transform',
-            pointerEvents: 'none',
-          }}
-        >
-          <CanvasWires wires={subgraph.wires} />
-
-          {frames.map((frame) => {
-            const isFocused = focusedId === frame.id
-            const sectionId =
-              frame.unit.parentConfig.id ?? `section-${frame.unit.parentIndex}`
-            return (
-              <div
-                key={frame.id}
-                style={{
-                  position: 'absolute',
-                  left: frame.x,
-                  top: frame.y,
-                  width: frame.w,
-                  height: frame.h,
-                  pointerEvents: 'auto',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setFocusedId(frame.id)}
-              >
-                <CanvasFrame
-                  slug={slug}
-                  publicSiteUrl={publicSiteUrl}
-                  sectionId={sectionId}
-                  unit={frame.unit}
-                  index={frame.unit.parentIndex}
-                  focused={isFocused}
-                />
-                {/* Resize handle — bottom-right corner, focused frames only.
-                    Window-level mousemove takes over on drag so the gesture
-                    survives the cursor leaving the 14px target. */}
-                {isFocused && (
-                  <div
-                    onMouseDown={(e) => startResize(frame.id, e)}
-                    title="drag to resize"
-                    style={{
-                      position: 'absolute',
-                      right: -7,
-                      bottom: -7,
-                      width: 14,
-                      height: 14,
-                      background: '#fff',
-                      border: '2px solid #888',
-                      borderRadius: 3,
-                      cursor: 'nwse-resize',
-                      zIndex: 2,
-                    }}
-                  />
-                )}
-              </div>
-            )
-          })}
-
-          {subgraph.inputs.map((node) => (
-            <div
-              key={node.id}
-              style={{
-                position: 'absolute',
-                left: node.x,
-                top: node.y,
-                width: node.w,
-                height: node.h,
-                pointerEvents: 'auto',
-              }}
-            >
-              <InputNode data={node.data} />
-            </div>
-          ))}
-
-          {subgraph.outputs.map((node) => (
-            <div
-              key={node.id}
-              style={{
-                position: 'absolute',
-                left: node.x,
-                top: node.y,
-                width: node.w,
-                height: node.h,
-                // Containing div doesn't need pointer events — the iframe
-                // inside is the only interactive surface, and we've set
-                // pointer-events: none on it so canvas pan-drag passes
-                // through.
-                pointerEvents: 'none',
-              }}
-            >
-              <OutputNode data={node.data} />
-            </div>
-          ))}
-
-          {subgraph.outputHeaders.map((header) => (
-            <div
-              key={header.id}
-              style={{
-                position: 'absolute',
-                left: header.x,
-                top: header.y,
-                width: header.w,
-                height: header.h,
-                pointerEvents: 'auto',
-              }}
-            >
-              <OutputGroupHeader
-                data={header.data}
-                onClick={() =>
-                  setExpandedGroup((prev) =>
-                    prev === header.id ? null : header.id
-                  )
-                }
-              />
-            </div>
-          ))}
-
-          {subgraph.outputOverrideInputs.map((node) => (
-            <div
-              key={node.id}
-              style={{
-                position: 'absolute',
-                left: node.x,
-                top: node.y,
-                width: node.w,
-                height: node.h,
-                pointerEvents: 'auto',
-              }}
-            >
-              <InputNode data={node.data} />
-            </div>
-          ))}
-
-          {subgraph.outputTabBars.map((bar) => (
-            <div
-              key={bar.id}
-              style={{
-                position: 'absolute',
-                left: bar.x,
-                top: bar.y,
-                width: bar.w,
-                height: bar.h,
-                pointerEvents: 'auto',
-              }}
-            >
-              <OutputTabBar
-                tabs={bar.tabs}
-                onSelect={(outputId) =>
-                  setActiveTabByGroup((prev) => ({
-                    ...prev,
-                    [bar.group]: outputId,
-                  }))
-                }
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <footer
-        style={{
-          position: 'absolute',
-          bottom: 16,
-          left: 16,
-          right: 16,
-          fontSize: 11,
-          color: '#555',
-          display: 'flex',
-          justifyContent: 'space-between',
-          pointerEvents: 'none',
-        }}
-      >
-        <span>
-          drag empty canvas to pan · cmd/ctrl + wheel to zoom · click a frame
-          to focus · drag the corner handle to resize
-        </span>
-        <span>
-          pan {pan.x.toFixed(0)}, {pan.y.toFixed(0)}
-        </span>
-      </footer>
     </div>
-  )
-}
-
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n))
-}
-
-function Btn({
-  onClick,
-  children,
-}: {
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: 'rgba(20, 20, 20, 0.8)',
-        backdropFilter: 'blur(8px)',
-        color: '#ccc',
-        border: '1px solid #2a2a2a',
-        borderRadius: 6,
-        padding: '6px 12px',
-        fontSize: 12,
-        cursor: 'pointer',
-        minWidth: 36,
-      }}
-    >
-      {children}
-    </button>
   )
 }

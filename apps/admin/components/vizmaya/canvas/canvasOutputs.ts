@@ -1,5 +1,4 @@
 import type { ResolvedUnit } from '@vismay/viz-engine'
-import type { OutputNodeData } from './OutputNode'
 
 /**
  * Group key — outputs that share a render route family. The canvas renders
@@ -7,6 +6,22 @@ import type { OutputNodeData } from './OutputNode'
  * iframe count stays manageable. Order here defines display order.
  */
 export type OutputGroupId = 'share' | 'slides' | 'report' | 'autoplay'
+
+/**
+ * One renderable output: a target route + native dimensions + which group
+ * it belongs to. Consumed by the canvas to build iframe nodes.
+ */
+export interface OutputNodeData {
+  id: string
+  group: OutputGroupId
+  label: string
+  /** Short dims string shown under the label, e.g. "1080 × 1440". */
+  tag: string
+  /** Full iframe URL (vizmaya-fyi route + query). */
+  src: string
+  w: number
+  h: number
+}
 
 export interface OutputGroup {
   id: OutputGroupId
