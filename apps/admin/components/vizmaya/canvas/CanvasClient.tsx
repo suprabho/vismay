@@ -27,6 +27,14 @@ import {
   OUTPUT_GROUPS,
   type OutputGroupId,
 } from './canvasOutputs'
+import {
+  buildEditableSlice,
+  mergeSlice,
+  saveSlice,
+  type EditableKind,
+  type EditableSlice,
+} from './canvasEditing'
+import EditorPanel from './EditorPanel'
 
 interface Props {
   slug: string
@@ -70,10 +78,15 @@ const OVERRIDE_SOCKETS_BY_GROUP: Record<OutputGroupId, string[]> = {
 /**
  * Per-group override builder: how to slice the parsed sources into the
  * override input cards that feed each output group's iframe(s).
+ *
+ * `editKind` tags each spec with the EditableKind that the editor panel
+ * uses to extract / merge that override's slice. Drives the click-to-edit
+ * affordance attached to each rendered override node.
  */
 interface OverrideSpec {
   data: InputNodeData
   socket: string
+  editKind: EditableKind
 }
 function buildOverridesForGroup(
   groupId: OutputGroupId,
@@ -82,21 +95,55 @@ function buildOverridesForGroup(
 ): OverrideSpec[] {
   switch (groupId) {
     case 'share':
-      return [{ data: shareNode(unit, parsed), socket: 'variants' }]
+      return [
+        {
+          data: shareNode(unit, parsed),
+          socket: 'variants',
+          editKind: 'share',
+        },
+      ]
     case 'slides':
       return [
-        { data: reportNodeFormat(unit, parsed, 'slides'), socket: 'override' },
+        {
+          data: reportNodeFormat(unit, parsed, 'slides'),
+          socket: 'override',
+          editKind: 'slides',
+        },
       ]
     case 'report':
       return [
-        { data: reportNodeFormat(unit, parsed, 'report'), socket: 'override' },
+        {
+          data: reportNodeFormat(unit, parsed, 'report'),
+          socket: 'override',
+          editKind: 'report',
+        },
       ]
     case 'autoplay':
       return [
-        { data: mapOverrideNode(unit, parsed), socket: 'map' },
-        { data: narrationNode(unit, parsed), socket: 'narration' },
+        {
+          data: mapOverrideNode(unit, parsed),
+          socket: 'map',
+          editKind: 'map',
+        },
+        {
+          data: narrationNode(unit, parsed),
+          socket: 'narration',
+          editKind: 'narration',
+        },
       ]
   }
+}
+
+/**
+ * Append `&_v=<nonce>` (or `?_v=`) so the iframe reloads when the user
+ * saves an edit — the underlying YAML changes but the canonical URL
+ * doesn't, so without a cache buster the browser would serve the prior
+ * render.
+ */
+function withCacheBust(url: string, nonce: number): string {
+  if (nonce === 0) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}_v=${nonce}`
 }
 
 /**
@@ -120,7 +167,8 @@ function buildSectionView(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>,
   slug: string,
-  publicSiteUrl: string
+  publicSiteUrl: string,
+  dataNonce: number
 ): SectionView {
   const sectionId =
     unit.parentConfig.id ?? `section-${unit.parentIndex}`
@@ -128,8 +176,13 @@ function buildSectionView(
     unit.heading ||
     unit.paragraphs[0]?.replace(/\*+/g, '') ||
     `Section ${unit.parentIndex + 1}`
-  const frameSrc = `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`
-  const allOutputs = buildOutputsForUnit(unit, slug, publicSiteUrl)
+  const frameSrc = withCacheBust(
+    `${publicSiteUrl.replace(/\/$/, '')}/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
+    dataNonce
+  )
+  const allOutputs = buildOutputsForUnit(unit, slug, publicSiteUrl).map(
+    (o) => ({ ...o, src: withCacheBust(o.src, dataNonce) })
+  )
   const outputs: SectionView['outputs'] = {
     share: allOutputs.filter((o) => o.group === 'share'),
     slides: allOutputs.filter((o) => o.group === 'slides'),
@@ -175,28 +228,69 @@ function buildSectionView(
 export default function CanvasClient({
   slug,
   units,
-  sources,
+  sources: initialSources,
   publicSiteUrl,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  // Sources live in state so save handlers can patch them locally,
+  // triggering iframe reload + preview re-render without a full page
+  // refetch. Server's initial value seeds it once.
+  const [sources, setSources] = useState<CanvasSources>(initialSources)
+  // Bumped on every successful save — appended to iframe URLs as a
+  // cache-bust so the iframes pull the fresh render.
+  const [dataNonce, setDataNonce] = useState(0)
+
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
     () => units.filter((u) => u.subIndex === 0),
     [units]
   )
   // Section views are pure data; cheap to memoise once and index into.
+  // Includes dataNonce so URL changes propagate after a save.
   const sectionViews = useMemo(
     () =>
       sectionUnits.map((u) =>
-        buildSectionView(u, parsedSources, slug, publicSiteUrl)
+        buildSectionView(u, parsedSources, slug, publicSiteUrl, dataNonce)
       ),
-    [sectionUnits, parsedSources, slug, publicSiteUrl]
+    [sectionUnits, parsedSources, slug, publicSiteUrl, dataNonce]
   )
+  // Latest sectionViews available to closures captured during the
+  // initial build (which only runs once per `units` change). Without
+  // this, applySection would see stale URLs/data after a save.
+  const sectionViewsRef = useRef(sectionViews)
+  useEffect(() => {
+    sectionViewsRef.current = sectionViews
+  }, [sectionViews])
+  const sectionUnitsRef = useRef(sectionUnits)
+  useEffect(() => {
+    sectionUnitsRef.current = sectionUnits
+  }, [sectionUnits])
 
   const [activeSectionIndex, setActiveSectionIndex] = useState(0)
   const [expandedGroup, setExpandedGroup] = useState<OutputGroupId | null>(
     'share'
   )
+
+  /* ─── Editor state (right side panel) ────────────────────────── */
+  const [editorTarget, setEditorTarget] = useState<{
+    kind: EditableKind
+    unit: ResolvedUnit
+  } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  // Derived from editorTarget + current sources; updates if the user
+  // saves and the slice re-derives, but the panel stays open.
+  const editorSlice: EditableSlice | null = useMemo(
+    () =>
+      editorTarget
+        ? buildEditableSlice(editorTarget.kind, editorTarget.unit, sources)
+        : null,
+    [editorTarget, sources]
+  )
+  const setEditorTargetRef = useRef(setEditorTarget)
+  useEffect(() => {
+    setEditorTargetRef.current = setEditorTarget
+  }, [setEditorTarget])
 
   // Latest setters via refs so callbacks captured during initial editor
   // build always dispatch to the current React state, not stale closures.
@@ -276,6 +370,10 @@ export default function CanvasClient({
       }
 
       class TextPreviewControl extends ClassicPreset.Control {
+        // Set by the build path when the node is editable (the 5
+        // override types). When present, the React renderer shows a
+        // hover state + opens the editor panel on click.
+        onClick?: () => void
         constructor(
           public label: string,
           public tag: string,
@@ -569,8 +667,20 @@ export default function CanvasClient({
       }: {
         data: TextPreviewControl
       }) {
+        const editable = typeof data.onClick === 'function'
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        const onClick = (e: React.MouseEvent) => {
+          if (!editable) return
+          stop(e)
+          data.onClick?.()
+        }
         return (
           <div
+            onClick={onClick}
+            onPointerDown={editable ? stop : undefined}
+            onMouseDown={editable ? stop : undefined}
+            title={editable ? 'click to edit' : undefined}
             style={{
               width: INPUT_W - 24,
               minHeight: 96,
@@ -588,6 +698,14 @@ export default function CanvasClient({
               whiteSpace: 'pre-wrap',
               fontStyle: data.variant === 'muted' ? 'italic' : 'normal',
               overflow: 'hidden',
+              cursor: editable ? 'pointer' : 'default',
+              transition: 'border-color 120ms',
+            }}
+            onMouseEnter={(e) => {
+              if (editable) e.currentTarget.style.borderColor = '#3a5da0'
+            }}
+            onMouseLeave={(e) => {
+              if (editable) e.currentTarget.style.borderColor = '#262626'
             }}
           >
             <div
@@ -596,9 +714,14 @@ export default function CanvasClient({
                 color: '#666',
                 letterSpacing: '0.14em',
                 marginBottom: 4,
+                display: 'flex',
+                justifyContent: 'space-between',
               }}
             >
-              {data.tag}
+              <span>{data.tag}</span>
+              {editable && (
+                <span style={{ color: '#3a5da0' }}>EDIT</span>
+              )}
             </div>
             {data.body}
           </div>
@@ -717,7 +840,12 @@ export default function CanvasClient({
 
       /* ── Initial build (single section) ──────────────────────── */
 
-      const initialView = sectionViews[stateRef.current.activeSectionIndex] ?? sectionViews[0]
+      // Read the latest section views through the ref — by the time
+      // this async setup completes, parent state could have changed.
+      const initialView =
+        sectionViewsRef.current[stateRef.current.activeSectionIndex] ??
+        sectionViewsRef.current[0]
+      const sectionCount = sectionViewsRef.current.length
 
       // Column X coords. Outputs sit to the right of the headers column,
       // far enough that even the slides node (1920 wide) doesn't reach
@@ -737,7 +865,7 @@ export default function CanvasClient({
       )
       frameIframeCtrl.pagination = {
         current: stateRef.current.activeSectionIndex,
-        total: sectionViews.length,
+        total: sectionCount,
         label: initialView.heading,
       }
       const frame = new FrameNode(frameIframeCtrl)
@@ -835,7 +963,8 @@ export default function CanvasClient({
        * with internal aspect tabs.
        */
       async function mountGroup(groupId: OutputGroupId): Promise<void> {
-        const view = sectionViews[stateRef.current.activeSectionIndex]
+        const view = sectionViewsRef.current[stateRef.current.activeSectionIndex]
+        if (!view) return
         const group = OUTPUT_GROUPS.find((g) => g.id === groupId)!
         const groupOutputs = view.outputs[groupId]
         if (groupOutputs.length === 0) return
@@ -860,6 +989,19 @@ export default function CanvasClient({
             spec.data.body,
             spec.data.variant
           )
+          // Wire click-to-edit. The handler reads the LATEST active
+          // section's unit (not the build-time one) so paginating then
+          // clicking opens the editor for the right section.
+          const editKind = spec.editKind
+          node.previewCtrl.onClick = () => {
+            const idx = stateRef.current.activeSectionIndex
+            const targetUnit = sectionUnitsRef.current[idx]
+            if (!targetUnit) return
+            setEditorTargetRef.current({
+              kind: editKind,
+              unit: targetUnit,
+            })
+          }
           overrideMap.set(spec.socket, node)
           await editor.addNode(node)
           await area.translate(node.id, {
@@ -992,14 +1134,14 @@ export default function CanvasClient({
       }
 
       async function applySection(idx: number): Promise<void> {
-        const view = sectionViews[idx]
+        const view = sectionViewsRef.current[idx]
         if (!view) return
 
         // Frame iframe + pagination overlay
         frameIframeCtrl.src = view.frameSrc
         frameIframeCtrl.pagination = {
           current: idx,
-          total: sectionViews.length,
+          total: sectionViewsRef.current.length,
           label: view.heading,
         }
         await area.update('control', frameIframeCtrl.id)
@@ -1073,16 +1215,67 @@ export default function CanvasClient({
       sceneRef.current?.destroy()
       sceneRef.current = null
     }
-  }, [sectionViews])
+    // Rebuild only when the structural inputs change (different story
+    // slug, different unit list, or different public-site host). Source
+    // edits + nonce bumps don't trigger a rebuild — they flow through
+    // the `sources changed` effect below.
+  }, [slug, sectionUnits, publicSiteUrl])
 
   /* ─── Apply state changes (without rebuilding the editor) ───── */
   useEffect(() => {
     void sceneRef.current?.applySection(activeSectionIndex)
+    // A section switch with the editor open would show a stale slice
+    // (the captured unit is the old section's). Close it; user can
+    // re-open on the new section.
+    setEditorTarget(null)
   }, [activeSectionIndex])
 
   useEffect(() => {
     void sceneRef.current?.applyExpandedGroup(expandedGroup)
   }, [expandedGroup])
+
+  // After a save: sources change → parsedSources change → sectionViews
+  // recompute (now with bumped nonce in URLs). Re-applySection pushes
+  // the new srcs + preview text into the existing nodes, prompting the
+  // iframes to reload against the fresh data.
+  const sourcesInitialMountRef = useRef(true)
+  useEffect(() => {
+    if (sourcesInitialMountRef.current) {
+      sourcesInitialMountRef.current = false
+      return
+    }
+    void sceneRef.current?.applySection(activeSectionIndex)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsedSources, dataNonce])
+
+  /* ─── Save handler for the editor panel ────────────────────── */
+  const handleSave = useCallback(
+    async (editedText: string) => {
+      if (!editorTarget) return
+      setSaving(true)
+      setSaveError(null)
+      try {
+        const merge = mergeSlice(
+          editorTarget.kind,
+          editorTarget.unit,
+          sources,
+          editedText
+        )
+        await saveSlice(slug, merge)
+        // Apply locally so the canvas updates without a refetch round
+        // trip; bump the iframe cache-bust so embedded routes re-render
+        // against the freshly written file.
+        setSources((prev) => ({ ...prev, ...merge.patch }))
+        setDataNonce((n) => n + 1)
+        setEditorTarget(null)
+      } catch (e) {
+        setSaveError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSaving(false)
+      }
+    },
+    [editorTarget, sources, slug]
+  )
 
   /* ─── Keyboard pagination (← / →) ────────────────────────────── */
   const onKey = useCallback(
@@ -1135,6 +1328,18 @@ export default function CanvasClient({
           {sectionViews.length} sections · ← / → to paginate
         </span>
       </header>
+      {editorSlice && (
+        <EditorPanel
+          slice={editorSlice}
+          saving={saving}
+          error={saveError}
+          onSave={handleSave}
+          onClose={() => {
+            setEditorTarget(null)
+            setSaveError(null)
+          }}
+        />
+      )}
     </div>
   )
 }
