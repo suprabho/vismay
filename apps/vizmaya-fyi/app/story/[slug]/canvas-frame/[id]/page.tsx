@@ -41,7 +41,7 @@ export default async function CanvasFramePage({ params }: RouteParams) {
     story = await getStoryContent(slug)
     if (!(await hasStoryConfig(slug))) notFound()
     config = await loadStoryConfig(slug)
-    if (story.frontmatter.vertical === 'footshort') {
+    if (story.frontmatter.vertical === 'footshorts') {
       try {
         config = await hydrateFootshortConfig(config)
       } catch {

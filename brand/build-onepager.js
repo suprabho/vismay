@@ -234,7 +234,7 @@ function portfolioGroup(y, headColor, headDot, head, items) {
 
 rY = portfolioGroup(rY, C.live, C.live, "LIVE", [
   ["vizmaya.fyi",  "STEWARD · SUPRO"],
-  ["Footshort",    "STEWARD · SUPRO"],
+  ["Footshorts",    "STEWARD · SUPRO"],
 ]);
 rY = portfolioGroup(rY, C.prod, C.prod, "IN PRODUCTION", [
   ["Kidzovo  ·  kids",                ""],

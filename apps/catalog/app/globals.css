@@ -3,15 +3,15 @@
 /* Tailwind v4 only auto-scans the app's own source tree. Viz modules from the
    vertical packages live outside that tree and use arbitrary classes
    (grid-cols-[…], text-[10px], min-w-[72px], …) the JIT needs to see. */
-@source "../../../verticals/footshort-viz/src/**/*.{ts,tsx}";
+@source "../../../verticals/footshorts-viz/src/**/*.{ts,tsx}";
 @source "../../../verticals/f1-viz/src/**/*.{ts,tsx}";
 
 @theme {
   --color-bg: #0b0d12;
   --color-surface: #13161d;
   --color-line: #1f2330;
-  /* Footshort modules render `border-border` (e.g. StandingsTable, FeedCard
-     surface chrome). Value matches the `classic` footshort brand theme so the
+  /* Footshorts modules render `border-border` (e.g. StandingsTable, FeedCard
+     surface chrome). Value matches the `classic` footshorts brand theme so the
      catalog preview reads the same as the live app. */
   --color-border: #24242e;
   --color-text: #f5f5f5;

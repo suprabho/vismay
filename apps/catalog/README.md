@@ -1,6 +1,6 @@
 # @vismay/catalog
 
-Browse every registered `VizModule` across core, F1, and Footshort verticals — each module is shown with a live preview rendered from a co-located `sample.ts` fixture plus its `adminForm` schema. Intended for admins / editors composing stories who want to see what each viz type looks like before adding one to a `.config.yaml`.
+Browse every registered `VizModule` across core, F1, and Footshorts verticals — each module is shown with a live preview rendered from a co-located `sample.ts` fixture plus its `adminForm` schema. Intended for admins / editors composing stories who want to see what each viz type looks like before adding one to a `.config.yaml`.
 
 ## Run
 
@@ -38,4 +38,4 @@ import type { ImageLayerConfig } from './index'
 export const sample: ImageLayerConfig = { type: 'image', src: '…', fit: 'cover' }
 ```
 
-The catalog imports it explicitly via `lib/catalogModules.ts`, so non-catalog consumers (vizmaya-fyi, vizf1, footshort) tree-shake the sample data out of their bundles.
+The catalog imports it explicitly via `lib/catalogModules.ts`, so non-catalog consumers (vizmaya-fyi, vizf1, footshorts) tree-shake the sample data out of their bundles.

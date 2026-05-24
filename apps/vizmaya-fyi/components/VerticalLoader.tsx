@@ -10,8 +10,8 @@ import {
 // path that pulls in this module — including server pages whose JSX tree
 // references <VerticalLoader/> — is guaranteed to have the loader in place
 // by the time loadVertical fires on the client.
-registerVerticalLoader('footshort', () =>
-  import('@vismay/footshort-viz').then((m) => m.register())
+registerVerticalLoader('footshorts', () =>
+  import('@vismay/footshorts-viz').then((m) => m.register())
 )
 registerVerticalLoader('f1', () =>
   import('@vismay/f1-viz').then((m) => m.register())

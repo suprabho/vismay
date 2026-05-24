@@ -22,7 +22,7 @@ export default function ModuleCard({
 }: Props) {
   return (
     // Outer is a div, not an anchor: several vertical viz components (F1
-    // race-row, footshort match-row, etc.) render internal <Link> elements
+    // race-row, footshorts match-row, etc.) render internal <Link> elements
     // that would nest inside the outer <a> and produce a hydration error.
     // The bottom strip is the only click target, which is enough for the
     // catalog's grid scan-then-click flow.

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import DetailSheet from '@/components/DetailSheet'
 import type { FifaWc26TeamProfile } from '@/lib/fifa-wc26'
-import type { ShortfootFixture, ShortfootNewsItem } from '@/lib/shortfoot'
+import type { FootshortsFixture, FootshortsNewsItem } from '@/lib/footshorts'
 
 interface Props {
   code: string
@@ -51,8 +51,8 @@ export default function TeamDetail({ code, onClose }: Props) {
     state.kind === 'ready'
       ? [
           'stats',
-          ...(state.data.shortfoot.fixtures.length > 0 ? (['fixtures'] as const) : []),
-          ...(state.data.shortfoot.news.length > 0 ? (['news'] as const) : []),
+          ...(state.data.footshorts.fixtures.length > 0 ? (['fixtures'] as const) : []),
+          ...(state.data.footshorts.news.length > 0 ? (['news'] as const) : []),
         ]
       : ['stats']
   const activeTab: Tab = availableTabs.includes(tab) ? tab : 'stats'
@@ -70,8 +70,8 @@ export default function TeamDetail({ code, onClose }: Props) {
           tabs={availableTabs}
           active={activeTab}
           onChange={setTab}
-          fixturesCount={state.data.shortfoot.fixtures.length}
-          newsCount={state.data.shortfoot.news.length}
+          fixturesCount={state.data.footshorts.fixtures.length}
+          newsCount={state.data.footshorts.news.length}
         />
       )}
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
@@ -339,7 +339,7 @@ function FixturesPanel({ data }: { data: FifaWc26TeamProfile }) {
   return (
     <>
       <ul className="space-y-2 mt-1">
-        {data.shortfoot.fixtures.map((f) => (
+        {data.footshorts.fixtures.map((f) => (
           <FixtureRow key={f.id} fixture={f} teamName={data.name} />
         ))}
       </ul>
@@ -357,7 +357,7 @@ function NewsPanel({ data }: { data: FifaWc26TeamProfile }) {
   return (
     <>
       <ul className="space-y-3 mt-1">
-        {data.shortfoot.news.map((n) => (
+        {data.footshorts.news.map((n) => (
           <NewsRow key={n.id} item={n} />
         ))}
       </ul>
@@ -365,7 +365,7 @@ function NewsPanel({ data }: { data: FifaWc26TeamProfile }) {
         className="text-[10px] font-mono leading-snug"
         style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
       >
-        News summaries: shortfoot RSS via Gemini.
+        News summaries: footshorts RSS via Gemini.
       </p>
     </>
   )
@@ -375,7 +375,7 @@ function FixtureRow({
   fixture,
   teamName,
 }: {
-  fixture: ShortfootFixture
+  fixture: FootshortsFixture
   teamName: string
 }) {
   const status = fixture.status.toLowerCase()
@@ -456,7 +456,7 @@ function FixtureRow({
   )
 }
 
-function NewsRow({ item }: { item: ShortfootNewsItem }) {
+function NewsRow({ item }: { item: FootshortsNewsItem }) {
   const date = new Date(item.publishedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

@@ -11,9 +11,9 @@
 
 import { createServiceClient } from '@vismay/content-source/supabase'
 import {
-  getShortfootDataForTeam,
-  type ShortfootTeamData,
-} from './shortfoot'
+  getFootshortsDataForTeam,
+  type FootshortsTeamData,
+} from './footshorts'
 
 export interface FifaWc26Team {
   code: string
@@ -113,7 +113,7 @@ export interface FifaWc26TeamProfile extends FifaWc26Team {
     giniIndex: number | null
   }
   total: number
-  shortfoot: ShortfootTeamData
+  footshorts: FootshortsTeamData
 }
 
 // Rank a metric value (1 = highest) given a sorted-desc list of all values.
@@ -146,17 +146,17 @@ export async function getFifaWc26TeamProfile(
       .filter((v): v is number => v != null)
       .sort((a, b) => b - a)
 
-  // Static profile must render even if the shortfoot read errors out.
+  // Static profile must render even if the footshorts read errors out.
   // allSettled lets the rest of the response come back on any query failure.
-  const shortfootResult = await Promise.allSettled([
-    getShortfootDataForTeam(team.name),
+  const footshortsResult = await Promise.allSettled([
+    getFootshortsDataForTeam(team.name),
   ])
-  const shortfoot =
-    shortfootResult[0].status === 'fulfilled'
-      ? shortfootResult[0].value
+  const footshorts =
+    footshortsResult[0].status === 'fulfilled'
+      ? footshortsResult[0].value
       : (console.warn(
-          `[fifa-wc26] shortfoot lookup failed for ${team.name}:`,
-          shortfootResult[0].reason,
+          `[fifa-wc26] footshorts lookup failed for ${team.name}:`,
+          footshortsResult[0].reason,
         ),
         { news: [], fixtures: [] })
 
@@ -175,6 +175,6 @@ export async function getFifaWc26TeamProfile(
       ),
       giniIndex: rankOf(team.giniIndex, sortedDesc((t) => t.giniIndex)),
     },
-    shortfoot,
+    footshorts,
   }
 }

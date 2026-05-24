@@ -1,0 +1,36 @@
+{
+  "name": "@vismay/footshorts-viz",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./web": "./src/web/index.ts",
+    "./native": "./src/native/index.ts",
+    "./modules/*/sample": "./src/modules/*/sample.ts"
+  },
+  "peerDependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-native": "*",
+    "expo-router": "*",
+    "expo-image": "*",
+    "nativewind": "*"
+  },
+  "peerDependenciesMeta": {
+    "next": { "optional": true },
+    "react-native": { "optional": true },
+    "expo-router": { "optional": true },
+    "expo-image": { "optional": true },
+    "nativewind": { "optional": true }
+  },
+  "dependencies": {
+    "@vismay/viz-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}

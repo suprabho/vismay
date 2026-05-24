@@ -16,12 +16,12 @@ import ErrorBoundary from './ErrorBoundary'
 registerVerticalLoader('f1', () =>
   import('@vismay/f1-viz').then((m) => m.register()),
 )
-registerVerticalLoader('footshort', () =>
-  import('@vismay/footshort-viz').then((m) => m.register()),
+registerVerticalLoader('footshorts', () =>
+  import('@vismay/footshorts-viz').then((m) => m.register()),
 )
 const verticalsReady = Promise.all([
   loadVertical('f1'),
-  loadVertical('footshort'),
+  loadVertical('footshorts'),
 ])
 
 interface Props {

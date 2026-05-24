@@ -62,7 +62,7 @@ function fsReadIfExists(filePath: string): string | null {
 // fs mode where stories don't carry an `app_slug` column — instead the
 // frontmatter declares a `vertical` and we map it to the owning app.
 const VERTICAL_TO_APP_SLUG: Record<string, string> = {
-  footshort: 'footshort',
+  footshorts: 'footshorts',
   f1: 'vizf1',
 }
 

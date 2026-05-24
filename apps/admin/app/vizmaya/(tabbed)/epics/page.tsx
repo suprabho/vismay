@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminEpicsListPage() {
   if (!(await isAuthed())) redirect('/login?next=/vizmaya/epics')
-  // vizf1 and footshort epics now live in their own /<appSlug>/epics
+  // vizf1 and footshorts epics now live in their own /<appSlug>/epics
   // sections — scope vizmaya admin to its own app.
   const epics = await listAppEpics('vizmaya-fyi')
 
