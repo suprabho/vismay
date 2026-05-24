@@ -12,6 +12,7 @@ import {
   type DriverSeasonStats as DriverSeasonStatsT,
   type GpResultRow,
 } from '@/lib/useDriverSeasonStats'
+import { flagFor, formatOrdinal, positionLabel, shortDate } from '@/lib/formatStats'
 import { supabaseBrowser } from '@/lib/supabaseBrowser'
 
 type DriverRow = {
@@ -44,73 +45,6 @@ function useDriver(driverId: string) {
       return (data as unknown as DriverRow) ?? null
     },
   })
-}
-
-// Limited F1-calendar mapping. Supabase circuits don't store a country code,
-// so we map the few country names that appear on the calendar to ISO-3166
-// alpha-2 codes and convert those into regional-indicator emoji flags. Falls
-// back to no flag for unknown countries — the table still reads fine.
-const COUNTRY_CODES: Record<string, string> = {
-  Australia: 'AU',
-  Austria: 'AT',
-  Azerbaijan: 'AZ',
-  Bahrain: 'BH',
-  Belgium: 'BE',
-  Brazil: 'BR',
-  Canada: 'CA',
-  China: 'CN',
-  France: 'FR',
-  Germany: 'DE',
-  Hungary: 'HU',
-  Italy: 'IT',
-  Japan: 'JP',
-  Mexico: 'MX',
-  Monaco: 'MC',
-  Netherlands: 'NL',
-  Portugal: 'PT',
-  Qatar: 'QA',
-  'Saudi Arabia': 'SA',
-  Singapore: 'SG',
-  Spain: 'ES',
-  'United Arab Emirates': 'AE',
-  UAE: 'AE',
-  'United Kingdom': 'GB',
-  UK: 'GB',
-  USA: 'US',
-  'United States': 'US',
-  Miami: 'US',
-  'Las Vegas': 'US',
-  Vietnam: 'VN',
-}
-
-function flagFor(country: string): string {
-  const code = COUNTRY_CODES[country]
-  if (!code) return ''
-  // 0x1F1E6 = 'A' regional-indicator. Each ISO letter maps to its symbol.
-  return [...code].map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65)).join('')
-}
-
-function shortDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`)
-  if (Number.isNaN(d.getTime())) return iso
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  const month = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' })
-  return `${day} ${month}`
-}
-
-/** Position cell — number when classified, status string (e.g. "DNF") otherwise. */
-function positionLabel(row: GpResultRow): string {
-  if (row.position != null) return String(row.position)
-  if (row.status) {
-    // "Retired" / "Accident" all collapse to DNF for the table — match the
-    // mock's convention. Keep DSQ / DNS distinct since they're meaningfully
-    // different outcomes.
-    const s = row.status.toLowerCase()
-    if (s.includes('dns')) return 'DNS'
-    if (s.includes('dsq') || s.includes('disqual')) return 'DSQ'
-    return 'DNF'
-  }
-  return '—'
 }
 
 export function DriverSeasonStats({ driverId }: { driverId: string }) {
@@ -298,7 +232,9 @@ function DriverStandingsTable({
                       </td>
                       <td className="px-4 py-3 text-text">{shortDate(row.date)}</td>
                       <td className="px-4 py-3 text-text">{row.constructorName || '—'}</td>
-                      <td className="px-4 py-3 text-text tabular-nums">{positionLabel(row)}</td>
+                      <td className="px-4 py-3 text-text tabular-nums">
+                        {positionLabel(row.position, row.status)}
+                      </td>
                       <td className="px-4 py-3 text-right text-text tabular-nums">{row.points}</td>
                     </tr>
                   )
@@ -381,12 +317,3 @@ function Stat({
   )
 }
 
-function formatOrdinal(n: number): string {
-  const mod100 = n % 100
-  if (mod100 >= 11 && mod100 <= 13) return `${n}th`
-  const mod10 = n % 10
-  if (mod10 === 1) return `${n}st`
-  if (mod10 === 2) return `${n}nd`
-  if (mod10 === 3) return `${n}rd`
-  return `${n}th`
-}
