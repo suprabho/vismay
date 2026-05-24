@@ -49,8 +49,24 @@ async function ingestSource(source: RssSource): Promise<{ fetched: number; new: 
   let feed;
   try {
     feed = await parser.parseURL(source.feedUrl);
-  } catch (e) {
+  } catch (e: any) {
     console.error(`[${source.id}] feed fetch failed:`, e);
+    // "Unable to parse XML." usually means the publisher served HTML (consent page,
+    // geo-block, CAPTCHA) instead of XML. Fetch once more without rss-parser so the
+    // log shows what actually came back — invaluable when this only repros in CI.
+    if (typeof e?.message === 'string' && e.message.includes('parse XML')) {
+      try {
+        const res = await fetch(source.feedUrl, {
+          headers: { 'User-Agent': 'ShortFoot/1.0 (+https://shortfoot.app)' },
+        });
+        const body = await res.text();
+        console.error(
+          `[${source.id}] diagnostic: HTTP ${res.status} ${res.headers.get('content-type') ?? '?'} | first 200 chars: ${body.slice(0, 200)}`
+        );
+      } catch (probeErr) {
+        console.error(`[${source.id}] diagnostic probe also failed:`, probeErr);
+      }
+    }
     return stats;
   }
 

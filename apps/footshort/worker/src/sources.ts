@@ -46,30 +46,18 @@ export const RSS_SOURCES: RssSource[] = [
     tier: 1,
     scope: 'global',
   },
-  {
-    id: 'reuters-sports',
-    publisher: 'Reuters',
-    feedUrl: 'https://www.reutersagency.com/feed/?best-sectors=sports&post_type=best',
-    tier: 1,
-    scope: 'global',
-  },
+  // Removed 2026-05: reuters-sports (reutersagency.com /feed now 404; www.reuters.com returns 401 — no public RSS).
 
   // Tier 2 — football-first outlets
   {
-    id: 'goal-com',
-    publisher: 'Goal.com',
-    feedUrl: 'https://www.goal.com/feeds/en/news',
-    tier: 2,
-    scope: 'global',
-  },
-  {
     id: '90min',
     publisher: '90min',
-    feedUrl: 'https://www.90min.com/rss',
+    feedUrl: 'https://www.90min.com/feed',
     tier: 2,
     scope: 'global',
   },
   // Removed 2026-04: onefootball (empty feed), football365 (404), the-athletic-soccer (404).
+  // Removed 2026-05: goal-com (every common feed path returns 404 — RSS retired).
   // Verify replacement URLs before reinstating.
 
   // Tier 3 — specialist / analysis
