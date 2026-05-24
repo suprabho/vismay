@@ -1,0 +1,57 @@
+name: Footshort - hourly news ingest
+
+# Pulls football RSS feeds, hands each new article to Gemini for summary +
+# tagging, upserts into the footshort Supabase. Safe to re-run (idempotent
+# on url_hash).
+#
+# Required repo secrets:
+#   SUPABASE_URL           - footshort Supabase project URL
+#   SUPABASE_SERVICE_KEY   - footshort service role key
+#   GEMINI_API_KEY         - Gemini API key
+#   FOOTBALL_DATA_TOKEN    - football-data.org API token
+# Optional repo variables:
+#   GEMINI_MODEL           - overrides default (gemini-2.5-flash)
+
+on:
+  schedule:
+    # Every hour on the hour. GH cron is UTC and can drift up to ~15 min under load.
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: footshort-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/footshort/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Run ingest
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+        run: pnpm ingest:ci

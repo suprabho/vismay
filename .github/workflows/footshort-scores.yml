@@ -1,0 +1,51 @@
+name: Footshort - scores refresh
+
+# Pulls latest match scores from football-data.org and upserts into the
+# footshort Supabase. Runs twice daily; safe to re-run (idempotent on match id).
+#
+# Required repo secrets:
+#   SUPABASE_URL           - footshort Supabase project URL
+#   SUPABASE_SERVICE_KEY   - footshort service role key
+#   FOOTBALL_DATA_TOKEN    - football-data.org API token
+
+on:
+  schedule:
+    # Every 12 hours at 00:00 and 12:00 UTC. GH cron is UTC and can drift up to ~15 min under load.
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: footshort-scores
+  cancel-in-progress: false
+
+jobs:
+  scores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/footshort/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Refresh scores
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+        run: pnpm scores:ci
