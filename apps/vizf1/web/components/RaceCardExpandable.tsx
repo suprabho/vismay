@@ -28,7 +28,9 @@ export function RaceCardExpandable({ race }: { race: RaceRow }) {
   // gracefully if a race name isn't in the registry (new venues, sprint-only
   // rounds, etc.) so the row keeps rendering without country chrome.
   const gp = findGrandPrix(race.raceName)
-  const flag = gp ? flagUrl(gp.code, 80) : null
+  // 160-wide source for a ~40px-wide thumbnail = ~4x density, stays crisp on
+  // retina without bumping payload meaningfully (one PNG per row).
+  const flag = gp ? flagUrl(gp.code, 160) : null
   const accent = gp?.accent ?? null
 
   return (
@@ -42,26 +44,26 @@ export function RaceCardExpandable({ race }: { race: RaceRow }) {
         className="flex w-full items-center gap-3 p-3 text-left disabled:cursor-default"
         disabled={!expandable}
       >
+        {flag ? (
+          // flagcdn.com isn't allowlisted for next/image; plain <img> keeps
+          // the row light and matches the race-card layout's flag treatment.
+          // Sized to roughly match the round/date stack height so it reads as
+          // the row's primary country identifier.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={flag}
+            alt=""
+            width={40}
+            height={27}
+            className="h-[27px] w-10 flex-none rounded-sm object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+          />
+        ) : null}
         <div className="flex w-14 flex-col items-center">
           <span className="text-sm font-semibold text-text">R{race.round}</span>
           <span className="mt-0.5 text-[10px] text-muted">{dateLabel(race.date)}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {flag ? (
-              // flagcdn.com isn't allowlisted for next/image; plain <img> keeps
-              // the row light and matches the race-card layout's flag treatment.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={flag}
-                alt=""
-                width={18}
-                height={12}
-                className="h-3 w-[18px] flex-none rounded-[2px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
-              />
-            ) : null}
-            <div className="truncate text-sm text-text">{race.raceName}</div>
-          </div>
+          <div className="truncate text-sm text-text">{race.raceName}</div>
           <div className="truncate text-[11px] text-muted">
             {race.circuitName}
             {race.locality ? ` · ${race.locality}` : ''}
