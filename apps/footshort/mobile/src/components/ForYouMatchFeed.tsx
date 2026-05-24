@@ -32,7 +32,13 @@ import {
 } from '@/lib/useFollowedFixtures';
 import type { FixtureRow } from '@/lib/useFixtures';
 import type { Entity } from '@/lib/useEntities';
-import { MatchRow } from '@vismay/footshort-viz/native';
+import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
+import { MatchRow, MatchTile } from '@vismay/footshort-viz/native';
+
+// Match web's "Upcoming" tile strip: wide enough that two tiles read clearly
+// side-by-side on a phone, with comfortable gap and snap stops.
+const TILE_WIDTH = 240;
+const TILE_GAP = 12;
 
 type Card =
   | { kind: 'league'; id: string; entity: Entity; section: LeagueSection }
@@ -497,6 +503,16 @@ function LeagueCardContent({
   const router = useRouter();
   const nextChip = nextLeagueChip(section);
   const subtitle = section.entity.country;
+  // For league cards every fixture is from this same competition — using
+  // the section entity's crest as the watermark is both correct and saves
+  // a network hop for the strip.
+  const leagueCrestMap = useMemo<Record<string, string>>(
+    () =>
+      section.entity.crest_url
+        ? { [section.entity.slug]: section.entity.crest_url }
+        : {},
+    [section.entity.slug, section.entity.crest_url],
+  );
 
   return (
     <View>
@@ -537,7 +553,9 @@ function LeagueCardContent({
                     : 'Upcoming'
               }
             />
-            <MatchdayPager fixtures={section.nextMatchday} />
+            {/* Match web's FixturesBlock display='tile' — a competition-themed
+                MatchTile strip instead of a row carousel. */}
+            <MatchTileStrip fixtures={section.nextMatchday} crestMap={leagueCrestMap} />
           </View>
         ) : null}
 
@@ -560,6 +578,10 @@ function TeamCardContent({ section, expanded }: { section: TeamSection; expanded
   const upcoming = section.upcoming.slice(0, 3);
   const nextChip = nextTeamChip(section);
   const subtitle = teamSubtitle(section);
+  // Team fixtures span multiple competitions (league + cups). Fetch the
+  // shared slug→crest map so each MatchTile gets the right watermark.
+  // React Query dedupes the call across every team card on the screen.
+  const { data: crestMap } = useLeagueCrestMap();
 
   return (
     <View>
@@ -591,9 +613,9 @@ function TeamCardContent({ section, expanded }: { section: TeamSection; expanded
         {upcoming.length > 0 ? (
           <View className="mt-4">
             <SectionLabel text="Next 3" />
-            {upcoming.map((f) => (
-              <MatchRow key={f.id} fixture={f} />
-            ))}
+            {/* Match web's TeamCard "Next 3" — a horizontal MatchTile strip
+                themed by each fixture's competition, not a row stack. */}
+            <MatchTileStrip fixtures={upcoming} crestMap={crestMap ?? {}} />
           </View>
         ) : null}
 
@@ -723,6 +745,40 @@ function relativeDateLabel(iso: string): string {
     return d.toLocaleDateString(undefined, { weekday: 'short' });
   }
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// Horizontal MatchTile strip — the mobile twin of web's "Upcoming" /
+// "Next 3" tile rendering on For You cards (see ForYouMatchFeed/FixturesBlock
+// with display='tile'). Themed by competition crest watermark when we have
+// one in the slug→crest map.
+function MatchTileStrip({
+  fixtures,
+  crestMap,
+}: {
+  fixtures: FixtureRow[];
+  crestMap: Record<string, string>;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      snapToInterval={TILE_WIDTH + TILE_GAP}
+      decelerationRate="fast"
+      contentContainerStyle={{ paddingRight: 4 }}
+    >
+      {fixtures.map((f, i) => (
+        <View
+          key={f.id}
+          style={{
+            width: TILE_WIDTH,
+            marginRight: i === fixtures.length - 1 ? 0 : TILE_GAP,
+          }}
+        >
+          <MatchTile fixture={f} competitionCrest={crestMap[f.competition_slug] ?? null} />
+        </View>
+      ))}
+    </ScrollView>
+  );
 }
 
 function MatchdayPager({ fixtures }: { fixtures: FixtureRow[] }) {
