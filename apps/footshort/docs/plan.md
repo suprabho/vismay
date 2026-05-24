@@ -15,10 +15,10 @@
 
 ## Environment variables (create `.env` files)
 
-### `apps/worker/.env`
+### `apps/footshort/worker/.env`
 ```
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...          # service_role key, server-only
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...      # service_role key, server-only
 GEMINI_API_KEY=...                    # Google AI Studio → API keys
 GEMINI_MODEL=gemini-2.5-flash         # optional override
 FOOTBALL_DATA_TOKEN=...               # football-data.org dashboard

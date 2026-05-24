@@ -14,8 +14,14 @@ name: Render story PDF
 #                                    so the gated /story/<slug>/<format>
 #                                    route accepts the screenshot request.
 #                                    MUST exactly match Vercel's value.
-#   ADMIN_SESSION_SECRET           — optional; if set on Vercel, must match
-#                                    here too. Defaults to ADMIN_PASSWORD.
+#   ADMIN_SESSION_SECRET           — REQUIRED. storyPdfRender.ts calls
+#                                    signOutputUrl() which throws if this
+#                                    isn't set; the renderer crashes on
+#                                    the first page.goto without it. MUST
+#                                    match the value on both Vercel
+#                                    deployments (admin app signs, consumer
+#                                    middleware verifies — all three places
+#                                    need the same value).
 
 on:
   workflow_dispatch:
