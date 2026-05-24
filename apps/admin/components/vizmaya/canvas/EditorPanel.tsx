@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import type { editor as MonacoEditorNs } from 'monaco-editor'
+import type { OnMount } from '@monaco-editor/react'
 import type { EditableSlice } from './canvasEditing'
 
 // Monaco needs `window` — keep it out of the SSR bundle. The canvas page
@@ -54,6 +56,32 @@ export default function EditorPanel({
     } else if (e.key === 'Escape') {
       onClose()
     }
+  }
+
+  // Register alternative find/replace keybindings. Monaco's defaults
+  // (Cmd+F / Cmd+H) lose to Chrome's "Find on Page" and macOS's system-level
+  // "Hide Application" respectively; the latter can't be intercepted by a
+  // web app at all. Cmd+Opt+F / Cmd+Opt+H avoid both.
+  const editorRef = useRef<MonacoEditorNs.IStandaloneCodeEditor | null>(null)
+  const handleMount: OnMount = useCallback((editorInstance, monaco) => {
+    editorRef.current = editorInstance
+    editorInstance.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
+      () => {
+        editorInstance.getAction('actions.find')?.run()
+      },
+    )
+    editorInstance.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyH,
+      () => {
+        editorInstance.getAction('editor.action.startFindReplaceAction')?.run()
+      },
+    )
+  }, [])
+
+  const openFind = () => {
+    editorRef.current?.focus()
+    editorRef.current?.getAction('actions.find')?.run()
   }
 
   const dirty = draft !== slice.text
@@ -120,9 +148,25 @@ export default function EditorPanel({
             }}
           >
             {slice.language === 'yaml' ? 'YAML' : 'Text'}
-            <span style={{ marginLeft: 10 }}>⌘S to save · esc to close</span>
+            <span style={{ marginLeft: 10 }}>⌘⌥F find · ⌘S save · esc close</span>
           </div>
         </div>
+        <button
+          onClick={openFind}
+          title="Find / Replace (⌘⌥F / ⌘⌥H)"
+          style={{
+            background: 'transparent',
+            color: '#888',
+            border: '1px solid #2a2a2a',
+            borderRadius: 5,
+            padding: '6px 10px',
+            fontSize: 12,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          Find
+        </button>
         <button
           onClick={() => onSave(draft)}
           disabled={saving || !dirty}
@@ -180,6 +224,7 @@ export default function EditorPanel({
           language={slice.language}
           theme="vs-dark"
           onChange={(v) => setDraft(v ?? '')}
+          onMount={handleMount}
           options={{
             minimap: { enabled: false },
             fontSize: 12,
