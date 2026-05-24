@@ -33,9 +33,16 @@ export type EditableKind =
   | 'content'
   | 'layout'
   | 'background'
+  // Whole-foreground edit — works on any shape (regions-object, flat
+  // VizLayer[], or absent). Used as the catch-all editor on the
+  // Foreground junction so flat-shape sections aren't stuck with no
+  // way to edit; users can also switch shapes here by rewriting the
+  // field.
+  | 'foreground'
   // Per-region foreground edit (lead / charts / body / anything else the
   // layout defines). Callers pass the region key alongside the kind so a
-  // single case handles every named region the layout produces.
+  // single case handles every named region the layout produces. Only
+  // valid when foreground is regions-shaped; mergeSlice throws otherwise.
   | 'region'
 
 export interface EditableSlice {
@@ -204,6 +211,29 @@ export function buildEditableSlice(
         language: 'yaml',
         title: `Background · §${unit.parentIndex}`,
         placeholder: BACKGROUND_PLACEHOLDER,
+      }
+    }
+
+    case 'foreground': {
+      const section = readConfigSection(sources.configYaml, unit.parentIndex)
+      const fg = section?.foreground
+      // Title hints at the current shape so the user reads at a glance what
+      // they're editing — same field, three valid encodings.
+      const shape =
+        fg === undefined
+          ? 'none'
+          : Array.isArray(fg)
+            ? 'flat'
+            : typeof fg === 'object' &&
+                typeof (fg as { layout?: unknown }).layout === 'string' &&
+                typeof (fg as { regions?: unknown }).regions === 'object'
+              ? 'regions'
+              : 'flat'
+      return {
+        text: fg === undefined ? '' : safeStringify(fg),
+        language: 'yaml',
+        title: `Foreground · §${unit.parentIndex} (${shape})`,
+        placeholder: FOREGROUND_PLACEHOLDER,
       }
     }
 
@@ -418,15 +448,20 @@ export function mergeSlice(
       const layoutValue = editedText.trim()
       if (layoutValue === '') {
         // Drop the layout field. Only meaningful when foreground is
-        // regions-shaped; on a flat layer stack this is a no-op.
+        // regions-shaped; on a flat layer stack / missing fg, no-op.
         if (fg && typeof fg === 'object' && !Array.isArray(fg)) {
           delete (fg as Record<string, unknown>).layout
         }
       } else if (!fg || typeof fg !== 'object' || Array.isArray(fg)) {
-        // Foreground was flat / missing — promote to a regions-shape with
-        // an empty regions map. The server validator will surface the
-        // resulting "no regions" state if the layout actually needs them.
-        section.foreground = { layout: layoutValue, regions: {} }
+        // Foreground is flat (VizLayer[]) or absent — silently switching
+        // it to regions-shape would clobber the user's layer stack.
+        // Refuse, with a pointer to the Foreground edit which handles
+        // shape switches deliberately.
+        throw new Error(
+          `Layout edit only applies to regions-shaped foreground; this section's foreground is ${
+            Array.isArray(fg) ? 'a flat layer stack' : 'absent'
+          }. Edit the Foreground field as a whole if you want to switch shapes.`
+        )
       } else {
         ;(fg as Record<string, unknown>).layout = layoutValue
       }
@@ -456,6 +491,27 @@ export function mergeSlice(
       }
     }
 
+    case 'foreground': {
+      const { doc, section } = mutableConfigSection(
+        sources.configYaml,
+        unit.parentIndex
+      )
+      if (trimmed === '') {
+        delete (section as Record<string, unknown>).foreground
+      } else {
+        // Accept any shape the user types — regions-object, flat
+        // VizLayer[], or a single layer object. The server validator
+        // catches structural issues post-write (200 + warning).
+        section.foreground = parseYaml(editedText)
+      }
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
+
     case 'region': {
       if (!regionKey) {
         throw new Error(
@@ -466,13 +522,18 @@ export function mergeSlice(
         sources.configYaml,
         unit.parentIndex
       )
-      let fg = section.foreground
+      const fg = section.foreground
+      // Region edits only make sense in regions shape. Promoting flat /
+      // absent foreground to regions here would clobber the user's
+      // layer stack. The canvas already only mounts region junctions
+      // when shape === 'regions', but this is a belt-and-suspenders
+      // guard against direct callers and stale clicks.
       if (!fg || typeof fg !== 'object' || Array.isArray(fg)) {
-        // Foreground was flat / missing — promote to a regions-shape so we
-        // can set the region. Empty layout = invalid; the user will need to
-        // fill that in next (or accept the validation error).
-        fg = { layout: '', regions: {} }
-        section.foreground = fg
+        throw new Error(
+          `Region '${regionKey}' edit only applies to regions-shaped foreground; this section's foreground is ${
+            Array.isArray(fg) ? 'a flat layer stack' : 'absent'
+          }. Edit the Foreground field as a whole if you want to switch shapes.`
+        )
       }
       const regions =
         (fg as { regions?: Record<string, unknown> }).regions ??
@@ -628,6 +689,40 @@ const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the l
 #   id: liquid-sunset
 #
 # Set to \`{ type: none }\` to suppress the persistent map for this section.`
+
+// Foreground is shape-polymorphic — the editor accepts any of three
+// encodings and writes back exactly what the user types. Documenting all
+// three here is the cheapest way to make a flat-section author find their
+// way to a regions setup (and vice versa).
+const FOREGROUND_PLACEHOLDER = `# Section foreground — three valid shapes:
+#
+# 1) Flat layer stack (no layout, no named regions):
+#
+# - type: chart
+#   id: oil-share
+# - type: text
+#   content: "Hello"
+#
+# 2) Named regions (layout-driven):
+#
+# layout: lead-charts-body
+# regions:
+#   lead:
+#     type: text
+#     content: "Section lead text"
+#   charts:
+#     - type: chart
+#       id: oil-share
+#   body:
+#     type: prose
+#     ...
+#
+# 3) Single layer (shorthand for a one-element flat stack):
+#
+# type: chart
+# id: oil-share
+#
+# Leave the editor empty to remove the foreground entirely.`
 
 function regionPlaceholder(regionKey: string): string {
   if (regionKey === 'charts') {

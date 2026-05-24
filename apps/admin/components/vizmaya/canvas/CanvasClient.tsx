@@ -1180,13 +1180,19 @@ export default function CanvasClient({
 
         let y = offset
 
-        /* Standalone direct frame inputs (region column). Content + Layout
-         * are editable (markdown body + foreground.layout string); Theme
-         * lives in the markdown frontmatter and stays non-editable here —
-         * frontmatter editing is its own concern. */
+        /* Standalone direct frame inputs (region column). Content is
+         * always editable (markdown body); Layout is editable only when
+         * the foreground is regions-shaped — on a flat layer stack the
+         * "layout" field is meaningless and saving one would clobber the
+         * stack. Theme lives in markdown frontmatter and stays
+         * non-editable here — frontmatter editing is its own concern. */
         for (const key of ['content', 'layout', 'theme'] as const) {
-          const editKind: EditableKind | undefined =
-            key === 'content' ? 'content' : key === 'layout' ? 'layout' : undefined
+          let editKind: EditableKind | undefined
+          if (key === 'content') {
+            editKind = 'content'
+          } else if (key === 'layout' && g.foreground.shape === 'regions') {
+            editKind = 'layout'
+          }
           const node = await addLeaf(g[key], regionColX, y, editKind)
           await wire(node, 'value', frame, key)
           y += LEAF_H + LGAP_Y
@@ -1279,11 +1285,18 @@ export default function CanvasClient({
             regionCenters.length > 0
               ? (regionCenters[0] + regionCenters[regionCenters.length - 1]) / 2
               : (fgTop + fgBottom) / 2
+          // Foreground group junction is editable in every shape — opens
+          // the whole foreground YAML so the user can edit it freeform
+          // (and switch shapes by rewriting). Region junctions give
+          // finer-grained per-region edits when shape === 'regions';
+          // this is the catch-all entry point and the ONLY editor on
+          // flat / none shapes.
           const fgNode = await addJunction(
             'Foreground',
             fg.layout ? `layout: ${fg.layout}` : 'regions',
             groupColX,
-            center - JUNCTION_H / 2
+            center - JUNCTION_H / 2,
+            makeEditClick('foreground')
           )
           await wire(fgNode, 'value', frame, 'foreground')
           for (const rj of regionNodes) await wire(rj, 'value', fgNode, 'in')
@@ -1294,7 +1307,8 @@ export default function CanvasClient({
             'Foreground',
             'flat layer stack',
             groupColX,
-            y + h / 2 - JUNCTION_H / 2
+            y + h / 2 - JUNCTION_H / 2,
+            makeEditClick('foreground')
           )
           await wire(fgNode, 'value', frame, 'foreground')
           let ly = y + (h - stackH(leaves.length)) / 2
@@ -1304,7 +1318,13 @@ export default function CanvasClient({
             ly += LEAF_H + LGAP_Y
           }
         } else {
-          const fgNode = await addJunction('Foreground', 'none', groupColX, y)
+          const fgNode = await addJunction(
+            'Foreground',
+            'none',
+            groupColX,
+            y,
+            makeEditClick('foreground')
+          )
           await wire(fgNode, 'value', frame, 'foreground')
           const ln = await addLeaf(
             {
