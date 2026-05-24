@@ -1,5 +1,7 @@
 'use client'
 
+import type { SlotDescriptor } from './canvasSlotEditing'
+
 export interface InputNodeData {
   id: string
   label: string
@@ -11,6 +13,13 @@ export interface InputNodeData {
    * for yet, so the unwired state is unmistakable.
    */
   variant: 'mono' | 'muted'
+  /**
+   * Identifies which editable slot this node represents, if any. Set on
+   * leaves whose click should open a slot editor (map / image / theme).
+   * Unset on junctions, content, layout, and modules whose click-to-edit
+   * isn't wired yet (chart, text, video, …).
+   */
+  slot?: SlotDescriptor
 }
 
 /**

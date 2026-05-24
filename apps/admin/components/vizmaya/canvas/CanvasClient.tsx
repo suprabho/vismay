@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useRouter } from 'next/navigation'
 import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
@@ -21,6 +22,8 @@ import {
   type InputGraph,
 } from './canvasInputs'
 import type { InputNodeData } from './InputNode'
+// Re-imported for the addLeaf type — InputNodeData['slot'] is the discriminator
+// the leaf click dispatcher branches on.
 import {
   buildOutputsForUnit,
   canvasFrameId,
@@ -34,7 +37,21 @@ import {
   type EditableKind,
   type EditableSlice,
 } from './canvasEditing'
+import {
+  getLayer,
+  getSection,
+  replaceLayer,
+  replaceTheme,
+  saveConfigYaml,
+  saveMarkdown,
+  unwrapLayerFromMapPicker,
+  wrapLayerForMapPicker,
+  type SlotPath,
+} from './canvasSlotEditing'
 import EditorPanel from './EditorPanel'
+import MapPickerModal from '../MapPickerModal'
+import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
+import ThemeEditOverlay from './ThemeEditOverlay'
 
 interface Props {
   slug: string
@@ -49,7 +66,32 @@ interface Props {
    * Empty values fall back to a blank src.
    */
   signedSrcById: Record<string, string>
+  /**
+   * Raw story markdown (with frontmatter). Local state so theme-slot edits
+   * can splice into the frontmatter and PUT the updated file. The page is
+   * declared `dynamic = 'force-dynamic'` so router.refresh() after save
+   * pulls a fresh copy on next render.
+   */
+  markdown: string
+  /** Raw config.yaml. Local state so map/image-slot edits can splice layers
+   *  back into the matching section block. */
+  configYaml: string
 }
+
+/**
+ * Editor target for the click-to-edit slot flow. Disjoint from the canvas's
+ * existing override-edit flow (EditableKind/EditorPanel) so the two save
+ * paths stay independent and the side panel / modal mounts don't compete.
+ */
+type SlotTarget =
+  | { mode: 'map'; unit: ResolvedUnit; slotPath: SlotPath }
+  | {
+      mode: 'image'
+      unit: ResolvedUnit
+      slotPath: SlotPath
+      initial: ImageLayerDraft
+    }
+  | { mode: 'theme' }
 
 /* ─── Layout constants ───────────────────────────────────────────── */
 const FRAME_W = 1920
@@ -247,15 +289,41 @@ export default function CanvasClient({
   sources: initialSources,
   theme,
   signedSrcById,
+  markdown: initialMarkdown,
+  configYaml: initialConfigYaml,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
   // triggering iframe reload + preview re-render without a full page
   // refetch. Server's initial value seeds it once.
   const [sources, setSources] = useState<CanvasSources>(initialSources)
+  // Markdown + config.yaml mirror their on-disk source so slot edits can
+  // splice + PUT incrementally; they're seeded from props but otherwise
+  // owned by this component (router.refresh() after save reseeds them on
+  // the next render cycle). Kept in refs alongside state so the click
+  // handler closures captured at editor build time see fresh values.
+  const [markdown, setMarkdown] = useState(initialMarkdown)
+  const [configYaml, setConfigYaml] = useState(initialConfigYaml)
+  const markdownRef = useRef(markdown)
+  const configYamlRef = useRef(configYaml)
+  useEffect(() => {
+    markdownRef.current = markdown
+  }, [markdown])
+  useEffect(() => {
+    configYamlRef.current = configYaml
+  }, [configYaml])
   // Bumped on every successful save — appended to iframe URLs as a
   // cache-bust so the iframes pull the fresh render.
   const [dataNonce, setDataNonce] = useState(0)
+
+  /* ─── Slot editor state (map / image modal, theme overlay) ───── */
+  const [slotTarget, setSlotTarget] = useState<SlotTarget | null>(null)
+  const setSlotTargetRef = useRef(setSlotTarget)
+  useEffect(() => {
+    setSlotTargetRef.current = setSlotTarget
+  }, [setSlotTarget])
+  const [slotSaving, setSlotSaving] = useState(false)
+  const [slotError, setSlotError] = useState<string | null>(null)
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
@@ -1028,11 +1096,62 @@ export default function CanvasClient({
         const offset = FRAME_H / 2 - measureLeftHeight(g) / 2
 
         const addLeaf = async (
-          d: { label: string; tag: string; body: string; variant: 'mono' | 'muted' },
+          d: {
+            label: string
+            tag: string
+            body: string
+            variant: 'mono' | 'muted'
+            slot?: InputNodeData['slot']
+          },
           x: number,
           y: number
         ): Promise<DataNode> => {
           const node = new DataNode(d.label, d.tag, d.body, d.variant)
+          // Click-to-edit dispatch. Reads the LATEST active section's unit +
+          // configYaml/markdown via refs so paginating then clicking opens
+          // the editor on the right section's slot, not the build-time one.
+          if (d.slot) {
+            const slot = d.slot
+            node.previewCtrl.onClick = () => {
+              if (slot.kind === 'theme') {
+                setSlotTargetRef.current({ mode: 'theme' })
+                return
+              }
+              const idx = stateRef.current.activeSectionIndex
+              const targetUnit = sectionUnitsRef.current[idx]
+              if (!targetUnit) return
+              if (slot.layerType === 'map') {
+                setSlotTargetRef.current({
+                  mode: 'map',
+                  unit: targetUnit,
+                  slotPath: slot.path,
+                })
+              } else if (slot.layerType === 'image') {
+                const section = getSection(
+                  configYamlRef.current,
+                  targetUnit.parentIndex
+                )
+                const layer = section ? getLayer(section, slot.path) : null
+                const initial: ImageLayerDraft = {
+                  src: typeof layer?.src === 'string' ? layer.src : '',
+                  alt: typeof layer?.alt === 'string' ? layer.alt : undefined,
+                  fit: (layer?.fit as ImageLayerDraft['fit']) ?? 'cover',
+                  focus:
+                    typeof layer?.focus === 'string' ? layer.focus : undefined,
+                  background:
+                    typeof layer?.background === 'string'
+                      ? layer.background
+                      : undefined,
+                }
+                setSlotTargetRef.current({
+                  mode: 'image',
+                  unit: targetUnit,
+                  slotPath: slot.path,
+                  initial,
+                })
+              }
+            }
+          }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
           leftNodeIds.add(node.id)
@@ -1526,8 +1645,10 @@ export default function CanvasClient({
     void sceneRef.current?.applySection(activeSectionIndex)
     // A section switch with the editor open would show a stale slice
     // (the captured unit is the old section's). Close it; user can
-    // re-open on the new section.
+    // re-open on the new section. Same rule for the slot editors —
+    // their captured unit/path also belong to the previous section.
     setEditorTarget(null)
+    setSlotTarget((cur) => (cur?.mode === 'theme' ? cur : null))
   }, [activeSectionIndex])
 
   useEffect(() => {
@@ -1576,6 +1697,132 @@ export default function CanvasClient({
     },
     [editorTarget, sources, slug]
   )
+
+  /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
+  // After a successful slot save we:
+  //  1) update the local YAML/markdown buffer so subsequent clicks read
+  //     fresh values without waiting for the server round-trip,
+  //  2) bump dataNonce so already-mounted iframes reload against the
+  //     freshly-written file, and
+  //  3) router.refresh() so server props (units, theme, signedSrcById)
+  //     re-derive on the next render — leaves rebuild with new previews.
+  const router = useRouter()
+  const handleMapSlotApply = useCallback(
+    async (nextWrappedRaw: string, target: SlotTarget & { mode: 'map' }) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        // Unwrap the picker's `map:` block back into either a bg-layer object
+        // (modern; needs `type: 'map'` re-stamped) or a raw section.map
+        // object (legacy; no `type` key).
+        const section = getSection(
+          configYamlRef.current,
+          target.unit.parentIndex
+        )
+        const originalLayer = section
+          ? getLayer(section, target.slotPath) ?? {}
+          : {}
+        const core = unwrapLayerFromMapPicker(nextWrappedRaw, originalLayer)
+        const nextLayer =
+          target.slotPath.kind === 'legacyMap'
+            ? core
+            : { type: 'map', ...core }
+        const nextConfigYaml = replaceLayer(
+          configYamlRef.current,
+          target.unit.parentIndex,
+          target.slotPath,
+          nextLayer
+        )
+        await saveConfigYaml(slug, nextConfigYaml)
+        setConfigYaml(nextConfigYaml)
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+        router.refresh()
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug, router]
+  )
+
+  const handleImageSlotApply = useCallback(
+    async (
+      next: ImageLayerDraft,
+      target: SlotTarget & { mode: 'image' }
+    ) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        // Merge with the on-disk layer so any keys the modal doesn't expose
+        // (custom style overrides, future fields) survive the round-trip.
+        const section = getSection(
+          configYamlRef.current,
+          target.unit.parentIndex
+        )
+        const originalLayer = section
+          ? getLayer(section, target.slotPath) ?? {}
+          : {}
+        const nextLayer: Record<string, unknown> = {
+          ...originalLayer,
+          type: 'image',
+          src: next.src,
+        }
+        // Optional fields — set when the modal returned a value, delete
+        // otherwise so leaving a field blank clears the YAML key.
+        if (next.alt != null) nextLayer.alt = next.alt
+        else delete nextLayer.alt
+        if (next.fit != null) nextLayer.fit = next.fit
+        else delete nextLayer.fit
+        if (next.focus != null) nextLayer.focus = next.focus
+        else delete nextLayer.focus
+        if (next.background != null) nextLayer.background = next.background
+        else delete nextLayer.background
+        const nextConfigYaml = replaceLayer(
+          configYamlRef.current,
+          target.unit.parentIndex,
+          target.slotPath,
+          nextLayer
+        )
+        await saveConfigYaml(slug, nextConfigYaml)
+        setConfigYaml(nextConfigYaml)
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+        router.refresh()
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug, router]
+  )
+
+  const handleThemeSave = useCallback(
+    async (nextTheme: Theme) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        const nextMarkdown = replaceTheme(markdownRef.current, nextTheme)
+        await saveMarkdown(slug, nextMarkdown)
+        setMarkdown(nextMarkdown)
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+        router.refresh()
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug, router]
+  )
+
+  const closeSlot = useCallback(() => {
+    setSlotTarget(null)
+    setSlotError(null)
+  }, [])
 
   /* ─── Keyboard pagination (← / →) ────────────────────────────── */
   const onKey = useCallback(
@@ -1640,6 +1887,103 @@ export default function CanvasClient({
           }}
         />
       )}
+      {/* Slot-edit surfaces — mutually exclusive by construction (slotTarget
+          is a single discriminated union). Map + image take over with their
+          own portal modals; theme slides in from the right like EditorPanel
+          so the canvas behind it stays visible. */}
+      {slotTarget?.mode === 'map' && (
+        <MapPickerSlotMount
+          target={slotTarget}
+          configYaml={configYaml}
+          sectionUnits={sectionUnits}
+          onApply={(raw) => handleMapSlotApply(raw, slotTarget)}
+          onClose={closeSlot}
+        />
+      )}
+      {slotTarget?.mode === 'image' && (
+        <ImageEditModal
+          slug={slug}
+          sectionLabel={imageSlotLabel(slotTarget, sectionUnits)}
+          initial={slotTarget.initial}
+          onApply={(next) => handleImageSlotApply(next, slotTarget)}
+          onClose={closeSlot}
+        />
+      )}
+      {slotTarget?.mode === 'theme' && (
+        <ThemeEditOverlay
+          initial={theme}
+          saving={slotSaving}
+          error={slotError}
+          onSave={handleThemeSave}
+          onClose={closeSlot}
+        />
+      )}
     </div>
   )
+}
+
+/* ─── Map slot mount helper ────────────────────────────────────────
+ * MapPickerModal wants whole-section YAML for the legacy path and a
+ * wrapped `{map: layer}` snippet for the modern path. Doing that derivation
+ * inline in the JSX bloats the render; this thin wrapper isolates it. */
+function MapPickerSlotMount({
+  target,
+  configYaml,
+  sectionUnits,
+  onApply,
+  onClose,
+}: {
+  target: SlotTarget & { mode: 'map' }
+  configYaml: string
+  sectionUnits: ResolvedUnit[]
+  onApply: (nextRaw: string) => void
+  onClose: () => void
+}) {
+  const section = getSection(configYaml, target.unit.parentIndex)
+  const layer = section ? getLayer(section, target.slotPath) : null
+  // Always pass wrapped YAML — the picker's helpers look for `map.<key>` at
+  // the top level, which is exactly what `wrapLayerForMapPicker` produces
+  // for both legacy `section.map` values and modern bg-layer fields.
+  const sectionRaw = wrapLayerForMapPicker(layer ?? {})
+  const unitIdx = sectionUnits.findIndex(
+    (u) => u.parentIndex === target.unit.parentIndex
+  )
+  const sectionLabel =
+    target.unit.heading ||
+    target.unit.parentConfig.id ||
+    `Section ${unitIdx + 1}`
+  return (
+    <MapPickerModal
+      sectionRaw={sectionRaw}
+      sectionLabel={sectionLabel}
+      onApply={onApply}
+      onClose={onClose}
+      // Canvas is desktop-only; the mobile target would patch a separate
+      // `mobile:` sub-block, which isn't where the canvas's bg layer lives.
+      hideMobileTarget
+    />
+  )
+}
+
+function imageSlotLabel(
+  target: SlotTarget & { mode: 'image' },
+  sectionUnits: ResolvedUnit[]
+): string {
+  const idx = sectionUnits.findIndex(
+    (u) => u.parentIndex === target.unit.parentIndex
+  )
+  const base =
+    target.unit.heading ||
+    target.unit.parentConfig.id ||
+    `Section ${idx + 1}`
+  const path = target.slotPath
+  const where =
+    path.kind === 'background'
+      ? `background[${path.index}]`
+      : path.kind === 'foregroundFlat'
+        ? `foreground[${path.index}]`
+        : path.kind === 'foregroundRegion'
+          ? `foreground.${path.region}[${path.index}]`
+          : 'map'
+  return `${base} · ${where}`
 }

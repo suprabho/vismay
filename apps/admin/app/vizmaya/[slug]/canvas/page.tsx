@@ -38,12 +38,18 @@ export default async function CanvasPage({ params }: Props) {
   // shouldn't break the canvas — fall through to `null` and the input node
   // for that source renders its "no override" placeholder.
   const cs = getContentSource()
-  const [shareYaml, reportYaml, mapYaml, ttsYaml] = await Promise.all([
-    cs.readShareYaml(slug).catch(() => null),
-    cs.readReportYaml(slug).catch(() => null),
-    cs.readMapYaml(slug).catch(() => null),
-    cs.readTtsYaml(slug).catch(() => null),
-  ])
+  const [shareYaml, reportYaml, mapYaml, ttsYaml, markdown, configYaml] =
+    await Promise.all([
+      cs.readShareYaml(slug).catch(() => null),
+      cs.readReportYaml(slug).catch(() => null),
+      cs.readMapYaml(slug).catch(() => null),
+      cs.readTtsYaml(slug).catch(() => null),
+      // Loaded so the canvas's slot editors (map / image / theme) can splice
+      // edits directly into the live source files. Markdown carries the
+      // frontmatter theme; configYaml carries the per-section layer stacks.
+      cs.readMarkdown(slug).catch(() => null),
+      cs.readConfigYaml(slug).catch(() => null),
+    ])
 
   const sources: CanvasSources = {
     shareYaml,
@@ -89,6 +95,8 @@ export default async function CanvasPage({ params }: Props) {
       sources={sources}
       theme={story.frontmatter.theme ?? null}
       signedSrcById={signedSrcById}
+      markdown={markdown ?? ''}
+      configYaml={configYaml ?? ''}
     />
   )
 }

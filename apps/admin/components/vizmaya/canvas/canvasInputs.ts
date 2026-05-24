@@ -3,6 +3,7 @@ import type { ResolvedUnit, VizLayer, Theme } from '@vismay/viz-engine'
 import { parseMapOverrides } from '@vismay/viz-engine'
 import { parseTtsConfig, findTtsOverride } from '@vismay/content-source/storyTts'
 import type { InputNodeData } from './InputNode'
+import type { SlotPath } from './canvasSlotEditing'
 
 /**
  * Raw text bundle loaded once on the server. The builder slices the relevant
@@ -114,15 +115,16 @@ export function layoutNode(unit: ResolvedUnit): InputNodeData {
 /* ── Theme ─────────────────────────────────────────────────────────── */
 
 /** Story-wide theme (colors + fonts). Constant across sections — surfaced
- *  as a direct frame input, like Layout. */
+ *  as a direct frame input, like Layout. Clickable: opens ThemeEditor. */
 export function themeNode(theme: Theme | null): InputNodeData {
   if (!theme) {
     return {
       id: 'theme',
       label: 'Theme',
       tag: '—',
-      body: '(no theme on this story)',
+      body: '(no theme on this story — click to add)',
       variant: 'muted',
+      slot: { kind: 'theme' },
     }
   }
   return {
@@ -134,6 +136,7 @@ export function themeNode(theme: Theme | null): InputNodeData {
       12
     ),
     variant: 'mono',
+    slot: { kind: 'theme' },
   }
 }
 
@@ -203,7 +206,12 @@ function layerLabel(type: string): string {
   }
 }
 
-function layerLeaf(layer: VizLayer, idPrefix: string, i: number): InputNodeData {
+function layerLeaf(
+  layer: VizLayer,
+  idPrefix: string,
+  i: number,
+  path: SlotPath
+): InputNodeData {
   const type =
     layer && typeof layer.type === 'string' ? layer.type : 'layer'
   return {
@@ -212,6 +220,14 @@ function layerLeaf(layer: VizLayer, idPrefix: string, i: number): InputNodeData 
     tag: type.toUpperCase(),
     body: truncateLines(safeYamlStringify(layer), 10),
     variant: 'mono',
+    // Map and image leaves carry a slot descriptor so the canvas's click
+    // handler can route to the right editor. Other layer types (chart /
+    // text / video / rive / embed) omit the slot for now — clicking does
+    // nothing until those editors are wired.
+    slot:
+      type === 'map' || type === 'image'
+        ? { kind: 'layer', layerType: type, path }
+        : undefined,
   }
 }
 
@@ -238,7 +254,9 @@ export function buildBackgroundGraph(unit: ResolvedUnit): BackgroundGraph {
   }
   // Modern layer stack.
   if (bg !== undefined) {
-    const layers = asLayerArray(bg).map((l, i) => layerLeaf(l, 'bg', i))
+    const layers = asLayerArray(bg).map((l, i) =>
+      layerLeaf(l, 'bg', i, { kind: 'background', index: i })
+    )
     return layers.length
       ? { shape: 'layers', layers }
       : { shape: 'none', layers: [] }
@@ -257,6 +275,7 @@ export function buildBackgroundGraph(unit: ResolvedUnit): BackgroundGraph {
           tag: 'MAP · LEGACY',
           body: truncateLines(safeYamlStringify(legacyMap), 10),
           variant: 'mono',
+          slot: { kind: 'layer', layerType: 'map', path: { kind: 'legacyMap' } },
         },
       ],
     }
@@ -273,11 +292,19 @@ export function buildForegroundGraph(unit: ResolvedUnit): ForegroundGraph {
     ).map(([key, value]) => ({
       key,
       label: titleCase(key),
-      layers: asLayerArray(value).map((l, i) => layerLeaf(l, `fg:${key}`, i)),
+      layers: asLayerArray(value).map((l, i) =>
+        layerLeaf(l, `fg:${key}`, i, {
+          kind: 'foregroundRegion',
+          region: key,
+          index: i,
+        })
+      ),
     }))
     return { shape: 'regions', layout: regionsShape.layout, regions, layers: [] }
   }
-  const layers = asLayerArray(fg).map((l, i) => layerLeaf(l, 'fg', i))
+  const layers = asLayerArray(fg).map((l, i) =>
+    layerLeaf(l, 'fg', i, { kind: 'foregroundFlat', index: i })
+  )
   if (layers.length === 0) {
     return { shape: 'none', layout: null, regions: [], layers: [] }
   }
