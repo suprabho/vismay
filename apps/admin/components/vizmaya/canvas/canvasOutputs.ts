@@ -109,6 +109,16 @@ export function outputSpecsForUnit(
       query: { ratio: '1:1', section: sectionId },
     },
     {
+      id: `${sectionId}:share-4-5`,
+      group: 'share',
+      label: 'Share 4:5',
+      tag: '1080 × 1350',
+      w: 1080,
+      h: 1350,
+      path: `/story/${slugPath}/share`,
+      query: { ratio: '4:5', section: sectionId },
+    },
+    {
       id: `${sectionId}:share-4-3`,
       group: 'share',
       label: 'Share 4:3',

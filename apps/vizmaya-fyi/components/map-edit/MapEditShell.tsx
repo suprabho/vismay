@@ -937,14 +937,16 @@ function SharePreview({
 }: {
   state: MapState
   accessToken: string
-  aspect: '1:1' | '3:4' | '4:3'
+  aspect: '1:1' | '4:5' | '3:4' | '4:3'
 }) {
   const dims =
     aspect === '1:1'
       ? { width: 1080, height: 1080 }
-      : aspect === '3:4'
-        ? { width: 1080, height: 1440 }
-        : { width: 1080, height: 810 }
+      : aspect === '4:5'
+        ? { width: 1080, height: 1350 }
+        : aspect === '3:4'
+          ? { width: 1080, height: 1440 }
+          : { width: 1080, height: 810 }
 
   const scale = 480 / dims.width
 
@@ -979,7 +981,7 @@ export default function MapEditShell({ accessToken }: { accessToken: string }) {
   const [selectedSlug, setSelectedSlug] = useState('')
   const [selectedUnitIdx, setSelectedUnitIdx] = useState(0)
   const [viewMode, setViewMode] = useState<ViewMode>('desktop')
-  const [shareAspect, setShareAspect] = useState<'1:1' | '3:4' | '4:3'>('1:1')
+  const [shareAspect, setShareAspect] = useState<'1:1' | '4:5' | '3:4' | '4:3'>('1:1')
   const [mapState, setMapState] = useState<MapState>(DEFAULT_MAP)
   const [showContent, setShowContent] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -1179,7 +1181,7 @@ export default function MapEditShell({ accessToken }: { accessToken: string }) {
             </div>
             {viewMode === 'share' && (
               <div className="flex gap-1 mt-1">
-                {(['1:1', '3:4', '4:3'] as const).map((a) => (
+                {(['1:1', '4:5', '3:4', '4:3'] as const).map((a) => (
                   <button
                     key={a}
                     onClick={() => setShareAspect(a)}

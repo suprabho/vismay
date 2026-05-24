@@ -26,8 +26,10 @@ interface RouteParams {
 export default async function SharePage({ params, searchParams }: RouteParams) {
   const { slug } = await params
   const sp = await searchParams
-  const initialRatio: '1:1' | '3:4' | '4:3' =
-    sp.ratio === '1:1' || sp.ratio === '4:3' ? sp.ratio : '3:4'
+  const initialRatio: '1:1' | '4:5' | '3:4' | '4:3' =
+    sp.ratio === '1:1' || sp.ratio === '4:5' || sp.ratio === '4:3'
+      ? sp.ratio
+      : '3:4'
   const sectionFilter = typeof sp.section === 'string' ? sp.section : null
 
   let story

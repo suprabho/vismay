@@ -25,7 +25,7 @@ import { extractHeroBits } from './ShareCard'
  * aspect keys edit `map.ratios[<ratio>].*` (overrides that aspect only).
  */
 type RatioTab = 'base' | ShareAspectRatio
-const RATIO_TABS: RatioTab[] = ['base', '1:1', '3:4', '4:3']
+const RATIO_TABS: RatioTab[] = ['base', '1:1', '4:5', '3:4', '4:3']
 
 /**
  * Which slot on the override object a card's heading/subheading edits land in.
@@ -588,7 +588,7 @@ export default function ShareEditDrawer({ selected, overrides, onChange, onClose
           <div>
             <Label>Map view</Label>
             <p className="text-[0.7rem] mb-2" style={{ color: 'var(--color-muted)' }}>
-              Base applies to all aspects. 1:1 / 3:4 / 4:3 override that aspect only.
+              Base applies to all aspects. 1:1 / 4:5 / 3:4 / 4:3 override that aspect only.
             </p>
             <div
               className="inline-flex rounded-md overflow-hidden border mb-2"

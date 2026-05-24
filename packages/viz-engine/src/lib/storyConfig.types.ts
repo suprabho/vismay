@@ -349,7 +349,7 @@ export interface MapPinOverride {
  * here as a string union so this types-only module stays free of
  * component imports.
  */
-export type ShareAspectRatio = '1:1' | '3:4' | '4:3'
+export type ShareAspectRatio = '1:1' | '4:5' | '3:4' | '4:3'
 
 /**
  * Per-aspect camera override. Only framing fields (center/zoom/pitch/bearing)

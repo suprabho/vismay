@@ -1,6 +1,6 @@
 'use client'
 
-export type AspectRatio = '1:1' | '3:4' | '4:3'
+export type AspectRatio = '1:1' | '4:5' | '3:4' | '4:3'
 
 interface Props {
   value: AspectRatio
@@ -9,6 +9,7 @@ interface Props {
 
 const RATIOS: { label: string; value: AspectRatio; desc: string }[] = [
   { label: '1:1', value: '1:1', desc: 'Square' },
+  { label: '4:5', value: '4:5', desc: 'Portrait (Instagram)' },
   { label: '3:4', value: '3:4', desc: 'Portrait' },
   { label: '4:3', value: '4:3', desc: 'Landscape' },
 ]
