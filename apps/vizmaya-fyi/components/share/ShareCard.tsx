@@ -44,9 +44,9 @@ const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
  * (≈23% smaller per −0.3).
  */
 const SHARE_ZOOM_DELTA: Record<AspectRatio, number> = {
-  '1:1': -2.3,
-  '3:4': -2.3,
-  '4:3': -2.3,
+  '1:1': -0.5,
+  '3:4': -0.1,
+  '4:3': -0.5,
 }
 
 export type CardVariant = 'auto' | 'map-title' | 'graph'
