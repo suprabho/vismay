@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { RaceRow } from '@vismay/f1-viz/types'
+import { findGrandPrix, flagUrl } from '@vismay/f1-viz/grands-prix'
 import { RaceWeekendTabs } from '@/components/RaceWeekendTabs'
 
 function dateLabel(date: string): string {
@@ -23,15 +24,50 @@ function statusPill(status: RaceRow['status']) {
 export function RaceCardExpandable({ race }: { race: RaceRow }) {
   const [open, setOpen] = useState(false)
   const expandable = race.status === 'finished' || race.status === 'live'
+  // Bundled palette knows the country flag + accent for each GP — fall back
+  // gracefully if a race name isn't in the registry (new venues, sprint-only
+  // rounds, etc.) so the row keeps rendering without country chrome.
+  const gp = findGrandPrix(race.raceName)
+  // 160-wide source for a ~40px-wide thumbnail = ~4x density, stays crisp on
+  // retina without bumping payload meaningfully (one PNG per row).
+  const flag = gp ? flagUrl(gp.code, 160) : null
+  const accent = gp?.accent ?? null
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+    <div
+      className="overflow-hidden rounded-xl border border-border bg-surface border-l-2"
+      style={
+        accent
+          ? {
+              borderLeftColor: accent,
+              // 12% accent blended into the surface keeps bright country
+              // colors (Belgium yellow, F1 red, China red) subtle on the
+              // dark theme while still reading as a country-themed row.
+              background: `color-mix(in srgb, var(--color-surface) 88%, ${accent} 12%)`,
+            }
+          : undefined
+      }
+    >
       <button
         type="button"
         onClick={() => expandable && setOpen((v) => !v)}
         className="flex w-full items-center gap-3 p-3 text-left disabled:cursor-default"
         disabled={!expandable}
       >
+        {flag ? (
+          // flagcdn.com isn't allowlisted for next/image; plain <img> keeps
+          // the row light and matches the race-card layout's flag treatment.
+          // Sized to roughly match the round/date stack height so it reads as
+          // the row's primary country identifier.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={flag}
+            alt=""
+            width={40}
+            height={27}
+            className="h-[27px] w-10 flex-none rounded-sm object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+          />
+        ) : null}
         <div className="flex w-14 flex-col items-center">
           <span className="text-sm font-semibold text-text">R{race.round}</span>
           <span className="mt-0.5 text-[10px] text-muted">{dateLabel(race.date)}</span>
