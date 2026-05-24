@@ -377,6 +377,11 @@ export default function CanvasClient({
         width: number
         height: number
         resizable: boolean
+        // True for output iframes (Share/Slides/Report/Autoplay) — the
+        // user clicks Tune / Download / aspect tabs inside them. False
+        // for the frame iframe, which is a static reference render and
+        // shouldn't swallow canvas pan-drag from inside its bounds.
+        interactive: boolean
         onResize?: (w: number, h: number) => void
         // Pagination overlay — only used on the frame iframe.
         pagination?: {
@@ -388,13 +393,14 @@ export default function CanvasClient({
           src: string,
           w: number,
           h: number,
-          opts: { resizable?: boolean } = {}
+          opts: { resizable?: boolean; interactive?: boolean } = {}
         ) {
           super()
           this.src = src
           this.width = w
           this.height = h
           this.resizable = opts.resizable ?? false
+          this.interactive = opts.interactive ?? false
         }
       }
 
@@ -665,6 +671,20 @@ export default function CanvasClient({
               />
             )}
             <div
+              // For interactive iframes, swallow mousedown on the
+              // wrapper so Rete doesn't start a node-drag when the user
+              // clicks into the embedded module. The iframe itself owns
+              // events past its borders.
+              onPointerDown={
+                data.interactive
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
+              onMouseDown={
+                data.interactive
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
               style={{
                 position: 'absolute',
                 top: overlayPad,
@@ -686,7 +706,12 @@ export default function CanvasClient({
                   border: 0,
                   display: 'block',
                   background: '#0a0a0a',
-                  pointerEvents: 'none',
+                  // Output iframes (Share/Slides/Report/Autoplay) get
+                  // full pointer events so their in-page controls work
+                  // from inside the canvas. The frame iframe stays
+                  // passive so the user can pan/drag the canvas through
+                  // its area.
+                  pointerEvents: data.interactive ? 'auto' : 'none',
                 }}
               />
             </div>
@@ -1134,9 +1159,12 @@ export default function CanvasClient({
           // iframe — the underlying page has its own aspect toggle, so
           // a Rete-side tab strip would just duplicate it. We mount the
           // default first variant (Share 3:4) and let the user switch
-          // ratios from inside the iframe.
+          // ratios from inside the iframe (interactive: true wires up
+          // pointer events for the in-page AspectRatioToggle + Download).
           const first = groupOutputs[0]
-          const ctrl = new IframeControl(first.src, first.w, first.h)
+          const ctrl = new IframeControl(first.src, first.w, first.h, {
+            interactive: true,
+          })
           const node = new OutputNode(
             group.label,
             ctrl,
@@ -1169,9 +1197,13 @@ export default function CanvasClient({
           }
         } else {
           // Stacked: one OutputNode per output, all connected from the
-          // same overrides and the same frame render socket.
+          // same overrides and the same frame render socket. interactive
+          // for the same reason as tabbed — Autoplay's Tune/Download,
+          // Slides/Report's in-page controls all live inside.
           for (const o of groupOutputs) {
-            const ctrl = new IframeControl(o.src, o.w, o.h)
+            const ctrl = new IframeControl(o.src, o.w, o.h, {
+              interactive: true,
+            })
             const node = new OutputNode(
               o.label,
               ctrl,
