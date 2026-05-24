@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import { appEpicUrl } from '@/lib/publicSite'
 import { THEME_REGISTRY } from '../themeRegistry'
 import EmbedPreview from './EmbedPreview'
 
@@ -415,7 +416,7 @@ export default function EpicEditorClient({
         <div className="flex items-center gap-2 shrink-0">
           <label
             className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer select-none"
-            title="Show this epic in the vizmaya.fyi home page Epics grid"
+            title="Show this epic in the app's home page Epics grid"
           >
             <input
               type="checkbox"
@@ -442,14 +443,22 @@ export default function EpicEditorClient({
               ))}
             </select>
           </label>
-          <Link
-            href={`https://vizmaya.fyi/epic/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
-          >
-            preview →
-          </Link>
+          {(() => {
+            // appSlug hydrates from the stories API on mount; before that we
+            // can't pick a domain, so suppress the link until it lands.
+            const previewUrl = appSlug ? appEpicUrl(appSlug, slug) : null
+            if (!previewUrl) return null
+            return (
+              <Link
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 border border-white/10 rounded-lg hover:bg-white/5"
+              >
+                preview →
+              </Link>
+            )
+          })()}
           <button
             type="button"
             onClick={save}
