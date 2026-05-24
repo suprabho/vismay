@@ -67,17 +67,22 @@ export function DriverSeasonStats({ driverId }: { driverId: string }) {
   const season = s?.season ?? String(new Date().getFullYear())
 
   return (
-    <main className="pb-12">
-      {/* Constructor-tinted hero band */}
-      <header
-        className="relative overflow-hidden border-b border-border"
-        style={{
-          background: `linear-gradient(135deg, ${color}33 0%, ${color}11 60%, var(--color-bg) 100%)`,
-        }}
-      >
+    // Page-wide constructor tint — strong at the top, fades to transparent
+    // ~70% down so the body's bg-bg takes over for the long tail of a tall
+    // page. AppHeader is bg-bg/80 backdrop-blur and naturally picks up the
+    // tint through its translucency.
+    <main
+      className="min-h-screen pb-12"
+      style={{
+        background: `linear-gradient(180deg, ${color}33 0%, ${color}14 25%, ${color}08 60%, transparent 100%)`,
+      }}
+    >
+      <header className="relative overflow-hidden border-b border-border">
+        {/* Radial highlight on the hero band adds a second beat of colour
+            on top of the page gradient so the masthead still pops. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-30"
+          className="pointer-events-none absolute inset-0 opacity-40"
           style={{
             background: `radial-gradient(60% 80% at 85% 20%, ${color}66, transparent 70%)`,
           }}
