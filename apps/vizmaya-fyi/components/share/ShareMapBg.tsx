@@ -23,6 +23,7 @@ import type { AspectRatio } from './AspectRatioToggle'
 type FocusArea = { top: number; left: number; width: number; height: number }
 const SHARE_FOCUS_AREA: Record<AspectRatio, FocusArea> = {
   '1:1': { top: 0.20, left: 0, width: 1.0, height: 0.40 },
+  '4:5': { top: 0.22, left: 0, width: 1.0, height: 0.40 },
   '3:4': { top: 0.25, left: 0, width: 1.0, height: 0.40 },
   '4:3': { top: 0.10, left: 0.28, width: 0.70, height: 0.40 },
 }

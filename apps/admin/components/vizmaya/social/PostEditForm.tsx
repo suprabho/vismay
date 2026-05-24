@@ -16,7 +16,7 @@ import { vizmayaUrl } from '@/lib/publicSite'
 
 type AssetKind = AssetRef['kind']
 
-const RATIOS: ShareCardRatio[] = ['1:1', '3:4', '4:3']
+const RATIOS: ShareCardRatio[] = ['1:1', '4:5', '3:4', '4:3']
 const VIDEO_ASPECTS: VideoAspect[] = ['9:16', '16:9']
 
 const CHANNEL_LABELS: Record<Channel, string> = {

@@ -2,22 +2,24 @@
 
 import { useMemo, useState } from 'react'
 
-type Ratio = '1:1' | '3:4' | '4:3'
+type Ratio = '1:1' | '4:5' | '3:4' | '4:3'
 
 interface Props {
   assets: { card_id: string; ratio: string; public_url: string }[]
 }
 
-const RATIOS: Ratio[] = ['1:1', '3:4', '4:3']
+const RATIOS: Ratio[] = ['1:1', '4:5', '3:4', '4:3']
 
 const RATIO_BOX: Record<Ratio, string> = {
   '1:1': '1 / 1',
+  '4:5': '4 / 5',
   '3:4': '3 / 4',
   '4:3': '4 / 3',
 }
 
 const RATIO_GRID: Record<Ratio, string> = {
   '1:1': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  '4:5': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
   '3:4': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
   '4:3': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
 }

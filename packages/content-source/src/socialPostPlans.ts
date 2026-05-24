@@ -3,7 +3,7 @@ import { createServiceClient } from './supabase'
 export type Channel = 'x' | 'linkedin' | 'youtube'
 export type PostStatus = 'draft' | 'scheduled' | 'posted' | 'cancelled'
 
-export type ShareCardRatio = '1:1' | '3:4' | '4:3'
+export type ShareCardRatio = '1:1' | '4:5' | '3:4' | '4:3'
 export type VideoAspect = '9:16' | '16:9'
 
 export type AssetRef =

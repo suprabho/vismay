@@ -19,6 +19,7 @@ import BrandingHeader from './BrandingFooter'
  *
  * Output targets:
  *   1:1 → 1080×1080  (pixelRatio ≈ 2.77)
+ *   4:5 → 1080×1350  (pixelRatio ≈ 2.77) — Instagram portrait
  *   3:4 → 1080×1440  (pixelRatio ≈ 2.77)
  *   4:3 → 1440×1080  (pixelRatio ≈ 2.77)
  */
@@ -26,12 +27,14 @@ const BASE = 390
 
 const RENDER_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '1:1': { w: BASE, h: BASE },
+  '4:5': { w: BASE, h: BASE * (5 / 4) },
   '3:4': { w: BASE, h: BASE * (4 / 3) },
   '4:3': { w: BASE * (4 / 3), h: BASE },
 }
 
 const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '1:1': { w: 1080, h: 1080 },
+  '4:5': { w: 1080, h: 1350 },
   '3:4': { w: 1080, h: 1440 },
   '4:3': { w: 1440, h: 1080 },
 }
@@ -45,6 +48,7 @@ const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
  */
 const SHARE_ZOOM_DELTA: Record<AspectRatio, number> = {
   '1:1': -0.5,
+  '4:5': -0.3,
   '3:4': -0.1,
   '4:3': -0.5,
 }

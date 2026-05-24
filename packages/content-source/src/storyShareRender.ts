@@ -28,7 +28,7 @@ export interface ShareRenderAuth {
 }
 
 export const SHARE_BUCKET = 'story-share'
-export const SHARE_RATIOS = ['1:1', '3:4', '4:3'] as const
+export const SHARE_RATIOS = ['1:1', '4:5', '3:4', '4:3'] as const
 export type ShareRatio = (typeof SHARE_RATIOS)[number]
 
 export interface ShareRenderTarget {
@@ -46,6 +46,7 @@ const READY_TIMEOUT_MS = 60_000
 
 const VIEWPORT_FOR_RATIO: Record<ShareRatio, { width: number; height: number }> = {
   '1:1': { width: 720, height: 720 },
+  '4:5': { width: 720, height: 900 },
   '3:4': { width: 720, height: 960 },
   '4:3': { width: 960, height: 720 },
 }
