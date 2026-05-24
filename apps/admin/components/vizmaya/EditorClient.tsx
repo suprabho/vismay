@@ -67,7 +67,7 @@ export default function EditorClient({
 }: {
   slug: string
   /** Which consumer app this story belongs to — picks the "preview ↗"
-   *  destination (vizf1/footshort have their own /editorial route; vizmaya
+   *  destination (vizf1/footshorts have their own /editorial route; vizmaya
    *  uses /story/<slug>). The server-rendered share/autoplay links stay on
    *  vizmaya.fyi regardless because those gated routes only live there. */
   appSlug: string

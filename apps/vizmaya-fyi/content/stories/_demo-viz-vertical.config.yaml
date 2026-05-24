@@ -1,5 +1,5 @@
 # Phase 6 demo — proves the vertical plugin scaffold.
-# `vertical: 'footshort'` in the frontmatter is what registers the
+# `vertical: 'footshorts'` in the frontmatter is what registers the
 # `fs:match-card` module before the slot looks it up.
 
 defaults:

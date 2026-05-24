@@ -80,7 +80,7 @@ new / news                                       format               dashboards
 ### Two IPs running today
 
 - **vizmaya.fyi** — geopolitics, economics, technology *(Supro)*
-- **Footshort** — football *(Supro)*
+- **Footshorts** — football *(Supro)*
 
 *Started with the two I could run alone, to harden the engine on real production load before bringing partners in.*
 
@@ -166,7 +166,7 @@ Plus **epics** — `/energy-profile` (daily IEA news ingest + 33-country OWID en
 
 ### Roadmap
 
-- **Engine** — extract data-bound football components into `@vismay/footshort-viz`; decide on a native React Native engine when mobile editorial usage justifies it
+- **Engine** — extract data-bound football components into `@vismay/footshorts-viz`; decide on a native React Native engine when mobile editorial usage justifies it
 - **IPs** — bring the four in-production partners to first launch
 - **Tooling** — admin polish, validation, type-narrowed YAML so partners self-serve more
 - **People** — fill the open partner slots on the bench

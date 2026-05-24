@@ -3,13 +3,13 @@ import { catalogModules, type CatalogCategory } from '../lib/catalogModules'
 import CategorySection from './CategorySection'
 import ModuleCard from './ModuleCard'
 
-const CATEGORY_ORDER: CatalogCategory[] = ['Core', 'F1', 'Footshort']
+const CATEGORY_ORDER: CatalogCategory[] = ['Core', 'F1', 'Footshorts']
 
 export default async function CatalogGrid() {
   // Layout boots verticals too, but awaiting here defends against any
   // Next.js dev-mode flow where the page renders before the layout's await
   // resolves on first compile. Both calls share the same cached load promise.
-  await Promise.all([loadVertical('f1'), loadVertical('footshort')])
+  await Promise.all([loadVertical('f1'), loadVertical('footshorts')])
   const byCategory = new Map<CatalogCategory, typeof catalogModules>()
   for (const cat of CATEGORY_ORDER) byCategory.set(cat, [])
   for (const entry of catalogModules) byCategory.get(entry.category)!.push(entry)

@@ -16,15 +16,15 @@ export function vizmayaUrl(path: string): string {
 }
 
 /**
- * Per-app preview routing. Stories on vizf1/footshort render via the
+ * Per-app preview routing. Stories on vizf1/footshorts render via the
  * consumer app's own `/editorial/<slug>` route (which iframes vizmaya.fyi's
  * source render), not via vizmaya.fyi directly — opening the consumer URL
- * is what admins actually want to see. Epics on footshort have a bespoke
+ * is what admins actually want to see. Epics on footshorts have a bespoke
  * landing at `/editorial/epic/<slug>`; vizf1 has no epic route at all.
  *
  * Keep this in lockstep with the consumer apps' routes:
- *   apps/footshort/web/app/editorial/[slug]/         (story reader)
- *   apps/footshort/web/app/editorial/epic/[slug]/    (epic landing)
+ *   apps/footshorts/web/app/editorial/[slug]/         (story reader)
+ *   apps/footshorts/web/app/editorial/epic/[slug]/    (epic landing)
  *   apps/vizf1/web/app/editorial/[slug]/             (story reader)
  *
  * `vizmaya-fyi` keeps the env-overridable `vizmayaPublicUrl` so local dev
@@ -48,7 +48,7 @@ const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
     storyPath: (slug) => `/editorial/${slug}`,
     epicPath: null,
   },
-  footshort: {
+  footshorts: {
     baseUrl: 'https://footshorts.com',
     storyPath: (slug) => `/editorial/${slug}`,
     epicPath: (slug) => `/editorial/epic/${slug}`,

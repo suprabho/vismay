@@ -23,7 +23,7 @@ A small studio model and a shared engine. I pair with a friend who has a real, d
 
 **Live**
 - **vizmaya.fyi** — geopolitics, economics, technology *(Supro)*
-- **Footshort** — football *(Supro)*
+- **Footshorts** — football *(Supro)*
 
 **In production**
 - **Kidzovo** — kids
@@ -59,7 +59,7 @@ The partner stays inside their craft. Everything below the "human" layer is shar
 
 ## The engine
 
-`@vismay/viz-engine` — a registry-based runtime for scroll-driven, three-layer data stories: a persistent map background (Mapbox GL), a chart foreground that transitions without remounting (ECharts), and snap-locked text that drives both. Core modules: map, chart, image, video, embed, rive. Verticals (Footshort, F1, …) plug in as tree-shaken bundles. Three render pipelines — autoplay MP4, story PDF (report + slides), TTS audio — all dispatched through GitHub Actions in production. Stack: Next.js 16, React 19, Supabase, Mapbox GL, ECharts, GSAP, Rive, Playwright, Gemini.
+`@vismay/viz-engine` — a registry-based runtime for scroll-driven, three-layer data stories: a persistent map background (Mapbox GL), a chart foreground that transitions without remounting (ECharts), and snap-locked text that drives both. Core modules: map, chart, image, video, embed, rive. Verticals (Footshorts, F1, …) plug in as tree-shaken bundles. Three render pipelines — autoplay MP4, story PDF (report + slides), TTS audio — all dispatched through GitHub Actions in production. Stack: Next.js 16, React 19, Supabase, Mapbox GL, ECharts, GSAP, Rive, Playwright, Gemini.
 
 The point of the engine isn't the tech. It's that every new IP gets the production value of a major publication without having to rebuild it.
 

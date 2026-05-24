@@ -23,9 +23,9 @@ const APPS: AppEntry[] = [
     status: 'available',
   },
   {
-    href: '/footshort',
-    name: 'Footshort',
-    description: 'Football stories and epics tagged to the footshort app.',
+    href: '/footshorts',
+    name: 'Footshorts',
+    description: 'Football stories and epics tagged to the footshorts app.',
     status: 'available',
   },
 ]

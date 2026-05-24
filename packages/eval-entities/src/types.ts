@@ -1,7 +1,7 @@
 /**
  * Shared types for the entity-tagging eval runner.
  *
- * Each app (vizf1, footshort, …) ships an `EntityEvalAdapter` that knows how
+ * Each app (vizf1, footshorts, …) ships an `EntityEvalAdapter` that knows how
  * to pull a sample of fully-processed articles + their currently-tagged
  * entities. The runner is app-agnostic: it judges those tags against the
  * article text, computes precision/recall/F1, and renders a report.
@@ -32,7 +32,7 @@ export type SampleOpts = {
 };
 
 export interface EntityEvalAdapter {
-  /** Slug for filenames + report header, e.g. 'vizf1' or 'footshort'. */
+  /** Slug for filenames + report header, e.g. 'vizf1' or 'footshorts'. */
   appName: string;
   /** Canonical entity types this app knows about. Drives per-type metric rollups. */
   entityTypes: readonly string[];

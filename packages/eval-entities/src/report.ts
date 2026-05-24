@@ -1,6 +1,6 @@
 /**
  * HTML report renderer. Mirrors the visual language of
- * apps/footshort/worker/src/evalFootballFilter.ts so reviewers see a
+ * apps/footshorts/worker/src/evalFootballFilter.ts so reviewers see a
  * consistent look across all eval reports.
  *
  * Article cards are sorted worst-first (most spurious+missing on top) so the

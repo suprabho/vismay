@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     '@vismay/admin-core',
     '@vismay/content-source',
     '@vismay/viz-engine',
-    '@vismay/footshort-viz',
+    '@vismay/footshorts-viz',
     '@vismay/f1-viz',
   ],
 }
