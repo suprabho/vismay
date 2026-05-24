@@ -1,35 +1,45 @@
 {
   "steps": [
     {
-      "title": "Net debt vs operating free cash flow — ₹ Billion",
+      "title": "Net debt falling, free cash flow rising — ₹ Billion",
       "option": {
         "tooltip": {
           "trigger": "axis",
           "axisPointer": { "type": "shadow" },
+          "backgroundColor": "#0f1c30",
+          "borderColor": "#1e3050",
+          "textStyle": { "color": "#ecedf2", "fontFamily": "JetBrains Mono", "fontSize": 12 },
           "formatter": "{b}<br/>{a0}: ₹{c0}Bn<br/>{a1}: ₹{c1}Bn"
         },
         "legend": {
           "data": ["Net Debt", "Operating Free Cash Flow"],
-          "top": 4,
+          "top": 6,
           "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
-          "icon": "circle"
+          "icon": "circle",
+          "itemGap": 20
         },
         "grid": {
           "left": "4%",
           "right": "4%",
           "bottom": "8%",
-          "top": "16%",
+          "top": "18%",
           "containLabel": true
         },
         "xAxis": {
           "type": "category",
-          "data": ["FY 2025", "FY 2026"],
+          "data": ["FY 2024", "FY 2025", "FY 2026"],
           "axisLine": { "lineStyle": { "color": "$line" } },
           "axisTick": { "show": false },
-          "axisLabel": { "color": "$text", "fontSize": 14, "fontFamily": "Inter", "fontWeight": "bold" }
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 14,
+            "fontFamily": "Inter",
+            "fontWeight": "bold"
+          }
         },
         "yAxis": {
           "type": "value",
+          "max": 2800,
           "axisLabel": {
             "formatter": "₹{value}",
             "color": "$muted",
@@ -48,9 +58,10 @@
             "itemStyle": {
               "borderRadius": [6, 6, 0, 0],
               "color": {
-                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "type": "linear",
+                "x": 0, "y": 0, "x2": 0, "y2": 1,
                 "colorStops": [
-                  { "offset": 0, "color": "rgba(232,54,93,0.85)" },
+                  { "offset": 0, "color": "rgba(232,54,93,0.9)" },
                   { "offset": 1, "color": "rgba(232,54,93,0.3)" }
                 ]
               }
@@ -64,7 +75,7 @@
               "fontWeight": "bold",
               "formatter": "₹{c}Bn"
             },
-            "data": [2038.4, 1647.9]
+            "data": [2200, 2038, 1648]
           },
           {
             "name": "Operating Free Cash Flow",
@@ -73,9 +84,10 @@
             "itemStyle": {
               "borderRadius": [6, 6, 0, 0],
               "color": {
-                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "type": "linear",
+                "x": 0, "y": 0, "x2": 0, "y2": 1,
                 "colorStops": [
-                  { "offset": 0, "color": "rgba(43,223,168,0.9)" },
+                  { "offset": 0, "color": "rgba(43,223,168,0.95)" },
                   { "offset": 1, "color": "rgba(43,223,168,0.35)" }
                 ]
               }
@@ -89,7 +101,21 @@
               "fontWeight": "bold",
               "formatter": "₹{c}Bn"
             },
-            "data": [627.1, 737.5]
+            "data": [532, 627, 738]
+          },
+          {
+            "name": " ",
+            "type": "line",
+            "data": [2200, 2038, 1648],
+            "lineStyle": {
+              "color": "$accent",
+              "type": "dashed",
+              "width": 1.5,
+              "opacity": 0.5
+            },
+            "symbol": "none",
+            "z": 0,
+            "yAxisIndex": 0
           }
         ]
       }

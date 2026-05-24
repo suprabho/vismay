@@ -1,18 +1,27 @@
 {
   "steps": [
     {
-      "title": "Quarterly consolidated revenue — ₹ Billion",
+      "title": "Quarterly revenue by segment — ₹ Billion",
       "option": {
         "tooltip": {
           "trigger": "axis",
-          "axisPointer": { "type": "cross", "label": { "backgroundColor": "#1e3050" } },
-          "formatter": "{b}<br/>Revenue: ₹{c} Bn"
+          "axisPointer": { "type": "shadow" },
+          "backgroundColor": "#0f1c30",
+          "borderColor": "#1e3050",
+          "textStyle": { "color": "#ecedf2", "fontFamily": "JetBrains Mono", "fontSize": 12 }
+        },
+        "legend": {
+          "data": ["India Mobile", "India Homes & Enterprise", "Africa"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle",
+          "itemGap": 18
         },
         "grid": {
           "left": "4%",
-          "right": "6%",
+          "right": "4%",
           "bottom": "8%",
-          "top": "12%",
+          "top": "20%",
           "containLabel": true
         },
         "xAxis": {
@@ -28,8 +37,7 @@
         },
         "yAxis": {
           "type": "value",
-          "min": 440,
-          "max": 580,
+          "max": 650,
           "axisLabel": {
             "formatter": "₹{value}",
             "color": "$muted",
@@ -42,43 +50,49 @@
         },
         "series": [
           {
-            "name": "Revenue",
-            "type": "line",
-            "smooth": true,
-            "symbolSize": 8,
-            "symbol": "circle",
-            "itemStyle": { "color": "$teal", "borderWidth": 2 },
-            "lineStyle": { "color": "$teal", "width": 3 },
-            "areaStyle": {
-              "color": {
-                "type": "linear",
-                "x": 0, "y": 0, "x2": 0, "y2": 1,
-                "colorStops": [
-                  { "offset": 0, "color": "rgba(43,223,168,0.35)" },
-                  { "offset": 1, "color": "rgba(43,223,168,0.02)" }
-                ]
-              }
+            "name": "India Mobile",
+            "type": "bar",
+            "stack": "revenue",
+            "barWidth": "52%",
+            "itemStyle": { "color": "$teal" },
+            "data": [258.2, 266.8, 278.5, 287.1, 296.3]
+          },
+          {
+            "name": "India Homes & Enterprise",
+            "type": "bar",
+            "stack": "revenue",
+            "barWidth": "52%",
+            "itemStyle": { "color": "$amber" },
+            "data": [108.8, 109.6, 109.6, 108.7, 101.7]
+          },
+          {
+            "name": "Africa",
+            "type": "bar",
+            "stack": "revenue",
+            "barWidth": "52%",
+            "itemStyle": {
+              "color": "$accent",
+              "borderRadius": [4, 4, 0, 0]
             },
+            "data": [111.8, 118.2, 133.4, 144.0, 155.8]
+          },
+          {
+            "name": " ",
+            "type": "line",
+            "data": [478.8, 494.6, 521.5, 539.8, 553.8],
+            "lineStyle": { "opacity": 0 },
+            "itemStyle": { "opacity": 0 },
+            "symbol": "none",
+            "z": 10,
             "label": {
               "show": true,
               "position": "top",
+              "distance": 8,
               "color": "$text",
               "fontSize": 13,
               "fontFamily": "JetBrains Mono",
               "fontWeight": "bold",
-              "formatter": "₹{c}"
-            },
-            "data": [478.8, 494.6, 521.5, 539.8, 553.8],
-            "markLine": {
-              "silent": true,
-              "lineStyle": { "color": "$accent", "type": "dashed", "width": 1.5 },
-              "data": [{ "type": "average", "name": "Average" }],
-              "label": {
-                "formatter": "Avg ₹{c}",
-                "color": "$accent",
-                "fontFamily": "JetBrains Mono",
-                "fontSize": 11
-              }
+              "formatter": "₹{c}Bn"
             }
           }
         ]

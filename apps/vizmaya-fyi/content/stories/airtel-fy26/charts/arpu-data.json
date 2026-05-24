@@ -6,7 +6,10 @@
         "tooltip": {
           "trigger": "axis",
           "axisPointer": { "type": "shadow" },
-          "formatter": "{b}: ₹{c} per user/month"
+          "backgroundColor": "#0f1c30",
+          "borderColor": "#1e3050",
+          "textStyle": { "color": "#ecedf2", "fontFamily": "JetBrains Mono", "fontSize": 12 },
+          "formatter": "{b}: ₹{c}/user/month"
         },
         "grid": {
           "left": "4%",
@@ -17,19 +20,18 @@
         },
         "xAxis": {
           "type": "category",
-          "data": ["Q4 FY25\n(Mar-25)", "Q3 FY26\n(Dec-25)", "Q4 FY26\n(Mar-26)"],
+          "data": ["Q4 FY24", "Q4 FY25", "Q1 FY26", "Q2 FY26", "Q3 FY26", "Q4 FY26"],
           "axisLine": { "lineStyle": { "color": "$line" } },
           "axisTick": { "show": false },
           "axisLabel": {
             "color": "$muted",
             "fontSize": 11,
-            "fontFamily": "JetBrains Mono",
-            "lineHeight": 16
+            "fontFamily": "JetBrains Mono"
           }
         },
         "yAxis": {
           "type": "value",
-          "min": 220,
+          "min": 180,
           "max": 280,
           "axisLabel": {
             "formatter": "₹{value}",
@@ -44,83 +46,131 @@
         "series": [
           {
             "type": "bar",
-            "barWidth": "40%",
-            "itemStyle": {
-              "borderRadius": [6, 6, 0, 0],
-              "color": {
-                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
-                "colorStops": [
-                  { "offset": 0, "color": "rgba(232,54,93,0.9)" },
-                  { "offset": 1, "color": "rgba(232,54,93,0.4)" }
-                ]
-              }
-            },
+            "barWidth": "52%",
             "label": {
               "show": true,
               "position": "top",
-              "color": "$text",
-              "fontSize": 18,
+              "fontSize": 13,
               "fontFamily": "JetBrains Mono",
               "fontWeight": "bold",
               "formatter": "₹{c}"
             },
             "data": [
-              { "value": 245, "itemStyle": { "color": "rgba(122,142,168,0.6)", "borderRadius": [6, 6, 0, 0] } },
-              { "value": 259, "itemStyle": {
-                "borderRadius": [6, 6, 0, 0],
-                "color": {
-                  "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
-                  "colorStops": [
-                    { "offset": 0, "color": "rgba(232,54,93,0.7)" },
-                    { "offset": 1, "color": "rgba(232,54,93,0.35)" }
-                  ]
-                }
-              }},
-              { "value": 257, "itemStyle": {
-                "borderRadius": [6, 6, 0, 0],
-                "color": {
-                  "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
-                  "colorStops": [
-                    { "offset": 0, "color": "rgba(232,54,93,1.0)" },
-                    { "offset": 1, "color": "rgba(232,54,93,0.5)" }
-                  ]
-                }
-              }}
-            ]
+              {
+                "value": 208,
+                "itemStyle": { "color": "rgba(122,142,168,0.4)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$muted" }
+              },
+              {
+                "value": 245,
+                "itemStyle": { "color": "rgba(122,142,168,0.6)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$muted" }
+              },
+              {
+                "value": 249,
+                "itemStyle": {
+                  "borderRadius": [4, 4, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(232,54,93,0.6)" },
+                      { "offset": 1, "color": "rgba(232,54,93,0.25)" }
+                    ]
+                  }
+                },
+                "label": { "color": "$accent" }
+              },
+              {
+                "value": 252,
+                "itemStyle": {
+                  "borderRadius": [4, 4, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(232,54,93,0.75)" },
+                      { "offset": 1, "color": "rgba(232,54,93,0.3)" }
+                    ]
+                  }
+                },
+                "label": { "color": "$accent" }
+              },
+              {
+                "value": 254,
+                "itemStyle": {
+                  "borderRadius": [4, 4, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(232,54,93,0.87)" },
+                      { "offset": 1, "color": "rgba(232,54,93,0.4)" }
+                    ]
+                  }
+                },
+                "label": { "color": "$accent" }
+              },
+              {
+                "value": 257,
+                "itemStyle": {
+                  "borderRadius": [4, 4, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(232,54,93,1.0)" },
+                      { "offset": 1, "color": "rgba(232,54,93,0.5)" }
+                    ]
+                  }
+                },
+                "label": { "color": "$text", "fontSize": 16, "fontWeight": "bold" }
+              }
+            ],
+            "markLine": {
+              "silent": true,
+              "lineStyle": { "color": "$teal", "type": "dashed", "width": 1.5 },
+              "data": [{ "xAxis": 1, "name": "Tariff hike →" }],
+              "label": {
+                "formatter": "Tariff hike\nJul 2024",
+                "color": "$teal",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 10
+              }
+            }
           }
         ]
       }
     },
     {
-      "title": "Monthly data usage per subscriber — GB/month",
+      "title": "Monthly data consumption per user — GB/month",
       "option": {
         "tooltip": {
           "trigger": "axis",
-          "formatter": "{b}: {c} GB/month"
+          "axisPointer": { "type": "shadow" },
+          "backgroundColor": "#0f1c30",
+          "borderColor": "#1e3050",
+          "textStyle": { "color": "#ecedf2", "fontFamily": "JetBrains Mono", "fontSize": 12 },
+          "formatter": "{b}: {c} GB/user/month"
         },
         "grid": {
           "left": "4%",
           "right": "6%",
           "bottom": "8%",
-          "top": "12%",
+          "top": "10%",
           "containLabel": true
         },
         "xAxis": {
           "type": "category",
-          "data": ["Q4 FY25\n(Mar-25)", "Q3 FY26\n(Dec-25)", "Q4 FY26\n(Mar-26)"],
+          "data": ["Q4 FY24", "Q4 FY25", "Q1 FY26", "Q2 FY26", "Q3 FY26", "Q4 FY26"],
           "axisLine": { "lineStyle": { "color": "$line" } },
           "axisTick": { "show": false },
           "axisLabel": {
             "color": "$muted",
             "fontSize": 11,
-            "fontFamily": "JetBrains Mono",
-            "lineHeight": 16
+            "fontFamily": "JetBrains Mono"
           }
         },
         "yAxis": {
           "type": "value",
           "min": 0,
-          "max": 40,
+          "max": 42,
           "axisLabel": {
             "formatter": "{value} GB",
             "color": "$muted",
@@ -134,21 +184,46 @@
         "series": [
           {
             "type": "bar",
-            "barWidth": "40%",
-            "itemStyle": { "color": "$teal", "borderRadius": [6, 6, 0, 0] },
+            "barWidth": "52%",
             "label": {
               "show": true,
               "position": "top",
-              "color": "$teal",
-              "fontSize": 18,
+              "fontSize": 13,
               "fontFamily": "JetBrains Mono",
               "fontWeight": "bold",
               "formatter": "{c} GB"
             },
             "data": [
-              { "value": 25.1, "itemStyle": { "color": "rgba(43,223,168,0.45)", "borderRadius": [6, 6, 0, 0] } },
-              { "value": 29.8, "itemStyle": { "color": "rgba(43,223,168,0.7)", "borderRadius": [6, 6, 0, 0] } },
-              { "value": 31.4, "itemStyle": { "color": "rgba(43,223,168,1.0)", "borderRadius": [6, 6, 0, 0] } }
+              {
+                "value": 21.0,
+                "itemStyle": { "color": "rgba(43,223,168,0.35)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$muted" }
+              },
+              {
+                "value": 25.1,
+                "itemStyle": { "color": "rgba(43,223,168,0.50)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$muted" }
+              },
+              {
+                "value": 27.2,
+                "itemStyle": { "color": "rgba(43,223,168,0.65)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$teal" }
+              },
+              {
+                "value": 28.8,
+                "itemStyle": { "color": "rgba(43,223,168,0.78)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$teal" }
+              },
+              {
+                "value": 29.8,
+                "itemStyle": { "color": "rgba(43,223,168,0.88)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$teal" }
+              },
+              {
+                "value": 31.4,
+                "itemStyle": { "color": "rgba(43,223,168,1.0)", "borderRadius": [4, 4, 0, 0] },
+                "label": { "color": "$teal", "fontSize": 16, "fontWeight": "bold" }
+              }
             ]
           }
         ]

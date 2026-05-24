@@ -3,21 +3,26 @@
 # Bharti Airtel Q4 / FY26 results scrollytelling.
 # 18 config sections map 1:1 to 18 markdown headings (1 hero + 17 ##).
 #
+# SUBSECTION ANCHORING:
+#   subsection.text must match the parent ## heading (case-insensitive prefix)
+#   so resolveAnchor can find the markdown section.
+#   paragraphs: N selects the Nth paragraph (0-indexed) of that section.
+#
 # Acts:
 #   1  hero                    — intro, India map atmospheric
 #   2  revenue-stat            — ₹2.1Tn stat, India pins
-#   3  revenue-momentum        — quarterly revenue line chart (5 quarters)
+#   3  revenue-momentum        — stacked bar by segment (5 quarters)
 #   4  ebitda-margin-stat      — 57.8% stat
-#   5  margins-built-to-last   — EBITDA grouped bar + margin bar (2 subsection steps)
+#   5  margins-built-to-last   — EBITDA grouped bar (step 0) → margin bar (step 1)
 #   6  arpu-stat               — ₹257 stat
-#   7  the-data-explosion      — ARPU bar (step 1) → data usage bar (step 2)
+#   7  the-data-explosion      — ARPU bars (step 0) → data usage bars (step 1)
 #   8  homes-stat              — +41.7% stat
 #   9  homes-juggernaut        — homes subscribers + ARPU dual-axis chart
 #   10 africa-stat             — +22% stat, map pivots to Africa
-#   11 africa-turns-corner     — CC revenue bar (step 1)
-#   12 airtel-money            — Airtel Money MAUs + margin (step 2 of africa chart)
+#   11 africa-turns-corner     — CC revenue bar (step 0) → EBITDA/MAU (step 1)
+#   12 airtel-money            — prose section
 #   13 debt-stat               — -19% stat, back to India
-#   14 demolishing-debt        — net debt vs operating FCF bar
+#   14 demolishing-debt        — net debt vs FCF 3-year scissors chart
 #   15 profit-stat             — +51% stat
 #   16 profit-surge            — annual PAT FY24→FY26 bar
 #   17 stock-stat              — ₹1,784 stat
@@ -79,12 +84,13 @@ sections:
         - { lng: 73.856, lat: 18.520, label: "Pune" }
         - { lng: 72.571, lat: 23.022, label: "Ahmedabad" }
 
-  # 3 ─── REVENUE TREND CHART
+  # 3 ─── REVENUE TREND CHART (stacked bar: India Mobile + India Other + Africa)
   - id: five-quarters-of-acceleration
+    text: "Five Quarters of Acceleration"
     map:
       center: [82.5, 22.5]
       zoom: 3.6
-      opacity: 0.30
+      opacity: 0.12
     foreground:
       - type: chart
         id: "revenue-trend"
@@ -101,17 +107,21 @@ sections:
       opacity: 0.45
 
   # 5 ─── EBITDA SCALE CHART (2 steps via subsections)
+  #   step 0: "Margins Built to Last" para 0 → grouped bar (Revenue + EBITDA, FY24–FY26)
+  #   step 1: "Margins Built to Last" para 1 → EBITDA margin bar (54% → 58%)
   - id: margins-built-to-last
     map:
       center: [82.5, 22.5]
       zoom: 3.6
-      opacity: 0.28
+      opacity: 0.12
     subsections:
-      - text: "Annual EBITDA scaled from ₹889 billion in FY24 to ₹1,213 billion in FY26 — 36% growth in absolute EBITDA over three years. Revenue: ₹1,644Bn → ₹2,110Bn. The infrastructure advantage is now a money-printing advantage."
+      - text: "Margins Built to Last"
+        paragraphs: 0
         foreground:
           - type: chart
             id: "ebitda-scale"
-      - text: "Margin held firm at 57–58% across all three years despite accelerating capex. Operating leverage is structural: every new subscriber uses an existing tower, an existing fibre strand, an existing spectrum licence. The incremental cost of one more customer is close to zero."
+      - text: "Margins Built to Last"
+        paragraphs: 1
         foreground:
           - type: chart
             id: "ebitda-scale"
@@ -131,17 +141,21 @@ sections:
         zoom: 3.4
 
   # 7 ─── ARPU + DATA CHART (2 steps via subsections)
+  #   step 0: "The Data Explosion" para 0 → ARPU bar chart
+  #   step 1: "The Data Explosion" para 1 → data usage GB bar chart
   - id: the-data-explosion
     map:
       center: [78.9, 22.5]
       zoom: 4.2
-      opacity: 0.28
+      opacity: 0.12
     subsections:
-      - text: "India mobile ARPU: ₹257 in Q4 FY26, up from ₹245 a year ago. The July 2024 tariff hike worked. Monthly churn remained at 2.4%. Postpaid subscribers — the premium tier — jumped 74.6% year-on-year to 106 million."
+      - text: "The Data Explosion"
+        paragraphs: 0
         foreground:
           - type: chart
             id: "arpu-data"
-      - text: "Data consumption per user: 31.4 GB/month in Q4 FY26, up 25% from 25.1 GB/month a year ago. Total network traffic grew 32.8%. 80.1% of the base is now on 4G or 5G. Airtel has 1.19 million broadband base stations — and each one is doing more work every quarter."
+      - text: "The Data Explosion"
+        paragraphs: 1
         foreground:
           - type: chart
             id: "arpu-data"
@@ -159,10 +173,11 @@ sections:
 
   # 9 ─── HOMES CHART
   - id: homes-the-quiet-juggernaut
+    text: "Homes: The Quiet Juggernaut"
     map:
       center: [78.9, 22.5]
       zoom: 4.2
-      opacity: 0.28
+      opacity: 0.12
     foreground:
       - type: chart
         id: "homes-growth"
@@ -195,24 +210,29 @@ sections:
         center: [20.0, 0.0]
         zoom: 2.2
 
-  # 11 ─── AFRICA: BOTH CHART STEPS (CC revenue + margin/Airtel Money)
+  # 11 ─── AFRICA: CC REVENUE + MARGIN/AIRTEL MONEY (2 steps via subsections)
+  #   step 0: "Africa Turns the Corner" para 0 → CC revenue bar comparison
+  #   step 1: "Africa Turns the Corner" para 1 → EBITDA margin + Airtel Money MAUs
   - id: africa-turns-the-corner
     map:
       center: [20.0, 2.0]
       zoom: 2.8
-      opacity: 0.30
+      opacity: 0.15
     subsections:
-      - text: "Q4 FY26 constant-currency revenue hit $1,610 million — up 22% from $1,317 million a year ago. Full-year growth: 24% in constant currency. The Africa business has reached critical mass."
+      - text: "Africa Turns the Corner"
+        paragraphs: 0
         foreground:
           - type: chart
             id: "africa-comeback"
-      - text: "EBITDA margin expanded 2.2 percentage points to 50.4%. Airtel Money: 54.1 million monthly active users (+21.3%), $49 billion in transactions (+34% YoY). The fintech embedded in Africa is systematically underpriced."
+      - text: "Africa Turns the Corner"
+        paragraphs: 1
         foreground:
           - type: chart
             id: "africa-comeback"
 
-  # 12 ─── AIRTEL MONEY: PROSE SECTION (no additional chart — prose + Africa map)
+  # 12 ─── AIRTEL MONEY: PROSE SECTION (no chart — prose + Africa map)
   - id: airtel-money-africas-hidden-compounding-engine
+    text: "Airtel Money: Africa's Hidden Compounding Engine"
     map:
       center: [20.0, 2.0]
       zoom: 2.8
@@ -229,12 +249,13 @@ sections:
       zoom: 3.6
       opacity: 0.45
 
-  # 14 ─── DEBT + FCF CHART
+  # 14 ─── DEBT + FCF SCISSORS CHART (3 years: debt falls, FCF rises)
   - id: demolishing-the-debt
+    text: "Demolishing the Debt"
     map:
       center: [82.5, 22.5]
       zoom: 3.6
-      opacity: 0.28
+      opacity: 0.12
     foreground:
       - type: chart
         id: "debt-fcf"
@@ -252,10 +273,11 @@ sections:
 
   # 16 ─── PAT PROGRESSION CHART
   - id: the-profit-surge
+    text: "The Profit Surge"
     map:
       center: [82.5, 22.5]
       zoom: 3.6
-      opacity: 0.28
+      opacity: 0.12
     foreground:
       - type: chart
         id: "profit-leap"
@@ -273,10 +295,11 @@ sections:
 
   # 18 ─── MARKET SCORECARD CHART
   - id: what-the-market-sees-in-airtel
+    text: "What the Market Sees in Airtel"
     map:
       center: [82.5, 22.5]
       zoom: 3.6
-      opacity: 0.28
+      opacity: 0.12
     foreground:
       - type: chart
         id: "market-scorecard"
