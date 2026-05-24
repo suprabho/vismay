@@ -114,7 +114,7 @@ function applyHydration(cards: MatchCardRaw[], teamsBySlug: Map<string, TeamRow>
  * doesn't contain `fs:match-card` layers, or if Supabase isn't configured,
  * the function returns the input unchanged.
  */
-export async function hydrateFootshortConfig(config: StoryConfig): Promise<StoryConfig> {
+export async function hydrateFootshortsConfig(config: StoryConfig): Promise<StoryConfig> {
   const cards = collectMatchCards(config)
   if (cards.length === 0) return config
 

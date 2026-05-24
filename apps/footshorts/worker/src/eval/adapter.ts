@@ -1,5 +1,5 @@
 /**
- * footshort adapter for @vismay/eval-entities.
+ * footshorts adapter for @vismay/eval-entities.
  *
  * Pulls summarised articles + their tagged entities from the (article_id,
  * entity_id) join, dereferencing entity_id → (type, name) via the entities
@@ -16,8 +16,8 @@ const PAGE_SIZE = 500;
 function getSupabase(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
-  if (!url) throw new Error('footshort eval: NEXT_PUBLIC_SUPABASE_URL required');
-  if (!key) throw new Error('footshort eval: SUPABASE_SERVICE_ROLE_KEY required');
+  if (!url) throw new Error('footshorts eval: NEXT_PUBLIC_SUPABASE_URL required');
+  if (!key) throw new Error('footshorts eval: SUPABASE_SERVICE_ROLE_KEY required');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -44,7 +44,7 @@ async function getEntityNameCache(
 ): Promise<Map<string, { type: string; name: string }>> {
   if (entityNameCache) return entityNameCache;
   const { data, error } = await sb.from('entities').select('id, type, name');
-  if (error) throw new Error(`footshort eval entity cache: ${error.message}`);
+  if (error) throw new Error(`footshorts eval entity cache: ${error.message}`);
   const cache = new Map<string, { type: string; name: string }>();
   for (const e of (data ?? []) as Array<{ id: string; type: string; name: string }>) {
     cache.set(e.id, { type: e.type, name: e.name });
@@ -53,8 +53,8 @@ async function getEntityNameCache(
   return cache;
 }
 
-export const footshortAdapter: EntityEvalAdapter = {
-  appName: 'footshort',
+export const footshortsAdapter: EntityEvalAdapter = {
+  appName: 'footshorts',
   entityTypes: ['league', 'team', 'player'] as const,
 
   async fetchSample({ since, max }) {
@@ -70,7 +70,7 @@ export const footshortAdapter: EntityEvalAdapter = {
         .gte('summary_at', since)
         .order('published_at', { ascending: false })
         .range(from, to);
-      if (error) throw new Error(`footshort articles page ${from}-${to}: ${error.message}`);
+      if (error) throw new Error(`footshorts articles page ${from}-${to}: ${error.message}`);
       if (!data || data.length === 0) break;
       articles.push(...(data as ArticleRow[]));
       if (data.length < PAGE_SIZE) break;
@@ -85,7 +85,7 @@ export const footshortAdapter: EntityEvalAdapter = {
         .from('article_entities')
         .select('article_id, entity_id, entities ( id, type, name )')
         .in('article_id', slice);
-      if (error) throw new Error(`footshort article_entities slice ${i}: ${error.message}`);
+      if (error) throw new Error(`footshorts article_entities slice ${i}: ${error.message}`);
       if (data) aeRows.push(...(data as unknown as AeJoinRow[]));
     }
 

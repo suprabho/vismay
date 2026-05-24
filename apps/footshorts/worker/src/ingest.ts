@@ -57,7 +57,7 @@ async function ingestSource(source: RssSource): Promise<{ fetched: number; new: 
     if (typeof e?.message === 'string' && e.message.includes('parse XML')) {
       try {
         const res = await fetch(source.feedUrl, {
-          headers: { 'User-Agent': 'ShortFoot/1.0 (+https://shortfoot.app)' },
+          headers: { 'User-Agent': 'Footshorts/1.0 (+https://footshorts.app)' },
         });
         const body = await res.text();
         console.error(

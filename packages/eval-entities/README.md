@@ -26,7 +26,7 @@ spurious or missing in the final tagged set.
 2. Add a thin runner that imports `runEval` + your adapter and a script in
    your worker's `package.json`.
 
-See `apps/vizf1/worker/src/eval/` and `apps/footshort/worker/src/eval/` for
+See `apps/vizf1/worker/src/eval/` and `apps/footshorts/worker/src/eval/` for
 the two existing implementations.
 
 ## Running
@@ -34,7 +34,7 @@ the two existing implementations.
 ```bash
 # from a worker with .env containing GEMINI_API_KEY + Supabase creds:
 pnpm --filter @vizf1/worker eval
-pnpm --filter @shortfoot/worker eval
+pnpm --filter @footshorts/worker eval
 ```
 
 Env knobs (all optional):
