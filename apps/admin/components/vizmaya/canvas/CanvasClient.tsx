@@ -8,21 +8,17 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { ResolvedUnit } from '@vismay/viz-engine'
+import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
-  contentNode,
-  layoutNode,
-  backgroundNode,
-  leadNode,
-  chartsNode,
-  bodyNode,
   shareNode,
   reportNodeFormat,
   mapOverrideNode,
   narrationNode,
   parseCanvasSources,
+  buildInputGraph,
   type CanvasSources,
+  type InputGraph,
 } from './canvasInputs'
 import type { InputNodeData } from './InputNode'
 import {
@@ -44,6 +40,8 @@ interface Props {
   slug: string
   units: ResolvedUnit[]
   sources: CanvasSources
+  /** Story-wide theme (from frontmatter). Surfaced as a frame input. */
+  theme: Theme | null
   /**
    * Pre-signed iframe URLs keyed by output id (e.g. `section-1:share-3-4`)
    * and canvas-frame id (`canvas-frame:section-1`). Server signs at request
@@ -61,14 +59,19 @@ const FRAME_MIN_H = 270
 
 const INPUT_W = 320
 const INPUT_H = 150
-const INPUT_GAP_Y = 36
-
-// Decorative group labels in the input column ("Viz", "Foreground"). Same
-// width as wired input cards so the column edges line up; shorter height
-// since they carry just a label, no preview body.
-const INPUT_HEADER_H = 52
 
 const COL_GAP = 280
+
+/* ── Left-side input graph (leaf → region → group → frame) ──────────
+ * Three tiers feed the frame from the left. Leaves are source-layer cards
+ * (same width as override cards); region/group junctions are short label
+ * nodes. Bands stack vertically; the whole graph is centered on the frame. */
+const LEAF_H = 176
+const JUNCTION_H = 96
+const LGAP_Y = 28
+const BAND_GAP = 64
+// Horizontal pitch between the three left tiers.
+const LCOL_PITCH = INPUT_W + 150
 
 const HEADER_W = 320
 const HEADER_H = 88
@@ -163,25 +166,15 @@ function withCacheBust(url: string, nonce: number): string {
 
 /**
  * Section-derived data bundle: everything the editor needs to render one
- * section's nodes. Recomputed on section switch; passed to the in-place
- * update path so no Rete nodes get remounted.
+ * section's nodes. Recomputed on section switch; the left input subgraph
+ * is rebuilt from it, while the frame + right-side nodes update in place.
  */
-/** Wired input slot keys on the Frame node. The visual column also includes
- *  two decorative "Viz" / "Foreground" header cards, but those carry no data
- *  and aren't part of this map — they're hard-coded in the build/layout. */
-type FrameInputKey =
-  | 'content'
-  | 'layout'
-  | 'background'
-  | 'lead'
-  | 'charts'
-  | 'body'
-
 interface SectionView {
   sectionId: string
   heading: string
   frameSrc: string
-  inputs: Record<FrameInputKey, InputNodeData>
+  /** Tiered input lineage feeding the frame (leaf → region → group). */
+  graph: InputGraph
   /** Override card data per group; only the expanded group's is actually
    *  read at any moment, but we precompute all four so toggling is cheap. */
   overrides: Record<OutputGroupId, OverrideSpec[]>
@@ -194,7 +187,8 @@ function buildSectionView(
   parsed: ReturnType<typeof parseCanvasSources>,
   slug: string,
   signedSrcById: Record<string, string>,
-  dataNonce: number
+  dataNonce: number,
+  theme: Theme | null
 ): SectionView {
   const sectionId =
     unit.parentConfig.id ?? `section-${unit.parentIndex}`
@@ -219,14 +213,7 @@ function buildSectionView(
     sectionId,
     heading,
     frameSrc,
-    inputs: {
-      content: contentNode(unit),
-      layout: layoutNode(unit),
-      background: backgroundNode(unit),
-      lead: leadNode(unit),
-      charts: chartsNode(unit),
-      body: bodyNode(unit),
-    },
+    graph: buildInputGraph(unit, theme),
     overrides: {
       share: buildOverridesForGroup('share', unit, parsed),
       slides: buildOverridesForGroup('slides', unit, parsed),
@@ -258,6 +245,7 @@ export default function CanvasClient({
   slug,
   units,
   sources: initialSources,
+  theme,
   signedSrcById,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -279,9 +267,9 @@ export default function CanvasClient({
   const sectionViews = useMemo(
     () =>
       sectionUnits.map((u) =>
-        buildSectionView(u, parsedSources, slug, signedSrcById, dataNonce)
+        buildSectionView(u, parsedSources, slug, signedSrcById, dataNonce, theme)
       ),
-    [sectionUnits, parsedSources, slug, signedSrcById, dataNonce]
+    [sectionUnits, parsedSources, slug, signedSrcById, dataNonce, theme]
   )
   // Latest sectionViews available to closures captured during the
   // initial build (which only runs once per `units` change). Without
@@ -431,11 +419,11 @@ export default function CanvasClient({
         }
       }
 
-      // Input-side section label ("Viz", "Foreground"). Purely decorative —
-      // visually demarcates the slot tree on the input column. No toggle,
-      // no sockets, no data flow.
-      class InputHeaderControl extends ClassicPreset.Control {
-        constructor(public label: string) {
+      // Region / group junction label (e.g. "Charts", "Foreground"). Sits
+      // on a node that fans its upstream inputs into one output, so unlike
+      // the old decorative header it DOES carry sockets + data flow.
+      class JunctionControl extends ClassicPreset.Control {
+        constructor(public sub: string) {
           super()
         }
       }
@@ -450,13 +438,15 @@ export default function CanvasClient({
           super('Frame')
           this.addInput('content', new ClassicPreset.Input(socket, 'Content'))
           this.addInput('layout', new ClassicPreset.Input(socket, 'Layout'))
+          this.addInput('theme', new ClassicPreset.Input(socket, 'Theme'))
           this.addInput(
             'background',
             new ClassicPreset.Input(socket, 'Background')
           )
-          this.addInput('lead', new ClassicPreset.Input(socket, 'Lead'))
-          this.addInput('charts', new ClassicPreset.Input(socket, 'Charts'))
-          this.addInput('body', new ClassicPreset.Input(socket, 'Body'))
+          this.addInput(
+            'foreground',
+            new ClassicPreset.Input(socket, 'Foreground')
+          )
           this.addOutput(
             'render',
             new ClassicPreset.Output(socket, 'render', true)
@@ -520,11 +510,19 @@ export default function CanvasClient({
         }
       }
 
-      class InputHeaderNode extends ClassicPreset.Node {
-        kind = 'input-header' as const
-        constructor(label: string) {
+      // Region / group node: fans N upstream connections (`in`, multi) into
+      // one downstream `value`. Used for foreground regions and the
+      // Foreground / Background groups.
+      class JunctionNode extends ClassicPreset.Node {
+        kind = 'junction' as const
+        constructor(label: string, sub: string) {
           super(label)
-          this.addControl('header', new InputHeaderControl(label))
+          this.addInput('in', new ClassicPreset.Input(socket, 'in', true))
+          this.addOutput(
+            'value',
+            new ClassicPreset.Output(socket, 'value', true)
+          )
+          this.addControl('ctrl', new JunctionControl(sub))
         }
       }
 
@@ -876,34 +874,26 @@ export default function CanvasClient({
         )
       }
 
-      function InputHeaderControlView({
-        data,
-      }: {
-        data: InputHeaderControl
-      }) {
-        // Visually distinct from wired DataNodes: thin underline, smaller
-        // padding, all-caps label — so the eye reads it as a section
-        // divider, not another input card.
+      function JunctionControlView({ data }: { data: JunctionControl }) {
+        // A funnel node — the Rete node title already shows the name, so the
+        // control just carries the subtitle (layer count / layout name). No
+        // body preview; visually lighter than a leaf card.
         return (
           <div
             style={{
               width: INPUT_W - 24,
-              height: INPUT_HEADER_H - 16,
-              padding: '0 4px',
-              display: 'flex',
-              alignItems: 'flex-end',
-              borderBottom: '1px solid #2a2a2a',
+              padding: '6px 10px',
+              background: '#121212',
+              border: '1px solid #333',
+              borderRadius: 8,
               fontFamily: 'system-ui, sans-serif',
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: '#888',
-              paddingBottom: 6,
+              fontSize: 10,
+              color: '#777',
+              letterSpacing: '0.06em',
               pointerEvents: 'none',
             }}
           >
-            {data.label}
+            {data.sub}
           </div>
         )
       }
@@ -931,8 +921,8 @@ export default function CanvasClient({
               if (data.payload instanceof GroupHeaderControl) {
                 return GroupHeaderControlView as never
               }
-              if (data.payload instanceof InputHeaderControl) {
-                return InputHeaderControlView as never
+              if (data.payload instanceof JunctionControl) {
+                return JunctionControlView as never
               }
               return null
             },
@@ -959,11 +949,14 @@ export default function CanvasClient({
         sectionViewsRef.current[0]
       const sectionCount = sectionViewsRef.current.length
 
-      // Column X coords. Outputs sit to the right of the headers column,
-      // far enough that even the slides node (1920 wide) doesn't reach
-      // back into the header lane.
-      const inputColX = 0
-      const frameColX = inputColX + INPUT_W + COL_GAP
+      // Column X coords. Left of the frame: three input tiers
+      // (leaf → region → group). Right of the frame: headers → overrides →
+      // outputs, far enough that even the slides node (1920 wide) doesn't
+      // reach back into the header lane.
+      const leafColX = 0
+      const regionColX = leafColX + LCOL_PITCH
+      const groupColX = regionColX + LCOL_PITCH
+      const frameColX = groupColX + INPUT_W + COL_GAP
       const headerColX = frameColX + FRAME_W + COL_GAP
       const overrideColX = headerColX + HEADER_W + COL_GAP
       const outputColX = overrideColX + INPUT_W + COL_GAP
@@ -987,69 +980,234 @@ export default function CanvasClient({
       await editor.addNode(frame)
       await area.translate(frame.id, { x: frameColX, y: 0 })
 
-      /* Frame inputs — interleaved wired slots + decorative group headers.
+      /* ── Left input graph (leaf → region → group → frame) ──────────
        *
-       * Order (top → bottom):
-       *   Content
-       *   Layout
-       *   [Viz header]
-       *   Background
-       *   [Foreground header]
-       *   Lead
-       *   Charts
-       *   Body
+       * The frame's lineage, laid out in three columns:
+       *   leaf col   — one card per source VizLayer (map / chart / image …)
+       *   region col — foreground regions (Charts / Body / …), the Background
+       *                group, and the standalone Content / Layout / Theme
+       *                inputs
+       *   group col  — the Foreground group (regions funnel through it)
        *
-       * Headers carry no data and aren't wired; they only label the
-       * slot tree visually. Each wired slot gets a `value → frame.<key>`
-       * connection on the same socket name as its FrameInputKey. */
-      type ColumnItem =
-        | { kind: 'input'; key: FrameInputKey }
-        | { kind: 'header'; label: string }
-      const inputColumn: ColumnItem[] = [
-        { kind: 'input', key: 'content' },
-        { kind: 'input', key: 'layout' },
-        { kind: 'header', label: 'Viz' },
-        { kind: 'input', key: 'background' },
-        { kind: 'header', label: 'Foreground' },
-        { kind: 'input', key: 'lead' },
-        { kind: 'input', key: 'charts' },
-        { kind: 'input', key: 'body' },
-      ]
-      const itemHeight = (it: ColumnItem): number =>
-        it.kind === 'input' ? INPUT_H : INPUT_HEADER_H
-      const inputTotalH =
-        inputColumn.reduce((acc, it) => acc + itemHeight(it), 0) +
-        (inputColumn.length - 1) * INPUT_GAP_Y
-      const inputStartY = 0 + FRAME_H / 2 - inputTotalH / 2
-      const inputNodes: Partial<Record<FrameInputKey, DataNode>> = {}
-      let columnY = inputStartY
-      for (const item of inputColumn) {
-        if (item.kind === 'header') {
-          const headerNode = new InputHeaderNode(item.label)
-          await editor.addNode(headerNode)
-          await area.translate(headerNode.id, { x: inputColX, y: columnY })
+       * Node count + shape vary per section (different regions, different
+       * layer stacks), so the whole subgraph is torn down and rebuilt on a
+       * section switch rather than updated in place. `leftNodeIds` tracks
+       * everything created here so `unmountInputs` can clear it. */
+      let leftNodeIds = new Set<string>()
+
+      const stackH = (n: number): number =>
+        n > 0 ? n * LEAF_H + (n - 1) * LGAP_Y : 0
+      const bandH = (n: number): number => Math.max(stackH(n), JUNCTION_H)
+
+      // Total height of the left graph, used to vertically center it on the
+      // frame. Mirrors the placement walk in `mountInputs`.
+      function measureLeftHeight(g: InputGraph): number {
+        // Content / Layout / Theme standalone block.
+        let h = 3 * LEAF_H + 2 * LGAP_Y + BAND_GAP
+        // Background band (>=1 row: a placeholder when empty).
+        h += bandH(Math.max(1, g.background.layers.length)) + BAND_GAP
+        // Foreground band.
+        if (g.foreground.shape === 'regions') {
+          const regions = g.foreground.regions
+          let fh = 0
+          regions.forEach((r, i) => {
+            fh += bandH(Math.max(1, r.layers.length))
+            if (i < regions.length - 1) fh += LGAP_Y
+          })
+          h += Math.max(fh, JUNCTION_H)
+        } else if (g.foreground.shape === 'flat') {
+          h += bandH(g.foreground.layers.length)
         } else {
-          const data = initialView.inputs[item.key]
-          const node = new DataNode(
-            data.label,
-            data.tag,
-            data.body,
-            data.variant
-          )
-          inputNodes[item.key] = node
+          h += LEAF_H
+        }
+        return h
+      }
+
+      async function mountInputs(view: SectionView): Promise<void> {
+        const g = view.graph
+        const offset = FRAME_H / 2 - measureLeftHeight(g) / 2
+
+        const addLeaf = async (
+          d: { label: string; tag: string; body: string; variant: 'mono' | 'muted' },
+          x: number,
+          y: number
+        ): Promise<DataNode> => {
+          const node = new DataNode(d.label, d.tag, d.body, d.variant)
           await editor.addNode(node)
-          await area.translate(node.id, { x: inputColX, y: columnY })
+          await area.translate(node.id, { x, y })
+          leftNodeIds.add(node.id)
+          return node
+        }
+        const addJunction = async (
+          label: string,
+          sub: string,
+          x: number,
+          y: number
+        ): Promise<JunctionNode> => {
+          const node = new JunctionNode(label, sub)
+          await editor.addNode(node)
+          await area.translate(node.id, { x, y })
+          leftNodeIds.add(node.id)
+          return node
+        }
+        const wire = async (
+          src: DataNode | JunctionNode,
+          srcKey: string,
+          dst: JunctionNode | FrameNode,
+          dstKey: string
+        ): Promise<void> => {
           await editor.addConnection(
             new ClassicPreset.Connection(
-              node,
-              'value',
-              frame,
-              item.key
+              src,
+              srcKey,
+              dst,
+              dstKey
             ) as Schemes['Connection']
           )
         }
-        columnY += itemHeight(item) + INPUT_GAP_Y
+
+        let y = offset
+
+        /* Standalone direct frame inputs (region column). */
+        for (const key of ['content', 'layout', 'theme'] as const) {
+          const node = await addLeaf(g[key], regionColX, y)
+          await wire(node, 'value', frame, key)
+          y += LEAF_H + LGAP_Y
+        }
+        y += BAND_GAP - LGAP_Y
+
+        /* Background band: layer leaves → Background group → frame. */
+        {
+          const leaves =
+            g.background.layers.length > 0
+              ? g.background.layers
+              : [
+                  {
+                    label: 'Background',
+                    tag: '—',
+                    body: '(no background — none / inherited)',
+                    variant: 'muted' as const,
+                  },
+                ]
+          const h = bandH(leaves.length)
+          const bgNode = await addJunction(
+            'Background',
+            leaves.length === 1 && g.background.shape === 'none'
+              ? 'none'
+              : `${g.background.layers.length} layer${
+                  g.background.layers.length === 1 ? '' : 's'
+                }`,
+            regionColX,
+            y + h / 2 - JUNCTION_H / 2
+          )
+          await wire(bgNode, 'value', frame, 'background')
+          let ly = y + (h - stackH(leaves.length)) / 2
+          for (const leaf of leaves) {
+            const ln = await addLeaf(leaf, leafColX, ly)
+            await wire(ln, 'value', bgNode, 'in')
+            ly += LEAF_H + LGAP_Y
+          }
+          y += h + BAND_GAP
+        }
+
+        /* Foreground band: layer leaves → region → Foreground group → frame. */
+        const fg = g.foreground
+        if (fg.shape === 'regions') {
+          const fgTop = y
+          const regionCenters: number[] = []
+          const regionNodes: JunctionNode[] = []
+          for (const region of fg.regions) {
+            const leaves =
+              region.layers.length > 0
+                ? region.layers
+                : [
+                    {
+                      label: region.label,
+                      tag: '—',
+                      body: '(no layers)',
+                      variant: 'muted' as const,
+                    },
+                  ]
+            const h = bandH(leaves.length)
+            const rj = await addJunction(
+              region.label,
+              `${region.layers.length} layer${
+                region.layers.length === 1 ? '' : 's'
+              } · region`,
+              regionColX,
+              y + h / 2 - JUNCTION_H / 2
+            )
+            regionNodes.push(rj)
+            regionCenters.push(y + h / 2)
+            let ly = y + (h - stackH(leaves.length)) / 2
+            for (const leaf of leaves) {
+              const ln = await addLeaf(leaf, leafColX, ly)
+              await wire(ln, 'value', rj, 'in')
+              ly += LEAF_H + LGAP_Y
+            }
+            y += h + LGAP_Y
+          }
+          const fgBottom = y - LGAP_Y
+          const center =
+            regionCenters.length > 0
+              ? (regionCenters[0] + regionCenters[regionCenters.length - 1]) / 2
+              : (fgTop + fgBottom) / 2
+          const fgNode = await addJunction(
+            'Foreground',
+            fg.layout ? `layout: ${fg.layout}` : 'regions',
+            groupColX,
+            center - JUNCTION_H / 2
+          )
+          await wire(fgNode, 'value', frame, 'foreground')
+          for (const rj of regionNodes) await wire(rj, 'value', fgNode, 'in')
+        } else if (fg.shape === 'flat') {
+          const leaves = fg.layers
+          const h = bandH(leaves.length)
+          const fgNode = await addJunction(
+            'Foreground',
+            'flat layer stack',
+            groupColX,
+            y + h / 2 - JUNCTION_H / 2
+          )
+          await wire(fgNode, 'value', frame, 'foreground')
+          let ly = y + (h - stackH(leaves.length)) / 2
+          for (const leaf of leaves) {
+            const ln = await addLeaf(leaf, regionColX, ly)
+            await wire(ln, 'value', fgNode, 'in')
+            ly += LEAF_H + LGAP_Y
+          }
+        } else {
+          const fgNode = await addJunction('Foreground', 'none', groupColX, y)
+          await wire(fgNode, 'value', frame, 'foreground')
+          const ln = await addLeaf(
+            {
+              label: 'Foreground',
+              tag: '—',
+              body: '(no foreground)',
+              variant: 'muted',
+            },
+            regionColX,
+            y
+          )
+          await wire(ln, 'value', fgNode, 'in')
+        }
       }
+
+      async function unmountInputs(): Promise<void> {
+        if (leftNodeIds.size === 0) return
+        // Connections must go before their endpoints. This also clears the
+        // group → frame.<input> edges (frame survives; only its incoming
+        // connections are removed).
+        for (const conn of [...editor.getConnections()]) {
+          if (leftNodeIds.has(conn.source) || leftNodeIds.has(conn.target)) {
+            await editor.removeConnection(conn.id)
+          }
+        }
+        for (const id of leftNodeIds) await editor.removeNode(id)
+        leftNodeIds = new Set<string>()
+      }
+
+      await mountInputs(initialView)
 
       /* Group header column (always present, 4 headers) */
       const headerNodes: Record<OutputGroupId, GroupHeaderNode> = {} as Record<
@@ -1294,26 +1452,10 @@ export default function CanvasClient({
         }
         await area.update('control', frameIframeCtrl.id)
 
-        // Input nodes (preview content) — headers don't carry per-section
-        // data, so only the wired slots need refreshing here.
-        const wiredKeys: FrameInputKey[] = [
-          'content',
-          'layout',
-          'background',
-          'lead',
-          'charts',
-          'body',
-        ]
-        for (const key of wiredKeys) {
-          const node = inputNodes[key]
-          if (!node) continue
-          const data = view.inputs[key]
-          node.previewCtrl.label = data.label
-          node.previewCtrl.tag = data.tag
-          node.previewCtrl.body = data.body
-          node.previewCtrl.variant = data.variant
-          await area.update('control', node.previewCtrl.id)
-        }
+        // Left input graph — node count + shape vary per section (different
+        // regions / layer stacks), so rebuild rather than patch in place.
+        await unmountInputs()
+        await mountInputs(view)
 
         // Expanded group's overrides + output iframes (if any group open)
         if (expandedSlot) {
