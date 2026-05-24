@@ -211,7 +211,7 @@ function EntityPlaceholder({ entities }: { entities: FeedCardEntity[] }) {
           <img
             src={a.entity.crest_url}
             alt=""
-            className="h-1/2 max-h-32 w-auto object-contain drop-shadow-lg"
+            className="h-[40%] max-h-32 w-auto object-contain drop-shadow-lg"
           />
         ) : (
           <span />
