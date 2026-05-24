@@ -22,6 +22,7 @@ import {
   mapOverrideNode,
   narrationNode,
   parseCanvasSources,
+  liveUnit,
   type CanvasSources,
 } from './canvasInputs'
 import type { InputNodeData } from './InputNode'
@@ -192,21 +193,28 @@ interface SectionView {
 function buildSectionView(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>,
+  configYaml: string | null,
   slug: string,
   signedSrcById: Record<string, string>,
   dataNonce: number
 ): SectionView {
+  // Layer the live configYaml over the unit so frame input previews
+  // (Layout / Background / Lead / Charts / Body) reflect in-canvas saves
+  // without waiting for the user to paginate. The original unit's other
+  // fields (heading, paragraphs, sliceIndex) are kept intact — those come
+  // from server-side resolveUnits and don't change on a config save.
+  const live = liveUnit(unit, configYaml)
   const sectionId =
-    unit.parentConfig.id ?? `section-${unit.parentIndex}`
+    live.parentConfig.id ?? `section-${live.parentIndex}`
   const heading =
-    unit.heading ||
-    unit.paragraphs[0]?.replace(/\*+/g, '') ||
-    `Section ${unit.parentIndex + 1}`
+    live.heading ||
+    live.paragraphs[0]?.replace(/\*+/g, '') ||
+    `Section ${live.parentIndex + 1}`
   const frameSrc = withCacheBust(
     signedSrcById[canvasFrameId(sectionId)] ?? '',
     dataNonce
   )
-  const allOutputs = buildOutputsForUnit(unit, slug, signedSrcById).map(
+  const allOutputs = buildOutputsForUnit(live, slug, signedSrcById).map(
     (o) => ({ ...o, src: withCacheBust(o.src, dataNonce) })
   )
   const outputs: SectionView['outputs'] = {
@@ -220,18 +228,18 @@ function buildSectionView(
     heading,
     frameSrc,
     inputs: {
-      content: contentNode(unit),
-      layout: layoutNode(unit),
-      background: backgroundNode(unit),
-      lead: leadNode(unit),
-      charts: chartsNode(unit),
-      body: bodyNode(unit),
+      content: contentNode(live),
+      layout: layoutNode(live),
+      background: backgroundNode(live),
+      lead: leadNode(live),
+      charts: chartsNode(live),
+      body: bodyNode(live),
     },
     overrides: {
-      share: buildOverridesForGroup('share', unit, parsed),
-      slides: buildOverridesForGroup('slides', unit, parsed),
-      report: buildOverridesForGroup('report', unit, parsed),
-      autoplay: buildOverridesForGroup('autoplay', unit, parsed),
+      share: buildOverridesForGroup('share', live, parsed),
+      slides: buildOverridesForGroup('slides', live, parsed),
+      report: buildOverridesForGroup('report', live, parsed),
+      autoplay: buildOverridesForGroup('autoplay', live, parsed),
     },
     outputs,
   }
@@ -275,13 +283,21 @@ export default function CanvasClient({
     [units]
   )
   // Section views are pure data; cheap to memoise once and index into.
-  // Includes dataNonce so URL changes propagate after a save.
+  // Includes dataNonce so URL changes propagate after a save, and
+  // sources.configYaml so liveUnit picks up frame-input edits.
   const sectionViews = useMemo(
     () =>
       sectionUnits.map((u) =>
-        buildSectionView(u, parsedSources, slug, signedSrcById, dataNonce)
+        buildSectionView(
+          u,
+          parsedSources,
+          sources.configYaml,
+          slug,
+          signedSrcById,
+          dataNonce
+        )
       ),
-    [sectionUnits, parsedSources, slug, signedSrcById, dataNonce]
+    [sectionUnits, parsedSources, sources.configYaml, slug, signedSrcById, dataNonce]
   )
   // Latest sectionViews available to closures captured during the
   // initial build (which only runs once per `units` change). Without
@@ -1021,6 +1037,12 @@ export default function CanvasClient({
         inputColumn.reduce((acc, it) => acc + itemHeight(it), 0) +
         (inputColumn.length - 1) * INPUT_GAP_Y
       const inputStartY = 0 + FRAME_H / 2 - inputTotalH / 2
+      // FrameInputKey aligns 1:1 with its EditableKind — each frame input
+      // edits a slice of either config.yaml (Layout/Background/Lead/Charts/
+      // Body) or the story markdown (Content). Same click-to-edit pattern
+      // as the override nodes: the handler reads the LATEST active section
+      // via refs, so paginating then clicking opens the editor for the
+      // current section rather than the build-time one.
       const inputNodes: Partial<Record<FrameInputKey, DataNode>> = {}
       let columnY = inputStartY
       for (const item of inputColumn) {
@@ -1036,6 +1058,16 @@ export default function CanvasClient({
             data.body,
             data.variant
           )
+          const editKind = item.key satisfies EditableKind
+          node.previewCtrl.onClick = () => {
+            const idx = stateRef.current.activeSectionIndex
+            const targetUnit = sectionUnitsRef.current[idx]
+            if (!targetUnit) return
+            setEditorTargetRef.current({
+              kind: editKind,
+              unit: targetUnit,
+            })
+          }
           inputNodes[item.key] = node
           await editor.addNode(node)
           await area.translate(node.id, { x: inputColX, y: columnY })
