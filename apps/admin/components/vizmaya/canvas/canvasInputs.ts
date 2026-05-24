@@ -5,15 +5,14 @@ import { parseTtsConfig, findTtsOverride } from '@vismay/content-source/storyTts
 import type { InputNodeData } from './InputNode'
 
 /**
- * Raw text + chart JSON bundle loaded once on the server. The builder slices
- * the relevant per-section/per-unit fragment from each source when it builds
- * the input nodes for a given frame.
+ * Raw text bundle loaded once on the server. The builder slices the relevant
+ * per-section/per-unit fragment from each source when it builds the input
+ * nodes for a given frame.
  *
  * Yamls stay as raw strings (not pre-parsed) so future editing can preserve
  * formatting / comments; the builder parses lazily via the `parsed` accessor.
  */
 export interface CanvasSources {
-  chartsById: Record<string, unknown>
   shareYaml: string | null
   reportYaml: string | null
   mapYaml: string | null
@@ -23,7 +22,6 @@ export interface CanvasSources {
 /** Lazy-parsed view of `CanvasSources`. Caller is expected to memoise the
  *  bundle so the same parsed objects are reused across frames. */
 export interface ParsedCanvasSources {
-  charts: Record<string, unknown>
   share: unknown
   report: unknown
   mapOverrides: ReturnType<typeof parseMapOverrides>
@@ -32,7 +30,6 @@ export interface ParsedCanvasSources {
 
 export function parseCanvasSources(sources: CanvasSources): ParsedCanvasSources {
   return {
-    charts: sources.chartsById,
     share: safeParseYaml(sources.shareYaml),
     report: safeParseYaml(sources.reportYaml),
     mapOverrides: parseMapOverrides(sources.mapYaml),
@@ -51,19 +48,25 @@ function safeParseYaml(raw: string | null): unknown {
 
 /**
  * Derive the input subgraph for a section frame. Every section gets the same
- * seven input slots so the diagram shape stays consistent across sections;
+ * fixed slot set so the diagram shape stays consistent across sections;
  * slots without data for this particular section render a muted "no override"
  * placeholder so the empty state is unmistakable.
  *
- * Slots 4–7 are PER-FRAME OVERRIDES — file-level data carved into a slice
- * keyed by `(parentIndex, subIndex)` (and `sliceIndex` for narration).
- * Semantically each override feeds a specific output kind:
- *   - Share Variants  → Share cards
- *   - Report Override → Report PDF + Slides deck
- *   - Map Override    → Autoplay video
- *   - Narration       → Autoplay video (TTS track)
- * The diagram wires them all to the section frame uniformly; per-output
- * wiring is a follow-up.
+ * Frame inputs decompose the section config into the slot tree authors
+ * actually think in:
+ *   - Content    → markdown anchored to the section
+ *   - Layout     → the foreground layout name (only when foreground is
+ *                  regions-shaped — flat layer stacks have no layout)
+ *   - Background → the section's background layer stack (under "Viz")
+ *   - Lead/Charts/Body → individual foreground regions (under
+ *                  "Viz → Foreground"), only meaningful when foreground is
+ *                  regions-shaped.
+ *
+ * The remaining four slots are PER-FRAME OVERRIDES sourced from file-level
+ * data sliced by `(parentIndex, subIndex)` (and `sliceIndex` for narration).
+ * They're returned by this same helper for any caller that wants the full
+ * input set, but the canvas builds them only inside per-output override
+ * columns; the frame's left input column shows just the slot tree above.
  */
 export function buildInputsForUnit(
   unit: ResolvedUnit,
@@ -71,8 +74,11 @@ export function buildInputsForUnit(
 ): InputNodeData[] {
   return [
     contentNode(unit),
-    configNode(unit),
-    chartNode(unit, parsed),
+    layoutNode(unit),
+    backgroundNode(unit),
+    leadNode(unit),
+    chartsNode(unit),
+    bodyNode(unit),
     shareNode(unit, parsed),
     reportNode(unit, parsed),
     mapOverrideNode(unit, parsed),
@@ -100,53 +106,117 @@ export function contentNode(unit: ResolvedUnit): InputNodeData {
   }
 }
 
-export function configNode(unit: ResolvedUnit): InputNodeData {
-  let body: string
-  try {
-    body = truncateLines(yamlStringify(unit.parentConfig, { lineWidth: 60 }), 10)
-  } catch {
-    body = '(failed to serialise config slice)'
+/* ── Layout / Viz / Foreground slot tree ───────────────────────────── */
+
+/** Region-shaped foreground: `{ layout: string, regions: { … } }`. The
+ *  alternative is a flat `VizLayer | VizLayer[]` with no layout/regions. */
+interface ForegroundRegionsShape {
+  layout: string
+  regions: Record<string, unknown>
+}
+function asForegroundRegions(
+  foreground: unknown
+): ForegroundRegionsShape | null {
+  if (
+    foreground &&
+    typeof foreground === 'object' &&
+    !Array.isArray(foreground) &&
+    typeof (foreground as { layout?: unknown }).layout === 'string' &&
+    typeof (foreground as { regions?: unknown }).regions === 'object' &&
+    (foreground as { regions?: unknown }).regions !== null
+  ) {
+    return foreground as ForegroundRegionsShape
+  }
+  return null
+}
+
+export function layoutNode(unit: ResolvedUnit): InputNodeData {
+  const regions = asForegroundRegions(unit.parentConfig.foreground)
+  if (!regions) {
+    return {
+      id: 'layout',
+      label: 'Layout',
+      tag: '—',
+      body: '(foreground has no layout — flat layer stack)',
+      variant: 'muted',
+    }
   }
   return {
-    id: 'config',
-    label: 'Config',
-    tag: 'YAML',
-    body,
+    id: 'layout',
+    label: 'Layout',
+    tag: 'NAME',
+    body: regions.layout,
     variant: 'mono',
   }
 }
 
-export function chartNode(
-  unit: ResolvedUnit,
-  parsed: ParsedCanvasSources
-): InputNodeData {
-  const chartId = unit.parentConfig.chart
-  if (!chartId) {
+export function backgroundNode(unit: ResolvedUnit): InputNodeData {
+  const bg = unit.parentConfig.background
+  if (bg === undefined) {
     return {
-      id: 'chart',
-      label: 'Chart Data',
+      id: 'background',
+      label: 'Background',
       tag: '—',
-      body: '(no chart in this section)',
-      variant: 'muted',
-    }
-  }
-  const data = parsed.charts[chartId]
-  if (data === undefined) {
-    return {
-      id: 'chart',
-      label: 'Chart Data',
-      tag: '—',
-      body: `chart: ${chartId}\n\n(JSON not found)`,
+      body: '(no background — inherits from legacy map field)',
       variant: 'muted',
     }
   }
   return {
-    id: 'chart',
-    label: 'Chart Data',
-    tag: 'JSON',
-    body: `// ${chartId}\n${truncateLines(safeJsonStringify(data), 12)}`,
+    id: 'background',
+    label: 'Background',
+    tag: 'YAML',
+    body: truncateLines(safeYamlStringify(bg), 10),
     variant: 'mono',
   }
+}
+
+/** Build a foreground-region slot. Pulls `foreground.regions[regionKey]`
+ *  when the section uses a regions-shaped foreground; otherwise muted. */
+function foregroundRegionNode(
+  unit: ResolvedUnit,
+  regionKey: string,
+  id: string,
+  label: string
+): InputNodeData {
+  const regions = asForegroundRegions(unit.parentConfig.foreground)
+  if (!regions) {
+    return {
+      id,
+      label,
+      tag: '—',
+      body: '(foreground is a flat layer stack — no regions)',
+      variant: 'muted',
+    }
+  }
+  const slice = regions.regions[regionKey]
+  if (slice === undefined) {
+    return {
+      id,
+      label,
+      tag: '—',
+      body: `(no ${regionKey} region in this layout)`,
+      variant: 'muted',
+    }
+  }
+  return {
+    id,
+    label,
+    tag: 'YAML',
+    body: truncateLines(safeYamlStringify(slice), 10),
+    variant: 'mono',
+  }
+}
+
+export function leadNode(unit: ResolvedUnit): InputNodeData {
+  return foregroundRegionNode(unit, 'lead', 'lead', 'Lead')
+}
+
+export function chartsNode(unit: ResolvedUnit): InputNodeData {
+  return foregroundRegionNode(unit, 'charts', 'charts', 'Charts')
+}
+
+export function bodyNode(unit: ResolvedUnit): InputNodeData {
+  return foregroundRegionNode(unit, 'body', 'body', 'Body')
 }
 
 export function shareNode(
@@ -373,14 +443,6 @@ function truncateLines(text: string, maxLines: number): string {
   const lines = text.split('\n')
   if (lines.length <= maxLines) return text
   return lines.slice(0, maxLines).join('\n') + '\n…'
-}
-
-function safeJsonStringify(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return '(failed to stringify JSON)'
-  }
 }
 
 function safeYamlStringify(value: unknown): string {

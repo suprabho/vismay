@@ -12,8 +12,11 @@ import type { ResolvedUnit } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
   contentNode,
-  configNode,
-  chartNode,
+  layoutNode,
+  backgroundNode,
+  leadNode,
+  chartsNode,
+  bodyNode,
   shareNode,
   reportNodeFormat,
   mapOverrideNode,
@@ -59,6 +62,11 @@ const FRAME_MIN_H = 270
 const INPUT_W = 320
 const INPUT_H = 150
 const INPUT_GAP_Y = 36
+
+// Decorative group labels in the input column ("Viz", "Foreground"). Same
+// width as wired input cards so the column edges line up; shorter height
+// since they carry just a label, no preview body.
+const INPUT_HEADER_H = 52
 
 const COL_GAP = 280
 
@@ -158,11 +166,22 @@ function withCacheBust(url: string, nonce: number): string {
  * section's nodes. Recomputed on section switch; passed to the in-place
  * update path so no Rete nodes get remounted.
  */
+/** Wired input slot keys on the Frame node. The visual column also includes
+ *  two decorative "Viz" / "Foreground" header cards, but those carry no data
+ *  and aren't part of this map — they're hard-coded in the build/layout. */
+type FrameInputKey =
+  | 'content'
+  | 'layout'
+  | 'background'
+  | 'lead'
+  | 'charts'
+  | 'body'
+
 interface SectionView {
   sectionId: string
   heading: string
   frameSrc: string
-  inputs: { content: InputNodeData; config: InputNodeData; chart: InputNodeData }
+  inputs: Record<FrameInputKey, InputNodeData>
   /** Override card data per group; only the expanded group's is actually
    *  read at any moment, but we precompute all four so toggling is cheap. */
   overrides: Record<OutputGroupId, OverrideSpec[]>
@@ -202,8 +221,11 @@ function buildSectionView(
     frameSrc,
     inputs: {
       content: contentNode(unit),
-      config: configNode(unit),
-      chart: chartNode(unit, parsed),
+      layout: layoutNode(unit),
+      background: backgroundNode(unit),
+      lead: leadNode(unit),
+      charts: chartsNode(unit),
+      body: bodyNode(unit),
     },
     overrides: {
       share: buildOverridesForGroup('share', unit, parsed),
@@ -403,6 +425,15 @@ export default function CanvasClient({
         }
       }
 
+      // Input-side section label ("Viz", "Foreground"). Purely decorative —
+      // visually demarcates the slot tree on the input column. No toggle,
+      // no sockets, no data flow.
+      class InputHeaderControl extends ClassicPreset.Control {
+        constructor(public label: string) {
+          super()
+        }
+      }
+
       /* ── Node classes ────────────────────────────────────────── */
 
       const socket = new ClassicPreset.Socket('canvas')
@@ -412,8 +443,14 @@ export default function CanvasClient({
         constructor(iframeCtrl: IframeControl) {
           super('Frame')
           this.addInput('content', new ClassicPreset.Input(socket, 'Content'))
-          this.addInput('config', new ClassicPreset.Input(socket, 'Config'))
-          this.addInput('chart', new ClassicPreset.Input(socket, 'Chart Data'))
+          this.addInput('layout', new ClassicPreset.Input(socket, 'Layout'))
+          this.addInput(
+            'background',
+            new ClassicPreset.Input(socket, 'Background')
+          )
+          this.addInput('lead', new ClassicPreset.Input(socket, 'Lead'))
+          this.addInput('charts', new ClassicPreset.Input(socket, 'Charts'))
+          this.addInput('body', new ClassicPreset.Input(socket, 'Body'))
           this.addOutput(
             'render',
             new ClassicPreset.Output(socket, 'render', true)
@@ -474,6 +511,14 @@ export default function CanvasClient({
             childCount
           )
           this.addControl('header', this.headerCtrl)
+        }
+      }
+
+      class InputHeaderNode extends ClassicPreset.Node {
+        kind = 'input-header' as const
+        constructor(label: string) {
+          super(label)
+          this.addControl('header', new InputHeaderControl(label))
         }
       }
 
@@ -806,6 +851,38 @@ export default function CanvasClient({
         )
       }
 
+      function InputHeaderControlView({
+        data,
+      }: {
+        data: InputHeaderControl
+      }) {
+        // Visually distinct from wired DataNodes: thin underline, smaller
+        // padding, all-caps label — so the eye reads it as a section
+        // divider, not another input card.
+        return (
+          <div
+            style={{
+              width: INPUT_W - 24,
+              height: INPUT_HEADER_H - 16,
+              padding: '0 4px',
+              display: 'flex',
+              alignItems: 'flex-end',
+              borderBottom: '1px solid #2a2a2a',
+              fontFamily: 'system-ui, sans-serif',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: '#888',
+              paddingBottom: 6,
+              pointerEvents: 'none',
+            }}
+          >
+            {data.label}
+          </div>
+        )
+      }
+
       /* ── Plugin wiring ───────────────────────────────────────── */
 
       type Schemes = ClassicScheme
@@ -828,6 +905,9 @@ export default function CanvasClient({
               }
               if (data.payload instanceof GroupHeaderControl) {
                 return GroupHeaderControlView as never
+              }
+              if (data.payload instanceof InputHeaderControl) {
+                return InputHeaderControlView as never
               }
               return null
             },
@@ -882,39 +962,68 @@ export default function CanvasClient({
       await editor.addNode(frame)
       await area.translate(frame.id, { x: frameColX, y: 0 })
 
-      /* Frame inputs (3 fixed nodes) */
-      const inputEntries: Array<{ key: string; data: InputNodeData }> = [
-        { key: 'content', data: initialView.inputs.content },
-        { key: 'config', data: initialView.inputs.config },
-        { key: 'chart', data: initialView.inputs.chart },
+      /* Frame inputs — interleaved wired slots + decorative group headers.
+       *
+       * Order (top → bottom):
+       *   Content
+       *   Layout
+       *   [Viz header]
+       *   Background
+       *   [Foreground header]
+       *   Lead
+       *   Charts
+       *   Body
+       *
+       * Headers carry no data and aren't wired; they only label the
+       * slot tree visually. Each wired slot gets a `value → frame.<key>`
+       * connection on the same socket name as its FrameInputKey. */
+      type ColumnItem =
+        | { kind: 'input'; key: FrameInputKey }
+        | { kind: 'header'; label: string }
+      const inputColumn: ColumnItem[] = [
+        { kind: 'input', key: 'content' },
+        { kind: 'input', key: 'layout' },
+        { kind: 'header', label: 'Viz' },
+        { kind: 'input', key: 'background' },
+        { kind: 'header', label: 'Foreground' },
+        { kind: 'input', key: 'lead' },
+        { kind: 'input', key: 'charts' },
+        { kind: 'input', key: 'body' },
       ]
+      const itemHeight = (it: ColumnItem): number =>
+        it.kind === 'input' ? INPUT_H : INPUT_HEADER_H
       const inputTotalH =
-        inputEntries.length * INPUT_H +
-        (inputEntries.length - 1) * INPUT_GAP_Y
+        inputColumn.reduce((acc, it) => acc + itemHeight(it), 0) +
+        (inputColumn.length - 1) * INPUT_GAP_Y
       const inputStartY = 0 + FRAME_H / 2 - inputTotalH / 2
-      const inputNodes: Record<string, DataNode> = {}
-      for (let i = 0; i < inputEntries.length; i++) {
-        const { key, data } = inputEntries[i]
-        const node = new DataNode(
-          data.label,
-          data.tag,
-          data.body,
-          data.variant
-        )
-        inputNodes[key] = node
-        await editor.addNode(node)
-        await area.translate(node.id, {
-          x: inputColX,
-          y: inputStartY + i * (INPUT_H + INPUT_GAP_Y),
-        })
-        await editor.addConnection(
-          new ClassicPreset.Connection(
-            node,
-            'value',
-            frame,
-            key
-          ) as Schemes['Connection']
-        )
+      const inputNodes: Partial<Record<FrameInputKey, DataNode>> = {}
+      let columnY = inputStartY
+      for (const item of inputColumn) {
+        if (item.kind === 'header') {
+          const headerNode = new InputHeaderNode(item.label)
+          await editor.addNode(headerNode)
+          await area.translate(headerNode.id, { x: inputColX, y: columnY })
+        } else {
+          const data = initialView.inputs[item.key]
+          const node = new DataNode(
+            data.label,
+            data.tag,
+            data.body,
+            data.variant
+          )
+          inputNodes[item.key] = node
+          await editor.addNode(node)
+          await area.translate(node.id, { x: inputColX, y: columnY })
+          await editor.addConnection(
+            new ClassicPreset.Connection(
+              node,
+              'value',
+              frame,
+              item.key
+            ) as Schemes['Connection']
+          )
+        }
+        columnY += itemHeight(item) + INPUT_GAP_Y
       }
 
       /* Group header column (always present, 4 headers) */
@@ -1153,9 +1262,19 @@ export default function CanvasClient({
         }
         await area.update('control', frameIframeCtrl.id)
 
-        // Input nodes (preview content)
-        for (const key of ['content', 'config', 'chart'] as const) {
+        // Input nodes (preview content) — headers don't carry per-section
+        // data, so only the wired slots need refreshing here.
+        const wiredKeys: FrameInputKey[] = [
+          'content',
+          'layout',
+          'background',
+          'lead',
+          'charts',
+          'body',
+        ]
+        for (const key of wiredKeys) {
           const node = inputNodes[key]
+          if (!node) continue
           const data = view.inputs[key]
           node.previewCtrl.label = data.label
           node.previewCtrl.tag = data.tag
