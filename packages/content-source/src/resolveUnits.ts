@@ -115,13 +115,17 @@ export function resolveUnits(
             })
           })
         } else {
+          // Use `statParagraphs` (already stripped of the *italic* subheading
+          // paragraph for stat sections) so the mobile unit doesn't render the
+          // subheading line twice — once styled, once as raw-asterisk body.
+          // Equivalent to the original slice for non-stat sections.
           mobileUnits.push({
             parentIndex,
             subIndex,
             parentConfig: section,
             heading,
             subheading,
-            paragraphs: sliceParagraphs(allParagraphs, sub.paragraphs),
+            paragraphs: statParagraphs,
             sliceIndex: 0,
           })
         }
@@ -231,13 +235,17 @@ export function resolveUnits(
           })
         })
       } else {
+        // Use `statParagraphs` (already stripped of the *italic* subheading
+        // paragraph for stat sections) so the mobile unit doesn't render the
+        // subheading line twice — once styled, once as raw-asterisk body.
+        // Equivalent to the original slice for non-stat sections.
         mobileUnits.push({
           parentIndex,
           subIndex: 0,
           parentConfig: section,
           heading,
           subheading,
-          paragraphs: sliceParagraphs(allParagraphs, section.paragraphs),
+          paragraphs: statParagraphs,
           sliceIndex: 0,
         })
       }
