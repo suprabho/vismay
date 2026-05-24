@@ -3,10 +3,11 @@ name: Footshort - scores refresh
 # Pulls latest match scores from football-data.org and upserts into the
 # footshort Supabase. Runs twice daily; safe to re-run (idempotent on match id).
 #
-# Required repo secrets:
-#   SUPABASE_URL           - footshort Supabase project URL
-#   SUPABASE_SERVICE_KEY   - footshort service role key
-#   FOOTBALL_DATA_TOKEN    - football-data.org API token
+# Required repo secrets (in `Production` — shared project-wide with vizmaya /
+# vizf1 / energy-profile workflows):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshort-only)
 
 on:
   schedule:
@@ -22,6 +23,7 @@ jobs:
   scores:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: Production
     defaults:
       run:
         working-directory: apps/footshort/worker
@@ -45,7 +47,7 @@ jobs:
 
       - name: Refresh scores
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
         run: pnpm scores:ci
