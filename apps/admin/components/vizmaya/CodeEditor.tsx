@@ -85,6 +85,23 @@ export default function CodeEditor({
         },
       )
 
+      // Alternative find/replace bindings. Monaco's defaults (Cmd+F / Cmd+H)
+      // collide with the browser's "Find on Page" and macOS's system-level
+      // "Hide Application" — the latter is unreachable from a web app at all.
+      // Cmd+Opt+F / Cmd+Opt+H avoid both.
+      editorInstance.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
+        () => {
+          editorInstance.getAction('actions.find')?.run()
+        },
+      )
+      editorInstance.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyH,
+        () => {
+          editorInstance.getAction('editor.action.startFindReplaceAction')?.run()
+        },
+      )
+
       if (onValidate) {
         const model = editorInstance.getModel()
         if (model) {
@@ -134,8 +151,40 @@ export default function CodeEditor({
     configureMonacoLanguages(monaco)
   }, [])
 
+  // Imperatively trigger Monaco's find/replace actions from the floating
+  // toolbar. The editor ref may be null briefly while Monaco mounts; guard.
+  const runFind = useCallback(() => {
+    editorRef.current?.focus()
+    editorRef.current?.getAction('actions.find')?.run()
+  }, [])
+  const runReplace = useCallback(() => {
+    editorRef.current?.focus()
+    editorRef.current?.getAction('editor.action.startFindReplaceAction')?.run()
+  }, [])
+
   return (
-    <div className="flex-1 min-h-0 w-full bg-neutral-950">
+    <div className="relative flex-1 min-h-0 w-full bg-neutral-950">
+      {/* Floating find/replace controls. Monaco's own find widget renders
+          at a higher z-index, so these visually disappear once a search is
+          open and reappear when it's closed. */}
+      <div className="pointer-events-none absolute top-1.5 right-3 z-10 flex gap-1">
+        <button
+          type="button"
+          onClick={runFind}
+          className="pointer-events-auto text-[11px] px-2 py-0.5 rounded text-neutral-400 bg-neutral-900/80 hover:bg-neutral-800 hover:text-neutral-200 border border-white/10 backdrop-blur-sm transition-colors"
+          title="Find (⌘⌥F)"
+        >
+          Find
+        </button>
+        <button
+          type="button"
+          onClick={runReplace}
+          className="pointer-events-auto text-[11px] px-2 py-0.5 rounded text-neutral-400 bg-neutral-900/80 hover:bg-neutral-800 hover:text-neutral-200 border border-white/10 backdrop-blur-sm transition-colors"
+          title="Find & Replace (⌘⌥H)"
+        >
+          Replace
+        </button>
+      </div>
       <Editor
         value={value}
         onChange={(next) => onChange(next ?? '')}
