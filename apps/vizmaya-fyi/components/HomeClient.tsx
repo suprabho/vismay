@@ -96,9 +96,9 @@ const css = `
 .vz .bn > *{position:relative;z-index:1}
 .vz .bn-aura{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
 .vz .bn-aura iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}
-.vz .bn-aura::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,rgba(0,0,0,.18) 55%,rgba(0,0,0,0) 100%)}
+.vz .bn-aura::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.40) 0%,rgba(0,0,0,0) 38%),linear-gradient(to top,rgba(0,0,0,.55) 0%,rgba(0,0,0,.18) 55%,rgba(0,0,0,0) 100%)}
 .vz .bn.has-aura,.vz .bn.has-aura.feature,.vz .bn.has-aura.accent-pink,.vz .bn.has-aura.accent-blue{background:var(--bn-bg,#0c0c10);border-color:color-mix(in srgb,var(--bn-text,#fff) 12%,transparent);color:var(--bn-text,#fff)}
-.vz .bn.has-aura .bn-aura::after{background:linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 70%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 22%,transparent) 55%,transparent 100%)}
+.vz .bn.has-aura .bn-aura::after{background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 50%,transparent) 0%,transparent 38%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 70%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 22%,transparent) 55%,transparent 100%)}
 .vz .bn.has-aura h3,.vz .bn.has-aura.feature h3{color:var(--bn-text,#fff)}
 .vz .bn.has-aura p,.vz .bn.has-aura.feature p{color:var(--bn-text,#fff)}
 .vz .bn.has-aura .bn-k,.vz .bn.has-aura.feature .bn-k{color:color-mix(in srgb,var(--bn-muted,var(--bn-text,#fff)) 92%,transparent)}

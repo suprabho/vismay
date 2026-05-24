@@ -17,7 +17,7 @@
     "@vismay/admin-core": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
-    "@vismay/footshort-viz": "workspace:*",
+    "@vismay/footshorts-viz": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "gray-matter": "^4.0.3",
     "mapbox-gl": "^3.21.0",

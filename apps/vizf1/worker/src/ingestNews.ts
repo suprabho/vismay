@@ -1,7 +1,7 @@
 /**
  * VizF1 news ingestion.
  *
- * Mirrors apps/footshort/worker/src/ingest.ts:
+ * Mirrors apps/footshorts/worker/src/ingest.ts:
  *   1. For each RSS source, fetch + parse
  *   2. For each item, compute url_hash; skip if already in DB
  *   3. Insert row with status='pending'

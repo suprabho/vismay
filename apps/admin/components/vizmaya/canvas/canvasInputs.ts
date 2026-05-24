@@ -1,5 +1,10 @@
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import type { ResolvedUnit, VizLayer, Theme } from '@vismay/viz-engine'
+import type {
+  ResolvedUnit,
+  StorySectionConfig,
+  VizLayer,
+  Theme,
+} from '@vismay/viz-engine'
 import { parseMapOverrides } from '@vismay/viz-engine'
 import { parseTtsConfig, findTtsOverride } from '@vismay/content-source/storyTts'
 import type { InputNodeData } from './InputNode'
@@ -12,12 +17,19 @@ import type { SlotPath } from './canvasSlotEditing'
  *
  * Yamls stay as raw strings (not pre-parsed) so future editing can preserve
  * formatting / comments; the builder parses lazily via the `parsed` accessor.
+ *
+ * `configYaml` and `markdown` carry the story's primary config + body so the
+ * frame-level input nodes (Content / Layout / Background / Lead / Charts /
+ * Body) can be click-to-edit too — they all live in those two files, not in
+ * the per-output override files.
  */
 export interface CanvasSources {
   shareYaml: string | null
   reportYaml: string | null
   mapYaml: string | null
   ttsYaml: string | null
+  configYaml: string | null
+  markdown: string | null
 }
 
 /** Lazy-parsed view of `CanvasSources`. Caller is expected to memoise the
@@ -35,6 +47,36 @@ export function parseCanvasSources(sources: CanvasSources): ParsedCanvasSources 
     report: safeParseYaml(sources.reportYaml),
     mapOverrides: parseMapOverrides(sources.mapYaml),
     tts: parseTtsConfig(sources.ttsYaml),
+  }
+}
+
+/**
+ * Refresh `unit.parentConfig` from the latest configYaml. The frame input
+ * builders (layoutNode, backgroundNode, leadNode, …) read from
+ * `parentConfig.foreground` / `parentConfig.background` — which the page
+ * captures at SSR load and doesn't re-resolve client-side. After an
+ * in-canvas save those fields change on disk and in `CanvasSources`, but
+ * the original unit still carries the pre-save shape, so the preview
+ * cards would lag the iframe by one section switch.
+ *
+ * This helper layers the live config over the original unit, keeping
+ * fields the live config doesn't own (heading, paragraphs, sliceIndex,
+ * etc.). Falls through to the original unit when configYaml is missing
+ * or malformed — server-side load already happened, so any state where
+ * configYaml is broken would be transient.
+ */
+export function liveUnit(
+  unit: ResolvedUnit,
+  configYaml: string | null
+): ResolvedUnit {
+  if (!configYaml) return unit
+  try {
+    const doc = parseYaml(configYaml) as { sections?: unknown[] } | null
+    const section = doc?.sections?.[unit.parentIndex]
+    if (!section || typeof section !== 'object') return unit
+    return { ...unit, parentConfig: section as StorySectionConfig }
+  } catch {
+    return unit
   }
 }
 

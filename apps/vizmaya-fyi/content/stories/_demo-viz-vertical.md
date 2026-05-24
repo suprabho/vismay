@@ -1,11 +1,11 @@
 ---
-title: "Vertical plugin demo — Footshort"
-subtitle: "Proves the registry's plugin path: a Footshort match-card module loaded only because frontmatter.vertical declares it."
+title: "Vertical plugin demo — Footshorts"
+subtitle: "Proves the registry's plugin path: a Footshorts match-card module loaded only because frontmatter.vertical declares it."
 byline: "vizmaya · phase-6"
 date: "2026-05-17"
 status: "draft"
 listed: false
-vertical: "footshort"
+vertical: "footshorts"
 theme:
   colors:
     background: "#0f1115"
@@ -25,9 +25,9 @@ theme:
     mono: "JetBrains Mono"
 ---
 
-# Footshort vertical demo
+# Footshorts vertical demo
 
-*Proves the vertical-bundle plugin path. The `fs:match-card` viz type isn't in the core registry — it's only available because this story's frontmatter declares `vertical: 'footshort'`.*
+*Proves the vertical-bundle plugin path. The `fs:match-card` viz type isn't in the core registry — it's only available because this story's frontmatter declares `vertical: 'footshorts'`.*
 
 **By vizmaya · phase 6**
 
@@ -51,7 +51,7 @@ Tall sheet with crests side-by-side, big kickoff stack, and an optional "Watch o
 
 ## Match row
 
-`fs:match-row` reuses the `MatchRow` component extracted in E4. It accepts the full `FixtureRow` shape as inline YAML, the same data contract Footshort's own league pages render against.
+`fs:match-row` reuses the `MatchRow` component extracted in E4. It accepts the full `FixtureRow` shape as inline YAML, the same data contract Footshorts's own league pages render against.
 
 ## Standings table
 

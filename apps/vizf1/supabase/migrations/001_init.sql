@@ -1,12 +1,12 @@
 -- VizF1 schema v1
 -- All tables and enums are namespaced with `vizf1_` so they can co-exist in
--- the project-wide Supabase project alongside vizmaya and footshort schemas.
--- footshort's existing `articles` / `article_entities` would otherwise collide.
+-- the project-wide Supabase project alongside vizmaya and footshorts schemas.
+-- footshorts's existing `articles` / `article_entities` would otherwise collide.
 
 -- One-time cleanup of un-prefixed tables from a previous (failed) draft run.
--- These names are NOT used by vizmaya or footshort (verified at migration
+-- These names are NOT used by vizmaya or footshorts (verified at migration
 -- time) so it's safe to drop them. Do NOT add `articles` / `article_entities`
--- here — those belong to footshort.
+-- here — those belong to footshorts.
 drop table if exists session_results cascade;
 drop table if exists sessions cascade;
 drop table if exists story_segments cascade;

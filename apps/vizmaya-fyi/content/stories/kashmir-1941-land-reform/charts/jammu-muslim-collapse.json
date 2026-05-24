@@ -1,0 +1,50 @@
+{
+  "steps": [
+    {
+      "title": "Muslim share of Jammu Province (Indian portion)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}% Muslim"
+        },
+        "grid": { "left": "3%", "right": "12%", "bottom": "3%", "top": "10%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["1941", "1961"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 13 }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 70,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "formatter": "{value}%" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Muslim share",
+            "type": "bar",
+            "barWidth": 48,
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontFamily": "Fira Code",
+              "fontSize": 13,
+              "formatter": "{c}%"
+            },
+            "data": [
+              { "value": 61, "itemStyle": { "color": "$accent" } },
+              { "value": 38, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

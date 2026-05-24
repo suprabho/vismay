@@ -51,13 +51,14 @@ interface ConfigDoc {
 
 /**
  * Read one section from config.yaml by `parentIndex`. Returns the parsed
- * object (mutable copy) or null if the section doesn't exist or the YAML
- * doesn't parse.
+ * object (mutable copy) or null if the section doesn't exist, the YAML
+ * doesn't parse, or `configYaml` itself is null (story missing config).
  */
 export function getSection(
-  configYaml: string,
+  configYaml: string | null,
   parentIndex: number
 ): Record<string, unknown> | null {
+  if (!configYaml) return null
   const doc = safeParseYaml(configYaml) as ConfigDoc | null
   if (!doc || !Array.isArray(doc.sections)) return null
   const section = doc.sections[parentIndex]
@@ -127,7 +128,7 @@ function asArray(v: unknown): unknown[] {
  * surrounding doc structure they'd have annotated.
  */
 export function replaceLayer(
-  configYaml: string,
+  configYaml: string | null,
   parentIndex: number,
   path: SlotPath,
   nextLayer: Record<string, unknown>

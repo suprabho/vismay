@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from 'react'
-import { useRouter } from 'next/navigation'
 import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
@@ -17,6 +16,7 @@ import {
   mapOverrideNode,
   narrationNode,
   parseCanvasSources,
+  liveUnit,
   buildInputGraph,
   type CanvasSources,
   type InputGraph,
@@ -66,16 +66,6 @@ interface Props {
    * Empty values fall back to a blank src.
    */
   signedSrcById: Record<string, string>
-  /**
-   * Raw story markdown (with frontmatter). Local state so theme-slot edits
-   * can splice into the frontmatter and PUT the updated file. The page is
-   * declared `dynamic = 'force-dynamic'` so router.refresh() after save
-   * pulls a fresh copy on next render.
-   */
-  markdown: string
-  /** Raw config.yaml. Local state so map/image-slot edits can splice layers
-   *  back into the matching section block. */
-  configYaml: string
 }
 
 /**
@@ -227,22 +217,29 @@ interface SectionView {
 function buildSectionView(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>,
+  configYaml: string | null,
   slug: string,
   signedSrcById: Record<string, string>,
   dataNonce: number,
   theme: Theme | null
 ): SectionView {
+  // Layer the live configYaml over the unit so frame input previews
+  // (Layout / Background / Lead / Charts / Body) reflect in-canvas saves
+  // without waiting for the user to paginate. The original unit's other
+  // fields (heading, paragraphs, sliceIndex) are kept intact — those come
+  // from server-side resolveUnits and don't change on a config save.
+  const live = liveUnit(unit, configYaml)
   const sectionId =
-    unit.parentConfig.id ?? `section-${unit.parentIndex}`
+    live.parentConfig.id ?? `section-${live.parentIndex}`
   const heading =
-    unit.heading ||
-    unit.paragraphs[0]?.replace(/\*+/g, '') ||
-    `Section ${unit.parentIndex + 1}`
+    live.heading ||
+    live.paragraphs[0]?.replace(/\*+/g, '') ||
+    `Section ${live.parentIndex + 1}`
   const frameSrc = withCacheBust(
     signedSrcById[canvasFrameId(sectionId)] ?? '',
     dataNonce
   )
-  const allOutputs = buildOutputsForUnit(unit, slug, signedSrcById).map(
+  const allOutputs = buildOutputsForUnit(live, slug, signedSrcById).map(
     (o) => ({ ...o, src: withCacheBust(o.src, dataNonce) })
   )
   const outputs: SectionView['outputs'] = {
@@ -255,12 +252,16 @@ function buildSectionView(
     sectionId,
     heading,
     frameSrc,
-    graph: buildInputGraph(unit, theme),
+    // Feed the live unit (with configYaml-fresh parentConfig) so the
+    // graph rebuilds against the latest background/foreground/regions
+    // after an in-canvas edit — without it, the iframe would update via
+    // cache-bust but the input subgraph would lag by a section switch.
+    graph: buildInputGraph(live, theme),
     overrides: {
-      share: buildOverridesForGroup('share', unit, parsed),
-      slides: buildOverridesForGroup('slides', unit, parsed),
-      report: buildOverridesForGroup('report', unit, parsed),
-      autoplay: buildOverridesForGroup('autoplay', unit, parsed),
+      share: buildOverridesForGroup('share', live, parsed),
+      slides: buildOverridesForGroup('slides', live, parsed),
+      report: buildOverridesForGroup('report', live, parsed),
+      autoplay: buildOverridesForGroup('autoplay', live, parsed),
     },
     outputs,
   }
@@ -289,32 +290,35 @@ export default function CanvasClient({
   sources: initialSources,
   theme,
   signedSrcById,
-  markdown: initialMarkdown,
-  configYaml: initialConfigYaml,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
   // triggering iframe reload + preview re-render without a full page
   // refetch. Server's initial value seeds it once.
+  //
+  // CanvasSources now carries configYaml + markdown alongside the override
+  // YAMLs; slot-editor click handlers read them through refs (mirrored
+  // below) so the latest in-memory copy is spliced even after intervening
+  // edits.
   const [sources, setSources] = useState<CanvasSources>(initialSources)
-  // Markdown + config.yaml mirror their on-disk source so slot edits can
-  // splice + PUT incrementally; they're seeded from props but otherwise
-  // owned by this component (router.refresh() after save reseeds them on
-  // the next render cycle). Kept in refs alongside state so the click
-  // handler closures captured at editor build time see fresh values.
-  const [markdown, setMarkdown] = useState(initialMarkdown)
-  const [configYaml, setConfigYaml] = useState(initialConfigYaml)
-  const markdownRef = useRef(markdown)
-  const configYamlRef = useRef(configYaml)
+  const configYamlRef = useRef(sources.configYaml)
+  const markdownRef = useRef(sources.markdown)
   useEffect(() => {
-    markdownRef.current = markdown
-  }, [markdown])
+    configYamlRef.current = sources.configYaml
+  }, [sources.configYaml])
   useEffect(() => {
-    configYamlRef.current = configYaml
-  }, [configYaml])
+    markdownRef.current = sources.markdown
+  }, [sources.markdown])
   // Bumped on every successful save — appended to iframe URLs as a
   // cache-bust so the iframes pull the fresh render.
   const [dataNonce, setDataNonce] = useState(0)
+
+  // The frontmatter theme isn't carried in CanvasSources, so a theme save
+  // can't piggyback on the setSources flow. Local override keeps the canvas
+  // in sync with the just-saved value until the next server render reseeds
+  // the prop. Theme edits are rare, so we don't bother re-syncing on prop
+  // change — the user reloading the page reseeds via this useState's init.
+  const [localTheme, setLocalTheme] = useState<Theme | null>(theme)
 
   /* ─── Slot editor state (map / image modal, theme overlay) ───── */
   const [slotTarget, setSlotTarget] = useState<SlotTarget | null>(null)
@@ -331,13 +335,30 @@ export default function CanvasClient({
     [units]
   )
   // Section views are pure data; cheap to memoise once and index into.
-  // Includes dataNonce so URL changes propagate after a save.
+  // Includes dataNonce so URL changes propagate after a save, and
+  // sources.configYaml so liveUnit picks up frame-input edits.
   const sectionViews = useMemo(
     () =>
       sectionUnits.map((u) =>
-        buildSectionView(u, parsedSources, slug, signedSrcById, dataNonce, theme)
+        buildSectionView(
+          u,
+          parsedSources,
+          sources.configYaml,
+          slug,
+          signedSrcById,
+          dataNonce,
+          localTheme
+        )
       ),
-    [sectionUnits, parsedSources, slug, signedSrcById, dataNonce, theme]
+    [
+      sectionUnits,
+      parsedSources,
+      sources.configYaml,
+      slug,
+      signedSrcById,
+      dataNonce,
+      localTheme,
+    ]
   )
   // Latest sectionViews available to closures captured during the
   // initial build (which only runs once per `units` change). Without
@@ -357,9 +378,14 @@ export default function CanvasClient({
   )
 
   /* ─── Editor state (right side panel) ────────────────────────── */
+  // `regionKey` is only meaningful when `kind === 'region'`; it names
+  // which foreground region the click targeted. Carried alongside so the
+  // single 'region' edit kind handles every named region the layout
+  // produces (lead / charts / body / sidebar / …) without per-key cases.
   const [editorTarget, setEditorTarget] = useState<{
     kind: EditableKind
     unit: ResolvedUnit
+    regionKey?: string
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -368,7 +394,12 @@ export default function CanvasClient({
   const editorSlice: EditableSlice | null = useMemo(
     () =>
       editorTarget
-        ? buildEditableSlice(editorTarget.kind, editorTarget.unit, sources)
+        ? buildEditableSlice(
+            editorTarget.kind,
+            editorTarget.unit,
+            sources,
+            editorTarget.regionKey
+          )
         : null,
     [editorTarget, sources]
   )
@@ -490,7 +521,14 @@ export default function CanvasClient({
       // Region / group junction label (e.g. "Charts", "Foreground"). Sits
       // on a node that fans its upstream inputs into one output, so unlike
       // the old decorative header it DOES carry sockets + data flow.
+      //
+      // `onClick` is set on junctions whose underlying YAML the user can
+      // edit in place — Background (the whole layer stack) and each
+      // foreground region (lead / charts / body / …). Unset on the
+      // Foreground group junction, since editing the whole foreground
+      // stack at once would conflate layout + regions.
       class JunctionControl extends ClassicPreset.Control {
+        onClick?: () => void
         constructor(public sub: string) {
           super()
         }
@@ -946,8 +984,25 @@ export default function CanvasClient({
         // A funnel node — the Rete node title already shows the name, so the
         // control just carries the subtitle (layer count / layout name). No
         // body preview; visually lighter than a leaf card.
+        //
+        // When the junction is editable (Background / region junctions), an
+        // EDIT chip lights up and the box becomes clickable. Matches the
+        // hover affordance on leaf TextPreviewControls so the user reads
+        // both as "click to edit".
+        const editable = typeof data.onClick === 'function'
+        const stop = (e: React.MouseEvent | React.PointerEvent) =>
+          e.stopPropagation()
+        const onClick = (e: React.MouseEvent) => {
+          if (!editable) return
+          stop(e)
+          data.onClick?.()
+        }
         return (
           <div
+            onClick={onClick}
+            onPointerDown={editable ? stop : undefined}
+            onMouseDown={editable ? stop : undefined}
+            title={editable ? 'click to edit' : undefined}
             style={{
               width: INPUT_W - 24,
               padding: '6px 10px',
@@ -958,10 +1013,26 @@ export default function CanvasClient({
               fontSize: 10,
               color: '#777',
               letterSpacing: '0.06em',
-              pointerEvents: 'none',
+              cursor: editable ? 'pointer' : 'default',
+              pointerEvents: editable ? 'auto' : 'none',
+              transition: 'border-color 120ms',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+            onMouseEnter={(e) => {
+              if (editable) e.currentTarget.style.borderColor = '#3a5da0'
+            }}
+            onMouseLeave={(e) => {
+              if (editable) e.currentTarget.style.borderColor = '#333'
             }}
           >
-            {data.sub}
+            <span style={{ flex: 1, minWidth: 0 }}>{data.sub}</span>
+            {editable && (
+              <span style={{ color: '#3a5da0', letterSpacing: '0.14em' }}>
+                EDIT
+              </span>
+            )}
           </div>
         )
       }
@@ -1091,6 +1162,30 @@ export default function CanvasClient({
         return h
       }
 
+      /**
+       * Build a click-to-edit handler that opens the editor panel against
+       * the CURRENT active section's unit (read via refs at click time, so
+       * paginating then clicking targets the right section rather than the
+       * build-time one). Used for both leaf DataNodes (Content / Layout)
+       * and junction nodes (Background / regions); the regionKey is only
+       * passed for region junctions and is ignored by other kinds.
+       */
+      function makeEditClick(
+        kind: EditableKind,
+        regionKey?: string
+      ): () => void {
+        return () => {
+          const idx = stateRef.current.activeSectionIndex
+          const targetUnit = sectionUnitsRef.current[idx]
+          if (!targetUnit) return
+          setEditorTargetRef.current({
+            kind,
+            unit: targetUnit,
+            regionKey,
+          })
+        }
+      }
+
       async function mountInputs(view: SectionView): Promise<void> {
         const g = view.graph
         const offset = FRAME_H / 2 - measureLeftHeight(g) / 2
@@ -1104,12 +1199,19 @@ export default function CanvasClient({
             slot?: InputNodeData['slot']
           },
           x: number,
-          y: number
+          y: number,
+          editKind?: EditableKind
         ): Promise<DataNode> => {
           const node = new DataNode(d.label, d.tag, d.body, d.variant)
-          // Click-to-edit dispatch. Reads the LATEST active section's unit +
-          // configYaml/markdown via refs so paginating then clicking opens
-          // the editor on the right section's slot, not the build-time one.
+          // Two complementary click paths share addLeaf:
+          //   - `d.slot` (theme + map/image layer leaves) dispatches to the
+          //     dedicated slot editors (MapPickerModal / ImageEditModal /
+          //     ThemeEditOverlay) via setSlotTargetRef.
+          //   - `editKind` (content / layout) dispatches to the YAML
+          //     EditorPanel via setEditorTargetRef.
+          // They don't overlap in practice — the only leaf that has both a
+          // slot AND would carry an editKind is theme, which intentionally
+          // gets the visual editor; the slot branch wins by being first.
           if (d.slot) {
             const slot = d.slot
             node.previewCtrl.onClick = () => {
@@ -1151,6 +1253,8 @@ export default function CanvasClient({
                 })
               }
             }
+          } else if (editKind) {
+            node.previewCtrl.onClick = makeEditClick(editKind)
           }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
@@ -1161,9 +1265,14 @@ export default function CanvasClient({
           label: string,
           sub: string,
           x: number,
-          y: number
+          y: number,
+          onClick?: () => void
         ): Promise<JunctionNode> => {
           const node = new JunctionNode(label, sub)
+          if (onClick) {
+            ;(node.controls.ctrl as InstanceType<typeof JunctionControl>).onClick =
+              onClick
+          }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
           leftNodeIds.add(node.id)
@@ -1187,9 +1296,20 @@ export default function CanvasClient({
 
         let y = offset
 
-        /* Standalone direct frame inputs (region column). */
+        /* Standalone direct frame inputs (region column). Content is
+         * always editable (markdown body); Layout is editable only when
+         * the foreground is regions-shaped — on a flat layer stack the
+         * "layout" field is meaningless and saving one would clobber the
+         * stack. Theme lives in markdown frontmatter and stays
+         * non-editable here — frontmatter editing is its own concern. */
         for (const key of ['content', 'layout', 'theme'] as const) {
-          const node = await addLeaf(g[key], regionColX, y)
+          let editKind: EditableKind | undefined
+          if (key === 'content') {
+            editKind = 'content'
+          } else if (key === 'layout' && g.foreground.shape === 'regions') {
+            editKind = 'layout'
+          }
+          const node = await addLeaf(g[key], regionColX, y, editKind)
           await wire(node, 'value', frame, key)
           y += LEAF_H + LGAP_Y
         }
@@ -1209,6 +1329,9 @@ export default function CanvasClient({
                   },
                 ]
           const h = bandH(leaves.length)
+          // Editable: clicking opens the whole background layer stack as
+          // YAML. Empty save deletes the field; the renderer then falls
+          // back to whatever the legacy `map:` shim or absence implies.
           const bgNode = await addJunction(
             'Background',
             leaves.length === 1 && g.background.shape === 'none'
@@ -1217,7 +1340,8 @@ export default function CanvasClient({
                   g.background.layers.length === 1 ? '' : 's'
                 }`,
             regionColX,
-            y + h / 2 - JUNCTION_H / 2
+            y + h / 2 - JUNCTION_H / 2,
+            makeEditClick('background')
           )
           await wire(bgNode, 'value', frame, 'background')
           let ly = y + (h - stackH(leaves.length)) / 2
@@ -1248,13 +1372,19 @@ export default function CanvasClient({
                     },
                   ]
             const h = bandH(leaves.length)
+            // Each region (lead / charts / body / …) is editable as its
+            // own YAML slice of foreground.regions[region.key]. The
+            // generic 'region' kind handles any region name the layout
+            // produces; the regionKey is what tells canvasEditing which
+            // slot to read or splice.
             const rj = await addJunction(
               region.label,
               `${region.layers.length} layer${
                 region.layers.length === 1 ? '' : 's'
               } · region`,
               regionColX,
-              y + h / 2 - JUNCTION_H / 2
+              y + h / 2 - JUNCTION_H / 2,
+              makeEditClick('region', region.key)
             )
             regionNodes.push(rj)
             regionCenters.push(y + h / 2)
@@ -1271,11 +1401,18 @@ export default function CanvasClient({
             regionCenters.length > 0
               ? (regionCenters[0] + regionCenters[regionCenters.length - 1]) / 2
               : (fgTop + fgBottom) / 2
+          // Foreground group junction is editable in every shape — opens
+          // the whole foreground YAML so the user can edit it freeform
+          // (and switch shapes by rewriting). Region junctions give
+          // finer-grained per-region edits when shape === 'regions';
+          // this is the catch-all entry point and the ONLY editor on
+          // flat / none shapes.
           const fgNode = await addJunction(
             'Foreground',
             fg.layout ? `layout: ${fg.layout}` : 'regions',
             groupColX,
-            center - JUNCTION_H / 2
+            center - JUNCTION_H / 2,
+            makeEditClick('foreground')
           )
           await wire(fgNode, 'value', frame, 'foreground')
           for (const rj of regionNodes) await wire(rj, 'value', fgNode, 'in')
@@ -1286,7 +1423,8 @@ export default function CanvasClient({
             'Foreground',
             'flat layer stack',
             groupColX,
-            y + h / 2 - JUNCTION_H / 2
+            y + h / 2 - JUNCTION_H / 2,
+            makeEditClick('foreground')
           )
           await wire(fgNode, 'value', frame, 'foreground')
           let ly = y + (h - stackH(leaves.length)) / 2
@@ -1296,7 +1434,13 @@ export default function CanvasClient({
             ly += LEAF_H + LGAP_Y
           }
         } else {
-          const fgNode = await addJunction('Foreground', 'none', groupColX, y)
+          const fgNode = await addJunction(
+            'Foreground',
+            'none',
+            groupColX,
+            y,
+            makeEditClick('foreground')
+          )
           await wire(fgNode, 'value', frame, 'foreground')
           const ln = await addLeaf(
             {
@@ -1680,7 +1824,8 @@ export default function CanvasClient({
           editorTarget.kind,
           editorTarget.unit,
           sources,
-          editedText
+          editedText,
+          editorTarget.regionKey
         )
         await saveSlice(slug, merge)
         // Apply locally so the canvas updates without a refetch round
@@ -1700,13 +1845,15 @@ export default function CanvasClient({
 
   /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
   // After a successful slot save we:
-  //  1) update the local YAML/markdown buffer so subsequent clicks read
-  //     fresh values without waiting for the server round-trip,
+  //  1) splice the new layer / theme into the in-memory YAML/markdown
+  //     and patch sources locally — `liveUnit` + the `parsedSources`
+  //     effect propagate the change to every leaf preview without a
+  //     server round-trip,
   //  2) bump dataNonce so already-mounted iframes reload against the
-  //     freshly-written file, and
-  //  3) router.refresh() so server props (units, theme, signedSrcById)
-  //     re-derive on the next render — leaves rebuild with new previews.
-  const router = useRouter()
+  //     freshly-written file.
+  // No router.refresh() — the local update is the source of truth until
+  // the next full page load, and the rebuild it would force loses the
+  // user's zoom/pan.
   const handleMapSlotApply = useCallback(
     async (nextWrappedRaw: string, target: SlotTarget & { mode: 'map' }) => {
       setSlotSaving(true)
@@ -1734,17 +1881,16 @@ export default function CanvasClient({
           nextLayer
         )
         await saveConfigYaml(slug, nextConfigYaml)
-        setConfigYaml(nextConfigYaml)
+        setSources((prev) => ({ ...prev, configYaml: nextConfigYaml }))
         setDataNonce((n) => n + 1)
         setSlotTarget(null)
-        router.refresh()
       } catch (e) {
         setSlotError(e instanceof Error ? e.message : 'Save failed')
       } finally {
         setSlotSaving(false)
       }
     },
-    [slug, router]
+    [slug]
   )
 
   const handleImageSlotApply = useCallback(
@@ -1786,17 +1932,16 @@ export default function CanvasClient({
           nextLayer
         )
         await saveConfigYaml(slug, nextConfigYaml)
-        setConfigYaml(nextConfigYaml)
+        setSources((prev) => ({ ...prev, configYaml: nextConfigYaml }))
         setDataNonce((n) => n + 1)
         setSlotTarget(null)
-        router.refresh()
       } catch (e) {
         setSlotError(e instanceof Error ? e.message : 'Save failed')
       } finally {
         setSlotSaving(false)
       }
     },
-    [slug, router]
+    [slug]
   )
 
   const handleThemeSave = useCallback(
@@ -1804,19 +1949,27 @@ export default function CanvasClient({
       setSlotSaving(true)
       setSlotError(null)
       try {
-        const nextMarkdown = replaceTheme(markdownRef.current, nextTheme)
+        // markdownRef.current can be null when the story page falls back
+        // to an empty buffer — replaceTheme handles '' by creating fresh
+        // frontmatter, so we coerce here rather than refusing the save.
+        const nextMarkdown = replaceTheme(
+          markdownRef.current ?? '',
+          nextTheme
+        )
         await saveMarkdown(slug, nextMarkdown)
-        setMarkdown(nextMarkdown)
+        setSources((prev) => ({ ...prev, markdown: nextMarkdown }))
+        // Theme prop isn't in sources — bump local override so the theme
+        // leaf and any frame-input theme reads see the new value too.
+        setLocalTheme(nextTheme)
         setDataNonce((n) => n + 1)
         setSlotTarget(null)
-        router.refresh()
       } catch (e) {
         setSlotError(e instanceof Error ? e.message : 'Save failed')
       } finally {
         setSlotSaving(false)
       }
     },
-    [slug, router]
+    [slug]
   )
 
   const closeSlot = useCallback(() => {
@@ -1894,7 +2047,7 @@ export default function CanvasClient({
       {slotTarget?.mode === 'map' && (
         <MapPickerSlotMount
           target={slotTarget}
-          configYaml={configYaml}
+          configYaml={sources.configYaml}
           sectionUnits={sectionUnits}
           onApply={(raw) => handleMapSlotApply(raw, slotTarget)}
           onClose={closeSlot}
@@ -1911,7 +2064,7 @@ export default function CanvasClient({
       )}
       {slotTarget?.mode === 'theme' && (
         <ThemeEditOverlay
-          initial={theme}
+          initial={localTheme}
           saving={slotSaving}
           error={slotError}
           onSave={handleThemeSave}
@@ -1934,12 +2087,18 @@ function MapPickerSlotMount({
   onClose,
 }: {
   target: SlotTarget & { mode: 'map' }
-  configYaml: string
+  configYaml: string | null
   sectionUnits: ResolvedUnit[]
   onApply: (nextRaw: string) => void
   onClose: () => void
 }) {
-  const section = getSection(configYaml, target.unit.parentIndex)
+  // configYaml is null when the story has no config.yaml on disk; the picker
+  // still mounts with an empty wrapped layer (`map: {}`), so the user can
+  // pick a starting camera and the apply path will create the section's map
+  // block from scratch.
+  const section = configYaml
+    ? getSection(configYaml, target.unit.parentIndex)
+    : null
   const layer = section ? getLayer(section, target.slotPath) : null
   // Always pass wrapped YAML — the picker's helpers look for `map.<key>` at
   // the top level, which is exactly what `wrapLayerForMapPicker` produces

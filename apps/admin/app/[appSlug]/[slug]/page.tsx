@@ -19,6 +19,7 @@ export default async function AppEditStoryPage({ params }: Props) {
   return (
     <EditorClient
       slug={slug}
+      appSlug={appSlug}
       sectionHref={`/${appSlug}`}
       initial={initial}
       signedLinks={signedLinks}

@@ -16,24 +16,32 @@ export interface ParsedMarkdown {
   data: Record<string, unknown>
   body: string
   hadFrontmatter: boolean
+  /** Set when the frontmatter block existed but YAML parsing threw — exposed
+   *  so the admin editor can surface a "showing defaults" badge instead of
+   *  silently falling back. */
+  yamlError: string | null
 }
 
 export function parseFrontmatter(md: string): ParsedMarkdown {
   const m = md.match(FRONTMATTER_RE)
-  if (!m) return { data: {}, body: md, hadFrontmatter: false }
+  if (!m) return { data: {}, body: md, hadFrontmatter: false, yamlError: null }
   // The admin editor calls this on every keystroke, so YAML may be transiently
   // invalid (unclosed string, hanging key) — swallow parse errors so the
-  // editor doesn't unmount mid-edit.
+  // editor doesn't unmount mid-edit, but expose `yamlError` so callers can
+  // distinguish "no theme defined" from "theme defined but unparseable".
   let data: Record<string, unknown> | null = null
+  let yamlError: string | null = null
   try {
     data = parseYaml(m[1]) as Record<string, unknown> | null
-  } catch {
+  } catch (e) {
     data = null
+    yamlError = e instanceof Error ? e.message : 'YAML parse error'
   }
   return {
     data: data && typeof data === 'object' ? data : {},
     body: m[2] ?? '',
     hadFrontmatter: true,
+    yamlError,
   }
 }
 
