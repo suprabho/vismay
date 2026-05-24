@@ -1,0 +1,36 @@
+{
+  "steps": [
+    {
+      "title": "Share of Cultivated Land, Before Reform (illustrative)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": { "left": "3%", "right": "6%", "bottom": "3%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "max": 100,
+          "axisLabel": { "formatter": "{value}%", "color": "$muted" }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Tiller / tenant households", "Largest proprietors"],
+          "axisLabel": { "color": "$text", "fontSize": 11 }
+        },
+        "series": [
+          {
+            "name": "Share of cultivated land",
+            "type": "bar",
+            "barWidth": "50%",
+            "label": { "show": true, "position": "right", "formatter": "{c}%", "color": "$text" },
+            "data": [
+              { "value": 35, "itemStyle": { "color": "$accent2" } },
+              { "value": 65, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

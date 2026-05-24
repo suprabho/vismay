@@ -1,0 +1,89 @@
+defaults:
+  mapStyle: mapbox://styles/mapbox/light-v11
+  mapOpacity: 0.55
+  pinColor: "#bd771c"
+  pinRadius: 10
+  flySpeed: 1.2
+  highlightCountry: "IN"
+  highlightColor: "#2e7b9e"
+
+sections:
+  - id: hero
+    kind: hero
+    text: "Land to the Tiller"
+    map:
+      center: [74.9, 34.0]
+      zoom: 6.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: ceiling-stat
+    kind: stat
+    text: "22.75"
+    color: accent
+    map:
+      center: [74.797, 34.083]
+      zoom: 9.5
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [74.797, 34.083]
+          label: "Srinagar, Kashmir Valley"
+
+  - id: naya-kashmir
+    text: "Naya Kashmir"
+    map:
+      center: [74.9, 34.0]
+      zoom: 7.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: land-concentration-chart
+    text: "Who Held the Land"
+    chart: data:land-concentration
+    map:
+      center: [74.9, 34.0]
+      zoom: 6.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: abolition-act
+    text: "The Abolition Act"
+    map:
+      center: [74.9, 33.9]
+      zoom: 7.0
+      pitch: 20
+      bearing: 0
+      opacity: 0.5
+
+  - id: redistribution-chart
+    text: "After the Transfer"
+    chart: data:redistribution
+    map:
+      center: [74.9, 34.0]
+      zoom: 6.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
+
+  - id: radical-template
+    text: "A Radical Template — and Its Limits"
+    map:
+      center: [75.3, 33.6]
+      zoom: 6.0
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  - id: methodology
+    text: "Methodology & Sources"
+    map:
+      center: [76.0, 33.5]
+      zoom: 5.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.20

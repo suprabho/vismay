@@ -1,0 +1,37 @@
+{
+  "steps": [
+    {
+      "title": "Land Above the Ceiling vs. Retained (illustrative)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "grid": { "left": "3%", "right": "4%", "bottom": "3%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Resumed above ceiling", "Retained by proprietors"],
+          "axisLabel": { "color": "$text", "fontSize": 11, "interval": 0 }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Acres (illustrative)",
+          "nameTextStyle": { "color": "$muted" },
+          "axisLabel": { "color": "$muted" }
+        },
+        "series": [
+          {
+            "name": "Area",
+            "type": "bar",
+            "barWidth": "45%",
+            "label": { "show": true, "position": "top", "color": "$text" },
+            "data": [
+              { "value": 450000, "itemStyle": { "color": "$positive" } },
+              { "value": 230000, "itemStyle": { "color": "$muted" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
