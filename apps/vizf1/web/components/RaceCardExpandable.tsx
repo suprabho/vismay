@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { RaceRow } from '@vismay/f1-viz/types'
+import { findGrandPrix, flagUrl } from '@vismay/f1-viz/grands-prix'
 import { RaceWeekendTabs } from '@/components/RaceWeekendTabs'
 
 function dateLabel(date: string): string {
@@ -23,9 +24,18 @@ function statusPill(status: RaceRow['status']) {
 export function RaceCardExpandable({ race }: { race: RaceRow }) {
   const [open, setOpen] = useState(false)
   const expandable = race.status === 'finished' || race.status === 'live'
+  // Bundled palette knows the country flag + accent for each GP — fall back
+  // gracefully if a race name isn't in the registry (new venues, sprint-only
+  // rounds, etc.) so the row keeps rendering without country chrome.
+  const gp = findGrandPrix(race.raceName)
+  const flag = gp ? flagUrl(gp.code, 80) : null
+  const accent = gp?.accent ?? null
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+    <div
+      className="overflow-hidden rounded-xl border border-border bg-surface border-l-2"
+      style={accent ? { borderLeftColor: accent } : undefined}
+    >
       <button
         type="button"
         onClick={() => expandable && setOpen((v) => !v)}
@@ -37,7 +47,21 @@ export function RaceCardExpandable({ race }: { race: RaceRow }) {
           <span className="mt-0.5 text-[10px] text-muted">{dateLabel(race.date)}</span>
         </div>
         <div className="flex-1 min-w-0">
-          <div className="truncate text-sm text-text">{race.raceName}</div>
+          <div className="flex items-center gap-2">
+            {flag ? (
+              // flagcdn.com isn't allowlisted for next/image; plain <img> keeps
+              // the row light and matches the race-card layout's flag treatment.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={flag}
+                alt=""
+                width={18}
+                height={12}
+                className="h-3 w-[18px] flex-none rounded-[2px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+              />
+            ) : null}
+            <div className="truncate text-sm text-text">{race.raceName}</div>
+          </div>
           <div className="truncate text-[11px] text-muted">
             {race.circuitName}
             {race.locality ? ` · ${race.locality}` : ''}

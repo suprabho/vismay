@@ -91,6 +91,16 @@ export const GRANDS_PRIX: Record<string, GrandPrixEntry> = {
     circuit: 'Circuit de Barcelona-Catalunya',
     accent: '#AA151B',
   },
+  // Some seasons OpenF1 publishes the Catalunya round as "Barcelona Grand
+  // Prix" rather than "Spanish Grand Prix" — alias to the same circuit/flag/
+  // accent so the calendar row still gets country chrome.
+  barcelona: {
+    name: 'Barcelona Grand Prix',
+    country: 'Spain',
+    code: 'es',
+    circuit: 'Circuit de Barcelona-Catalunya',
+    accent: '#AA151B',
+  },
   austrian: {
     name: 'Austrian Grand Prix',
     country: 'Austria',
