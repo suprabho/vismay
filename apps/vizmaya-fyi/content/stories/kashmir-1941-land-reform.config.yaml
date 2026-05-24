@@ -1,0 +1,365 @@
+# Story config — kashmir-1941-land-reform
+#
+# Source: research brief "Demography of Jammu and Kashmir on the Eve of Land
+# Reform (1941–1951)", anchored on the Census of India 1941, Vol. XXII (Wreford).
+#
+# Custom GeoJSON (built for this story):
+#   /data/jk-1941-districts.geojson  — 16 features, idProperty "id"
+#       valley: anantnag, budgam, baramulla, kupwara, pulwama, srinagar
+#       jammu:  jammu, kathua, udhampur, doda, poonch, rajauri
+#       ladakh: leh, kargil
+#       pakistan: azad-kashmir, gilgit-baltistan
+#   /data/jk-1941-regions.geojson    — 5 dissolved regions, idProperty "id"
+#       valley, jammu, ladakh, ajk, gb
+#   Indian districts simplified from GADM v1 (geohacker/india); AJK + GB from
+#   geoBoundaries gbOpen PAK ADM1; Indian polygons clipped against the Pakistani
+#   ones so the shared edge approximates the 1949 Cease-Fire Line.
+#
+# Reference coordinates (lng, lat):
+#   Srinagar     74.797 34.083    Jammu city  74.857 32.726
+#   Muzaffarabad 73.471 34.370    Gilgit      74.315 35.920
+#   Leh          77.578 34.152    Mirpur      73.751 33.146
+#   Poonch       74.095 33.770
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.5
+  pinColor: "#e0a32e"
+  pinRadius: 9
+  flySpeed: 1.2
+
+sections:
+
+  # ── HERO ─────────────────────────────────────────
+  - id: hero
+    kind: hero
+    text: "A Kingdom on the Eve of Reform"
+    eyebrow: "Jammu & Kashmir · 1941–1951 · Census + Land Reform"
+    map:
+      center: [76.0, 34.4]
+      zoom: 5.6
+      pitch: 15
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [74.797, 34.083]
+          label: "Srinagar"
+          pulse: true
+
+  # ── STAT: total population ───────────────────────
+  - id: stat-population
+    kind: stat
+    text: "4,021,616"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [76.0, 34.4]
+      zoom: 5.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.5
+
+  # ── Religious composition — district choropleth ──
+  - id: religious-composition
+    text: "Muslim land, Hindu crown"
+    chart: data:religious-composition
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [76.0, 34.3]
+      zoom: 5.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-districts.geojson"
+        idProperty: "id"
+        ramp: [20, 60, 96]
+        colors: ["$surface", "$teal", "$accent"]
+        lineColor: "$background"
+        lineWidth: 0.5
+        legend:
+          show: true
+          title: "Muslim share of population, 1941"
+          lowLabel: "20%"
+          highLabel: "96%"
+          position: "bottom-left"
+        items:
+          - { code: "anantnag", value: 94 }
+          - { code: "budgam", value: 94 }
+          - { code: "baramulla", value: 95 }
+          - { code: "kupwara", value: 96 }
+          - { code: "pulwama", value: 95 }
+          - { code: "srinagar", value: 88 }
+          - { code: "jammu", value: 40 }
+          - { code: "kathua", value: 25 }
+          - { code: "udhampur", value: 43 }
+          - { code: "doda", value: 67 }
+          - { code: "poonch", value: 90 }
+          - { code: "rajauri", value: 88 }
+          - { code: "leh", value: 14 }
+          - { code: "kargil", value: 80 }
+          - { code: "azad-kashmir", value: 88 }
+          - { code: "gilgit-baltistan", value: 99 }
+
+  # ── Three provinces — region map + chart ─────────
+  - id: three-provinces
+    text: "Three provinces, three worlds"
+    chart: data:province-muslim-share
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [76.0, 34.3]
+      zoom: 5.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-regions.geojson"
+        idProperty: "id"
+        ramp: [40, 70, 99]
+        colors: ["$surface", "$teal", "$accent"]
+        lineColor: "$background"
+        lineWidth: 0.8
+        labels:
+          show: true
+          withValue: false
+          size: 12
+        items:
+          - { code: "valley", value: 94 }
+          - { code: "jammu", value: 40 }
+          - { code: "ladakh", value: 46 }
+          - { code: "ajk", value: 88 }
+          - { code: "gb", value: 99 }
+
+  # ── The Valley ───────────────────────────────────
+  - id: kashmir-valley
+    text: "The Valley: ninety-three percent"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [74.7, 34.05]
+      zoom: 7.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [74.797, 34.083]
+          label: "Srinagar"
+          pulse: true
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-districts.geojson"
+        idProperty: "id"
+        items:
+          - { code: "anantnag", color: "$accent", opacity: 0.75 }
+          - { code: "budgam", color: "$accent", opacity: 0.75 }
+          - { code: "baramulla", color: "$accent", opacity: 0.75 }
+          - { code: "kupwara", color: "$accent", opacity: 0.75 }
+          - { code: "pulwama", color: "$accent", opacity: 0.75 }
+          - { code: "srinagar", color: "$accent", opacity: 0.85 }
+
+  # ── Jammu Province district gradient ─────────────
+  - id: jammu-province
+    text: "Jammu: a majority that would not last"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [74.7, 33.1]
+      zoom: 7.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [74.857, 32.726]
+          label: "Jammu"
+        - coordinates: [73.751, 33.146]
+          label: "Mirpur"
+          labelAnchor: bottom
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-districts.geojson"
+        idProperty: "id"
+        ramp: [25, 90]
+        colors: ["$teal", "$accent"]
+        lineColor: "$background"
+        lineWidth: 0.6
+        labels:
+          show: true
+          withValue: true
+          valueSuffix: "%"
+          size: 11
+        items:
+          - { code: "kathua", value: 25 }
+          - { code: "jammu", value: 40 }
+          - { code: "udhampur", value: 43 }
+          - { code: "doda", value: 67 }
+          - { code: "rajauri", value: 88 }
+          - { code: "poonch", value: 90 }
+
+  # ── Agrarian structure ───────────────────────────
+  - id: agrarian-structure
+    text: "The tiller and the chakdar"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [76.0, 34.2]
+      zoom: 5.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+
+  # ── STAT: 1950 ───────────────────────────────────
+  - id: stat-1950
+    kind: stat
+    text: "1950"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [74.7, 34.0]
+      zoom: 6.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.45
+
+  # ── Land distribution chart ──────────────────────
+  - id: land-distribution
+    text: "Four and a half lakh acres"
+    chart: data:land-distribution
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [75.0, 34.0]
+      zoom: 6.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+
+  # ── Partition — region outcome map ───────────────
+  - id: partition
+    text: "The line through the mountains"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [75.6, 34.4]
+      zoom: 5.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [73.471, 34.370]
+          label: "Muzaffarabad"
+          labelAnchor: left
+        - coordinates: [74.315, 35.920]
+          label: "Gilgit"
+          labelAnchor: bottom
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-regions.geojson"
+        idProperty: "id"
+        lineColor: "$background"
+        lineWidth: 0.8
+        labels:
+          show: true
+          withValue: false
+          size: 12
+        items:
+          - { code: "valley", color: "$teal", opacity: 0.7 }
+          - { code: "jammu", color: "$teal", opacity: 0.7 }
+          - { code: "ladakh", color: "$teal", opacity: 0.7 }
+          - { code: "ajk", color: "$accent", opacity: 0.75 }
+          - { code: "gb", color: "$accent", opacity: 0.75 }
+
+  # ── STAT: massacres ──────────────────────────────
+  - id: stat-massacres
+    kind: stat
+    text: "20,000 to 100,000"
+    chart: data:jammu-muslim-collapse
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [74.8, 33.0]
+      zoom: 6.8
+      pitch: 20
+      bearing: 0
+      opacity: 0.5
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-districts.geojson"
+        idProperty: "id"
+        items:
+          - { code: "jammu", color: "$red", opacity: 0.55 }
+          - { code: "kathua", color: "$red", opacity: 0.55 }
+          - { code: "udhampur", color: "$red", opacity: 0.55 }
+          - { code: "doda", color: "$red", opacity: 0.45 }
+          - { code: "rajauri", color: "$red", opacity: 0.55 }
+          - { code: "poonch", color: "$red", opacity: 0.45 }
+
+  # ── Azad Kashmir collapse ────────────────────────
+  - id: ajk-collapse
+    text: "From one in eight to one in a thousand"
+    chart: data:ajk-collapse
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [73.9, 34.1]
+      zoom: 6.9
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-regions.geojson"
+        idProperty: "id"
+        items:
+          - { code: "ajk", color: "$red", opacity: 0.7 }
+
+  # ── The 1951 residue ─────────────────────────────
+  - id: residue-1951
+    text: "The census that never was"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [76.6, 34.2]
+      zoom: 5.7
+      pitch: 0
+      bearing: 0
+      opacity: 0.55
+      regions:
+        level: custom
+        geojsonUrl: "/data/jk-1941-regions.geojson"
+        idProperty: "id"
+        lineColor: "$background"
+        lineWidth: 0.8
+        items:
+          - { code: "valley", color: "$teal", opacity: 0.65 }
+          - { code: "jammu", color: "$teal", opacity: 0.65 }
+          - { code: "ladakh", color: "$teal", opacity: 0.65 }
+          - { code: "ajk", color: "$muted", opacity: 0.2 }
+          - { code: "gb", color: "$muted", opacity: 0.2 }
+
+  # ── Synthesis ────────────────────────────────────
+  - id: synthesis
+    text: "When class wore the mask of creed"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [76.0, 34.2]
+      zoom: 5.5
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+
+  # ── Methodology ──────────────────────────────────
+  - id: methodology
+    text: "Methodology & Sources"
+    mobileParagraphs:
+      - [0, 2]
+    map:
+      center: [76.0, 33.6]
+      zoom: 4.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.2

@@ -1,0 +1,53 @@
+{
+  "steps": [
+    {
+      "title": "Religious composition of the princely state, 1941",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}%"
+        },
+        "grid": { "left": "3%", "right": "12%", "bottom": "3%", "top": "10%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 100,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "formatter": "{value}%" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Buddhist", "Sikh", "Hindu", "Muslim"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 13 },
+          "splitLine": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Share",
+            "type": "bar",
+            "barWidth": 22,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "Fira Code",
+              "fontSize": 12,
+              "formatter": "{c}%"
+            },
+            "data": [
+              { "value": 1.01, "itemStyle": { "color": "$muted" } },
+              { "value": 1.64, "itemStyle": { "color": "$positive" } },
+              { "value": 20.12, "itemStyle": { "color": "$teal" } },
+              { "value": 77.11, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

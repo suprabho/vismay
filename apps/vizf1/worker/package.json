@@ -11,11 +11,13 @@
     "ingest:circuits:ci": "tsx src/ingestCircuits.ts",
     "build:story-segments": "tsx --env-file=.env src/buildStorySegments.ts",
     "build:story-segments:ci": "tsx src/buildStorySegments.ts",
+    "eval": "tsx --env-file=.env src/eval/run.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
     "@supabase/supabase-js": "^2.45.4",
+    "@vismay/eval-entities": "workspace:*",
     "@vizf1/brand": "workspace:*",
     "rss-parser": "^3.13.0",
     "zod": "^3.23.8"

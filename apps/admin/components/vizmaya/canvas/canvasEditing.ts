@@ -33,9 +33,10 @@ export type EditableKind =
   | 'content'
   | 'layout'
   | 'background'
-  | 'lead'
-  | 'charts'
-  | 'body'
+  // Per-region foreground edit (lead / charts / body / anything else the
+  // layout defines). Callers pass the region key alongside the kind so a
+  // single case handles every named region the layout produces.
+  | 'region'
 
 export interface EditableSlice {
   /** Initial text in the editor — full (untruncated) representation of
@@ -51,11 +52,15 @@ export interface EditableSlice {
   placeholder: string
 }
 
-/** Build the editor view for one (kind, unit) pair. */
+/** Build the editor view for one (kind, unit) pair. `regionKey` is
+ *  required when `kind === 'region'` — it names which foreground region
+ *  (lead / charts / body / etc.) this edit targets. Ignored for other
+ *  kinds. */
 export function buildEditableSlice(
   kind: EditableKind,
   unit: ResolvedUnit,
-  sources: CanvasSources
+  sources: CanvasSources,
+  regionKey?: string
 ): EditableSlice {
   switch (kind) {
     case 'share': {
@@ -202,10 +207,12 @@ export function buildEditableSlice(
       }
     }
 
-    case 'lead':
-    case 'charts':
-    case 'body': {
-      const regionKey = kind
+    case 'region': {
+      if (!regionKey) {
+        throw new Error(
+          "buildEditableSlice('region') requires regionKey (which named region to edit)"
+        )
+      }
       const section = readConfigSection(sources.configYaml, unit.parentIndex)
       const fg = section?.foreground
       const regions =
@@ -246,7 +253,8 @@ export function mergeSlice(
   kind: EditableKind,
   unit: ResolvedUnit,
   sources: CanvasSources,
-  editedText: string
+  editedText: string,
+  regionKey?: string
 ): MergeResult {
   const trimmed = editedText.trim()
 
@@ -448,10 +456,12 @@ export function mergeSlice(
       }
     }
 
-    case 'lead':
-    case 'charts':
-    case 'body': {
-      const regionKey = kind
+    case 'region': {
+      if (!regionKey) {
+        throw new Error(
+          "mergeSlice('region') requires regionKey (which named region to edit)"
+        )
+      }
       const { doc, section } = mutableConfigSection(
         sources.configYaml,
         unit.parentIndex
@@ -619,7 +629,7 @@ const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the l
 #
 # Set to \`{ type: none }\` to suppress the persistent map for this section.`
 
-function regionPlaceholder(regionKey: 'lead' | 'charts' | 'body'): string {
+function regionPlaceholder(regionKey: string): string {
   if (regionKey === 'charts') {
     return `# Charts region for this section. Examples:
 #
@@ -633,7 +643,10 @@ function regionPlaceholder(regionKey: 'lead' | 'charts' | 'body'): string {
 # - type: chart
 #   id: gdp-trend`
   }
-  return `# ${regionKey[0].toUpperCase()}${regionKey.slice(1)} region for this section. Example:
+  const label = regionKey
+    ? regionKey[0].toUpperCase() + regionKey.slice(1)
+    : 'Region'
+  return `# ${label} region for this section. Example:
 #
 # type: prose          # or 'chart', 'image', 'spacer', etc.
 # content: "Optional region body"

@@ -93,6 +93,7 @@ export default async function CanvasPage({ params }: Props) {
       slug={slug}
       units={units}
       sources={sources}
+      theme={story.frontmatter.theme ?? null}
       signedSrcById={signedSrcById}
     />
   )
