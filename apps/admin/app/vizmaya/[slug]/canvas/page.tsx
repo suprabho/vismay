@@ -38,27 +38,14 @@ export default async function CanvasPage({ params }: Props) {
   // shouldn't break the canvas — fall through to `null` and the input node
   // for that source renders its "no override" placeholder.
   const cs = getContentSource()
-  const chartIds = Array.from(
-    new Set(
-      units
-        .map((u) => u.parentConfig.chart)
-        .filter((id): id is string => typeof id === 'string')
-    )
-  )
-  const [shareYaml, reportYaml, mapYaml, ttsYaml, chartEntries] = await Promise.all([
+  const [shareYaml, reportYaml, mapYaml, ttsYaml] = await Promise.all([
     cs.readShareYaml(slug).catch(() => null),
     cs.readReportYaml(slug).catch(() => null),
     cs.readMapYaml(slug).catch(() => null),
     cs.readTtsYaml(slug).catch(() => null),
-    Promise.all(
-      chartIds.map(
-        async (id) => [id, await cs.readChart(slug, id).catch(() => null)] as const
-      )
-    ),
   ])
 
   const sources: CanvasSources = {
-    chartsById: Object.fromEntries(chartEntries.filter(([, v]) => v != null)),
     shareYaml,
     reportYaml,
     mapYaml,
