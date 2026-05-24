@@ -72,7 +72,7 @@ export function HeroPanel({ title, dek, byline, eyebrow }: HeroPanelProps) {
     <div className="flex flex-col">
       {eyebrow && (
         <div
-          className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-[0.15em] mb-6"
+          className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.15em] mb-6"
           style={{ color: 'var(--color-accent)' }}
         >
           {eyebrow}
@@ -82,13 +82,13 @@ export function HeroPanel({ title, dek, byline, eyebrow }: HeroPanelProps) {
         <HeroTitle segments={segments} portraitSegments={portraitSegments} />
       </div>
       <p
-        className="text-[1.1rem] leading-[1.65] mb-8"
+        className="text-[1.2rem] leading-[1.65] mb-8"
         style={{ color: 'var(--color-muted)' }}
       >
         {dek}
       </p>
       <div
-        className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-[0.1em]"
+        className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.1em]"
         style={{ color: 'var(--color-muted)' }}
       >
         {byline}
@@ -105,7 +105,7 @@ export function HeroPanelTitle({ title, eyebrow }: Pick<HeroPanelProps, 'title' 
     <div className="flex flex-col">
       {eyebrow && (
         <div
-          className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-[0.15em] mb-6"
+          className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.15em] mb-6"
           style={{ color: 'var(--color-accent)' }}
         >
           {eyebrow}
@@ -123,13 +123,13 @@ export function HeroPanelDek({ dek, byline }: Pick<HeroPanelProps, 'dek' | 'byli
   return (
     <div className="flex flex-col">
       <p
-        className="text-[1.1rem] leading-[1.65] mb-8"
+        className="text-[1.2rem] leading-[1.65] mb-8"
         style={{ color: 'var(--color-muted)' }}
       >
         {dek}
       </p>
       <div
-        className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-[0.1em]"
+        className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.1em]"
         style={{ color: 'var(--color-muted)' }}
       >
         {byline}

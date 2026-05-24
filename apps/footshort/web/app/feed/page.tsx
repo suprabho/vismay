@@ -10,7 +10,7 @@ import { useSeenArticles } from '@/lib/useSeenArticles';
 
 type Tab = 'forYou' | 'discover' | 'editorial';
 
-const FEED_HEIGHT = 'h-[calc(100dvh-168px)] md:h-[calc(100dvh-104px)]';
+const FEED_HEIGHT = 'h-[calc(100dvh-148px)] md:h-[calc(100dvh-104px)]';
 
 function PillTabs({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   const tabs: { key: Tab; label: string }[] = [
@@ -123,7 +123,7 @@ function DiscoverStack() {
     >
       {items.map((item) => (
         <div key={item.article_id} className={`${FEED_HEIGHT} snap-start`}>
-          <div className="h-full px-3">
+          <div className="h-full">
             <FeedCard
               articleId={item.article_id}
               headline={item.headline}
@@ -154,8 +154,8 @@ export default function FeedPage() {
   const [tab, setTab] = useState<Tab>('forYou');
 
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-6">
-      <div className="sticky top-[64px] z-10 -mx-4 flex justify-center bg-bg/80 px-4 pt-6 backdrop-blur md:top-0">
+    <main className="mx-auto max-w-2xl px-4">
+      <div className="sticky top-[50px] z-10 -mx-4 flex justify-center bg-bg/80 px-4 -pt-1 backdrop-blur md:top-0">
         <PillTabs active={tab} onChange={setTab} />
       </div>
       {tab === 'forYou' && (
