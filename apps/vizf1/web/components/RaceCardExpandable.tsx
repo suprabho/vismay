@@ -36,7 +36,17 @@ export function RaceCardExpandable({ race }: { race: RaceRow }) {
   return (
     <div
       className="overflow-hidden rounded-xl border border-border bg-surface border-l-2"
-      style={accent ? { borderLeftColor: accent } : undefined}
+      style={
+        accent
+          ? {
+              borderLeftColor: accent,
+              // 12% accent blended into the surface keeps bright country
+              // colors (Belgium yellow, F1 red, China red) subtle on the
+              // dark theme while still reading as a country-themed row.
+              background: `color-mix(in srgb, var(--color-surface) 88%, ${accent} 12%)`,
+            }
+          : undefined
+      }
     >
       <button
         type="button"
