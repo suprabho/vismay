@@ -1,56 +1,4 @@
 import { HeroBlock } from '@vismay/viz-engine'
-import HeroTitle, {
-  type TitleSegment,
-  krFlag,
-  brainIcon,
-  shipIcon,
-  oilDrumIcon,
-  boltIcon,
-} from './HeroTitle'
-
-const LANDSCAPE_SEGMENTS: TitleSegment[] = [
-  { type: 'pill', icon: krFlag, text: 'South Korea' },
-  { type: 'text', content: ' Makes the ' },
-  { type: 'pill', icon: brainIcon, text: 'Memory' },
-  { type: 'text', content: ' and Builds the ' },
-  { type: 'pill', icon: shipIcon, text: 'Ships' },
-  { type: 'text', content: '. It Just Lost All ' },
-  { type: 'pill', icon: boltIcon, text: '3 Energy Lines.' },
-  { type: 'text', content: ' ' },
-  { type: 'icon-pill', icon: oilDrumIcon, text: 'LNG', color: '#155dfc' },
-  { type: 'text', content: ' ' },
-  { type: 'icon-pill', icon: oilDrumIcon, text: 'Oil', color: '#f54900' },
-  { type: 'text', content: ' ' },
-  { type: 'icon-pill', icon: oilDrumIcon, text: 'He', color: '#2d7a4f' },
-]
-
-const PORTRAIT_SEGMENTS: TitleSegment[] = [
-  { type: 'pill', icon: krFlag, text: 'South Korea' },
-  { type: 'break' },
-  { type: 'text', content: 'Makes the ' },
-  { type: 'pill', icon: brainIcon, text: 'Memory' },
-  { type: 'text', content: ' &' },
-  { type: 'break' },
-  { type: 'text', content: 'Builds the ' },
-  { type: 'pill', icon: shipIcon, text: 'Ships' },
-  { type: 'break' },
-  { type: 'text', content: 'It Just Lost All' },
-  { type: 'break' },
-  { type: 'pill', icon: boltIcon, text: '3 Energy Lines.' },
-  { type: 'break' },
-  { type: 'icon-pill', icon: oilDrumIcon, text: 'LNG', color: '#155dfc' },
-  { type: 'text', content: ' ' },
-  { type: 'icon-pill', icon: oilDrumIcon, text: 'Oil', color: '#f54900' },
-  { type: 'text', content: ' ' },
-  { type: 'icon-pill', icon: oilDrumIcon, text: 'He', color: '#2d7a4f' },
-]
-
-function buildTitleSegments(title: string): { segments: TitleSegment[]; portraitSegments: TitleSegment[] } {
-  if (title.toLowerCase().includes('south korea')) {
-    return { segments: LANDSCAPE_SEGMENTS, portraitSegments: PORTRAIT_SEGMENTS }
-  }
-  return { segments: [{ type: 'text', content: title }], portraitSegments: [{ type: 'text', content: title }] }
-}
 
 interface HeroPanelProps {
   title: string
@@ -60,14 +8,11 @@ interface HeroPanelProps {
 }
 
 /**
- * The pretext-styled hero content (mono eyebrow, animated SVG title with
- * pills/icons, dek, byline) with NO outer section/min-h wrapper. Embeddable
- * inside other layouts — used by both the legacy Hero and MapStorySection's
- * `kind: hero` mode.
+ * Eyebrow + plain serif h1 + dek + byline, with NO outer section/min-h
+ * wrapper. Embeddable inside other layouts — used by both the legacy Hero
+ * and MapStorySection's `kind: hero` mode.
  */
 export function HeroPanel({ title, dek, byline, eyebrow }: HeroPanelProps) {
-  const { segments, portraitSegments } = buildTitleSegments(title)
-
   return (
     <div className="flex flex-col">
       {eyebrow && (
@@ -78,9 +23,12 @@ export function HeroPanel({ title, dek, byline, eyebrow }: HeroPanelProps) {
           {eyebrow}
         </div>
       )}
-      <div className="mb-5">
-        <HeroTitle segments={segments} portraitSegments={portraitSegments} />
-      </div>
+      <h1
+        className="font-serif font-bold leading-[1.1] text-[2.5rem] md:text-[3rem] mb-5"
+        style={{ color: 'var(--color-text)' }}
+      >
+        {title}
+      </h1>
       <p
         className="text-[1.1rem] leading-[1.65] mb-8"
         style={{ color: 'var(--color-muted)' }}
@@ -99,8 +47,6 @@ export function HeroPanel({ title, dek, byline, eyebrow }: HeroPanelProps) {
 
 /** Eyebrow + Title only — used as the first mobile hero snap section. */
 export function HeroPanelTitle({ title, eyebrow }: Pick<HeroPanelProps, 'title' | 'eyebrow'>) {
-  const { segments, portraitSegments } = buildTitleSegments(title)
-
   return (
     <div className="flex flex-col">
       {eyebrow && (
@@ -111,9 +57,12 @@ export function HeroPanelTitle({ title, eyebrow }: Pick<HeroPanelProps, 'title' 
           {eyebrow}
         </div>
       )}
-      <div>
-        <HeroTitle segments={segments} portraitSegments={portraitSegments} />
-      </div>
+      <h1
+        className="font-serif font-bold leading-[1.1] text-[2.25rem]"
+        style={{ color: 'var(--color-text)' }}
+      >
+        {title}
+      </h1>
     </div>
   )
 }
