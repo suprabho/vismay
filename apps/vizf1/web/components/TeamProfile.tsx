@@ -69,10 +69,18 @@ export function TeamProfile({ teamId }: { teamId: string }) {
   const drivers = team.data?.drivers ?? []
   const name = t?.name ?? teamId
   const color = t?.primary_color ?? null
+  const tint = color ?? '#1f2330'
   const logoUrl = t?.logo_url ?? null
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-4 pb-12">
+    // Page-wide constructor tint (matches ConstructorSeasonStats).
+    <main
+      className="min-h-screen pb-12"
+      style={{
+        background: `linear-gradient(180deg, ${tint}33 0%, ${tint}14 25%, ${tint}08 60%, transparent 100%)`,
+      }}
+    >
+      <div className="mx-auto max-w-2xl px-4 py-4">
       <Link href="/feed" className="text-xs text-muted hover:text-text">
         ← For You
       </Link>
@@ -161,6 +169,7 @@ export function TeamProfile({ teamId }: { teamId: string }) {
           </div>
         )}
       </section>
+      </div>
     </main>
   )
 }
