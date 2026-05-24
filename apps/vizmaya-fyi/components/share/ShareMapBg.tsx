@@ -4,26 +4,32 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapPinConfig, MapPalette } from '@vismay/viz-engine'
 import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel } from '@vismay/viz-engine'
 import { MapboxBackground } from '@vismay/viz-engine'
+import type { AspectRatio } from './AspectRatioToggle'
 
-// Match the story page's camera framing so the share card shows the same
-// visible region. The story applies a focus area via `map.setPadding` so the
-// YAML `center` lands inside the visible card region (not the canvas
-// centroid) — story configs pick coordinates assuming that shift. Without
-// these here, share cards render the same `center` at dead-center, which
-// generally pushes the subject behind the bottom title-overlay gradient.
+// Per-aspect-ratio focus area for the share-card map. Mapbox padding shifts
+// the geographic center coordinate to land inside this fractional rectangle
+// of the canvas; the rest of the map fills around it.
 //
-// Share cards put the title overlay at the bottom (gradient transparent →
-// 70% black). We want the geographic center to land in the upper half so
-// the subject sits clear of the overlay regardless of aspect ratio.
+// Title overlays sit at the top of each card. The square/portrait ratios push
+// the focal point down into the lower-middle so the subject clears the
+// caption panel. The 4:3 landscape uses a left-column caption, so its focal
+// point shifts right into the unobscured 2/3.
 //
 // Hoisted to module scope so the object identity is stable across renders.
 // MapboxBackground's region/heatmap effect lists these focus-area props in
 // its deps; an inline literal would be a fresh object every render and would
 // cause the effect to tear down and rebuild the choropleth on every parent
 // re-render — a visible flicker, especially with custom GeoJSON regions.
-const SHARE_FOCUS_AREA = { top: 0.05, left: 0, width: 1.0, height: 0.45 }
+type FocusArea = { top: number; left: number; width: number; height: number }
+const SHARE_FOCUS_AREA: Record<AspectRatio, FocusArea> = {
+  '1:1': { top: 0.20, left: 0, width: 1.0, height: 0.40 },
+  '3:4': { top: 0.40, left: 0, width: 1.0, height: 0.40 },
+  '4:3': { top: 0.10, left: 0.28, width: 0.70, height: 0.40 },
+}
 
 interface Props {
+  /** Share-card aspect ratio — picks the focal area used to frame the map. */
+  ratio: AspectRatio
   center: [number, number]
   zoom: number
   pitch?: number
@@ -70,6 +76,7 @@ interface Props {
  * scrolled back off.
  */
 export default function ShareMapBg({
+  ratio,
   center,
   zoom,
   pitch = 0,
@@ -90,6 +97,7 @@ export default function ShareMapBg({
   defaultPinRadius,
   pixelRatio,
 }: Props) {
+  const focusArea = SHARE_FOCUS_AREA[ratio]
   const hostRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -157,8 +165,8 @@ export default function ShareMapBg({
           defaultPinColor={defaultPinColor}
           defaultPinRadius={defaultPinRadius}
           pixelRatio={pixelRatio}
-          landscapeFocusArea={SHARE_FOCUS_AREA}
-          portraitFocusArea={SHARE_FOCUS_AREA}
+          landscapeFocusArea={focusArea}
+          portraitFocusArea={focusArea}
         />
       )}
     </div>

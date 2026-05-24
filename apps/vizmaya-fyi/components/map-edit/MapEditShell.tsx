@@ -957,6 +957,7 @@ function SharePreview({
       }}
     >
       <ShareMapBg
+        ratio={aspect}
         center={state.center}
         zoom={state.zoom}
         pitch={state.pitch}
