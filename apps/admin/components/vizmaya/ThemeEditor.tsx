@@ -1,12 +1,15 @@
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 
 interface Props {
   theme: Partial<Theme> | undefined
   onChange: (next: Theme) => void
+  /** YAML parse error from the markdown frontmatter, if any. When set, the
+   *  editor surfaces a banner so authors don't see defaults silently. */
+  yamlError?: string | null
 }
 
 /** Ordered so color swatches read left-to-right the way they compose on screen. */
@@ -57,8 +60,12 @@ function mergeTheme(partial: Partial<Theme> | undefined): Theme {
 
 type FontStatus = 'loading' | 'loaded' | 'error'
 
-export default function ThemeEditor({ theme, onChange }: Props) {
-  const t = useMemo(() => mergeTheme(theme), [theme])
+export default function ThemeEditor({ theme, onChange, yamlError }: Props) {
+  // Recompute on every render rather than memoize: mergeTheme is two object
+  // spreads and the cost is negligible, while skipping useMemo here removes a
+  // class of subtle bugs where a stale `theme` reference (e.g. cached parent
+  // memoization) hides downstream prop changes from the color/font fields.
+  const t = mergeTheme(theme)
   const [fontStatus, setFontStatus] = useState<Record<string, FontStatus>>({})
 
   // Inject Google Fonts link for admin preview
@@ -110,6 +117,20 @@ export default function ThemeEditor({ theme, onChange }: Props) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-3xl p-4 space-y-8">
+        {yamlError && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <span aria-hidden="true" className="mt-0.5 shrink-0 text-amber-300">⚠</span>
+            <div className="min-w-0">
+              <div className="font-medium">Frontmatter YAML is invalid — showing defaults.</div>
+              <div className="mt-0.5 font-mono text-[11px] leading-snug text-amber-300/80 break-words">
+                {yamlError}
+              </div>
+              <div className="mt-1 text-[11px] text-amber-300/70">
+                Edits made here will be saved with the merged theme, but won&apos;t reflect what&apos;s in the markdown until the YAML parses again.
+              </div>
+            </div>
+          </div>
+        )}
         <ThemePreview theme={t} />
 
         <Section title="Colors">

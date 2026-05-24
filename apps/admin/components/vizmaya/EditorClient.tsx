@@ -345,7 +345,13 @@ export default function EditorClient({
       </nav>
 
       <div className="flex-1 flex flex-col min-h-0">
-        {tab === 'theme' && <ThemeEditor theme={theme} onChange={updateTheme} />}
+        {tab === 'theme' && (
+          <ThemeEditor
+            theme={theme}
+            yamlError={parsed.yamlError}
+            onChange={updateTheme}
+          />
+        )}
         {tab === 'markdown' && (
           <>
             <FileActions
