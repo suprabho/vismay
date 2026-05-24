@@ -94,13 +94,22 @@ STEP 2 — Summary.
 If is_football_news=true: write a 55-60 word neutral, factual summary. Lead with the news itself. No speculation, no opinion, no "reports suggest" hedging unless the original is explicitly rumor-based. Do not mention that this is a summary.
 If is_football_news=false: write a one-line note describing what the article is actually about. It will not be shown to users.
 
-STEP 3 — Entities. Only extract when is_football_news=true:
+STEP 3 — Entities. Only extract when is_football_news=true. Precision matters more than recall — when in doubt, leave it out.
+
+An entity qualifies for tagging ONLY if BOTH are true:
+  (a) It appears in the article text (do not infer from background knowledge — e.g. do not tag a player's current club unless the club is itself named in the text).
+  (b) It is a primary subject OR a substantive secondary subject of the article. EXCLUDE entities that appear only in passing. Failure patterns to avoid:
+       * "X confirmed Y did Z." → tag Y, not X (X is providing context).
+       * "[Y, who plays for Z]" → Z is parenthetical; tag Z only if the article discusses the club itself.
+       * "Unlike A last season, B did X today." → A is comparison context; tag B, not A.
+       * "Fans at the X stadium chanted." → X (the club) only when the article discusses the club, not just the venue.
+
+Per-type guidance:
 - leagues: competition names (Premier League, La Liga, Champions League, FA Cup, etc.)
 - teams: clubs or national teams (Arsenal, Brazil, etc.) — use the common English name.
 - players: full name as commonly known. On-field footballers only — no managers, referees, or pundits.
-When is_football_news=false, return empty arrays for all three.
 
-Do not invent entities not in the text. Be precise.`;
+When is_football_news=false, return empty arrays for all three.`;
 
 export type GeminiInput = {
   headline: string;

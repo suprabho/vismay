@@ -94,11 +94,22 @@ STEP 2 — Summary.
 If is_f1_news=true: 55-60 word neutral, factual summary leading with the news. No speculation, no opinion. Do not say "this article".
 If is_f1_news=false: one-line note describing the actual topic.
 
-STEP 3 — Entities. Only when is_f1_news=true:
+STEP 3 — Entities. Only when is_f1_news=true. Precision matters more than recall — when in doubt, leave it out.
+
+An entity qualifies for tagging ONLY if BOTH are true:
+  (a) It appears in the article text (do not infer from background knowledge — e.g. do not tag a driver's current team unless the team is itself named in the text).
+  (b) It is a primary subject OR a substantive secondary subject of the article. EXCLUDE entities that appear only in passing. Failure patterns to avoid:
+       * "X confirmed Y did Z." → tag Y, not X (X is providing context).
+       * "[Y, who drives for Z]" → Z is parenthetical; tag Z only if the article discusses the team itself.
+       * "Unlike A last year, B did X today." → A is comparison context; tag B, not A.
+       * "Fans at the X circuit applauded." → X is a circuit only if the article actually discusses the circuit, race, or event there.
+
+Per-type guidance:
 - drivers: full names of F1 drivers mentioned. On-track drivers only — no reserve, no junior series unless clearly graduating.
 - teams: constructor names using the common English form ("Red Bull", "Aston Martin", "RB", "Sauber" — not the long sponsor name).
-- circuits: grand prix or circuit names ("Monaco", "Silverstone", "Suzuka"). Prefer the city/country name over the sponsored title.
-Do not invent entities not in the text. Empty arrays when is_f1_news=false.`
+- circuits: grand prix or circuit names ("Monaco", "Silverstone", "Suzuka"). Prefer the specific circuit name (e.g. "Circuit Gilles Villeneuve") over the city when both appear. Do NOT tag a city as a circuit just because a race happens there — only when the article is actually about events at that circuit.
+
+Empty arrays when is_f1_news=false.`
 
 const client = new GoogleGenAI({ apiKey: API_KEY })
 

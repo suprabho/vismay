@@ -88,7 +88,7 @@ export function FeedCard({
       ref={ref}
       className="flex h-full flex-col overflow-hidden rounded-t-3xl border border-b-0 border-border bg-surface"
     >
-      <div className="shrink-0 grow-0 basis-[60%] overflow-hidden bg-bg">
+      <div className="shrink-0 grow-0 basis-[50%] overflow-hidden bg-bg">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="" className="h-full w-full object-cover" />
@@ -97,7 +97,7 @@ export function FeedCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 bg-bg px-6 pt-5 pb-6">
+      <div className="flex flex-1 flex-col gap-3 bg-bg p-5 md:p-6">
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-text">
             {publisher}

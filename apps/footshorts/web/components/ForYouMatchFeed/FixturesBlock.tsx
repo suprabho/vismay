@@ -32,13 +32,21 @@ export function FixturesBlock({
   if (isKnockoutFixture(fixtures[0]!)) {
     const bracket = buildBracket(fixtures);
     const ties = bracket?.rounds[0]?.ties ?? [];
-    return (
-      <div className="flex flex-col gap-2">
-        {ties.map((tie) => (
-          <TieCard key={tie.legs.map((l) => l.id).join('|')} tie={tie} />
-        ))}
-      </div>
-    );
+    // TieCard exists to show two legs + aggregate. When every tie here is a
+    // single one-off (e.g. the Final, or any future/scheduled knockout fixture
+    // before its second leg exists) and the caller asked for the colorful
+    // 'tile' look, drop through to TileStrip so the upcoming match gets the
+    // same team-themed treatment as league fixtures in TeamCard.
+    const allSingleLeg = ties.length > 0 && ties.every((t) => t.legs.length === 1);
+    if (!(display === 'tile' && allSingleLeg)) {
+      return (
+        <div className="flex flex-col gap-2">
+          {ties.map((tie) => (
+            <TieCard key={tie.legs.map((l) => l.id).join('|')} tie={tie} />
+          ))}
+        </div>
+      );
+    }
   }
   if (display === 'tile') {
     return <TileStrip fixtures={fixtures} competitionCrest={competitionCrest} />;
