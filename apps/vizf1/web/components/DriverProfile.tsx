@@ -56,9 +56,20 @@ export function DriverProfile({ driverId }: { driverId: string }) {
 
   const d = driver.data
   const name = d ? `${d.given_name} ${d.family_name}` : driverId
+  const color = d?.primary_color ?? '#1f2330'
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-4 pb-12">
+    // Page-wide constructor tint (matches DriverSeasonStats). Strong at the
+    // top, fades to transparent ~70% down so the body's bg-bg carries the
+    // rest. AppHeader is bg-bg/80 backdrop-blur so the sticky nav picks up
+    // the tint through translucency.
+    <main
+      className="min-h-screen pb-12"
+      style={{
+        background: `linear-gradient(180deg, ${color}33 0%, ${color}14 25%, ${color}08 60%, transparent 100%)`,
+      }}
+    >
+      <div className="mx-auto max-w-2xl px-4 py-4">
       <Link href="/feed" className="text-xs text-muted hover:text-text">
         ← For You
       </Link>
@@ -136,6 +147,7 @@ export function DriverProfile({ driverId }: { driverId: string }) {
           </div>
         )}
       </section>
+      </div>
     </main>
   )
 }
