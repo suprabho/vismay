@@ -12,12 +12,14 @@
     "fixtures:ci": "tsx src/fixtures.ts",
     "backfill:images": "tsx --env-file=.env src/backfillImages.ts",
     "backfill:colors": "tsx --env-file=.env src/backfillColors.ts",
+    "eval": "tsx --env-file=.env src/eval/run.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@shortfoot/shared": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
+    "@vismay/eval-entities": "workspace:*",
     "rss-parser": "^3.13.0",
     "sharp": "^0.34.5",
     "zod": "^3.23.8"
