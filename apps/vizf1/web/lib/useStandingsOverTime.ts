@@ -34,9 +34,19 @@ type SeasonStandingsTimeline = {
   lanes: DriverLane[]
 }
 
-export function useStandingsOverTime(topN = 6) {
+/**
+ * Standings (championship position) after each completed race round.
+ *
+ * @param topN how many drivers to return lanes for, ordered by final standing
+ * @param forceInclude driver_ids that must appear in the output even if they
+ *   sit outside the topN cutoff. Useful for driver pages, where the page's
+ *   driver may be P21 but we still want their lane.
+ */
+export function useStandingsOverTime(topN = 6, forceInclude: string[] = []) {
+  // Sort to keep cache keys stable across re-renders with the same set.
+  const forceKey = [...forceInclude].sort().join(',')
   return useQuery({
-    queryKey: ['vizf1', 'standings-over-time', 'current', topN],
+    queryKey: ['vizf1', 'standings-over-time', 'current', topN, forceKey],
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<SeasonStandingsTimeline> => {
       const sb = supabaseBrowser()
@@ -126,13 +136,17 @@ export function useStandingsOverTime(topN = 6) {
       }
 
       // Final-standings order = order of drivers in the last `ranked`.
-      const finalOrder = [...cumulativePoints.entries()]
+      const orderedIds = [...cumulativePoints.entries()]
         .sort(([aId, aPts], [bId, bPts]) => {
           if (bPts !== aPts) return bPts - aPts
           return (cumulativeWins.get(bId) ?? 0) - (cumulativeWins.get(aId) ?? 0)
         })
         .map(([driverId]) => driverId)
-        .slice(0, topN)
+      // Top-N first (so the legend ordering matches championship order); then
+      // append any forced drivers that didn't make the cut.
+      const include = new Set(orderedIds.slice(0, topN))
+      for (const id of forceInclude) include.add(id)
+      const finalOrder = orderedIds.filter((id) => include.has(id))
 
       const lanes: DriverLane[] = finalOrder
         .map((driverId) => {

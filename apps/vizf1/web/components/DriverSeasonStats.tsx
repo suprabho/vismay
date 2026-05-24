@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
+import { PositionChart } from '@vismay/f1-viz/web'
 import { DriverAvatar } from '@/components/DriverAvatar'
 import { TeamBadge } from '@/components/TeamBadge'
 import { useDriverStandings } from '@/lib/useStandings'
+import { useStandingsOverTime } from '@/lib/useStandingsOverTime'
 import {
   useDriverSeasonStats,
   type DriverSeasonStats as DriverSeasonStatsT,
@@ -200,9 +202,55 @@ export function DriverSeasonStats({ driverId }: { driverId: string }) {
 
       <div className="mx-auto max-w-4xl px-4">
         <DriverStandingsTable season={season} name={name} rows={s?.rows ?? []} />
+        <StandingsByRoundChart driverId={driverId} driverName={name} season={season} />
         <SeasonStatsGrid season={season} stats={s} standingPosition={standing?.position ?? null} />
       </div>
     </main>
+  )
+}
+
+/**
+ * This driver's championship position after each completed race round, plotted
+ * alongside the top-5 leaders for context. If the page's driver is outside the
+ * top 5, they're force-included as a sixth lane — otherwise the chart would
+ * show only the title fight while leaving the page driver invisible.
+ */
+function StandingsByRoundChart({
+  driverId,
+  driverName,
+  season,
+}: {
+  driverId: string
+  driverName: string
+  season: string
+}) {
+  const q = useStandingsOverTime(5, [driverId])
+  const rounds = q.data?.rounds ?? []
+  const lanes = q.data?.lanes ?? []
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-xl font-bold uppercase tracking-wide text-text sm:text-2xl">
+        Standings by round
+      </h2>
+      {q.isLoading ? (
+        <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-surface">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        </div>
+      ) : lanes.length === 0 ? (
+        <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
+          No completed races yet this season.
+        </div>
+      ) : (
+        <PositionChart
+          title={`${driverName} vs. championship leaders`}
+          raceLabel={`${season} season`}
+          lanes={lanes}
+          totalLaps={rounds[rounds.length - 1] ?? 1}
+          xTickFormat={(n) => `R${n}`}
+        />
+      )}
+    </section>
   )
 }
 
