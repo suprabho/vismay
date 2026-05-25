@@ -15,6 +15,7 @@ import {
   reportNodeFormat,
   mapOverrideNode,
   narrationNode,
+  contentNode,
   parseCanvasSources,
   liveUnit,
   buildInputGraph,
@@ -117,11 +118,18 @@ const OVERRIDE_GAP_Y = 36
 const FRAME_OVERLAY_H = 56
 
 /** Which override input sockets each output group exposes. Drives both
- *  socket creation on the OutputNode and the override → output wiring. */
+ *  socket creation on the OutputNode and the override → output wiring.
+ *
+ *  `content` (markdown body) and `map` (map.yaml override) are shared data
+ *  feeding every output — wiring them in as sockets on share / slides /
+ *  report makes that lineage visible (and clickable to edit) from each
+ *  group instead of forcing the user back to the frame's left column.
+ *  Autoplay already wires `map`; it doesn't get `content` because narration
+ *  IS its content surface for that group. */
 const OVERRIDE_SOCKETS_BY_GROUP: Record<OutputGroupId, string[]> = {
-  share: ['variants'],
-  slides: ['override'],
-  report: ['override'],
+  share: ['variants', 'content', 'map'],
+  slides: ['override', 'content', 'map'],
+  report: ['override', 'content', 'map'],
   autoplay: ['map', 'narration'],
 }
 
@@ -143,6 +151,22 @@ function buildOverridesForGroup(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>
 ): OverrideSpec[] {
+  // Content + map are shared inputs every output consumes (no per-format
+  // file), so the builders are reused across share/slides/report. Editing
+  // them from any of those groups writes the same markdown / map.yaml as
+  // editing from the frame's left column.
+  const sharedFeeds: OverrideSpec[] = [
+    {
+      data: contentNode(unit),
+      socket: 'content',
+      editKind: 'content',
+    },
+    {
+      data: mapOverrideNode(unit, parsed),
+      socket: 'map',
+      editKind: 'map',
+    },
+  ]
   switch (groupId) {
     case 'share':
       return [
@@ -151,6 +175,7 @@ function buildOverridesForGroup(
           socket: 'variants',
           editKind: 'share',
         },
+        ...sharedFeeds,
       ]
     case 'slides':
       return [
@@ -159,6 +184,7 @@ function buildOverridesForGroup(
           socket: 'override',
           editKind: 'slides',
         },
+        ...sharedFeeds,
       ]
     case 'report':
       return [
@@ -167,6 +193,7 @@ function buildOverridesForGroup(
           socket: 'override',
           editKind: 'report',
         },
+        ...sharedFeeds,
       ]
     case 'autoplay':
       return [
