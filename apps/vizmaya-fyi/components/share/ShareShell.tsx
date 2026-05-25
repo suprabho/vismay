@@ -331,6 +331,13 @@ export default function ShareShell({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
+        // The signed share URL gates the *page* but the save endpoint requires
+        // a valid admin cookie. A 401 here means the admin session isn't valid
+        // for this domain (cookie missing, expired, or the admin deployment's
+        // ADMIN_PASSWORD/ADMIN_SESSION_SECRET no longer matches what minted it).
+        if (res.status === 401) {
+          throw new Error('Admin session expired — log in at /admin and retry.')
+        }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
       // Reload so the SSG page re-renders with the freshly saved data.
