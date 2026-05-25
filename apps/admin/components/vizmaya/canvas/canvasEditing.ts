@@ -21,6 +21,12 @@
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { ResolvedUnit } from '@vismay/viz-engine'
 import type { CanvasSources } from './canvasInputs'
+import {
+  getSection,
+  getLayer,
+  replaceLayer,
+  type SlotPath,
+} from './canvasSlotEditing'
 
 export type EditableKind =
   // Override inputs — sliced from per-story override files.
@@ -44,6 +50,13 @@ export type EditableKind =
   // single case handles every named region the layout produces. Only
   // valid when foreground is regions-shaped; mergeSlice throws otherwise.
   | 'region'
+  // One specific layer inside a section — identified by the same SlotPath
+  // the visual slot editors (MapPickerModal / ImageEditModal) use. The
+  // editor shows just that layer's YAML, not the surrounding array.
+  // Callers pass `slotPath` alongside; mergeSlice throws if it's missing.
+  // Used by the canvas's map-block click to surface the layer's YAML in
+  // Monaco while the picker modal opens on top.
+  | 'layer'
 
 export interface EditableSlice {
   /** Initial text in the editor — full (untruncated) representation of
@@ -61,13 +74,16 @@ export interface EditableSlice {
 
 /** Build the editor view for one (kind, unit) pair. `regionKey` is
  *  required when `kind === 'region'` — it names which foreground region
- *  (lead / charts / body / etc.) this edit targets. Ignored for other
- *  kinds. */
+ *  (lead / charts / body / etc.) this edit targets. `slotPath` is
+ *  required when `kind === 'layer'` — it names which layer inside the
+ *  section's background/foreground arrays to edit. Both are ignored for
+ *  other kinds. */
 export function buildEditableSlice(
   kind: EditableKind,
   unit: ResolvedUnit,
   sources: CanvasSources,
-  regionKey?: string
+  regionKey?: string,
+  slotPath?: SlotPath
 ): EditableSlice {
   switch (kind) {
     case 'share': {
@@ -259,7 +275,37 @@ export function buildEditableSlice(
         placeholder: regionPlaceholder(regionKey),
       }
     }
+
+    case 'layer': {
+      if (!slotPath) {
+        throw new Error(
+          "buildEditableSlice('layer') requires slotPath (which layer to edit)"
+        )
+      }
+      const section = getSection(sources.configYaml, unit.parentIndex)
+      const layer = section ? getLayer(section, slotPath) : null
+      return {
+        text: layer === null ? '' : safeStringify(layer),
+        language: 'yaml',
+        title: layerSliceTitle(slotPath, unit.parentIndex),
+        placeholder: LAYER_PLACEHOLDER,
+      }
+    }
   }
+}
+
+/** Human-readable title for a `layer` slice — names the slot path so the
+ *  user reads at a glance which layer they're editing. */
+function layerSliceTitle(path: SlotPath, parentIndex: number): string {
+  const where =
+    path.kind === 'legacyMap'
+      ? 'map'
+      : path.kind === 'background'
+        ? `background[${path.index}]`
+        : path.kind === 'foregroundFlat'
+          ? `foreground[${path.index}]`
+          : `foreground.${path.region}[${path.index}]`
+  return `Layer · §${parentIndex} · ${where}`
 }
 
 /**
@@ -284,7 +330,8 @@ export function mergeSlice(
   unit: ResolvedUnit,
   sources: CanvasSources,
   editedText: string,
-  regionKey?: string
+  regionKey?: string,
+  slotPath?: SlotPath
 ): MergeResult {
   const trimmed = editedText.trim()
 
@@ -550,6 +597,34 @@ export function mergeSlice(
         newRaw,
       }
     }
+
+    case 'layer': {
+      if (!slotPath) {
+        throw new Error(
+          "mergeSlice('layer') requires slotPath (which layer to edit)"
+        )
+      }
+      // Empty body clears the layer back to a bare `{}` (legacy maps) or an
+      // empty layer object (modern). We don't delete the slot entirely —
+      // that's a structural change the user should do from the parent
+      // Background/Foreground edit, where the surrounding array is visible.
+      const parsed =
+        trimmed === '' ? {} : (parseYaml(editedText) as Record<string, unknown>)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Layer YAML must be a mapping (e.g. `center: …`)')
+      }
+      const newRaw = replaceLayer(
+        sources.configYaml,
+        unit.parentIndex,
+        slotPath,
+        parsed
+      )
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
   }
 }
 
@@ -689,6 +764,23 @@ const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the l
 #   id: liquid-sunset
 #
 # Set to \`{ type: none }\` to suppress the persistent map for this section.`
+
+// One specific layer's YAML — what `getLayer` returns. For a map layer
+// the user typically lands here from the canvas's map-block click, with
+// MapPickerModal already open on top; this hint is for the case where
+// they close the modal and want to edit pins / palette / style directly.
+const LAYER_PLACEHOLDER = `# This layer's fields. For a map:
+#
+# center: [78.0, 22.0]
+# zoom: 5.5
+# pitch: 0
+# bearing: 0
+# pins:
+#   - coordinates: [78.0, 22.0]
+#     label: "Pin"
+#
+# Empty body clears the layer's contents. To remove the layer slot
+# itself, edit the parent Background/Foreground array instead.`
 
 // Foreground is shape-polymorphic — the editor accepts any of three
 // encodings and writes back exactly what the user types. Documenting all

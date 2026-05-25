@@ -203,9 +203,23 @@ function sliceLines(raw: string, start: number, end: number): string {
 }
 
 function matchCenter(raw: string): [number, number] | null {
-  const m = raw.match(/^\s*center:\s*\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/m)
-  if (!m) return null
-  return [parseFloat(m[1]), parseFloat(m[2])]
+  // Flow style — `center: [lng, lat]`.
+  const flow = raw.match(/^\s*center:\s*\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/m)
+  if (flow) return [parseFloat(flow[1]), parseFloat(flow[2])]
+  // Block style — what the `yaml` package emits by default, and what users
+  // may hand-write:
+  //   center:
+  //     - lng
+  //     - lat
+  // The wrapper that feeds MapPickerModal (`wrapLayerForMapPicker`) goes
+  // through `yamlStringify`, so this branch is the one the canvas's map-block
+  // click path actually hits — without it, the modal opens at fallback
+  // (0, 20 / zoom 2) instead of the layer's saved view.
+  const block = raw.match(
+    /^([ \t]*)center:[ \t]*\r?\n\1[ \t]+-[ \t]*(-?\d+(?:\.\d+)?)[ \t]*\r?\n\1[ \t]+-[ \t]*(-?\d+(?:\.\d+)?)/m
+  )
+  if (block) return [parseFloat(block[2]), parseFloat(block[3])]
+  return null
 }
 
 function matchNum(raw: string, key: string): number | null {
@@ -216,8 +230,17 @@ function matchNum(raw: string, key: string): number | null {
 
 function replaceOrInsert(raw: string, key: string, newValue: string, parentKey: string): string {
   if (key === 'center') {
-    const re = /^(\s*)center:\s*\[.*?\]\s*$/m
-    if (re.test(raw)) return raw.replace(re, `$1center: ${newValue}`)
+    // Flow style — overwrite in place.
+    const flowRe = /^(\s*)center:\s*\[.*?\]\s*$/m
+    if (flowRe.test(raw)) return raw.replace(flowRe, `$1center: ${newValue}`)
+    // Block style — collapse the three lines (`center:` + two `- num` items)
+    // back into a single flow-style line. Without this branch, the regex
+    // miss above falls through to `insertUnderParent`, which appends a
+    // SECOND `center:` line and leaves the old block intact — a duplicate
+    // key that the YAML parser silently resolves on save but is visibly
+    // wrong in any text view of the source.
+    const blockRe = /^([ \t]*)center:[ \t]*\r?\n\1[ \t]+-[ \t]*-?\d+(?:\.\d+)?[ \t]*\r?\n\1[ \t]+-[ \t]*-?\d+(?:\.\d+)?[ \t]*$/m
+    if (blockRe.test(raw)) return raw.replace(blockRe, `$1center: ${newValue}`)
     return insertUnderParent(raw, key, newValue, parentKey)
   }
   const re = new RegExp(`^(\\s*)${key}:\\s*-?\\d+(?:\\.\\d+)?\\s*$`, 'm')
