@@ -8,11 +8,9 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   scheme: 'footshorts',
-  runtimeVersion: {
-    policy: 'appVersion',
-  },
+  runtimeVersion: '0.1.0',
   updates: {
-    url: 'https://u.expo.dev/718ceb3c-a4cc-4180-867f-813e1be1d476',
+    url: 'https://u.expo.dev/ec487831-05e0-4a95-8ae4-c14736fa0375',
   },
   ios: {
     bundleIdentifier: 'app.footshorts',
@@ -36,7 +34,7 @@ const config: ExpoConfig = {
   ],
   extra: {
     eas: {
-      projectId: '718ceb3c-a4cc-4180-867f-813e1be1d476',
+      projectId: 'ec487831-05e0-4a95-8ae4-c14736fa0375',
     },
   },
 };
