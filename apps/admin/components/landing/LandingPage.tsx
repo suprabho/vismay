@@ -2,7 +2,7 @@ import { LoginModal } from './LoginModal'
 
 const LIVE = [
   { name: 'vizmaya.fyi', domain: 'geopolitics · economics · technology', partner: 'Supro' },
-  { name: 'Footshort', domain: 'football', partner: 'Supro' },
+  { name: 'Footshorts', domain: 'football', partner: 'Supro' },
 ]
 
 const IN_PRODUCTION = [

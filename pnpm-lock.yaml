@@ -38,9 +38,9 @@ importers:
       '@vismay/f1-viz':
         specifier: workspace:*
         version: link:../../verticals/f1-viz
-      '@vismay/footshort-viz':
+      '@vismay/footshorts-viz':
         specifier: workspace:*
-        version: link:../../verticals/footshort-viz
+        version: link:../../verticals/footshorts-viz
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -120,9 +120,9 @@ importers:
       '@vismay/f1-viz':
         specifier: workspace:*
         version: link:../../verticals/f1-viz
-      '@vismay/footshort-viz':
+      '@vismay/footshorts-viz':
         specifier: workspace:*
-        version: link:../../verticals/footshort-viz
+        version: link:../../verticals/footshorts-viz
       '@vismay/viz-admin':
         specifier: workspace:*
         version: link:../../packages/viz-admin
@@ -167,7 +167,7 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  apps/footshort/brand:
+  apps/footshorts/brand:
     dependencies:
       nativewind:
         specifier: '*'
@@ -189,12 +189,12 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  apps/footshort/mobile:
+  apps/footshorts/mobile:
     dependencies:
-      '@shortfoot/brand':
+      '@footshorts/brand':
         specifier: workspace:*
         version: link:../brand
-      '@shortfoot/shared':
+      '@footshorts/shared':
         specifier: workspace:*
         version: link:../shared
       '@supabase/supabase-js':
@@ -203,9 +203,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.10(react@19.2.0)
-      '@vismay/footshort-viz':
+      '@vismay/footshorts-viz':
         specifier: workspace:*
-        version: link:../../../verticals/footshort-viz
+        version: link:../../../verticals/footshorts-viz
       expo:
         specifier: ^55.0.0
         version: 55.0.24(@babel/core@7.29.0)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.14)(react-dom@19.2.0(react@19.2.0))(react-native-webview@13.16.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
@@ -295,7 +295,7 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
-  apps/footshort/shared:
+  apps/footshorts/shared:
     dependencies:
       '@supabase/supabase-js':
         specifier: ^2.45.4
@@ -308,12 +308,12 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  apps/footshort/web:
+  apps/footshorts/web:
     dependencies:
-      '@shortfoot/brand':
+      '@footshorts/brand':
         specifier: workspace:*
         version: link:../brand
-      '@shortfoot/shared':
+      '@footshorts/shared':
         specifier: workspace:*
         version: link:../shared
       '@supabase/supabase-js':
@@ -322,9 +322,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.10(react@19.2.0)
-      '@vismay/footshort-viz':
+      '@vismay/footshorts-viz':
         specifier: workspace:*
-        version: link:../../../verticals/footshort-viz
+        version: link:../../../verticals/footshorts-viz
       next:
         specifier: 16.2.2
         version: 16.2.2(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -363,17 +363,20 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
-  apps/footshort/worker:
+  apps/footshorts/worker:
     dependencies:
       '@google/generative-ai':
         specifier: ^0.21.0
         version: 0.21.0
-      '@shortfoot/shared':
+      '@footshorts/shared':
         specifier: workspace:*
         version: link:../shared
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.105.4
+      '@vismay/eval-entities':
+        specifier: workspace:*
+        version: link:../../../packages/eval-entities
       rss-parser:
         specifier: ^3.13.0
         version: 3.13.0
@@ -473,6 +476,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.105.4
+      '@vismay/eval-entities':
+        specifier: workspace:*
+        version: link:../../../packages/eval-entities
       '@vizf1/brand':
         specifier: workspace:*
         version: link:../brand
@@ -561,9 +567,9 @@ importers:
       '@vismay/f1-viz':
         specifier: workspace:*
         version: link:../../verticals/f1-viz
-      '@vismay/footshort-viz':
+      '@vismay/footshorts-viz':
         specifier: workspace:*
-        version: link:../../verticals/footshort-viz
+        version: link:../../verticals/footshorts-viz
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -760,6 +766,22 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/eval-entities:
+    dependencies:
+      '@google/genai':
+        specifier: ^1.50.1
+        version: 1.52.0(@modelcontextprotocol/sdk@1.29.0(zod@3.25.76))
+    devDependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.45.4
+        version: 2.105.4
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/ui: {}
 
   packages/viz-admin:
@@ -888,7 +910,7 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  verticals/footshort-viz:
+  verticals/footshorts-viz:
     dependencies:
       '@vismay/viz-engine':
         specifier: workspace:*

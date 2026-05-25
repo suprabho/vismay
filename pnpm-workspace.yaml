@@ -1,6 +1,6 @@
 packages:
   - 'apps/*'
-  - 'apps/footshort/*'
+  - 'apps/footshorts/*'
   - 'apps/vizf1/*'
   - 'packages/*'
   - 'verticals/*'

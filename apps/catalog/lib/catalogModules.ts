@@ -8,13 +8,13 @@ import { sample as raceRowSample } from '@vismay/f1-viz/modules/race-row/sample'
 import { sample as raceCardSample } from '@vismay/f1-viz/modules/race-card/sample'
 import { sample as driverStandingsSample } from '@vismay/f1-viz/modules/driver-standings/sample'
 import { sample as positionChartSample } from '@vismay/f1-viz/modules/position-chart/sample'
-import { sample as matchCardSample } from '@vismay/footshort-viz/modules/match-card/sample'
-import { sample as matchRowSample } from '@vismay/footshort-viz/modules/match-row/sample'
-import { sample as matchTileSample } from '@vismay/footshort-viz/modules/match-tile/sample'
-import { sample as standingsTableSample } from '@vismay/footshort-viz/modules/standings-table/sample'
-import { sample as bracketSample } from '@vismay/footshort-viz/modules/bracket/sample'
+import { sample as matchCardSample } from '@vismay/footshorts-viz/modules/match-card/sample'
+import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-row/sample'
+import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
+import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
+import { sample as bracketSample } from '@vismay/footshorts-viz/modules/bracket/sample'
 
-export type CatalogCategory = 'Core' | 'F1' | 'Footshort'
+export type CatalogCategory = 'Core' | 'F1' | 'Footshorts'
 
 export interface CatalogEntry {
   type: string
@@ -51,11 +51,11 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'f1:race-card', category: 'F1', sample: raceCardSample },
   { type: 'f1:driver-standings', category: 'F1', sample: driverStandingsSample },
   { type: 'f1:position-chart', category: 'F1', sample: positionChartSample },
-  { type: 'fs:match-card', category: 'Footshort', sample: matchCardSample },
-  { type: 'fs:match-row', category: 'Footshort', sample: matchRowSample },
-  { type: 'fs:match-tile', category: 'Footshort', sample: matchTileSample },
-  { type: 'fs:standings-table', category: 'Footshort', sample: standingsTableSample },
-  { type: 'fs:bracket', category: 'Footshort', sample: bracketSample },
+  { type: 'fs:match-card', category: 'Footshorts', sample: matchCardSample },
+  { type: 'fs:match-row', category: 'Footshorts', sample: matchRowSample },
+  { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },
+  { type: 'fs:standings-table', category: 'Footshorts', sample: standingsTableSample },
+  { type: 'fs:bracket', category: 'Footshorts', sample: bracketSample },
 ]
 
 export function findCatalogEntry(type: string): CatalogEntry | undefined {

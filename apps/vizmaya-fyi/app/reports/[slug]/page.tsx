@@ -18,6 +18,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { type CachedPdf, getCachedPdf } from '@vismay/content-source/storyPdf'
+import { signOutputUrl } from '@vismay/admin-core/signedUrl'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import ReportsBuilder from '@/components/reports/ReportsBuilder'
 
@@ -87,6 +88,36 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
     console.error('[reports/[slug]] cached-pdf lookup failed:', err)
   }
 
+  // The builder iframes /story/<slug>/report and /story/<slug>/slides — both
+  // gated by the signed-URL middleware. Mint same-origin tokens with a 24h
+  // TTL so the iframe loads cleanly across a typical editing session and
+  // through Save reloads (which re-key the iframe but keep the same src).
+  // Fall back to bare paths if signing fails: in dev without
+  // ADMIN_SESSION_SECRET the middleware's passThroughWhenUnconfigured handles
+  // it; in prod the iframe will 401 visibly and the page-level error surfaces
+  // a configuration miss rather than crashing the whole builder.
+  const previewSrcs: Record<'report' | 'slides', string> = {
+    report: `/story/${slug}/report?embed=1`,
+    slides: `/story/${slug}/slides?embed=1`,
+  }
+  try {
+    const SIGN_TTL_SECONDS = 24 * 60 * 60
+    for (const fmt of ['report', 'slides'] as const) {
+      // Same-origin sign — baseUrl only seeds the URL parser; we hand the
+      // resulting pathname+search back to the iframe.
+      const signed = signOutputUrl({
+        baseUrl: 'http://placeholder.local',
+        path: `/story/${slug}/${fmt}`,
+        ttlSeconds: SIGN_TTL_SECONDS,
+        query: { embed: '1' },
+      })
+      const u = new URL(signed)
+      previewSrcs[fmt] = `${u.pathname}${u.search}`
+    }
+  } catch (err) {
+    console.error('[reports/[slug]] preview sign failed:', err)
+  }
+
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
 
   // Each unit gets a stable index = (parentIndex, subIndex). The builder
@@ -139,6 +170,7 @@ export default async function ReportsBuilderPage({ params }: RouteParams) {
         chartIds={chartIds}
         initialYaml={reportYaml}
         initialPdfs={initialPdfs}
+        previewSrcs={previewSrcs}
       />
     </ThemeProvider>
   )

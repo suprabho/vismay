@@ -1967,12 +1967,12 @@
       "versionNonce": 1867302555,
       "fontSize": 12,
       "fontFamily": 1,
-      "text": "\u2022 packages/admin-core/src/auth.ts          \u2014 HMAC cookie auth (keep, but only for admin login UI)\n\u2022 packages/admin-core/src/middleware.ts    \u2014 current cookie-checking middleware (used by admin)\n\u2022 apps/admin/lib/adminAuth.ts              \u2014 admin's createAuth() instance\n\u2022 apps/vizmaya-fyi/middleware.ts           \u2014 gates /story/:slug/share + /autoplay (broken cross-TLD)\n\u2022 apps/vizmaya-fyi/lib/adminAuth.ts        \u2014 duplicated createAuth() (would be deleted)\n\u2022 apps/vizf1/* and apps/footshort/*        \u2014 no auth yet",
+      "text": "\u2022 packages/admin-core/src/auth.ts          \u2014 HMAC cookie auth (keep, but only for admin login UI)\n\u2022 packages/admin-core/src/middleware.ts    \u2014 current cookie-checking middleware (used by admin)\n\u2022 apps/admin/lib/adminAuth.ts              \u2014 admin's createAuth() instance\n\u2022 apps/vizmaya-fyi/middleware.ts           \u2014 gates /story/:slug/share + /autoplay (broken cross-TLD)\n\u2022 apps/vizmaya-fyi/lib/adminAuth.ts        \u2014 duplicated createAuth() (would be deleted)\n\u2022 apps/vizf1/* and apps/footshorts/*        \u2014 no auth yet",
       "textAlign": "left",
       "verticalAlign": "top",
       "baseline": 10,
       "containerId": null,
-      "originalText": "\u2022 packages/admin-core/src/auth.ts          \u2014 HMAC cookie auth (keep, but only for admin login UI)\n\u2022 packages/admin-core/src/middleware.ts    \u2014 current cookie-checking middleware (used by admin)\n\u2022 apps/admin/lib/adminAuth.ts              \u2014 admin's createAuth() instance\n\u2022 apps/vizmaya-fyi/middleware.ts           \u2014 gates /story/:slug/share + /autoplay (broken cross-TLD)\n\u2022 apps/vizmaya-fyi/lib/adminAuth.ts        \u2014 duplicated createAuth() (would be deleted)\n\u2022 apps/vizf1/* and apps/footshort/*        \u2014 no auth yet",
+      "originalText": "\u2022 packages/admin-core/src/auth.ts          \u2014 HMAC cookie auth (keep, but only for admin login UI)\n\u2022 packages/admin-core/src/middleware.ts    \u2014 current cookie-checking middleware (used by admin)\n\u2022 apps/admin/lib/adminAuth.ts              \u2014 admin's createAuth() instance\n\u2022 apps/vizmaya-fyi/middleware.ts           \u2014 gates /story/:slug/share + /autoplay (broken cross-TLD)\n\u2022 apps/vizmaya-fyi/lib/adminAuth.ts        \u2014 duplicated createAuth() (would be deleted)\n\u2022 apps/vizf1/* and apps/footshorts/*        \u2014 no auth yet",
       "lineHeight": 1.25
     },
     {

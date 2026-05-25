@@ -3,7 +3,7 @@
  *
  * The Vismay engine ships a small core registry (chart, map, image, video,
  * rive, embed) that covers vizmaya.fyi's editorial vocabulary. Other
- * verticals — Footshort (football), F1, Cricket, etc. — extend the registry
+ * verticals — Footshorts (football), F1, Cricket, etc. — extend the registry
  * with their own viz types (match cards, telemetry overlays, lap charts, …).
  *
  * Each vertical owns a folder under `components/story/viz/verticals/<slug>/`
@@ -12,12 +12,12 @@
  * `registerVizModule()` for each.
  *
  * Routing:
- *   - The story's frontmatter declares `vertical: 'footshort'` (etc.). When
+ *   - The story's frontmatter declares `vertical: 'footshorts'` (etc.). When
  *     `app/story/[slug]/page.tsx` resolves the story, it looks up the
  *     vertical and invokes `loadVertical(vertical)` once per process.
  *   - `loadVertical` is idempotent — repeat calls reuse the cached promise.
  *   - Verticals never auto-register at module-evaluation time, so a story
- *     that doesn't reference Footshort never pulls Footshort's modules into
+ *     that doesn't reference Footshorts never pulls Footshorts's modules into
  *     the SSG client bundle.
  *
  * Adding a new vertical:
@@ -39,7 +39,7 @@ export type VerticalLoader = () => Promise<void>
  */
 const VERTICAL_LOADERS: Record<string, VerticalLoader> = {}
 
-/** App boot wires verticals here, e.g. `registerVerticalLoader('footshort', () => import('@vismay/footshort-viz').then(m => m.register()))`. */
+/** App boot wires verticals here, e.g. `registerVerticalLoader('footshorts', () => import('@vismay/footshorts-viz').then(m => m.register()))`. */
 export function registerVerticalLoader(slug: string, loader: VerticalLoader): void {
   VERTICAL_LOADERS[slug] = loader
 }

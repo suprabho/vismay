@@ -1,0 +1,50 @@
+{
+  "steps": [
+    {
+      "title": "Non-Muslim share of the Azad Kashmir area",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}% non-Muslim"
+        },
+        "grid": { "left": "3%", "right": "12%", "bottom": "3%", "top": "10%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["1941", "1951"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$text", "fontSize": 13 }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 14,
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "formatter": "{value}%" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Non-Muslim share",
+            "type": "bar",
+            "barWidth": 48,
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontFamily": "Fira Code",
+              "fontSize": 13,
+              "formatter": "{c}%"
+            },
+            "data": [
+              { "value": 12.7, "itemStyle": { "color": "$teal" } },
+              { "value": 0.09, "itemStyle": { "color": "$red" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

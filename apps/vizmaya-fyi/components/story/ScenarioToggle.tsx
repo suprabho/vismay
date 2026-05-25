@@ -161,7 +161,7 @@ export default function ScenarioToggle({ block }: { block: ScenarioToggleBlock }
       {/* Total impact */}
       <div className="text-center mt-4 mb-12">
         <div
-          className="font-[family-name:var(--font-mono)] text-[0.7rem] uppercase tracking-[0.1em]"
+          className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.1em]"
           style={{ color: 'var(--color-muted)' }}
         >
           End-to-end GPU hour impact

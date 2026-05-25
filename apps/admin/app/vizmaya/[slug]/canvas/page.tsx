@@ -33,16 +33,20 @@ export default async function CanvasPage({ params }: Props) {
 
   const { units } = resolveUnits(slug, story.sections, config)
 
-  // Per-frame override sources. Loaded once on the server so the client can
-  // slice per-section without round-tripping the file system. Failures
-  // shouldn't break the canvas — fall through to `null` and the input node
-  // for that source renders its "no override" placeholder.
+  // Per-frame override sources + the primary config/markdown. Loaded once
+  // on the server so the client can slice + edit without round-tripping the
+  // file system. Failures shouldn't break the canvas — fall through to
+  // `null` and the input node for that source renders its "no override"
+  // placeholder. configYaml / markdown are the canonical files behind the
+  // frame-level inputs; they have to round-trip the same edit path.
   const cs = getContentSource()
-  const [shareYaml, reportYaml, mapYaml, ttsYaml] = await Promise.all([
+  const [shareYaml, reportYaml, mapYaml, ttsYaml, configYaml, markdown] = await Promise.all([
     cs.readShareYaml(slug).catch(() => null),
     cs.readReportYaml(slug).catch(() => null),
     cs.readMapYaml(slug).catch(() => null),
     cs.readTtsYaml(slug).catch(() => null),
+    cs.readConfigYaml(slug).catch(() => null),
+    cs.readMarkdown(slug).catch(() => null),
   ])
 
   const sources: CanvasSources = {
@@ -50,6 +54,8 @@ export default async function CanvasPage({ params }: Props) {
     reportYaml,
     mapYaml,
     ttsYaml,
+    configYaml,
+    markdown,
   }
 
   // The canvas iframes vizmaya-fyi's single-section render route. URL
@@ -87,6 +93,7 @@ export default async function CanvasPage({ params }: Props) {
       slug={slug}
       units={units}
       sources={sources}
+      theme={story.frontmatter.theme ?? null}
       signedSrcById={signedSrcById}
     />
   )

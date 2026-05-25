@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
-import { hydrateFootshortConfig } from '@vismay/content-source/hydrateFootshortConfig'
+import { hydrateFootshortsConfig } from '@vismay/content-source/hydrateFootshortsConfig'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { parseMapOverrides } from '@vismay/viz-engine'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
@@ -73,14 +73,14 @@ export default async function StoryPage({ params }: RouteParams) {
     story = await getStoryContent(slug)
     if (!(await hasStoryConfig(slug))) notFound()
     config = await loadStoryConfig(slug)
-    // Hydrate footshort stories with real team data from Supabase
+    // Hydrate footshorts stories with real team data from Supabase
     // (`entities` table). YAML-explicit overrides win; Supabase fills the
     // gaps; the bundled palette is the final fallback at render time. A
     // missing Supabase config is a no-op, so dev without env vars still
     // renders the story with monogram placeholders.
-    if (story.frontmatter.vertical === 'footshort') {
+    if (story.frontmatter.vertical === 'footshorts') {
       try {
-        config = await hydrateFootshortConfig(config)
+        config = await hydrateFootshortsConfig(config)
       } catch {
         // Hydration must never block rendering — fall back silently.
       }

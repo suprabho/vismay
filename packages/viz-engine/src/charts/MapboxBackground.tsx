@@ -119,7 +119,7 @@ function textLabelAnchor(
 function buildTextLabelElement(label: MapTextLabel): HTMLDivElement {
   const el = document.createElement('div')
   el.className = 'mapbox-text-label'
-  const size = label.size ?? 11
+  const size = label.size ?? 14
   const color = label.color ?? 'var(--color-text)'
   el.style.cssText = `
     font-family: var(--font-mono);

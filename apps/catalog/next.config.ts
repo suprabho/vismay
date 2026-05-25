@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     '@vismay/viz-engine',
     '@vismay/f1-viz',
-    '@vismay/footshort-viz',
+    '@vismay/footshorts-viz',
     '@vismay/viz-admin',
   ],
 }

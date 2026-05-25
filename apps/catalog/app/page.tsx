@@ -7,7 +7,7 @@ export default function HomePage() {
       <header className="mb-10">
         <h1 className="text-2xl font-medium">Vismay catalog</h1>
         <p className="mt-2 text-sm text-[color:var(--color-muted)]">
-          {catalogModules.length} viz modules available across core, F1, and Footshort verticals.
+          {catalogModules.length} viz modules available across core, F1, and Footshorts verticals.
           Click any card for the adminForm schema + sample YAML.
         </p>
       </header>

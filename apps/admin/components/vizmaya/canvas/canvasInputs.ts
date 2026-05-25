@@ -1,8 +1,14 @@
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import type { ResolvedUnit } from '@vismay/viz-engine'
+import type {
+  ResolvedUnit,
+  StorySectionConfig,
+  VizLayer,
+  Theme,
+} from '@vismay/viz-engine'
 import { parseMapOverrides } from '@vismay/viz-engine'
 import { parseTtsConfig, findTtsOverride } from '@vismay/content-source/storyTts'
 import type { InputNodeData } from './InputNode'
+import type { SlotPath } from './canvasSlotEditing'
 
 /**
  * Raw text bundle loaded once on the server. The builder slices the relevant
@@ -11,12 +17,19 @@ import type { InputNodeData } from './InputNode'
  *
  * Yamls stay as raw strings (not pre-parsed) so future editing can preserve
  * formatting / comments; the builder parses lazily via the `parsed` accessor.
+ *
+ * `configYaml` and `markdown` carry the story's primary config + body so the
+ * frame-level input nodes (Content / Layout / Background / Lead / Charts /
+ * Body) can be click-to-edit too — they all live in those two files, not in
+ * the per-output override files.
  */
 export interface CanvasSources {
   shareYaml: string | null
   reportYaml: string | null
   mapYaml: string | null
   ttsYaml: string | null
+  configYaml: string | null
+  markdown: string | null
 }
 
 /** Lazy-parsed view of `CanvasSources`. Caller is expected to memoise the
@@ -37,6 +50,36 @@ export function parseCanvasSources(sources: CanvasSources): ParsedCanvasSources 
   }
 }
 
+/**
+ * Refresh `unit.parentConfig` from the latest configYaml. The frame input
+ * builders (layoutNode, backgroundNode, leadNode, …) read from
+ * `parentConfig.foreground` / `parentConfig.background` — which the page
+ * captures at SSR load and doesn't re-resolve client-side. After an
+ * in-canvas save those fields change on disk and in `CanvasSources`, but
+ * the original unit still carries the pre-save shape, so the preview
+ * cards would lag the iframe by one section switch.
+ *
+ * This helper layers the live config over the original unit, keeping
+ * fields the live config doesn't own (heading, paragraphs, sliceIndex,
+ * etc.). Falls through to the original unit when configYaml is missing
+ * or malformed — server-side load already happened, so any state where
+ * configYaml is broken would be transient.
+ */
+export function liveUnit(
+  unit: ResolvedUnit,
+  configYaml: string | null
+): ResolvedUnit {
+  if (!configYaml) return unit
+  try {
+    const doc = parseYaml(configYaml) as { sections?: unknown[] } | null
+    const section = doc?.sections?.[unit.parentIndex]
+    if (!section || typeof section !== 'object') return unit
+    return { ...unit, parentConfig: section as StorySectionConfig }
+  } catch {
+    return unit
+  }
+}
+
 function safeParseYaml(raw: string | null): unknown {
   if (!raw || !raw.trim()) return null
   try {
@@ -46,50 +89,11 @@ function safeParseYaml(raw: string | null): unknown {
   }
 }
 
-/**
- * Derive the input subgraph for a section frame. Every section gets the same
- * fixed slot set so the diagram shape stays consistent across sections;
- * slots without data for this particular section render a muted "no override"
- * placeholder so the empty state is unmistakable.
- *
- * Frame inputs decompose the section config into the slot tree authors
- * actually think in:
- *   - Content    → markdown anchored to the section
- *   - Layout     → the foreground layout name (only when foreground is
- *                  regions-shaped — flat layer stacks have no layout)
- *   - Background → the section's background layer stack (under "Viz")
- *   - Lead/Charts/Body → individual foreground regions (under
- *                  "Viz → Foreground"), only meaningful when foreground is
- *                  regions-shaped.
- *
- * The remaining four slots are PER-FRAME OVERRIDES sourced from file-level
- * data sliced by `(parentIndex, subIndex)` (and `sliceIndex` for narration).
- * They're returned by this same helper for any caller that wants the full
- * input set, but the canvas builds them only inside per-output override
- * columns; the frame's left input column shows just the slot tree above.
- */
-export function buildInputsForUnit(
-  unit: ResolvedUnit,
-  parsed: ParsedCanvasSources
-): InputNodeData[] {
-  return [
-    contentNode(unit),
-    layoutNode(unit),
-    backgroundNode(unit),
-    leadNode(unit),
-    chartsNode(unit),
-    bodyNode(unit),
-    shareNode(unit, parsed),
-    reportNode(unit, parsed),
-    mapOverrideNode(unit, parsed),
-    narrationNode(unit, parsed),
-  ]
-}
-
 /* ─── Individual input builders ───────────────────────────────────────
- * Exported separately so the per-output override columns (right side of
- * the canvas, attached to each expanded output node) can reuse the same
- * slicing without duplicating the YAML extraction logic.
+ * The frame's left column is a dependency graph: source-file leaves feed
+ * region/group nodes that funnel into the frame (see `buildInputGraph`).
+ * The override builders (`shareNode` etc.) are reused by the per-output
+ * override columns on the right side of the canvas.
  */
 
 export function contentNode(unit: ResolvedUnit): InputNodeData {
@@ -106,7 +110,7 @@ export function contentNode(unit: ResolvedUnit): InputNodeData {
   }
 }
 
-/* ── Layout / Viz / Foreground slot tree ───────────────────────────── */
+/* ── Foreground layout helpers ─────────────────────────────────────── */
 
 /** Region-shaped foreground: `{ layout: string, regions: { … } }`. The
  *  alternative is a flat `VizLayer | VizLayer[]` with no layout/regions. */
@@ -150,73 +154,217 @@ export function layoutNode(unit: ResolvedUnit): InputNodeData {
   }
 }
 
-export function backgroundNode(unit: ResolvedUnit): InputNodeData {
-  const bg = unit.parentConfig.background
-  if (bg === undefined) {
+/* ── Theme ─────────────────────────────────────────────────────────── */
+
+/** Story-wide theme (colors + fonts). Constant across sections — surfaced
+ *  as a direct frame input, like Layout. Clickable: opens ThemeEditor. */
+export function themeNode(theme: Theme | null): InputNodeData {
+  if (!theme) {
     return {
-      id: 'background',
-      label: 'Background',
+      id: 'theme',
+      label: 'Theme',
       tag: '—',
-      body: '(no background — inherits from legacy map field)',
+      body: '(no theme on this story — click to add)',
       variant: 'muted',
+      slot: { kind: 'theme' },
     }
   }
   return {
-    id: 'background',
-    label: 'Background',
-    tag: 'YAML',
-    body: truncateLines(safeYamlStringify(bg), 10),
+    id: 'theme',
+    label: 'Theme',
+    tag: 'THEME',
+    body: truncateLines(
+      safeYamlStringify({ colors: theme.colors, fonts: theme.fonts }),
+      12
+    ),
     variant: 'mono',
+    slot: { kind: 'theme' },
   }
 }
 
-/** Build a foreground-region slot. Pulls `foreground.regions[regionKey]`
- *  when the section uses a regions-shaped foreground; otherwise muted. */
-function foregroundRegionNode(
-  unit: ResolvedUnit,
-  regionKey: string,
-  id: string,
+/* ── Layer-tier dependency graph ───────────────────────────────────────
+ * The sketch's lineage: raw source layers (map / chart / image / text) feed
+ * region nodes (Charts / Body / …), which fan into Foreground / Background,
+ * which feed the frame. Each VizLayer becomes a leaf; each region and each
+ * group becomes a junction. All sourced from `unit.parentConfig` — no extra
+ * server loading.
+ */
+
+export interface RegionGraphNode {
+  key: string
   label: string
+  /** Source-layer leaves composing this region (may be empty). */
+  layers: InputNodeData[]
+}
+
+export interface ForegroundGraph {
+  /** 'regions' = named layout regions; 'flat' = bare layer stack; 'none'. */
+  shape: 'regions' | 'flat' | 'none'
+  layout: string | null
+  /** Populated when shape === 'regions'. */
+  regions: RegionGraphNode[]
+  /** Populated when shape === 'flat'. */
+  layers: InputNodeData[]
+}
+
+export interface BackgroundGraph {
+  shape: 'layers' | 'none'
+  layers: InputNodeData[]
+}
+
+export interface InputGraph {
+  /** Section markdown (prose) — direct frame input. */
+  content: InputNodeData
+  /** Foreground layout name — direct frame input. */
+  layout: InputNodeData
+  /** Story theme — direct frame input. */
+  theme: InputNodeData
+  background: BackgroundGraph
+  foreground: ForegroundGraph
+}
+
+/** Friendly node label for a VizLayer `type`. Falls back to the raw type
+ *  for vertical-specific modules (e.g. `fs:standings-table`). */
+function layerLabel(type: string): string {
+  switch (type) {
+    case 'map':
+      return 'Map'
+    case 'image':
+      return 'Image'
+    case 'chart':
+      return 'Chart'
+    case 'text':
+      return 'Text'
+    case 'markdown':
+      return 'Markdown'
+    case 'embed':
+      return 'Embed'
+    case 'video':
+      return 'Video'
+    case 'rive':
+      return 'Rive'
+    default:
+      return type
+  }
+}
+
+function layerLeaf(
+  layer: VizLayer,
+  idPrefix: string,
+  i: number,
+  path: SlotPath
 ): InputNodeData {
-  const regions = asForegroundRegions(unit.parentConfig.foreground)
-  if (!regions) {
-    return {
-      id,
-      label,
-      tag: '—',
-      body: '(foreground is a flat layer stack — no regions)',
-      variant: 'muted',
-    }
-  }
-  const slice = regions.regions[regionKey]
-  if (slice === undefined) {
-    return {
-      id,
-      label,
-      tag: '—',
-      body: `(no ${regionKey} region in this layout)`,
-      variant: 'muted',
-    }
-  }
+  const type =
+    layer && typeof layer.type === 'string' ? layer.type : 'layer'
   return {
-    id,
-    label,
-    tag: 'YAML',
-    body: truncateLines(safeYamlStringify(slice), 10),
+    id: `${idPrefix}:${i}`,
+    label: layerLabel(type),
+    tag: type.toUpperCase(),
+    body: truncateLines(safeYamlStringify(layer), 10),
     variant: 'mono',
+    // Map and image leaves carry a slot descriptor so the canvas's click
+    // handler can route to the right editor. Other layer types (chart /
+    // text / video / rive / embed) omit the slot for now — clicking does
+    // nothing until those editors are wired.
+    slot:
+      type === 'map' || type === 'image'
+        ? { kind: 'layer', layerType: type, path }
+        : undefined,
   }
 }
 
-export function leadNode(unit: ResolvedUnit): InputNodeData {
-  return foregroundRegionNode(unit, 'lead', 'lead', 'Lead')
+/** Coerce a slot value (single layer | array | undefined) to a layer array. */
+function asLayerArray(value: unknown): VizLayer[] {
+  if (Array.isArray(value)) return value as VizLayer[]
+  if (value && typeof value === 'object') return [value as VizLayer]
+  return []
 }
 
-export function chartsNode(unit: ResolvedUnit): InputNodeData {
-  return foregroundRegionNode(unit, 'charts', 'charts', 'Charts')
+function titleCase(key: string): string {
+  return key.charAt(0).toUpperCase() + key.slice(1)
 }
 
-export function bodyNode(unit: ResolvedUnit): InputNodeData {
-  return foregroundRegionNode(unit, 'body', 'body', 'Body')
+export function buildBackgroundGraph(unit: ResolvedUnit): BackgroundGraph {
+  const bg = unit.parentConfig.background
+  // Explicit opt-out (`background: { type: none }`).
+  if (
+    bg &&
+    typeof bg === 'object' &&
+    (bg as { type?: unknown }).type === 'none'
+  ) {
+    return { shape: 'none', layers: [] }
+  }
+  // Modern layer stack.
+  if (bg !== undefined) {
+    const layers = asLayerArray(bg).map((l, i) =>
+      layerLeaf(l, 'bg', i, { kind: 'background', index: i })
+    )
+    return layers.length
+      ? { shape: 'layers', layers }
+      : { shape: 'none', layers: [] }
+  }
+  // Legacy: no `background`, but a bare `map:` synthesizes one map layer at
+  // runtime. Surface it as a single synthetic Map leaf so the lineage still
+  // traces back to a source.
+  const legacyMap = unit.parentConfig.map
+  if (legacyMap) {
+    return {
+      shape: 'layers',
+      layers: [
+        {
+          id: 'bg:0',
+          label: 'Map',
+          tag: 'MAP · LEGACY',
+          body: truncateLines(safeYamlStringify(legacyMap), 10),
+          variant: 'mono',
+          slot: { kind: 'layer', layerType: 'map', path: { kind: 'legacyMap' } },
+        },
+      ],
+    }
+  }
+  return { shape: 'none', layers: [] }
+}
+
+export function buildForegroundGraph(unit: ResolvedUnit): ForegroundGraph {
+  const fg = unit.parentConfig.foreground
+  const regionsShape = asForegroundRegions(fg)
+  if (regionsShape) {
+    const regions: RegionGraphNode[] = Object.entries(
+      regionsShape.regions
+    ).map(([key, value]) => ({
+      key,
+      label: titleCase(key),
+      layers: asLayerArray(value).map((l, i) =>
+        layerLeaf(l, `fg:${key}`, i, {
+          kind: 'foregroundRegion',
+          region: key,
+          index: i,
+        })
+      ),
+    }))
+    return { shape: 'regions', layout: regionsShape.layout, regions, layers: [] }
+  }
+  const layers = asLayerArray(fg).map((l, i) =>
+    layerLeaf(l, 'fg', i, { kind: 'foregroundFlat', index: i })
+  )
+  if (layers.length === 0) {
+    return { shape: 'none', layout: null, regions: [], layers: [] }
+  }
+  return { shape: 'flat', layout: null, regions: [], layers }
+}
+
+/** Whole input subgraph for one section frame. */
+export function buildInputGraph(
+  unit: ResolvedUnit,
+  theme: Theme | null
+): InputGraph {
+  return {
+    content: contentNode(unit),
+    layout: layoutNode(unit),
+    theme: themeNode(theme),
+    background: buildBackgroundGraph(unit),
+    foreground: buildForegroundGraph(unit),
+  }
 }
 
 export function shareNode(
@@ -238,29 +386,8 @@ export function shareNode(
   }
 }
 
-export function reportNode(
-  unit: ResolvedUnit,
-  parsed: ParsedCanvasSources
-): InputNodeData {
-  const slice = sliceReportForUnit(
-    parsed.report,
-    unit.parentIndex,
-    unit.subIndex
-  )
-  return {
-    id: 'report',
-    label: 'Report Override',
-    tag: slice ? 'YAML' : '—',
-    body:
-      slice === null
-        ? '(no override for this section)'
-        : truncateLines(safeYamlStringify(slice), 12),
-    variant: slice ? 'mono' : 'muted',
-  }
-}
-
 /**
- * Variant of <reportNode> scoped to a single output format. The right-side
+ * Report override scoped to a single output format. The right-side
  * per-output input column attaches one of these (rather than the combined
  * report+slides node) so the Report output shows its `report` slice and
  * the Slides output shows its `slides` slice — visually disaggregated to
@@ -330,48 +457,6 @@ export function narrationNode(
     body: tts ? truncateLines(tts.script, 10) : '(no override for this section)',
     variant: tts ? 'mono' : 'muted',
   }
-}
-
-/**
- * Per-output override inputs: which input nodes feed a given output.
- *
- * The frame-level input column (left of the section frame) shows the
- * full source data — every override the section can have. Each expanded
- * output on the right then shows just the override(s) it actually
- * consumes, attached to that output's left edge:
- *   share-*    → Share Variants slice
- *   slides     → report.yaml slides slice
- *   report     → report.yaml report slice
- *   autoplay-* → Map Override + Narration
- *
- * Reuses the same slicers as the frame-level column so the per-output
- * cards always agree with the frame-level cards. Node ids are namespaced
- * with the output id so React keys stay unique when multiple outputs
- * share an override (e.g. both autoplay nodes have a Map Override card).
- */
-export function buildOverridesForOutput(
-  outputId: string,
-  outputGroup: string,
-  unit: ResolvedUnit,
-  parsed: ParsedCanvasSources
-): InputNodeData[] {
-  const nodes: InputNodeData[] = []
-  switch (outputGroup) {
-    case 'share':
-      nodes.push(shareNode(unit, parsed))
-      break
-    case 'slides':
-      nodes.push(reportNodeFormat(unit, parsed, 'slides'))
-      break
-    case 'report':
-      nodes.push(reportNodeFormat(unit, parsed, 'report'))
-      break
-    case 'autoplay':
-      nodes.push(mapOverrideNode(unit, parsed))
-      nodes.push(narrationNode(unit, parsed))
-      break
-  }
-  return nodes.map((n) => ({ ...n, id: `${outputId}:${n.id}` }))
 }
 
 /* ─── Slicers ──────────────────────────────────────────────────────── */

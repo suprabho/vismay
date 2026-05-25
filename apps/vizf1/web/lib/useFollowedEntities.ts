@@ -24,7 +24,7 @@ export type FollowedEntities = {
 }
 
 // TODO(vizf1): replace with auth-backed follows once we port AuthProvider +
-// onboarding from footshort. For now we just hydrate the static list with DB
+// onboarding from footshorts. For now we just hydrate the static list with DB
 // metadata so portraits and team colours appear once the worker has run.
 //
 // Look up drivers by `code` (VER/NOR/LEC/HAM/PIA) and constructors by `name`

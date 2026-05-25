@@ -1415,7 +1415,7 @@ export default function MapEditShell({ accessToken }: { accessToken: string }) {
                   padding: '2.5rem',
                 }}
               >
-                <div className="w-full max-w-[820px] mx-auto">
+                <div className="w-full mx-auto">
                   <ContentPreview unit={currentUnit} />
                 </div>
               </div>

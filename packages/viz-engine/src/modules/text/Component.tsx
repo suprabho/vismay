@@ -57,10 +57,10 @@ function TextPanel({
   paragraphs: string[]
 }) {
   return (
-    <div className="w-full max-w-[820px] mx-auto h-full flex flex-col justify-center">
+    <div className="w-full mx-auto h-full flex flex-col justify-center">
       {heading && (
         <div
-          className="font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-[0.15em] mb-3"
+          className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.15em] mb-3"
           style={{ color: 'var(--color-accent)' }}
         >
           {heading}
@@ -70,7 +70,7 @@ function TextPanel({
         paragraphs.map((p, i) => (
           <p
             key={i}
-            className="font-[family-name:var(--font-serif)] text-[1rem] leading-[1.7] mb-3 last:mb-0"
+            className="font-[family-name:var(--font-serif)] text-[1.4rem] md:text-[1rem] leading-[1.7] mb-3 last:mb-0"
             style={{ color: 'var(--color-text)' }}
           >
             {formatInlineMarkdown(p)}
@@ -117,7 +117,7 @@ function StatPanel({
         </div>
       )}
       <div
-        className="font-sans text-[0.95rem] max-w-[440px] leading-[1.55]"
+        className="font-sans text-[0.95rem] leading-[1.55]"
         style={{ color: 'var(--color-muted)' }}
       >
         {description}

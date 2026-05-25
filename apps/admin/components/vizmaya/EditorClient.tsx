@@ -9,7 +9,7 @@ import YamlConfigEditor from './YamlConfigEditor'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
-import { vizmayaUrl } from '@/lib/publicSite'
+import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
@@ -60,17 +60,24 @@ function isTab(v: string | null): v is Tab {
 
 export default function EditorClient({
   slug,
+  appSlug,
   sectionHref,
   initial,
   signedLinks,
 }: {
   slug: string
+  /** Which consumer app this story belongs to — picks the "preview ↗"
+   *  destination (vizf1/footshorts have their own /editorial route; vizmaya
+   *  uses /story/<slug>). The server-rendered share/autoplay links stay on
+   *  vizmaya.fyi regardless because those gated routes only live there. */
+  appSlug: string
   sectionHref: string
   initial: InitialState
   /** Pre-signed URLs for the gated open-in-tab links (autoplay, share).
    *  Server signs on each page render so admin always gets a fresh token. */
   signedLinks: SignedStoryLinks
 }) {
+  const previewUrl = appStoryUrl(appSlug, slug) ?? vizmayaUrl(`/story/${slug}`)
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
@@ -302,7 +309,7 @@ export default function EditorClient({
           share ↗
         </Link>
         <Link
-          href={vizmayaUrl(`/story/${slug}`)}
+          href={previewUrl}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
@@ -338,7 +345,13 @@ export default function EditorClient({
       </nav>
 
       <div className="flex-1 flex flex-col min-h-0">
-        {tab === 'theme' && <ThemeEditor theme={theme} onChange={updateTheme} />}
+        {tab === 'theme' && (
+          <ThemeEditor
+            theme={theme}
+            yamlError={parsed.yamlError}
+            onChange={updateTheme}
+          />
+        )}
         {tab === 'markdown' && (
           <>
             <FileActions

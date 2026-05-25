@@ -5,7 +5,7 @@ byline: "vizmaya · May 2026"
 date: "2026-05-18"
 status: "draft"
 listed: false
-vertical: "footshort"
+vertical: "footshorts"
 theme:
   colors:
     background: "#0a1a3a"

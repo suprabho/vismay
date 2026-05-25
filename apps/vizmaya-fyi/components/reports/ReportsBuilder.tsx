@@ -34,6 +34,10 @@ interface Props {
   chartIds: string[]
   initialYaml: string | null
   initialPdfs: Record<Format, string | null>
+  /** Server-minted iframe src per format. The /story/<slug>/<format> routes
+   *  are gated by the signed-URL middleware, so the page mints HMAC-signed
+   *  URLs with a 24h TTL and hands them down. */
+  previewSrcs: Record<Format, string>
 }
 
 type Format = 'report' | 'slides'
@@ -350,6 +354,7 @@ export default function ReportsBuilder({
   chartIds,
   initialYaml,
   initialPdfs,
+  previewSrcs,
 }: Props) {
   const [format, setFormat] = useState<Format>('report')
   const [pagesByFormat, setPagesByFormat] = useState<PagesByFormat>(() =>
@@ -467,7 +472,7 @@ export default function ReportsBuilder({
     [slug]
   )
 
-  const previewSrc = `/story/${slug}/${format}?embed=1`
+  const previewSrc = previewSrcs[format]
   const overrideCount = useMemo(
     () =>
       pages.filter(

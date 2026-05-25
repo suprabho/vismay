@@ -5,7 +5,7 @@
    (grid-cols-[…], text-[10px], min-w-[72px], …) the JIT needs to see. Without
    these directives the standings grid collapses to a single column and
    typography shrinks/grows incorrectly in the admin preview. */
-@source "../../../verticals/footshort-viz/src/**/*.{ts,tsx}";
+@source "../../../verticals/footshorts-viz/src/**/*.{ts,tsx}";
 @source "../../../verticals/f1-viz/src/**/*.{ts,tsx}";
 
 html {

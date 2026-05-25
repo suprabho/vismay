@@ -173,7 +173,7 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
             className="snap-start snap-always h-svh w-full relative"
           >
             <div className={cardClasses} style={cardStyle}>
-              <div className="max-w-[820px] mx-auto h-full flex flex-col justify-center">
+              <div className="mx-auto h-full flex flex-col justify-center">
                 {/* Landscape: full hero (only used when heroPart is undefined,
                     i.e. desktop units; mobile 'title' units never reach
                     landscape rendering). */}
@@ -199,7 +199,7 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
             className="snap-start snap-always h-svh w-full relative [@media(min-aspect-ratio:1/1)]:hidden"
           >
             <div className={cardClasses} style={cardStyle}>
-              <div className="max-w-[820px] mx-auto h-full flex flex-col justify-center">
+              <div className="mx-auto h-full flex flex-col justify-center">
                 <HeroPanelDek dek={heroBits?.dek ?? ''} byline={heroBits?.byline ?? ''} />
               </div>
             </div>
@@ -215,7 +215,7 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
       className="snap-start snap-always h-svh w-full relative"
     >
       <div className={cardClasses} style={cardStyle}>
-        <div className="max-w-[820px] mx-auto h-full flex flex-col justify-center">
+        <div className="mx-auto h-full flex flex-col justify-center">
           {kind === 'stat' && heading ? (
             <StatPanel
               value={heading}
@@ -251,7 +251,7 @@ function TextPanel({
     <>
       {heading && (
         <div
-          className="font-[family-name:var(--font-mono)] text-[0.65rem] uppercase tracking-[0.15em] mb-3"
+          className="font-[family-name:var(--font-mono)] text-[1rem] uppercase tracking-[0.15em] mb-3"
           style={{ color: 'var(--color-accent)' }}
         >
           {heading}
@@ -261,7 +261,7 @@ function TextPanel({
         paragraphs.map((p, i) => (
           <p
             key={i}
-            className="font-[family-name:var(--font-serif)] text-[1rem] leading-[1.7] mb-3 last:mb-0"
+            className="font-[family-name:var(--font-serif)] text-[1.4rem] leading-[1.7] mb-3 last:mb-0"
             style={{ color: 'var(--color-text)' }}
           >
             {formatInlineMarkdown(p)}
@@ -307,14 +307,14 @@ function StatPanel({
       </div>
       {subheading && (
         <div
-          className="font-mono text-[0.65rem] uppercase tracking-[0.15em] mb-3"
+          className="font-mono text-[1rem] uppercase tracking-[0.15em] mb-3"
           style={{ color: 'var(--color-accent)' }}
         >
           {subheading}
         </div>
       )}
       <div
-        className="font-sans text-[0.95rem] max-w-[440px] leading-[1.55]"
+        className="font-sans text-[0.95rem] leading-[1.55]"
         style={{ color: 'var(--color-muted)' }}
       >
         {description}
