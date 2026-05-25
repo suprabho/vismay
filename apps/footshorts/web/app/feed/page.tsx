@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { FeedCard } from '@/components/FeedCard';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
 import { StoryRings } from '@/components/StoryRings';
 import { EditorialMagazine } from '@/components/EditorialMagazine';
+import { useAuth } from '@/lib/AuthProvider';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useSeenArticles } from '@/lib/useSeenArticles';
 
@@ -19,7 +21,7 @@ function PillTabs({ active, onChange }: { active: Tab; onChange: (t: Tab) => voi
     { key: 'editorial', label: 'Editorial' },
   ];
   return (
-    <div className="mx-auto mb-4 inline-flex rounded-full border border-border bg-surface/60 p-1">
+    <div className="mx-auto mb-2 inline-flex rounded-full border border-border bg-surface/60 p-1">
       {tabs.map((t) => {
         const selected = active === t.key;
         return (
@@ -152,11 +154,20 @@ function DiscoverStack() {
 
 export default function FeedPage() {
   const [tab, setTab] = useState<Tab>('forYou');
+  const { session } = useAuth();
+  const letter = (session?.user?.email ?? '?').charAt(0).toUpperCase();
 
   return (
     <main className="mx-auto max-w-2xl px-4">
-      <div className="sticky top-[50px] z-10 -mx-4 flex justify-center bg-bg/80 px-4 -pt-1 backdrop-blur md:top-0">
+      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-center bg-bg/80 px-4 py-1 backdrop-blur">
         <PillTabs active={tab} onChange={setTab} />
+        <Link
+          href="/profile"
+          className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-text hover:border-muted md:hidden"
+          aria-label="Profile"
+        >
+          {letter}
+        </Link>
       </div>
       {tab === 'forYou' && (
         <>
@@ -165,7 +176,14 @@ export default function FeedPage() {
         </>
       )}
       {tab === 'discover' && <DiscoverStack />}
-      {tab === 'editorial' && <EditorialMagazine />}
+      {tab === 'editorial' && (
+        // Scroll the magazine in its own region below the pill bar — same as
+        // DiscoverStack. Body-scrolling it instead let the translucent sticky
+        // header overlap (and swallow clicks on) the topmost Epics strip.
+        <div className={`${FEED_HEIGHT} overflow-y-auto overscroll-contain`} style={{ scrollbarWidth: 'none' }}>
+          <EditorialMagazine />
+        </div>
+      )}
     </main>
   );
 }

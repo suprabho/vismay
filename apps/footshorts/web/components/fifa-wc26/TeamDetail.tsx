@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import DetailSheet from '@/components/DetailSheet'
-import type { FifaWc26TeamProfile } from '@/lib/fifa-wc26'
-import type { FootshortsFixture, FootshortsNewsItem } from '@/lib/footshorts'
+import {
+  getFifaWc26TeamProfile,
+  type FifaWc26TeamProfile,
+  type FootshortsFixture,
+  type FootshortsNewsItem,
+} from '@/lib/fifaWc26'
 
 interface Props {
   code: string
@@ -25,15 +29,11 @@ export default function TeamDetail({ code, onClose }: Props) {
   useEffect(() => {
     let cancelled = false
     setState({ kind: 'loading' })
-    fetch(`/api/fifa-wc26/team/${encodeURIComponent(code)}`)
-      .then(async (r) => {
-        if (r.status === 404) {
-          if (!cancelled) setState({ kind: 'missing' })
-          return
-        }
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        const data = (await r.json()) as FifaWc26TeamProfile
-        if (!cancelled) setState({ kind: 'ready', data })
+    getFifaWc26TeamProfile(code)
+      .then((data) => {
+        if (cancelled) return
+        if (!data) setState({ kind: 'missing' })
+        else setState({ kind: 'ready', data })
       })
       .catch((err) => {
         if (!cancelled) setState({ kind: 'error', message: String(err) })
@@ -406,6 +406,9 @@ function FixtureRow({
     : isFinished
     ? 'color-mix(in srgb, var(--vmy-bone) 70%, transparent)'
     : 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)'
+
+  // teamName retained for parity with the source; opponent is derived from isHome.
+  void teamName
 
   return (
     <li

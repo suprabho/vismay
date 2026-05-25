@@ -4,17 +4,26 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Link from "next/link";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
-import VizmayaLogo from "@/components/VizmayaLogo";
-import type { Epic, EpicStory } from "@vismay/content-source/epics";
-import type { FifaWc26Team } from "@/lib/fifa-wc26";
 import { applyMapPalette } from "@vismay/viz-engine";
-import { fifaWc26LogoPalette, fifaWc26MapPalette, type FifaWc26Theme } from "./theme";
+import type { FifaWc26Team } from "@/lib/fifaWc26";
+import { fifaWc26MapPalette, type FifaWc26Theme } from "./theme";
 import TeamDetail from "./TeamDetail";
 
+// Decoupled from @vismay/content-source: the epic + stories arrive already
+// shaped from the Footshorts editorial fetch.
+interface LandingEpic {
+  name: string;
+  description: string | null;
+}
+interface LandingStory {
+  slug: string;
+  title: string;
+}
+
 interface Props {
-  epic: Epic;
+  epic: LandingEpic;
   teams: FifaWc26Team[];
-  stories: EpicStory[];
+  stories: LandingStory[];
   theme: FifaWc26Theme;
   mapStyle: string;
 }
@@ -189,7 +198,6 @@ export default function FifaWc26Landing({ epic, teams, stories, theme, mapStyle 
   );
   const [controlsOpen, setControlsOpen] = useState(false);
 
-  const logoPalette = useMemo(() => fifaWc26LogoPalette(theme), [theme]);
   const mapPalette = useMemo(() => fifaWc26MapPalette(theme), [theme]);
 
   // Restyle the stock dark-v11 base layers to match the epic palette. Polls
@@ -532,14 +540,24 @@ export default function FifaWc26Landing({ epic, teams, stories, theme, mapStyle 
         <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
           <div className="flex items-center justify-between md:justify-start gap-3">
             <Link
-              href="/"
-              aria-label="Vizmaya home"
-              className="pointer-events-auto shrink-0 rounded-md transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none"
+              href="/feed?tab=editorial"
+              aria-label="Back to editorial"
+              className="pointer-events-auto shrink-0 flex h-9 w-9 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus:opacity-80 focus:outline-none"
+              style={{
+                background: alpha(theme.surface, 85),
+                border: `1px solid ${alpha(theme.bone, 15)}`,
+                color: theme.bone,
+              }}
             >
-              <VizmayaLogo
-                className="w-[150px] h-[36px] md:w-[180px] md:h-[44px]"
-                palette={logoPalette}
-              />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                className="h-5 w-5"
+              >
+                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </Link>
             <div
               className="md:hidden pointer-events-auto shrink-0 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider"
@@ -556,7 +574,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme, mapStyle 
             <div className="flex items-start gap-2">
               <h1
                 className="text-base md:text-lg leading-tight tracking-tight min-w-0 flex-1"
-                style={{ fontFamily: "var(--font-fraunces), serif", color: theme.bone, fontWeight: 500 }}
+                style={{ fontFamily: "var(--font-serif, Georgia, 'Times New Roman', serif)", color: theme.bone, fontWeight: 500 }}
               >
                 {epic.name}
               </h1>
@@ -724,7 +742,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme, mapStyle 
           className="text-[10px] uppercase tracking-widest mb-2"
           style={{ color: theme.muted }}
         >
-          vizmaya stories
+          Stories
         </div>
         {stories.length === 0 ? (
           <p className="text-xs" style={{ color: alpha(theme.muted, 70) }}>
@@ -735,7 +753,7 @@ export default function FifaWc26Landing({ epic, teams, stories, theme, mapStyle 
             {stories.map((s) => (
               <Link
                 key={s.slug}
-                href={`/story/${s.slug}`}
+                href={`/editorial/${s.slug}`}
                 className="wc26-story-chip shrink-0 px-3 py-2 rounded text-sm"
                 style={{
                   border: `1px solid ${theme.line}`,

@@ -33,7 +33,13 @@ import {
 import type { FixtureRow } from '@/lib/useFixtures';
 import type { Entity } from '@/lib/useEntities';
 import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
-import { MatchRow, MatchTile } from '@vismay/footshorts-viz/native';
+import {
+  MatchRow,
+  MatchTile,
+  TieCard,
+  buildBracket,
+  stageLabel,
+} from '@vismay/footshorts-viz/native';
 
 // Match web's "Upcoming" tile strip: wide enough that two tiles read clearly
 // side-by-side on a phone, with comfortable gap and snap stops.
@@ -534,7 +540,7 @@ function LeagueCardContent({
                     : 'Recent results'
               }
             />
-            <MatchdayPager fixtures={section.lastMatchday} />
+            <FixturesBlock fixtures={section.lastMatchday} />
           </View>
         ) : null}
 
@@ -554,8 +560,13 @@ function LeagueCardContent({
               }
             />
             {/* Match web's FixturesBlock display='tile' — a competition-themed
-                MatchTile strip instead of a row carousel. */}
-            <MatchTileStrip fixtures={section.nextMatchday} crestMap={leagueCrestMap} />
+                MatchTile strip instead of a row carousel, with knockout ties
+                rendered as a bracket when present. */}
+            <FixturesBlock
+              fixtures={section.nextMatchday}
+              display="tile"
+              crestMap={leagueCrestMap}
+            />
           </View>
         ) : null}
 
@@ -614,8 +625,9 @@ function TeamCardContent({ section, expanded }: { section: TeamSection; expanded
           <View className="mt-4">
             <SectionLabel text="Next 3" />
             {/* Match web's TeamCard "Next 3" — a horizontal MatchTile strip
-                themed by each fixture's competition, not a row stack. */}
-            <MatchTileStrip fixtures={upcoming} crestMap={crestMap ?? {}} />
+                themed by each fixture's competition, falling back to a bracket
+                for multi-leg knockout ties. */}
+            <FixturesBlock fixtures={upcoming} display="tile" crestMap={crestMap ?? {}} />
           </View>
         ) : null}
 
@@ -650,35 +662,6 @@ function FormDot({ fixture, teamId }: { fixture: FixtureRow; teamId: string }) {
       }}
     />
   );
-}
-
-// football-data.org stage codes → human labels. Anything unmapped falls back
-// to title-cased words ("ROUND_OF_32" → "Round Of 32") so new stages don't
-// crash the UI even if we forget to extend this map.
-function stageLabel(stage: string): string {
-  const map: Record<string, string> = {
-    PRELIMINARY_ROUND: 'Preliminary Round',
-    FIRST_QUALIFYING_ROUND: '1st Qualifying Round',
-    SECOND_QUALIFYING_ROUND: '2nd Qualifying Round',
-    THIRD_QUALIFYING_ROUND: '3rd Qualifying Round',
-    PLAY_OFFS: 'Play-offs',
-    PLAY_OFF_ROUND: 'Play-off Round',
-    GROUP_STAGE: 'Group Stage',
-    LEAGUE_STAGE: 'League Phase',
-    LAST_16: 'Round of 16',
-    ROUND_OF_16: 'Round of 16',
-    ROUND_OF_32: 'Round of 32',
-    QUARTER_FINALS: 'Quarter-finals',
-    SEMI_FINALS: 'Semi-finals',
-    THIRD_PLACE: 'Third Place',
-    FINAL: 'Final',
-  };
-  if (map[stage]) return map[stage]!;
-  return stage
-    .toLowerCase()
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
 }
 
 function nextLeagueChip(section: LeagueSection): string | null {
@@ -745,6 +728,52 @@ function relativeDateLabel(iso: string): string {
     return d.toLocaleDateString(undefined, { weekday: 'short' });
   }
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// Knockout when the migration's phase column says so, or — for rows that
+// haven't been re-ingested yet — when a stage is present and isn't one of the
+// non-knockout stage codes football-data.org uses. Mirrors web's FixturesBlock.
+function isKnockoutFixture(f: FixtureRow): boolean {
+  if (f.phase) return f.phase === 'knockout';
+  if (!f.stage) return false;
+  return f.stage !== 'GROUP_STAGE' && f.stage !== 'LEAGUE_STAGE';
+}
+
+// Mobile twin of web's FixturesBlock — routes one phase's fixtures to the right
+// renderer. Knockout fixtures become TieCards (aggregate + per-leg rows); a
+// 'tile' section whose ties are all single-leg (e.g. an upcoming Final, or any
+// scheduled knockout before its second leg exists) drops through to the
+// colourful MatchTile strip so it matches the rest of the feed.
+function FixturesBlock({
+  fixtures,
+  display = 'row',
+  crestMap,
+}: {
+  fixtures: FixtureRow[];
+  display?: 'row' | 'tile';
+  crestMap?: Record<string, string>;
+}) {
+  if (fixtures.length === 0) return null;
+  // Whole section is one phase (the followed-fixtures hook already filters to a
+  // single matchday or stage), so checking the first fixture is enough.
+  if (isKnockoutFixture(fixtures[0]!)) {
+    const bracket = buildBracket(fixtures);
+    const ties = bracket?.rounds[0]?.ties ?? [];
+    const allSingleLeg = ties.length > 0 && ties.every((t) => t.legs.length === 1);
+    if (!(display === 'tile' && allSingleLeg)) {
+      return (
+        <View style={{ gap: 8 }}>
+          {ties.map((tie) => (
+            <TieCard key={tie.legs.map((l) => l.id).join('|')} tie={tie} />
+          ))}
+        </View>
+      );
+    }
+  }
+  if (display === 'tile') {
+    return <MatchTileStrip fixtures={fixtures} crestMap={crestMap ?? {}} />;
+  }
+  return <MatchdayPager fixtures={fixtures} />;
 }
 
 // Horizontal MatchTile strip — the mobile twin of web's "Upcoming" /

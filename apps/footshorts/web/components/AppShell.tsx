@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
-import { AppHeader } from '@/components/AppHeader';
 
 type NavItem = {
   href: string;
@@ -112,7 +111,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="md:pl-60 lg:pl-64">
       <Sidebar />
-      <AppHeader />
       {children}
     </div>
   );
