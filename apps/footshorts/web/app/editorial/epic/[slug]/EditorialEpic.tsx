@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEditorialEpic } from '@/lib/useEditorialStories';
 import type { EditorialStorySummary } from '@footshorts/shared';
+import FifaWc26EpicLanding from '@/components/fifa-wc26/FifaWc26EpicLanding';
 
 // Same hash-based gradient as EditorialMagazine so cards stay visually
 // consistent across the magazine and the epic landing.
@@ -45,6 +46,12 @@ function StoryTile({ story }: { story: EditorialStorySummary }) {
 
 export default function EditorialEpic({ slug }: { slug: string }) {
   const { data, isLoading, error } = useEditorialEpic(slug);
+
+  // Bespoke epics (e.g. the FIFA WC26 map) render their own full-screen landing
+  // with self-contained chrome, in place of the generic story grid below.
+  if (data && data.landingComponent === 'fifa-wc26') {
+    return <FifaWc26EpicLanding epic={data} />;
+  }
 
   return (
     <div className="min-h-screen bg-bg">
