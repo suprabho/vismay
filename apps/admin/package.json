@@ -15,6 +15,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.103.0",
     "@vismay/admin-core": "workspace:*",
+    "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
