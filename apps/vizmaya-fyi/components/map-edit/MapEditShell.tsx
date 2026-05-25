@@ -167,6 +167,7 @@ function toYaml(state: MapState): string {
       if (pin.radius) lines.push(`      radius: ${pin.radius}`)
       if (pin.pulse === false) lines.push(`      pulse: false`)
       if (pin.labelAnchor) lines.push(`      labelAnchor: ${pin.labelAnchor}`)
+      if (pin.image) lines.push(`      image: "${pin.image}"`)
     }
   }
   return lines.join('\n')

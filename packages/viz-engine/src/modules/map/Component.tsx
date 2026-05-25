@@ -59,6 +59,7 @@ export default function MapLayerComponent({
       radius: p.radius ?? shell.defaults.pinRadius,
       pulse: p.pulse,
       labelAnchor: p.labelAnchor,
+      image: p.image,
     }))
     return {
       center: config.center,

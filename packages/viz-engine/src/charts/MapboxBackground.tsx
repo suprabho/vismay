@@ -13,6 +13,7 @@ import type {
 import type { MapPalette } from '../lib/storyConfig.types'
 import { applyMapPalette, applyMapFontstack } from '../lib/applyMapPalette'
 import { applyAdminWorldview, buildCountryFilter } from '../lib/mapboxWorldview'
+import { resolveAssetUrl } from '../lib/assetUrl'
 
 export type { MapStep, MapPin }
 
@@ -99,7 +100,7 @@ const DEFAULT_PIN_RADIUS = 12
 const DEFAULT_OPACITY = 1
 
 function pinKey(pin: MapPin): string {
-  return `${pin.coordinates[0]},${pin.coordinates[1]},${pin.label ?? ''}`
+  return `${pin.coordinates[0]},${pin.coordinates[1]},${pin.label ?? ''},${pin.image ?? ''}`
 }
 
 function textLabelKey(label: MapTextLabel): string {
@@ -1057,14 +1058,40 @@ export default function MapboxBackground({
 
       const el = document.createElement('div')
       el.className = 'mapbox-highlight-marker'
-      el.style.cssText = `
-        width: ${radius * 2}px;
-        height: ${radius * 2}px;
-        border-radius: 50%;
-        background: ${color};
-        opacity: ${opacity};
-        ${pulse ? `box-shadow: 0 0 0 0 ${color}; animation: mapbox-pulse 2s ease-out infinite;` : ''}
-      `
+      if (pin.image) {
+        // Image pin: circular crop with the pin color as a surrounding ring.
+        el.style.cssText = `
+          width: ${radius * 2}px;
+          height: ${radius * 2}px;
+          border-radius: 50%;
+          overflow: hidden;
+          box-sizing: border-box;
+          border: 2px solid ${color};
+          background: ${color};
+          opacity: ${opacity};
+          ${pulse ? `box-shadow: 0 0 0 0 ${color}; animation: mapbox-pulse 2s ease-out infinite;` : ''}
+        `
+        const img = document.createElement('img')
+        img.src = resolveAssetUrl(pin.image)
+        img.alt = pin.label ?? ''
+        img.draggable = false
+        img.style.cssText = `
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        `
+        el.appendChild(img)
+      } else {
+        el.style.cssText = `
+          width: ${radius * 2}px;
+          height: ${radius * 2}px;
+          border-radius: 50%;
+          background: ${color};
+          opacity: ${opacity};
+          ${pulse ? `box-shadow: 0 0 0 0 ${color}; animation: mapbox-pulse 2s ease-out infinite;` : ''}
+        `
+      }
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat(pin.coordinates)
