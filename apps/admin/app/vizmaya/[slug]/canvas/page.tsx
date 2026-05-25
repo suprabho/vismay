@@ -8,6 +8,7 @@ import {
 } from '@vismay/content-source/storyConfig'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
+import { vizmayaPublicUrl } from '@/lib/publicSite'
 import CanvasClient from '@/components/vizmaya/canvas/CanvasClient'
 import {
   canvasFrameId,
@@ -58,29 +59,30 @@ export default async function CanvasPage({ params }: Props) {
     markdown,
   }
 
-  // The canvas iframes vizmaya-fyi's single-section render route. URL
-  // comes from env so dev (localhost:3000) and prod (subdomain) both
-  // work without code changes; default keeps the dev loop unblocked.
-  const publicSiteUrl =
-    process.env.NEXT_PUBLIC_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-
   // Pre-sign every iframe URL the canvas can mount. 24h TTL — well past
   // any plausible single editing session, refreshed on every page reload.
   // The HMAC secret stays server-side; only the resulting URLs cross to
   // the client.
+  //
+  // `vizmayaPublicUrl` (lib/publicSite) is the one source of truth for
+  // "where vizmaya-fyi is reachable from" — `NEXT_PUBLIC_VIZMAYA_URL` in
+  // prod, configurable for dev. The canvas used to read a separate
+  // `NEXT_PUBLIC_PUBLIC_SITE_URL` env that defaulted to localhost:3000;
+  // if that env wasn't set in prod, iframes silently rendered against
+  // localhost. Unified now so there's only one knob to misconfigure.
   const sectionUnits = units.filter((u) => u.subIndex === 0)
   const SIGN_TTL_SECONDS = 24 * 60 * 60
   const signedSrcById: Record<string, string> = {}
   for (const u of sectionUnits) {
     const sectionId = u.parentConfig.id ?? `section-${u.parentIndex}`
     signedSrcById[canvasFrameId(sectionId)] = signOutputUrl({
-      baseUrl: publicSiteUrl,
+      baseUrl: vizmayaPublicUrl,
       path: `/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
       ttlSeconds: SIGN_TTL_SECONDS,
     })
     for (const spec of outputSpecsForUnit(u, slug)) {
       signedSrcById[spec.id] = signOutputUrl({
-        baseUrl: publicSiteUrl,
+        baseUrl: vizmayaPublicUrl,
         path: spec.path,
         ttlSeconds: SIGN_TTL_SECONDS,
         query: spec.query,
