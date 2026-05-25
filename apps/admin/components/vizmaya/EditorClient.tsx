@@ -285,7 +285,7 @@ export default function EditorClient({
           className="hidden"
         />
         <Link
-          href={vizmayaUrl(`/reports/${slug}`)}
+          href={signedLinks.reports}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"

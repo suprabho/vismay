@@ -37,12 +37,20 @@ export interface SignedStoryLinks {
   autoplay: string
   /** /story/<slug>/share (gated render route on consumer domain) */
   share: string
+  /** /story/<slug>/report (gated rendered-PDF page on consumer domain) */
+  report: string
+  /** /story/<slug>/slides (gated rendered-slides page on consumer domain) */
+  slides: string
+  /** /reports/<slug> (gated per-story report+slides builder UI on consumer domain) */
+  reports: string
 }
 
 /**
- * Mint the standard set of admin-only "open story output" links for a given
+ * Mint the full set of admin-only "open story output" links for a given
  * vertical + slug. Each link carries a 24h HMAC token; the consumer-side
- * middleware verifies before allowing the render.
+ * middleware verifies before allowing the render. Keep this in lockstep
+ * with the matcher in `apps/<consumer>/middleware.ts` — any path admins
+ * link to that's behind the signed-URL gate has to be minted here.
  *
  * Defaults to `vizmaya` for back-compat with callers that pre-date
  * multi-vertical wiring.
@@ -52,17 +60,14 @@ export function signStoryLinks(
   vertical: VerticalSlug = 'vizmaya'
 ): SignedStoryLinks {
   const baseUrl = consumerBaseUrl(vertical)
+  const sign = (path: string): string =>
+    signOutputUrl({ baseUrl, path, ttlSeconds: LINK_TTL_SECONDS })
   return {
-    autoplay: signOutputUrl({
-      baseUrl,
-      path: `/story/${slug}/autoplay`,
-      ttlSeconds: LINK_TTL_SECONDS,
-    }),
-    share: signOutputUrl({
-      baseUrl,
-      path: `/story/${slug}/share`,
-      ttlSeconds: LINK_TTL_SECONDS,
-    }),
+    autoplay: sign(`/story/${slug}/autoplay`),
+    share: sign(`/story/${slug}/share`),
+    report: sign(`/story/${slug}/report`),
+    slides: sign(`/story/${slug}/slides`),
+    reports: sign(`/reports/${slug}`),
   }
 }
 
