@@ -5,6 +5,7 @@ import {
   vizmayaPublicUrl,
   vizf1PublicUrl,
   footshortsPublicUrl,
+  originVariants,
 } from '@/lib/publicSite'
 import { ACTION_TOKEN_HEADER } from '@vismay/admin-core/actionToken'
 
@@ -17,12 +18,17 @@ export const runtime = 'nodejs'
  * the browser requires CORS headers on both the preflight and the actual
  * response for the call to succeed.
  *
+ * Both apex and `www.` variants are included for each TLD — Vercel's default
+ * www redirect changes which one ends up in the browser's Origin header, and
+ * preflight requests can't follow redirects, so a mismatch fails as
+ * "Redirect is not allowed for a preflight request" instead of a useful 401.
+ *
  * Only `/api/*` paths get CORS treatment — page routes stay closed.
  */
 const ALLOWED_CONSUMER_ORIGINS = new Set<string>([
-  vizmayaPublicUrl,
-  vizf1PublicUrl,
-  footshortsPublicUrl,
+  ...originVariants(vizmayaPublicUrl),
+  ...originVariants(vizf1PublicUrl),
+  ...originVariants(footshortsPublicUrl),
 ])
 
 function corsHeadersFor(origin: string): Record<string, string> {
