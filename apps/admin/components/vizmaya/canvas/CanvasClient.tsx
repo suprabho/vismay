@@ -382,10 +382,15 @@ export default function CanvasClient({
   // which foreground region the click targeted. Carried alongside so the
   // single 'region' edit kind handles every named region the layout
   // produces (lead / charts / body / sidebar / …) without per-key cases.
+  // `slotPath` is only meaningful when `kind === 'layer'`; it names
+  // which background/foreground layer the click targeted. Carried
+  // alongside for the same reason — one edit kind handles every layer
+  // slot the canvas surfaces.
   const [editorTarget, setEditorTarget] = useState<{
     kind: EditableKind
     unit: ResolvedUnit
     regionKey?: string
+    slotPath?: SlotPath
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -398,7 +403,8 @@ export default function CanvasClient({
             editorTarget.kind,
             editorTarget.unit,
             sources,
-            editorTarget.regionKey
+            editorTarget.regionKey,
+            editorTarget.slotPath
           )
         : null,
     [editorTarget, sources]
@@ -1223,6 +1229,17 @@ export default function CanvasClient({
               const targetUnit = sectionUnitsRef.current[idx]
               if (!targetUnit) return
               if (slot.layerType === 'map') {
+                // Two-step affordance: open the YAML in the right panel
+                // first so the user has a literal source to read while the
+                // visual picker is open, and so closing the modal lands them
+                // on the Monaco editor for fine-grained pin/style tweaks
+                // the picker doesn't expose. Both close together on section
+                // switch (see the activeSectionIndex effect below).
+                setEditorTargetRef.current({
+                  kind: 'layer',
+                  unit: targetUnit,
+                  slotPath: slot.path,
+                })
                 setSlotTargetRef.current({
                   mode: 'map',
                   unit: targetUnit,
@@ -1825,7 +1842,8 @@ export default function CanvasClient({
           editorTarget.unit,
           sources,
           editedText,
-          editorTarget.regionKey
+          editorTarget.regionKey,
+          editorTarget.slotPath
         )
         await saveSlice(slug, merge)
         // Apply locally so the canvas updates without a refetch round
