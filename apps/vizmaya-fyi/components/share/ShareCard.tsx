@@ -2,16 +2,33 @@
 
 import { useRef, useCallback, useMemo, useState, forwardRef, useImperativeHandle } from 'react'
 import { toPng } from 'html-to-image'
-import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility } from '@vismay/viz-engine'
+import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility, VizLayer, MapRegionLayer, HeatmapLayer } from '@vismay/viz-engine'
 import type { MapTextLabel } from '@vismay/viz-engine'
+import { ForegroundVizSlot, resolveSlotsFlat } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
 import ShareTextCard from './ShareTextCard'
 import ShareStatCard from './ShareStatCard'
 import ShareHeroCard from './ShareHeroCard'
-import ShareChartCard from './ShareChartCard'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
+
+/**
+ * Shape of a `type: 'map'` layer as returned by `resolveSlotsFlat`. Mirrors
+ * `parentConfig.map` so the legacy and new (`background: [{type:'map'}]`)
+ * syntaxes feed the same share-mode map cascade below.
+ */
+type ResolvedMapLayer = {
+  type: 'map'
+  center?: [number, number]
+  zoom?: number
+  pitch?: number
+  bearing?: number
+  pins?: MapPinConfig[]
+  regions?: MapRegionLayer
+  heatmap?: HeatmapLayer
+  textLabels?: MapTextLabel[]
+}
 
 /**
  * DOM render size — matches mobile proportions so text looks natural.
@@ -129,6 +146,25 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   const output = OUTPUT_SIZE[ratio]
   const pixelRatio = output.w / w
   const { parentConfig, paragraphs } = unit
+  // Resolve foreground/background through the slot shim so stories that use
+  // the new `foreground:` / `background:` syntax (or any registered viz module
+  // like `fs:match-card`, `image`, `embed`, …) appear on share cards. The shim
+  // also synthesizes a legacy `map:` block into a `type: 'map'` background
+  // layer, so the map cascade below works the same for both syntaxes.
+  const resolvedSlots = useMemo(() => resolveSlotsFlat(parentConfig), [parentConfig])
+  const resolvedMap = useMemo<ResolvedMapLayer | undefined>(
+    () => resolvedSlots.background.find((l): l is VizLayer & ResolvedMapLayer => l.type === 'map'),
+    [resolvedSlots]
+  )
+  // Foreground layers that deserve their own visual share card. Text layers
+  // are excluded because share mode already renders the section's heading /
+  // paragraphs via ShareTextCard / ShareHeroCard / ShareStatCard — emitting a
+  // duplicate "viz" card for a `- type: text` layer would render the same copy
+  // twice.
+  const vizForegroundLayers = useMemo(
+    () => resolvedSlots.foreground.filter((l) => l.type !== 'text'),
+    [resolvedSlots]
+  )
   // Per-subsection share override — sits between the section-level share
   // override and the story config in the cascade.
   const shareSubOverride = shareOverride?.subsections?.[unit.subIndex]
@@ -137,11 +173,11 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   const subheading =
     shareSubOverride?.subheading ?? shareOverride?.subheading ?? unit.subheading
   const kind = parentConfig.kind ?? 'text'
-  const hasChart = !!parentConfig.chart
+  const hasVizForeground = vizForegroundLayers.length > 0
   const isMapTitle = variant === 'map-title'
   const isGraph = variant === 'graph'
   // Only show map bg on hero cards and map-title variant
-  const showMap = !!parentConfig.map?.center && (kind === 'hero' || isMapTitle)
+  const showMap = !!resolvedMap?.center && (kind === 'hero' || isMapTitle)
 
   // Resolve layer visibility (share-subsection > share-section). A `false`
   // value at any level suppresses the layer; otherwise it's shown.
@@ -182,20 +218,22 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   //   share-subsection base >
   //   share-section ratios[ratio] >
   //   share-section base >
-  //   story-subsection > parent
+  //   story-subsection > parent (sourced from the resolved background map
+  //   layer so legacy `map:` and new `background: [{type:'map'}]` both flow
+  //   through the same fallback path).
   // Only the camera fields are aspect-specific — pins / regions / heatmap /
   // textLabels are the same across aspects and use the original cascade.
   const subsectionMap = parentConfig.subsections?.[unit.subIndex]?.map
   const subRatio = shareSubOverride?.map?.ratios?.[ratio]
   const secRatio = shareOverride?.map?.ratios?.[ratio]
   const mapCenter =
-    subRatio?.center ?? shareSubOverride?.map?.center ?? secRatio?.center ?? shareOverride?.map?.center ?? subsectionMap?.center ?? parentConfig.map?.center
+    subRatio?.center ?? shareSubOverride?.map?.center ?? secRatio?.center ?? shareOverride?.map?.center ?? subsectionMap?.center ?? resolvedMap?.center
   // Zoom cascade: a per-ratio override wins outright. Otherwise resolve the
   // base zoom and apply the share-card default zoom-out so cards pull back a
   // bit from the story's interactive framing.
   const ratioZoomOverride = subRatio?.zoom ?? secRatio?.zoom
   const baseZoom =
-    shareSubOverride?.map?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? parentConfig.map?.zoom
+    shareSubOverride?.map?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? resolvedMap?.zoom
   const mapZoom =
     ratioZoomOverride !== undefined
       ? ratioZoomOverride
@@ -203,15 +241,15 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
         ? baseZoom + SHARE_ZOOM_DELTA[ratio]
         : undefined
   const mapPitch =
-    subRatio?.pitch ?? shareSubOverride?.map?.pitch ?? secRatio?.pitch ?? shareOverride?.map?.pitch ?? subsectionMap?.pitch ?? parentConfig.map?.pitch
+    subRatio?.pitch ?? shareSubOverride?.map?.pitch ?? secRatio?.pitch ?? shareOverride?.map?.pitch ?? subsectionMap?.pitch ?? resolvedMap?.pitch
   const mapBearing =
-    subRatio?.bearing ?? shareSubOverride?.map?.bearing ?? secRatio?.bearing ?? shareOverride?.map?.bearing ?? subsectionMap?.bearing ?? parentConfig.map?.bearing
+    subRatio?.bearing ?? shareSubOverride?.map?.bearing ?? secRatio?.bearing ?? shareOverride?.map?.bearing ?? subsectionMap?.bearing ?? resolvedMap?.bearing
   // Regions / heatmap: share override layers can override either, with full
   // cascade. `layers.{regions,heatmap} === false` suppresses entirely below.
   const resolvedRegions =
-    shareSubOverride?.map?.regions ?? shareOverride?.map?.regions ?? subsectionMap?.regions ?? parentConfig.map?.regions
+    shareSubOverride?.map?.regions ?? shareOverride?.map?.regions ?? subsectionMap?.regions ?? resolvedMap?.regions
   const resolvedHeatmap =
-    shareSubOverride?.map?.heatmap ?? shareOverride?.map?.heatmap ?? subsectionMap?.heatmap ?? parentConfig.map?.heatmap
+    shareSubOverride?.map?.heatmap ?? shareOverride?.map?.heatmap ?? subsectionMap?.heatmap ?? resolvedMap?.heatmap
   // Thin patch: `regionLabelCodes` replaces the parent's labels.codes allowlist
   // without forcing the user to restate the whole regions block.
   const labelCodesOverride =
@@ -233,11 +271,8 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
     if (shareSubOverride?.map?.textLabels) return shareSubOverride.map.textLabels
     if (shareOverride?.map?.textLabels) return shareOverride.map.textLabels
     if (subsectionMap?.textLabels) return subsectionMap.textLabels
-    if (parentConfig.map && 'textLabels' in parentConfig.map) {
-      return (parentConfig.map as { textLabels?: MapTextLabel[] }).textLabels
-    }
-    return undefined
-  }, [parentConfig, shareOverride, shareSubOverride, subsectionMap])
+    return resolvedMap?.textLabels
+  }, [resolvedMap, shareOverride, shareSubOverride, subsectionMap])
 
   // Collect pins for this card:
   //   • share-subsection pins (if set, replaces all)
@@ -255,7 +290,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
       if (shareOverride?.map?.pins) return shareOverride.map.pins
       if (subsectionMap?.pins) return subsectionMap.pins
       const pins: MapPinConfig[] = []
-      if (parentConfig.map?.pins) pins.push(...parentConfig.map.pins)
+      if (resolvedMap?.pins) pins.push(...resolvedMap.pins)
       if (parentConfig.subsections) {
         for (const sub of parentConfig.subsections) {
           if (sub.map?.pins) pins.push(...sub.map.pins)
@@ -280,7 +315,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
       if (patch?.hidden) return []
       return [patch ? { ...p, ...patch } : p]
     })
-  }, [parentConfig, shareOverride, shareSubOverride, subsectionMap, layers.pins])
+  }, [parentConfig, resolvedMap, shareOverride, shareSubOverride, subsectionMap, layers.pins])
 
   const capture = useCallback(async (): Promise<string | null> => {
     const node = captureRef.current
@@ -472,18 +507,45 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                   </div>
                 </div>
               )
-            ) : isGraph && hasChart ? (
-              /* Chart-only card — one per subsection, with activeStep
-                 driven by the unit's subIndex so each chart step renders
-                 in its own share card. */
-              <div className="h-full min-h-0">
-                <ShareChartCard
-                  chartId={parentConfig.chart!}
-                  activeStep={unit.subIndex}
-                  slug={slug}
-                  heading={chartHeading}
-                  subheading={chartSubheading}
-                />
+            ) : isGraph && hasVizForeground ? (
+              /* Foreground-viz card — renders the section's foreground stack
+                 through the slot dispatcher so any registered viz module
+                 (chart, image, video, embed, rive, vertical-specific cards
+                 like `fs:match-card` or `f1:race-row`) appears on share,
+                 not just the legacy `chart:` field. `activeStep` is driven
+                 by the unit's subIndex so chart steps animate per card. */
+              <div className="w-full h-full flex flex-col p-[10px] pb-[32px]">
+                {(chartHeading || chartSubheading) && (
+                  <div className="shrink-0">
+                    {chartHeading && (
+                      <h4
+                        className="font-serif text-[20px] text-center font-bold leading-[1.2]"
+                        style={{ color: 'var(--color-accent)' }}
+                      >
+                        {chartHeading}
+                      </h4>
+                    )}
+                    {chartSubheading && (
+                      <p
+                        className="text-[17px] text-center leading-[1.4]"
+                        style={{ color: 'var(--color-muted)' }}
+                      >
+                        {chartSubheading}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="flex-1 min-h-0 relative">
+                  <div className="absolute inset-0 overflow-hidden **:min-h-0!">
+                    <ForegroundVizSlot
+                      slug={slug}
+                      layers={vizForegroundLayers}
+                      unitKey={`${unit.parentIndex}-${unit.subIndex}`}
+                      activeStep={unit.subIndex}
+                      mode="capture"
+                    />
+                  </div>
+                </div>
               </div>
             ) : kind === 'hero' && heroHeading ? (
               <ShareHeroCard title={heroHeading} dek={heroDek} />
