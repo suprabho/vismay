@@ -21,6 +21,31 @@ export const footshortsPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_FOOTSHORTS_URL || 'https://footshorts.com'
 )
 
+/**
+ * Return both the apex and `www.` variants of a base URL.
+ *
+ * Vercel's default redirect rules send the apex (`vizmaya.fyi`) to the `www`
+ * subdomain (or vice versa), and the redirected origin is what the browser
+ * actually sends in the `Origin` header — which means admin's CORS allowlist
+ * has to accept both even though signing/linking only uses the canonical one.
+ * Preflight requests can't follow redirects, so a mismatch surfaces as
+ * "Redirect is not allowed for a preflight request" instead of a useful 401.
+ *
+ * For unparseable inputs we fall back to the original string so callers don't
+ * silently drop a configured URL.
+ */
+export function originVariants(url: string): string[] {
+  try {
+    const u = new URL(url)
+    const host = u.hostname
+    const apex = host.startsWith('www.') ? host.slice(4) : host
+    const www = `www.${apex}`
+    return [`${u.protocol}//${apex}`, `${u.protocol}//${www}`]
+  } catch {
+    return [url]
+  }
+}
+
 export function vizmayaUrl(path: string): string {
   const normalized = path.startsWith('/') ? path : `/${path}`
   return `${vizmayaPublicUrl}${normalized}`
