@@ -1,5 +1,4 @@
 import { notFound, redirect } from 'next/navigation'
-import { isAuthed } from '@/lib/adminAuth'
 import { isDemoAuthed } from '@vismay/content-source/demoAuth'
 import {
   getDemoByClientSlug,
@@ -32,27 +31,23 @@ export default async function DemoRoute({ params }: Props) {
   if (!isValidClientSlug(clientSlug)) notFound()
 
   const demo = await getDemoByClientSlug(clientSlug)
-  const adminBypass = await isAuthed()
 
-  // Non-admins always go through the login form when access conditions
-  // aren't met. Same redirect for missing/archived/wrong-cookie so there's
-  // no slug-enumeration channel — the auth route returns the same 401
-  // for unknown slugs and wrong passwords. Drafts are reachable with the
+  // Everyone — including admins — goes through the demo password gate.
+  // Same redirect for missing/archived/wrong-cookie so there's no
+  // slug-enumeration channel; the auth route returns the same 401 for
+  // unknown slugs and wrong passwords. Drafts are reachable with the
   // right password (status is a label, not an extra gate); only archived
-  // demos are off-limits. Admins skip this gate so they can preview
-  // without juggling demo passwords during prep.
-  if (!adminBypass) {
-    if (
-      !demo ||
-      demo.status === 'archived' ||
-      !(await isDemoAuthed(clientSlug, demo.password_hash))
-    ) {
-      redirect(`/demo/${clientSlug}/login`)
-    }
+  // demos are off-limits. The previous admin-cookie bypass is gone because
+  // admin lives on vismay.xyz and the cookie can't reach vizmaya.fyi (see
+  // docs/auth.md); if a one-click admin preview is needed later it'll be
+  // a signed-URL link, not a cookie check.
+  if (
+    !demo ||
+    demo.status === 'archived' ||
+    !(await isDemoAuthed(clientSlug, demo.password_hash))
+  ) {
+    redirect(`/demo/${clientSlug}/login`)
   }
-
-  // Archived/missing demos shouldn't be revivable even for admins.
-  if (!demo || demo.status === 'archived') notFound()
 
   const content = parseDemoContent(demo.content_yaml)
 

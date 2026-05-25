@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { isAuthed, auth } from '@/lib/adminAuth'
+import { isAuthed } from '@/lib/adminAuth'
+import { signOutputUrl } from '@vismay/admin-core/signedUrl'
+import { vizmayaPublicUrl } from '@/lib/publicSite'
 import { getDemoById } from '@vismay/content-source/demos'
 import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
 import { getContentSource } from '@vismay/content-source/contentSource'
@@ -47,8 +49,10 @@ export async function POST(
     return NextResponse.json({ error: 'no cards curated yet' }, { status: 400 })
   }
 
-  const url = new URL(req.url)
-  const baseUrl = `${url.protocol}//${url.host}`
+  // Render against the public vizmaya.fyi origin — the /story/<slug>/share
+  // route is gated by signed-URL middleware on the consumer TLD, not by
+  // anything on admin's host. Admin signs each ratio URL just below.
+  const baseUrl = vizmayaPublicUrl
   const supabase = createServiceClient()
 
   if (isShareDispatchConfigured()) {
@@ -70,10 +74,15 @@ export async function POST(
     const contentRevisionHash = await computeContentRevisionHash(source, demo.story_slug)
     const result = await renderShareAssets({
       supabase,
-      auth,
       demoId: id,
       storySlug: demo.story_slug,
-      baseUrl,
+      shareUrlFor: (ratio) =>
+        signOutputUrl({
+          baseUrl,
+          path: `/story/${demo.story_slug}/share`,
+          query: { ratio },
+          ttlSeconds: 10 * 60,
+        }),
       cardIds,
       contentRevisionHash,
       log: (m) => console.log(`[storyShareRender] ${m}`),

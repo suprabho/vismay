@@ -12,6 +12,7 @@
   "dependencies": {
     "@footshorts/brand": "workspace:*",
     "@footshorts/shared": "workspace:*",
+    "@vismay/admin-core": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-query": "^5.56.2",

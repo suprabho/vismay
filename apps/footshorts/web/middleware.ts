@@ -1,0 +1,33 @@
+import { createSignedOutputMiddleware } from '@vismay/admin-core/signedMiddleware'
+
+export const runtime = 'nodejs'
+
+/**
+ * Gated "output" routes are rendered on this domain but only ever requested
+ * by admin (canvas iframe, share-card preview, autoplay capture, PDF render).
+ * Admin signs the URL with HMAC(ADMIN_SESSION_SECRET, path|exp) via
+ * `signOutputUrl()` and middleware verifies the token.
+ *
+ * Stateless — no cookie, no cross-domain hand-off. See docs/auth.md.
+ *
+ * This middleware is orthogonal to Footshorts' own user-facing auth
+ * (the Supabase-backed /login + /admin pages) — the matcher below only
+ * touches story output routes, so the product's admin dashboard is
+ * unaffected.
+ *
+ * In dev without ADMIN_SESSION_SECRET set, requests fall through so the local
+ * loop isn't blocked. Prod fails closed.
+ */
+export const middleware = createSignedOutputMiddleware({
+  passThroughWhenUnconfigured: process.env.NODE_ENV !== 'production',
+})
+
+export const config = {
+  matcher: [
+    '/story/:slug/share',
+    '/story/:slug/autoplay',
+    '/story/:slug/canvas-frame/:id',
+    '/story/:slug/report',
+    '/story/:slug/slides',
+  ],
+}
