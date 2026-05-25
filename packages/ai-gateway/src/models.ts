@@ -23,10 +23,20 @@ export const MODELS = {
   },
   image: {
     /**
-     * Gemini 3 Pro Image (the model formerly nicknamed nano-banana). Native
-     * Gemini image gen — same gateway/key path as text, no extra provider.
+     * Imagen 4 standard — Google's dedicated image model. Exposed by the
+     * gateway as a true `image` model, so it works with experimental_generateImage.
+     *
+     * Note: Gemini 3 Pro Image (a.k.a. nano-banana) is listed by the gateway
+     * as a `language` model — it's a multimodal LLM that emits images inside
+     * its response. Reaching it needs a different call path (languageModel +
+     * parse image parts) that we haven't built; once we do, add an
+     * `image.nanoBanana` alias here that points at it.
      */
-    default: 'google/gemini-3-pro-image',
+    default: 'google/imagen-4.0-generate-001',
+    /** Cheaper, faster Imagen 4 — good for iteration loops. */
+    fast: 'google/imagen-4.0-fast-generate-001',
+    /** Highest-quality Imagen 4 — slower and pricier. */
+    ultra: 'google/imagen-4.0-ultra-generate-001',
   },
 } as const
 

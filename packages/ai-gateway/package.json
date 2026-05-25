@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/gateway": "^1.0.0",
+    "@ai-sdk/gateway": "^2.0.0",
     "ai": "^5.0.0",
     "zod": "^3.23.0"
   },
