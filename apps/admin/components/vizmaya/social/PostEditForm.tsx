@@ -12,7 +12,7 @@ import {
   type VideoAspect,
 } from '@vismay/content-source/socialPostPlans'
 import type { StoryOption } from './PlannerClient'
-import { vizmayaUrl } from '@/lib/publicSite'
+import { useSignedStoryLinks } from '@/lib/useSignedStoryLinks'
 
 type AssetKind = AssetRef['kind']
 
@@ -118,6 +118,7 @@ export function PostEditForm({
   const [saving, setSaving] = useState(false)
   const [prefilling, setPrefilling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const signedLinks = useSignedStoryLinks(draft.storySlug || null)
 
   const allowedKinds = useMemo(() => allowedKindsFor(draft.channel), [draft.channel])
 
@@ -464,10 +465,15 @@ export function PostEditForm({
             )}
             {draft.storySlug && (
               <a
-                href={vizmayaUrl(`/story/${draft.storySlug}/share`)}
+                href={signedLinks?.share ?? '#'}
+                aria-disabled={!signedLinks}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-neutral-500 hover:text-white inline-block mt-1"
+                className={`text-[11px] inline-block mt-1 ${
+                  signedLinks
+                    ? 'text-neutral-500 hover:text-white'
+                    : 'text-neutral-700 pointer-events-none'
+                }`}
               >
                 Preview all share cards →
               </a>
