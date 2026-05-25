@@ -5,13 +5,13 @@
  * can jump into any builder. Each row links to /reports/<slug>; an "edited"
  * badge marks slugs that already have a report.yaml override file.
  *
- * Gated by the same admin password as /admin (lib/adminAuth.ts cookie).
+ * Gated by the signed-URL middleware (`/reports` is in the matcher in
+ * apps/vizmaya-fyi/middleware.ts). Admin opens this via
+ * `signReportsIndexUrl()` — no cookie on vizmaya.fyi. See docs/auth.md.
  */
 
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import matter from 'gray-matter'
-import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource, type StoryMeta } from '@vismay/content-source/contentSource'
 import type { Frontmatter } from '@vismay/viz-engine'
 
@@ -53,8 +53,7 @@ async function loadRows(): Promise<Row[]> {
 }
 
 export default async function ReportsLandingPage() {
-  if (!(await isAuthed())) redirect('/admin/login?next=/reports')
-
+  // Auth handled by middleware (signed-URL gate); no cookie check here.
   const rows = await loadRows()
 
   return (

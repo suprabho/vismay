@@ -25,6 +25,14 @@ interface Props {
   sampleYaml: string
   logo?: string
   initialRatio: AspectRatio
+  /**
+   * Absolute base URL of the vismay.xyz admin app. The share-yaml save fetch
+   * targets admin's API directly (cross-TLD); page mints this on the server
+   * so the client doesn't read env vars. See docs/auth.md.
+   */
+  adminBaseUrl?: string
+  /** Action token granting `edit-story-content` for this slug. */
+  editStoryContentToken?: string
 }
 
 interface CardEntry {
@@ -161,6 +169,8 @@ export default function ShareShell({
   sampleYaml,
   logo,
   initialRatio,
+  adminBaseUrl = '',
+  editStoryContentToken = '',
 }: Props) {
   // `initialRatio` is seeded by the server from `?ratio=` so the first paint
   // (and the Playwright share-render capture) has the correct card dimensions.
@@ -331,19 +341,22 @@ export default function ShareShell({
     setSaving(true)
     setSaveError(null)
     try {
-      const res = await fetch(`/api/admin/stories/${slug}`, {
+      const res = await fetch(`${adminBaseUrl}/api/vizmaya/stories/${slug}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-action-token': editStoryContentToken,
+        },
+        credentials: 'omit',
         body: JSON.stringify({ share_yaml }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        // The signed share URL gates the *page* but the save endpoint requires
-        // a valid admin cookie. A 401 here means the admin session isn't valid
-        // for this domain (cookie missing, expired, or the admin deployment's
-        // ADMIN_PASSWORD/ADMIN_SESSION_SECRET no longer matches what minted it).
+        // A 401 here means the action token minted by the page server has
+        // expired (page was open past TTL) or the admin/vizmaya secrets are
+        // out of sync. Reload re-mints the token from the same signed URL.
         if (res.status === 401) {
-          throw new Error('Admin session expired — log in at /admin and retry.')
+          throw new Error('Editing token expired — reload the page and retry.')
         }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
@@ -353,7 +366,7 @@ export default function ShareShell({
       setSaveError(err instanceof Error ? err.message : 'Save failed')
       setSaving(false)
     }
-  }, [view, draftYaml, draftOverrides, yamlError, slug])
+  }, [view, draftYaml, draftOverrides, yamlError, slug, adminBaseUrl, editStoryContentToken])
 
   const handleDownloadAll = useCallback(async () => {
     setDownloading(true)

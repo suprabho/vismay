@@ -73,6 +73,16 @@ interface Props {
   initialSectionId?: string | null
   /** Initial aspect ratio. Defaults to '9:16'. */
   initialRatio?: AutoplayRatio
+  /**
+   * Absolute base URL of the vismay.xyz admin app. The shell's save fetches
+   * call admin's API directly (cross-TLD); the page mints this URL on the
+   * server so the client doesn't have to read env vars. See docs/auth.md.
+   */
+  adminBaseUrl?: string
+  /** Action token granting `edit-story-map` for this slug. */
+  editStoryMapToken?: string
+  /** Action token granting `edit-story-cues` for this slug. */
+  editStoryCuesToken?: string
 }
 
 /* ─── Fixed viewport dimensions per ratio ──────────────────────────── */
@@ -101,6 +111,9 @@ export default function AutoplayShell({
   initialMapYaml = null,
   initialSectionId = null,
   initialRatio = '9:16',
+  adminBaseUrl = '',
+  editStoryMapToken = '',
+  editStoryCuesToken = '',
 }: Props) {
   /* ─── Map editor side panel (admin only) ─────────────────────────── */
   const [mapEditorOpen, setMapEditorOpen] = useState(false)
@@ -153,9 +166,10 @@ export default function AutoplayShell({
   const [tuneMode, setTuneMode] = useState(false)
   /**
    * Per-unit local overrides applied on top of the loaded `cues`. Set by the
-   * `[ ] { }` keyboard nudges and persisted via PATCH /api/admin/cues when
-   * the user hits Save. Keys are unit_index. Values include a sentinel
-   * `_dirty` so we can colour the UI for unsaved changes vs already-saved.
+   * `[ ] { }` keyboard nudges and persisted via PATCH /api/vizmaya/cues on
+   * admin (cross-TLD, action-token-gated) when the user hits Save. Keys are
+   * unit_index. Values include a sentinel `_dirty` so we can colour the UI
+   * for unsaved changes vs already-saved.
    */
   const [cueOverrides, setCueOverrides] = useState<Map<number, CueRecord>>(
     () => new Map()
@@ -603,9 +617,13 @@ export default function AutoplayShell({
         start_ms: c.start_ms,
         end_ms: c.end_ms,
       }))
-      const res = await fetch(`/api/admin/cues/${slug}`, {
+      const res = await fetch(`${adminBaseUrl}/api/vizmaya/cues/${slug}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-action-token': editStoryCuesToken,
+        },
+        credentials: 'omit',
         body: JSON.stringify({ updates }),
       })
       if (!res.ok) {
@@ -621,7 +639,7 @@ export default function AutoplayShell({
     } finally {
       setSaving(false)
     }
-  }, [slug, cueOverrides])
+  }, [slug, cueOverrides, adminBaseUrl, editStoryCuesToken])
 
   const handleResetTunings = useCallback(() => {
     setCueOverrides(new Map())
@@ -916,6 +934,8 @@ export default function AutoplayShell({
             mapStyle={mapStyle}
             onClose={() => setMapEditorOpen(false)}
             onSaved={() => setMapReloadNonce((n) => n + 1)}
+            adminBaseUrl={adminBaseUrl}
+            editStoryMapToken={editStoryMapToken}
           />
         </div>
       )}

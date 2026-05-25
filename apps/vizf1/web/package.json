@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@vismay/admin-core": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vizf1/brand": "workspace:*",

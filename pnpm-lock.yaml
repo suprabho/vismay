@@ -328,6 +328,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.10(react@19.2.0)
+      '@vismay/admin-core':
+        specifier: workspace:*
+        version: link:../../../packages/admin-core
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../../verticals/footshorts-viz
@@ -424,6 +427,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.10(react@19.2.4)
+      '@vismay/admin-core':
+        specifier: workspace:*
+        version: link:../../../packages/admin-core
       '@vismay/f1-viz':
         specifier: workspace:*
         version: link:../../../verticals/f1-viz

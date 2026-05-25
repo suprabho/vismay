@@ -4,9 +4,11 @@ import { loadStoryConfig, hasStoryConfig, loadShareConfig } from '@vismay/conten
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import { signActionToken } from '@vismay/admin-core/actionToken'
 import type { ResolvedUnit } from '@vismay/viz-engine'
 import { themedLogoDataUrl } from '@/lib/themeLogo'
 import { buildShareSampleYaml } from '@/lib/shareSampleYaml'
+import { adminBaseUrl } from '@/lib/adminBaseUrl'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import ShareShell from '@/components/share/ShareShell'
 
@@ -59,6 +61,15 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
   const logo = await themedLogoDataUrl(shareConfig?.logo, story.frontmatter.theme)
   const sampleYaml = buildShareSampleYaml(units)
 
+  // Cross-TLD save credential. The page itself was reached via a signed
+  // URL (middleware-verified); we mint a narrow action token here so the
+  // editor can save back to admin's API directly. On expiry the user sees
+  // a 401 and reloads to re-mint. See docs/auth.md Phase 2a.
+  const editStoryContentToken = signActionToken({
+    scope: 'edit-story-content',
+    subject: slug,
+  })
+
   return (
     <ThemeProvider theme={story.frontmatter.theme}>
       {fontImportUrl && (
@@ -80,6 +91,8 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
         sampleYaml={sampleYaml}
         logo={logo}
         initialRatio={initialRatio}
+        adminBaseUrl={adminBaseUrl()}
+        editStoryContentToken={editStoryContentToken}
       />
     </ThemeProvider>
   )

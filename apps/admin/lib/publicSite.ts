@@ -1,14 +1,25 @@
 /**
- * Base URL of the public vizmaya.fyi site. Admin runs on its own domain
- * (admin.vizmaya.fyi in prod, a separate port in dev), so any link from admin
- * to a public-site route must be prefixed with this URL — a bare `/story/...`
- * would 404 against the admin domain.
+ * Public base URLs of the consumer TLDs. Admin always runs on vismay.xyz, so
+ * every cross-app link has to be absolute — a bare `/story/...` would 404
+ * against the admin host.
+ *
+ * Each base URL is env-overridable (with `NEXT_PUBLIC_` so it's also readable
+ * client-side) and falls back to the canonical production hostname. Local dev
+ * against a Next port works by setting the env in `.env.local`.
  */
-const FALLBACK = 'https://vizmaya.fyi'
+function normalize(url: string): string {
+  return url.replace(/\/$/, '')
+}
 
-export const vizmayaPublicUrl: string = (
-  process.env.NEXT_PUBLIC_VIZMAYA_URL || FALLBACK
-).replace(/\/$/, '')
+export const vizmayaPublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_VIZMAYA_URL || 'https://vizmaya.fyi'
+)
+export const vizf1PublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_VIZF1_URL || 'https://vizf1.com'
+)
+export const footshortsPublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_FOOTSHORTS_URL || 'https://footshorts.com'
+)
 
 export function vizmayaUrl(path: string): string {
   const normalized = path.startsWith('/') ? path : `/${path}`
@@ -26,10 +37,6 @@ export function vizmayaUrl(path: string): string {
  *   apps/footshorts/web/app/editorial/[slug]/         (story reader)
  *   apps/footshorts/web/app/editorial/epic/[slug]/    (epic landing)
  *   apps/vizf1/web/app/editorial/[slug]/             (story reader)
- *
- * `vizmaya-fyi` keeps the env-overridable `vizmayaPublicUrl` so local dev
- * against a Next port still works. The consumer URLs are hardcoded — there
- * is no local-dev story for them yet.
  */
 interface AppPublicRoutes {
   baseUrl: string
@@ -44,12 +51,12 @@ const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
     epicPath: (slug) => `/epic/${slug}`,
   },
   vizf1: {
-    baseUrl: 'https://vizf1.com',
+    baseUrl: vizf1PublicUrl,
     storyPath: (slug) => `/editorial/${slug}`,
     epicPath: null,
   },
   footshorts: {
-    baseUrl: 'https://footshorts.com',
+    baseUrl: footshortsPublicUrl,
     storyPath: (slug) => `/editorial/${slug}`,
     epicPath: (slug) => `/editorial/epic/${slug}`,
   },
