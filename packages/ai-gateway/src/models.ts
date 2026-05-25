@@ -26,7 +26,7 @@ export const MODELS = {
      * Gemini 3 Pro Image (the model formerly nicknamed nano-banana). Native
      * Gemini image gen — same gateway/key path as text, no extra provider.
      */
-    default: 'google/gemini-3-pro-image-preview',
+    default: 'google/gemini-3-pro-image',
   },
 } as const
 

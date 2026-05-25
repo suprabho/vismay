@@ -115,7 +115,7 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 | `text.pro` | `google/gemini-2.5-pro` |
 | `text.proPlus` | `google/gemini-3-pro` |
 | `text.claude` | `anthropic/claude-sonnet-4.6` |
-| `image.default` | `google/gemini-3-pro-image-preview` |
+| `image.default` | `google/gemini-3-pro-image` |
 
 Adding a model = adding a row here. Call sites use aliases, so swaps don't
 touch product code.

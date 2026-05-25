@@ -5,7 +5,7 @@ import { resolveModel, type ImageModelAlias } from './models'
 export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
 
 export interface GenerateImageOptions {
-  /** Alias from MODELS.image or a raw gateway id (e.g. `google/gemini-3-pro-image-preview`). */
+  /** Alias from MODELS.image or a raw gateway id (e.g. `google/gemini-3-pro-image`). */
   model?: ImageModelAlias | string
   /** Prompt describing the image. */
   prompt: string
