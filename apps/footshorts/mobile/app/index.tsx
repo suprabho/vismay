@@ -13,7 +13,7 @@ export default function Index() {
     );
   }
 
-  if (!session) return <Redirect href="/login" />;
+  if (!session) return <Redirect href="/landing" />;
   if (!profile?.onboarded_at) return <Redirect href="/onboarding/leagues" />;
   return <Redirect href="/(tabs)/feed" />;
 }

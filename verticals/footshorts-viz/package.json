@@ -17,6 +17,7 @@
     "react-native": "*",
     "expo-router": "*",
     "expo-image": "*",
+    "expo-linear-gradient": "*",
     "nativewind": "*"
   },
   "peerDependenciesMeta": {
@@ -24,6 +25,7 @@
     "react-native": { "optional": true },
     "expo-router": { "optional": true },
     "expo-image": { "optional": true },
+    "expo-linear-gradient": { "optional": true },
     "nativewind": { "optional": true }
   },
   "dependencies": {

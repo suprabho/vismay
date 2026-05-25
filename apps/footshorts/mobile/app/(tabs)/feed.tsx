@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -124,7 +124,11 @@ function FeedBody({ tab }: { tab: Tab }) {
   }
 
   if (tab === 'editorial') {
-    return <EditorialMagazine topGap={topGap} />;
+    // Hand the magazine the on-screen content width so the Epics strip can size
+    // each card to ~78% of it (matching web's snap-x cards). Subtract the 16px
+    // horizontal padding the magazine uses internally.
+    const screenWidth = Dimensions.get('window').width;
+    return <EditorialMagazine topGap={topGap} contentWidth={screenWidth - 32} />;
   }
 
   if (discover.isLoading) {

@@ -8,6 +8,10 @@ import { useLeagueFixtures } from '@/lib/useFixtures';
 import { StandingsTable } from '@vismay/footshorts-viz/native';
 import { MatchRow } from '@vismay/footshorts-viz/native';
 
+// Mirror web's max-w-2xl readable column so the league hub sits in a
+// centered 640px frame on tablets/landscape and bleeds-to-edge on phones.
+const MAX_CONTENT_WIDTH = 640;
+
 export default function LeagueScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
@@ -42,60 +46,62 @@ export default function LeagueScreen() {
       className="flex-1 bg-bg"
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }}
     >
-      <View className="px-5 pb-4">
-        <Pressable onPress={() => router.back()} hitSlop={12} className="mb-4">
-          <Text className="text-accent text-sm">← Back</Text>
-        </Pressable>
-        <View className="flex-row items-center">
-          {league.data.crest_url ? (
-            <Image
-              source={{ uri: league.data.crest_url }}
-              style={{ width: 44, height: 44, marginRight: 12 }}
-              contentFit="contain"
-            />
-          ) : null}
-          <View className="flex-1">
-            <Text className="text-text text-2xl font-bold">{league.data.name}</Text>
-            {league.data.country ? (
-              <Text className="text-muted text-xs mt-0.5">{league.data.country}</Text>
+      <View style={{ width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' }}>
+        <View className="px-5 pb-4">
+          <Pressable onPress={() => router.back()} hitSlop={12} className="mb-4">
+            <Text className="text-accent text-sm">← Back</Text>
+          </Pressable>
+          <View className="flex-row items-center">
+            {league.data.crest_url ? (
+              <Image
+                source={{ uri: league.data.crest_url }}
+                style={{ width: 44, height: 44, marginRight: 12 }}
+                contentFit="contain"
+              />
             ) : null}
+            <View className="flex-1">
+              <Text className="text-text text-2xl font-bold">{league.data.name}</Text>
+              {league.data.country ? (
+                <Text className="text-muted text-xs mt-0.5">{league.data.country}</Text>
+              ) : null}
+            </View>
           </View>
         </View>
+
+        <Section title="Standings">
+          {standings.isLoading ? (
+            <ActivityIndicator color="#00D26A" />
+          ) : standings.data && standings.data.length > 0 ? (
+            <StandingsTable rows={standings.data} />
+          ) : (
+            <EmptyNote text="No standings yet." />
+          )}
+        </Section>
+
+        <Section title="Recent results">
+          <FixtureList
+            loading={pastFixtures.isLoading}
+            data={pastFixtures.data ?? []}
+            emptyText="No recent results."
+          />
+        </Section>
+
+        <Section title="Upcoming">
+          <FixtureList
+            loading={upcomingFixtures.isLoading}
+            data={upcomingFixtures.data ?? []}
+            emptyText="No upcoming fixtures."
+          />
+        </Section>
       </View>
-
-      <Section title="Standings">
-        {standings.isLoading ? (
-          <ActivityIndicator color="#00D26A" />
-        ) : standings.data && standings.data.length > 0 ? (
-          <StandingsTable rows={standings.data} />
-        ) : (
-          <EmptyNote text="No standings yet." />
-        )}
-      </Section>
-
-      <Section title="Recent results">
-        <FixtureList
-          loading={pastFixtures.isLoading}
-          data={pastFixtures.data ?? []}
-          emptyText="No recent results."
-        />
-      </Section>
-
-      <Section title="Upcoming">
-        <FixtureList
-          loading={upcomingFixtures.isLoading}
-          data={upcomingFixtures.data ?? []}
-          emptyText="No upcoming fixtures."
-        />
-      </Section>
     </ScrollView>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View className="px-5 mt-5">
-      <Text className="text-text text-base font-semibold mb-3">{title}</Text>
+    <View className="px-5 mt-6">
+      <Text className="text-text text-base font-semibold mb-2">{title}</Text>
       {children}
     </View>
   );
@@ -116,8 +122,11 @@ function FixtureList({
 }) {
   if (loading) return <ActivityIndicator color="#00D26A" />;
   if (data.length === 0) return <EmptyNote text={emptyText} />;
+  // Bordered surface wrapper mirrors web's
+  // `overflow-hidden rounded-xl border border-border bg-surface` block so
+  // each fixture list reads as a coherent card instead of a bare list.
   return (
-    <View>
+    <View className="rounded-xl overflow-hidden border border-border bg-surface">
       {data.map((f) => (
         <MatchRow key={f.id} fixture={f} />
       ))}

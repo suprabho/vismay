@@ -1,3 +1,5 @@
 export { MatchRow } from './MatchRow'
+export type { MatchRowVariant } from './MatchRow'
+export { MatchTile } from './MatchTile'
 export { StandingsTable } from './StandingsTable'
 export { EntityChip } from './EntityChip'
