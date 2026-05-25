@@ -11,6 +11,7 @@ import type {
   ResolvedUnit,
   ShareSectionOverride,
 } from '@vismay/viz-engine'
+import { resolveSlotsFlat } from '@vismay/viz-engine'
 
 export interface ShareCardEntry {
   /** Stable identity used for storage paths and share_card_ids. */
@@ -53,7 +54,12 @@ export function buildShareCardList(
     if (sectionId && overrides?.[sectionId]?.hide) continue
 
     const kind = unit.parentConfig.kind ?? 'text'
-    const hasChart = !!unit.parentConfig.chart
+    // Mirrors ShareShell.buildCardList — any visual foreground viz layer
+    // (legacy `chart:` or anything in the new `foreground:` slot except
+    // `type: 'text'`) triggers a graph card.
+    const hasVizForeground = resolveSlotsFlat(unit.parentConfig).foreground.some(
+      (l) => l.type !== 'text'
+    )
     const shareOverride = sectionId ? overrides?.[sectionId] : undefined
 
     const subsectionConfig = unit.parentConfig.subsections?.[unit.subIndex]
@@ -72,7 +78,7 @@ export function buildShareCardList(
       })
     }
 
-    if (hasChart) {
+    if (hasVizForeground) {
       cards.push({
         id: `${unit.parentIndex}-${unit.subIndex}-0-graph`,
         parentIndex: unit.parentIndex,

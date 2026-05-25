@@ -5,6 +5,7 @@ import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import type { ResolvedUnit, StoryConfig, ShareSectionOverride } from '@vismay/viz-engine'
+import { resolveSlotsFlat } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
 import ShareEditDrawer, { type SelectedCard } from './ShareEditDrawer'
@@ -63,7 +64,13 @@ function buildCardList(
     if (sectionId && overrides?.[sectionId]?.hide) continue
 
     const kind = unit.parentConfig.kind ?? 'text'
-    const hasChart = !!unit.parentConfig.chart
+    // A visual foreground layer (chart / image / video / embed / rive / any
+    // vertical-specific viz module) gets its own "graph" card, mirroring the
+    // legacy `chart:` field. Text layers are excluded — share mode already
+    // renders the section text via the auto / hero / stat / text variants.
+    const hasVizForeground = resolveSlotsFlat(unit.parentConfig).foreground.some(
+      (l) => l.type !== 'text'
+    )
     const shareOverride = sectionId ? overrides?.[sectionId] : undefined
 
     // 1. Map + Heading — emitted for the first unit of each parent (using
@@ -77,10 +84,10 @@ function buildCardList(
       cards.push({ unit, variant: 'map-title', label: 'map-title' })
     }
 
-    // 2. Graph — one per subsection when a chart is configured, so each
-    // chart step (driven by subIndex) gets its own share card. Sections
-    // without subsections still emit exactly one graph card.
-    if (hasChart) {
+    // 2. Graph — one per subsection when a visual foreground viz is
+    // configured, so each chart step (driven by subIndex) gets its own share
+    // card. Sections without subsections still emit exactly one graph card.
+    if (hasVizForeground) {
       cards.push({ unit, variant: 'graph', label: 'graph' })
     }
 
