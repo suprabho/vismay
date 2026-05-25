@@ -84,28 +84,33 @@ function TeamCell({
   align: 'left' | 'right' | 'stack';
   sizes: Sizes;
 }) {
-  // On mobile the compact row stacks crest above name so the name gets the
-  // cell's full width instead of competing with the 22px crest + gap; from
-  // `sm:` upward it lays out horizontally. `min-w-0` is required at every
-  // flex level so `truncate` can actually shrink the nowrap text.
-  const directionClass =
-    align === 'stack'
-      ? 'flex-col'
-      : align === 'right'
-        ? 'flex-col sm:flex-row-reverse'
-        : 'flex-col sm:flex-row';
-  const innerClassName = `flex min-w-0 items-center ${sizes.gap} ${directionClass}`;
+  // Always horizontal so the row reads identically at every width and matches
+  // the native MatchRow. The away cell is right-aligned with the crest rendered
+  // *after* the name (rather than `flex-row-reverse`, a lone utility that only
+  // appears here and is easily dropped from a partial CSS build). 'stack' is
+  // used only by the expanded variant, which puts the crest above a centred
+  // name like a scoreboard. `min-w-0` is required at every flex level so
+  // `truncate` can actually shrink the text.
+  const isStack = align === 'stack';
+  const directionClass = isStack ? 'flex-col' : 'flex-row';
+  const justifyClass = align === 'right' ? 'justify-end' : '';
+  const innerClassName = `flex min-w-0 items-center ${sizes.gap} ${directionClass} ${justifyClass}`;
+  // eslint-disable-next-line @next/next/no-img-element
+  const crestEl = crest ? (
+    <img src={crest} alt="" className={`${sizes.crest} shrink-0 object-contain`} />
+  ) : null;
+  const nameEl = (
+    <span
+      className={`min-w-0 max-w-full truncate ${isStack ? 'text-center' : 'text-left'} ${sizes.teamText} text-text`}
+    >
+      {name}
+    </span>
+  );
   const children = (
     <div className={innerClassName}>
-      {crest ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={crest} alt="" className={`${sizes.crest} shrink-0 object-contain`} />
-      ) : null}
-      <span
-        className={`min-w-0 max-w-full truncate text-center sm:text-left ${sizes.teamText} text-text`}
-      >
-        {name}
-      </span>
+      {align === 'right' ? null : crestEl}
+      {nameEl}
+      {align === 'right' ? crestEl : null}
     </div>
   );
   if (!slug) return <div className="min-w-0 flex-1">{children}</div>;
