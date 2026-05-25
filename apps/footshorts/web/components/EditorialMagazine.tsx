@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEditorialEpics, useEditorialStories } from '@/lib/useEditorialStories';
 import type { EditorialEpicSummary, EditorialStorySummary } from '@footshorts/shared';
+import { AuraBackground } from '@/components/AuraBackground';
 
 // Hash slug → HSL hue so each story has a distinct, deterministic accent
 // gradient. Cover images live in story frontmatter and aren't fetched here
@@ -31,7 +32,8 @@ function HeroCard({ story }: { story: EditorialStorySummary }) {
       className="group relative block overflow-hidden rounded-2xl border border-border"
       style={{ background: gradientFor(story.slug), aspectRatio: '5 / 4' }}
     >
-      <div className="flex h-full flex-col justify-between p-6 text-white">
+      {story.aura && <AuraBackground slug={story.aura} />}
+      <div className="relative z-10 flex h-full flex-col justify-between p-6 text-white">
         <div className="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] opacity-80">
           <span>Editorial</span>
           <span aria-hidden>·</span>
@@ -78,7 +80,8 @@ function GridCard({ story }: { story: EditorialStorySummary }) {
       className="group relative block overflow-hidden rounded-xl border border-border"
       style={{ background: gradientFor(story.slug), aspectRatio: '4 / 5' }}
     >
-      <div className="flex h-full flex-col justify-between p-4 text-white">
+      {story.aura && <AuraBackground slug={story.aura} />}
+      <div className="relative z-10 flex h-full flex-col justify-between p-4 text-white">
         <time
           dateTime={story.publishedAt ?? story.createdAt}
           className="text-[0.65rem] uppercase tracking-[0.18em] opacity-75"
