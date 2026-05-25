@@ -83,7 +83,7 @@ export default function GenerateImagePanel({ slug, onClose, onGenerated }: Props
       <div className="px-3 py-2.5 flex items-center gap-2">
         <span className="text-xs text-neutral-400">✨ Generate image</span>
         <span className="text-[10px] text-neutral-600">
-          imagen-4 · saved as a regular asset
+          gemini-3-pro-image · saved as a regular asset
         </span>
         <button
           type="button"

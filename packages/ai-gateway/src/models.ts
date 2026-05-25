@@ -23,22 +23,42 @@ export const MODELS = {
   },
   image: {
     /**
-     * Imagen 4 standard — Google's dedicated image model. Exposed by the
-     * gateway as a true `image` model, so it works with experimental_generateImage.
-     *
-     * Note: Gemini 3 Pro Image (a.k.a. nano-banana) is listed by the gateway
-     * as a `language` model — it's a multimodal LLM that emits images inside
-     * its response. Reaching it needs a different call path (languageModel +
-     * parse image parts) that we haven't built; once we do, add an
-     * `image.nanoBanana` alias here that points at it.
+     * Gemini 3 Pro Image (nano-banana). Multimodal LLM — emits images inside
+     * its response. Gateway lists this as a `language` model, so generateImage
+     * routes it through the languageModel + responseModalities path (see
+     * LLM_IMAGE_MODELS below).
      */
-    default: 'google/imagen-4.0-generate-001',
+    default: 'google/gemini-3-pro-image',
+    /** Older multimodal Gemini image variant. Same LLM-path call shape. */
+    geminiFlashImage: 'google/gemini-2.5-flash-image',
+    /** Imagen 4 — Google's dedicated image model. True `image` type on the gateway. */
+    imagen: 'google/imagen-4.0-generate-001',
     /** Cheaper, faster Imagen 4 — good for iteration loops. */
-    fast: 'google/imagen-4.0-fast-generate-001',
+    imagenFast: 'google/imagen-4.0-fast-generate-001',
     /** Highest-quality Imagen 4 — slower and pricier. */
-    ultra: 'google/imagen-4.0-ultra-generate-001',
+    imagenUltra: 'google/imagen-4.0-ultra-generate-001',
   },
 } as const
+
+/**
+ * Models the gateway lists as `language` but that emit images via the
+ * responseModalities=IMAGE channel. generateImage detects these and routes
+ * them through generateText + a parse-from-files step rather than the
+ * experimental_generateImage path (which would 404 with "No such imageModel").
+ *
+ * Keep this in sync with the gateway's /v1/models endpoint — any new Gemini
+ * image LLM Google ships should be added here.
+ */
+export const LLM_IMAGE_MODELS: ReadonlySet<string> = new Set([
+  'google/gemini-3-pro-image',
+  'google/gemini-2.5-flash-image',
+  'google/gemini-3.1-flash-image-preview',
+])
+
+/** True if the image model id needs the LLM path instead of experimental_generateImage. */
+export function isLLMImageModel(id: string): boolean {
+  return LLM_IMAGE_MODELS.has(id)
+}
 
 export type TextModelAlias = `text.${keyof typeof MODELS.text}`
 export type ImageModelAlias = `image.${keyof typeof MODELS.image}`

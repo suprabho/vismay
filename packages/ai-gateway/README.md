@@ -115,9 +115,17 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 | `text.pro` | `google/gemini-2.5-pro` |
 | `text.proPlus` | `google/gemini-3-pro` |
 | `text.claude` | `anthropic/claude-sonnet-4.6` |
-| `image.default` | `google/imagen-4.0-generate-001` |
-| `image.fast` | `google/imagen-4.0-fast-generate-001` |
-| `image.ultra` | `google/imagen-4.0-ultra-generate-001` |
+| `image.default` | `google/gemini-3-pro-image` (multimodal LLM) |
+| `image.geminiFlashImage` | `google/gemini-2.5-flash-image` (multimodal LLM) |
+| `image.imagen` | `google/imagen-4.0-generate-001` |
+| `image.imagenFast` | `google/imagen-4.0-fast-generate-001` |
+| `image.imagenUltra` | `google/imagen-4.0-ultra-generate-001` |
+
+`generateImage` auto-detects whether a model id is a dedicated image model or
+a multimodal LLM (Gemini nano-banana, Gemini Flash Image) and picks the
+correct call path under the hood. For LLM-path models the aspect ratio is
+forwarded as a prompt hint rather than a hard parameter — treat it as
+guidance, not a guarantee.
 
 Adding a model = adding a row here. Call sites use aliases, so swaps don't
 touch product code.
