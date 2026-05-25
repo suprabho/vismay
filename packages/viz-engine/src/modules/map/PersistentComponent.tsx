@@ -182,6 +182,7 @@ export default function MapPersistentComponent({
           radius: p.radius ?? shell.defaults.pinRadius,
           pulse: p.pulse,
           labelAnchor: p.labelAnchor,
+          image: p.image,
         })),
         regions,
         heatmap,

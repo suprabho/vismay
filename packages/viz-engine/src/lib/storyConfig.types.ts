@@ -108,6 +108,12 @@ export interface MapPinConfig {
   pulse?: boolean
   /** Preferred popup anchor direction. Controls which side of the pin the label appears on. */
   labelAnchor?: 'top' | 'bottom' | 'left' | 'right'
+  /**
+   * Optional image rendered inside the pin (circular crop). Accepts an
+   * `assets://<key>` reference, an absolute `http(s)` URL, or a same-origin
+   * `/path`. When set, `color` becomes the ring around the image.
+   */
+  image?: string
 }
 
 export type SectionKind = 'text' | 'hero' | 'stat'
