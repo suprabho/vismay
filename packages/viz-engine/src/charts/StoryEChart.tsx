@@ -11,26 +11,32 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 interface Props {
   option: EChartsOption
   style?: CSSProperties
-  /** Defaults to the SVG renderer — it rasterizes cleanly into Chromium's PDF. */
   opts?: { renderer?: 'canvas' | 'svg'; [key: string]: unknown }
   notMerge?: boolean
   lazyUpdate?: boolean
 }
 
 /**
- * Shared host for every foreground ECharts chart. Centralizes the two
- * capture-only behaviours that keep charts from vanishing in PDF/slide
+ * Shared host for every foreground ECharts chart. Centralizes the
+ * capture-mode behaviours that keep charts from vanishing in PDF/slide
  * renders (see `chartCapture.tsx` for the why):
  *
- *   1. Animation is forced off in capture mode, so ECharts paints its final
- *      frame on the first `setOption` — there is no zeroed transient for
- *      `page.pdf()` to snapshot.
- *   2. Readiness is driven by the ECharts `finished` event. The chart module
+ *   1. The CANVAS renderer is forced in capture mode. ECharts' SVG output
+ *      does not survive Chromium's print-to-PDF reliably (it broke around
+ *      Skia/PDF m148, and only the bespoke charts ever used SVG — every
+ *      `data:` chart already rendered to canvas and printed fine, which is
+ *      why this bug was specific to the one SVG-rendered story). Canvas
+ *      rasterizes deterministically into the PDF.
+ *   2. Animation is forced off in capture mode, so ECharts paints its final
+ *      frame on the first `setOption` — no zeroed transient for `page.pdf()`
+ *      to snapshot mid-entrance-animation.
+ *   3. Readiness is driven by the ECharts `finished` event. The chart module
  *      claims the layer's readiness slot on mount (`onClaim`) and only flips
  *      it once the chart has actually rendered (`onPainted`).
  *
- * Outside capture the context defaults are no-ops and the authored
- * `animation` is preserved, so live scroll/autoplay behaviour is unchanged.
+ * Outside capture the context defaults are no-ops, and each chart keeps its
+ * authored renderer (bespoke charts stay on SVG for crisp interactive
+ * tooltips) and `animation`, so live scroll/autoplay behaviour is unchanged.
  */
 export default function StoryEChart({ option, style, opts, notMerge, lazyUpdate }: Props) {
   const { capture, onClaim, onPainted } = useChartCapture()
@@ -53,12 +59,16 @@ export default function StoryEChart({ option, style, opts, notMerge, lazyUpdate 
   }, [capture, onClaim])
 
   const finalOption: EChartsOption = capture ? { ...option, animation: false } : option
+  // Capture: always canvas (prints deterministically). Live: keep the chart's
+  // authored renderer, defaulting to canvas to match echarts-for-react's own
+  // default (the renderer `GenericChart` has always used).
+  const renderer: 'canvas' | 'svg' = capture ? 'canvas' : (opts?.renderer ?? 'canvas')
 
   return (
     <ReactECharts
       option={finalOption}
       style={style}
-      opts={opts ?? { renderer: 'svg' }}
+      opts={{ ...opts, renderer }}
       notMerge={notMerge}
       lazyUpdate={lazyUpdate}
       onEvents={capture ? { finished: signalPainted } : undefined}
