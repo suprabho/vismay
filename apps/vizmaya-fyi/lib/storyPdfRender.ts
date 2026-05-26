@@ -135,6 +135,7 @@ async function renderPdfBuffer(args: {
     // the consumer middleware to verify.
     const url = signOutputUrl({
       baseUrl: args.baseUrl,
+      path: `/story/${args.slug}/${args.format}`,
       // Cover the whole render: the token gates the initial navigation and any
       // in-page fetches (chart data) the shell fires while we wait for
       // __pdfReady__. A short TTL could expire mid-render on a long deck now
