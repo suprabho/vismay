@@ -90,10 +90,6 @@ sections:
   - id: heat-cities
     text: "A country in the wrong half of the list"
     chart: data:hottest-cities
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
     map:
       center: [73.0, 27.0]
       zoom: 5.0
@@ -117,6 +113,10 @@ sections:
           label: "Najafgarh — urban heat island"
           color: "#e8a04f"
           labelAnchor: left
+    subsections:
+      - text: "A country in the wrong half of the list > Ninety-seven of the hottest hundred"
+      - text: "A country in the wrong half of the list > No longer a coincidence"
+      - text: "A country in the wrong half of the list > Where the loss is paid"
 
   # ═══════════════════════════════════════════════
   # MONSOON FORECAST — IMD first-stage history
@@ -125,11 +125,6 @@ sections:
   - id: monsoon-forecast-section
     text: "The driest first forecast in twenty-five years"
     chart: data:monsoon-forecast
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
-      - [3, 4]
     map:
       center: [80.0, 22.0]
       zoom: 4.2
@@ -149,6 +144,11 @@ sections:
           label: "Delhi — IMD HQ, first-stage release"
           color: "#e8a04f"
           labelAnchor: top
+    subsections:
+      - text: "The driest first forecast in twenty-five years > Ninety-two percent of the long-period average"
+      - text: "The driest first forecast in twenty-five years > El Niño at 98%"
+      - text: "The driest first forecast in twenty-five years > Three farmers, three timings"
+      - text: "The driest first forecast in twenty-five years > The market hasn't waited"
 
   # ═══════════════════════════════════════════════
   # HORMUZ CHOKEPOINT — fertilizer landed cost spike
@@ -157,11 +157,6 @@ sections:
   - id: hormuz-chokepoint
     text: "The chokepoint reopens — at a cost"
     chart: data:fertilizer-spike
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
-      - [3, 4]
     map:
       center: [60.0, 25.0]
       zoom: 3.4
@@ -194,6 +189,10 @@ sections:
           label: "Jamnagar — refinery drawdown on closure"
           color: "#3a7a8c"
           labelAnchor: left
+    subsections:
+      - text: "The chokepoint reopens — at a cost > Fourteen days, four weeks of price"
+      - text: "The chokepoint reopens — at a cost > Fertilizer is the second-order shock"
+      - text: "The chokepoint reopens — at a cost > The subsidy will have to swallow it"
 
   # ═══════════════════════════════════════════════
   # RUPEE & GROWTH — agency GDP downgrade
@@ -202,10 +201,6 @@ sections:
   - id: rupee-and-growth
     text: "Ninety-six"
     chart: data:gdp-downgrade
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
     map:
       center: [76.0, 22.0]
       zoom: 4.4
@@ -221,6 +216,10 @@ sections:
           label: "Delhi — Finance Ministry, subsidy arithmetic"
           color: "#d9a84a"
           labelAnchor: top
+    subsections:
+      - text: "Ninety-six > ₹95.84 on May 23"
+      - text: "Ninety-six > All three agencies cut"
+      - text: "Ninety-six > No rating change — yet"
 
   # ═══════════════════════════════════════════════
   # CLOSE — what stacking does
@@ -228,11 +227,6 @@ sections:
 
   - id: close
     text: "What three shocks become when they arrive together"
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
-      - [3, 4]
     map:
       center: [78.0, 22.5]
       zoom: 3.6
@@ -244,3 +238,7 @@ sections:
           label: "New Delhi"
           color: "#e8a04f"
           labelAnchor: right
+    subsections:
+      - text: "What three shocks become when they arrive together > Each shock has a precedent"
+      - text: "What three shocks become when they arrive together > Three reasons stacking is expensive"
+      - text: "What three shocks become when they arrive together > The playbook is being written now"
