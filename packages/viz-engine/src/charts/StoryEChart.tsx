@@ -1,28 +1,13 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import type { EChartsOption } from 'echarts'
 import { useChartCapture } from './chartCapture'
+import { useChartColors } from '../lib/chartTheme'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
-
-/**
- * Read the active theme's `--color-bg` off the given element by walking up the
- * computed-style cascade. `ThemeProvider` writes the var to a wrapper div, not
- * documentElement, so reading from any element inside the theme tree picks it
- * up; reading from documentElement does not.
- */
-function readThemeBg(el: HTMLElement | null): string | null {
-  if (!el || typeof window === 'undefined') return null
-  try {
-    const v = getComputedStyle(el).getPropertyValue('--color-bg').trim()
-    return v || null
-  } catch {
-    return null
-  }
-}
 
 interface Props {
   option: EChartsOption
@@ -49,11 +34,17 @@ interface Props {
  *      `backgroundColor: 'transparent'` — the canvas paints fine in-page
  *      but its pixels never reach the PDF, leaving only the map + caption
  *      around an empty rectangle. macOS Chromium tolerates the transparent
- *      canvas, so the bug only surfaced once these charts were rendered by
- *      the production CI runner. Painting with the story's --color-bg
- *      sidesteps the compositor; the chart blends into the page background
- *      regardless of how alpha is handled. `GenericChart` has always done
- *      this; doing it here covers the bespoke hand-built charts too.
+ *      canvas, so the bug only surfaces on the CI runner. Painting with
+ *      the story's theme bg (read synchronously from the `ChartColors`
+ *      context that `ThemeProvider` already publishes) sidesteps the
+ *      compositor; the chart blends into the page bg regardless of how
+ *      alpha is handled. `GenericChart` has always done this; doing it
+ *      here covers every hand-built chart too. Reading synchronously
+ *      matters — the chart's first paint already has the opaque bg.
+ *      `notMerge` chart instances fire `finished` once, and an async
+ *      useEffect-based read leaves the chart captured with the
+ *      transparent first paint (which is exactly what slipped through
+ *      the earlier PR-98 attempt on the Linux runner).
  *   3. Animation is forced off in capture mode, so ECharts paints its final
  *      frame on the first `setOption` — no zeroed transient for `page.pdf()`
  *      to snapshot mid-entrance-animation.
@@ -68,20 +59,8 @@ interface Props {
  */
 export default function StoryEChart({ option, style, opts, notMerge, lazyUpdate }: Props) {
   const { capture, onClaim, onPainted } = useChartCapture()
+  const { bg: themeBg } = useChartColors()
   const painted = useRef(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  // Capture mode reads --color-bg off the chart's mounted element (so it
-  // walks up to ThemeProvider's wrapper). We need the DOM node to exist
-  // before we can read it, so the first render falls back to whatever the
-  // option declared; the second render (after the ref attaches) uses the
-  // resolved theme bg. In practice capture mode runs animation-off, so the
-  // single extra render is invisible.
-  const [themeBg, setThemeBg] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!capture) return
-    setThemeBg(readThemeBg(rootRef.current))
-  }, [capture])
 
   const signalPainted = () => {
     if (painted.current) return
@@ -104,9 +83,8 @@ export default function StoryEChart({ option, style, opts, notMerge, lazyUpdate 
         ...option,
         animation: false,
         // Force opaque bg in capture (see point 2 above). Falls back to
-        // whatever the option already set if the theme var isn't readable yet
-        // (first render before the ref attaches).
-        backgroundColor: themeBg ?? option.backgroundColor ?? '#000',
+        // whatever the option already set if context didn't provide one.
+        backgroundColor: themeBg || option.backgroundColor || '#000',
       }
     : option
   // Capture: always canvas (prints deterministically). Live: keep the chart's
@@ -115,18 +93,13 @@ export default function StoryEChart({ option, style, opts, notMerge, lazyUpdate 
   const renderer: 'canvas' | 'svg' = capture ? 'canvas' : (opts?.renderer ?? 'canvas')
 
   return (
-    // `display: contents` keeps the ref attached without affecting the
-    // surrounding flex layout (chart parents are flex-col with the caption
-    // sibling counting on a 380px-tall echarts box, not a wrapped one).
-    <div ref={rootRef} style={{ display: 'contents' }}>
-      <ReactECharts
-        option={finalOption}
-        style={style}
-        opts={{ ...opts, renderer }}
-        notMerge={notMerge}
-        lazyUpdate={lazyUpdate}
-        onEvents={capture ? { finished: signalPainted } : undefined}
-      />
-    </div>
+    <ReactECharts
+      option={finalOption}
+      style={style}
+      opts={{ ...opts, renderer }}
+      notMerge={notMerge}
+      lazyUpdate={lazyUpdate}
+      onEvents={capture ? { finished: signalPainted } : undefined}
+    />
   )
 }
