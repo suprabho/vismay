@@ -34,9 +34,10 @@ loadEnv({ path: '.env' })
 
 const DATA_DIR = resolve(process.cwd(), 'vizmaya-data/coke-studio')
 const SONGS_CSV          = resolve(DATA_DIR, 'songs.csv')
-const GAZETTEER_CSV      = resolve(DATA_DIR, 'gazetteer.csv')
-const SONG_LANGUAGES_CSV = resolve(DATA_DIR, 'song_languages.csv')
-const PLACE_MENTIONS_CSV = resolve(DATA_DIR, 'place_mentions.csv')
+const GAZETTEER_CSV           = resolve(DATA_DIR, 'gazetteer.csv')
+const GAZETTEER_ADDITIONS_CSV = resolve(DATA_DIR, 'gazetteer-additions.csv')
+const SONG_LANGUAGES_CSV      = resolve(DATA_DIR, 'song_languages.csv')
+const PLACE_MENTIONS_CSV      = resolve(DATA_DIR, 'place_mentions.csv')
 
 const BATCH_SIZE = 100
 
@@ -46,6 +47,17 @@ function readRows(path: string): Record<string, string>[] {
   if (!existsSync(path)) throw new Error(`missing CSV: ${path}`)
   const raw = readFileSync(path, 'utf8')
   return parseCsv(raw, {
+    columns: true,
+    skip_empty_lines: true,
+    bom: true,
+    trim: true,
+  }) as Record<string, string>[]
+}
+
+// gazetteer-additions.csv is optional (only written by extract-places.ts).
+function readRowsOptional(path: string): Record<string, string>[] {
+  if (!existsSync(path)) return []
+  return parseCsv(readFileSync(path, 'utf8'), {
     columns: true,
     skip_empty_lines: true,
     bom: true,
@@ -177,15 +189,24 @@ function parseSongs(): SongRow[] {
 }
 
 function parseGazetteer(): GazetteerRow[] {
-  return readRows(GAZETTEER_CSV).map((r): GazetteerRow => {
+  // Hand-seeded entries from gazetteer.csv come first; LLM auto-additions
+  // from gazetteer-additions.csv (written by extract-places.ts) are merged
+  // after, deduped on place_canonical so the seed wins.
+  const seedRows = readRows(GAZETTEER_CSV)
+  const additionRows = readRowsOptional(GAZETTEER_ADDITIONS_CSV)
+  const seen = new Set<string>()
+  const out: GazetteerRow[] = []
+  for (const r of [...seedRows, ...additionRows]) {
     const place_canonical = nullable(r.place_canonical)
-    if (!place_canonical) throw new Error(`gazetteer.csv: row missing place_canonical: ${JSON.stringify(r)}`)
+    if (!place_canonical) throw new Error(`gazetteer row missing place_canonical: ${JSON.stringify(r)}`)
+    if (seen.has(place_canonical)) continue
+    seen.add(place_canonical)
     const place_type = nullable(r.place_type)
     if (!place_type) throw new Error(`gazetteer.csv: ${place_canonical} missing place_type`)
     const lat = parseFloat0(r.lat)
     const lon = parseFloat0(r.lon)
     if (lat == null || lon == null) throw new Error(`gazetteer.csv: ${place_canonical} missing lat/lon`)
-    return {
+    out.push({
       place_canonical,
       place_type,
       modern_country:    nullable(r.modern_country),
@@ -194,8 +215,9 @@ function parseGazetteer(): GazetteerRow[] {
       lon,
       aliases:           nullable(r.aliases),
       notes:             nullable(r.notes),
-    }
-  })
+    })
+  }
+  return out
 }
 
 function parseSongLanguages(): SongLanguageRow[] {
