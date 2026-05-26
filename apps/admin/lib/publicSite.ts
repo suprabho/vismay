@@ -58,7 +58,13 @@ export function vizmayaUrl(path: string): string {
  * is what admins actually want to see. Epics on footshorts have a bespoke
  * landing at `/editorial/epic/<slug>`; vizf1 has no epic route at all.
  *
+ * On vizmaya.fyi epics own their own top-level slug (each epic ships its
+ * own bespoke landing under `apps/vizmaya-fyi/app/<slug>/`), so the preview
+ * URL is just `/<slug>` — there is no `/epic/...` segment.
+ *
  * Keep this in lockstep with the consumer apps' routes:
+ *   apps/vizmaya-fyi/app/<slug>/                      (epic landing — bespoke per epic)
+ *   apps/vizmaya-fyi/app/story/[slug]/                (story reader)
  *   apps/footshorts/web/app/editorial/[slug]/         (story reader)
  *   apps/footshorts/web/app/editorial/epic/[slug]/    (epic landing)
  *   apps/vizf1/web/app/editorial/[slug]/             (story reader)
@@ -73,7 +79,7 @@ const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
   'vizmaya-fyi': {
     baseUrl: vizmayaPublicUrl,
     storyPath: (slug) => `/story/${slug}`,
-    epicPath: (slug) => `/epic/${slug}`,
+    epicPath: (slug) => `/${slug}`,
   },
   vizf1: {
     baseUrl: vizf1PublicUrl,
