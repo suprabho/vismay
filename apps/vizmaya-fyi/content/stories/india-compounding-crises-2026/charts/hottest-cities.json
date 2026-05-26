@@ -1,0 +1,183 @@
+{
+  "steps": [
+    {
+      "title": "Peak May 2026 temperature, °C — top 15 cities globally (Copernicus / IMD station data). Every entry is in India.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}: {c}°C"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 42,
+          "max": 49,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "{value}°"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Patna",
+            "Allahabad",
+            "Jhansi",
+            "Delhi (Safdarjung)",
+            "Nagpur",
+            "Bhilwara",
+            "Hisar",
+            "Najafgarh",
+            "Bikaner",
+            "Jaisalmer",
+            "Churu",
+            "Ganganagar",
+            "Sirsa",
+            "Barmer",
+            "Phalodi"
+          ],
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          }
+        },
+        "series": [
+          {
+            "name": "Peak temp",
+            "type": "bar",
+            "barWidth": 14,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "formatter": "{c}°"
+            },
+            "data": [
+              {
+                "value": 44.6,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 45.0,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 45.2,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 45.4,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 45.7,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 46.0,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 46.3,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "value": 46.5,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "value": 46.8,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "value": 47.0,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "value": 47.1,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": 47.3,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": 47.5,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": 47.9,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              },
+              {
+                "value": 48.1,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

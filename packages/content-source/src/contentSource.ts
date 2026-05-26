@@ -320,13 +320,14 @@ const dbSource: ContentSource = {
     return data?.data ?? null
   },
   async writeMarkdown(slug, raw) {
-    // Parse frontmatter so the denormalized title/status/listed columns stay
-    // in sync with the body — the admin editor may edit frontmatter inline.
+    // Parse frontmatter so the denormalized title/status/listed/aura columns
+    // stay in sync with the body — the admin editor may edit frontmatter inline.
     const { default: matter } = await import('gray-matter')
     const { data } = matter(raw)
     const title = (data.title as string | undefined) ?? slug
     const status = ((data.status as string | undefined) ?? 'published') as StoryStatus
     const listed = data.listed !== false
+    const aura = (data.aura as string | undefined)?.trim() || null
     const sb = createServiceClient()
     const { error } = await sb.from('stories').upsert(
       {
@@ -334,6 +335,7 @@ const dbSource: ContentSource = {
         title,
         status,
         listed,
+        aura,
         markdown: raw,
         updated_at: new Date().toISOString(),
         published_at: status === 'published' ? new Date().toISOString() : null,

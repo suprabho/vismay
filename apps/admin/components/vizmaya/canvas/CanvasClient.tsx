@@ -9,12 +9,14 @@ import {
   useState,
 } from 'react'
 import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
+import { getForegroundLayout } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
   shareNode,
   reportNodeFormat,
   mapOverrideNode,
   narrationNode,
+  contentNode,
   parseCanvasSources,
   liveUnit,
   buildInputGraph,
@@ -22,6 +24,22 @@ import {
   type InputGraph,
 } from './canvasInputs'
 import type { InputNodeData } from './InputNode'
+import {
+  seedLayerForType,
+  appendBackgroundLayer,
+  appendForegroundFlatLayer,
+  appendForegroundRegionLayer,
+  addForegroundRegion,
+  createBackgroundWithLayer,
+  seedShareSection,
+  seedReportPage,
+  seedMapOverride,
+  seedTtsUnit,
+} from './canvasSlotAdd'
+import AddMenu, {
+  type AddMenuTarget,
+  type AddMenuChoice,
+} from './AddMenu'
 // Re-imported for the addLeaf type — InputNodeData['slot'] is the discriminator
 // the leaf click dispatcher branches on.
 import {
@@ -66,6 +84,16 @@ interface Props {
    * Empty values fall back to a blank src.
    */
   signedSrcById: Record<string, string>
+  /**
+   * Module `type` strings available for the "+ add layer" picker, grouped
+   * by slot. Resolved server-side via `getModuleTypesForVertical` so the
+   * canvas knows what's in the registry for this story's vertical
+   * without dragging vertical bundles into the client.
+   */
+  moduleTypes: {
+    background: string[]
+    foreground: string[]
+  }
 }
 
 /**
@@ -117,11 +145,18 @@ const OVERRIDE_GAP_Y = 36
 const FRAME_OVERLAY_H = 56
 
 /** Which override input sockets each output group exposes. Drives both
- *  socket creation on the OutputNode and the override → output wiring. */
+ *  socket creation on the OutputNode and the override → output wiring.
+ *
+ *  `content` (markdown body) and `map` (map.yaml override) are shared data
+ *  feeding every output — wiring them in as sockets on share / slides /
+ *  report makes that lineage visible (and clickable to edit) from each
+ *  group instead of forcing the user back to the frame's left column.
+ *  Autoplay already wires `map`; it doesn't get `content` because narration
+ *  IS its content surface for that group. */
 const OVERRIDE_SOCKETS_BY_GROUP: Record<OutputGroupId, string[]> = {
-  share: ['variants'],
-  slides: ['override'],
-  report: ['override'],
+  share: ['variants', 'content', 'map'],
+  slides: ['override', 'content', 'map'],
+  report: ['override', 'content', 'map'],
   autoplay: ['map', 'narration'],
 }
 
@@ -143,6 +178,22 @@ function buildOverridesForGroup(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>
 ): OverrideSpec[] {
+  // Content + map are shared inputs every output consumes (no per-format
+  // file), so the builders are reused across share/slides/report. Editing
+  // them from any of those groups writes the same markdown / map.yaml as
+  // editing from the frame's left column.
+  const sharedFeeds: OverrideSpec[] = [
+    {
+      data: contentNode(unit),
+      socket: 'content',
+      editKind: 'content',
+    },
+    {
+      data: mapOverrideNode(unit, parsed),
+      socket: 'map',
+      editKind: 'map',
+    },
+  ]
   switch (groupId) {
     case 'share':
       return [
@@ -151,6 +202,7 @@ function buildOverridesForGroup(
           socket: 'variants',
           editKind: 'share',
         },
+        ...sharedFeeds,
       ]
     case 'slides':
       return [
@@ -159,6 +211,7 @@ function buildOverridesForGroup(
           socket: 'override',
           editKind: 'slides',
         },
+        ...sharedFeeds,
       ]
     case 'report':
       return [
@@ -167,6 +220,7 @@ function buildOverridesForGroup(
           socket: 'override',
           editKind: 'report',
         },
+        ...sharedFeeds,
       ]
     case 'autoplay':
       return [
@@ -290,6 +344,7 @@ export default function CanvasClient({
   sources: initialSources,
   theme,
   signedSrcById,
+  moduleTypes,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
@@ -303,12 +358,19 @@ export default function CanvasClient({
   const [sources, setSources] = useState<CanvasSources>(initialSources)
   const configYamlRef = useRef(sources.configYaml)
   const markdownRef = useRef(sources.markdown)
+  // Whole-bundle ref for the +Add dispatcher: override seeding reads
+  // share/report/map/tts yamls and we don't want to track each in its
+  // own ref when one mirror covers them all.
+  const sourcesRef = useRef(sources)
   useEffect(() => {
     configYamlRef.current = sources.configYaml
   }, [sources.configYaml])
   useEffect(() => {
     markdownRef.current = sources.markdown
   }, [sources.markdown])
+  useEffect(() => {
+    sourcesRef.current = sources
+  }, [sources])
   // Bumped on every successful save — appended to iframe URLs as a
   // cache-bust so the iframes pull the fresh render.
   const [dataNonce, setDataNonce] = useState(0)
@@ -328,6 +390,46 @@ export default function CanvasClient({
   }, [setSlotTarget])
   const [slotSaving, setSlotSaving] = useState(false)
   const [slotError, setSlotError] = useState<string | null>(null)
+
+  /* ─── Add-menu state ────────────────────────────────────────── */
+  // Drives the floating context menu on junction / header right-click.
+  // Null when no menu is open; the menu's `target` drives the picker UI;
+  // `context` rides alongside to tell the dispatcher how to interpret
+  // the user's pick (which append helper to call, etc.).
+  type AddDispatchContext =
+    | {
+        kind: 'layer'
+        dispatch:
+          | { kind: 'background-append' }
+          | { kind: 'background-create' }
+          | { kind: 'foreground-flat-append' }
+          | { kind: 'foreground-region-append'; regionKey: string }
+      }
+    | { kind: 'region'; layoutHint: string }
+    | {
+        kind: 'override'
+        overrideKind: 'share' | 'slides' | 'report' | 'map' | 'narration'
+      }
+  const [addMenu, setAddMenu] = useState<{
+    position: { x: number; y: number }
+    target: AddMenuTarget
+    /** Section the menu was opened against. The dispatcher reads the
+     *  section's current sources at save time, but the unit identity
+     *  (parentIndex / subIndex) is captured here so the menu acts on the
+     *  section the user right-clicked, not whatever section becomes
+     *  active by the time they pick. */
+    sourceSectionIndex: number
+    context: AddDispatchContext
+  } | null>(null)
+  const setAddMenuRef = useRef(setAddMenu)
+  useEffect(() => {
+    setAddMenuRef.current = setAddMenu
+  }, [setAddMenu])
+  // moduleTypes from props, mirrored for closures captured at editor build.
+  const moduleTypesRef = useRef(moduleTypes)
+  useEffect(() => {
+    moduleTypesRef.current = moduleTypes
+  }, [moduleTypes])
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
@@ -382,10 +484,15 @@ export default function CanvasClient({
   // which foreground region the click targeted. Carried alongside so the
   // single 'region' edit kind handles every named region the layout
   // produces (lead / charts / body / sidebar / …) without per-key cases.
+  // `slotPath` is only meaningful when `kind === 'layer'`; it names
+  // which background/foreground layer the click targeted. Carried
+  // alongside for the same reason — one edit kind handles every layer
+  // slot the canvas surfaces.
   const [editorTarget, setEditorTarget] = useState<{
     kind: EditableKind
     unit: ResolvedUnit
     regionKey?: string
+    slotPath?: SlotPath
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -398,7 +505,8 @@ export default function CanvasClient({
             editorTarget.kind,
             editorTarget.unit,
             sources,
-            editorTarget.regionKey
+            editorTarget.regionKey,
+            editorTarget.slotPath
           )
         : null,
     [editorTarget, sources]
@@ -507,7 +615,13 @@ export default function CanvasClient({
       }
 
       // Group header — click to expand/collapse. No data flow.
+      //
+      // `onContextMenu` is set in the header build loop so right-clicking
+      // the header opens the AddMenu's override-seed picker for that
+      // group (e.g. seed a Share variant entry that the section doesn't
+      // have yet).
       class GroupHeaderControl extends ClassicPreset.Control {
+        onContextMenu?: (clientX: number, clientY: number) => void
         constructor(
           public groupId: OutputGroupId,
           public label: string,
@@ -529,6 +643,17 @@ export default function CanvasClient({
       // stack at once would conflate layout + regions.
       class JunctionControl extends ClassicPreset.Control {
         onClick?: () => void
+        // Right-click handler — set on Background / Foreground / region
+        // junctions so the user can open the +Add picker from any of
+        // them. Sticking it on the control (not the node) so the React
+        // view reads it through the same render-customize path the rest
+        // of the canvas uses.
+        onContextMenu?: (clientX: number, clientY: number) => void
+        // Layout-region mismatch warning — set on region junctions whose
+        // key isn't in `getForegroundLayout(layoutName).regions`. The
+        // view renders it as a small ⚠ chip so the user sees that the
+        // region won't render until the layout is updated.
+        warning?: string
         constructor(public sub: string) {
           super()
         }
@@ -922,12 +1047,21 @@ export default function CanvasClient({
             prev === data.groupId ? null : data.groupId
           )
         }
+        // Right-click opens the override-seed AddMenu, anchored at cursor.
+        // Preventing default keeps the browser menu from layering on top.
+        const onContextMenu = (e: React.MouseEvent) => {
+          if (!data.onContextMenu) return
+          e.preventDefault()
+          stop(e)
+          data.onContextMenu(e.clientX, e.clientY)
+        }
         return (
           <button
             type="button"
             onPointerDown={stop}
             onMouseDown={stop}
             onClick={onClick}
+            onContextMenu={onContextMenu}
             style={{
               width: HEADER_W - 24,
               height: HEADER_H - 20,
@@ -988,8 +1122,14 @@ export default function CanvasClient({
         // When the junction is editable (Background / region junctions), an
         // EDIT chip lights up and the box becomes clickable. Matches the
         // hover affordance on leaf TextPreviewControls so the user reads
-        // both as "click to edit".
+        // both as "click to edit". A right-click on any junction opens the
+        // +Add menu via `onContextMenu` — independent of whether the
+        // junction is left-click editable.
         const editable = typeof data.onClick === 'function'
+        const hasContextMenu = typeof data.onContextMenu === 'function'
+        // Pointer events need to be 'auto' if EITHER edit OR right-click
+        // is wired — otherwise the right-click event never reaches us.
+        const wantsPointer = editable || hasContextMenu
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -997,24 +1137,38 @@ export default function CanvasClient({
           stop(e)
           data.onClick?.()
         }
+        const onContextMenu = (e: React.MouseEvent) => {
+          if (!hasContextMenu) return
+          e.preventDefault()
+          stop(e)
+          data.onContextMenu?.(e.clientX, e.clientY)
+        }
+        const titleHint = editable
+          ? hasContextMenu
+            ? 'click to edit · right-click to add'
+            : 'click to edit'
+          : hasContextMenu
+            ? 'right-click to add'
+            : undefined
         return (
           <div
             onClick={onClick}
-            onPointerDown={editable ? stop : undefined}
-            onMouseDown={editable ? stop : undefined}
-            title={editable ? 'click to edit' : undefined}
+            onContextMenu={onContextMenu}
+            onPointerDown={wantsPointer ? stop : undefined}
+            onMouseDown={wantsPointer ? stop : undefined}
+            title={titleHint}
             style={{
               width: INPUT_W - 24,
               padding: '6px 10px',
               background: '#121212',
-              border: '1px solid #333',
+              border: `1px solid ${data.warning ? '#a07a3a' : '#333'}`,
               borderRadius: 8,
               fontFamily: 'system-ui, sans-serif',
               fontSize: 10,
               color: '#777',
               letterSpacing: '0.06em',
               cursor: editable ? 'pointer' : 'default',
-              pointerEvents: editable ? 'auto' : 'none',
+              pointerEvents: wantsPointer ? 'auto' : 'none',
               transition: 'border-color 120ms',
               display: 'flex',
               alignItems: 'center',
@@ -1024,13 +1178,30 @@ export default function CanvasClient({
               if (editable) e.currentTarget.style.borderColor = '#3a5da0'
             }}
             onMouseLeave={(e) => {
-              if (editable) e.currentTarget.style.borderColor = '#333'
+              if (editable) {
+                e.currentTarget.style.borderColor = data.warning
+                  ? '#a07a3a'
+                  : '#333'
+              }
             }}
           >
             <span style={{ flex: 1, minWidth: 0 }}>{data.sub}</span>
-            {editable && (
+            {data.warning && (
+              <span
+                title={data.warning}
+                style={{ color: '#a07a3a', letterSpacing: '0.14em' }}
+              >
+                ⚠ MISMATCH
+              </span>
+            )}
+            {editable && !data.warning && (
               <span style={{ color: '#3a5da0', letterSpacing: '0.14em' }}>
                 EDIT
+              </span>
+            )}
+            {hasContextMenu && !editable && !data.warning && (
+              <span style={{ color: '#555', letterSpacing: '0.14em' }}>
+                + ADD
               </span>
             )}
           </div>
@@ -1186,6 +1357,82 @@ export default function CanvasClient({
         }
       }
 
+      /**
+       * Open the +Add menu at `(cx, cy)`. The `context` field travels
+       * with the menu's target so the dispatcher knows what to do when
+       * the user picks. Reads the active section through refs at call
+       * time so right-clicking targets the section the user is looking
+       * at, not the build-time one.
+       *
+       * Returns nothing — the JunctionControl's onContextMenu is what
+       * the React event fires into; this helper produces those handlers.
+       */
+      function makeAddLayerOpener(opts: {
+        slot: 'background' | 'foreground'
+        label: string
+        /** Discriminator for the dispatcher: how to splice the new layer. */
+        dispatch:
+          | { kind: 'background-append' }
+          | { kind: 'background-create' }
+          | { kind: 'foreground-flat-append' }
+          | { kind: 'foreground-region-append'; regionKey: string }
+      }): (clientX: number, clientY: number) => void {
+        return (clientX, clientY) => {
+          const idx = stateRef.current.activeSectionIndex
+          setAddMenuRef.current({
+            position: { x: clientX, y: clientY },
+            target: {
+              kind: 'layer',
+              slot: opts.slot,
+              availableTypes: moduleTypesRef.current[opts.slot],
+              label: opts.label,
+            },
+            sourceSectionIndex: idx,
+            context: { kind: 'layer', dispatch: opts.dispatch },
+          })
+        }
+      }
+
+      function makeAddRegionOpener(opts: {
+        knownKeys: string[]
+        existingKeys: string[]
+        layoutName: string
+      }): (clientX: number, clientY: number) => void {
+        return (clientX, clientY) => {
+          const idx = stateRef.current.activeSectionIndex
+          setAddMenuRef.current({
+            position: { x: clientX, y: clientY },
+            target: {
+              kind: 'region',
+              knownKeys: opts.knownKeys,
+              existingKeys: opts.existingKeys,
+              layoutName: opts.layoutName,
+            },
+            sourceSectionIndex: idx,
+            context: { kind: 'region', layoutHint: opts.layoutName },
+          })
+        }
+      }
+
+      function makeAddOverrideOpener(opts: {
+        label: string
+        overrideKind: 'share' | 'slides' | 'report' | 'map' | 'narration'
+      }): (clientX: number, clientY: number) => void {
+        return (clientX, clientY) => {
+          const idx = stateRef.current.activeSectionIndex
+          setAddMenuRef.current({
+            position: { x: clientX, y: clientY },
+            target: {
+              kind: 'override',
+              label: opts.label,
+              overrideKind: opts.overrideKind,
+            },
+            sourceSectionIndex: idx,
+            context: { kind: 'override', overrideKind: opts.overrideKind },
+          })
+        }
+      }
+
       async function mountInputs(view: SectionView): Promise<void> {
         const g = view.graph
         const offset = FRAME_H / 2 - measureLeftHeight(g) / 2
@@ -1223,6 +1470,17 @@ export default function CanvasClient({
               const targetUnit = sectionUnitsRef.current[idx]
               if (!targetUnit) return
               if (slot.layerType === 'map') {
+                // Two-step affordance: open the YAML in the right panel
+                // first so the user has a literal source to read while the
+                // visual picker is open, and so closing the modal lands them
+                // on the Monaco editor for fine-grained pin/style tweaks
+                // the picker doesn't expose. Both close together on section
+                // switch (see the activeSectionIndex effect below).
+                setEditorTargetRef.current({
+                  kind: 'layer',
+                  unit: targetUnit,
+                  slotPath: slot.path,
+                })
                 setSlotTargetRef.current({
                   mode: 'map',
                   unit: targetUnit,
@@ -1266,13 +1524,20 @@ export default function CanvasClient({
           sub: string,
           x: number,
           y: number,
-          onClick?: () => void
+          onClick?: () => void,
+          opts?: {
+            onContextMenu?: (clientX: number, clientY: number) => void
+            warning?: string
+          }
         ): Promise<JunctionNode> => {
           const node = new JunctionNode(label, sub)
-          if (onClick) {
-            ;(node.controls.ctrl as InstanceType<typeof JunctionControl>).onClick =
-              onClick
-          }
+          const ctrl = node.controls.ctrl as InstanceType<typeof JunctionControl>
+          if (onClick) ctrl.onClick = onClick
+          // Set onContextMenu + warning BEFORE addNode so the initial React
+          // render sees them — the +ADD chip and ⚠ MISMATCH chip both
+          // depend on these being present at first paint.
+          if (opts?.onContextMenu) ctrl.onContextMenu = opts.onContextMenu
+          if (opts?.warning) ctrl.warning = opts.warning
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
           leftNodeIds.add(node.id)
@@ -1332,6 +1597,10 @@ export default function CanvasClient({
           // Editable: clicking opens the whole background layer stack as
           // YAML. Empty save deletes the field; the renderer then falls
           // back to whatever the legacy `map:` shim or absence implies.
+          // Right-click: opens the +Add layer picker. When shape is
+          // 'none', the dispatcher creates the background array from
+          // scratch ('background-create'); otherwise it appends to the
+          // existing array ('background-append').
           const bgNode = await addJunction(
             'Background',
             leaves.length === 1 && g.background.shape === 'none'
@@ -1341,7 +1610,17 @@ export default function CanvasClient({
                 }`,
             regionColX,
             y + h / 2 - JUNCTION_H / 2,
-            makeEditClick('background')
+            makeEditClick('background'),
+            {
+              onContextMenu: makeAddLayerOpener({
+                slot: 'background',
+                label: 'Background',
+                dispatch:
+                  g.background.shape === 'none'
+                    ? { kind: 'background-create' }
+                    : { kind: 'background-append' },
+              }),
+            }
           )
           await wire(bgNode, 'value', frame, 'background')
           let ly = y + (h - stackH(leaves.length)) / 2
@@ -1359,6 +1638,19 @@ export default function CanvasClient({
           const fgTop = y
           const regionCenters: number[] = []
           const regionNodes: JunctionNode[] = []
+          // Cache the layout's known region keys once per mount so the
+          // warning check + region picker suggestions all read the same
+          // source of truth. `getForegroundLayout(layoutName)` returns
+          // undefined for an unknown layout; we treat that as "no known
+          // keys" rather than throwing — the user might be mid-rename.
+          const layoutName = fg.layout ?? ''
+          const layoutDef = layoutName
+            ? getForegroundLayout(layoutName)
+            : undefined
+          const layoutKnownKeys = layoutDef
+            ? Object.keys(layoutDef.regions)
+            : []
+          const existingRegionKeys = fg.regions.map((r) => r.key)
           for (const region of fg.regions) {
             const leaves =
               region.layers.length > 0
@@ -1372,6 +1664,14 @@ export default function CanvasClient({
                     },
                   ]
             const h = bandH(leaves.length)
+            // Warning if the layout doesn't reference this region key —
+            // the YAML will write but the renderer's layout dispatcher
+            // won't paint it, so the user needs to know.
+            const isUnknownToLayout =
+              layoutDef !== undefined && !layoutKnownKeys.includes(region.key)
+            const regionWarning = isUnknownToLayout
+              ? `Region '${region.key}' is not used by layout '${layoutName}'. The renderer won't paint this region until the layout is updated or the region key is changed.`
+              : undefined
             // Each region (lead / charts / body / …) is editable as its
             // own YAML slice of foreground.regions[region.key]. The
             // generic 'region' kind handles any region name the layout
@@ -1384,7 +1684,18 @@ export default function CanvasClient({
               } · region`,
               regionColX,
               y + h / 2 - JUNCTION_H / 2,
-              makeEditClick('region', region.key)
+              makeEditClick('region', region.key),
+              {
+                onContextMenu: makeAddLayerOpener({
+                  slot: 'foreground',
+                  label: `${region.label} region`,
+                  dispatch: {
+                    kind: 'foreground-region-append',
+                    regionKey: region.key,
+                  },
+                }),
+                warning: regionWarning,
+              }
             )
             regionNodes.push(rj)
             regionCenters.push(y + h / 2)
@@ -1407,24 +1718,45 @@ export default function CanvasClient({
           // finer-grained per-region edits when shape === 'regions';
           // this is the catch-all entry point and the ONLY editor on
           // flat / none shapes.
+          //
+          // Right-click: regions-shape opens the region picker so the
+          // user can add a new region under foreground.regions; the
+          // picker surfaces layout-defined region suggestions.
           const fgNode = await addJunction(
             'Foreground',
             fg.layout ? `layout: ${fg.layout}` : 'regions',
             groupColX,
             center - JUNCTION_H / 2,
-            makeEditClick('foreground')
+            makeEditClick('foreground'),
+            {
+              onContextMenu: makeAddRegionOpener({
+                knownKeys: layoutKnownKeys,
+                existingKeys: existingRegionKeys,
+                layoutName,
+              }),
+            }
           )
           await wire(fgNode, 'value', frame, 'foreground')
           for (const rj of regionNodes) await wire(rj, 'value', fgNode, 'in')
         } else if (fg.shape === 'flat') {
           const leaves = fg.layers
           const h = bandH(leaves.length)
+          // Right-click on flat foreground appends a new layer to the
+          // existing flat array. Switching shape (flat → regions) would
+          // clobber the layer stack, so the picker stays in layer mode.
           const fgNode = await addJunction(
             'Foreground',
             'flat layer stack',
             groupColX,
             y + h / 2 - JUNCTION_H / 2,
-            makeEditClick('foreground')
+            makeEditClick('foreground'),
+            {
+              onContextMenu: makeAddLayerOpener({
+                slot: 'foreground',
+                label: 'Foreground (flat)',
+                dispatch: { kind: 'foreground-flat-append' },
+              }),
+            }
           )
           await wire(fgNode, 'value', frame, 'foreground')
           let ly = y + (h - stackH(leaves.length)) / 2
@@ -1434,12 +1766,27 @@ export default function CanvasClient({
             ly += LEAF_H + LGAP_Y
           }
         } else {
+          // 'none' shape: foreground is absent. Right-click opens the
+          // region picker; adding a region promotes the foreground to
+          // regions shape with the default layout (`split-37-63-two-row`).
+          // Picker shows that default's region keys as suggestions.
+          const defaultLayout = 'split-37-63-two-row'
+          const defaultLayoutDef = getForegroundLayout(defaultLayout)
           const fgNode = await addJunction(
             'Foreground',
             'none',
             groupColX,
             y,
-            makeEditClick('foreground')
+            makeEditClick('foreground'),
+            {
+              onContextMenu: makeAddRegionOpener({
+                knownKeys: defaultLayoutDef
+                  ? Object.keys(defaultLayoutDef.regions)
+                  : [],
+                existingKeys: [],
+                layoutName: defaultLayout,
+              }),
+            }
           )
           await wire(fgNode, 'value', frame, 'foreground')
           const ln = await addLeaf(
@@ -1481,6 +1828,21 @@ export default function CanvasClient({
         OUTPUT_GROUPS.length * HEADER_H +
         (OUTPUT_GROUPS.length - 1) * HEADER_GAP_Y
       const headersStartY = 0 + FRAME_H / 2 - headersTotalH / 2
+      // Map of group → which override "seed" the right-click menu offers.
+      // Share/Slides/Report each have one override; Autoplay covers both
+      // map and narration but the menu can only pick one — we go with
+      // narration as the canonical Autoplay add (map overrides are
+      // editable in-place via the map override card or the map slot on
+      // the canvas's left side).
+      const GROUP_OVERRIDE_KIND: Record<
+        OutputGroupId,
+        'share' | 'slides' | 'report' | 'map' | 'narration'
+      > = {
+        share: 'share',
+        slides: 'slides',
+        report: 'report',
+        autoplay: 'narration',
+      }
       for (let i = 0; i < OUTPUT_GROUPS.length; i++) {
         const group = OUTPUT_GROUPS[i]
         const childCount = initialView.outputs[group.id].length
@@ -1494,6 +1856,15 @@ export default function CanvasClient({
           expanded,
           displayedCount
         )
+        // Right-click on the header opens the +Add menu's override-seed
+        // picker for this group's primary override kind. Idempotent
+        // server-side: if the override already exists for this section,
+        // the seed helper leaves it alone so the user can still right-
+        // click to re-open the editor on a missing field.
+        node.headerCtrl.onContextMenu = makeAddOverrideOpener({
+          label: `${group.label} · this section`,
+          overrideKind: GROUP_OVERRIDE_KIND[group.id],
+        })
         headerNodes[group.id] = node
         await editor.addNode(node)
         await area.translate(node.id, {
@@ -1825,7 +2196,8 @@ export default function CanvasClient({
           editorTarget.unit,
           sources,
           editedText,
-          editorTarget.regionKey
+          editorTarget.regionKey,
+          editorTarget.slotPath
         )
         await saveSlice(slug, merge)
         // Apply locally so the canvas updates without a refetch round
@@ -1977,6 +2349,210 @@ export default function CanvasClient({
     setSlotError(null)
   }, [])
 
+  /* ─── +Add menu dispatcher ────────────────────────────────────── */
+  // When the user picks something in the floating menu, route to the right
+  // canvasSlotAdd helper, persist via the matching save endpoint, patch
+  // `sources` locally so the canvas re-renders, then open the editor on
+  // the newly-created item so the user can fill it in. Errors bubble to
+  // a toast — we don't keep the menu open after a save failure since the
+  // local state and disk state would have diverged either way.
+  const handleAddMenuPick = useCallback(
+    async (choice: AddMenuChoice) => {
+      const cur = addMenu
+      if (!cur) return
+      const targetUnit =
+        sectionUnitsRef.current[cur.sourceSectionIndex] ??
+        sectionUnitsRef.current[stateRef.current.activeSectionIndex]
+      if (!targetUnit) return
+
+      try {
+        const currentConfig = configYamlRef.current
+        const currentSources = sourcesRef.current
+
+        if (choice.kind === 'layer' && cur.context.kind === 'layer') {
+          // Build the seed body for this type. For map/image we'll open
+          // the visual editor next; for others, the YAML EditorPanel.
+          const seed = seedLayerForType(choice.type)
+          let next: { yaml: string; path: SlotPath }
+          switch (cur.context.dispatch.kind) {
+            case 'background-append':
+              next = appendBackgroundLayer(
+                currentConfig,
+                targetUnit.parentIndex,
+                seed
+              )
+              break
+            case 'background-create':
+              next = createBackgroundWithLayer(
+                currentConfig,
+                targetUnit.parentIndex,
+                seed
+              )
+              break
+            case 'foreground-flat-append':
+              next = appendForegroundFlatLayer(
+                currentConfig,
+                targetUnit.parentIndex,
+                seed
+              )
+              break
+            case 'foreground-region-append':
+              next = appendForegroundRegionLayer(
+                currentConfig,
+                targetUnit.parentIndex,
+                cur.context.dispatch.regionKey,
+                seed
+              )
+              break
+          }
+          await saveConfigYaml(slug, next.yaml)
+          setSources((p) => ({ ...p, configYaml: next.yaml }))
+          setDataNonce((n) => n + 1)
+          setAddMenu(null)
+          // Open the right editor for the new slot. Map gets the visual
+          // picker; image gets the image modal; everything else lands in
+          // the YAML editor scoped to this layer.
+          if (choice.type === 'map') {
+            setEditorTarget({
+              kind: 'layer',
+              unit: targetUnit,
+              slotPath: next.path,
+            })
+            setSlotTarget({
+              mode: 'map',
+              unit: targetUnit,
+              slotPath: next.path,
+            })
+          } else if (choice.type === 'image') {
+            setSlotTarget({
+              mode: 'image',
+              unit: targetUnit,
+              slotPath: next.path,
+              initial: {
+                src: typeof seed.src === 'string' ? seed.src : '',
+                fit: 'cover',
+              },
+            })
+          } else {
+            setEditorTarget({
+              kind: 'layer',
+              unit: targetUnit,
+              slotPath: next.path,
+            })
+          }
+          return
+        }
+
+        if (choice.kind === 'region' && cur.context.kind === 'region') {
+          // Promote `none` foreground to regions with `layoutHint`, or
+          // append to an existing regions block. addForegroundRegion is
+          // idempotent so a duplicate pick (UI prevents it but belt+braces)
+          // is a no-op.
+          const nextYaml = addForegroundRegion(
+            currentConfig,
+            targetUnit.parentIndex,
+            choice.key,
+            cur.context.layoutHint || undefined
+          )
+          await saveConfigYaml(slug, nextYaml)
+          setSources((p) => ({ ...p, configYaml: nextYaml }))
+          setDataNonce((n) => n + 1)
+          setAddMenu(null)
+          // Don't auto-open the region editor — the region is empty and
+          // the natural next action is to add a layer to it (right-click
+          // on the now-present region junction). The rebuild after
+          // setSources will mount that junction with its +ADD chip.
+          return
+        }
+
+        if (choice.kind === 'override' && cur.context.kind === 'override') {
+          const sectionId =
+            targetUnit.parentConfig.id ??
+            `section-${targetUnit.parentIndex}`
+          let nextRaw: string
+          let patch: Partial<CanvasSources>
+          let target: 'share' | 'report' | 'map' | 'tts'
+          let editKind: EditableKind
+          switch (cur.context.overrideKind) {
+            case 'share':
+              nextRaw = seedShareSection(currentSources.shareYaml, sectionId)
+              patch = { shareYaml: nextRaw }
+              target = 'share'
+              editKind = 'share'
+              break
+            case 'slides':
+              nextRaw = seedReportPage(
+                currentSources.reportYaml,
+                'slides',
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { reportYaml: nextRaw }
+              target = 'report'
+              editKind = 'slides'
+              break
+            case 'report':
+              nextRaw = seedReportPage(
+                currentSources.reportYaml,
+                'report',
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { reportYaml: nextRaw }
+              target = 'report'
+              editKind = 'report'
+              break
+            case 'map':
+              nextRaw = seedMapOverride(
+                currentSources.mapYaml,
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { mapYaml: nextRaw }
+              target = 'map'
+              editKind = 'map'
+              break
+            case 'narration':
+              nextRaw = seedTtsUnit(
+                currentSources.ttsYaml,
+                targetUnit.parentIndex,
+                targetUnit.subIndex,
+                targetUnit.sliceIndex ?? 0
+              )
+              patch = { ttsYaml: nextRaw }
+              target = 'tts'
+              editKind = 'narration'
+              break
+          }
+          await saveSlice(slug, { target, patch, newRaw: nextRaw })
+          setSources((p) => ({ ...p, ...patch }))
+          setDataNonce((n) => n + 1)
+          setAddMenu(null)
+          // Open the YAML editor on the newly-seeded entry. The slice
+          // builder reads from `sources` which we just patched, so the
+          // editor lands on the seed body (e.g. `unit: {…}` for report).
+          setEditorTarget({ kind: editKind, unit: targetUnit })
+          return
+        }
+
+        // Type mismatch (choice vs context) — only reachable via a bug,
+        // not by user action. Surface to console so we notice in dev.
+        console.warn('[CanvasClient] AddMenu pick/context mismatch', {
+          choice,
+          context: cur.context,
+        })
+        setAddMenu(null)
+      } catch (e) {
+        // Hold the menu open on error so the user sees the failure and
+        // can retry. Detailed error surface (toast/banner) is TODO; for
+        // now the console + the absence of a side effect is the signal.
+        console.error('[CanvasClient] +Add failed:', e)
+        setAddMenu(null)
+      }
+    },
+    [addMenu, slug]
+  )
+
   /* ─── Keyboard pagination (← / →) ────────────────────────────── */
   const onKey = useCallback(
     (e: KeyboardEvent) => {
@@ -2069,6 +2645,17 @@ export default function CanvasClient({
           error={slotError}
           onSave={handleThemeSave}
           onClose={closeSlot}
+        />
+      )}
+      {/* Floating +Add context menu. Anchored at the right-click cursor
+          via React portal so it isn't clipped by the rete canvas's
+          transformed area. */}
+      {addMenu && (
+        <AddMenu
+          position={addMenu.position}
+          target={addMenu.target}
+          onPick={handleAddMenuPick}
+          onClose={() => setAddMenu(null)}
         />
       )}
     </div>

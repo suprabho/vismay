@@ -1,0 +1,167 @@
+{
+  "steps": [
+    {
+      "title": "Indian fertilizer landed cost, Jan 2026 = 100. The Hormuz closure window opened a 26% gap that the reopening did not close.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "line"
+          },
+          "formatter": "{b}<br/>{a0}: {c0}<br/>{a1}: {c1}"
+        },
+        "legend": {
+          "data": [
+            "Urea (natural gas-linked)",
+            "DAP (Gulf shipping)"
+          ],
+          "top": 0,
+          "right": "5%",
+          "textStyle": {
+            "color": "$text",
+            "fontSize": 11,
+            "fontFamily": "JetBrains Mono"
+          },
+          "itemWidth": 12,
+          "itemHeight": 8
+        },
+        "grid": {
+          "left": "8%",
+          "right": "8%",
+          "bottom": "10%",
+          "top": "18%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": [
+            "Jan",
+            "Feb 1",
+            "Feb 15",
+            "Feb 28",
+            "Mar 7",
+            "Mar 14",
+            "Mar 28",
+            "Apr 15",
+            "May 1",
+            "May 23"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 95,
+          "max": 135,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "{value}"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "series": [
+          {
+            "name": "Urea (natural gas-linked)",
+            "type": "line",
+            "smooth": false,
+            "symbol": "circle",
+            "symbolSize": 5,
+            "lineStyle": {
+              "color": "$accent",
+              "width": 2
+            },
+            "itemStyle": {
+              "color": "$accent"
+            },
+            "data": [
+              100,
+              101,
+              102,
+              118,
+              124,
+              125,
+              124,
+              125,
+              125,
+              126
+            ]
+          },
+          {
+            "name": "DAP (Gulf shipping)",
+            "type": "line",
+            "smooth": false,
+            "symbol": "circle",
+            "symbolSize": 5,
+            "lineStyle": {
+              "color": "$red",
+              "width": 2
+            },
+            "itemStyle": {
+              "color": "$red"
+            },
+            "data": [
+              100,
+              102,
+              103,
+              121,
+              127,
+              128,
+              127,
+              127,
+              128,
+              128
+            ],
+            "markArea": {
+              "silent": true,
+              "itemStyle": {
+                "color": "rgba(176, 74, 58, 0.10)"
+              },
+              "label": {
+                "show": true,
+                "color": "$muted",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 10,
+                "position": "top",
+                "formatter": "Hormuz closed"
+              },
+              "data": [
+                [
+                  {
+                    "xAxis": "Feb 28"
+                  },
+                  {
+                    "xAxis": "Mar 14"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

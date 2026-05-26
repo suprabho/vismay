@@ -21,7 +21,7 @@ import {
 import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import type { AssetRef, ShareCardRatio } from '@vismay/content-source/socialPostPlans'
-import { auth } from '../lib/adminAuth'
+import { signOutputUrl } from '@vismay/admin-core/signedUrl'
 
 const envPath = path.resolve(__dirname, '..', '.env')
 if (fs.existsSync(envPath)) {
@@ -120,10 +120,15 @@ async function runForDemo(
 
   const result = await renderShareAssets({
     supabase,
-    auth,
     demoId,
     storySlug: demo.story_slug as string,
-    baseUrl,
+    shareUrlFor: (ratio) =>
+      signOutputUrl({
+        baseUrl,
+        path: `/story/${demo.story_slug}/share`,
+        query: { ratio },
+        ttlSeconds: 10 * 60,
+      }),
     cardIds,
     contentRevisionHash,
     log: (m) => console.log(`  ${m}`),
@@ -184,10 +189,15 @@ async function runForPost(
 
   const result = await renderShareAssets({
     supabase,
-    auth,
     demoId: null,
     storySlug: post.story_slug as string,
-    baseUrl,
+    shareUrlFor: (ratio) =>
+      signOutputUrl({
+        baseUrl,
+        path: `/story/${post.story_slug}/share`,
+        query: { ratio },
+        ttlSeconds: 10 * 60,
+      }),
     cardIds,
     ratios: [ratio as ShareRatio],
     contentRevisionHash,

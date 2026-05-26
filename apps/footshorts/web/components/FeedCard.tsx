@@ -88,7 +88,7 @@ export function FeedCard({
       ref={ref}
       className="flex h-full flex-col overflow-hidden rounded-t-3xl border border-b-0 border-border bg-surface"
     >
-      <div className="shrink-0 grow-0 basis-[50%] overflow-hidden bg-bg">
+      <div className="shrink-0 grow-0 basis-[30%] overflow-hidden bg-bg">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="" className="h-full w-full object-cover" />
@@ -97,50 +97,53 @@ export function FeedCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 bg-bg p-5 md:p-6">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-text">
-            {publisher}
-          </span>
-          <span className="text-xs text-muted">{relativeTime(publishedAt)}</span>
-        </div>
-        <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold leading-tight text-text">{headline}</h2>
-        {summary ? (
-          <p className="text-[15px] leading-[22px] text-text/80">{summary}</p>
-        ) : (
-          <p className="text-sm italic text-muted">Summary unavailable.</p>
-        )}
-        {tags.length > 0 ? (
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            {visibleTags.map((e) => (
-              <span
-                key={e.id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text"
-              >
-                {e.crest_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={e.crest_url}
-                    alt=""
-                    className="h-4 w-4 object-contain"
-                  />
-                ) : null}
-                {e.name}
-              </span>
-            ))}
-            {hiddenCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => setTagsExpanded(true)}
-                className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:text-text"
-              >
-                +{hiddenCount} more
-              </button>
-            ) : null}
+      <div className="flex flex-1 flex-col gap-3 bg-bg p-2 md:p-6 justify-between">
+        <div className="flex flex-1 flex-col">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-text">
+              {publisher}
+            </span>
+            <span className="text-xs text-muted">{relativeTime(publishedAt)}</span>
           </div>
-        ) : null}
+          <div className="flex flex-col gap-2">
+          <h2 className="text-xl font-bold leading-tight text-text">{headline}</h2>
+          {summary ? (
+            <p className="text-[15px] leading-[22px] text-text/80">{summary}</p>
+          ) : (
+            <p className="text-sm italic text-muted">Summary unavailable.</p>
+          )}
+          {tags.length > 0 ? (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              {visibleTags.map((e) => (
+                <span
+                  key={e.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text"
+                >
+                  {e.crest_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={e.crest_url}
+                      alt=""
+                      className="h-4 w-4 object-contain"
+                    />
+                  ) : null}
+                  {e.name}
+                </span>
+              ))}
+              {hiddenCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setTagsExpanded(true)}
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:text-text"
+                >
+                  +{hiddenCount} more
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          </div>
         </div>
+        
         
         <a
           href={url}

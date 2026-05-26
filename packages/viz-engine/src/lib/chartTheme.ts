@@ -24,6 +24,12 @@ export const defaultChartColors = {
   muted: '#aca286',
   line: '#1a2830',
   surface: '#023555',
+  // Story page background. Charts read this synchronously in capture mode
+  // to paint their canvas opaque — Chromium's print-to-PDF compositor on
+  // Linux silently drops chart canvases with a transparent backgroundColor,
+  // so the bespoke charts need to fill with the same color the page already
+  // shows. Defaults to a dark surface so unthemed callers still print.
+  bg: '#0b0f14',
   // Chart chrome — tooltip surface, label text, dimmed text (treemap tiles
   // that aren't highlighted), and muted caption text. Separate from the
   // palette so stories can later retheme chart UI without touching brand colors.
@@ -129,6 +135,7 @@ export function themeToChartColors(theme: Theme): ChartColors {
     muted: theme.colors.muted,
     line: theme.colors.line ?? defaultChartColors.line,
     surface: theme.colors.surface,
+    bg: theme.colors.background,
     chromeBg: defaultChartColors.chromeBg,
     chromeText: defaultChartColors.chromeText,
     chromeTextDim: defaultChartColors.chromeTextDim,

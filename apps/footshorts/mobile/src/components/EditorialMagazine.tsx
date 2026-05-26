@@ -14,6 +14,11 @@ import {
   useEditorialEpics,
   useEditorialStories,
 } from '@/lib/useEditorialStories'
+import { AuraBackground } from '@/components/AuraBackground'
+
+// Each aura is a live embed; cap how many mount so a long magazine doesn't
+// spin up an embed per card. Hero + the first few grid cards get one.
+const AURA_CAP = 6
 
 // Hash slug → HSL hue so each story/epic gets a deterministic accent colour.
 // Mirrors the web magazine's approach. Cover images live in story frontmatter
@@ -47,6 +52,7 @@ function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
       style={{ backgroundColor: colorFor(story.slug), aspectRatio: 5 / 4 }}
       className="rounded-2xl overflow-hidden border border-border"
     >
+      {story.aura ? <AuraBackground slug={story.aura} /> : null}
       <View className="flex-1 p-5 justify-between">
         <Text className="text-white/80 text-[10px] tracking-[2px] uppercase">
           Editorial · {formatDate(story.publishedAt ?? story.createdAt)}
@@ -66,13 +72,22 @@ function HeroCard({ story, onPress }: { story: EditorialStorySummary; onPress: (
   )
 }
 
-function GridCard({ story, onPress }: { story: EditorialStorySummary; onPress: () => void }) {
+function GridCard({
+  story,
+  onPress,
+  showAura,
+}: {
+  story: EditorialStorySummary
+  onPress: () => void
+  showAura: boolean
+}) {
   return (
     <Pressable
       onPress={onPress}
       style={{ backgroundColor: colorFor(story.slug), aspectRatio: 4 / 5 }}
       className="rounded-xl overflow-hidden border border-border flex-1"
     >
+      {showAura && story.aura ? <AuraBackground slug={story.aura} /> : null}
       <View className="flex-1 p-3 justify-between">
         <Text className="text-white/70 text-[9px] tracking-[2px] uppercase">
           {formatDate(story.publishedAt ?? story.createdAt)}
@@ -224,9 +239,14 @@ export function EditorialMagazine({ topGap, contentWidth }: Props) {
       ) : null}
       {rest.length > 0 && (
         <View className="mt-3 flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
-          {rest.map((s) => (
+          {rest.map((s, i) => (
             <View key={s.slug} className="w-1/2 p-1">
-              <GridCard story={s} onPress={() => router.push(`/editorial/${s.slug}`)} />
+              <GridCard
+                story={s}
+                onPress={() => router.push(`/editorial/${s.slug}`)}
+                // +1 for the hero card, which always gets an aura.
+                showAura={i + 1 < AURA_CAP}
+              />
             </View>
           ))}
         </View>

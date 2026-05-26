@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { usePollPdfRender } from '@vismay/content-source/usePollPdfRender'
-import { vizmayaUrl } from '@/lib/publicSite'
+import { useSignedStoryLinks } from '@/lib/useSignedStoryLinks'
 
 export function SlidesPostRenderPanel({ slug }: { slug: string }) {
   const { state, publicUrl, error, trigger, refresh } = usePollPdfRender(slug, 'slides')
+  const signedLinks = useSignedStoryLinks(slug)
 
   useEffect(() => {
     refresh()
@@ -72,18 +73,24 @@ export function SlidesPostRenderPanel({ slug }: { slug: string }) {
       )}
       <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
         <Link
-          href={vizmayaUrl(`/reports/${encodeURIComponent(slug)}`)}
+          href={signedLinks?.reports ?? '#'}
+          aria-disabled={!signedLinks}
           target="_blank"
           rel="noreferrer"
-          className="text-[11px] px-2 py-1 border border-white/10 rounded hover:bg-white/5"
+          className={`text-[11px] px-2 py-1 border border-white/10 rounded ${
+            signedLinks ? 'hover:bg-white/5' : 'opacity-40 pointer-events-none'
+          }`}
         >
           Open report builder ↗
         </Link>
         <Link
-          href={vizmayaUrl(`/story/${encodeURIComponent(slug)}/slides`)}
+          href={signedLinks?.slides ?? '#'}
+          aria-disabled={!signedLinks}
           target="_blank"
           rel="noreferrer"
-          className="text-[11px] px-2 py-1 border border-white/10 rounded hover:bg-white/5"
+          className={`text-[11px] px-2 py-1 border border-white/10 rounded ${
+            signedLinks ? 'hover:bg-white/5' : 'opacity-40 pointer-events-none'
+          }`}
         >
           Open slides preview ↗
         </Link>

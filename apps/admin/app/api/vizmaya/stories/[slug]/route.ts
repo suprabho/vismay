@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { parse as parseYaml } from 'yaml'
 import matter from 'gray-matter'
 import { isAuthed } from '@/lib/adminAuth'
+import { authedOrAction } from '@/lib/authedOrAction'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { loadStoryConfig } from '@vismay/content-source/storyConfig'
 import { getApp } from '@vismay/content-source/apps'
@@ -64,9 +65,11 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug } = await params
   if (!SAFE_SLUG.test(slug)) return NextResponse.json({ error: 'bad slug' }, { status: 400 })
+  if (!(await authedOrAction(req, 'edit-story-content', slug))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
 
   const body = (await req.json().catch(() => null)) as UpdateBody | null
   if (!body) return NextResponse.json({ error: 'invalid body' }, { status: 400 })

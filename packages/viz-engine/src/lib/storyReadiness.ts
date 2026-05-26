@@ -33,7 +33,13 @@ import { useEffect, useRef } from 'react'
 
 const READY_FLAG = '__pdfReady__'
 const POST_SETTLE_MS = 2000
-const FALLBACK_TIMEOUT_MS = 60_000
+// Cap how long we wait for individual readiness signals before declaring the
+// page ready anyway. Sized to comfortably outlast a chart's dynamic import +
+// initial paint on the slowest runner we use (GitHub Actions Ubuntu under
+// load can take ~30s for the echarts chunks); shorter and a slow chart slot
+// gets captured with no series drawn. The PDF renderer's `READY_TIMEOUT_MS`
+// must stay strictly larger so we ride this fallback instead of Playwright's.
+const FALLBACK_TIMEOUT_MS = 120_000
 
 declare global {
   interface Window {

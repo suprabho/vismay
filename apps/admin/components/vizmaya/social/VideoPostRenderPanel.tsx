@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
 import type { VideoAspect } from '@vismay/content-source/socialPostPlans'
 import { RangeRenderPanel } from '@/components/vizmaya/video/RangeRenderPanel'
-import { vizmayaUrl } from '@/lib/publicSite'
+import { useSignedStoryLinks } from '@/lib/useSignedStoryLinks'
 
 export function VideoPostRenderPanel({
   slug,
@@ -17,6 +17,7 @@ export function VideoPostRenderPanel({
   const { state, error, poll } = usePollVideoRender()
   const [cachedUrl, setCachedUrl] = useState<string | null>(null)
   const [probing, setProbing] = useState(true)
+  const signedLinks = useSignedStoryLinks(slug)
 
   const probe = useCallback(async () => {
     setProbing(true)
@@ -122,10 +123,13 @@ export function VideoPostRenderPanel({
           Open Narration editor ↗
         </Link>
         <Link
-          href={vizmayaUrl(`/story/${encodeURIComponent(slug)}/autoplay`)}
+          href={signedLinks?.autoplay ?? '#'}
+          aria-disabled={!signedLinks}
           target="_blank"
           rel="noreferrer"
-          className="text-[11px] px-2 py-1 border border-white/10 rounded hover:bg-white/5"
+          className={`text-[11px] px-2 py-1 border border-white/10 rounded ${
+            signedLinks ? 'hover:bg-white/5' : 'opacity-40 pointer-events-none'
+          }`}
         >
           Open Autoplay preview ↗
         </Link>

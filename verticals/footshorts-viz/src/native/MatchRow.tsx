@@ -7,38 +7,72 @@ export type MatchRowVariant = 'compact' | 'expanded';
 
 type Props = { fixture: FixtureRow; variant?: MatchRowVariant };
 
-function kickoffLabel(
-  iso: string,
-  status: FixtureRow['status'],
-  variant: MatchRowVariant,
-): string {
+type Sizes = {
+  padding: string;
+  gap: string;
+  crest: number;
+  teamText: string;
+  scoreText: string;
+  scoreTextFinished: string;
+  dateText: string;
+  scoreColMin: number;
+  scoreColPad: string;
+};
+
+// Mirrors web/MatchRow.tsx SIZES so the two platforms render identically.
+const SIZES: Record<MatchRowVariant, Sizes> = {
+  compact: {
+    padding: 'p-2',
+    gap: 'gap-2',
+    crest: 22,
+    teamText: 'text-sm',
+    scoreText: 'text-xs text-text/80',
+    scoreTextFinished: 'text-sm font-semibold text-text',
+    dateText: 'text-[10px]',
+    scoreColMin: 72,
+    scoreColPad: 'px-3',
+  },
+  expanded: {
+    padding: 'p-4',
+    gap: 'gap-3',
+    crest: 40,
+    teamText: 'text-sm',
+    scoreText: 'text-2xl text-text/80',
+    scoreTextFinished: 'text-4xl font-semibold text-text',
+    dateText: 'text-xs',
+    scoreColMin: 96,
+    scoreColPad: 'px-4',
+  },
+};
+
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+// Kept identical to web/MatchRow.tsx (UTC + fixed month names) so both
+// platforms show the same string, e.g. "Feb 16" / "Feb 16 14:30".
+function kickoffLabel(iso: string, status: FixtureRow['status']): string {
   const d = new Date(iso);
   if (status === 'finished') {
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}`;
   }
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
-  // scheduled: 'expanded' shows full weekday context to match web's expanded
-  // MatchRow variant (e.g. "Sat · Nov 8 · 3:00 PM"); 'compact' stays terse.
-  if (variant === 'expanded') {
-    const datePart = d.toLocaleDateString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
-    const timePart = d.toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-    return `${datePart} · ${timePart}`;
-  }
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()} ${hh}:${mm}`;
 }
 
 function TeamCell({
@@ -46,31 +80,40 @@ function TeamCell({
   crest,
   slug,
   align,
-  variant,
+  sizes,
 }: {
   name: string;
   crest: string | null;
   slug: string | null;
-  align: 'left' | 'right';
-  variant: MatchRowVariant;
+  align: 'left' | 'right' | 'stack';
+  sizes: Sizes;
 }) {
   const router = useRouter();
-  const crestSize = variant === 'expanded' ? 26 : 22;
-  const textClass =
-    variant === 'expanded'
-      ? 'text-text text-base flex-shrink'
-      : 'text-text text-sm flex-shrink';
+  // 'stack' (expanded) puts the crest above a centred name like web's expanded
+  // MatchRow; 'left'/'right' lay out horizontally. The away cell is right-
+  // aligned with the crest rendered *after* the name — we avoid `flex-row-
+  // reverse` because a View's default flexDirection in RN is `column`, so if
+  // that lone utility ever fails to compile the cell silently stacks instead.
+  const isStack = align === 'stack';
+  const directionClass = isStack ? 'flex-col' : 'flex-row';
+  const justifyClass = align === 'right' ? 'justify-end' : '';
+  const nameClass = isStack
+    ? `w-full text-center ${sizes.teamText} text-text`
+    : `flex-shrink ${sizes.teamText} text-text`;
+  const crestEl = crest ? (
+    <Image
+      source={{ uri: crest }}
+      style={{ width: sizes.crest, height: sizes.crest }}
+      contentFit="contain"
+    />
+  ) : null;
   const body = (
-    <View className={`flex-row items-center flex-1 ${align === 'right' ? 'justify-end' : ''}`}>
-      {align === 'left' && crest ? (
-        <Image source={{ uri: crest }} style={{ width: crestSize, height: crestSize, marginRight: 8 }} contentFit="contain" />
-      ) : null}
-      <Text className={textClass} numberOfLines={1}>
+    <View className={`flex-1 items-center ${sizes.gap} ${directionClass} ${justifyClass}`}>
+      {align === 'right' ? null : crestEl}
+      <Text className={nameClass} numberOfLines={1}>
         {name}
       </Text>
-      {align === 'right' && crest ? (
-        <Image source={{ uri: crest }} style={{ width: crestSize, height: crestSize, marginLeft: 8 }} contentFit="contain" />
-      ) : null}
+      {align === 'right' ? crestEl : null}
     </View>
   );
   if (!slug) return body;
@@ -82,6 +125,7 @@ function TeamCell({
 }
 
 export function MatchRow({ fixture, variant = 'compact' }: Props) {
+  const sizes = SIZES[variant];
   const homeName = fixture.home?.name ?? fixture.home_team_name ?? 'TBD';
   const awayName = fixture.away?.name ?? fixture.away_team_name ?? 'TBD';
   const isFinished = fixture.status === 'finished';
@@ -90,40 +134,30 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
       ? `${fixture.home_score} – ${fixture.away_score}`
       : 'vs';
 
-  // 'expanded' gives more vertical breathing room and a taller centre cell to
-  // match web's expanded MatchRow used on team pages.
-  const rowPadding = variant === 'expanded' ? 'p-3' : 'p-2';
-  const centerMinWidth = variant === 'expanded' ? 88 : 72;
-  const scoreClass =
-    variant === 'expanded'
-      ? isFinished
-        ? 'text-text text-base font-semibold'
-        : 'text-text/80 text-sm'
-      : isFinished
-        ? 'text-text text-sm font-semibold'
-        : 'text-text/80 text-xs';
-
   return (
-    <View className={`flex-row items-center ${rowPadding} border-b-2 border-white/30`}>
+    <View className={`flex-row items-center border-b border-white/20 ${sizes.padding}`}>
       <TeamCell
         name={homeName}
         crest={fixture.home?.crest_url ?? null}
         slug={fixture.home?.slug ?? null}
-        align="left"
-        variant={variant}
+        align={variant === 'expanded' ? 'stack' : 'left'}
+        sizes={sizes}
       />
-      <View className="px-3 items-center" style={{ minWidth: centerMinWidth }}>
-        <Text className={scoreClass}>{scoreText}</Text>
-        <Text className="text-text/50 text-[10px] mt-0.5">
-          {kickoffLabel(fixture.kickoff_at, fixture.status, variant)}
+      <View
+        className={`items-center ${sizes.scoreColPad}`}
+        style={{ minWidth: sizes.scoreColMin }}
+      >
+        <Text className={isFinished ? sizes.scoreTextFinished : sizes.scoreText}>{scoreText}</Text>
+        <Text className={`mt-0.5 ${sizes.dateText} text-text/50`}>
+          {kickoffLabel(fixture.kickoff_at, fixture.status)}
         </Text>
       </View>
       <TeamCell
         name={awayName}
         crest={fixture.away?.crest_url ?? null}
         slug={fixture.away?.slug ?? null}
-        align="right"
-        variant={variant}
+        align={variant === 'expanded' ? 'stack' : 'right'}
+        sizes={sizes}
       />
     </View>
   );

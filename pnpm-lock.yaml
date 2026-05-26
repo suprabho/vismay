@@ -297,6 +297,9 @@ importers:
       '@types/react':
         specifier: ~19.2.10
         version: 19.2.14
+      babel-preset-expo:
+        specifier: ~55.0.21
+        version: 55.0.21(@babel/core@7.29.0)(@babel/runtime@7.29.2)(expo@55.0.24)(react-refresh@0.14.2)
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -328,9 +331,18 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.10(react@19.2.0)
+      '@vismay/admin-core':
+        specifier: workspace:*
+        version: link:../../../packages/admin-core
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../../verticals/footshorts-viz
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../../../packages/viz-engine
+      mapbox-gl:
+        specifier: ^3.21.0
+        version: 3.23.1
       next:
         specifier: 16.2.2
         version: 16.2.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -340,6 +352,9 @@ importers:
       react-dom:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
+      react-map-gl:
+        specifier: ^8.1.1
+        version: 8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
@@ -424,6 +439,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.100.10(react@19.2.4)
+      '@vismay/admin-core':
+        specifier: workspace:*
+        version: link:../../../packages/admin-core
       '@vismay/f1-viz':
         specifier: workspace:*
         version: link:../../../verticals/f1-viz
@@ -12794,6 +12812,12 @@ snapshots:
       react: 19.2.4
 
   '@vercel/oidc@3.1.0': {}
+  '@vis.gl/react-mapbox@8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
+    optionalDependencies:
+      mapbox-gl: 3.23.1
 
   '@vis.gl/react-mapbox@8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
@@ -12801,6 +12825,12 @@ snapshots:
       react-dom: 19.2.4(react@19.2.4)
     optionalDependencies:
       mapbox-gl: 3.23.1
+
+  '@vis.gl/react-maplibre@8.1.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@maplibre/maplibre-gl-style-spec': 19.3.3
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
 
   '@vis.gl/react-maplibre@8.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
@@ -17094,6 +17124,15 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.6: {}
+
+  react-map-gl@8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      '@vis.gl/react-mapbox': 8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@vis.gl/react-maplibre': 8.1.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
+    optionalDependencies:
+      mapbox-gl: 3.23.1
 
   react-map-gl@8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:

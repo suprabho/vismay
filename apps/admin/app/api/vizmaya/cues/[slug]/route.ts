@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { isAuthed } from '@/lib/adminAuth'
+import { authedOrAction } from '@/lib/authedOrAction'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
@@ -41,12 +41,12 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  if (!(await isAuthed())) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
   const { slug } = await params
   if (!SAFE_SLUG.test(slug)) {
     return NextResponse.json({ error: 'bad slug' }, { status: 400 })
+  }
+  if (!(await authedOrAction(req, 'edit-story-cues', slug))) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
   const body = (await req.json().catch(() => null)) as PatchBody | null

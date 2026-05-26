@@ -1,11 +1,9 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 /**
  * A data-driven chart: reads its ECharts option(s) from a JSON file served
@@ -171,7 +169,7 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
       ref={rootRef}
       style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
     >
-      <ReactECharts
+      <StoryEChart
         option={option}
         style={{ width: '100%', height: '100%', minHeight: mobile ? 280 : 360 }}
         notMerge

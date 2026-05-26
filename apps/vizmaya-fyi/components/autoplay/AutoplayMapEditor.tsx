@@ -48,11 +48,15 @@ interface Props {
   mapStyle: string
   onClose?: () => void
   /**
-   * Fired after a successful PUT to `/api/admin/stories/<slug>/map`.
+   * Fired after a successful PUT to admin's `/api/vizmaya/stories/<slug>/map`.
    * AutoplayShell uses this to reload the preview iframe so the fresh
    * overrides take effect immediately instead of waiting for ISR.
    */
   onSaved?: () => void
+  /** Admin base URL — cross-TLD save target. See docs/auth.md. */
+  adminBaseUrl: string
+  /** Action token granting `edit-story-map` for this slug. */
+  editStoryMapToken: string
 }
 
 const YAML_PLACEHOLDER = `# Autoplay map overrides — edited above visually or here as raw YAML.
@@ -84,6 +88,8 @@ export default function AutoplayMapEditor({
   mapStyle,
   onClose,
   onSaved,
+  adminBaseUrl,
+  editStoryMapToken,
 }: Props) {
   const initialState = useMemo(
     () => hydrateOverrides(parseMapOverrides(initialYaml)),
@@ -165,9 +171,13 @@ export default function AutoplayMapEditor({
     setSaving(true)
     setStatus({ type: 'idle' })
     try {
-      const res = await fetch(`/api/admin/stories/${slug}/map`, {
+      const res = await fetch(`${adminBaseUrl}/api/vizmaya/stories/${slug}/map`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-action-token': editStoryMapToken,
+        },
+        credentials: 'omit',
         body: JSON.stringify({ raw: currentSerialized ?? '' }),
       })
       if (!res.ok) {
@@ -185,7 +195,7 @@ export default function AutoplayMapEditor({
     } finally {
       setSaving(false)
     }
-  }, [currentSerialized, slug, onSaved])
+  }, [currentSerialized, slug, onSaved, adminBaseUrl, editStoryMapToken])
 
   // Cmd/Ctrl+S to save.
   useEffect(() => {

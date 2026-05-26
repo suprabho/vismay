@@ -8,7 +8,7 @@ create table if not exists apps (
 
 insert into apps (slug, name) values
   ('vizmaya-fyi', 'Vizmaya'),
-  ('footshorts',   'Footshorts'),
+  ('footshort',   'Footshort'),
   ('vizf1',       'VizF1')
 on conflict (slug) do nothing;
 

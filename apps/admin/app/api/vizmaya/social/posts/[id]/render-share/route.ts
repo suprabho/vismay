@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { isAuthed, auth } from '@/lib/adminAuth'
+import { isAuthed } from '@/lib/adminAuth'
+import { signOutputUrl } from '@vismay/admin-core/signedUrl'
+import { vizmayaPublicUrl } from '@/lib/publicSite'
 import { getPost } from '@vismay/content-source/socialPostPlans'
 import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
 import { getContentSource } from '@vismay/content-source/contentSource'
@@ -69,8 +71,10 @@ export async function POST(
     )
   }
 
-  const url = new URL(req.url)
-  const baseUrl = `${url.protocol}//${url.host}`
+  // Render against the public vizmaya.fyi origin — the /story/<slug>/share
+  // route is gated by signed-URL middleware on the consumer TLD, not by
+  // anything on admin's host. Admin signs each ratio URL just below.
+  const baseUrl = vizmayaPublicUrl
   const supabase = createServiceClient()
 
   if (isShareDispatchConfigured()) {
@@ -94,10 +98,15 @@ export async function POST(
     )
     const result = await renderShareAssets({
       supabase,
-      auth,
       demoId: null,
       storySlug: target.storySlug,
-      baseUrl,
+      shareUrlFor: (ratio) =>
+        signOutputUrl({
+          baseUrl,
+          path: `/story/${target.storySlug}/share`,
+          query: { ratio },
+          ttlSeconds: 10 * 60,
+        }),
       cardIds: target.cardIds,
       ratios: [target.ratio],
       contentRevisionHash,

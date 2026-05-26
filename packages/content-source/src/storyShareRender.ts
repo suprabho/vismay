@@ -10,22 +10,15 @@
  * the social-post path leaves it null. Storage paths are
  * `{slug}/share/{cardId}__{ratio}.png`.
  *
- * Mirrors lib/storyPdfRender.ts: same Playwright launch flags, same admin
- * cookie pre-auth.
+ * Mirrors lib/storyPdfRender.ts: same Playwright launch flags. Caller is
+ * responsible for minting a signed URL per ratio (see `shareUrlFor` arg) —
+ * content-source intentionally has no dependency on admin-core. The /share
+ * route on consumer TLDs is gated by signed-URL middleware; an unsigned
+ * goto would 401. See docs/auth.md.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { chromium, type Page } from 'playwright'
-
-/**
- * Minimal auth surface needed by the headless render: the cookie name + a
- * way to compute the current admin token. Callers pass their own admin
- * instance (e.g. the auth created via @vismay/admin-core/auth).
- */
-export interface ShareRenderAuth {
-  cookieName: string
-  expectedToken(): string | null
-}
 
 export const SHARE_BUCKET = 'story-share'
 export const SHARE_RATIOS = ['1:1', '4:5', '3:4', '4:3'] as const
@@ -131,10 +124,20 @@ async function uploadCard(args: {
 
 export async function renderShareAssets(args: {
   supabase: SupabaseClient
-  /** Admin auth used to pre-cookie the headless context. */
-  auth: ShareRenderAuth
   storySlug: string
-  baseUrl: string
+  /**
+   * Mint the signed URL for the /share render at a given ratio. The render
+   * route is HMAC-gated on consumer TLDs (see docs/auth.md); the caller
+   * owns the signing so this package stays decoupled from admin-core.
+   *
+   *   shareUrlFor: (ratio) => signOutputUrl({
+   *     baseUrl,
+   *     path: `/story/${slug}/share`,
+   *     query: { ratio },
+   *     ttlSeconds: 10 * 60,
+   *   })
+   */
+  shareUrlFor: (ratio: ShareRatio) => string
   cardIds: string[]
   contentRevisionHash: string
   /** Restrict to a subset of ratios. Defaults to all three. */
@@ -153,11 +156,6 @@ export async function renderShareAssets(args: {
   })
 
   try {
-    // The share page is public, but pre-applying the admin cookie costs
-    // nothing and future-proofs against later gating.
-    const adminToken = args.auth.expectedToken()
-    const cookieUrl = new URL(args.baseUrl)
-
     // One context per ratio so the viewport stays consistent across all
     // cards at that ratio. Cards re-render when ratio changes.
     for (const ratio of ratios) {
@@ -167,21 +165,8 @@ export async function renderShareAssets(args: {
         deviceScaleFactor: 2, // retina-quality PNG
         reducedMotion: 'no-preference',
       })
-      if (adminToken) {
-        await context.addCookies([
-          {
-            name: args.auth.cookieName,
-            value: adminToken,
-            domain: cookieUrl.hostname,
-            path: '/',
-            httpOnly: true,
-            secure: cookieUrl.protocol === 'https:',
-            sameSite: 'Lax',
-          },
-        ])
-      }
       const page = await context.newPage()
-      const url = `${args.baseUrl}/story/${args.storySlug}/share?ratio=${encodeURIComponent(ratio)}`
+      const url = args.shareUrlFor(ratio)
       log(`  goto: ${url}`)
       await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
 

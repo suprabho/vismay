@@ -9,6 +9,8 @@ import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyCon
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { buildMapTargets } from '@vismay/viz-engine'
+import { signActionToken } from '@vismay/admin-core/actionToken'
+import { adminBaseUrl } from '@/lib/adminBaseUrl'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import AutoplayShell from '@/components/autoplay/AutoplayShell'
 
@@ -53,6 +55,20 @@ export default async function AutoplayPage({ params, searchParams }: RouteParams
   const mapTargets = buildMapTargets(config)
   const initialMapYaml = await getContentSource().readMapYaml(slug)
 
+  // Cross-TLD save credentials. The page itself was reached via a signed
+  // URL (middleware-verified); we mint two narrow action tokens here so
+  // the editor can save back to admin's API directly without proxying.
+  // Both tokens share the page's TTL window; on expiry the user sees a 401
+  // and reloads the page (which re-mints them). See docs/auth.md Phase 2a.
+  const editStoryMapToken = signActionToken({
+    scope: 'edit-story-map',
+    subject: slug,
+  })
+  const editStoryCuesToken = signActionToken({
+    scope: 'edit-story-cues',
+    subject: slug,
+  })
+
   return (
     <ThemeProvider theme={story.frontmatter.theme}>
       <AutoplayShell
@@ -69,6 +85,9 @@ export default async function AutoplayPage({ params, searchParams }: RouteParams
         initialMapYaml={initialMapYaml}
         initialRatio={initialRatio}
         initialSectionId={initialSectionId}
+        adminBaseUrl={adminBaseUrl()}
+        editStoryMapToken={editStoryMapToken}
+        editStoryCuesToken={editStoryCuesToken}
       />
     </ThemeProvider>
   )

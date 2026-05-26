@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 const TITLES: Record<number, string> = {
   0: 'Global HBM market: South Korea holds 90% \n every AI GPU depends on it',
@@ -116,7 +114,7 @@ export default function HBMDRAMTreemap({ activeStep }: { activeStep: number }) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         key={`${activeStep}`}
         option={option}
         style={{ height: mobile ? '100%' : 360, width: '100%', flex: mobile ? 1 : undefined }}

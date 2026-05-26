@@ -6,11 +6,12 @@
  * owns the format toggle, override controls, iframe preview, and download
  * triggers.
  *
- * Gated by the same admin password as /admin (lib/adminAuth.ts cookie).
+ * Gated by the signed-URL middleware (`/reports/:slug` is in the matcher in
+ * apps/vizmaya-fyi/middleware.ts). Admin opens this via
+ * `signReportsBuilderUrl(slug)` — no cookie on vizmaya.fyi. See docs/auth.md.
  */
 
-import { notFound, redirect } from 'next/navigation'
-import { isAuthed } from '@/lib/adminAuth'
+import { notFound } from 'next/navigation'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { getStoryContent } from '@vismay/content-source/content'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
@@ -30,8 +31,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function ReportsBuilderPage({ params }: RouteParams) {
   const { slug } = await params
-  if (!(await isAuthed()))
-    redirect(`/admin/login?next=${encodeURIComponent(`/reports/${slug}`)}`)
+  // Auth handled by middleware (signed-URL gate); no cookie check here.
 
   let story
   let config

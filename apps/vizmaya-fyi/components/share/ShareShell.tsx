@@ -5,6 +5,7 @@ import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import type { ResolvedUnit, StoryConfig, ShareSectionOverride } from '@vismay/viz-engine'
+import { resolveSlotsFlat } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
 import ShareEditDrawer, { type SelectedCard } from './ShareEditDrawer'
@@ -24,6 +25,14 @@ interface Props {
   sampleYaml: string
   logo?: string
   initialRatio: AspectRatio
+  /**
+   * Absolute base URL of the vismay.xyz admin app. The share-yaml save fetch
+   * targets admin's API directly (cross-TLD); page mints this on the server
+   * so the client doesn't read env vars. See docs/auth.md.
+   */
+  adminBaseUrl?: string
+  /** Action token granting `edit-story-content` for this slug. */
+  editStoryContentToken?: string
 }
 
 interface CardEntry {
@@ -63,7 +72,13 @@ function buildCardList(
     if (sectionId && overrides?.[sectionId]?.hide) continue
 
     const kind = unit.parentConfig.kind ?? 'text'
-    const hasChart = !!unit.parentConfig.chart
+    // A visual foreground layer (chart / image / video / embed / rive / any
+    // vertical-specific viz module) gets its own "graph" card, mirroring the
+    // legacy `chart:` field. Text layers are excluded — share mode already
+    // renders the section text via the auto / hero / stat / text variants.
+    const hasVizForeground = resolveSlotsFlat(unit.parentConfig).foreground.some(
+      (l) => l.type !== 'text'
+    )
     const shareOverride = sectionId ? overrides?.[sectionId] : undefined
 
     // 1. Map + Heading — emitted for the first unit of each parent (using
@@ -77,10 +92,10 @@ function buildCardList(
       cards.push({ unit, variant: 'map-title', label: 'map-title' })
     }
 
-    // 2. Graph — one per subsection when a chart is configured, so each
-    // chart step (driven by subIndex) gets its own share card. Sections
-    // without subsections still emit exactly one graph card.
-    if (hasChart) {
+    // 2. Graph — one per subsection when a visual foreground viz is
+    // configured, so each chart step (driven by subIndex) gets its own share
+    // card. Sections without subsections still emit exactly one graph card.
+    if (hasVizForeground) {
       cards.push({ unit, variant: 'graph', label: 'graph' })
     }
 
@@ -154,6 +169,8 @@ export default function ShareShell({
   sampleYaml,
   logo,
   initialRatio,
+  adminBaseUrl = '',
+  editStoryContentToken = '',
 }: Props) {
   // `initialRatio` is seeded by the server from `?ratio=` so the first paint
   // (and the Playwright share-render capture) has the correct card dimensions.
@@ -324,13 +341,23 @@ export default function ShareShell({
     setSaving(true)
     setSaveError(null)
     try {
-      const res = await fetch(`/api/admin/stories/${slug}`, {
+      const res = await fetch(`${adminBaseUrl}/api/vizmaya/stories/${slug}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-action-token': editStoryContentToken,
+        },
+        credentials: 'omit',
         body: JSON.stringify({ share_yaml }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
+        // A 401 here means the action token minted by the page server has
+        // expired (page was open past TTL) or the admin/vizmaya secrets are
+        // out of sync. Reload re-mints the token from the same signed URL.
+        if (res.status === 401) {
+          throw new Error('Editing token expired — reload the page and retry.')
+        }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
       // Reload so the SSG page re-renders with the freshly saved data.
@@ -339,7 +366,7 @@ export default function ShareShell({
       setSaveError(err instanceof Error ? err.message : 'Save failed')
       setSaving(false)
     }
-  }, [view, draftYaml, draftOverrides, yamlError, slug])
+  }, [view, draftYaml, draftOverrides, yamlError, slug, adminBaseUrl, editStoryContentToken])
 
   const handleDownloadAll = useCallback(async () => {
     setDownloading(true)

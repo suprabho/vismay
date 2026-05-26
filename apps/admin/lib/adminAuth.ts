@@ -1,18 +1,27 @@
 import { createAuth } from '@vismay/admin-core/auth'
 
 /**
- * Vizmaya-fyi's admin auth instance. Backed by @vismay/admin-core so the
- * /admin app and any other admin-protected surface (e.g. /story/:slug/share)
- * share one HMAC-cookie session.
+ * Admin's HMAC-cookie session. Canonical to `vismay.xyz` — the cookie is
+ * scoped to `.vismay.xyz` in production so all admin subdomains
+ * (`vizmaya.vismay.xyz`, `vizf1.vismay.xyz`, `footshorts.vismay.xyz`) share
+ * one login. Consumer TLDs (vizmaya.fyi, vizf1.com, footshorts.com) never
+ * carry this cookie — cross-TLD authorization there goes through
+ * `signOutputUrl()` instead. See [docs/auth.md](../../../docs/auth.md).
  *
- * Set ADMIN_COOKIE_DOMAIN=.vizmaya.fyi in production once apps/admin/ is
- * deployed at admin.vizmaya.fyi so the cookie is readable across subdomains.
+ * `ADMIN_COOKIE_DOMAIN` env var overrides the default for staging hosts that
+ * use a different parent (e.g. `.vismay-staging.dev`); leaving it unset in
+ * dev keeps the cookie host-only on `localhost`.
  */
+const COOKIE_DOMAIN =
+  process.env.NODE_ENV === 'production'
+    ? process.env.ADMIN_COOKIE_DOMAIN || '.vismay.xyz'
+    : undefined
+
 export const auth = createAuth({
   cookieName: 'vmy_admin',
   passwordEnv: 'ADMIN_PASSWORD',
   secretEnv: 'ADMIN_SESSION_SECRET',
-  cookieDomain: process.env.ADMIN_COOKIE_DOMAIN || undefined,
+  cookieDomain: COOKIE_DOMAIN,
 })
 
 export const ADMIN_COOKIE_NAME = auth.cookieName
