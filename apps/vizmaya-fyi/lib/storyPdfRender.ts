@@ -55,16 +55,22 @@ const RENDER_CONFIG: Record<
   },
 }
 
-// Must exceed the in-page fallback timer in lib/pdfReadiness.ts
-// (FALLBACK_TIMEOUT_MS = 120_000) so we can ride the fallback when a map
-// fails to fire onReady — pages with many maps can hit Chrome's WebGL
-// context limit and silently drop the oldest contexts. The fallback was
-// bumped from 60s to 120s when the per-chart 8s readiness backstop was
-// removed (it fired before echarts-for-react had loaded on the GitHub
-// Actions runner, flipping readiness with empty chart canvases); chart
-// slots now signal only on the real ECharts `finished` event, and the
-// fallback has to be long enough to cover a slow dynamic-import chain.
-const READY_TIMEOUT_MS = 150_000
+// How long Playwright waits for window.__pdfReady__ before giving up.
+//
+// This must outlast the WORST CASE of the in-page readiness coordinator
+// (storyReadiness.ts), not just its FALLBACK_TIMEOUT_MS (120_000). The
+// fallback timer is armed inside a React useEffect — i.e. only once the
+// shell has hydrated — and a large deck mounts one map + chart per slide,
+// so hydration alone can take tens of seconds on a GitHub Actions runner.
+// The flag therefore flips at roughly (hydration + 120s); a fixed 150s
+// budget left almost no hydration headroom and timed out on long decks
+// before the fallback could rescue the capture.
+//
+// 5 minutes covers a slow hydrate + the 120s settle/fallback with room to
+// spare, and still sits comfortably under the workflow's 15-minute job cap
+// (render-pdf.yml) so a genuinely stuck render still fails loudly rather
+// than hanging the runner.
+const READY_TIMEOUT_MS = 300_000
 
 export interface RenderResult {
   public_url: string
@@ -129,12 +135,21 @@ async function renderPdfBuffer(args: {
     // the consumer middleware to verify.
     const url = signOutputUrl({
       baseUrl: args.baseUrl,
-      path: `/story/${args.slug}/${args.format}`,
-      ttlSeconds: 5 * 60,
+      // Cover the whole render: the token gates the initial navigation and any
+      // in-page fetches (chart data) the shell fires while we wait for
+      // __pdfReady__. A short TTL could expire mid-render on a long deck now
+      // that READY_TIMEOUT_MS is minutes; keep it just under the job cap.
+      ttlSeconds: 14 * 60,
       query: { print: '1' },
     })
     args.log(`navigating: ${url}`)
-    await page.goto(url, { waitUntil: 'load', timeout: 60_000 })
+    // `domcontentloaded`, not `load`: in print mode every slide eagerly mounts
+    // a Mapbox canvas that streams tiles / sprites / style JSON, so on a large
+    // deck the window `load` event waits on that flood and can blow past a
+    // 60s budget (the same network-event trap the readiness coordinator was
+    // built to avoid). We don't need `load` — capture is gated on the explicit
+    // window.__pdfReady__ signal below, which is far more precise.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 })
 
     // The shells set window.__pdfReady__ once maps have all fired their
     // onReady callbacks AND a post-map settle window has elapsed (so ECharts
