@@ -34,15 +34,22 @@
  * system prompt + gazetteer cached. See docs/coke-studio-pipeline.md.
  */
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { config as loadEnv } from 'dotenv'
 import Anthropic from '@anthropic-ai/sdk'
 import { parse as parseCsv } from 'csv-parse/sync'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
-loadEnv({ path: '.env.local' })
-loadEnv({ path: '.env' })
+// Paths anchored on this script's location so the pipeline works regardless
+// of cwd. See scripts/coke-studio/fetch-lyrics.ts for the same setup.
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+const PKG_DIR    = resolve(SCRIPT_DIR, '../../')
+const REPO_ROOT  = resolve(SCRIPT_DIR, '../../../../')
+
+loadEnv({ path: resolve(PKG_DIR, '.env.local') })
+loadEnv({ path: resolve(PKG_DIR, '.env') })
 
 // ---- config + CLI ---------------------------------------------------------
 
@@ -50,7 +57,7 @@ const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4096
 const REQ_DELAY_MS = 300
 
-const DATA_DIR = resolve(process.cwd(), 'vizmaya-data/coke-studio')
+const DATA_DIR = resolve(REPO_ROOT, 'vizmaya-data/coke-studio')
 const PLACE_MENTIONS_CSV     = resolve(DATA_DIR, 'place_mentions.csv')
 const GAZETTEER_CSV          = resolve(DATA_DIR, 'gazetteer.csv')
 const GAZETTEER_ADDITIONS    = resolve(DATA_DIR, 'gazetteer-additions.csv')
@@ -396,7 +403,12 @@ function csvCell(v: string | number | null): string {
   return s
 }
 
+function ensureDataDir(): void {
+  mkdirSync(DATA_DIR, { recursive: true })
+}
+
 function writeMentionsCsv(allMentions: { song_id: string; index: number; m: ExtractedMention }[]): void {
+  ensureDataDir()
   const header = 'mention_id,song_id,place_raw,place_canonical,language_of_mention,lyric_context,lyric_translation,context_type,verse_number,confidence,notes\n'
   const rows = allMentions.map(({ song_id, index, m }) => [
     `${song_id}_m${String(index + 1).padStart(2, '0')}`,
@@ -415,6 +427,7 @@ function writeMentionsCsv(allMentions: { song_id: string; index: number; m: Extr
 }
 
 function appendGazetteerRows(path: string, rows: GazetteerAddition[], existingKeys: Set<string>): GazetteerAddition[] {
+  ensureDataDir()
   const header = 'place_canonical,place_type,modern_country,historical_polity,lat,lon,aliases,notes\n'
   if (!existsSync(path)) writeFileSync(path, header)
   const fresh = rows.filter((r) => !existingKeys.has(r.place_canonical))
@@ -435,6 +448,7 @@ function appendGazetteerRows(path: string, rows: GazetteerAddition[], existingKe
 }
 
 function appendSuggestionsCsv(rows: { addition: GazetteerAddition; reason: string; song_id: string }[]): void {
+  ensureDataDir()
   const header = 'place_canonical,place_type,modern_country,lat,lon,confidence,first_seen_song,reason,suggested_at\n'
   if (!existsSync(GAZETTEER_SUGGESTIONS)) writeFileSync(GAZETTEER_SUGGESTIONS, header)
   if (rows.length === 0) return
