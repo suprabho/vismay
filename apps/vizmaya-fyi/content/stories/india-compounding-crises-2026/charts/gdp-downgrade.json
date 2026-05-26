@@ -1,0 +1,125 @@
+{
+  "steps": [
+    {
+      "title": "FY27 India GDP growth forecast, %. All three agencies cut between January and May 2026; none changed the sovereign rating.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}<br/>{a0}: {c0}%<br/>{a1}: {c1}%"
+        },
+        "legend": {
+          "data": [
+            "January 2026",
+            "May 2026"
+          ],
+          "top": 0,
+          "right": "5%",
+          "textStyle": {
+            "color": "$text",
+            "fontSize": 11,
+            "fontFamily": "JetBrains Mono"
+          },
+          "itemWidth": 12,
+          "itemHeight": 8
+        },
+        "grid": {
+          "left": "8%",
+          "right": "8%",
+          "bottom": "8%",
+          "top": "18%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Moody's",
+            "Fitch",
+            "S&P"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontFamily": "Inter",
+            "fontSize": 12
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 5.5,
+          "max": 7.2,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "{value}%"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "series": [
+          {
+            "name": "January 2026",
+            "type": "bar",
+            "barWidth": 22,
+            "itemStyle": {
+              "color": "$muted"
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$muted",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "formatter": "{c}%"
+            },
+            "data": [
+              6.9,
+              6.8,
+              6.7
+            ]
+          },
+          {
+            "name": "May 2026",
+            "type": "bar",
+            "barWidth": 22,
+            "itemStyle": {
+              "color": "$accent"
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$accent",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "formatter": "{c}%"
+            },
+            "data": [
+              6.2,
+              6.1,
+              6.0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
