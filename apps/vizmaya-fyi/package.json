@@ -27,6 +27,7 @@
     "energy-profile:generate-summaries": "npx tsx scripts/energy-profile/generate-summaries.ts",
     "flags:upload": "npx tsx scripts/upload-flags.ts",
     "fifa-wc26:import": "npx tsx scripts/fifa-wc26/import.ts",
+    "coke-studio:import": "npx tsx scripts/coke-studio/import.ts",
     "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts"
   },
   "dependencies": {
