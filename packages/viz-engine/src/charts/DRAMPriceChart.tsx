@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 const labels = ["Q1 '25", "Q2 '25", "Q3 '25", "Q4 '25", "Q1 '26", 'Q2 \'26\n(60d)', 'Q2 \'26\n(6mo)', 'Q2 \'26\n(3-5yr)']
 const preExisting = [20, 45, 80, 120, 172, 172, 172, 172]
@@ -117,7 +115,7 @@ export default function DRAMPriceChart({ activeStep }: { activeStep: number }) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         option={option}
         style={{ height: mobile ? '100%' : 360, width: '100%', flex: mobile ? 1 : undefined }}
         opts={{ renderer: 'svg' }}

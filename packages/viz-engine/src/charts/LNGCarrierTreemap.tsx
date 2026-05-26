@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 const TITLES: Record<number, string> = {
   0: 'South Korea builds 84% of the world\'s LNG carriers — HD Hyundai, Samsung, Hanwha',
@@ -114,7 +112,7 @@ export default function LNGCarrierTreemap({ activeStep }: { activeStep: number }
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         key={`lng-${activeStep}`}
         option={option}
         style={{ height: mobile ? '100%' : 340, width: '100%', flex: mobile ? 1 : undefined }}

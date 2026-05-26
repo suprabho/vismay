@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 // KOSPI 2026 — weekly OHLC around the March 2026 Iran war crash
 // Indexed to 100 at start. 18% drop in 4 trading days.
@@ -240,7 +238,7 @@ export default function StockCandlestickChart({ activeStep }: { activeStep: numb
 
     return (
       <div className="w-full h-full flex flex-col">
-        <ReactECharts
+        <StoryEChart
           option={overlayOption}
           style={{ height: mobile ? '100%' : 380, width: '100%', flex: mobile ? 1 : undefined }}
           opts={{ renderer: 'svg' }}
@@ -439,7 +437,7 @@ export default function StockCandlestickChart({ activeStep }: { activeStep: numb
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         option={option}
         style={{ height: mobile ? '100%' : 380, width: '100%', flex: mobile ? 1 : undefined }}
         opts={{ renderer: 'svg' }}
