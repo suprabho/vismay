@@ -69,7 +69,8 @@ function parseCli(): Cli {
   const cli: Cli = { season: null, limit: null, dryRun: false, force: false }
   for (let i = 0; i < args.length; i++) {
     const a = args[i]
-    if (a === '--season') cli.season = Number(args[++i])
+    if (a === '--') continue // bare separator, e.g. forwarded by `pnpm run … --`
+    else if (a === '--season') cli.season = Number(args[++i])
     else if (a === '--limit') cli.limit = Number(args[++i])
     else if (a === '--dry-run') cli.dryRun = true
     else if (a === '--force') cli.force = true
