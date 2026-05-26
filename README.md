@@ -8,6 +8,7 @@ Monorepo for the Vismay viz engine and the apps it powers.
 - `packages/viz-engine/` — stub. Will host the registry, slot dispatchers, core viz modules, asset pipeline, and capture pipeline.
 - `packages/viz-admin/` — stub. Will host the asset uploader, Compose panel, and admin form schema renderer.
 - `packages/content-source/` — stub. Will host the `fs|db` story reader, story config types, and resolver.
+- `packages/ai-gateway/` — one wrapper around the Vercel AI Gateway for all text + image generation. New AI features import from here, never from a provider SDK. See [`packages/ai-gateway/README.md`](packages/ai-gateway/README.md).
 - `packages/ui/` — stub. Will host shared branding (logo, theme provider).
 
 ## Working in the monorepo

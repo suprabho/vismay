@@ -94,6 +94,21 @@ Pump prices for gasoline, automotive diesel and light fuel oil across **33 count
 - **Reader:** extended `getIeaCountryProfile` in [lib/epics.ts](lib/epics.ts) — adds `timeseries.oilPrices` (last 60 months, USD/L).
 - **Chart:** [components/energy-profile/charts/OilPricesChart.tsx](components/energy-profile/charts/OilPricesChart.tsx).
 
+## AI gateway
+
+New AI calls (text + image) go through [@vismay/ai-gateway](../../packages/ai-gateway/README.md),
+which wraps the Vercel AI Gateway. The existing direct `@google/genai` /
+`@anthropic-ai/sdk` call sites (judge, energy summaries, scrape-news, epstein
+scripts, generate-audio) still hit the providers directly — they'll migrate
+batch-by-batch once the gateway has burned in.
+
+**Migration 043 (`043_ai_generations.sql`)** adds the audit table the gateway
+writes to. Apply before deploying any feature that calls `generateImage` /
+`generateText` from the admin app.
+
+**First user-facing feature:** prompt-to-image in the admin Assets tab — see
+[apps/admin/CLAUDE.md](../admin/CLAUDE.md).
+
 ## TTS narration overrides (per-unit)
 
 `scripts/generate-audio.ts` derives the spoken text for each mobile unit from heading + paragraphs. To override that text without editing the displayed markdown, save a `<slug>.tts.yaml` (also `stories.tts_yaml` after migration 012):

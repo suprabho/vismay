@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
 import ComposeVizPanel from './ComposeVizPanel'
+import GenerateImagePanel from './GenerateImagePanel'
 
 interface Props {
   slug: string
@@ -36,6 +37,7 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [generateOpen, setGenerateOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -163,6 +165,17 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
         >
           {uploading ? 'Uploading…' : '↑ Upload'}
         </button>
+        <button
+          type="button"
+          onClick={() => setGenerateOpen((v) => !v)}
+          className={
+            'text-xs px-2 py-1 rounded hover:text-white hover:bg-white/5 ' +
+            (generateOpen ? 'text-white bg-white/5' : 'text-neutral-400')
+          }
+          title="Generate an image from a text prompt via the AI gateway"
+        >
+          ✨ Generate
+        </button>
         <span className="text-xs text-neutral-500">
           {assets.length} {assets.length === 1 ? 'asset' : 'assets'}
         </span>
@@ -183,6 +196,18 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
         <div className="absolute inset-x-0 top-10 bottom-0 z-10 pointer-events-none bg-white/5 border-2 border-dashed border-white/30 flex items-center justify-center">
           <span className="text-sm text-white/70">Drop files to upload</span>
         </div>
+      )}
+
+      {generateOpen && (
+        <GenerateImagePanel
+          slug={slug}
+          onClose={() => setGenerateOpen(false)}
+          onGenerated={(asset) =>
+            // Prepend new generations so the most-recent one is visible at the
+            // top of the grid without needing to scroll.
+            setAssets((cur) => [asset, ...cur.filter((a) => a.key !== asset.key)])
+          }
+        />
       )}
 
       <div className="flex-1 overflow-y-auto">
