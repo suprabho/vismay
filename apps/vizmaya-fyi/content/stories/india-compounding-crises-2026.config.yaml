@@ -190,7 +190,8 @@ sections:
           color: "#3a7a8c"
           labelAnchor: left
     subsections:
-      - text: "The chokepoint reopens — at a cost > Fourteen days, four weeks of price"
+      - text: "The chokepoint reopens — at a cost > Fourteen days, the shortest closure on record"
+      - text: "The chokepoint reopens — at a cost > Four weeks of price"
       - text: "The chokepoint reopens — at a cost > Fertilizer is the second-order shock"
       - text: "The chokepoint reopens — at a cost > The subsidy will have to swallow it"
 
@@ -241,4 +242,29 @@ sections:
     subsections:
       - text: "What three shocks become when they arrive together > Each shock has a precedent"
       - text: "What three shocks become when they arrive together > Three reasons stacking is expensive"
-      - text: "What three shocks become when they arrive together > The playbook is being written now"
+      - text: "What three shocks become when they arrive together > The four-shock playbook does not exist"
+      - text: "What three shocks become when they arrive together > Read it in the next CPI"
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY — five source subsections
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    map:
+      center: [78.0, 22.5]
+      zoom: 3.2
+      pitch: 10
+      bearing: 0
+      opacity: 0.40
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Sources, by shock"
+          color: "#7c8088"
+          labelAnchor: right
+    subsections:
+      - text: "Methodology & sources > Heat & power demand"
+      - text: "Methodology & sources > Monsoon forecast"
+      - text: "Methodology & sources > Strait of Hormuz, fertilizer, LNG"
+      - text: "Methodology & sources > Rupee and GDP downgrades"
+      - text: "Methodology & sources > Editorial choices"

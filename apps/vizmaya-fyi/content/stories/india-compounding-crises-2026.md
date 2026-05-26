@@ -78,9 +78,11 @@ The IMD upgrades the forecast in late May. The market has, for now, priced in th
 
 ## The chokepoint reopens — at a cost
 
-### Fourteen days, four weeks of price
+### Fourteen days, the shortest closure on record
 
 The Strait of Hormuz reopened on **March 14, 2026**, fourteen days after the missile exchange between Iran and the multinational task force closed it. The closure was the shortest in the strait's history. The price of it is the longer story.
+
+### Four weeks of price
 
 **Fifty-five percent** of India's LNG imports transit Hormuz. So does roughly **two-thirds** of its crude. During the closure window, Indian refiners drew down strategic reserves; spot LNG cargoes were rerouted from Qatar via the Cape, adding **fourteen days** and roughly **$2.40 per MMBtu** to delivered cost. The reopening did not reverse the freight premium — war-risk insurance on Hormuz transits is now **0.7%** of hull value, up from 0.05% in January.
 
@@ -120,9 +122,11 @@ Each of the four numbers in this story has been seen before. The 2010 heatwave w
 
 What May 2026 does is set them down in the **same fortnight**, in an economy with three structural features that make stacking expensive. The **fiscal headroom** is thinner than in 2009 — gross debt-to-GDP is 84% versus 73% then. The **subsidy bill** is bigger and more rigid — food, fertilizer and fuel together absorb 4.1% of GDP versus 2.9%. And the **monsoon dependence**, despite a generation of irrigation investment, still routes roughly **52% of GVA** through the kharif print, when the lagged effects on food inflation, rural wages, two-wheeler sales and discretionary FMCG are added in.
 
-### The playbook is being written now
+### The four-shock playbook does not exist
 
 The single-shock playbook is well-rehearsed: RBI rate hold, MSP bump, excise cut, strategic-reserve drawdown. The four-shock playbook does not exist, because the country has not had to write it.
+
+### Read it in the next CPI
 
 It is being written now, in the May 21 grid log, the April 15 IMD bulletin, the March 14 Hormuz reopen, and the May 23 dollar-rupee close. The first reading is on the next quarter's CPI.
 
@@ -130,12 +134,22 @@ It is being written now, in the May 21 grid log, the April 15 IMD bulletin, the 
 
 ## Methodology & sources
 
-**Heat & power demand:** Central Electricity Authority daily peak-demand records (May 2026 grid log); Copernicus Climate Change Service ERA5 reanalysis; World Weather Attribution May 2026 rapid-attribution study; India Meteorological Department station data.
+### Heat & power demand
 
-**Monsoon forecast:** IMD First-Stage Long-Range Forecast, April 15, 2026 (and the 2001-2025 historical series for comparison). El Niño probability from NOAA CPC ENSO Diagnostic Discussion, May 8, 2026.
+Central Electricity Authority daily peak-demand records (May 2026 grid log); Copernicus Climate Change Service ERA5 reanalysis; World Weather Attribution May 2026 rapid-attribution study; India Meteorological Department station data.
 
-**Strait of Hormuz / fertilizer / LNG:** Ministry of Petroleum & Natural Gas (PPAC) LNG and crude import-routing data, FY24-FY26; Department of Fertilizers monthly landed-cost dashboard; Lloyd's List Intelligence war-risk insurance benchmarks. Closure dates from public press briefings by the multinational task force.
+### Monsoon forecast
 
-**Rupee, GDP downgrades:** RBI weekly statistical supplement (foreign-currency assets and intervention); Moody's, Fitch and S&P sovereign-rating reports issued in the April-May 2026 window.
+IMD First-Stage Long-Range Forecast, April 15, 2026 (and the 2001-2025 historical series for comparison). El Niño probability from NOAA CPC ENSO Diagnostic Discussion, May 8, 2026.
 
-**Editorial choice:** Story restricted to four shocks. The CDS Eastern Coast cyclone forecast, the IT-services hiring slowdown, and the FDI-routing change post-Mauritius treaty are real but second-order to the May fortnight and are excluded by design.
+### Strait of Hormuz, fertilizer, LNG
+
+Ministry of Petroleum & Natural Gas (PPAC) LNG and crude import-routing data, FY24-FY26; Department of Fertilizers monthly landed-cost dashboard; Lloyd's List Intelligence war-risk insurance benchmarks. Closure dates from public press briefings by the multinational task force.
+
+### Rupee and GDP downgrades
+
+RBI weekly statistical supplement (foreign-currency assets and intervention); Moody's, Fitch and S&P sovereign-rating reports issued in the April-May 2026 window.
+
+### Editorial choices
+
+Story restricted to four shocks. The CDS Eastern Coast cyclone forecast, the IT-services hiring slowdown, and the FDI-routing change post-Mauritius treaty are real but second-order to the May fortnight and are excluded by design.
