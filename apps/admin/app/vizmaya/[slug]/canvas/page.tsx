@@ -15,6 +15,7 @@ import {
   outputSpecsForUnit,
 } from '@/components/vizmaya/canvas/canvasOutputs'
 import type { CanvasSources } from '@/components/vizmaya/canvas/canvasInputs'
+import { getModuleTypesForVertical } from '@/lib/vizmayaModuleTypes'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +91,16 @@ export default async function CanvasPage({ params }: Props) {
     }
   }
 
+  // Module-type lists for the "+ add layer" picker. Resolved server-side
+  // so the vertical's modules can be loaded via dynamic import without
+  // bloating the client bundle; the canvas only receives the resulting
+  // string arrays. Failures fall back to core types.
+  const moduleTypes = await getModuleTypesForVertical(
+    typeof story.frontmatter.vertical === 'string'
+      ? story.frontmatter.vertical
+      : undefined
+  )
+
   return (
     <CanvasClient
       slug={slug}
@@ -97,6 +108,7 @@ export default async function CanvasPage({ params }: Props) {
       sources={sources}
       theme={story.frontmatter.theme ?? null}
       signedSrcById={signedSrcById}
+      moduleTypes={moduleTypes}
     />
   )
 }
