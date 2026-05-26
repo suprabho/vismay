@@ -1,43 +1,46 @@
 /**
- * Coke Studio lyrics fetcher — Genius API search + page HTML scrape.
+ * Coke Studio lyrics fetcher — multi-source, quality-scored.
  *
- * For every row in coke_studio_songs without a cached lyrics record, search
- * Genius for the song, pick the best hit, scrape the song page for lyrics,
- * upsert into coke_studio_song_lyrics. Songs we can't find are written to
+ * For every row in coke_studio_songs without a cached lyrics record, fan
+ * out across N sources (YouTube descriptions, LyricsTranslate, Genius — and
+ * easy to add more) in parallel, score the survivors, upsert the winner
+ * into coke_studio_song_lyrics. Songs no source could find are written to
  * vizmaya-data/coke-studio/lyrics-misses.csv for manual triage.
+ *
+ * Source-by-source: see scripts/coke-studio/sources/. Each source is a small
+ * module behind a common interface. Sources without their auth env var
+ * (e.g. GENIUS_CLIENT_ACCESS_TOKEN) skip themselves rather than block.
  *
  * Run locally:
  *   pnpm coke-studio:fetch-lyrics
  *   pnpm coke-studio:fetch-lyrics -- --season 1
  *   pnpm coke-studio:fetch-lyrics -- --limit 10 --dry-run
- *   pnpm coke-studio:fetch-lyrics -- --force        # refetch even if cached
+ *   pnpm coke-studio:fetch-lyrics -- --force        # refetch cached songs
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — write access
- *   GENIUS_CLIENT_ACCESS_TOKEN                            — see docs/coke-studio-pipeline.md
  *
- * Why HTML scrape and not the API? The Genius API returns song metadata
- * (URL, ID, primary artist) but never the lyrics text itself. The canonical
- * pattern across lyric tooling (e.g. the lyricsgenius Python package) is to
- * fetch the song's web page and parse the `[data-lyrics-container=true]`
- * divs. Tolerated but unofficial; we cache to a service-role-only table so
- * we don't republish.
+ * Optional env:
+ *   GENIUS_CLIENT_ACCESS_TOKEN  — enables the Genius source. No token =
+ *                                  Genius is skipped; YouTube + LT cover
+ *                                  most of the corpus on their own.
  *
- * Throttling: 1 req/sec by default — Genius free tier is 1000 req/day, and
- * we don't want to get IP-throttled mid-run.
+ * Picking: scoreCandidate = length + 1000 if has_native_script + 1000 if
+ * has_translation. Longer + bilingual wins. See sources/utils.ts.
  */
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { createGeniusSource } from './sources/genius.js'
+import { createYouTubeSource } from './sources/youtube.js'
+import { createLyricsTranslateSource } from './sources/lyricstranslate.js'
+import { detectScript, pickBest, scoreCandidate } from './sources/utils.js'
+import type { LyricsCandidate, LyricsSource, SongRow, SourceName } from './sources/types.js'
 
-// Anchor all paths on this script's location, not process.cwd(), so the
-// pipeline works regardless of where the user invokes it from. The script
-// lives at apps/vizmaya-fyi/scripts/coke-studio/, so the package root is
-// ../../ and the repo root is ../../../../.
+// Path anchoring on script location — see PR #103 / commit 7619cb0.
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const PKG_DIR    = resolve(SCRIPT_DIR, '../../')
 const REPO_ROOT  = resolve(SCRIPT_DIR, '../../../../')
@@ -45,14 +48,14 @@ const REPO_ROOT  = resolve(SCRIPT_DIR, '../../../../')
 loadEnv({ path: resolve(PKG_DIR, '.env.local') })
 loadEnv({ path: resolve(PKG_DIR, '.env') })
 
-// ---- config + CLI ---------------------------------------------------------
-
-const GENIUS_API = 'https://api.genius.com'
-const REQ_DELAY_MS = 1000
-const USER_AGENT = 'vizmaya-coke-studio-fetcher/1.0 (+https://vizmaya.fyi)'
-
 const DATA_DIR = resolve(REPO_ROOT, 'vizmaya-data/coke-studio')
 const MISSES_CSV = resolve(DATA_DIR, 'lyrics-misses.csv')
+
+// Per-song polite throttle — applies between songs, not within. Each song
+// fires all sources concurrently, so a single song's wall time is the slowest
+// source's latency. Sleeping between songs is what keeps each source under
+// its rate limit (Genius is the strictest at 1 req/sec).
+const PER_SONG_DELAY_MS = 1100
 
 interface Cli {
   season: number | null
@@ -73,159 +76,6 @@ function parseCli(): Cli {
     else throw new Error(`unknown arg: ${a}`)
   }
   return cli
-}
-
-// ---- types ----------------------------------------------------------------
-
-interface SongRow {
-  song_id: string
-  title: string
-  season: number
-  episode: number | null
-  track_in_episode: number
-  artists: string | null
-  notes: string | null
-}
-
-interface GeniusHit {
-  id: number
-  title: string
-  primary_artist_name: string
-  url: string
-}
-
-interface LyricsResult {
-  source: 'genius'
-  source_url: string
-  source_id: string
-  raw_text: string
-  script_hint: 'arabic' | 'latin' | 'devanagari' | 'mixed' | null
-}
-
-// ---- Genius API + scrape --------------------------------------------------
-
-async function geniusSearch(query: string, token: string): Promise<GeniusHit[]> {
-  const url = `${GENIUS_API}/search?q=${encodeURIComponent(query)}`
-  const res = await fetch(url, {
-    headers: {
-      authorization: `Bearer ${token}`,
-      'user-agent': USER_AGENT,
-    },
-  })
-  if (!res.ok) {
-    throw new Error(`Genius search ${res.status} ${res.statusText}: ${query}`)
-  }
-  const body = (await res.json()) as {
-    response: { hits: { result: { id: number; title: string; url: string; primary_artist: { name: string } } }[] }
-  }
-  return body.response.hits.map((h) => ({
-    id: h.result.id,
-    title: h.result.title,
-    primary_artist_name: h.result.primary_artist.name,
-    url: h.result.url,
-  }))
-}
-
-function normaliseForMatch(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[̀-ͯ]/g, '') // strip diacritics
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
-
-// Pick the hit that best matches the song. We prefer hits that mention "coke
-// studio" in the URL or title (handles covers that share titles with the
-// original), then score by title + artist token overlap.
-function pickBestHit(song: SongRow, hits: GeniusHit[]): GeniusHit | null {
-  if (hits.length === 0) return null
-
-  const titleTokens = new Set(normaliseForMatch(song.title).split(' ').filter(Boolean))
-  const artistTokens = new Set(
-    (song.artists ?? '')
-      .split(/[|,&]/)
-      .flatMap((a) => normaliseForMatch(a).split(' '))
-      .filter(Boolean),
-  )
-
-  const scored = hits.map((h) => {
-    const hitTitleTokens = new Set(normaliseForMatch(h.title).split(' ').filter(Boolean))
-    const hitArtistTokens = new Set(normaliseForMatch(h.primary_artist_name).split(' ').filter(Boolean))
-    const titleOverlap = [...titleTokens].filter((t) => hitTitleTokens.has(t)).length
-    const artistOverlap = [...artistTokens].filter((t) => hitArtistTokens.has(t)).length
-    const cokeStudioBonus =
-      /coke[\s_-]*studio/i.test(h.url) || /coke[\s_-]*studio/i.test(h.title) ? 5 : 0
-    return { hit: h, score: titleOverlap * 2 + artistOverlap + cokeStudioBonus }
-  })
-
-  scored.sort((a, b) => b.score - a.score)
-  // Require a minimum score: at least one title token overlap.
-  if (scored[0].score < 2) return null
-  return scored[0].hit
-}
-
-// Detect dominant script from the first ~200 chars. Used by the extractor to
-// route Urdu/Arabic-script verses through a different prompt.
-function detectScript(text: string): LyricsResult['script_hint'] {
-  const sample = text.slice(0, 200)
-  let arabic = 0
-  let latin = 0
-  let devanagari = 0
-  for (const ch of sample) {
-    const cp = ch.codePointAt(0) ?? 0
-    if ((cp >= 0x0600 && cp <= 0x06ff) || (cp >= 0x0750 && cp <= 0x077f)) arabic++
-    else if (cp >= 0x0900 && cp <= 0x097f) devanagari++
-    else if ((cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a)) latin++
-  }
-  const total = arabic + latin + devanagari
-  if (total === 0) return null
-  const dominant = Math.max(arabic, latin, devanagari)
-  if (dominant / total < 0.7) return 'mixed'
-  if (dominant === arabic) return 'arabic'
-  if (dominant === devanagari) return 'devanagari'
-  return 'latin'
-}
-
-async function scrapeLyrics(url: string): Promise<string | null> {
-  const res = await fetch(url, { headers: { 'user-agent': USER_AGENT } })
-  if (!res.ok) return null
-  const html = await res.text()
-  const dom = new JSDOM(html)
-  const containers = dom.window.document.querySelectorAll('[data-lyrics-container="true"]')
-  if (containers.length === 0) return null
-
-  // Replace <br> with newlines so the text reads as verses, not one blob.
-  // Genius uses <br> for line breaks within sections and a new container per
-  // section (Verse 1, Chorus, etc).
-  const sections: string[] = []
-  for (const c of containers) {
-    for (const br of c.querySelectorAll('br')) {
-      br.replaceWith(dom.window.document.createTextNode('\n'))
-    }
-    const text = (c.textContent ?? '').trim()
-    if (text) sections.push(text)
-  }
-  return sections.join('\n\n').trim() || null
-}
-
-async function fetchSongLyrics(
-  song: SongRow,
-  token: string,
-): Promise<LyricsResult | null> {
-  const firstArtist = (song.artists ?? '').split(/[|,&]/)[0]?.trim() ?? ''
-  const query = `${song.title} ${firstArtist} coke studio`.trim()
-  const hits = await geniusSearch(query, token)
-  const hit = pickBestHit(song, hits)
-  if (!hit) return null
-  const text = await scrapeLyrics(hit.url)
-  if (!text) return null
-  return {
-    source: 'genius',
-    source_url: hit.url,
-    source_id: String(hit.id),
-    raw_text: text,
-    script_hint: detectScript(text),
-  }
 }
 
 // ---- DB I/O ---------------------------------------------------------------
@@ -254,16 +104,17 @@ async function loadCachedSongIds(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.song_id as string))
 }
 
-async function upsertLyrics(songId: string, result: LyricsResult): Promise<void> {
+async function upsertLyrics(songId: string, c: LyricsCandidate): Promise<void> {
   const sb = createServiceClient()
+  const scriptHint = detectScript(c.raw_text).script_hint
   const { error } = await sb.from('coke_studio_song_lyrics').upsert(
     {
       song_id: songId,
-      source: result.source,
-      source_url: result.source_url,
-      source_id: result.source_id,
-      raw_text: result.raw_text,
-      script_hint: result.script_hint,
+      source: c.source,
+      source_url: c.source_url,
+      source_id: c.source_id,
+      raw_text: c.raw_text,
+      script_hint: scriptHint,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'song_id', ignoreDuplicates: false },
@@ -271,13 +122,23 @@ async function upsertLyrics(songId: string, result: LyricsResult): Promise<void>
   if (error) throw new Error(`upsert coke_studio_song_lyrics ${songId}: ${error.message}`)
 }
 
+async function backfillYoutube(
+  songId: string,
+  youtubeUrl: string,
+  durationSeconds: number | null | undefined,
+): Promise<void> {
+  const sb = createServiceClient()
+  const patch: Record<string, unknown> = { youtube_url: youtubeUrl, updated_at: new Date().toISOString() }
+  if (durationSeconds != null) patch.duration_seconds = durationSeconds
+  const { error } = await sb.from('coke_studio_songs').update(patch).eq('song_id', songId)
+  if (error) throw new Error(`backfill youtube_url ${songId}: ${error.message}`)
+}
+
 // ---- misses CSV -----------------------------------------------------------
 
 function appendMiss(song: SongRow, reason: string): void {
   const header = 'song_id,title,season,episode,artists,reason,attempted_at\n'
   if (!existsSync(MISSES_CSV)) {
-    // Parent might not exist on a fresh checkout where vizmaya-data is
-    // a sibling that wasn't created locally yet.
     mkdirSync(dirname(MISSES_CSV), { recursive: true })
     writeFileSync(MISSES_CSV, header)
   }
@@ -305,18 +166,51 @@ function pruneMisses(songIds: string[]): void {
   writeFileSync(MISSES_CSV, kept.join('\n'))
 }
 
+// ---- multi-source fan-out -------------------------------------------------
+
+interface PerSongResult {
+  candidates: LyricsCandidate[]
+  errors: { source: SourceName; message: string }[]
+}
+
+async function fetchAllSources(song: SongRow, sources: LyricsSource[]): Promise<PerSongResult> {
+  const settled = await Promise.allSettled(sources.map((s) => s.fetch(song)))
+  const candidates: LyricsCandidate[] = []
+  const errors: { source: SourceName; message: string }[] = []
+  for (let i = 0; i < settled.length; i++) {
+    const s = sources[i]
+    const r = settled[i]
+    if (r.status === 'fulfilled' && r.value) candidates.push(r.value)
+    else if (r.status === 'rejected') {
+      const msg = r.reason instanceof Error ? r.reason.message : String(r.reason)
+      errors.push({ source: s.name, message: msg })
+    }
+  }
+  return { candidates, errors }
+}
+
+function summariseCandidates(candidates: LyricsCandidate[]): string {
+  if (candidates.length === 0) return '0 sources'
+  return candidates
+    .map((c) => `${c.source}:${c.raw_text.length}ch${c.has_native_script ? '/N' : ''}${c.has_translation ? '/T' : ''}=${scoreCandidate(c)}`)
+    .join(' ')
+}
+
 // ---- entry point ----------------------------------------------------------
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 async function main(): Promise<void> {
   const cli = parseCli()
-  const token = process.env.GENIUS_CLIENT_ACCESS_TOKEN
-  if (!token) {
-    throw new Error(
-      'GENIUS_CLIENT_ACCESS_TOKEN not set — see apps/vizmaya-fyi/docs/coke-studio-pipeline.md for setup',
-    )
-  }
+
+  // Genius is opt-in via env var; YouTube + LT are always on.
+  const sources: LyricsSource[] = [
+    createYouTubeSource(),
+    createLyricsTranslateSource(),
+  ]
+  const genius = createGeniusSource()
+  if (genius) sources.push(genius)
+  console.log(`[coke-studio:fetch-lyrics] sources enabled: ${sources.map((s) => s.name).join(', ')}`)
 
   const allSongs = await loadSongs(cli)
   const cached = cli.force ? new Set<string>() : await loadCachedSongIds()
@@ -334,8 +228,6 @@ async function main(): Promise<void> {
     return
   }
 
-  // Log misses through this wrapper so a write failure (permissions, disk
-  // full, etc) doesn't bubble out and abort the rest of the run.
   const safeAppendMiss = (song: SongRow, reason: string): void => {
     try {
       appendMiss(song, reason)
@@ -348,35 +240,49 @@ async function main(): Promise<void> {
   let ok = 0
   let miss = 0
   const newlyOkIds: string[] = []
+  const winsBySource = new Map<SourceName, number>()
+
   for (let i = 0; i < todo.length; i++) {
     const song = todo[i]
     const prefix = `[${i + 1}/${todo.length}] ${song.song_id}`
-    try {
-      const result = await fetchSongLyrics(song, token)
-      if (result) {
-        await upsertLyrics(song.song_id, result)
+    const { candidates, errors } = await fetchAllSources(song, sources)
+    const winner = pickBest(candidates)
+
+    if (winner) {
+      try {
+        await upsertLyrics(song.song_id, winner)
+        if (winner.source === 'youtube' && winner.youtube_url) {
+          await backfillYoutube(song.song_id, winner.youtube_url, winner.duration_seconds)
+        }
         ok++
         newlyOkIds.push(song.song_id)
-        console.log(`${prefix} ✓ ${result.script_hint ?? '?'} ${result.raw_text.length}ch`)
-      } else {
+        winsBySource.set(winner.source, (winsBySource.get(winner.source) ?? 0) + 1)
+        console.log(`${prefix} ✓ ${winner.source} | ${summariseCandidates(candidates)}`)
+      } catch (err) {
         miss++
-        safeAppendMiss(song, 'no Genius match or empty lyrics page')
-        console.log(`${prefix} ✗ no match`)
+        const msg = err instanceof Error ? err.message : String(err)
+        safeAppendMiss(song, `upsert failed: ${msg}`)
+        console.log(`${prefix} ! upsert failed: ${msg}`)
       }
-    } catch (err) {
+    } else {
       miss++
-      const msg = err instanceof Error ? err.message : String(err)
-      safeAppendMiss(song, msg)
-      console.log(`${prefix} ! ${msg}`)
+      const reason = errors.length > 0
+        ? `all sources failed: ${errors.map((e) => `${e.source}=${e.message}`).join('; ')}`
+        : 'no source matched'
+      safeAppendMiss(song, reason)
+      console.log(`${prefix} ✗ ${reason}`)
     }
-    if (i < todo.length - 1) await sleep(REQ_DELAY_MS)
+
+    if (i < todo.length - 1) await sleep(PER_SONG_DELAY_MS)
   }
 
-  // Clear previously-logged misses for songs we just succeeded on, so the
-  // misses CSV stays a live to-fix list rather than an append-only audit.
   pruneMisses(newlyOkIds)
 
   console.log(`[coke-studio:fetch-lyrics] done — ${ok} fetched, ${miss} missed`)
+  if (winsBySource.size > 0) {
+    const breakdown = [...winsBySource.entries()].map(([s, n]) => `${s}:${n}`).join(' ')
+    console.log(`[coke-studio:fetch-lyrics] wins by source: ${breakdown}`)
+  }
   if (miss > 0) console.log(`[coke-studio:fetch-lyrics] misses logged to ${MISSES_CSV}`)
 }
 
