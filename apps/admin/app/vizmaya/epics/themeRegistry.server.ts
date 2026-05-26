@@ -2,6 +2,7 @@
 // server contexts free of any client React components (Deck.GL, Mapbox, etc.).
 // The client registry in themeRegistry.tsx re-exports this with preview components.
 
+import { COKE_STUDIO_THEME_DEFAULTS, COKE_STUDIO_THEME_LABELS } from '@/app/coke-studio/theme'
 import { EPSTEIN_THEME_DEFAULTS, EPSTEIN_THEME_LABELS } from '@/app/epstein/theme'
 import { ENERGY_PROFILE_THEME_DEFAULTS, ENERGY_PROFILE_THEME_LABELS } from '@/app/energy-profile/theme'
 import { FIFA_WC26_THEME_DEFAULTS, FIFA_WC26_THEME_LABELS } from '@/app/fifa-wc26/theme'
@@ -31,6 +32,12 @@ const SHARED_FONT_DEFAULTS: ThemeFontDefaults = {
 const SHARED_MAP_STYLE_DEFAULT = 'mapbox://styles/mapbox/dark-v11'
 
 export const THEME_REGISTRY_SERVER: Record<string, ThemeMeta> = {
+  'coke-studio': {
+    defaults: COKE_STUDIO_THEME_DEFAULTS,
+    labels: COKE_STUDIO_THEME_LABELS,
+    fontDefaults: SHARED_FONT_DEFAULTS,
+    mapStyleDefault: SHARED_MAP_STYLE_DEFAULT,
+  },
   epstein: {
     defaults: EPSTEIN_THEME_DEFAULTS,
     labels: EPSTEIN_THEME_LABELS,
