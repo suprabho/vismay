@@ -63,27 +63,29 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
 ## Full-corpus run
 
-> All commands assume cwd = vizmaya repo root so `vizmaya-data/coke-studio/*.csv`
-> resolves correctly. See *Running from `apps/vizmaya-fyi`* below.
+All paths in these scripts are anchored to the script file location, so cwd
+doesn't matter — invoke them from anywhere.
 
 ```bash
 # 0. Apply migrations 046 + 047
 supabase db push                  # or paste into SQL editor
 
 # 1. Seed songs + hand-seeded gazetteer (one-time, idempotent)
-npx tsx apps/vizmaya-fyi/scripts/coke-studio/import.ts
+pnpm --filter vizmaya-fyi coke-studio:import
 
 # 2. Fetch lyrics from Genius (~6 min, 1 req/sec throttle)
-npx tsx apps/vizmaya-fyi/scripts/coke-studio/fetch-lyrics.ts
+pnpm --filter vizmaya-fyi coke-studio:fetch-lyrics
 
 # 3. Extract place mentions with Claude (~10-15 min, 352 LLM calls)
-npx tsx apps/vizmaya-fyi/scripts/coke-studio/extract-places.ts
+pnpm --filter vizmaya-fyi coke-studio:extract-places
 
 # 4. Re-import to push place_mentions + auto-added gazetteer rows
-npx tsx apps/vizmaya-fyi/scripts/coke-studio/import.ts
+pnpm --filter vizmaya-fyi coke-studio:import
 ```
 
-Each step is idempotent — safe to re-run any of them.
+Each step is idempotent — safe to re-run any of them. The npx form
+(`npx tsx apps/vizmaya-fyi/scripts/coke-studio/<script>.ts`) works too;
+both invocations are cwd-independent.
 
 ### Useful flags
 
@@ -136,27 +138,6 @@ manually or skip. Direct Genius URL works too — drop the song into the
 - Cached: system prompt + tool schema + gazetteer block (~4k tokens) — cached after the first call
 - ≈ $0.03/song uncached, ≈ $0.008/song cached
 - 352 songs total: ≈ **$10-15** end-to-end if rerun from cold
-
-## Running from `apps/vizmaya-fyi/` directly
-
-The pnpm scripts use `process.cwd()` to find `vizmaya-data/` (matching the
-existing `fifa-wc26:import` pattern). `pnpm coke-studio:import` from inside
-`apps/vizmaya-fyi/` will fail to find the CSVs because `vizmaya-data` is at
-the repo root, not under the package. Two options:
-
-```bash
-# (a) Run from repo root with explicit script path
-cd vismay
-npx tsx apps/vizmaya-fyi/scripts/coke-studio/import.ts
-
-# (b) Symlink the data dir into apps/vizmaya-fyi (gitignored)
-cd apps/vizmaya-fyi
-ln -s ../../vizmaya-data vizmaya-data
-pnpm coke-studio:import
-```
-
-If this footgun keeps biting, the cleaner fix is to anchor the data path on
-the script file location instead of `process.cwd()`. Tracked as a follow-up.
 
 ## What's not in this pipeline (yet)
 

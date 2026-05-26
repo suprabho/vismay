@@ -24,15 +24,22 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { parse as parseCsv } from 'csv-parse/sync'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
-loadEnv({ path: '.env.local' })
-loadEnv({ path: '.env' })
+// Paths anchored on this script's location, not process.cwd() — see
+// scripts/coke-studio/fetch-lyrics.ts for the same setup.
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+const PKG_DIR    = resolve(SCRIPT_DIR, '../../')
+const REPO_ROOT  = resolve(SCRIPT_DIR, '../../../../')
 
-const DATA_DIR = resolve(process.cwd(), 'vizmaya-data/coke-studio')
+loadEnv({ path: resolve(PKG_DIR, '.env.local') })
+loadEnv({ path: resolve(PKG_DIR, '.env') })
+
+const DATA_DIR = resolve(REPO_ROOT, 'vizmaya-data/coke-studio')
 const SONGS_CSV          = resolve(DATA_DIR, 'songs.csv')
 const GAZETTEER_CSV           = resolve(DATA_DIR, 'gazetteer.csv')
 const GAZETTEER_ADDITIONS_CSV = resolve(DATA_DIR, 'gazetteer-additions.csv')
