@@ -228,13 +228,21 @@ function parseGazetteer(): GazetteerRow[] {
 }
 
 function parseSongLanguages(): SongLanguageRow[] {
-  return readRows(SONG_LANGUAGES_CSV).map((r): SongLanguageRow => {
+  // Rows with `song_id` but empty `language` are intentional — instrumental
+  // tracks have no lyrics and therefore no language. Zahra Sabri's compilation
+  // includes them as "Instrumental (no lyrics)" placeholders so the song_id
+  // shows up in the source-of-truth CSV; we drop them at import since
+  // (song_id, language) is the PK and a NULL language would violate the
+  // not-null constraint. Truly-missing rows (empty song_id) still throw.
+  const out: SongLanguageRow[] = []
+  for (const r of readRows(SONG_LANGUAGES_CSV)) {
     const song_id = nullable(r.song_id)
     const language = nullable(r.language)
-    if (!song_id || !language) {
-      throw new Error(`song_languages.csv: row missing song_id/language: ${JSON.stringify(r)}`)
+    if (!song_id) {
+      throw new Error(`song_languages.csv: row missing song_id: ${JSON.stringify(r)}`)
     }
-    return {
+    if (!language) continue // instrumental — skip
+    out.push({
       song_id,
       language,
       language_family: nullable(r.language_family),
@@ -245,8 +253,29 @@ function parseSongLanguages(): SongLanguageRow[] {
       confidence:      nullable(r.confidence) ?? 'medium',
       source:          nullable(r.source),
       notes:           nullable(r.notes),
-    }
-  })
+    })
+  }
+  return out
+}
+
+// `context_type` is constrained by a check constraint to this enum (see
+// migration 046). Older extract-places runs sometimes wrote values outside
+// it (e.g. "destination") — most map cleanly onto a member of the enum, the
+// rest fall through to 'other'. Normalising here keeps the DB clean without
+// forcing a schema relaxation every time the LLM invents a synonym.
+const ALLOWED_CONTEXT_TYPES = new Set([
+  'beloved', 'origin', 'journey', 'shrine', 'imagery', 'address', 'other',
+])
+const CONTEXT_TYPE_ALIASES: Record<string, string> = {
+  destination: 'journey',
+  beloved_home: 'beloved',
+  homeland: 'origin',
+}
+
+function normalizeContextType(raw: string | null): string | null {
+  if (!raw) return null
+  const aliased = CONTEXT_TYPE_ALIASES[raw] ?? raw
+  return ALLOWED_CONTEXT_TYPES.has(aliased) ? aliased : 'other'
 }
 
 function parsePlaceMentions(): PlaceMentionRow[] {
@@ -267,7 +296,7 @@ function parsePlaceMentions(): PlaceMentionRow[] {
       language_of_mention: nullable(r.language_of_mention),
       lyric_context:       nullable(r.lyric_context),
       lyric_translation:   nullable(r.lyric_translation),
-      context_type:        nullable(r.context_type),
+      context_type:        normalizeContextType(nullable(r.context_type)),
       verse_number:        parseInt0(r.verse_number),
       confidence:          nullable(r.confidence) ?? 'medium',
       notes:               nullable(r.notes),
