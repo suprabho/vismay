@@ -22,20 +22,42 @@ apps/vizmaya-fyi/
     047_coke_studio_song_lyrics.sql          # lyrics cache (RLS, service-role only)
   scripts/coke-studio/
     import.ts                                # CSV → Supabase upsert (idempotent)
-    fetch-lyrics.ts                          # Genius API → coke_studio_song_lyrics
+    fetch-lyrics.ts                          # multi-source orchestrator
     extract-places.ts                        # Claude Sonnet 4.6 → place_mentions + gazetteer
+    sources/
+      types.ts                               # LyricsSource + LyricsCandidate
+      utils.ts                               # script detect, fuzzy match, scoring
+      youtube.ts                             # Coke Studio YouTube channel (no auth)
+      lyricstranslate.ts                     # lyricstranslate.com (no auth)
+      genius.ts                              # Genius API (opt-in, needs token)
 ```
+
+## Lyrics sources
+
+The fetcher fans out to every enabled source in parallel for each song and
+picks the best by a quality score (`length + 1000 if native script + 1000
+if translation present`). Sources without their env var skip themselves.
+
+| Source | Auth | Typical coverage | Notes |
+|---|---|---|---|
+| **YouTube** (Coke Studio channel descriptions) | none | ~70% overall, ~95% for S11+ | Authoritative — official bilingual lyrics. Also backfills `youtube_url` + `duration_seconds` on `coke_studio_songs`. |
+| **LyricsTranslate** | none | ~60% overall, strongest for famous songs | Crowdsourced; usually has parallel English translation. |
+| **Genius** | `GENIUS_CLIENT_ACCESS_TOKEN` | ~30-40% (mainly newer English-leaning tracks) | Was the original source; kept as a fallback. Genius API search + page-HTML lyrics scrape. |
+
+Adding a source: write one file in `scripts/coke-studio/sources/` that exports
+a `LyricsSource`, register it in `fetch-lyrics.ts`'s `main()`. Wayback Machine
+of cokestudio.com.pk would be a natural fourth.
 
 ## One-time setup
 
-### Genius API token
+### Genius API token (optional)
 
-Lyrics come from Genius. Free tier is 1000 req/day — enough for the 352-song
-corpus with daily-limit headroom.
+Skippable — YouTube + LyricsTranslate cover most of the corpus on their own.
+If you want Genius as an additional source:
 
 1. Sign in at https://genius.com → https://genius.com/api-clients → "New
-   API Client". App name: anything (e.g. "vizmaya-coke-studio"). App URL:
-   anything (e.g. `https://vizmaya.fyi`). Submit.
+   API Client". App name: anything (e.g. "vizmaya-coke-studio"). App URL +
+   Redirect URI: anything (e.g. `https://vizmaya.fyi`). Submit.
 2. On the resulting client page, click **"Generate Access Token"**.
 3. Add to `apps/vizmaya-fyi/.env.local`:
 
@@ -73,7 +95,7 @@ supabase db push                  # or paste into SQL editor
 # 1. Seed songs + hand-seeded gazetteer (one-time, idempotent)
 pnpm --filter vizmaya-fyi coke-studio:import
 
-# 2. Fetch lyrics from Genius (~6 min, 1 req/sec throttle)
+# 2. Fetch lyrics from every enabled source in parallel (~7-10 min for 352 songs)
 pnpm --filter vizmaya-fyi coke-studio:fetch-lyrics
 
 # 3. Extract place mentions with Claude (~10-15 min, 352 LLM calls)
@@ -141,9 +163,6 @@ manually or skip. Direct Genius URL works too — drop the song into the
 
 ## What's not in this pipeline (yet)
 
-- **YouTube enrichment** — `youtube_url` and `duration_seconds` stay empty
-  after this pipeline. Separate script needed (YouTube Data API search by
-  `(title, season)`).
 - **`coke_studio_song_languages`** — table is header-only on disk; intended
   for a future enrichment from Zahra Sabri's compilation + fasttext on
   lyric snippets.
@@ -152,3 +171,7 @@ manually or skip. Direct Genius URL works too — drop the song into the
 - **`coke-studio-map` landing component** — not built. While the epic row
   stays `status='draft'` + `show_on_home=false`, the data layer is invisible
   to readers. Flip both flags once the landing exists.
+
+`youtube_url` + `duration_seconds` no longer need a separate enrichment
+script — the YouTube source backfills them onto `coke_studio_songs` whenever
+its result wins for a song.
