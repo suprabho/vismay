@@ -66,6 +66,12 @@ interface Props {
    *  as a reference rectangle. Implies `hideMobileTarget` semantics for the
    *  focal padding (no story-style focal subarea is applied). */
   frame?: PickerFrame
+  /** Optional persistence hook for the Mapbox style URL. When defined, the
+   *  modal exposes a header input so the user can change the story-wide
+   *  `defaults.mapStyle` from inside the camera tool. The modal updates the
+   *  visible Mapbox canvas immediately via `setStyle`; the parent owns the
+   *  config.yaml write so the change survives the next page load. */
+  onMapStyleChange?: (nextStyle: string) => Promise<void> | void
 }
 
 type Target = 'desktop' | 'mobile'
@@ -80,6 +86,7 @@ export default function MapPickerModal({
   onClose,
   hideMobileTarget = false,
   frame,
+  onMapStyleChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -97,6 +104,19 @@ export default function MapPickerModal({
   const [desktopDirty, setDesktopDirty] = useState(false)
   const [mobileDirty, setMobileDirty] = useState(false)
   const [noMapBlock] = useState(() => extractMapView(sectionRaw) === null)
+
+  // Local map-style state — drives both the live mapbox canvas (via setStyle)
+  // and the controlled input shown in the header. Initialised from the parent
+  // and persisted on blur / Enter via `onMapStyleChange`. The committed value
+  // tracks what's actually on disk so the user reads at a glance whether
+  // their edit is unsaved (the input falls back to `style` when undirty so a
+  // parent re-render with a fresh `style` prop is picked up).
+  const initialStyle = style ?? DEFAULT_STYLE
+  const [mapStyle, setMapStyle] = useState<string>(initialStyle)
+  const [styleCommitted, setStyleCommitted] = useState<string>(initialStyle)
+  const [styleSaving, setStyleSaving] = useState(false)
+  const [styleError, setStyleError] = useState<string | null>(null)
+  const mapStyleDirty = mapStyle !== styleCommitted
 
   // Read target inside the moveend listener via ref — the listener captures
   // its closure once at mount, so a state read would always return 'desktop'.
@@ -126,7 +146,7 @@ export default function MapPickerModal({
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: style ?? DEFAULT_STYLE,
+      style: mapStyle,
       center: initialDesktop.center,
       zoom: initialDesktop.zoom,
       pitch: initialDesktop.pitch,
@@ -216,6 +236,51 @@ export default function MapPickerModal({
       document.body.style.overflow = prev
     }
   }, [])
+
+  // Live preview the map style URL change — setStyle reloads tiles + layers
+  // without remounting the map, so the camera (and the user's in-progress
+  // pan/zoom) survives the swap. Skipped on first mount; the initial `new
+  // mapboxgl.Map({style})` already loaded the right style.
+  const styleAppliedRef = useRef(mapStyle)
+  useEffect(() => {
+    if (styleAppliedRef.current === mapStyle) return
+    const map = mapRef.current
+    if (!map) return
+    try {
+      map.setStyle(mapStyle)
+      styleAppliedRef.current = mapStyle
+    } catch {
+      // Mapbox throws on a malformed URL; we leave the previous style in
+      // place so the canvas stays usable, and the input is still editable
+      // for the user to correct.
+    }
+  }, [mapStyle])
+
+  async function commitMapStyle() {
+    const next = mapStyle.trim()
+    if (!next || next === styleCommitted) {
+      // Empty / unchanged values fall back to whatever was last committed —
+      // saves a no-op write and keeps the input from going blank.
+      setMapStyle(styleCommitted)
+      return
+    }
+    if (!onMapStyleChange) {
+      // No persistence hook — treat as accepted locally so the user sees the
+      // input chrome stop flagging dirty, but flag the limitation visibly.
+      setStyleCommitted(next)
+      return
+    }
+    setStyleSaving(true)
+    setStyleError(null)
+    try {
+      await onMapStyleChange(next)
+      setStyleCommitted(next)
+    } catch (e) {
+      setStyleError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setStyleSaving(false)
+    }
+  }
 
   function switchTarget(next: Target) {
     if (next === target) return
@@ -311,6 +376,63 @@ export default function MapPickerModal({
           >
             Clear mobile override
           </button>
+        )}
+      </div>
+
+      {/* Map style URL — the story-wide `defaults.mapStyle`. Persisted only
+          when the parent passed `onMapStyleChange`; otherwise the input is
+          informational and saves locally so the live preview still reflects
+          the user's change for this session. */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-black/20">
+        <label className="text-[10px] uppercase tracking-wider text-neutral-500 shrink-0">
+          Style URL
+        </label>
+        <input
+          type="text"
+          value={mapStyle}
+          onChange={(e) => setMapStyle(e.target.value)}
+          onBlur={() => void commitMapStyle()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              void commitMapStyle()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setMapStyle(styleCommitted)
+            }
+          }}
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+          placeholder="mapbox://styles/mapbox/dark-v11"
+          className="flex-1 min-w-0 bg-black/40 border border-white/10 rounded-md px-3 py-1.5 text-xs font-mono text-neutral-200 outline-none focus:border-white/30"
+        />
+        {styleSaving && (
+          <span className="text-[10px] text-neutral-400 shrink-0">Saving…</span>
+        )}
+        {!styleSaving && mapStyleDirty && (
+          <span
+            className="text-[10px] text-amber-300 shrink-0"
+            title="Press Enter or click outside to save"
+          >
+            unsaved
+          </span>
+        )}
+        {!styleSaving && !mapStyleDirty && !onMapStyleChange && (
+          <span
+            className="text-[10px] text-neutral-500 shrink-0"
+            title="Parent didn't wire onMapStyleChange — edits preview only this session"
+          >
+            preview only
+          </span>
+        )}
+        {styleError && (
+          <span
+            className="text-[10px] text-red-300 shrink-0 truncate max-w-[12rem]"
+            title={styleError}
+          >
+            {styleError}
+          </span>
         )}
       </div>
 

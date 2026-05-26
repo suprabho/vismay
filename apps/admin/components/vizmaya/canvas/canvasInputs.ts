@@ -440,6 +440,33 @@ export function mapOverrideNode(
   }
 }
 
+/**
+ * Per-section share-card map override (sliced from share.yaml's
+ * `sections[<sectionId>].map` block). Separate from `mapOverrideNode` because
+ * Share Cards read camera fields from share.yaml — the map.yaml overrides
+ * only feed autoplay. Surfacing the right slice keeps the canvas honest:
+ * what the user edits on the Share output is what the Share Cards actually
+ * consume.
+ */
+export function shareMapOverrideNode(
+  unit: ResolvedUnit,
+  parsed: ParsedCanvasSources
+): InputNodeData {
+  const sectionId =
+    unit.parentConfig.id ?? `section-${unit.parentIndex}`
+  const slice = sliceShareMapForSection(parsed.share, sectionId)
+  return {
+    id: 'share-map-override',
+    label: 'Map Override',
+    tag: slice ? 'YAML' : '—',
+    body:
+      slice === null
+        ? '(no share-map override for this section)'
+        : truncateLines(safeYamlStringify(slice), 12),
+    variant: slice ? 'mono' : 'muted',
+  }
+}
+
 export function narrationNode(
   unit: ResolvedUnit,
   parsed: ParsedCanvasSources
@@ -470,6 +497,18 @@ function sliceShareForSection(
   if (!sections || typeof sections !== 'object') return null
   const slice = sections[sectionId]
   return slice == null ? null : slice
+}
+
+/** Subset of `sliceShareForSection` that returns only the `.map` sub-block —
+ *  the share-card camera override the canvas surfaces as its own card. */
+function sliceShareMapForSection(
+  share: unknown,
+  sectionId: string
+): unknown | null {
+  const section = sliceShareForSection(share, sectionId)
+  if (!section || typeof section !== 'object') return null
+  const map = (section as { map?: unknown }).map
+  return map == null ? null : map
 }
 
 interface ReportPageEntry {
