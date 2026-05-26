@@ -1,0 +1,246 @@
+# Story config — india-compounding-crises-2026
+#
+# Source artifact: India 2026 Compounding Crises report (May 2026 fortnight).
+# Four shocks layered in one fortnight: extreme heat + weak monsoon forecast +
+# Strait of Hormuz closure aftermath + rupee/GDP downgrade.
+#
+# Repeating coordinates:
+#   New Delhi              77.2090  28.6139
+#   Mumbai (RBI, refiners) 72.8777  19.0760
+#   Najafgarh (UHI)        76.9799  28.6093
+#   Sirsa (Thar fringe)    75.0228  29.5345
+#   Phalodi (Thar)         72.3636  27.1316
+#   Barmer (Thar)          71.3833  25.7521
+#   Jamnagar refinery      70.0577  22.4707
+#   Kandla LNG terminal    70.2167  23.0000
+#   Dahej LNG terminal     72.5800  21.7080
+#   Strait of Hormuz       56.2500  26.5667
+#   Bandar Abbas (Iran)    56.2667  27.1865
+#   Doha (LNG origin)      51.5310  25.2854
+#   Nagpur (cotton belt)   79.0882  21.1458
+#   Patna (paddy belt)     85.1376  25.5941
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#e8a04f"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO — subcontinent, Delhi pin
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "India 2026: Four Shocks at Once"
+    eyebrow: "India · Macro · May 2026"
+    map:
+      center: [78.0, 22.5]
+      zoom: 3.4
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi — where the four lines cross"
+          color: "#e8a04f"
+          radius: 14
+          pulse: true
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 270.82 GW grid record
+  # ═══════════════════════════════════════════════
+
+  - id: opening-stat
+    kind: stat
+    text: "270.82 GW"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.0, 22.0]
+      zoom: 4.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi — May 21 grid peak, 14:32 IST"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [76.9799, 28.6093]
+          label: "Najafgarh — urban heat-island hotspot"
+          color: "#b04a3a"
+          labelAnchor: bottom
+        - coordinates: [75.0228, 29.5345]
+          label: "Sirsa — eight days above 47°C"
+          color: "#b04a3a"
+          labelAnchor: top
+      mobile:
+        center: [78.0, 22.0]
+        zoom: 3.4
+
+  # ═══════════════════════════════════════════════
+  # HEAT CITIES — Copernicus top-100 share
+  # ═══════════════════════════════════════════════
+
+  - id: heat-cities
+    text: "A country in the wrong half of the list"
+    chart: data:hottest-cities
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [73.0, 27.0]
+      zoom: 5.0
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [72.3636, 27.1316]
+          label: "Phalodi — 47°C+"
+          color: "#b04a3a"
+          labelAnchor: top
+        - coordinates: [71.3833, 25.7521]
+          label: "Barmer — Thar fringe"
+          color: "#b04a3a"
+          labelAnchor: right
+        - coordinates: [75.0228, 29.5345]
+          label: "Sirsa — 8 consecutive days"
+          color: "#b04a3a"
+          labelAnchor: bottom
+        - coordinates: [76.9799, 28.6093]
+          label: "Najafgarh — urban heat island"
+          color: "#e8a04f"
+          labelAnchor: left
+
+  # ═══════════════════════════════════════════════
+  # MONSOON FORECAST — IMD first-stage history
+  # ═══════════════════════════════════════════════
+
+  - id: monsoon-forecast-section
+    text: "The driest first forecast in twenty-five years"
+    chart: data:monsoon-forecast
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [80.0, 22.0]
+      zoom: 4.2
+      pitch: 20
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [79.0882, 21.1458]
+          label: "Vidarbha — rainfed cotton belt"
+          color: "#d9a84a"
+          labelAnchor: bottom
+        - coordinates: [85.1376, 25.5941]
+          label: "Patna — paddy transplant window"
+          color: "#7d9a6f"
+          labelAnchor: right
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi — IMD HQ, first-stage release"
+          color: "#e8a04f"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # HORMUZ CHOKEPOINT — fertilizer landed cost spike
+  # ═══════════════════════════════════════════════
+
+  - id: hormuz-chokepoint
+    text: "The chokepoint reopens — at a cost"
+    chart: data:fertilizer-spike
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [60.0, 25.0]
+      zoom: 3.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [56.2500, 26.5667]
+          label: "Strait of Hormuz — closed Feb 28 → Mar 14"
+          color: "#b04a3a"
+          radius: 14
+          labelAnchor: top
+        - coordinates: [56.2667, 27.1865]
+          label: "Bandar Abbas — Iranian naval base"
+          color: "#b04a3a"
+          labelAnchor: left
+        - coordinates: [51.5310, 25.2854]
+          label: "Doha — LNG origin"
+          color: "#3a7a8c"
+          labelAnchor: bottom
+        - coordinates: [70.2167, 23.0000]
+          label: "Kandla — Indian LNG terminal"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [72.5800, 21.7080]
+          label: "Dahej — Indian LNG terminal"
+          color: "#e8a04f"
+          labelAnchor: bottom
+        - coordinates: [70.0577, 22.4707]
+          label: "Jamnagar — refinery drawdown on closure"
+          color: "#3a7a8c"
+          labelAnchor: left
+
+  # ═══════════════════════════════════════════════
+  # RUPEE & GROWTH — agency GDP downgrade
+  # ═══════════════════════════════════════════════
+
+  - id: rupee-and-growth
+    text: "Ninety-six"
+    chart: data:gdp-downgrade
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [76.0, 22.0]
+      zoom: 4.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — RBI intervention, $38B drawdown"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi — Finance Ministry, subsidy arithmetic"
+          color: "#d9a84a"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # CLOSE — what stacking does
+  # ═══════════════════════════════════════════════
+
+  - id: close
+    text: "What three shocks become when they arrive together"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
+    map:
+      center: [78.0, 22.5]
+      zoom: 3.6
+      pitch: 20
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "New Delhi"
+          color: "#e8a04f"
+          labelAnchor: right
