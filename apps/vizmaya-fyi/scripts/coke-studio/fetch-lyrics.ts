@@ -27,14 +27,23 @@
  * we don't want to get IP-throttled mid-run.
  */
 
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
-loadEnv({ path: '.env.local' })
-loadEnv({ path: '.env' })
+// Anchor all paths on this script's location, not process.cwd(), so the
+// pipeline works regardless of where the user invokes it from. The script
+// lives at apps/vizmaya-fyi/scripts/coke-studio/, so the package root is
+// ../../ and the repo root is ../../../../.
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
+const PKG_DIR    = resolve(SCRIPT_DIR, '../../')
+const REPO_ROOT  = resolve(SCRIPT_DIR, '../../../../')
+
+loadEnv({ path: resolve(PKG_DIR, '.env.local') })
+loadEnv({ path: resolve(PKG_DIR, '.env') })
 
 // ---- config + CLI ---------------------------------------------------------
 
@@ -42,10 +51,8 @@ const GENIUS_API = 'https://api.genius.com'
 const REQ_DELAY_MS = 1000
 const USER_AGENT = 'vizmaya-coke-studio-fetcher/1.0 (+https://vizmaya.fyi)'
 
-const MISSES_CSV = resolve(
-  process.cwd(),
-  'vizmaya-data/coke-studio/lyrics-misses.csv',
-)
+const DATA_DIR = resolve(REPO_ROOT, 'vizmaya-data/coke-studio')
+const MISSES_CSV = resolve(DATA_DIR, 'lyrics-misses.csv')
 
 interface Cli {
   season: number | null
@@ -268,7 +275,12 @@ async function upsertLyrics(songId: string, result: LyricsResult): Promise<void>
 
 function appendMiss(song: SongRow, reason: string): void {
   const header = 'song_id,title,season,episode,artists,reason,attempted_at\n'
-  if (!existsSync(MISSES_CSV)) writeFileSync(MISSES_CSV, header)
+  if (!existsSync(MISSES_CSV)) {
+    // Parent might not exist on a fresh checkout where vizmaya-data is
+    // a sibling that wasn't created locally yet.
+    mkdirSync(dirname(MISSES_CSV), { recursive: true })
+    writeFileSync(MISSES_CSV, header)
+  }
   const row = [
     song.song_id,
     JSON.stringify(song.title),
@@ -322,6 +334,17 @@ async function main(): Promise<void> {
     return
   }
 
+  // Log misses through this wrapper so a write failure (permissions, disk
+  // full, etc) doesn't bubble out and abort the rest of the run.
+  const safeAppendMiss = (song: SongRow, reason: string): void => {
+    try {
+      appendMiss(song, reason)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn(`  (failed to append miss for ${song.song_id}: ${msg})`)
+    }
+  }
+
   let ok = 0
   let miss = 0
   const newlyOkIds: string[] = []
@@ -337,13 +360,13 @@ async function main(): Promise<void> {
         console.log(`${prefix} ✓ ${result.script_hint ?? '?'} ${result.raw_text.length}ch`)
       } else {
         miss++
-        appendMiss(song, 'no Genius match or empty lyrics page')
+        safeAppendMiss(song, 'no Genius match or empty lyrics page')
         console.log(`${prefix} ✗ no match`)
       }
     } catch (err) {
       miss++
       const msg = err instanceof Error ? err.message : String(err)
-      appendMiss(song, msg)
+      safeAppendMiss(song, msg)
       console.log(`${prefix} ! ${msg}`)
     }
     if (i < todo.length - 1) await sleep(REQ_DELAY_MS)
