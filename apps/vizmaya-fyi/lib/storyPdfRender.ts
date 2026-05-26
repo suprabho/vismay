@@ -56,10 +56,15 @@ const RENDER_CONFIG: Record<
 }
 
 // Must exceed the in-page fallback timer in lib/pdfReadiness.ts
-// (FALLBACK_TIMEOUT_MS = 60_000) so we can ride the fallback when a map
+// (FALLBACK_TIMEOUT_MS = 120_000) so we can ride the fallback when a map
 // fails to fire onReady — pages with many maps can hit Chrome's WebGL
-// context limit and silently drop the oldest contexts.
-const READY_TIMEOUT_MS = 90_000
+// context limit and silently drop the oldest contexts. The fallback was
+// bumped from 60s to 120s when the per-chart 8s readiness backstop was
+// removed (it fired before echarts-for-react had loaded on the GitHub
+// Actions runner, flipping readiness with empty chart canvases); chart
+// slots now signal only on the real ECharts `finished` event, and the
+// fallback has to be long enough to cover a slow dynamic-import chain.
+const READY_TIMEOUT_MS = 150_000
 
 export interface RenderResult {
   public_url: string

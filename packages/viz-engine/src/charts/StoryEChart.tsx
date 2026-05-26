@@ -71,11 +71,22 @@ export default function StoryEChart({ option, style, opts, notMerge, lazyUpdate 
   useEffect(() => {
     if (!capture) return
     onClaim()
-    // Backstop: if `finished` never lands (e.g. a chunk error) signal anyway
-    // so the render rides this short delay instead of the 60s global fallback.
-    const timer = setTimeout(signalPainted, 8000)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // No per-chart backstop. ECharts paint is asynchronous (dynamic import +
+    // initial render), and on a slow runner — like GitHub Actions Ubuntu,
+    // where the production PDFs are actually rendered — the previous 8s
+    // backstop fired before echarts-for-react had even finished loading.
+    // That flipped the chart's readiness slot to "done" while its canvas
+    // was still empty, the unified readiness flag flipped, and `page.pdf()`
+    // captured the chart slot with no series drawn. Macs were faster, so
+    // the backstop never won the race locally — which is why PR-98/100
+    // looked correct in dev and stayed broken on the CI runner.
+    //
+    // Now the chart's readiness slot only flips when the ECharts `finished`
+    // event actually lands (in capture mode that's deterministic since
+    // animation is forced off — the very first `setOption` paints the
+    // final frame and emits `finished`). If echarts fails to load entirely
+    // (chunk error etc.), `useStoryReadiness`' global FALLBACK_TIMEOUT_MS
+    // still flips the flag eventually so the render doesn't hang.
   }, [capture, onClaim])
 
   const finalOption: EChartsOption = capture
