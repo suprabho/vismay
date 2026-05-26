@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 const TITLES: Record<number, string> = {
   0: "South Korea's triple exposure\n 3 supply lines, one chokepoint",
@@ -111,7 +109,7 @@ export default function PolarExposureChart({ activeStep }: { activeStep: number 
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         option={option}
         style={{ height: mobile ? '100%' : 360, width: '100%', flex: mobile ? 1 : undefined }}
         opts={{ renderer: 'svg' }}

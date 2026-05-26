@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 // Historical DDR5 16Gb spot price data (DRAMeXchange via Tom's Hardware / Accio)
 const months = [
@@ -241,7 +239,7 @@ export default function DDR5AreaChart({ activeStep }: { activeStep: number }) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         option={option}
         style={{ height: mobile ? '100%' : 380, width: '100%', flex: mobile ? 1 : undefined }}
         opts={{ renderer: 'svg' }}

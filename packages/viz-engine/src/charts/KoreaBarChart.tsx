@@ -1,10 +1,8 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import StoryEChart from './StoryEChart'
 
 const TITLES: Record<number, string> = {
   0: 'Memory dominance: SK Hynix + Samsung',
@@ -124,7 +122,7 @@ export default function KoreaBarChart({ activeStep }: { activeStep: number }) {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <ReactECharts
+      <StoryEChart
         option={option}
         style={{ height: mobile ? '100%' : 380, width: '100%', flex: mobile ? 1 : undefined }}
         opts={{ renderer: 'svg' }}
