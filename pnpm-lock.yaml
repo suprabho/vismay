@@ -594,6 +594,9 @@ importers:
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../verticals/footshorts-viz
+      '@vismay/kidzovo-viz':
+        specifier: workspace:*
+        version: link:../../verticals/kidzovo-viz
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -976,6 +979,40 @@ importers:
       next:
         specifier: ^15.0.0
         version: 15.5.18(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-native:
+        specifier: '*'
+        version: 0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  verticals/kidzovo-viz:
+    dependencies:
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../../packages/viz-engine
+      expo-image:
+        specifier: '*'
+        version: 55.0.10(expo@55.0.24)(react-native-web@0.21.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+      expo-linear-gradient:
+        specifier: '*'
+        version: 15.0.8(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+      expo-router:
+        specifier: '*'
+        version: 55.0.14(6481d72e87a6c456ba887717d31150b5)
+      nativewind:
+        specifier: '*'
+        version: 4.2.4(react-native-reanimated@4.2.1(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(tailwindcss@4.3.0)
+      next:
+        specifier: ^15.0.0 || ^16.0.0
+        version: 16.2.2(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -12812,6 +12849,7 @@ snapshots:
       react: 19.2.4
 
   '@vercel/oidc@3.1.0': {}
+
   '@vis.gl/react-mapbox@8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
       react: 19.2.0

@@ -1,0 +1,13 @@
+# Phase 0 demo — proves the Kidzovo vertical plugin scaffold loads.
+# `vertical: 'kidzovo'` in the frontmatter is what fires the loader and
+# runs @vismay/kidzovo-viz's `register()`. No kz:* modules exist yet, so
+# this config carries only narrative sections without any foreground viz.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/light-v11
+  mapOpacity: 0.35
+  pinColor: "#ff7aa9"
+  pinRadius: 10
+  flySpeed: 1.0
+
+sections: []
