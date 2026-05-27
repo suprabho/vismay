@@ -1,0 +1,54 @@
+# Story config — nagpur-intro
+#
+# Frame 1: opening India → Nagpur zoom.
+# The flyTo animation happens automatically as the reader scrolls from the
+# hero section (India-wide) into the next section (Nagpur close-up).
+#
+# Coordinates:
+#   India centroid (rough)   78.0  22.0
+#   Nagpur                   79.0882  21.1458
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#d97a3c"
+  pinRadius: 12
+  flySpeed: 1.0
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # FRAME 1a — HERO: India-wide view
+  # ═══════════════════════════════════════════════
+
+  - id: hero-india
+    kind: hero
+    text: "Nagpur Intro"
+    eyebrow: "Short story 1"
+    map:
+      center: [78.0, 22.0]
+      zoom: 3.4
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+
+  # ═══════════════════════════════════════════════
+  # FRAME 1b — Camera lands on Nagpur with a labelled pin
+  # ═══════════════════════════════════════════════
+
+  - id: nagpur
+    text: "Nagpur"
+    map:
+      center: [79.0882, 21.1458]
+      zoom: 10
+      pitch: 30
+      bearing: 0
+      opacity: 0.65
+      flySpeed: 0.9
+      pins:
+        - coordinates: [79.0882, 21.1458]
+          label: "Nagpur"
+          color: "#d97a3c"
+          radius: 14
+          pulse: true
+          labelAnchor: "right"
