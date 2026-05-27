@@ -1,13 +1,62 @@
-# Phase 0 demo — proves the Kidzovo vertical plugin scaffold loads.
-# `vertical: 'kidzovo'` in the frontmatter is what fires the loader and
-# runs @vismay/kidzovo-viz's `register()`. No kz:* modules exist yet, so
-# this config carries only narrative sections without any foreground viz.
+# Phase 1 demo — three panels exercising the new kz-storybook layout.
+# Each section sets `foreground.layout: kz-storybook` so MapStorySection
+# switches to region-mode and the section's own text card is suppressed
+# (see apps/vizmaya-fyi/components/story/MapStorySection.tsx:69-78). The
+# visible narration comes from each section's `caption` region; the
+# background image fills the panel edge-to-edge.
 
 defaults:
   mapStyle: mapbox://styles/mapbox/light-v11
-  mapOpacity: 0.35
+  mapOpacity: 0.0
   pinColor: "#ff7aa9"
   pinRadius: 10
   flySpeed: 1.0
 
-sections: []
+sections:
+  - id: ovi-plays
+    text: "Ovi plays"
+    map:
+      opacity: 0.0
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-1.svg"
+            alt: "Pink-to-cream gradient placeholder for Ovi's room"
+            fit: cover
+        caption:
+          - type: text
+            content: "Ovi loved to play in her room all day long."
+
+  - id: great-big-mess
+    text: "A great big mess"
+    map:
+      opacity: 0.0
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-2.svg"
+            alt: "Teal-to-cream gradient placeholder for the messy floor"
+            fit: cover
+        caption:
+          - type: text
+            content: "She threw toys, crayons, socks, and clothes everywhere while playing."
+
+  - id: mama-walks-in
+    text: "Mama walks in"
+    map:
+      opacity: 0.0
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-3.svg"
+            alt: "Pink-to-teal gradient placeholder for Mama entering"
+            fit: cover
+        caption:
+          - type: text
+            content: "Mama carefully stepped around the messy floor."
