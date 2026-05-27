@@ -5,11 +5,10 @@
  * matching .riv with a state-machine number input (default name: `pose`)
  * whose enumerated integer values match the entries in `poses` below.
  *
- * IMPORTANT: Ovi's `src` is currently a PLACEHOLDER pointing at
- * `vizmaya-logo.riv`. The wrapper module wires up the .riv correctly —
- * mount, anchor, fade — but pose changes won't render visually until a
- * real Ovi.riv with the `pose` input lands. Swap `src` here when it does
- * (no module changes needed).
+ * Ovi's .riv ships from `apps/vizmaya-fyi/public/kidzovo-demo/owl.riv`.
+ * If the file's state-machine input is named something other than `pose`
+ * or its pose enum maps to different integers, adjust `poseInputName`
+ * and the `poses` map below — no module code changes needed.
  */
 
 export interface CharacterEntry {
@@ -36,8 +35,7 @@ export interface CharacterEntry {
 
 export const characters: Record<string, CharacterEntry> = {
   ovi: {
-    // TODO(kidzovo-phase-2): swap to the real Ovi.riv once authoring lands.
-    src: '/vizmaya-logo.riv',
+    src: '/kidzovo-demo/owl.riv',
     poseInputName: 'pose',
     poses: {
       standing: 0,
