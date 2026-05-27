@@ -1,0 +1,97 @@
+# Story config — spacex-s1-2026
+#
+# The Orbital Stack: SpaceX S-1 2026 scrollytelling.
+# 2 config sections:
+#   1  hero         — title + dek, no background, no chart
+#   2  main-story   — 14 subsections, each driving a step of the orbital-stack chart
+#
+# KEY DESIGN: No map background. Chart-only layout.
+#   All sections use `background: { type: none }` so the dark theme
+#   CSS background (#030712) shows through.
+#
+#   The foreground chart (orbital-stack) is set on the main-story PARENT.
+#   All 14 subsections inherit it. subIndex drives activeStep (0–13).
+#
+# CHART STEPS (orbital-stack.json):
+#   step  0  — The Integrated Stack      (3-layer financial overview)
+#   step  1  — The Algorithm             (SpaceX vs industry speed)
+#   step  2  — Launch Dominance          (payload to LEO comparison)
+#   step  3  — Global Connectivity       (satellite + subscriber growth)
+#   step  4  — Eradicating Dead Zones    (mobile MAU + V3 capacity)
+#   step  5  — Terrestrial AI Compute    (deployment speed + scale)
+#   step  6  — The Data Engine           (X platform funnel)
+#   step  7  — Cost Per Token            (3-component advantage)
+#   step  8  — The Bottleneck            (grid vs compute demand area)
+#   step  9  — Orbital AI Convergence    (3-pillar progress)
+#   step 10  — The Unfair Advantage      (radar: orbital vs terrestrial)
+#   step 11  — $28.5T TAM               (treemap)
+#   step 12  — The Financial Engine      (waterfall: revenue → EBITDA)
+#   step 13  — Risks and Realities       (risk impact bars)
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0
+  pinColor: "#f97316"
+  pinRadius: 10
+  flySpeed: 1.2
+
+sections:
+
+  # 1 ─── HERO
+  - id: hero
+    kind: hero
+    text: "The Orbital Stack"
+    eyebrow: "Technology · SpaceX S-1 2026 · May 2026"
+    background:
+      type: none
+
+  # 2 ─── MAIN STORY — 14 subsections, one chart evolves throughout
+  - id: main-story
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: orbital-stack
+    subsections:
+
+      # step 0
+      - text: "The Integrated Stack"
+
+      # step 1
+      - text: "The Algorithm"
+
+      # step 2
+      - text: "Launch Dominance"
+
+      # step 3
+      - text: "Global Connectivity"
+
+      # step 4
+      - text: "Eradicating Dead Zones"
+
+      # step 5
+      - text: "Terrestrial AI Compute"
+
+      # step 6
+      - text: "The Data Engine"
+
+      # step 7
+      - text: "Cost Per Token"
+
+      # step 8
+      - text: "The Terrestrial Bottleneck"
+
+      # step 9
+      - text: "Orbital AI Convergence"
+
+      # step 10
+      - text: "The Unfair Advantage"
+
+      # step 11
+      - text: "$28.5 Trillion TAM"
+
+      # step 12
+      - text: "The Financial Engine"
+
+      # step 13
+      - text: "Risks and Realities"

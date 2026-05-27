@@ -1,0 +1,715 @@
+{
+  "steps": [
+
+    {
+      "title": "SpaceX 2025 — financial flow by layer ($B)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ${c}B"
+        },
+        "legend": {
+          "data": ["Cash Generated", "Capital Deployed"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "6%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "formatter": "${value}B", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["SPACE", "CONNECTIVITY", "AI"],
+          "axisLabel": { "color": "$text", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "bold" },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Cash Generated",
+            "type": "bar",
+            "barWidth": "38%",
+            "itemStyle": { "color": "$teal", "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "+${c}B" },
+            "data": [0, 7.16, 0]
+          },
+          {
+            "name": "Capital Deployed",
+            "type": "bar",
+            "barWidth": "38%",
+            "barGap": "20%",
+            "itemStyle": { "color": "$accent", "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "color": "$accent", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "${c}B" },
+            "data": [3.0, 3.8, 12.7]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "SpaceX algorithm at scale — vs industry benchmark",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "legend": {
+          "data": ["SpaceX", "Industry"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Data center\ndeploy (days)", "Booster\nreuse (flights)", "Mission\nsuccess (%)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "SpaceX",
+            "type": "bar",
+            "barWidth": "30%",
+            "itemStyle": { "color": "$teal", "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "data": [91, 34, 99]
+          },
+          {
+            "name": "Industry",
+            "type": "bar",
+            "barWidth": "30%",
+            "barGap": "20%",
+            "itemStyle": { "color": "$muted", "borderRadius": [0, 4, 4, 0], "opacity": 0.5 },
+            "label": { "show": true, "position": "right", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "data": [730, 0, 95]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Payload to LEO — metric tons",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}t to LEO"
+        },
+        "grid": { "left": "2%", "right": "10%", "bottom": "12%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Ariane 6", "Vulcan", "Falcon 9", "New Glenn", "Falcon Heavy", "Starship V3"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11, "rotate": 15 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Tonnes to LEO",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "formatter": "{value}t", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "52%",
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12,
+              "fontWeight": "bold",
+              "formatter": "{c}t"
+            },
+            "itemStyle": {
+              "color": {
+                "type": "linear",
+                "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "$accent" },
+                  { "offset": 1, "color": "$accent2" }
+                ]
+              },
+              "borderRadius": [4, 4, 0, 0]
+            },
+            "data": [
+              { "value": 21, "itemStyle": { "color": "$muted", "opacity": 0.4 } },
+              { "value": 27, "itemStyle": { "color": "$muted", "opacity": 0.5 } },
+              { "value": 23, "itemStyle": { "color": "$accent2", "borderRadius": [4,4,0,0] } },
+              { "value": 45, "itemStyle": { "color": "$muted", "opacity": 0.5 } },
+              { "value": 64, "itemStyle": { "color": "$accent2", "opacity": 0.8, "borderRadius": [4,4,0,0] } },
+              { "value": 100, "itemStyle": { "color": "$accent", "borderRadius": [4,4,0,0] } }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Starlink constellation + subscriber growth",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" }
+        },
+        "legend": {
+          "data": ["Satellites", "Subscribers (M)"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "10%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["2020", "2021", "2022", "2023", "2024", "2025"],
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 12 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "Satellites",
+            "nameTextStyle": { "color": "$accent2", "fontFamily": "Inter", "fontSize": 10 },
+            "axisLabel": { "color": "$accent2", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+            "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          },
+          {
+            "type": "value",
+            "name": "Subscribers (M)",
+            "nameTextStyle": { "color": "$teal", "fontFamily": "Inter", "fontSize": 10 },
+            "axisLabel": { "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+            "splitLine": { "show": false },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          }
+        ],
+        "series": [
+          {
+            "name": "Satellites",
+            "type": "bar",
+            "yAxisIndex": 0,
+            "barWidth": "45%",
+            "itemStyle": { "color": "$accent2", "opacity": 0.7, "borderRadius": [4,4,0,0] },
+            "data": [800, 1700, 3300, 5500, 7200, 9600]
+          },
+          {
+            "name": "Subscribers (M)",
+            "type": "line",
+            "yAxisIndex": 1,
+            "smooth": true,
+            "symbol": "circle",
+            "symbolSize": 7,
+            "lineStyle": { "color": "$teal", "width": 3 },
+            "itemStyle": { "color": "$teal" },
+            "areaStyle": { "color": { "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{ "offset": 0, "color": "rgba(34,211,238,0.25)" }, { "offset": 1, "color": "rgba(34,211,238,0)" }] } },
+            "data": [0.01, 0.15, 0.7, 2.0, 4.0, 10.3]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Starlink Direct-to-Mobile — scale and capacity",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["MAUs (7.4M)", "MNO Partners (~30)", "V3 per launch (60)", "V3 downlink (Tbps)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "44%",
+            "itemStyle": { "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "fontFamily": "JetBrains Mono", "fontSize": 11, "color": "$text" },
+            "data": [
+              { "value": 7.4,  "itemStyle": { "color": "$teal" },   "label": { "formatter": "7.4M MAUs",       "color": "$teal" } },
+              { "value": 30,   "itemStyle": { "color": "$accent2" },"label": { "formatter": "~30 operators",   "color": "$accent2" } },
+              { "value": 60,   "itemStyle": { "color": "$amber" },  "label": { "formatter": "60 per launch",   "color": "$amber" } },
+              { "value": 1,    "itemStyle": { "color": "$accent" }, "label": { "formatter": "1 Tbps / sat",    "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "AI compute build — SpaceX vs industry (days to deploy)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "legend": {
+          "data": ["SpaceX", "Industry Standard"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["COLOSSUS I\n(~500 MW)", "COLOSSUS II\n(~500 MW)", "Combined\n(~1.0 GW)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Days to deploy",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "formatter": "{value}d", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "max": 800
+        },
+        "series": [
+          {
+            "name": "SpaceX",
+            "type": "bar",
+            "barWidth": "30%",
+            "itemStyle": { "color": "$teal", "borderRadius": [4,4,0,0] },
+            "label": { "show": true, "position": "top", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 12, "fontWeight": "bold", "formatter": "{c}d" },
+            "data": [180, 91, 91]
+          },
+          {
+            "name": "Industry Standard",
+            "type": "bar",
+            "barWidth": "30%",
+            "barGap": "20%",
+            "itemStyle": { "color": "$muted", "opacity": 0.4, "borderRadius": [4,4,0,0] },
+            "label": { "show": true, "position": "top", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 12, "formatter": "{c}d" },
+            "data": [730, 730, 730]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "X platform — user funnel (billions / millions)",
+      "option": {
+        "tooltip": { "trigger": "item" },
+        "series": [
+          {
+            "type": "funnel",
+            "left": "5%",
+            "right": "5%",
+            "top": "5%",
+            "bottom": "5%",
+            "width": "90%",
+            "sort": "descending",
+            "gap": 4,
+            "label": {
+              "show": true,
+              "position": "inside",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "color": "#030712",
+              "fontWeight": "bold",
+              "formatter": "{b}"
+            },
+            "labelLine": { "show": false },
+            "itemStyle": { "borderWidth": 0 },
+            "data": [
+              { "value": 1300, "name": "1.3B Accounts (12-month active)", "itemStyle": { "color": "$accent2" } },
+              { "value": 550,  "name": "550M Monthly Active Users",       "itemStyle": { "color": "$teal" } },
+              { "value": 350,  "name": "350M Daily Posts",                "itemStyle": { "color": "$amber" } },
+              { "value": 117,  "name": "117M Grok MAUs",                  "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "SpaceX cost-per-token advantage — normalized (industry = 100)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "legend": {
+          "data": ["SpaceX", "Industry"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Hardware Cost", "Energy Cost", "Compute Speed", "Cost Per Token"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Index (Industry = 100)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "max": 160
+        },
+        "series": [
+          {
+            "name": "SpaceX",
+            "type": "bar",
+            "barWidth": "30%",
+            "label": { "show": true, "position": "top", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "itemStyle": { "color": "$teal", "borderRadius": [4,4,0,0] },
+            "data": [45, 20, 140, 32]
+          },
+          {
+            "name": "Industry",
+            "type": "bar",
+            "barWidth": "30%",
+            "barGap": "20%",
+            "label": { "show": true, "position": "top", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "itemStyle": { "color": "$muted", "opacity": 0.4, "borderRadius": [4,4,0,0] },
+            "data": [100, 100, 100, 100]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Global compute demand vs US grid capacity — indexed 2010=100 (log scale)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" },
+          "formatter": "Year {b}<br/>{a0}: {c0}<br/>{a1}: {c1}"
+        },
+        "legend": {
+          "data": ["Global Compute Demand", "US Grid Capacity"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "4%", "bottom": "10%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["2010","2012","2014","2016","2018","2020","2022","2024","2026","2028","2030","2032","2035"],
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "log",
+          "name": "Index (2010=100, log)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Global Compute Demand",
+            "type": "line",
+            "smooth": true,
+            "symbol": "none",
+            "lineStyle": { "color": "$accent", "width": 3 },
+            "areaStyle": { "color": { "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{ "offset": 0, "color": "rgba(249,115,22,0.3)" }, { "offset": 1, "color": "rgba(249,115,22,0)" }] } },
+            "data": [100, 196, 385, 754, 1478, 2897, 7949, 21812, 55000, 90000, 145000, 230000, 500000]
+          },
+          {
+            "name": "US Grid Capacity",
+            "type": "line",
+            "smooth": false,
+            "symbol": "none",
+            "lineStyle": { "color": "$muted", "width": 2, "type": "dashed" },
+            "areaStyle": { "color": { "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{ "offset": 0, "color": "rgba(100,116,139,0.15)" }, { "offset": 1, "color": "rgba(100,116,139,0)" }] } },
+            "data": [100, 102, 103, 105, 107, 109, 114, 119, 125, 131, 138, 145, 157]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Orbital AI convergence — readiness by pillar (2026)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "grid": { "left": "2%", "right": "10%", "bottom": "12%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["MANUFACTURE\n(xAI / Terafab)", "DEPLOY\n(Starship)", "CONNECT\n(Starlink)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Readiness %",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "max": 100,
+          "axisLabel": { "formatter": "{value}%", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "45%",
+            "label": {
+              "show": true,
+              "position": "top",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "formatter": "{c}%"
+            },
+            "data": [
+              { "value": 18, "itemStyle": { "color": "$amber", "borderRadius": [4,4,0,0] }, "label": { "color": "$amber" } },
+              { "value": 35, "itemStyle": { "color": "$accent", "borderRadius": [4,4,0,0] }, "label": { "color": "$accent" } },
+              { "value": 82, "itemStyle": { "color": "$teal",   "borderRadius": [4,4,0,0] }, "label": { "color": "$teal" } }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Orbital AI vs terrestrial AI — capability radar",
+      "option": {
+        "tooltip": {},
+        "legend": {
+          "data": ["Terrestrial AI (Today)", "Orbital AI (2028+)"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "radar": {
+          "indicator": [
+            { "name": "Power\nAbundance",   "max": 10 },
+            { "name": "Cooling\nEfficiency","max": 10 },
+            { "name": "Hardware\nScaling",  "max": 10 },
+            { "name": "Distribution\nReach","max": 10 },
+            { "name": "Energy\nCost",       "max": 10 }
+          ],
+          "shape": "polygon",
+          "splitNumber": 4,
+          "axisName": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line" } },
+          "splitArea": { "show": false },
+          "axisLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "type": "radar",
+            "data": [
+              {
+                "value": [3, 3, 3, 4, 3],
+                "name": "Terrestrial AI (Today)",
+                "lineStyle": { "color": "$muted", "width": 2 },
+                "areaStyle": { "color": "rgba(100,116,139,0.15)" },
+                "itemStyle": { "color": "$muted" }
+              },
+              {
+                "value": [9, 9, 10, 10, 9],
+                "name": "Orbital AI (2028+)",
+                "lineStyle": { "color": "$teal", "width": 2 },
+                "areaStyle": { "color": "rgba(34,211,238,0.2)" },
+                "itemStyle": { "color": "$teal" }
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "$28.5 trillion total addressable market — $B",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: ${c}B"
+        },
+        "series": [
+          {
+            "type": "treemap",
+            "width": "100%",
+            "height": "92%",
+            "top": "4%",
+            "roam": false,
+            "nodeClick": false,
+            "breadcrumb": { "show": false },
+            "label": {
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "bold",
+              "color": "#f1f5f9",
+              "formatter": "{b}\n${c}B"
+            },
+            "upperLabel": { "show": true, "height": 24, "fontFamily": "Inter", "fontSize": 12, "fontWeight": "bold", "color": "#f1f5f9" },
+            "itemStyle": { "borderWidth": 2, "borderColor": "#030712", "gapWidth": 2 },
+            "levels": [
+              {
+                "itemStyle": { "borderWidth": 3, "borderColor": "#030712", "gapWidth": 3 },
+                "upperLabel": { "show": true }
+              },
+              {
+                "itemStyle": { "borderWidth": 2, "borderColor": "#030712", "gapWidth": 2 }
+              }
+            ],
+            "data": [
+              {
+                "name": "AI  $26.5T",
+                "value": 26500,
+                "itemStyle": { "color": "$accent2" },
+                "children": [
+                  { "name": "Enterprise Applications", "value": 22700, "itemStyle": { "color": "#1d4ed8" } },
+                  { "name": "AI Infrastructure",       "value": 2400,  "itemStyle": { "color": "#2563eb" } },
+                  { "name": "Consumer Subscriptions",  "value": 760,   "itemStyle": { "color": "#3b82f6" } },
+                  { "name": "Digital Advertising",     "value": 600,   "itemStyle": { "color": "#60a5fa" } }
+                ]
+              },
+              {
+                "name": "Connectivity  $1.6T",
+                "value": 1600,
+                "itemStyle": { "color": "$teal" },
+                "children": [
+                  { "name": "Starlink Broadband", "value": 870, "itemStyle": { "color": "#0891b2" } },
+                  { "name": "Starlink Mobile",    "value": 740, "itemStyle": { "color": "#22d3ee" } }
+                ]
+              },
+              {
+                "name": "Space  $370B",
+                "value": 370,
+                "itemStyle": { "color": "$accent" }
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "SpaceX 2025 full-year financials — adjusted EBITDA waterfall ($B)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ${c}B"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "12%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Total\nRevenue", "Connectivity\nEBITDA", "Space\nEBITDA", "AI\nEBITDA", "Total\nEBITDA"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "$B",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "formatter": "${value}B", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "52%",
+            "label": {
+              "show": true,
+              "position": "top",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12,
+              "fontWeight": "bold",
+              "formatter": "{c}B"
+            },
+            "data": [
+              { "value": 18.67, "itemStyle": { "color": "$accent2", "borderRadius": [4,4,0,0] }, "label": { "color": "$accent2", "formatter": "$18.67B" } },
+              { "value": 7.16,  "itemStyle": { "color": "$teal",    "borderRadius": [4,4,0,0] }, "label": { "color": "$teal",    "formatter": "+$7.16B" } },
+              { "value": -0.65, "itemStyle": { "color": "$red",     "borderRadius": [0,0,4,4] }, "label": { "color": "$red",    "position": "bottom", "formatter": "-$0.65B" } },
+              { "value": -1.23, "itemStyle": { "color": "$red",     "borderRadius": [0,0,4,4] }, "label": { "color": "$red",    "position": "bottom", "formatter": "-$1.23B" } },
+              { "value": 6.59,  "itemStyle": { "color": "$positive","borderRadius": [4,4,0,0] }, "label": { "color": "$positive","formatter": "$6.59B" } }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Execution risk profile — impact scale (1–10)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "grid": { "left": "2%", "right": "10%", "bottom": "8%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "max": 10,
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "AI Scrutiny &\nCompliance",
+            "Geopolitical &\nRegulatory",
+            "Capital &\nInfrastructure",
+            "Starship\nBottleneck"
+          ],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "44%",
+            "label": {
+              "show": true,
+              "position": "right",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12,
+              "fontWeight": "bold"
+            },
+            "data": [
+              { "value": 6, "itemStyle": { "color": "$amber", "borderRadius": [0,4,4,0] },  "label": { "color": "$amber",   "formatter": "6 / 10" } },
+              { "value": 7, "itemStyle": { "color": "$amber", "borderRadius": [0,4,4,0] },  "label": { "color": "$amber",   "formatter": "7 / 10" } },
+              { "value": 8, "itemStyle": { "color": "$red",   "borderRadius": [0,4,4,0] },  "label": { "color": "$red",     "formatter": "8 / 10" } },
+              { "value": 9, "itemStyle": { "color": "$red",   "borderRadius": [0,4,4,0] },  "label": { "color": "$red",     "formatter": "9 / 10" } }
+            ]
+          }
+        ]
+      }
+    }
+
+  ]
+}
