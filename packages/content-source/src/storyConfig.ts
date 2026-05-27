@@ -130,11 +130,16 @@ export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
         )
       })
     }
-    // Legacy `map:` block is only required when the section doesn't declare a
-    // `background:` slot. New stories using the layered schema validate their
-    // background layers downstream via each module's `parseConfig`.
-    const usesNewBackgroundSlot = (s as { background?: unknown }).background !== undefined
-    if (!usesNewBackgroundSlot) {
+    // Legacy `map:` block is only required when the section is purely legacy —
+    // i.e. it declares neither `background:` nor `foreground:`. New stories
+    // that opt into the layered schema (background-only, foreground-only, or
+    // both) validate their layers downstream via each module's `parseConfig`,
+    // and `resolveSlots()` already handles a missing legacy `map:` by
+    // returning an empty background array.
+    const usesNewSchemaSlot =
+      (s as { background?: unknown }).background !== undefined ||
+      (s as { foreground?: unknown }).foreground !== undefined
+    if (!usesNewSchemaSlot) {
       if (!s.map || !Array.isArray(s.map.center) || s.map.center.length !== 2) {
         throw new Error(`Section ${i} in ${slug}.config.yaml is missing 'map.center'`)
       }
