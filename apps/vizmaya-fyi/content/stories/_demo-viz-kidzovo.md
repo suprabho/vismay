@@ -1,7 +1,7 @@
 ---
 title: "Vertical plugin demo — Kidzovo"
-subtitle: "Three panels rendered through the new kz-storybook layout. Per-panel background image swaps and the caption text changes as you scroll. No kz:character or kz:bubble yet — those land in phases 2 and 3."
-byline: "vizmaya · kidzovo phase-1"
+subtitle: "Three panels rendered through the kz-storybook layout, with Ovi on each stage. Demonstrates phases 0–2: vertical loader, foreground layout, and the kz:character module. Bubbles (phase 3) and the full Ovi's Messy Room story (phase 4) are still to come."
+byline: "vizmaya · kidzovo phase-2"
 date: "2026-05-28"
 status: "draft"
 listed: false
@@ -23,9 +23,9 @@ theme:
 
 # Kidzovo vertical demo
 
-*Proves the `kz-storybook` foreground layout end-to-end. Scroll: each panel is a separate section whose `foreground.layout: kz-storybook` paints a full-bleed background and a top-anchored narration caption.*
+*Proves the `kz-storybook` layout + `kz:character` module end-to-end. Each panel paints a full-bleed background, a top-anchored caption, and Ovi standing on the stage region with a panel-specific pose. The .riv currently in use is `vizmaya-logo.riv` as a placeholder — pose changes are wired but won't visibly differ until a real Ovi.riv with the `pose` state-machine input ships.*
 
-**By vizmaya · kidzovo phase 1**
+**By vizmaya · kidzovo phase 2**
 
 ---
 
@@ -33,4 +33,4 @@ theme:
 
 ## A great big mess
 
-## Mama walks in
+## Ovi sits in the mess

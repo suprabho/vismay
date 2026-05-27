@@ -1,9 +1,14 @@
-# Phase 1 demo — three panels exercising the new kz-storybook layout.
-# Each section sets `foreground.layout: kz-storybook` so MapStorySection
-# switches to region-mode and the section's own text card is suppressed
-# (see apps/vizmaya-fyi/components/story/MapStorySection.tsx:69-78). The
-# visible narration comes from each section's `caption` region; the
-# background image fills the panel edge-to-edge.
+# Phase 2 demo — three panels with a single character (Ovi) standing on
+# each stage. Demonstrates:
+#
+#   - kz-storybook layout (phase 1) — background + caption regions
+#   - kz:character module (phase 2) — Ovi resolved from data/characters.ts,
+#     positioned via anchor, pose pinned per-panel via pose.static
+#
+# Ovi's .riv is currently a placeholder (vizmaya-logo.riv) — the wrapper
+# wires up correctly but pose changes won't render visually until a real
+# Ovi.riv with the `pose` state-machine input lands. See
+# verticals/kidzovo-viz/src/data/characters.ts.
 
 defaults:
   mapStyle: mapbox://styles/mapbox/light-v11
@@ -28,6 +33,12 @@ sections:
         caption:
           - type: text
             content: "Ovi loved to play in her room all day long."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: standing
+            anchor: { x: center, y: bottom }
 
   - id: great-big-mess
     text: "A great big mess"
@@ -44,9 +55,15 @@ sections:
         caption:
           - type: text
             content: "She threw toys, crayons, socks, and clothes everywhere while playing."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: throwing
+            anchor: { x: center, y: bottom }
 
-  - id: mama-walks-in
-    text: "Mama walks in"
+  - id: ovi-sits
+    text: "Ovi sits in the mess"
     map:
       opacity: 0.0
     foreground:
@@ -55,8 +72,14 @@ sections:
         background:
           - type: image
             src: "/kidzovo-demo/panel-3.svg"
-            alt: "Pink-to-teal gradient placeholder for Mama entering"
+            alt: "Pink-to-teal gradient placeholder after the mess settles"
             fit: cover
         caption:
           - type: text
-            content: "Mama carefully stepped around the messy floor."
+            content: "Tired from playing, Ovi sat down in the middle of the mess."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: sitting
+            anchor: { x: center, y: bottom }
