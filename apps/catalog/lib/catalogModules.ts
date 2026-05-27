@@ -13,8 +13,9 @@ import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-r
 import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
 import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
 import { sample as bracketSample } from '@vismay/footshorts-viz/modules/bracket/sample'
+import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
 
-export type CatalogCategory = 'Core' | 'F1' | 'Footshorts'
+export type CatalogCategory = 'Core' | 'F1' | 'Footshorts' | 'Starship'
 
 export interface CatalogEntry {
   type: string
@@ -56,6 +57,13 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },
   { type: 'fs:standings-table', category: 'Footshorts', sample: standingsTableSample },
   { type: 'fs:bracket', category: 'Footshorts', sample: bracketSample },
+  {
+    type: 'starship:viewer',
+    category: 'Starship',
+    sample: starshipViewerSample,
+    previewNotice:
+      'Starship preview requires the merged GLB at /models/starship.glb. See the vizmaya-fyi demo route for a live render.',
+  },
 ]
 
 export function findCatalogEntry(type: string): CatalogEntry | undefined {

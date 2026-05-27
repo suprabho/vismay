@@ -1,0 +1,4 @@
+# Raw STL/3MF source files — committed `.glb` under public/models/ is the only
+# runtime artifact. Re-fetch from upstream and run `pnpm convert-assets` to
+# regenerate.
+assets/source/
