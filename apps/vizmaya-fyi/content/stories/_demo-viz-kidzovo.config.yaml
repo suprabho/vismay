@@ -1,14 +1,18 @@
-# Phase 2 demo — three panels with a single character (Ovi) standing on
-# each stage. Demonstrates:
+# Phase 3 demo — three panels with Ovi on stage plus a kz:bubble on the
+# middle panel. Demonstrates:
 #
-#   - kz-storybook layout (phase 1) — background + caption regions
+#   - kz-storybook layout (phase 1) — background, caption, stage, bubbles
 #   - kz:character module (phase 2) — Ovi resolved from data/characters.ts,
 #     positioned via anchor, pose pinned per-panel via pose.static
+#   - kz:bubble module (phase 3) — gentle-tone bubble in panel 2 with the
+#     tail auto-anchored to Ovi via `speaker: ovi` (resolves to her
+#     center-bottom anchor → bottom-center tail)
 #
 # Ovi's .riv is currently a placeholder (vizmaya-logo.riv) — the wrapper
 # wires up correctly but pose changes won't render visually until a real
 # Ovi.riv with the `pose` state-machine input lands. See
-# verticals/kidzovo-viz/src/data/characters.ts.
+# verticals/kidzovo-viz/src/data/characters.ts. The bubble renders in CSS
+# until a real bubble.riv ships; see modules/bubble/Component.tsx.
 
 defaults:
   mapStyle: mapbox://styles/mapbox/light-v11
@@ -61,6 +65,12 @@ sections:
             pose:
               static: throwing
             anchor: { x: center, y: bottom }
+        bubbles:
+          - type: kz:bubble
+            tone: gentle
+            speaker: ovi
+            textStepwise:
+              - "This is so much fun!"
 
   - id: ovi-sits
     text: "Ovi sits in the mess"

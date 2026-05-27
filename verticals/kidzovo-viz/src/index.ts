@@ -10,6 +10,7 @@
  *   - phase 0: register() boundary + console log
  *   - phase 1: kz-storybook foreground layout
  *   - phase 2: kz:character module (one bundled character — Ovi)
+ *   - phase 3: kz:bubble module (CSS-rendered; .riv backing reserved)
  *
  * See docs/kidzovo-vertical-plan.md for the full phase breakdown.
  */
@@ -20,11 +21,12 @@ import { kzStorybook } from './layouts/kz-storybook'
 
 export async function register(): Promise<void> {
   registerForegroundLayout(kzStorybook)
-  const [{ default: characterModule }] = await Promise.all([
+  const [{ default: characterModule }, { default: bubbleModule }] = await Promise.all([
     import('./modules/character'),
+    import('./modules/bubble'),
   ])
   registerVizModule(characterModule)
-  // TODO(kidzovo-scaffold): add ./modules/bubble (phase 3).
+  registerVizModule(bubbleModule)
   // eslint-disable-next-line no-console
   console.log('[kidzovo-viz] registered')
 }

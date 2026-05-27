@@ -1,12 +1,9 @@
 /**
  * Shared types for the Kidzovo vertical's viz modules.
  *
- * The full module catalog (see docs/kidzovo-vertical-plan.md §5) is:
+ * Module catalog (see docs/kidzovo-vertical-plan.md §5):
  *   - kz:character — Rive-backed character with named poses (phase 2).
- *   - kz:bubble   — Rive-backed speech bubble (phase 3).
- *
- * This file currently carries only what phase 2 needs. Bubble + tone +
- * tail-anchor types land alongside the bubble module in phase 3.
+ *   - kz:bubble   — Speech bubble with per-step text + tail (phase 3).
  */
 
 /**
@@ -65,4 +62,76 @@ export interface KzCharacterConfig {
    * entry's `defaultBindings`.
    */
   bindings?: Record<string, string | number | boolean>
+}
+
+/**
+ * Bubble visual register. Maps to per-tone CSS variants in the bubble
+ * Component (border weight, color, fill, italic/bold) and — once a real
+ * bubble.riv ships — to a state-machine number input that picks a
+ * matching artboard variant.
+ *
+ *   gentle  → soft pink border, regular weight. The default.
+ *   loud    → bold amber fill, heavy black border, larger text.
+ *   whisper → light dashed border, muted italic text.
+ *   thought → cloud-shape (bumpy radii), italic, no tail.
+ */
+export type BubbleTone = 'gentle' | 'loud' | 'whisper' | 'thought'
+
+/**
+ * Anchored corner the tail points OUT OF the bubble. The tail terminates
+ * at the speaker's general direction; `bottom-center` is the most common
+ * choice when the speaker is roughly under the bubble (which is the case
+ * for the default kz-storybook layout: character on stage floor, bubble
+ * in the upper third).
+ */
+export type BubbleTailAt =
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right'
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+
+/**
+ * Manual placement override. Both axes accept any CSS length (`'20%'`,
+ * `'4rem'`, `'120px'`). Omitting `position` falls back to the layout's
+ * default upper-right bubble slot.
+ */
+export interface BubblePosition {
+  x: string
+  y: string
+}
+
+export interface KzBubbleConfig {
+  type: 'kz:bubble'
+  /**
+   * Optional .riv override. When present, the Component will (in a future
+   * phase) layer the rive bubble under the HTML text overlay. For now it's
+   * accepted by parseConfig but the Component renders CSS — see
+   * `modules/bubble/Component.tsx` for the path forward.
+   */
+  src?: string
+  /**
+   * Which steps the bubble shows on. Indices into the section's `activeStep`.
+   * Omit to show on every step the section is active.
+   */
+  visibleOn?: number[]
+  /**
+   * Which character (`who` field on a `kz:character` in the same section's
+   * stage region) the tail points at. Resolved at runtime; falls back to
+   * `tailAt` if no matching speaker is on stage.
+   */
+  speaker?: string
+  /** Visual register. Default: 'gentle'. */
+  tone?: BubbleTone
+  /**
+   * Per-step body text. Indexed by `activeStep`; nulls hide the bubble on
+   * that step (in addition to the `visibleOn` filter). Length should match
+   * the section's step count; shorter arrays clamp to the last entry.
+   */
+  textStepwise: (string | null)[]
+  /** Explicit tail direction override. Defaults from `speaker` (or `bottom-center`). */
+  tailAt?: BubbleTailAt
+  /** Manual placement on the bubbles region. Defaults to upper-right slot. */
+  position?: BubblePosition
 }
