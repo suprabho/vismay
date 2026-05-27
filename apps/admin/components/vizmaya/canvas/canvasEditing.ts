@@ -34,6 +34,11 @@ export type EditableKind =
   | 'slides'
   | 'report'
   | 'map'
+  // Per-section share map override — sliced from share.yaml's
+  // `sections[<sectionId>].map` block. Distinct from `'map'` (which targets
+  // map.yaml's autoplay overrides) because Share Cards read camera fields
+  // from share.yaml, not map.yaml; the two files don't cross-feed.
+  | 'shareMap'
   | 'narration'
   // Frame inputs — sliced from the story's config.yaml + markdown body.
   | 'content'
@@ -145,6 +150,25 @@ export function buildEditableSlice(
         language: 'yaml',
         title: `Map Override · §${unit.parentIndex}.${unit.subIndex}`,
         placeholder: mapOverridePlaceholder(unit),
+      }
+    }
+    case 'shareMap': {
+      const sectionId =
+        unit.parentConfig.id ?? `section-${unit.parentIndex}`
+      const doc = safeParseYaml(sources.shareYaml)
+      const section =
+        doc && typeof doc === 'object'
+          ? (doc as { sections?: Record<string, unknown> }).sections?.[sectionId]
+          : undefined
+      const map =
+        section && typeof section === 'object'
+          ? (section as { map?: unknown }).map
+          : undefined
+      return {
+        text: map === undefined ? '' : safeStringify(map),
+        language: 'yaml',
+        title: `Share Map · ${sectionId}`,
+        placeholder: SHARE_MAP_PLACEHOLDER,
       }
     }
     case 'narration': {
@@ -428,6 +452,37 @@ export function mergeSlice(
       return {
         target: 'map',
         patch: { mapYaml: newRaw },
+        newRaw,
+      }
+    }
+
+    case 'shareMap': {
+      // Per-section map block lives at `sections[<sectionId>].map` inside
+      // share.yaml. Empty body removes just the map block; the surrounding
+      // section override (heading / paragraphs / chart / layers …) is kept
+      // intact so clearing the camera doesn't nuke the user's other share
+      // edits for that section.
+      const sectionId =
+        unit.parentConfig.id ?? `section-${unit.parentIndex}`
+      const doc =
+        (safeParseYaml(sources.shareYaml) as Record<string, unknown> | null) ??
+        {}
+      const sections =
+        ((doc as { sections?: Record<string, unknown> }).sections as
+          | Record<string, Record<string, unknown>>
+          | undefined) ?? {}
+      const section = sections[sectionId] ?? {}
+      if (trimmed === '') {
+        delete section.map
+      } else {
+        section.map = parseYaml(editedText)
+      }
+      sections[sectionId] = section
+      ;(doc as { sections?: Record<string, unknown> }).sections = sections
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'share',
+        patch: { shareYaml: newRaw },
         newRaw,
       }
     }
@@ -750,6 +805,24 @@ function mapOverridePlaceholder(unit: ResolvedUnit): string {
 #   pitch: 35
 #   bearing: 0`
 }
+
+const SHARE_MAP_PLACEHOLDER = `# Share-card map override for this section. Examples:
+#
+# center: [78.0, 22.0]
+# zoom: 5.5
+# pitch: 35
+# bearing: 0
+# pins:
+#   - coordinates: [78.0, 22.0]
+#     label: "Pin"
+# ratios:
+#   3:4:
+#     zoom: 6.5
+#   1:1:
+#     center: [80.0, 22.0]
+#
+# Empty body removes the override. Wraps live under \`sections.<id>.map:\`
+# in share.yaml — same shape ShareCard reads.`
 
 const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the legacy \`map:\` field).
 # Examples:

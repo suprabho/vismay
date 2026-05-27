@@ -20,6 +20,12 @@ interface Props {
   error: string | null
   onSave: (text: string) => void
   onClose: () => void
+  /** Optional handler for the "Map-Edit" header button. When defined, the
+   *  panel shows a button that drops the user into the visual MapPickerModal
+   *  scoped to whatever camera fields this slice owns (a background-layer
+   *  map, an autoplay map override, a per-section share map). The panel
+   *  itself doesn't know which — it just relays the click. */
+  onMapEdit?: () => void
 }
 
 /**
@@ -36,6 +42,7 @@ export default function EditorPanel({
   error,
   onSave,
   onClose,
+  onMapEdit,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping
   // through React state on every keystroke. Initialised from the slice;
@@ -167,6 +174,25 @@ export default function EditorPanel({
         >
           Find
         </button>
+        {onMapEdit && (
+          <button
+            onClick={onMapEdit}
+            title="Open the visual map editor for this slice"
+            style={{
+              background: 'transparent',
+              color: '#ddd',
+              border: '1px solid #3a5da0',
+              borderRadius: 5,
+              padding: '6px 10px',
+              fontSize: 12,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🗺 Map-Edit
+          </button>
+        )}
         <button
           onClick={() => onSave(draft)}
           disabled={saving || !dirty}

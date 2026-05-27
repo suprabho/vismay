@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
 import { getForegroundLayout } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
@@ -15,6 +16,7 @@ import {
   shareNode,
   reportNodeFormat,
   mapOverrideNode,
+  shareMapOverrideNode,
   narrationNode,
   contentNode,
   parseCanvasSources,
@@ -58,12 +60,14 @@ import {
 import {
   getLayer,
   getSection,
+  readDefaultsMapStyle,
   replaceLayer,
   replaceTheme,
   saveConfigYaml,
   saveMarkdown,
   unwrapLayerFromMapPicker,
   wrapLayerForMapPicker,
+  writeDefaultsMapStyle,
   type SlotPath,
 } from './canvasSlotEditing'
 import EditorPanel from './EditorPanel'
@@ -103,6 +107,15 @@ interface Props {
  */
 type SlotTarget =
   | { mode: 'map'; unit: ResolvedUnit; slotPath: SlotPath }
+  // Camera-only editor for the per-section override files. `overrideKind`
+  // disambiguates the underlying file (map.yaml for autoplay/slides/report
+  // vs share.yaml for the per-section share-card camera); the modal reads
+  // and writes the same center/zoom/pitch/bearing fields either way.
+  | {
+      mode: 'mapOverride'
+      unit: ResolvedUnit
+      overrideKind: 'map' | 'shareMap'
+    }
   | {
       mode: 'image'
       unit: ResolvedUnit
@@ -178,10 +191,15 @@ function buildOverridesForGroup(
   unit: ResolvedUnit,
   parsed: ReturnType<typeof parseCanvasSources>
 ): OverrideSpec[] {
-  // Content + map are shared inputs every output consumes (no per-format
-  // file), so the builders are reused across share/slides/report. Editing
-  // them from any of those groups writes the same markdown / map.yaml as
-  // editing from the frame's left column.
+  // Content is a shared input every output consumes — editing it from any
+  // group writes the same markdown as editing from the frame's left column.
+  //
+  // Map is per-group on purpose: share renders against share.yaml's
+  // sections[<id>].map, while slides/report/autoplay render against
+  // map.yaml's overrides[]. Wiring a single shared `map` card would have
+  // the visual lineage lying about which file feeds which output — which
+  // is exactly what bit the share output before (edits landed in map.yaml,
+  // but Share Cards read share.yaml so nothing visibly changed).
   const sharedFeeds: OverrideSpec[] = [
     {
       data: contentNode(unit),
@@ -202,7 +220,19 @@ function buildOverridesForGroup(
           socket: 'variants',
           editKind: 'share',
         },
-        ...sharedFeeds,
+        {
+          data: contentNode(unit),
+          socket: 'content',
+          editKind: 'content',
+        },
+        // Share Cards read camera fields from share.yaml's per-section map;
+        // map.yaml is the autoplay surface and doesn't reach share. Editing
+        // this card now writes share.yaml so the iframe reflects the edit.
+        {
+          data: shareMapOverrideNode(unit, parsed),
+          socket: 'map',
+          editKind: 'shareMap',
+        },
       ]
     case 'slides':
       return [
@@ -511,6 +541,44 @@ export default function CanvasClient({
         : null,
     [editorTarget, sources]
   )
+
+  // `Map-Edit` affordance for the editor panel header. Defined only when
+  // the current slice is camera-shaped — a map layer, an autoplay map
+  // override (map.yaml), or a per-section share map (share.yaml). For
+  // other kinds the button is hidden so the panel doesn't gain a no-op
+  // control. The click routes to the right SlotTarget mode; the modal
+  // mounts handle the file-specific wrap / save semantics.
+  const editorMapEdit: (() => void) | undefined = useMemo(() => {
+    if (!editorTarget) return undefined
+    if (editorTarget.kind === 'layer' && editorTarget.slotPath) {
+      const slotPath = editorTarget.slotPath
+      // legacyMap is always a map. For modern bg/foreground layer paths,
+      // peek at the on-disk layer's `type` field — if it isn't `map`, the
+      // visual picker has nothing to do here.
+      let isMap = slotPath.kind === 'legacyMap'
+      if (!isMap) {
+        const section = getSection(
+          sources.configYaml,
+          editorTarget.unit.parentIndex
+        )
+        const layer = section ? getLayer(section, slotPath) : null
+        isMap = !!layer && (layer as { type?: unknown }).type === 'map'
+      }
+      if (!isMap) return undefined
+      const unit = editorTarget.unit
+      return () => {
+        setSlotTarget({ mode: 'map', unit, slotPath })
+      }
+    }
+    if (editorTarget.kind === 'map' || editorTarget.kind === 'shareMap') {
+      const overrideKind = editorTarget.kind
+      const unit = editorTarget.unit
+      return () => {
+        setSlotTarget({ mode: 'mapOverride', unit, overrideKind })
+      }
+    }
+    return undefined
+  }, [editorTarget, sources])
   const setEditorTargetRef = useRef(setEditorTarget)
   useEffect(() => {
     setEditorTargetRef.current = setEditorTarget
@@ -1470,19 +1538,14 @@ export default function CanvasClient({
               const targetUnit = sectionUnitsRef.current[idx]
               if (!targetUnit) return
               if (slot.layerType === 'map') {
-                // Two-step affordance: open the YAML in the right panel
-                // first so the user has a literal source to read while the
-                // visual picker is open, and so closing the modal lands them
-                // on the Monaco editor for fine-grained pin/style tweaks
-                // the picker doesn't expose. Both close together on section
-                // switch (see the activeSectionIndex effect below).
+                // Panel-first affordance: open the YAML editor only. The
+                // panel exposes a "Map-Edit" button (wired in CanvasClient
+                // via the editorMapEdit callback) that opens the visual
+                // picker on demand — so the user starts with the source of
+                // truth and explicitly drops into the camera tool. Same
+                // panel handles pin/style tweaks the picker doesn't cover.
                 setEditorTargetRef.current({
                   kind: 'layer',
-                  unit: targetUnit,
-                  slotPath: slot.path,
-                })
-                setSlotTargetRef.current({
-                  mode: 'map',
                   unit: targetUnit,
                   slotPath: slot.path,
                 })
@@ -2265,6 +2328,46 @@ export default function CanvasClient({
     [slug]
   )
 
+  // Map-override apply: the visual picker hands back a `{map: {...}}`-shaped
+  // YAML chunk (the same shape its extract/apply helpers operate on). We
+  // route it through `mergeSlice` for the editor kind that owns the file
+  // (map.yaml for autoplay overrides, share.yaml for per-section share
+  // maps), so the modal write goes to the exact same place the panel's
+  // YAML save would.
+  const handleMapOverrideApply = useCallback(
+    async (
+      nextWrappedRaw: string,
+      target: SlotTarget & { mode: 'mapOverride' }
+    ) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        const overrideKind = target.overrideKind
+        const editedText = nextOverrideTextFromPickerYaml(
+          overrideKind,
+          target.unit,
+          sourcesRef.current,
+          nextWrappedRaw
+        )
+        const merge = mergeSlice(
+          overrideKind,
+          target.unit,
+          sourcesRef.current,
+          editedText
+        )
+        await saveSlice(slug, merge)
+        setSources((prev) => ({ ...prev, ...merge.patch }))
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug]
+  )
+
   const handleImageSlotApply = useCallback(
     async (
       next: ImageLayerDraft,
@@ -2349,6 +2452,23 @@ export default function CanvasClient({
     setSlotError(null)
   }, [])
 
+  // Story-wide `defaults.mapStyle` write, called from the map picker's URL
+  // input. Bumps dataNonce so the iframes pick up the new style URL on the
+  // next render. Throws on save failure so the modal can surface the error
+  // inline next to the input.
+  const handleMapStyleChange = useCallback(
+    async (nextStyle: string) => {
+      const nextConfigYaml = writeDefaultsMapStyle(
+        configYamlRef.current,
+        nextStyle
+      )
+      await saveConfigYaml(slug, nextConfigYaml)
+      setSources((prev) => ({ ...prev, configYaml: nextConfigYaml }))
+      setDataNonce((n) => n + 1)
+    },
+    [slug]
+  )
+
   /* ─── +Add menu dispatcher ────────────────────────────────────── */
   // When the user picks something in the floating menu, route to the right
   // canvasSlotAdd helper, persist via the matching save endpoint, patch
@@ -2413,13 +2533,11 @@ export default function CanvasClient({
           // picker; image gets the image modal; everything else lands in
           // the YAML editor scoped to this layer.
           if (choice.type === 'map') {
+            // Panel-first: open the YAML editor; the user clicks "Map-Edit"
+            // in the panel header to drop into the visual picker. Matches
+            // the click-existing-map-leaf flow above.
             setEditorTarget({
               kind: 'layer',
-              unit: targetUnit,
-              slotPath: next.path,
-            })
-            setSlotTarget({
-              mode: 'map',
               unit: targetUnit,
               slotPath: next.path,
             })
@@ -2614,6 +2732,7 @@ export default function CanvasClient({
             setEditorTarget(null)
             setSaveError(null)
           }}
+          onMapEdit={editorMapEdit}
         />
       )}
       {/* Slot-edit surfaces — mutually exclusive by construction (slotTarget
@@ -2625,7 +2744,20 @@ export default function CanvasClient({
           target={slotTarget}
           configYaml={sources.configYaml}
           sectionUnits={sectionUnits}
+          mapStyle={readDefaultsMapStyle(sources.configYaml) ?? undefined}
+          onMapStyleChange={handleMapStyleChange}
           onApply={(raw) => handleMapSlotApply(raw, slotTarget)}
+          onClose={closeSlot}
+        />
+      )}
+      {slotTarget?.mode === 'mapOverride' && (
+        <MapOverridePickerMount
+          target={slotTarget}
+          sources={sources}
+          sectionUnits={sectionUnits}
+          mapStyle={readDefaultsMapStyle(sources.configYaml) ?? undefined}
+          onMapStyleChange={handleMapStyleChange}
+          onApply={(raw) => handleMapOverrideApply(raw, slotTarget)}
           onClose={closeSlot}
         />
       )}
@@ -2670,12 +2802,16 @@ function MapPickerSlotMount({
   target,
   configYaml,
   sectionUnits,
+  mapStyle,
+  onMapStyleChange,
   onApply,
   onClose,
 }: {
   target: SlotTarget & { mode: 'map' }
   configYaml: string | null
   sectionUnits: ResolvedUnit[]
+  mapStyle?: string
+  onMapStyleChange?: (next: string) => Promise<void> | void
   onApply: (nextRaw: string) => void
   onClose: () => void
 }) {
@@ -2702,6 +2838,8 @@ function MapPickerSlotMount({
     <MapPickerModal
       sectionRaw={sectionRaw}
       sectionLabel={sectionLabel}
+      style={mapStyle}
+      onMapStyleChange={onMapStyleChange}
       onApply={onApply}
       onClose={onClose}
       // Canvas is desktop-only; the mobile target would patch a separate
@@ -2709,6 +2847,116 @@ function MapPickerSlotMount({
       hideMobileTarget
     />
   )
+}
+
+/* ─── Map override mount helper ────────────────────────────────────
+ * Routes the visual MapPickerModal into the per-section override files
+ * (map.yaml for autoplay, share.yaml for share cards). The picker reads
+ * camera fields from a YAML where `map:` sits at the top level — that's
+ * already true for map.yaml entries (which have `target: { ... }; map: { ... }`)
+ * but needs wrapping for share.yaml's `sections[<id>].map` slice. The mount
+ * does the wrap/unwrap and labels the modal so the user reads at a glance
+ * which file they're editing.
+ */
+function MapOverridePickerMount({
+  target,
+  sources,
+  sectionUnits,
+  mapStyle,
+  onMapStyleChange,
+  onApply,
+  onClose,
+}: {
+  target: SlotTarget & { mode: 'mapOverride' }
+  sources: CanvasSources
+  sectionUnits: ResolvedUnit[]
+  mapStyle?: string
+  onMapStyleChange?: (next: string) => Promise<void> | void
+  onApply: (nextRaw: string) => void
+  onClose: () => void
+}) {
+  const sliceText = buildEditableSlice(
+    target.overrideKind,
+    target.unit,
+    sources
+  ).text
+  // share.yaml's map slice has no enclosing `map:` key — wrap so the picker's
+  // top-level `map.<key>` lookup resolves. map.yaml entries already have the
+  // key as part of the override entry, so pass them straight through.
+  const sectionRaw =
+    target.overrideKind === 'shareMap'
+      ? wrapShareMapForPicker(sliceText)
+      : sliceText
+  const unitIdx = sectionUnits.findIndex(
+    (u) => u.parentIndex === target.unit.parentIndex
+  )
+  const base =
+    target.unit.heading ||
+    target.unit.parentConfig.id ||
+    `Section ${unitIdx + 1}`
+  const fileLabel = target.overrideKind === 'shareMap' ? 'share.yaml' : 'map.yaml'
+  const sectionLabel = `${base} · ${fileLabel}`
+  return (
+    <MapPickerModal
+      sectionRaw={sectionRaw}
+      sectionLabel={sectionLabel}
+      style={mapStyle}
+      onMapStyleChange={onMapStyleChange}
+      onApply={onApply}
+      onClose={onClose}
+      hideMobileTarget
+    />
+  )
+}
+
+/** Wrap a share.yaml map-slice (which has fields at the top level — no
+ *  enclosing `map:` key) so MapPickerModal's `extractMapView` / `applyMapView`
+ *  can find the camera under `map.<key>`. Empty slice produces a bare
+ *  `map:` line that the modal can still patch into via `ensureMapBlock`. */
+function wrapShareMapForPicker(sliceText: string): string {
+  const trimmed = sliceText.trim()
+  if (!trimmed) return 'map:\n'
+  let parsed: unknown
+  try {
+    parsed = parseYaml(sliceText)
+  } catch {
+    return 'map:\n'
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return 'map:\n'
+  }
+  return yamlStringify({ map: parsed }, { lineWidth: 0 })
+}
+
+/** Inverse of {@link wrapShareMapForPicker} for share.yaml; pass-through for
+ *  map.yaml. Returns the editor-text shape that `mergeSlice` expects for the
+ *  given override kind. */
+function nextOverrideTextFromPickerYaml(
+  kind: 'map' | 'shareMap',
+  unit: ResolvedUnit,
+  _sources: CanvasSources,
+  pickerYaml: string
+): string {
+  void unit
+  if (kind === 'map') {
+    // The map.yaml entry editor expects the full entry text (`target: ...;
+    // map: ...`). The picker started from that shape and patched the camera
+    // in place, so the wrapped output already matches the editor's input
+    // contract.
+    return pickerYaml
+  }
+  // shareMap: unwrap the picker's `map:` envelope and return the inner block
+  // so the share.yaml splicer writes the camera + any preserved sibling keys
+  // (ratios, pins…) back under `sections[<id>].map`.
+  let parsed: { map?: unknown } | null = null
+  try {
+    parsed = parseYaml(pickerYaml) as { map?: unknown } | null
+  } catch {
+    return ''
+  }
+  const inner = parsed?.map
+  if (inner == null || typeof inner !== 'object') return ''
+  return yamlStringify(inner, { lineWidth: 0 })
 }
 
 function imageSlotLabel(

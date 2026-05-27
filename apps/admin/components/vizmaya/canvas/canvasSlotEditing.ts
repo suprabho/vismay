@@ -218,6 +218,40 @@ async function putStory(slug: string, body: Record<string, unknown>): Promise<vo
   }
 }
 
+/* ─── Story defaults (config.yaml `defaults` block) ─────────────── */
+
+/**
+ * Read the story-wide `defaults.mapStyle` (a Mapbox style URL) from the
+ * parsed config. Returns null when the config is unset / malformed or the
+ * field is absent — caller falls back to the engine-level DEFAULTS
+ * (`mapbox://styles/mapbox/dark-v11`) which the public site applies anyway.
+ */
+export function readDefaultsMapStyle(configYaml: string | null): string | null {
+  const doc = safeParseYaml(configYaml)
+  if (!doc || typeof doc !== 'object') return null
+  const defaults = (doc as { defaults?: unknown }).defaults
+  if (!defaults || typeof defaults !== 'object') return null
+  const v = (defaults as { mapStyle?: unknown }).mapStyle
+  return typeof v === 'string' && v.trim().length > 0 ? v : null
+}
+
+/**
+ * Splice a new `defaults.mapStyle` into the story's config.yaml. Creates the
+ * `defaults` block when missing — the schema allows it (StoryDefaults merges
+ * with engine DEFAULTS in `loadStoryConfig`) — so callers don't have to
+ * branch on whether the story already declared overrides.
+ */
+export function writeDefaultsMapStyle(
+  configYaml: string | null,
+  nextStyle: string
+): string {
+  const doc = (safeParseYaml(configYaml) as Record<string, unknown> | null) ?? {}
+  const defaults = (doc.defaults as Record<string, unknown> | undefined) ?? {}
+  defaults.mapStyle = nextStyle
+  doc.defaults = defaults
+  return yamlStringify(doc, { lineWidth: 0 })
+}
+
 /* ─── Map slot ↔ MapPickerModal wrapping ────────────────────────── */
 
 /**
