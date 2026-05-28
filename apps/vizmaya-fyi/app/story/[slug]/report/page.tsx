@@ -95,6 +95,8 @@ export default async function StoryReportPage({ params, searchParams }: RoutePar
         title={story.frontmatter.title}
         units={reportUnits}
         config={configWithDefaults}
+        format={story.frontmatter.format ?? 'map'}
+        aura={story.frontmatter.aura}
         accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
         logo={logo}
         print={print}

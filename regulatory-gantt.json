@@ -1,0 +1,218 @@
+{
+  "steps": [
+    {
+      "title": "Seven concurrent workstreams across the clearance journey — Galathea Bay, Jan 2021 to Mar 2026",
+      "_note": "Pure-JSON Gantt using thick line series. Each phase is a 2-point line at a fixed y-category, drawn from start date to end date, with lineStyle.width:22 and cap:round to look like a rounded bar. Works in ECharts 4/5/6 with no plugins.",
+      "option": {
+        "grid": {
+          "top": "10%",
+          "left": "3%",
+          "right": "5%",
+          "bottom": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "time",
+          "position": "top",
+          "min": "2020-11-01",
+          "max": "2026-06-01",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 11,
+            "fontFamily": "JetBrains Mono"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "type": "dashed",
+              "color": "$line"
+            }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "inverse": true,
+          "boundaryGap": true,
+          "data": [
+            "Removing protections",
+            "Project planning",
+            "Clearance process",
+            "Legal challenge in NGT",
+            "Indigenous consent gap",
+            "FCA Amendment in force",
+            "Major Port designation"
+          ],
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontWeight": 600
+          },
+          "splitLine": {
+            "show": false
+          }
+        },
+        "series": [
+          {
+            "name": "Removing protections — Jan 2021 → Aug 2023",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$red",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "data": [
+              ["2021-01-15", "Removing protections"],
+              ["2023-08-04", "Removing protections"]
+            ]
+          },
+          {
+            "name": "Project planning — Mar 2021 → Oct 2022",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$accent2",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "data": [
+              ["2021-03-15", "Project planning"],
+              ["2022-10-27", "Project planning"]
+            ]
+          },
+          {
+            "name": "Clearance process — Oct 2022 → Mar 2026",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$accent",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "data": [
+              ["2022-10-27", "Clearance process"],
+              ["2026-03-15", "Clearance process"]
+            ]
+          },
+          {
+            "name": "Legal challenge in NGT — Nov 2022 → Feb 2026",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$amber",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "data": [
+              ["2022-11-11", "Legal challenge in NGT"],
+              ["2026-02-16", "Legal challenge in NGT"]
+            ]
+          },
+          {
+            "name": "Indigenous consent gap — Nov 2022 → Mar 2026",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$amber",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "data": [
+              ["2022-11-22", "Indigenous consent gap"],
+              ["2026-03-15", "Indigenous consent gap"]
+            ]
+          },
+          {
+            "name": "FCA Amendment in force — Aug 2023 → Mar 2026",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$red",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "data": [
+              ["2023-08-04", "FCA Amendment in force"],
+              ["2026-03-15", "FCA Amendment in force"]
+            ]
+          },
+          {
+            "name": "Major Port designation — Sep 2024 → Mar 2026",
+            "type": "line",
+            "showSymbol": false,
+            "lineStyle": {
+              "color": "$accent",
+              "width": 22,
+              "cap": "round"
+            },
+            "emphasis": {
+              "lineStyle": { "width": 26 }
+            },
+            "markLine": {
+              "silent": true,
+              "symbol": "none",
+              "lineStyle": {
+                "color": "$muted",
+                "type": "dashed",
+                "width": 1
+              },
+              "label": {
+                "show": true,
+                "position": "end",
+                "color": "$muted",
+                "fontSize": 10,
+                "fontFamily": "JetBrains Mono",
+                "formatter": "PPPAC\n2026-03-15"
+              },
+              "data": [
+                { "xAxis": "2026-03-15" }
+              ]
+            },
+            "data": [
+              ["2024-09-15", "Major Port designation"],
+              ["2026-03-15", "Major Port designation"]
+            ]
+          }
+        ],
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{a}"
+        },
+        "legend": {
+          "show": false
+        }
+      }
+    }
+  ]
+}

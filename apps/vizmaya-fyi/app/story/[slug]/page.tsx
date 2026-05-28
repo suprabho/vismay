@@ -167,6 +167,7 @@ export default async function StoryPage({ params }: RouteParams) {
             defaults={defaults}
             slug={slug}
             mapOverrides={mapOverrides}
+            format={story.frontmatter.format ?? 'map'}
           />
         </VerticalLoader>
       </VerticalCaptureFrame>

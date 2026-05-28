@@ -68,8 +68,34 @@ const splitThreeSevenTwoRow: ForegroundLayoutDef = {
  * Layouts that need true region splits (where slots map to named regions
  * positionally) can be added later with proper `regions` definitions —
  * the foreground dispatch in `ForegroundLayoutSlot` already supports it.
+ *
+ * The region box is inset from the viewport edges by a safe area:
+ *   - top 96px clears the fixed top-left Vizmaya logo (64px tall + 16px
+ *     padding + a hair of breathing room)
+ *   - bottom 64px keeps the closing copy off the lower edge
+ *   - 6vw horizontal gutter on both sides so slots positioned with
+ *     `{ x: left }` / `{ x: right }` don't graze the viewport edge
+ *
+ * Portrait variant tightens the horizontal gutter (mobile real estate is
+ * scarcer) but keeps the same vertical clearance.
  */
-const deckFreeLayouts: ForegroundLayoutDef[] = [
+const DECK_SAFE_AREA: CSSProperties = {
+  position: 'absolute',
+  top: '96px',
+  bottom: '64px',
+  left: '6vw',
+  right: '6vw',
+}
+
+const DECK_SAFE_AREA_PORTRAIT: CSSProperties = {
+  position: 'absolute',
+  top: '96px',
+  bottom: '48px',
+  left: '4vw',
+  right: '4vw',
+}
+
+const DECK_LAYOUT_NAMES = [
   'text-left-chart-right',
   'text-left-quote-right',
   'image-left-text-right',
@@ -78,10 +104,18 @@ const deckFreeLayouts: ForegroundLayoutDef[] = [
   'chart-top-text-below',
   'centered',
   'free',
-].map((name) => ({
+]
+
+const deckFreeLayouts: ForegroundLayoutDef[] = DECK_LAYOUT_NAMES.map((name) => ({
   name,
   regions: {
-    default: { style: FILL },
+    default: { style: DECK_SAFE_AREA },
+  },
+  portrait: {
+    name: `${name}.portrait`,
+    regions: {
+      default: { style: DECK_SAFE_AREA_PORTRAIT },
+    },
   },
 }))
 

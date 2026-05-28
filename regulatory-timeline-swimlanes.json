@@ -1,0 +1,156 @@
+{
+  "steps": [
+    {
+      "title": "Regulatory clearance grouped into four story threads — Galathea Bay, Jan 2021 to Mar 2026",
+      "option": {
+        "grid": {
+          "top": "10%",
+          "left": "3%",
+          "right": "5%",
+          "bottom": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "max": "2026-06-01",
+          "min": "2020-11-01",
+          "type": "time",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 11,
+            "fontFamily": "JetBrains Mono"
+          },
+          "splitLine": {
+            "show": false
+          }
+        },
+        "yAxis": {
+          "data": [
+            "Project clearances",
+            "Friction",
+            "Planning",
+            "Protections removed"
+          ],
+          "type": "category",
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontWeight": 600
+          },
+          "splitLine": {
+            "lineStyle": {
+              "type": "dashed",
+              "color": "$line"
+            }
+          }
+        },
+        "series": [
+          {
+            "name": "Event",
+            "type": "scatter",
+            "symbolSize": 14,
+            "data": [
+              {
+                "name": "Galathea Bay Sanctuary denotified",
+                "value": ["2021-01-15", "Protections removed"],
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "name": "Galathea NP ESZ reduced to zero",
+                "value": ["2021-01-18", "Protections removed"],
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "name": "NMTAP lists Galathea as Important Marine Turtle Habitat",
+                "value": ["2021-02-01", "Friction"],
+                "itemStyle": { "color": "$amber" }
+              },
+              {
+                "name": "AECOM pre-feasibility report",
+                "value": ["2021-03-15", "Planning"],
+                "itemStyle": { "color": "$accent2" }
+              },
+              {
+                "name": "Stage-I forest clearance",
+                "value": ["2022-10-27", "Project clearances"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "Environmental clearance issued",
+                "value": ["2022-11-11", "Project clearances"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "Tribal Council NOC withdrawn",
+                "value": ["2022-11-22", "Friction"],
+                "itemStyle": { "color": "$amber" }
+              },
+              {
+                "name": "Forest (Conservation) Amendment Act",
+                "value": ["2023-08-04", "Protections removed"],
+                "itemStyle": { "color": "$red" }
+              },
+              {
+                "name": "Galathea Bay notified as 13th Major Port",
+                "value": ["2024-09-15", "Project clearances"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "NGT upholds environmental clearance",
+                "value": ["2026-02-16", "Project clearances"],
+                "itemStyle": { "color": "$accent" }
+              },
+              {
+                "name": "PPPAC clears port at ₹48,862 cr",
+                "value": ["2026-03-15", "Project clearances"],
+                "itemStyle": { "color": "$accent" }
+              }
+            ],
+            "markArea": {
+              "silent": true,
+              "itemStyle": {
+                "color": "$red",
+                "opacity": 0.06
+              },
+              "label": {
+                "show": true,
+                "position": "insideTop",
+                "color": "$muted",
+                "fontSize": 10,
+                "fontFamily": "JetBrains Mono"
+              },
+              "data": [
+                [
+                  {
+                    "name": "Legal challenge period",
+                    "xAxis": "2022-11-11"
+                  },
+                  {
+                    "xAxis": "2026-02-16"
+                  }
+                ]
+              ]
+            }
+          }
+        ],
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}<br/>{c}"
+        }
+      }
+    }
+  ]
+}

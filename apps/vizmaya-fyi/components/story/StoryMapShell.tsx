@@ -10,7 +10,7 @@ import {
 } from '@vismay/viz-engine'
 import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
-import type { ResolvedUnit, StoryDefaults } from '@vismay/viz-engine'
+import type { ResolvedUnit, StoryDefaults, StoryFormat } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
 
 interface Props {
@@ -28,6 +28,14 @@ interface Props {
    * scrollytelling config without forking it. Null = no overrides set.
    */
   mapOverrides?: MapOverrideConfig | null
+  /**
+   * Story format. Defaults to `'map'`. When `'deck'`, every section routes
+   * through `<ForegroundLayoutSlot>` even if no `layout:` is declared — the
+   * legacy chart panel positioning (right-column, 63vw × 50vh) assumes a
+   * map left-half and would jam deck slots into the wrong third of the
+   * viewport.
+   */
+  format?: StoryFormat
 }
 
 /**
@@ -56,7 +64,9 @@ export default function StoryMapShell({
   defaults,
   slug,
   mapOverrides,
+  format = 'map',
 }: Props) {
+  const isDeckFormat = format === 'deck'
   const [activeUnit, setActiveUnit] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isAutoplay, setIsAutoplay] = useState(false)
@@ -102,14 +112,23 @@ export default function StoryMapShell({
   // Full resolved shape so we can dispatch between the legacy flat chart-panel
   // path and the region-aware ForegroundLayoutSlot. Legacy stories stay on the
   // flat path (zero-visible-change); stories that opt in to
-  // `foreground: { layout, regions }` go through the layout slot.
-  const currentResolvedForeground = useMemo(
-    () =>
-      current
-        ? resolveSlots(current.parentConfig).foreground
-        : ({ kind: 'flat', layers: [] } as const),
-    [current]
-  )
+  // `foreground: { layout, regions }` go through the layout slot. Deck stories
+  // ALWAYS go through the layout slot — flat foregrounds get synthesized into
+  // a single-region `free` layout so slots inherit the deck safe-area inset.
+  const currentResolvedForeground = useMemo<
+    ReturnType<typeof resolveSlots>['foreground']
+  >(() => {
+    if (!current) return { kind: 'flat', layers: [] }
+    const resolved = resolveSlots(current.parentConfig).foreground
+    if (isDeckFormat && resolved.kind === 'flat') {
+      return {
+        kind: 'regions',
+        layout: 'free',
+        regions: { default: resolved.layers },
+      }
+    }
+    return resolved
+  }, [current, isDeckFormat])
   const currentForeground = useMemo(
     () => (current ? resolveSlotsFlat(current.parentConfig).foreground : []),
     [current]
@@ -135,10 +154,20 @@ export default function StoryMapShell({
       prev.subIndex === current.subIndex
     return sharesNext && !sharesPrev
   })()
-  // Legacy chart panel renders only for flat-mode units. Regions-mode units
-  // route through `<ForegroundLayoutSlot>` instead.
-  const showChart = !usesRegions && currentForeground.length > 0 && !isFirstOfMultiSlice
-  const showRegions = usesRegions && !isFirstOfMultiSlice && current != null
+  // Legacy chart panel renders only for flat-mode units in map-format stories.
+  // Deck stories ALWAYS route through `<ForegroundLayoutSlot>` (regions path)
+  // because the legacy panel positioning (right-column 63vw × 50vh) is
+  // designed around the map left-half and would jam deck slots into the
+  // wrong viewport region. For a deck section without an explicit
+  // `section.layout:`, the layout slot still works — the foreground falls
+  // back to the `single-fill` / `free` layout and self-positioning slots
+  // sit inside the deck safe-area inset.
+  const showChart =
+    !isDeckFormat && !usesRegions && currentForeground.length > 0 && !isFirstOfMultiSlice
+  const showRegions =
+    !isFirstOfMultiSlice &&
+    current != null &&
+    (usesRegions || (isDeckFormat && currentForeground.length > 0))
 
   // Single IntersectionObserver across every unit element.
   useEffect(() => {
@@ -180,6 +209,7 @@ export default function StoryMapShell({
         isPortrait,
         isCapture,
         units,
+        format,
       }}
     >
       {/* ─── Persistent background slot ──────────────────────────────────

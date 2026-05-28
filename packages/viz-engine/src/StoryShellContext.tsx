@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryDefaults } from './lib/storyConfig.types'
 import type { MapOverrideConfig } from './lib/storyMapOverrides'
+import type { StoryFormat } from './types/story'
 
 /**
  * Page-level data that some background modules (notably `map`) need but the
@@ -23,6 +24,13 @@ export interface StoryShellContextValue {
   isCapture: boolean
   /** The active units array. Modules needing per-subsection overrides (e.g. map) read this. */
   units: ResolvedUnit[]
+  /**
+   * Story format. Defaults to `'map'`. Deck stories force the regions-aware
+   * foreground path even when a section omits `layout:` — the legacy chart
+   * panel positioning (right-column 63vw × 50vh, designed around a map
+   * left-half) is wrong for full-canvas deck slots that self-position.
+   */
+  format?: StoryFormat
 }
 
 const StoryShellContext = createContext<StoryShellContextValue | null>(null)
