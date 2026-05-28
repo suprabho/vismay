@@ -1,0 +1,190 @@
+{
+  "steps": [
+    {
+      "title": "Africa constant-currency revenue — US$ Million (Q4)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ${c}M (constant currency)"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "8%",
+          "bottom": "8%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Q4 FY25\n(Mar-25)", "Q4 FY26\n(Mar-26)"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "fontSize": 12, "fontFamily": "JetBrains Mono", "lineHeight": 16 }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 2000,
+          "axisLabel": {
+            "formatter": "${value}M",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "40%",
+            "data": [
+              {
+                "value": 1317,
+                "itemStyle": {
+                  "borderRadius": [6, 6, 0, 0],
+                  "color": "rgba(122,142,168,0.5)"
+                },
+                "label": {
+                  "show": true,
+                  "position": "top",
+                  "color": "$muted",
+                  "fontSize": 18,
+                  "fontFamily": "JetBrains Mono",
+                  "fontWeight": "bold",
+                  "formatter": "$1,317M"
+                }
+              },
+              {
+                "value": 1610,
+                "itemStyle": {
+                  "borderRadius": [6, 6, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(43,223,168,1.0)" },
+                      { "offset": 1, "color": "rgba(43,223,168,0.4)" }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true,
+                  "position": "top",
+                  "color": "$teal",
+                  "fontSize": 22,
+                  "fontFamily": "JetBrains Mono",
+                  "fontWeight": "bold",
+                  "formatter": "$1,610M\n+22%"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Africa EBITDA margin vs Airtel Money MAUs",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" }
+        },
+        "legend": {
+          "data": ["EBITDA Margin %", "Airtel Money MAUs (Mn)"],
+          "top": 4,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "12%",
+          "bottom": "8%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Q4 FY25", "Q4 FY26"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "fontSize": 12, "fontFamily": "JetBrains Mono" }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "EBITDA Margin %",
+            "nameTextStyle": { "color": "$muted", "fontSize": 10 },
+            "min": 40,
+            "max": 60,
+            "axisLabel": {
+              "formatter": "{value}%",
+              "color": "$muted",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          },
+          {
+            "type": "value",
+            "name": "MAUs (Mn)",
+            "nameTextStyle": { "color": "$muted", "fontSize": 10 },
+            "min": 0,
+            "max": 80,
+            "axisLabel": {
+              "formatter": "{value}M",
+              "color": "$muted",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "splitLine": { "show": false },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          }
+        ],
+        "series": [
+          {
+            "name": "EBITDA Margin %",
+            "type": "bar",
+            "yAxisIndex": 0,
+            "barWidth": "30%",
+            "itemStyle": { "color": "$teal", "borderRadius": [6, 6, 0, 0] },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$teal",
+              "fontSize": 16,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "{c}%"
+            },
+            "data": [47.3, 50.4]
+          },
+          {
+            "name": "Airtel Money MAUs (Mn)",
+            "type": "line",
+            "yAxisIndex": 1,
+            "smooth": false,
+            "symbolSize": 10,
+            "symbol": "circle",
+            "itemStyle": { "color": "$amber" },
+            "lineStyle": { "color": "$amber", "width": 3 },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$amber",
+              "fontSize": 13,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "{c}M MAUs"
+            },
+            "data": [44.6, 54.1]
+          }
+        ]
+      }
+    }
+  ]
+}

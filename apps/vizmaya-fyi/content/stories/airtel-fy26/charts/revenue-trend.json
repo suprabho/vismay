@@ -1,0 +1,102 @@
+{
+  "steps": [
+    {
+      "title": "Quarterly revenue by segment — ₹ Billion",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "backgroundColor": "#0f1c30",
+          "borderColor": "#1e3050",
+          "textStyle": { "color": "#ecedf2", "fontFamily": "JetBrains Mono", "fontSize": 12 }
+        },
+        "legend": {
+          "data": ["India Mobile", "India Homes & Enterprise", "Africa"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle",
+          "itemGap": 18
+        },
+        "grid": {
+          "left": "4%",
+          "right": "4%",
+          "bottom": "8%",
+          "top": "20%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Q4 FY25", "Q1 FY26", "Q2 FY26", "Q3 FY26", "Q4 FY26"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 12,
+            "fontFamily": "JetBrains Mono"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "max": 650,
+          "axisLabel": {
+            "formatter": "₹{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "India Mobile",
+            "type": "bar",
+            "stack": "revenue",
+            "barWidth": "52%",
+            "itemStyle": { "color": "$teal" },
+            "data": [258.2, 266.8, 278.5, 287.1, 296.3]
+          },
+          {
+            "name": "India Homes & Enterprise",
+            "type": "bar",
+            "stack": "revenue",
+            "barWidth": "52%",
+            "itemStyle": { "color": "$amber" },
+            "data": [108.8, 109.6, 109.6, 108.7, 101.7]
+          },
+          {
+            "name": "Africa",
+            "type": "bar",
+            "stack": "revenue",
+            "barWidth": "52%",
+            "itemStyle": {
+              "color": "$accent",
+              "borderRadius": [4, 4, 0, 0]
+            },
+            "data": [111.8, 118.2, 133.4, 144.0, 155.8]
+          },
+          {
+            "name": " ",
+            "type": "line",
+            "data": [478.8, 494.6, 521.5, 539.8, 553.8],
+            "lineStyle": { "opacity": 0 },
+            "itemStyle": { "opacity": 0 },
+            "symbol": "none",
+            "z": 10,
+            "label": {
+              "show": true,
+              "position": "top",
+              "distance": 8,
+              "color": "$text",
+              "fontSize": 13,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "₹{c}Bn"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

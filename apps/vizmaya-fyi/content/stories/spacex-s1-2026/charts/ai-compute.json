@@ -1,0 +1,53 @@
+{
+  "steps": [
+    {
+      "title": "AI compute build — SpaceX vs industry (days to deploy)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "legend": {
+          "data": ["SpaceX", "Industry Standard"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["COLOSSUS I\n(~500 MW)", "COLOSSUS II\n(~500 MW)", "Combined\n(~1.0 GW)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Days to deploy",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "formatter": "{value}d", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "max": 800
+        },
+        "series": [
+          {
+            "name": "SpaceX",
+            "type": "bar",
+            "barWidth": "30%",
+            "itemStyle": { "color": "$teal", "borderRadius": [4,4,0,0] },
+            "label": { "show": true, "position": "top", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 12, "fontWeight": "bold", "formatter": "{c}d" },
+            "data": [180, 91, 91]
+          },
+          {
+            "name": "Industry Standard",
+            "type": "bar",
+            "barWidth": "30%",
+            "barGap": "20%",
+            "itemStyle": { "color": "$muted", "opacity": 0.4, "borderRadius": [4,4,0,0] },
+            "label": { "show": true, "position": "top", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 12, "formatter": "{c}d" },
+            "data": [730, 730, 730]
+          }
+        ]
+      }
+    }
+  ]
+}

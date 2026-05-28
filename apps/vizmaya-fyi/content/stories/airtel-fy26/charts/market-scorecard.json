@@ -1,0 +1,99 @@
+{
+  "steps": [
+    {
+      "title": "Airtel vs Nifty — indexed price return (Apr 2025 = 100)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" }
+        },
+        "legend": {
+          "data": ["Bharti Airtel", "Nifty 50"],
+          "top": 4,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 12 },
+          "icon": "circle"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Apr-25", "Jun-25", "Sep-25", "Dec-25", "Mar-26"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "fontSize": 11, "fontFamily": "JetBrains Mono" }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 70,
+          "max": 140,
+          "axisLabel": {
+            "formatter": "{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Bharti Airtel",
+            "type": "line",
+            "smooth": true,
+            "symbolSize": 6,
+            "symbol": "circle",
+            "itemStyle": { "color": "$accent" },
+            "lineStyle": { "color": "$accent", "width": 3 },
+            "areaStyle": {
+              "color": {
+                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(232,54,93,0.3)" },
+                  { "offset": 1, "color": "rgba(232,54,93,0.02)" }
+                ]
+              }
+            },
+            "label": {
+              "show": false
+            },
+            "endLabel": {
+              "show": true,
+              "color": "$accent",
+              "fontSize": 13,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "+25.1%"
+            },
+            "data": [100, 105, 112, 120, 125.1]
+          },
+          {
+            "name": "Nifty 50",
+            "type": "line",
+            "smooth": true,
+            "symbolSize": 6,
+            "symbol": "circle",
+            "itemStyle": { "color": "$muted" },
+            "lineStyle": { "color": "$muted", "width": 2, "type": "dashed" },
+            "label": {
+              "show": false
+            },
+            "endLabel": {
+              "show": true,
+              "color": "$muted",
+              "fontSize": 12,
+              "fontFamily": "JetBrains Mono",
+              "formatter": "-5.1%"
+            },
+            "data": [100, 95, 92, 95, 94.9]
+          }
+        ]
+      }
+    }
+  ]
+}

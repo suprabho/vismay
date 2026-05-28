@@ -1,0 +1,115 @@
+{
+  "steps": [
+    {
+      "title": "Annual net income before exceptionals — ₹ Billion",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ₹{c} Bn"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "8%",
+          "bottom": "8%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["FY 2024", "FY 2025", "FY 2026"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 13,
+            "fontFamily": "Inter",
+            "fontWeight": "bold"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 320,
+          "axisLabel": {
+            "formatter": "₹{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "40%",
+            "data": [
+              {
+                "value": 116.2,
+                "itemStyle": {
+                  "borderRadius": [6, 6, 0, 0],
+                  "color": "rgba(122,142,168,0.55)"
+                },
+                "label": {
+                  "show": true,
+                  "position": "top",
+                  "color": "$muted",
+                  "fontSize": 15,
+                  "fontFamily": "JetBrains Mono",
+                  "fontWeight": "bold",
+                  "formatter": "₹{c}Bn"
+                }
+              },
+              {
+                "value": 177.6,
+                "itemStyle": {
+                  "borderRadius": [6, 6, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(43,223,168,0.65)" },
+                      { "offset": 1, "color": "rgba(43,223,168,0.25)" }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true,
+                  "position": "top",
+                  "color": "$teal",
+                  "fontSize": 15,
+                  "fontFamily": "JetBrains Mono",
+                  "fontWeight": "bold",
+                  "formatter": "₹{c}Bn\n+53%"
+                }
+              },
+              {
+                "value": 269.0,
+                "itemStyle": {
+                  "borderRadius": [6, 6, 0, 0],
+                  "color": {
+                    "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                    "colorStops": [
+                      { "offset": 0, "color": "rgba(43,223,168,1.0)" },
+                      { "offset": 1, "color": "rgba(43,223,168,0.45)" }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true,
+                  "position": "top",
+                  "color": "$teal",
+                  "fontSize": 18,
+                  "fontFamily": "JetBrains Mono",
+                  "fontWeight": "bold",
+                  "formatter": "₹{c}Bn\n+51%"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

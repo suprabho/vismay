@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "title": "Starlink Direct-to-Mobile — scale and capacity",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["MAUs (7.4M)", "MNO Partners (~30)", "V3 per launch (60)", "V3 downlink (Tbps)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "44%",
+            "itemStyle": { "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "fontFamily": "JetBrains Mono", "fontSize": 11, "color": "$text" },
+            "data": [
+              { "value": 7.4,  "itemStyle": { "color": "$teal" },    "label": { "formatter": "7.4M MAUs",     "color": "$teal" } },
+              { "value": 30,   "itemStyle": { "color": "$accent2" }, "label": { "formatter": "~30 operators", "color": "$accent2" } },
+              { "value": 60,   "itemStyle": { "color": "$amber" },   "label": { "formatter": "60 per launch", "color": "$amber" } },
+              { "value": 1,    "itemStyle": { "color": "$accent" },  "label": { "formatter": "1 Tbps / sat",  "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

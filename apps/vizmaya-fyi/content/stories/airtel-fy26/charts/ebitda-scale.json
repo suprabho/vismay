@@ -1,0 +1,152 @@
+{
+  "steps": [
+    {
+      "title": "Annual revenue vs EBITDA — ₹ Billion",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}<br/>{a0}: ₹{c0} Bn<br/>{a1}: ₹{c1} Bn"
+        },
+        "legend": {
+          "data": ["Revenue", "EBITDA"],
+          "top": 4,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 12 },
+          "icon": "circle"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "4%",
+          "bottom": "6%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["FY 2024", "FY 2025", "FY 2026"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 13,
+            "fontFamily": "Inter",
+            "fontWeight": "bold"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "axisLabel": {
+            "formatter": "₹{value}",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Revenue",
+            "type": "bar",
+            "barWidth": "28%",
+            "itemStyle": { "color": "$surface", "borderColor": "$accent2", "borderWidth": 1.5, "borderRadius": [4, 4, 0, 0] },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$muted",
+              "fontSize": 11,
+              "fontFamily": "JetBrains Mono",
+              "formatter": "₹{c}"
+            },
+            "data": [1643.6, 1815.1, 2109.7]
+          },
+          {
+            "name": "EBITDA",
+            "type": "bar",
+            "barWidth": "28%",
+            "itemStyle": { "color": "$teal", "borderRadius": [4, 4, 0, 0] },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$teal",
+              "fontSize": 12,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "₹{c}"
+            },
+            "data": [889.1, 1050.0, 1212.7]
+          }
+        ]
+      }
+    },
+    {
+      "title": "EBITDA margin expansion — 3-year view",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "formatter": "{b}: {c}% EBITDA margin"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "12%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["FY 2024", "FY 2025", "FY 2026"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 13,
+            "fontFamily": "Inter",
+            "fontWeight": "bold"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 50,
+          "max": 62,
+          "axisLabel": {
+            "formatter": "{value}%",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "40%",
+            "itemStyle": {
+              "color": {
+                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(43,223,168,0.9)" },
+                  { "offset": 1, "color": "rgba(43,223,168,0.4)" }
+                ]
+              },
+              "borderRadius": [6, 6, 0, 0]
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$teal",
+              "fontSize": 16,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "{c}%"
+            },
+            "data": [54.1, 57.8, 57.5]
+          }
+        ]
+      }
+    }
+  ]
+}

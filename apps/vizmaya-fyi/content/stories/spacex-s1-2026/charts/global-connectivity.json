@@ -1,0 +1,69 @@
+{
+  "steps": [
+    {
+      "title": "Starlink constellation + subscriber growth",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" }
+        },
+        "legend": {
+          "data": ["Satellites", "Subscribers (M)"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "10%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["2020", "2021", "2022", "2023", "2024", "2025"],
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 12 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "Satellites",
+            "nameTextStyle": { "color": "$accent2", "fontFamily": "Inter", "fontSize": 10 },
+            "axisLabel": { "color": "$accent2", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+            "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          },
+          {
+            "type": "value",
+            "name": "Subscribers (M)",
+            "nameTextStyle": { "color": "$teal", "fontFamily": "Inter", "fontSize": 10 },
+            "axisLabel": { "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+            "splitLine": { "show": false },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          }
+        ],
+        "series": [
+          {
+            "name": "Satellites",
+            "type": "bar",
+            "yAxisIndex": 0,
+            "barWidth": "45%",
+            "itemStyle": { "color": "$accent2", "opacity": 0.7, "borderRadius": [4,4,0,0] },
+            "data": [800, 1700, 3300, 5500, 7200, 9600]
+          },
+          {
+            "name": "Subscribers (M)",
+            "type": "line",
+            "yAxisIndex": 1,
+            "smooth": true,
+            "symbol": "circle",
+            "symbolSize": 7,
+            "lineStyle": { "color": "$teal", "width": 3 },
+            "itemStyle": { "color": "$teal" },
+            "areaStyle": { "color": { "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{ "offset": 0, "color": "rgba(34,211,238,0.25)" }, { "offset": 1, "color": "rgba(34,211,238,0)" }] } },
+            "data": [0.01, 0.15, 0.7, 2.0, 4.0, 10.3]
+          }
+        ]
+      }
+    }
+  ]
+}

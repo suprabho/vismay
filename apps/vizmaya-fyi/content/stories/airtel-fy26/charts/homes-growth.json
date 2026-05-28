@@ -1,0 +1,115 @@
+{
+  "steps": [
+    {
+      "title": "Airtel Homes broadband subscribers — Millions",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" },
+          "formatter": "{b}<br/>Subscribers: {c0} Mn<br/>ARPU: ₹{c1}/month"
+        },
+        "legend": {
+          "data": ["Subscribers (Mn)", "ARPU (₹)"],
+          "top": 4,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": {
+          "left": "4%",
+          "right": "10%",
+          "bottom": "8%",
+          "top": "16%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["Mar 2025", "Dec 2025", "Mar 2026"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "$muted", "fontSize": 12, "fontFamily": "JetBrains Mono" }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "Subscribers (Mn)",
+            "nameTextStyle": { "color": "$muted", "fontSize": 10 },
+            "min": 0,
+            "max": 18,
+            "axisLabel": {
+              "formatter": "{value}M",
+              "color": "$muted",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          },
+          {
+            "type": "value",
+            "name": "ARPU (₹)",
+            "nameTextStyle": { "color": "$muted", "fontSize": 10 },
+            "min": 400,
+            "max": 650,
+            "axisLabel": {
+              "formatter": "₹{value}",
+              "color": "$muted",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "splitLine": { "show": false },
+            "axisLine": { "show": false },
+            "axisTick": { "show": false }
+          }
+        ],
+        "series": [
+          {
+            "name": "Subscribers (Mn)",
+            "type": "bar",
+            "yAxisIndex": 0,
+            "barWidth": "35%",
+            "itemStyle": {
+              "borderRadius": [6, 6, 0, 0],
+              "color": {
+                "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(91,164,245,0.9)" },
+                  { "offset": 1, "color": "rgba(91,164,245,0.3)" }
+                ]
+              }
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$accent2",
+              "fontSize": 16,
+              "fontFamily": "JetBrains Mono",
+              "fontWeight": "bold",
+              "formatter": "{c}M"
+            },
+            "data": [10.04, 13.09, 14.22]
+          },
+          {
+            "name": "ARPU (₹)",
+            "type": "line",
+            "yAxisIndex": 1,
+            "smooth": false,
+            "symbolSize": 8,
+            "symbol": "circle",
+            "itemStyle": { "color": "$amber" },
+            "lineStyle": { "color": "$amber", "width": 2.5, "type": "dashed" },
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$amber",
+              "fontSize": 12,
+              "fontFamily": "JetBrains Mono",
+              "formatter": "₹{c}"
+            },
+            "data": [543, 529, 527]
+          }
+        ]
+      }
+    }
+  ]
+}

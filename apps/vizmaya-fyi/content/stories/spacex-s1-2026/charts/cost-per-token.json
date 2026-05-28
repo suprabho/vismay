@@ -1,0 +1,53 @@
+{
+  "steps": [
+    {
+      "title": "SpaceX cost-per-token advantage — normalized (industry = 100)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "legend": {
+          "data": ["SpaceX", "Industry"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Hardware Cost", "Energy Cost", "Compute Speed", "Cost Per Token"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Index (Industry = 100)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "max": 160
+        },
+        "series": [
+          {
+            "name": "SpaceX",
+            "type": "bar",
+            "barWidth": "30%",
+            "label": { "show": true, "position": "top", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "itemStyle": { "color": "$teal", "borderRadius": [4,4,0,0] },
+            "data": [45, 20, 140, 32]
+          },
+          {
+            "name": "Industry",
+            "type": "bar",
+            "barWidth": "30%",
+            "barGap": "20%",
+            "label": { "show": true, "position": "top", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "itemStyle": { "color": "$muted", "opacity": 0.4, "borderRadius": [4,4,0,0] },
+            "data": [100, 100, 100, 100]
+          }
+        ]
+      }
+    }
+  ]
+}
