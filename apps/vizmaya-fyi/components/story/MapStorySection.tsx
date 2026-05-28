@@ -2,7 +2,7 @@
 
 import type { ResolvedUnit, StatColor } from '@vismay/viz-engine'
 import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
-import { formatInlineMarkdown } from '@vismay/viz-engine'
+import { formatInlineMarkdown, getListItems, isListBlock } from '@vismay/viz-engine'
 import { HeroPanel, HeroPanelTitle, HeroPanelDek } from './Hero'
 import { statColorVar } from './ThemeProvider'
 
@@ -291,15 +291,27 @@ function TextPanel({
         </div>
       )}
       {paragraphs.length > 0 ? (
-        paragraphs.map((p, i) => (
-          <p
-            key={i}
-            className="font-[family-name:var(--font-serif)] text-[1.4rem] leading-[1.7] mb-3 last:mb-0"
-            style={{ color: 'var(--color-text)' }}
-          >
-            {formatInlineMarkdown(p)}
-          </p>
-        ))
+        paragraphs.map((p, i) =>
+          isListBlock(p) ? (
+            <ul
+              key={i}
+              className="font-[family-name:var(--font-serif)] text-[1.4rem] leading-[1.7] mb-3 last:mb-0 list-disc pl-5"
+              style={{ color: 'var(--color-text)' }}
+            >
+              {getListItems(p).map((item, j) => (
+                <li key={j}>{formatInlineMarkdown(item)}</li>
+              ))}
+            </ul>
+          ) : (
+            <p
+              key={i}
+              className="font-[family-name:var(--font-serif)] text-[1.4rem] leading-[1.7] mb-3 last:mb-0"
+              style={{ color: 'var(--color-text)' }}
+            >
+              {formatInlineMarkdown(p)}
+            </p>
+          )
+        )
       ) : (
         <p
           className="font-[family-name:var(--font-mono)] text-[0.7rem] opacity-60"
