@@ -94,7 +94,28 @@ function parseConfig(
       r.bindings != null && typeof r.bindings === 'object'
         ? (r.bindings as KzCharacterConfig['bindings'])
         : undefined,
+    costume: parseCostume(r.costume, { label: ctx.label }),
   }
+}
+
+function parseCostume(
+  raw: unknown,
+  ctx: { label: string }
+): KzCharacterConfig['costume'] {
+  if (raw == null) return undefined
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`${ctx.label}: kz:character.costume must be an object map`)
+  }
+  const out: Record<string, number | boolean> = {}
+  for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value !== 'number' && typeof value !== 'boolean') {
+      throw new Error(
+        `${ctx.label}: kz:character.costume['${name}'] must be a number or boolean (got ${typeof value})`
+      )
+    }
+    out[name] = value
+  }
+  return Object.keys(out).length > 0 ? out : undefined
 }
 
 const characterModule: VizModule<KzCharacterConfig> = {
@@ -134,6 +155,7 @@ const characterModule: VizModule<KzCharacterConfig> = {
     },
     { kind: 'json', key: 'anchor', label: 'Anchor ({x, y})' },
     { kind: 'json', key: 'bindings', label: 'Rive view-model bindings' },
+    { kind: 'json', key: 'costume', label: 'State-machine input writes (e.g. {Headgear: 11})' },
   ],
 }
 

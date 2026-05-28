@@ -31,6 +31,14 @@ export interface CharacterEntry {
   poses: Record<string, number>
   /** View-model bindings always applied for this character (e.g. brand colors). */
   defaultBindings?: Record<string, string | number | boolean>
+  /**
+   * Baseline state-machine input writes applied on every panel — per-layer
+   * `costume` overrides merge on top. Important because state-machine inputs
+   * persist across panels when the rive instance is shared via
+   * `stableIdentity` — without a baseline, a costume set on one panel would
+   * stick to subsequent panels that meant to render in defaults.
+   */
+  defaultCostume?: Record<string, number | boolean>
 }
 
 export const characters: Record<string, CharacterEntry> = {
@@ -44,6 +52,21 @@ export const characters: Record<string, CharacterEntry> = {
     artboard: 'Mascot',
     stateMachine: 'State Machine Main',
     poseInputName: 'State',
+    // Baseline costume so panels without an explicit `costume` block render
+    // the .riv's bare-Ovi look instead of inheriting whatever a previous
+    // panel last set. Only includes inputs whose `0` value is confirmed
+    // safe by visual inspection:
+    //   - Headgear: 0 → "Hair" (no hat) ✓
+    //   - Muffler: 0  → default yellow muffler ✓
+    // `Specs`, `BG`, and `Skin` are omitted because we haven't confirmed
+    // which integer maps to "default" yet; testing `BG: 0` turned the owl
+    // into a red rectangle. Until we discover those values (e.g. via Rive
+    // Studio or by probing the .riv enums), any costume override of those
+    // inputs will persist into subsequent panels.
+    defaultCostume: {
+      Headgear: 0,
+      Muffler: 0,
+    },
     poses: {
       // Default / quiet poses
       idle: 0,

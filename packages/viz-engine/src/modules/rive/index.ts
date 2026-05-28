@@ -83,6 +83,17 @@ export interface RiveLayerConfig {
   }
   /** Per-step state-machine / view-model input writes. */
   stepInput?: RiveStepInputConfig
+  /**
+   * One-shot writes to state-machine inputs, applied once the .riv loads.
+   * Keys are input names (case-sensitive, must match the .riv exactly).
+   * Values are numbers (for number inputs) or booleans (for boolean inputs).
+   *
+   * Triggers are intentionally excluded — they're events, not state, and a
+   * "static" trigger has no meaning. Use the imperative API if you need to
+   * fire one. Unknown input names are silently skipped so a config that
+   * outlives a .riv refactor doesn't 500 the page.
+   */
+  staticInputs?: Record<string, number | boolean>
   /** Background color shown while loading. */
   background?: string
   /** Capture-mode behavior. Defaults to `{ mode: 'currentFrame' }`. */
@@ -135,6 +146,23 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): RiveLa
     }
     return s as unknown as RiveStepInputConfig
   })()
+  const staticInputs = (() => {
+    if (r.staticInputs == null) return undefined
+    if (typeof r.staticInputs !== 'object' || Array.isArray(r.staticInputs)) {
+      throw new Error(`${ctx.label}: rive.staticInputs must be an object map`)
+    }
+    const entries = Object.entries(r.staticInputs as Record<string, unknown>)
+    const validated: Record<string, number | boolean> = {}
+    for (const [name, value] of entries) {
+      if (typeof value !== 'number' && typeof value !== 'boolean') {
+        throw new Error(
+          `${ctx.label}: rive.staticInputs['${name}'] must be a number or boolean (got ${typeof value})`
+        )
+      }
+      validated[name] = value
+    }
+    return Object.keys(validated).length > 0 ? validated : undefined
+  })()
   const capture = (() => {
     if (r.capture == null) return undefined
     if (typeof r.capture !== 'object') throw new Error(`${ctx.label}: rive.capture must be an object`)
@@ -159,6 +187,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): RiveLa
     posterImage: typeof r.posterImage === 'string' ? r.posterImage : undefined,
     viewModel,
     stepInput,
+    staticInputs,
     background: typeof r.background === 'string' ? r.background : undefined,
     capture,
   }
@@ -196,6 +225,7 @@ const riveModule: VizModule<RiveLayerConfig> = {
     { kind: 'boolean', key: 'autoplay', label: 'Autoplay' },
     { kind: 'json', key: 'viewModel', label: 'View model bindings (JSON)', placeholder: '{"instance":"default","bindings":{}}' },
     { kind: 'json', key: 'stepInput', label: 'Scroll → input mapping (JSON)' },
+    { kind: 'json', key: 'staticInputs', label: 'Static state-machine input writes (JSON)' },
     { kind: 'json', key: 'capture', label: 'Capture freeze (JSON)' },
   ],
 }

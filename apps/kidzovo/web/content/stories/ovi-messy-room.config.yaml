@@ -62,6 +62,10 @@ sections:
             who: ovi
             pose:
               static: painting
+            costume:
+              # Splash of color while Ovi's at peak chaos.
+              Headgear: 1
+              Muffler: 2
             anchor: { x: center, y: bottom }
         bubbles:
           - type: kz:bubble
@@ -112,6 +116,9 @@ sections:
             who: ovi
             pose:
               static: listening
+            costume:
+              # Specs on for the moment of contemplation.
+              Specs: 3
             anchor: { x: center, y: bottom }
         bubbles:
           - type: kz:bubble
@@ -140,6 +147,11 @@ sections:
             who: ovi
             pose:
               static: partialSuccess1
+            costume:
+              # Celebration outfit — full set on for the cleanup montage.
+              Headgear: 13
+              Muffler: 5
+              BG: 5
             anchor: { x: center, y: bottom }
         bubbles:
           - type: kz:bubble

@@ -59,9 +59,21 @@ export interface KzCharacterConfig {
   /**
    * Rive view-model bindings forwarded to the underlying rive module
    * (color tokens, named numbers, etc.). Layered on top of the palette
-   * entry's `defaultBindings`.
+   * entry's `defaultBindings`. Distinct from `costume` — bindings write
+   * to view-model properties; costume writes to state-machine inputs.
    */
   bindings?: Record<string, string | number | boolean>
+  /**
+   * One-shot state-machine input writes, applied once on mount. Use for
+   * costume layers (Hat / Specs / BG / Muffler / Skin) and any other
+   * named number/boolean input the .riv exposes beyond the pose state.
+   * Keys are case-sensitive .riv input names. Unknown names are silently
+   * skipped at render time.
+   *
+   * Example:
+   *   costume: { Headgear: 11, Muffler: 3, BG: 5 }
+   */
+  costume?: Record<string, number | boolean>
 }
 
 /**

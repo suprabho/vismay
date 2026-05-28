@@ -139,6 +139,16 @@ export default function KzCharacterComponent(
       ? { ...(palette.defaultBindings ?? {}), ...(config.bindings ?? {}) }
       : undefined
 
+  // Always send the merged costume (palette baseline + per-layer overrides)
+  // so panels without an explicit `costume` reset to defaults instead of
+  // inheriting whatever a previous panel last wrote. The rive instance is
+  // shared across panels via stableIdentity, so unset inputs stay sticky
+  // unless we re-write them every render.
+  const mergedCostume =
+    palette.defaultCostume || config.costume
+      ? { ...(palette.defaultCostume ?? {}), ...(config.costume ?? {}) }
+      : undefined
+
   const riveConfig: RiveLayerConfig = {
     type: 'rive',
     src: config.src ?? palette.src,
@@ -147,6 +157,7 @@ export default function KzCharacterComponent(
     autoplay: true,
     layout: { fit: 'contain', alignment: 'bottomCenter' },
     stepInput,
+    staticInputs: mergedCostume,
     viewModel: mergedBindings ? { bindings: mergedBindings } : undefined,
   }
 

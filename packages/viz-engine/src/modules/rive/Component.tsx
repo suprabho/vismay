@@ -265,6 +265,23 @@ export default function RiveLayerComponent({
   const bindings = config.viewModel?.bindings
   const hasBindings = bindings != null && Object.keys(bindings).length > 0
 
+  // One-shot writes to named state-machine inputs (e.g. costume layers,
+  // initial pose). Fires whenever the rive instance or the static inputs
+  // change; unknown input names are silently skipped so a stale config
+  // doesn't tank the page. Triggers aren't supported here — they're not
+  // "static" by nature.
+  useEffect(() => {
+    if (!rive || !config.stateMachine || !config.staticInputs) return
+    const inputs = rive.stateMachineInputs(config.stateMachine) ?? []
+    for (const [name, value] of Object.entries(config.staticInputs)) {
+      const target = inputs.find((i) => i.name === name)
+      if (!target) continue
+      // The runtime accepts numbers/booleans interchangeably on number inputs
+      // via JS coercion; pass the value as-is and let Rive normalize.
+      target.value = value as number | boolean
+    }
+  }, [rive, config.stateMachine, config.staticInputs])
+
   useImperativeHandle<VizCaptureHandle | null, VizCaptureHandle>(
     captureRef ?? { current: null },
     () => ({
