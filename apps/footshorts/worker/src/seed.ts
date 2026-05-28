@@ -102,6 +102,12 @@ async function seedLeagues() {
   return data.competitions.filter((c) => wanted.has(c.code));
 }
 
+// Continental club comps (CL, EL) and international national-team comps (WC,
+// EC) are not domestic leagues — a team's `league_slug` should always point at
+// its domestic league. Memberships in these comps still go into
+// team_competitions; they just don't set league_slug.
+const NON_DOMESTIC_LEAGUE_CODES = new Set(['CL', 'EL', 'WC', 'EC']);
+
 async function seedTeams(competitions: any[]) {
   console.log('[seed] teams...');
   const allTeams: any[] = [];
@@ -112,6 +118,7 @@ async function seedTeams(competitions: any[]) {
     try {
       const data = await fdFetch<{ teams: any[] }>(`/competitions/${comp.code}/teams`);
       const leagueSlug = slugify(commonName(comp.name));
+      const isDomesticLeague = !NON_DOMESTIC_LEAGUE_CODES.has(comp.code);
       for (const t of data.teams) {
         const teamSlug = slugify(commonName(t.name));
         allTeams.push({
@@ -120,7 +127,7 @@ async function seedTeams(competitions: any[]) {
           name: t.name,
           football_data_id: t.id,
           country: t.area?.name ?? null,
-          league_slug: leagueSlug,
+          league_slug: isDomesticLeague ? leagueSlug : null,
           crest_url: t.crest ?? null,
         });
         memberships.push({ teamSlug, competitionSlug: leagueSlug });
@@ -131,11 +138,17 @@ async function seedTeams(competitions: any[]) {
     }
   }
 
-  // Dedupe entity rows by slug (a team in multiple comps stores once).
-  // Memberships are kept un-deduped — that's the whole point of the join table.
-  const deduped = Array.from(
-    new Map(allTeams.map((t) => [t.slug, t])).values()
-  );
+  // Dedupe entity rows by slug, preferring a row whose league_slug is set —
+  // i.e. one from a domestic-league pass. A team seen first via CL and later
+  // via PL must keep the PL slug, not get clobbered by the CL null.
+  const teamMap = new Map<string, any>();
+  for (const t of allTeams) {
+    const existing = teamMap.get(t.slug);
+    if (!existing || (!existing.league_slug && t.league_slug)) {
+      teamMap.set(t.slug, t);
+    }
+  }
+  const deduped = Array.from(teamMap.values());
 
   const { error } = await supabase
     .from('entities')
