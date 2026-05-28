@@ -1,0 +1,27 @@
+# Social card variants for spacex-s1-2026.
+# Each card is a stripped-down snapshot of one foreground slot from the deck.
+cards:
+  - id: og-default
+    aspect: "1200x630"
+    background:
+      type: aura
+      slug: blue-abstract-background-patriotic-stars-flowing-lines
+      tint: "#070a14"
+    title: "A Rocket Company That Became the Internet"
+    dek: "SpaceX's S-1 reveals three companies inside one stock — and only one of them makes money."
+    eyebrow: "Vizmaya · SpaceX S-1 · May 2026"
+  - id: og-revenue
+    aspect: "1200x630"
+    title: "$18.7B"
+    dek: "SpaceX 2025 revenue — and where it really comes from."
+    eyebrow: "Three segments, three stories"
+  - id: og-starlink
+    aspect: "1200x630"
+    title: "10.3M"
+    dek: "Starlink subscribers · 164 countries · +106% YoY"
+    eyebrow: "The machine behind the curtain"
+  - id: og-valuation
+    aspect: "1200x630"
+    title: "$1.75T"
+    dek: "Implied IPO valuation · 42% equity, 85% votes"
+    eyebrow: "Elon's kingdom"

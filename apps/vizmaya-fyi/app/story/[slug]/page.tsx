@@ -13,6 +13,7 @@ import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/story/ThemeProvider'
 import StoryMapShell from '@/components/story/StoryMapShell'
+import StoryBackgroundSlot, { StoryBackgroundOverlay } from '@/components/story/StoryBackgroundSlot'
 import VerticalLoader from '@/components/VerticalLoader'
 import VerticalCaptureFrame from '@/components/story/VerticalCaptureFrame'
 import VizmayaLogo from '@/components/VizmayaLogo'
@@ -111,6 +112,16 @@ export default async function StoryPage({ params }: RouteParams) {
 
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
 
+  // Page-level backdrop. Mount only for deck-format stories — map stories
+  // own their backdrop through Mapbox per section, and adding a fixed aura
+  // behind a live map composes oddly. `frontmatter.aura` doubles as the
+  // home tile background; only deck stories promote it into a story-page
+  // backdrop. VerticalCaptureFrame owns its own backdrop in 9:16 compose
+  // mode but renders client-side, so harmless overlap is acceptable.
+  const isDeck = story.frontmatter.format === 'deck'
+  const backgroundConfig = config.defaults.storyBackground
+  const hasBackdrop = isDeck && (backgroundConfig != null || !!story.frontmatter.aura)
+
   return (
     <ThemeProvider theme={story.frontmatter.theme}>
       {fontImportUrl && (
@@ -118,6 +129,15 @@ export default async function StoryPage({ params }: RouteParams) {
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
           <link href={fontImportUrl} rel="stylesheet" />
+        </>
+      )}
+      {hasBackdrop && (
+        <>
+          <StoryBackgroundSlot
+            config={backgroundConfig}
+            frontmatterAura={story.frontmatter.aura}
+          />
+          <StoryBackgroundOverlay config={config.defaults.overlay} />
         </>
       )}
       <VerticalCaptureFrame slug={slug} auraSlug={story.frontmatter.aura}>

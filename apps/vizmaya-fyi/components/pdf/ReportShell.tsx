@@ -3,7 +3,7 @@
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
 import { ForegroundVizSlot } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlotsFlat, getVizModule } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
 import { useStoryReadiness } from '@vismay/viz-engine'
@@ -68,8 +68,11 @@ export default function ReportShell({
 }: Props) {
   const byline = useMemo(() => extractByline(units), [units])
   // Sum capture-blocking signals: each visible map page + each foreground
-  // viz layer (chart / image / video / rive / embed). Matches the unified
-  // readiness model in `lib/storyReadiness.ts`.
+  // viz layer (chart / image / video / rive / embed) WHOSE MODULE IS
+  // REGISTERED. Unknown layer types render null in `ForegroundVizSlot`
+  // without firing `noteReady`, so counting them would prevent
+  // `__pdfReady__` from ever flipping true. Matches the unified readiness
+  // model in `lib/storyReadiness.ts`.
   const expectedSignals = useMemo(() => {
     let total = 0
     for (const u of units) {
@@ -80,7 +83,11 @@ export default function ReportShell({
       if (!!center && typeof zoom === 'number' && !isReportMapHidden(u.parentConfig)) {
         total++
       }
-      total += resolveSlotsFlat(u.parentConfig).foreground.length
+      const layers = resolveSlotsFlat(u.parentConfig).foreground
+      for (const layer of layers) {
+        const mod = getVizModule(layer.type)
+        if (mod && mod.slots.includes('foreground')) total++
+      }
     }
     return total
   }, [units])

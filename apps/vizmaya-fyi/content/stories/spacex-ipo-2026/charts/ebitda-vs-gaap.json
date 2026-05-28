@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "title": "The EBITDA bridge — Adj. EBITDA vs GAAP net income, USD billions",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}<br/>{a0}: ${c0}B<br/>{a1}: ${c1}B"
+        },
+        "grid": { "left": 72, "right": 32, "top": 56, "bottom": 64 },
+        "legend": {
+          "data": ["Adj. EBITDA", "GAAP net income"],
+          "textStyle": { "color": "$muted", "fontFamily": "Inter" },
+          "top": 12
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["2023", "2024 (standalone)", "2025 (recast)", "Q1 2026"],
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "interval": 0,
+            "overflow": "break"
+          },
+          "axisLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "USD billions",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter" },
+          "axisLabel": {
+            "formatter": "${value}B",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Adj. EBITDA",
+            "type": "bar",
+            "data": [2.1, 3.9, 6.6, 1.1],
+            "itemStyle": { "color": "$positive", "borderRadius": [4, 4, 0, 0] },
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "${@[1]}B",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono"
+            }
+          },
+          {
+            "name": "GAAP net income",
+            "type": "bar",
+            "data": [-0.95, 0.79, -4.9, -4.3],
+            "itemStyle": { "color": "$red", "borderRadius": [4, 4, 0, 0] },
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "${@[1]}B",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono"
+            }
+          }
+        ],
+        "markLine": {
+          "silent": true,
+          "lineStyle": { "color": "$line", "type": "solid" },
+          "data": [{ "yAxis": 0 }]
+        }
+      }
+    }
+  ]
+}

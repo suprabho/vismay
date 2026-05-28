@@ -1,0 +1,89 @@
+{
+  "steps": [
+    {
+      "title": "Musk's stake — 42% of equity, 85% of votes",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}<br/>{c}% ({d}%)"
+        },
+        "title": [
+          {
+            "text": "Economic equity",
+            "left": "24%",
+            "top": "82%",
+            "textAlign": "center",
+            "textStyle": {
+              "color": "$muted",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          },
+          {
+            "text": "Voting power",
+            "left": "76%",
+            "top": "82%",
+            "textAlign": "center",
+            "textStyle": {
+              "color": "$muted",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          }
+        ],
+        "series": [
+          {
+            "name": "Economic equity",
+            "type": "pie",
+            "radius": ["44%", "68%"],
+            "center": ["24%", "44%"],
+            "label": {
+              "show": true,
+              "position": "inside",
+              "formatter": "{c}%",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 14,
+              "fontWeight": "bold"
+            },
+            "labelLine": { "show": false },
+            "itemStyle": {
+              "borderColor": "rgba(7,10,20,0.85)",
+              "borderWidth": 2
+            },
+            "data": [
+              { "value": 42, "name": "Musk", "itemStyle": { "color": "$accent" } },
+              { "value": 58, "name": "Other holders", "itemStyle": { "color": "rgba(120,140,180,0.30)" } }
+            ]
+          },
+          {
+            "name": "Voting power",
+            "type": "pie",
+            "radius": ["44%", "68%"],
+            "center": ["76%", "44%"],
+            "label": {
+              "show": true,
+              "position": "inside",
+              "formatter": "{c}%",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 14,
+              "fontWeight": "bold"
+            },
+            "labelLine": { "show": false },
+            "itemStyle": {
+              "borderColor": "rgba(7,10,20,0.85)",
+              "borderWidth": 2
+            },
+            "data": [
+              { "value": 85, "name": "Musk", "itemStyle": { "color": "$accent" } },
+              { "value": 15, "name": "Other holders", "itemStyle": { "color": "rgba(120,140,180,0.30)" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
