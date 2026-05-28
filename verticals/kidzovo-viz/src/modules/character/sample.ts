@@ -8,6 +8,6 @@ import type { KzCharacterConfig } from '../../types'
 export const sample: KzCharacterConfig = {
   type: 'kz:character',
   who: 'ovi',
-  pose: { static: 'standing' },
+  pose: { static: 'idle' },
   anchor: { x: 'center', y: 'bottom' },
 }

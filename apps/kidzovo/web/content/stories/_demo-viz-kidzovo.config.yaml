@@ -36,7 +36,7 @@ sections:
           - type: kz:character
             who: ovi
             pose:
-              static: standing
+              static: idle
             anchor: { x: center, y: bottom }
 
   - id: great-big-mess
@@ -58,7 +58,7 @@ sections:
           - type: kz:character
             who: ovi
             pose:
-              static: throwing
+              static: painting
             anchor: { x: center, y: bottom }
         bubbles:
           - type: kz:bubble
@@ -86,5 +86,5 @@ sections:
           - type: kz:character
             who: ovi
             pose:
-              static: sitting
+              static: listening
             anchor: { x: center, y: bottom }

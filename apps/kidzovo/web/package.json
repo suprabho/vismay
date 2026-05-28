@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@rive-app/react-canvas": "^4.28.0",
     "@vismay/content-source": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",

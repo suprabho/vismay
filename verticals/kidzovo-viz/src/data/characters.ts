@@ -36,12 +36,32 @@ export interface CharacterEntry {
 export const characters: Record<string, CharacterEntry> = {
   ovi: {
     src: '/kidzovo-demo/owl.riv',
-    poseInputName: 'pose',
+    // Discovered via apps/kidzovo/web/app/inspect-riv/page.tsx — the .riv
+    // ships with a "Mascot" artboard whose "State Machine Main" has a
+    // `State` number input. The integer values match the animation name
+    // prefixes (e.g. "3  Painting" → State = 3). The unprefixed "Idle"
+    // animation is the default state.
+    artboard: 'Mascot',
+    stateMachine: 'State Machine Main',
+    poseInputName: 'State',
     poses: {
-      standing: 0,
-      throwing: 1,
-      sitting: 2,
-      picking: 3,
+      // Default / quiet poses
+      idle: 0,
+      homepage: 1,
+      recommendations: 2,
+      painting: 3,
+      listening: 4,
+      talking: 5,
+      // Outcome / status poses
+      waiting: 101,
+      success: 102,
+      retry: 103,
+      failure: 104,
+      partialSuccess1: 105,
+      partialSuccess2: 106,
+      partialSuccess3: 107,
+      partialSuccess4: 108,
+      denial: 109,
     },
   },
 }
