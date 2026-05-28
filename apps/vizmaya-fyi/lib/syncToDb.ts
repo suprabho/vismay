@@ -62,6 +62,10 @@ export async function syncStory(slug: string, opts: SyncOptions = {}): Promise<S
     title: fm.title ?? slug,
     status: (fm.status ?? 'published') as string,
     listed: fm.listed !== false,
+    // Denormalized from frontmatter (parity with contentSource.writeMarkdown's
+    // upsert path so admin-edited and script-migrated stories land identically).
+    // Drives the home-tile background and the deck format's page-level backdrop.
+    aura: (fm.aura as string | undefined)?.trim() || null,
     markdown,
     config_yaml: configYaml,
     share_yaml: shareYaml,
