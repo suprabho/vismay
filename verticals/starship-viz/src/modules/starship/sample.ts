@@ -7,6 +7,7 @@ import type { StarshipViewerConfig } from './index'
  */
 export const sample: StarshipViewerConfig = {
   type: 'starship:viewer',
+  model: 'starship',
   mode: 'rotate',
   material: 'metal',
 }

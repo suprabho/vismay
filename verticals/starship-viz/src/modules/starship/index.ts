@@ -1,5 +1,6 @@
 import type { VizModule } from '@vismay/viz-engine'
-import type { StarshipMaterial, StarshipMode } from '../../types'
+import type { RocketModel, StarshipMaterial, StarshipMode } from '../../types'
+import { ROCKET_MODELS } from '../../types'
 
 /**
  * `starship:viewer` — Foreground viz module wrapping a Three.js / R3F scene
@@ -23,6 +24,8 @@ import type { StarshipMaterial, StarshipMode } from '../../types'
 
 export interface StarshipViewerConfig {
   type: 'starship:viewer'
+  /** Which rocket to render. Defaults to `'starship'`. */
+  model: RocketModel
   mode: StarshipMode
   material: StarshipMaterial
   /**
@@ -39,6 +42,7 @@ function isObj(x: unknown): x is Record<string, unknown> {
 
 const MODES: readonly StarshipMode[] = ['rotate', 'explode', 'bellyflop', 'inspect']
 const MATERIALS: readonly StarshipMaterial[] = ['metal', 'black']
+const MODELS = Object.keys(ROCKET_MODELS) as RocketModel[]
 
 function parseConfig(
   raw: unknown,
@@ -46,6 +50,12 @@ function parseConfig(
 ): StarshipViewerConfig {
   if (!isObj(raw)) {
     throw new Error(`${ctx.label}: starship:viewer layer must be an object`)
+  }
+  const model = raw.model ?? 'starship'
+  if (typeof model !== 'string' || !MODELS.includes(model as RocketModel)) {
+    throw new Error(
+      `${ctx.label}: starship:viewer 'model' must be one of ${MODELS.join(', ')} (got ${String(model)})`,
+    )
   }
   const mode = raw.mode
   if (typeof mode !== 'string' || !MODES.includes(mode as StarshipMode)) {
@@ -71,6 +81,7 @@ function parseConfig(
   }
   return {
     type: 'starship:viewer',
+    model: model as RocketModel,
     mode: mode as StarshipMode,
     material: material as StarshipMaterial,
     ...(scrubSteps != null ? { scrubSteps } : {}),
@@ -87,9 +98,10 @@ const starshipViewerModule: VizModule<StarshipViewerConfig> = {
   // initial frame can take several hundred ms on a cold cache. Capture
   // shouldn't snapshot before the model is visible.
   readinessProfile: 'first-paint',
-  // Identity keyed only by mode/material so authors who keep the same ship
-  // visible across consecutive units don't pay for a remount + re-fetch.
-  stableIdentity: (config) => `starship:viewer:${config.mode}:${config.material}`,
+  // Identity keyed on model/mode/material so consecutive units showing the
+  // same rocket reuse the WebGL context instead of remounting.
+  stableIdentity: (config) =>
+    `starship:viewer:${config.model}:${config.mode}:${config.material}`,
 }
 
 export default starshipViewerModule

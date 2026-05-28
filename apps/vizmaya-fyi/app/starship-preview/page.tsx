@@ -2,7 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
-import type { StarshipMaterial, StarshipMode } from '@vismay/starship-viz/types'
+import { ROCKET_MODELS } from '@vismay/starship-viz/types'
+import type {
+  RocketModel,
+  StarshipMaterial,
+  StarshipMode,
+} from '@vismay/starship-viz/types'
 
 /**
  * Standalone 4-mode preview for `starship:viewer` — bypasses the story
@@ -26,10 +31,12 @@ const StarshipScene = dynamic(
 )
 
 const MODES: StarshipMode[] = ['rotate', 'explode', 'bellyflop', 'inspect']
+const MODELS = Object.keys(ROCKET_MODELS) as RocketModel[]
 
 export default function StarshipPreviewPage() {
   const [progress, setProgress] = useState(0)
   const [material, setMaterial] = useState<StarshipMaterial>('metal')
+  const [model, setModel] = useState<RocketModel>('starship')
 
   return (
     <main
@@ -40,8 +47,29 @@ export default function StarshipPreviewPage() {
         padding: 24,
       }}
     >
-      <header style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>Starship preview</h1>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 22, margin: 0 }}>Rocket preview</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+          <span style={{ opacity: 0.6 }}>rocket</span>
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value as RocketModel)}
+            style={{
+              background: 'transparent',
+              border: '1px solid #2c303a',
+              color: '#e0ddd5',
+              padding: '3px 8px',
+              borderRadius: 4,
+              fontSize: 12,
+            }}
+          >
+            {MODELS.map((m) => (
+              <option key={m} value={m} style={{ background: '#0a0e14' }}>
+                {ROCKET_MODELS[m].label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
           <span style={{ opacity: 0.6 }}>material</span>
           {(['metal', 'black'] as const).map((m) => (
@@ -115,7 +143,13 @@ export default function StarshipPreviewPage() {
             >
               {mode}
             </div>
-            <StarshipScene mode={mode} progress={progress} material={material} />
+            <StarshipScene
+              key={`${model}-${mode}`}
+              model={model}
+              mode={mode}
+              progress={progress}
+              material={material}
+            />
           </div>
         ))}
       </div>

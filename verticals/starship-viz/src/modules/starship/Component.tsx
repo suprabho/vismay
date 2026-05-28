@@ -34,6 +34,7 @@ export default function StarshipViewerComponent({
       }}
     >
       <StarshipScene
+        model={config.model}
         mode={config.mode}
         progress={progress}
         material={config.material}
