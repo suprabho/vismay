@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapStorySection from './MapStorySection'
+import { DeckProgress } from './DeckProgress'
 import {
   ForegroundVizSlot,
   ForegroundLayoutSlot,
@@ -199,6 +200,21 @@ export default function StoryMapShell({
       ? 'autoplay'
       : 'scroll'
 
+  // Story-scoped opt-in via `defaults.progress: true` in the .config.yaml.
+  // Hidden during autoplay/capture so the indicator doesn't appear in
+  // rendered video frames.
+  const showProgress =
+    isDeckFormat && defaults.progress === true && !isAutoplay && !isCapture
+
+  const handleProgressJump = useCallback((targetIndex: number) => {
+    const root = containerRef.current
+    if (!root) return
+    const target = root.querySelector<HTMLElement>(
+      `[data-unit-index="${targetIndex}"]`
+    )
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
   return (
     <StoryShellProvider
       value={{
@@ -329,6 +345,14 @@ export default function StoryMapShell({
           />
         ))}
       </div>
+
+      {showProgress && (
+        <DeckProgress
+          current={activeUnit}
+          total={units.length}
+          onJump={handleProgressJump}
+        />
+      )}
     </StoryShellProvider>
   )
 }

@@ -11,26 +11,26 @@ listed: true
 # from `aura:` and lays out sections as snap-aligned panels over it.
 format: "deck"
 
-# Existing frontmatter field — already drives the home-tile background.
-# Under format: "deck", it is *also* used as the page-level background
-# behind every section. Swap to any other slug from aura.promad.design.
-aura: "blue-abstract-background-patriotic-stars-flowing-lines"
+# Editorial bone-white rebuild — no aura backdrop; the deck.config.yaml
+# `storyBackground` paints a flat color so the page reads as a printed S-1
+# rather than a generative-motion site.
+aura: null
 
 theme:
   colors:
-    background: "#070a14"        # near-black, deep space
-    text: "#eef1f8"              # off-white, high contrast over aura
-    accent: "#4ea8ff"            # orbital blue
-    accent2: "#71ECFF"           # signal cyan (Starlink)
-    teal: "#3a7a8c"
-    surface: "rgba(10,14,24,0.62)"   # frosted glass panel base
-    muted: "#8c97ad"
-    positive: "#5fd28a"
-    amber: "#f4b942"
-    red: "#e26d5c"
-    line: "rgba(120,140,180,0.20)"
+    background: "#f5f1ea"        # warm bone white
+    text: "#181a20"              # ink charcoal — rgb(24,26,32)
+    muted: "#5c667a"             # slate body — rgb(92,102,122)
+    accent: "#3a3a9c"            # indigo — eyebrow + metadata
+    accent2: "#d6451e"           # vermillion — bigStat numerals
+    positive: "#6b8e54"          # sage — replaces Material green
+    amber: "#b07a1f"             # deeper amber for light bg
+    red: "#a93226"               # editorial red
+    teal: "#2a6471"              # darker teal for light bg
+    surface: "rgba(245,241,234,0.92)"   # bone-tinted panel surface
+    line: "rgba(24,26,32,0.10)"  # hairline divider
   fonts:
-    serif: "Source Serif Pro"
+    serif: "Fraunces"
     sans: "Inter"
     mono: "JetBrains Mono"
 ---

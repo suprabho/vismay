@@ -119,9 +119,28 @@ const deckFreeLayouts: ForegroundLayoutDef[] = DECK_LAYOUT_NAMES.map((name) => (
   },
 }))
 
+// Editorial hero variant — the foreground region fills the viewport with
+// NO safe-area inset, so an image layer sized `{ width: 100%, height: 100vh }`
+// goes truly edge-to-edge. The accompanying text + scrim are painted as a
+// z-20 overlay inside `MapStorySection` (so the order is image → scrim →
+// headline group from bottom to top in z-stacking).
+const heroFullBleed: ForegroundLayoutDef = {
+  name: 'hero-full-bleed',
+  regions: {
+    default: { style: FILL },
+  },
+  portrait: {
+    name: 'hero-full-bleed.portrait',
+    regions: {
+      default: { style: FILL },
+    },
+  },
+}
+
 const registry = new Map<string, ForegroundLayoutDef>([
   [singleFill.name, singleFill],
   [splitThreeSevenTwoRow.name, splitThreeSevenTwoRow],
+  [heroFullBleed.name, heroFullBleed],
   ...deckFreeLayouts.map((l): [string, ForegroundLayoutDef] => [l.name, l]),
 ])
 

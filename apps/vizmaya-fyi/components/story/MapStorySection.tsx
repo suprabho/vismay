@@ -101,6 +101,58 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
   // / `quote` slots inside the layout regions.
   const suppressForDeckKind = DECK_KINDS_NO_TEXT_CARD.has(rawKind)
 
+  // Editorial full-bleed hero — must run BEFORE the generic deck-suppress
+  // branch below. Setting `section.layout` auto-wraps the foreground into
+  // regions form, which would otherwise drop us into the empty-snap-target
+  // path and we'd never paint the scrim + headline overlay.
+  if (
+    kind === 'hero' &&
+    parentConfig.layout === 'hero-full-bleed' &&
+    heading &&
+    (heroPart === 'title' || heroPart === undefined)
+  ) {
+    // Deck-format cover sections carry dek/byline as direct YAML fields on
+    // the section (not as italic/bold markers in the markdown body, which is
+    // the legacy hero convention). Prefer those when present.
+    const cfgAny = parentConfig as unknown as { dek?: string; byline?: string }
+    const dek = cfgAny.dek ?? heroBits?.dek ?? ''
+    const byline = cfgAny.byline ?? heroBits?.byline ?? ''
+    return (
+      <section
+        data-unit-index={unitIndex}
+        className="snap-start snap-always h-svh w-full relative"
+        style={{
+          zIndex: 20,
+          background:
+            'radial-gradient(ellipse at 70% 40%, rgba(58,52,72,0.55) 0%, rgba(20,22,28,0.0) 55%), linear-gradient(180deg, #1b1d28 0%, #0f1118 60%, #0a0c14 100%)',
+        }}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-[70%] pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(to top, rgba(8,9,14,0.78) 0%, rgba(8,9,14,0.45) 40%, rgba(8,9,14,0.12) 75%, transparent 100%)',
+          }}
+        />
+        <div
+          className="absolute pointer-events-auto"
+          style={{ left: '6vw', right: '6vw', bottom: '8vh' }}
+        >
+          <div className="max-w-[60ch]">
+            <HeroPanel
+              title={heading}
+              dek={dek}
+              byline={byline}
+              eyebrow={parentConfig.eyebrow}
+              onImagery
+            />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   if (usesRegions || suppressForDeckKind) {
     return (
       <section
@@ -198,6 +250,7 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
   if (kind === 'hero') {
     const showTitle = heroPart === 'title' || heroPart === undefined
     const showDek = heroPart === 'dek' || heroPart === undefined
+
     return (
       <>
         {showTitle && heading && (

@@ -194,6 +194,13 @@ export interface StoryDefaults {
   scroll?: DeckScrollConfig
   /** Story-wide chart defaults (theme + grid). Forwarded to the chart module. */
   chart?: ChartDefaults
+  /**
+   * When true, the deck shell mounts a fixed right-edge step indicator
+   * (one hairline per snap unit, active one wider/darker) and a clickable
+   * jump-to-section affordance. Off by default so existing deck stories
+   * keep the cleaner empty edges.
+   */
+  progress?: boolean
 }
 
 export interface MapPinConfig {
