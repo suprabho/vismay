@@ -1,0 +1,50 @@
+{
+  "name": "@vismay/starship-viz",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./web": "./src/web/index.ts",
+    "./native": "./src/native/index.ts",
+    "./modules/*/sample": "./src/modules/*/sample.ts"
+  },
+  "scripts": {
+    "convert-assets": "tsx scripts/convert-starship-assets.ts"
+  },
+  "peerDependencies": {
+    "next": "^15.0.0 || ^16.0.0",
+    "react": "^19.0.0",
+    "react-native": "*",
+    "expo-router": "*",
+    "expo-image": "*",
+    "nativewind": "*"
+  },
+  "peerDependenciesMeta": {
+    "next": { "optional": true },
+    "react-native": { "optional": true },
+    "expo-router": { "optional": true },
+    "expo-image": { "optional": true },
+    "nativewind": { "optional": true }
+  },
+  "dependencies": {
+    "@vismay/viz-engine": "workspace:*",
+    "three": "^0.171.0",
+    "@react-three/fiber": "^9.1.0",
+    "@react-three/drei": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/three": "^0.171.0",
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
+    "draco3dgltf": "^1.5.7",
+    "jsdom": "^29.0.0",
+    "jszip": "^3.10.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5"
+  }
+}

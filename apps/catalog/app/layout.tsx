@@ -6,6 +6,9 @@ registerVerticalLoader('f1', () => import('@vismay/f1-viz').then((m) => m.regist
 registerVerticalLoader('footshorts', () =>
   import('@vismay/footshorts-viz').then((m) => m.register()),
 )
+registerVerticalLoader('starship', () =>
+  import('@vismay/starship-viz').then((m) => m.register()),
+)
 
 export const metadata: Metadata = {
   title: 'Vismay catalog',
@@ -17,7 +20,11 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  await Promise.all([loadVertical('f1'), loadVertical('footshorts')])
+  await Promise.all([
+    loadVertical('f1'),
+    loadVertical('footshorts'),
+    loadVertical('starship'),
+  ])
   return (
     <html lang="en" className="dark">
       <body className="bg-bg text-text antialiased min-h-screen">{children}</body>

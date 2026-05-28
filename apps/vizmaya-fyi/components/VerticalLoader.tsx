@@ -16,6 +16,9 @@ registerVerticalLoader('footshorts', () =>
 registerVerticalLoader('f1', () =>
   import('@vismay/f1-viz').then((m) => m.register())
 )
+registerVerticalLoader('starship', () =>
+  import('@vismay/starship-viz').then((m) => m.register())
+)
 
 export default function VerticalLoader(
   props: React.ComponentProps<typeof EngineVerticalLoader>

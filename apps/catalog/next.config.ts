@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     '@vismay/viz-engine',
     '@vismay/f1-viz',
     '@vismay/footshorts-viz',
+    '@vismay/starship-viz',
     '@vismay/viz-admin',
   ],
 }
