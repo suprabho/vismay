@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { ScrollySectionBlock } from '@vismay/viz-engine'
-import { formatInlineMarkdown } from '@vismay/viz-engine'
+import { formatInlineMarkdown, getListItems, isListBlock } from '@vismay/viz-engine'
 import { ChartPanel } from '@vismay/viz-engine'
 
 export default function ScrollySection({ block }: { block: ScrollySectionBlock }) {
@@ -106,15 +106,27 @@ export default function ScrollySection({ block }: { block: ScrollySectionBlock }
               >
                 {step.label}
               </div>
-              {step.content.split('\n\n').map((para, j) => (
-                <p
-                  key={j}
-                  className="font-[family-name:var(--font-serif)] text-[1.05rem] leading-[1.8] mb-3 last:mb-0"
-                  style={{ color: 'var(--color-text)' }}
-                >
-                  {formatInlineMarkdown(para)}
-                </p>
-              ))}
+              {step.content.split('\n\n').map((para, j) =>
+                isListBlock(para) ? (
+                  <ul
+                    key={j}
+                    className="font-[family-name:var(--font-serif)] text-[1.05rem] leading-[1.8] mb-3 last:mb-0 list-disc pl-5"
+                    style={{ color: 'var(--color-text)' }}
+                  >
+                    {getListItems(para).map((item, k) => (
+                      <li key={k}>{formatInlineMarkdown(item)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p
+                    key={j}
+                    className="font-[family-name:var(--font-serif)] text-[1.05rem] leading-[1.8] mb-3 last:mb-0"
+                    style={{ color: 'var(--color-text)' }}
+                  >
+                    {formatInlineMarkdown(para)}
+                  </p>
+                )
+              )}
             </div>
           </div>
         ))}

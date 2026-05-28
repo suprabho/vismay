@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import type { VizRenderProps } from '../../types'
-import { formatInlineMarkdown } from '../../lib/inlineMarkdown'
+import { formatInlineMarkdown, getListItems, isListBlock } from '../../lib/inlineMarkdown'
 import { useForegroundContent } from '../../lib/foregroundContent'
 import type { BodyTextColor, BodyTextLayerConfig, BodyTextSize } from './index'
 
@@ -65,19 +65,27 @@ export default function BodyTextLayerComponent({
         </div>
       )}
       {paragraphs.length > 0 ? (
-        paragraphs.map((p, i) => (
-          <p
-            key={i}
-            className="font-serif mb-3 last:mb-0"
-            style={{
-              color,
-              fontSize,
-              lineHeight,
-            }}
-          >
-            {formatInlineMarkdown(p)}
-          </p>
-        ))
+        paragraphs.map((p, i) =>
+          isListBlock(p) ? (
+            <ul
+              key={i}
+              className="font-serif mb-3 last:mb-0 list-disc pl-5"
+              style={{ color, fontSize, lineHeight }}
+            >
+              {getListItems(p).map((item, j) => (
+                <li key={j}>{formatInlineMarkdown(item)}</li>
+              ))}
+            </ul>
+          ) : (
+            <p
+              key={i}
+              className="font-serif mb-3 last:mb-0"
+              style={{ color, fontSize, lineHeight }}
+            >
+              {formatInlineMarkdown(p)}
+            </p>
+          )
+        )
       ) : (
         <p
           className="font-mono opacity-60"
