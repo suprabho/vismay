@@ -1,0 +1,15 @@
+# Next.js build output / dev cache
+.next
+out
+
+# Next-generated env declarations (regenerated on next dev / next build)
+next-env.d.ts
+
+# Editor + OS noise
+.DS_Store
+*.tsbuildinfo
+
+# Local env (if added later)
+.env
+.env.local
+.env*.local

@@ -1,0 +1,183 @@
+# Ovi's Messy Room — phase 4 deliverable per docs/kidzovo-vertical-plan.md §9.
+#
+# Single-character arc (six panels): plays → throws → mess → notices → picks
+# → done. Each panel composes kz-storybook regions:
+#
+#   background → /kidzovo-demo/panel-N.svg     (gradient placeholder)
+#   caption    → third-person narration (text module)
+#   stage      → Ovi via kz:character, pose pinned per panel
+#   bubbles    → kz:bubble on the panels where Ovi self-talks (2, 4, 5)
+#
+# No `defaults:` block — the kidzovo host doesn't render the engine's map
+# background, so the parser's hardcoded defaults (DEFAULTS in
+# packages/content-source/src/storyConfig.ts) are accepted as no-ops.
+# Each section sets `background: { type: none }` — the explicit "no
+# section-level background" sentinel that the parser accepts in place
+# of the legacy `map.center` / `map.zoom` requirements. The visible
+# background lives inside the kz-storybook layout's `background` region.
+#
+# Ovi's .riv ships from /kidzovo-demo/owl.riv; the bubble renders in CSS
+# until a real bubble.riv arrives. See verticals/kidzovo-viz/.
+
+sections:
+  - id: ovi-loves-to-play
+    text: "Ovi loves to play"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-1.svg"
+            alt: "Warm pink-to-cream gradient — Ovi's calm playroom"
+            fit: cover
+        caption:
+          - type: text
+            content: "Ovi loved to play in her room all day long."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: idle
+            anchor: { x: center, y: bottom }
+
+  - id: toys-go-everywhere
+    text: "Toys go everywhere"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-2.svg"
+            alt: "Teal-to-cream gradient — the play is at full speed"
+            fit: cover
+        caption:
+          - type: text
+            content: "She threw toys, crayons, socks, and clothes everywhere while playing."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: painting
+            costume:
+              # Splash of color while Ovi's at peak chaos.
+              Headgear: 1
+              Muffler: 2
+            anchor: { x: center, y: bottom }
+        bubbles:
+          - type: kz:bubble
+            tone: loud
+            speaker: ovi
+            textStepwise:
+              - "Wheeee!"
+
+  - id: great-big-mess
+    text: "A great big mess"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-3.svg"
+            alt: "Pink-to-teal gradient — the room after the storm"
+            fit: cover
+        caption:
+          - type: text
+            content: "Soon her room was a great big mess."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: idle
+            anchor: { x: center, y: bottom }
+
+  - id: ovi-notices
+    text: "Ovi notices"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-4.svg"
+            alt: "Muted brown-to-teal gradient — a quieter moment"
+            fit: cover
+        caption:
+          - type: text
+            content: "Tired from playing, Ovi sat down and looked around."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: listening
+            costume:
+              # Specs on for the moment of contemplation.
+              Specs: 3
+            anchor: { x: center, y: bottom }
+        bubbles:
+          - type: kz:bubble
+            tone: thought
+            speaker: ovi
+            textStepwise:
+              - "My room looks really messy."
+
+  - id: one-toy-at-a-time
+    text: "One toy at a time"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-5.svg"
+            alt: "Warm amber-to-cream gradient — daylight and purpose"
+            fit: cover
+        caption:
+          - type: text
+            content: "Ovi picked up her toys, one by one, and put them back where they belonged."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: partialSuccess1
+            costume:
+              # Celebration outfit — full set on for the cleanup montage.
+              Headgear: 13
+              Muffler: 5
+              BG: 5
+            anchor: { x: center, y: bottom }
+        bubbles:
+          - type: kz:bubble
+            tone: gentle
+            speaker: ovi
+            textStepwise:
+              - "I can do this."
+
+  - id: all-done
+    text: "All done"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-6.svg"
+            alt: "Soft pink-cream-teal gradient — the room is tidy again"
+            fit: cover
+        caption:
+          - type: text
+            content: "Soon everything was back where it belonged. Ovi smiled at her tidy room."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: idle
+            anchor: { x: center, y: bottom }
