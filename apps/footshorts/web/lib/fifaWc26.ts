@@ -405,3 +405,220 @@ export async function getFootshortsDataForTeam(
   ])
   return { news, fixtures }
 }
+
+// ---------------------------------------------------------------------------
+// WC26 squads: per-country roster + league/club composition breakdown.
+// Reads the wc26_squad_players view (public-read, security_invoker). Players
+// whose club didn't resolve to an entity carry club_name_raw and no league.
+
+export interface FifaWc26SquadPlayer {
+  playerEntityId: string
+  playerSlug: string | null
+  playerName: string
+  jersey: number | null
+  position: string | null
+  role: 'captain' | 'vice_captain' | null
+  dateOfBirth: string | null
+  primaryPosition: string | null
+  heightCm: number | null
+  foot: 'left' | 'right' | 'both' | null
+  clubEntityId: string | null
+  clubSlug: string | null
+  clubName: string | null
+  clubCrestUrl: string | null
+  clubPrimaryColor: string | null
+  clubNameRaw: string | null
+  leagueSlug: string | null
+  leagueName: string | null
+  photoUrl: string | null
+  source: string
+}
+
+export interface SquadGroupClub {
+  clubSlug: string | null
+  clubName: string
+  clubCrestUrl: string | null
+  clubPrimaryColor: string | null
+  count: number
+  matched: boolean
+}
+
+export interface SquadGroupLeague {
+  leagueSlug: string | null
+  leagueName: string
+  count: number
+  clubs: SquadGroupClub[]
+}
+
+export interface FifaWc26Squad {
+  players: FifaWc26SquadPlayer[]
+  byLeague: SquadGroupLeague[]
+  total: number
+  unmatched: number
+}
+
+interface SquadPlayerRow {
+  country_code: string
+  player_entity_id: string
+  player_slug: string | null
+  player_name: string
+  player_nationality: string | null
+  player_photo_url: string | null
+  date_of_birth: string | null
+  primary_position: string | null
+  height_cm: number | null
+  foot: 'left' | 'right' | 'both' | null
+  jersey: number | null
+  position: string | null
+  role: 'captain' | 'vice_captain' | null
+  club_entity_id: string | null
+  club_slug: string | null
+  club_name: string | null
+  club_crest_url: string | null
+  club_primary_color: string | null
+  club_name_raw: string | null
+  squad_photo_url: string | null
+  source: string
+  announced_at: string
+}
+
+const UNMATCHED_LEAGUE_LABEL = 'Other clubs'
+
+export async function getFifaWc26Squad(code: string): Promise<FifaWc26Squad> {
+  const { data, error } = await supabase
+    .from('wc26_squad_players')
+    .select('*')
+    .eq('country_code', code)
+    .order('jersey', { ascending: true, nullsFirst: false })
+  if (error) throw new Error(`getFifaWc26Squad(${code}): ${error.message}`)
+  const rows = (data ?? []) as unknown as SquadPlayerRow[]
+  if (rows.length === 0) {
+    return { players: [], byLeague: [], total: 0, unmatched: 0 }
+  }
+
+  // Resolve league_slug → league name for any club whose entity row carries
+  // a league. The view doesn't include league_slug (clubs are denormalized
+  // with it), so we batch the lookup here.
+  const clubIds = Array.from(
+    new Set(rows.map((r) => r.club_entity_id).filter((id): id is string => !!id)),
+  )
+  const clubIdToLeagueSlug = new Map<string, string | null>()
+  if (clubIds.length > 0) {
+    const { data: clubRows, error: clubErr } = await supabase
+      .from('entities')
+      .select('id, league_slug')
+      .in('id', clubIds)
+    if (clubErr) {
+      console.warn(`[fifa-wc26] club->league lookup failed: ${clubErr.message}`)
+    } else {
+      for (const c of (clubRows ?? []) as Array<{ id: string; league_slug: string | null }>) {
+        clubIdToLeagueSlug.set(c.id, c.league_slug ?? null)
+      }
+    }
+  }
+  const leagueSlugs = Array.from(
+    new Set(
+      Array.from(clubIdToLeagueSlug.values()).filter((s): s is string => !!s),
+    ),
+  )
+  const leagueSlugToName = new Map<string, string>()
+  if (leagueSlugs.length > 0) {
+    const { data: leagueRows, error: leagueErr } = await supabase
+      .from('entities')
+      .select('slug, name')
+      .eq('type', 'league')
+      .in('slug', leagueSlugs)
+    if (leagueErr) {
+      console.warn(`[fifa-wc26] league name lookup failed: ${leagueErr.message}`)
+    } else {
+      for (const l of (leagueRows ?? []) as Array<{ slug: string; name: string }>) {
+        leagueSlugToName.set(l.slug, l.name)
+      }
+    }
+  }
+
+  const players: FifaWc26SquadPlayer[] = rows.map((r) => {
+    const leagueSlug = r.club_entity_id ? clubIdToLeagueSlug.get(r.club_entity_id) ?? null : null
+    const leagueName = leagueSlug ? leagueSlugToName.get(leagueSlug) ?? leagueSlug : null
+    return {
+      playerEntityId: r.player_entity_id,
+      playerSlug: r.player_slug,
+      playerName: r.player_name,
+      jersey: r.jersey,
+      position: r.position,
+      role: r.role,
+      dateOfBirth: r.date_of_birth,
+      primaryPosition: r.primary_position,
+      heightCm: r.height_cm,
+      foot: r.foot,
+      clubEntityId: r.club_entity_id,
+      clubSlug: r.club_slug,
+      clubName: r.club_name,
+      clubCrestUrl: r.club_crest_url,
+      clubPrimaryColor: r.club_primary_color,
+      clubNameRaw: r.club_name_raw,
+      leagueSlug,
+      leagueName,
+      photoUrl: r.squad_photo_url ?? r.player_photo_url,
+      source: r.source,
+    }
+  })
+
+  // Group: league -> clubs -> count. Unmatched clubs (no entity) and matched
+  // clubs without a league_slug both land under "Other clubs".
+  const leagueMap = new Map<string, SquadGroupLeague>()
+  const unmatchedLeagueKey = '__unmatched__'
+  for (const p of players) {
+    const leagueKey = p.leagueSlug ?? unmatchedLeagueKey
+    const leagueName = p.leagueName ?? UNMATCHED_LEAGUE_LABEL
+    let league = leagueMap.get(leagueKey)
+    if (!league) {
+      league = {
+        leagueSlug: p.leagueSlug,
+        leagueName,
+        count: 0,
+        clubs: [],
+      }
+      leagueMap.set(leagueKey, league)
+    }
+    league.count += 1
+
+    const matched = !!p.clubEntityId
+    const clubLabel = p.clubName ?? p.clubNameRaw ?? '—'
+    const clubKey = matched ? `e:${p.clubEntityId}` : `r:${clubLabel.toLowerCase()}`
+    let club = league.clubs.find((c) =>
+      matched
+        ? c.clubSlug === p.clubSlug && c.matched
+        : c.clubName === clubLabel && !c.matched,
+    )
+    if (!club) {
+      club = {
+        clubSlug: matched ? p.clubSlug : null,
+        clubName: clubLabel,
+        clubCrestUrl: matched ? p.clubCrestUrl : null,
+        clubPrimaryColor: matched ? p.clubPrimaryColor : null,
+        count: 0,
+        matched,
+      }
+      league.clubs.push(club)
+    }
+    club.count += 1
+    void clubKey
+  }
+
+  const byLeague = Array.from(leagueMap.values())
+    .map((l) => ({
+      ...l,
+      clubs: l.clubs.sort((a, b) => b.count - a.count || a.clubName.localeCompare(b.clubName)),
+    }))
+    .sort((a, b) => {
+      // "Other clubs" always last
+      if (a.leagueSlug == null && b.leagueSlug != null) return 1
+      if (a.leagueSlug != null && b.leagueSlug == null) return -1
+      return b.count - a.count || a.leagueName.localeCompare(b.leagueName)
+    })
+
+  const unmatched = players.filter((p) => !p.clubEntityId).length
+
+  return { players, byLeague, total: players.length, unmatched }
+}
