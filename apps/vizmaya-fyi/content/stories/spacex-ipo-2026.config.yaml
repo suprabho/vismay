@@ -40,41 +40,34 @@
 # =============================================================================
 
 defaults:
-  # Page-level aura background. When omitted, falls back to frontmatter `aura:`.
-  # `tint` lets the renderer apply a colour cast so the aura sits coherently
-  # inside the SpaceX dark-orbital palette.
+  # Editorial bone-white rebuild: flat color backdrop, no aura motion, no
+  # frosted-glass panels. The whole story should read like a printed S-1
+  # spread, not a generative-motion site.
   storyBackground:
-    type: aura
-    slug: blue-abstract-background-patriotic-stars-flowing-lines
-    input: off
-    tint: "#070a14"           # deep-space tint pulled toward theme.background
-    tintBlendMode: multiply
-    fixed: true               # stays put while content scrolls
-  # A vignette/darken layer between aura and content — critical for chart
-  # readability over moving aurora.
+    type: color
+    value: "#f5f1ea"
+    fixed: true
   overlay:
-    color: "#070a14"
-    opacity: 0.42
-    gradient:
-      type: radial
-      from: "rgba(7,10,20,0.20)"
-      to:   "rgba(7,10,20,0.74)"
-  # Default frosted-glass styling for foreground panels. Every chart/image/quote
-  # slot inherits this unless overridden.
+    color: "transparent"
+    opacity: 0
+  # Default panel chrome is OFF — bone-white editorial wants type on paper,
+  # not cards on glass. Individual sections can opt back in if needed.
   panel:
-    background: "rgba(10,14,24,0.62)"
-    border: "1px solid rgba(120,140,180,0.20)"
-    borderRadius: "20px"
-    padding: "32px"
-    backdropBlur: "18px"
-    shadow: "0 24px 60px -32px rgba(0,0,0,0.65)"
+    background: "transparent"
+    border: "none"
+    borderRadius: "0"
+    padding: "0"
+    backdropBlur: "0"
+    shadow: "none"
   scroll:
-    mode: snap                # snap == slide-deck feel; continuous == cinematic
+    mode: snap
     paddingY: "12vh"
-  # Optional: deck-wide chart defaults
   chart:
-    theme: dark-orbital
+    theme: light-editorial
     grid: { left: 64, right: 32, top: 56, bottom: 56 }
+  # Story-scoped feature flag — mounts the right-edge 15-step progress
+  # indicator. Other deck stories don't set this and stay unaffected.
+  progress: true
 
 sections:
 
@@ -83,6 +76,7 @@ sections:
   # ---------------------------------------------------------------------------
   - id: cover
     kind: cover
+    layout: hero-full-bleed       # opts out of DECK_SAFE_AREA so the image goes edge-to-edge
     text: "Cover"
     eyebrow: "SpaceX S-1 · May 20, 2026 · $1.75 Trillion IPO Analysis"
     heading: "A Rocket Company That Became the Internet"
@@ -92,15 +86,16 @@ sections:
       border: "none"
       backdropBlur: "0"
     foreground:
-      # Hero image floats in the upper right with a hard-edge clip. See
-      # images/PROMPTS.md → 01-hero for the generation brief.
+      # Falcon photograph, full-bleed. The hero text + bottom scrim are
+      # painted as an overlay inside MapStorySection (z-20 above the
+      # foreground image) when section.layout === 'hero-full-bleed'.
       - type: image
         src: /content/spacex-s1-2026/images/01-hero-orbital.webp
         alt: "Falcon stage one re-entry plume over a Starlink constellation arc, deep dusk"
         style:
-          position: { x: right, y: center }
-          size: { width: "46%", height: "76vh" }
-          opacity: 0.92
+          position: { x: center, y: center }
+          size: { width: "100%", height: "100vh" }
+          opacity: 1
           panel:
             background: "transparent"
             border: "none"
@@ -123,6 +118,7 @@ sections:
         color: accent2
         align: left
         style:
+          position: { x: left, y: center }
           size: { width: "44%" }
 
   # ---------------------------------------------------------------------------
@@ -144,7 +140,7 @@ sections:
         caption: "2025 segment P&L · revenue, operating income, Adj. EBITDA"
         style:
           position: { x: right, y: center }
-          size: { width: "52%", height: "62vh" }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 4 · Starlink prose-only — bodyText over aura
@@ -157,7 +153,8 @@ sections:
       - type: bodyText
         from: text
         style:
-          size: { width: "62%" }
+          position: { x: left, y: center }
+          size: { width: "44%" }
 
   # ---------------------------------------------------------------------------
   # 5 · 10.3M subscribers — bigStat + chart row
@@ -166,7 +163,7 @@ sections:
     kind: data
     text: "10.3M subscribers"
     paragraphs: [0, 2]
-    layout: stat-top-chart-below
+    layout: stat-left-chart-right
     foreground:
       - type: bigStat
         value: "10.3M"
@@ -176,14 +173,14 @@ sections:
         color: accent2
         align: left
         style:
-          position: { x: left, y: top }
+          position: { x: left, y: center }
           size: { width: "44%" }
       - type: chart
         id: starlink-subscribers
         caption: "Subscribers doubled in each of the last two years · S-1 disclosure"
         style:
-          position: { x: right, y: top }
-          size: { width: "52%", height: "56vh" }
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 6 · Space prose — starship 3D rotate showcase
@@ -202,18 +199,15 @@ sections:
         from: text
         style:
           position: { x: left, y: center }
-          size: { width: "54%" }
-      - type: starship:viewer
-        mode: rotate
-        material: metal
+          size: { width: "44%" }
+      - type: quote
+        text: |
+          The launch business is currently a net drain on the balance sheet —
+          by design.
+        attribution: "Falcon 9 → Starlink supply chain"
         style:
           position: { x: right, y: center }
-          size: { width: "38%", height: "70vh" }
-          panel:
-            background: "transparent"
-            border: "none"
-            backdropBlur: "0"
-            padding: "0"
+          size: { width: "44%" }
 
   # ---------------------------------------------------------------------------
   # 7 · $15B+ Starship — bigStat + 3D explode
@@ -239,19 +233,13 @@ sections:
         align: left
         style:
           position: { x: left, y: center }
-          size: { width: "38%" }
-      - type: starship:viewer
-        mode: explode
-        material: metal
-        scrubSteps: 1
+          size: { width: "44%" }
+      - type: chart
+        id: starship-rd-cumulative
+        caption: "$3B in 2025 alone · $930M in Q1 2026"
         style:
           position: { x: right, y: center }
-          size: { width: "58%", height: "70vh" }
-          panel:
-            background: "transparent"
-            border: "none"
-            backdropBlur: "0"
-            padding: "0"
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 8 · AI black hole — split, image left, text right
@@ -260,20 +248,22 @@ sections:
     kind: split
     text: "The AI black hole"
     paragraphs: [0, 4]
-    layout: image-left-text-right
+    layout: text-left-chart-right
     foreground:
+      # Text first on the spine; the image becomes the right-hand visual so
+      # the section reads consistently with every other split section.
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
       - type: image
         src: /content/spacex-s1-2026/images/02-colossus-data-center.webp
         alt: "Inside view of COLOSSUS — gigawatt-scale AI training cluster, Memphis"
         caption: "COLOSSUS · 220,000 Nvidia GPUs · 300MW · built in 120 days"
         style:
-          position: { x: left, y: center }
-          size: { width: "44%", height: "60vh" }
-      - type: bodyText
-        from: text
-        style:
           position: { x: right, y: center }
-          size: { width: "50%" }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 9 · EBITDA bridge — bodyText + clustered-bar chart
@@ -294,7 +284,7 @@ sections:
         caption: "Adj. EBITDA $6.6B · GAAP net loss $4.9B · accumulated deficit $41.3B"
         style:
           position: { x: right, y: center }
-          size: { width: "52%", height: "62vh" }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 10 · Capex — donut centred, prose below
@@ -303,19 +293,20 @@ sections:
     kind: data
     text: "Capital at the speed of ambition"
     paragraphs: [0, 3]
-    layout: chart-top-text-below
+    layout: text-left-chart-right
     foreground:
+      # Flipped from chart-top-text-below to keep the section on the spine.
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
       - type: chart
         id: capex-by-segment
         caption: "$20.7B in 2025 · AI alone spent $7.7B in Q1 2026"
         style:
-          position: { x: center, y: top }
-          size: { width: "72%", height: "52vh" }
-      - type: bodyText
-        from: text
-        style:
-          position: { x: center, y: bottom }
-          size: { width: "72%" }
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 11 · Governance — twin donuts (42% vs 85%)
@@ -330,13 +321,13 @@ sections:
         from: text
         style:
           position: { x: left, y: center }
-          size: { width: "46%" }
+          size: { width: "44%" }
       - type: chart
         id: voting-vs-economic
         caption: "Class B · 10 votes per share · Nasdaq controlled-company exemptions"
         style:
           position: { x: right, y: center }
-          size: { width: "50%", height: "60vh" }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 12 · $1.75T — closing bigStat + trajectory line
@@ -352,17 +343,17 @@ sections:
         label: "Implied IPO valuation · analyst estimates"
         delta: "Doubled in six months pre-roadshow"
         deltaColor: amber
-        color: accent
+        color: accent2
         align: left
         style:
           position: { x: left, y: center }
-          size: { width: "38%" }
+          size: { width: "44%" }
       - type: chart
         id: valuation-trajectory
         caption: "$12B (2015) → $1.75T (2026 target) · log scale"
         style:
           position: { x: right, y: center }
-          size: { width: "58%", height: "62vh" }
+          size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 13 · Closing essay
@@ -375,7 +366,8 @@ sections:
       - type: bodyText
         from: text
         style:
-          size: { width: "64%" }
+          position: { x: left, y: center }
+          size: { width: "50%" }
       - type: keyValue
         title: "Three theses, one ticker"
         items:
@@ -384,7 +376,7 @@ sections:
           - { key: "AI",            value: "Belief that Grok + X + orbital compute compounds", color: red }
         style:
           position: { x: right, y: center }
-          size: { width: "30%" }
+          size: { width: "32%" }
 
   # ---------------------------------------------------------------------------
   # 14 · Methodology — quiet bodyText, smaller type
@@ -393,9 +385,6 @@ sections:
     kind: bodyText
     text: "Methodology"
     paragraphs: [0, 3]
-    panel:
-      backdropBlur: "12px"
-      padding: "24px"
     foreground:
       - type: bodyText
         from: text
@@ -403,4 +392,5 @@ sections:
           size: small
           color: muted
         style:
-          size: { width: "62%" }
+          position: { x: left, y: center }
+          size: { width: "44%" }
