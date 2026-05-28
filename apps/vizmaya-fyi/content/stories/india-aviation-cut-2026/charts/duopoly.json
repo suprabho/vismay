@@ -1,0 +1,78 @@
+{
+  "steps": [
+    {
+      "title": "Share of India's domestic seat capacity, May 2026. IndiGo plus Air India Group control more than nine of every ten seats. Akasa, SpiceJet, regional players together hold the rest.",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: {c}%"
+        },
+        "legend": {
+          "show": false
+        },
+        "series": [
+          {
+            "name": "Domestic share",
+            "type": "pie",
+            "radius": ["45%", "72%"],
+            "center": ["50%", "55%"],
+            "avoidLabelOverlap": true,
+            "itemStyle": {
+              "borderColor": "$background",
+              "borderWidth": 2
+            },
+            "label": {
+              "show": true,
+              "color": "$text",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "formatter": "{b}\n{c}%"
+            },
+            "labelLine": {
+              "lineStyle": {
+                "color": "$muted"
+              }
+            },
+            "data": [
+              {
+                "name": "IndiGo",
+                "value": 62,
+                "itemStyle": {
+                  "color": "$teal"
+                }
+              },
+              {
+                "name": "Air India Group",
+                "value": 28,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "name": "Akasa",
+                "value": 5,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "name": "SpiceJet",
+                "value": 3,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "name": "Others",
+                "value": 2,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

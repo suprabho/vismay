@@ -1,0 +1,365 @@
+# Story config — india-aviation-cut-2026
+#
+# Source: The Hindu / Business Today / Outlook Business reporting (May 27, 2026),
+# EIA STEO (May 12, 2026), AERA tariff orders. Eleven airports named for cuts.
+#
+# Repeating coordinates:
+#   Mumbai (BOM)          72.8777  19.0760
+#   New Delhi (DEL)       77.1025  28.5562
+#   Bengaluru (BLR)       77.7080  13.1986
+#   Hyderabad (HYD)       78.4294  17.2403
+#   Chennai (MAA)         80.1693  12.9941
+#   Ahmedabad (AMD)       72.6346  23.0775
+#   Kolkata (CCU)         88.4467  22.6543
+#   Nagpur (NAG)          79.0473  21.0922
+#   Patna (PAT)           85.0867  25.5913
+#   Varanasi (VNS)        82.8631  25.4524
+#   Bhopal (BHO)          77.3374  23.2873
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#e8a04f"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO — India view, Mumbai + Delhi pinned
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Sky Closes for the Summer"
+    eyebrow: "India · Aviation · June–August 2026"
+    map:
+      center: [78.5, 22.0]
+      zoom: 3.6
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — 280 weekly departures pulled"
+          color: "#e8a04f"
+          radius: 14
+          pulse: true
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi — three trunk routes thinned"
+          color: "#e8a04f"
+          radius: 12
+          pulse: true
+
+  # ═══════════════════════════════════════════════
+  # OPENING STAT — 250 a day
+  # ═══════════════════════════════════════════════
+
+  - id: opening-stat
+    kind: stat
+    text: "250+"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.0, 22.0]
+      zoom: 3.8
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — Air India hub"
+          color: "#e8a04f"
+          labelAnchor: left
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi — IndiGo + Air India"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [77.7080, 13.1986]
+          label: "Bengaluru — return-leg cuts"
+          color: "#3a7a8c"
+          labelAnchor: right
+        - coordinates: [78.4294, 17.2403]
+          label: "Hyderabad — Delhi sector thinned"
+          color: "#3a7a8c"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # THE BARREL — Brent spike chart
+  # ═══════════════════════════════════════════════
+
+  - id: the-barrel
+    text: "The barrel"
+    chart: data:brent-spike
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [55.0, 26.0]
+      zoom: 3.2
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [51.5310, 25.2854]
+          label: "Strait of Hormuz — April flare-up"
+          color: "#b04a3a"
+          labelAnchor: right
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — ATF ₹1 lakh/kL, up from ₹80k"
+          color: "#e8a04f"
+          labelAnchor: bottom
+
+  # ═══════════════════════════════════════════════
+  # TATA'S HOLE — Air India losses chart
+  # ═══════════════════════════════════════════════
+
+  - id: tatas-hole
+    text: "Tata's hole"
+    chart: data:ai-losses
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [72.8777, 19.5]
+      zoom: 5.2
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — Air India HQ"
+          color: "#e8a04f"
+          labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # INTERNATIONAL CUT — feeds the domestic cut
+  # ═══════════════════════════════════════════════
+
+  - id: international-first
+    text: "The international cut came first"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [90.0, 25.0]
+      zoom: 2.2
+      pitch: 10
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi — Chicago suspended through October"
+          color: "#b04a3a"
+          labelAnchor: top
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — JFK frequencies cut"
+          color: "#b04a3a"
+          labelAnchor: left
+        - coordinates: [103.8198, 1.3521]
+          label: "Singapore — capacity halved"
+          color: "#e8a04f"
+          labelAnchor: bottom
+        - coordinates: [101.6869, 3.1390]
+          label: "Kuala Lumpur — capacity halved"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [-87.6298, 41.8781]
+          label: "Chicago"
+          color: "#7c8088"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # MUMBAI EPICENTRE — six routes pinned
+  # ═══════════════════════════════════════════════
+
+  - id: mumbai-takes-the-punch
+    text: "Mumbai takes the punch"
+    chart: data:routes-cut
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [78.0, 22.0]
+      zoom: 4.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai (BOM) — 280 weekly departures pulled"
+          color: "#e8a04f"
+          radius: 14
+          labelAnchor: left
+        - coordinates: [72.6346, 23.0775]
+          label: "Ahmedabad (AMD)"
+          color: "#d9a84a"
+          labelAnchor: left
+        - coordinates: [79.0473, 21.0922]
+          label: "Nagpur (NAG)"
+          color: "#d9a84a"
+          labelAnchor: right
+        - coordinates: [82.8631, 25.4524]
+          label: "Varanasi (VNS)"
+          color: "#d9a84a"
+          labelAnchor: right
+        - coordinates: [85.0867, 25.5913]
+          label: "Patna (PAT)"
+          color: "#d9a84a"
+          labelAnchor: right
+        - coordinates: [77.3374, 23.2873]
+          label: "Bhopal (BHO)"
+          color: "#d9a84a"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
+  # DELHI TRUNK — three named routes
+  # ═══════════════════════════════════════════════
+
+  - id: delhi-loses-three
+    text: "Delhi loses three trunk routes"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [80.0, 20.0]
+      zoom: 4.2
+      pitch: 20
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi (DEL) — UDF held at ₹129"
+          color: "#e8a04f"
+          radius: 14
+          labelAnchor: right
+        - coordinates: [78.4294, 17.2403]
+          label: "Hyderabad (HYD)"
+          color: "#d9a84a"
+          labelAnchor: right
+        - coordinates: [77.7080, 13.1986]
+          label: "Bengaluru (BLR)"
+          color: "#d9a84a"
+          labelAnchor: bottom
+        - coordinates: [88.4467, 22.6543]
+          label: "Kolkata (CCU)"
+          color: "#d9a84a"
+          labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # ELEVEN AIRPORTS — UDF comparison
+  # ═══════════════════════════════════════════════
+
+  - id: eleven-airports
+    text: "The eleven airports"
+    chart: data:udf-comparison
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [80.0, 21.0]
+      zoom: 3.8
+      pitch: 15
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — Adani 74%"
+          color: "#e8a04f"
+          labelAnchor: left
+        - coordinates: [72.6346, 23.0775]
+          label: "Ahmedabad — Adani 100%"
+          color: "#e8a04f"
+          labelAnchor: left
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi — GMR 74%"
+          color: "#3a7a8c"
+          labelAnchor: right
+        - coordinates: [78.4294, 17.2403]
+          label: "Hyderabad — GMR 63%"
+          color: "#3a7a8c"
+          labelAnchor: right
+        - coordinates: [79.0473, 21.0922]
+          label: "Nagpur — GMR concession Oct 2024"
+          color: "#3a7a8c"
+          labelAnchor: top
+        - coordinates: [77.7080, 13.1986]
+          label: "Bengaluru — BIAL / Fairfax 74%"
+          color: "#7d9a6f"
+          labelAnchor: bottom
+        - coordinates: [80.1693, 12.9941]
+          label: "Chennai — AAI"
+          color: "#7c8088"
+          labelAnchor: right
+        - coordinates: [88.4467, 22.6543]
+          label: "Kolkata — AAI"
+          color: "#7c8088"
+          labelAnchor: right
+        - coordinates: [85.0867, 25.5913]
+          label: "Patna — AAI"
+          color: "#7c8088"
+          labelAnchor: right
+        - coordinates: [82.8631, 25.4524]
+          label: "Varanasi — AAI"
+          color: "#7c8088"
+          labelAnchor: top
+        - coordinates: [77.3374, 23.2873]
+          label: "Bhopal — AAI"
+          color: "#7c8088"
+          labelAnchor: left
+
+  # ═══════════════════════════════════════════════
+  # DUOPOLY — combined market share
+  # ═══════════════════════════════════════════════
+
+  - id: three-months-then-what
+    text: "Three months, then what?"
+    chart: data:duopoly
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [78.0, 22.0]
+      zoom: 3.8
+      pitch: 20
+      bearing: 0
+      opacity: 0.50
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai"
+          color: "#e8a04f"
+          labelAnchor: left
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi"
+          color: "#e8a04f"
+          labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # CLOSE
+  # ═══════════════════════════════════════════════
+
+  - id: close
+    text: "What the cut is and is not"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+    map:
+      center: [78.0, 22.0]
+      zoom: 3.6
+      pitch: 15
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai"
+          color: "#e8a04f"
+          labelAnchor: left
+        - coordinates: [77.1025, 28.5562]
+          label: "Delhi"
+          color: "#e8a04f"
+          labelAnchor: right
