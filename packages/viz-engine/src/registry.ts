@@ -6,6 +6,12 @@ import embedModule from './modules/embed'
 import videoModule from './modules/video'
 import riveModule from './modules/rive'
 import textModule from './modules/text'
+import bigStatModule from './modules/bigStat'
+import bodyTextModule from './modules/bodyText'
+import quoteModule from './modules/quote'
+import keyValueModule from './modules/keyValue'
+import imageGridModule from './modules/imageGrid'
+import tableModule from './modules/table'
 
 // The registry stores modules with the config generic erased — different
 // modules carry incompatible config types, and `parseConfig`'s input position
@@ -23,6 +29,12 @@ const core: AnyVizModule[] = [
   videoModule,
   riveModule,
   textModule,
+  bigStatModule,
+  bodyTextModule,
+  quoteModule,
+  keyValueModule,
+  imageGridModule,
+  tableModule,
 ]
 
 const registry = new Map<string, AnyVizModule>(core.map((m) => [m.type, m]))

@@ -53,9 +53,37 @@ function extractHeroBits(paragraphs: string[]): { dek: string; byline: string } 
  * Portrait layout: text card centered below the top-pinned chart strip
  * (or centered with no top strip when chartless).
  */
+/**
+ * Deck-format section kinds that suppress the section text card entirely —
+ * the visual is composed through foreground vizslots (`bigStat`, `bodyText`,
+ * `quote`, etc.) in named layout regions. The snap target still mounts so
+ * the IntersectionObserver drives `activeUnit`.
+ */
+const DECK_KINDS_NO_TEXT_CARD = new Set<string>([
+  'bigStat',
+  'bodyText',
+  'split',
+  'data',
+  'gallery',
+  'quote',
+  'divider',
+  'closing',
+])
+
+/**
+ * Map deck-format aliases to the legacy section-text variants the renderer
+ * already knows how to draw. The deck format adds `cover` as a richer
+ * hero variant; both render through the hero panel.
+ */
+function aliasKind(kind: string): string {
+  if (kind === 'cover') return 'hero'
+  return kind
+}
+
 export default function MapStorySection({ unitIndex, unit, isAutoplay = false }: Props) {
   const { parentConfig, heading, subheading, paragraphs, heroPart } = unit
-  const kind = parentConfig.kind ?? 'text'
+  const rawKind = parentConfig.kind ?? 'text'
+  const kind = aliasKind(rawKind)
   const heroBits = kind === 'hero' ? extractHeroBits(paragraphs) : null
   // `hasChart` historically gated by the legacy `chart:` field — it really
   // means "is the foreground slot occupied", since the text card needs to
@@ -67,8 +95,13 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
   // suppressed to avoid double rendering — only the snap target stays so
   // the IntersectionObserver still drives `activeUnit`.
   const usesRegions = resolveSlots(parentConfig).foreground.kind === 'regions'
+  // Deck-format kinds (other than cover/hero) carry their visual entirely
+  // through composed foreground vizslots — the section text card must not
+  // render or it would duplicate copy that lives in `bodyText` / `bigStat`
+  // / `quote` slots inside the layout regions.
+  const suppressForDeckKind = DECK_KINDS_NO_TEXT_CARD.has(rawKind)
 
-  if (usesRegions) {
+  if (usesRegions || suppressForDeckKind) {
     return (
       <section
         data-unit-index={unitIndex}

@@ -87,9 +87,13 @@ export interface MapTarget {
 export function buildMapTargets(config: StoryConfig): MapTarget[] {
   const out: MapTarget[] = []
   config.sections.forEach((section, parentIndex) => {
+    // Deck-format sections have no `map:` block — nothing for the autoplay
+    // map editor to override. Skip the whole section.
+    if (!section.map) return
+    const sectionMap = section.map
     const parentLabel = sectionLabel(section.id, section.kind, section.text, section.heading)
-    const parentDesktop = mapToView(section.map)
-    const parentMobile = section.map.mobile ? overlayView(parentDesktop, section.map.mobile) : null
+    const parentDesktop = mapToView(sectionMap)
+    const parentMobile = sectionMap.mobile ? overlayView(parentDesktop, sectionMap.mobile) : null
     out.push({
       key: `${parentIndex}._`,
       parentIndex,
@@ -102,7 +106,7 @@ export function buildMapTargets(config: StoryConfig): MapTarget[] {
       // Mobile resolution: subsection.mobile > parent.mobile > null. Match
       // the layering in StoryMapShell so the editor's "starting point" for
       // the mobile target is what the renderer would actually show.
-      const subMobileSrc = sub.map?.mobile ?? section.map.mobile ?? null
+      const subMobileSrc = sub.map?.mobile ?? sectionMap.mobile ?? null
       const subMobile = subMobileSrc ? overlayView(subDesktop, subMobileSrc) : null
       const subLab = sectionLabel(sub.id, undefined, sub.text, sub.heading)
       out.push({
@@ -140,7 +144,9 @@ function truncate(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, n - 1) + '…'
 }
 
-function mapToView(m: StoryConfig['sections'][number]['map']): MapView {
+type SectionMap = NonNullable<StoryConfig['sections'][number]['map']>
+
+function mapToView(m: SectionMap): MapView {
   return {
     center: m.center,
     zoom: m.zoom,
@@ -363,7 +369,9 @@ export function applyMapOverrides(
   if (!cfg || cfg.overrides.length === 0) return config
   const sections = config.sections.map((s) => ({
     ...s,
-    map: { ...s.map },
+    // Deck sections may omit `map:` entirely — preserve the undefined so the
+    // resolver/back-compat shim downstream skips background synthesis.
+    map: s.map ? { ...s.map } : undefined,
     subsections: s.subsections?.map((sub) => ({ ...sub })),
   }))
   for (const o of cfg.overrides) {
@@ -372,11 +380,14 @@ export function applyMapOverrides(
     if (o.subIndex === undefined) {
       // Parent-level merge. mergeMapBlock copies scalar/pin/region/heatmap
       // fields; the parent type also carries `mobile`, which we merge
-      // separately and reattach.
-      const mergedScalars = mergeMapBlock(section.map, o.map)
-      const merged: typeof section.map = { ...mergedScalars, mobile: section.map.mobile }
+      // separately and reattach. Skip when the section has no map block —
+      // there is nothing to merge into (deck format).
+      if (!section.map) continue
+      const sectionMap = section.map
+      const mergedScalars = mergeMapBlock(sectionMap, o.map)
+      const merged: NonNullable<typeof section.map> = { ...mergedScalars, mobile: sectionMap.mobile }
       if (o.map.mobile) {
-        merged.mobile = mergeMapBlock(section.map.mobile ?? {}, o.map.mobile)
+        merged.mobile = mergeMapBlock(sectionMap.mobile ?? {}, o.map.mobile)
       }
       section.map = merged
     } else {

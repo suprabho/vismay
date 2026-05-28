@@ -1,0 +1,68 @@
+{
+  "steps": [
+    {
+      "title": "Valuation trajectory — USD billions, private rounds to IPO target",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "formatter": "{b}<br/>${c}B"
+        },
+        "grid": { "left": 80, "right": 40, "top": 56, "bottom": 56 },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": ["2015", "2021", "Dec 2025 tender", "Feb 2026 xAI merger", "Jun 2026 IPO target"],
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "interval": 0,
+            "overflow": "break"
+          },
+          "axisLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "log",
+          "logBase": 10,
+          "name": "USD billions (log)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter" },
+          "axisLabel": {
+            "formatter": "${value}B",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Valuation",
+            "type": "line",
+            "smooth": false,
+            "symbol": "circle",
+            "symbolSize": 12,
+            "lineStyle": { "color": "$accent", "width": 3 },
+            "itemStyle": { "color": "$accent" },
+            "areaStyle": {
+              "color": {
+                "type": "linear",
+                "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(78,168,255,0.30)" },
+                  { "offset": 1, "color": "rgba(78,168,255,0.02)" }
+                ]
+              }
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "${@[1]}B",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11
+            },
+            "data": [12, 100, 800, 1250, 1750]
+          }
+        ]
+      }
+    }
+  ]
+}

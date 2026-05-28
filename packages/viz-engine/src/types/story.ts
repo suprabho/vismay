@@ -21,6 +21,19 @@ export interface Theme {
 
 export type StoryStatus = 'draft' | 'published' | 'archived'
 
+/**
+ * Top-level renderer discriminator. Missing = 'map' so every existing story
+ * keeps rendering through the map-anchored shell unchanged.
+ *
+ * - `map`: legacy map-anchored scrollytelling. Every section has its own
+ *   `map:` camera state; foreground vizslots float over a persistent Mapbox
+ *   instance.
+ * - `deck`: snap-scrolled slide deck over a page-level aura backdrop.
+ *   Sections are slides composed of foreground vizslots in regions; the
+ *   `defaults.storyBackground` mounts once at the page level.
+ */
+export type StoryFormat = 'map' | 'deck'
+
 export interface Frontmatter {
   title: string
   subtitle: string
@@ -40,6 +53,12 @@ export interface Frontmatter {
    * ignored with a console warning. See `components/story/viz/verticals.ts`.
    */
   vertical?: string
+  /**
+   * Renderer format. Missing = 'map' (legacy default). See `StoryFormat`.
+   * The page route branches on this to mount either the map-anchored shell
+   * or the deck shell.
+   */
+  format?: StoryFormat
 }
 
 export type BlockType =

@@ -1,0 +1,72 @@
+{
+  "steps": [
+    {
+      "title": "Starlink subscribers — millions, end-of-period",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "formatter": "{b}<br/>{c}M subscribers"
+        },
+        "grid": { "left": 64, "right": 32, "top": 56, "bottom": 56 },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": ["End 2023", "End 2024", "Q1 2025", "End 2025", "Q1 2026"],
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono"
+          },
+          "axisLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Subscribers (millions)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter" },
+          "axisLabel": {
+            "formatter": "{value}M",
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono"
+          },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "name": "Subscribers",
+            "type": "line",
+            "smooth": true,
+            "symbol": "circle",
+            "symbolSize": 10,
+            "lineStyle": { "color": "$accent2", "width": 3 },
+            "itemStyle": { "color": "$accent2" },
+            "areaStyle": {
+              "color": {
+                "type": "linear",
+                "x": 0, "y": 0, "x2": 0, "y2": 1,
+                "colorStops": [
+                  { "offset": 0, "color": "rgba(113,236,255,0.40)" },
+                  { "offset": 1, "color": "rgba(113,236,255,0.02)" }
+                ]
+              }
+            },
+            "data": [2.3, 4.6, 5.0, 9.2, 10.3],
+            "markPoint": {
+              "data": [
+                {
+                  "name": "+106% YoY",
+                  "coord": ["Q1 2026", 10.3],
+                  "value": "+106% YoY",
+                  "itemStyle": { "color": "$accent" },
+                  "label": {
+                    "color": "$text",
+                    "fontFamily": "Inter",
+                    "fontSize": 11
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

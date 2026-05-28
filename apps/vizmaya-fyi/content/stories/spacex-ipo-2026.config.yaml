@@ -1,0 +1,387 @@
+# =============================================================================
+# vizmaya · deck format · spacex-s1-2026
+# =============================================================================
+# This file demonstrates the new `format: "deck"` flavour declared in the
+# accompanying .md frontmatter. It is a sibling of the existing map-anchored
+# format — *not* a replacement. Where the legacy schema treats `map:` as the
+# default backdrop on every section, the deck format treats an **aura embed**
+# as a single page-level backdrop and treats every section as a "slide" of
+# composed foreground vizslots laid over it.
+#
+# Schema summary (full spec in docs/deck-format-spec.md):
+#
+#   defaults:
+#     storyBackground:        page-level background (aura | image | color | none).
+#                             Renders ONCE, persists across all sections, sits
+#                             behind every panel. Defaults to the frontmatter
+#                             `aura:` slug if omitted.
+#     overlay:                colour + opacity layer between aura and content,
+#                             so charts stay legible against busy motion.
+#     panel:                  default frosted-glass styling for foreground slots
+#                             (surface, border, blur, radius). Overridable per
+#                             slot.
+#     scroll:                 snap | continuous (deck behaves like a vertical
+#                             slide deck when snap is on; cinematic scroll when
+#                             continuous).
+#
+#   sections[]:
+#     id:                     unique id; matches markdown heading slug
+#     kind:                   cover | bigStat | bodyText | split | data |
+#                             gallery | quote | divider | closing
+#     text:                   anchor into the .md (heading text)
+#     paragraphs:             [start, end] slice of resolved paragraphs
+#     panel:                  per-section panel override
+#     foreground:             array of vizslot layers — chart | image |
+#                             imageGrid | bigStat | quote | bodyText | mapbox |
+#                             embed | keyValue | table
+#
+#   vizslot common style fields (panel/style) follow VizLayerStyle from the
+#   existing engine — position, size, opacity, blendMode, panel.
+# =============================================================================
+
+defaults:
+  # Page-level aura background. When omitted, falls back to frontmatter `aura:`.
+  # `tint` lets the renderer apply a colour cast so the aura sits coherently
+  # inside the SpaceX dark-orbital palette.
+  storyBackground:
+    type: aura
+    slug: blue-abstract-background-patriotic-stars-flowing-lines
+    input: off
+    tint: "#070a14"           # deep-space tint pulled toward theme.background
+    tintBlendMode: multiply
+    fixed: true               # stays put while content scrolls
+  # A vignette/darken layer between aura and content — critical for chart
+  # readability over moving aurora.
+  overlay:
+    color: "#070a14"
+    opacity: 0.42
+    gradient:
+      type: radial
+      from: "rgba(7,10,20,0.20)"
+      to:   "rgba(7,10,20,0.74)"
+  # Default frosted-glass styling for foreground panels. Every chart/image/quote
+  # slot inherits this unless overridden.
+  panel:
+    background: "rgba(10,14,24,0.62)"
+    border: "1px solid rgba(120,140,180,0.20)"
+    borderRadius: "20px"
+    padding: "32px"
+    backdropBlur: "18px"
+    shadow: "0 24px 60px -32px rgba(0,0,0,0.65)"
+  scroll:
+    mode: snap                # snap == slide-deck feel; continuous == cinematic
+    paddingY: "12vh"
+  # Optional: deck-wide chart defaults
+  chart:
+    theme: dark-orbital
+    grid: { left: 64, right: 32, top: 56, bottom: 56 }
+
+sections:
+
+  # ---------------------------------------------------------------------------
+  # 1 · Cover
+  # ---------------------------------------------------------------------------
+  - id: cover
+    kind: cover
+    text: "Cover"
+    eyebrow: "SpaceX S-1 · May 20, 2026 · $1.75 Trillion IPO Analysis"
+    heading: "A Rocket Company That Became the Internet"
+    dek: "SpaceX's S-1 reveals three companies inside one stock — and only one of them makes money."
+    panel:
+      background: "transparent"
+      border: "none"
+      backdropBlur: "0"
+    foreground:
+      # Hero image floats in the upper right with a hard-edge clip. See
+      # images/PROMPTS.md → 01-hero for the generation brief.
+      - type: image
+        src: /content/spacex-s1-2026/images/01-hero-orbital.webp
+        alt: "Falcon stage one re-entry plume over a Starlink constellation arc, deep dusk"
+        style:
+          position: { x: right, y: center }
+          size: { width: "46%", height: "76vh" }
+          opacity: 0.92
+          panel:
+            background: "transparent"
+            border: "none"
+            borderRadius: "0"
+
+  # ---------------------------------------------------------------------------
+  # 2 · $18.7B headline — the "bigStat" archetype
+  # ---------------------------------------------------------------------------
+  - id: revenue-headline
+    kind: bigStat
+    text: "$18.7B headline"
+    paragraphs: [0, 2]
+    foreground:
+      - type: bigStat
+        value: "$18.7B"
+        unit: ""
+        label: "SpaceX consolidated revenue, full year 2025"
+        delta: "+33% YoY · run-rate $18.8B in Q1 2026"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          size: { width: "44%" }
+
+  # ---------------------------------------------------------------------------
+  # 3 · Three segments — split text + chart
+  # ---------------------------------------------------------------------------
+  - id: three-segments
+    kind: split
+    text: "Three segments, three stories"
+    paragraphs: [0, 4]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: segment-revenue
+        caption: "2025 segment P&L · revenue, operating income, Adj. EBITDA"
+        style:
+          position: { x: right, y: center }
+          size: { width: "52%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 4 · Starlink prose-only — bodyText over aura
+  # ---------------------------------------------------------------------------
+  - id: starlink-machine
+    kind: bodyText
+    text: "Starlink: the machine behind the curtain"
+    paragraphs: [0, 4]
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          size: { width: "62%" }
+
+  # ---------------------------------------------------------------------------
+  # 5 · 10.3M subscribers — bigStat + chart row
+  # ---------------------------------------------------------------------------
+  - id: subscribers
+    kind: data
+    text: "10.3M subscribers"
+    paragraphs: [0, 2]
+    layout: stat-top-chart-below
+    foreground:
+      - type: bigStat
+        value: "10.3M"
+        label: "Starlink subscribers · March 31, 2026"
+        delta: "164 countries · +106% YoY"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: top }
+          size: { width: "44%" }
+      - type: chart
+        id: starlink-subscribers
+        caption: "Subscribers doubled in each of the last two years · S-1 disclosure"
+        style:
+          position: { x: right, y: top }
+          size: { width: "52%", height: "56vh" }
+
+  # ---------------------------------------------------------------------------
+  # 6 · Space prose — pull quote interleaved
+  # ---------------------------------------------------------------------------
+  - id: space-budget
+    kind: split
+    text: "Space: the rocket that ate the budget"
+    paragraphs: [0, 3]
+    layout: text-left-quote-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "54%" }
+      - type: quote
+        text: |
+          The launch business is currently a net drain on the balance sheet —
+          by design.
+        attribution: "Falcon 9 → Starlink supply chain"
+        style:
+          position: { x: right, y: center }
+          size: { width: "38%" }
+
+  # ---------------------------------------------------------------------------
+  # 7 · $15B+ Starship — bigStat + cumulative bars
+  # ---------------------------------------------------------------------------
+  - id: starship-rd
+    kind: data
+    text: "$15B+ on Starship"
+    paragraphs: [0, 2]
+    layout: stat-left-chart-right
+    foreground:
+      - type: bigStat
+        value: "$15B+"
+        label: "Cumulative Starship R&D · per S-1 disclosure"
+        delta: "More than the original programme budget"
+        deltaColor: amber
+        color: amber
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: chart
+        id: starship-rd-cumulative
+        caption: "$3B in 2025 alone · $930M in Q1 2026"
+        style:
+          position: { x: right, y: center }
+          size: { width: "58%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 8 · AI black hole — split, image left, text right
+  # ---------------------------------------------------------------------------
+  - id: ai-black-hole
+    kind: split
+    text: "The AI black hole"
+    paragraphs: [0, 4]
+    layout: image-left-text-right
+    foreground:
+      - type: image
+        src: /content/spacex-s1-2026/images/02-colossus-data-center.webp
+        alt: "Inside view of COLOSSUS — gigawatt-scale AI training cluster, Memphis"
+        caption: "COLOSSUS · 220,000 Nvidia GPUs · 300MW · built in 120 days"
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%", height: "60vh" }
+      - type: bodyText
+        from: text
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%" }
+
+  # ---------------------------------------------------------------------------
+  # 9 · EBITDA bridge — bodyText + clustered-bar chart
+  # ---------------------------------------------------------------------------
+  - id: ebitda-bridge
+    kind: data
+    text: "The EBITDA bridge"
+    paragraphs: [0, 3]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: ebitda-vs-gaap
+        caption: "Adj. EBITDA $6.6B · GAAP net loss $4.9B · accumulated deficit $41.3B"
+        style:
+          position: { x: right, y: center }
+          size: { width: "52%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 10 · Capex — donut centred, prose below
+  # ---------------------------------------------------------------------------
+  - id: capex-velocity
+    kind: data
+    text: "Capital at the speed of ambition"
+    paragraphs: [0, 3]
+    layout: chart-top-text-below
+    foreground:
+      - type: chart
+        id: capex-by-segment
+        caption: "$20.7B in 2025 · AI alone spent $7.7B in Q1 2026"
+        style:
+          position: { x: center, y: top }
+          size: { width: "72%", height: "52vh" }
+      - type: bodyText
+        from: text
+        style:
+          position: { x: center, y: bottom }
+          size: { width: "72%" }
+
+  # ---------------------------------------------------------------------------
+  # 11 · Governance — twin donuts (42% vs 85%)
+  # ---------------------------------------------------------------------------
+  - id: governance
+    kind: data
+    text: "Elon's kingdom"
+    paragraphs: [0, 3]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "46%" }
+      - type: chart
+        id: voting-vs-economic
+        caption: "Class B · 10 votes per share · Nasdaq controlled-company exemptions"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # ---------------------------------------------------------------------------
+  # 12 · $1.75T — closing bigStat + trajectory line
+  # ---------------------------------------------------------------------------
+  - id: valuation
+    kind: data
+    text: "$1.75T at IPO"
+    paragraphs: [0, 3]
+    layout: stat-left-chart-right
+    foreground:
+      - type: bigStat
+        value: "$1.75T"
+        label: "Implied IPO valuation · analyst estimates"
+        delta: "Doubled in six months pre-roadshow"
+        deltaColor: amber
+        color: accent
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: chart
+        id: valuation-trajectory
+        caption: "$12B (2015) → $1.75T (2026 target) · log scale"
+        style:
+          position: { x: right, y: center }
+          size: { width: "58%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 13 · Closing essay
+  # ---------------------------------------------------------------------------
+  - id: closing-essay
+    kind: closing
+    text: "When class wore the mask of margin"
+    paragraphs: [0, 4]
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          size: { width: "64%" }
+      - type: keyValue
+        title: "Three theses, one ticker"
+        items:
+          - { key: "Connectivity",  value: "Profitable broadband near-monopoly", color: accent2 }
+          - { key: "Space",         value: "Option premium on Starship & the lunar economy", color: amber }
+          - { key: "AI",            value: "Belief that Grok + X + orbital compute compounds", color: red }
+        style:
+          position: { x: right, y: center }
+          size: { width: "30%" }
+
+  # ---------------------------------------------------------------------------
+  # 14 · Methodology — quiet bodyText, smaller type
+  # ---------------------------------------------------------------------------
+  - id: methodology
+    kind: bodyText
+    text: "Methodology"
+    paragraphs: [0, 3]
+    panel:
+      backdropBlur: "12px"
+      padding: "24px"
+    foreground:
+      - type: bodyText
+        from: text
+        textStyle:
+          size: small
+          color: muted
+        style:
+          size: { width: "62%" }

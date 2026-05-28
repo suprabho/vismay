@@ -99,7 +99,19 @@ export function defaultNarrationText(unit: {
   parentConfig: { kind?: string }
   heroPart?: 'title' | 'dek'
 }): string {
-  const kind = unit.parentConfig.kind ?? 'text'
+  // Normalize deck-format aliases to the legacy narration rules:
+  //   cover    → hero    (dek + byline extraction)
+  //   bigStat  → stat    (paragraphs joined verbatim)
+  //   bodyText | split | data | gallery | quote | closing → text rules
+  //   divider  → silent  (returns '' so generate-audio skips it)
+  const rawKind = unit.parentConfig.kind ?? 'text'
+  if (rawKind === 'divider') return ''
+  const kind =
+    rawKind === 'cover'
+      ? 'hero'
+      : rawKind === 'bigStat'
+      ? 'stat'
+      : rawKind
   const parts: string[] = []
   if (unit.heading) parts.push(unit.heading)
 

@@ -166,3 +166,35 @@ Phase 1 is zero — Supabase already wired.
 - [ ] `revalidatePath` confirmed working on save
 - [ ] Flip `CONTENT_SOURCE=db` in Vercel env
 - [ ] Leave `content/stories/` committed for ≥2 weeks as rollback path
+
+---
+
+## Deck format compatibility (added May 2026)
+
+The `format: "deck"` story format (see [deck-format-spec.md](deck-format-spec.md))
+requires **no schema changes**. Everything new lands inside columns that
+already exist:
+
+- `frontmatter.format` → stored in the `markdown` text column, parsed at
+  runtime by `gray-matter` alongside `title`, `status`, `aura`, etc.
+- `defaults.storyBackground` / `defaults.overlay` / `defaults.panel` /
+  `defaults.scroll` / `defaults.chart` → stored in `config_yaml` text
+  column, parsed by `yaml.parse`.
+- `section.layout` / `section.panel` / `section.foreground[]` with
+  deck-specific vizslot types (`bigStat`, `bodyText`, `quote`, `keyValue`,
+  `imageGrid`, `table`) → also inside `config_yaml`.
+- Chart data → same `chart_data` table, same `(slug, chart_id)` composite
+  key; the file path `content/stories/<slug>/charts/<id>.json` migrates
+  unchanged.
+
+**One bug fix required for parity:** `lib/syncToDb.ts` did not denormalize
+the `aura` frontmatter field into the `stories.aura` column (added in
+migration 044) — script-migrated stories landed with `aura=null`, breaking
+the home-tile background and (for deck stories) the page-level backdrop.
+Fixed alongside this phase so admin-edited stories and script-migrated
+stories carry identical column state.
+
+**Image assets** (e.g. spacex's `01-hero-orbital.webp`) are still served
+from `content/stories/<slug>/images/`. The image asset upload pipeline
+remains out of scope per the section above; deck-format image / imageGrid
+slots reference these paths the same way map stories do today.

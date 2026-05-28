@@ -1,0 +1,75 @@
+{
+  "steps": [
+    {
+      "title": "2025 capital expenditure — USD billions, by segment",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}<br/>${c}B ({d}%)"
+        },
+        "legend": {
+          "orient": "vertical",
+          "right": 24,
+          "top": "middle",
+          "textStyle": { "color": "$muted", "fontFamily": "Inter" }
+        },
+        "series": [
+          {
+            "name": "Capex 2025",
+            "type": "pie",
+            "radius": ["48%", "72%"],
+            "center": ["38%", "50%"],
+            "avoidLabelOverlap": true,
+            "itemStyle": {
+              "borderColor": "rgba(7,10,20,0.85)",
+              "borderWidth": 2
+            },
+            "label": {
+              "show": true,
+              "position": "outside",
+              "formatter": "{b}\n${c}B",
+              "color": "$text",
+              "fontFamily": "Inter",
+              "fontSize": 12
+            },
+            "labelLine": {
+              "lineStyle": { "color": "$line" }
+            },
+            "data": [
+              { "value": 12.7, "name": "AI (xAI · COLOSSUS)", "itemStyle": { "color": "$red" } },
+              { "value": 4.2, "name": "Connectivity (Starlink)", "itemStyle": { "color": "$accent2" } },
+              { "value": 3.8, "name": "Space (Falcon · Starship)", "itemStyle": { "color": "$amber" } }
+            ]
+          }
+        ],
+        "graphic": [
+          {
+            "type": "text",
+            "left": "38%",
+            "top": "47%",
+            "style": {
+              "text": "$20.7B",
+              "fill": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "textAlign": "center"
+            }
+          },
+          {
+            "type": "text",
+            "left": "38%",
+            "top": "57%",
+            "style": {
+              "text": "total capex",
+              "fill": "$muted",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "textAlign": "center"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

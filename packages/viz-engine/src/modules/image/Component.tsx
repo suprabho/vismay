@@ -25,12 +25,15 @@ export default function ImageLayerComponent({
   const imgRef = useRef<HTMLImageElement | null>(null)
   const url = resolveAssetUrl(config.src)
 
-  // Cached images can fire `onLoad` before React attaches our handler — read
-  // `complete` once on mount as the belt-and-braces signal.
+  // Cached images can fire `onLoad` (or `onError`) before React attaches our
+  // handlers — read `complete` once on mount as the belt-and-braces signal.
+  // Any `complete` state (success OR error) is terminal as far as readiness
+  // is concerned — we don't want to block a PDF render waiting for a 404 that
+  // already happened.
   useEffect(() => {
     const img = imgRef.current
     if (!img) return
-    if (img.complete && img.naturalWidth > 0) {
+    if (img.complete) {
       noteReady()
     }
   }, [noteReady])
@@ -71,6 +74,10 @@ export default function ImageLayerComponent({
       alt={config.alt ?? ''}
       style={style}
       onLoad={() => noteReady()}
+      // Fire `noteReady` on error too so a missing/404 asset doesn't block
+      // the capture readiness signal indefinitely — PDF/share renders should
+      // proceed with a broken image rather than hang the whole render.
+      onError={() => noteReady()}
       draggable={false}
     />
   )

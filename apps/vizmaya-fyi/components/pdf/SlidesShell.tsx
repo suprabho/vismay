@@ -3,7 +3,7 @@
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
 import { ForegroundVizSlot } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlotsFlat, getVizModule } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
 import { useStoryReadiness } from '@vismay/viz-engine'
@@ -74,8 +74,11 @@ export default function SlidesShell({
   }, [units])
 
   // Count each capture-blocking element: every visible map + every foreground
-  // viz layer (chart / image / video / rive / embed). The slot's
-  // `noteLayerReady` fires once per layer when its first paintable state lands.
+  // viz layer (chart / image / video / rive / embed) WHOSE MODULE IS
+  // REGISTERED. Unknown layer types (e.g. a deck-format `quote` layer when
+  // the quote module hasn't been registered yet) silently render null in
+  // `ForegroundVizSlot` and never fire `noteReady` — counting them would
+  // keep `__pdfReady__` from ever flipping true.
   const expectedSignals = useMemo(() => {
     let total = 0
     for (const s of slides) {
@@ -86,7 +89,11 @@ export default function SlidesShell({
       ) {
         total++
       }
-      total += resolveSlotsFlat(s.unit.parentConfig).foreground.length
+      const layers = resolveSlotsFlat(s.unit.parentConfig).foreground
+      for (const layer of layers) {
+        const mod = getVizModule(layer.type)
+        if (mod && mod.slots.includes('foreground')) total++
+      }
     }
     return total
   }, [slides])

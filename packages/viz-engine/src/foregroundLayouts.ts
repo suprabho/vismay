@@ -56,9 +56,39 @@ const splitThreeSevenTwoRow: ForegroundLayoutDef = {
   },
 }
 
+/**
+ * Deck-format layouts. Each name encodes the canonical region split
+ * (text/chart/stat/quote left or right; stacked top/below), but the regions
+ * collapse to a single absolute-fill box because the deck's vizslots
+ * self-position via `style.position` + `style.size` (see
+ * `ForegroundVizSlot.layerWrapperStyle`). Slot-level positioning is what
+ * actually draws the layout — the named layout exists so authors signal
+ * intent and the admin form / preview can render the right scaffolding.
+ *
+ * Layouts that need true region splits (where slots map to named regions
+ * positionally) can be added later with proper `regions` definitions —
+ * the foreground dispatch in `ForegroundLayoutSlot` already supports it.
+ */
+const deckFreeLayouts: ForegroundLayoutDef[] = [
+  'text-left-chart-right',
+  'text-left-quote-right',
+  'image-left-text-right',
+  'stat-top-chart-below',
+  'stat-left-chart-right',
+  'chart-top-text-below',
+  'centered',
+  'free',
+].map((name) => ({
+  name,
+  regions: {
+    default: { style: FILL },
+  },
+}))
+
 const registry = new Map<string, ForegroundLayoutDef>([
   [singleFill.name, singleFill],
   [splitThreeSevenTwoRow.name, splitThreeSevenTwoRow],
+  ...deckFreeLayouts.map((l): [string, ForegroundLayoutDef] => [l.name, l]),
 ])
 
 export function registerForegroundLayout(def: ForegroundLayoutDef): void {
