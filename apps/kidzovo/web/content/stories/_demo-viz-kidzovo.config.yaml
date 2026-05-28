@@ -11,12 +11,16 @@
 # No `defaults:` block — the kidzovo host doesn't render the engine's map
 # background, so the parser's hardcoded defaults (DEFAULTS in
 # packages/content-source/src/storyConfig.ts) are accepted as no-ops.
-# Likewise no per-section `map:` overrides; the kz-storybook layout paints
-# its own background.
+# Each section sets `background: { type: none }` — the explicit "no
+# section-level background" sentinel that the parser accepts in place
+# of the legacy `map.center` / `map.zoom` requirements. The visible
+# background lives inside the kz-storybook layout's `background` region.
 
 sections:
   - id: ovi-plays
     text: "Ovi plays"
+    background:
+      type: none
     foreground:
       layout: kz-storybook
       regions:
@@ -37,6 +41,8 @@ sections:
 
   - id: great-big-mess
     text: "A great big mess"
+    background:
+      type: none
     foreground:
       layout: kz-storybook
       regions:
@@ -63,6 +69,8 @@ sections:
 
   - id: ovi-sits
     text: "Ovi sits in the mess"
+    background:
+      type: none
     foreground:
       layout: kz-storybook
       regions:
