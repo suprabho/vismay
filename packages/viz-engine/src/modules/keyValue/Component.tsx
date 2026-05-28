@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import type { VizRenderProps } from '../../types'
 import type { StatColor } from '../../lib/storyConfig.types'
-import { formatInlineMarkdown } from '../../lib/inlineMarkdown'
+import { formatInlineMarkdown, getListItems, isListBlock } from '../../lib/inlineMarkdown'
 import type { KeyValueLayerConfig } from './index'
 
 function colorVar(token: StatColor | undefined): string {
@@ -63,7 +63,15 @@ function Row({ item }: { item: KeyValueLayerConfig['items'][number] }) {
           lineHeight: 1.45,
         }}
       >
-        {formatInlineMarkdown(item.value)}
+        {isListBlock(item.value) ? (
+          <ul className="list-disc pl-5 m-0">
+            {getListItems(item.value).map((it, j) => (
+              <li key={j}>{formatInlineMarkdown(it)}</li>
+            ))}
+          </ul>
+        ) : (
+          formatInlineMarkdown(item.value)
+        )}
       </dd>
     </>
   )

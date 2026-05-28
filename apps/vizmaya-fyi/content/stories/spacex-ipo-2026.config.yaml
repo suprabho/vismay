@@ -183,13 +183,17 @@ sections:
           size: { width: "50%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
-  # 6 · Space prose — pull quote interleaved
+  # 6 · Space prose — starship 3D rotate showcase
   # ---------------------------------------------------------------------------
+  # The right column hosts a slow Y-axis rotation of Starship via the
+  # `starship:viewer` module from @vismay/starship-viz. The 3D viewer is
+  # available because the .md frontmatter declares `vertical: 'starship'`.
+  # Material `metal` matches the brushed-stainless flavour of SpaceX renders.
   - id: space-budget
     kind: split
     text: "Space: the rocket that ate the budget"
     paragraphs: [0, 3]
-    layout: text-left-quote-right
+    layout: text-left-chart-right
     foreground:
       - type: bodyText
         from: text
@@ -206,8 +210,14 @@ sections:
           size: { width: "44%" }
 
   # ---------------------------------------------------------------------------
-  # 7 · $15B+ Starship — bigStat + cumulative bars
+  # 7 · $15B+ Starship — bigStat + 3D explode
   # ---------------------------------------------------------------------------
+  # The R&D dollar narrative is paired with an explode view of the ship: as
+  # the reader steps through the section, the three named parts (cone, tank,
+  # raptor) drift apart along ship-local Y. Visualises "what the $15B is
+  # buying" — the physical vehicle itself, not the cumulative spend bars.
+  # The legacy bar chart still ships in `charts/starship-rd-cumulative.json`
+  # if we want to swap it back in.
   - id: starship-rd
     kind: data
     text: "$15B+ on Starship"
@@ -217,7 +227,7 @@ sections:
       - type: bigStat
         value: "$15B+"
         label: "Cumulative Starship R&D · per S-1 disclosure"
-        delta: "More than the original programme budget"
+        delta: "$3B in 2025 alone · $930M in Q1 2026"
         deltaColor: amber
         color: amber
         align: left

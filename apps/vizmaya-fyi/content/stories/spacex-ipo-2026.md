@@ -6,6 +6,10 @@ date: "2026-05-27"
 status: "published"
 listed: true
 
+# Pulls in @vismay/starship-viz so `starship:viewer` foreground slots in the
+# config resolve. Bundle stays out of the main chunk for non-starship stories.
+vertical: "starship"
+
 # New format discriminator — this story uses the "deck" scrolly-corporate format
 # instead of the legacy map-anchored format. Renderer picks up the aura background
 # from `aura:` and lays out sections as snap-aligned panels over it.

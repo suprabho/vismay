@@ -123,7 +123,7 @@ export default async function StoryPage({ params }: RouteParams) {
   const hasBackdrop = isDeck && (backgroundConfig != null || !!story.frontmatter.aura)
 
   return (
-    <ThemeProvider theme={story.frontmatter.theme}>
+    <ThemeProvider theme={story.frontmatter.theme} transparent={hasBackdrop}>
       {fontImportUrl && (
         <>
           <link rel="preconnect" href="https://fonts.googleapis.com" />

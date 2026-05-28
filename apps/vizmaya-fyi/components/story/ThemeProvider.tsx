@@ -30,9 +30,18 @@ function hexToRgbTriple(hex: string): string {
 export default function ThemeProvider({
   theme,
   children,
+  transparent = false,
 }: {
   theme: Theme
   children: ReactNode
+  /**
+   * When true, omit the wrapper's opaque background. Required for deck-format
+   * stories that mount a `<StoryBackgroundSlot>` at `position: fixed; z-index:
+   * -2`: a non-positioned ancestor with a background paints AFTER negative-z
+   * descendants in the root stacking context and would obscure the aura/image
+   * backdrop.
+   */
+  transparent?: boolean
 }) {
   const chartColors = useMemo(() => themeToChartColors(theme), [theme])
 
@@ -67,7 +76,7 @@ export default function ThemeProvider({
       <div
         style={{
           ...vars,
-          background: theme.colors.background,
+          ...(transparent ? null : { background: theme.colors.background }),
           color: theme.colors.text,
           fontFamily: vars['--font-sans'],
           minHeight: '100vh',
