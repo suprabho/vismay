@@ -1,0 +1,353 @@
+song_id,title,title_native,season,episode,track_in_episode,release_date,duration_seconds,artists,lyricists,composers,producer,youtube_url,is_instrumental,is_cover,original_artist,notes
+cs_s01_e01_t01,Deewana,,1,1,1,2008-06-08,,Ali Azmat,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e01_t02,Garaj Baras,,1,1,2,2008-06-08,,Ali Azmat|Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e01_t03,Gallan,,1,1,3,2008-06-08,,Ali Azmat,,,Rohail Hyatt,,,,,Punjabi
+cs_s01_e01_t04,Shaman Paiyan,,1,1,4,2008-06-08,,Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,Punjabi
+cs_s01_e01_t05,Balama,,1,1,5,2008-06-08,,Ali Azmat|Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,Punjabi & Urdu
+cs_s01_e01_t06,Paheliyan,,1,1,6,2008-06-08,,Mauj,,,Rohail Hyatt,,,,,
+cs_s01_e02_t01,I'm in Love (I'm a Believer),,1,2,1,2008-06-29,,Saba & Selina,,,Rohail Hyatt,,,,,English
+cs_s01_e02_t02,Sar Kiye,,1,2,2,2008-06-29,,Strings,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e02_t03,Anjane,,1,2,3,2008-06-29,,Strings,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e02_t04,Duur,,1,2,4,2008-06-29,,Strings|Hussain Bakhsh Gullo|House Band,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e02_t05,Zinda,,1,2,5,2008-06-29,,Strings,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e02_t06,Jam Session,,1,2,6,2008-06-29,,Hussain Bakhsh Gullo|House Band,,,Rohail Hyatt,,,,,
+cs_s01_e03_t01,Janay Na Koi,,1,3,1,2008-07-20,,Ali Zafar,,,Rohail Hyatt,,,,,
+cs_s01_e03_t02,Chal Dil Meray,,1,3,2,2008-07-20,,Ali Zafar,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e03_t03,Channo,,1,3,3,2008-07-20,,Ali Zafar,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e03_t04,Rangeen,,1,3,4,2008-07-20,,Ali Zafar,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e03_t05,My Happiness,,1,3,5,2008-07-20,,Sajid & Zeeshan,,,Rohail Hyatt,,,,,English
+cs_s01_e03_t06,Allah Hu,,1,3,6,2008-07-20,,Ali Zafar|Tufail Ahmed,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e04_t01,Percussion Jam,,1,4,1,2008-08-04,,House Band,,,Rohail Hyatt,,,,,
+cs_s01_e04_t02,Dildara,,1,4,2,2008-08-04,,Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,Punjabi
+cs_s01_e04_t03,Flute Jam,,1,4,3,2008-08-04,,Various Artists,,,Rohail Hyatt,,,true,,Instrumental jam
+cs_s01_e04_t04,Mein Challa,,1,4,4,2008-08-04,,Ali Azmat,,,Rohail Hyatt,,,,,Punjabi
+cs_s01_e04_t05,Garaj Baras,,1,4,5,2008-08-04,,Ali Azmat|Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,Urdu; rebroadcast
+cs_s01_e04_t06,Dhaani,,1,4,6,2008-08-04,,Strings|Hussain Bakhsh Gullo,,,Rohail Hyatt,,,,,Urdu
+cs_s01_e04_t07,Sar Kiye,,1,4,7,2008-08-04,,Strings,,,Rohail Hyatt,,,,,Urdu; rebroadcast
+cs_s01_e04_t08,Allah Hu,,1,4,8,2008-08-04,,Ali Zafar|Tufail Ahmed,,,Rohail Hyatt,,,,,Urdu; rebroadcast
+cs_s02_e01_t01,Aik Alif,,2,1,1,2009-06-14,,Saieen Zahoor|Noori,,,Rohail Hyatt,,,,,Individuality
+cs_s02_e01_t02,Aj Latha Naeeo,,2,1,2,2009-06-14,,Javed Bashir,,,Rohail Hyatt,,,,,Individuality
+cs_s02_e01_t03,Jal Pari,,2,1,3,2009-06-14,,Atif Aslam,,,Rohail Hyatt,,,,,Individuality
+cs_s02_e01_t04,Khamaaj,,2,1,4,2009-06-14,,Shafqat Amanat Ali Khan,,,Rohail Hyatt,,,,,Individuality
+cs_s02_e01_t05,Paimona,,2,1,5,2009-06-14,,Zeb & Haniya,,,Rohail Hyatt,,,,,Individuality
+cs_s02_e02_t01,Aankhon Kay Sagar,,2,2,1,2009-06-28,,Shafqat Amanat Ali Khan,,,Rohail Hyatt,,,,,Harmony
+cs_s02_e02_t02,Dastaan,,2,2,2,2009-06-28,,Ali Zafar,,,Rohail Hyatt,,,,,Harmony
+cs_s02_e02_t03,Janay Do,,2,2,3,2009-06-28,,Josh,,,Rohail Hyatt,,,,,Harmony
+cs_s02_e02_t04,Kinara,,2,2,4,2009-06-28,,Atif Aslam|Riaz Ali Khan,,,Rohail Hyatt,,,,,Harmony
+cs_s02_e02_t05,Toomba,,2,2,5,2009-06-28,,Saieen Zahoor,,,Rohail Hyatt,,,,,Harmony
+cs_s02_e03_t01,Bari Barsi,,2,3,1,2009-07-12,,Josh,,,Rohail Hyatt,,,,,Equality
+cs_s02_e03_t02,Chal Diyay,,2,3,2,2009-07-12,,Zeb & Haniya|Javed Bashir,,,Rohail Hyatt,,,,,Equality
+cs_s02_e03_t03,Jo Meray,,2,3,3,2009-07-12,,Noori,,,Rohail Hyatt,,,,,Equality
+cs_s02_e03_t04,Wasta Pyar Da,,2,3,4,2009-07-12,,Atif Aslam,,,Rohail Hyatt,,,,,Equality
+cs_s02_e03_t05,Yaar Daddi,,2,3,5,2009-07-12,,Ali Zafar,,,Rohail Hyatt,,,,,Equality
+cs_s02_e04_t01,Bulleya,,2,4,1,2009-07-26,,Riaz Ali Khan,,,Rohail Hyatt,,,,,Spirit
+cs_s02_e04_t02,Chup,,2,4,2,2009-07-26,,Zeb & Haniya,,,Rohail Hyatt,,,,,Spirit
+cs_s02_e04_t03,Mahi Ve,,2,4,3,2009-07-26,,Josh|Shafqat Amanat Ali Khan,,,Rohail Hyatt,,,,,Spirit
+cs_s02_e04_t04,Mai Ne,,2,4,4,2009-07-26,,Atif Aslam,,,Rohail Hyatt,,,,,Spirit
+cs_s02_e04_t05,Saari Raat,,2,4,5,2009-07-26,,Noori,,,Rohail Hyatt,,,,,Spirit
+cs_s02_e05_t01,Humain Kya Hua,,2,5,1,2009-08-14,,Atif Aslam,,,Rohail Hyatt,,,,,Unity
+cs_s02_e05_t02,Husn-e-Haqiqi,,2,5,2,2009-08-14,,Arieb Azhar,,,Rohail Hyatt,,,,,Unity
+cs_s02_e05_t03,Kedaar,,2,5,3,2009-08-14,,Noori,,,Rohail Hyatt,,,,,Unity
+cs_s02_e05_t04,Kuch Ajab Khail,,2,5,4,2009-08-14,,Shafqat Amanat Ali Khan,,,Rohail Hyatt,,,,,Unity
+cs_s02_e05_t05,Nahi Ray Nahi,,2,5,5,2009-08-14,,Ali Zafar,,,Rohail Hyatt,,,,,Unity
+cs_s02_e05_t06,Rona Chor Dia,,2,5,6,2009-08-14,,Zeb & Haniya|Javed Bashir,,,Rohail Hyatt,,,,,Unity
+cs_s02_e05_t07,Titliyan,,2,5,7,2009-08-14,,Strings,,,Rohail Hyatt,,,,,Unity
+cs_s03_e01_t01,Na Raindee Hai,,3,1,1,2010-06-01,,Arieb Azhar,,,Rohail Hyatt,,,,,Reason
+cs_s03_e01_t02,Ramooz-e-Ishq,,3,1,2,2010-06-01,,Abida Parveen,,,Rohail Hyatt,,,,,Reason
+cs_s03_e01_t03,Alif Allah,,3,1,3,2010-06-01,,Arif Lohar|Meesha Shafi,,,Rohail Hyatt,,,,,Reason
+cs_s03_e01_t04,Yaadein,,3,1,4,2010-06-01,,Karavan,,,Rohail Hyatt,,,,,Reason
+cs_s03_e01_t05,Bibi Sanam,,3,1,5,2010-06-01,,Zeb & Haniya,,,Rohail Hyatt,,,,,Reason
+cs_s03_e02_t01,Aisha,,3,2,1,2010-06-17,,Amanat Ali,,,Rohail Hyatt,,,,,Will
+cs_s03_e02_t02,Moomal Raano,,3,2,2,2010-06-17,,Fakir Juman Shah,,,Rohail Hyatt,,,,,Will
+cs_s03_e02_t03,Tan Dole,,3,2,3,2010-06-17,,Noori|Zeb & Haniya,,,Rohail Hyatt,,,,,Will
+cs_s03_e02_t04,Bolo Bolo,,3,2,4,2010-06-17,,Entity Paradigm,,,Rohail Hyatt,,,,,Will
+cs_s03_e02_t05,Nainaan de Aakhe,,3,2,5,2010-06-17,,Rizwan|Muazzam,,,Rohail Hyatt,,,,,Will
+cs_s03_e03_t01,Pritam,,3,3,1,2010-07-04,,Sanam Marvi,,,Rohail Hyatt,,,,,Conception
+cs_s03_e03_t02,Chori Chori,,3,3,2,2010-07-04,,Meesha Shafi,,,Rohail Hyatt,,,,,Conception
+cs_s03_e03_t03,Mori Araj Suno,,3,3,3,2010-07-04,,Tina Sani|Arieb Azhar,,,Rohail Hyatt,,,,,Conception
+cs_s03_e03_t04,Sultanat,,3,3,4,2010-07-04,,Aunty Disco Project,,,Rohail Hyatt,,,,,Conception
+cs_s03_e03_t05,Nigah-e-Darwaishan,,3,3,5,2010-07-04,,Abida Parveen,,,Rohail Hyatt,,,,,Conception
+cs_s03_e04_t01,Hor Vi Neevan Ho,,3,4,1,2010-07-14,,Noori,,,Rohail Hyatt,,,,,Form
+cs_s03_e04_t02,Kaisay Mumkin Hai,,3,4,2,2010-07-14,,Karavan,,,Rohail Hyatt,,,,,Form
+cs_s03_e04_t03,Nazaar Eyle,,3,4,3,2010-07-14,,Zeb & Haniya,,,Rohail Hyatt,,,,,Form
+cs_s03_e04_t04,Haq Maujood,,3,4,4,2010-07-14,,Sanam Marvi|Amanat Ali,,,Rohail Hyatt,,,,,Form
+cs_s03_e04_t05,Mirza Saahibaan,,3,4,5,2010-07-14,,Arif Lohar,,,Rohail Hyatt,,,,,Form
+cs_s03_e05_t01,Ay Watan ke Sajeele Jawaano,,3,5,1,2010-07-31,,Amanat Ali,,,Rohail Hyatt,,,,,Realisation
+cs_s03_e05_t02,Soz-e-Ishq,,3,5,2,2010-07-31,,Abida Parveen,,,Rohail Hyatt,,,,,Realisation
+cs_s03_e05_t03,Jana Jogi De Naal,,3,5,3,2010-07-31,,Zeb & Haniya|Rizwan|Muazzam,,,Rohail Hyatt,,,,,Realisation
+cs_s03_e05_t04,Nawai Ney,,3,5,4,2010-07-31,,Tina Sani,,,Rohail Hyatt,,,,,Realisation
+cs_s03_e05_t05,Manzil-e-Sufi,,3,5,5,2010-07-31,,Sanam Marvi,,,Rohail Hyatt,,,,,Realisation
+cs_s04_e01_t01,Daanah Pah Daanah,,4,1,1,2011-05-19,,Akhtar Chanal Zahri|Komal Rizvi,,,Rohail Hyatt,,,,,
+cs_s04_e01_t02,Ik Aarzu,,4,1,2,2011-05-19,,Jal,,,Rohail Hyatt,,,,,
+cs_s04_e01_t03,Kuch Hai,,4,1,3,2011-05-19,,Mizraab,,,Rohail Hyatt,,,,,
+cs_s04_e01_t04,Sighra Aaween,,4,1,4,2011-05-19,,Sanam Marvi,,,Rohail Hyatt,,,,,
+cs_s04_e01_t05,To Kia Hua,,4,1,5,2011-05-19,,Bilal Khan,,,Rohail Hyatt,,,,,
+cs_s04_e02_t01,Kangna,,4,2,1,2011-06-01,,Fareed Ayaz|Abu Muhammad,,,Rohail Hyatt,,,,,
+cs_s04_e02_t02,Kirkir Kirkir,,4,2,2,2011-06-01,,Sajjad Ali,,,Rohail Hyatt,,,,,
+cs_s04_e02_t03,Ni Oothan Waale,,4,2,3,2011-06-01,,Attaullah Khan Esakhelvi,,,Rohail Hyatt,,,,,
+cs_s04_e02_t04,Nindiya Re,,4,2,4,2011-06-01,,Kaavish,,,Rohail Hyatt,,,,,
+cs_s04_e02_t05,Senraan Ra Baairya,,4,2,5,2011-06-01,,Asif Hussain Samraat|Zoe Viccaji,,,Rohail Hyatt,,,,,
+cs_s04_e03_t01,Baageshri,,4,3,1,2011-06-17,,Mole,,,Rohail Hyatt,,,true,,Instrumental
+cs_s04_e03_t02,Lamha,,4,3,2,2011-06-17,,Bilal Khan,,,Rohail Hyatt,,,,,
+cs_s04_e03_t03,Ith Naheen,,4,3,3,2011-06-17,,Sanam Marvi,,,Rohail Hyatt,,,,,
+cs_s04_e03_t04,Panchi,,4,3,4,2011-06-17,,Jal|Quratulain Balouch,,,Rohail Hyatt,,,,,
+cs_s04_e03_t05,Mundari,,4,3,5,2011-06-17,,Ustaad Naseer-ud-Din Saami,,,Rohail Hyatt,,,,,
+cs_s04_e04_t01,Mandh,,4,4,1,2011-07-01,,The Sketches,,,Rohail Hyatt,,,,,
+cs_s04_e04_t02,Pyaar Naal,,4,4,2,2011-07-01,,Attaullah Khan Esakhelvi,,,Rohail Hyatt,,,,,
+cs_s04_e04_t03,Nar Bait,,4,4,3,2011-07-01,,Akhtar Chanal Zahri,,,Rohail Hyatt,,,,,
+cs_s04_e04_t04,Lambi Judaai,,4,4,4,2011-07-01,,Komal Rizvi,,,Rohail Hyatt,,,,,
+cs_s04_e04_t05,Rang Laaga,,4,4,5,2011-07-01,,Sajjad Ali|Sanam Marvi,,,Rohail Hyatt,,,,,
+cs_s04_e05_t01,Beero Binjaaro,,4,5,1,2011-07-15,,Asif Hussain Samraat,,,Rohail Hyatt,,,,,
+cs_s04_e05_t02,Mori Bangri,,4,5,2,2011-07-15,,Fareed Ayaz|Abu Muhammad,,,Rohail Hyatt,,,,,
+cs_s05_e01_t01,Paisay Da Nasha,,5,1,1,2012-05-13,,Bohemia,,,Rohail Hyatt,,,,,
+cs_s05_e01_t02,Tum Kaho,,5,1,2,2012-05-13,,Symt,,,Rohail Hyatt,,,,,
+cs_s05_e01_t03,Kamlee,,5,1,3,2012-05-13,,Hadiqa Kiani,,,Rohail Hyatt,,,,,
+cs_s05_e01_t04,Larsha Pekhawar Ta,,5,1,4,2012-05-13,,Hamayoon Khan,,,Rohail Hyatt,,,,,
+cs_s05_e01_t05,Charkha Nolakha,,5,1,5,2012-05-13,,Atif Aslam|Qayaas,,,Rohail Hyatt,,,,,
+cs_s05_e02_t01,Khabaram Raseeda,,5,2,1,2012-05-26,,Fareed Ayaz|Abu Muhammad,,,Rohail Hyatt,,,,,
+cs_s05_e02_t02,Larho Mujhey,,5,2,2,2012-05-26,,Bilal Khan,,,Rohail Hyatt,,,,,
+cs_s05_e02_t03,Rabba Sacheya,,5,2,3,2012-05-26,,Atif Aslam,,,Rohail Hyatt,,,,,
+cs_s05_e02_t04,Pere Pavandi Saan,,5,2,4,2012-05-26,,Tahir Mithu,,,Rohail Hyatt,,,,,
+cs_s05_e02_t05,Ishq Aap Bhe Awalla,,5,2,5,2012-05-26,,Chakwal Group|Meesha Shafi,,,Rohail Hyatt,,,,,
+cs_s05_e03_t01,Nindiya Ke Paar,,5,3,1,2012-06-24,,Uzair Jaswal,,,Rohail Hyatt,,,,,
+cs_s05_e03_t02,Rung,,5,3,2,2012-06-24,,Hadiqa Kiani,,,Rohail Hyatt,,,,,
+cs_s05_e03_t03,Neray Aah,,5,3,3,2012-06-24,,Overload|Rachel Viccaji,,,Rohail Hyatt,,,,,
+cs_s05_e03_t04,School Di Kitaab,,5,3,4,2012-06-24,,Bohemia,,,Rohail Hyatt,,,,,
+cs_s05_e03_t05,Taaray,,5,3,5,2012-06-24,,Bilal Khan,,,Rohail Hyatt,,,,,
+cs_s05_e04_t01,Tora Bahraam Khaana,,5,4,1,2012-07-08,,Hamayoon Khan,,,Rohail Hyatt,,,,,
+cs_s05_e04_t02,Rung,,5,4,2,2012-07-08,,Fareed Ayaz|Abu Muhammad,,,Rohail Hyatt,,,,,
+cs_s05_e04_t03,Bolay,,5,4,3,2012-07-08,,Uzair Jaswal,,,Rohail Hyatt,,,,,
+cs_s05_e04_t04,Kandyaari Dhol Geet,,5,4,4,2012-07-08,,Bohemia|Chakwal Group,,,Rohail Hyatt,,,,,
+cs_s05_e04_t05,Dholna,,5,4,5,2012-07-08,,Atif Aslam,,,Rohail Hyatt,,,,,
+cs_s05_e05_t01,Koi Labda,,5,5,1,2012-07-15,,Sanam Marvi|Symt,,,Rohail Hyatt,,,,,
+cs_s05_e05_t02,Wah Wah Jhulara,,5,5,2,2012-07-15,,Chakwal Group,,,Rohail Hyatt,,,,,
+cs_s05_e05_t03,Dasht-E-Tanhai,,5,5,3,2012-07-15,,Meesha Shafi,,,Rohail Hyatt,,,,,
+cs_s05_e05_t04,Mahi,,5,5,4,2012-07-15,,Overload,,,Rohail Hyatt,,,,,
+cs_s05_e05_t05,Seher,,5,5,5,2012-07-15,,Farhan Rais Khan,,,Rohail Hyatt,,,true,,Instrumental
+cs_s06_e00_t01,Jogi,,6,,1,2013-10-20,,Muazzam Ali Khan|Fariha Pervez,,,Rohail Hyatt,,,,,Season Opener
+cs_s06_e00_t02,Laili Jaan,,6,,2,2013-10-24,,Zeb & Haniya,,,Rohail Hyatt,,,,,Season Opener
+cs_s06_e01_t01,Khayaal,,6,1,1,2013-10-26,,Umair Jaswal,,,Rohail Hyatt,,,,,
+cs_s06_e01_t02,Babu Bhai,,6,1,2,2013-10-26,,Ali Azmat,,,Rohail Hyatt,,,,,
+cs_s06_e01_t03,Rabba Ho,,6,1,3,2013-10-26,,Saieen Zahoor|Sanam Marvi,,,Rohail Hyatt,,,,,
+cs_s06_e02_t01,Laage Re Nain,,6,2,1,2013-11-23,,Ayesha Omer,,,Rohail Hyatt,,,,,
+cs_s06_e02_t02,Tori Chab / Abhogi,,6,2,2,2013-11-23,,Rustam Fateh Ali Khan|Sumru Agiryuruyen,,,Rohail Hyatt,,,,,
+cs_s06_e02_t03,Ishq Di Booti,,6,2,3,2013-11-23,,Abrar-ul-Haq,,,Rohail Hyatt,,,,,
+cs_s06_e03_t01,Neer Bharan,,6,3,1,2013-12-07,,Zara Madani|Muazzam Ali Khan,,,Rohail Hyatt,,,,,
+cs_s06_e03_t02,Channa,,6,3,2,2013-12-07,,Atif Aslam,,,Rohail Hyatt,,,,,
+cs_s06_e03_t03,Yaar Vekho,,6,3,3,2013-12-07,,Sanam Marvi,,,Rohail Hyatt,,,,,
+cs_s06_e03_t04,Raat Gaey,,6,3,4,2013-12-07,,Zoe Viccaji,,,Rohail Hyatt,,,,,
+cs_s06_e04_t01,Aamay Bhashalli Rey,,6,4,1,2013-12-21,,Alamgir|Fariha Pervez,,,Rohail Hyatt,,,,,
+cs_s06_e04_t02,Laila O Laila,,6,4,2,2013-12-21,,Rostam Mirlashari,,,Rohail Hyatt,,,,,
+cs_s06_e04_t03,Ishq Kinara,,6,4,3,2013-12-21,,Sumru Agiryuruyen|Zoe Viccaji,,,Rohail Hyatt,,,,,
+cs_s06_e04_t04,Mahi Gal,,6,4,4,2013-12-21,,Asad Abbas|Fariha Pervez,,,Rohail Hyatt,,,,,
+cs_s06_e05_t01,Miyan Ki Malhaar,,6,5,1,2014-01-05,,Ayesha Omer|Fariha Pervez|Zara Madani,,,Rohail Hyatt,,,,,
+cs_s06_e05_t02,Moray Naina,,6,5,2,2014-01-05,,Zara Madani,,,Rohail Hyatt,,,,,
+cs_s06_e05_t03,Sawaal - Kande Utte,,6,5,3,2014-01-05,,Muazzam Mujahid Ali Khan|Ali Azmat,,,Rohail Hyatt,,,,,
+cs_s06_e05_t04,Allah Hu,,6,5,4,2014-01-05,,Abrar-ul-Haq|Saieen Zahoor,,,Rohail Hyatt,,,,,
+cs_s07_e01_t01,Sab Aakho Ali Ali,,7,1,1,2014-09-20,,Asrar,,,Strings,,,,,
+cs_s07_e01_t02,Tum Naraz Ho,,7,1,2,2014-09-20,,Sajjad Ali,,,Strings,,,,,
+cs_s07_e01_t03,Lai Beqadaraan Naal Yaari,,7,1,3,2014-09-20,,Niazi Brothers,,,Strings,,,,,
+cs_s07_e01_t04,Mein Sufi Hoon,,7,1,4,2014-09-20,,Abida Parveen|Ustad Raees Khan,,,Strings,,,,,
+cs_s07_e02_t01,Washmallay,,7,2,1,2014-09-27,,Akhtar Chanal Zahri|Komal Rizvi|Momin Durrani,,,Strings,,,,,
+cs_s07_e02_t02,Phool Banro,,7,2,2,2014-09-27,,Abbas Ali Khan|Humira Channa,,,Strings,,,,,
+cs_s07_e02_t03,Chehra,,7,2,3,2014-09-27,,Zohaib Hassan,,,Strings,,,,,
+cs_s07_e02_t04,Charkha,,7,2,4,2014-09-27,,Javed Bashir,,,Strings,,,,,
+cs_s07_e03_t01,Jhoolay Laal,,7,3,1,2014-10-04,,Fariha Pervez|Sajjad Ali,,,Strings,,,,,
+cs_s07_e03_t02,Sunn Ve Balori,,7,3,2,2014-10-04,,Meesha Shafi,,,Strings,,,,,
+cs_s07_e03_t03,Nadiya,,7,3,3,2014-10-04,,Jimmy Khan|Rahma Ali,,,Strings,,,,,
+cs_s07_e03_t04,Dost,,7,3,4,2014-10-04,,Abida Parveen,,,Strings,,,,,
+cs_s07_e04_t01,Shakar Wandaan Re,,7,4,1,2014-10-11,,Asrar,,,Strings,,,,,
+cs_s07_e04_t02,Ambwa Talay,,7,4,2,2014-10-11,,Humaira Channa|Javed Bashir,,,Strings,,,,,
+cs_s07_e04_t03,Dheeray Dheeray,,7,4,3,2014-10-11,,Zohaib Hassan,,,Strings,,,,,
+cs_s07_e04_t04,Bone Shaker,,7,4,4,2014-10-11,,Usman Riaz,,,Strings,,,true,,Instrumental
+cs_s07_e05_t01,Mujhay Baar Baar,,7,5,1,2014-10-18,,Abbas Ali Khan,,,Strings,,,,,
+cs_s07_e05_t02,Pehla Pyar,,7,5,2,2014-10-18,,Jimmy Khan,,,Strings,,,,,
+cs_s07_e05_t03,Mitti Da Pehlwan,,7,5,3,2014-10-18,,Jawad Ahmad,,,Strings,,,,,
+cs_s07_e05_t04,Kheryaan De Naal,,7,5,4,2014-10-18,,Niazi Brothers,,,Strings,,,,,
+cs_s07_e06_t01,Yaad,,7,6,1,2014-11-15,,Javed Bashir,,,Strings,,,,,
+cs_s07_e06_t02,Chaap Tilak,,7,6,2,2014-11-15,,Abida Parveen|Rahat Fateh Ali Khan,,,Strings,,,,,
+cs_s07_e06_t03,Jaana,,7,6,3,2014-11-15,,Zohaib Hassan|Zoe Viccaji,,,Strings,,,,,
+cs_s07_e06_t04,Descent to the Ocean Floor,,7,6,4,2014-11-15,,Usman Riaz,,,Strings,,,true,,Instrumental
+cs_s07_e07_t01,Suth Gaana,,7,7,1,2014-11-22,,Sajjad Ali,,,Strings,,,,,
+cs_s07_e07_t02,Pani Da Bulbula,,7,7,2,2014-11-22,,Abrar-ul-Haq,,,Strings,,,,,
+cs_s07_e07_t03,Za Sta Pashan Na Yam,,7,7,3,2014-11-22,,Naseer|Shahab,,,Strings,,,,,
+cs_s07_e07_t04,Hans Dhuni,,7,7,4,2014-11-22,,Ustad Raees Khan,,,Strings,,,true,,Instrumental
+cs_s08_e00_t01,Sohni Dharti,,8,,1,2015-08-04,,Season's Vocalists,,,Strings,,,,,Season Opener
+cs_s08_e01_t01,Aankharli Pharookai,,8,1,1,2015-08-16,,Karam Abbas|Mai Dhai,,,Strings,,,,,
+cs_s08_e01_t02,Bewajah,,8,1,2,2015-08-16,,Nabeel Shaukat Ali,,,Strings,,,,,
+cs_s08_e01_t03,Sayon,,8,1,3,2015-08-16,,Mekaal Hasan Band,,,Strings,,,,,
+cs_s08_e01_t04,Tajdar-e-Haram,,8,1,4,2015-08-16,,Atif Aslam,,,Strings,,,,,
+cs_s08_e02_t01,Sakal Ban,,8,2,1,2015-08-22,,Rizwan|Muazzam Ali Khan,,,Strings,,,,,
+cs_s08_e02_t02,Sammi Meri Waar,,8,2,2,2015-08-22,,Qurat-ul-Ain Balouch|Umair Jaswal,,,Strings,,,,,
+cs_s08_e02_t03,Chiryan da Chamba,,8,2,3,2015-08-22,,Suraiya Khanum|Anwar Maqsood,,,Strings,,,,,
+cs_s08_e02_t04,Rockstar,,8,2,4,2015-08-22,,Ali Zafar,,,Strings,,,,,
+cs_s08_e03_t01,Man Aamadeh Am,,8,3,1,2015-08-29,,Atif Aslam|Gul Panra,,,Strings,,,,,
+cs_s08_e03_t02,Umran Langiyaan,,8,3,2,2015-08-29,,Ali Sethi|Nabeel Shaukat Ali,,,Strings,,,,,
+cs_s08_e03_t03,Neun La Leya,,8,3,3,2015-08-29,,Kaavish,,,Strings,,,,,
+cs_s08_e03_t04,Rung Jindri,,8,3,4,2015-08-29,,Arif Lohar,,,Strings,,,,,
+cs_s08_e04_t01,Rabba Ho,,8,4,1,2015-09-05,,Mulazim Hussain,,,Strings,,,,,
+cs_s08_e04_t02,Khari Neem,,8,4,2,2015-09-05,,Siege,,,Strings,,,,,
+cs_s08_e04_t03,Piya Dehkan Ko,,8,4,3,2015-09-05,,Nafees Ahmed Khan|Ustad Hamid Ali Khan,,,Strings,,,,,
+cs_s08_e04_t04,Ae Dil,,8,4,4,2015-09-05,,Ali Zafar|Sara Haider,,,Strings,,,,,
+cs_s08_e05_t01,Hina Ki Khushbu,,8,5,1,2015-09-13,,Asim Azhar|Samra Khan,,,Strings,,,,,
+cs_s08_e05_t02,Khalis Makhan,,8,5,2,2015-09-13,,Bakhshi Brothers,,,Strings,,,,,
+cs_s08_e05_t03,Kinaray,,8,5,3,2015-09-13,,Mekaal Hasan Band,,,Strings,,,,,
+cs_s08_e05_t04,Rangeela,,8,5,4,2015-09-13,,Ali Azmat,,,Strings,,,,,
+cs_s08_e06_t01,Ve Baneya,,8,6,1,2015-09-19,,Fizza Javed|Mulazim,,,Strings,,,,,
+cs_s08_e06_t02,Hare Hare Baans,,8,6,2,2015-09-19,,Rizwan|Muazzam|Shazia Manzoor,,,Strings,,,,,
+cs_s08_e06_t03,Jiya Karay,,8,6,3,2015-09-19,,Sara Raza|Ali Haider,,,Strings,,,,,
+cs_s08_e06_t04,Kadi Aao N,,8,6,4,2015-09-19,,Atif Aslam|Mai Dhai,,,Strings,,,,,
+cs_s08_e07_t01,Armaan,,8,7,1,2015-10-03,,Alycia Dias|Siege,,,Strings,,,,,
+cs_s08_e07_t02,Ajj Din Vehre Vich,,8,7,2,2015-10-03,,Ali Zafar,,,Strings,,,,,
+cs_s08_e07_t03,Dil Jale,,8,7,3,2015-10-03,,Malang Party,,,Strings,,,,,
+cs_s08_e07_t04,Aaj Jaane Ki Zid Na Karo,,8,7,4,2015-10-03,,Farida Khanum,,,Strings,,,,,
+cs_s09_e00_t01,Zalima Coca Cola Pila De,,9,,1,2016-08-03,,Meesha Shafi|Umair Jaswal,,,Strings,,,,,Season Opener
+cs_s09_e00_t02,Aye Rah-E-Haq Ke Shaheedo,,9,,2,2016-08-05,,Season's Vocalists,,,Strings,,,,,Season Opener
+cs_s09_e01_t01,Sasu Mangay,,9,1,1,2016-08-12,,Naseebo Lal|Umair Jaswal,,,Strings,,,,,
+cs_s09_e01_t02,Janay Na Tu,,9,1,2,2016-08-12,,Ali Khan,,,Strings,,,,,
+cs_s09_e01_t03,Aja Re Moray Saiyaan,,9,1,3,2016-08-12,,Noori|Zeb Bangash,,,Strings,,,,,
+cs_s09_e01_t04,Aaqa,,9,1,4,2016-08-12,,Abida Parveen|Ali Sethi,,,Strings,,,,,
+cs_s09_e02_t01,Bholay Bhalay,,9,2,1,2016-08-19,,Meesha Shafi,,,Strings,,,,,
+cs_s09_e02_t02,Afreen Afreen,,9,2,2,2016-08-19,,Momina Mustehsan|Rahat Fateh Ali Khan,,,Strings,,,,,
+cs_s09_e02_t03,Baliye (Laung Gawacha),,9,2,3,2016-08-19,,Haroon Shahid|Quratulain Balouch,,,Strings,,,,,
+cs_s09_e02_t04,Man Kunto Maula,,9,2,4,2016-08-19,,Ali Azmat|Javed Bashir,,,Strings,,,,,
+cs_s09_e03_t01,Khaki Banda,,9,3,1,2016-08-26,,Ahmed Jahanzeb|Umair Jaswal,,,Strings,,,,,
+cs_s09_e03_t02,Dilruba Na Raazi,,9,3,2,2016-08-26,,Faakhir Mehmood|Zeb Bangash,,,Strings,,,,,
+cs_s09_e03_t03,Tu Hi Tu,,9,3,3,2016-08-26,,Mehwish Hayat|Shiraz Uppal,,,Strings,,,,,
+cs_s09_e03_t04,Maula-i Kull,,9,3,4,2016-08-26,,Abida Parveen,,,Strings,,,,,
+cs_s09_e04_t01,Uddi Ja,,9,4,1,2016-09-02,,Mohsin Abbas Haider,,,Strings,,,,,
+cs_s09_e04_t02,Aaya Laariye,,9,4,2,2016-09-02,,Meesha Shafi|Naeem Abbas Rufi,,,Strings,,,,,
+cs_s09_e04_t03,Paar Chanaa De,,9,4,3,2016-09-02,,Shilpa Rao|Noori,,,Strings,,,,,
+cs_s09_e04_t04,Ala Baali,,9,4,4,2016-09-02,,Jabar Abbas|Nirmal Roy,,,Strings,,,,,
+cs_s09_e05_t01,Main Raasta,,9,5,1,2016-09-09,,Junaid Khan|Momina Mustehsan,,,Strings,,,,,
+cs_s09_e05_t02,Shamaan Pai Gaiyaan/Kee Dam Da Bharosa,,9,5,2,2016-09-09,,Kashif Ali|Rachel Viccaji,,,Strings,,,,,
+cs_s09_e05_t03,Sadaa,,9,5,3,2016-09-09,,Rahat Fateh Ali Khan,,,Strings,,,,,
+cs_s09_e05_t04,Jhalliya,,9,5,4,2016-09-09,,Javed Bashir|Masuma Anwar|Shahzad Nawaz,,,Strings,,,,,
+cs_s09_e06_t01,Meri Meri,,9,6,1,2016-09-16,,Rizwan Butt|Sara Haider,,,Strings,,,,,
+cs_s09_e06_t02,Tera Woh Pyar (Nawazishein Karam),,9,6,2,2016-09-16,,Asim Azhar|Momina Mustehsan,,,Strings,,,,,
+cs_s09_e06_t03,Anokha Laadla,,9,6,3,2016-09-16,,Basit Ali|Damia Farooq,,,Strings,,,,,
+cs_s09_e06_t04,Lagi Bina / Chal Mele Noon Challiye,,9,6,4,2016-09-16,,Saieen Zahoor|Sanam Marvi,,,Strings,,,,,
+cs_s09_e07_t01,Sab Jag Soye,,9,7,1,2016-09-23,,Shuja Haider|Quratulain Balouch,,,Strings,,,,,Season Finale
+cs_s09_e07_t02,Tu Kuja Man Kuja,,9,7,2,2016-09-23,,Rafaqat Ali Khan|Shiraz Uppal,,,Strings,,,,,Season Finale
+cs_s09_e07_t03,Nimma Nimma,,9,7,3,2016-09-23,,Shani Arshad,,,Strings,,,,,Season Finale
+cs_s09_e07_t04,O Re,,9,7,4,2016-09-23,,Noori,,,Strings,,,,,Season Finale
+cs_s09_e07_t05,Dil Kamla,,9,7,5,2016-09-23,,Natasha Khan|Faakhir Mehmood,,,Strings,,,,,Season Finale
+cs_s09_e07_t06,Rang,,9,7,6,2016-09-23,,Amjad Sabri|Rahat Fateh Ali Khan,,,Strings,,,,,Season Finale
+cs_s10_e00_t01,The National Anthem of Pakistan,,10,,1,2017-08-04,,Season's Vocalists,,,Strings,,,,,Season Opener
+cs_s10_e01_t01,Allahu Akbar,,10,1,1,2017-08-11,,Ahmed Jahanzeb|Shafqat Amanat Ali Khan,,,Strings,,,,,
+cs_s10_e01_t02,Chaa Rahi Kaali Ghata,,10,1,2,2017-08-11,,Amanat Ali|Hina Nasrullah,,,Strings,,,,,
+cs_s10_e01_t03,Muntazir,,10,1,3,2017-08-11,,Danyal Zafar|Momina Mustehsan,,,Strings,,,,,
+cs_s10_e01_t04,Ranjish Hi Sahi,,10,1,4,2017-08-11,,Ali Sethi,,,Strings,,,,,
+cs_s10_e02_t01,Tinak Dhin,,10,2,1,2017-08-18,,Ali Hamza|Ali Sethi|Waqar Ehsin,,,Strings,,,,,
+cs_s10_e02_t02,Sayonee,,10,2,2,2017-08-18,,Ali Noor|Junoon|Rahat Fateh Ali Khan,,,Strings,,,,,
+cs_s10_e02_t03,Faasle,,10,2,3,2017-08-18,,Kaavish|Quratulain Balouch,,,Strings,,,,,
+cs_s10_e02_t04,Jaan-e-Bahaaraan,,10,2,4,2017-08-18,,Ali Zafar,,,Strings,,,,,
+cs_s10_e03_t01,Laal Meri Pat,,10,3,1,2017-08-25,,Akbar Ali|Arieb Azhar|Quratulain Balouch,,,Strings,,,,,
+cs_s10_e03_t02,Ronay Na Diya,,10,3,2,2017-08-25,,Sajjad Ali|Zaw Ali,,,Strings,,,,,
+cs_s10_e03_t03,Baazi,,10,3,3,2017-08-25,,Aima Baig|Sahir Ali Bagga,,,Strings,,,,,
+cs_s10_e03_t04,Mujhse Pehli Si Mohabbat,,10,3,4,2017-08-25,,Humaira Channa|Nabeel Shaukat Ali,,,Strings,,,,,
+cs_s10_e04_t01,Naina Moray,,10,4,1,2017-09-01,,Aamir Zaki|Akbar Ali|Javed Bashir,,,Strings,,,,,
+cs_s10_e04_t02,Dekh Tera Kya/Latthay Di Chaadar,,10,4,2,2017-09-01,,Farhan Saeed|Quratulain Balouch,,,Strings,,,,,
+cs_s10_e04_t03,Julie,,10,4,3,2017-09-01,,Ali Zafar|Danyal Zafar,,,Strings,,,,,
+cs_s10_e04_t04,Jindjaani,,10,4,4,2017-09-01,,Ali Hamza|Nirmal Roy,,,Strings,,,,,
+cs_s10_e05_t01,Sab Maya Hai,,10,5,1,2017-09-08,,Attaullah Khan Esakhelvi|Sanwal Esakhelvi,,,Strings,,,,,
+cs_s10_e05_t02,Rangrez,,10,5,2,2017-09-08,,Rahat Fateh Ali Khan,,,Strings,,,,,
+cs_s10_e05_t03,Ujaalon Mein,,10,5,3,2017-09-08,,Faiza Mujahid|Faraz Anwar,,,Strings,,,,,
+cs_s10_e05_t04,Bol,,10,5,4,2017-09-08,,Shafqat Amanat Ali Khan,,,Strings,,,,,
+cs_s10_e06_t01,Dam Mast Qalandar,,10,6,1,2017-09-15,,Jabar Abbas|Umair Jaswal,,,Strings,,,,,
+cs_s10_e06_t02,Yo Soch,,10,6,2,2017-09-15,,Ali Zafar|Natasha Khan,,,Strings,,,,,
+cs_s10_e06_t03,Kaatay Na Katay,,10,6,3,2017-09-15,,Aima Baig|Humera Arshad|Rachel Viccaji,,,Strings,,,,,
+cs_s10_e06_t04,Ghoom Taana,,10,6,4,2017-09-15,,Irteassh|Momina Mustehsan,,,Strings,,,,,
+cs_s10_e07_t01,Tera Naam,,10,7,1,2017-09-21,,Sajjad Ali,,,Strings,,,,,
+cs_s10_e07_t02,Baanware,,10,7,2,2017-09-21,,Aima Baig|Shuja Haider,,,Strings,,,,,
+cs_s10_e07_t03,Maula Tera Noor,,10,7,3,2017-09-21,,Shafqat Amanat Ali Khan,,,Strings,,,,,
+cs_s10_e07_t04,Us Rah Par,,10,7,4,2017-09-21,,Ali Hamza|Ali Zafar|Strings,,,Strings,,,,,
+cs_s11_e00_t01,Hum Dekhenge,,11,,1,2018-07-22,,Season's Vocalists,,,Strings,,,,,Season Opener
+cs_s11_e01_t01,Shikwa / Jawab-e-Shikwa,,11,1,1,2018-08-10,,Natasha Baig|Fareed Ayaz|Abu Muhammad Qawwal|Brothers,,,Strings,,,,,Naaz
+cs_s11_e01_t02,Baalkada,,11,1,2,2018-08-10,,Lucky|Naghma|Jimmy Khan,,,Strings,,,,,Naaz
+cs_s11_e01_t03,Rap Hai Saara,,11,1,3,2018-08-10,,Young Desi|Lyari Underground,,,Strings,,,,,Naaz
+cs_s11_e01_t04,Main Irada,,11,1,4,2018-08-10,,Haniya Aslam|Rachel Viccaji|Shamu Bai|Ariana|Amrina,,,Strings,,,,,Naaz
+cs_s11_e02_t01,Runaway,,11,2,1,2018-08-17,,Krewella|Riaz Qadri|Ghulam Ali Qadri,,,Strings,,,,,Zeenat
+cs_s11_e02_t02,Gaddiye,,11,2,2,2018-08-17,,Asrar|Attaullah Khan Esakhelvi,,,Strings,,,,,Zeenat
+cs_s11_e02_t03,Rasha Mama,,11,2,3,2018-08-17,,Zarsanga|Khumariyaan|Gul Panrra,,,Strings,,,,,Zeenat
+cs_s11_e02_t04,Ghoom Charakhra,,11,2,4,2018-08-17,,Abida Parveen|Ali Azmat,,,Strings,,,,,Zeenat
+cs_s11_e03_t01,Roye Roye,,11,3,1,2018-08-24,,Momina Mustehsan|Sahir Ali Bagga,,,Strings,,,,,Rung
+cs_s11_e03_t02,Allah Karesi,,11,3,2,2018-08-24,,Attaullah Khan Esakhelvi|Sanwal Esakhelvi,,,Strings,,,,,Rung
+cs_s11_e03_t03,Piya Ghar Aaya,,11,3,3,2018-08-24,,Fareed Ayaz|Abu Muhammad Qawwal|Brothers,,,Strings,,,,,Rung
+cs_s11_e04_t01,Aatish,,11,4,1,2018-08-31,,Aima Baig|Shuja Haider,,,Strings,,,,,Gulistan
+cs_s11_e04_t02,Nami Danam,,11,4,2,2018-08-31,,Chand Tara Orchestra,,,Strings,,,,,Gulistan
+cs_s11_e04_t03,Mahi Aaja,,11,4,3,2018-08-31,,Asim Azhar|Momina Mustehsan,,,Strings,,,,,Gulistan
+cs_s11_e05_t01,Malang,,11,5,1,2018-09-07,,Aima Baig|Sahir Ali Bagga,,,Strings,,,,,Mauj
+cs_s11_e05_t02,Dastaan-e-Moomal Rano,,11,5,2,2018-09-07,,The Sketches,,,Strings,,,,,Mauj
+cs_s11_e05_t03,Dil Hai Pakistani,,11,5,3,2018-09-07,,Ali Azmat|Mangal|Darehan|Shayan,,,Strings,,,,,Mauj
+cs_s11_e06_t01,Ilallah,,11,6,1,2018-09-28,,Sounds of Kolachi,,,Strings,,,,,Zamana
+cs_s11_e06_t02,Hawa Hawa,,11,6,2,2018-09-28,,Gul Panrra|Hasan Jahangir,,,Strings,,,,,Zamana
+cs_s11_e06_t03,Tere Liye,,11,6,3,2018-09-28,,Ali Azmat|Riaz Qadri|Ghulam Ali Qadri,,,Strings,,,,,Zamana
+cs_s11_e07_t01,Jind Mahiya,,11,7,1,2018-10-05,,Shuja Haider,,,Strings,,,,,Sahil
+cs_s11_e07_t02,Ballay Ballay,,11,7,2,2018-10-05,,Abrar-ul-Haq|Aima Baig,,,Strings,,,,,Sahil
+cs_s11_e07_t03,Ya Qurban,,11,7,3,2018-10-05,,Khumariyaan,,,Strings,,,,,Sahil
+cs_s11_e07_t04,Balaghal Ula Be Kamalihi,,11,7,4,2018-10-05,,Abida Parveen,,,Strings,,,,,Sahil
+cs_s11_e08_t01,Wah Jo Kalaam,,11,8,1,2018-10-12,,Asrar|Vishnu|Shamu Bai,,,Strings,,,,,Jashan
+cs_s11_e08_t02,Luddi Hai Jamalo,,11,8,2,2018-10-12,,Ali Sethi|Humaira Arshad,,,Strings,,,,,Jashan
+cs_s11_e08_t03,Apna Gham,,11,8,3,2018-10-12,,Bilal Khan|Mishal Khawaja,,,Strings,,,,,Jashan
+cs_s11_e09_t01,Dildar Sadqay,,11,9,1,2018-10-19,,Elizabeth Rai|Jawad Ahmad,,,Strings,,,,,Aftab
+cs_s11_e09_t02,Aurangzeb,,11,9,2,2018-10-19,,Mughal-e-Funk,,,Strings,,,true,,Aftab; Instrumental
+cs_s11_e09_t03,Ko Ko Korina,,11,9,3,2018-10-19,,Ahad Raza Mir|Momina Mustehsan,,,Strings,,,,,Aftab
+cs_s12_e00_t01,Wohi Khuda Hai,,12,,1,2019-10-11,,Atif Aslam,,,Rohail Hyatt,,,,,Season Opener
+cs_s12_e01_t01,Dam Mastam,,12,1,1,2019-10-18,,Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,
+cs_s12_e01_t02,Ram Pam,,12,1,2,2019-10-18,,Shahab Hussain|Zoe Viccaji,,,Rohail Hyatt,,,,,
+cs_s12_e01_t03,Maahi Diyaan Jhokaan,,12,1,3,2019-10-18,,Barkat Jamal Fakir Troupe,,,Rohail Hyatt,,,,,
+cs_s12_e02_t01,Billo,,12,2,1,2019-10-25,,Abrar-ul-Haq,,,Rohail Hyatt,,,,,
+cs_s12_e02_t02,Saiyaan,,12,2,2,2019-10-25,,Rachel Viccaji|Shuja Haider,,,Rohail Hyatt,,,,,
+cs_s12_e02_t03,Roshe,,12,2,3,2019-10-25,,Zeb Bangash,,,Rohail Hyatt,,,,,
+cs_s12_e03_t01,Chal Raha Hoon,,12,3,1,2019-11-08,,Umair Jaswal,,,Rohail Hyatt,,,,,
+cs_s12_e03_t02,Mubarik Mubarik,,12,3,2,2019-11-08,,Atif Aslam|Banur's Band,,,Rohail Hyatt,,,,,
+cs_s12_e03_t03,Aadam,,12,3,3,2019-11-08,,Fareed Ayaz|Abu Muhammad with Humnawa,,,Rohail Hyatt,,,,,
+cs_s12_e04_t01,Gulon Main Rang,,12,4,1,2019-11-15,,Ali Sethi,,,Rohail Hyatt,,,,,
+cs_s12_e04_t02,Dhola,,12,4,2,2019-11-15,,Aima Baig|Sahir Ali Bagga,,,Rohail Hyatt,,,,,
+cs_s12_e04_t03,Hairaan Hua,,12,4,3,2019-11-15,,Sanam Marvi,,,Rohail Hyatt,,,,,
+cs_s12_e05_t01,Balma,,12,5,1,2019-11-22,,Fariha Parvez,,,Rohail Hyatt,,,,,
+cs_s12_e05_t02,Heeray,,12,5,2,2019-11-22,,Aima Baig|Rahat Fateh Ali Khan,,,Rohail Hyatt,,,,,
+cs_s12_e05_t03,Daachi Waaliya,,12,5,3,2019-11-22,,Hadiqa Kiani,,,Rohail Hyatt,,,,,
+cs_s12_e05_t04,Mram Mram,,12,5,4,2019-11-22,,Shamali Afghan,,,Rohail Hyatt,,,,,
+cs_s12_e06_t01,Bo Giyam,,12,6,1,2019-11-29,,Kashif Din|Nimra Rafiq,,,Rohail Hyatt,,,,,
+cs_s12_e06_t02,Mundiya,,12,6,2,2019-11-29,,Ali Sethi|Qurat-ul-Ain Balouch,,,Rohail Hyatt,,,,,
+cs_s12_e06_t03,Aaye Kuch Abr,,12,6,3,2019-11-29,,Atif Aslam,,,Rohail Hyatt,,,,,
+cs_s12_e06_t04,Tiri Pawanda,,12,6,4,2019-11-29,,Harsakhiyan,,,Rohail Hyatt,,,,,
+cs_s13_e01_t01,Na Tutteya Ve,,13,1,1,2020-12-04,,Meesha Shafi|Fariha Pervez|Sanam Marvi|Sehar Gul Khan|Wajiha Naqvi|Zara Madani,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e01_t02,Dil Khirki,,13,1,2,2020-12-04,,Mehdi Maloof,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e01_t03,Jaag Rahi,,13,1,3,2020-12-04,,Ali Noor|Fariha Pervez,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e02_t01,Dil Tarpe,,13,2,1,2020-12-11,,Rahat Fateh Ali Khan|Zara Madani,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e02_t02,Yaqeen,,13,2,2,2020-12-11,,Wajiha Naqvi,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e02_t03,Gal Sunn,,13,2,3,2020-12-11,,Ali Pervez Mehdi|Meesha Shafi,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e03_t01,Ishq Da Kukkar,,13,3,1,2020-12-17,,Sehar Gul Khan,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e03_t02,Pardesiya,,13,3,2,2020-12-17,,Asim Raza,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e03_t03,Har Funn Maula,,13,3,3,2020-12-17,,Sanam Marvi|Umair Jaswal,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e04_t01,Anbhol,,13,4,1,2020-12-25,,Sanam Marvi,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e04_t02,Megh,,13,4,2,2020-12-25,,Aizaz Sohail,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s13_e04_t03,Saari Dunya,,13,4,3,2020-12-25,,Bohemia,,,Rohail Hyatt,,,,,Coke Studio 2020 (Season 13)
+cs_s14_e00_t01,Shuru Karein,,14,,1,2022-01-09,,Rovalio,,,Xulfi,,,,,Season Opener
+cs_s14_e00_t02,Tu Jhoom,,14,,2,2022-01-14,,Abida Parveen|Naseebo Lal,,,Xulfi,,,,,Season Opener
+cs_s14_e01_t01,Kana Yaari,,14,1,1,2022-01-19,,Kaifi Khalil|Eva B|Abdul Wahab Bugti,,,Xulfi,,,,,
+cs_s14_e01_t02,Sajan Das Na,,14,1,2,2022-01-23,,Atif Aslam|Momina Mustehsan,,,Xulfi,,,,,
+cs_s14_e01_t03,Mehram,,14,1,3,2022-01-28,,Asfar Hussain|Arooj Aftab,,,Xulfi,,,,,
+cs_s14_e02_t01,Neray Neray Vas,,14,2,1,2022-02-01,,Soch|Butt Brothers,,,Xulfi,,,,,
+cs_s14_e02_t02,Pasoori,,14,2,2,2022-02-06,,Ali Sethi|Shae Gill,,,Xulfi,,,,,
+cs_s14_e02_t03,Ye Dunya,,14,2,3,2022-02-12,,Karakoram|Talha Anjum|Faris Shafi,,,Xulfi,,,,,
+cs_s14_e03_t01,Peechay Hutt,,14,3,1,2022-02-19,,Hasan Raheem|Justin Bibis|Talal Qureshi,,,Xulfi,,,,,
+cs_s14_e03_t02,Muaziz Saarif,,14,3,2,2022-02-27,,Faris Shafi|Meesha Shafi,,,Xulfi,,,,,
+cs_s14_e03_t03,Beparwah,,14,3,3,2022-03-07,,Momina Mustehsan,,,Xulfi,,,,,
+cs_s14_e04_t01,Thagyan,,14,4,1,2022-03-13,,Quratulain Baloch|Zain|Zohaib,,,Xulfi,,,,,
+cs_s14_e04_t02,Go,,14,4,2,2022-03-18,,Abdullah Siddiqui|Atif Aslam,,,Xulfi,,,,,
+cs_s14_e04_t03,Phir Milenge,,14,4,3,2022-03-22,,Faisal Kapadia|Young Stunners,,,Xulfi,,,,,
+cs_s15_e01_t01,Aayi Aayi,,15,1,1,2024-04-14,,Noman Ali Rajper|Babar Mangi|Marvi Saiban,,,Xulfi,,,,,
+cs_s15_e01_t02,2AM,,15,1,2,2024-04-21,,Star Shah|Zeeshan Ali,,,Xulfi,,,,,
+cs_s15_e01_t03,Maghron La,,15,1,3,2024-04-28,,Sabri Sisters|Rozeo,,,Xulfi,,,,,
+cs_s15_e02_t01,Harkalay,,15,2,1,2024-05-05,,REHMA|Zahoor,,,Xulfi,,,,,
+cs_s15_e02_t02,O Yaara,,15,2,2,2024-05-12,,Abdul Hannan|Kaavish,,,Xulfi,,,,,
+cs_s15_e02_t03,Chal Chaliye,,15,2,3,2024-05-19,,Farheen Raza Jaffry|Sajjad Ali,,,Xulfi,,,,,
+cs_s15_e03_t01,Blockbuster,,15,3,1,2024-05-25,,Faris Shafi|Umair Butt|Gharwi Group,,,Xulfi,,,,,
+cs_s15_e03_t02,Jhol,,15,3,2,2024-06-14,,Annural Khalid|Maanu,,,Xulfi,,,,,
+cs_s15_e03_t03,Turri Jandi,,15,3,3,2024-06-21,,Shazia Manzoor|Hasan Raheem,,,Xulfi,,,,,
+cs_s15_e04_t01,Piya Piya Calling,,15,4,1,2024-06-28,,Kaifi Khalil|Karpe|Amanda Delara,,,Xulfi,,,,,
+cs_s15_e04_t02,Mehman,,15,4,2,2024-07-04,,Zeb Bangash|Noorima Rehan|Nizam Torwali,,,Xulfi,,,,,
