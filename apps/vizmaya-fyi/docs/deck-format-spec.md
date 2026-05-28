@@ -90,7 +90,7 @@ This is one full-bleed div with `position: fixed; inset: 0; pointer-events: none
 | `quote`     | Pull quote                                    | `text`, optional `attribution`             |
 | `keyValue`  | Tiny tabular insets (3-row max)               | `items: [{key, value, color?}]`, optional `title` |
 | `table`     | Full tabular display                          | `columns`, `rows`                          |
-| `mapbox`    | Inline map (when the story needs ONE map)     | same shape as existing `map:` block        |
+| `map`       | Inline interactive map (in a foreground region) | `center`, `zoom`; optional `pitch`/`bearing`/`pins`/`regions`/`heatmap`/`textLabels` (same shape as the legacy section-level `map:` block) |
 | `embed`     | Iframe (videos, tweets, third-party widgets)  | `src`, optional `poster`, `aspect`, `sandbox` |
 | `video`     | Native `<video>`                              | `src`, optional `poster`, `loop`, `muted`, `autoplay` |
 | `rive`      | Rive animation                                | `src`, optional `viewModel`                |
