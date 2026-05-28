@@ -143,6 +143,17 @@ export async function resolveEntities(
   return [...new Set(resolvedIds)];
 }
 
+// Single-entity resolver, exposed so the squad ingest can map each player's
+// `club_name_raw` to an existing `entities(type='team')` row without going
+// through the article tagger's bulk shape.
+export async function resolveTeamName(
+  supabase: SupabaseClient,
+  name: string
+): Promise<string | null> {
+  const cache = await loadEntityCache(supabase);
+  return resolveOne(cache, 'team', name);
+}
+
 export function clearEntityCache() {
   entityCache = null;
 }

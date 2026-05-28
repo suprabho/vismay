@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "seed": "tsx --env-file=.env src/seed.ts",
+    "seed:squads": "tsx --env-file=.env src/seed-squads.ts",
+    "seed:squads:ci": "tsx src/seed-squads.ts",
     "ingest": "tsx --env-file=.env src/ingest.ts",
     "ingest:ci": "tsx src/ingest.ts",
     "scores": "tsx --env-file=.env src/scores.ts",
@@ -20,6 +22,7 @@
     "@footshorts/shared": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
     "@vismay/eval-entities": "workspace:*",
+    "cheerio": "^1.0.0",
     "rss-parser": "^3.13.0",
     "sharp": "^0.34.5",
     "zod": "^3.23.8"
