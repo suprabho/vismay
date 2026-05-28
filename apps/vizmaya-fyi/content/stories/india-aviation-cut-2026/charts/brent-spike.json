@@ -1,0 +1,121 @@
+{
+  "steps": [
+    {
+      "title": "Brent crude, US$/barrel — monthly average. The April 2026 spike followed the U.S.–Iran flare-up; Brent touched $138 on April 7 and averaged $117 for the month.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "line"
+          },
+          "formatter": "{b}: ${c}/bbl"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "6%",
+          "bottom": "8%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": [
+            "Oct 25",
+            "Nov 25",
+            "Dec 25",
+            "Jan 26",
+            "Feb 26",
+            "Mar 26",
+            "Apr 26",
+            "May 26"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "min": 50,
+          "max": 140,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "${value}"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "series": [
+          {
+            "name": "Brent",
+            "type": "line",
+            "smooth": false,
+            "symbol": "circle",
+            "symbolSize": 6,
+            "lineStyle": {
+              "color": "$accent",
+              "width": 2
+            },
+            "itemStyle": {
+              "color": "$accent"
+            },
+            "areaStyle": {
+              "color": "$accent",
+              "opacity": 0.15
+            },
+            "markPoint": {
+              "symbol": "pin",
+              "symbolSize": 48,
+              "label": {
+                "color": "$background",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 10,
+                "formatter": "${c}"
+              },
+              "itemStyle": {
+                "color": "$red"
+              },
+              "data": [
+                {
+                  "name": "April peak",
+                  "coord": ["Apr 26", 117]
+                }
+              ]
+            },
+            "data": [
+              74,
+              72,
+              73,
+              78,
+              82,
+              88,
+              117,
+              96
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

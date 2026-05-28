@@ -1,0 +1,109 @@
+{
+  "steps": [
+    {
+      "title": "Air India Group consolidated net loss, ₹ crore — four years after the Tata takeover (Jan 2022), the hole is the widest it has ever been.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}: ₹{c} cr"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "10%",
+          "bottom": "6%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "FY22-23",
+            "FY23-24",
+            "FY24-25",
+            "FY25-26"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontFamily": "Inter",
+            "fontSize": 11
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "inverse": true,
+          "min": 0,
+          "max": 30000,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "₹{value} cr"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "series": [
+          {
+            "name": "Net loss",
+            "type": "bar",
+            "barWidth": 38,
+            "label": {
+              "show": true,
+              "position": "bottom",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "₹{c} cr"
+            },
+            "data": [
+              {
+                "value": 11388,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 4444,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 10859,
+                "itemStyle": {
+                  "color": "$amber"
+                }
+              },
+              {
+                "value": 26765,
+                "itemStyle": {
+                  "color": "$red"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
