@@ -74,17 +74,12 @@ export default async function KidzovoStoryPage({ params }: RouteParams) {
 
   const { units } = resolveUnits(slug, story.sections, config)
 
-  const defaults = {
-    ...config.defaults,
-    // Kidzovo never uses maps; the palette is a hard-coded no-op so the
-    // engine's defaults type stays happy.
-    mapPalette: config.defaults.mapPalette ?? {
-      land: '#fff7ec',
-      water: '#65d0d0',
-      labels: '#3d2a17',
-      roads: '#9a7d65',
-    },
-  }
+  // Kidzovo never mounts a Mapbox background, so `config.defaults` is
+  // passed through untouched. The parser fills in mapStyle/mapOpacity/etc.
+  // with placeholder values from packages/content-source/src/storyConfig.ts
+  // when the YAML omits a `defaults:` block — harmless because no map
+  // module reads them in this host.
+  const defaults = config.defaults
 
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
 

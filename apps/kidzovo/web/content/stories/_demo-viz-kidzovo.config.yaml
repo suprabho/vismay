@@ -8,24 +8,15 @@
 #     tail auto-anchored to Ovi via `speaker: ovi` (resolves to her
 #     center-bottom anchor → bottom-center tail)
 #
-# Ovi's .riv is currently a placeholder (vizmaya-logo.riv) — the wrapper
-# wires up correctly but pose changes won't render visually until a real
-# Ovi.riv with the `pose` state-machine input lands. See
-# verticals/kidzovo-viz/src/data/characters.ts. The bubble renders in CSS
-# until a real bubble.riv ships; see modules/bubble/Component.tsx.
-
-defaults:
-  mapStyle: mapbox://styles/mapbox/light-v11
-  mapOpacity: 0.0
-  pinColor: "#ff7aa9"
-  pinRadius: 10
-  flySpeed: 1.0
+# No `defaults:` block — the kidzovo host doesn't render the engine's map
+# background, so the parser's hardcoded defaults (DEFAULTS in
+# packages/content-source/src/storyConfig.ts) are accepted as no-ops.
+# Likewise no per-section `map:` overrides; the kz-storybook layout paints
+# its own background.
 
 sections:
   - id: ovi-plays
     text: "Ovi plays"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -46,8 +37,6 @@ sections:
 
   - id: great-big-mess
     text: "A great big mess"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -74,8 +63,6 @@ sections:
 
   - id: ovi-sits
     text: "Ovi sits in the mess"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:

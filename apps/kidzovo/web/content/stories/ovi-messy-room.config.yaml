@@ -8,23 +8,18 @@
 #   stage      → Ovi via kz:character, pose pinned per panel
 #   bubbles    → kz:bubble on the panels where Ovi self-talks (2, 4, 5)
 #
-# Ovi's .riv is still a placeholder (vizmaya-logo.riv) — pose changes are
-# wired through the pose→stepInput pipeline but won't render visually
-# until a real Ovi.riv with the `pose` state-machine input lands. The
-# bubble likewise renders in CSS; see verticals/kidzovo-viz/.
-
-defaults:
-  mapStyle: mapbox://styles/mapbox/light-v11
-  mapOpacity: 0.0
-  pinColor: "#ff7aa9"
-  pinRadius: 10
-  flySpeed: 1.0
+# No `defaults:` block — the kidzovo host doesn't render the engine's map
+# background, so the parser's hardcoded defaults (DEFAULTS in
+# packages/content-source/src/storyConfig.ts) are accepted as no-ops.
+# Likewise no per-section `map:` overrides; the kz-storybook layout paints
+# its own background.
+#
+# Ovi's .riv ships from /kidzovo-demo/owl.riv; the bubble renders in CSS
+# until a real bubble.riv arrives. See verticals/kidzovo-viz/.
 
 sections:
   - id: ovi-loves-to-play
     text: "Ovi loves to play"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -45,8 +40,6 @@ sections:
 
   - id: toys-go-everywhere
     text: "Toys go everywhere"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -73,8 +66,6 @@ sections:
 
   - id: great-big-mess
     text: "A great big mess"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -95,8 +86,6 @@ sections:
 
   - id: ovi-notices
     text: "Ovi notices"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -123,8 +112,6 @@ sections:
 
   - id: one-toy-at-a-time
     text: "One toy at a time"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
@@ -151,8 +138,6 @@ sections:
 
   - id: all-done
     text: "All done"
-    map:
-      opacity: 0.0
     foreground:
       layout: kz-storybook
       regions:
