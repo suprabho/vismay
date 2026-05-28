@@ -17,7 +17,7 @@ import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
 import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
+type Tab = 'theme' | 'edit' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -39,8 +39,7 @@ interface InitialState {
 
 const TABS: { id: Tab; label: string; deckOnly?: boolean }[] = [
   { id: 'theme', label: 'Theme' },
-  { id: 'markdown', label: 'Markdown' },
-  { id: 'config', label: 'Config' },
+  { id: 'edit', label: 'Markdown + Config' },
   { id: 'deck', label: 'Deck', deckOnly: true },
   { id: 'charts', label: 'Charts' },
   { id: 'assets', label: 'Assets' },
@@ -55,7 +54,7 @@ interface BulkResult {
   errors: string[]
 }
 
-const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'deck', 'charts', 'assets', 'narration', 'settings'])
+const TAB_IDS = new Set<Tab>(['theme', 'edit', 'deck', 'charts', 'assets', 'narration', 'settings'])
 function isTab(v: string | null): v is Tab {
   return v != null && TAB_IDS.has(v as Tab)
 }
@@ -83,6 +82,7 @@ export default function EditorClient({
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
+    if (q === 'markdown' || q === 'config') return 'edit'
     return isTab(q) ? q : 'theme'
   })()
   const [tab, setTab] = useState<Tab>(initialTab)
@@ -358,41 +358,41 @@ export default function EditorClient({
             onChange={updateTheme}
           />
         )}
-        {tab === 'markdown' && (
-          <>
-            <FileActions
-              filename={`${slug}.md`}
-              accept=".md,.markdown,text/markdown"
-              mime="text/markdown;charset=utf-8"
-              value={markdown}
-              onUpload={setMarkdown}
-            />
-            <CodeEditor
-              value={markdown}
-              onChange={setMarkdown}
-              language="markdown"
-              path={`${slug}.md`}
-            />
-          </>
-        )}
-        {tab === 'config' && (
-          <>
-            <FileActions
-              filename={`${slug}.config.yaml`}
-              accept=".yaml,.yml,text/yaml,application/yaml"
-              mime="application/yaml;charset=utf-8"
-              value={config}
-              onUpload={setConfig}
-            />
-            <YamlConfigEditor
-              value={config}
-              onChange={setConfig}
-              path={`${slug}.config.yaml`}
-            />
-          </>
+        {tab === 'edit' && (
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 min-h-0 divide-y md:divide-y-0 md:divide-x divide-white/5">
+            <div className="flex flex-col min-h-0">
+              <FileActions
+                filename={`${slug}.md`}
+                accept=".md,.markdown,text/markdown"
+                mime="text/markdown;charset=utf-8"
+                value={markdown}
+                onUpload={setMarkdown}
+              />
+              <CodeEditor
+                value={markdown}
+                onChange={setMarkdown}
+                language="markdown"
+                path={`${slug}.md`}
+              />
+            </div>
+            <div className="flex flex-col min-h-0">
+              <FileActions
+                filename={`${slug}.config.yaml`}
+                accept=".yaml,.yml,text/yaml,application/yaml"
+                mime="application/yaml;charset=utf-8"
+                value={config}
+                onUpload={setConfig}
+              />
+              <YamlConfigEditor
+                value={config}
+                onChange={setConfig}
+                path={`${slug}.config.yaml`}
+              />
+            </div>
+          </div>
         )}
         {tab === 'deck' && isDeck && (
-          <DeckComposerPanel value={config} onJumpToYaml={() => setTab('config')} />
+          <DeckComposerPanel value={config} onJumpToYaml={() => setTab('edit')} />
         )}
         {tab === 'charts' && (
           <ChartsList
@@ -455,6 +455,7 @@ function ChartsList({
   onChartsChange: (next: ChartEntry[]) => void
 }) {
   const [uploading, setUploading] = useState(false)
+  const [downloadingAll, setDownloadingAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -477,6 +478,20 @@ function ChartsList({
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+  }
+
+  async function downloadAll() {
+    setError(null)
+    const ids = charts.filter((c) => c.editable).map((c) => c.id)
+    if (ids.length === 0) return
+    setDownloadingAll(true)
+    try {
+      for (const id of ids) {
+        await downloadChart(id)
+      }
+    } finally {
+      setDownloadingAll(false)
+    }
   }
 
   async function deleteChart(id: string) {
@@ -543,6 +558,14 @@ function ChartsList({
         >
           {uploading ? 'Uploading…' : '↑ Upload chart'}
         </button>
+        <button
+          type="button"
+          disabled={downloadingAll || charts.every((c) => !c.editable)}
+          onClick={downloadAll}
+          className="text-xs px-2 py-1 rounded text-neutral-400 hover:text-white hover:bg-white/5 disabled:opacity-40"
+        >
+          {downloadingAll ? 'Downloading…' : '↓ Download all'}
+        </button>
         <span className="text-xs text-neutral-600">filename → id</span>
         <input
           ref={inputRef}
@@ -562,7 +585,7 @@ function ChartsList({
           No charts for this story.
         </div>
       ) : (
-        <ul className="divide-y divide-white/5">
+        <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
           {charts.map((c) =>
             c.editable ? (
               <li key={c.id} className="flex items-center">
