@@ -1,0 +1,64 @@
+{
+  "steps": [
+    {
+      "title": "$28.5 trillion total addressable market — $B",
+      "option": {
+        "tooltip": {
+          "trigger": "item",
+          "formatter": "{b}: ${c}B"
+        },
+        "series": [
+          {
+            "type": "treemap",
+            "width": "100%",
+            "height": "92%",
+            "top": "4%",
+            "roam": false,
+            "nodeClick": false,
+            "breadcrumb": { "show": false },
+            "label": {
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "bold",
+              "color": "#f1f5f9",
+              "formatter": "{b}\n${c}B"
+            },
+            "upperLabel": { "show": true, "height": 24, "fontFamily": "Inter", "fontSize": 12, "fontWeight": "bold", "color": "#f1f5f9" },
+            "itemStyle": { "borderWidth": 2, "borderColor": "#030712", "gapWidth": 2 },
+            "levels": [
+              { "itemStyle": { "borderWidth": 3, "borderColor": "#030712", "gapWidth": 3 }, "upperLabel": { "show": true } },
+              { "itemStyle": { "borderWidth": 2, "borderColor": "#030712", "gapWidth": 2 } }
+            ],
+            "data": [
+              {
+                "name": "AI  $26.5T",
+                "value": 26500,
+                "itemStyle": { "color": "$accent2" },
+                "children": [
+                  { "name": "Enterprise Applications", "value": 22700, "itemStyle": { "color": "#1d4ed8" } },
+                  { "name": "AI Infrastructure",       "value": 2400,  "itemStyle": { "color": "#2563eb" } },
+                  { "name": "Consumer Subscriptions",  "value": 760,   "itemStyle": { "color": "#3b82f6" } },
+                  { "name": "Digital Advertising",     "value": 600,   "itemStyle": { "color": "#60a5fa" } }
+                ]
+              },
+              {
+                "name": "Connectivity  $1.6T",
+                "value": 1600,
+                "itemStyle": { "color": "$teal" },
+                "children": [
+                  { "name": "Starlink Broadband", "value": 870, "itemStyle": { "color": "#0891b2" } },
+                  { "name": "Starlink Mobile",    "value": 740, "itemStyle": { "color": "#22d3ee" } }
+                ]
+              },
+              {
+                "name": "Space  $370B",
+                "value": 370,
+                "itemStyle": { "color": "$accent" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

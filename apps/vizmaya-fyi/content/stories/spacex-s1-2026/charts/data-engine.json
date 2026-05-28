@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "title": "X platform — user funnel (billions / millions)",
+      "option": {
+        "tooltip": { "trigger": "item" },
+        "series": [
+          {
+            "type": "funnel",
+            "left": "5%",
+            "right": "5%",
+            "top": "5%",
+            "bottom": "5%",
+            "width": "90%",
+            "sort": "descending",
+            "gap": 4,
+            "label": {
+              "show": true,
+              "position": "inside",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "color": "#030712",
+              "fontWeight": "bold",
+              "formatter": "{b}"
+            },
+            "labelLine": { "show": false },
+            "itemStyle": { "borderWidth": 0 },
+            "data": [
+              { "value": 1300, "name": "1.3B Accounts (12-month active)", "itemStyle": { "color": "$accent2" } },
+              { "value": 550,  "name": "550M Monthly Active Users",       "itemStyle": { "color": "$teal" } },
+              { "value": 350,  "name": "350M Daily Posts",                "itemStyle": { "color": "$amber" } },
+              { "value": 117,  "name": "117M Grok MAUs",                  "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

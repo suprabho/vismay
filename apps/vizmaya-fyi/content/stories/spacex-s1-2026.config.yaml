@@ -1,32 +1,30 @@
 # Story config — spacex-s1-2026
 #
 # The Orbital Stack: SpaceX S-1 2026 scrollytelling.
-# 2 config sections:
-#   1  hero         — title + dek, no background, no chart
-#   2  main-story   — 14 subsections, each driving a step of the orbital-stack chart
+# 15 sections total: 1 hero + 14 story sections.
 #
 # KEY DESIGN: No map background. Chart-only layout.
 #   All sections use `background: { type: none }` so the dark theme
 #   CSS background (#030712) shows through.
 #
-#   The foreground chart (orbital-stack) is set on the main-story PARENT.
-#   All 14 subsections inherit it. subIndex drives activeStep (0–13).
+#   Each story section has its own dedicated chart JSON file.
+#   Charts are independently editable via the admin UI.
 #
-# CHART STEPS (orbital-stack.json):
-#   step  0  — The Integrated Stack      (3-layer financial overview)
-#   step  1  — The Algorithm             (SpaceX vs industry speed)
-#   step  2  — Launch Dominance          (payload to LEO comparison)
-#   step  3  — Global Connectivity       (satellite + subscriber growth)
-#   step  4  — Eradicating Dead Zones    (mobile MAU + V3 capacity)
-#   step  5  — Terrestrial AI Compute    (deployment speed + scale)
-#   step  6  — The Data Engine           (X platform funnel)
-#   step  7  — Cost Per Token            (3-component advantage)
-#   step  8  — The Bottleneck            (grid vs compute demand area)
-#   step  9  — Orbital AI Convergence    (3-pillar progress)
-#   step 10  — The Unfair Advantage      (radar: orbital vs terrestrial)
-#   step 11  — $28.5T TAM               (treemap)
-#   step 12  — The Financial Engine      (waterfall: revenue → EBITDA)
-#   step 13  — Risks and Realities       (risk impact bars)
+# CHART FILES (content/stories/spacex-s1-2026/charts/):
+#   integrated-stack.json   — 3-layer financial flow (Space / Connectivity / AI)
+#   the-algorithm.json      — SpaceX vs industry (deploy days / reuse / success)
+#   launch-dominance.json   — payload to LEO comparison across rockets
+#   global-connectivity.json— satellite count + subscriber growth 2020–2025
+#   dead-zones.json         — Starlink mobile MAU / MNO partners / V3 capacity
+#   ai-compute.json         — COLOSSUS I/II deploy days vs industry standard
+#   data-engine.json        — X platform user funnel (1.3B → 117M Grok)
+#   cost-per-token.json     — hardware / energy / speed / token (industry = 100)
+#   grid-bottleneck.json    — compute demand (exponential) vs grid (flat), log scale
+#   orbital-convergence.json— Manufacture 18% / Deploy 35% / Connect 82%
+#   unfair-advantage.json   — radar: Terrestrial [3,3,3,4,3] vs Orbital [9,9,10,10,9]
+#   tam-treemap.json        — $28.5T treemap: AI / Connectivity / Space
+#   financial-engine.json   — waterfall: revenue → segment EBITDA → total
+#   risks.json              — risk impact bars (4 categories, 6–9 / 10)
 
 defaults:
   mapStyle: mapbox://styles/mapbox/dark-v11
@@ -37,7 +35,7 @@ defaults:
 
 sections:
 
-  # 1 ─── HERO
+  # ── HERO ───────────────────────────────────────────────────────────────────
   - id: hero
     kind: hero
     text: "The Orbital Stack"
@@ -45,53 +43,128 @@ sections:
     background:
       type: none
 
-  # 2 ─── MAIN STORY — 14 subsections, one chart evolves throughout
-  - id: main-story
+  # ── SECTION 1 ──────────────────────────────────────────────────────────────
+  - id: integrated-stack
     background:
       type: none
     foreground:
       type: chart
-      id: orbital-stack
-    subsections:
+      id: integrated-stack
+    text: "The Integrated Stack"
 
-      # step 0
-      - text: "The Integrated Stack"
+  # ── SECTION 2 ──────────────────────────────────────────────────────────────
+  - id: the-algorithm
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: the-algorithm
+    text: "The Algorithm"
 
-      # step 1
-      - text: "The Algorithm"
+  # ── SECTION 3 ──────────────────────────────────────────────────────────────
+  - id: launch-dominance
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: launch-dominance
+    text: "Launch Dominance"
 
-      # step 2
-      - text: "Launch Dominance"
+  # ── SECTION 4 ──────────────────────────────────────────────────────────────
+  - id: global-connectivity
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: global-connectivity
+    text: "Global Connectivity"
 
-      # step 3
-      - text: "Global Connectivity"
+  # ── SECTION 5 ──────────────────────────────────────────────────────────────
+  - id: dead-zones
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: dead-zones
+    text: "Eradicating Dead Zones"
 
-      # step 4
-      - text: "Eradicating Dead Zones"
+  # ── SECTION 6 ──────────────────────────────────────────────────────────────
+  - id: ai-compute
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: ai-compute
+    text: "Terrestrial AI Compute"
 
-      # step 5
-      - text: "Terrestrial AI Compute"
+  # ── SECTION 7 ──────────────────────────────────────────────────────────────
+  - id: data-engine
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: data-engine
+    text: "The Data Engine"
 
-      # step 6
-      - text: "The Data Engine"
+  # ── SECTION 8 ──────────────────────────────────────────────────────────────
+  - id: cost-per-token
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: cost-per-token
+    text: "Cost Per Token"
 
-      # step 7
-      - text: "Cost Per Token"
+  # ── SECTION 9 ──────────────────────────────────────────────────────────────
+  - id: grid-bottleneck
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: grid-bottleneck
+    text: "The Terrestrial Bottleneck"
 
-      # step 8
-      - text: "The Terrestrial Bottleneck"
+  # ── SECTION 10 ─────────────────────────────────────────────────────────────
+  - id: orbital-convergence
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: orbital-convergence
+    text: "Orbital AI Convergence"
 
-      # step 9
-      - text: "Orbital AI Convergence"
+  # ── SECTION 11 ─────────────────────────────────────────────────────────────
+  - id: unfair-advantage
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: unfair-advantage
+    text: "The Unfair Advantage"
 
-      # step 10
-      - text: "The Unfair Advantage"
+  # ── SECTION 12 ─────────────────────────────────────────────────────────────
+  - id: tam-treemap
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: tam-treemap
+    text: "$28.5 Trillion TAM"
 
-      # step 11
-      - text: "$28.5 Trillion TAM"
+  # ── SECTION 13 ─────────────────────────────────────────────────────────────
+  - id: financial-engine
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: financial-engine
+    text: "The Financial Engine"
 
-      # step 12
-      - text: "The Financial Engine"
-
-      # step 13
-      - text: "Risks and Realities"
+  # ── SECTION 14 ─────────────────────────────────────────────────────────────
+  - id: risks
+    background:
+      type: none
+    foreground:
+      type: chart
+      id: risks
+    text: "Risks and Realities"

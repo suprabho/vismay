@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "title": "Orbital AI vs terrestrial AI — capability radar",
+      "option": {
+        "tooltip": {},
+        "legend": {
+          "data": ["Terrestrial AI (Today)", "Orbital AI (2028+)"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "radar": {
+          "indicator": [
+            { "name": "Power\nAbundance",    "max": 10 },
+            { "name": "Cooling\nEfficiency", "max": 10 },
+            { "name": "Hardware\nScaling",   "max": 10 },
+            { "name": "Distribution\nReach", "max": 10 },
+            { "name": "Energy\nCost",        "max": 10 }
+          ],
+          "shape": "polygon",
+          "splitNumber": 4,
+          "axisName": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line" } },
+          "splitArea": { "show": false },
+          "axisLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "type": "radar",
+            "data": [
+              {
+                "value": [3, 3, 3, 4, 3],
+                "name": "Terrestrial AI (Today)",
+                "lineStyle": { "color": "$muted", "width": 2 },
+                "areaStyle": { "color": "rgba(100,116,139,0.15)" },
+                "itemStyle": { "color": "$muted" }
+              },
+              {
+                "value": [9, 9, 10, 10, 9],
+                "name": "Orbital AI (2028+)",
+                "lineStyle": { "color": "$teal", "width": 2 },
+                "areaStyle": { "color": "rgba(34,211,238,0.2)" },
+                "itemStyle": { "color": "$teal" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

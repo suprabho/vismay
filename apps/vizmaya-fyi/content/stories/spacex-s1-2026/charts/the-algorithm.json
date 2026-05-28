@@ -1,0 +1,53 @@
+{
+  "steps": [
+    {
+      "title": "SpaceX algorithm at scale — vs industry benchmark",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" }
+        },
+        "legend": {
+          "data": ["SpaceX", "Industry"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Data center\ndeploy (days)", "Booster\nreuse (flights)", "Mission\nsuccess (%)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "SpaceX",
+            "type": "bar",
+            "barWidth": "30%",
+            "itemStyle": { "color": "$teal", "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "data": [91, 34, 99]
+          },
+          {
+            "name": "Industry",
+            "type": "bar",
+            "barWidth": "30%",
+            "barGap": "20%",
+            "itemStyle": { "color": "$muted", "borderRadius": [0, 4, 4, 0], "opacity": 0.5 },
+            "label": { "show": true, "position": "right", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+            "data": [730, 0, 95]
+          }
+        ]
+      }
+    }
+  ]
+}

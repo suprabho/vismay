@@ -1,0 +1,47 @@
+{
+  "steps": [
+    {
+      "title": "Orbital AI convergence — readiness by pillar (2026)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "grid": { "left": "2%", "right": "10%", "bottom": "12%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["MANUFACTURE\n(xAI / Terafab)", "DEPLOY\n(Starship)", "CONNECT\n(Starlink)"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Readiness %",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "max": 100,
+          "axisLabel": { "formatter": "{value}%", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "45%",
+            "label": {
+              "show": true,
+              "position": "top",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "formatter": "{c}%"
+            },
+            "data": [
+              { "value": 18, "itemStyle": { "color": "$amber", "borderRadius": [4,4,0,0] }, "label": { "color": "$amber" } },
+              { "value": 35, "itemStyle": { "color": "$accent", "borderRadius": [4,4,0,0] }, "label": { "color": "$accent" } },
+              { "value": 82, "itemStyle": { "color": "$teal",   "borderRadius": [4,4,0,0] }, "label": { "color": "$teal" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

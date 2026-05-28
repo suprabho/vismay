@@ -1,0 +1,54 @@
+{
+  "steps": [
+    {
+      "title": "SpaceX 2025 — financial flow by layer ($B)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ${c}B"
+        },
+        "legend": {
+          "data": ["Cash Generated", "Capital Deployed"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "6%", "bottom": "8%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "formatter": "${value}B", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["SPACE", "CONNECTIVITY", "AI"],
+          "axisLabel": { "color": "$text", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "bold" },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Cash Generated",
+            "type": "bar",
+            "barWidth": "38%",
+            "itemStyle": { "color": "$teal", "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "color": "$teal", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "+${c}B" },
+            "data": [0, 7.16, 0]
+          },
+          {
+            "name": "Capital Deployed",
+            "type": "bar",
+            "barWidth": "38%",
+            "barGap": "20%",
+            "itemStyle": { "color": "$accent", "borderRadius": [0, 4, 4, 0] },
+            "label": { "show": true, "position": "right", "color": "$accent", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "${c}B" },
+            "data": [3.0, 3.8, 12.7]
+          }
+        ]
+      }
+    }
+  ]
+}
