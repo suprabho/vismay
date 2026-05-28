@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import ThemeEditor from './ThemeEditor'
 import CodeEditor from './CodeEditor'
 import YamlConfigEditor from './YamlConfigEditor'
+import DeckComposerPanel from './DeckComposerPanel'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
@@ -16,7 +17,7 @@ import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
 import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'charts' | 'assets' | 'narration' | 'settings'
+type Tab = 'theme' | 'markdown' | 'config' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -36,10 +37,11 @@ interface InitialState {
   }
 }
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; deckOnly?: boolean }[] = [
   { id: 'theme', label: 'Theme' },
   { id: 'markdown', label: 'Markdown' },
   { id: 'config', label: 'Config' },
+  { id: 'deck', label: 'Deck', deckOnly: true },
   { id: 'charts', label: 'Charts' },
   { id: 'assets', label: 'Assets' },
   { id: 'narration', label: 'Narration' },
@@ -53,7 +55,7 @@ interface BulkResult {
   errors: string[]
 }
 
-const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'charts', 'assets', 'narration', 'settings'])
+const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'deck', 'charts', 'assets', 'narration', 'settings'])
 function isTab(v: string | null): v is Tab {
   return v != null && TAB_IDS.has(v as Tab)
 }
@@ -95,6 +97,10 @@ export default function EditorClient({
 
   const parsed = useMemo(() => parseFrontmatter(markdown), [markdown])
   const theme = (parsed.data.theme ?? undefined) as Partial<Theme> | undefined
+  // Reveal the Deck composer tab only for deck-format stories. Authors can
+  // still author the deck in YAML through the Config tab; this tab adds a
+  // structured view that materializes the per-slot adminForm metadata.
+  const isDeck = parsed.data.format === 'deck'
 
   function updateTheme(next: Theme) {
     const nextData = { ...parsed.data, theme: next }
@@ -322,7 +328,7 @@ export default function EditorClient({
       )}
 
       <nav className="flex gap-1 px-2 py-2 border-b border-white/5 overflow-x-auto">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !t.deckOnly || isDeck).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -384,6 +390,9 @@ export default function EditorClient({
               path={`${slug}.config.yaml`}
             />
           </>
+        )}
+        {tab === 'deck' && isDeck && (
+          <DeckComposerPanel value={config} onJumpToYaml={() => setTab('config')} />
         )}
         {tab === 'charts' && (
           <ChartsList
