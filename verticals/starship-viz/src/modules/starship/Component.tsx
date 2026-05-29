@@ -44,6 +44,7 @@ export default function StarshipViewerComponent({
         mode={config.mode}
         progress={progress}
         material={config.material}
+        camera={config.camera}
         onReady={noteReady}
         showGround={config.ground?.show}
         groundColor={config.ground?.color}

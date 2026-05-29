@@ -60,3 +60,49 @@ export const ROCKET_MODELS: Record<RocketModel, RocketSpec> = {
 
 /** Legacy alias for code that still names Starship parts directly. */
 export type StarshipPart = 'cone' | 'tank' | 'raptor'
+
+/**
+ * Easing applied to the scrub `progress` before the two camera keyframes are
+ * interpolated. `easeInOut` is the cinematic default; `linear` ties the move
+ * directly to scroll position.
+ */
+export type CameraEasing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+
+/** One end of a camera move. */
+export interface CameraKeyframe {
+  /** World-space camera position `[x, y, z]`. */
+  position: [number, number, number]
+  /** Vertical field of view, degrees. Lower = tighter / more "zoomed in". */
+  fov: number
+  /** World-space point the camera looks at `[x, y, z]`. */
+  target: [number, number, number]
+}
+
+/**
+ * Scroll-scrubbed camera animation for `starship:viewer`. A two-keyframe move:
+ * the camera tracks from `from` to `to` as the section's scrub `progress`
+ * (`activeStep / scrubSteps`) goes 0 → 1.
+ *
+ * Position is interpolated in *spherical* space around the (also-interpolated)
+ * look-at `target`, so an angular delta between the keyframes reads as an
+ * orbit arc and a radial delta reads as a dolly — both at once if they differ
+ * in both. `fov` lerps for a lens-zoom feel.
+ *
+ * The rig damps the live camera toward the progress-derived pose every frame,
+ * so even a discrete progress jump (snap-scroll decks step `activeStep` in
+ * integers) glides as a smooth arc rather than teleporting.
+ *
+ * Values here are fully resolved (no optionals) — `parseConfig` fills the
+ * defaults so the scene never branches on missing fields.
+ */
+export interface CameraAnimation {
+  from: CameraKeyframe
+  to: CameraKeyframe
+  easing: CameraEasing
+  /**
+   * Exponential smoothing rate the rig chases the target pose at (frame-rate
+   * independent, à la `THREE.MathUtils.damp`). Higher = snappier, lower =
+   * floatier. Default 4.
+   */
+  damping: number
+}

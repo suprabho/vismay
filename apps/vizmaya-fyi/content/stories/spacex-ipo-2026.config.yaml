@@ -234,8 +234,18 @@ sections:
   - id: starship-rd
     kind: data
     text: "$15B+ on Starship"
-    paragraphs: [0, 2]
     layout: stat-left-chart-right
+    # Two subsections turn this section into a 2-step scrub. As the reader
+    # advances beat 0 → 1, `activeStep` goes 0 → 1, which drives BOTH the
+    # explode and the camera move (progress = activeStep / scrubSteps). A deck
+    # section with no subsections is a single snap target, so activeStep would
+    # never leave 0 and neither animation would play. The bigStat + viewer are
+    # section-level foreground, so they persist across both beats.
+    subsections:
+      - text: "$15B+ on Starship"
+        paragraphs: [0, 2]
+      - text: "$15B+ on Starship"
+        paragraphs: [2, 3]
     foreground:
       - type: bigStat
         value: "$15B+"
@@ -251,6 +261,20 @@ sections:
         mode: explode
         material: metal
         scrubSteps: 1
+        # Scroll-scrubbed camera move over the same progress as the explode.
+        # Position lerps in spherical space around `target`. The dominant move
+        # is a vertical tilt — the camera lifts from a near-level 3/4 view
+        # (polar ~77°) to a high angle looking down (~59°) — because a pure
+        # horizontal orbit barely reads on a near-cylindrical rocket, whereas
+        # rising to look down clearly reveals the parts separating. It also
+        # dollies in (radius 6.3 → 5.6), tightens fov 40 → 36, and pans the
+        # look-at up to 0.1. `damping` glides between the two discrete steps
+        # instead of cutting straight across.
+        camera:
+          from: { position: [3.5, 1.4, 5], fov: 40, target: [0, 0, 0] }
+          to:   { position: [1.2, 3.0, 4.6], fov: 36, target: [0, 0.1, 0] }
+          easing: easeInOut
+          damping: 4
         style:
           position: { x: right, y: center }
           size: { width: "50%", height: "62vh" }

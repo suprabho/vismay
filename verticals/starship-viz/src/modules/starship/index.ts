@@ -1,5 +1,12 @@
 import type { VizModule } from '@vismay/viz-engine'
-import type { RocketModel, StarshipMaterial, StarshipMode } from '../../types'
+import type {
+  CameraAnimation,
+  CameraEasing,
+  CameraKeyframe,
+  RocketModel,
+  StarshipMaterial,
+  StarshipMode,
+} from '../../types'
 import { ROCKET_MODELS } from '../../types'
 
 /**
@@ -20,6 +27,14 @@ import { ROCKET_MODELS } from '../../types'
  *       # Optional — drives explode/bellyflop scrub. Defaults to using
  *       # `activeStep` mapped to 0..1 via `scrubSteps`.
  *       scrubSteps: 3
+ *       # Optional — scroll-scrubbed camera move over the same progress.
+ *       # Position lerps in spherical space (angle delta → orbit, radius
+ *       # delta → dolly); fov lerps for zoom; target pans the look-at point.
+ *       camera:
+ *         from: { position: [3.5, 1.4, 5], fov: 40, target: [0, 0, 0] }
+ *         to:   { position: [-2.6, 0.9, 3.6], fov: 30, target: [0, -0.4, 0] }
+ *         easing: easeInOut      # linear | easeIn | easeOut | easeInOut
+ *         damping: 4             # higher = snappier glide between steps
  */
 
 export interface StarshipViewerConfig {
@@ -53,6 +68,16 @@ export interface StarshipViewerConfig {
     color?: string
     opacity?: number
   }
+  /**
+   * Optional scroll-scrubbed camera move. When present (and `mode` is not
+   * `inspect`, which owns the camera via OrbitControls), the camera animates
+   * from `camera.from` to `camera.to` as the section's scrub `progress`
+   * (`activeStep / scrubSteps`) goes 0 → 1. Note that in deck stories a
+   * section only advances `activeStep` if it has `subsections`, so pair this
+   * with subsections (or `scrubSteps`) for the move to actually scrub —
+   * otherwise it pins a static custom framing.
+   */
+  camera?: CameraAnimation
 }
 
 function isObj(x: unknown): x is Record<string, unknown> {
@@ -62,6 +87,63 @@ function isObj(x: unknown): x is Record<string, unknown> {
 const MODES: readonly StarshipMode[] = ['rotate', 'explode', 'bellyflop', 'inspect']
 const MATERIALS: readonly StarshipMaterial[] = ['metal', 'black']
 const MODELS = Object.keys(ROCKET_MODELS) as RocketModel[]
+const EASINGS: readonly CameraEasing[] = ['linear', 'easeIn', 'easeOut', 'easeInOut']
+
+function parseVec3(v: unknown, label: string): [number, number, number] {
+  if (
+    !Array.isArray(v) ||
+    v.length !== 3 ||
+    v.some((n) => typeof n !== 'number' || !Number.isFinite(n))
+  ) {
+    throw new Error(`${label} must be an array of three finite numbers (got ${JSON.stringify(v)})`)
+  }
+  return [v[0] as number, v[1] as number, v[2] as number]
+}
+
+function parseCameraKeyframe(raw: unknown, label: string): CameraKeyframe {
+  if (!isObj(raw)) {
+    throw new Error(`${label} must be an object (got ${typeof raw})`)
+  }
+  const position = parseVec3(raw.position, `${label}.position`)
+  let fov = 40
+  if (raw.fov != null) {
+    if (typeof raw.fov !== 'number' || !Number.isFinite(raw.fov) || raw.fov <= 0 || raw.fov >= 180) {
+      throw new Error(`${label}.fov must be a number in (0, 180) (got ${String(raw.fov)})`)
+    }
+    fov = raw.fov
+  }
+  const target = raw.target != null ? parseVec3(raw.target, `${label}.target`) : [0, 0, 0]
+  return { position, fov, target: target as [number, number, number] }
+}
+
+function parseCamera(raw: unknown, label: string): CameraAnimation {
+  if (!isObj(raw)) {
+    throw new Error(`${label} must be an object (got ${typeof raw})`)
+  }
+  if (raw.from == null || raw.to == null) {
+    throw new Error(`${label} requires both 'from' and 'to' keyframes`)
+  }
+  let easing: CameraEasing = 'easeInOut'
+  if (raw.easing != null) {
+    if (typeof raw.easing !== 'string' || !EASINGS.includes(raw.easing as CameraEasing)) {
+      throw new Error(`${label}.easing must be one of ${EASINGS.join(', ')} (got ${String(raw.easing)})`)
+    }
+    easing = raw.easing as CameraEasing
+  }
+  let damping = 4
+  if (raw.damping != null) {
+    if (typeof raw.damping !== 'number' || !Number.isFinite(raw.damping) || raw.damping <= 0) {
+      throw new Error(`${label}.damping must be a positive number (got ${String(raw.damping)})`)
+    }
+    damping = raw.damping
+  }
+  return {
+    from: parseCameraKeyframe(raw.from, `${label}.from`),
+    to: parseCameraKeyframe(raw.to, `${label}.to`),
+    easing,
+    damping,
+  }
+}
 
 function parseConfig(
   raw: unknown,
@@ -154,6 +236,10 @@ function parseConfig(
       ...(opacity != null ? { opacity } : {}),
     }
   }
+  let camera: CameraAnimation | undefined
+  if (raw.camera != null) {
+    camera = parseCamera(raw.camera, `${ctx.label}: starship:viewer 'camera'`)
+  }
   return {
     type: 'starship:viewer',
     model: model as RocketModel,
@@ -162,6 +248,7 @@ function parseConfig(
     ...(scrubSteps != null ? { scrubSteps } : {}),
     ...(stage != null ? { stage } : {}),
     ...(ground != null ? { ground } : {}),
+    ...(camera != null ? { camera } : {}),
   }
 }
 
