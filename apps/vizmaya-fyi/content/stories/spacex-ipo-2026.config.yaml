@@ -129,6 +129,9 @@ sections:
     kind: split
     text: "Three segments, three stories"
     paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 dense paragraphs → 2 snaps (intro+Connectivity, then Space+AI)
+      - [0, 2]
+      - [2, 4]
     layout: text-left-chart-right
     foreground:
       - type: bodyText
@@ -150,6 +153,9 @@ sections:
     kind: bodyText
     text: "Starlink: the machine behind the curtain"
     paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 dense paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 4]
     foreground:
       - type: bodyText
         from: text
@@ -194,6 +200,9 @@ sections:
     kind: split
     text: "Space: the rocket that ate the budget"
     paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs (p2 is long) → 2 snaps
+      - [0, 2]
+      - [2, 3]
     layout: text-left-chart-right
     foreground:
       - type: bodyText
@@ -253,6 +262,9 @@ sections:
     kind: split
     text: "The AI black hole"
     paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 4]
     layout: text-left-chart-right
     foreground:
       # Text first on the spine; the image becomes the right-hand visual so
@@ -277,6 +289,9 @@ sections:
     kind: data
     text: "The EBITDA bridge"
     paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
     layout: text-left-chart-right
     foreground:
       - type: bodyText
@@ -298,6 +313,9 @@ sections:
     kind: data
     text: "Capital at the speed of ambition"
     paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
     layout: text-left-chart-right
     foreground:
       # Flipped from chart-top-text-below to keep the section on the spine.
@@ -320,6 +338,9 @@ sections:
     kind: data
     text: "Elon's kingdom"
     paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
     layout: text-left-chart-right
     foreground:
       - type: bodyText
@@ -367,6 +388,9 @@ sections:
     kind: closing
     text: "When class wore the mask of margin"
     paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 4]
     foreground:
       - type: bodyText
         from: text
@@ -390,6 +414,9 @@ sections:
     kind: bodyText
     text: "Methodology"
     paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
     foreground:
       - type: bodyText
         from: text

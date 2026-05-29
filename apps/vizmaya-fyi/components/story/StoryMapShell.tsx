@@ -165,10 +165,16 @@ export default function StoryMapShell({
   // sit inside the deck safe-area inset.
   const showChart =
     !isDeckFormat && !usesRegions && currentForeground.length > 0 && !isFirstOfMultiSlice
+  // Deck stories carry their section text INSIDE the foreground (the `bodyText`
+  // slot) rather than in a separate text card, so — unlike the map-format chart
+  // panel — the foreground must render on every slice, including the first slice
+  // of a `mobileParagraphs` split. Suppressing it there (the map-format "reveal
+  // the chart on slice 2" behaviour) would blank the slice entirely. So honour
+  // isFirstOfMultiSlice only off-deck.
   const showRegions =
-    !isFirstOfMultiSlice &&
     current != null &&
-    (usesRegions || (isDeckFormat && currentForeground.length > 0))
+    (usesRegions || (isDeckFormat && currentForeground.length > 0)) &&
+    (isDeckFormat || !isFirstOfMultiSlice)
 
   // Single IntersectionObserver across every unit element.
   useEffect(() => {
@@ -333,7 +339,7 @@ export default function StoryMapShell({
           Other sections have no inline z and behave identically either way. */}
       <div
         ref={containerRef}
-        className={`relative h-svh overflow-y-scroll snap-y snap-mandatory${
+        className={`relative h-svh overflow-y-scroll overscroll-contain snap-y snap-mandatory${
           isAutoplay ? ' hide-scrollbar' : ''
         }`}
       >
