@@ -8,16 +8,13 @@ import {
   useViewModelInstanceColor,
   useViewModelInstanceString,
 } from '@rive-app/react-canvas'
+import type { LogoPalette } from '@vismay/viz-engine'
 
-export interface VizmayaLogoPalette {
-  text?: string
-  teal?: string
-  accent?: string
-  accent2?: string
-  surface?: string
-  muted?: string
-  line?: string
-}
+/**
+ * Logo color palette. Aliased to the engine's `LogoPalette` so the per-section
+ * resolver (`resolveSectionLogoPalettes`) and this component can't drift.
+ */
+export type VizmayaLogoPalette = LogoPalette
 
 interface VizmayaLogoProps {
   className?: string

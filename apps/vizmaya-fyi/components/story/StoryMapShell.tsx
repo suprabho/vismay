@@ -1,8 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import MapStorySection from './MapStorySection'
 import { DeckProgress } from './DeckProgress'
+import VizmayaLogo from '@/components/VizmayaLogo'
 import {
   ForegroundVizSlot,
   ForegroundLayoutSlot,
@@ -11,7 +13,7 @@ import {
 } from '@vismay/viz-engine'
 import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
-import type { ResolvedUnit, StoryDefaults, StoryFormat } from '@vismay/viz-engine'
+import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
 
 interface Props {
@@ -37,6 +39,14 @@ interface Props {
    * viewport.
    */
   format?: StoryFormat
+  /**
+   * One resolved Vizmaya-logo color palette per section (index === section
+   * `parentIndex`), produced by `resolveSectionLogoPalettes`. When provided,
+   * the shell renders the persistent top-left logo and re-tints it to the
+   * active section's palette as the reader scrolls. Omitted by headless
+   * consumers (e.g. the canvas-frame route) so they stay logo-free.
+   */
+  logoPalettes?: LogoPalette[]
 }
 
 /**
@@ -66,6 +76,7 @@ export default function StoryMapShell({
   slug,
   mapOverrides,
   format = 'map',
+  logoPalettes,
 }: Props) {
   const isDeckFormat = format === 'deck'
   const [activeUnit, setActiveUnit] = useState(0)
@@ -206,6 +217,15 @@ export default function StoryMapShell({
       ? 'autoplay'
       : 'scroll'
 
+  // Deck sections render their foreground INSIDE each snap target (in the
+  // scroll container) — rather than in a single fixed overlay that hard-swaps
+  // the active unit — so the content scrolls with the page like the map
+  // format's text cards: smooth section-to-section transitions, and wheel/touch
+  // over any slot (including the 3D starship canvas) reaches the scroller.
+  // Scoped to the live `scroll` experience; autoplay/capture/print keep the
+  // deterministic fixed-overlay path the video/PDF pipelines depend on.
+  const deckInFlow = isDeckFormat && mode === 'scroll'
+
   // Story-scoped opt-in via `defaults.progress: true` in the .config.yaml.
   // Hidden during autoplay/capture so the indicator doesn't appear in
   // rendered video frames.
@@ -319,7 +339,7 @@ export default function StoryMapShell({
           region inherit the region's pointer-events default; layer-level
           style can re-enable interaction (matching the legacy chart panel's
           `[@media(min-aspect-ratio:1/1)]:pointer-events-auto` trick). */}
-      {showRegions && current && (
+      {showRegions && current && !deckInFlow && (
         <div className="fixed inset-0 z-10 pointer-events-none">
           <ForegroundLayoutSlot
             slug={slug ?? ''}
@@ -352,6 +372,13 @@ export default function StoryMapShell({
             // the normal landscape text card so the recorded video has the
             // section copy on screen alongside the map and chart.
             isAutoplay={isAutoplay && isPortrait}
+            // Deck (live scroll): render this section's foreground in-flow so
+            // it scrolls with the page. Off-deck and autoplay/capture keep the
+            // empty snap target + fixed overlay above.
+            renderForegroundInline={deckInFlow}
+            slug={slug ?? ''}
+            mode={mode}
+            isPortrait={isPortrait}
           />
         ))}
       </div>
@@ -362,6 +389,27 @@ export default function StoryMapShell({
           total={units.length}
           onJump={handleProgressJump}
         />
+      )}
+
+      {/* ─── Persistent Vizmaya logo (home link) ─────────────────────────
+          Re-tints to the active section's resolved palette as the reader
+          scrolls. Indexed by `parentIndex` (not `activeUnit`) so sections
+          with multiple subsections share one palette. Rendered here rather
+          than at the page level because this is the only component that
+          knows the active section; gated on `logoPalettes` so headless
+          consumers (canvas-frame) stay logo-free. */}
+      {logoPalettes && (
+        <Link
+          href="/"
+          aria-label="Home"
+          className="fixed top-4 left-4 z-50 w-80 h-16 bg-white/2 rounded-full backdrop-blur-3xl cursor-pointer"
+        >
+          <VizmayaLogo
+            className="w-full h-full"
+            wordmarkPrefix={isDeckFormat ? 'Biz' : undefined}
+            palette={logoPalettes[current?.parentIndex ?? 0] ?? logoPalettes[0]}
+          />
+        </Link>
       )}
     </StoryShellProvider>
   )

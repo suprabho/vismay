@@ -157,7 +157,14 @@ export function StarshipScene({
     <Canvas
       camera={{ position: [3.5, 1.4, 5], fov: 40 }}
       dpr={[1, 2]}
-      style={{ width: '100%', height }}
+      // Only `inspect` mode needs pointer input (OrbitControls drag). Every
+      // other mode is scroll/time-driven, so the canvas must be click-through.
+      // R3F forces `pointer-events: auto` on its container, which overrides the
+      // layer wrapper's `none`; left as-is, the ship swallows wheel/touch and
+      // the page won't scroll while the cursor is over it (and R3F runs pointer
+      // raycasting on every move for nothing). `none` lets the event reach the
+      // scroll container behind.
+      style={{ width: '100%', height, pointerEvents: mode === 'inspect' ? 'auto' : 'none' }}
       gl={{ antialias: true, alpha: true }}
       onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
     >
