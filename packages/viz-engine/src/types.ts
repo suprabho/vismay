@@ -37,6 +37,15 @@ export interface ForegroundLayoutDef {
   name: string
   regions: Record<ForegroundRegionName, ForegroundLayoutRegion>
   portrait?: ForegroundLayoutDef
+  /**
+   * When true, the slots in this layout's `default` region flow full-width and
+   * vertically (in declaration order) on portrait instead of keeping their
+   * authored `%`/`vw` widths side-by-side. Set on the deck "free" layouts
+   * (text-left-chart-right, stat-left-chart-right, …) where slots self-position
+   * via `style`. Left unset on hero-full-bleed / single-fill / split-37-63-two-row,
+   * which either fill the region or already restack via a `portrait` region variant.
+   */
+  stackOnPortrait?: boolean
 }
 
 export interface VizCaptureHandle {
@@ -77,6 +86,13 @@ export interface VizLayerStyle {
   zIndex?: number
   /** Optional chrome around the layer's wrapper box. */
   panel?: VizLayerPanel
+  /**
+   * Per-slot overrides applied when `useIsMobile()` is true (portrait). Shallow-
+   * merged over the base style — e.g. `portrait: { size: { height: '38vh' } }`
+   * to tune a chart's stacked height, or `portrait: { opacity: 0 }` to drop a
+   * slot on mobile. A nested `portrait` is ignored.
+   */
+  portrait?: VizLayerStyle
 }
 
 export interface VizRef<TKind extends string = string> {

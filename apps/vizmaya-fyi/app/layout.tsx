@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono, Fraunces } from 'next/font/google'
 import { GoogleAnalytics } from '@next/third-parties/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -53,6 +53,15 @@ export const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Extend content under the iOS notch / Dynamic Island so the dark hero and
+  // aura backdrop reach the physical screen edges rather than being letterboxed
+  // by the default safe-area gutters.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

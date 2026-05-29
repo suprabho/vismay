@@ -13,6 +13,14 @@ export interface ImageLayerConfig {
   focus?: string
   /** Background color shown while the image is loading or where `contain` letterboxes. */
   background?: string
+  /**
+   * Marks an above-the-fold / LCP image (e.g. a full-bleed hero). When set the
+   * `<img>` loads eagerly with `fetchpriority="high"`; otherwise it lazy-loads
+   * so below-fold imagery doesn't compete on cold cellular.
+   */
+  priority?: boolean
+  /** `sizes` attribute hint (defaults to '100vw'). Inert until srcset variants exist. */
+  sizes?: string
 }
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): ImageLayerConfig {
@@ -33,6 +41,8 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): ImageL
     fit: (r.fit as ImageFit | undefined) ?? 'cover',
     focus: typeof r.focus === 'string' ? r.focus : undefined,
     background: typeof r.background === 'string' ? r.background : undefined,
+    priority: r.priority === true,
+    sizes: typeof r.sizes === 'string' ? r.sizes : undefined,
   }
 }
 
@@ -61,6 +71,7 @@ const imageModule: VizModule<ImageLayerConfig> = {
   adminForm: () => [
     { kind: 'asset', key: 'src', label: 'Image source', accept: ['image/*'], required: true },
     { kind: 'text', key: 'alt', label: 'Alt text', placeholder: 'Describe the image…' },
+    { kind: 'boolean', key: 'priority', label: 'Priority (hero / above the fold — eager + high fetchpriority)' },
     {
       kind: 'select',
       key: 'fit',
