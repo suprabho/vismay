@@ -79,8 +79,8 @@ export default function VizmayaLogo({ className, palette, wordmarkPrefix }: Vizm
     preString?.setValue?.(wordmarkPrefix)
   }, [wordmarkPrefix, preString])
 
-  // TEMP DIAGNOSTIC — remove once the prefix swap is confirmed working.
-  // Reads as `[VizmayaLogo diag]` in the browser console on every render.
+  // TEMP DIAGNOSTIC — remove once the logo (animation + prefix swap) is confirmed.
+  // Reads as `[VizmayaLogo diag]` in the browser console.
   useEffect(() => {
     let vmProps: unknown
     try {
@@ -88,14 +88,17 @@ export default function VizmayaLogo({ className, palette, wordmarkPrefix }: Vizm
     } catch (e) {
       vmProps = `(error: ${String(e)})`
     }
+    const r = rive as { animationNames?: string[]; stateMachineNames?: string[] } | null
     // eslint-disable-next-line no-console
     console.log('[VizmayaLogo diag]', {
       wordmarkPrefix, // undefined on non-deck; should be "Biz" on a deck story
       hasInstance: !!instance, // false => view-model instance never resolved
       preStringValue: preString?.value, // null => `.riv` lacks `logoPreString`
+      animationNames: r?.animationNames, // [] => no animation timeline in the .riv
+      stateMachineNames: r?.stateMachineNames, // which state machines the .riv exposes
       vmProps, // the View Model's actual property list (names + types)
     })
-  }, [wordmarkPrefix, instance, preString, preString?.value, viewModel])
+  }, [wordmarkPrefix, instance, preString, preString?.value, viewModel, rive])
 
   return (
     <div className={className}>
