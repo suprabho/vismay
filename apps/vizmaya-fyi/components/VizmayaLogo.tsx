@@ -40,6 +40,12 @@ function parseHex(hex: string): { r: number; g: number; b: number } | null {
 export default function VizmayaLogo({ className, palette, wordmarkPrefix }: VizmayaLogoProps) {
   const { rive, RiveComponent } = useRive({
     src: '/vizmaya-logo.riv',
+    // The logo's motion is driven by a Rive script ("Node Script 1"), whose
+    // `update` only ticks while the artboard advances — i.e. while a state
+    // machine is playing. These must be named explicitly: without
+    // `stateMachines` the runtime plays only the first linear animation it
+    // finds (there is none here), so the script stays frozen.
+    stateMachines: ['logoMachine', 'textMachine'],
     autoplay: true,
   })
 
