@@ -21,16 +21,19 @@ export async function register(): Promise<void> {
     { default: matchTileModule },
     { default: standingsTableModule },
     { default: bracketModule },
+    { default: tacticsBoardModule },
   ] = await Promise.all([
     import('./modules/match-card'),
     import('./modules/match-row'),
     import('./modules/match-tile'),
     import('./modules/standings-table'),
     import('./modules/bracket'),
+    import('./modules/tactics-board'),
   ])
   registerVizModule(matchCardModule)
   registerVizModule(matchRowModule)
   registerVizModule(matchTileModule)
   registerVizModule(standingsTableModule)
   registerVizModule(bracketModule)
+  registerVizModule(tacticsBoardModule)
 }
