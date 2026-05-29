@@ -181,10 +181,12 @@ sections:
   - id: species
     text: "Ebola is not one disease"
     chart: data:species
+    # Table removed (broken render); paragraphs are now: 0 intro,
+    # 1 conflating-species, 2 trial candidates.
     mobileParagraphs:
       - [0, 1]
-      - [1, 3]
-      - [3, 4]
+      - [1, 2]
+      - [2, 3]
     map:
       center: [20.0, 5.0]
       zoom: 2.6

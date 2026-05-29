@@ -68,14 +68,6 @@ Inside Ituri, the picture by health zone is dominated by Rwampara, with **32 con
 
 Every "Ebola" headline hides a species. The species matters more than the country.
 
-| Species | First seen | Outbreaks | Cases | Typical CFR | Vaccine | Therapeutic |
-|---|---|---:|---:|---|---|---|
-| **Zaire** | 1976 | 30+ | ~46,000 | 40–90% | **Ervebo (licensed)** | Inmazeb, Ebanga (licensed) |
-| **Sudan** | 1976 | 8 | ~672 | 40–50% | Trial candidates | None licensed |
-| **Bundibugyo** | 2007 | **3** | ~290+ | 25–50% | **None** | **None licensed** |
-| **Taï Forest** | 1994 | 1 | 1 | — | None | — |
-| **Reston** | 1989 | 7 | ~13 | 0% | — | Does not cause human disease |
-
 The analytical error that keeps recurring in the press is **conflating species**. The 2014–2016 West Africa epidemic and the 2018–2020 Kivu epidemic were Zaire — and the tools that exist were built for them. The 2022 Mubende outbreak and the January 2025 Kampala outbreak were Sudan — trial candidates but no licensed product. The 2026 outbreak is **Bundibugyo** — the species we have done the least work on.
 
 WHO, IAVI, Oxford with Serum Institute of India (ChAdOx1-BDBV), and Moderna are accelerating trial candidates. None had begun randomised trials by late May 2026.
