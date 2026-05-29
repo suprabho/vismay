@@ -1,8 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import MapStorySection from './MapStorySection'
 import { DeckProgress } from './DeckProgress'
+import VizmayaLogo from '@/components/VizmayaLogo'
 import {
   ForegroundVizSlot,
   ForegroundLayoutSlot,
@@ -11,7 +13,7 @@ import {
 } from '@vismay/viz-engine'
 import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
-import type { ResolvedUnit, StoryDefaults, StoryFormat } from '@vismay/viz-engine'
+import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
 
 interface Props {
@@ -37,6 +39,14 @@ interface Props {
    * viewport.
    */
   format?: StoryFormat
+  /**
+   * One resolved Vizmaya-logo color palette per section (index === section
+   * `parentIndex`), produced by `resolveSectionLogoPalettes`. When provided,
+   * the shell renders the persistent top-left logo and re-tints it to the
+   * active section's palette as the reader scrolls. Omitted by headless
+   * consumers (e.g. the canvas-frame route) so they stay logo-free.
+   */
+  logoPalettes?: LogoPalette[]
 }
 
 /**
@@ -66,6 +76,7 @@ export default function StoryMapShell({
   slug,
   mapOverrides,
   format = 'map',
+  logoPalettes,
 }: Props) {
   const isDeckFormat = format === 'deck'
   const [activeUnit, setActiveUnit] = useState(0)
@@ -378,6 +389,26 @@ export default function StoryMapShell({
           total={units.length}
           onJump={handleProgressJump}
         />
+      )}
+
+      {/* ─── Persistent Vizmaya logo (home link) ─────────────────────────
+          Re-tints to the active section's resolved palette as the reader
+          scrolls. Indexed by `parentIndex` (not `activeUnit`) so sections
+          with multiple subsections share one palette. Rendered here rather
+          than at the page level because this is the only component that
+          knows the active section; gated on `logoPalettes` so headless
+          consumers (canvas-frame) stay logo-free. */}
+      {logoPalettes && (
+        <Link
+          href="/"
+          aria-label="Home"
+          className="fixed top-4 left-4 z-50 w-80 h-16 bg-white/2 rounded-full backdrop-blur-3xl cursor-pointer"
+        >
+          <VizmayaLogo
+            className="w-full h-full"
+            palette={logoPalettes[current?.parentIndex ?? 0] ?? logoPalettes[0]}
+          />
+        </Link>
       )}
     </StoryShellProvider>
   )
