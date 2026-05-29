@@ -83,6 +83,28 @@ export default function VizmayaLogo({ className, palette, wordmarkPrefix }: Vizm
     preString?.setValue?.(wordmarkPrefix)
   }, [wordmarkPrefix, preString])
 
+  // TEMP DIAGNOSTIC — logs `[VizmayaLogo diag]` to the browser console on
+  // every render. Remove once the prefix swap is confirmed working.
+  useEffect(() => {
+    let vmProps: unknown
+    try {
+      vmProps = (viewModel as { properties?: unknown })?.properties ?? '(none)'
+    } catch (e) {
+      vmProps = `(error: ${String(e)})`
+    }
+    const r = rive as { animationNames?: string[]; stateMachineNames?: string[] } | null
+    // eslint-disable-next-line no-console
+    console.log('[VizmayaLogo diag]', {
+      wordmarkPrefix, // should be "Biz" on a deck story, undefined elsewhere
+      hasRive: !!rive, // false => the .riv never loaded
+      hasInstance: !!instance, // false => view-model instance never resolved
+      preStringValue: preString?.value, // null => running .riv has no `logoPreString` property
+      vmProps, // the View Model's actual properties — catches a name/case mismatch
+      animationNames: r?.animationNames, // what timeline animations the .riv exposes
+      stateMachineNames: r?.stateMachineNames, // what state machines the .riv exposes
+    })
+  }, [wordmarkPrefix, rive, instance, preString, preString?.value, viewModel])
+
   return (
     <div className={className}>
       <RiveComponent style={{ width: '100%', height: '100%' }} />
