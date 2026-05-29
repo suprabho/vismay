@@ -6,6 +6,7 @@ import {
   useViewModel,
   useViewModelInstance,
   useViewModelInstanceColor,
+  useViewModelInstanceString,
 } from '@rive-app/react-canvas'
 
 export interface VizmayaLogoPalette {
@@ -21,6 +22,14 @@ export interface VizmayaLogoPalette {
 interface VizmayaLogoProps {
   className?: string
   palette?: VizmayaLogoPalette
+  /**
+   * Overrides the wordmark text. Requires `vizmaya-logo.riv` to expose a
+   * String view-model property named `wordmark`, bound to the logo's text
+   * run (default value "Vizmaya"). Until the `.riv` is re-authored to add
+   * that property this is a safe no-op and the baked-in wordmark shows.
+   * Omit (undefined) to keep the default wordmark.
+   */
+  label?: string
 }
 
 function parseHex(hex: string): { r: number; g: number; b: number } | null {
@@ -32,7 +41,7 @@ function parseHex(hex: string): { r: number; g: number; b: number } | null {
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
 }
 
-export default function VizmayaLogo({ className, palette }: VizmayaLogoProps) {
+export default function VizmayaLogo({ className, palette, label }: VizmayaLogoProps) {
   const { rive, RiveComponent } = useRive({
     src: '/vizmaya-logo.riv',
     autoplay: true,
@@ -47,6 +56,7 @@ export default function VizmayaLogo({ className, palette }: VizmayaLogoProps) {
   const surface = useViewModelInstanceColor('surfaceColor', instance)
   const muted = useViewModelInstanceColor('mutedColor', instance)
   const line = useViewModelInstanceColor('lineColor', instance)
+  const wordmark = useViewModelInstanceString('wordmark', instance)
 
   useEffect(() => {
     if (!palette) return
@@ -67,6 +77,11 @@ export default function VizmayaLogo({ className, palette }: VizmayaLogoProps) {
     apply(palette.muted, muted)
     apply(palette.line, line)
   }, [palette, text, teal, accent, accent2, surface, muted, line])
+
+  useEffect(() => {
+    if (label === undefined) return
+    wordmark?.setValue?.(label)
+  }, [label, wordmark])
 
   return (
     <div className={className}>
