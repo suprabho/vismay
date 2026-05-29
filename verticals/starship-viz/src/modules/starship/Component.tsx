@@ -30,6 +30,14 @@ export default function StarshipViewerComponent({
   // defaults to 1.
   const stageBg = useMemo(() => stageBackground(config.stage), [config.stage])
 
+  // The viewer is a passive, scroll-driven visual in every mode except
+  // `inspect` (which is the one mode meant for direct manipulation via
+  // OrbitControls). Marking the box `pointer-events: none` lets wheel/touch
+  // pass straight through to the scroll container behind it, so scrolling
+  // over the starship scrolls the page (advancing sections / the scrub
+  // progress that drives the camera) instead of getting trapped on the canvas.
+  const interactive = config.mode === 'inspect'
+
   return (
     <div
       style={{
@@ -37,6 +45,7 @@ export default function StarshipViewerComponent({
         height: '100%',
         position: 'relative',
         background: stageBg,
+        pointerEvents: interactive ? 'auto' : 'none',
       }}
     >
       <StarshipScene
@@ -44,6 +53,7 @@ export default function StarshipViewerComponent({
         mode={config.mode}
         progress={progress}
         material={config.material}
+        camera={config.camera}
         onReady={noteReady}
         showGround={config.ground?.show}
         groundColor={config.ground?.color}
