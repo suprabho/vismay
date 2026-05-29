@@ -23,13 +23,12 @@ interface VizmayaLogoProps {
   className?: string
   palette?: VizmayaLogoPalette
   /**
-   * Overrides the wordmark text. Requires `vizmaya-logo.riv` to expose a
-   * String view-model property named `wordmark`, bound to the logo's text
-   * run (default value "Vizmaya"). Until the `.riv` is re-authored to add
-   * that property this is a safe no-op and the baked-in wordmark shows.
-   * Omit (undefined) to keep the default wordmark.
+   * Overrides the logo's themeable prefix segment — the "Viz" in "Vizmaya".
+   * Bound to the `logoPreString` String view-model property in
+   * `vizmaya-logo.riv` (default "Viz"); pass "Biz" to render "Bizmaya".
+   * Omit (undefined) to keep the asset default.
    */
-  label?: string
+  wordmarkPrefix?: string
 }
 
 function parseHex(hex: string): { r: number; g: number; b: number } | null {
@@ -41,7 +40,7 @@ function parseHex(hex: string): { r: number; g: number; b: number } | null {
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff }
 }
 
-export default function VizmayaLogo({ className, palette, label }: VizmayaLogoProps) {
+export default function VizmayaLogo({ className, palette, wordmarkPrefix }: VizmayaLogoProps) {
   const { rive, RiveComponent } = useRive({
     src: '/vizmaya-logo.riv',
     autoplay: true,
@@ -56,7 +55,7 @@ export default function VizmayaLogo({ className, palette, label }: VizmayaLogoPr
   const surface = useViewModelInstanceColor('surfaceColor', instance)
   const muted = useViewModelInstanceColor('mutedColor', instance)
   const line = useViewModelInstanceColor('lineColor', instance)
-  const wordmark = useViewModelInstanceString('wordmark', instance)
+  const preString = useViewModelInstanceString('logoPreString', instance)
 
   useEffect(() => {
     if (!palette) return
@@ -79,9 +78,27 @@ export default function VizmayaLogo({ className, palette, label }: VizmayaLogoPr
   }, [palette, text, teal, accent, accent2, surface, muted, line])
 
   useEffect(() => {
-    if (label === undefined) return
-    wordmark?.setValue?.(label)
-  }, [label, wordmark])
+    if (wordmarkPrefix === undefined) return
+    preString?.setValue?.(wordmarkPrefix)
+  }, [wordmarkPrefix, preString])
+
+  // TEMP DIAGNOSTIC — remove once the prefix swap is confirmed working.
+  // Reads as `[VizmayaLogo diag]` in the browser console on every render.
+  useEffect(() => {
+    let vmProps: unknown
+    try {
+      vmProps = (viewModel as { properties?: unknown })?.properties ?? '(none)'
+    } catch (e) {
+      vmProps = `(error: ${String(e)})`
+    }
+    // eslint-disable-next-line no-console
+    console.log('[VizmayaLogo diag]', {
+      wordmarkPrefix, // undefined on non-deck; should be "Biz" on a deck story
+      hasInstance: !!instance, // false => view-model instance never resolved
+      preStringValue: preString?.value, // null => `.riv` lacks `logoPreString`
+      vmProps, // the View Model's actual property list (names + types)
+    })
+  }, [wordmarkPrefix, instance, preString, preString?.value, viewModel])
 
   return (
     <div className={className}>

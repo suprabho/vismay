@@ -161,7 +161,7 @@ export default async function StoryPage({ params }: RouteParams) {
         >
           <VizmayaLogo
             className="w-full h-full"
-            label={isDeck ? 'Bizmaya' : undefined}
+            wordmarkPrefix={isDeck ? 'Biz' : undefined}
             palette={{
               text: story.frontmatter.theme.colors.text,
               teal: story.frontmatter.theme.colors.teal,
