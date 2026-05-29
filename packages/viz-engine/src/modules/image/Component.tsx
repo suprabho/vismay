@@ -19,6 +19,7 @@ import type { ImageLayerConfig } from './index'
  */
 export default function ImageLayerComponent({
   config,
+  mode,
   noteReady,
   captureRef,
 }: VizRenderProps<ImageLayerConfig>) {
@@ -66,6 +67,14 @@ export default function ImageLayerComponent({
     background: config.background,
   }
 
+  // Eager in capture/print so PDF/video readiness never waits on an unscrolled
+  // lazy image; otherwise eager only for priority (hero/LCP) images and lazy
+  // for the rest. `fetchPriority` lifts the hero ahead of other requests on cold
+  // cellular; `sizes` is forward-compatible for future srcset variants.
+  const isCapture = mode === 'capture' || mode === 'print'
+  const loading: 'eager' | 'lazy' = isCapture || config.priority ? 'eager' : 'lazy'
+  const fetchPriority: 'high' | 'auto' = config.priority ? 'high' : 'auto'
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -73,6 +82,10 @@ export default function ImageLayerComponent({
       src={url}
       alt={config.alt ?? ''}
       style={style}
+      loading={loading}
+      fetchPriority={fetchPriority}
+      decoding="async"
+      sizes={config.sizes ?? '100vw'}
       onLoad={() => noteReady()}
       // Fire `noteReady` on error too so a missing/404 asset doesn't block
       // the capture readiness signal indefinitely — PDF/share renders should

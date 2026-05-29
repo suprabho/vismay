@@ -112,6 +112,18 @@ export default async function StoryPage({ params }: RouteParams) {
 
   const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
 
+  // Story images resolve to the Supabase public bucket in prod (see
+  // resolveAssetUrl / the fs→db sync), so warm that connection early — the hero
+  // is the LCP and its first byte should land sooner on cold cellular. No-op for
+  // stories whose images are same-origin `/content/…` paths.
+  let assetOrigin: string | null = null
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (supabaseUrl) assetOrigin = new URL(supabaseUrl).origin
+  } catch {
+    assetOrigin = null
+  }
+
   // Page-level backdrop. Mount only for deck-format stories — map stories
   // own their backdrop through Mapbox per section, and adding a fixed aura
   // behind a live map composes oddly. `frontmatter.aura` doubles as the
@@ -131,6 +143,7 @@ export default async function StoryPage({ params }: RouteParams) {
           <link href={fontImportUrl} rel="stylesheet" />
         </>
       )}
+      {assetOrigin && <link rel="preconnect" href={assetOrigin} crossOrigin="" />}
       {hasBackdrop && (
         <>
           <StoryBackgroundSlot

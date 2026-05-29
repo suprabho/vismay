@@ -75,6 +75,10 @@ export default function ForegroundLayoutSlot({
 
   if (!layoutDef) return null
   const activeDef: ForegroundLayoutDef = (isPortrait && layoutDef.portrait) || layoutDef
+  // Driven by the BASE layout's flag — the `.portrait` variant only overrides
+  // region boxes, not this flag. When set, each region's slots flow full-width
+  // and vertically on portrait (see ForegroundVizSlot's portraitStack branch).
+  const portraitStack = isPortrait && !!layoutDef.stackOnPortrait
   const unitKey = `${unit.parentIndex}-${unit.subIndex}`
 
   return (
@@ -101,6 +105,8 @@ export default function ForegroundLayoutSlot({
               unitKey={`${unitKey}:${regionName}`}
               activeStep={activeStep}
               mode={mode}
+              isPortrait={isPortrait}
+              portraitStack={portraitStack}
               noteLayerReady={noteLayerReady}
             />
           </div>

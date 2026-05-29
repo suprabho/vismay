@@ -108,6 +108,10 @@ const DECK_LAYOUT_NAMES = [
 
 const deckFreeLayouts: ForegroundLayoutDef[] = DECK_LAYOUT_NAMES.map((name) => ({
   name,
+  // Deck slots self-position with `%`/`vw` widths that read fine in landscape
+  // but squish to ~160px side-by-side on a phone. On portrait, flow them
+  // full-width and vertically instead (handled in ForegroundVizSlot).
+  stackOnPortrait: true,
   regions: {
     default: { style: DECK_SAFE_AREA },
   },

@@ -92,6 +92,7 @@ sections:
       - type: image
         src: /content/stories/spacex-ipo-2026/images/01-hero-orbital.webp
         alt: "Falcon stage one re-entry plume over a Starlink constellation arc, deep dusk"
+        priority: true              # hero / LCP — load eager with fetchpriority=high
         style:
           position: { x: center, y: center }
           size: { width: "100%", height: "100vh" }
