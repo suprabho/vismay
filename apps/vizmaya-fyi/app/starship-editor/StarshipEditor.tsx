@@ -109,6 +109,18 @@ export default function StarshipEditor() {
     }
   }
 
+  const copyOverridesAsYaml = async () => {
+    const yaml = formatOverridesAsYaml(state, partNames)
+    try {
+      await navigator.clipboard.writeText(yaml)
+      // eslint-disable-next-line no-alert
+      alert('YAML copied to clipboard.')
+    } catch {
+      // eslint-disable-next-line no-alert
+      alert(`Clipboard blocked. Here it is:\n\n${yaml}`)
+    }
+  }
+
   return (
     <div
       style={{
@@ -130,6 +142,7 @@ export default function StarshipEditor() {
         switchModel={switchModel}
         resetAll={resetAll}
         copy={copyOverridesAsCode}
+        copyYaml={copyOverridesAsYaml}
       />
       <Sidebar
         state={state}
@@ -161,9 +174,17 @@ interface ToolbarProps {
   switchModel: (model: RocketModel) => void
   resetAll: () => void
   copy: () => void
+  copyYaml: () => void
 }
 
-function Toolbar({ state, setState, switchModel, resetAll, copy }: ToolbarProps) {
+function Toolbar({
+  state,
+  setState,
+  switchModel,
+  resetAll,
+  copy,
+  copyYaml,
+}: ToolbarProps) {
   return (
     <div
       style={{
@@ -240,8 +261,11 @@ function Toolbar({ state, setState, switchModel, resetAll, copy }: ToolbarProps)
         </Pill>
       </Group>
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-        <button type="button" onClick={copy} style={btnStyle('accent')}>
-          Copy overrides
+        <button type="button" onClick={copyYaml} style={btnStyle('accent')}>
+          Copy YAML
+        </button>
+        <button type="button" onClick={copy} style={btnStyle('ghost')}>
+          Copy TS
         </button>
         <button type="button" onClick={resetAll} style={btnStyle('ghost')}>
           Reset all
@@ -350,9 +374,11 @@ function Sidebar({
       })}
       <h3 style={{ ...sectionHeading, marginTop: 24 }}>How it works</h3>
       <p style={{ padding: '0 16px', color: '#8a8e96', lineHeight: 1.45 }}>
-        Pick a part to edit it in the inspector. <strong>Copy overrides</strong>{' '}
-        emits a TypeScript snippet you can paste into the matching import
-        script to bake the fix into the GLB.
+        Pick a part to edit it in the inspector.{' '}
+        <strong>Copy YAML</strong> emits a snippet for a{' '}
+        <code>starship:viewer</code> block in a story config — paste it into
+        the admin Monaco editor. <strong>Copy TS</strong> emits the older
+        import-script snippet that bakes the fix into the GLB.
       </p>
     </aside>
   )
@@ -744,4 +770,111 @@ function formatOverridesAsCode(
   }
   if (lines.length === 3) lines.push('// (no adjustments yet)')
   return lines.join('\n')
+}
+
+/**
+ * Emit the editor's current state as a YAML fragment for pasting into a
+ * `- type: starship:viewer` block in `<slug>.config.yaml`.
+ *
+ * Only `model` and `material` round-trip through the live `parseConfig`
+ * today. `parts`, `helpers`, `camera`, `lights`, and `ground` are emitted
+ * for forward compatibility — `parseConfig` ignores unknown keys, so they
+ * sit harmlessly in the YAML until someone wires them through StarshipScene.
+ * The header comment in the output flags this for the reader.
+ *
+ * Per-part fields are emitted only when they differ from defaults to keep
+ * the output minimal. Scene defaults mirror the hard-coded values in
+ * `verticals/starship-viz/src/web/StarshipScene.tsx`.
+ */
+function formatOverridesAsYaml(
+  state: EditorState,
+  partNames: readonly string[],
+): string {
+  const lines: string[] = [
+    '# Copied from /starship-editor — paste into a `- type: starship:viewer`',
+    '# block in your story config.yaml.',
+    '#',
+    '# LIVE (honored by parseConfig today): type, model, mode, material, scrubSteps.',
+    '# FORWARD-LOOKING (parseConfig ignores until wired): parts, helpers,',
+    '# camera, lights, ground. They round-trip through Monaco safely.',
+    '',
+    'type: starship:viewer',
+    `model: ${state.model}`,
+    '# mode: rotate          # author-set per story unit — rotate | explode | bellyflop | inspect',
+    `material: ${state.globalMaterial}`,
+    '# scrubSteps: 1         # only meaningful for mode: explode | bellyflop',
+  ]
+
+  const partBlocks: string[] = []
+  for (const name of partNames) {
+    const ov = state.overrides[name]
+    if (!ov || !hasAdjustments(ov)) continue
+    const fields: string[] = []
+    if (!ov.visible) fields.push('    visible: false')
+    const { x: px, y: py, z: pz } = ov.positionOffset
+    if (px || py || pz) {
+      fields.push(`    position: { x: ${fmtNum(px)}, y: ${fmtNum(py)}, z: ${fmtNum(pz)} }`)
+    }
+    const { x: rx, y: ry, z: rz } = ov.rotation
+    if (rx || ry || rz) {
+      fields.push(`    rotation: { x: ${fmtNum(rx)}, y: ${fmtNum(ry)}, z: ${fmtNum(rz)} }`)
+    }
+    if (ov.scaleMultiplier !== 1) {
+      fields.push(`    scale: ${fmtNum(ov.scaleMultiplier)}`)
+    }
+    if (ov.materialOverride !== null) {
+      fields.push(`    material: ${ov.materialOverride}`)
+    }
+    if (fields.length === 0) continue
+    partBlocks.push(`  ${name}:\n${fields.join('\n')}`)
+  }
+  if (partBlocks.length > 0) {
+    lines.push('', 'parts:', ...partBlocks)
+  } else {
+    lines.push('', '# parts: (no per-part adjustments yet)')
+  }
+
+  // Helpers — debug overlays. Emit only when any deviate from default
+  // (axes/grid on; boxes/wireframe off) so production YAML stays clean.
+  const helpersDirty =
+    !state.showAxes || !state.showGrid || state.showBoxes || state.showWireframe
+  if (helpersDirty) {
+    lines.push(
+      '',
+      '# Debug helpers — editor-only by default; safe to omit in production.',
+      'helpers:',
+      `  axes: ${state.showAxes}`,
+      `  grid: ${state.showGrid}`,
+      `  boxes: ${state.showBoxes}`,
+      `  wireframe: ${state.showWireframe}`,
+    )
+  }
+
+  // Scene-level defaults — mirror StarshipScene.tsx hard-coded values so the
+  // YAML is a complete starting point for tuning in Monaco.
+  lines.push(
+    '',
+    '# Scene-level defaults (from StarshipScene.tsx). Edit in Monaco to tune.',
+    'camera:',
+    '  position: { x: 3.5, y: 1.4, z: 5 }',
+    '  fov: 40',
+    'lights:',
+    '  ambient: 0.5',
+    '  key:  { position: { x: 5,  y: 8, z: 4 },  intensity: 1.3 }',
+    '  fill: { position: { x: -4, y: 2, z: -3 }, intensity: 0.5 }',
+    'ground:',
+    '  show: true',
+    "  color: '#0a0d12'",
+    '  opacity: 0.55',
+    '  y: -1.55',
+  )
+
+  return lines.join('\n')
+}
+
+/** Trim trailing zeros from a fixed-precision number so the YAML stays tidy. */
+function fmtNum(n: number): string {
+  if (n === 0) return '0'
+  const s = n.toFixed(4)
+  return s.replace(/\.?0+$/, '') || '0'
 }

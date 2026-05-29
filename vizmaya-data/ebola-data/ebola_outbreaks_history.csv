@@ -1,0 +1,59 @@
+year,country,location,species,cases,deaths,cfr_pct,notes
+1976,Democratic Republic of the Congo,Yambuku,Zaire,318,280,88,First recognition of Ebola disease; spread by contaminated needles at Yambuku Mission Hospital
+1976,Sudan,Nzara/Maridi,Sudan,284,151,53,Outbreak began in cotton factory workers; spread through hospitals
+1976,United Kingdom,Laboratory,Zaire,1,0,0,Lab infection by needle stick
+1977,Democratic Republic of the Congo,Tandala,Zaire,1,1,100,Single case identified retrospectively
+1979,Sudan,Nzara/Yambio,Sudan,34,22,65,Same area as 1976; index case worked at textile factory
+1989,Philippines,Primate facility,Reston,3,0,0,Asymptomatic infections in animal-facility workers
+1989,United States,Reston VA + Philadelphia + Alice TX,Reston,4,0,0,Asymptomatic infections from monkeys imported from Philippines
+1992,Italy,Sienna quarantine facility,Reston,0,0,0,No human infections; Reston detected in imported monkeys
+1994,Cote d'Ivoire,Tai Forest,Tai Forest,1,0,0,Scientist infected after autopsy on wild chimpanzee
+1994,Gabon,Makakou,Zaire,51,31,61,Gold mining villages; initially mistaken for yellow fever
+1995,Democratic Republic of the Congo,Kikwit,Zaire,315,254,81,Spread through families and hospitals
+1996,Russia,Laboratory,Zaire,1,1,100,Laboratory worker infected during experimental Ebola treatment work
+1996,Philippines,Primate facility,Reston,0,0,0,Reston detected in monkey export facility; no human cases
+1996,United States,Texas quarantine,Reston,0,0,0,Reston in quarantine facility; no human cases
+1996,South Africa,Johannesburg,Zaire,2,1,50,Imported by medical traveler from Gabon; nurse infected and died
+1996,Gabon,Booue,Zaire,60,45,75,Index case a hunter; chimpanzee skin sample confirmed Ebola
+1996,Gabon,Mayibout 2,Zaire,31,21,68,Hunters butchered an infected chimpanzee
+2000,Uganda,Gulu / Masindi / Mbarara,Sudan,425,224,53,Spread across multiple districts
+2001,Republic of the Congo,Mbomo/Kelle,Zaire,59,44,75,First Ebola outbreak in Republic of the Congo
+2001,Gabon,La Zadie/Ivindo/Mpassa,Zaire,65,53,81,Linked to hunting wildlife
+2003,Republic of the Congo,Mbomo/Kelle,Zaire,143,128,89,Linked to close contact with wildlife
+2003,Republic of the Congo,Mbomo,Zaire,35,29,83,Late 2003 outbreak in Cuvette Ouest
+2004,Sudan,Yambio,Sudan,17,7,41,Concurrent with measles outbreak in same area
+2004,Russia,Laboratory,Zaire,1,1,100,Lab worker accidentally injected with virus
+2005,Republic of the Congo,Etoumbi,Zaire,12,10,83,Two hunters were index patients
+2007,Democratic Republic of the Congo,Luebo/Mweke,Zaire,264,187,71,Kasai Occidental Province
+2007,Uganda,Bundibugyo,Bundibugyo,131,42,32,First identification of Bundibugyo virus
+2008,Democratic Republic of the Congo,Mweka/Luebo,Zaire,32,15,47,Kasai Occidental Province
+2008,Philippines,Pig farm,Reston,6,0,0,First known Reston in pigs; asymptomatic in workers
+2011,Uganda,Luwero,Sudan,1,1,100,Single case; quick diagnosis via UVRI lab
+2012,Uganda,Kibaale,Sudan,11,4,36,Lab-confirmed cases only
+2012,Democratic Republic of the Congo,Orientale (Isiro),Bundibugyo,38,13,34,2nd Bundibugyo outbreak (lab-confirmed only)
+2012,Uganda,Luwero/Jinja/Nakasongola,Sudan,6,3,50,Lab-confirmed cases only
+2014,Democratic Republic of the Congo,Boende,Zaire,69,49,71,Equateur Province; unrelated to West Africa epidemic
+2014,Guinea,Multiple,Zaire,3814,2544,67,Part of West Africa epidemic
+2014,Liberia,Multiple,Zaire,10678,4810,45,Part of West Africa epidemic
+2014,Sierra Leone,Multiple,Zaire,14124,3956,28,Part of West Africa epidemic
+2014,Mali,Bamako,Zaire,8,6,75,Imported from Guinea
+2014,Nigeria,Lagos/Port Harcourt,Zaire,20,8,40,Imported from Liberia; contained
+2014,Senegal,Dakar,Zaire,1,0,0,Imported; contained
+2014,Spain,Madrid,Zaire,1,0,0,Healthcare worker infected treating evacuated patient
+2014,United Kingdom,London,Zaire,1,0,0,Healthcare worker symptomatic on arrival from Sierra Leone
+2014,Italy,Rome,Zaire,1,0,0,Healthcare worker returned from Sierra Leone
+2014,United States,Dallas/NYC,Zaire,4,1,25,Includes 2 nurses infected in Dallas
+2017,Democratic Republic of the Congo,Likati (Bas Uele),Zaire,8,4,50,Remote area; logistical challenges
+2018,Democratic Republic of the Congo,Bikoro (Equateur),Zaire,54,33,61,9th DRC outbreak; ended July 2018
+2018,Democratic Republic of the Congo,North Kivu / Ituri (Kivu),Zaire,3470,2287,66,2nd largest ever; spillover into Uganda; conflict-affected; first wide Ervebo deployment
+2020,Democratic Republic of the Congo,Mbandaka (Equateur),Zaire,130,55,42,11th DRC outbreak; new spillover event
+2021,Guinea,N'Zerekore,Zaire,23,12,52,First cases since 2014-16 epidemic; survivor reactivation
+2021,Democratic Republic of the Congo,Biena (North Kivu),Zaire,12,6,50,Linked to 2018-2020 outbreak via persistent infection
+2021,Democratic Republic of the Congo,Beni (North Kivu),Zaire,11,9,82,Survivor reactivation; 13th DRC outbreak
+2022,Democratic Republic of the Congo,Mbandaka (Equateur),Zaire,5,5,100,14th DRC outbreak; new spillover
+2022,Democratic Republic of the Congo,Beni (North Kivu),Zaire,1,1,100,Single fatal case; 15th DRC outbreak
+2022,Uganda,Mubende,Sudan,164,55,34,Mubende District; outbreak ended Jan 2023
+2025,Uganda,Kampala,Sudan,14,4,29,Index case was a nurse; ring-vaccination trial deployed
+2025,Democratic Republic of the Congo,Bulape (Kasai),Zaire,64,45,70,16th DRC outbreak; >47500 vaccinated with Ervebo
+2026,Democratic Republic of the Congo,Ituri/North Kivu/South Kivu,Bundibugyo,121,17,14,17th DRC outbreak; PHEIC declared 17 May 2026; ongoing; figures as of 26 May
+2026,Uganda,Kampala,Bundibugyo,7,1,14,Imported cases from DRC; ongoing

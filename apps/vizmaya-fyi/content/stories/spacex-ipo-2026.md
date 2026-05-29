@@ -18,7 +18,7 @@ format: "deck"
 # Editorial bone-white rebuild — no aura backdrop; the deck.config.yaml
 # `storyBackground` paints a flat color so the page reads as a printed S-1
 # rather than a generative-motion site.
-aura: null
+aura: minimalist-gold-background-elegant-white-design-for-websites
 
 theme:
   colors:

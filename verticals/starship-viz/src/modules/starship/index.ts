@@ -34,6 +34,25 @@ export interface StarshipViewerConfig {
    * Only meaningful for `mode: 'explode' | 'bellyflop'`.
    */
   scrubSteps?: number
+  /**
+   * Background painted on the wrapper div around the canvas. Omit to inherit
+   * the layer's background (the common case — most stories want the section
+   * bg to show through). `opacity` blends the color over whatever's behind.
+   */
+  stage?: {
+    color?: string
+    opacity?: number
+  }
+  /**
+   * Soft ground disc under the ship. `show: false` hides it entirely;
+   * omit the block to use the built-in defaults
+   * (`#0a0d12` at `0.55`).
+   */
+  ground?: {
+    show?: boolean
+    color?: string
+    opacity?: number
+  }
 }
 
 function isObj(x: unknown): x is Record<string, unknown> {
@@ -79,12 +98,70 @@ function parseConfig(
     }
     scrubSteps = scrubStepsRaw
   }
+  let stage: StarshipViewerConfig['stage']
+  if (raw.stage != null) {
+    if (!isObj(raw.stage)) {
+      throw new Error(
+        `${ctx.label}: starship:viewer 'stage' must be an object (got ${typeof raw.stage})`,
+      )
+    }
+    const { color, opacity } = raw.stage
+    if (color != null && typeof color !== 'string') {
+      throw new Error(
+        `${ctx.label}: starship:viewer 'stage.color' must be a string (got ${typeof color})`,
+      )
+    }
+    if (opacity != null) {
+      if (typeof opacity !== 'number' || !Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+        throw new Error(
+          `${ctx.label}: starship:viewer 'stage.opacity' must be a number in [0,1] (got ${String(opacity)})`,
+        )
+      }
+    }
+    stage = {
+      ...(color != null ? { color } : {}),
+      ...(opacity != null ? { opacity } : {}),
+    }
+  }
+  let ground: StarshipViewerConfig['ground']
+  if (raw.ground != null) {
+    if (!isObj(raw.ground)) {
+      throw new Error(
+        `${ctx.label}: starship:viewer 'ground' must be an object (got ${typeof raw.ground})`,
+      )
+    }
+    const { show, color, opacity } = raw.ground
+    if (show != null && typeof show !== 'boolean') {
+      throw new Error(
+        `${ctx.label}: starship:viewer 'ground.show' must be a boolean (got ${typeof show})`,
+      )
+    }
+    if (color != null && typeof color !== 'string') {
+      throw new Error(
+        `${ctx.label}: starship:viewer 'ground.color' must be a string (got ${typeof color})`,
+      )
+    }
+    if (opacity != null) {
+      if (typeof opacity !== 'number' || !Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+        throw new Error(
+          `${ctx.label}: starship:viewer 'ground.opacity' must be a number in [0,1] (got ${String(opacity)})`,
+        )
+      }
+    }
+    ground = {
+      ...(show != null ? { show } : {}),
+      ...(color != null ? { color } : {}),
+      ...(opacity != null ? { opacity } : {}),
+    }
+  }
   return {
     type: 'starship:viewer',
     model: model as RocketModel,
     mode: mode as StarshipMode,
     material: material as StarshipMaterial,
     ...(scrubSteps != null ? { scrubSteps } : {}),
+    ...(stage != null ? { stage } : {}),
+    ...(ground != null ? { ground } : {}),
   }
 }
 

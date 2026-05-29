@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "id": "countries",
+    "title": "Cumulative human Ebola cases by country, 1976–2026",
+    "subtitle": "Five countries hold 95% of all recorded cases",
+    "source": "US CDC Outbreak History + WHO DON",
+    "note": "DRC total includes the 2026 outbreak in progress. West Africa epidemic totals attributed to Sierra Leone, Liberia, Guinea."
+  },
+  "grid": { "left": 8, "right": 56, "top": 12, "bottom": 24, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0f0e0c",
+    "borderColor": "#0f0e0c",
+    "textStyle": { "color": "#f5f1ea", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{b}<br/><b>{c}</b> cases"
+  },
+  "xAxis": {
+    "type": "value",
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#d8d2c5", "type": "dashed" } },
+    "axisLabel": { "color": "#6b665d", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": [
+      "All others",
+      "Nigeria",
+      "Republic of Congo",
+      "Gabon",
+      "Sudan / S. Sudan",
+      "Uganda",
+      "Guinea",
+      "DR Congo (17 outbreaks)",
+      "Liberia",
+      "Sierra Leone"
+    ],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#0f0e0c", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 12 }
+  },
+  "series": [
+    {
+      "type": "bar",
+      "data": [
+        { "value": 30,    "itemStyle": { "color": "#6b665d" } },
+        { "value": 20,    "itemStyle": { "color": "#6a1818" } },
+        { "value": 249,   "itemStyle": { "color": "#6a1818" } },
+        { "value": 268,   "itemStyle": { "color": "#6a1818" } },
+        { "value": 335,   "itemStyle": { "color": "#5c4ba0" } },
+        { "value": 770,   "itemStyle": { "color": "#5c4ba0" } },
+        { "value": 3837,  "itemStyle": { "color": "#6a1818" } },
+        { "value": 4913,  "itemStyle": { "color": "#c4391c" } },
+        { "value": 10678, "itemStyle": { "color": "#6a1818" } },
+        { "value": 14124, "itemStyle": { "color": "#6a1818" } }
+      ],
+      "barCategoryGap": "35%",
+      "label": {
+        "show": true, "position": "right",
+        "color": "#0f0e0c", "fontFamily": "JetBrains Mono", "fontSize": 11,
+        "formatter": "{c}"
+      },
+      "itemStyle": { "borderRadius": [0, 2, 2, 0] }
+    }
+  ]
+}

@@ -326,10 +326,14 @@ export default function StoryMapShell({
         </div>
       )}
 
-      {/* Snap-scroll container — the scrollable element, root of the observer */}
+      {/* Snap-scroll container — the scrollable element, root of the observer.
+          No explicit z-index: a `z-0` here would create a stacking context
+          that traps the hero-full-bleed section's inline `zIndex: 20` below
+          the foreground image (rendered at z-10 in a sibling fixed wrapper).
+          Other sections have no inline z and behave identically either way. */}
       <div
         ref={containerRef}
-        className={`relative z-0 h-svh overflow-y-scroll snap-y snap-mandatory${
+        className={`relative h-svh overflow-y-scroll snap-y snap-mandatory${
           isAutoplay ? ' hide-scrollbar' : ''
         }`}
       >

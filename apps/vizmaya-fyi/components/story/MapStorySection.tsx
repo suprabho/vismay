@@ -121,11 +121,7 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
       <section
         data-unit-index={unitIndex}
         className="snap-start snap-always h-svh w-full relative"
-        style={{
-          zIndex: 20,
-          background:
-            'radial-gradient(ellipse at 70% 40%, rgba(58,52,72,0.55) 0%, rgba(20,22,28,0.0) 55%), linear-gradient(180deg, #1b1d28 0%, #0f1118 60%, #0a0c14 100%)',
-        }}
+        style={{ zIndex: 20 }}
       >
         <div
           aria-hidden

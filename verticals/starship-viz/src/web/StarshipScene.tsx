@@ -31,6 +31,10 @@ interface StarshipSceneProps {
   onReady?: () => void
   /** When true, attaches a soft-shadow ground plane under the ship. */
   showGround?: boolean
+  /** Color of the ground disc under the ship. Hex string (e.g. `#0a0d12`) or numeric hex. */
+  groundColor?: string | number
+  /** Opacity of the ground disc, 0..1. */
+  groundOpacity?: number
 }
 
 /**
@@ -140,6 +144,8 @@ export function StarshipScene({
   height = '100%',
   onReady,
   showGround = true,
+  groundColor = 0x0a0d12,
+  groundOpacity = 0.55,
 }: StarshipSceneProps) {
   return (
     // The conversion script normalizes the ship to ~3 units tall and
@@ -172,11 +178,11 @@ export function StarshipScene({
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.55, 0]} receiveShadow>
           <circleGeometry args={[5, 64]} />
           <meshStandardMaterial
-            color={0x0a0d12}
+            color={groundColor}
             roughness={1}
             metalness={0}
             transparent
-            opacity={0.55}
+            opacity={groundOpacity}
           />
         </mesh>
       )}

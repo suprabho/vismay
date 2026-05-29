@@ -23,14 +23,20 @@ export default function StarshipViewerComponent({
     return t < 0 ? 0 : t > 1 ? 1 : t
   }, [activeStep, config.scrubSteps])
 
+  // Stage background — opt-in via `config.stage`. Default is transparent so
+  // the layer's section background shows through (the common case for the
+  // bone-white editorial palette). Explicit `color` + optional `opacity` get
+  // composed into an rgba string when both are present; missing `opacity`
+  // defaults to 1.
+  const stageBg = useMemo(() => stageBackground(config.stage), [config.stage])
+
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
         position: 'relative',
-        background:
-          'radial-gradient(ellipse at 50% 60%, rgba(40,52,68,0.4) 0%, rgba(10,14,20,0.92) 70%)',
+        background: stageBg,
       }}
     >
       <StarshipScene
@@ -39,7 +45,25 @@ export default function StarshipViewerComponent({
         progress={progress}
         material={config.material}
         onReady={noteReady}
+        showGround={config.ground?.show}
+        groundColor={config.ground?.color}
+        groundOpacity={config.ground?.opacity}
       />
     </div>
   )
+}
+
+function stageBackground(stage: StarshipViewerConfig['stage']): string {
+  if (!stage || stage.color == null) return 'transparent'
+  const opacity = stage.opacity ?? 1
+  if (opacity >= 1) return stage.color
+  // Hex → rgba blend so the color dims over whatever's behind without
+  // dimming the canvas children.
+  const m = /^#([0-9a-f]{6})$/i.exec(stage.color)
+  if (!m) return stage.color
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`
 }

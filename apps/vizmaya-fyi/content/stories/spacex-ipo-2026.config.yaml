@@ -44,8 +44,8 @@ defaults:
   # frosted-glass panels. The whole story should read like a printed S-1
   # spread, not a generative-motion site.
   storyBackground:
-    type: color
-    value: "#f5f1ea"
+    type: aura
+    slug: "blue-abstract-background-elegant-soft-waves-for-design"
     fixed: true
   overlay:
     color: "transparent"
@@ -62,7 +62,7 @@ defaults:
   scroll:
     mode: snap
     paddingY: "12vh"
-  chart:
+  chart: 
     theme: light-editorial
     grid: { left: 64, right: 32, top: 56, bottom: 56 }
   # Story-scoped feature flag — mounts the right-edge 15-step progress
@@ -90,7 +90,7 @@ sections:
       # painted as an overlay inside MapStorySection (z-20 above the
       # foreground image) when section.layout === 'hero-full-bleed'.
       - type: image
-        src: /content/spacex-s1-2026/images/01-hero-orbital.webp
+        src: /content/stories/spacex-ipo-2026/images/01-hero-orbital.webp
         alt: "Falcon stage one re-entry plume over a Starlink constellation arc, deep dusk"
         style:
           position: { x: center, y: center }
@@ -200,14 +200,17 @@ sections:
         style:
           position: { x: left, y: center }
           size: { width: "44%" }
-      - type: quote
-        text: |
-          The launch business is currently a net drain on the balance sheet —
-          by design.
-        attribution: "Falcon 9 → Starlink supply chain"
+      - type: starship:viewer
+        model: falcon-9
+        mode: rotate
+        material: metal
+        ground:
+          show: true
+          color: '#ffffff'
+          opacity: 0
         style:
           position: { x: right, y: center }
-          size: { width: "44%" }
+          size: { width: "44%", height: "62vh" }
 
   # ---------------------------------------------------------------------------
   # 7 · $15B+ Starship — bigStat + 3D explode
@@ -234,9 +237,10 @@ sections:
         style:
           position: { x: left, y: center }
           size: { width: "44%" }
-      - type: chart
-        id: starship-rd-cumulative
-        caption: "$3B in 2025 alone · $930M in Q1 2026"
+      - type: starship:viewer
+        mode: explode
+        material: metal
+        scrubSteps: 1
         style:
           position: { x: right, y: center }
           size: { width: "50%", height: "62vh" }
@@ -258,7 +262,7 @@ sections:
           position: { x: left, y: center }
           size: { width: "44%" }
       - type: image
-        src: /content/spacex-s1-2026/images/02-colossus-data-center.webp
+        src: /content/stories/spacex-ipo-2026/images/02-colossus-data-center.webp
         alt: "Inside view of COLOSSUS — gigawatt-scale AI training cluster, Memphis"
         caption: "COLOSSUS · 220,000 Nvidia GPUs · 300MW · built in 120 days"
         style:

@@ -1,0 +1,79 @@
+{
+  "_meta": {
+    "id": "outbreak-timeline",
+    "title": "From hospital cluster to PHEIC in 12 days",
+    "subtitle": "Key events, April 24 – May 26 2026",
+    "source": "WHO DON, ECDC, Africa CDC, CDC",
+    "note": "Time from estimated index onset to PHEIC was 23 days — faster than any prior Ebola PHEIC."
+  },
+  "grid": { "left": 80, "right": 24, "top": 16, "bottom": 24, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0f0e0c",
+    "borderColor": "#0f0e0c",
+    "textStyle": { "color": "#f5f1ea", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{b}<br/>{c[2]}"
+  },
+  "xAxis": {
+    "type": "time",
+    "min": "2026-04-22",
+    "max": "2026-05-28",
+    "axisLine": { "lineStyle": { "color": "#d8d2c5" } },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#d8d2c5", "type": "dashed" } },
+    "axisLabel": { "color": "#6b665d", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": ["Containment", "Confirmation", "Cases", "Declarations"],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#0f0e0c", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 11 }
+  },
+  "series": [
+    {
+      "name": "Events",
+      "type": "scatter",
+      "symbolSize": 14,
+      "itemStyle": { "color": "#c4391c", "borderColor": "#0f0e0c", "borderWidth": 1.5 },
+      "data": [
+        { "value": ["2026-04-24", "Cases",         "Estimated index onset (Ituri)"],            "name": "24 Apr" },
+        { "value": ["2026-05-05", "Cases",         "WHO alerted; 4 health workers dead"],       "name": "5 May", "itemStyle": { "color": "#c79100" } },
+        { "value": ["2026-05-15", "Confirmation",  "INRB confirms Bundibugyo virus"],           "name": "15 May" },
+        { "value": ["2026-05-15", "Declarations",  "DRC declares 17th Ebola outbreak"],         "name": "15 May" },
+        { "value": ["2026-05-15", "Cases",         "Uganda confirms imported case (death)"],    "name": "15 May" },
+        { "value": ["2026-05-16", "Cases",         "Second unrelated Kampala case"],            "name": "16 May", "itemStyle": { "color": "#c79100" } },
+        { "value": ["2026-05-17", "Declarations",  "WHO declares PHEIC"],                       "name": "17 May" },
+        { "value": ["2026-05-18", "Declarations",  "Africa CDC PHECS; ECDC EUHTF activated"],   "name": "18 May", "itemStyle": { "color": "#c79100" } },
+        { "value": ["2026-05-19", "Declarations",  "IHR Emergency Committee first meeting"],    "name": "19 May", "itemStyle": { "color": "#c79100" } },
+        { "value": ["2026-05-21", "Cases",         "85 confirmed · 746 suspected"],             "name": "21 May" },
+        { "value": ["2026-05-24", "Cases",         "101 confirmed · 930 suspected"],            "name": "24 May" },
+        { "value": ["2026-05-26", "Cases",         "128 confirmed · 1,077 suspected"],          "name": "26 May" }
+      ],
+      "label": {
+        "show": true, "position": "top",
+        "color": "#0f0e0c", "fontFamily": "JetBrains Mono", "fontSize": 10,
+        "formatter": "{b}"
+      }
+    },
+    {
+      "name": "PHEIC marker",
+      "type": "line",
+      "showSymbol": false,
+      "lineStyle": { "color": "#c4391c", "width": 1, "type": "dashed" },
+      "markLine": {
+        "silent": true,
+        "symbol": "none",
+        "lineStyle": { "color": "#c4391c", "width": 1, "type": "dashed" },
+        "label": {
+          "formatter": "PHEIC",
+          "color": "#c4391c",
+          "fontFamily": "Inter",
+          "fontWeight": 600,
+          "fontSize": 10
+        },
+        "data": [{ "xAxis": "2026-05-17" }]
+      }
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "id": "species",
+    "title": "Ebola by species — cases, CFR, and product availability",
+    "subtitle": "Five species, three that cause significant human disease",
+    "source": "US CDC, WHO",
+    "note": "Bundibugyo is the species behind the 2026 outbreak — and the one with the fewest historical cases and no licensed vaccine or therapeutic."
+  },
+  "grid": { "left": 60, "right": 80, "top": 30, "bottom": 50, "containLabel": true },
+  "tooltip": {
+    "trigger": "axis",
+    "axisPointer": { "type": "shadow" },
+    "backgroundColor": "#0f0e0c",
+    "borderColor": "#0f0e0c",
+    "textStyle": { "color": "#f5f1ea", "fontFamily": "JetBrains Mono", "fontSize": 11 }
+  },
+  "legend": {
+    "top": 0,
+    "icon": "circle",
+    "itemWidth": 8,
+    "itemHeight": 8,
+    "textStyle": { "color": "#6b665d", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "xAxis": {
+    "type": "category",
+    "data": ["Zaire", "Sudan", "Bundibugyo", "Taï Forest", "Reston"],
+    "axisLine": { "lineStyle": { "color": "#d8d2c5" } },
+    "axisTick": { "show": false },
+    "axisLabel": {
+      "color": "#0f0e0c", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 12,
+      "rich": {
+        "active": { "color": "#c4391c", "fontWeight": 700 }
+      },
+      "formatter": "{value}"
+    }
+  },
+  "yAxis": [
+    {
+      "type": "log",
+      "name": "Cases (log)",
+      "nameTextStyle": { "color": "#6b665d", "fontFamily": "Inter", "fontSize": 10 },
+      "axisLine": { "show": false },
+      "axisTick": { "show": false },
+      "splitLine": { "lineStyle": { "color": "#d8d2c5", "type": "dashed" } },
+      "axisLabel": { "color": "#6b665d", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+    },
+    {
+      "type": "value",
+      "name": "CFR %",
+      "max": 100,
+      "nameTextStyle": { "color": "#6b665d", "fontFamily": "Inter", "fontSize": 10 },
+      "axisLine": { "show": false },
+      "axisTick": { "show": false },
+      "splitLine": { "show": false },
+      "axisLabel": { "color": "#6b665d", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "{value}%" }
+    }
+  ],
+  "series": [
+    {
+      "name": "Cumulative cases",
+      "type": "bar",
+      "yAxisIndex": 0,
+      "barWidth": "38%",
+      "data": [
+        { "value": 46000, "itemStyle": { "color": "#6a1818" } },
+        { "value": 672,   "itemStyle": { "color": "#5c4ba0" } },
+        { "value": 290,   "itemStyle": { "color": "#c4391c" } },
+        { "value": 1,     "itemStyle": { "color": "#2d6a4f" } },
+        { "value": 13,    "itemStyle": { "color": "#6b665d" } }
+      ],
+      "itemStyle": { "borderRadius": [2, 2, 0, 0] }
+    },
+    {
+      "name": "Typical CFR (midpoint)",
+      "type": "line",
+      "yAxisIndex": 1,
+      "data": [65, 45, 38, 0, 0],
+      "symbol": "circle",
+      "symbolSize": 8,
+      "lineStyle": { "color": "#0f0e0c", "width": 1.5, "type": "dashed" },
+      "itemStyle": { "color": "#0f0e0c" }
+    }
+  ],
+  "markLines": {
+    "_note": "Use this metadata to annotate the active species in your renderer.",
+    "active_species_index": 2
+  }
+}
