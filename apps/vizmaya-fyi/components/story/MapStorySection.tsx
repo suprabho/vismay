@@ -1,7 +1,7 @@
 'use client'
 
 import type { ResolvedUnit, StatColor } from '@vismay/viz-engine'
-import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlots, resolveSlotsFlat, ForegroundLayoutSlot } from '@vismay/viz-engine'
 import { formatInlineMarkdown, getListItems, isListBlock } from '@vismay/viz-engine'
 import { HeroPanel, HeroPanelTitle, HeroPanelDek } from './Hero'
 import { statColorVar } from './ThemeProvider'
@@ -18,6 +18,22 @@ interface Props {
    * camera/chart cues; dropping it would shorten the rendered video.
    */
   isAutoplay?: boolean
+  /**
+   * Deck live-scroll only. When true, this section renders its own foreground
+   * layer stack INSIDE the snap target (in the scroll flow) rather than
+   * leaving an empty target for the shell's fixed overlay to fill. This is
+   * what makes deck content scroll with the page like the map-format text
+   * cards — smooth section transitions, and wheel/touch over any slot reaches
+   * the scroll container. The shell only sets this for `mode === 'scroll'`;
+   * autoplay/capture/print keep the fixed-overlay path.
+   */
+  renderForegroundInline?: boolean
+  /** Story slug — forwarded to in-flow foreground slots so charts find their JSON. */
+  slug?: string
+  /** Render mode — forwarded to in-flow foreground slots. */
+  mode?: 'scroll' | 'autoplay' | 'capture' | 'print'
+  /** Portrait (mobile) viewport — forwarded to in-flow foreground slots. */
+  isPortrait?: boolean
 }
 
 /**
@@ -80,7 +96,15 @@ function aliasKind(kind: string): string {
   return kind
 }
 
-export default function MapStorySection({ unitIndex, unit, isAutoplay = false }: Props) {
+export default function MapStorySection({
+  unitIndex,
+  unit,
+  isAutoplay = false,
+  renderForegroundInline = false,
+  slug = '',
+  mode = 'scroll',
+  isPortrait = false,
+}: Props) {
   const { parentConfig, heading, subheading, paragraphs, heroPart } = unit
   const rawKind = parentConfig.kind ?? 'text'
   const kind = aliasKind(rawKind)
@@ -94,7 +118,28 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
   // module (see ForegroundLayoutSlot). The section's own text card is
   // suppressed to avoid double rendering — only the snap target stays so
   // the IntersectionObserver still drives `activeUnit`.
-  const usesRegions = resolveSlots(parentConfig).foreground.kind === 'regions'
+  const resolvedFg = resolveSlots(parentConfig).foreground
+  const usesRegions = resolvedFg.kind === 'regions'
+
+  // Deck live-scroll: this section's foreground, rendered in-flow so it scrolls
+  // with the page. A flat foreground (deck section with no `layout:`) is wrapped
+  // into a single-region `free` layout so its slots inherit the deck safe-area
+  // inset — mirroring the shell's fixed-overlay synthesis. `activeStep` is this
+  // section's own subIndex (its scrub position when it's the active unit).
+  const inlineForeground = !renderForegroundInline ? null : (
+    <ForegroundLayoutSlot
+      slug={slug}
+      foreground={
+        resolvedFg.kind === 'flat'
+          ? { kind: 'regions', layout: 'free', regions: { default: resolvedFg.layers } }
+          : resolvedFg
+      }
+      unit={unit}
+      activeStep={unit.subIndex ?? 0}
+      mode={mode}
+      isPortrait={isPortrait}
+    />
+  )
   // Deck-format kinds (other than cover/hero) carry their visual entirely
   // through composed foreground vizslots — the section text card must not
   // render or it would duplicate copy that lives in `bodyText` / `bigStat`
@@ -120,9 +165,15 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
     return (
       <section
         data-unit-index={unitIndex}
-        className="snap-start snap-always h-svh w-full relative"
+        className={`snap-start snap-always h-svh w-full relative${
+          renderForegroundInline ? ' overflow-hidden' : ''
+        }`}
         style={{ zIndex: 20 }}
       >
+        {/* Deck live-scroll: the cover image renders in-flow here (behind the
+            scrim + headline) so it scrolls with the section. Off-deck this is
+            null and the image comes from the shell's fixed overlay. */}
+        {inlineForeground}
         <div
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-[70%] pointer-events-none"
@@ -153,8 +204,16 @@ export default function MapStorySection({ unitIndex, unit, isAutoplay = false }:
     return (
       <section
         data-unit-index={unitIndex}
-        className="snap-start snap-always h-svh w-full relative"
-      />
+        // `overflow-hidden` only when rendering in-flow: each deck section is a
+        // viewport-tall slide, so over-tall content (e.g. a long `bodyText`)
+        // must clip at the section edge instead of bleeding into the adjacent
+        // snap target as it scrolls past. Off-deck this is an empty target.
+        className={`snap-start snap-always h-svh w-full relative${
+          renderForegroundInline ? ' overflow-hidden' : ''
+        }`}
+      >
+        {inlineForeground}
+      </section>
     )
   }
 

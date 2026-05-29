@@ -206,6 +206,15 @@ export default function StoryMapShell({
       ? 'autoplay'
       : 'scroll'
 
+  // Deck sections render their foreground INSIDE each snap target (in the
+  // scroll container) — rather than in a single fixed overlay that hard-swaps
+  // the active unit — so the content scrolls with the page like the map
+  // format's text cards: smooth section-to-section transitions, and wheel/touch
+  // over any slot (including the 3D starship canvas) reaches the scroller.
+  // Scoped to the live `scroll` experience; autoplay/capture/print keep the
+  // deterministic fixed-overlay path the video/PDF pipelines depend on.
+  const deckInFlow = isDeckFormat && mode === 'scroll'
+
   // Story-scoped opt-in via `defaults.progress: true` in the .config.yaml.
   // Hidden during autoplay/capture so the indicator doesn't appear in
   // rendered video frames.
@@ -319,7 +328,7 @@ export default function StoryMapShell({
           region inherit the region's pointer-events default; layer-level
           style can re-enable interaction (matching the legacy chart panel's
           `[@media(min-aspect-ratio:1/1)]:pointer-events-auto` trick). */}
-      {showRegions && current && (
+      {showRegions && current && !deckInFlow && (
         <div className="fixed inset-0 z-10 pointer-events-none">
           <ForegroundLayoutSlot
             slug={slug ?? ''}
@@ -352,6 +361,13 @@ export default function StoryMapShell({
             // the normal landscape text card so the recorded video has the
             // section copy on screen alongside the map and chart.
             isAutoplay={isAutoplay && isPortrait}
+            // Deck (live scroll): render this section's foreground in-flow so
+            // it scrolls with the page. Off-deck and autoplay/capture keep the
+            // empty snap target + fixed overlay above.
+            renderForegroundInline={deckInFlow}
+            slug={slug ?? ''}
+            mode={mode}
+            isPortrait={isPortrait}
           />
         ))}
       </div>
