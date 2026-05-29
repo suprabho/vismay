@@ -290,7 +290,12 @@ export function StarshipScene({
     <Canvas
       camera={{ position: initialPosition, fov: initialFov }}
       dpr={[1, 2]}
-      style={{ width: '100%', height }}
+      // R3F gives its container `pointer-events: auto`, which would otherwise
+      // override the `none` on the wrapper and let the canvas swallow wheel /
+      // touch — trapping page scroll over the model. Every mode except
+      // `inspect` (the OrbitControls one) is a passive, scroll-driven visual,
+      // so make the canvas transparent to input and let scroll reach the deck.
+      style={{ width: '100%', height, pointerEvents: mode === 'inspect' ? 'auto' : 'none' }}
       gl={{ antialias: true, alpha: true }}
       onCreated={({ camera: cam }) => cam.lookAt(initialTarget[0], initialTarget[1], initialTarget[2])}
     >
