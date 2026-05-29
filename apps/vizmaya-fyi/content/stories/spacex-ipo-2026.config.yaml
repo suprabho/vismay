@@ -68,6 +68,14 @@ defaults:
   # Story-scoped feature flag — mounts the right-edge 15-step progress
   # indicator. Other deck stories don't set this and stay unaffected.
   progress: true
+  # Per-section Vizmaya-logo recolor (demo). The persistent top-left logo
+  # re-tints to each section's palette as you scroll. Values are theme tokens
+  # ("$accent", "$teal", "$muted", …) resolved against this story's theme, or a
+  # literal hex. `defaults.logoPalette` is the story-wide base; each section's
+  # own `logoPalette` layers over it. Slots: text/teal/accent/accent2/surface/
+  # muted/line → the logo's .riv color bindings.
+  logoPalette:
+    accent: "$accent2"   # story-wide base: the logo's accent slot uses accent2
 
 sections:
 
@@ -109,6 +117,8 @@ sections:
     kind: bigStat
     text: "$18.7B headline"
     paragraphs: [0, 2]
+    logoPalette:
+      accent: "$teal"        # demo: tint the logo accent teal on this slide
     foreground:
       - type: bigStat
         value: "$18.7B"
@@ -386,6 +396,9 @@ sections:
     kind: data
     text: "$1.75T at IPO"
     paragraphs: [0, 3]
+    logoPalette:
+      accent: "$accent"      # demo: the warm accent returns for the valuation slide
+      teal: "$accent2"
     layout: stat-left-chart-right
     foreground:
       - type: bigStat
@@ -412,6 +425,9 @@ sections:
     kind: closing
     text: "When class wore the mask of margin"
     paragraphs: [0, 4]
+    logoPalette:
+      accent: "$muted"       # demo: a muted, somber accent for the closing essay
+      text: "$accent"
     mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
       - [0, 2]
       - [2, 4]

@@ -13,6 +13,7 @@ import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-r
 import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
 import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
 import { sample as bracketSample } from '@vismay/footshorts-viz/modules/bracket/sample'
+import { sample as tacticsBoardSample } from '@vismay/footshorts-viz/modules/tactics-board/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
 
 export type CatalogCategory = 'Core' | 'F1' | 'Footshorts' | 'Starship'
@@ -57,6 +58,7 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },
   { type: 'fs:standings-table', category: 'Footshorts', sample: standingsTableSample },
   { type: 'fs:bracket', category: 'Footshorts', sample: bracketSample },
+  { type: 'fs:tactics-board', category: 'Footshorts', sample: tacticsBoardSample },
   {
     type: 'starship:viewer',
     category: 'Starship',

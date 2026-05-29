@@ -21,6 +21,7 @@ export * from './types/story'
 
 // Lib helpers (formerly @/lib/*) — order matters where files share types via re-export
 export * from './lib/storyConfig.types'
+export * from './lib/logoPalette'
 export * from './lib/inlineMarkdown'
 export * from './lib/foregroundContent'
 export * from './lib/storyMapOverrides'

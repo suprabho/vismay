@@ -157,6 +157,24 @@ export interface ChartDefaults {
   }
 }
 
+/**
+ * Per-section override of the persistent Vizmaya logo Rive's colors. Each value
+ * is a theme token (`"$accent"`, `"$teal"`, … — resolved against the active theme
+ * via `resolveSectionLogoPalettes`) or a concrete hex (`"#d8804a"`). Slots map to
+ * the `.riv` view-model bindings (text→textColor, teal→tealColor, accent→accentColor,
+ * accent2→accent2Color, surface→surfaceColor, muted→mutedColor, line→lineColor).
+ * Unset slots inherit: section override → story-wide `defaults.logoPalette` → theme.
+ */
+export interface LogoPalette {
+  text?: string
+  teal?: string
+  accent?: string
+  accent2?: string
+  surface?: string
+  muted?: string
+  line?: string
+}
+
 export interface StoryDefaults {
   mapStyle: string
   mapOpacity: number
@@ -201,6 +219,12 @@ export interface StoryDefaults {
    * keep the cleaner empty edges.
    */
   progress?: boolean
+  /**
+   * Story-wide base override for the persistent Vizmaya logo Rive's colors.
+   * Applied on top of the theme palette; individual sections layer their own
+   * `logoPalette` over this. Values are theme tokens (`"$accent"`) or hex.
+   */
+  logoPalette?: LogoPalette
 }
 
 export interface MapPinConfig {
@@ -394,6 +418,13 @@ export interface StorySectionConfig {
    * without touching the deck-wide defaults.
    */
   panel?: VizLayerPanel
+  /**
+   * Per-section override for the persistent Vizmaya logo Rive's colors. Merged
+   * over `defaults.logoPalette` (story-wide) which is itself merged over the
+   * theme palette. As the reader scrolls into this section the logo re-tints.
+   * Values are theme tokens (`"$accent"`, `"$teal"`) or concrete hex.
+   */
+  logoPalette?: LogoPalette
   /**
    * Legacy map field. Optional in the type because the deck format never sets
    * it and the loader/back-compat shims already tolerate its absence. For map
