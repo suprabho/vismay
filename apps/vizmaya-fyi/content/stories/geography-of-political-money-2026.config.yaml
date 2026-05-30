@@ -98,11 +98,9 @@ sections:
       bearing: -18
       opacity: 0.6
       pins:
-        - lng: -77.043
-          lat: 38.9026
+        - coordinates: [-77.043, 38.9026]
           label: "K Street NW — the lobbying corridor"
-        - lng: -77.0090
-          lat: 38.8899
+        - coordinates: [-77.0090, 38.8899]
           label: "U.S. Capitol"
 
   # ═══════════════════════════════════════════════
@@ -118,11 +116,9 @@ sections:
       bearing: 12
       opacity: 0.6
       pins:
-        - lng: -74.0107
-          lat: 40.7193
+        - coordinates: [-74.0107, 40.7193]
           label: "Citigroup HQ, 388 Greenwich St"
-        - lng: -74.0113
-          lat: 40.7058
+        - coordinates: [-74.0113, 40.7058]
           label: "Wall Street"
 
   # ═══════════════════════════════════════════════
@@ -138,8 +134,7 @@ sections:
       bearing: -8
       opacity: 0.55
       pins:
-        - lng: -73.9527
-          lat: 40.8859
+        - coordinates: [-73.9527, 40.8859]
           label: "Englewood Cliffs, NJ — $480K cash · ~$150K gold bars"
 
   # ═══════════════════════════════════════════════
