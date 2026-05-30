@@ -7,12 +7,17 @@ import type { StandingsOverMatchdaysConfig } from './index'
 
 export default function StandingsOverMatchdaysVizComponent({
   config,
+  mode,
   noteReady,
 }: VizRenderProps<StandingsOverMatchdaysConfig>) {
   useEffect(() => {
     const h = requestAnimationFrame(() => noteReady())
     return () => cancelAnimationFrame(h)
   }, [noteReady])
+
+  // Animate for live viewing only — capture/print render the final, fully-drawn
+  // frame so the headless snapshot can't freeze mid-draw.
+  const animate = mode !== 'capture' && mode !== 'print'
 
   return (
     <div
@@ -30,6 +35,7 @@ export default function StandingsOverMatchdaysVizComponent({
           competitionLabel={config.competitionLabel}
           lanes={config.lanes}
           totalMatchdays={config.totalMatchdays}
+          animate={animate}
         />
       </div>
     </div>

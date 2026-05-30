@@ -98,8 +98,20 @@ export type TeamLane = {
   team_code?: string | null
   /** Hex color for the polyline; usually the club's primary brand color. */
   color: string
-  /** Optional crest URL (reserved for legend icons; unused by the chart today). */
+  /** Optional crest URL; rendered at the lane's latest point (and resolved from
+   *  the bundled team palette when omitted — see Crest.tsx). */
   crest_url?: string | null
+  /**
+   * When true, this lane is emphasised — drawn thicker, fully opaque, and on top
+   * of the others — while every *other* lane (and its legend entry) is dimmed.
+   * If no lane sets this, all lanes render at full opacity (backward compatible).
+   */
+  highlight?: boolean
+  /**
+   * Explicit polyline stroke width in SVG user units. Overrides both the default
+   * (1.5) and the `highlight` bump. Omit to keep the default (backward compatible).
+   */
+  lineWidth?: number
   points: MatchdayPosition[]
 }
 
