@@ -5,6 +5,8 @@ import VizModulePreview from './VizModulePreview'
 
 interface Props {
   type: string
+  /** Detail-route id (defaults to `type`). Lets one module type have variant cards. */
+  routeId?: string
   label: string
   slots: readonly VizSlot[]
   mountingMode?: string
@@ -14,6 +16,7 @@ interface Props {
 
 export default function ModuleCard({
   type,
+  routeId,
   label,
   slots,
   mountingMode,
@@ -31,7 +34,7 @@ export default function ModuleCard({
         <VizModulePreview type={type} sample={sample} previewNotice={previewNotice} />
       </div>
       <Link
-        href={`/${encodeURIComponent(type)}`}
+        href={`/${encodeURIComponent(routeId ?? type)}`}
         className="block p-3 border-t border-[color:var(--color-line)] hover:bg-white/[0.02]"
       >
         <div className="flex flex-col gap-1.5">

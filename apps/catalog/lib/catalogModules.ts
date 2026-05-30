@@ -13,7 +13,7 @@ import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-r
 import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
 import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
 import { sample as standingsOverMatchdaysSample } from '@vismay/footshorts-viz/modules/standings-over-matchdays/sample'
-import { sample as bracketSample } from '@vismay/footshorts-viz/modules/bracket/sample'
+import { sample as bracketSample, sampleTree as bracketSampleTree } from '@vismay/footshorts-viz/modules/bracket/sample'
 import { sample as tacticsBoardSample } from '@vismay/footshorts-viz/modules/tactics-board/sample'
 import { sample as teamFormStripSample } from '@vismay/footshorts-viz/modules/team-form-strip/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
@@ -25,11 +25,24 @@ export interface CatalogEntry {
   category: CatalogCategory
   sample: unknown
   /**
+   * Stable id for the card key + detail route. Defaults to `type`. Set it when
+   * one module type needs more than one catalog card (e.g. a second sample that
+   * exercises a different `layout`), so the cards don't collide on `type`.
+   */
+  id?: string
+  /** Card/detail title override. Defaults to the module's `label`. */
+  label?: string
+  /**
    * Some modules can't render a working preview inside the catalog
    * (e.g. chart needs a runtime data endpoint the catalog doesn't serve).
    * When set, the card shows this notice instead of attempting to render.
    */
   previewNotice?: string
+}
+
+/** The routing/key identity for a catalog entry (falls back to its module type). */
+export function catalogEntryId(entry: CatalogEntry): string {
+  return entry.id ?? entry.type
 }
 
 export const catalogModules: CatalogEntry[] = [
@@ -65,6 +78,13 @@ export const catalogModules: CatalogEntry[] = [
     sample: standingsOverMatchdaysSample,
   },
   { type: 'fs:bracket', category: 'Footshorts', sample: bracketSample },
+  {
+    type: 'fs:bracket',
+    id: 'fs:bracket@tree',
+    label: 'Footshorts — bracket (tree)',
+    category: 'Footshorts',
+    sample: bracketSampleTree,
+  },
   { type: 'fs:tactics-board', category: 'Footshorts', sample: tacticsBoardSample },
   { type: 'fs:team-form-strip', category: 'Footshorts', sample: teamFormStripSample },
   {
@@ -76,6 +96,6 @@ export const catalogModules: CatalogEntry[] = [
   },
 ]
 
-export function findCatalogEntry(type: string): CatalogEntry | undefined {
-  return catalogModules.find((m) => m.type === type)
+export function findCatalogEntry(id: string): CatalogEntry | undefined {
+  return catalogModules.find((m) => catalogEntryId(m) === id)
 }
