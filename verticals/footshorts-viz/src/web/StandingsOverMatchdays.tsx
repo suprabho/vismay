@@ -34,6 +34,8 @@ const DIM_OPACITY = 0.28 // opacity for non-highlighted lanes + legend when a hi
 const DRAW_MS = 900 // line-draw duration per lane
 const STAGGER_MS = 100 // per-lane draw stagger
 const CREST_IN_MS = 360 // crest pop-in duration
+const CREST_SIZE = 30 // crest diameter (px) at each lane's endpoint
+const CREST_SIZE_HIGHLIGHT = 40 // larger crest for the highlighted lane
 // Total entrance time stays well under the viz-engine's post-ready settle window
 // (~2s), so the snapshot — taken after readiness — always lands on the final
 // frame even when `animate` is left on. Capture/print disable it anyway.
@@ -290,7 +292,7 @@ export function StandingsOverMatchdays({
                 <Crest
                   team={lane.team_name}
                   crestUrl={lane.crest_url ?? undefined}
-                  size={lane.highlight ? 26 : 20}
+                  size={lane.highlight ? CREST_SIZE_HIGHLIGHT : CREST_SIZE}
                 />
               </div>
             </div>
