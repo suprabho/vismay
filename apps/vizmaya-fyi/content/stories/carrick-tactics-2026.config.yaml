@@ -13,6 +13,60 @@ defaults:
   flySpeed: 1.2
 
 sections:
+  - id: recent-form
+    text: "The run-in form"
+    foreground:
+      - type: fs:team-form-strip
+        teamId: middlesbrough
+        label: "Form · last 5"
+        # Oldest → newest. W-W-D-W-W from Boro's perspective.
+        fixtures:
+          - id: boro-cardiff
+            competition_slug: champ
+            season: "2025"
+            kickoff_at: "2026-04-05T14:00:00Z"
+            status: finished
+            home_score: 2
+            away_score: 0
+            home: { id: middlesbrough, slug: middlesbrough, name: Middlesbrough, crest_url: null }
+            away: { id: cardiff, slug: cardiff, name: Cardiff, crest_url: null }
+          - id: stoke-boro
+            competition_slug: champ
+            season: "2025"
+            kickoff_at: "2026-04-12T14:00:00Z"
+            status: finished
+            home_score: 1
+            away_score: 2
+            home: { id: stoke, slug: stoke, name: Stoke, crest_url: null }
+            away: { id: middlesbrough, slug: middlesbrough, name: Middlesbrough, crest_url: null }
+          - id: boro-bristol
+            competition_slug: champ
+            season: "2025"
+            kickoff_at: "2026-04-19T14:00:00Z"
+            status: finished
+            home_score: 1
+            away_score: 1
+            home: { id: middlesbrough, slug: middlesbrough, name: Middlesbrough, crest_url: null }
+            away: { id: bristol-city, slug: bristol-city, name: Bristol City, crest_url: null }
+          - id: preston-boro
+            competition_slug: champ
+            season: "2025"
+            kickoff_at: "2026-04-26T14:00:00Z"
+            status: finished
+            home_score: 0
+            away_score: 1
+            home: { id: preston, slug: preston, name: Preston, crest_url: null }
+            away: { id: middlesbrough, slug: middlesbrough, name: Middlesbrough, crest_url: null }
+          - id: boro-swansea
+            competition_slug: champ
+            season: "2025"
+            kickoff_at: "2026-05-03T14:00:00Z"
+            status: finished
+            home_score: 3
+            away_score: 1
+            home: { id: middlesbrough, slug: middlesbrough, name: Middlesbrough, crest_url: null }
+            away: { id: swansea, slug: swansea, name: Swansea, crest_url: null }
+
   - id: build-from-back
     text: "Building from the back"
     foreground:

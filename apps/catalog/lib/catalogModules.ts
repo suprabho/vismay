@@ -15,6 +15,7 @@ import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/s
 import { sample as standingsOverMatchdaysSample } from '@vismay/footshorts-viz/modules/standings-over-matchdays/sample'
 import { sample as bracketSample } from '@vismay/footshorts-viz/modules/bracket/sample'
 import { sample as tacticsBoardSample } from '@vismay/footshorts-viz/modules/tactics-board/sample'
+import { sample as teamFormStripSample } from '@vismay/footshorts-viz/modules/team-form-strip/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
 
 export type CatalogCategory = 'Core' | 'F1' | 'Footshorts' | 'Starship'
@@ -65,6 +66,7 @@ export const catalogModules: CatalogEntry[] = [
   },
   { type: 'fs:bracket', category: 'Footshorts', sample: bracketSample },
   { type: 'fs:tactics-board', category: 'Footshorts', sample: tacticsBoardSample },
+  { type: 'fs:team-form-strip', category: 'Footshorts', sample: teamFormStripSample },
   {
     type: 'starship:viewer',
     category: 'Starship',

@@ -33,6 +33,10 @@ theme:
 
 ---
 
+## The run-in form
+
+Carrick's side arrive in the kind of form the system is built to produce: four wins and a draw in their last five, scoring first in nearly every one. The strip below reads left to right, oldest to most recent — steady returns rather than a hot streak. What follows is the *why* behind it: the same build-from-the-back move, repeated, turning controlled possession into routine three-pointers.
+
 ## Building from the back
 
 The first principle is patience. Middlesbrough's keeper splits the centre-backs, the full-backs push high and wide, and the two holding midfielders stagger so there is always a passing lane into the next line.
