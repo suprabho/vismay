@@ -75,14 +75,14 @@ sections:
       zoom: 3.6
       opacity: 0.50
       pins:
-        - { lng: 77.209, lat: 28.613, label: "Delhi" }
-        - { lng: 72.877, lat: 19.076, label: "Mumbai" }
-        - { lng: 80.270, lat: 13.082, label: "Chennai" }
-        - { lng: 88.363, lat: 22.572, label: "Kolkata" }
-        - { lng: 77.594, lat: 12.971, label: "Bengaluru" }
-        - { lng: 78.486, lat: 17.385, label: "Hyderabad" }
-        - { lng: 73.856, lat: 18.520, label: "Pune" }
-        - { lng: 72.571, lat: 23.022, label: "Ahmedabad" }
+        - { coordinates: [77.209, 28.613], label: "Delhi" }
+        - { coordinates: [72.877, 19.076], label: "Mumbai" }
+        - { coordinates: [80.270, 13.082], label: "Chennai" }
+        - { coordinates: [88.363, 22.572], label: "Kolkata" }
+        - { coordinates: [77.594, 12.971], label: "Bengaluru" }
+        - { coordinates: [78.486, 17.385], label: "Hyderabad" }
+        - { coordinates: [73.856, 18.520], label: "Pune" }
+        - { coordinates: [72.571, 23.022], label: "Ahmedabad" }
 
   # 3 ─── REVENUE TREND CHART (stacked bar: India Mobile + India Other + Africa)
   - id: five-quarters-of-acceleration
@@ -193,19 +193,19 @@ sections:
       zoom: 2.8
       opacity: 0.50
       pins:
-        - { lng: 3.389,   lat: 6.524,   label: "Nigeria" }
-        - { lng: 36.817,  lat: -1.286,  label: "Kenya" }
-        - { lng: 39.200,  lat: -6.173,  label: "Tanzania" }
-        - { lng: 30.060,  lat: -1.944,  label: "Rwanda" }
-        - { lng: 28.283,  lat: -15.417, label: "Zambia" }
-        - { lng: -4.023,  lat: 5.345,   label: "Côte d'Ivoire" }
-        - { lng: 15.058,  lat: 4.360,   label: "DRC" }
-        - { lng: 14.460,  lat: 12.105,  label: "Chad" }
-        - { lng: 2.213,   lat: 13.515,  label: "Niger" }
-        - { lng: -12.364, lat: 12.364,  label: "Guinea" }
-        - { lng: -3.960,  lat: 12.364,  label: "Mali" }
-        - { lng: 34.888,  lat: -13.254, label: "Malawi" }
-        - { lng: 47.521,  lat: -18.914, label: "Madagascar" }
+        - { coordinates: [3.389, 6.524], label: "Nigeria" }
+        - { coordinates: [36.817, -1.286], label: "Kenya" }
+        - { coordinates: [39.200, -6.173], label: "Tanzania" }
+        - { coordinates: [30.060, -1.944], label: "Rwanda" }
+        - { coordinates: [28.283, -15.417], label: "Zambia" }
+        - { coordinates: [-4.023, 5.345], label: "Côte d'Ivoire" }
+        - { coordinates: [15.058, 4.360], label: "DRC" }
+        - { coordinates: [14.460, 12.105], label: "Chad" }
+        - { coordinates: [2.213, 13.515], label: "Niger" }
+        - { coordinates: [-12.364, 12.364], label: "Guinea" }
+        - { coordinates: [-3.960, 12.364], label: "Mali" }
+        - { coordinates: [34.888, -13.254], label: "Malawi" }
+        - { coordinates: [47.521, -18.914], label: "Madagascar" }
       mobile:
         center: [20.0, 0.0]
         zoom: 2.2

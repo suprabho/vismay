@@ -27,10 +27,9 @@ sections:
       pitch: 0
       bearing: 0
       opacity: 0.45
-    pins:
-      - lng: -77.0091
-        lat: 38.8899
-        label: "U.S. Treasury, Washington D.C."
+      pins:
+        - coordinates: [-77.0091, 38.8899]
+          label: "U.S. Treasury, Washington D.C."
 
   - id: debt-breakdown
     text: "$31.4 Trillion held by the public"
@@ -70,10 +69,9 @@ sections:
       pitch: 0
       bearing: 0
       opacity: 0.4
-    pins:
-      - lng: -74.006
-        lat: 40.7128
-        label: "Wall Street, NYC"
+      pins:
+        - coordinates: [-74.006, 40.7128]
+          label: "Wall Street, NYC"
 
   - id: federal-reserve
     text: "The Federal Reserve's $4.4 Trillion"
@@ -86,10 +84,9 @@ sections:
       pitch: 0
       bearing: 0
       opacity: 0.4
-    pins:
-      - lng: -77.0425
-        lat: 38.8925
-        label: "Federal Reserve, Washington D.C."
+      pins:
+        - coordinates: [-77.0425, 38.8925]
+          label: "Federal Reserve, Washington D.C."
 
   - id: foreign-holders
     text: "$9.3 Trillion from Foreigners"
@@ -103,16 +100,13 @@ sections:
       pitch: 0
       bearing: 0
       opacity: 0.4
-    pins:
-      - lng: 139.6917
-        lat: 35.6895
-        label: "Japan — $1.2T"
-      - lng: -0.1276
-        lat: 51.5074
-        label: "United Kingdom — $0.9T"
-      - lng: 116.4074
-        lat: 39.9042
-        label: "China — $0.7T"
+      pins:
+        - coordinates: [139.6917, 35.6895]
+          label: "Japan — $1.2T"
+        - coordinates: [-0.1276, 51.5074]
+          label: "United Kingdom — $0.9T"
+        - coordinates: [116.4074, 39.9042]
+          label: "China — $0.7T"
 
   - id: china-question
     text: "The China Question"
@@ -125,10 +119,9 @@ sections:
       pitch: 0
       bearing: 0
       opacity: 0.4
-    pins:
-      - lng: 116.4074
-        lat: 39.9042
-        label: "Beijing"
+      pins:
+        - coordinates: [116.4074, 39.9042]
+          label: "Beijing"
 
   - id: intragovernmental
     text: "$7.6 Trillion: The Government Owes Itself"
