@@ -191,9 +191,13 @@ export default function HomeClient({ stories, epics = [] }: { stories: HomeStory
     const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 60)
     window.addEventListener('scroll', onScroll)
 
+    // threshold:0 (any pixel) rather than a ratio — the bento grid is a single
+    // tall element, and a ratio like 0.12 can never be met once the grid grows
+    // taller than ~8× the viewport (e.g. cards stacked on mobile), leaving it
+    // stuck at opacity:0 but still clickable.
     const obs = new IntersectionObserver(
       (es) => es.forEach((e) => { if (e.isIntersecting) e.target.classList.add('v') }),
-      { threshold: 0.12 }
+      { threshold: 0, rootMargin: '0px 0px -64px 0px' }
     )
     document.querySelectorAll('.rv').forEach((el) => obs.observe(el))
 
