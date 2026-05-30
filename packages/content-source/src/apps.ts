@@ -116,7 +116,24 @@ export async function listAppStories(appSlug: string): Promise<AppStory[]> {
   }))
 }
 
-export async function setStoryApp(storySlug: string, appSlug: string): Promise<void> {
+/** Stories with no owning app yet — surfaced as "Drafts · Unassigned" in admin. */
+export async function listUnassignedStories(): Promise<AppStory[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('stories')
+    .select('slug, title, status')
+    .is('app_slug', null)
+    .order('title', { ascending: true })
+  if (error) throw new Error(`listUnassignedStories: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    slug: r.slug as string,
+    title: (r.title as string | null) ?? (r.slug as string),
+    status: r.status as string,
+  }))
+}
+
+/** Move a story to an app, or pass null to unassign it back to Drafts. */
+export async function setStoryApp(storySlug: string, appSlug: string | null): Promise<void> {
   const sb = createServiceClient()
   const { error } = await sb
     .from('stories')

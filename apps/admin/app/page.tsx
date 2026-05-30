@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { LandingPage } from '@/components/landing/LandingPage'
 import { isAuthed } from '@/lib/adminAuth'
+import { listUnassignedStories } from '@vismay/content-source/apps'
+import DraftsList from '@/components/vizmaya/DraftsList'
 
 interface AppEntry {
   href: string
@@ -28,6 +30,18 @@ const APPS: AppEntry[] = [
     description: 'Football stories and epics tagged to the footshorts app.',
     status: 'available',
   },
+  {
+    href: '/storytime-ovo',
+    name: 'Storytime with Ovo',
+    description: 'Stories and epics tagged to the storytime-ovo app.',
+    status: 'available',
+  },
+  {
+    href: '/experiments',
+    name: 'Experiments',
+    description: 'Experimental stories and epics.',
+    status: 'available',
+  },
 ]
 
 export default async function HomePage() {
@@ -36,7 +50,9 @@ export default async function HomePage() {
   return <Dashboard />
 }
 
-function Dashboard() {
+async function Dashboard() {
+  // Unassigned stories (db mode only; fs mode is single-app and returns []).
+  const drafts = await listUnassignedStories().catch(() => [])
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -51,6 +67,7 @@ function Dashboard() {
             <AppCard key={app.href} app={app} />
           ))}
         </ul>
+        <DraftsList stories={drafts} />
       </div>
     </div>
   )

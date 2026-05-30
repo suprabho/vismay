@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
 
 type Story = {
   slug: string
@@ -9,6 +10,7 @@ type Story = {
   status: string
   listed: boolean
   displayOrder: number | null
+  appSlug: string | null
 }
 
 interface UploadResult {
@@ -318,6 +320,11 @@ export default function AdminHome() {
                 <div className="text-xs text-neutral-500 truncate mt-0.5">{s.slug}</div>
               </Link>
               <div className="flex items-center gap-3 shrink-0">
+                <MoveStoryControl
+                  slug={s.slug}
+                  currentAppSlug={s.appSlug}
+                  onMoved={() => refreshStories()}
+                />
                 <div className="flex items-center gap-1">
                   <select
                     value={s.status}

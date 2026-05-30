@@ -95,8 +95,8 @@ const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
 
 /** Public URL for a story in the given consumer app, or null if the app
  *  doesn't render stories (unknown appSlug). */
-export function appStoryUrl(appSlug: string, slug: string): string | null {
-  const routes = APP_PUBLIC_ROUTES[appSlug]
+export function appStoryUrl(appSlug: string | null, slug: string): string | null {
+  const routes = appSlug ? APP_PUBLIC_ROUTES[appSlug] : undefined
   if (!routes || !routes.storyPath) return null
   return `${routes.baseUrl}${routes.storyPath(slug)}`
 }
