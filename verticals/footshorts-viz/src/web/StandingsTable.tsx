@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { StandingRow } from '../types';
+import { Crest } from '../data/Crest';
 
 type Props = { rows: StandingRow[] };
 
@@ -37,9 +38,13 @@ export function StandingsTable({ rows }: Props) {
           >
             <span className="text-text">{r.position}</span>
             <span className="flex min-w-0 items-center gap-2">
-              {r.team?.crest_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={r.team.crest_url} alt="" className="h-[18px] w-[18px] object-contain" />
+              {r.team ? (
+                <Crest
+                  team={r.team.slug ?? r.team.name}
+                  crestUrl={r.team.crest_url ?? undefined}
+                  size={18}
+                  className="shrink-0 object-contain"
+                />
               ) : null}
               <span className="truncate text-text">{r.team?.name ?? '—'}</span>
             </span>

@@ -6,6 +6,8 @@ date: "2026-05-30"
 status: "draft"
 listed: false
 vertical: "footshorts"
+format: "deck"
+aura: blue-abstract-background-patriotic-stars-flowing-lines
 theme:
   colors:
     background: "#0b1437"
@@ -65,4 +67,4 @@ The return was the calm after: 1–1, holding the lead, seeing it out. 6–5 on 
 
 ## The road to Budapest
 
-Four ties, eight legs, a bottom-seed play-off turned into a final. Pair every leg by aggregate and the whole knockout path resolves into a single bracket — Monaco, Chelsea, Liverpool, Bayern — and the line that runs through all of them to Budapest.
+Set Paris's run against the full sixteen-team draw and the shape of it lands at once. The highlighted line threads the left half — Chelsea, then Liverpool, then Bayern — while the right half resolves the other way to Real Madrid. Two halves, one trophy in the middle, and a final in Budapest waiting on the last result of all.
