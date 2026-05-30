@@ -89,7 +89,9 @@ The Space segment produced $4.1 billion in revenue in 2025. It also spent $3 bil
 
 The cumulative Starship R&D spend disclosed in the S-1 exceeds $15 billion — more than the programme's original budget. SpaceX expects Starship to begin commercial payload delivery in the second half of 2026. In Q1 2026, the Space segment generated only $619 million in revenue against $662 million in operating losses, with $930 million in Starship R&D funded through the quarter.
 
-The launch business is currently a net drain on the balance sheet — by design. Falcon 9 maintains a 99%+ mission success rate and carries more than 80% of mass to orbit globally. Booster reuse is now routine, with flight-proven boosters completing 20+ missions. Launch costs that historically ran into the billions per mission now run in the tens of millions. The paradox: this engineering excellence serves as Starlink's supply chain, not Space's cash generator. Falcon launches are how Starlink satellites reach orbit. As Starship becomes operational, V3 constellation deployment becomes cheaper per bit delivered — closing the loop back into Connectivity margin expansion.
+The launch business is currently a net drain on the balance sheet — by design. Falcon 9 maintains a 99%+ mission success rate and carries more than 80% of mass to orbit globally. Booster reuse is now routine, with flight-proven boosters completing 20+ missions. Launch costs that historically ran into the billions per mission now run in the tens of millions.
+
+The paradox: this engineering excellence serves as Starlink's supply chain, not Space's cash generator. Falcon launches are how Starlink satellites reach orbit. As Starship becomes operational, V3 constellation deployment becomes cheaper per bit delivered — closing the loop back into Connectivity margin expansion.
 
 The question for investors is whether Starship transforms this segment from a cost centre into a second profit engine by 2027–2028, or whether it remains the company's most expensive science project.
 

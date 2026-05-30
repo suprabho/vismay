@@ -139,9 +139,10 @@ sections:
     kind: split
     text: "Three segments, three stories"
     paragraphs: [0, 4]
-    mobileParagraphs:            # portrait: 4 dense paragraphs → 2 snaps (intro+Connectivity, then Space+AI)
+    mobileParagraphs:            # portrait: intro+Connectivity (~11l), then Space, then AI — one snap per segment. Was 2 snaps; p2+p3 stacked to ~15l beside the chart.
       - [0, 2]
-      - [2, 4]
+      - [2, 3]
+      - [3, 4]
     layout: text-left-chart-right
     foreground:
       - type: bodyText
@@ -163,9 +164,10 @@ sections:
     kind: bodyText
     text: "Starlink: the machine behind the curtain"
     paragraphs: [0, 4]
-    mobileParagraphs:            # portrait: 4 dense paragraphs → 2 snaps
+    mobileParagraphs:            # portrait: lead+subscriber-base, then revenue/margin, then V3 cadence — 3 snaps (~9l each). Was 2 snaps; p2+p3 stacked to ~18l.
       - [0, 2]
-      - [2, 4]
+      - [2, 3]
+      - [3, 4]
     foreground:
       - type: bodyText
         from: text
@@ -209,10 +211,12 @@ sections:
   - id: space-budget
     kind: split
     text: "Space: the rocket that ate the budget"
-    paragraphs: [0, 3]
-    mobileParagraphs:            # portrait: 3 paragraphs (p2 is long) → 2 snaps
-      - [0, 2]
+    paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: framing, R&D overrun, Falcon excellence, then the paradox — one para per snap. The old single launch-business para was ~16l and clipped beside the 3D viewer, so it was split at "The paradox:" in the .md (desktop now shows the same words as two paragraphs).
+      - [0, 1]
+      - [1, 2]
       - [2, 3]
+      - [3, 4]
     layout: text-left-chart-right
     foreground:
       - type: bodyText
@@ -296,9 +300,11 @@ sections:
     kind: split
     text: "The AI black hole"
     paragraphs: [0, 4]
-    mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
-      - [0, 2]
-      - [2, 4]
+    mobileParagraphs:            # portrait: one paragraph per snap — acquisition, financials, COLOSSUS, Grok. The image slot is a fixed ~338px, so pairing p0+p1 left only ~41px headroom (clips on ~800px phones); isolating each para keeps every snap comfortable.
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
     layout: text-left-chart-right
     foreground:
       # Text first on the spine; the image becomes the right-hand visual so
@@ -323,8 +329,9 @@ sections:
     kind: data
     text: "The EBITDA bridge"
     paragraphs: [0, 3]
-    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
-      - [0, 2]
+    mobileParagraphs:            # portrait: headline, then the long bridge para alone (~11l), then the 2024 net-income beat. Was 2 snaps; p0+p1 stacked to ~15l beside the chart.
+      - [0, 1]
+      - [1, 2]
       - [2, 3]
     layout: text-left-chart-right
     foreground:
@@ -347,8 +354,9 @@ sections:
     kind: data
     text: "Capital at the speed of ambition"
     paragraphs: [0, 3]
-    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
-      - [0, 2]
+    mobileParagraphs:            # portrait: capex split, then the long TAM-context para alone (~11l), then debt facilities. Was 2 snaps; p0+p1 stacked to ~18l beside the chart.
+      - [0, 1]
+      - [1, 2]
       - [2, 3]
     layout: text-left-chart-right
     foreground:
@@ -372,8 +380,9 @@ sections:
     kind: data
     text: "Elon's kingdom"
     paragraphs: [0, 3]
-    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
-      - [0, 2]
+    mobileParagraphs:            # portrait: share classes, controlled-company status, then the long "founder empire" para alone (~12l). Was 2 snaps; p0+p1 stacked to ~13l.
+      - [0, 1]
+      - [1, 2]
       - [2, 3]
     layout: text-left-chart-right
     foreground:
@@ -428,9 +437,11 @@ sections:
     logoPalette:
       accent: "$muted"       # demo: a muted, somber accent for the closing essay
       text: "$accent"
-    mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
-      - [0, 2]
-      - [2, 4]
+    mobileParagraphs:            # portrait: thesis, EBITDA-coverage, the "messier truth" para, then the closing kicker alone — 4 snaps beside the keyValue card. Was 2 snaps; p2+p3 stacked to ~14l.
+      - [0, 1]
+      - [1, 2]
+      - [2, 3]
+      - [3, 4]
     foreground:
       - type: bodyText
         from: text
@@ -454,8 +465,9 @@ sections:
     kind: bodyText
     text: "Methodology"
     paragraphs: [0, 3]
-    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
-      - [0, 2]
+    mobileParagraphs:            # portrait: each long sources paragraph on its own snap (small type, ~8-9l each). Was 2 snaps; p0+p1 stacked to ~17l.
+      - [0, 1]
+      - [1, 2]
       - [2, 3]
     foreground:
       - type: bodyText
