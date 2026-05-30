@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useInView } from '@/lib/use-in-view'
+import { useInView } from '../../lib/use-in-view'
 import { ScenarioToggleBlock } from '@vismay/viz-engine'
 import { useChartColors } from '@vismay/viz-engine'
-import dynamic from 'next/dynamic'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import ClientECharts from './ClientECharts'
 
 function stripMarkdown(text: string): string {
   return text.replace(/\*\*/g, '').replace(/\*/g, '')
@@ -149,7 +147,7 @@ export default function ScenarioToggle({ block }: { block: ScenarioToggleBlock }
         className="max-w-[860px] mx-auto px-4 transition-opacity duration-500"
         style={{ opacity: isInView ? 1 : 0 }}
       >
-        <ReactECharts
+        <ClientECharts
           key={active}
           option={chartOption}
           style={{ height: 320 }}

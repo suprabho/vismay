@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* The story reader shell + blocks were extracted into @vismay/story-reader.
+   Tailwind v4 auto-detects sources under the app tree but not reliably across
+   workspace packages, so scan the reader's source explicitly — otherwise its
+   utility classes (e.g. the snap container, logo chrome) silently drop. */
+@source "../../../packages/story-reader/src";
+
 @theme inline {
   --color-background: var(--color-bg, #0a0e14);
   --color-foreground: var(--color-text, #e0ddd5);

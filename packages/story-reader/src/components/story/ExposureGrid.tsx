@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { useInView } from '@/lib/use-in-view'
+import { useInView } from '../../lib/use-in-view'
 import { ExposureGridBlock } from '@vismay/viz-engine'
 
 const COLORS = ['var(--color-accent)', 'var(--color-amber, #EF9F27)', 'var(--color-red, #E24B4A)']
