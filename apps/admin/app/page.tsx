@@ -30,6 +30,18 @@ const APPS: AppEntry[] = [
     description: 'Football stories and epics tagged to the footshorts app.',
     status: 'available',
   },
+  {
+    href: '/storytime-ovo',
+    name: 'Storytime with Ovo',
+    description: 'Stories and epics tagged to the storytime-ovo app.',
+    status: 'available',
+  },
+  {
+    href: '/experiments',
+    name: 'Experiments',
+    description: 'Experimental stories and epics.',
+    status: 'available',
+  },
 ]
 
 export default async function HomePage() {
