@@ -23,6 +23,7 @@ export interface StoryEditorData {
   narrationUnits: NarrationUnit[]
   tts_yaml: string | null
   videoCache: VideoCache
+  appSlug: string | null
 }
 
 // Walk a parsed YAML tree and collect every `chart:` string. A bare id
@@ -101,14 +102,16 @@ async function loadAssets(slug: string): Promise<AssetListEntry[]> {
 export async function loadStoryEditorData(slug: string): Promise<StoryEditorData | null> {
   const src = getContentSource()
   const videoCache = await loadVideoCache(slug)
-  const [markdown, config_yaml, jsonChartIds, tts_yaml, assets] = await Promise.all([
+  const [markdown, config_yaml, jsonChartIds, tts_yaml, assets, metas] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
     src.listChartIds(slug),
     src.readTtsYaml(slug),
     loadAssets(slug),
+    src.listStories(),
   ])
   if (markdown == null) return null
+  const appSlug = metas.find((m) => m.slug === slug)?.appSlug ?? null
 
   // Merge editable JSON-backed charts with YAML chart refs so stories whose
   // charts are hardcoded React components (no JSON file) still surface here
@@ -165,5 +168,6 @@ export async function loadStoryEditorData(slug: string): Promise<StoryEditorData
     narrationUnits,
     tts_yaml: tts_yaml ?? null,
     videoCache,
+    appSlug,
   }
 }

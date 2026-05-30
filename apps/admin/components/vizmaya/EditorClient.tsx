@@ -11,6 +11,7 @@ import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
 import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
+import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
@@ -70,8 +71,9 @@ export default function EditorClient({
   /** Which consumer app this story belongs to — picks the "preview ↗"
    *  destination (vizf1/footshorts have their own /editorial route; vizmaya
    *  uses /story/<slug>). The server-rendered share/autoplay links stay on
-   *  vizmaya.fyi regardless because those gated routes only live there. */
-  appSlug: string
+   *  vizmaya.fyi regardless because those gated routes only live there.
+   *  null = unassigned (a Draft); preview falls back to the vizmaya route. */
+  appSlug: string | null
   sectionHref: string
   initial: InitialState
   /** Pre-signed URLs for the gated open-in-tab links (autoplay, share).
@@ -418,6 +420,8 @@ export default function EditorClient({
         )}
         {tab === 'settings' && (
           <SettingsPanel
+            slug={slug}
+            appSlug={appSlug}
             status={(parsed.data.status as string) ?? 'published'}
             listed={parsed.data.listed !== false}
             displayOrder={typeof parsed.data.displayOrder === 'number' ? parsed.data.displayOrder : null}
@@ -656,11 +660,15 @@ function StatusBadge({
 }
 
 function SettingsPanel({
+  slug,
+  appSlug,
   status,
   listed,
   displayOrder,
   onChange,
 }: {
+  slug: string
+  appSlug: string | null
   status: string
   listed: boolean
   displayOrder: number | null
@@ -669,6 +677,14 @@ function SettingsPanel({
   return (
     <div className="flex-1 flex flex-col min-h-0 p-4 overflow-y-auto">
       <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-2">App</label>
+          <MoveStoryControl slug={slug} currentAppSlug={appSlug} />
+          <p className="text-xs text-neutral-500 mt-1">
+            Move this story to another app, or unassign it back to Drafts.
+          </p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium mb-2">Publishing Status</label>
           <select

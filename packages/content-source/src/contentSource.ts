@@ -22,7 +22,7 @@ export interface StoryMeta {
   status: StoryStatus
   listed: boolean
   displayOrder: number | null
-  appSlug: string
+  appSlug: string | null
 }
 
 export interface ContentSource {
@@ -235,7 +235,7 @@ const dbSource: ContentSource = {
       status: row.status,
       listed: row.listed,
       displayOrder: typeof row.display_order === 'number' ? row.display_order : null,
-      appSlug: (row.app_slug as string | undefined) ?? 'vizmaya-fyi',
+      appSlug: (row.app_slug as string | null) ?? null,
     }))
   },
   async readMarkdown(slug) {
