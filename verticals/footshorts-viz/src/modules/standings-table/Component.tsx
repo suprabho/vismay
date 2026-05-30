@@ -27,7 +27,7 @@ export default function StandingsTableVizComponent({
       }}
     >
       <div style={{ width: '100%', maxWidth: '480px' }}>
-        <StandingsTable rows={config.rows} />
+        <StandingsTable rows={config.rows} linkBase="https://footshorts.com" />
       </div>
     </div>
   )

@@ -4,7 +4,12 @@ import Link from 'next/link';
 import type { StandingRow } from '../types';
 import { Crest } from '../data/Crest';
 
-type Props = { rows: StandingRow[] };
+// `linkBase` lets cross-domain hosts point team links at a canonical origin.
+// The `fs:standings-table` viz module renders inside stories/snapshots on other
+// domains, where a relative `/team/x` link would resolve against the wrong host;
+// it passes `https://footshorts.com`. The footshorts app omits it so the relative
+// route resolves locally and keeps `next/link` client-side navigation.
+type Props = { rows: StandingRow[]; linkBase?: string };
 
 // Inline style instead of an arbitrary Tailwind class so the grid renders
 // correctly in host apps whose Tailwind config doesn't scan this package's
@@ -12,7 +17,8 @@ type Props = { rows: StandingRow[] };
 // otherwise collapse to a single column).
 const GRID_TEMPLATE_COLUMNS = '28px 1fr 28px 24px 24px 24px 32px 32px';
 
-export function StandingsTable({ rows }: Props) {
+export function StandingsTable({ rows, linkBase }: Props) {
+  const base = linkBase?.replace(/\/$/, '') ?? '';
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
       <div
@@ -60,7 +66,7 @@ export function StandingsTable({ rows }: Props) {
           return <div key={r.team_id}>{inner}</div>;
         }
         return (
-          <Link key={r.team_id} href={`/team/${teamSlug}`} className="block hover:bg-bg/40">
+          <Link key={r.team_id} href={`${base}/team/${teamSlug}`} className="block hover:bg-bg/40">
             {inner}
           </Link>
         );
