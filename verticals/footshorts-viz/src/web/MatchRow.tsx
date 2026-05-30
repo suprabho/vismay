@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { FixtureRow } from '../types';
+import { Crest } from '../data/Crest';
 
 type Variant = 'compact' | 'expanded';
 
@@ -11,6 +12,7 @@ type Sizes = {
   padding: string;
   gap: string;
   crest: string;
+  crestPx: number;
   teamText: string;
   scoreText: string;
   scoreTextFinished: string;
@@ -23,6 +25,7 @@ const SIZES: Record<Variant, Sizes> = {
     padding: 'p-2',
     gap: 'gap-2',
     crest: 'h-[22px] w-[22px]',
+    crestPx: 22,
     teamText: 'text-sm',
     scoreText: 'text-xs text-text/80',
     scoreTextFinished: 'text-sm font-semibold text-text',
@@ -33,6 +36,7 @@ const SIZES: Record<Variant, Sizes> = {
     padding: 'p-4',
     gap: 'gap-3',
     crest: 'h-10 w-10',
+    crestPx: 40,
     teamText: 'text-sm',
     scoreText: 'text-2xl text-text/80',
     scoreTextFinished: 'text-4xl font-semibold text-text',
@@ -95,10 +99,14 @@ function TeamCell({
   const directionClass = isStack ? 'flex-col' : 'flex-row';
   const justifyClass = align === 'right' ? 'justify-end' : '';
   const innerClassName = `flex min-w-0 items-center ${sizes.gap} ${directionClass} ${justifyClass}`;
-  // eslint-disable-next-line @next/next/no-img-element
-  const crestEl = crest ? (
-    <img src={crest} alt="" className={`${sizes.crest} shrink-0 object-contain`} />
-  ) : null;
+  const crestEl = (
+    <Crest
+      team={slug ?? name}
+      crestUrl={crest ?? undefined}
+      size={sizes.crestPx}
+      className="shrink-0 object-contain"
+    />
+  );
   const nameEl = (
     <span
       className={`min-w-0 max-w-full truncate ${isStack ? 'text-center' : 'text-left'} ${sizes.teamText} text-text`}

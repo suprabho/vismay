@@ -1,0 +1,548 @@
+# Story config — paris-road-to-budapest (DECK format)
+#
+# PSG's 2025/26 UEFA Champions League run, authored from the "Road to Budapest"
+# infographic, told as a snap-scrolling deck over a single page-level aura.
+# Footshorts (fs:) viz modules render the data:
+#   - fs:standings-table  → the league-phase mini-table (10th–12th)
+#   - fs:match-card       → each two-legged knockout tie, leg by leg
+#   - fs:bracket (tree)   → the full 16-team mirrored draw, PSG's path highlighted
+# Crests resolve from the bundled palette (football-data.org) via crest_url:null;
+# competition_slug is `champions-league` so the emblem/watermark theme correctly.
+
+defaults:
+  mapOpacity: 0
+  storyBackground:
+    type: aura
+    slug: blue-abstract-background-patriotic-stars-flowing-lines
+    tint: "#070a14"
+    tintBlendMode: multiply
+    fixed: true
+  overlay:
+    color: "#070a14"
+    opacity: 0.42
+    gradient:
+      type: radial
+      from: "rgba(7,10,20,0.18)"
+      to: "rgba(7,10,20,0.76)"
+  panel:
+    background: "rgba(10,16,38,0.62)"
+    border: "1px solid rgba(120,140,180,0.20)"
+    borderRadius: "20px"
+    padding: "28px"
+    backdropBlur: "18px"
+    shadow: "0 24px 60px -32px rgba(0,0,0,0.65)"
+  scroll:
+    mode: snap
+    paddingY: "12vh"
+  progress: true
+
+sections:
+
+  # 1 · Cover -----------------------------------------------------------------
+  - id: cover
+    kind: cover
+    text: "Cover"
+    eyebrow: "UEFA Champions League · 2025/26"
+    heading: "Paris: Road to Budapest"
+    dek: "Eleventh in the league phase, and then a knockout run that didn't stop — Monaco, Chelsea, Liverpool, Bayern — all the way to the final in Budapest."
+    background: { type: none }
+    panel:
+      background: "transparent"
+      border: "none"
+      backdropBlur: "0"
+
+  # 2 · League phase ----------------------------------------------------------
+  - id: league-phase
+    kind: data
+    text: "Eleventh, and through"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: fs:standings-table
+        rows:
+          - competition_slug: champions-league
+            season: 25-26
+            team_id: inter
+            position: 10
+            played: 8
+            won: 5
+            draw: 0
+            lost: 3
+            goals_for: 15
+            goals_against: 7
+            goal_difference: 8
+            points: 15
+            form: null
+            team: { id: inter, slug: inter, name: Inter Milan, crest_url: null }
+          - competition_slug: champions-league
+            season: 25-26
+            team_id: psg
+            position: 11
+            played: 8
+            won: 4
+            draw: 2
+            lost: 2
+            goals_for: 21
+            goals_against: 11
+            goal_difference: 10
+            points: 14
+            form: null
+            team: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null }
+          - competition_slug: champions-league
+            season: 25-26
+            team_id: newcastle
+            position: 12
+            played: 8
+            won: 4
+            draw: 2
+            lost: 2
+            goals_for: 17
+            goals_against: 7
+            goal_difference: 10
+            points: 14
+            form: null
+            team: { id: newcastle, slug: newcastle, name: Newcastle United, crest_url: null }
+        style:
+          position: { x: right, y: center }
+          size: { width: "54%" }
+
+  # 3 · Play-off --------------------------------------------------------------
+  - id: playoff
+    kind: split
+    text: "Play-off: past Monaco"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: Monaco
+        away: psg
+        score: 2 – 3
+        kickoff: FT
+        competition: Champions League · Play-off, 1st leg
+        competitionSlug: champions-league
+        homeColor: '#CE3524'
+        awayColor: '#004170'
+        style:
+          position: { x: right, y: top }
+          size: { width: "48%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: psg
+        away: Monaco
+        score: 2 – 2
+        kickoff: FT
+        competition: Champions League · Play-off, 2nd leg · Paris win 5–4 agg
+        competitionSlug: champions-league
+        homeColor: '#004170'
+        awayColor: '#CE3524'
+        style:
+          position: { x: right, y: bottom }
+          size: { width: "48%" }
+
+  # 4 · Round of 16 -----------------------------------------------------------
+  - id: round-of-16
+    kind: split
+    text: "Round of 16: Chelsea swept aside"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: psg
+        away: chelsea
+        score: 5 – 2
+        kickoff: FT
+        competition: Champions League · Round of 16, 1st leg
+        competitionSlug: champions-league
+        homeColor: '#004170'
+        awayColor: '#034694'
+        style:
+          position: { x: right, y: top }
+          size: { width: "48%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: chelsea
+        away: psg
+        score: 0 – 3
+        kickoff: FT
+        competition: Champions League · Round of 16, 2nd leg · Paris win 8–2 agg
+        competitionSlug: champions-league
+        homeColor: '#034694'
+        awayColor: '#004170'
+        style:
+          position: { x: right, y: bottom }
+          size: { width: "48%" }
+
+  # 5 · Quarter-final ---------------------------------------------------------
+  - id: quarter-final
+    kind: split
+    text: "Quarter-final: Liverpool shut out"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: psg
+        away: liverpool
+        score: 2 – 0
+        kickoff: FT
+        competition: Champions League · Quarter-final, 1st leg
+        competitionSlug: champions-league
+        homeColor: '#004170'
+        awayColor: '#C8102E'
+        style:
+          position: { x: right, y: top }
+          size: { width: "48%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: liverpool
+        away: psg
+        score: 0 – 2
+        kickoff: FT
+        competition: Champions League · Quarter-final, 2nd leg · Paris win 4–0 agg
+        competitionSlug: champions-league
+        homeColor: '#C8102E'
+        awayColor: '#004170'
+        style:
+          position: { x: right, y: bottom }
+          size: { width: "48%" }
+
+  # 6 · Semi-final ------------------------------------------------------------
+  - id: semi-final
+    kind: split
+    text: "Semi-final: a night against Bayern"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "38%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: psg
+        away: bayern
+        score: 5 – 4
+        kickoff: FT
+        competition: Champions League · Semi-final, 1st leg
+        competitionSlug: champions-league
+        homeColor: '#004170'
+        awayColor: '#DC052D'
+        style:
+          position: { x: right, y: top }
+          size: { width: "48%" }
+      - type: fs:match-card
+        layout: horizontal
+        home: bayern
+        away: psg
+        score: 1 – 1
+        kickoff: FT
+        competition: Champions League · Semi-final, 2nd leg · Paris win 6–5 agg
+        competitionSlug: champions-league
+        homeColor: '#DC052D'
+        awayColor: '#004170'
+        style:
+          position: { x: right, y: bottom }
+          size: { width: "48%" }
+
+  # 7 · The full bracket ------------------------------------------------------
+  # Full 16-team draw. PSG's real ties (Chelsea/Liverpool/Bayern) sit on the LEFT
+  # (earlier kickoffs → left half); an illustrative right half resolves to Real
+  # Madrid as the Budapest finalist. crest_url:null everywhere → palette crests.
+  - id: the-road
+    kind: data
+    text: "The road to Budapest"
+    paragraphs: [0, 1]
+    layout: free
+    foreground:
+      - type: fs:bracket
+        layout: tree
+        highlightTeamId: psg
+        title: "Final · Budapest"
+        competitionSlug: champions-league
+        panel:
+          background: "rgba(10,16,38,0.55)"
+          padding: "18px"
+        style:
+          position: { x: center, y: center }
+          size: { width: "100%", height: "80vh" }
+        fixtures:
+          # ---- LEFT half · Round of 16 (early March) ----
+          - id: r16-l1a
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-04T20:00:00Z'
+            status: finished
+            home_score: 5
+            away_score: 2
+            home_team_name: Paris Saint-Germain
+            away_team_name: Chelsea
+            home: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+            away: { id: chelsea, slug: chelsea, name: Chelsea, crest_url: null, primary_color: '#034694' }
+          - id: r16-l1b
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-11T20:00:00Z'
+            status: finished
+            home_score: 0
+            away_score: 3
+            home_team_name: Chelsea
+            away_team_name: Paris Saint-Germain
+            home: { id: chelsea, slug: chelsea, name: Chelsea, crest_url: null, primary_color: '#034694' }
+            away: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+          - id: r16-l2
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-05T20:00:00Z'
+            status: finished
+            home_score: 3
+            away_score: 1
+            home_team_name: Liverpool
+            away_team_name: Stade Brestois
+            home: { id: liverpool, slug: liverpool, name: Liverpool, crest_url: null, primary_color: '#C8102E' }
+            away: { id: brest, slug: brest, name: Stade Brestois, crest_url: null, primary_color: '#E2001A' }
+          - id: r16-l3
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-06T20:00:00Z'
+            status: finished
+            home_score: 4
+            away_score: 1
+            home_team_name: Bayern Munich
+            away_team_name: Benfica
+            home: { id: bayern, slug: bayern, name: Bayern Munich, crest_url: null, primary_color: '#DC052D' }
+            away: { id: benfica, slug: benfica, name: Benfica, crest_url: null, primary_color: '#E20020' }
+          - id: r16-l4
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-07T20:00:00Z'
+            status: finished
+            home_score: 3
+            away_score: 1
+            home_team_name: Club Brugge
+            away_team_name: Sporting CP
+            home: { id: club-brugge, slug: club-brugge, name: Club Brugge, crest_url: null, primary_color: '#0066B3' }
+            away: { id: sporting, slug: sporting, name: Sporting CP, crest_url: null, primary_color: '#008057' }
+          # ---- RIGHT half · Round of 16 (mid March, later kickoffs) ----
+          - id: r16-r1
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-10T20:00:00Z'
+            status: finished
+            home_score: 3
+            away_score: 1
+            home_team_name: Real Madrid
+            away_team_name: Feyenoord
+            home: { id: real-madrid, slug: real-madrid, name: Real Madrid, crest_url: null, primary_color: '#FEBE10' }
+            away: { id: feyenoord, slug: feyenoord, name: Feyenoord, crest_url: null, primary_color: '#E20E0E' }
+          - id: r16-r2
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-11T18:45:00Z'
+            status: finished
+            home_score: 2
+            away_score: 0
+            home_team_name: Manchester City
+            away_team_name: Atalanta
+            home: { id: manchester-city, slug: manchester-city, name: Manchester City, crest_url: null, primary_color: '#6CABDD' }
+            away: { id: atalanta, slug: atalanta, name: Atalanta, crest_url: null, primary_color: '#1E71B8' }
+          - id: r16-r3
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-12T20:00:00Z'
+            status: finished
+            home_score: 2
+            away_score: 0
+            home_team_name: Arsenal
+            away_team_name: PSV Eindhoven
+            home: { id: arsenal, slug: arsenal, name: Arsenal, crest_url: null, primary_color: '#EF0107' }
+            away: { id: psv, slug: psv, name: PSV Eindhoven, crest_url: null, primary_color: '#ED1C24' }
+          - id: r16-r4
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: ROUND_OF_16
+            phase: knockout
+            kickoff_at: '2026-03-13T20:00:00Z'
+            status: finished
+            home_score: 1
+            away_score: 3
+            home_team_name: Atlético Madrid
+            away_team_name: Juventus
+            home: { id: atletico-madrid, slug: atletico-madrid, name: Atlético Madrid, crest_url: null, primary_color: '#CB3524' }
+            away: { id: juventus, slug: juventus, name: Juventus, crest_url: null, primary_color: '#000000' }
+          # ---- Quarter-finals ----
+          - id: qf-l1a
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: QUARTER_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-07T20:00:00Z'
+            status: finished
+            home_score: 2
+            away_score: 0
+            home_team_name: Paris Saint-Germain
+            away_team_name: Liverpool
+            home: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+            away: { id: liverpool, slug: liverpool, name: Liverpool, crest_url: null, primary_color: '#C8102E' }
+          - id: qf-l1b
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: QUARTER_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-14T20:00:00Z'
+            status: finished
+            home_score: 0
+            away_score: 2
+            home_team_name: Liverpool
+            away_team_name: Paris Saint-Germain
+            home: { id: liverpool, slug: liverpool, name: Liverpool, crest_url: null, primary_color: '#C8102E' }
+            away: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+          - id: qf-l2
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: QUARTER_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-08T20:00:00Z'
+            status: finished
+            home_score: 5
+            away_score: 1
+            home_team_name: Bayern Munich
+            away_team_name: Club Brugge
+            home: { id: bayern, slug: bayern, name: Bayern Munich, crest_url: null, primary_color: '#DC052D' }
+            away: { id: club-brugge, slug: club-brugge, name: Club Brugge, crest_url: null, primary_color: '#0066B3' }
+          - id: qf-r1
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: QUARTER_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-09T20:00:00Z'
+            status: finished
+            home_score: 2
+            away_score: 1
+            home_team_name: Real Madrid
+            away_team_name: Manchester City
+            home: { id: real-madrid, slug: real-madrid, name: Real Madrid, crest_url: null, primary_color: '#FEBE10' }
+            away: { id: manchester-city, slug: manchester-city, name: Manchester City, crest_url: null, primary_color: '#6CABDD' }
+          - id: qf-r2
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: QUARTER_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-10T20:00:00Z'
+            status: finished
+            home_score: 1
+            away_score: 3
+            home_team_name: Arsenal
+            away_team_name: Juventus
+            home: { id: arsenal, slug: arsenal, name: Arsenal, crest_url: null, primary_color: '#EF0107' }
+            away: { id: juventus, slug: juventus, name: Juventus, crest_url: null, primary_color: '#000000' }
+          # ---- Semi-finals ----
+          - id: sf-l-a
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: SEMI_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-28T20:00:00Z'
+            status: finished
+            home_score: 5
+            away_score: 4
+            home_team_name: Paris Saint-Germain
+            away_team_name: Bayern Munich
+            home: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+            away: { id: bayern, slug: bayern, name: Bayern Munich, crest_url: null, primary_color: '#DC052D' }
+          - id: sf-l-b
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: SEMI_FINALS
+            phase: knockout
+            kickoff_at: '2026-05-05T20:00:00Z'
+            status: finished
+            home_score: 1
+            away_score: 1
+            home_team_name: Bayern Munich
+            away_team_name: Paris Saint-Germain
+            home: { id: bayern, slug: bayern, name: Bayern Munich, crest_url: null, primary_color: '#DC052D' }
+            away: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+          - id: sf-r
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: SEMI_FINALS
+            phase: knockout
+            kickoff_at: '2026-04-29T20:00:00Z'
+            status: finished
+            home_score: 3
+            away_score: 2
+            home_team_name: Real Madrid
+            away_team_name: Juventus
+            home: { id: real-madrid, slug: real-madrid, name: Real Madrid, crest_url: null, primary_color: '#FEBE10' }
+            away: { id: juventus, slug: juventus, name: Juventus, crest_url: null, primary_color: '#000000' }
+          # ---- Final · Budapest (pending) ----
+          - id: final
+            competition_slug: champions-league
+            season: '2026'
+            matchday: null
+            stage: FINAL
+            phase: knockout
+            kickoff_at: '2026-05-30T19:00:00Z'
+            status: scheduled
+            home_score: null
+            away_score: null
+            home_team_name: Paris Saint-Germain
+            away_team_name: Real Madrid
+            home: { id: psg, slug: psg, name: Paris Saint-Germain, crest_url: null, primary_color: '#004170' }
+            away: { id: real-madrid, slug: real-madrid, name: Real Madrid, crest_url: null, primary_color: '#FEBE10' }

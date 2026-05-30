@@ -15,16 +15,19 @@ interface PageProps {
 export default async function ModuleDetailPage({ params }: PageProps) {
   await Promise.all([loadVertical('f1'), loadVertical('footshorts')])
   const { type: encoded } = await params
-  const type = decodeURIComponent(encoded)
-  const entry = findCatalogEntry(type)
+  const routeId = decodeURIComponent(encoded)
+  const entry = findCatalogEntry(routeId)
   if (!entry) notFound()
-  const vizModule = getVizModule(type)
+  // `routeId` may be a variant id (e.g. 'fs:bracket@tree'); the renderer is keyed
+  // by the underlying registered module type.
+  const moduleType = entry.type
+  const vizModule = getVizModule(moduleType)
   if (!vizModule) notFound()
 
   let parsedConfig: unknown
   let parseError: string | null = null
   try {
-    parsedConfig = vizModule.parseConfig(entry.sample, { slug: 'catalog-preview', label: type })
+    parsedConfig = vizModule.parseConfig(entry.sample, { slug: 'catalog-preview', label: moduleType })
   } catch (e) {
     parseError = e instanceof Error ? e.message : String(e)
   }
@@ -57,8 +60,8 @@ export default async function ModuleDetailPage({ params }: PageProps) {
         <p className="font-mono text-xs uppercase tracking-wider text-[color:var(--color-muted)] mb-1">
           {entry.category}
         </p>
-        <h1 className="text-3xl font-medium">{vizModule.label}</h1>
-        <code className="font-mono text-sm text-[color:var(--color-muted)]">{type}</code>
+        <h1 className="text-3xl font-medium">{entry.label ?? vizModule.label}</h1>
+        <code className="font-mono text-sm text-[color:var(--color-muted)]">{moduleType}</code>
       </header>
 
       <section className="mb-8">
@@ -66,7 +69,7 @@ export default async function ModuleDetailPage({ params }: PageProps) {
           Preview
         </h2>
         <div className="relative aspect-video w-full max-w-3xl bg-[color:var(--color-surface)] rounded-lg border border-[color:var(--color-line)] overflow-hidden">
-          <VizModulePreview type={type} sample={entry.sample} previewNotice={entry.previewNotice} />
+          <VizModulePreview type={moduleType} sample={entry.sample} previewNotice={entry.previewNotice} />
         </div>
       </section>
 

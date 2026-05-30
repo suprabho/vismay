@@ -1,16 +1,16 @@
 'use client'
 
-import type { CSSProperties } from 'react'
-import { findTeam } from './teams'
+import { useState, type CSSProperties } from 'react'
+import { findTeam, slugify } from './teams'
 
 /**
- * Inline-SVG crest placeholder. Renders a circular badge with the team's
- * primary color, a secondary stripe, and the team's monogram. Used by every
- * fs:match-card layout so cards look right even when no external crest URL
- * is supplied — and so social-share renders are deterministic.
+ * Team crest with a deterministic fallback chain:
+ *   1. explicit `crestUrl` prop (per-fixture YAML override), else
+ *   2. the bundled palette crest (football-data.org, via findTeam), else
+ *   3. an inline-SVG monogram badge.
  *
- * When a `crestUrl` is provided (YAML override) the component renders that
- * image instead, falling back to the placeholder on error.
+ * If the resolved image fails to load (blocked host, 404, wrong id) the
+ * `onError` handler drops to the monogram, so a crest is never a broken image.
  */
 interface Props {
   team: string
@@ -21,24 +21,32 @@ interface Props {
 }
 
 export function Crest({ team, size = 48, crestUrl, className, style }: Props) {
-  if (crestUrl) {
+  const entry = findTeam(team)
+  const resolvedUrl = crestUrl ?? entry?.crest
+  const [imgFailed, setImgFailed] = useState(false)
+
+  if (resolvedUrl && !imgFailed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={crestUrl}
-        alt=""
+        src={resolvedUrl}
+        alt={entry?.name ?? team}
         width={size}
         height={size}
         className={className}
         style={{ objectFit: 'contain', ...style }}
+        onError={() => setImgFailed(true)}
       />
     )
   }
-  const entry = findTeam(team)
+
   const color = entry?.color ?? '#404040'
   const secondary = entry?.secondary ?? '#FFFFFF'
   const monogram = entry?.monogram ?? team.slice(0, 3).toUpperCase()
   const fontSize = Math.round(size * 0.32)
+  // Key the gradient id off the team identity (not the monogram) so two clubs
+  // that share a monogram don't collide on a single shared <defs> id.
+  const gradId = `crest-bg-${slugify(entry?.name ?? team)}`
   return (
     <svg
       width={size}
@@ -50,12 +58,12 @@ export function Crest({ team, size = 48, crestUrl, className, style }: Props) {
       role="img"
     >
       <defs>
-        <radialGradient id={`crest-bg-${monogram}`} cx="35%" cy="30%" r="80%">
+        <radialGradient id={gradId} cx="35%" cy="30%" r="80%">
           <stop offset="0%" stopColor={color} stopOpacity="1" />
           <stop offset="100%" stopColor={color} stopOpacity="0.85" />
         </radialGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill={`url(#crest-bg-${monogram})`} stroke={secondary} strokeWidth="1.5" />
+      <circle cx="32" cy="32" r="30" fill={`url(#${gradId})`} stroke={secondary} strokeWidth="1.5" />
       <path d="M2 32 a30 30 0 0 0 60 0" fill={secondary} fillOpacity="0.18" />
       <text
         x="32"

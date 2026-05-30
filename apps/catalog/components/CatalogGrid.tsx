@@ -1,5 +1,5 @@
 import { getVizModule, loadVertical } from '@vismay/viz-engine'
-import { catalogModules, type CatalogCategory } from '../lib/catalogModules'
+import { catalogModules, catalogEntryId, type CatalogCategory } from '../lib/catalogModules'
 import CategorySection from './CategorySection'
 import ModuleCard from './ModuleCard'
 
@@ -26,13 +26,15 @@ export default async function CatalogGrid() {
         return (
           <CategorySection key={cat} title={cat} count={entries.length}>
             {entries.map((entry) => {
+              const entryId = catalogEntryId(entry)
               const vizModule = getVizModule(entry.type)
               if (!vizModule) {
                 return (
                   <ModuleCard
-                    key={entry.type}
+                    key={entryId}
                     type={entry.type}
-                    label={entry.type}
+                    routeId={entryId}
+                    label={entry.label ?? entry.type}
                     slots={[]}
                     sample={entry.sample}
                     previewNotice={`Module '${entry.type}' is not registered`}
@@ -41,9 +43,10 @@ export default async function CatalogGrid() {
               }
               return (
                 <ModuleCard
-                  key={entry.type}
+                  key={entryId}
                   type={entry.type}
-                  label={vizModule.label}
+                  routeId={entryId}
+                  label={entry.label ?? vizModule.label}
                   slots={vizModule.slots}
                   mountingMode={vizModule.mountingMode}
                   sample={entry.sample}

@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { FixtureRow } from '../types';
+import { teamCrestUrl } from '../data/teams';
 
 export type MatchRowVariant = 'compact' | 'expanded';
 
@@ -100,9 +101,12 @@ function TeamCell({
   const nameClass = isStack
     ? `w-full text-center ${sizes.teamText} text-text`
     : `flex-shrink ${sizes.teamText} text-text`;
-  const crestEl = crest ? (
+  // Explicit crest_url wins, else fall back to the bundled palette crest so
+  // teams show a badge everywhere (Crest's SVG monogram is web-only).
+  const crestUri = crest ?? teamCrestUrl(slug ?? name);
+  const crestEl = crestUri ? (
     <Image
-      source={{ uri: crest }}
+      source={{ uri: crestUri }}
       style={{ width: sizes.crest, height: sizes.crest }}
       contentFit="contain"
     />
