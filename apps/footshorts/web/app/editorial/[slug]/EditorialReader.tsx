@@ -1,27 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { StoryEmbed } from '@vismay/story-embed/web';
 
-// vizmaya.fyi is the source-of-truth render of the story. Footshorts iframes
-// it so we don't re-implement scrollytelling here. If vizmaya later adds an
-// embed mode that strips its own chrome (logo, etc.), append the param here.
-const VIZMAYA_ORIGIN = 'https://vizmaya.fyi';
-
+// vizmaya.fyi renders the story (the "general Viz story view"). We embed it via
+// the shared StoryEmbed and overlay Footshorts's back-button chrome on top — no
+// scrollytelling re-implementation here.
 export default function EditorialReader({ slug }: { slug: string }) {
-  const [loaded, setLoaded] = useState(false);
-  const src = `${VIZMAYA_ORIGIN}/story/${encodeURIComponent(slug)}`;
-
-  // A safety net in case onLoad never fires (cross-origin frames can be
-  // quiet about errors). After 6s, hide the spinner so the viewer at least
-  // sees something — either the rendered story or vizmaya's own error page.
-  useEffect(() => {
-    const t = setTimeout(() => setLoaded(true), 6000);
-    return () => clearTimeout(t);
-  }, []);
-
   return (
-    <div className="fixed inset-0 bg-bg">
+    <StoryEmbed slug={slug}>
       <Link
         href="/feed"
         aria-label="Back to feed"
@@ -37,23 +24,6 @@ export default function EditorialReader({ slug }: { slug: string }) {
           <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </Link>
-
-      {!loaded && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-        </div>
-      )}
-
-      <iframe
-        src={src}
-        title="Editorial story"
-        className="h-full w-full border-0"
-        onLoad={() => setLoaded(true)}
-        // Keep the same sandbox web platform features the story page needs:
-        // scripts (charts), forms (rare), popups (external links), and same-
-        // origin so vizmaya's own auth/asset cookies still work.
-        allow="fullscreen"
-      />
-    </div>
+    </StoryEmbed>
   );
 }

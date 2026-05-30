@@ -1,0 +1,28 @@
+{
+  "name": "@vismay/story-embed",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/url.ts",
+  "types": "src/url.ts",
+  "exports": {
+    ".": "./src/url.ts",
+    "./url": "./src/url.ts",
+    "./web": "./src/web.tsx",
+    "./native": "./src/native.tsx"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-native": "*",
+    "react-native-webview": "*",
+    "nativewind": "*"
+  },
+  "peerDependenciesMeta": {
+    "react-native": { "optional": true },
+    "react-native-webview": { "optional": true },
+    "nativewind": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}
