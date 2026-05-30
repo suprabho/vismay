@@ -1,0 +1,1366 @@
+# Story config — carrick-united
+#
+# Exercises every footshorts (fs:) viz module in one story: two animated
+# tactics-board phases, the standings table, the standings-over-matchdays
+# line chart, a match card / tile / row, and a knockout bracket. All data is
+# hand-authored but shaped exactly like the live Supabase rows (StandingRow /
+# FixtureRow) and the fs:* layer configs, so it's drop-in once a data source
+# is wired up. `vertical: footshorts` in the .md frontmatter is what registers
+# these modules before the slots look them up.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.4
+  pinColor: '#d2122e'
+  pinRadius: 12
+  flySpeed: 1.2
+sections:
+- id: build-from-back
+  text: Building from the back
+  foreground:
+  - type: fs:tactics-board
+    title: Building from the back
+    homeLabel: Middlesbrough
+    awayLabel: Man Utd
+    homeColor: '#d2122e'
+    awayColor: '#3b4a63'
+    accent: '#e0b341'
+    phase:
+      phaseId: carrick-buildup-1
+      formation: 4-2-3-1
+      durationSec: 4
+      frames:
+      - t: 0
+        ball:
+          x: 18
+          y: 50
+        players:
+        - id: GK
+          x: 8
+          y: 50
+          team: home
+        - id: RB
+          x: 22
+          y: 82
+          team: home
+        - id: RCB
+          x: 18
+          y: 60
+          team: home
+        - id: LCB
+          x: 18
+          y: 40
+          team: home
+        - id: LB
+          x: 22
+          y: 18
+          team: home
+        - id: RDM
+          x: 35
+          y: 58
+          team: home
+        - id: LDM
+          x: 35
+          y: 42
+          team: home
+        - id: RW
+          x: 60
+          y: 78
+          team: home
+        - id: AM
+          x: 50
+          y: 50
+          team: home
+        - id: LW
+          x: 55
+          y: 30
+          team: home
+        - id: ST
+          x: 70
+          y: 55
+          team: home
+        - id: A_ST1
+          x: 65
+          y: 45
+          team: away
+        - id: A_ST2
+          x: 65
+          y: 55
+          team: away
+        - id: A_AM
+          x: 55
+          y: 50
+          team: away
+        - id: A_RW
+          x: 50
+          y: 80
+          team: away
+        - id: A_LW
+          x: 50
+          y: 20
+          team: away
+        - id: A_RM
+          x: 40
+          y: 60
+          team: away
+        - id: A_LM
+          x: 40
+          y: 40
+          team: away
+        - id: A_RB
+          x: 25
+          y: 78
+          team: away
+        - id: A_RCB
+          x: 22
+          y: 58
+          team: away
+        - id: A_LCB
+          x: 22
+          y: 42
+          team: away
+        - id: A_LB
+          x: 25
+          y: 22
+          team: away
+      - t: 2
+        ball:
+          x: 35
+          y: 58
+        players:
+        - id: GK
+          x: 8
+          y: 50
+          team: home
+        - id: RB
+          x: 35
+          y: 88
+          team: home
+        - id: RCB
+          x: 22
+          y: 62
+          team: home
+        - id: LCB
+          x: 22
+          y: 38
+          team: home
+        - id: LB
+          x: 35
+          y: 12
+          team: home
+        - id: RDM
+          x: 38
+          y: 58
+          team: home
+        - id: LDM
+          x: 42
+          y: 42
+          team: home
+        - id: RW
+          x: 65
+          y: 82
+          team: home
+        - id: AM
+          x: 55
+          y: 48
+          team: home
+        - id: LW
+          x: 50
+          y: 38
+          team: home
+        - id: ST
+          x: 78
+          y: 48
+          team: home
+        - id: A_ST1
+          x: 60
+          y: 45
+          team: away
+        - id: A_ST2
+          x: 60
+          y: 55
+          team: away
+        - id: A_AM
+          x: 50
+          y: 50
+          team: away
+        - id: A_RW
+          x: 48
+          y: 80
+          team: away
+        - id: A_LW
+          x: 48
+          y: 20
+          team: away
+        - id: A_RM
+          x: 42
+          y: 58
+          team: away
+        - id: A_LM
+          x: 42
+          y: 42
+          team: away
+        - id: A_RB
+          x: 30
+          y: 78
+          team: away
+        - id: A_RCB
+          x: 28
+          y: 58
+          team: away
+        - id: A_LCB
+          x: 28
+          y: 42
+          team: away
+        - id: A_LB
+          x: 30
+          y: 22
+          team: away
+      - t: 4
+        ball:
+          x: 55
+          y: 48
+        players:
+        - id: GK
+          x: 10
+          y: 50
+          team: home
+        - id: RB
+          x: 48
+          y: 88
+          team: home
+        - id: RCB
+          x: 28
+          y: 62
+          team: home
+        - id: LCB
+          x: 28
+          y: 38
+          team: home
+        - id: LB
+          x: 45
+          y: 10
+          team: home
+        - id: RDM
+          x: 42
+          y: 55
+          team: home
+        - id: LDM
+          x: 48
+          y: 42
+          team: home
+        - id: RW
+          x: 72
+          y: 80
+          team: home
+        - id: AM
+          x: 58
+          y: 48
+          team: home
+        - id: LW
+          x: 55
+          y: 42
+          team: home
+        - id: ST
+          x: 82
+          y: 42
+          team: home
+        - id: A_ST1
+          x: 55
+          y: 45
+          team: away
+        - id: A_ST2
+          x: 55
+          y: 55
+          team: away
+        - id: A_AM
+          x: 48
+          y: 50
+          team: away
+        - id: A_RW
+          x: 50
+          y: 78
+          team: away
+        - id: A_LW
+          x: 50
+          y: 22
+          team: away
+        - id: A_RM
+          x: 48
+          y: 58
+          team: away
+        - id: A_LM
+          x: 48
+          y: 42
+          team: away
+        - id: A_RB
+          x: 35
+          y: 78
+          team: away
+        - id: A_RCB
+          x: 35
+          y: 58
+          team: away
+        - id: A_LCB
+          x: 35
+          y: 42
+          team: away
+        - id: A_LB
+          x: 35
+          y: 22
+          team: away
+      annotations:
+      - type: pass
+        from: RCB
+        to: RDM
+        at: 0.5
+      - type: pass
+        from: RDM
+        to: AM
+        at: 2.2
+      - type: run
+        playerId: RB
+        path:
+        - - 22
+          - 82
+        - - 35
+          - 88
+        - - 48
+          - 88
+        at: 0.8
+        duration: 3.0
+      - type: run
+        playerId: LW
+        path:
+        - - 55
+          - 30
+        - - 50
+          - 38
+        - - 55
+          - 42
+        at: 1.0
+        duration: 2.5
+      - type: zone
+        polygon:
+        - - 35
+          - 35
+        - - 55
+          - 35
+        - - 55
+          - 65
+        - - 35
+          - 65
+        label: Central overload
+        at: 1.5
+        duration: 2.5
+- id: into-final-third
+  text: Into the final third
+  foreground:
+  - type: fs:tactics-board
+    title: Into the final third
+    homeLabel: Middlesbrough
+    awayLabel: Man Utd
+    homeColor: '#d2122e'
+    awayColor: '#3b4a63'
+    accent: '#e0b341'
+    phase:
+      phaseId: carrick-final-third-1
+      formation: 4-2-3-1
+      durationSec: 4.5
+      frames:
+      - t: 0
+        ball:
+          x: 60
+          y: 50
+        players:
+        - id: GK
+          x: 12
+          y: 50
+          team: home
+        - id: RB
+          x: 55
+          y: 86
+          team: home
+        - id: RCB
+          x: 32
+          y: 60
+          team: home
+        - id: LCB
+          x: 32
+          y: 40
+          team: home
+        - id: LB
+          x: 50
+          y: 14
+          team: home
+        - id: RDM
+          x: 48
+          y: 55
+          team: home
+        - id: LDM
+          x: 52
+          y: 44
+          team: home
+        - id: RW
+          x: 74
+          y: 80
+          team: home
+        - id: AM
+          x: 60
+          y: 50
+          team: home
+        - id: LW
+          x: 60
+          y: 40
+          team: home
+        - id: ST
+          x: 84
+          y: 46
+          team: home
+        - id: A_ST1
+          x: 50
+          y: 46
+          team: away
+        - id: A_ST2
+          x: 50
+          y: 54
+          team: away
+        - id: A_AM
+          x: 58
+          y: 50
+          team: away
+        - id: A_RW
+          x: 60
+          y: 72
+          team: away
+        - id: A_LW
+          x: 60
+          y: 28
+          team: away
+        - id: A_RM
+          x: 66
+          y: 60
+          team: away
+        - id: A_LM
+          x: 66
+          y: 42
+          team: away
+        - id: A_RB
+          x: 80
+          y: 72
+          team: away
+        - id: A_RCB
+          x: 86
+          y: 56
+          team: away
+        - id: A_LCB
+          x: 86
+          y: 44
+          team: away
+        - id: A_LB
+          x: 80
+          y: 28
+          team: away
+      - t: 2
+        ball:
+          x: 80
+          y: 82
+        players:
+        - id: GK
+          x: 14
+          y: 50
+          team: home
+        - id: RB
+          x: 72
+          y: 88
+          team: home
+        - id: RCB
+          x: 38
+          y: 60
+          team: home
+        - id: LCB
+          x: 38
+          y: 40
+          team: home
+        - id: LB
+          x: 55
+          y: 14
+          team: home
+        - id: RDM
+          x: 52
+          y: 55
+          team: home
+        - id: LDM
+          x: 56
+          y: 45
+          team: home
+        - id: RW
+          x: 80
+          y: 82
+          team: home
+        - id: AM
+          x: 72
+          y: 52
+          team: home
+        - id: LW
+          x: 66
+          y: 42
+          team: home
+        - id: ST
+          x: 88
+          y: 42
+          team: home
+        - id: A_ST1
+          x: 55
+          y: 46
+          team: away
+        - id: A_ST2
+          x: 55
+          y: 54
+          team: away
+        - id: A_AM
+          x: 64
+          y: 50
+          team: away
+        - id: A_RW
+          x: 66
+          y: 74
+          team: away
+        - id: A_LW
+          x: 64
+          y: 30
+          team: away
+        - id: A_RM
+          x: 72
+          y: 62
+          team: away
+        - id: A_LM
+          x: 72
+          y: 44
+          team: away
+        - id: A_RB
+          x: 84
+          y: 74
+          team: away
+        - id: A_RCB
+          x: 88
+          y: 52
+          team: away
+        - id: A_LCB
+          x: 88
+          y: 46
+          team: away
+        - id: A_LB
+          x: 84
+          y: 30
+          team: away
+      - t: 4.5
+        ball:
+          x: 90
+          y: 50
+        players:
+        - id: GK
+          x: 16
+          y: 50
+          team: home
+        - id: RB
+          x: 90
+          y: 88
+          team: home
+        - id: RCB
+          x: 44
+          y: 58
+          team: home
+        - id: LCB
+          x: 44
+          y: 42
+          team: home
+        - id: LB
+          x: 60
+          y: 16
+          team: home
+        - id: RDM
+          x: 58
+          y: 54
+          team: home
+        - id: LDM
+          x: 62
+          y: 46
+          team: home
+        - id: RW
+          x: 90
+          y: 80
+          team: home
+        - id: AM
+          x: 86
+          y: 56
+          team: home
+        - id: LW
+          x: 72
+          y: 44
+          team: home
+        - id: ST
+          x: 90
+          y: 48
+          team: home
+        - id: A_ST1
+          x: 60
+          y: 48
+          team: away
+        - id: A_ST2
+          x: 60
+          y: 52
+          team: away
+        - id: A_AM
+          x: 70
+          y: 50
+          team: away
+        - id: A_RW
+          x: 72
+          y: 74
+          team: away
+        - id: A_LW
+          x: 70
+          y: 30
+          team: away
+        - id: A_RM
+          x: 80
+          y: 60
+          team: away
+        - id: A_LM
+          x: 80
+          y: 44
+          team: away
+        - id: A_RB
+          x: 90
+          y: 72
+          team: away
+        - id: A_RCB
+          x: 92
+          y: 54
+          team: away
+        - id: A_LCB
+          x: 92
+          y: 46
+          team: away
+        - id: A_LB
+          x: 88
+          y: 30
+          team: away
+      annotations:
+      - type: pass
+        from: AM
+        to: RW
+        at: 0.6
+      - type: run
+        playerId: RB
+        path:
+        - - 55
+          - 86
+        - - 72
+          - 88
+        - - 90
+          - 88
+        at: 0.8
+        duration: 3.2
+      - type: pass
+        from: RW
+        to: ST
+        at: 3.2
+      - type: run
+        playerId: ST
+        path:
+        - - 84
+          - 46
+        - - 88
+          - 42
+        - - 90
+          - 48
+        at: 2.6
+        duration: 1.8
+      - type: zone
+        polygon:
+        - - 83
+          - 30
+        - - 100
+          - 30
+        - - 100
+          - 70
+        - - 83
+          - 70
+        label: Cut-back zone
+        at: 2.6
+        duration: 1.8
+- id: table
+  text: Third in the table
+  foreground:
+  - type: fs:standings-table
+    rows:
+    - competition_slug: prem
+      season: 25-26
+      team_id: arsenal
+      position: 1
+      played: 36
+      won: 26
+      draw: 6
+      lost: 4
+      goals_for: 80
+      goals_against: 28
+      goal_difference: 52
+      points: 84
+      form: WWWDW
+      team:
+        id: arsenal
+        slug: arsenal
+        name: Arsenal
+        crest_url: null
+    - competition_slug: prem
+      season: 25-26
+      team_id: man-city
+      position: 2
+      played: 36
+      won: 25
+      draw: 6
+      lost: 5
+      goals_for: 82
+      goals_against: 34
+      goal_difference: 48
+      points: 81
+      form: WDWWW
+      team:
+        id: man-city
+        slug: man-city
+        name: Manchester City
+        crest_url: null
+    - competition_slug: prem
+      season: 25-26
+      team_id: man-utd
+      position: 3
+      played: 36
+      won: 23
+      draw: 8
+      lost: 5
+      goals_for: 70
+      goals_against: 38
+      goal_difference: 32
+      points: 77
+      form: WWWWW
+      team:
+        id: man-utd
+        slug: man-utd
+        name: Manchester United
+        crest_url: null
+    - competition_slug: prem
+      season: 25-26
+      team_id: liverpool
+      position: 4
+      played: 36
+      won: 22
+      draw: 8
+      lost: 6
+      goals_for: 74
+      goals_against: 40
+      goal_difference: 34
+      points: 74
+      form: WLWDW
+      team:
+        id: liverpool
+        slug: liverpool
+        name: Liverpool
+        crest_url: null
+    - competition_slug: prem
+      season: 25-26
+      team_id: chelsea
+      position: 5
+      played: 36
+      won: 21
+      draw: 7
+      lost: 8
+      goals_for: 66
+      goals_against: 42
+      goal_difference: 24
+      points: 70
+      form: WDLWW
+      team:
+        id: chelsea
+        slug: chelsea
+        name: Chelsea
+        crest_url: null
+    - competition_slug: prem
+      season: 25-26
+      team_id: tottenham
+      position: 6
+      played: 36
+      won: 19
+      draw: 8
+      lost: 9
+      goals_for: 68
+      goals_against: 48
+      goal_difference: 20
+      points: 65
+      form: LWDWW
+      team:
+        id: tottenham
+        slug: tottenham
+        name: Tottenham
+        crest_url: null
+- id: climb
+  text: From sixth to third
+  foreground:
+  - type: fs:standings-over-matchdays
+    competitionLabel: Premier League · 2025/26
+    totalMatchdays: 38
+    lanes:
+    - team_id: arsenal
+      team_name: Arsenal
+      team_code: ARS
+      color: '#EF0107'
+      points:
+      - matchday: 1
+        position: 1
+      - matchday: 2
+        position: 1
+      - matchday: 3
+        position: 1
+      - matchday: 4
+        position: 2
+      - matchday: 5
+        position: 1
+      - matchday: 6
+        position: 1
+      - matchday: 7
+        position: 1
+      - matchday: 8
+        position: 1
+      - matchday: 9
+        position: 2
+      - matchday: 10
+        position: 1
+      - matchday: 11
+        position: 1
+      - matchday: 12
+        position: 1
+      - matchday: 13
+        position: 1
+      - matchday: 14
+        position: 1
+      - matchday: 15
+        position: 1
+      - matchday: 16
+        position: 1
+      - matchday: 17
+        position: 1
+      - matchday: 18
+        position: 1
+      - matchday: 19
+        position: 1
+      - matchday: 20
+        position: 1
+      - matchday: 21
+        position: 1
+      - matchday: 22
+        position: 1
+      - matchday: 23
+        position: 1
+      - matchday: 24
+        position: 1
+      - matchday: 25
+        position: 1
+      - matchday: 26
+        position: 1
+      - matchday: 27
+        position: 1
+      - matchday: 28
+        position: 1
+      - matchday: 29
+        position: 1
+      - matchday: 30
+        position: 1
+      - matchday: 31
+        position: 1
+      - matchday: 32
+        position: 1
+      - matchday: 33
+        position: 1
+      - matchday: 34
+        position: 1
+      - matchday: 35
+        position: 1
+      - matchday: 36
+        position: 1
+      - matchday: 37
+        position: 1
+      - matchday: 38
+        position: 1
+    - team_id: man-city
+      team_name: Manchester City
+      team_code: MCI
+      color: '#6CABDD'
+      points:
+      - matchday: 1
+        position: 3
+      - matchday: 2
+        position: 2
+      - matchday: 3
+        position: 2
+      - matchday: 4
+        position: 1
+      - matchday: 5
+        position: 2
+      - matchday: 6
+        position: 2
+      - matchday: 7
+        position: 2
+      - matchday: 8
+        position: 2
+      - matchday: 9
+        position: 1
+      - matchday: 10
+        position: 2
+      - matchday: 11
+        position: 2
+      - matchday: 12
+        position: 2
+      - matchday: 13
+        position: 2
+      - matchday: 14
+        position: 2
+      - matchday: 15
+        position: 2
+      - matchday: 16
+        position: 2
+      - matchday: 17
+        position: 2
+      - matchday: 18
+        position: 2
+      - matchday: 19
+        position: 2
+      - matchday: 20
+        position: 2
+      - matchday: 21
+        position: 2
+      - matchday: 22
+        position: 2
+      - matchday: 23
+        position: 2
+      - matchday: 24
+        position: 2
+      - matchday: 25
+        position: 2
+      - matchday: 26
+        position: 2
+      - matchday: 27
+        position: 2
+      - matchday: 28
+        position: 2
+      - matchday: 29
+        position: 2
+      - matchday: 30
+        position: 2
+      - matchday: 31
+        position: 2
+      - matchday: 32
+        position: 2
+      - matchday: 33
+        position: 2
+      - matchday: 34
+        position: 2
+      - matchday: 35
+        position: 2
+      - matchday: 36
+        position: 2
+      - matchday: 37
+        position: 2
+      - matchday: 38
+        position: 2
+    - team_id: man-utd
+      team_name: Manchester United
+      team_code: MUN
+      color: '#DA291C'
+      points:
+      - matchday: 1
+        position: 6
+      - matchday: 2
+        position: 7
+      - matchday: 3
+        position: 7
+      - matchday: 4
+        position: 8
+      - matchday: 5
+        position: 6
+      - matchday: 6
+        position: 6
+      - matchday: 7
+        position: 7
+      - matchday: 8
+        position: 6
+      - matchday: 9
+        position: 6
+      - matchday: 10
+        position: 6
+      - matchday: 11
+        position: 6
+      - matchday: 12
+        position: 7
+      - matchday: 13
+        position: 6
+      - matchday: 14
+        position: 6
+      - matchday: 15
+        position: 5
+      - matchday: 16
+        position: 5
+      - matchday: 17
+        position: 5
+      - matchday: 18
+        position: 4
+      - matchday: 19
+        position: 4
+      - matchday: 20
+        position: 4
+      - matchday: 21
+        position: 4
+      - matchday: 22
+        position: 4
+      - matchday: 23
+        position: 3
+      - matchday: 24
+        position: 4
+      - matchday: 25
+        position: 3
+      - matchday: 26
+        position: 3
+      - matchday: 27
+        position: 3
+      - matchday: 28
+        position: 3
+      - matchday: 29
+        position: 3
+      - matchday: 30
+        position: 3
+      - matchday: 31
+        position: 3
+      - matchday: 32
+        position: 3
+      - matchday: 33
+        position: 3
+      - matchday: 34
+        position: 3
+      - matchday: 35
+        position: 3
+      - matchday: 36
+        position: 3
+      - matchday: 37
+        position: 3
+      - matchday: 38
+        position: 3
+    - team_id: liverpool
+      team_name: Liverpool
+      team_code: LIV
+      color: '#C8102E'
+      points:
+      - matchday: 1
+        position: 2
+      - matchday: 2
+        position: 3
+      - matchday: 3
+        position: 3
+      - matchday: 4
+        position: 3
+      - matchday: 5
+        position: 3
+      - matchday: 6
+        position: 3
+      - matchday: 7
+        position: 3
+      - matchday: 8
+        position: 3
+      - matchday: 9
+        position: 3
+      - matchday: 10
+        position: 3
+      - matchday: 11
+        position: 3
+      - matchday: 12
+        position: 3
+      - matchday: 13
+        position: 3
+      - matchday: 14
+        position: 3
+      - matchday: 15
+        position: 3
+      - matchday: 16
+        position: 3
+      - matchday: 17
+        position: 3
+      - matchday: 18
+        position: 3
+      - matchday: 19
+        position: 3
+      - matchday: 20
+        position: 3
+      - matchday: 21
+        position: 3
+      - matchday: 22
+        position: 3
+      - matchday: 23
+        position: 4
+      - matchday: 24
+        position: 3
+      - matchday: 25
+        position: 4
+      - matchday: 26
+        position: 4
+      - matchday: 27
+        position: 4
+      - matchday: 28
+        position: 4
+      - matchday: 29
+        position: 4
+      - matchday: 30
+        position: 4
+      - matchday: 31
+        position: 4
+      - matchday: 32
+        position: 4
+      - matchday: 33
+        position: 4
+      - matchday: 34
+        position: 4
+      - matchday: 35
+        position: 4
+      - matchday: 36
+        position: 4
+      - matchday: 37
+        position: 4
+      - matchday: 38
+        position: 4
+    - team_id: chelsea
+      team_name: Chelsea
+      team_code: CHE
+      color: '#034694'
+      points:
+      - matchday: 1
+        position: 5
+      - matchday: 2
+        position: 4
+      - matchday: 3
+        position: 4
+      - matchday: 4
+        position: 4
+      - matchday: 5
+        position: 4
+      - matchday: 6
+        position: 5
+      - matchday: 7
+        position: 4
+      - matchday: 8
+        position: 5
+      - matchday: 9
+        position: 4
+      - matchday: 10
+        position: 4
+      - matchday: 11
+        position: 5
+      - matchday: 12
+        position: 4
+      - matchday: 13
+        position: 4
+      - matchday: 14
+        position: 4
+      - matchday: 15
+        position: 4
+      - matchday: 16
+        position: 4
+      - matchday: 17
+        position: 4
+      - matchday: 18
+        position: 5
+      - matchday: 19
+        position: 5
+      - matchday: 20
+        position: 5
+      - matchday: 21
+        position: 5
+      - matchday: 22
+        position: 5
+      - matchday: 23
+        position: 5
+      - matchday: 24
+        position: 5
+      - matchday: 25
+        position: 5
+      - matchday: 26
+        position: 5
+      - matchday: 27
+        position: 5
+      - matchday: 28
+        position: 5
+      - matchday: 29
+        position: 5
+      - matchday: 30
+        position: 5
+      - matchday: 31
+        position: 5
+      - matchday: 32
+        position: 5
+      - matchday: 33
+        position: 5
+      - matchday: 34
+        position: 5
+      - matchday: 35
+        position: 5
+      - matchday: 36
+        position: 5
+      - matchday: 37
+        position: 5
+      - matchday: 38
+        position: 5
+- id: derby
+  text: The statement win
+  foreground:
+  - type: fs:match-card
+    layout: horizontal
+    home: Manchester United
+    away: Manchester City
+    score: 2 – 1
+    kickoff: FT
+    competition: Premier League · matchday 28
+    competitionSlug: prem
+    homeColor: '#DA291C'
+    awayColor: '#6CABDD'
+    dateLabel: Sunday, Mar 8
+- id: liverpool
+  text: Controlling the big games
+  foreground:
+  - type: fs:match-tile
+    fixture:
+      id: mun-liv-md31
+      competition_slug: prem
+      season: 25-26
+      matchday: 31
+      stage: null
+      phase: null
+      kickoff_at: '2026-04-05T15:30:00Z'
+      status: finished
+      home_score: 2
+      away_score: 0
+      home_team_name: Manchester United
+      away_team_name: Liverpool
+      home:
+        id: man-utd
+        slug: man-utd
+        name: Manchester United
+        crest_url: null
+        primary_color: '#DA291C'
+      away:
+        id: liverpool
+        slug: liverpool
+        name: Liverpool
+        crest_url: null
+        primary_color: '#C8102E'
+    competitionCrest: null
+- id: chelsea
+  text: Ruthless at home
+  foreground:
+  - type: fs:match-row
+    variant: compact
+    fixture:
+      id: mun-che-md34
+      competition_slug: prem
+      season: 25-26
+      matchday: 34
+      stage: null
+      kickoff_at: '2026-04-26T13:00:00Z'
+      status: finished
+      home_score: 3
+      away_score: 1
+      home_team_name: Manchester United
+      away_team_name: Chelsea
+      home:
+        id: man-utd
+        slug: man-utd
+        name: Manchester United
+        crest_url: null
+      away:
+        id: chelsea
+        slug: chelsea
+        name: Chelsea
+        crest_url: null
+- id: cup
+  text: A run to Wembley
+  foreground:
+  - type: fs:bracket
+    fixtures:
+    - id: fac-qf
+      competition_slug: fa-cup
+      season: '2026'
+      matchday: null
+      stage: quarter-final
+      phase: knockout
+      kickoff_at: '2026-03-21T17:45:00Z'
+      status: finished
+      home_score: 2
+      away_score: 0
+      home_team_name: Manchester United
+      away_team_name: Brighton
+      home:
+        id: man-utd
+        slug: man-utd
+        name: Manchester United
+        crest_url: null
+        primary_color: '#DA291C'
+      away:
+        id: brighton
+        slug: brighton
+        name: Brighton
+        crest_url: null
+        primary_color: '#0057B8'
+    - id: fac-sf
+      competition_slug: fa-cup
+      season: '2026'
+      matchday: null
+      stage: semi-final
+      phase: knockout
+      kickoff_at: '2026-04-19T15:30:00Z'
+      status: finished
+      home_score: 1
+      away_score: 0
+      home_team_name: Manchester United
+      away_team_name: Newcastle
+      home:
+        id: man-utd
+        slug: man-utd
+        name: Manchester United
+        crest_url: null
+        primary_color: '#DA291C'
+      away:
+        id: newcastle
+        slug: newcastle
+        name: Newcastle
+        crest_url: null
+        primary_color: '#241F20'
+    - id: fac-final
+      competition_slug: fa-cup
+      season: '2026'
+      matchday: null
+      stage: final
+      phase: knockout
+      kickoff_at: '2026-05-16T16:30:00Z'
+      status: scheduled
+      home_score: null
+      away_score: null
+      home_team_name: Manchester United
+      away_team_name: Manchester City
+      home:
+        id: man-utd
+        slug: man-utd
+        name: Manchester United
+        crest_url: null
+        primary_color: '#DA291C'
+      away:
+        id: man-city
+        slug: man-city
+        name: Manchester City
+        crest_url: null
+        primary_color: '#6CABDD'
