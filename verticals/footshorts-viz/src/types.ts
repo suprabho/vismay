@@ -72,6 +72,38 @@ export type StandingRow = {
 }
 
 /**
+ * One point on a team's league-position trajectory across a season.
+ * Mirrors f1-viz's `LapPosition` — kept here so the football vertical owns its
+ * own data contract for the `fs:standings-over-matchdays` chart.
+ */
+export type MatchdayPosition = {
+  /** Matchday number, 1-based (MD1..MD38). */
+  matchday: number
+  /** League position after this matchday, 1 = top of the table. */
+  position: number
+  /** Optional cumulative points after this matchday (reserved for labels/tooltips). */
+  points?: number
+}
+
+/**
+ * One team's position-over-matchdays trajectory — rendered as a single polyline
+ * by the `fs:standings-over-matchdays` chart (one lane per team). Analogous to
+ * f1-viz's `DriverLane`.
+ */
+export type TeamLane = {
+  team_id: string
+  /** Display name shown in the legend, e.g. "Manchester United". */
+  team_name: string
+  /** Optional short code for a compact legend, e.g. "MUN". */
+  team_code?: string | null
+  /** Hex color for the polyline; usually the club's primary brand color. */
+  color: string
+  /** Optional crest URL (reserved for legend icons; unused by the chart today). */
+  crest_url?: string | null
+  points: MatchdayPosition[]
+}
+
+/**
  * A knockout tie: one or two legs between the same pair of teams in the same
  * stage. We don't have a `tie_id` on fixtures — buildBracket pairs legs by
  * unordered team pair within (competition_slug, season, stage).
