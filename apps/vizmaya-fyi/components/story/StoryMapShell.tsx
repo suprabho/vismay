@@ -406,6 +406,7 @@ export default function StoryMapShell({
         >
           <VizmayaLogo
             className="w-full h-full"
+            wordmarkPrefix={isDeckFormat ? 'Biz' : undefined}
             palette={logoPalettes[current?.parentIndex ?? 0] ?? logoPalettes[0]}
           />
         </Link>
