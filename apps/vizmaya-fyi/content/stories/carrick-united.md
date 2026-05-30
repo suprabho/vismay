@@ -63,7 +63,7 @@ The derby was the proof of concept: a compact mid-block, then coordinated pressu
 
 ## Controlling the big games
 
-Against Liverpool it was the same script — stay compact, strike on coordinated triggers — for a 2–0 that never felt in doubt. The match tile carries the team theming straight from the fixture's own colours.
+Against Liverpool it was the same script — stay compact, strike on coordinated triggers — for a 2–0 that never felt in doubt. The same feature card as the derby, themed to United's red against Liverpool's.
 
 ## Ruthless at home
 

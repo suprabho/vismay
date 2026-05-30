@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import type { TeamLane } from '../types'
 
 type Props = {
@@ -18,6 +19,68 @@ const PADDING = { top: 16, right: 12, bottom: 24, left: 28 }
 const VIEW_W = 640
 const VIEW_H = 320
 
+// Inline styles + CSS vars instead of Tailwind utility classes so the chart
+// renders correctly in host apps whose Tailwind config doesn't scan this
+// package's source (notably vizmaya.fyi's story renderer and admin's preview,
+// where utilities like `bg-surface` / `fill-muted` / `w-full` are never
+// emitted and the SVG would otherwise collapse to zero size). Mirrors the
+// approach already used by StandingsTable / MatchTile / the match-card layouts.
+const cardStyle: CSSProperties = {
+  width: '100%',
+  borderRadius: '12px',
+  border: '1px solid var(--color-line, #1f2a42)',
+  background: 'var(--color-surface, #141d31)',
+  padding: '12px',
+  overflow: 'hidden',
+}
+const headerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  marginBottom: '8px',
+}
+const titleStyle: CSSProperties = {
+  fontSize: '11px',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'var(--color-muted, #8a93a7)',
+}
+const labelStyle: CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--color-text, #eef2f8)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+const svgStyle: CSSProperties = { display: 'block', width: '100%', height: 'auto' }
+const legendStyle: CSSProperties = {
+  marginTop: '12px',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '4px 12px',
+}
+const legendItemStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontSize: '11px',
+  color: 'var(--color-text, #eef2f8)',
+}
+const emptyStyle: CSSProperties = {
+  display: 'flex',
+  height: '12rem',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '12px',
+  border: '1px solid var(--color-line, #1f2a42)',
+  background: 'var(--color-surface, #141d31)',
+  color: 'var(--color-muted, #8a93a7)',
+  fontSize: '14px',
+}
+const TICK_COLOR = 'var(--color-muted, #8a93a7)'
+const GRID_COLOR = 'var(--color-line, #1f2a42)'
+
 /**
  * League position over the course of a season — one polyline per team, P1 at the
  * top. A football twin of f1-viz's `PositionChart`: x-axis is matchday instead
@@ -31,11 +94,7 @@ export function StandingsOverMatchdays({
   xTickFormat = (n) => `MD${n}`,
 }: Props) {
   if (lanes.length === 0) {
-    return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-surface text-sm text-muted">
-        No matchday data
-      </div>
-    )
+    return <div style={emptyStyle}>No matchday data</div>
   }
 
   const allPoints = lanes.flatMap((l) => l.points)
@@ -52,14 +111,15 @@ export function StandingsOverMatchdays({
     ((pos - 1) / Math.max(1, maxPos - 1)) * (VIEW_H - PADDING.top - PADDING.bottom)
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wider text-muted">{title}</span>
-        <span className="truncate text-xs text-text">{competitionLabel}</span>
+    <div style={cardStyle}>
+      <div style={headerStyle}>
+        <span style={titleStyle}>{title}</span>
+        <span style={labelStyle}>{competitionLabel}</span>
       </div>
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="h-auto w-full"
+        style={svgStyle}
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label={`League position by matchday chart for ${competitionLabel}`}
       >
@@ -70,7 +130,7 @@ export function StandingsOverMatchdays({
               x={PADDING.left - 6}
               y={yScale(p) + 3}
               textAnchor="end"
-              className="fill-muted"
+              fill={TICK_COLOR}
               style={{ fontSize: 10 }}
             >
               P{p}
@@ -80,8 +140,7 @@ export function StandingsOverMatchdays({
               y1={yScale(p)}
               x2={VIEW_W - PADDING.right}
               y2={yScale(p)}
-              stroke="currentColor"
-              className="text-border"
+              stroke={GRID_COLOR}
               strokeWidth={0.5}
             />
           </g>
@@ -93,7 +152,7 @@ export function StandingsOverMatchdays({
             x={xScale(md)}
             y={VIEW_H - 6}
             textAnchor="middle"
-            className="fill-muted"
+            fill={TICK_COLOR}
             style={{ fontSize: 10 }}
           >
             {xTickFormat(md)}
@@ -123,14 +182,19 @@ export function StandingsOverMatchdays({
           )
         })}
       </svg>
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
+      <div style={legendStyle}>
         {lanes.map((lane) => (
-          <div key={lane.team_id} className="flex items-center gap-1.5 text-[11px]">
+          <div key={lane.team_id} style={legendItemStyle}>
             <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: lane.color }}
+              style={{
+                display: 'inline-block',
+                height: '8px',
+                width: '8px',
+                borderRadius: '999px',
+                backgroundColor: lane.color,
+              }}
             />
-            <span className="text-text">{lane.team_code ?? lane.team_name}</span>
+            <span>{lane.team_code ?? lane.team_name}</span>
           </div>
         ))}
       </div>
