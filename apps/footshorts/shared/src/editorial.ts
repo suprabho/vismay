@@ -1,10 +1,11 @@
 /**
  * Editorial story access for Footshorts's Editorial mode.
  *
- * Footshorts reads vizmaya.fyi's `stories` table directly via an anonymous
- * Supabase client pointed at Vizmaya's project. Footshorts's own Supabase is
- * unrelated — the two products use separate databases and keep them that way.
- * This module only exposes read paths; writes live in vizmaya.fyi's admin.
+ * Footshorts and vizmaya.fyi share the same Supabase project, so Footshorts's
+ * own anonymous app client reads vizmaya.fyi's `stories` table directly. Every
+ * read here is scoped to `app_slug = 'footshorts'`, so only this vertical's
+ * rows are returned. This module only exposes read paths; writes live in
+ * vizmaya.fyi's admin.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
