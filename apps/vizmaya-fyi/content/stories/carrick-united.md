@@ -1,6 +1,6 @@
 ---
 title: "Carrick restores the balance"
-subtitle: "Appointed Manchester United interim head coach until the end of 2025/26, Michael Carrick took the team from 6th to 3rd — not with chaos, but with control. The same short-passing, central-overload blueprint he built at Middlesbrough, told through every footshorts widget."
+subtitle: "Appointed Manchester United interim head coach until the end of 2025/26, Michael Carrick took the team from 6th to 3rd in four months — not with a new-manager bounce, but with structure and control. The same short-passing, central-overload blueprint he built at Middlesbrough, told through every footshorts widget."
 byline: "vizmaya · tactics"
 date: "2026-05-30"
 status: "draft"
@@ -27,7 +27,7 @@ theme:
 
 # Carrick restores the balance
 
-*One story, every footshorts widget. The animated tactics board, the league table, the position-by-matchday line, the match cards and the cup bracket — all driven by the same data contract footshorts renders against, hand-authored here to tell the story of Carrick's interim run.*
+*The biggest reason United climbed wasn't a tactics board — it was emotional control: an interim manager who built structure instead of chasing a bounce. Here that turnaround runs through every footshorts widget — the animated tactics board, the league table, the position-by-matchday line, the match cards and the cup bracket — all driven by the same data contract footshorts renders against, hand-authored to tell the story of Carrick's interim run.*
 
 **By vizmaya · tactics**
 
@@ -41,6 +41,8 @@ Watch the right side. The right centre-back steps out with the ball and feeds th
 
 By the end of the move the ball has travelled from inside their own box to the edge of the middle third, and three opponents have been bypassed without a single hopeful long ball.
 
+This is the blueprint Carrick carried into United: calmer spacing, shorter distances, the ball circulated rather than gambled — fewer stretched transitions, and far more protection for the back line.
+
 ## Into the final third
 
 The same patience turns ruthless once the ball is in the number ten's feet near halfway.
@@ -51,19 +53,19 @@ This is the whole point of building from the back so deliberately: by the time B
 
 ## Third in the table
 
-Carry the same control into United's season and the table tells the story. Ten wins in fifteen league games under Carrick's interim charge; the circulation that looked patient on the board shows up here as results. United climbed into the Champions League places and held them — third, behind only Arsenal and City.
+Carry the same control into United's season and the table tells the story. Ten wins in fifteen league games under Carrick's interim charge — the patient circulation from the board, cashed in as points. The run took the scalps that mattered: wins over City, Arsenal, Liverpool, Chelsea and Spurs. Enough to climb into the Champions League places and hold them — third, behind only Arsenal and City, and arriving at the run-in on a five-game winning streak.
 
 ## From sixth to third
 
-Position by matchday tells it better than any quote. The red line bends upward from the moment Carrick takes charge around matchday 14 — steady, not spectacular. While Arsenal and City trade the top two, United grind from sixth through the autumn into a settled third by the spring, never giving the place back.
+Position by matchday tells it better than any quote. United open the season adrift in sixth — under Amorim the football was chaotic in possession, the shape stretched, the back line exposed. Then the red line bends, and keeps bending the right way: steady, not spectacular — what "structure, not a bounce" looks like on a chart. Arsenal and City trade the top two above them, but United climb from sixth into a settled third by the spring, and never give the place back.
 
 ## The statement win
 
-The derby was the proof of concept: a compact mid-block, then coordinated pressure the instant City played into the trap. United 2, City 1 — the kind of controlled, front-foot win that defined the run.
+The derby was the proof of concept. No ninety minutes of chasing the game — United sat compact in a mid-block, selectively aggressive, then exploded with coordinated pressure the instant City played into the zones they'd been waiting for. United 2, City 1: the controlled, front-foot win that defined the run.
 
 ## Controlling the big games
 
-Against Liverpool it was the same script — stay compact, strike on coordinated triggers — for a 2–0 that never felt in doubt. The same feature card as the derby, themed to United's red against Liverpool's.
+Against Liverpool it was the same script — stay compact, strike on coordinated triggers — for a 2–0 that never felt in doubt. This was the selective aggression that made United suddenly look stable against the big teams: not more pressing, but smarter pressing. The same feature card as the derby, themed to United's red against Liverpool's.
 
 ## Ruthless at home
 
@@ -71,4 +73,6 @@ By the spring the circulation was calmer, the distances shorter, the finishes ro
 
 ## A run to Wembley
 
-The same balance carried into the cup. Knockout ties controlled rather than survived: past Brighton in the quarter-final, Newcastle in the semi, and on to a Wembley final against City — the bracket built automatically from the underlying fixtures.
+The same balance carried into the cup — knockout ties controlled rather than survived: past Brighton in the quarter-final, Newcastle in the semi, and on to a Wembley final against City, the bracket built automatically from the underlying fixtures.
+
+None of it looks like a manager out to prove he's a genius. It looks like someone restoring balance to one of the most unstable clubs in football — which is exactly why United now trust him to keep doing it.
