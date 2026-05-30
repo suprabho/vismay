@@ -1,0 +1,58 @@
+{
+  "steps": [
+    {
+      "title": "DISCLOSE Act cloture votes vs. the 60-vote threshold (2010)",
+      "option": {
+        "grid": { "left": 56, "right": 28, "top": 48, "bottom": 44 },
+        "tooltip": { "trigger": "axis", "formatter": "{b}<br/>{c} yes votes" },
+        "xAxis": {
+          "type": "category",
+          "data": ["July 2010", "September 2010"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 13 }
+        },
+        "yAxis": {
+          "type": "value",
+          "max": 70,
+          "name": "Yes votes",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "44%",
+            "data": [
+              { "value": 57, "itemStyle": { "color": "$red" } },
+              { "value": 59, "itemStyle": { "color": "$red" } }
+            ],
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "{c}",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 14,
+              "fontWeight": "bold"
+            },
+            "itemStyle": { "borderRadius": [6, 6, 0, 0] },
+            "markLine": {
+              "silent": true,
+              "symbol": "none",
+              "data": [{ "yAxis": 60 }],
+              "lineStyle": { "color": "$accent2", "type": "dashed", "width": 2 },
+              "label": {
+                "formatter": "60 needed for cloture",
+                "color": "$accent2",
+                "fontFamily": "Inter",
+                "fontSize": 12,
+                "position": "insideEndTop"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

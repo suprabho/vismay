@@ -1,0 +1,319 @@
+# =============================================================================
+# vizmaya · deck format · money-in-politics-2026
+# =============================================================================
+# Companion (data-led) story to the map-anchored geography-of-political-money-2026.
+# This deck carries the *numbers*: spending scale, dark money, lobbying ROI,
+# AI-firm valuations and reform vote tallies. Sections are snap-aligned panels
+# of charts / bigStats / prose over a single page-level aura.
+#
+# Schema reference: docs/deck-format-spec.md and the worked example
+# content/stories/spacex-ipo-2026.config.yaml.
+# =============================================================================
+
+defaults:
+  mapOpacity: 0
+  # Single page-level aura backdrop (patriotic deep-blue / stars / flowing
+  # lines). Mounts once, persists across every section, sits behind the panels.
+  storyBackground:
+    type: aura
+    slug: blue-abstract-background-patriotic-stars-flowing-lines
+    tint: "#070a14"
+    tintBlendMode: multiply
+    fixed: true
+  # Darken layer between aura and content so charts stay legible against motion.
+  overlay:
+    color: "#070a14"
+    opacity: 0.46
+    gradient:
+      type: radial
+      from: "rgba(7,10,20,0.18)"
+      to: "rgba(7,10,20,0.78)"
+  # Frosted-glass panel chrome for every foreground slot.
+  panel:
+    background: "rgba(10,14,24,0.62)"
+    border: "1px solid rgba(120,140,180,0.20)"
+    borderRadius: "20px"
+    padding: "32px"
+    backdropBlur: "18px"
+    shadow: "0 24px 60px -32px rgba(0,0,0,0.65)"
+  scroll:
+    mode: snap
+    paddingY: "12vh"
+  # Right-edge step indicator + jump affordance.
+  progress: true
+
+sections:
+
+  # 1 · Cover ------------------------------------------------------------------
+  - id: cover
+    kind: cover
+    text: "Cover"
+    eyebrow: "Money & American Politics · 2026"
+    heading: "The Price of Access"
+    dek: "Lobbying set a $4.4 billion record. Outside spending topped $4.5 billion. Dark money hit $1.9 billion in a single cycle. The four numbers most reports get wrong — corrected."
+    # Aura is the page-level backdrop; suppress any per-section background slot.
+    background: { type: none }
+    panel:
+      background: "transparent"
+      border: "none"
+      backdropBlur: "0"
+
+  # 2 · $4.4B lobbying record — bigStat + prose --------------------------------
+  - id: lobbying-record
+    kind: bigStat
+    text: "$4.4 billion"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bigStat
+        value: "$4.4B"
+        label: "Federal lobbying spending · calendar year 2024 (record)"
+        delta: "+$150M over 2023, which itself set a record"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+      - type: bodyText
+        from: text
+        style:
+          position: { x: right, y: center }
+          size: { width: "44%" }
+
+  # 3 · Outside spending doubled — text + bar ----------------------------------
+  - id: outside-spending
+    kind: data
+    text: "Outside spending doubled"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: outside-spending-trend
+        caption: "Super PAC outside spending · USD billions · OpenSecrets / Brennan Center"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 4 · The biggest checks — text + bar ----------------------------------------
+  - id: biggest-checks
+    kind: data
+    text: "The biggest checks"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: top-donors
+        caption: "Self-funding & single-donor totals · USD millions · FEC filings"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 5 · $1.9B dark money — bigStat + prose -------------------------------------
+  - id: dark-money-headline
+    kind: bigStat
+    text: "$1.9 billion"
+    paragraphs: [0, 2]
+    layout: free
+    foreground:
+      - type: bigStat
+        value: "$1.9B"
+        label: "Dark money · 2024 cycle alone (record)"
+        delta: "$4.3B+ since Citizens United"
+        deltaColor: amber
+        color: amber
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+      - type: bodyText
+        from: text
+        style:
+          position: { x: right, y: center }
+          size: { width: "44%" }
+
+  # 6 · Dark money cycle over cycle — text + bar -------------------------------
+  - id: dark-money-cycle
+    kind: data
+    text: "Dark money, cycle over cycle"
+    paragraphs: [0, 2]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: dark-money-trend
+        caption: "Disclosed dark-money spending by cycle · USD billions · Brennan Center (a floor, not a ceiling)"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 7 · 22,000% lobbying ROI — stat + bar --------------------------------------
+  - id: lobbying-roi
+    kind: data
+    text: "22,000%"
+    paragraphs: [0, 1]
+    layout: stat-left-chart-right
+    foreground:
+      - type: bigStat
+        value: "22,000%"
+        label: "Return on lobbying · the one case economists could cleanly measure"
+        delta: "$220 saved per $1 spent · AJCA 2004 repatriation holiday"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+      - type: chart
+        id: lobbying-roi
+        caption: "Alexander, Mazza & Scholz, J. Law & Politics (2009) · one unusually measurable case, not the norm"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 8 · Who lobbies, how many — stat + bar -------------------------------------
+  - id: who-lobbies
+    kind: data
+    text: "Who lobbies, and how many"
+    paragraphs: [0, 2]
+    layout: stat-left-chart-right
+    foreground:
+      - type: bigStat
+        value: "$387.5M"
+        label: "Pharma & health-products lobbying · 2024 peak"
+        delta: "drug pricing · Medicare negotiation · FDA"
+        deltaColor: amber
+        color: amber
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+      - type: chart
+        id: lobbyist-count
+        caption: "Registered lobbyists vs. estimated 'shadow' lobbyists · OpenSecrets / Thurber estimate"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 9 · Gilens & Page — quote --------------------------------------------------
+  - id: research-found
+    kind: quote
+    text: "What the research found"
+    paragraphs: [0, 1]
+    layout: text-left-quote-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+      - type: quote
+        text: "Economic elites and organized groups representing business interests have substantial independent impacts on U.S. government policy, while mass-based interest groups and average citizens have little or no independent influence."
+        attribution: "Gilens & Page, Perspectives on Politics (Cambridge University Press), 2014 — influential, but contested"
+        style:
+          position: { x: right, y: center }
+          size: { width: "46%" }
+
+  # 10 · AI valuations — text + bar --------------------------------------------
+  - id: ai-heavyweights
+    kind: data
+    text: "The new heavyweights"
+    paragraphs: [0, 2]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: ai-valuations
+        caption: "AI-firm valuations · USD billions · early 2026 (these move fast)"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 11 · Reform keeps failing — text + bar -------------------------------------
+  - id: reform-fails
+    kind: data
+    text: "Reform keeps failing"
+    paragraphs: [0, 2]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: reform-cloture
+        caption: "DISCLOSE Act cloture votes vs. the 60-vote filibuster threshold · 2010"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "60vh" }
+
+  # 12 · Maine 74.9% — closing bigStat + keyValue ------------------------------
+  - id: maine-vote
+    kind: closing
+    text: "When the people get a vote"
+    paragraphs: [0, 1]
+    layout: free
+    foreground:
+      - type: bigStat
+        value: "74.9%"
+        label: "Voted to ban super PACs · Maine ballot initiative, 2024"
+        delta: "a direct test of SpeechNow's 'no corruption' premise"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "40%" }
+      - type: keyValue
+        title: "Four figures, corrected"
+        items:
+          - { key: "Lobbying", value: "$4.4B in 2024 — not $5.24B in 2025", color: accent2 }
+          - { key: "Trump self-funding", value: "~$66M — not $56M", color: amber }
+          - { key: "Dark money", value: "~$1.9B in 2024 / $4.3B+ since 2010", color: red }
+          - { key: "Revolving door", value: "866 is LegiStorm's — members + staffers", color: teal }
+        style:
+          position: { x: right, y: center }
+          size: { width: "46%" }
+
+  # 13 · Methodology — quiet bodyText ------------------------------------------
+  - id: methodology
+    kind: bodyText
+    text: "Methodology & sources"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    foreground:
+      - type: bodyText
+        from: text
+        textStyle:
+          size: small
+          color: muted
+        style:
+          position: { x: left, y: center }
+          size: { width: "60%" }

@@ -1,0 +1,43 @@
+{
+  "steps": [
+    {
+      "title": "Self-funding & single-donor totals — USD millions",
+      "option": {
+        "grid": { "left": 150, "right": 64, "top": 40, "bottom": 36 },
+        "tooltip": { "trigger": "axis", "formatter": "{b}<br/>${c}M" },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "formatter": "${value}M" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Trump 2016 self-fund", "Musk 2024 — America PAC", "Bloomberg 2020 self-fund"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$text", "fontFamily": "Inter", "fontSize": 12 }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "52%",
+            "data": [
+              { "value": 66, "itemStyle": { "color": "$muted" } },
+              { "value": 239, "itemStyle": { "color": "$accent2" } },
+              { "value": 936, "itemStyle": { "color": "$amber" } }
+            ],
+            "label": {
+              "show": true,
+              "position": "right",
+              "formatter": "${c}M",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 13,
+              "fontWeight": "bold"
+            },
+            "itemStyle": { "borderRadius": [0, 6, 6, 0] }
+          }
+        ]
+      }
+    }
+  ]
+}
