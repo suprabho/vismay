@@ -1,0 +1,44 @@
+{
+  "steps": [
+    {
+      "title": "Outside / super PAC spending — USD billions",
+      "option": {
+        "grid": { "left": 56, "right": 28, "top": 48, "bottom": 44 },
+        "tooltip": { "trigger": "axis", "formatter": "{b}<br/>${c}B" },
+        "xAxis": {
+          "type": "category",
+          "data": ["2016", "2024"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 13 }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "USD billions",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "formatter": "${value}B" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "46%",
+            "data": [
+              { "value": 1.0, "itemStyle": { "color": "$muted" } },
+              { "value": 4.5, "itemStyle": { "color": "$accent" } }
+            ],
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "${c}B",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 14,
+              "fontWeight": "bold"
+            },
+            "itemStyle": { "borderRadius": [6, 6, 0, 0] }
+          }
+        ]
+      }
+    }
+  ]
+}

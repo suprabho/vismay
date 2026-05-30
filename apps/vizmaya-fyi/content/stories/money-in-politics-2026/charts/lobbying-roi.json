@@ -1,0 +1,44 @@
+{
+  "steps": [
+    {
+      "title": "Lobbying spent vs. tax saved — log scale, USD",
+      "option": {
+        "grid": { "left": 64, "right": 28, "top": 48, "bottom": 44 },
+        "tooltip": { "trigger": "axis", "formatter": "{b}<br/>${c}" },
+        "xAxis": {
+          "type": "category",
+          "data": ["$1 spent on lobbying", "$220 in tax savings"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 13 }
+        },
+        "yAxis": {
+          "type": "log",
+          "name": "USD (log)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "formatter": "${value}" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "46%",
+            "data": [
+              { "value": 1, "itemStyle": { "color": "$muted" } },
+              { "value": 220, "itemStyle": { "color": "$positive" } }
+            ],
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "${c}",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 14,
+              "fontWeight": "bold"
+            },
+            "itemStyle": { "borderRadius": [6, 6, 0, 0] }
+          }
+        ]
+      }
+    }
+  ]
+}

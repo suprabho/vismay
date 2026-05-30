@@ -1,0 +1,202 @@
+# Story config — geography-of-political-money-2026
+#
+# The place-led companion to the data-led deck (money-in-politics-2026). The map
+# carries the argument: open on a national view that spotlights Maine (the one
+# 2024 ballot-measure reform), then fly into the landmarks where influence is
+# made — K Street / the Capitol, Lower Manhattan (the Citigroup-drafted
+# Dodd-Frank rollback), New Jersey (the Menendez conviction) — and close back on
+# the national view and the self-regulation problem.
+#
+# COORDINATES
+#   Continental US center   [-98.5, 39.0]
+#   Maine (Augusta)         [-69.78, 44.31]
+#   Washington, D.C.        [-77.02, 38.90]   K Street [-77.043, 38.9026] · Capitol [-77.0090, 38.8899]
+#   Lower Manhattan         [-74.009, 40.71]  Citigroup HQ [-74.0107, 40.7193] · Wall St [-74.0113, 40.7058]
+#   New Jersey (Englewood)  [-73.9527, 40.8859]
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#e26d5c"
+  pinRadius: 10
+  flySpeed: 1.2
+  mapPalette:
+    land: "#0a0f1c"
+    water: "#050c18"
+    border: "#243349"
+    labelText: "#c8d1dc"
+    labelHalo: "#050c18"
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO
+  # ═══════════════════════════════════════════════
+  - id: hero
+    kind: hero
+    text: "Follow the Money"
+    eyebrow: "Money & American Politics · 2026"
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.4
+      mobile:
+        center: [-96.0, 38.5]
+        zoom: 2.7
+
+  # ═══════════════════════════════════════════════
+  # MAINE — the exception, spotlit on the national map
+  # ═══════════════════════════════════════════════
+  - id: maine-spotlight
+    kind: stat
+    text: "74.9%"
+    map:
+      center: [-92.0, 41.0]
+      zoom: 3.6
+      pitch: 0
+      bearing: 0
+      opacity: 0.5
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        ramp: [0, 100]
+        colors: ["$surface", "$positive"]
+        labels:
+          show: true
+          withValue: true
+          valueOnNewLine: true
+          valueSuffix: "%"
+          valueDecimals: 1
+          size: 14
+          color: "$text"
+          background:
+            color: "$bg"
+            opacity: 0.6
+            padding: [4, 8]
+            cornerRadius: 6
+            borderColor: "$line"
+            borderOpacity: 0.5
+            borderWidth: 0.5
+          codes:
+            - "Maine"
+        items:
+          - { code: "Maine", value: 74.9 }
+
+  # ═══════════════════════════════════════════════
+  # WASHINGTON, D.C. — K Street + the Capitol
+  # ═══════════════════════════════════════════════
+  - id: k-street
+    kind: stat
+    text: "K Street"
+    map:
+      center: [-77.025, 38.898]
+      zoom: 11.4
+      pitch: 45
+      bearing: -18
+      opacity: 0.6
+      pins:
+        - lng: -77.043
+          lat: 38.9026
+          label: "K Street NW — the lobbying corridor"
+        - lng: -77.0090
+          lat: 38.8899
+          label: "U.S. Capitol"
+
+  # ═══════════════════════════════════════════════
+  # LOWER MANHATTAN — the Citigroup-drafted rollback
+  # ═══════════════════════════════════════════════
+  - id: citigroup-bill
+    kind: stat
+    text: "The Bill Citigroup Wrote"
+    map:
+      center: [-74.0095, 40.7125]
+      zoom: 12.6
+      pitch: 50
+      bearing: 12
+      opacity: 0.6
+      pins:
+        - lng: -74.0107
+          lat: 40.7193
+          label: "Citigroup HQ, 388 Greenwich St"
+        - lng: -74.0113
+          lat: 40.7058
+          label: "Wall Street"
+
+  # ═══════════════════════════════════════════════
+  # NEW JERSEY — the Menendez conviction
+  # ═══════════════════════════════════════════════
+  - id: menendez
+    kind: stat
+    text: "The Senator's Closet"
+    map:
+      center: [-74.02, 40.83]
+      zoom: 10.2
+      pitch: 40
+      bearing: -8
+      opacity: 0.55
+      pins:
+        - lng: -73.9527
+          lat: 40.8859
+          label: "Englewood Cliffs, NJ — $480K cash · ~$150K gold bars"
+
+  # ═══════════════════════════════════════════════
+  # MAINE — return to the ballot box
+  # ═══════════════════════════════════════════════
+  - id: people-voted
+    kind: stat
+    text: "Where the People Voted"
+    map:
+      center: [-69.4, 45.2]
+      zoom: 5.8
+      pitch: 0
+      bearing: 0
+      opacity: 0.5
+      regions:
+        level: custom
+        geojsonUrl: "https://raw.githubusercontent.com/codeforgermany/click_that_hood/master/public/data/united-states.geojson"
+        idProperty: "name"
+        ramp: [0, 100]
+        colors: ["$surface", "$positive"]
+        labels:
+          show: true
+          withValue: true
+          valueOnNewLine: true
+          valueSuffix: "%"
+          valueDecimals: 1
+          size: 15
+          color: "$text"
+          codes:
+            - "Maine"
+        items:
+          - { code: "Maine", value: 74.9 }
+
+  # ═══════════════════════════════════════════════
+  # NATIONAL — the self-regulation problem
+  # ═══════════════════════════════════════════════
+  - id: who-watches
+    kind: stat
+    text: "Who Watches the Money"
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.4
+      pitch: 0
+      bearing: 0
+      opacity: 0.42
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY
+  # ═══════════════════════════════════════════════
+  - id: methodology
+    text: "Methodology & sources"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    map:
+      center: [-98.5, 39.0]
+      zoom: 3.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.35
