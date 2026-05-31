@@ -1,11 +1,9 @@
 'use client'
 
 import { useRef, useMemo } from 'react'
-import { useInView } from '@/lib/use-in-view'
+import { useInView } from '../../lib/use-in-view'
 import { DataTableBlock } from '@vismay/viz-engine'
-import dynamic from 'next/dynamic'
-
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
+import ClientECharts from './ClientECharts'
 
 function isNumericColumn(rows: string[][], colIndex: number): boolean {
   return rows.every((row) => {
@@ -34,7 +32,7 @@ export default function DataTable({ block }: { block: DataTableBlock }) {
         className="max-w-[860px] mx-auto px-8 py-4 transition-opacity duration-700"
         style={{ opacity: isInView ? 1 : 0 }}
       >
-        <ReactECharts
+        <ClientECharts
           option={{
             backgroundColor: 'transparent',
             grid: { left: 150, right: 30, top: 10, bottom: 30 },

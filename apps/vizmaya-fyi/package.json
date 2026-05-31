@@ -35,6 +35,7 @@
   "dependencies": {
     "@vismay/admin-core": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/story-reader": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/f1-viz": "workspace:*",

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { useInView } from '@/lib/use-in-view'
+import { useInView } from '../../lib/use-in-view'
 import { ProseBlock } from '@vismay/viz-engine'
 import { formatInlineMarkdown, getListItems, isListBlock } from '@vismay/viz-engine'
 

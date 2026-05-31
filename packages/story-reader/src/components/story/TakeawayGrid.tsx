@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { useInView } from '@/lib/use-in-view'
+import { useInView } from '../../lib/use-in-view'
 import { TakeawayGridBlock } from '@vismay/viz-engine'
 
 const BORDER_COLORS = ['var(--color-accent)', 'var(--color-accent2)', 'var(--color-teal)']

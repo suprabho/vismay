@@ -1,25 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { StoryEmbed } from '@vismay/story-embed/web'
 
-// vizmaya.fyi is the source-of-truth render of the story. VizF1 iframes it so
-// scrollytelling, viz modules, and asset resolution all stay in one place.
-// The vizmaya-fyi app loads our `f1` vertical via registerVerticalLoader.
-const VIZMAYA_ORIGIN = 'https://vizmaya.fyi'
-
+// vizmaya.fyi renders the story (the "general Viz story view"). We embed it via
+// the shared StoryEmbed and overlay VizF1's back-button chrome on top — no
+// scrollytelling re-implementation here.
 export default function EditorialReader({ slug }: { slug: string }) {
-  const [loaded, setLoaded] = useState(false)
-  const src = `${VIZMAYA_ORIGIN}/story/${encodeURIComponent(slug)}`
-
-  // Safety net for silent cross-origin failures — after 6s show whatever's there.
-  useEffect(() => {
-    const t = setTimeout(() => setLoaded(true), 6000)
-    return () => clearTimeout(t)
-  }, [])
-
   return (
-    <div className="fixed inset-0 bg-bg">
+    <StoryEmbed slug={slug}>
       <Link
         href="/editorial"
         aria-label="Back to editorial"
@@ -35,20 +24,6 @@ export default function EditorialReader({ slug }: { slug: string }) {
           <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </Link>
-
-      {!loaded && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-        </div>
-      )}
-
-      <iframe
-        src={src}
-        title="Editorial story"
-        className="h-full w-full border-0"
-        onLoad={() => setLoaded(true)}
-        allow="fullscreen"
-      />
-    </div>
+    </StoryEmbed>
   )
 }
