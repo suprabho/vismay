@@ -628,6 +628,21 @@ function VerticalTree({ bracket, highlightTeamId, title, competitionSlug }: Omit
   )
 }
 
+// TODO(bracket-responsive): the editorial embed (vizmaya.fyi inside the
+// footshorts iframe) still renders the wide horizontal tree on portrait/mobile
+// and overflows. Approaches tried that did NOT fix it in that embed:
+//   1. window.matchMedia('(max-width: 640px)')  — viewport width misreported
+//   2. ResizeObserver on the container width     — effect/width unreliable
+//   3. CSS @container query on container width    — see git history
+//   4. CSS @media (max-aspect-ratio: 1/1)         — current; still horizontal
+// The last verified live DOM was still serving an OLD build (no <style>/wrapper
+// from these changes), so a stale deploy is a strong suspect — confirm the
+// consuming app actually rebuilds @vismay/footshorts-viz before debugging
+// further. If it's genuinely live and still horizontal, the next lead is a
+// fixed-width "stage"/scaled wrapper upstream (StoryMapShell / ForegroundVizSlot)
+// making both the viewport and the container report a wide width; in that case
+// drive the layout from an explicit story-level portrait flag passed via config
+// (BracketConfig.layout = 'tree-vertical') rather than any CSS/JS auto-detect.
 export function BracketTree({ orientation = 'auto', ...rest }: Props) {
   // Scope the responsive CSS to this instance.
   const cid = 'bkt-' + useId().replace(/[^a-zA-Z0-9]/g, '')
