@@ -122,10 +122,17 @@ export default function StoryMapShell({
   // are deterministic. End users on /story/<slug> never set this flag and
   // get the full animated experience.
   const [isCapture, setIsCapture] = useState(false)
+  // `?embed=1` is set by @vismay/story-embed when a consumer app (footshorts,
+  // vizf1) loads this story in an <iframe>/WebView. It opts the story into
+  // vizmaya's chrome-less embed mode: the persistent brand logo / home-link
+  // below is suppressed so the host overlays its own chrome. Direct vizmaya.fyi
+  // readers never set this flag and keep the logo.
+  const [isEmbed, setIsEmbed] = useState(false)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setIsAutoplay(params.get('autoplay') === '1')
     setIsCapture(params.get('capture') === '1')
+    setIsEmbed(params.get('embed') === '1')
   }, [])
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
   // breakpoint — treat them as the same signal so both charts and the
@@ -432,8 +439,10 @@ export default function StoryMapShell({
           with multiple subsections share one palette. Rendered here rather
           than at the page level because this is the only component that
           knows the active section; gated on `logoPalettes` so headless
-          consumers (canvas-frame) stay logo-free. */}
-      {logoPalettes && LogoComponent && (
+          consumers (canvas-frame) stay logo-free. Also hidden in chrome-less
+          embed mode (`?embed=1`) so consumer-app embeds (footshorts, vizf1)
+          show only their own overlaid chrome, not vizmaya's brand. */}
+      {logoPalettes && LogoComponent && !isEmbed && (
         <LinkComponent
           href="/"
           aria-label="Home"
