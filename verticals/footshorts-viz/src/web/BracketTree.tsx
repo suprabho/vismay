@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Bracket as BracketModel, BracketRound, BracketTie, FixtureTeamRef } from '../types'
 import { stageLabel } from '../stageLabel'
 import { Crest } from '../data/Crest'
@@ -108,20 +108,39 @@ function teamShort(ref: FixtureTeamRef, fallback: string): string {
   return t?.shortName ?? t?.name ?? ref?.name ?? fallback
 }
 
-// SSR/capture-safe: starts false (horizontal) so server render and the
-// Playwright/Chromium capture pipeline keep the wide tree; only a real narrow
-// client viewport flips it.
-function useIsNarrow(): boolean {
-  const [narrow, setNarrow] = useState(false)
+// How wide the horizontal mirrored tree would render — used to decide whether
+// it fits the available width. Mirrors the geometry in HorizontalTree.
+function horizontalWidth(bracket: BracketModel): number {
+  const lastRound = bracket.rounds[bracket.rounds.length - 1]
+  const finalRound =
+    bracket.rounds.find((r) => r.stage === 'FINAL') ??
+    (lastRound && lastRound.ties.length === 1 ? lastRound : undefined)
+  const nDepth = bracket.rounds.filter((r) => r !== finalRound).length
+  const finalX = PAD + nDepth * COL_W
+  const rightX0 = finalX + COL_W + Math.max(0, nDepth - 1) * COL_W
+  return rightX0 + CELL_W + PAD
+}
+
+// Measures a host element's own rendered width. Unlike `window.matchMedia`,
+// this reflects the real on-screen width even inside an iframe / scaled embed
+// where the viewport width is misleading (which is why the editorial embed
+// wasn't switching). Width starts at 0 (unmeasured) so SSR and the wide
+// Playwright/Chromium capture pipeline render the horizontal tree until a real
+// width is observed.
+function useContainerWidth() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mq = window.matchMedia(NARROW_QUERY)
-    const update = () => setNarrow(mq.matches)
-    update()
-    mq.addEventListener('change', update)
-    return () => mq.removeEventListener('change', update)
+    const el = ref.current
+    if (!el) return
+    const measure = () => setWidth(el.clientWidth)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
-  return narrow
+  return [ref, width] as const
 }
 
 function TeamLine({
@@ -645,8 +664,16 @@ function VerticalTree({ bracket, highlightTeamId, title, competitionSlug }: Omit
 }
 
 export function BracketTree({ orientation = 'auto', ...rest }: Props) {
-  const isNarrow = useIsNarrow()
-  if (rest.bracket.rounds.length === 0) return null
-  const vertical = orientation === 'vertical' || (orientation === 'auto' && isNarrow)
-  return vertical ? <VerticalTree {...rest} /> : <HorizontalTree {...rest} />
+  const [ref, availW] = useContainerWidth()
+  const hasBracket = rest.bracket.rounds.length > 0
+  // 'auto' renders vertical once we've measured a container too narrow for the
+  // horizontal tree; until measured (availW === 0) it stays horizontal.
+  const vertical =
+    orientation === 'vertical' ||
+    (orientation === 'auto' && availW > 0 && availW < horizontalWidth(rest.bracket))
+  return (
+    <div ref={ref} className="w-full">
+      {hasBracket ? vertical ? <VerticalTree {...rest} /> : <HorizontalTree {...rest} /> : null}
+    </div>
+  )
 }

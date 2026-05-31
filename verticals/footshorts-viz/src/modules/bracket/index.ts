@@ -34,10 +34,11 @@ export interface BracketConfig {
   /**
    * 'list' (default) = the stacked round list; 'tree' = full mirrored
    * tournament tree (web only), which automatically switches to the vertical
-   * top-to-bottom layout on narrow/portrait viewports; 'tree-vertical' = always
-   * render the mobile vertical tree regardless of width.
+   * portrait tree when its container is too narrow for the wide layout;
+   * 'tree-vertical' = always render the portrait tree; 'tree-horizontal' =
+   * always render the wide mirrored tree (no auto-switch).
    */
-  layout?: 'list' | 'tree' | 'tree-vertical'
+  layout?: 'list' | 'tree' | 'tree-vertical' | 'tree-horizontal'
   /** Team id whose path through the tree is emphasised (tree layout). */
   highlightTeamId?: string
   /** Caption shown by the centre emblem, e.g. "Final · Budapest". */
@@ -66,7 +67,13 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Bracke
     }
   }
   const layout =
-    raw.layout === 'tree' ? 'tree' : raw.layout === 'tree-vertical' ? 'tree-vertical' : 'list'
+    raw.layout === 'tree'
+      ? 'tree'
+      : raw.layout === 'tree-vertical'
+        ? 'tree-vertical'
+        : raw.layout === 'tree-horizontal'
+          ? 'tree-horizontal'
+          : 'list'
   const highlightTeamId = typeof raw.highlightTeamId === 'string' ? raw.highlightTeamId : undefined
   const title = typeof raw.title === 'string' ? raw.title : undefined
   const competitionSlug = typeof raw.competitionSlug === 'string' ? raw.competitionSlug : undefined

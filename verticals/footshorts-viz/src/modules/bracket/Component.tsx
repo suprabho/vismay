@@ -17,12 +17,20 @@ export default function BracketVizComponent({
   }, [noteReady])
 
   const bracket = useMemo(() => buildBracket(config.fixtures), [config.fixtures])
-  const isTree = config.layout === 'tree' || config.layout === 'tree-vertical'
-  // BracketTree is responsive: 'auto' switches to the vertical layout on narrow
-  // viewports; 'tree-vertical' forces it. `safe center` keeps the tree centred
-  // when it fits but anchors to the start (scrollable) when it overflows — which
-  // the tall vertical cascade does on a phone.
-  const orientation = config.layout === 'tree-vertical' ? 'vertical' : 'auto'
+  const isTree =
+    config.layout === 'tree' ||
+    config.layout === 'tree-vertical' ||
+    config.layout === 'tree-horizontal'
+  // BracketTree is responsive: 'auto' switches to the vertical layout when its
+  // measured container is too narrow for the wide tree; 'tree-vertical' /
+  // 'tree-horizontal' force a layout. `safe center` keeps the tree centred when
+  // it fits but anchors to the start (scrollable) when it overflows.
+  const orientation =
+    config.layout === 'tree-vertical'
+      ? 'vertical'
+      : config.layout === 'tree-horizontal'
+        ? 'horizontal'
+        : 'auto'
 
   return (
     <div
