@@ -35,6 +35,7 @@ export default function StandingsOverMatchdaysVizComponent({
           competitionLabel={config.competitionLabel}
           lanes={config.lanes}
           totalMatchdays={config.totalMatchdays}
+          matchdayRange={config.matchdayRange}
           animate={animate}
         />
       </div>
