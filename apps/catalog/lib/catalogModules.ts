@@ -13,7 +13,11 @@ import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-r
 import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
 import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
 import { sample as standingsOverMatchdaysSample } from '@vismay/footshorts-viz/modules/standings-over-matchdays/sample'
-import { sample as bracketSample, sampleTree as bracketSampleTree } from '@vismay/footshorts-viz/modules/bracket/sample'
+import {
+  sample as bracketSample,
+  sampleTree as bracketSampleTree,
+  sampleTreeVertical as bracketSampleTreeVertical,
+} from '@vismay/footshorts-viz/modules/bracket/sample'
 import { sample as tacticsBoardSample } from '@vismay/footshorts-viz/modules/tactics-board/sample'
 import { sample as teamFormStripSample } from '@vismay/footshorts-viz/modules/team-form-strip/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
@@ -84,6 +88,13 @@ export const catalogModules: CatalogEntry[] = [
     label: 'Footshorts — bracket (tree)',
     category: 'Footshorts',
     sample: bracketSampleTree,
+  },
+  {
+    type: 'fs:bracket',
+    id: 'fs:bracket@tree-vertical',
+    label: 'Footshorts — bracket (vertical)',
+    category: 'Footshorts',
+    sample: bracketSampleTreeVertical,
   },
   { type: 'fs:tactics-board', category: 'Footshorts', sample: tacticsBoardSample },
   { type: 'fs:team-form-strip', category: 'Footshorts', sample: teamFormStripSample },

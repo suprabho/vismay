@@ -17,7 +17,20 @@ export default function BracketVizComponent({
   }, [noteReady])
 
   const bracket = useMemo(() => buildBracket(config.fixtures), [config.fixtures])
-  const isTree = config.layout === 'tree'
+  const isTree =
+    config.layout === 'tree' ||
+    config.layout === 'tree-vertical' ||
+    config.layout === 'tree-horizontal'
+  // BracketTree is responsive: 'auto' switches to the vertical layout when its
+  // measured container is too narrow for the wide tree; 'tree-vertical' /
+  // 'tree-horizontal' force a layout. `safe center` keeps the tree centred when
+  // it fits but anchors to the start (scrollable) when it overflows.
+  const orientation =
+    config.layout === 'tree-vertical'
+      ? 'vertical'
+      : config.layout === 'tree-horizontal'
+        ? 'horizontal'
+        : 'auto'
 
   return (
     <div
@@ -25,8 +38,8 @@ export default function BracketVizComponent({
         width: '100%',
         height: '100%',
         display: 'flex',
-        alignItems: isTree ? 'center' : 'flex-start',
-        justifyContent: 'center',
+        alignItems: isTree ? 'safe center' : 'flex-start',
+        justifyContent: 'safe center',
         padding: '1rem',
         overflowX: isTree ? 'auto' : undefined,
         overflowY: 'auto',
@@ -37,6 +50,7 @@ export default function BracketVizComponent({
           isTree ? (
             <BracketTree
               bracket={bracket}
+              orientation={orientation}
               highlightTeamId={config.highlightTeamId}
               title={config.title}
               competitionSlug={config.competitionSlug ?? bracket.competition_slug}
