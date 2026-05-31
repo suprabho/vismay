@@ -15,6 +15,9 @@ import type { TeamLane } from '../../types'
  *     - type: fs:standings-over-matchdays
  *       competitionLabel: 'Premier League · 2025/26'
  *       totalMatchdays: 38
+ *       # Optional x-axis window. `from` defaults to the first matchday in the
+ *       # data (so trimmed series fill the chart); `to` overrides totalMatchdays.
+ *       matchdayRange: { from: 20, to: 38 }
  *       lanes:
  *         - team_id: man-utd
  *           team_name: 'Manchester United'
@@ -30,7 +33,14 @@ export interface StandingsOverMatchdaysConfig {
   type: 'fs:standings-over-matchdays'
   competitionLabel: string
   lanes: TeamLane[]
+  /** Pins the right edge of the x-axis. Superseded by `matchdayRange.to`. */
   totalMatchdays?: number
+  /**
+   * Optional x-axis window. `from` pins the left origin (defaults to the first
+   * matchday in the data, so trimmed series fill the chart); `to` pins the
+   * right edge and takes precedence over `totalMatchdays`.
+   */
+  matchdayRange?: { from?: number; to?: number }
 }
 
 function parseConfig(
@@ -51,11 +61,21 @@ function parseConfig(
       `${ctx.label}: fs:standings-over-matchdays requires a non-empty 'lanes' array`,
     )
   }
+  // Accept a partial { from?, to? } window; ignore non-numeric / empty input so
+  // the chart falls back to data-derived bounds.
+  let matchdayRange: { from?: number; to?: number } | undefined
+  if (r.matchdayRange && typeof r.matchdayRange === 'object') {
+    const mr = r.matchdayRange as Record<string, unknown>
+    const from = typeof mr.from === 'number' ? mr.from : undefined
+    const to = typeof mr.to === 'number' ? mr.to : undefined
+    if (from !== undefined || to !== undefined) matchdayRange = { from, to }
+  }
   return {
     type: 'fs:standings-over-matchdays',
     competitionLabel: r.competitionLabel,
     lanes: r.lanes as unknown as TeamLane[],
     totalMatchdays: typeof r.totalMatchdays === 'number' ? r.totalMatchdays : undefined,
+    matchdayRange,
   }
 }
 

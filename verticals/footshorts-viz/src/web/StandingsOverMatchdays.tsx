@@ -10,8 +10,19 @@ type Props = {
   /** Right-aligned context label, e.g. "Premier League · 2025/26". */
   competitionLabel: string
   lanes: TeamLane[]
-  /** Optional total matchdays. Falls back to the max matchday across lanes. */
+  /**
+   * Optional total matchdays — pins the right edge of the axis. Falls back to
+   * the max matchday across lanes. Superseded by `matchdayRange.to` when set.
+   */
   totalMatchdays?: number
+  /**
+   * Optional explicit matchday window for the x-axis. `from` pins the left
+   * origin; when omitted it defaults to the first matchday present in the data,
+   * so a trimmed series (e.g. starting at MD20) fills the plot instead of
+   * leaving the MD1→MD20 stretch blank. `to` pins the right edge and takes
+   * precedence over `totalMatchdays`.
+   */
+  matchdayRange?: { from?: number; to?: number }
   /** Formatter for the three x-axis ticks. Defaults to `MD${n}`. */
   xTickFormat?: (value: number) => string
   /**
@@ -129,6 +140,7 @@ export function StandingsOverMatchdays({
   competitionLabel,
   lanes,
   totalMatchdays,
+  matchdayRange,
   xTickFormat = (n) => `MD${n}`,
   animate = true,
 }: Props) {
@@ -137,12 +149,30 @@ export function StandingsOverMatchdays({
   }
 
   const allPoints = lanes.flatMap((l) => l.points)
-  const maxMD = totalMatchdays ?? Math.max(1, ...allPoints.map((p) => p.matchday))
+  const matchdays = allPoints.map((p) => p.matchday)
+  // Resolve the x-axis window. The left origin defaults to the first matchday
+  // actually present, so a trimmed series fills the plot rather than leaving a
+  // blank gap back to MD1; `matchdayRange.from` overrides it. The right edge
+  // prefers `matchdayRange.to`, then the legacy `totalMatchdays`, then the last
+  // matchday in the data. `Math.max` keeps the axis from inverting under a
+  // misconfigured range.
+  const minMD = matchdayRange?.from ?? (matchdays.length ? Math.min(...matchdays) : 1)
+  const maxMD = Math.max(
+    minMD,
+    matchdayRange?.to ?? totalMatchdays ?? (matchdays.length ? Math.max(...matchdays) : 1),
+  )
   const maxPos = Math.max(1, ...allPoints.map((p) => p.position))
+
+  // Three ticks across the window (first, mid, last), deduped so a narrow span
+  // like MD37–MD38 doesn't emit colliding React keys / overlapping labels.
+  const xTicks = Array.from(
+    new Set([minMD, Math.round((minMD + maxMD) / 2), maxMD]),
+  )
 
   const xScale = (md: number) =>
     PADDING.left +
-    ((md - 1) / Math.max(1, maxMD - 1)) * (VIEW_W - PADDING.left - PADDING.right)
+    ((md - minMD) / Math.max(1, maxMD - minMD)) *
+      (VIEW_W - PADDING.left - PADDING.right)
   // P1 maps to the top (PADDING.top); higher positions map downward — same as
   // f1-viz's PositionChart, so no inversion is needed.
   const yScale = (pos: number) =>
@@ -218,7 +248,7 @@ export function StandingsOverMatchdays({
             </g>
           ))}
           {/* X axis labels — first, mid, last */}
-          {[1, Math.ceil(maxMD / 2), maxMD].map((md) => (
+          {xTicks.map((md) => (
             <text
               key={md}
               x={xScale(md)}
