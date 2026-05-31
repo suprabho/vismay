@@ -1,0 +1,353 @@
+# Story config — vizmaya-studio
+#
+# The studio manifesto ("Process · What we believe · Who we are") rebuilt as a
+# deck-format scrollytelling piece. Bone-white editorial: type on paper, no
+# frosted-glass panels, no aura motion.
+#
+# THE PROP: the Vismaya mark (public/vizmaya-logo.riv) is the recurring object.
+#   - opens the deck big and animated (full tri-colour)
+#   - re-colours per "process" beat — green (Pattern) → vermillion (Meaning)
+#     → indigo (Form), the leaps between pattern, mind and form
+#   - anchors the "our mark" slide where the copy explains it
+#   - closes the deck
+#   The persistent top-left logo (mounted by the deck shell) also re-tints per
+#   section via each section's `logoPalette`.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/light-v11
+  mapOpacity: 0
+  pinColor: "#2d6a4f"
+  pinRadius: 10
+  flySpeed: 1.2
+
+  # Flat bone backdrop — no aura motion. The mark and the type carry the page.
+  storyBackground:
+    type: color
+    value: "#f5f1ea"
+  overlay:
+    color: "transparent"
+    opacity: 0
+
+  # Panels OFF — editorial wants type on paper, not cards on glass.
+  panel:
+    background: "transparent"
+    border: "none"
+    borderRadius: "0"
+    padding: "0"
+    backdropBlur: "0"
+    shadow: "none"
+
+  scroll:
+    mode: snap
+    paddingY: "12vh"
+
+  # Right-edge step indicator (one hairline per slide).
+  progress: true
+
+  # Persistent top-left logo base palette. The mark keeps its tri-colour
+  # identity (teal=green, accent=vermillion, accent2=indigo); each section
+  # layers its own accent shift on top.
+  logoPalette:
+    accent: "$red"        # vermillion accent by default
+    accent2: "$accent2"   # indigo
+    teal: "$teal"         # green
+
+sections:
+
+  # ── 1 · OPEN — the mark, big and animated ──────────────────────────────────
+  - id: open
+    kind: divider
+    layout: centered
+    text: "Open"
+    foreground:
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout:
+          fit: contain
+          alignment: center
+        viewModel:
+          bindings:
+            textColor:    "#0f0e0c"
+            tealColor:    "#2d6a4f"
+            accentColor:  "#c4391c"
+            accent2Color: "#5c4ba0"
+            surfaceColor: "#f5f1ea"
+            mutedColor:   "#6b665d"
+            lineColor:    "#d8d2c5"
+        capture:
+          mode: currentFrame
+        style:
+          position: { x: center, y: center }
+          size: { width: "54%", height: "60vh" }
+
+  # ── 2 · PROCESS — title slide ───────────────────────────────────────────────
+  - id: process
+    kind: hero
+    text: "Process"
+    heading: "Three things. In order. Every time."
+    eyebrow: "— Process"
+    background:
+      type: none
+
+  # ── 3 · PATTERN (Data) — mark glows green ───────────────────────────────────
+  - id: pattern
+    kind: split
+    text: "Pattern"
+    layout: text-left-chart-right
+    logoPalette:
+      accent: "$teal"
+    foreground:
+      - type: bodyText
+        from: text
+        showHeading: true
+        heading: "01 — Data · Pattern"
+        textStyle:
+          size: large
+        style:
+          position: { x: left, y: center }
+          size: { width: "46%" }
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout: { fit: contain, alignment: center }
+        viewModel:
+          bindings:
+            textColor:    "#2d6a4f"
+            tealColor:    "#2d6a4f"
+            accentColor:  "#2d6a4f"
+            accent2Color: "#3f8a68"
+            surfaceColor: "#f5f1ea"
+            mutedColor:   "#6f9484"
+            lineColor:    "#cdddd3"
+        capture: { mode: currentFrame }
+        style:
+          position: { x: right, y: center }
+          size: { width: "38%", height: "46vh" }
+
+  # ── 4 · MEANING (Narrative) — mark glows vermillion ─────────────────────────
+  - id: meaning
+    kind: split
+    text: "Meaning"
+    layout: text-left-chart-right
+    logoPalette:
+      accent: "$red"
+    foreground:
+      - type: bodyText
+        from: text
+        showHeading: true
+        heading: "02 — Narrative · Meaning"
+        textStyle:
+          size: large
+        style:
+          position: { x: left, y: center }
+          size: { width: "46%" }
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout: { fit: contain, alignment: center }
+        viewModel:
+          bindings:
+            textColor:    "#c4391c"
+            tealColor:    "#c4391c"
+            accentColor:  "#c4391c"
+            accent2Color: "#e07a64"
+            surfaceColor: "#f5f1ea"
+            mutedColor:   "#c08a80"
+            lineColor:    "#ecd9d2"
+        capture: { mode: currentFrame }
+        style:
+          position: { x: right, y: center }
+          size: { width: "38%", height: "46vh" }
+
+  # ── 5 · FORM (Design) — mark glows indigo ───────────────────────────────────
+  - id: form
+    kind: split
+    text: "Form"
+    layout: text-left-chart-right
+    logoPalette:
+      accent: "$accent2"
+    foreground:
+      - type: bodyText
+        from: text
+        showHeading: true
+        heading: "03 — Design · Form"
+        textStyle:
+          size: large
+        style:
+          position: { x: left, y: center }
+          size: { width: "46%" }
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout: { fit: contain, alignment: center }
+        viewModel:
+          bindings:
+            textColor:    "#5c4ba0"
+            tealColor:    "#5c4ba0"
+            accentColor:  "#5c4ba0"
+            accent2Color: "#8a7bc8"
+            surfaceColor: "#f5f1ea"
+            mutedColor:   "#9089a8"
+            lineColor:    "#ddd7ec"
+        capture: { mode: currentFrame }
+        style:
+          position: { x: right, y: center }
+          size: { width: "38%", height: "46vh" }
+
+  # ── 6 · THE MARK — Penrose explanation, full tri-colour mark ────────────────
+  - id: the-mark
+    kind: split
+    text: "The mark"
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        textStyle:
+          size: large
+        style:
+          position: { x: left, y: center }
+          size: { width: "48%" }
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout: { fit: contain, alignment: center }
+        viewModel:
+          bindings:
+            textColor:    "#0f0e0c"
+            tealColor:    "#2d6a4f"
+            accentColor:  "#c4391c"
+            accent2Color: "#5c4ba0"
+            surfaceColor: "#f5f1ea"
+            mutedColor:   "#6b665d"
+            lineColor:    "#d8d2c5"
+        capture: { mode: currentFrame }
+        style:
+          position: { x: right, y: center }
+          size: { width: "40%", height: "56vh" }
+
+  # ── 7 · BELIEF — title slide ─────────────────────────────────────────────────
+  - id: belief
+    kind: hero
+    text: "Belief"
+    heading: "Rigour and beauty are the same demand."
+    eyebrow: "— What we believe"
+    background:
+      type: none
+
+  # ── 8 · WHAT THE WORLD HIDES — prose ─────────────────────────────────────────
+  - id: world-hides
+    kind: bodyText
+    text: "What the world hides"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    foreground:
+      - type: bodyText
+        from: text
+        textStyle:
+          size: large
+        style:
+          position: { x: left, y: center }
+          size: { width: "56%" }
+
+  # ── 9 · PULL QUOTE ───────────────────────────────────────────────────────────
+  - id: both-fail
+    kind: quote
+    text: "Both fail the same way"
+    foreground:
+      - type: quote
+        text: "Either things stay buried in jargon, or they get compressed into hot takes. Both fail the same way."
+        align: center
+        style:
+          position: { x: center, y: center }
+          size: { width: "72%" }
+
+  # ── 10 · WHAT WE MAKE — prose ────────────────────────────────────────────────
+  - id: what-we-make
+    kind: bodyText
+    text: "What we make"
+    paragraphs: [0, 2]
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    foreground:
+      - type: bodyText
+        from: text
+        textStyle:
+          size: large
+        style:
+          position: { x: left, y: center }
+          size: { width: "56%" }
+
+  # ── 11 · STUDIO — title slide ────────────────────────────────────────────────
+  - id: studio
+    kind: hero
+    text: "Studio"
+    heading: "A two-person studio."
+    eyebrow: "— Who we are"
+    background:
+      type: none
+
+  # ── 12 · SHASHANK ────────────────────────────────────────────────────────────
+  - id: shashank
+    kind: bodyText
+    text: "Shashank A. Pandey"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    foreground:
+      - type: bodyText
+        from: text
+        showHeading: true
+        heading: "Shashank A. Pandey · Data storytelling, Visual journalism"
+        style:
+          position: { x: left, y: center }
+          size: { width: "58%" }
+
+  # ── 13 · SUPRABHO ────────────────────────────────────────────────────────────
+  - id: suprabho
+    kind: bodyText
+    text: "Suprabho Dhenki"
+    mobileParagraphs:
+      - [0, 1]
+      - [1, 2]
+    foreground:
+      - type: bodyText
+        from: text
+        showHeading: true
+        heading: "Suprabho Dhenki · Product design, Creative technology"
+        style:
+          position: { x: left, y: center }
+          size: { width: "58%" }
+
+  # ── 14 · CLOSING — the mark returns ──────────────────────────────────────────
+  - id: closing
+    kind: closing
+    layout: centered
+    text: "Closing"
+    foreground:
+      - type: rive
+        src: "/vizmaya-logo.riv"
+        autoplay: true
+        layout: { fit: contain, alignment: center }
+        viewModel:
+          bindings:
+            textColor:    "#0f0e0c"
+            tealColor:    "#2d6a4f"
+            accentColor:  "#c4391c"
+            accent2Color: "#5c4ba0"
+            surfaceColor: "#f5f1ea"
+            mutedColor:   "#6b665d"
+            lineColor:    "#d8d2c5"
+        capture: { mode: currentFrame }
+        style:
+          position: { x: center, y: "42%" }
+          size: { width: "46%", height: "44vh" }
+      - type: quote
+        text: "We added the z for viz. That's the job."
+        align: center
+        style:
+          position: { x: center, y: "74%" }
+          size: { width: "64%" }
