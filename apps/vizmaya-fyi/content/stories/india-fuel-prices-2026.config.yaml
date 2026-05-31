@@ -1,15 +1,21 @@
 # Story config — india-fuel-prices-2026
 #
 # Source: IEA Energy Prices Monthly Oil Prices Excerpt, May 2026 release
-# (covers Jan 2015 – Apr 2026). Cross-country comparison restricted to the
-# 33 countries in the IEA dataset by editorial choice.
+# (covers Jan 2015 – Apr 2026). End-May 2026 price points from PPAC-aligned
+# trackers (Goodreturns, CarDekho, DNA, 29 May 2026). Cross-country comparison
+# restricted to the 33 countries in the IEA dataset by editorial choice.
 #
 # Repeating coordinates:
 #   New Delhi             77.2090  28.6139
 #   Mumbai                72.8777  19.0760
-#   Jamnagar (refinery)   70.0577  22.4707  — Reliance + IOC, world's largest
+#   Bengaluru             77.5946  12.9716
+#   Hyderabad             78.4867  17.3850
 #   Chennai (refinery)    80.2707  13.0827
+#   Kolkata               88.3639  22.5726
+#   Jamnagar (refinery)   70.0577  22.4707  — Reliance + IOC, world's largest
 #   Washington DC        -77.0369  38.9072
+#   Moscow                37.6173  55.7558
+#   Riyadh                46.6753  24.7136
 #   Tokyo                139.6917  35.6895
 #   London                -0.1276  51.5074
 #   Berlin                13.4050  52.5200
@@ -41,38 +47,43 @@ sections:
       opacity: 0.45
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "New Delhi — pump price set by Centre + state"
+          label: "New Delhi - pump price set by Centre + state"
           color: "#e8a04f"
           radius: 14
           pulse: true
 
   # ═══════════════════════════════════════════════
-  # OPENING STAT — ₹101.99 (flat for 18 months)
+  # OPENING STAT — ₹107.59 (freeze broken in May)
   # ═══════════════════════════════════════════════
 
   - id: opening-stat
     kind: stat
-    text: "₹101.99"
+    text: "₹107.59/l"
     mobileParagraphs:
       - [0, 1]
       - [1, 2]
+      - [2, 3]
     map:
-      center: [78.0, 22.0]
-      zoom: 4.0
+      center: [78, 22]
+      zoom: 4
       pitch: 25
       bearing: 0
       opacity: 0.55
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "Delhi pump — ₹101.99/L"
+          label: "₹102.12/L"
           color: "#e8a04f"
           labelAnchor: right
         - coordinates: [72.8777, 19.0760]
-          label: "Mumbai pump — set by Maharashtra VAT"
+          label: "₹111.18/L (+ Maha VAT)"
           color: "#e8a04f"
           labelAnchor: left
+        - coordinates: [78.4867, 17.3850]
+          label: " ₹115.73/L (Hyderabad high)"
+          color: "#b04a3a"
+          labelAnchor: bottom
         - coordinates: [70.0577, 22.4707]
-          label: "Jamnagar refinery — ex-refinery cost floats with crude"
+          label: "Jamnagar refinery"
           color: "#3a7a8c"
           labelAnchor: bottom
         - coordinates: [80.2707, 13.0827]
@@ -80,8 +91,10 @@ sections:
           color: "#3a7a8c"
           labelAnchor: top
       mobile:
-        center: [78.0, 22.0]
-        zoom: 3.4
+        center: [79.7273, 12.2191]
+        zoom: 1.77
+        pitch: 0
+        bearing: 0
 
   # ═══════════════════════════════════════════════
   # THE LEAGUE TABLE — peer-set bar chart
@@ -90,9 +103,10 @@ sections:
   - id: league-table
     text: "The league table"
     chart: data:league-table
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
+    subsections:
+      - text: "The league table > A dollar-fifteen at the pump"
+      - text: "The league table > Cheaper than every European pump"
+      - text: "The league table > What the dollar number hides"
     map:
       center: [25.0, 30.0]
       zoom: 1.5
@@ -101,7 +115,7 @@ sections:
       opacity: 0.50
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "Delhi — $1.09/L"
+          label: "Delhi — $1.09/L (Apr) → $1.15/L (May)"
           color: "#e8a04f"
           labelAnchor: right
         - coordinates: [139.6917, 35.6895]
@@ -110,19 +124,19 @@ sections:
           labelAnchor: bottom
         - coordinates: [-77.0369, 38.9072]
           label: "Washington — $1.08/L"
-          color: "#7c8088"
+          image: assets//flag/us.svg
           labelAnchor: top
         - coordinates: [13.4050, 52.5200]
           label: "Berlin — $2.52/L"
-          color: "#b04a3a"
+          image: assets://flags/de.svg
           labelAnchor: right
         - coordinates: [-0.1276, 51.5074]
-          label: "London — $2.11/L"
-          color: "#b04a3a"
+          label: "$2.11/L"
+          image: assets://flag/uk.svg
           labelAnchor: left
         - coordinates: [-47.9292, -15.7801]
-          label: "Brasília — $1.34/L"
-          color: "#7c8088"
+          label: "$1.34/L"
+          image: assets://flag/br.svg
           labelAnchor: right
 
   # ═══════════════════════════════════════════════
@@ -132,9 +146,9 @@ sections:
   - id: a-days-wages
     text: "A day's wages"
     chart: data:affordability
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
+    subsections:
+      - text: "A day's wages > Litres per day of income"
+      - text: "A day's wages > Cheapest in dollars, dearest in hours"
     map:
       center: [40.0, 28.0]
       zoom: 1.6
@@ -143,7 +157,7 @@ sections:
       opacity: 0.45
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "India — 7.4 L per day's income"
+          label: "India — 7.0 L per day's income (was 7.4 L in April)"
           color: "#e8a04f"
           labelAnchor: right
         - coordinates: [-97.0, 38.0]
@@ -166,10 +180,10 @@ sections:
   - id: decoupled-from-crude
     text: "Decoupled from crude"
     chart: data:decoupled-from-crude
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
+    subsections:
+      - text: "Decoupled from crude > Everyone tracked Brent — except India"
+      - text: "Decoupled from crude > Not price control, not subsidy"
+      - text: "Decoupled from crude > The same instrument, used again"
     map:
       center: [60.0, 25.0]
       zoom: 2.2
@@ -187,16 +201,54 @@ sections:
           labelAnchor: top
 
   # ═══════════════════════════════════════════════
+  # THE EIGHT-WEEK ROUND TRIP — excise whiplash
+  # (NEW SECTION: March 27 cut, May 27 reversal,
+  #  OMC absorption, crude sourcing restructure)
+  # ═══════════════════════════════════════════════
+
+  - id: eight-week-round-trip
+    text: "The eight-week round trip"
+    chart: data:excise-whiplash
+    subsections:
+      - text: "The eight-week round trip > Two dates, eight weeks apart"
+      - text: "The eight-week round trip > The OMCs took the hit"
+      - text: "The eight-week round trip > The crude underneath the freeze"
+    map:
+      center: [55.0, 28.0]
+      zoom: 2.4
+      pitch: 15
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi — Mar 27 cut, May 27 reversal"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [37.6173, 55.7558]
+          label: "Russia — ~21% of India's crude (record high)"
+          color: "#3a7a8c"
+          labelAnchor: bottom
+        - coordinates: [46.6753, 24.7136]
+          label: "Riyadh — Saudi back to #2 supplier"
+          color: "#3a7a8c"
+          labelAnchor: right
+        - coordinates: [70.0577, 22.4707]
+          label: "Jamnagar — OMCs absorbed ₹48.8/L at peak"
+          color: "#b04a3a"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
   # A 12-RUPEE GAP — diesel vs petrol chart
+  # (Note: narrowed to ~₹4 after May 27 reversal)
   # ═══════════════════════════════════════════════
 
   - id: twelve-rupee-gap
     text: "A 12-rupee gap"
     chart: data:diesel-petrol-gap
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
+    subsections:
+      - text: "A 12-rupee gap > Diesel cheaper than petrol"
+      - text: "A 12-rupee gap > A subsidy to freight and farms"
+      - text: "A 12-rupee gap > Narrowed, not closed"
     map:
       center: [78.0, 22.0]
       zoom: 4.0
@@ -205,7 +257,7 @@ sections:
       opacity: 0.55
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "Delhi — diesel ₹91.02, petrol ₹101.99"
+          label: "Delhi — gap narrowed from ₹10.97 to ~₹4 after May 27"
           color: "#e8a04f"
           labelAnchor: right
         - coordinates: [88.3639, 22.5726]
@@ -219,14 +271,15 @@ sections:
 
   # ═══════════════════════════════════════════════
   # INDIA LOCKED IN — the INR flat-line chart
+  # (now: the flat line with a step at end-May 2026)
   # ═══════════════════════════════════════════════
 
   - id: india-locked-in
-    text: "Eighteen months at ₹101.99"
+    text: "Eighteen months, then a step"
     chart: data:india-locked-in
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
+    subsections:
+      - text: "Eighteen months, then a step > The flattest line in the dataset"
+      - text: "Eighteen months, then a step > Then a step"
     map:
       center: [77.2090, 24.0]
       zoom: 4.4
@@ -235,7 +288,7 @@ sections:
       opacity: 0.55
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "Delhi — May 2022 excise cut, last revision"
+          label: "Delhi — May 2022 cut → 18-month plateau → May 2026 step"
           color: "#e8a04f"
           labelAnchor: right
 
@@ -245,10 +298,10 @@ sections:
 
   - id: close
     text: "What the number does and does not tell"
-    mobileParagraphs:
-      - [0, 1]
-      - [1, 2]
-      - [2, 3]
+    subsections:
+      - text: "What the number does and does not tell > Two stories, layered"
+      - text: "What the number does and does not tell > The third thing the print could not show"
+      - text: "What the number does and does not tell > A choice, not a constant"
     map:
       center: [78.0, 22.0]
       zoom: 3.8
@@ -257,6 +310,31 @@ sections:
       opacity: 0.50
       pins:
         - coordinates: [77.2090, 28.6139]
-          label: "New Delhi"
+          label: "New Delhi — the freeze, finally, reopened"
           color: "#e8a04f"
           labelAnchor: right
+
+  # ═══════════════════════════════════════════════
+  # METHODOLOGY — sources, by category
+  # ═══════════════════════════════════════════════
+
+  - id: methodology
+    text: "Methodology & sources"
+    map:
+      center: [78.0, 22.5]
+      zoom: 3.2
+      pitch: 10
+      bearing: 0
+      opacity: 0.40
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Sources, by category"
+          color: "#7c8088"
+          labelAnchor: right
+    subsections:
+      - text: "Methodology & sources > Pump prices"
+      - text: "Methodology & sources > End-May price points"
+      - text: "Methodology & sources > Excise duty timeline"
+      - text: "Methodology & sources > Crude-source shares"
+      - text: "Methodology & sources > Per-capita income"
+      - text: "Methodology & sources > Brent references & editorial choices"
