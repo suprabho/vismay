@@ -194,6 +194,23 @@ export interface StoryDefaults {
    */
   mapFontstack?: string[]
   /**
+   * Config properties for Mapbox v3 "Standard" / "Standard Satellite" styles
+   * (`mapbox://styles/mapbox/standard`, `…/standard-satellite`). Applied via
+   * `map.setConfigProperty('basemap', key, value)` on load and passed as the
+   * initial `config.basemap` at construction.
+   *
+   * Only meaningful on Standard styles — classic styles (dark-v11, etc.) ignore
+   * this and use `mapPalette` instead. Standard styles are NOT layer-addressable,
+   * so `mapPalette` does nothing on them; use this to control roads, labels,
+   * 3D objects, and lighting. Common keys:
+   *   lightPreset: 'dawn' | 'day' | 'dusk' | 'night'
+   *   show3dObjects, show3dBuildings           (Standard only; ignored on Satellite)
+   *   showRoadLabels, showPlaceLabels, showPointOfInterestLabels, showTransitLabels
+   *   showRoadsAndTransit, showPedestrianRoads (Standard Satellite)
+   * Unsupported keys for the active style are silently ignored.
+   */
+  basemapConfig?: Record<string, string | number | boolean>
+  /**
    * Page-level backdrop for the deck format. Mounts once at the page level
    * (outside the snap container) and persists across every section. When
    * absent, the page route falls back to `frontmatter.aura` for deck stories

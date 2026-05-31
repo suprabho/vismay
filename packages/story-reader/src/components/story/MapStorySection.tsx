@@ -236,7 +236,7 @@ export default function MapStorySection({
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vw,80vh)] rounded-lg p-6 backdrop-blur-3xl pointer-events-none z-10"
             style={{
-              background: 'rgb(var(--color-panel-rgb) / 0.2)',
+              background: 'rgb(var(--color-panel-rgb) / 0.5)',
               border: '0.5px solid var(--color-line)',
             }}
           >
@@ -294,7 +294,7 @@ export default function MapStorySection({
   ].join(' ')
 
   const cardStyle = {
-    background: 'rgb(var(--color-panel-rgb) / 0.2)',
+    background: 'rgb(var(--color-panel-rgb) / 0.5)',
     border: '0.5px solid var(--color-line)',
   }
 

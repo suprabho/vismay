@@ -15,17 +15,42 @@
 #   New Jersey (Englewood)  [-73.9527, 40.8859]
 
 defaults:
-  mapStyle: mapbox://styles/mapbox/dark-v11
-  mapOpacity: 0.55
+  # Mapbox v3 Standard: vector basemap with baked-in 3D buildings, full color
+  # theming, and per-object 3D toggles (none of which Standard Satellite allows).
+  mapStyle: mapbox://styles/mapbox/standard
+  mapOpacity: 0.6
   pinColor: "#e26d5c"
   pinRadius: 10
   flySpeed: 1.2
+
+  # Standard styles are config-driven (not layer-addressable), so roads/labels/
+  # lighting/3D are controlled here via setConfigProperty('basemap', …). 3D
+  # buildings need pitch + zoom ≥ ~15 to be visible.
+  basemapConfig:
+    theme: monochrome            # default | faded | monochrome — tints the whole basemap
+    lightPreset: dusk            # dawn | day | dusk | night — lights the 3D objects
+    show3dObjects: true          # master 3D toggle (Standard only)
+    showRoadLabels: false        # road names + shields
+    showPointOfInterestLabels: false
+    showTransitLabels: false
+    showPlaceLabels: true        # keep city/place names
+
+  # Kept for fallback only: applies if you switch back to a classic style
+  # (dark-v11 etc.). Standard ignores mapPalette entirely.
   mapPalette:
     land: "#0a0f1c"
     water: "#050c18"
     border: "#243349"
     labelText: "#c8d1dc"
     labelHalo: "#050c18"
+    motorways: false
+    trunkRoads: false
+    minorRoads: false
+    pedestrianPaths: false
+    roadLabels: false
+    transitLabels: false
+    poiLabels: false
+    placeLabels: true
 
 sections:
 
@@ -92,9 +117,9 @@ sections:
     kind: stat
     text: "K Street"
     map:
-      center: [-77.025, 38.898]
-      zoom: 11.4
-      pitch: 45
+      center: [-77.039, 38.9015]
+      zoom: 15.6
+      pitch: 62
       bearing: -18
       opacity: 0.6
       pins:
@@ -110,9 +135,9 @@ sections:
     kind: stat
     text: "The Bill Citigroup Wrote"
     map:
-      center: [-74.0095, 40.7125]
-      zoom: 12.6
-      pitch: 50
+      center: [-74.0107, 40.7155]
+      zoom: 16.1
+      pitch: 62
       bearing: 12
       opacity: 0.6
       pins:
@@ -128,9 +153,9 @@ sections:
     kind: stat
     text: "The Senator's Closet"
     map:
-      center: [-74.02, 40.83]
-      zoom: 10.2
-      pitch: 40
+      center: [-73.9527, 40.8859]
+      zoom: 14.8
+      pitch: 55
       bearing: -8
       opacity: 0.55
       pins:

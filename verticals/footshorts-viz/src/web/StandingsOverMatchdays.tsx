@@ -1,5 +1,6 @@
 'use client'
 
+import { useId } from 'react'
 import type { CSSProperties } from 'react'
 import { Crest } from '../data/Crest'
 import type { TeamLane } from '../types'
@@ -117,6 +118,7 @@ const emptyStyle: CSSProperties = {
 const TICK_COLOR = 'var(--color-muted, #8a93a7)'
 const GRID_COLOR = 'var(--color-line, #1f2a42)'
 
+
 // Scoped @keyframes for the entrance. Global names are fine (identical rules
 // dedupe), and rendering the block only when animating keeps capture output
 // free of unused style. `forwards` / `both` rest the elements in their final
@@ -144,6 +146,9 @@ export function StandingsOverMatchdays({
   xTickFormat = (n) => `MD${n}`,
   animate = true,
 }: Props) {
+  // Stable, collision-safe id for the plot clip-path (several charts can share a
+  // page). Called unconditionally, before the early return, per the rules of hooks.
+  const clipId = `somd-clip-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   if (lanes.length === 0) {
     return <div style={emptyStyle}>No matchday data</div>
   }
@@ -225,6 +230,16 @@ export function StandingsOverMatchdays({
           role="img"
           aria-label={`League position by matchday chart for ${competitionLabel}`}
         >
+          <defs>
+            <clipPath id={clipId}>
+              <rect
+                x={PADDING.left}
+                y={PADDING.top}
+                width={VIEW_W - PADDING.left - PADDING.right}
+                height={VIEW_H - PADDING.top - PADDING.bottom}
+              />
+            </clipPath>
+          </defs>
           {/* Y axis labels — P1, mid, last */}
           {[1, Math.ceil(maxPos / 2), maxPos].map((p) => (
             <g key={p}>
@@ -260,30 +275,33 @@ export function StandingsOverMatchdays({
               {xTickFormat(md)}
             </text>
           ))}
-          {/* Lanes */}
-          {drawn.map(({ lane, d }, i) => {
-            const drawStyle: CSSProperties = animate
-              ? {
-                  strokeDasharray: '1',
-                  strokeDashoffset: '1',
-                  animation: `som-draw ${DRAW_MS}ms ease-out ${i * STAGGER_MS}ms forwards`,
-                }
-              : {}
-            return (
-              <path
-                key={lane.team_id}
-                d={d}
-                pathLength={animate ? 1 : undefined}
-                fill="none"
-                stroke={lane.color}
-                strokeWidth={laneWidth(lane)}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={laneOpacity(lane)}
-                style={drawStyle}
-              />
-            )
-          })}
+          {/* Lanes — clipped to the plot rect so an explicit `matchdayRange` narrower
+              than the data doesn't spill lines over the axes. */}
+          <g clipPath={matchdayRange ? `url(#${clipId})` : undefined}>
+            {drawn.map(({ lane, d }, i) => {
+              const drawStyle: CSSProperties = animate
+                ? {
+                    strokeDasharray: '1',
+                    strokeDashoffset: '1',
+                    animation: `som-draw ${DRAW_MS}ms ease-out ${i * STAGGER_MS}ms forwards`,
+                  }
+                : {}
+              return (
+                <path
+                  key={lane.team_id}
+                  d={d}
+                  pathLength={animate ? 1 : undefined}
+                  fill="none"
+                  stroke={lane.color}
+                  strokeWidth={laneWidth(lane)}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={laneOpacity(lane)}
+                  style={drawStyle}
+                />
+              )
+            })}
+          </g>
         </svg>
         {/* Crest at each lane's latest point (HTML overlay so we can reuse the
             Crest fallback chain; positioned in % to track the svg viewBox). */}
@@ -344,7 +362,9 @@ export function StandingsOverMatchdays({
                 backgroundColor: lane.color,
               }}
             />
-            <span>{lane.team_code ?? lane.team_name}</span>
+            <span style={{ fontWeight: lane.highlight ? 700 : 400 }}>
+              {lane.team_code ?? lane.team_name}
+            </span>
           </div>
         ))}
       </div>
