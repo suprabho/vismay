@@ -31,8 +31,13 @@ import type { FixtureRow } from '../../types'
 export interface BracketConfig {
   type: 'fs:bracket'
   fixtures: FixtureRow[]
-  /** 'list' (default) = the stacked round list; 'tree' = full mirrored tournament tree (web only). */
-  layout?: 'list' | 'tree'
+  /**
+   * 'list' (default) = the stacked round list; 'tree' = full mirrored
+   * tournament tree (web only), which automatically switches to the vertical
+   * top-to-bottom layout on narrow/portrait viewports; 'tree-vertical' = always
+   * render the mobile vertical tree regardless of width.
+   */
+  layout?: 'list' | 'tree' | 'tree-vertical'
   /** Team id whose path through the tree is emphasised (tree layout). */
   highlightTeamId?: string
   /** Caption shown by the centre emblem, e.g. "Final · Budapest". */
@@ -60,7 +65,8 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Bracke
       )
     }
   }
-  const layout = raw.layout === 'tree' ? 'tree' : 'list'
+  const layout =
+    raw.layout === 'tree' ? 'tree' : raw.layout === 'tree-vertical' ? 'tree-vertical' : 'list'
   const highlightTeamId = typeof raw.highlightTeamId === 'string' ? raw.highlightTeamId : undefined
   const title = typeof raw.title === 'string' ? raw.title : undefined
   const competitionSlug = typeof raw.competitionSlug === 'string' ? raw.competitionSlug : undefined

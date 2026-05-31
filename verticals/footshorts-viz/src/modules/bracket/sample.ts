@@ -208,3 +208,14 @@ export const sampleTree: BracketConfig = {
     },
   ],
 }
+
+/**
+ * Vertical-tree sample: the same eight-team knockout as {@link sampleTree}, but
+ * forced into the mobile top-to-bottom layout. The `tree` layout switches to
+ * this automatically on narrow viewports; `tree-vertical` opts in regardless of
+ * width (handy for portrait video / phone previews).
+ */
+export const sampleTreeVertical: BracketConfig = {
+  ...sampleTree,
+  layout: 'tree-vertical',
+}

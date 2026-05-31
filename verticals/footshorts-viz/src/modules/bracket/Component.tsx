@@ -1,11 +1,32 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { VizRenderProps } from '@vismay/viz-engine'
 import { Bracket } from '../../web/Bracket'
 import { BracketTree } from '../../web/BracketTree'
+import { BracketTreeVertical } from '../../web/BracketTreeVertical'
 import { buildBracket } from '../../buildBracket'
 import type { BracketConfig } from './index'
+
+// Below this width the mirrored (horizontal) tree forces horizontal scrolling,
+// so the `tree` layout falls back to the vertical top-to-bottom bracket.
+const NARROW_QUERY = '(max-width: 640px)'
+
+// SSR/capture-safe: starts false (horizontal) so server render and the
+// Playwright/Chromium capture pipeline keep the wide tree; only a real narrow
+// client viewport flips it to the vertical layout.
+function useIsNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia(NARROW_QUERY)
+    const update = () => setNarrow(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return narrow
+}
 
 export default function BracketVizComponent({
   config,
@@ -17,7 +38,10 @@ export default function BracketVizComponent({
   }, [noteReady])
 
   const bracket = useMemo(() => buildBracket(config.fixtures), [config.fixtures])
-  const isTree = config.layout === 'tree'
+  const isNarrow = useIsNarrow()
+  const isTreeFamily = config.layout === 'tree' || config.layout === 'tree-vertical'
+  const isVertical = config.layout === 'tree-vertical' || (config.layout === 'tree' && isNarrow)
+  const isTree = isTreeFamily && !isVertical
 
   return (
     <div
@@ -36,6 +60,13 @@ export default function BracketVizComponent({
         {bracket ? (
           isTree ? (
             <BracketTree
+              bracket={bracket}
+              highlightTeamId={config.highlightTeamId}
+              title={config.title}
+              competitionSlug={config.competitionSlug ?? bracket.competition_slug}
+            />
+          ) : isVertical ? (
+            <BracketTreeVertical
               bracket={bracket}
               highlightTeamId={config.highlightTeamId}
               title={config.title}
