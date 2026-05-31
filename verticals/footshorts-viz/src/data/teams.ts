@@ -96,6 +96,7 @@ export const TEAMS: Record<string, TeamEntry> = {
   atalanta: { name: 'Atalanta', color: '#1E71B8', secondary: '#000000', monogram: 'ATA', crest: fd(102) },
   newcastle: { name: 'Newcastle United', shortName: 'Newcastle', color: '#241F20', secondary: '#FFFFFF', monogram: 'NEW', crest: fd(67) },
   'aston-villa': { name: 'Aston Villa', shortName: 'Villa', color: '#670E36', secondary: '#95BFE5', monogram: 'AVL', crest: fd(58) },
+  brighton: { name: 'Brighton & Hove Albion', shortName: 'Brighton', color: '#0057B8', secondary: '#FFFFFF', monogram: 'BHA', crest: fd(397) },
   brest: { name: 'Stade Brestois', shortName: 'Brest', color: '#E2001A', secondary: '#FFFFFF', monogram: 'BRE', crest: fd(512) },
   lille: { name: 'Lille', color: '#E01E13', secondary: '#FFFFFF', monogram: 'LIL', crest: fd(521) },
   ajax: { name: 'Ajax', color: '#D2122E', secondary: '#FFFFFF', monogram: 'AJX', crest: fd(678) },
@@ -108,6 +109,37 @@ export const TEAMS: Record<string, TeamEntry> = {
   celtic: { name: 'Celtic', color: '#018749', secondary: '#FFFFFF', monogram: 'CEL', crest: fd(732) },
 }
 
+/**
+ * Common non-canonical slugs/abbreviations → canonical `TEAMS` key. Hand-authored
+ * demo data and some upstream feeds use short forms ("man-utd") that don't slugify
+ * to the registry key ("manchester-united"); without this they'd silently degrade
+ * to the monogram placeholder instead of the real crest. Keys must be in slugified
+ * form (lowercase, hyphenated); values must be real `TEAMS` keys.
+ */
+const ALIASES: Record<string, string> = {
+  'man-utd': 'manchester-united',
+  'man-united': 'manchester-united',
+  manutd: 'manchester-united',
+  mufc: 'manchester-united',
+  'man-city': 'manchester-city',
+  mancity: 'manchester-city',
+  mcfc: 'manchester-city',
+  spurs: 'tottenham',
+  'tottenham-hotspur': 'tottenham',
+  barca: 'barcelona',
+  'fc-barcelona': 'barcelona',
+  atletico: 'atletico-madrid',
+  atleti: 'atletico-madrid',
+  villa: 'aston-villa',
+  'bayern-munich': 'bayern',
+  'borussia-dortmund': 'dortmund',
+  bvb: 'dortmund',
+  'inter-milan': 'inter',
+  'ac-milan': 'milan',
+  'paris-saint-germain': 'psg',
+  brugge: 'club-brugge',
+}
+
 /** Slugify a display name so YAML can pass `home: "Arsenal"` and we still find the entry. */
 export function slugify(s: string): string {
   return s
@@ -118,12 +150,17 @@ export function slugify(s: string): string {
     .replace(/^-|-$/g, '')
 }
 
-/** Lookup with display-name fallback. Returns `null` if no bundled entry matches. */
+/**
+ * Lookup with display-name + alias fallback. Tries the raw key, then the
+ * slugified form, then the alias map. Returns `null` if no bundled entry matches.
+ */
 export function findTeam(slugOrName: string): TeamEntry | null {
   const direct = TEAMS[slugOrName]
   if (direct) return direct
   const slug = slugify(slugOrName)
-  return TEAMS[slug] ?? null
+  if (TEAMS[slug]) return TEAMS[slug]
+  const aliased = ALIASES[slug]
+  return aliased ? TEAMS[aliased] ?? null : null
 }
 
 /** Resolve the display color for a team — YAML override wins, then bundled, then fallback. */
