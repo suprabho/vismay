@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..800&family=Space+Grotesk:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", ui-serif, Georgia, serif;
+  --font-mono: "Space Grotesk", ui-monospace, SFMono-Regular, monospace;
+
+  --color-f1-red: #E10600;
+  --color-telemetry-blue: #00D2FF;
+  --color-gain-green: #00D21D;
+  --color-caution-yellow: #FFD200;
+  
+  --spacing-section-gap: 80px;
+  --spacing-gutter: 24px;
+  --spacing-margin-page: 48px;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-neutral-900 antialiased;
+  }
+}
+
+.font-telemetry {
+  font-family: var(--font-mono);
+}
