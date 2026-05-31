@@ -108,20 +108,6 @@ function teamShort(ref: FixtureTeamRef, fallback: string): string {
   return t?.shortName ?? t?.name ?? ref?.name ?? fallback
 }
 
-// How wide the horizontal mirrored tree would render — used as the breakpoint
-// below which the layout switches to the vertical tree. Mirrors the geometry in
-// HorizontalTree.
-function horizontalWidth(bracket: BracketModel): number {
-  const lastRound = bracket.rounds[bracket.rounds.length - 1]
-  const finalRound =
-    bracket.rounds.find((r) => r.stage === 'FINAL') ??
-    (lastRound && lastRound.ties.length === 1 ? lastRound : undefined)
-  const nDepth = bracket.rounds.filter((r) => r !== finalRound).length
-  const finalX = PAD + nDepth * COL_W
-  const rightX0 = finalX + COL_W + Math.max(0, nDepth - 1) * COL_W
-  return rightX0 + CELL_W + PAD
-}
-
 function TeamLine({
   teamRef,
   name,
@@ -643,22 +629,22 @@ function VerticalTree({ bracket, highlightTeamId, title, competitionSlug }: Omit
 }
 
 export function BracketTree({ orientation = 'auto', ...rest }: Props) {
-  // Scope the container-query CSS to this instance.
+  // Scope the responsive CSS to this instance.
   const cid = 'bkt-' + useId().replace(/[^a-zA-Z0-9]/g, '')
   if (rest.bracket.rounds.length === 0) return null
   if (orientation === 'vertical') return <VerticalTree {...rest} />
   if (orientation === 'horizontal') return <HorizontalTree {...rest} />
 
-  // 'auto': render both layouts and let a CSS container query show whichever
-  // fits the *container's* real width. Unlike window.matchMedia, this works
-  // without JS — inside iframes, scaled embeds, SSR, and static snapshots —
-  // which is what the viewport-based check was getting wrong in the editorial
-  // embed. Default (wide) shows horizontal; narrower than the horizontal tree's
-  // own width shows vertical.
-  const breakpoint = horizontalWidth(rest.bracket)
+  // 'auto': render both layouts and let a pure-CSS media query pick one by the
+  // viewport's portrait/landscape flag — landscape shows the wide mirrored
+  // tree, portrait (phones, square, 9:16 video) shows the vertical tree. This
+  // is the same aspect-ratio signal viz-engine uses elsewhere, and being plain
+  // CSS it works without JS — inside the editorial iframe, SSR, and static
+  // captures alike (window.matchMedia / ResizeObserver did not, since the embed
+  // doesn't give them a reliable width).
   return (
-    <div style={{ containerType: 'inline-size', width: '100%' }}>
-      <style>{`.${cid}-v{display:none}@container (max-width:${breakpoint - 1}px){.${cid}-h{display:none}.${cid}-v{display:block}}`}</style>
+    <div style={{ width: '100%' }}>
+      <style>{`.${cid}-v{display:none}@media (max-aspect-ratio:1/1){.${cid}-h{display:none}.${cid}-v{display:block}}`}</style>
       <div className={`${cid}-h`}>
         <HorizontalTree {...rest} />
       </div>
