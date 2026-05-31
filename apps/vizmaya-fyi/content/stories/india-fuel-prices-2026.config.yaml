@@ -97,6 +97,40 @@ sections:
         bearing: 0
 
   # ═══════════════════════════════════════════════
+  # WHAT'S IN A LITRE — metro spread + tax anatomy
+  # (split out of the opening stat to keep it lean)
+  # ═══════════════════════════════════════════════
+
+  - id: whats-in-a-litre
+    text: "What's in a litre"
+    subsections:
+      - text: "What's in a litre > The metro spread"
+      - text: "What's in a litre > Half the price is set in Delhi"
+    map:
+      center: [78.0, 22.0]
+      zoom: 4.2
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [77.2090, 28.6139]
+          label: "Delhi — ₹102.12/L (lowest metro VAT)"
+          color: "#e8a04f"
+          labelAnchor: right
+        - coordinates: [72.8777, 19.0760]
+          label: "Mumbai — ₹111.18/L (+ Maharashtra VAT)"
+          color: "#e8a04f"
+          labelAnchor: left
+        - coordinates: [78.4867, 17.3850]
+          label: "Hyderabad — ₹115.73/L (metro high)"
+          color: "#b04a3a"
+          labelAnchor: bottom
+        - coordinates: [70.0577, 22.4707]
+          label: "Jamnagar — ex-refinery cost, same for all"
+          color: "#3a7a8c"
+          labelAnchor: top
+
+  # ═══════════════════════════════════════════════
   # THE LEAGUE TABLE — peer-set bar chart
   # ═══════════════════════════════════════════════
 

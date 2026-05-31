@@ -34,15 +34,21 @@ theme:
 
 *National average pump price of petrol in India, 29 May 2026 — up roughly ₹5 from the eighteen-month plateau that held through April.*
 
-For **18 months** the petrol price did not move. Between November 2022 and April 2026, the IEA's metro average sat at **₹101.99** to the rupee. The diesel price, frozen at **₹91.02** since the same week in March 2024, behaved the same way. Both numbers looked like a typo in a moving market — until you remembered they were not market prices.
+For **18 months** the petrol price did not move. Between November 2022 and April 2026, the IEA's metro average sat at **₹101.99** to the rupee, with diesel frozen at **₹91.02** since March 2024. Both looked like a typo in a moving market — until you remembered they were not market prices.
 
-Then, in the space of two months, both numbers were touched twice. On **27 March 2026**, with Brent crude surging from $70 to $122 a barrel during the US–Israel–Iran war, the Centre cut excise by **₹10/l** on both fuels — petrol from ₹13 to ₹3, diesel to zero. Pump prices did not fall. 
+Then, in the space of two months, both were touched twice: a **₹10/l** excise cut on **27 March 2026** as Brent crude spiked toward $122, then a partial reversal on **27 May**. This time the pump moved — the national average stepped up to **₹107.59**. The 18-month freeze is over.
 
-The state-owned oil-marketing companies (OMCs) absorbed roughly **₹48.8/l** in under-recoveries, holding the retail line. On **27 May 2026**, with crude easing, the Centre put excise back on ₹3/l on petrol, ₹10/l on diesel — and this time the pump did move.
+---
 
-The national average ticked up to **₹107.59**. Mumbai sits at **₹111.18**, Hyderabad at **₹115.73**, Delhi at **₹102.12**. The retail rate at an Indian Oil pump in Delhi is the **ex-refinery cost** of petrol, plus a small dealer margin, plus the central government's **excise duty**, plus the state's **value-added tax**. 
+## What's in a litre
 
-The first number floats with crude. The last two, combined is more than **half the pump price** and are set in New Delhi and the state capital. They had not been touched since the May 2022 cut. Now they have been touched twice, in 8 weeks, in opposite directions. The 18-month freeze is over.
+### The metro spread
+
+There is no single Indian pump price. At the May 29 print, Delhi sits at **₹102.12**, Mumbai at **₹111.18**, Hyderabad at **₹115.73** — a spread of more than ₹13 across three metros buying the same ex-refinery fuel. What separates them is the state: each layers its own **value-added tax** on top.
+
+### Half the price is set in Delhi
+
+The retail rate at an Indian Oil pump in Delhi is the **ex-refinery cost** of petrol, plus a small dealer margin, plus the central government's **excise duty**, plus the state's **value-added tax**. The first floats with crude. The last two — combined, more than **half the pump price** — are set in New Delhi and the state capital, and had not been touched since the May 2022 cut. Now they have been touched twice in eight weeks, in opposite directions.
 
 ---
 
