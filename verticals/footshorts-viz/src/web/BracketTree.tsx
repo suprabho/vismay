@@ -201,10 +201,24 @@ function HorizontalTree({ bracket, highlightTeamId, title, competitionSlug }: Om
   const finalX = PAD + nDepth * COL_W
   const rightX = (d: number) => finalX + COL_W + (nDepth - 1 - d) * COL_W
 
+  // The centre emblem + title sit above the final cell. In a shallow draw the
+  // final sits high enough that they'd collide with it, so shift the whole tree
+  // down to reserve headroom (deep draws already have room → extraTop = 0).
+  const naturalFinalY =
+    leftYs[nDepth - 1]?.[0] != null && rightYs[nDepth - 1]?.[0] != null
+      ? (leftYs[nDepth - 1]![0]! + rightYs[nDepth - 1]![0]!) / 2
+      : TOP + 2 * SLOT
+  const EMBLEM_HEADROOM = PAD + HEADER_H + CELL_H / 2 + 78
+  const extraTop = Math.max(0, EMBLEM_HEADROOM - naturalFinalY)
+  if (extraTop > 0) {
+    for (const col of leftYs) for (let i = 0; i < col.length; i++) col[i] = col[i]! + extraTop
+    for (const col of rightYs) for (let i = 0; i < col.length; i++) col[i] = col[i]! + extraTop
+  }
+
   // Final cell centre = midpoint of the two semifinal cells.
   const sfLeftY = leftYs[nDepth - 1]?.[0]
   const sfRightY = rightYs[nDepth - 1]?.[0]
-  const finalY = sfLeftY != null && sfRightY != null ? (sfLeftY + sfRightY) / 2 : TOP + 2 * SLOT
+  const finalY = sfLeftY != null && sfRightY != null ? (sfLeftY + sfRightY) / 2 : naturalFinalY + extraTop
 
   // Canvas size.
   let maxBottom = finalY + CELL_H / 2
