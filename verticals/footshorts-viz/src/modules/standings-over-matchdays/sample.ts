@@ -10,6 +10,9 @@ export const sample: StandingsOverMatchdaysConfig = {
       team_name: 'Manchester United',
       team_code: 'MUN',
       color: '#DA291C',
+      // Hero lane: drawn thicker and on top while the rest of the pack dims.
+      highlight: true,
+      lineWidth: 3.5,
       points: [
         { matchday: 1, position: 6 },
         { matchday: 2, position: 7 },
