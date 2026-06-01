@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import AuraBackground from '@/components/AuraBackground'
@@ -14,441 +14,713 @@ export interface HomeStory {
   byline: string
   aura?: string
   theme?: Theme
+  /** Optional editorial topic — drives the card pill and rail filter chips. */
+  topic?: string
+  /** Optional cover image URL shown as the card thumbnail background. */
+  thumbnail?: string
 }
 
 export interface HomeEpic {
   slug: string
   name: string
   description: string | null
+  /** Per-epic theme override (loose jsonb; may be `{}`). */
+  theme?: Record<string, unknown>
+}
+
+
+/* The studio voice — static brand copy shown in the sticky rail. */
+const STUDIO = {
+  kicker: 'Vizmaya Labs',
+  statement: 'We turn complex data into stories impossible to ignore.',
+  deck: 'A two-person data-journalism studio. The map does the argument, the prose does the meaning — and we refuse to let the distance between what is true and what is understood be someone else’s problem.',
+}
+
+/* Each story card renders in its own theme — a dark base with an accent glow,
+   and the theme's own typefaces. */
+interface CardTheme {
+  bg: string
+  text: string
+  muted: string
+  accent: string
+  serif?: string
+  sans?: string
+  mono?: string
+}
+
+function withFallback(name: string | undefined, kind: 'serif' | 'sans' | 'mono'): string | undefined {
+  if (!name) return undefined
+  if (kind === 'serif') return `${name}, Georgia, serif`
+  if (kind === 'sans') return `${name}, -apple-system, 'Segoe UI', Helvetica, sans-serif`
+  return `${name}, 'Courier New', monospace`
+}
+
+/* Stories carry a full viz-engine Theme (colors + fonts). */
+function storyCardTheme(theme: Theme): CardTheme {
+  return {
+    bg: theme.colors.background,
+    text: theme.colors.text,
+    muted: theme.colors.muted,
+    accent: theme.colors.accent,
+    serif: withFallback(theme.fonts.serif, 'serif'),
+    sans: withFallback(theme.fonts.sans, 'sans'),
+    mono: withFallback(theme.fonts.mono, 'mono'),
+  }
+}
+
+/* Brand tricolor, cycled across epics whose theme has no accent of its own. */
+const EPIC_ACCENTS = ['#0BBFAB', '#E84D7A', '#2B4ACF']
+
+/* Epic themes are a loose, often-sparse jsonb (`ink`/`surface`/`accent`/
+   `bone`/`fonts`); fall back to the brand tricolor + a dark base when absent.
+   Epstein's theme uses `ember` (not `accent`) as its primary accent key, so
+   we check that too before reaching for the EPIC_ACCENTS fallback. */
+function epicCardTheme(raw: Record<string, unknown> | undefined, index: number): CardTheme {
+  const t = (raw ?? {}) as {
+    ink?: string
+    surface?: string
+    bone?: string
+    muted?: string
+    accent?: string
+    ember?: string  // Epstein primary accent
+    fonts?: { serif?: string; sans?: string; mono?: string }
+  }
+  const fonts = t.fonts ?? {}
+  return {
+    bg: t.ink || t.surface || '#0C0C10',
+    text: t.bone || '#FFFFFF',
+    muted: t.muted || 'rgba(255,255,255,.7)',
+    accent: t.accent || t.ember || EPIC_ACCENTS[index % EPIC_ACCENTS.length],
+    serif: withFallback(fonts.serif, 'serif'),
+    sans: withFallback(fonts.sans, 'sans'),
+    mono: withFallback(fonts.mono, 'mono'),
+  }
+}
+
+/* Inline CSS custom properties + dark gradient base for a themed card. */
+function cardThemeStyle(ct: CardTheme): CSSProperties {
+  return {
+    ['--bn-bg']: ct.bg,
+    ['--bn-text']: ct.text,
+    ['--bn-muted']: ct.muted,
+    ['--bn-accent']: ct.accent,
+    ...(ct.serif ? { ['--bn-serif']: ct.serif } : {}),
+    ...(ct.sans ? { ['--bn-sans']: ct.sans } : {}),
+    ...(ct.mono ? { ['--bn-mono']: ct.mono } : {}),
+    background: ct.bg,
+    backgroundImage:
+      `radial-gradient(120% 90% at 85% 8%, ${ct.accent}55 0%, ${ct.accent}14 34%, transparent 62%),` +
+      `radial-gradient(90% 80% at 8% 100%, ${ct.accent}30 0%, transparent 55%)`,
+    color: ct.text,
+  } as CSSProperties
 }
 
 const css = `
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 .vz{
-  --teal:#057A6E;--pink:#E84D7A;--blue:#2B4ACF;
-  --ink:#0C0C10;--cream:#F4F1EC;--muted:#4A4742;--line:rgba(12,12,16,.1);
-  --ff-d:'Fraunces',Georgia,serif;
-  --ff-m:'JetBrains Mono',ui-monospace,monospace;
-  background:var(--cream);color:var(--ink);font-family:var(--ff-m);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.75;
+  --ink:#0C0C10;--cream:#F4F1EC;--muted:#4A4742;--soft:#2A2824;
+  --line:rgba(12,12,16,.08);--line2:rgba(12,12,16,.14);
+  --teal:#0BBFAB;--pink:#E84D7A;--blue:#2B4ACF;--accent:#0BBFAB;
+  --d:'Fraunces',Georgia,serif;--e:'Fraunces',Georgia,serif;
+  --b:'Libre Franklin',-apple-system,sans-serif;--m:'JetBrains Mono',ui-monospace,monospace;
+  --gap:16px;
+  background:var(--cream);color:var(--ink);font-family:var(--b);-webkit-font-smoothing:antialiased;
+  min-height:100vh;
 }
 .vz ::selection{background:var(--teal);color:var(--ink)}
-.vz a{text-decoration:none;transition:opacity .3s,color .3s}.vz a:hover{opacity:.7}
-.vz button{cursor:pointer;transition:opacity .3s}.vz button:hover{opacity:.85}
+.vz a{text-decoration:none;color:inherit;transition:opacity .3s,color .3s,background .3s,border-color .3s,transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s}
+.vz button{cursor:pointer;font-family:inherit}
 .vz em{font-style:italic}
 
+/* reveal — content always ends visible; gentle entrance for lower editorial */
 .vz .rv{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
 .vz .rv.v{opacity:1;transform:translateY(0)}
-.vz .rv[data-d="1"]{transition-delay:.08s}.vz .rv[data-d="2"]{transition-delay:.16s}
-.vz .rv[data-d="3"]{transition-delay:.24s}.vz .rv[data-d="4"]{transition-delay:.32s}
+.vz .rv[data-d="1"]{transition-delay:.08s}.vz .rv[data-d="2"]{transition-delay:.16s}.vz .rv[data-d="3"]{transition-delay:.24s}
 
-/* Nav ---------------------------------------------------- */
-.vz .nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:18px clamp(24px,5vw,56px);background:transparent;transition:background .4s,border-color .4s,backdrop-filter .4s;border-bottom:1px solid transparent}
-.vz .nav.scrolled{background:rgba(244,241,236,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.vz .nav-logo{cursor:pointer;display:flex;align-items:center;background:none;border:none;padding:0}
-.vz .nav-r{display:flex;gap:28px;align-items:center}
-.vz .nav-link{font-family:var(--ff-m);font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink);opacity:.55}
-.vz .nav-cta{font-family:var(--ff-m);font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--cream)!important;background:var(--ink);padding:10px 18px;border-radius:2px;opacity:1!important}
+/* kicker */
+.vz .kick{font-family:var(--m);font-size:10.5px;letter-spacing:2.6px;text-transform:uppercase;color:var(--accent);display:inline-flex;align-items:center;gap:10px;font-weight:500}
+.vz .kick::before{content:'';width:18px;height:1px;background:currentColor;display:inline-block}
+.vz .kick.teal{color:var(--teal)}
+.vz .kick.pink{color:var(--pink)}
 
-/* Shared ------------------------------------------------- */
-.vz .rule{height:1px;background:var(--line);width:100%}
-.vz .container{max-width:1180px;margin:0 auto;padding:0 clamp(24px,5vw,56px)}
-.vz .kicker{font-family:var(--ff-m);font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--teal);display:inline-flex;align-items:center;gap:10px}
-.vz .kicker::before{content:'';display:inline-block;width:20px;height:1px;background:var(--teal)}
-.vz h1,.vz h2,.vz h3{font-family:var(--ff-d);font-weight:500;font-style:normal;letter-spacing:-.015em;color:var(--ink);line-height:1.1;margin:0}
-.vz .body{font-family:var(--ff-m);font-size:14px;line-height:1.85;color:var(--muted);margin:0}
-.vz .btn{font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:14px 26px;border-radius:2px;border:1px solid var(--ink);font-weight:500;display:inline-block;background:var(--ink);color:var(--cream)}
-.vz .btn.ghost{background:transparent;color:var(--ink)}
-.vz .btn.teal{background:var(--teal);color:var(--ink);border-color:var(--teal)}
+/* ── NAV ─────────────────────────────────────────── */
+.vz .vznav{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;justify-content:space-between;align-items:center;padding:14px clamp(20px,4vw,48px);background:transparent;border-bottom:1px solid transparent;transition:background .4s,border-color .4s,backdrop-filter .4s}
+.vz .vznav.scrolled{background:rgba(244,241,236,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.vz .vznav-logo{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
+.vz .vznav-r{display:flex;gap:26px;align-items:center}
+.vz .vznav-link{font-family:var(--m);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(12,12,16,.45);cursor:pointer}
+.vz .vznav-link:hover{color:var(--ink);opacity:1}
+.vz .vznav-cta{font-family:var(--m);font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--cream);background:var(--ink);padding:9px 17px;border-radius:3px;font-weight:500}
+.vz .vznav-cta:hover{opacity:.9}
 
-/* Masthead (hero + work grid as one top block) ----------- */
-.vz .masthead{padding:150px clamp(24px,5vw,56px) 100px;position:relative}
-.vz .hero{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;max-width:1200px;margin:0 auto 80px;position:relative}
-.vz .hero-kick,.vz .hero-h1,.vz .hero-deck{opacity:0;transition:opacity .7s ease,transform .8s cubic-bezier(.22,1,.36,1)}
-.vz .hero-kick{transition-delay:.15s}
-.vz .hero-h1{transform:translateY(20px);transition-delay:.3s}
-.vz .hero-deck{transition-delay:.55s}
-.vz .loaded .hero-kick,.vz .loaded .hero-deck{opacity:1}
-.vz .loaded .hero-h1{opacity:1;transform:translateY(0)}
-.vz .hero h1{font-size:clamp(42px,6.8vw,88px);line-height:1.02;letter-spacing:-.025em;margin:28px 0 32px;max-width:15ch}
-.vz .hero h1 em{font-family:var(--ff-d);font-style:italic;font-weight:400}
-.vz .hero-deck{font-family:var(--ff-m);font-size:13px;line-height:1.75;color:var(--muted);max-width:52ch;margin:0 auto;letter-spacing:.01em}
+/* ── RAIL + CAROUSEL REGION ──────────────────────── */
+.vz .region{padding:96px clamp(20px,5vw,56px) 40px;max-width:1240px;margin:0 auto}
+.vz .idx-region{max-width:1240px;padding-top:104px}
+.vz .idx-wrap{display:grid;grid-template-columns:340px 1fr;gap:clamp(32px,5vw,72px);align-items:start}
+.vz .idx-rail{position:sticky;top:92px}
+.vz .idx-h1{font-family:var(--d);font-weight:600;font-size:clamp(30px,3.4vw,46px);line-height:1.04;letter-spacing:-.02em;margin:18px 0 18px;text-wrap:balance}
+.vz .idx-deck{font-family:var(--b);font-size:13.5px;line-height:1.7;color:var(--muted);max-width:34ch}
+.vz .idx-stats{display:flex;gap:26px;margin:26px 0 28px}
+.vz .idx-stat b{font-family:var(--d);font-weight:600;font-size:24px;display:block}
+.vz .idx-stat span{font-family:var(--m);font-size:8.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted)}
+.vz .idx-filter{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:24px}
+.vz .idx-chip{font-family:var(--m);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line2);border-radius:999px;padding:6px 13px;transition:all .25s}
+.vz .idx-chip:hover{border-color:var(--ink);color:var(--ink)}
+.vz .idx-chip.on{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.vz .idx-about{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent)}
+.vz .idx-about:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
 
-/* Triad (Data · Narrative · Design) ---------------------- */
-.vz .triad{padding:96px clamp(24px,5vw,56px);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.vz .triad-head{text-align:center;margin-bottom:72px}
-.vz .triad-head h2{font-size:clamp(28px,3.4vw,40px);font-style:italic;font-weight:400;margin-top:18px;max-width:22ch;margin-left:auto;margin-right:auto}
-.vz .triad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;max-width:1100px;margin:0 auto}
-.vz .triad-col{padding:0 clamp(16px,3vw,40px);text-align:center;position:relative}
-.vz .triad-col + .triad-col{border-left:1px solid var(--line)}
-.vz .triad-col .node{font-family:var(--ff-m);font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;margin-bottom:18px}
-.vz .triad-col h3{font-size:clamp(32px,4vw,52px);font-style:italic;font-weight:400;margin-bottom:16px}
-.vz .triad-col p{font-family:var(--ff-m);font-size:13px;line-height:1.85;color:var(--muted);max-width:28ch;margin:0 auto}
-.vz .triad-col.data .node{color:var(--teal)}
-.vz .triad-col.narrative .node{color:var(--pink)}
-.vz .triad-col.design .node{color:var(--blue)}
-.vz .triad-foot{text-align:center;margin-top:64px;max-width:58ch;margin-left:auto;margin-right:auto}
-.vz .triad-foot p{font-family:var(--ff-m);font-size:12.5px;line-height:1.85;color:var(--muted)}
-.vz .triad-foot em{font-family:var(--ff-d);font-style:italic;font-size:15px;color:var(--ink)}
+/* carousel of bento pages */
+.vz .carousel{display:flex;flex-direction:column;gap:18px;height:clamp(460px,calc(100vh - 200px),700px)}
+.vz .carousel-vp{flex:1;overflow:hidden;min-height:0}
+.vz .carousel-track{display:flex;height:100%;transition:transform .55s cubic-bezier(.22,1,.36,1)}
+.vz .carousel-slide{flex:0 0 auto;height:100%}
+.vz .bento-slide{height:100%;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:1.08fr 1fr;gap:var(--gap)}
+.vz .bento-slide .bcard.big{grid-column:span 3}
+.vz .bento-slide .bcard.sm{grid-column:span 2}
 
-/* Work / bento ------------------------------------------- */
-.vz .bento{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:minmax(170px,auto);gap:14px;max-width:1200px;margin:0 auto;text-align:left}
-.vz .bn{position:relative;background:#fff;border:1px solid var(--line);border-radius:6px;padding:26px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease;color:var(--ink);overflow:hidden;isolation:isolate}
-.vz .bn > *{position:relative;z-index:1}
-.vz .bn-aura{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
-.vz .bn-aura iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}
-.vz .bn-aura::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.40) 0%,rgba(0,0,0,0) 38%),linear-gradient(to top,rgba(0,0,0,.55) 0%,rgba(0,0,0,.18) 55%,rgba(0,0,0,0) 100%)}
-.vz .bn.has-aura,.vz .bn.has-aura.feature,.vz .bn.has-aura.accent-pink,.vz .bn.has-aura.accent-blue{background:var(--bn-bg,#0c0c10);border-color:color-mix(in srgb,var(--bn-text,#fff) 12%,transparent);color:var(--bn-text,#fff)}
-.vz .bn.has-aura .bn-aura::after{background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 50%,transparent) 0%,transparent 38%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 70%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 22%,transparent) 55%,transparent 100%)}
-.vz .bn.has-aura h3,.vz .bn.has-aura.feature h3{color:var(--bn-text,#fff)}
-.vz .bn.has-aura p,.vz .bn.has-aura.feature p{color:var(--bn-text,#fff)}
-.vz .bn.has-aura .bn-k,.vz .bn.has-aura.feature .bn-k{color:color-mix(in srgb,var(--bn-muted,var(--bn-text,#fff)) 92%,transparent)}
-.vz .bn.has-aura .bn-n{color:var(--bn-accent,var(--bn-text,#fff))}
-.vz .bn.has-aura .bn-a{color:var(--bn-accent,var(--bn-text,#fff));opacity:.7}
-.vz .bn.has-aura:hover .bn-a{opacity:1}
-.vz .bn:hover{transform:translateY(-2px);box-shadow:0 12px 32px -18px rgba(12,12,16,.22);border-color:rgba(12,12,16,.18);opacity:1}
-.vz .bn-k{font-family:var(--ff-m);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-.vz .bn-n{color:var(--teal)}
-.vz .bn h3{font-family:var(--ff-d);font-style:italic;font-weight:400;color:var(--ink);line-height:1.18;margin:0 0 10px;font-size:22px}
-.vz .bn p{font-family:var(--ff-m);font-size:12.5px;line-height:1.7;color:var(--ink);margin:0}
-.vz .bn-a{margin-top:18px;font-family:var(--ff-m);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal);opacity:.55;transition:opacity .3s}
-.vz .bn:hover .bn-a{opacity:1}
-.vz .bn.feature{grid-column:span 4;grid-row:span 2;background:var(--ink);border-color:rgba(255,255,255,.08);color:#fff}
-.vz .bn.feature h3{color:#fff;font-size:clamp(26px,3vw,38px);line-height:1.15}
-.vz .bn.feature p{color:#fff;font-size:13.5px;line-height:1.75}
-.vz .bn.feature .bn-k{color:rgba(255,255,255,.4)}
-.vz .bn.feature .bn-n{color:var(--teal)}
-.vz .bn.wide{grid-column:span 2}
-.vz .bn.tall{grid-column:span 2;grid-row:span 2}
-.vz .bn.accent-pink{background:var(--pink);border-color:transparent;color:#fff}
-.vz .bn.accent-pink:not(.has-aura) h3,.vz .bn.accent-pink:not(.has-aura) p,.vz .bn.accent-pink:not(.has-aura) .bn-k,.vz .bn.accent-pink:not(.has-aura) .bn-a{color:#fff}
-.vz .bn.accent-pink:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
-.vz .bn.accent-blue{background:var(--blue);border-color:transparent;color:#fff}
-.vz .bn.accent-blue:not(.has-aura) h3,.vz .bn.accent-blue:not(.has-aura) p,.vz .bn.accent-blue:not(.has-aura) .bn-k,.vz .bn.accent-blue:not(.has-aura) .bn-a{color:#fff}
-.vz .bn.accent-blue:not(.has-aura) .bn-k{color:rgba(255,255,255,.8)}
+/* bento card — every card is themed: a dark base + accent glow (set inline
+   from the story/epic theme), rendered in that theme's own typefaces.
+   The --bn-* custom properties are supplied per card; site fonts/ink are the
+   fallback so an un-themed card still renders. */
+.vz .bcard{position:relative;display:flex;flex-direction:column;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;isolation:isolate;min-height:0}
+.vz .bcard.big{padding:22px 24px}
+.vz .bcard.sm{padding:15px 17px}
+.vz .bcard > *{position:relative;z-index:1}
+.vz .bcard:hover{transform:translateY(-3px);box-shadow:0 18px 42px -20px rgba(0,0,0,.55);opacity:1}
+.vz .bcard.themed{border-color:color-mix(in srgb,var(--bn-text,#fff) 12%,transparent)}
+.vz .bcard-rule{position:absolute;top:0;left:0;right:0;height:3px;background:var(--bn-accent,var(--accent));z-index:3}
+.vz .bcard-k{display:flex;align-items:center;gap:9px;font-family:var(--bn-mono,var(--m));font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:color-mix(in srgb,var(--bn-text,var(--muted)) 65%,transparent);margin-bottom:10px}
+.vz .bcard.epic .bcard-k{display:block;white-space:nowrap;margin-top:3px;color:var(--bn-accent,var(--accent))}
+.vz .bcard-n{color:var(--bn-accent,var(--accent));font-weight:600}
+.vz .bcard-topic{padding:2px 7px;border:1px solid color-mix(in srgb,var(--bn-text,#000) 25%,transparent);border-radius:999px;font-size:8.5px;letter-spacing:1.1px}
+.vz .bcard-date{margin-left:auto;opacity:.7}
+.vz .bcard-h{font-family:var(--bn-serif,var(--e));font-style:italic;font-weight:400;color:var(--bn-text,var(--ink));line-height:1.14;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical}
+.vz .bcard.big .bcard-h{font-size:26px;-webkit-line-clamp:3;margin-bottom:8px}
+.vz .bcard.sm .bcard-h{font-size:19px;-webkit-line-clamp:3}
+.vz .bcard-p{font-family:var(--bn-sans,var(--b));font-size:13px;line-height:1.55;color:color-mix(in srgb,var(--bn-text,var(--muted)) 80%,transparent);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vz .bcard-a{margin-top:12px;font-family:var(--bn-mono,var(--m));font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--bn-accent,var(--accent));opacity:.65}
+.vz .bcard:hover .bcard-a{opacity:1}
+.vz .bcard-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-family:var(--bn-mono,var(--m));font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase}
+.vz .bcard-meta{color:color-mix(in srgb,var(--bn-text,var(--muted)) 70%,transparent)}
+.vz .bcard.epic .bcard-a{font-weight:600;opacity:1}
 
-/* Epics --------------------------------------------------- */
-.vz .epics{padding:120px clamp(24px,5vw,56px);border-top:1px solid var(--line);background:var(--cream)}
-.vz .epics-inner{max-width:1100px;margin:0 auto}
-.vz .epics-head{text-align:center;margin-bottom:64px}
-.vz .epics-head h2{font-size:clamp(30px,4vw,48px);font-style:italic;font-weight:400;margin-top:18px;max-width:22ch;margin-left:auto;margin-right:auto}
-.vz .epics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-.vz .ep{position:relative;background:#fff;border:1px solid var(--line);border-radius:6px;padding:32px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease;color:var(--ink);min-height:220px}
-.vz .ep:hover{transform:translateY(-2px);box-shadow:0 12px 32px -18px rgba(12,12,16,.22);border-color:rgba(12,12,16,.18);opacity:1}
-.vz .ep-k{font-family:var(--ff-m);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--pink);margin-bottom:18px}
-.vz .ep h3{font-family:var(--ff-d);font-style:italic;font-weight:400;color:var(--ink);line-height:1.18;margin:0 0 12px;font-size:26px}
-.vz .ep p{font-family:var(--ff-m);font-size:13px;line-height:1.75;color:var(--muted);margin:0}
-.vz .ep-a{margin-top:24px;font-family:var(--ff-m);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--pink);opacity:.6;transition:opacity .3s}
-.vz .ep:hover .ep-a{opacity:1}
+/* live aura layered over the themed base for the stories that have one */
+.vz .bcard .bn-aura{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+.vz .bcard .bn-aura iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}
+.vz .bcard .bn-aura::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 50%,transparent) 0%,transparent 38%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 72%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 24%,transparent) 55%,transparent 100%)}
 
-/* Manifesto ---------------------------------------------- */
-.vz .manifesto{padding:120px clamp(24px,5vw,56px);background:var(--cream);border-top:1px solid var(--line)}
-.vz .manifesto-inner{max-width:760px;margin:0 auto}
-.vz .manifesto h2{font-size:clamp(30px,4vw,48px);font-style:italic;font-weight:400;margin:20px 0 40px;line-height:1.12}
-.vz .manifesto p{font-family:var(--ff-m);font-size:14.5px;line-height:1.95;color:#2A2824;margin:0 0 24px}
-.vz .pull{font-family:var(--ff-d);font-style:italic;font-weight:400;font-size:clamp(22px,2.8vw,30px);line-height:1.35;color:var(--ink);padding:36px 0;margin:40px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
+/* static thumbnail image layered over the solid bg when no aura is set */
+.vz .bcard .bn-thumb{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+.vz .bcard .bn-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:.38;transition:opacity .35s}
+.vz .bcard:hover .bn-thumb img{opacity:.5}
+.vz .bcard .bn-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 52%,transparent) 0%,transparent 42%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 82%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 28%,transparent) 60%,transparent 100%)}
 
-/* Who we are --------------------------------------------- */
-.vz .who{padding:120px clamp(24px,5vw,56px);border-top:1px solid var(--line)}
-.vz .who-inner{max-width:1100px;margin:0 auto}
-.vz .who-head{text-align:center;margin-bottom:72px}
-.vz .who-head h2{font-size:clamp(30px,4vw,48px);font-style:italic;font-weight:400;margin-top:18px}
-.vz .who-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(40px,6vw,80px)}
-.vz .bio h3{font-family:var(--ff-d);font-style:italic;font-weight:400;font-size:28px;margin-bottom:6px}
-.vz .bio .role{font-family:var(--ff-m);font-size:10.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--teal);margin-bottom:20px}
-.vz .bio p{font-family:var(--ff-m);font-size:13.5px;line-height:1.85;color:#2A2824;margin:0}
+/* carousel controls */
+.vz .carousel-ctrl{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.vz .carousel-dots{display:flex;gap:7px}
+.vz .cdot{width:7px;height:7px;border-radius:999px;border:none;background:rgba(12,12,16,.18);padding:0;transition:all .3s}
+.vz .cdot.on{background:var(--accent);transform:scale(1.25)}
+.vz .carousel-nav{display:flex;align-items:center;gap:14px}
+.vz .carousel-all{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line2);padding-bottom:2px}
+.vz .carousel-all:hover{color:var(--accent);border-color:var(--accent);opacity:1}
+.vz .carr{width:34px;height:34px;border-radius:999px;border:1px solid var(--line2);background:transparent;font-size:16px;line-height:1;color:var(--ink);display:flex;align-items:center;justify-content:center;transition:all .25s}
+.vz .carr:hover:not(:disabled){background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.vz .carr:disabled{opacity:.3;cursor:default}
+.vz .carousel-count{font-family:var(--m);font-size:11px;letter-spacing:1px;color:var(--muted);min-width:56px;text-align:center}
+.vz .carousel-count i{font-style:normal;opacity:.5;margin:0 2px}
 
-/* Contact ------------------------------------------------ */
-.vz .contact{padding:140px clamp(24px,5vw,56px);background:var(--ink);color:var(--cream);text-align:center}
-.vz .contact h2{color:var(--cream);font-size:clamp(30px,4.4vw,52px);font-style:italic;font-weight:400;max-width:18ch;margin:24px auto 28px;line-height:1.12}
-.vz .contact p{font-family:var(--ff-m);font-size:13.5px;color:rgba(244,241,236,.6);max-width:44ch;margin:0 auto 40px;line-height:1.8}
-.vz .contact .kicker{color:var(--teal)}
-.vz .contact .kicker::before{background:var(--teal)}
-.vz .contact .btn.teal{background:var(--teal);color:var(--ink);border-color:var(--teal)}
+/* ── EPICS ROW (below the header) ────────────────── */
+.vz .epics-section{max-width:1240px;margin:0 auto;padding:20px clamp(20px,5vw,56px) 64px;border-top:1px solid var(--line)}
+.vz .region-head{display:flex;justify-content:space-between;align-items:baseline;gap:20px;margin:64px 0 26px;flex-wrap:wrap}
+.vz .region-sub{font-family:var(--e);font-style:italic;font-size:19px;color:var(--muted)}
+.vz .epics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:var(--gap)}
+.vz .epics-row .bcard{min-height:212px}
 
-/* Footer ------------------------------------------------- */
-.vz footer{background:var(--ink);padding:32px clamp(24px,5vw,56px);border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
-.vz footer .mark{font-family:var(--ff-d);font-size:14px;font-style:italic;color:rgba(244,241,236,.4)}
-.vz footer .loc{font-family:var(--ff-m);font-size:10px;letter-spacing:1.6px;color:rgba(244,241,236,.25);margin-left:14px;text-transform:uppercase}
-.vz footer .links{display:flex;gap:24px}
-.vz footer .links a{font-family:var(--ff-m);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:rgba(244,241,236,.3)}
+/* ── STORY EMBED — sticky scroll-sync ────────────── */
+.vz .story-embed{border-top:1px solid var(--line)}
+.vz .story-embed-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;padding:clamp(20px,4vh,48px) clamp(20px,5vw,56px)}
+.vz .story-embed-inner{max-width:1240px;margin:0 auto;width:100%}
+.vz .story-embed-head{margin-bottom:24px}
+.vz .story-embed-frame{border-radius:10px;overflow:hidden;box-shadow:0 32px 80px -20px rgba(12,12,16,.22),0 0 0 1px var(--line2)}
+.vz .story-embed-bar{height:38px;background:var(--soft);display:flex;align-items:center;padding:0 14px;gap:7px;border-bottom:1px solid rgba(12,12,16,.12);flex-shrink:0}
+.vz .story-embed-dot{width:10px;height:10px;border-radius:999px}
+.vz .story-embed-dot:nth-child(1){background:#ff5f57}
+.vz .story-embed-dot:nth-child(2){background:#febc2e}
+.vz .story-embed-dot:nth-child(3){background:#28c840}
+.vz .story-embed-url{flex:1;margin:0 12px;height:22px;background:rgba(12,12,16,.12);border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--m);font-size:9px;letter-spacing:.5px;color:rgba(12,12,16,.35);overflow:hidden;white-space:nowrap}
+.vz .story-embed-iframe-wrap{position:relative}
+.vz .story-embed-iframe-wrap iframe{display:block;width:100%;height:clamp(400px,72vh,820px);border:0}
+/* Transparent overlay so wheel events bubble to the page scroller rather than
+   being captured by the iframe. Sits above the iframe, z-index keeps it on top. */
+.vz .story-embed-scroll-cap{position:absolute;inset:0;z-index:1}
 
-/* Responsive --------------------------------------------- */
-@media(max-width:860px){
-  .vz .bento{grid-template-columns:repeat(2,1fr)}
-  .vz .bn,.vz .bn.feature,.vz .bn.wide,.vz .bn.tall{grid-column:span 2;grid-row:auto}
-  .vz .triad-grid{grid-template-columns:1fr}
-  .vz .triad-col + .triad-col{border-left:none;border-top:1px solid var(--line);margin-top:40px;padding-top:40px}
-  .vz .who-grid{grid-template-columns:1fr}
+/* ── CONTACT ─────────────────────────────────────── */
+.vz .contact{padding:130px clamp(20px,5vw,56px);background:var(--ink);color:var(--cream);text-align:center;border-top:3px solid var(--teal)}
+.vz .contact .kick{justify-content:center}
+.vz .contact-h{font-family:var(--e);font-style:italic;font-weight:400;font-size:clamp(30px,4.4vw,52px);line-height:1.12;color:var(--cream);max-width:18ch;margin:22px auto 24px}
+.vz .contact-p{font-family:var(--b);font-size:14px;line-height:1.85;color:rgba(244,241,236,.62);max-width:52ch;margin:0 auto 38px}
+.vz .contact-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.vz .cbtn{font-family:var(--m);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;padding:15px 28px;border-radius:3px;border:1px solid transparent}
+.vz .cbtn.teal{background:var(--teal);color:var(--ink)}
+.vz .cbtn.ghost{background:transparent;color:var(--cream);border-color:rgba(244,241,236,.3)}
+.vz .cbtn.ghost:hover{border-color:var(--cream);opacity:1}
+
+/* ── FOOTER ──────────────────────────────────────── */
+.vz .vzfoot{background:var(--ink);padding:28px clamp(20px,5vw,56px);border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.vz .vzfoot-l{display:flex;align-items:center;gap:12px}
+.vz .vzfoot-mark{font-family:var(--e);font-style:italic;font-size:16px;color:rgba(244,241,236,.6)}
+.vz .vzfoot-loc{font-family:var(--m);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(244,241,236,.28);max-width:38ch}
+.vz .vzfoot-links{display:flex;gap:22px}
+.vz .vzfoot-links a{font-family:var(--m);font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(244,241,236,.4)}
+.vz .vzfoot-links a:hover{color:var(--teal);opacity:1}
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media(max-width:980px){
+  .vz .idx-wrap{grid-template-columns:1fr;gap:32px}
+  .vz .idx-rail{position:static}
 }
-@media(max-width:560px){
-  .vz .nav-link{display:none}
+@media(max-width:820px){
+  /* The carousel can't page horizontally on a phone — unroll it into a single
+     vertical feed. Override the inline track width/transform (hence !important),
+     stack the slides, and drop each bento page to one column. */
+  .vz .carousel{height:auto;gap:0}
+  .vz .carousel-vp{overflow:visible}
+  .vz .carousel-track{width:100%!important;transform:none!important;flex-direction:column;gap:var(--gap)}
+  .vz .carousel-slide{width:100%!important;height:auto}
+  .vz .bento-slide{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(150px,auto)}
+  .vz .bento-slide .bcard.big,.vz .bento-slide .bcard.sm{grid-column:span 1}
+  /* paging controls are meaningless once unrolled — keep only the archive link */
+  .vz .carousel-dots,.vz .carr,.vz .carousel-count{display:none}
+  .vz .carousel-ctrl{justify-content:flex-end;margin-top:18px}
+  .vz .vznav-link{display:none}
+}
+@media(max-width:520px){
+  .vz .bcard.big .bcard-h{font-size:23px}
+  .vz .region{padding-top:88px}
 }
 `
 
-export default function HomeClient({ stories, epics = [] }: { stories: HomeStory[]; epics?: HomeEpic[] }) {
-  useEffect(() => {
-    const nav = document.getElementById('nav')
-    const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 60)
-    window.addEventListener('scroll', onScroll)
+/* ── Penrose mark (the studio's three-mysteries logo) ───────── */
+function PenroseMark({ size = 20, dark = false }: { size?: number; dark?: boolean }) {
+  const line = dark ? 'rgba(255,255,255,.22)' : 'rgba(12,12,16,.18)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 150 150" aria-hidden style={{ display: 'block' }}>
+      <line x1="75" y1="28" x2="28" y2="122" stroke={line} strokeWidth="1" />
+      <line x1="75" y1="28" x2="122" y2="122" stroke={line} strokeWidth="1" />
+      <line x1="28" y1="122" x2="122" y2="122" stroke={line} strokeWidth="1" />
+      <circle cx="75" cy="28" r="15" fill="#0BBFAB" />
+      <circle cx="28" cy="122" r="15" fill="#E84D7A" />
+      <circle cx="122" cy="122" r="15" fill="#2B4ACF" />
+    </svg>
+  )
+}
 
-    // threshold:0 (any pixel) rather than a ratio — the bento grid is a single
-    // tall element, and a ratio like 0.12 can never be met once the grid grows
-    // taller than ~8× the viewport (e.g. cards stacked on mobile), leaving it
-    // stuck at opacity:0 but still clickable.
+const fmtMonth = (d: string) =>
+  new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+
+const DEFAULT_CARD_THEME: CardTheme = {
+  bg: '#0C0C10',
+  text: '#FFFFFF',
+  muted: 'rgba(255,255,255,.7)',
+  accent: '#0BBFAB',
+}
+
+/* A carousel item is a story plus its index in the full list. */
+type CarouselItem = { data: HomeStory; n: number }
+
+function StoryCard({ item, big }: { item: CarouselItem; big: boolean }) {
+  const s = item.data
+  const ct = s.theme ? storyCardTheme(s.theme) : DEFAULT_CARD_THEME
+  const hasAura = Boolean(s.aura)
+  const hasThumb = !hasAura && Boolean(s.thumbnail)
+  return (
+    <Link
+      className={`bcard story themed ${big ? 'big' : 'sm'}`}
+      href={`/story/${s.slug}`}
+      style={cardThemeStyle(ct)}
+    >
+      {hasAura && s.aura && <AuraBackground slug={s.aura} />}
+      {hasThumb && s.thumbnail && (
+        <div className="bn-thumb" aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={s.thumbnail} alt="" loading="lazy" />
+        </div>
+      )}
+      <div className="bcard-top">
+        <div className="bcard-k">
+          <span className="bcard-n">{String(item.n + 1).padStart(2, '0')}</span>
+          {s.topic && <span className="bcard-topic">{s.topic}</span>}
+          <span className="bcard-date">{fmtMonth(s.date)}</span>
+        </div>
+        <h3 className="bcard-h">{s.title}</h3>
+        {big && <p className="bcard-p">{s.subtitle}</p>}
+      </div>
+      <div className="bcard-a">Read →</div>
+    </Link>
+  )
+}
+
+/* The running epics, as a themed row just below the header. */
+function EpicsSection({ epics }: { epics: HomeEpic[] }) {
+  if (!epics.length) return null
+  return (
+    <section id="epics" className="epics-section">
+      <div className="region-head">
+        <div className="kick pink">Epics</div>
+        <span className="region-sub">Investigations we keep returning to</span>
+      </div>
+      <div className="epics-row">
+        {epics.map((e, i) => (
+          <Link
+            key={e.slug}
+            className="bcard epic themed big"
+            href={`/${e.slug}`}
+            style={cardThemeStyle(epicCardTheme(e.theme, i))}
+          >
+            <div className="bcard-rule" />
+            <div className="bcard-top">
+              <div className="bcard-k">Epic · {String(i + 1).padStart(2, '0')}</div>
+              <h3 className="bcard-h">{e.name}</h3>
+              {e.description && <p className="bcard-p">{e.description}</p>}
+            </div>
+            <div className="bcard-foot">
+              <span className="bcard-meta">Collection</span>
+              <span className="bcard-a">Enter →</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export default function HomeClient({
+  stories,
+  epics = [],
+  fontUrls = [],
+}: {
+  stories: HomeStory[]
+  epics?: HomeEpic[]
+  fontUrls?: string[]
+}) {
+  const [filter, setFilter] = useState('All')
+  const [page, setPage] = useState(0)
+
+  const embedWrapperRef = useRef<HTMLElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const scrollCapRef = useRef<HTMLDivElement>(null)
+  const sectionCountRef = useRef(10) // updated when story posts viz-story-ready
+  const currentIdxRef = useRef(0)   // which section we're currently on
+
+  // Topic chips are derived from whatever topics the stories actually carry —
+  // empty until stories are tagged, at which point they light up automatically.
+  const topics = useMemo(
+    () => Array.from(new Set(stories.map((s) => s.topic).filter((t): t is string => Boolean(t)))),
+    [stories]
+  )
+  const chips = useMemo(() => ['All', ...topics], [topics])
+
+  const visibleStories = useMemo(() => {
+    if (filter === 'All') return stories
+    return stories.filter((s) => s.topic === filter)
+  }, [filter, stories])
+
+  // The carousel is stories-only; chunk into bento pages of 5 — the first two
+  // render big (top row), the next three small.
+  const items: CarouselItem[] = useMemo(
+    () => visibleStories.map((s) => ({ data: s, n: stories.indexOf(s) })),
+    [visibleStories, stories]
+  )
+
+  const slides = useMemo(() => {
+    const out: CarouselItem[][] = []
+    for (let i = 0; i < items.length; i += 5) out.push(items.slice(i, i + 5))
+    if (!out.length) out.push([])
+    return out
+  }, [items])
+
+  const total = slides.length
+
+  // Reset to the first page whenever the filter repaginates the carousel —
+  // adjusted during render (not in an effect) per React's guidance.
+  const [pageFilter, setPageFilter] = useState(filter)
+  if (pageFilter !== filter) {
+    setPageFilter(filter)
+    setPage(0)
+  }
+  const cur = Math.min(page, total - 1)
+
+  // Nav background on scroll + gentle reveal for the lower editorial sections.
+  useEffect(() => {
+    const nav = document.getElementById('vznav')
+    const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 50)
+    window.addEventListener('scroll', onScroll)
     const obs = new IntersectionObserver(
       (es) => es.forEach((e) => { if (e.isIntersecting) e.target.classList.add('v') }),
       { threshold: 0, rootMargin: '0px 0px -64px 0px' }
     )
     document.querySelectorAll('.rv').forEach((el) => obs.observe(el))
 
-    const t = setTimeout(() => document.getElementById('hero')?.classList.add('loaded'), 80)
+    // Story posts its section count once mounted so we can size the wrapper.
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'viz-story-ready') return
+      const n = Number(e.data.sectionCount)
+      if (n > 0) {
+        sectionCountRef.current = n
+        const wrapper = embedWrapperRef.current
+        if (wrapper) wrapper.style.setProperty('--embed-sections', String(n))
+      }
+    }
+    window.addEventListener('message', onMessage)
 
     return () => {
       window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('message', onMessage)
       obs.disconnect()
-      clearTimeout(t)
     }
   }, [])
+
+  // Wheel interception on the scroll-cap overlay.
+  // Accumulates trackpad/mouse delta and triggers one section change at a time,
+  // then smooth-scrolls both the page and the story. Locked during transition
+  // so rapid gestures don't stack up. At first/last section the overlay yields
+  // control back to the page so the user can naturally scroll away.
+  useEffect(() => {
+    const cap = scrollCapRef.current
+    if (!cap) return
+
+    const THRESHOLD = 80 // px of accumulated delta to commit one section change
+    const LOCK_MS = 700  // ms to hold the lock while smooth scroll settles
+
+    let pendingDelta = 0
+    let locked = false
+
+    const seekTo = (idx: number) => {
+      currentIdxRef.current = idx
+      locked = true
+      pendingDelta = 0
+
+      // Snap the page to exactly this section's position within the wrapper
+      const wrapper = embedWrapperRef.current
+      if (wrapper) {
+        const wrapperTop = wrapper.getBoundingClientRect().top + window.scrollY
+        window.scrollTo({ top: wrapperTop + idx * window.innerHeight, behavior: 'smooth' })
+      }
+
+      // Advance the story
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'viz-story-seek', index: idx },
+        '*'
+      )
+
+      setTimeout(() => { locked = false; pendingDelta = 0 }, LOCK_MS)
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      const idx = currentIdxRef.current
+      const count = sectionCountRef.current
+
+      // At boundaries: don't intercept — let the page scroll away naturally
+      if ((e.deltaY < 0 && idx <= 0) || (e.deltaY > 0 && idx >= count - 1)) return
+
+      e.preventDefault()
+      if (locked) return
+
+      pendingDelta += e.deltaY
+      if (Math.abs(pendingDelta) < THRESHOLD) return
+
+      const dir = pendingDelta > 0 ? 1 : -1
+      const next = Math.max(0, Math.min(count - 1, idx + dir))
+      if (next !== idx) seekTo(next)
+    }
+
+    // Keep currentIdxRef in sync when the user scrolls naturally (e.g. at
+    // boundaries or via the scrollbar) so re-entry is always correct.
+    const onPageScroll = () => {
+      if (locked) return
+      const wrapper = embedWrapperRef.current
+      if (!wrapper) return
+      const { top, height } = wrapper.getBoundingClientRect()
+      if (top > 0) { currentIdxRef.current = 0; return }
+      if (-top >= height) return
+      currentIdxRef.current = Math.min(
+        sectionCountRef.current - 1,
+        Math.floor((-top / height) * sectionCountRef.current)
+      )
+    }
+
+    cap.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('scroll', onPageScroll, { passive: true })
+    return () => {
+      cap.removeEventListener('wheel', onWheel)
+      window.removeEventListener('scroll', onPageScroll)
+    }
+  }, [])
+
+  const go = (d: number) => setPage((p) => Math.min(total - 1, Math.max(0, p + d)))
+  const archiveLabel = `All ${stories.length} →`
 
   return (
     <div className="vz">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..700&family=Libre+Franklin:ital,wght@0,300..800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet"
       />
+      {/* per-card theme typefaces (each story/epic renders in its own fonts) */}
+      {fontUrls.map((u) => (
+        <link key={u} href={u} rel="stylesheet" />
+      ))}
       <style dangerouslySetInnerHTML={{ __html: css }} />
 
-      <nav className="nav" id="nav">
+      <nav className="vznav" id="vznav">
         <button
-          className="nav-logo"
-          onClick={() => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' })}
+          className="vznav-logo"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           aria-label="Vizmaya Labs"
         >
           <VizmayaLogo
-            className="w-[180px] h-[44px]"
+            className="w-[170px] h-[42px]"
             palette={{
               text: '#111111',
-              teal: '#00E6D9',
-              accent: '#FC3692',
-              accent2: '#004CFF',
+              teal: '#0BBFAB',
+              accent: '#E84D7A',
+              accent2: '#2B4ACF',
               surface: '#FFFFFF',
               muted: '#1D1D1D',
               line: '#111111',
             }}
           />
         </button>
-        <div className="nav-r">
-          <a className="nav-link" href="#work">Work</a>
-          <a className="nav-link" href="#epics">Epics</a>
-          <Link className="nav-link" href="/stories">Archive</Link>
-          <a className="nav-link" href="#about">About</a>
-          <a className="nav-cta" href="https://www.youtube.com/@Vizmayaa" target="_blank" rel="noreferrer">Subscribe</a>
+        <div className="vznav-r">
+          <a className="vznav-link" href="#work">Work</a>
+          <a className="vznav-link" href="#epics">Epics</a>
+          <Link className="vznav-link" href="/stories">Archive</Link>
+          <a className="vznav-link" href="#contact">Contact</a>
+          <a className="vznav-cta" href="https://www.youtube.com/@Vizmayaa" target="_blank" rel="noreferrer">Subscribe</a>
         </div>
       </nav>
 
-      {/* MASTHEAD — hero + work grid as one block */}
-      <section id="hero" className="masthead">
-        <div className="hero">
-          <div className="hero-kick kicker">Data journalism · Geopolitical storytelling</div>
-          <h1 className="hero-h1">
-            We turn complex data into stories<br />
-            <em>impossible to ignore.</em>
-          </h1>
-          <p className="hero-deck">
-           We build scrollytelling pieces and visual essays that hold the rigour and the explanation together, where the map does the argument and the prose does the meaning.
-          </p>
-        </div>
-
-        <div id="work" className="bento rv">
-          {stories.map((s, i) => {
-            const mod = i % 5
-            const isTall = mod === 3
-            const isTrailingTall = isTall && i >= stories.length - 2
-            const tileClass = i === 0
-              ? 'feature'
-              : mod === 1 ? 'wide'
-              : mod === 2 ? 'wide'
-              : isTall ? (isTrailingTall ? 'wide accent-pink' : 'tall accent-pink')
-              : 'wide accent-blue'
-            const auraClass = s.aura ? ' has-aura' : ''
-            const themeStyle: CSSProperties | undefined = s.aura && s.theme
-              ? {
-                  ['--bn-bg' as string]: s.theme.colors.background,
-                  ['--bn-text' as string]: s.theme.colors.text,
-                  ['--bn-muted' as string]: s.theme.colors.muted,
-                  ['--bn-accent' as string]: s.theme.colors.accent,
-                }
-              : undefined
-            return (
-              <Link key={s.slug} href={`/story/${s.slug}`} className={`bn ${tileClass}${auraClass}`} style={themeStyle}>
-                {s.aura && <AuraBackground slug={s.aura} />}
-                <div>
-                  <div className="bn-k">
-                    <span className="bn-n">#{String(i + 1).padStart(2, '0')}</span>
-                    <span>{new Date(s.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
-                  </div>
-                  <h3>{s.title}</h3>
-                  <p>{s.subtitle}</p>
-                </div>
-                <div className="bn-a">Read →</div>
-              </Link>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* EPICS — long-running collections */}
-      {epics.length > 0 && (
-        <section id="epics" className="epics">
-          <div className="epics-inner">
-            <div className="epics-head">
-              <div className="rv kicker">Epics</div>
-              <h2 className="rv" data-d="1">Investigations we keep returning to.</h2>
+      {/* WORK — sticky studio rail + carousel of bento pages */}
+      <section id="work" className="region idx-region grid-region">
+        <div className="idx-wrap">
+          <aside className="idx-rail">
+            <div className="kick">{STUDIO.kicker}</div>
+            <h1 className="idx-h1">{STUDIO.statement}</h1>
+            <p className="idx-deck">{STUDIO.deck}</p>
+            <div className="idx-stats">
+              <div className="idx-stat"><b>{stories.length}</b><span>stories published</span></div>
+              <div className="idx-stat"><b>{epics.length}</b><span>running epics</span></div>
+              <div className="idx-stat"><b>2</b><span>people</span></div>
             </div>
-            <div className="epics-grid">
-              {epics.map((e, i) => (
-                <Link
-                  key={e.slug}
-                  href={`/${e.slug}`}
-                  className="ep rv"
-                  data-d={String((i % 3) + 1)}
-                >
-                  <div>
-                    <div className="ep-k">Collection · {String(i + 1).padStart(2, '0')}</div>
-                    <h3>{e.name}</h3>
-                    {e.description && <p>{e.description}</p>}
-                  </div>
-                  <div className="ep-a">Enter →</div>
-                </Link>
+            <div className="idx-filter">
+              {chips.map((c) => (
+                <button key={c} className={'idx-chip' + (filter === c ? ' on' : '')} onClick={() => setFilter(c)}>{c}</button>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+            <a className="idx-about" href="#contact">More about the studio →</a>
+          </aside>
 
-      {/* TRIAD — three worlds, three mysteries */}
-      <section className="triad">
-        <div className="triad-head">
-          <div className="rv kicker">Process</div>
-          <h2 className="rv" data-d="1">
-            Three things. In order. Every time.
-          </h2>
-        </div>
-
-        <div className="triad-grid">
-          <div className="triad-col data rv" data-d="1">
-            <div className="node">01 — Data</div>
-            <h3>Pattern</h3>
-            <p>TWe start with the dataset, not the story. The pattern has to exist before we decide what it means. We find it, and we refuse to distort it.</p>
-          </div>
-          <div className="triad-col narrative rv" data-d="2">
-            <div className="node">02 — Narrative</div>
-            <h3>Meaning</h3>
-            <p>We find the question the data answers. The thing a reader can carry away, repeat, and use to see the world differently.</p>
-          </div>
-          <div className="triad-col design rv" data-d="3">
-            <div className="node">03 — Design</div>
-            <h3>Form</h3>
-            <p>We find the format the insight actually needs. Sometimes a fifteen-section scrollytelling piece. Sometimes a single annotated map and four sentences. The form serves the story, never the other way around.</p>
-          </div>
-        </div>
-
-        <div className="triad-foot rv" data-d="4">
-          <p>
-            Our mark borrows from Roger Penrose&apos;s diagram of reality&apos;s three mysteries —
-            the leaps between pattern, mind, and form. None of them makes sense alone.{' '}
-            <em>Vismaya</em> is Sanskrit for wonder: the feeling when something you couldn&apos;t
-            see becomes suddenly, undeniably visible. We added the <em>z</em> for viz. That&apos;s the job.
-          </p>
-        </div>
-      </section>
-
-      {/* MANIFESTO */}
-      <section className="manifesto">
-        <div className="manifesto-inner">
-          <div className="rv kicker">What we believe</div>
-          <h2 className="rv" data-d="1">Rigour and beauty are the same demand.</h2>
-
-          <p className="rv" data-d="1">
-            The world is full of important things nobody can see — not because they&apos;re hidden,
-            but because nobody has bothered to make them legible. The supply chain that keeps
-            your phone alive runs through six countries and a chokepoint most people can&apos;t
-            name. The policy shift that will reshape your industry in five years is sitting in
-            an appendix, unread. The slow variable that explains the fast headline is right
-            there in the dataset, ignored.
-          </p>
-
-          <div className="pull rv" data-d="2">
-            &ldquo;Either things stay buried in jargon, or they get compressed into hot takes.
-            Both fail the same way.&rdquo;
-          </div>
-
-          <p className="rv" data-d="1">
-            We don&apos;t start with a format — we start with a question: what does this insight
-            actually need to land? Sometimes it&apos;s a ten-minute scrollytelling piece. Sometimes
-            a single chart with a headline. Sometimes a forty-five-second reel. We&apos;d rather
-            kill a good story than publish a wrong one, and we&apos;d rather make one person
-            think differently than impress ten thousand who scroll past and feel nothing.
-          </p>
-        </div>
-      </section>
-
-      {/* WHO WE ARE */}
-      <section id="about" className="who">
-        <div className="who-inner">
-          <div className="who-head">
-            <div className="rv kicker">Who we are</div>
-            <h2 className="rv" data-d="1">A two-person studio</h2>
-          </div>
-          <div className="who-grid">
-            <div className="bio rv" data-d="1">
-              <h3>Shashank A. Pandey</h3>
-              <div className="role">Data storytelling · Visual journalism</div>
-              <p>
-                He started as a journalist who couldn't stop designing, and a designer who couldn't stop researching. Nobody hired that combination, so he taught himself. Not out of strategy. Because the obsession left no choice.
-                He believes clarity is an act of generosity. That every number is someone's lived reality compressed into a digit, and most of the time that life gets flattened into a chart no one reads. He exists to give it back its shape: to sit at the border between what is true and what is understood, and to refuse to let the distance between them be someone else's problem.
-              </p>
+          <div className="carousel">
+            <div className="carousel-vp">
+              <div
+                className="carousel-track"
+                style={{ width: `${total * 100}%`, transform: `translateX(-${cur * (100 / total)}%)` }}
+              >
+                {slides.map((sl, si) => (
+                  <div className="carousel-slide" key={si} style={{ width: `${100 / total}%` }}>
+                    <div className="bento-slide">
+                      {sl.map((it, idx) => (
+                        <StoryCard key={it.data.slug} item={it} big={idx < 2} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="bio rv" data-d="2">
-              <h3>Suprabho Dhenki</h3>
-              <div className="role">Product design · Creative technology</div>
-              <p>
-                Product designer and creative technologist. Founder of Promad, where he builds
-                design tools and workflows — Figma plugins, parametric systems, AI-assisted
-                production pipelines — that address the fragmentation of modern creative work.
-                Previously designed at Microsoft, 1mg, ClearTax, Merkle Science, and Kidzovo;
-                early work on interaction design at IIT Guwahati was featured in a CHI
-                publication. Bridges design and code through motion, data visualization, and
-                modular frameworks for creative production.
-              </p>
+            <div className="carousel-ctrl">
+              <div className="carousel-dots">
+                {slides.map((_, si) => (
+                  <button
+                    key={si}
+                    className={'cdot' + (si === cur ? ' on' : '')}
+                    onClick={() => setPage(si)}
+                    aria-label={`Page ${si + 1}`}
+                  />
+                ))}
+              </div>
+              <div className="carousel-nav">
+                <Link className="carousel-all" href="/stories">{archiveLabel}</Link>
+                <button className="carr" onClick={() => go(-1)} disabled={cur === 0} aria-label="Previous">‹</button>
+                <span className="carousel-count">{String(cur + 1).padStart(2, '0')} <i>/</i> {String(total).padStart(2, '0')}</span>
+                <button className="carr" onClick={() => go(1)} disabled={cur === total - 1} aria-label="Next">›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* EPICS — running collections, as a row below the header */}
+      <EpicsSection epics={epics} />
+
+      {/* STUDIO STORY EMBED — tall wrapper drives page scroll; frame is sticky */}
+      <section
+        ref={embedWrapperRef}
+        className="story-embed"
+        style={{ height: `calc(var(--embed-sections, 6) * 100svh)` }}
+      >
+        <div className="story-embed-sticky">
+          <div className="story-embed-inner">
+            <div className="story-embed-head">
+              <div className="kick">The Studio</div>
+            </div>
+            <div className="story-embed-frame">
+              <div className="story-embed-bar">
+                <span className="story-embed-dot" />
+                <span className="story-embed-dot" />
+                <span className="story-embed-dot" />
+                <span className="story-embed-url">vizmaya.fyi/story/vizmaya-studio</span>
+              </div>
+              <div className="story-embed-iframe-wrap">
+                <iframe
+                  ref={iframeRef}
+                  src="/story/vizmaya-studio?embed=1"
+                  title="Vizmaya Studio"
+                  loading="lazy"
+                />
+                {/* Overlay captures wheel events; onWheel effect drives page scroll + seek */}
+                <div ref={scrollCapRef} className="story-embed-scroll-cap" aria-hidden />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CONTACT */}
-      <section className="contact">
-        <div className="rv kicker">Work with us</div>
-        <h2 className="rv" data-d="1">
-          Have data that deserves a better story?
-        </h2>
-        <p className="rv" data-d="2">
-        We work with B2B data companies, research institutions, and think tanks who have findings worth publishing but need the storytelling and design layer to make them travel.
-        A typical engagement starts with a data brief and an editorial call. We produce scrollytelling pieces, map-led visual essays, standalone infographics, and data reels. Turnaround is two to four weeks depending on scope.
+      <section className="contact" id="contact">
+        <div className="kick teal rv">Work with us</div>
+        <h2 className="contact-h rv" data-d="1">Have data that deserves a better story?</h2>
+        <p className="contact-p rv" data-d="2">
+          We work with B2B data companies, research institutions, and think tanks who have findings worth
+          publishing but need the storytelling and design layer to make them travel. A typical engagement
+          starts with a data brief and an editorial call. Turnaround is two to four weeks.
         </p>
-        <div className="rv" data-d="3">
-          <a className="btn teal" href="mailto:vizmaya@promad.design">Get in touch &nbsp;→</a>
+        <div className="contact-row rv" data-d="3">
+          <a className="cbtn teal" href="mailto:vizmaya@promad.design">Get in touch&nbsp;&nbsp;→</a>
+          <a className="cbtn ghost" href="https://theasymmetryletter.substack.com" target="_blank" rel="noreferrer">Read The Asymmetry Letter</a>
         </div>
       </section>
 
-      <footer>
-        <div>
-          <span className="mark">Vizmaya Labs</span>
+      <footer className="vzfoot">
+        <div className="vzfoot-l">
+          <PenroseMark size={20} dark />
+          <span className="vzfoot-mark">Vizmaya Labs</span>
+          <span className="vzfoot-loc">Sits at the border between what is true and what is understood</span>
         </div>
-        <div className="links">
-          <a href="https://www.youtube.com/@Vizmayaa" target="_blank" rel="noreferrer">Youtube</a>
+        <div className="vzfoot-links">
+          <a href="https://www.youtube.com/@Vizmayaa" target="_blank" rel="noreferrer">YouTube</a>
           <a href="https://www.linkedin.com/company/vizmaya/" target="_blank" rel="noreferrer">LinkedIn</a>
           <a href="https://x.com/VizmayaFyi" target="_blank" rel="noreferrer">X</a>
         </div>

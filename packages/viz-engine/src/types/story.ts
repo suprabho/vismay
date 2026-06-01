@@ -47,6 +47,11 @@ export interface Frontmatter {
   /** Aura embed slug (https://aura.promad.design/embed/<slug>) used as the home tile background. */
   aura?: string
   /**
+   * Editorial topic (e.g. "Energy", "Politics", "Markets"). Optional — when
+   * present, the home page surfaces it as a card pill and a rail filter chip.
+   */
+  topic?: string
+  /**
    * Vertical bundle to load for this story. When set, the page loads the
    * matching `components/story/viz/verticals/<vertical>/` module bundle so
    * its viz types are available to the registry. Unknown verticals are
@@ -59,6 +64,12 @@ export interface Frontmatter {
    * or the deck shell.
    */
   format?: StoryFormat
+  /**
+   * Optional cover image URL shown as the home page card thumbnail background.
+   * Accepts absolute `http(s)` URLs or same-origin `/path` references.
+   * The theme's solid background color remains visible beneath the image.
+   */
+  thumbnail?: string
 }
 
 export type BlockType =

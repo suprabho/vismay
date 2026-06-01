@@ -134,6 +134,7 @@ export default function StoryMapShell({
     setIsCapture(params.get('capture') === '1')
     setIsEmbed(params.get('embed') === '1')
   }, [])
+
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
   // breakpoint — treat them as the same signal so both charts and the
   // unit-selector stay consistent when the viewport changes.
@@ -252,6 +253,31 @@ export default function StoryMapShell({
     els.forEach((el) => observer.observe(el))
     return () => observer.disconnect()
   }, [units.length, isPortrait])
+
+  // Host-driven scroll sync (`?embed=1`): advertise the section count so the
+  // host can size its scroll wrapper, then respond to seek commands by smooth-
+  // scrolling the snap container to the requested section. Smooth (not instant)
+  // keeps this in lockstep with the host's smooth, one-section-at-a-time page
+  // scroll so the story and the page glide together.
+  useEffect(() => {
+    if (!isEmbed) return
+    window.parent.postMessage(
+      { type: 'viz-story-ready', sectionCount: units.length },
+      '*'
+    )
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'viz-story-seek') return
+      const index = Number(e.data.index)
+      if (Number.isNaN(index)) return
+      const root = containerRef.current
+      if (!root) return
+      // Every snap section is exactly one container height (h-svh) tall, so the
+      // host's uniform `index * innerHeight` page offset maps 1:1 to this.
+      root.scrollTo({ top: index * root.clientHeight, behavior: 'smooth' })
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [isEmbed, units.length])
 
   const mode: 'scroll' | 'autoplay' | 'capture' | 'print' = isCapture
     ? 'capture'
