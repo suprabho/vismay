@@ -98,6 +98,7 @@ export default async function CanvasFramePage({ params }: RouteParams) {
           defaults={defaults}
           slug={slug}
           mapOverrides={mapOverrides}
+          format={story.frontmatter.format ?? 'map'}
         />
       </VerticalLoader>
     </ThemeProvider>

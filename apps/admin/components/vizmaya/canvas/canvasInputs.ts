@@ -277,7 +277,7 @@ function layerLeaf(
     // Every layer leaf carries a slot descriptor so the canvas's click
     // handler can route it to the right editor. The dispatcher (CanvasClient)
     // decides which surface opens per `layerType`: map → YAML + MapPicker,
-    // image → ImageEditModal, any module with an `adminForm` → SlotFormModal,
+    // image → ImageEditModal, any module with an `adminForm` → SlotInspector,
     // and types with neither (chart, malformed/unknown) → the YAML editor.
     // Keeping the routing decision out of here lets canvasInputs stay
     // presentation-only.

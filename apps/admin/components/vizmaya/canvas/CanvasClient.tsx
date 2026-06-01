@@ -73,7 +73,7 @@ import {
 import EditorPanel from './EditorPanel'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
-import SlotFormModal from './SlotFormModal'
+import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
 
 interface Props {
@@ -2485,6 +2485,10 @@ export default function CanvasClient({
             (f) => f.key.split('.')[0]
           )
         )
+        // The inspector also owns the slot's `style` (position/size/panel),
+        // so treat it as managed — dropped from `preserved` and re-applied
+        // from the patch, which lets clearing it remove the key.
+        managed.add('style')
         const preserved: Record<string, unknown> = {}
         for (const [k, v] of Object.entries(originalLayer)) {
           if (k === 'type' || managed.has(k)) continue
@@ -2896,13 +2900,13 @@ export default function CanvasClient({
         />
       )}
       {slotTarget?.mode === 'form' && (
-        <SlotFormModal
+        <SlotInspector
+          key={`${slotTarget.unit.parentIndex}:${JSON.stringify(slotTarget.slotPath)}`}
           sectionLabel={formSlotLabel(slotTarget, sectionUnits)}
           layerType={slotTarget.layerType}
           initialLayer={slotTarget.initialLayer}
           saving={slotSaving}
           error={slotError}
-          assetRefs={[]}
           onApply={(next) => handleSlotFormApply(next, slotTarget)}
           onEditAsYaml={() => openSlotAsYaml(slotTarget)}
           onClose={closeSlot}
