@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import AuraBackground from '@/components/AuraBackground'
@@ -27,6 +27,7 @@ export interface HomeEpic {
   /** Per-epic theme override (loose jsonb; may be `{}`). */
   theme?: Record<string, unknown>
 }
+
 
 /* The studio voice — static brand copy shown in the sticky rail. */
 const STUDIO = {
@@ -236,11 +237,23 @@ const css = `
 .vz .epics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:var(--gap)}
 .vz .epics-row .bcard{min-height:212px}
 
-/* ── STORY EMBED ─────────────────────────────────── */
+/* ── STORY EMBED — sticky scroll-sync ────────────── */
 .vz .story-embed{border-top:1px solid var(--line)}
-.vz .story-embed-head{padding:64px clamp(20px,5vw,56px) 32px;max-width:1240px;margin:0 auto}
-.vz .story-embed-frame{overflow:hidden}
-.vz .story-embed-frame iframe{display:block;width:100%;height:clamp(560px,88vh,960px);border:0}
+.vz .story-embed-sticky{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;justify-content:center;padding:clamp(20px,4vh,48px) clamp(20px,5vw,56px)}
+.vz .story-embed-inner{max-width:1240px;margin:0 auto;width:100%}
+.vz .story-embed-head{margin-bottom:24px}
+.vz .story-embed-frame{border-radius:10px;overflow:hidden;box-shadow:0 32px 80px -20px rgba(12,12,16,.22),0 0 0 1px var(--line2)}
+.vz .story-embed-bar{height:38px;background:var(--soft);display:flex;align-items:center;padding:0 14px;gap:7px;border-bottom:1px solid rgba(12,12,16,.12);flex-shrink:0}
+.vz .story-embed-dot{width:10px;height:10px;border-radius:999px}
+.vz .story-embed-dot:nth-child(1){background:#ff5f57}
+.vz .story-embed-dot:nth-child(2){background:#febc2e}
+.vz .story-embed-dot:nth-child(3){background:#28c840}
+.vz .story-embed-url{flex:1;margin:0 12px;height:22px;background:rgba(12,12,16,.12);border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--m);font-size:9px;letter-spacing:.5px;color:rgba(12,12,16,.35);overflow:hidden;white-space:nowrap}
+.vz .story-embed-iframe-wrap{position:relative}
+.vz .story-embed-iframe-wrap iframe{display:block;width:100%;height:clamp(400px,72vh,820px);border:0}
+/* Transparent overlay so wheel events bubble to the page scroller rather than
+   being captured by the iframe. Sits above the iframe, z-index keeps it on top. */
+.vz .story-embed-scroll-cap{position:absolute;inset:0;z-index:1}
 
 /* ── CONTACT ─────────────────────────────────────── */
 .vz .contact{padding:130px clamp(20px,5vw,56px);background:var(--ink);color:var(--cream);text-align:center;border-top:3px solid var(--teal)}
@@ -394,6 +407,12 @@ export default function HomeClient({
   const [filter, setFilter] = useState('All')
   const [page, setPage] = useState(0)
 
+  const embedWrapperRef = useRef<HTMLElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const scrollCapRef = useRef<HTMLDivElement>(null)
+  const sectionCountRef = useRef(10) // updated when story posts viz-story-ready
+  const lastSentIdxRef = useRef(-1)
+
   // Topic chips are derived from whatever topics the stories actually carry —
   // empty until stories are tagged, at which point they light up automatically.
   const topics = useMemo(
@@ -443,11 +462,15 @@ export default function HomeClient({
     )
     document.querySelectorAll('.rv').forEach((el) => obs.observe(el))
 
-    // Scroll-through: the embedded story posts this when the reader wheels past
-    // the first or last section. Resume page scroll in the signalled direction.
+    // Story posts its section count once mounted so we can size the wrapper.
     const onMessage = (e: MessageEvent) => {
-      if (e.data?.type !== 'viz-scroll-exit') return
-      window.scrollBy({ top: e.data.direction === 'down' ? 120 : -120, behavior: 'smooth' })
+      if (e.data?.type !== 'viz-story-ready') return
+      const n = Number(e.data.sectionCount)
+      if (n > 0) {
+        sectionCountRef.current = n
+        const wrapper = embedWrapperRef.current
+        if (wrapper) wrapper.style.setProperty('--embed-sections', String(n))
+      }
     }
     window.addEventListener('message', onMessage)
 
@@ -456,6 +479,43 @@ export default function HomeClient({
       window.removeEventListener('message', onMessage)
       obs.disconnect()
     }
+  }, [])
+
+  // Intercept wheel events on the scroll-cap overlay so the page — not the
+  // iframe — owns scroll. preventDefault stops the browser from routing the
+  // wheel into the iframe; we then manually drive the page scroll AND seek
+  // the story to the correct section via postMessage.
+  useEffect(() => {
+    const cap = scrollCapRef.current
+    if (!cap) return
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      window.scrollBy({ top: e.deltaY, left: 0 })
+
+      // Read the wrapper position AFTER the scroll settles so the index is
+      // computed from the post-scroll layout.
+      requestAnimationFrame(() => {
+        const wrapper = embedWrapperRef.current
+        if (!wrapper) return
+        const { top, height } = wrapper.getBoundingClientRect()
+        if (top > 0 || -top > height) return
+        const scrolledIn = -top
+        const idx = Math.min(
+          sectionCountRef.current - 1,
+          Math.floor((scrolledIn / height) * sectionCountRef.current)
+        )
+        if (idx < 0 || idx === lastSentIdxRef.current) return
+        lastSentIdxRef.current = idx
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'viz-story-seek', index: idx },
+          '*'
+        )
+      })
+    }
+
+    cap.addEventListener('wheel', onWheel, { passive: false })
+    return () => cap.removeEventListener('wheel', onWheel)
   }, [])
 
   const go = (d: number) => setPage((p) => Math.min(total - 1, Math.max(0, p + d)))
@@ -565,18 +625,36 @@ export default function HomeClient({
       {/* EPICS — running collections, as a row below the header */}
       <EpicsSection epics={epics} />
 
-      {/* STUDIO STORY EMBED */}
-      <section className="story-embed">
-        <div className="story-embed-head rv">
-          <div className="kick">The Studio</div>
-        </div>
-        <div className="story-embed-frame rv" data-d="1">
-          <iframe
-            src="https://www.vizmaya.fyi/story/vizmaya-studio?embed=1"
-            title="Vizmaya Studio"
-            loading="lazy"
-            allowFullScreen
-          />
+      {/* STUDIO STORY EMBED — tall wrapper drives page scroll; frame is sticky */}
+      <section
+        ref={embedWrapperRef}
+        className="story-embed"
+        style={{ height: `calc(var(--embed-sections, 6) * 100svh)` }}
+      >
+        <div className="story-embed-sticky">
+          <div className="story-embed-inner">
+            <div className="story-embed-head">
+              <div className="kick">The Studio</div>
+            </div>
+            <div className="story-embed-frame">
+              <div className="story-embed-bar">
+                <span className="story-embed-dot" />
+                <span className="story-embed-dot" />
+                <span className="story-embed-dot" />
+                <span className="story-embed-url">vizmaya.fyi/story/vizmaya-studio</span>
+              </div>
+              <div className="story-embed-iframe-wrap">
+                <iframe
+                  ref={iframeRef}
+                  src="/story/vizmaya-studio?embed=1"
+                  title="Vizmaya Studio"
+                  loading="lazy"
+                />
+                {/* Overlay captures wheel events; onWheel effect drives page scroll + seek */}
+                <div ref={scrollCapRef} className="story-embed-scroll-cap" aria-hidden />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
