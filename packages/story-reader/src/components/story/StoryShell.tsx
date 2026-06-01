@@ -101,7 +101,7 @@ interface Props {
  * `root: containerRef.current` so the fixed background/foreground stay
  * stable on iOS Safari and the observer fires reliably as snap settles.
  */
-export default function StoryMapShell({
+export default function StoryShell({
   units: desktopUnits,
   mobileUnits,
   accessToken,
@@ -161,6 +161,32 @@ export default function StoryMapShell({
   // The map-step layering (parent/sub/autoplay/mobile) now lives inside the
   // map module's PersistentComponent — it reads `units`, `mapOverrides`,
   // `isAutoplay`, and `isPortrait` off `<StoryShellProvider>`.
+
+  // Capture pipelines (video / PDF) need to know up-front whether this story
+  // will ever construct a Mapbox instance. A map-less deck story otherwise
+  // makes the video renderer's map-load probe burn its full timeout waiting
+  // for a map that never comes (see lib/storyVideoRender.ts). We expose the
+  // resolved count here, derived from the SAME `resolveSlots` the background /
+  // foreground dispatchers consume — so it can't disagree with what actually
+  // mounts (no false zero that would skip a needed tile-load wait). Both unit
+  // arrays are checked, so the signal stays correct regardless of which one
+  // the capture viewport ends up rendering.
+  const expectedMapCount = useMemo(() => {
+    const referencesMap = (unit: (typeof desktopUnits)[number]) => {
+      const resolved = resolveSlots(unit.parentConfig)
+      const fg =
+        resolved.foreground.kind === 'flat'
+          ? resolved.foreground.layers
+          : Object.values(resolved.foreground.regions).flat()
+      return [...resolved.background, ...fg].some((layer) => layer.type === 'map')
+    }
+    const allUnits = mobileUnits ? [...desktopUnits, ...mobileUnits] : desktopUnits
+    return allUnits.filter(referencesMap).length
+  }, [desktopUnits, mobileUnits])
+  useEffect(() => {
+    ;(window as unknown as { __expectedMapCount__?: number }).__expectedMapCount__ =
+      expectedMapCount
+  }, [expectedMapCount])
 
   const current = units[activeUnit] ?? units[0]
   const activeSub = current?.subIndex ?? 0

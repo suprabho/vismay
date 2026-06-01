@@ -4,7 +4,11 @@
 // LogoComponent / AuraComponent / LinkComponent props, so nothing Vizmaya- or
 // Next-specific lives in here.
 
-export { default as StoryMapShell } from './components/story/StoryMapShell'
+export { default as StoryShell } from './components/story/StoryShell'
+// Deprecated alias — kept for one release cycle while call sites migrate to
+// `StoryShell`. The "map" in the old name became a misnomer once page
+// backgrounds and the deck format made maps just one of several backdrops.
+export { default as StoryMapShell } from './components/story/StoryShell'
 export {
   default as StoryBackgroundSlot,
   StoryBackgroundOverlay,

@@ -10,7 +10,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/story/ThemeProvider'
-import StoryMapShell from '@/components/story/StoryMapShell'
+import StoryShell from '@/components/story/StoryShell'
 import VerticalLoader from '@/components/VerticalLoader'
 
 interface RouteParams {
@@ -19,7 +19,7 @@ interface RouteParams {
 
 /**
  * Single-section render target for the admin canvas. Mounts the same
- * StoryMapShell the public /story/[slug] page mounts — same providers,
+ * StoryShell the public /story/[slug] page mounts — same providers,
  * same legacy text card, same hero panel — but with `units` shrunk to the
  * one focused section so the iframe shows exactly that section's render.
  *
@@ -65,12 +65,12 @@ export default async function CanvasFramePage({ params }: RouteParams) {
   )
   if (focusedUnits.length === 0) notFound()
 
-  // StoryMapShell handles units[] uniformly — passing a length-1 array makes
+  // StoryShell handles units[] uniformly — passing a length-1 array makes
   // it a story-of-one. The IntersectionObserver, scroll snap, and active-unit
   // tracking all degenerate to "the one unit is always active".
   const focusedUnit = focusedUnits[0]
   // Carry every unit that shares this parent (e.g. subsections) so the unit
-  // selector inside StoryMapShell still has chart/scroll context to work
+  // selector inside StoryShell still has chart/scroll context to work
   // with. The shell will render the first one as active.
   const parentUnits = units.filter((u) => u.parentIndex === focusedUnit.parentIndex)
 
@@ -92,7 +92,7 @@ export default async function CanvasFramePage({ params }: RouteParams) {
         </>
       )}
       <VerticalLoader vertical={story.frontmatter.vertical}>
-        <StoryMapShell
+        <StoryShell
           units={parentUnits}
           accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
           defaults={defaults}

@@ -11,7 +11,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { themeToMapPalette } from '@/lib/themeToMapPalette'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/story/ThemeProvider'
-import StoryMapShell from '@/components/story/StoryMapShell'
+import StoryShell from '@/components/story/StoryShell'
 import StoryBackgroundSlot, { StoryBackgroundOverlay } from '@/components/story/StoryBackgroundSlot'
 import VerticalLoader from '@/components/VerticalLoader'
 import VerticalCaptureFrame from '@/components/story/VerticalCaptureFrame'
@@ -85,7 +85,7 @@ export default async function StoryPage({ params }: RouteParams) {
       }
     }
     // Autoplay map overrides — read here so they ship in the SSG bundle
-    // alongside the resolved config; StoryMapShell only applies them when
+    // alongside the resolved config; StoryShell only applies them when
     // it sees `?autoplay=1` in the URL (client-side detection). Scroll
     // mode never sees the override, so this is a no-op for normal readers.
     mapYaml = await getContentSource().readMapYaml(slug)
@@ -164,10 +164,10 @@ export default async function StoryPage({ params }: RouteParams) {
       )}
       <VerticalCaptureFrame slug={slug} auraSlug={story.frontmatter.aura}>
         {/* The persistent Vizmaya logo (home link) is rendered inside
-            StoryMapShell so it can re-tint per active section — see its
+            StoryShell so it can re-tint per active section — see its
             `logoPalettes` prop. */}
         <VerticalLoader vertical={story.frontmatter.vertical}>
-          <StoryMapShell
+          <StoryShell
             units={units}
             mobileUnits={hasMobileOverrides ? mobileUnits : undefined}
             accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
