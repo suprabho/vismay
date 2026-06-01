@@ -89,13 +89,15 @@ export interface PublishedEpic {
   slug: string
   name: string
   description: string | null
+  /** Per-epic theme override (loose jsonb; may be `{}` — see migration 017). */
+  theme: Record<string, unknown>
 }
 
 export async function listPublishedEpics(): Promise<PublishedEpic[]> {
   const sb = createServiceClient()
   const { data, error } = await sb
     .from('epics')
-    .select('slug, name, description')
+    .select('slug, name, description, theme')
     .eq('status', 'published')
     .order('name', { ascending: true })
   if (error) throw new Error(`listPublishedEpics: ${error.message}`)
@@ -103,6 +105,7 @@ export async function listPublishedEpics(): Promise<PublishedEpic[]> {
     slug: r.slug,
     name: r.name,
     description: r.description ?? null,
+    theme: (r.theme as Record<string, unknown>) ?? {},
   }))
 }
 
@@ -116,7 +119,7 @@ export async function listEpicsForHome(appSlug?: string): Promise<PublishedEpic[
   const sb = createServiceClient()
   let query = sb
     .from('epics')
-    .select('slug, name, description')
+    .select('slug, name, description, theme')
     .eq('status', 'published')
     .eq('show_on_home', true)
   if (appSlug) query = query.eq('app_slug', appSlug)
@@ -126,6 +129,7 @@ export async function listEpicsForHome(appSlug?: string): Promise<PublishedEpic[
     slug: r.slug,
     name: r.name,
     description: r.description ?? null,
+    theme: (r.theme as Record<string, unknown>) ?? {},
   }))
 }
 

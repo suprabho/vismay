@@ -134,6 +134,59 @@ export default function StoryMapShell({
     setIsCapture(params.get('capture') === '1')
     setIsEmbed(params.get('embed') === '1')
   }, [])
+
+  // Scroll-through for embedded context: when the user wheels past the first
+  // or last snap position, notify the parent page so it can continue its own
+  // scroll instead of leaving the reader stuck at the boundary.
+  useEffect(() => {
+    if (!isEmbed) return
+    const container = containerRef.current
+    if (!container) return
+
+    let accumulated = 0
+    const THRESHOLD = 250
+
+    const onWheel = (e: WheelEvent) => {
+      const atTop = container.scrollTop < 2
+      const atBottom =
+        Math.round(container.scrollTop) >=
+        Math.round(container.scrollHeight - container.clientHeight - 2)
+
+      if (!((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0))) {
+        accumulated = 0
+        return
+      }
+
+      // Deck sections embed scrollable text cards (overflow-y-auto). Walk from
+      // the event target up to the snap container — if any intermediate element
+      // still has room to scroll in the same direction, let it scroll first.
+      let el = e.target as Element | null
+      while (el && el !== container) {
+        const oy = window.getComputedStyle(el).overflowY
+        if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) {
+          const childAtTop = el.scrollTop < 2
+          const childAtBottom =
+            Math.round(el.scrollTop) >= Math.round(el.scrollHeight - el.clientHeight - 2)
+          if (e.deltaY < 0 && !childAtTop) return
+          if (e.deltaY > 0 && !childAtBottom) return
+        }
+        el = el.parentElement
+      }
+
+      accumulated += Math.abs(e.deltaY)
+      if (accumulated >= THRESHOLD) {
+        accumulated = 0
+        window.parent.postMessage(
+          { type: 'viz-scroll-exit', direction: e.deltaY < 0 ? 'up' : 'down' },
+          '*'
+        )
+      }
+      e.preventDefault()
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false })
+    return () => container.removeEventListener('wheel', onWheel)
+  }, [isEmbed])
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
   // breakpoint — treat them as the same signal so both charts and the
   // unit-selector stay consistent when the viewport changes.
