@@ -18,6 +18,9 @@ export interface HomeStory {
   topic?: string
   /** Optional cover image URL shown as the card thumbnail background. */
   thumbnail?: string
+  /** Optional text colour for the card when a thumbnail is shown — overrides
+   *  `--bn-text` so the title/READ stay legible over the cover image. */
+  thumbnailTextColor?: string
 }
 
 export interface HomeEpic {
@@ -98,10 +101,11 @@ function epicCardTheme(raw: Record<string, unknown> | undefined, index: number):
 }
 
 /* Inline CSS custom properties + dark gradient base for a themed card. */
-function cardThemeStyle(ct: CardTheme): CSSProperties {
+function cardThemeStyle(ct: CardTheme, textColor?: string): CSSProperties {
+  const text = textColor ?? ct.text
   return {
     ['--bn-bg']: ct.bg,
-    ['--bn-text']: ct.text,
+    ['--bn-text']: text,
     ['--bn-muted']: ct.muted,
     ['--bn-accent']: ct.accent,
     ...(ct.serif ? { ['--bn-serif']: ct.serif } : {}),
@@ -111,7 +115,7 @@ function cardThemeStyle(ct: CardTheme): CSSProperties {
     backgroundImage:
       `radial-gradient(120% 90% at 85% 8%, ${ct.accent}55 0%, ${ct.accent}14 34%, transparent 62%),` +
       `radial-gradient(90% 80% at 8% 100%, ${ct.accent}30 0%, transparent 55%)`,
-    color: ct.text,
+    color: text,
   } as CSSProperties
 }
 
@@ -333,11 +337,14 @@ function StoryCard({ item, big }: { item: CarouselItem; big: boolean }) {
   const ct = s.theme ? storyCardTheme(s.theme) : DEFAULT_CARD_THEME
   const hasAura = Boolean(s.aura)
   const hasThumb = !hasAura && Boolean(s.thumbnail)
+  // A cover thumbnail carries its own look; an optional per-story text colour
+  // keeps the card's title/READ legible over it without recolouring the body.
+  const textColor = hasThumb ? s.thumbnailTextColor : undefined
   return (
     <Link
       className={`bcard story themed ${big ? 'big' : 'sm'}`}
       href={`/story/${s.slug}`}
-      style={cardThemeStyle(ct)}
+      style={cardThemeStyle(ct, textColor)}
     >
       {hasAura && s.aura && <AuraBackground slug={s.aura} />}
       {hasThumb && s.thumbnail && (
