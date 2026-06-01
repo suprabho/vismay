@@ -18,6 +18,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { getVizModule } from '@vismay/viz-engine'
 
 /* ─── Friendly labels for layer types ───────────────────────────── */
 
@@ -33,6 +34,12 @@ const TYPE_LABELS: Record<string, string> = {
   embed: 'Embed',
   video: 'Video',
   rive: 'Rive',
+  bigStat: 'Big stat',
+  bodyText: 'Body text',
+  quote: 'Quote',
+  keyValue: 'Key/value list',
+  table: 'Table',
+  imageGrid: 'Image grid',
 }
 
 function typeLabel(type: string): string {
@@ -43,22 +50,15 @@ function typeLabel(type: string): string {
 // per type — map opens a visual picker, image opens an asset picker, the
 // rest land in YAML. Vertical types get a generic hint.
 function typeHint(type: string): string {
-  switch (type) {
-    case 'map':
-      return 'Opens map picker'
-    case 'image':
-      return 'Opens asset picker'
-    case 'chart':
-    case 'text':
-    case 'embed':
-    case 'video':
-    case 'rive':
-      return 'Opens YAML editor'
-    default:
-      // Vertical-scoped modules (fs:*, f1:*) — we don't know if they have
-      // a dedicated editor; the default landing surface is YAML.
-      return 'Opens YAML editor'
-  }
+  if (type === 'map') return 'Opens map picker'
+  if (type === 'image') return 'Opens asset picker'
+  // Any module that declares an adminForm opens the generic form editor;
+  // everything else (chart, or a vertical module with no form) lands in the
+  // YAML editor. Resolved from the live registry so vertical modules with a
+  // form get the right hint for free.
+  return getVizModule(type)?.adminForm
+    ? 'Opens form editor'
+    : 'Opens YAML editor'
 }
 
 /* ─── Target descriptors ────────────────────────────────────────── */

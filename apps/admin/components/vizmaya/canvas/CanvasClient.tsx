@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
-import { getForegroundLayout } from '@vismay/viz-engine'
+import { getForegroundLayout, getVizModule } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
   shareNode,
@@ -73,6 +73,7 @@ import {
 import EditorPanel from './EditorPanel'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
+import SlotFormModal from './SlotFormModal'
 import ThemeEditOverlay from './ThemeEditOverlay'
 
 interface Props {
@@ -121,6 +122,16 @@ type SlotTarget =
       unit: ResolvedUnit
       slotPath: SlotPath
       initial: ImageLayerDraft
+    }
+  // Generic form editor for any layer whose module declares an `adminForm`
+  // and has no bespoke visual editor (everything except map/image/chart).
+  // `initialLayer` is the on-disk layer object, used to seed the form.
+  | {
+      mode: 'form'
+      unit: ResolvedUnit
+      slotPath: SlotPath
+      layerType: string
+      initialLayer: Record<string, unknown>
     }
   | { mode: 'theme' }
 
@@ -1572,6 +1583,34 @@ export default function CanvasClient({
                   slotPath: slot.path,
                   initial,
                 })
+              } else {
+                // Any other module with an adminForm opens the generic form
+                // editor. Types with no adminForm (chart, or a malformed /
+                // unknown layer that resolved to no module) fall through to
+                // the YAML layer editor — the surface they'd land on before.
+                const mod = getVizModule(slot.layerType)
+                if (mod?.adminForm) {
+                  const section = getSection(
+                    configYamlRef.current,
+                    targetUnit.parentIndex
+                  )
+                  const layer = section
+                    ? getLayer(section, slot.path)
+                    : null
+                  setSlotTargetRef.current({
+                    mode: 'form',
+                    unit: targetUnit,
+                    slotPath: slot.path,
+                    layerType: slot.layerType,
+                    initialLayer: layer ?? { type: slot.layerType },
+                  })
+                } else {
+                  setEditorTargetRef.current({
+                    kind: 'layer',
+                    unit: targetUnit,
+                    slotPath: slot.path,
+                  })
+                }
               }
             }
           } else if (editKind) {
@@ -2419,6 +2458,78 @@ export default function CanvasClient({
     [slug]
   )
 
+  const handleSlotFormApply = useCallback(
+    async (
+      nextConfig: Record<string, unknown>,
+      target: SlotTarget & { mode: 'form' }
+    ) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        const section = getSection(
+          configYamlRef.current,
+          target.unit.parentIndex
+        )
+        const originalLayer = section
+          ? (getLayer(section, target.slotPath) ?? {})
+          : {}
+        // Drop the keys this module's form manages from the on-disk layer,
+        // then overlay the form result. This honors fields the user cleared
+        // (absent from nextConfig) while preserving untracked keys (style,
+        // region, and any field the form doesn't expose). Dotted adminForm
+        // keys (e.g. `textStyle.size`) collapse to their top-level container
+        // (`textStyle`) so the whole nested object is form-managed.
+        const mod = getVizModule(target.layerType)
+        const managed = new Set(
+          (mod?.adminForm?.(originalLayer as never) ?? []).map(
+            (f) => f.key.split('.')[0]
+          )
+        )
+        const preserved: Record<string, unknown> = {}
+        for (const [k, v] of Object.entries(originalLayer)) {
+          if (k === 'type' || managed.has(k)) continue
+          preserved[k] = v
+        }
+        const nextLayer: Record<string, unknown> = {
+          ...preserved,
+          ...nextConfig,
+          type: target.layerType,
+        }
+        const nextConfigYaml = replaceLayer(
+          configYamlRef.current,
+          target.unit.parentIndex,
+          target.slotPath,
+          nextLayer
+        )
+        await saveConfigYaml(slug, nextConfigYaml)
+        setSources((prev) => ({ ...prev, configYaml: nextConfigYaml }))
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug]
+  )
+
+  // Escape hatch from the form modal into the existing layer-YAML editor for
+  // the same slot. Closes the form first so the two surfaces never co-mount,
+  // then reuses the EditorPanel save path verbatim.
+  const openSlotAsYaml = useCallback(
+    (target: SlotTarget & { mode: 'form' }) => {
+      setSlotTarget(null)
+      setSlotError(null)
+      setEditorTarget({
+        kind: 'layer',
+        unit: target.unit,
+        slotPath: target.slotPath,
+      })
+    },
+    []
+  )
+
   const handleThemeSave = useCallback(
     async (nextTheme: Theme) => {
       setSlotSaving(true)
@@ -2552,11 +2663,25 @@ export default function CanvasClient({
               },
             })
           } else {
-            setEditorTarget({
-              kind: 'layer',
-              unit: targetUnit,
-              slotPath: next.path,
-            })
+            // Any other module with an adminForm opens the generic form
+            // editor seeded with the just-written layer; types without one
+            // (chart) land in the YAML editor.
+            const mod = getVizModule(choice.type)
+            if (mod?.adminForm) {
+              setSlotTarget({
+                mode: 'form',
+                unit: targetUnit,
+                slotPath: next.path,
+                layerType: choice.type,
+                initialLayer: seed,
+              })
+            } else {
+              setEditorTarget({
+                kind: 'layer',
+                unit: targetUnit,
+                slotPath: next.path,
+              })
+            }
           }
           return
         }
@@ -2770,6 +2895,19 @@ export default function CanvasClient({
           onClose={closeSlot}
         />
       )}
+      {slotTarget?.mode === 'form' && (
+        <SlotFormModal
+          sectionLabel={formSlotLabel(slotTarget, sectionUnits)}
+          layerType={slotTarget.layerType}
+          initialLayer={slotTarget.initialLayer}
+          saving={slotSaving}
+          error={slotError}
+          assetRefs={[]}
+          onApply={(next) => handleSlotFormApply(next, slotTarget)}
+          onEditAsYaml={() => openSlotAsYaml(slotTarget)}
+          onClose={closeSlot}
+        />
+      )}
       {slotTarget?.mode === 'theme' && (
         <ThemeEditOverlay
           initial={localTheme}
@@ -2961,6 +3099,30 @@ function nextOverrideTextFromPickerYaml(
 
 function imageSlotLabel(
   target: SlotTarget & { mode: 'image' },
+  sectionUnits: ResolvedUnit[]
+): string {
+  const idx = sectionUnits.findIndex(
+    (u) => u.parentIndex === target.unit.parentIndex
+  )
+  const base =
+    target.unit.heading ||
+    target.unit.parentConfig.id ||
+    `Section ${idx + 1}`
+  const path = target.slotPath
+  const where =
+    path.kind === 'background'
+      ? `background[${path.index}]`
+      : path.kind === 'foregroundFlat'
+        ? `foreground[${path.index}]`
+        : path.kind === 'foregroundRegion'
+          ? `foreground.${path.region}[${path.index}]`
+          : 'map'
+  return `${base} · ${where}`
+}
+
+/** Same as `imageSlotLabel` for the generic form-edit modal. */
+function formSlotLabel(
+  target: SlotTarget & { mode: 'form' },
   sectionUnits: ResolvedUnit[]
 ): string {
   const idx = sectionUnits.findIndex(
