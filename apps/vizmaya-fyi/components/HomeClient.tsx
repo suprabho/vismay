@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent as ReactTouchEvent } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
 import AuraBackground from '@/components/AuraBackground'
@@ -173,6 +173,9 @@ const css = `
 .vz .idx-chip.on{background:var(--ink);color:var(--cream);border-color:var(--ink)}
 .vz .idx-about{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent)}
 .vz .idx-about:hover{opacity:1;text-decoration:underline;text-underline-offset:4px}
+.vz .idx-feed{min-width:0}
+.vz .idx-filter-m{display:none}  /* desktop/tablet use the in-rail filter; shown only on phones */
+.vz .idx-feed-head{display:none}  /* mobile-only feed header (statement + chips); desktop uses the rail */
 
 /* carousel of bento pages */
 .vz .carousel{display:flex;flex-direction:column;gap:18px;height:clamp(460px,calc(100vh - 200px),700px)}
@@ -182,6 +185,14 @@ const css = `
 .vz .bento-slide{height:100%;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:1.08fr 1fr;gap:var(--gap)}
 .vz .bento-slide .bcard.big{grid-column:span 3}
 .vz .bento-slide .bcard.sm{grid-column:span 2}
+/* 4-card first page: an asymmetric bento. A wide+tall hero (1) beside a
+   narrow+tall card (2), then a wide+short (3) beside a narrow+short (4).
+   The top row runs ~2× the bottom; left column ~2× the right. */
+.vz .bento-slide.four{grid-template-rows:2fr 1fr}
+.vz .bento-slide.four .bcard:nth-child(1){grid-column:span 4}
+.vz .bento-slide.four .bcard:nth-child(2){grid-column:span 2}
+.vz .bento-slide.four .bcard:nth-child(3){grid-column:span 4}
+.vz .bento-slide.four .bcard:nth-child(4){grid-column:span 2}
 
 /* bento card — every card is themed: a dark base + accent glow (set inline
    from the story/epic theme), rendered in that theme's own typefaces.
@@ -284,19 +295,54 @@ const css = `
   .vz .idx-rail{position:static}
 }
 @media(max-width:820px){
-  /* The carousel can't page horizontally on a phone — unroll it into a single
-     vertical feed. Override the inline track width/transform (hence !important),
-     stack the slides, and drop each bento page to one column. */
-  .vz .carousel{height:auto;gap:0}
-  .vz .carousel-vp{overflow:visible}
-  .vz .carousel-track{width:100%!important;transform:none!important;flex-direction:column;gap:var(--gap)}
-  .vz .carousel-slide{width:100%!important;height:auto}
-  .vz .bento-slide{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(150px,auto)}
-  .vz .bento-slide .bcard.big,.vz .bento-slide .bcard.sm{grid-column:span 1}
-  /* paging controls are meaningless once unrolled — keep only the archive link */
-  .vz .carousel-dots,.vz .carr,.vz .carousel-count{display:none}
-  .vz .carousel-ctrl{justify-content:flex-end;margin-top:18px}
+  /* Phone: keep the bento carousel PAGINATED — a horizontal pager you swipe
+     through (dots below; the inline width/transform drive paging). Each page
+     reflows the 6-col bento into 2 columns: big cards span the full width on
+     top, small cards sit two-up beneath. Height is content-driven so every
+     page is as tall as its cards. */
+  .vz .carousel{height:auto;gap:14px}
+  .vz .carousel-vp{flex:none;overflow:hidden}
+  .vz .carousel-track{height:auto}
+  .vz .carousel-slide{height:auto;min-width:0}   /* respect the inline page width, don't grow to content */
+  .vz .bento-slide{height:auto;grid-template-columns:repeat(2,1fr);grid-template-rows:none;grid-auto-rows:minmax(120px,auto);gap:10px}
+  .vz .bento-slide .bcard{min-width:0}
+  .vz .bento-slide .bcard.big{grid-column:span 2}
+  .vz .bento-slide .bcard.sm{grid-column:span 1}
+  /* 4-card page on mobile: full-width hero (1), two squares side by side (2,3),
+     then a full-width card (4). Reset the desktop .four row template to auto. */
+  .vz .bento-slide.four{grid-template-rows:none}
+  .vz .bento-slide.four .bcard:nth-child(1){grid-column:span 2}
+  .vz .bento-slide.four .bcard:nth-child(2){grid-column:span 1}
+  .vz .bento-slide.four .bcard:nth-child(3){grid-column:span 1}
+  .vz .bento-slide.four .bcard:nth-child(4){grid-column:span 2}
+  /* swipe replaces the tiny arrows — keep the dots and the archive link */
+  .vz .carr,.vz .carousel-count{display:none}
+  /* controls (dots + archive link) sit ABOVE the cards on mobile */
+  .vz .carousel-ctrl{order:-1;justify-content:space-between;margin:0}
   .vz .vznav-link{display:none}
+
+  /* ── mobile stack order: carousel → feed header (statement + chips) → stats → text ──
+     Flatten the 2-col grid into one column and re-sequence. .idx-feed stacks the
+     (shorter) bento carousel then a static header — the studio statement plus the
+     topic chips — so the chips sit right under the bento. The rail's own statement
+     is hidden here to avoid showing it twice. */
+  .vz .idx-wrap{display:flex;flex-direction:column;gap:32px;align-items:stretch}  /* override the desktop grid's align-items:start so children fill the column width */
+  .vz .idx-feed{order:1;display:flex;flex-direction:column;gap:18px}
+  .vz .idx-rail{order:2;position:static;display:flex;flex-direction:column}
+  .vz .idx-rail .idx-filter{display:none}              /* replaced by the feed-header chips */
+  .vz .idx-rail .idx-h1{display:none}                  /* shown in the feed header instead */
+  .vz .idx-rail .idx-stats{order:1;margin-top:0}       /* stats first… */
+  .vz .idx-rail .kick{order:2}                         /* …then the text block */
+  .vz .idx-rail .idx-deck{order:4}
+  .vz .idx-rail .idx-about{order:5}
+  /* The whole header (statement + chips) is sticky — a direct child of .idx-feed
+     so it pins to the viewport bottom across the feed scroll, then releases at the
+     feed's end. Translucent cream + blur so the carousel scrolls under it. */
+  .vz .idx-feed-head{display:block;position:sticky;bottom:0;z-index:20;margin:0;padding:14px 0 calc(12px + env(safe-area-inset-bottom));background:rgba(244,241,236,.94);backdrop-filter:blur(14px);border-top:1px solid var(--line2)}
+  .vz .idx-feed-head .idx-h1{margin:0 0 12px;font-size:clamp(24px,6vw,32px)}
+  .vz .idx-filter-m{display:flex;flex-wrap:wrap;gap:7px;margin:0;padding:0}
+  .vz .idx-filter-m::-webkit-scrollbar{display:none}
+  .vz .idx-filter-m .idx-chip{flex:none}
 }
 @media(max-width:520px){
   .vz .bcard.big .bcard-h{font-size:23px}
@@ -430,8 +476,9 @@ export default function HomeClient({
     return stories.filter((s) => s.topic === filter)
   }, [filter, stories])
 
-  // The carousel is stories-only; chunk into bento pages of 5 — the first two
-  // render big (top row), the next three small.
+  // The carousel is stories-only. The first page is a 4-card asymmetric bento
+  // (a hero + three secondary cards — see the .four CSS); the rest run 5
+  // (2 big top, 3 small beneath).
   const items: CarouselItem[] = useMemo(
     () => visibleStories.map((s) => ({ data: s, n: stories.indexOf(s) })),
     [visibleStories, stories]
@@ -439,7 +486,10 @@ export default function HomeClient({
 
   const slides = useMemo(() => {
     const out: CarouselItem[][] = []
-    for (let i = 0; i < items.length; i += 5) out.push(items.slice(i, i + 5))
+    if (items.length) {
+      out.push(items.slice(0, 4))
+      for (let i = 4; i < items.length; i += 5) out.push(items.slice(i, i + 5))
+    }
     if (!out.length) out.push([])
     return out
   }, [items])
@@ -564,6 +614,22 @@ export default function HomeClient({
   const go = (d: number) => setPage((p) => Math.min(total - 1, Math.max(0, p + d)))
   const archiveLabel = `All ${stories.length} →`
 
+  // Touch-swipe paging for the mobile carousel — only acts on a clearly
+  // horizontal flick so it never hijacks the page's vertical scroll.
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchStart = (e: ReactTouchEvent) => {
+    const t = e.touches[0]
+    touchStart.current = { x: t.clientX, y: t.clientY }
+  }
+  const onTouchEnd = (e: ReactTouchEvent) => {
+    if (!touchStart.current) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touchStart.current.x
+    const dy = t.clientY - touchStart.current.y
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) go(dx < 0 ? 1 : -1)
+    touchStart.current = null
+  }
+
   return (
     <div className="vz">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -626,41 +692,56 @@ export default function HomeClient({
             <a className="idx-about" href="#contact">More about the studio →</a>
           </aside>
 
-          <div className="carousel">
-            <div className="carousel-vp">
-              <div
-                className="carousel-track"
-                style={{ width: `${total * 100}%`, transform: `translateX(-${cur * (100 / total)}%)` }}
-              >
-                {slides.map((sl, si) => (
-                  <div className="carousel-slide" key={si} style={{ width: `${100 / total}%` }}>
-                    <div className="bento-slide">
-                      {sl.map((it, idx) => (
-                        <StoryCard key={it.data.slug} item={it} big={idx < 2} />
-                      ))}
+          <div className="idx-feed">
+            <div className="carousel">
+              <div className="carousel-vp" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+                <div
+                  className="carousel-track"
+                  style={{ width: `${total * 100}%`, transform: `translateX(-${cur * (100 / total)}%)` }}
+                >
+                  {slides.map((sl, si) => (
+                    <div className="carousel-slide" key={si} style={{ width: `${100 / total}%` }}>
+                      <div className={'bento-slide' + (sl.length === 4 ? ' four' : '')}>
+                        {sl.map((it, idx) => (
+                          <StoryCard key={it.data.slug} item={it} big={sl.length === 4 ? idx === 0 : idx < 2} />
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
+              <div className="carousel-ctrl">
+                <div className="carousel-dots">
+                  {slides.map((_, si) => (
+                    <button
+                      key={si}
+                      className={'cdot' + (si === cur ? ' on' : '')}
+                      onClick={() => setPage(si)}
+                      aria-label={`Page ${si + 1}`}
+                    />
+                  ))}
+                </div>
+                <div className="carousel-nav">
+                  <Link className="carousel-all" href="/stories">{archiveLabel}</Link>
+                  <button className="carr" onClick={() => go(-1)} disabled={cur === 0} aria-label="Previous">‹</button>
+                  <span className="carousel-count">{String(cur + 1).padStart(2, '0')} <i>/</i> {String(total).padStart(2, '0')}</span>
+                  <button className="carr" onClick={() => go(1)} disabled={cur === total - 1} aria-label="Next">›</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile-only feed header — the studio statement, then the swipeable
+                topic chips, sitting directly below the (shorter) bento carousel.
+                Hidden on desktop, where the rail carries the statement + filter. */}
+            <div className="idx-feed-head">
+              <h1 className="idx-h1">{STUDIO.statement}</h1>
+              <div className="idx-filter idx-filter-m">
+                {chips.map((c) => (
+                  <button key={c} className={'idx-chip' + (filter === c ? ' on' : '')} onClick={() => setFilter(c)}>{c}</button>
                 ))}
               </div>
             </div>
-            <div className="carousel-ctrl">
-              <div className="carousel-dots">
-                {slides.map((_, si) => (
-                  <button
-                    key={si}
-                    className={'cdot' + (si === cur ? ' on' : '')}
-                    onClick={() => setPage(si)}
-                    aria-label={`Page ${si + 1}`}
-                  />
-                ))}
-              </div>
-              <div className="carousel-nav">
-                <Link className="carousel-all" href="/stories">{archiveLabel}</Link>
-                <button className="carr" onClick={() => go(-1)} disabled={cur === 0} aria-label="Previous">‹</button>
-                <span className="carousel-count">{String(cur + 1).padStart(2, '0')} <i>/</i> {String(total).padStart(2, '0')}</span>
-                <button className="carr" onClick={() => go(1)} disabled={cur === total - 1} aria-label="Next">›</button>
-              </div>
-            </div>
+
           </div>
         </div>
       </section>
