@@ -254,10 +254,11 @@ export default function StoryMapShell({
     return () => observer.disconnect()
   }, [units.length, isPortrait])
 
-  // Embed scroll-sync (`?embed=1`): the host page (e.g. the vizmaya.fyi
-  // landing) pins this iframe and drives it from its OWN page scroll. On mount
-  // we post the section count so the host can size its scroll wrapper, then we
-  // listen for seek commands and jump the snap container to that section.
+  // Host-driven scroll sync (`?embed=1`): advertise the section count so the
+  // host can size its scroll wrapper, then respond to seek commands by smooth-
+  // scrolling the snap container to the requested section. Smooth (not instant)
+  // keeps this in lockstep with the host's smooth, one-section-at-a-time page
+  // scroll so the story and the page glide together.
   useEffect(() => {
     if (!isEmbed) return
     window.parent.postMessage(
@@ -270,16 +271,9 @@ export default function StoryMapShell({
       if (Number.isNaN(index)) return
       const root = containerRef.current
       if (!root) return
-      // Jump to the section's offset on the snap container. We avoid
-      // scrollIntoView: inside an iframe it can scroll the iframe's own
-      // document within the host page rather than this inner snap container.
-      const target = root.querySelector<HTMLElement>(
-        `[data-unit-index="${index}"]`
-      )
-      root.scrollTo({
-        top: target ? target.offsetTop : index * root.clientHeight,
-        behavior: 'instant',
-      })
+      // Every snap section is exactly one container height (h-svh) tall, so the
+      // host's uniform `index * innerHeight` page offset maps 1:1 to this.
+      root.scrollTo({ top: index * root.clientHeight, behavior: 'smooth' })
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)

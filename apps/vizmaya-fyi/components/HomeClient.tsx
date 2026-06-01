@@ -411,7 +411,7 @@ export default function HomeClient({
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const scrollCapRef = useRef<HTMLDivElement>(null)
   const sectionCountRef = useRef(10) // updated when story posts viz-story-ready
-  const lastSentIdxRef = useRef(-1)
+  const currentIdxRef = useRef(0)   // which section we're currently on
 
   // Topic chips are derived from whatever topics the stories actually carry —
   // empty until stories are tagged, at which point they light up automatically.
@@ -481,41 +481,81 @@ export default function HomeClient({
     }
   }, [])
 
-  // Intercept wheel events on the scroll-cap overlay so the page — not the
-  // iframe — owns scroll. preventDefault stops the browser from routing the
-  // wheel into the iframe; we then manually drive the page scroll AND seek
-  // the story to the correct section via postMessage.
+  // Wheel interception on the scroll-cap overlay.
+  // Accumulates trackpad/mouse delta and triggers one section change at a time,
+  // then smooth-scrolls both the page and the story. Locked during transition
+  // so rapid gestures don't stack up. At first/last section the overlay yields
+  // control back to the page so the user can naturally scroll away.
   useEffect(() => {
     const cap = scrollCapRef.current
     if (!cap) return
 
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      window.scrollBy({ top: e.deltaY, left: 0 })
+    const THRESHOLD = 80 // px of accumulated delta to commit one section change
+    const LOCK_MS = 700  // ms to hold the lock while smooth scroll settles
 
-      // Read the wrapper position AFTER the scroll settles so the index is
-      // computed from the post-scroll layout.
-      requestAnimationFrame(() => {
-        const wrapper = embedWrapperRef.current
-        if (!wrapper) return
-        const { top, height } = wrapper.getBoundingClientRect()
-        if (top > 0 || -top > height) return
-        const scrolledIn = -top
-        const idx = Math.min(
-          sectionCountRef.current - 1,
-          Math.floor((scrolledIn / height) * sectionCountRef.current)
-        )
-        if (idx < 0 || idx === lastSentIdxRef.current) return
-        lastSentIdxRef.current = idx
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'viz-story-seek', index: idx },
-          '*'
-        )
-      })
+    let pendingDelta = 0
+    let locked = false
+
+    const seekTo = (idx: number) => {
+      currentIdxRef.current = idx
+      locked = true
+      pendingDelta = 0
+
+      // Snap the page to exactly this section's position within the wrapper
+      const wrapper = embedWrapperRef.current
+      if (wrapper) {
+        const wrapperTop = wrapper.getBoundingClientRect().top + window.scrollY
+        window.scrollTo({ top: wrapperTop + idx * window.innerHeight, behavior: 'smooth' })
+      }
+
+      // Advance the story
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'viz-story-seek', index: idx },
+        '*'
+      )
+
+      setTimeout(() => { locked = false; pendingDelta = 0 }, LOCK_MS)
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      const idx = currentIdxRef.current
+      const count = sectionCountRef.current
+
+      // At boundaries: don't intercept — let the page scroll away naturally
+      if ((e.deltaY < 0 && idx <= 0) || (e.deltaY > 0 && idx >= count - 1)) return
+
+      e.preventDefault()
+      if (locked) return
+
+      pendingDelta += e.deltaY
+      if (Math.abs(pendingDelta) < THRESHOLD) return
+
+      const dir = pendingDelta > 0 ? 1 : -1
+      const next = Math.max(0, Math.min(count - 1, idx + dir))
+      if (next !== idx) seekTo(next)
+    }
+
+    // Keep currentIdxRef in sync when the user scrolls naturally (e.g. at
+    // boundaries or via the scrollbar) so re-entry is always correct.
+    const onPageScroll = () => {
+      if (locked) return
+      const wrapper = embedWrapperRef.current
+      if (!wrapper) return
+      const { top, height } = wrapper.getBoundingClientRect()
+      if (top > 0) { currentIdxRef.current = 0; return }
+      if (-top >= height) return
+      currentIdxRef.current = Math.min(
+        sectionCountRef.current - 1,
+        Math.floor((-top / height) * sectionCountRef.current)
+      )
     }
 
     cap.addEventListener('wheel', onWheel, { passive: false })
-    return () => cap.removeEventListener('wheel', onWheel)
+    window.addEventListener('scroll', onPageScroll, { passive: true })
+    return () => {
+      cap.removeEventListener('wheel', onWheel)
+      window.removeEventListener('scroll', onPageScroll)
+    }
   }, [])
 
   const go = (d: number) => setPage((p) => Math.min(total - 1, Math.max(0, p + d)))
