@@ -67,7 +67,8 @@ export interface Frontmatter {
   /**
    * Optional cover image URL shown as the home page card thumbnail background.
    * Accepts absolute `http(s)` URLs or same-origin `/path` references.
-   * The theme's solid background color remains visible beneath the image.
+   * Rendered full-bleed at full opacity with no card overlay — the image itself
+   * carries the look, so pick one that keeps the card's title/READ legible.
    */
   thumbnail?: string
 }

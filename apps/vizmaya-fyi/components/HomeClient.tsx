@@ -210,11 +210,10 @@ const css = `
 .vz .bcard .bn-aura iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}
 .vz .bcard .bn-aura::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 50%,transparent) 0%,transparent 38%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 72%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 24%,transparent) 55%,transparent 100%)}
 
-/* static thumbnail image layered over the solid bg when no aura is set */
+/* static cover image when no aura is set — shown at full strength with no card
+   overlay; the story's own thumbnail carries the look (and text legibility). */
 .vz .bcard .bn-thumb{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
-.vz .bcard .bn-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:.38;transition:opacity .35s}
-.vz .bcard:hover .bn-thumb img{opacity:.5}
-.vz .bcard .bn-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 52%,transparent) 0%,transparent 42%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 82%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 28%,transparent) 60%,transparent 100%)}
+.vz .bcard .bn-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 
 /* carousel controls */
 .vz .carousel-ctrl{display:flex;justify-content:space-between;align-items:center;gap:16px}

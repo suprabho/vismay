@@ -7,5 +7,5 @@ node_modules
 .env*.local
 brandz
 .claude
-
+.vscode
 apps/vizmaya-fyi/public/content
