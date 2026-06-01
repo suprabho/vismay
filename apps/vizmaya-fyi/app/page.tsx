@@ -30,6 +30,7 @@ export default async function HomePage() {
     theme: s.theme,
     topic: s.topic,
     thumbnail: s.thumbnail,
+    thumbnailTextColor: s.thumbnailTextColor,
   }))
   const homeEpics: HomeEpic[] = epics.map((e) => ({
     slug: e.slug,

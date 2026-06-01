@@ -71,6 +71,13 @@ export interface Frontmatter {
    * carries the look, so pick one that keeps the card's title/READ legible.
    */
   thumbnail?: string
+  /**
+   * Optional text colour for the home page card when a `thumbnail` is shown.
+   * Overrides the card's title/subtitle/kicker colour (the `--bn-text` token)
+   * so they stay legible over the cover image, without recolouring the story
+   * body. Any CSS colour string. Ignored when there's no `thumbnail`.
+   */
+  thumbnailTextColor?: string
 }
 
 export type BlockType =
