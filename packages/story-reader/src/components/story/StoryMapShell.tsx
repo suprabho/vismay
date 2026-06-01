@@ -255,12 +255,16 @@ export default function StoryMapShell({
   }, [units.length, isPortrait])
 
   // Host-driven scroll sync (`?embed=1`).
-  // viz-story-progress { value: float 0..N } — continuous progress from the
-  //   page scroll. Assigned directly to scrollTop (no animation) so the story
-  //   tracks the page pixel-for-pixel with zero added latency.
-  // viz-story-seek { index: int } — final section snap after scroll settles,
-  //   uses smooth scrollTo so the landing feels deliberate.
-  // CSS snap is handled at seek time only; direct scrollTop writes bypass it.
+  // On mount the story advertises its section count so the host can size its
+  // scroll wrapper. Thereafter the host drives a single message:
+  //   viz-story-progress { value: 0..1 } — its scroll progress through the
+  //     pinned wrapper. Mapped onto this container's full scroll range and
+  //     assigned directly to scrollTop (no animation) so the story tracks the
+  //     page pixel-for-pixel with zero added latency. Normalising to 0..1 keeps
+  //     the sync independent of section count and of the (different) pixel
+  //     heights on each side of the iframe boundary.
+  // CSS snap is disabled in embed mode (see the container className below) so
+  // these direct scrollTop writes aren't fought by the snap engine.
   useEffect(() => {
     if (!isEmbed) return
     window.parent.postMessage(
@@ -269,17 +273,11 @@ export default function StoryMapShell({
     )
     const onMessage = (e: MessageEvent) => {
       const root = containerRef.current
-      if (!root) return
-      if (e.data?.type === 'viz-story-progress') {
-        const value = Number(e.data.value)
-        if (!Number.isNaN(value)) root.scrollTop = value * root.clientHeight
-        return
-      }
-      if (e.data?.type === 'viz-story-seek') {
-        const index = Number(e.data.index)
-        if (!Number.isNaN(index))
-          root.scrollTo({ top: index * root.clientHeight, behavior: 'smooth' })
-      }
+      if (!root || e.data?.type !== 'viz-story-progress') return
+      const value = Number(e.data.value)
+      if (Number.isNaN(value)) return
+      const max = root.scrollHeight - root.clientHeight
+      root.scrollTop = Math.max(0, Math.min(1, value)) * max
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)

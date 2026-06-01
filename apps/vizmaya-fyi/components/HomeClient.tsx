@@ -408,9 +408,7 @@ export default function HomeClient({
 
   const embedWrapperRef = useRef<HTMLElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const scrollCapRef = useRef<HTMLDivElement>(null)
   const sectionCountRef = useRef(10) // updated when story posts viz-story-ready
-  const currentIdxRef = useRef(0)   // which section we're currently on
 
   // Topic chips are derived from whatever topics the stories actually carry —
   // empty until stories are tagged, at which point they light up automatically.
@@ -480,80 +478,79 @@ export default function HomeClient({
     }
   }, [])
 
-  // Wheel interception on the scroll-cap overlay.
-  // Accumulates trackpad/mouse delta and triggers one section change at a time,
-  // then smooth-scrolls both the page and the story. Locked during transition
-  // so rapid gestures don't stack up. At first/last section the overlay yields
-  // control back to the page so the user can naturally scroll away.
+  // Continuous scroll-sync (`viz-story-progress`).
+  // The page is the only scroller. As it scrolls through the tall wrapper the
+  // sticky frame stays pinned, and we mirror the page's progress through the
+  // pinned range (a 0..1 fraction) into the iframe, which maps it onto the
+  // story's own scroll range. Because it's plain native page scroll, wheel and
+  // touch behave identically — no hijacking, no locks, no per-device code — and
+  // the page owns its own boundaries: scrolling up continues up the page,
+  // scrolling past the wrapper releases the sticky into the contact section.
   useEffect(() => {
-    const cap = scrollCapRef.current
-    if (!cap) return
+    let raf = 0
+    let snapTimer: ReturnType<typeof setTimeout> | undefined
+    let snapping = false // true while our own snap scroll is animating
 
-    const THRESHOLD = 80 // px of accumulated delta to commit one section change
-    const LOCK_MS = 700  // ms to hold the lock while smooth scroll settles
-
-    let pendingDelta = 0
-    let locked = false
-
-    const seekTo = (idx: number) => {
-      currentIdxRef.current = idx
-      locked = true
-      pendingDelta = 0
-
-      // Snap the page to exactly this section's position within the wrapper
+    // Geometry of the pinned range: how far the page scrolls while the frame
+    // stays pinned (wrapper height minus one viewport). null when not pinnable.
+    const pinnedRange = () => {
       const wrapper = embedWrapperRef.current
-      if (wrapper) {
-        const wrapperTop = wrapper.getBoundingClientRect().top + window.scrollY
-        window.scrollTo({ top: wrapperTop + idx * window.innerHeight, behavior: 'smooth' })
-      }
+      if (!wrapper) return null
+      const { top, height } = wrapper.getBoundingClientRect()
+      const pinned = height - window.innerHeight
+      if (pinned <= 0) return null
+      return { top, pinned }
+    }
 
-      // Advance the story
+    const compute = () => {
+      raf = 0
+      const r = pinnedRange()
+      if (!r) return
+      // Skip while the wrapper is entirely off-screen — no point streaming
+      // progress the reader can't see.
+      if (r.top > window.innerHeight || -r.top > r.pinned + window.innerHeight) return
+      const fraction = Math.max(0, Math.min(1, -r.top / r.pinned))
       iframeRef.current?.contentWindow?.postMessage(
-        { type: 'viz-story-seek', index: idx },
+        { type: 'viz-story-progress', value: fraction },
         '*'
       )
-
-      setTimeout(() => { locked = false; pendingDelta = 0 }, LOCK_MS)
     }
 
-    const onWheel = (e: WheelEvent) => {
-      const idx = currentIdxRef.current
+    // After scrolling settles, rest on the nearest section. We nudge the PAGE
+    // (the single source of truth) and let the progress mirror above carry the
+    // story smoothly into place — no separate seek message, nothing to fight.
+    const snapToNearest = () => {
+      const r = pinnedRange()
+      if (!r) return
       const count = sectionCountRef.current
-
-      // At boundaries: don't intercept — let the page scroll away naturally
-      if ((e.deltaY < 0 && idx <= 0) || (e.deltaY > 0 && idx >= count - 1)) return
-
-      e.preventDefault()
-      if (locked) return
-
-      pendingDelta += e.deltaY
-      if (Math.abs(pendingDelta) < THRESHOLD) return
-
-      const dir = pendingDelta > 0 ? 1 : -1
-      const next = Math.max(0, Math.min(count - 1, idx + dir))
-      if (next !== idx) seekTo(next)
+      if (count < 2) return
+      // Only snap while genuinely inside the pinned range — never yank the
+      // reader back when they've scrolled above or below the embed.
+      if (r.top > 0 || -r.top >= r.pinned) return
+      const fraction = -r.top / r.pinned
+      const idx = Math.round(fraction * (count - 1))
+      const wrapperTop = r.top + window.scrollY
+      const target = wrapperTop + (idx / (count - 1)) * r.pinned
+      if (Math.abs(target - window.scrollY) > 1) {
+        snapping = true
+        window.scrollTo({ top: target, behavior: 'smooth' })
+        setTimeout(() => { snapping = false }, 600)
+      }
     }
 
-    // Keep currentIdxRef in sync when the user scrolls naturally (e.g. at
-    // boundaries or via the scrollbar) so re-entry is always correct.
-    const onPageScroll = () => {
-      if (locked) return
-      const wrapper = embedWrapperRef.current
-      if (!wrapper) return
-      const { top, height } = wrapper.getBoundingClientRect()
-      if (top > 0) { currentIdxRef.current = 0; return }
-      if (-top >= height) return
-      currentIdxRef.current = Math.min(
-        sectionCountRef.current - 1,
-        Math.floor((-top / height) * sectionCountRef.current)
-      )
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute)
+      if (snapping) return // ignore the scroll events our own snap produces
+      if (snapTimer) clearTimeout(snapTimer)
+      snapTimer = setTimeout(snapToNearest, 140)
     }
 
-    cap.addEventListener('wheel', onWheel, { passive: false })
-    window.addEventListener('scroll', onPageScroll, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
+    compute() // sync once in case we mount already scrolled into the wrapper
     return () => {
-      cap.removeEventListener('wheel', onWheel)
-      window.removeEventListener('scroll', onPageScroll)
+      window.removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+      if (snapTimer) clearTimeout(snapTimer)
     }
   }, [])
 
@@ -689,8 +686,9 @@ export default function HomeClient({
                   title="Vizmaya Studio"
                   loading="lazy"
                 />
-                {/* Overlay captures wheel events; onWheel effect drives page scroll + seek */}
-                <div ref={scrollCapRef} className="story-embed-scroll-cap" aria-hidden />
+                {/* Transparent overlay so wheel/touch land on the page (not the
+                    iframe's own scroller); native page scroll then drives the story. */}
+                <div className="story-embed-scroll-cap" aria-hidden />
               </div>
             </div>
           </div>
