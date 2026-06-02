@@ -20,12 +20,12 @@
  */
 
 import { useState } from 'react'
-import { buildLayerSchemaPrompt } from '@vismay/viz-engine'
 import {
   aiSlotConfig,
   modelLabel,
   type AiSlotKind,
 } from './aiSlots'
+import { buildSlotSchemaPrompt } from './overrideSchemas'
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'] as const
 type AspectRatio = (typeof ASPECT_RATIOS)[number]
@@ -64,14 +64,11 @@ export default function PromptBar({
   onClose,
 }: Props) {
   const config = aiSlotConfig(kind, layerType)
-  // Schema-aware default for text-modality layer slots: derive the exact
-  // accepted shape from the module's adminForm so the author sees (and can
-  // tweak) the real fields. Image layers keep their artistic default, and
-  // non-derivable slots fall back to the slot's generic default.
-  const schemaPrompt =
-    kind === 'layer' && layerType && config?.modality === 'text'
-      ? buildLayerSchemaPrompt(layerType)
-      : null
+  // Schema-aware default: the exact accepted YAML shape for this slot (derived
+  // from the layer module's adminForm, or the override-slot schema), so the
+  // author sees and can tweak the real fields. Image layers and non-derivable
+  // slots fall back to the slot's generic default.
+  const schemaPrompt = buildSlotSchemaPrompt(kind, layerType)
 
   const [prompt, setPrompt] = useState('')
   const [system, setSystem] = useState(

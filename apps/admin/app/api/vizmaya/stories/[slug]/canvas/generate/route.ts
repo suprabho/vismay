@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { parse as parseYaml } from 'yaml'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { buildAssetRef, resolveAssetUrl, buildLayerSchemaPrompt } from '@vismay/viz-engine'
+import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
 import {
   generateText,
   generateImage,
@@ -12,6 +12,7 @@ import {
   resolveModel,
 } from '@vismay/ai-gateway'
 import { aiSlotConfig, type AiSlotKind } from '@/components/vizmaya/canvas/aiSlots'
+import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
 
 /**
  * Generate the value for one editable canvas slot from a prompt.
@@ -96,17 +97,11 @@ export async function POST(
 
   // System prompt, in priority order:
   //   1. caller override (the author edited the textarea),
-  //   2. the schema-aware prompt derived from the layer module's adminForm,
+  //   2. the schema-aware prompt for this slot (exact YAML shape),
   //   3. the slot's generic default (backstop for slots we can't yet derive).
-  // Only text-modality layers get a YAML-shape prompt; image layers keep their
-  // artistic default (the image module's adminForm describes its YAML fields,
-  // not how to paint the image).
-  const schemaPrompt =
-    body.kind === 'layer' &&
-    config.modality === 'text' &&
-    typeof body.layerType === 'string'
-      ? buildLayerSchemaPrompt(body.layerType)
-      : null
+  // buildSlotSchemaPrompt owns the modality guard, so image layers keep their
+  // artistic default rather than getting a YAML schema.
+  const schemaPrompt = buildSlotSchemaPrompt(body.kind, body.layerType)
   const system =
     typeof body.system === 'string' && body.system.trim()
       ? body.system.trim().slice(0, MAX_SYSTEM_LENGTH)
