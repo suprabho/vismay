@@ -98,14 +98,11 @@ export default async function CanvasFramePage({ params }: RouteParams) {
           defaults={defaults}
           slug={slug}
           mapOverrides={mapOverrides}
-<<<<<<< Updated upstream
-=======
           // Match the public /story/[slug] page: a deck-format story must
           // render through the deck foreground layout, not the legacy
           // map chart-panel path. Omitting this defaulted to 'map', which
           // shoved deck vizslots (bigStat, bodyText, …) into the fixed
           // chart panel — drawing a stray gray rounded card behind them.
->>>>>>> Stashed changes
           format={story.frontmatter.format ?? 'map'}
         />
       </VerticalLoader>
