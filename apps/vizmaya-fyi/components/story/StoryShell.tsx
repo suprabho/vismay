@@ -2,7 +2,7 @@
 
 import type { ComponentProps, ReactNode } from 'react'
 import Link from 'next/link'
-import { StoryMapShell as BaseStoryMapShell } from '@vismay/story-reader'
+import { StoryShell as BaseStoryShell } from '@vismay/story-reader'
 import VizmayaLogo from '@/components/VizmayaLogo'
 
 // next/link-backed home link so the in-app reader keeps client-side nav +
@@ -29,11 +29,11 @@ function NextHomeLink({
  * the Vizmaya logo and a next/link home link. Every vizmaya route imports the
  * reader through this adapter, so call sites are unchanged by the extraction.
  */
-export default function StoryMapShell(
-  props: ComponentProps<typeof BaseStoryMapShell>
+export default function StoryShell(
+  props: ComponentProps<typeof BaseStoryShell>
 ) {
   return (
-    <BaseStoryMapShell
+    <BaseStoryShell
       {...props}
       LogoComponent={VizmayaLogo}
       LinkComponent={NextHomeLink}

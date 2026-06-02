@@ -243,6 +243,18 @@ function layerLabel(type: string): string {
       return 'Video'
     case 'rive':
       return 'Rive'
+    case 'bigStat':
+      return 'Big stat'
+    case 'bodyText':
+      return 'Body text'
+    case 'quote':
+      return 'Quote'
+    case 'keyValue':
+      return 'Key/value list'
+    case 'table':
+      return 'Table'
+    case 'imageGrid':
+      return 'Image grid'
     default:
       return type
   }
@@ -262,14 +274,14 @@ function layerLeaf(
     tag: type.toUpperCase(),
     body: truncateLines(safeYamlStringify(layer), 10),
     variant: 'mono',
-    // Map and image leaves carry a slot descriptor so the canvas's click
-    // handler can route to the right editor. Other layer types (chart /
-    // text / video / rive / embed) omit the slot for now — clicking does
-    // nothing until those editors are wired.
-    slot:
-      type === 'map' || type === 'image'
-        ? { kind: 'layer', layerType: type, path }
-        : undefined,
+    // Every layer leaf carries a slot descriptor so the canvas's click
+    // handler can route it to the right editor. The dispatcher (CanvasClient)
+    // decides which surface opens per `layerType`: map → YAML + MapPicker,
+    // image → ImageEditModal, any module with an `adminForm` → SlotInspector,
+    // and types with neither (chart, malformed/unknown) → the YAML editor.
+    // Keeping the routing decision out of here lets canvasInputs stay
+    // presentation-only.
+    slot: { kind: 'layer', layerType: type, path },
   }
 }
 

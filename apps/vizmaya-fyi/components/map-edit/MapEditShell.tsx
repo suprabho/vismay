@@ -95,7 +95,7 @@ function resolvePaintColor(color: string, fallback = '#D85A30'): string {
 
 /**
  * Resolve the map state for a unit, merging subsection overrides on top of
- * the parent section's map config — exactly matching StoryMapShell's logic.
+ * the parent section's map config — exactly matching StoryShell's logic.
  */
 function resolveMapStateFromUnit(
   unit: ResolvedUnit,

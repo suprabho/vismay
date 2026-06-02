@@ -5,6 +5,45 @@
 > evolve the engine to support it (and any future formats) without forking the
 > shell.
 
+## Status — as of June 2026
+
+**Phases 0–6 are shipped.** Five deck stories are live (`spacex-ipo-2026`,
+`spacex-s1-2026`, `money-in-politics-2026`, `paris-road-to-budapest`,
+`vizmaya-studio`), so the format is past its "ship spacex" milestone. The work
+landed across two commits — `feat(deck-format): generalize story shell…` and a
+follow-up `refactor(story-reader): extract vizmaya reader…` — rather than the
+six incremental PRs sketched at the bottom of this doc.
+
+| Phase | State | Notes |
+|---|---|---|
+| 0 · Schema foundations | ✅ Done | `SectionKind`, `StoryDefaults` (`storyBackground`/`overlay`/`panel`/`scroll`/`chart`), `StoryBackgroundConfig`, optional `section.map`/`section.panel`, `frontmatter.format` all landed. |
+| 1 · Optional `section.map` | ✅ Done | Guarded in `resolveSlots`, `PersistentComponent`, `storyMapOverrides`. |
+| 2 · Page-level background | ✅ Done | `StoryBackgroundSlot` + `StoryBackgroundOverlay`; print-mode solid-color swap (2.5) included from the start. |
+| 3 · Foreground modules | ✅ Done | All six (`bigStat`, `bodyText`, `quote`, `keyValue`, `table`, `imageGrid`) + the `map` foreground alias. |
+| 4 · Foreground layouts | ✅ Done | All eight registered (`DECK_LAYOUT_NAMES`). |
+| 5 · Kind taxonomy | ✅ Done | Section-text suppression gate shipped (see naming note below). |
+| 6 · Cross-cutting pipelines | ✅ Done | Zero-map video short-circuit + print-mode aura swap both in place (details under Phase 6). |
+| 7 · Deck editor | 🟡 Partial | Form-based **slot** editing shipped in the Rete Canvas editor (`SlotFormModal` + `VizConfigForm`); new-slide creation & drag-drop regions still deferred. See Phase 7. |
+| 8 · DB-backed content | ➖ Separate track | Schema keys ride along with the `feat/db-backed-content` migration. |
+
+**Two deviations from the plan as written:**
+
+1. **Reader extraction.** The shell and editorial blocks were pulled into a
+   shared package, **`@vismay/story-reader`**. Components this plan files under
+   `components/story/…` now live in
+   `packages/story-reader/src/components/story/…`; the vizmaya app keeps thin
+   adapters (e.g. `apps/vizmaya-fyi/components/story/StoryShell.tsx`) that inject
+   brand chrome (logo + next/link home link). Paths below predate the
+   extraction — translate accordingly.
+
+2. **As-built names differ from this plan's working names:**
+   - `StoryMapShell` → **`StoryShell`** (done; a deprecated `StoryMapShell`
+     alias is re-exported from `@vismay/story-reader` for one release cycle).
+   - `AuraBackdrop` → **`AuraBackground`** (vizmaya's host-injected aura
+     component, passed into `StoryBackgroundSlot` via its `AuraComponent` prop).
+   - `suppressSectionText` → **`DECK_KINDS_NO_TEXT_CARD`** / `suppressForDeckKind`
+     in `MapStorySection.tsx`.
+
 ## Architectural premise
 
 Investigation surfaces good news: the shell's core scroll engine, viz registry,
@@ -34,8 +73,9 @@ than a rewrite.
 - Extend `SectionKind` union and add render branches in ~10 files
 - Add deck-specific schema (`defaults.storyBackground`, `defaults.overlay`,
   `defaults.panel`, `defaults.scroll`)
-- Rename `StoryMapShell` → `StoryShell` (the "map" was always a misnomer once
-  backgrounds became pluggable)
+- ~~Rename `StoryMapShell` → `StoryShell`~~ ✅ **Done** (the "map" was always a
+  misnomer once backgrounds became pluggable). A deprecated `StoryMapShell`
+  alias is re-exported from `@vismay/story-reader` for one release cycle.
 
 ---
 
@@ -161,13 +201,15 @@ inner iframe gets the same aura at its own page level.
 
 This makes the home-tile aura double as the deck backdrop automatically.
 
-### 2.3 Aura component
+### 2.3 Aura component ✅
 
 Reuse the aura iframe/canvas component already used by
-`VerticalCaptureFrame.tsx:57-94`. Extract it to a shared `<AuraBackdrop>` in
-`packages/viz-engine/src/backdrops/AuraBackdrop.tsx` so both consumers share
-it. Support `input: off`, `tint` + `tintBlendMode` (CSS multiply layer above
-the aura), `fixed: true` (already the natural state).
+`VerticalCaptureFrame.tsx:57-94`. **As built:** the shared shell stays
+brand-agnostic — `StoryBackgroundSlot` takes the aura renderer via an
+`AuraComponent` prop, and vizmaya injects its own **`AuraBackground`**
+(`apps/vizmaya-fyi/components/AuraBackground.tsx`) rather than a `<AuraBackdrop>`
+living inside `viz-engine`. Supports `input: off`, `tint` + `tintBlendMode` (CSS
+multiply layer above the aura), `fixed: true` (the natural state).
 
 ### 2.4 Overlay layer
 
@@ -175,12 +217,13 @@ the aura), `fixed: true` (already the natural state).
 fixed inset: 0` div with the configured color/opacity/gradient. This is the
 deck spec's legibility floor for charts over moving aurora.
 
-### 2.5 PDF print mode
+### 2.5 PDF print mode ✅
 
 In `mode === 'print'` the aura should swap to a solid color (or be omitted
-entirely) for legibility. Add a `<StoryBackgroundSlot mode="print">` branch
-that returns `theme.colors.background` solid fill. This is the only
-mode-specific behavior the backdrop needs.
+entirely) for legibility. **Done** — `StoryBackgroundSlot` has a `mode === 'print'`
+branch returning a flat `var(--color-bg, #000)` fill, and `StoryBackgroundOverlay`
+drops its translucent layer in print too. This is the only mode-specific
+behavior the backdrop needs.
 
 ### 2.6 Readiness
 
@@ -309,11 +352,17 @@ Done in Phase 0.
 
 Today: hero, stat, text. The key insight: **for deck format, the section text
 card is suppressed for all kinds except `hero`/`cover`**. The deck composes
-content entirely through foreground vizslots in regions. One-line gate, not a
-per-kind branch:
+content entirely through foreground vizslots in regions. One gate, not a
+per-kind branch.
+
+**As built** in `MapStorySection.tsx` (now under `@vismay/story-reader`): the
+suppressed kinds are enumerated in a `DECK_KINDS_NO_TEXT_CARD` set and the gate
+reads `suppressForDeckKind` (rather than the inline `suppressSectionText`
+expression sketched here) — same effect:
 
 ```ts
-const suppressSectionText = frontmatter.format === 'deck' && kind !== 'cover' && kind !== 'hero'
+// kinds whose text lives entirely in foreground vizslots
+const suppressForDeckKind = DECK_KINDS_NO_TEXT_CARD.has(rawKind)
 ```
 
 That sidesteps the 10-way branch explosion. Deck stories use the vizslot
@@ -357,12 +406,16 @@ card.
 The investigation confirms most pipelines are already format-agnostic. Audit
 each for residual map assumptions.
 
-### 6.1 Autoplay video render
+### 6.1 Autoplay video render ✅
 
 `lib/storyVideoRender.ts` walks `[data-unit-index]` and waits on
-`__capturedMaps__`. Behavior to verify: with zero maps, the `__capturedMaps__`
-proxy must resolve to `[]` and not block. Currently capped at 5s — confirm it
-short-circuits when no map ever registers.
+`__capturedMaps__`. **Done** — the shell now publishes `window.__expectedMapCount__`,
+computed from the same `resolveSlots` the background/foreground dispatchers
+consume (so it can't disagree with what actually mounts — no false zero that
+would skip a needed tile-load wait). `walkAndRecord` reads it and, when it's a
+definite `0`, skips the map-load probe entirely instead of letting phase 1's 5s
+timeout elapse on every map-less render. A null/undefined reading falls through
+to the old probe, so older pages and races keep the prior behavior.
 
 ### 6.2 PDF report mode
 
@@ -397,16 +450,40 @@ when `?compose=vertical` is set.
 
 ---
 
-## Phase 7 · Editor and admin integration *(deferrable)*
+## Phase 7 · Editor and admin integration
 
-`components/map-edit/MapEditShell.tsx` is the admin editor. It branches on
-`section.kind` and assumes a map. For deck stories the editor is a different
-beast — section composition through region drag-drop, no map.
+Rather than a separate `DeckEditShell`, deck editing was added to the existing
+**Rete "Canvas" editor** (`apps/admin/.../canvas/`), which was already
+format-agnostic (it understands foreground regions + layouts and saves
+`config_yaml` generically). The original `MapEditShell` is untouched.
 
-**Defer this.** The admin can edit map stories today and view-only deck
-stories. Build a `DeckEditShell` only when authors need to edit decks in the
-admin (vs. authoring in YAML). Most likely 3-6 deck stories before this
-becomes urgent.
+### 7.1 Form-based slot editing ✅ *(shipped — slots-only scope)*
+
+Clicking any deck vizslot (`bigStat` / `bodyText` / `quote` / `keyValue` /
+`table` / `imageGrid`) — or any module that declares an `adminForm` — opens a
+new **`SlotFormModal`** that hosts the shared `VizConfigForm`, the same
+adminForm renderer the Assets-tab ComposeVizPanel uses. Saving reuses the
+existing `replaceLayer` → `saveConfigYaml` path (identical to the image modal).
+
+- **Routing rule:** module has `adminForm` and no bespoke editor → form modal.
+  `map` (no adminForm) keeps YAML + MapPicker; `image` keeps `ImageEditModal`;
+  `chart` (no adminForm) keeps the YAML editor. A **"Edit as YAML"** escape
+  hatch in the modal hands back to the YAML panel for the same slot.
+- **Routing seam:** `canvasInputs.layerLeaf` now attaches a clickable `slot`
+  descriptor to *every* layer (was map/image only); `CanvasClient`'s dispatcher
+  decides the editor. Add-menu surfaces the deck types with friendly labels +
+  seed templates (`canvasSlotAdd.seedLayerForType`).
+- **Dotted-key shim:** `SlotFormModal` flattens/​re-nests dotted adminForm keys
+  (only `bodyText`'s `textStyle.*` today) so they round-trip into the nested
+  config the runtime expects.
+
+### 7.2 Still deferred
+
+- **New-slide creation** and **drag-drop region reordering** in the canvas
+  (the heavier composition surfaces) — not built; YAML still owns slide/section
+  structure and layout choice.
+- The read-only **DeckComposerPanel** ("Deck" tab) remains a preview; it was
+  not graduated to inline editing (the canvas form editor covers that need).
 
 ---
 
@@ -431,17 +508,21 @@ keys.
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | Phase 1 breaks a legacy map story by gating the cascade wrong | Medium | Snapshot-test every story's `resolveSlots` output before/after; visual regression on 3-4 representative stories |
-| `__capturedMaps__` proxy hangs when no maps ever register | Medium | Add explicit short-circuit in `storyVideoRender.ts` if `expectedMapCount === 0` |
+| `__capturedMaps__` proxy hangs when no maps ever register | ✅ Resolved | `storyVideoRender.ts` reads the shell's `__expectedMapCount__` and short-circuits the probe at `0`; the proxy wait was already timeout-guarded, so this only trims the wasted 5s |
 | Aura backdrop bleeds into PDF and ruins legibility | Low | Phase 2.5 print-mode solid-color swap; verify in render |
 | Portrait variants of new layouts feel wrong | High (it's design) | Build desktop layouts first, do portrait pass after spacex story is approved |
 | Deck stories' chart layers don't animate on `activeStep` (no subsections) | Low | Correct behavior — deck slides don't have multi-step charts. If needed later, subsections work identically on deck. |
 | `frontmatter.aura` doubling as page background changes home-tile semantics | Low | The frontmatter field is unchanged; only consumers of it (now: home tile + deck page) read it independently |
 | Shared `<AuraBackdrop>` extraction breaks `VerticalCaptureFrame` | Medium | Extract carefully; keep VCF as the canonical caller, page-level mount delegates to same component |
-| `StoryMapShell` → `StoryShell` rename triggers churn in imports | Low | Leave a `StoryMapShell` re-export alias for one release cycle |
+| `StoryMapShell` → `StoryShell` rename triggers churn in imports | ✅ Resolved | Renamed; deprecated `StoryMapShell` re-export alias kept in `@vismay/story-reader` for one release cycle, so external importers don't break |
 
 ---
 
 ## Sequencing & ship strategy
+
+> **Historical.** This is the plan as sequenced before the work shipped. In
+> practice Phases 0–6 landed across two commits (see the Status section at the
+> top), not the eleven discrete PRs below. Kept for provenance.
 
 Each row is one PR, mergeable independently:
 

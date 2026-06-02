@@ -13,7 +13,7 @@ interface Props {
  * narrow widths and the section count is more legible than a long dot stack
  * on small screens).
  *
- * Mounted from `StoryMapShell` only when `defaults.progress === true`, so
+ * Mounted from `StoryShell` only when `defaults.progress === true`, so
  * other deck stories don't inherit the indicator by default.
  */
 export function DeckProgress({ current, total, onJump }: Props) {

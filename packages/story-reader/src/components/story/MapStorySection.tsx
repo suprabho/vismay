@@ -53,7 +53,7 @@ function extractHeroBits(paragraphs: string[]): { dek: string; byline: string } 
  * One viewport-tall snap target.
  *
  * Renders ONLY the text panel — the chart and map are page-level fixed
- * panels owned by StoryMapShell, so they persist across subsections of the
+ * panels owned by StoryShell, so they persist across subsections of the
  * same parent (allowing chart animations to resume rather than re-mount).
  *
  * Landscape layout:

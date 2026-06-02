@@ -269,7 +269,7 @@ async function walkAndRecord(args: {
   const page = await context.newPage()
 
   // ?autoplay=1 strips chrome and applies the autoplay-flavored layout.
-  // ?capture=1 sets staticCapture in StoryMapShell so the map jumps
+  // ?capture=1 sets staticCapture in StoryShell so the map jumps
   // deterministically between cues instead of flying — keeps tile loads
   // off-frame and makes camera state predictable from cue timing alone.
   // ?compose=vertical (9:16 only) constrains the story content to a 4:5
@@ -319,28 +319,46 @@ async function walkAndRecord(args: {
   // `addInitScript` runs in every frame in the context, so the iframe's
   // window has its own `__capturedMaps__` array populated by the story
   // page running inside it.
-  try {
-    await walkFrame.waitForFunction(
-      () => {
-        const w = window as unknown as {
-          __capturedMaps__?: { loaded(): boolean }[]
-        }
-        return !!w.__capturedMaps__ && w.__capturedMaps__.length > 0
-      },
-      { timeout: 5_000 }
+  //
+  // Fast path for map-less stories (deck-format slides, text-only stories):
+  // the shell publishes `__expectedMapCount__` synchronously, computed from
+  // the SAME slot resolver that decides whether a Mapbox instance mounts. When
+  // it's a definite 0, no map will ever register, so we skip the proxy probe
+  // entirely instead of letting phase 1's 5s timeout elapse on every render. A
+  // null/undefined reading (older page, or a race before the shell effect ran)
+  // falls through to the probe, preserving the original behavior.
+  const expectedMapCount = (await walkFrame
+    .evaluate(
+      () =>
+        (window as unknown as { __expectedMapCount__?: number })
+          .__expectedMapCount__
     )
-    await walkFrame.waitForFunction(
-      () => {
-        const w = window as unknown as {
-          __capturedMaps__?: { loaded(): boolean }[]
-        }
-        const maps = w.__capturedMaps__!
-        return maps.every((m) => m.loaded())
-      },
-      { timeout: 30_000 }
-    )
-  } catch {
-    // Either no maps appeared, or they didn't settle in time.
+    .catch(() => undefined)) as number | undefined
+
+  if (expectedMapCount !== 0) {
+    try {
+      await walkFrame.waitForFunction(
+        () => {
+          const w = window as unknown as {
+            __capturedMaps__?: { loaded(): boolean }[]
+          }
+          return !!w.__capturedMaps__ && w.__capturedMaps__.length > 0
+        },
+        { timeout: 5_000 }
+      )
+      await walkFrame.waitForFunction(
+        () => {
+          const w = window as unknown as {
+            __capturedMaps__?: { loaded(): boolean }[]
+          }
+          const maps = w.__capturedMaps__!
+          return maps.every((m) => m.loaded())
+        },
+        { timeout: 30_000 }
+      )
+    } catch {
+      // Either no maps appeared, or they didn't settle in time.
+    }
   }
 
   // One extra beat for any GSAP/chart entrance animations to settle, plus
