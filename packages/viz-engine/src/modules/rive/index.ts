@@ -198,6 +198,14 @@ const riveModule: VizModule<RiveLayerConfig> = {
     { kind: 'json', key: 'stepInput', label: 'Scroll → input mapping (JSON)' },
     { kind: 'json', key: 'capture', label: 'Capture freeze (JSON)' },
   ],
+  // viewModel is the common binding; stepInput/capture are advanced and left to
+  // the field docs rather than the worked example.
+  aiFieldExamples: {
+    viewModel:
+      'viewModel:\n' +
+      '  instance: default\n' +
+      '  bindings: { speed: 1.5, active: true }',
+  },
 }
 
 export default riveModule

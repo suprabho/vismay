@@ -41,8 +41,9 @@ export function buildLayerSchemaPrompt(layerType: string): string | null {
   }
   if (!fields.length) return null
 
+  const examples = mod.aiFieldExamples ?? {}
   const fieldLines = fields.map((f) => `  - ${describeField(f)}`).join('\n')
-  const example = buildExample(layerType, fields)
+  const example = buildExample(layerType, fields, examples)
 
   return (
     `You author one \`${mod.type}\` layer (“${mod.label}”) for a data-driven ` +
@@ -85,7 +86,11 @@ function describeField(f: AdminFormField): string {
 }
 
 /** A compact worked YAML example, nesting dotted keys (e.g. `textStyle.size`). */
-function buildExample(layerType: string, fields: AdminFormField[]): string {
+function buildExample(
+  layerType: string,
+  fields: AdminFormField[],
+  examples: Record<string, string>,
+): string {
   // Only illustrate required fields plus a couple of common optionals, so the
   // example stays short. Always lead with the type discriminant.
   const lines: string[] = [`type: ${layerType}`]
@@ -93,7 +98,14 @@ function buildExample(layerType: string, fields: AdminFormField[]): string {
 
   for (const f of fields) {
     const required = 'required' in f && f.required
-    if (!required && f.kind === 'json') continue // skip nested optionals in the example
+    if (f.kind === 'json') {
+      // Nested shapes come from the module's hand-written example, not a
+      // synthesised placeholder. Skip optional json with no example.
+      const ex = examples[f.key]
+      if (ex) lines.push(...ex.split('\n'))
+      else if (required) lines.push(`${f.key}: []`)
+      continue
+    }
     const value = exampleValue(f)
     if (value == null) continue
 
@@ -130,8 +142,7 @@ function exampleValue(f: AdminFormField): string | null {
       return 'accent2'
     case 'asset':
       return '"assets://your-asset"'
-    case 'json':
-      return '[]'
+    // 'json' fields are handled by buildExample via aiFieldExamples, not here.
     default:
       return null
   }

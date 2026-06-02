@@ -83,6 +83,12 @@ const imageGridModule: VizModule<ImageGridLayerConfig> = {
       ],
     },
   ],
+  aiFieldExamples: {
+    items:
+      'items:\n' +
+      '  - { src: "assets://photo-1.jpg", alt: "Falcon 9 liftoff" }\n' +
+      '  - { src: "assets://photo-2.jpg", caption: "Booster landing" }',
+  },
 }
 
 export default imageGridModule

@@ -168,6 +168,16 @@ export interface VizModule<TConfig = unknown> {
   mountingMode?: VizMountingMode
   introspect?: (config: TConfig, opts: { assetUrl: string }) => Promise<unknown>
   adminForm?: (config: TConfig | null) => AdminFormField[]
+  /**
+   * Worked YAML examples for `adminForm` `json` fields — the nested shapes the
+   * field descriptor can't fully spell out (e.g. a table's `columns`/`rows`).
+   * Keyed by the field's `key`; each value is the field's YAML *value* as it
+   * should appear (multi-line block or inline). Consumed by the schema-aware
+   * AI prompt builder (`buildLayerSchemaPrompt`) so generated YAML matches the
+   * exact nested shape `parseConfig` accepts. Optional — primitive fields are
+   * derived from `adminForm` alone.
+   */
+  aiFieldExamples?: Record<string, string>
   readinessProfile?: 'instant' | 'first-paint' | 'tiles-then-settle'
   collectAssetKeys?: (config: TConfig) => string[]
   /** Deterministic identity string used by BackgroundVizSlot to dedupe persistent instances. */

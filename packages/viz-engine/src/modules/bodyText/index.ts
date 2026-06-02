@@ -99,6 +99,12 @@ const bodyTextModule: VizModule<BodyTextLayerConfig> = {
       ],
     },
   ],
+  aiFieldExamples: {
+    content:
+      'content:\n' +
+      '  - "First paragraph of the body."\n' +
+      '  - "Second paragraph."',
+  },
 }
 
 export default bodyTextModule

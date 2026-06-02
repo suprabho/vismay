@@ -88,6 +88,12 @@ const textModule: VizModule<TextLayerConfig> = {
     { kind: 'json', key: 'content', label: 'Content override (string | string[])' },
     { kind: 'theme-token', key: 'color', label: 'Stat color token (stat-kind only)' },
   ],
+  aiFieldExamples: {
+    content:
+      'content:\n' +
+      '  - "First paragraph of the override."\n' +
+      '  - "Second paragraph."',
+  },
 }
 
 export default textModule

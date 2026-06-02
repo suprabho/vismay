@@ -84,6 +84,16 @@ const tableModule: VizModule<TableLayerConfig> = {
     { kind: 'json', key: 'rows', label: 'Rows (array of objects)', required: true },
     { kind: 'text', key: 'caption', label: 'Caption' },
   ],
+  aiFieldExamples: {
+    columns:
+      'columns:\n' +
+      '  - { key: metric, label: Metric }\n' +
+      '  - { key: value, label: FY2025, align: right, format: currency, currency: USD, decimals: 1 }',
+    rows:
+      'rows:\n' +
+      '  - { metric: Revenue, value: 18700000000 }\n' +
+      '  - { metric: Launches, value: 134 }',
+  },
 }
 
 export default tableModule
