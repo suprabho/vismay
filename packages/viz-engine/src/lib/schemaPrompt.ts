@@ -31,11 +31,34 @@ const RAW_YAML_RULE =
  */
 export function buildLayerSchemaPrompt(layerType: string): string | null {
   const mod = getVizModule(layerType)
-  if (!mod || typeof mod.adminForm !== 'function') return null
+  if (!mod) return null
 
+  // Prefer deriving from adminForm (the live source of truth). Modules without
+  // one (chart, map) supply a hand-written `aiSchema` body instead.
+  let body: string | null = null
+  if (typeof mod.adminForm === 'function') {
+    body = deriveBody(mod, layerType)
+  } else if (mod.aiSchema) {
+    body = mod.aiSchema.trim()
+  }
+  if (!body) return null
+
+  return (
+    `You author one \`${mod.type}\` layer (“${mod.label}”) for a data-driven ` +
+    `story, as YAML. The layer is a mapping discriminated by \`type: ${mod.type}\`.\n\n` +
+    `${body}\n\n` +
+    RAW_YAML_RULE
+  )
+}
+
+/** The field-list + worked-example body derived from a module's adminForm. */
+function deriveBody(
+  mod: { adminForm?: (c: null) => AdminFormField[]; aiFieldExamples?: Record<string, string> },
+  layerType: string,
+): string | null {
   let fields: AdminFormField[]
   try {
-    fields = mod.adminForm(null)
+    fields = mod.adminForm!(null)
   } catch {
     return null
   }
@@ -46,12 +69,9 @@ export function buildLayerSchemaPrompt(layerType: string): string | null {
   const example = buildExample(layerType, fields, examples)
 
   return (
-    `You author one \`${mod.type}\` layer (“${mod.label}”) for a data-driven ` +
-    `story, as YAML. The layer is a mapping discriminated by \`type: ${mod.type}\`.\n\n` +
     `Accepted fields (a field marked (required) must be present; omit optional ` +
     `fields you don't need):\n${fieldLines}\n\n` +
-    `Example shape:\n${example}\n\n` +
-    RAW_YAML_RULE
+    `Example shape:\n${example}`
   )
 }
 

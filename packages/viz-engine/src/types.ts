@@ -178,6 +178,15 @@ export interface VizModule<TConfig = unknown> {
    * derived from `adminForm` alone.
    */
   aiFieldExamples?: Record<string, string>
+  /**
+   * Full hand-written schema body (field list + a worked YAML example) for
+   * modules that expose no `adminForm` to derive from — currently `chart` and
+   * `map`, whose shapes are either a bare id reference or a deep camera/overlay
+   * config that doesn't fit the flat admin-form model. Used by
+   * `buildLayerSchemaPrompt` only when `adminForm` is absent; the builder wraps
+   * it with the shared intro + "output only YAML" rule.
+   */
+  aiSchema?: string
   readinessProfile?: 'instant' | 'first-paint' | 'tiles-then-settle'
   collectAssetKeys?: (config: TConfig) => string[]
   /** Deterministic identity string used by BackgroundVizSlot to dedupe persistent instances. */
