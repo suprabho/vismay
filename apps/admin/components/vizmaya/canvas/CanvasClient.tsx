@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
+import type { ResolvedUnit, Theme, StoryDefaults } from '@vismay/viz-engine'
 import { getForegroundLayout, getVizModule } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
@@ -558,6 +558,20 @@ export default function CanvasClient({
         : null,
     [editorTarget, sources]
   )
+
+  // Story-wide deck defaults (config.yaml `defaults:`), parsed for the slot
+  // inspector's live preview so it merges `defaults.panel` etc. like the real
+  // render. Re-parses on each in-canvas config save.
+  const deckDefaults = useMemo<StoryDefaults>(() => {
+    try {
+      const doc = parseYaml(sources.configYaml ?? '') as
+        | { defaults?: StoryDefaults }
+        | null
+      return (doc?.defaults ?? {}) as StoryDefaults
+    } catch {
+      return {} as StoryDefaults
+    }
+  }, [sources.configYaml])
 
   // `Map-Edit` affordance for the editor panel header. Defined only when
   // the current slice is camera-shaped — a map layer, an autoplay map
@@ -2930,9 +2944,13 @@ export default function CanvasClient({
       {slotTarget?.mode === 'form' && (
         <SlotInspector
           key={`${slotTarget.unit.parentIndex}:${JSON.stringify(slotTarget.slotPath)}`}
+          slug={slug}
           sectionLabel={formSlotLabel(slotTarget, sectionUnits)}
           layerType={slotTarget.layerType}
           initialLayer={slotTarget.initialLayer}
+          theme={localTheme ?? theme}
+          defaults={deckDefaults}
+          unitKey={`${slotTarget.unit.parentIndex}.${slotTarget.unit.subIndex ?? 0}`}
           saving={slotSaving}
           error={slotError}
           onApply={(next) => handleSlotFormApply(next, slotTarget)}

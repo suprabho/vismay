@@ -18,8 +18,17 @@
  * remounts via `key` to re-seed when the selected slot changes.
  */
 
-import { useMemo, useState } from 'react'
-import { getVizModule } from '@vismay/viz-engine'
+import { Component, useMemo, useState, type ReactNode } from 'react'
+import {
+  getVizModule,
+  ForegroundVizSlot,
+  StoryShellProvider,
+  ChartColorsProvider,
+  themeToChartColors,
+  type Theme,
+  type StoryDefaults,
+  type VizLayer,
+} from '@vismay/viz-engine'
 import VizConfigForm from '../VizConfigForm'
 
 type FormValue = string | number | boolean | object | null | undefined
@@ -33,10 +42,17 @@ interface StyleDraft {
 }
 
 interface Props {
+  slug: string
   sectionLabel: string
   layerType: string
   /** On-disk layer object, used to seed the inspector. */
   initialLayer: Record<string, unknown>
+  /** Story theme — drives the live preview's CSS color/font vars. */
+  theme: Theme | null
+  /** Story-wide defaults — the preview merges `defaults.panel` etc. like the real render. */
+  defaults: StoryDefaults
+  /** Stable identity for the previewed unit (resets layer state across slots). */
+  unitKey: string
   saving: boolean
   error: string | null
   onApply: (next: Record<string, unknown>) => void
@@ -134,9 +150,13 @@ const labelStyle: React.CSSProperties = {
 }
 
 export default function SlotInspector({
+  slug,
   sectionLabel,
   layerType,
   initialLayer,
+  theme,
+  defaults,
+  unitKey,
   saving,
   error,
   onApply,
@@ -172,6 +192,18 @@ export default function SlotInspector({
     setStyle((s) => ({ ...s, size: { ...s.size, [dim]: v } }))
   const setPanel = (k: string, v: string) =>
     setStyle((s) => ({ ...s, panel: { ...s.panel, [k]: v } }))
+
+  // Live preview layer — the exact object that would be written, rebuilt on
+  // every edit so the preview re-renders as you type.
+  const previewLayer = useMemo<VizLayer>(() => {
+    const layer: Record<string, unknown> = {
+      type: layerType,
+      ...unflattenContent(content),
+    }
+    const cs = cleanStyle(panelOn ? style : { ...style, panel: undefined })
+    if (cs) layer.style = cs
+    return layer as VizLayer
+  }, [layerType, content, style, panelOn])
 
   const apply = () => {
     const patch: Record<string, unknown> = { ...unflattenContent(content) }
@@ -311,6 +343,22 @@ export default function SlotInspector({
       )}
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        {/* LIVE PREVIEW — mounts the real ForegroundVizSlot with the draft
+            layer, re-rendering as you type. Faithful (same render path as the
+            story); an error boundary keeps a mid-edit invalid draft from
+            crashing the panel. */}
+        {theme && (
+          <div style={{ borderBottom: `1px solid ${COLORS.line}`, padding: 10 }}>
+            <SlotPreview
+              slug={slug}
+              theme={theme}
+              defaults={defaults}
+              layer={previewLayer}
+              unitKey={unitKey}
+            />
+          </div>
+        )}
+
         {/* CONTENT — VizConfigForm with dark CSS vars scoped locally so its
             theme-token colors render legibly on the canvas surface. */}
         <Section title="Content">
@@ -549,4 +597,129 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   )
+}
+
+/* ─── live preview ─── */
+
+/** Mirror of story-reader's ThemeProvider var mapping (kept here so the admin
+ *  doesn't take a story-reader dependency just for the preview). */
+function themeVars(theme: Theme): React.CSSProperties {
+  const c = theme.colors
+  const hexToRgb = (hex: string): string => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+    if (!m) return '10 14 20'
+    const n = parseInt(m[1], 16)
+    return `${(n >> 16) & 0xff} ${(n >> 8) & 0xff} ${n & 0xff}`
+  }
+  const vars: Record<string, string> = {
+    '--color-bg': c.background,
+    '--color-bg-rgb': hexToRgb(c.background),
+    '--color-text': c.text,
+    '--color-accent': c.accent,
+    '--color-accent2': c.accent2,
+    '--color-teal': c.teal,
+    '--color-surface': c.surface,
+    '--color-muted': c.muted,
+    '--color-panel-rgb': hexToRgb(c.surface),
+    '--font-serif': `${theme.fonts.serif}, 'Times New Roman', serif`,
+    '--font-sans': `${theme.fonts.sans}, -apple-system, 'Segoe UI', Helvetica, sans-serif`,
+    '--font-mono': `${theme.fonts.mono}, 'Courier New', Consolas, monospace`,
+  }
+  if (c.positive) vars['--color-positive'] = c.positive
+  if (c.amber) vars['--color-amber'] = c.amber
+  if (c.red) vars['--color-red'] = c.red
+  return vars as React.CSSProperties
+}
+
+function SlotPreview({
+  slug,
+  theme,
+  defaults,
+  layer,
+  unitKey,
+}: {
+  slug: string
+  theme: Theme
+  defaults: StoryDefaults
+  layer: VizLayer
+  unitKey: string
+}) {
+  const chartColors = useMemo(() => themeToChartColors(theme), [theme])
+  const shell = useMemo(
+    () => ({
+      accessToken: '',
+      defaults,
+      mapOverrides: null,
+      isAutoplay: false,
+      isPortrait: false,
+      isCapture: false,
+      units: [],
+      format: 'deck' as const,
+    }),
+    [defaults]
+  )
+  return (
+    <div
+      style={{
+        ...themeVars(theme),
+        position: 'relative',
+        width: '100%',
+        height: 180,
+        borderRadius: 6,
+        overflow: 'hidden',
+        background: theme.colors.background,
+        color: theme.colors.text,
+        fontFamily: 'var(--font-sans)',
+        border: `1px solid ${COLORS.line}`,
+      }}
+    >
+      <ChartColorsProvider value={chartColors}>
+        <StoryShellProvider value={shell}>
+          {/* Remount on every layer change so a previously-failed draft
+              recovers once the fields are valid again. */}
+          <PreviewBoundary key={JSON.stringify(layer)}>
+            <ForegroundVizSlot
+              slug={slug}
+              layers={[layer]}
+              unitKey={unitKey}
+              activeStep={0}
+              mode="scroll"
+            />
+          </PreviewBoundary>
+        </StoryShellProvider>
+      </ChartColorsProvider>
+    </div>
+  )
+}
+
+class PreviewBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { failed: false }
+  }
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true }
+  }
+  render(): ReactNode {
+    if (this.state.failed) {
+      return (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            padding: 16,
+            fontSize: 11,
+            color: COLORS.muted,
+          }}
+        >
+          Fill in the required fields to preview this slot.
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
