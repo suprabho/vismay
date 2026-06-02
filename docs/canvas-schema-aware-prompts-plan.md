@@ -1,6 +1,12 @@
 # Plan: schema-aware AI system prompts for the Vizmaya Canvas
 
-**Status: plan-only. No code is to be written yet.**
+**Status: implemented (steps 1–5).** Layer slots derive their prompt from the
+module `adminForm` (+ `aiFieldExamples` for nested fields, `aiSchema` for
+chart/map); override slots use hand-authored schemas in `overrideSchemas.ts`;
+`buildSlotSchemaPrompt` is the single entry point for the PromptBar + route,
+and the PromptBar recovers a missing layer type from the YAML being edited.
+The "layer-type picker UI" (original step 5) was dropped as unnecessary — the
+type is always known upstream or recoverable from content.
 
 ## Goal
 

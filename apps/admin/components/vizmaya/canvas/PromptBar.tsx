@@ -53,6 +53,18 @@ interface Props {
   onClose?: () => void
 }
 
+/**
+ * The `type:` discriminant of a single-layer YAML mapping, or null. Used to
+ * recover the layer type when a caller (e.g. EditorPanel editing an existing
+ * layer) doesn't pass `layerType` but the type is right there in the content.
+ * `image` is excluded so YAML editing never flips the bar into image-gen mode.
+ */
+function layerTypeFromYaml(text?: string): string | null {
+  if (!text) return null
+  const m = text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9]*)/m)
+  return m && m[1] !== 'image' ? m[1] : null
+}
+
 export default function PromptBar({
   slug,
   kind,
@@ -63,12 +75,19 @@ export default function PromptBar({
   defaultSystemPrompt,
   onClose,
 }: Props) {
-  const config = aiSlotConfig(kind, layerType)
+  // When a layer slot arrives without a concrete type, recover it from the YAML
+  // being edited so the schema prompt matches the real layer (not the generic).
+  const effectiveLayerType =
+    kind === 'layer' && !layerType
+      ? (layerTypeFromYaml(currentValue) ?? undefined)
+      : layerType
+
+  const config = aiSlotConfig(kind, effectiveLayerType)
   // Schema-aware default: the exact accepted YAML shape for this slot (derived
   // from the layer module's adminForm, or the override-slot schema), so the
   // author sees and can tweak the real fields. Image layers and non-derivable
   // slots fall back to the slot's generic default.
-  const schemaPrompt = buildSlotSchemaPrompt(kind, layerType)
+  const schemaPrompt = buildSlotSchemaPrompt(kind, effectiveLayerType)
 
   const [prompt, setPrompt] = useState('')
   const [system, setSystem] = useState(
@@ -101,7 +120,7 @@ export default function PromptBar({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             kind,
-            layerType,
+            layerType: effectiveLayerType,
             prompt: trimmed,
             system: system.trim() || undefined,
             model,
