@@ -71,6 +71,7 @@ import {
   type SlotPath,
 } from './canvasSlotEditing'
 import EditorPanel from './EditorPanel'
+import PromptBar from './PromptBar'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
@@ -547,6 +548,9 @@ export default function CanvasClient({
     unit: ResolvedUnit
     regionKey?: string
     slotPath?: SlotPath
+    /** Open the standalone ✨ PromptBar for this slot instead of the full
+     *  EditorPanel (the on-node Generate affordance — Feature 1). */
+    promptOnly?: boolean
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -710,6 +714,10 @@ export default function CanvasClient({
         // override types). When present, the React renderer shows a
         // hover state + opens the editor panel on click.
         onClick?: () => void
+        // Set on editable text/YAML leaves (content/layout/overrides/YAML
+        // layers). When present, a ✨ chip opens the standalone PromptBar
+        // for this slot (Feature 1's on-node Generate affordance).
+        onGenerate?: () => void
         constructor(
           public label: string,
           public tag: string,
@@ -749,6 +757,9 @@ export default function CanvasClient({
       // stack at once would conflate layout + regions.
       class JunctionControl extends ClassicPreset.Control {
         onClick?: () => void
+        // Set on editable junctions (Background / Foreground / region) so a
+        // ✨ chip can open the standalone PromptBar for that slot's YAML.
+        onGenerate?: () => void
         // Right-click handler — set on Background / Foreground / region
         // junctions so the user can open the +Add picker from any of
         // them. Sticking it on the control (not the node) so the React
@@ -1080,6 +1091,7 @@ export default function CanvasClient({
         data: TextPreviewControl
       }) {
         const editable = typeof data.onClick === 'function'
+        const generatable = typeof data.onGenerate === 'function'
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -1087,11 +1099,15 @@ export default function CanvasClient({
           stop(e)
           data.onClick?.()
         }
+        const onGenerate = (e: React.MouseEvent) => {
+          stop(e)
+          data.onGenerate?.()
+        }
         return (
           <div
             onClick={onClick}
-            onPointerDown={editable ? stop : undefined}
-            onMouseDown={editable ? stop : undefined}
+            onPointerDown={editable || generatable ? stop : undefined}
+            onMouseDown={editable || generatable ? stop : undefined}
             title={editable ? 'click to edit' : undefined}
             style={{
               width: INPUT_W - 24,
@@ -1131,9 +1147,20 @@ export default function CanvasClient({
               }}
             >
               <span>{data.tag}</span>
-              {editable && (
-                <span style={{ color: '#3a5da0' }}>EDIT</span>
-              )}
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {generatable && (
+                  <span
+                    onClick={onGenerate}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    title="Generate with AI"
+                    style={{ color: '#b07cd8', cursor: 'pointer' }}
+                  >
+                    ✨ AI
+                  </span>
+                )}
+                {editable && <span style={{ color: '#3a5da0' }}>EDIT</span>}
+              </span>
             </div>
             {data.body}
           </div>
@@ -1233,15 +1260,20 @@ export default function CanvasClient({
         // junction is left-click editable.
         const editable = typeof data.onClick === 'function'
         const hasContextMenu = typeof data.onContextMenu === 'function'
-        // Pointer events need to be 'auto' if EITHER edit OR right-click
-        // is wired — otherwise the right-click event never reaches us.
-        const wantsPointer = editable || hasContextMenu
+        const generatable = typeof data.onGenerate === 'function'
+        // Pointer events need to be 'auto' if edit, right-click, OR generate
+        // is wired — otherwise those events never reach us.
+        const wantsPointer = editable || hasContextMenu || generatable
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
           if (!editable) return
           stop(e)
           data.onClick?.()
+        }
+        const onGenerate = (e: React.MouseEvent) => {
+          stop(e)
+          data.onGenerate?.()
         }
         const onContextMenu = (e: React.MouseEvent) => {
           if (!hasContextMenu) return
@@ -1298,6 +1330,21 @@ export default function CanvasClient({
                 style={{ color: '#a07a3a', letterSpacing: '0.14em' }}
               >
                 ⚠ MISMATCH
+              </span>
+            )}
+            {generatable && !data.warning && (
+              <span
+                onClick={onGenerate}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Generate with AI"
+                style={{
+                  color: '#b07cd8',
+                  letterSpacing: '0.14em',
+                  cursor: 'pointer',
+                }}
+              >
+                ✨ AI
               </span>
             )}
             {editable && !data.warning && (
@@ -1466,6 +1513,28 @@ export default function CanvasClient({
             kind,
             unit: targetUnit,
             regionKey,
+          })
+        }
+      }
+
+      // Sibling of makeEditClick that opens the standalone ✨ PromptBar
+      // (promptOnly) for the slot instead of the full YAML editor. Shares the
+      // same target shape, so the generated value persists through handleSave.
+      function makeGenerateClick(
+        kind: EditableKind,
+        regionKey?: string,
+        slotPath?: SlotPath
+      ): () => void {
+        return () => {
+          const idx = stateRef.current.activeSectionIndex
+          const targetUnit = sectionUnitsRef.current[idx]
+          if (!targetUnit) return
+          setEditorTargetRef.current({
+            kind,
+            unit: targetUnit,
+            regionKey,
+            slotPath,
+            promptOnly: true,
           })
         }
       }
@@ -1649,6 +1718,23 @@ export default function CanvasClient({
             }
           } else if (editKind) {
             node.previewCtrl.onClick = makeEditClick(editKind)
+            node.previewCtrl.onGenerate = makeGenerateClick(editKind)
+          }
+          // ✨ Generate on layer leaves, but only those that edit through the
+          // YAML editor (map layers + types with no adminForm) — those persist
+          // via handleSave. Image + adminForm-form layers use separate editors
+          // (image modal / SlotInspector) and keep their in-panel AI for now.
+          if (d.slot && d.slot.kind !== 'theme' && d.slot.layerType !== 'image') {
+            const slot = d.slot
+            const usesYamlEditor =
+              slot.layerType === 'map' || !getVizModule(slot.layerType)?.adminForm
+            if (usesYamlEditor) {
+              node.previewCtrl.onGenerate = makeGenerateClick(
+                'layer',
+                undefined,
+                slot.path
+              )
+            }
           }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
@@ -1664,11 +1750,13 @@ export default function CanvasClient({
           opts?: {
             onContextMenu?: (clientX: number, clientY: number) => void
             warning?: string
+            onGenerate?: () => void
           }
         ): Promise<JunctionNode> => {
           const node = new JunctionNode(label, sub)
           const ctrl = node.controls.ctrl as InstanceType<typeof JunctionControl>
           if (onClick) ctrl.onClick = onClick
+          if (opts?.onGenerate) ctrl.onGenerate = opts.onGenerate
           // Set onContextMenu + warning BEFORE addNode so the initial React
           // render sees them — the +ADD chip and ⚠ MISMATCH chip both
           // depend on these being present at first paint.
@@ -1764,6 +1852,7 @@ export default function CanvasClient({
                     ? { kind: 'background-create' }
                     : { kind: 'background-append' },
               }),
+              onGenerate: makeGenerateClick('background'),
             }
           )
           await wire(bgNode, 'value', frame, 'background')
@@ -1839,6 +1928,7 @@ export default function CanvasClient({
                   },
                 }),
                 warning: regionWarning,
+                onGenerate: makeGenerateClick('region', region.key),
               }
             )
             regionNodes.push(rj)
@@ -1878,6 +1968,7 @@ export default function CanvasClient({
                 existingKeys: existingRegionKeys,
                 layoutName,
               }),
+              onGenerate: makeGenerateClick('foreground'),
             }
           )
           await wire(fgNode, 'value', frame, 'foreground')
@@ -1900,6 +1991,7 @@ export default function CanvasClient({
                 label: 'Foreground (flat)',
                 dispatch: { kind: 'foreground-flat-append' },
               }),
+              onGenerate: makeGenerateClick('foreground'),
             }
           )
           await wire(fgNode, 'value', frame, 'foreground')
@@ -1930,6 +2022,7 @@ export default function CanvasClient({
                 existingKeys: [],
                 layoutName: defaultLayout,
               }),
+              onGenerate: makeGenerateClick('foreground'),
             }
           )
           await wire(fgNode, 'value', frame, 'foreground')
@@ -2079,6 +2172,7 @@ export default function CanvasClient({
               unit: targetUnit,
             })
           }
+          node.previewCtrl.onGenerate = makeGenerateClick(editKind)
           overrideMap.set(spec.socket, node)
           await editor.addNode(node)
           await area.translate(node.id, {
@@ -2915,7 +3009,7 @@ export default function CanvasClient({
           </button>
         )}
       </header>
-      {editorSlice && (
+      {editorSlice && !editorTarget?.promptOnly && (
         <EditorPanel
           slice={editorSlice}
           saving={saving}
@@ -2932,6 +3026,72 @@ export default function CanvasClient({
           // supplies the modality, model subset, and default system prompt.
           aiKind={editorTarget?.kind}
         />
+      )}
+      {/* On-node ✨ Generate (Feature 1): a standalone PromptBar for the slot,
+          no full editor. onApply persists straight through handleSave (the same
+          merge→save path) and closes. layerType is omitted so the bar recovers
+          a layer's type from its current YAML. */}
+      {editorSlice && editorTarget?.promptOnly && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 380,
+            background: '#0c0c0c',
+            borderLeft: '1px solid #262626',
+            zIndex: 50,
+            padding: 14,
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            <span style={{ fontSize: 12, color: '#ddd' }}>
+              ✨ Generate · {editorSlice.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditorTarget(null)
+                setSaveError(null)
+              }}
+              style={{
+                marginLeft: 'auto',
+                color: '#888',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 16,
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+          <PromptBar
+            slug={slug}
+            kind={editorTarget.kind}
+            currentValue={editorSlice.text}
+            onApply={(v) => handleSave(v)}
+            onClose={() => {
+              setEditorTarget(null)
+              setSaveError(null)
+            }}
+          />
+          {saveError && (
+            <div style={{ color: '#f87171', fontSize: 11, marginTop: 8 }}>
+              {saveError}
+            </div>
+          )}
+        </div>
       )}
       {/* Slot-edit surfaces — mutually exclusive by construction (slotTarget
           is a single discriminated union). Map + image take over with their
