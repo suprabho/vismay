@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import type { editor as MonacoEditorNs } from 'monaco-editor'
 import type { OnMount } from '@monaco-editor/react'
 import type { EditableSlice } from './canvasEditing'
+import PromptBar from './PromptBar'
+import type { AiSlotKind } from './aiSlots'
 
 // Monaco needs `window` — keep it out of the SSR bundle. The canvas page
 // is already 'use client' but dynamic import here avoids a hydration race
@@ -26,6 +28,14 @@ interface Props {
    *  map, an autoplay map override, a per-section share map). The panel
    *  itself doesn't know which — it just relays the click. */
   onMapEdit?: () => void
+  /** Story slug — required to surface the AI prompt input. */
+  slug?: string
+  /** When set (with `slug`), shows a `<PromptBar>` above the editor scoped to
+   *  this slot. The generated value lands in the editor draft for review; the
+   *  existing Save flow persists it. Left unset → no prompt input. */
+  aiKind?: AiSlotKind
+  /** Layer type for `aiKind === 'layer'` (routes image layers to image gen). */
+  aiLayerType?: string
 }
 
 /**
@@ -43,6 +53,9 @@ export default function EditorPanel({
   onSave,
   onClose,
   onMapEdit,
+  slug,
+  aiKind,
+  aiLayerType,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping
   // through React state on every keystroke. Initialised from the slice;
@@ -258,6 +271,25 @@ export default function EditorPanel({
           }}
         >
           {error}
+        </div>
+      )}
+
+      {slug && aiKind && (
+        <div
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid #2a2a2a',
+          }}
+        >
+          {/* Generated value lands in the draft; the user reviews it in Monaco
+              and the existing Save flow persists it through mergeSlice. */}
+          <PromptBar
+            slug={slug}
+            kind={aiKind}
+            layerType={aiLayerType}
+            currentValue={draft}
+            onApply={(v) => setDraft(v)}
+          />
         </div>
       )}
 

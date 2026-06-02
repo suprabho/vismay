@@ -2926,6 +2926,11 @@ export default function CanvasClient({
             setSaveError(null)
           }}
           onMapEdit={editorMapEdit}
+          slug={slug}
+          // Vertical slice: AI prompt input is wired for the content slot
+          // first. Widen to other EditableKinds by dropping this gate once the
+          // content flow is validated end-to-end.
+          aiKind={editorTarget?.kind === 'content' ? 'content' : undefined}
         />
       )}
       {/* Slot-edit surfaces — mutually exclusive by construction (slotTarget
