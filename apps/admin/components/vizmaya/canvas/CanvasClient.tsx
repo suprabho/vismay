@@ -477,6 +477,13 @@ export default function CanvasClient({
   useEffect(() => {
     moduleTypesRef.current = moduleTypes
   }, [moduleTypes])
+  // Story format, mirrored for the same reason — the graph builder reads it to
+  // frame deck sections as slides (drop the map-era Background band, relabel
+  // the foreground as the slide).
+  const formatRef = useRef(format)
+  useEffect(() => {
+    formatRef.current = format
+  }, [format])
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
@@ -1413,8 +1420,15 @@ export default function CanvasClient({
       function measureLeftHeight(g: InputGraph): number {
         // Content / Layout / Theme standalone block.
         let h = 3 * LEAF_H + 2 * LGAP_Y + BAND_GAP
-        // Background band (>=1 row: a placeholder when empty).
-        h += bandH(Math.max(1, g.background.layers.length)) + BAND_GAP
+        // Background band (>=1 row: a placeholder when empty). Deck sections
+        // with no per-section background drop the band entirely — the backdrop
+        // is page-level (edited via the Deck defaults button), so a
+        // "(no background)" box is just map-era noise. Must mirror mountInputs.
+        const deckNoBg =
+          formatRef.current === 'deck' && g.background.layers.length === 0
+        if (!deckNoBg) {
+          h += bandH(Math.max(1, g.background.layers.length)) + BAND_GAP
+        }
         // Foreground band.
         if (g.foreground.shape === 'regions') {
           const regions = g.foreground.regions
@@ -1689,6 +1703,10 @@ export default function CanvasClient({
          * "layout" field is meaningless and saving one would clobber the
          * stack. Theme lives in markdown frontmatter and stays
          * non-editable here — frontmatter editing is its own concern. */
+        // Deck sections read as slide parts, not map inputs.
+        const isDeck = formatRef.current === 'deck'
+        const deckLeafLabel: Partial<Record<'content' | 'layout' | 'theme', string>> =
+          isDeck ? { content: 'Slide text', layout: 'Slide layout' } : {}
         for (const key of ['content', 'layout', 'theme'] as const) {
           let editKind: EditableKind | undefined
           if (key === 'content') {
@@ -1696,14 +1714,18 @@ export default function CanvasClient({
           } else if (key === 'layout' && g.foreground.shape === 'regions') {
             editKind = 'layout'
           }
-          const node = await addLeaf(g[key], regionColX, y, editKind)
+          const relabel = deckLeafLabel[key]
+          const data = relabel ? { ...g[key], label: relabel } : g[key]
+          const node = await addLeaf(data, regionColX, y, editKind)
           await wire(node, 'value', frame, key)
           y += LEAF_H + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 
-        /* Background band: layer leaves → Background group → frame. */
-        {
+        /* Background band: layer leaves → Background group → frame. Dropped
+           for deck sections with no per-section background (the backdrop is
+           page-level — see the Deck defaults editor); mirrors measureLeftHeight. */
+        if (!(isDeck && g.background.layers.length === 0)) {
           const leaves =
             g.background.layers.length > 0
               ? g.background.layers
@@ -1845,7 +1867,7 @@ export default function CanvasClient({
           // user can add a new region under foreground.regions; the
           // picker surfaces layout-defined region suggestions.
           const fgNode = await addJunction(
-            'Foreground',
+            isDeck ? 'Slide' : 'Foreground',
             fg.layout ? `layout: ${fg.layout}` : 'regions',
             groupColX,
             center - JUNCTION_H / 2,
@@ -1867,8 +1889,8 @@ export default function CanvasClient({
           // existing flat array. Switching shape (flat → regions) would
           // clobber the layer stack, so the picker stays in layer mode.
           const fgNode = await addJunction(
-            'Foreground',
-            'flat layer stack',
+            isDeck ? 'Slide' : 'Foreground',
+            isDeck ? 'single region' : 'flat layer stack',
             groupColX,
             y + h / 2 - JUNCTION_H / 2,
             makeEditClick('foreground'),
@@ -1895,8 +1917,8 @@ export default function CanvasClient({
           const defaultLayout = 'split-37-63-two-row'
           const defaultLayoutDef = getForegroundLayout(defaultLayout)
           const fgNode = await addJunction(
-            'Foreground',
-            'none',
+            isDeck ? 'Slide' : 'Foreground',
+            isDeck ? 'no slots yet' : 'none',
             groupColX,
             y,
             makeEditClick('foreground'),
