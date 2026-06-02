@@ -20,6 +20,7 @@
  */
 
 import { useState } from 'react'
+import { buildLayerSchemaPrompt } from '@vismay/viz-engine'
 import {
   aiSlotConfig,
   modelLabel,
@@ -63,10 +64,18 @@ export default function PromptBar({
   onClose,
 }: Props) {
   const config = aiSlotConfig(kind, layerType)
+  // Schema-aware default for text-modality layer slots: derive the exact
+  // accepted shape from the module's adminForm so the author sees (and can
+  // tweak) the real fields. Image layers keep their artistic default, and
+  // non-derivable slots fall back to the slot's generic default.
+  const schemaPrompt =
+    kind === 'layer' && layerType && config?.modality === 'text'
+      ? buildLayerSchemaPrompt(layerType)
+      : null
 
   const [prompt, setPrompt] = useState('')
   const [system, setSystem] = useState(
-    defaultSystemPrompt ?? config?.defaultSystem ?? '',
+    defaultSystemPrompt ?? schemaPrompt ?? config?.defaultSystem ?? '',
   )
   const [showSystem, setShowSystem] = useState(false)
   const [model, setModel] = useState(config?.models[0] ?? '')

@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { parse as parseYaml } from 'yaml'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
+import { buildAssetRef, resolveAssetUrl, buildLayerSchemaPrompt } from '@vismay/viz-engine'
 import {
   generateText,
   generateImage,
@@ -94,11 +94,23 @@ export async function POST(
     )
   }
 
-  // System prompt: caller override (when they edited it) else the slot default.
+  // System prompt, in priority order:
+  //   1. caller override (the author edited the textarea),
+  //   2. the schema-aware prompt derived from the layer module's adminForm,
+  //   3. the slot's generic default (backstop for slots we can't yet derive).
+  // Only text-modality layers get a YAML-shape prompt; image layers keep their
+  // artistic default (the image module's adminForm describes its YAML fields,
+  // not how to paint the image).
+  const schemaPrompt =
+    body.kind === 'layer' &&
+    config.modality === 'text' &&
+    typeof body.layerType === 'string'
+      ? buildLayerSchemaPrompt(body.layerType)
+      : null
   const system =
     typeof body.system === 'string' && body.system.trim()
       ? body.system.trim().slice(0, MAX_SYSTEM_LENGTH)
-      : config.defaultSystem
+      : (schemaPrompt ?? config.defaultSystem)
 
   // Model: caller choice if it's in the allowed set, else the slot default.
   const requested = typeof body.model === 'string' ? body.model : null
