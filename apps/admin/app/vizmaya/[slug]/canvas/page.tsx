@@ -109,6 +109,7 @@ export default async function CanvasPage({ params }: Props) {
       theme={story.frontmatter.theme ?? null}
       signedSrcById={signedSrcById}
       moduleTypes={moduleTypes}
+      format={story.frontmatter.format === 'deck' ? 'deck' : 'map'}
     />
   )
 }

@@ -99,6 +99,11 @@ interface Props {
     background: string[]
     foreground: string[]
   }
+  /**
+   * Story format from frontmatter. Drives deck-aware affordances (the Deck
+   * defaults editor; future deck-only graph framing). Defaults to `'map'`.
+   */
+  format?: 'map' | 'deck'
 }
 
 /**
@@ -386,6 +391,7 @@ export default function CanvasClient({
   theme,
   signedSrcById,
   moduleTypes,
+  format = 'map',
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
@@ -2850,6 +2856,28 @@ export default function CanvasClient({
         <span style={{ marginLeft: 12, color: '#888' }}>
           {sectionViews.length} sections · ← / → to paginate
         </span>
+        {format === 'deck' && sectionUnits.length > 0 && (
+          <button
+            onClick={() =>
+              setEditorTarget({ kind: 'defaults', unit: sectionUnits[0] })
+            }
+            title="Edit story-wide deck defaults — page backdrop, overlay, panel, scroll, chart"
+            style={{
+              pointerEvents: 'auto',
+              marginLeft: 12,
+              background: 'transparent',
+              color: '#9bb0d8',
+              border: '1px solid #2a4d8f',
+              borderRadius: 5,
+              padding: '3px 9px',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Deck defaults
+          </button>
+        )}
       </header>
       {editorSlice && (
         <EditorPanel
