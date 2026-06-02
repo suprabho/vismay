@@ -78,7 +78,18 @@ function resolveForeground(section: StorySectionConfig): ResolvedForeground {
       }
       return { kind: 'regions', layout: fg.layout, regions }
     }
-    return { kind: 'flat', layers: asLayerArray(fg as VizLayer | VizLayer[]) }
+    // Deck-format sugar: `section.layout` at the root paired with a flat
+    // `foreground:` array becomes a region-aware foreground using a single
+    // `default` region. Deck layouts are registered as single-fill containers
+    // (foregroundLayouts.ts) because their vizslots self-position via
+    // `style.position` + `style.size`. The layout name is preserved so the
+    // admin form / preview can render the right scaffolding and downstream
+    // consumers (telemetry, layout-aware selectors) can detect deck slides.
+    const layers = asLayerArray(fg as VizLayer | VizLayer[])
+    if (typeof section.layout === 'string' && section.layout.trim().length > 0) {
+      return { kind: 'regions', layout: section.layout, regions: { default: layers } }
+    }
+    return { kind: 'flat', layers }
   }
   if (typeof section.chart === 'string' && section.chart.trim().length > 0) {
     return { kind: 'flat', layers: [{ type: 'chart', id: section.chart }] }

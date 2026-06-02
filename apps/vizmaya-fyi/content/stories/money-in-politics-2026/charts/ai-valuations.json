@@ -1,0 +1,45 @@
+{
+  "steps": [
+    {
+      "title": "AI-firm valuations — USD billions, early 2026",
+      "option": {
+        "grid": { "left": 56, "right": 28, "top": 48, "bottom": 56 },
+        "tooltip": { "trigger": "axis", "formatter": "{b}<br/>${c}B" },
+        "xAxis": {
+          "type": "category",
+          "data": ["Anthropic\nFeb 2026", "OpenAI\nMar 2026", "Anthropic\nMay 2026"],
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 12, "lineHeight": 15 }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "USD billions",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "formatter": "${value}B" },
+          "splitLine": { "lineStyle": { "color": "$line" } }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "46%",
+            "data": [
+              { "value": 380, "itemStyle": { "color": "$muted" } },
+              { "value": 852, "itemStyle": { "color": "$accent2" } },
+              { "value": 965, "itemStyle": { "color": "$accent" } }
+            ],
+            "label": {
+              "show": true,
+              "position": "top",
+              "formatter": "${c}B",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 13,
+              "fontWeight": "bold"
+            },
+            "itemStyle": { "borderRadius": [6, 6, 0, 0] }
+          }
+        ]
+      }
+    }
+  ]
+}

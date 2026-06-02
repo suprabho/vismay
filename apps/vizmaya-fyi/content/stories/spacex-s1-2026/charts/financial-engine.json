@@ -1,0 +1,52 @@
+{
+  "steps": [
+    {
+      "title": "SpaceX 2025 full-year financials — adjusted EBITDA waterfall ($B)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: ${c}B"
+        },
+        "grid": { "left": "2%", "right": "8%", "bottom": "12%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Total\nRevenue", "Connectivity\nEBITDA", "Space\nEBITDA", "AI\nEBITDA", "Total\nEBITDA"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "$B",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "formatter": "${value}B", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "52%",
+            "label": {
+              "show": true,
+              "position": "top",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12,
+              "fontWeight": "bold",
+              "formatter": "{c}B"
+            },
+            "data": [
+              { "value": 18.67, "itemStyle": { "color": "$accent2", "borderRadius": [4,4,0,0] }, "label": { "color": "$accent2", "formatter": "$18.67B" } },
+              { "value": 7.16,  "itemStyle": { "color": "$teal",    "borderRadius": [4,4,0,0] }, "label": { "color": "$teal",    "formatter": "+$7.16B" } },
+              { "value": -0.65, "itemStyle": { "color": "$red",     "borderRadius": [0,0,4,4] }, "label": { "color": "$red",    "position": "bottom", "formatter": "-$0.65B" } },
+              { "value": -1.23, "itemStyle": { "color": "$red",     "borderRadius": [0,0,4,4] }, "label": { "color": "$red",    "position": "bottom", "formatter": "-$1.23B" } },
+              { "value": 6.59,  "itemStyle": { "color": "$positive","borderRadius": [4,4,0,0] }, "label": { "color": "$positive","formatter": "$6.59B" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

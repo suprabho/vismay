@@ -2,8 +2,9 @@
 
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
-import { ForegroundVizSlot } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import { ForegroundVizSlot, ForegroundLayoutSlot } from '@vismay/viz-engine'
+import { resolveSlotsFlat, resolveSlots, getVizModule } from '@vismay/viz-engine'
+import type { StoryFormat } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
 import { useStoryReadiness } from '@vismay/viz-engine'
@@ -21,6 +22,16 @@ interface Props {
   title: string
   units: ResolvedUnit[]
   config: StoryConfig
+  /**
+   * Story format. Map stories get the legacy 50/50 (map left + text+chart
+   * right) per-slide template. Deck stories get a full-canvas slide that
+   * mounts the section's foreground via `ForegroundLayoutSlot`, so slot
+   * positions and named layouts (`text-left-chart-right`, etc.) work the
+   * same in slides as on the live page.
+   */
+  format?: StoryFormat
+  /** Frontmatter aura slug. For deck stories, used as the per-slide backdrop. */
+  aura?: string
   accessToken: string
   logo?: string
   /** When true, hides any non-print chrome (debug overlays, etc.). */
@@ -47,11 +58,18 @@ export default function SlidesShell({
   title,
   units,
   config,
+  format = 'map',
+  // aura intentionally unused in this PR — deck slides paint the theme
+  // background as their backdrop. A future iteration can render the aura
+  // embed per slide (deferred because animated iframes don't help PDF
+  // capture and visually compete with frosted-glass slot chrome).
+  aura: _aura,
   accessToken,
   logo,
   print = false,
   embed = false,
 }: Props) {
+  const isDeck = format === 'deck'
   const slides = useMemo(() => {
     return units.map((unit) => {
       const map = unit.parentConfig.map
@@ -74,8 +92,11 @@ export default function SlidesShell({
   }, [units])
 
   // Count each capture-blocking element: every visible map + every foreground
-  // viz layer (chart / image / video / rive / embed). The slot's
-  // `noteLayerReady` fires once per layer when its first paintable state lands.
+  // viz layer (chart / image / video / rive / embed) WHOSE MODULE IS
+  // REGISTERED. Unknown layer types (e.g. a deck-format `quote` layer when
+  // the quote module hasn't been registered yet) silently render null in
+  // `ForegroundVizSlot` and never fire `noteReady` — counting them would
+  // keep `__pdfReady__` from ever flipping true.
   const expectedSignals = useMemo(() => {
     let total = 0
     for (const s of slides) {
@@ -86,13 +107,77 @@ export default function SlidesShell({
       ) {
         total++
       }
-      total += resolveSlotsFlat(s.unit.parentConfig).foreground.length
+      const layers = resolveSlotsFlat(s.unit.parentConfig).foreground
+      for (const layer of layers) {
+        const mod = getVizModule(layer.type)
+        if (mod && mod.slots.includes('foreground')) total++
+      }
     }
     return total
   }, [slides])
   const { noteReady } = useStoryReadiness(expectedSignals)
   // Keep the legacy alias so the JSX below doesn't have to thread a renamed prop.
   const noteMapReady = noteReady
+
+  /**
+   * Deck-format slide renderer. Full 1920×1080 canvas, no map column,
+   * no per-slide header/footer chrome. The section's resolved foreground
+   * (which can be region-based via `section.layout`) mounts via
+   * `ForegroundLayoutSlot`, so slot positions and named layouts work the
+   * same as on the live page.
+   *
+   * For `kind: cover` / `kind: hero` slides we render the section text on
+   * top of the foreground (the cover image lives in the foreground slot
+   * via the YAML and the title card sits over it). For other deck kinds
+   * the section text is suppressed — content lives in the vizslots.
+   */
+  const renderDeckSlide = (unit: ResolvedUnit): ReactNode => {
+    const resolved = resolveSlots(unit.parentConfig)
+    const rawKind = unit.parentConfig.kind ?? 'text'
+    const isHeroLike = rawKind === 'cover' || rawKind === 'hero'
+    return (
+      <div className="absolute inset-0">
+        <ForegroundLayoutSlot
+          slug={slug}
+          foreground={resolved.foreground}
+          unit={unit}
+          activeStep={unit.subIndex}
+          mode="print"
+          noteLayerReady={noteReady}
+        />
+        {isHeroLike && (
+          <div
+            className="absolute z-30 pointer-events-none flex flex-col gap-3"
+            // Bottom-left over the foreground; matches the live cover slot's
+            // title placement. Padding clears the slide edges.
+            style={{ left: '80px', right: '80px', bottom: '96px' }}
+          >
+            {unit.parentConfig.eyebrow && (
+              <div
+                className="font-[family-name:var(--font-mono)] uppercase tracking-[0.18em]"
+                style={{ fontSize: '16px', color: 'var(--color-accent)' }}
+              >
+                {unit.parentConfig.eyebrow}
+              </div>
+            )}
+            {unit.heading && (
+              <h2
+                className="font-serif font-bold"
+                style={{
+                  fontSize: '64px',
+                  lineHeight: 1.1,
+                  color: 'var(--color-text)',
+                  maxWidth: '60%',
+                }}
+              >
+                {unit.heading}
+              </h2>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const renderSlideContent = (
     {
@@ -278,7 +363,7 @@ export default function SlidesShell({
               fontFamily: 'var(--font-sans)',
             }}
           >
-            {renderSlideContent(slide, i)}
+            {isDeck ? renderDeckSlide(slide.unit) : renderSlideContent(slide, i)}
           </section>
         ))}
       </div>

@@ -6,17 +6,19 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import ThemeEditor from './ThemeEditor'
 import CodeEditor from './CodeEditor'
 import YamlConfigEditor from './YamlConfigEditor'
+import DeckComposerPanel from './DeckComposerPanel'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
 import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
+import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
 import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
 
-type Tab = 'theme' | 'markdown' | 'config' | 'charts' | 'assets' | 'narration' | 'settings'
+type Tab = 'theme' | 'edit' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -36,10 +38,10 @@ interface InitialState {
   }
 }
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; deckOnly?: boolean }[] = [
   { id: 'theme', label: 'Theme' },
-  { id: 'markdown', label: 'Markdown' },
-  { id: 'config', label: 'Config' },
+  { id: 'edit', label: 'Markdown + Config' },
+  { id: 'deck', label: 'Deck', deckOnly: true },
   { id: 'charts', label: 'Charts' },
   { id: 'assets', label: 'Assets' },
   { id: 'narration', label: 'Narration' },
@@ -53,7 +55,7 @@ interface BulkResult {
   errors: string[]
 }
 
-const TAB_IDS = new Set<Tab>(['theme', 'markdown', 'config', 'charts', 'assets', 'narration', 'settings'])
+const TAB_IDS = new Set<Tab>(['theme', 'edit', 'deck', 'charts', 'assets', 'narration', 'settings'])
 function isTab(v: string | null): v is Tab {
   return v != null && TAB_IDS.has(v as Tab)
 }
@@ -69,8 +71,9 @@ export default function EditorClient({
   /** Which consumer app this story belongs to — picks the "preview ↗"
    *  destination (vizf1/footshorts have their own /editorial route; vizmaya
    *  uses /story/<slug>). The server-rendered share/autoplay links stay on
-   *  vizmaya.fyi regardless because those gated routes only live there. */
-  appSlug: string
+   *  vizmaya.fyi regardless because those gated routes only live there.
+   *  null = unassigned (a Draft); preview falls back to the vizmaya route. */
+  appSlug: string | null
   sectionHref: string
   initial: InitialState
   /** Pre-signed URLs for the gated open-in-tab links (autoplay, share).
@@ -81,6 +84,7 @@ export default function EditorClient({
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
+    if (q === 'markdown' || q === 'config') return 'edit'
     return isTab(q) ? q : 'theme'
   })()
   const [tab, setTab] = useState<Tab>(initialTab)
@@ -95,6 +99,10 @@ export default function EditorClient({
 
   const parsed = useMemo(() => parseFrontmatter(markdown), [markdown])
   const theme = (parsed.data.theme ?? undefined) as Partial<Theme> | undefined
+  // Reveal the Deck composer tab only for deck-format stories. Authors can
+  // still author the deck in YAML through the Config tab; this tab adds a
+  // structured view that materializes the per-slot adminForm metadata.
+  const isDeck = parsed.data.format === 'deck'
 
   function updateTheme(next: Theme) {
     const nextData = { ...parsed.data, theme: next }
@@ -322,7 +330,7 @@ export default function EditorClient({
       )}
 
       <nav className="flex gap-1 px-2 py-2 border-b border-white/5 overflow-x-auto">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !t.deckOnly || isDeck).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -352,38 +360,41 @@ export default function EditorClient({
             onChange={updateTheme}
           />
         )}
-        {tab === 'markdown' && (
-          <>
-            <FileActions
-              filename={`${slug}.md`}
-              accept=".md,.markdown,text/markdown"
-              mime="text/markdown;charset=utf-8"
-              value={markdown}
-              onUpload={setMarkdown}
-            />
-            <CodeEditor
-              value={markdown}
-              onChange={setMarkdown}
-              language="markdown"
-              path={`${slug}.md`}
-            />
-          </>
+        {tab === 'edit' && (
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 min-h-0 divide-y md:divide-y-0 md:divide-x divide-white/5">
+            <div className="flex flex-col min-h-0">
+              <FileActions
+                filename={`${slug}.md`}
+                accept=".md,.markdown,text/markdown"
+                mime="text/markdown;charset=utf-8"
+                value={markdown}
+                onUpload={setMarkdown}
+              />
+              <CodeEditor
+                value={markdown}
+                onChange={setMarkdown}
+                language="markdown"
+                path={`${slug}.md`}
+              />
+            </div>
+            <div className="flex flex-col min-h-0">
+              <FileActions
+                filename={`${slug}.config.yaml`}
+                accept=".yaml,.yml,text/yaml,application/yaml"
+                mime="application/yaml;charset=utf-8"
+                value={config}
+                onUpload={setConfig}
+              />
+              <YamlConfigEditor
+                value={config}
+                onChange={setConfig}
+                path={`${slug}.config.yaml`}
+              />
+            </div>
+          </div>
         )}
-        {tab === 'config' && (
-          <>
-            <FileActions
-              filename={`${slug}.config.yaml`}
-              accept=".yaml,.yml,text/yaml,application/yaml"
-              mime="application/yaml;charset=utf-8"
-              value={config}
-              onUpload={setConfig}
-            />
-            <YamlConfigEditor
-              value={config}
-              onChange={setConfig}
-              path={`${slug}.config.yaml`}
-            />
-          </>
+        {tab === 'deck' && isDeck && (
+          <DeckComposerPanel value={config} onJumpToYaml={() => setTab('edit')} />
         )}
         {tab === 'charts' && (
           <ChartsList
@@ -409,6 +420,8 @@ export default function EditorClient({
         )}
         {tab === 'settings' && (
           <SettingsPanel
+            slug={slug}
+            appSlug={appSlug}
             status={(parsed.data.status as string) ?? 'published'}
             listed={parsed.data.listed !== false}
             displayOrder={typeof parsed.data.displayOrder === 'number' ? parsed.data.displayOrder : null}
@@ -446,6 +459,7 @@ function ChartsList({
   onChartsChange: (next: ChartEntry[]) => void
 }) {
   const [uploading, setUploading] = useState(false)
+  const [downloadingAll, setDownloadingAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -468,6 +482,20 @@ function ChartsList({
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
+  }
+
+  async function downloadAll() {
+    setError(null)
+    const ids = charts.filter((c) => c.editable).map((c) => c.id)
+    if (ids.length === 0) return
+    setDownloadingAll(true)
+    try {
+      for (const id of ids) {
+        await downloadChart(id)
+      }
+    } finally {
+      setDownloadingAll(false)
+    }
   }
 
   async function deleteChart(id: string) {
@@ -534,6 +562,14 @@ function ChartsList({
         >
           {uploading ? 'Uploading…' : '↑ Upload chart'}
         </button>
+        <button
+          type="button"
+          disabled={downloadingAll || charts.every((c) => !c.editable)}
+          onClick={downloadAll}
+          className="text-xs px-2 py-1 rounded text-neutral-400 hover:text-white hover:bg-white/5 disabled:opacity-40"
+        >
+          {downloadingAll ? 'Downloading…' : '↓ Download all'}
+        </button>
         <span className="text-xs text-neutral-600">filename → id</span>
         <input
           ref={inputRef}
@@ -553,7 +589,7 @@ function ChartsList({
           No charts for this story.
         </div>
       ) : (
-        <ul className="divide-y divide-white/5">
+        <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
           {charts.map((c) =>
             c.editable ? (
               <li key={c.id} className="flex items-center">
@@ -624,11 +660,15 @@ function StatusBadge({
 }
 
 function SettingsPanel({
+  slug,
+  appSlug,
   status,
   listed,
   displayOrder,
   onChange,
 }: {
+  slug: string
+  appSlug: string | null
   status: string
   listed: boolean
   displayOrder: number | null
@@ -637,6 +677,14 @@ function SettingsPanel({
   return (
     <div className="flex-1 flex flex-col min-h-0 p-4 overflow-y-auto">
       <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-2">App</label>
+          <MoveStoryControl slug={slug} currentAppSlug={appSlug} />
+          <p className="text-xs text-neutral-500 mt-1">
+            Move this story to another app, or unassign it back to Drafts.
+          </p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium mb-2">Publishing Status</label>
           <select

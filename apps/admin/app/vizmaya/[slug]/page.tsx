@@ -19,7 +19,7 @@ export default async function EditStoryPage({ params }: Props) {
   return (
     <EditorClient
       slug={slug}
-      appSlug="vizmaya-fyi"
+      appSlug={initial.appSlug}
       sectionHref="/vizmaya"
       initial={initial}
       signedLinks={signedLinks}

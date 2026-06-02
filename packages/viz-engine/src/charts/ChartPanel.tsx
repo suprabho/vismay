@@ -17,9 +17,20 @@ import GenericChart from './GenericChart'
  * ScrollySection blocks) to its chart component. The persistent map
  * background is NOT in this registry — it lives at page level.
  *
- * An id prefixed with `data:` is resolved by GenericChart, which loads
- * `content/stories/<slug>/charts/<id>.json` and renders its ECharts option.
- * This is the path used by stories generated via `npm run ingest`.
+ * Resolution order:
+ *   1. `data:<id>` — legacy explicit form. Resolved by GenericChart, which
+ *      fetches `/api/chart-data/<slug>/<id>` (Supabase-backed; previously
+ *      `content/stories/<slug>/charts/<id>.json` on disk).
+ *   2. One of the bespoke hardcoded components below (KoreaBarChart, etc.).
+ *   3. Bare id with a known slug — also resolved by GenericChart. This is
+ *      the default for the new layered schema (`foreground: [{ type:
+ *      'chart', id: 'segment-revenue' }]`), where authors don't write the
+ *      `data:` prefix. A missing row renders GenericChart's "Chart load
+ *      failed" message instead of silently returning null.
+ *
+ * Bare id with no slug still returns null — the legacy ScrollySection
+ * callsite mounts ChartPanel without a slug and expects the hardcoded
+ * registry only.
  */
 export default function ChartPanel({
   chartId,
@@ -30,7 +41,8 @@ export default function ChartPanel({
   activeStep?: number
   slug?: string
 }) {
-  if (chartId?.startsWith('data:')) {
+  if (!chartId) return null
+  if (chartId.startsWith('data:')) {
     if (!slug) return null
     const id = chartId.slice('data:'.length)
     return <GenericChart slug={slug} id={id} activeStep={activeStep} />
@@ -56,7 +68,7 @@ export default function ChartPanel({
       return <FeedbackLoopDiagram activeStep={activeStep} />
     case 'dram-price':
       return <DRAMPriceChart activeStep={activeStep} />
-    default:
-      return null
   }
+  if (slug) return <GenericChart slug={slug} id={chartId} activeStep={activeStep} />
+  return null
 }

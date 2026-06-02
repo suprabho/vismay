@@ -44,6 +44,12 @@ export type EditableKind =
   | 'content'
   | 'layout'
   | 'background'
+  // Story-wide `defaults` block (config.yaml `defaults:`). For deck stories
+  // this holds the page backdrop (storyBackground/overlay), the default panel
+  // chrome, scroll behaviour, and chart defaults — none of which the legacy
+  // per-section map paradigm surfaced. Edited as one YAML slice from the
+  // canvas header; not tied to any section, so `unit` is ignored.
+  | 'defaults'
   // Whole-foreground edit — works on any shape (regions-object, flat
   // VizLayer[], or absent). Used as the catch-all editor on the
   // Foreground junction so flat-shape sections aren't stuck with no
@@ -251,6 +257,20 @@ export function buildEditableSlice(
         language: 'yaml',
         title: `Background · §${unit.parentIndex}`,
         placeholder: BACKGROUND_PLACEHOLDER,
+      }
+    }
+
+    case 'defaults': {
+      const doc = safeParseYaml(sources.configYaml)
+      const defaults =
+        doc && typeof doc === 'object'
+          ? (doc as { defaults?: unknown }).defaults
+          : undefined
+      return {
+        text: defaults === undefined ? '' : safeStringify(defaults),
+        language: 'yaml',
+        title: 'Deck defaults',
+        placeholder: DEFAULTS_PLACEHOLDER,
       }
     }
 
@@ -593,6 +613,24 @@ export function mergeSlice(
       }
     }
 
+    case 'defaults': {
+      // `defaults` is top-level (not section-scoped). Reuse mutableConfigSection
+      // only to parse the whole doc + preserve the rest of config.yaml; the
+      // returned section is ignored.
+      const { doc } = mutableConfigSection(sources.configYaml, unit.parentIndex)
+      if (trimmed === '') {
+        delete (doc as Record<string, unknown>).defaults
+      } else {
+        ;(doc as Record<string, unknown>).defaults = parseYaml(editedText)
+      }
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
+
     case 'foreground': {
       const { doc, section } = mutableConfigSection(
         sources.configYaml,
@@ -823,6 +861,26 @@ const SHARE_MAP_PLACEHOLDER = `# Share-card map override for this section. Examp
 #
 # Empty body removes the override. Wraps live under \`sections.<id>.map:\`
 # in share.yaml — same shape ShareCard reads.`
+
+const DEFAULTS_PLACEHOLDER = `# Story-wide defaults (config.yaml \`defaults:\`). Deck stories use:
+#
+# storyBackground:        # page-level backdrop, renders once behind every slide
+#   type: aura            #   aura | image | color | none
+#   slug: "my-aura-slug"
+#   fixed: true
+# overlay:                # legibility layer between backdrop and content
+#   color: "#000"
+#   opacity: 0.3
+# panel:                  # default frosted-glass chrome for foreground slots
+#   background: "rgb(var(--color-panel-rgb) / 0.6)"
+#   borderRadius: "12px"
+#   backdropBlur: "12px"
+# scroll:                 # snap = slide deck; continuous = cinematic scroll
+#   mode: snap
+#   paddingY: "12vh"
+# chart:                  # chart theme + grid defaults
+#   theme: light-editorial
+`
 
 const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the legacy \`map:\` field).
 # Examples:

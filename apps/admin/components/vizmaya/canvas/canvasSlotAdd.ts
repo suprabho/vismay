@@ -50,6 +50,22 @@ export function seedLayerForType(type: string): Record<string, unknown> {
       return { type: 'video', src: '' }
     case 'rive':
       return { type: 'rive', src: '' }
+    // Deck-format vizslots. Seeds carry the keys the form exposes so they
+    // show as empty inputs; they need not satisfy `parseConfig` (the user
+    // fills the form immediately after the slot is created, same as the
+    // empty `image` seed above).
+    case 'bigStat':
+      return { type: 'bigStat', value: '' }
+    case 'bodyText':
+      return { type: 'bodyText' }
+    case 'quote':
+      return { type: 'quote', text: '' }
+    case 'keyValue':
+      return { type: 'keyValue', items: [] }
+    case 'table':
+      return { type: 'table', columns: [], rows: [] }
+    case 'imageGrid':
+      return { type: 'imageGrid', items: [] }
     default:
       // Module types (fs:*, f1:*, …) — we don't know the config shape, so
       // seed with just `type`. Layer YAML editor takes over from there.

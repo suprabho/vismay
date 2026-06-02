@@ -1,0 +1,57 @@
+{
+  "steps": [
+    {
+      "title": "Global compute demand vs US grid capacity — indexed 2010=100 (log scale)",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "cross" },
+          "formatter": "Year {b}<br/>{a0}: {c0}<br/>{a1}: {c1}"
+        },
+        "legend": {
+          "data": ["Global Compute Demand", "US Grid Capacity"],
+          "top": 6,
+          "textStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "icon": "circle"
+        },
+        "grid": { "left": "2%", "right": "4%", "bottom": "10%", "top": "18%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["2010","2012","2014","2016","2018","2020","2022","2024","2026","2028","2030","2032","2035"],
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "log",
+          "name": "Index (2010=100, log)",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "name": "Global Compute Demand",
+            "type": "line",
+            "smooth": true,
+            "symbol": "none",
+            "lineStyle": { "color": "$accent", "width": 3 },
+            "areaStyle": { "color": { "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{ "offset": 0, "color": "rgba(249,115,22,0.3)" }, { "offset": 1, "color": "rgba(249,115,22,0)" }] } },
+            "data": [100, 196, 385, 754, 1478, 2897, 7949, 21812, 55000, 90000, 145000, 230000, 500000]
+          },
+          {
+            "name": "US Grid Capacity",
+            "type": "line",
+            "smooth": false,
+            "symbol": "none",
+            "lineStyle": { "color": "$muted", "width": 2, "type": "dashed" },
+            "areaStyle": { "color": { "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1, "colorStops": [{ "offset": 0, "color": "rgba(100,116,139,0.15)" }, { "offset": 1, "color": "rgba(100,116,139,0)" }] } },
+            "data": [100, 102, 103, 105, 107, 109, 114, 119, 125, 131, 138, 145, 157]
+          }
+        ]
+      }
+    }
+  ]
+}

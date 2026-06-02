@@ -113,6 +113,9 @@ export default function ThemeEditor({ theme, onChange, yamlError }: Props) {
   function setFont(key: keyof Theme['fonts'], value: string) {
     onChange({ ...t, fonts: { ...t.fonts, [key]: value } })
   }
+  function swapFonts(a: keyof Theme['fonts'], b: keyof Theme['fonts']) {
+    onChange({ ...t, fonts: { ...t.fonts, [a]: t.fonts[b], [b]: t.fonts[a] } })
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -150,6 +153,24 @@ export default function ThemeEditor({ theme, onChange, yamlError }: Props) {
         </Section>
 
         <Section title="Fonts">
+          <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-neutral-500">
+            <span className="mr-0.5">Swap roles:</span>
+            <SwapButton
+              label="serif ↔ sans"
+              title={`Swap "${t.fonts.serif}" and "${t.fonts.sans}"`}
+              onClick={() => swapFonts('serif', 'sans')}
+            />
+            <SwapButton
+              label="sans ↔ mono"
+              title={`Swap "${t.fonts.sans}" and "${t.fonts.mono}"`}
+              onClick={() => swapFonts('sans', 'mono')}
+            />
+            <SwapButton
+              label="serif ↔ mono"
+              title={`Swap "${t.fonts.serif}" and "${t.fonts.mono}"`}
+              onClick={() => swapFonts('serif', 'mono')}
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(['serif', 'sans', 'mono'] as const).map((k) => (
               <FontField
@@ -168,6 +189,19 @@ export default function ThemeEditor({ theme, onChange, yamlError }: Props) {
         </Section>
       </div>
     </div>
+  )
+}
+
+function SwapButton({ label, title, onClick }: { label: string; title: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="rounded border border-white/10 px-1.5 py-0.5 text-[11px] text-neutral-300 hover:border-white/30 hover:text-white transition-colors"
+    >
+      {label}
+    </button>
   )
 }
 

@@ -1,13 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import DetailSheet from '@/components/DetailSheet'
 import {
   getFifaWc26TeamProfile,
   type FifaWc26TeamProfile,
+  type FifaWc26Squad,
+  type FifaWc26SquadPlayer,
   type FootshortsFixture,
   type FootshortsNewsItem,
+  type SquadGroupClub,
+  type SquadGroupLeague,
 } from '@/lib/fifaWc26'
+import { useFifaWc26Squad } from '@/lib/useFifaWc26'
 
 interface Props {
   code: string
@@ -20,11 +25,12 @@ type State =
   | { kind: 'missing' }
   | { kind: 'error'; message: string }
 
-type Tab = 'stats' | 'fixtures' | 'news'
+type Tab = 'stats' | 'squad' | 'fixtures' | 'news'
 
 export default function TeamDetail({ code, onClose }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [tab, setTab] = useState<Tab>('stats')
+  const squadQuery = useFifaWc26Squad(code)
 
   useEffect(() => {
     let cancelled = false
@@ -47,10 +53,12 @@ export default function TeamDetail({ code, onClose }: Props) {
     setTab('stats')
   }, [code])
 
+  const squadCount = squadQuery.data?.total ?? 0
   const availableTabs: Tab[] =
     state.kind === 'ready'
       ? [
           'stats',
+          ...(squadCount > 0 ? (['squad'] as const) : []),
           ...(state.data.footshorts.fixtures.length > 0 ? (['fixtures'] as const) : []),
           ...(state.data.footshorts.news.length > 0 ? (['news'] as const) : []),
         ]
@@ -70,6 +78,7 @@ export default function TeamDetail({ code, onClose }: Props) {
           tabs={availableTabs}
           active={activeTab}
           onChange={setTab}
+          squadCount={squadCount}
           fixturesCount={state.data.footshorts.fixtures.length}
           newsCount={state.data.footshorts.news.length}
         />
@@ -86,7 +95,9 @@ export default function TeamDetail({ code, onClose }: Props) {
             No profile data for this team yet.
           </p>
         )}
-        {state.kind === 'ready' && <TabContent tab={activeTab} data={state.data} />}
+        {state.kind === 'ready' && (
+          <TabContent tab={activeTab} data={state.data} squad={squadQuery.data ?? null} squadLoading={squadQuery.isLoading} />
+        )}
       </div>
     </DetailSheet>
   )
@@ -96,19 +107,33 @@ function TabBar({
   tabs,
   active,
   onChange,
+  squadCount,
   fixturesCount,
   newsCount,
 }: {
   tabs: Tab[]
   active: Tab
   onChange: (t: Tab) => void
+  squadCount: number
   fixturesCount: number
   newsCount: number
 }) {
   const label = (t: Tab): string =>
-    t === 'stats' ? 'Stats' : t === 'fixtures' ? 'Fixtures' : 'News'
+    t === 'stats'
+      ? 'Stats'
+      : t === 'squad'
+      ? 'Squad'
+      : t === 'fixtures'
+      ? 'Fixtures'
+      : 'News'
   const count = (t: Tab): number | null =>
-    t === 'fixtures' ? fixturesCount : t === 'news' ? newsCount : null
+    t === 'squad'
+      ? squadCount
+      : t === 'fixtures'
+      ? fixturesCount
+      : t === 'news'
+      ? newsCount
+      : null
   return (
     <div
       className="flex px-4 shrink-0"
@@ -149,7 +174,18 @@ function TabBar({
   )
 }
 
-function TabContent({ tab, data }: { tab: Tab; data: FifaWc26TeamProfile }) {
+function TabContent({
+  tab,
+  data,
+  squad,
+  squadLoading,
+}: {
+  tab: Tab
+  data: FifaWc26TeamProfile
+  squad: FifaWc26Squad | null
+  squadLoading: boolean
+}) {
+  if (tab === 'squad') return <SquadPanel squad={squad} loading={squadLoading} />
   if (tab === 'fixtures') return <FixturesPanel data={data} />
   if (tab === 'news') return <NewsPanel data={data} />
   return <StatsPanel data={data} />
@@ -591,5 +627,363 @@ function RankBar({
         />
       </div>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Squad panel: treemap (league > club) on top, roster table below.
+
+function SquadPanel({
+  squad,
+  loading,
+}: {
+  squad: FifaWc26Squad | null
+  loading: boolean
+}) {
+  if (loading) {
+    return <p className="text-xs font-mono text-zinc-500 mt-3">Loading squad…</p>
+  }
+  if (!squad || squad.total === 0) {
+    return (
+      <p className="text-xs font-mono text-zinc-500 mt-3">
+        No squad announced yet for this team.
+      </p>
+    )
+  }
+  return (
+    <>
+      <SquadBreakdown squad={squad} />
+      <SquadRoster players={squad.players} />
+      <p
+        className="text-[10px] font-mono leading-snug"
+        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
+      >
+        Squad source: {Array.from(new Set(squad.players.map((p) => p.source ?? 'manual'))).join(' · ')}.
+        Clubs reflect call-up time; players unmatched to a club entity show their raw club name.
+      </p>
+    </>
+  )
+}
+
+function SquadBreakdown({ squad }: { squad: FifaWc26Squad }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <p
+          className="text-[10px] font-mono uppercase tracking-[0.22em]"
+          style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
+        >
+          — Composition · {squad.total} players · {squad.byLeague.length}{' '}
+          {squad.byLeague.length === 1 ? 'league' : 'leagues'}
+        </p>
+      </div>
+      <Treemap leagues={squad.byLeague} total={squad.total} />
+      <SquadLegend leagues={squad.byLeague} total={squad.total} />
+    </div>
+  )
+}
+
+// Slice-and-dice treemap: leagues stacked vertically (heights = league share),
+// clubs split horizontally inside each league (widths = club share within
+// league). Simple, deterministic, no external deps. Width = 100% of container,
+// height fixed at 220px so the panel doesn't dominate the sheet on mobile.
+
+const TREEMAP_HEIGHT = 220
+
+const LEAGUE_HUES = [
+  '#4cb46a',
+  '#f0c64b',
+  '#5aa3e0',
+  '#c25fb6',
+  '#e08a3c',
+  '#7ad6c3',
+  '#b88de3',
+  '#e36b6b',
+] as const
+
+function leagueColor(idx: number, isUnmatched: boolean): string {
+  if (isUnmatched) return 'color-mix(in srgb, var(--vmy-bone) 18%, transparent)'
+  return LEAGUE_HUES[idx % LEAGUE_HUES.length]
+}
+
+function Treemap({
+  leagues,
+  total,
+}: {
+  leagues: SquadGroupLeague[]
+  total: number
+}) {
+  if (total === 0) return null
+  return (
+    <div
+      className="w-full rounded-md overflow-hidden flex flex-col"
+      style={{
+        height: TREEMAP_HEIGHT,
+        border: '1px solid color-mix(in srgb, var(--vmy-bone) 10%, transparent)',
+      }}
+    >
+      {leagues.map((l, i) => {
+        const heightPct = (l.count / total) * 100
+        const color = leagueColor(i, l.leagueSlug == null)
+        return (
+          <div
+            key={l.leagueSlug ?? `__unmatched-${i}`}
+            className="flex w-full relative"
+            style={{
+              height: `${heightPct}%`,
+              borderTop: i > 0 ? '1px solid var(--vmy-ink)' : 'none',
+            }}
+          >
+            {l.clubs.map((c, j) => {
+              const widthPct = (c.count / l.count) * 100
+              return (
+                <TreemapClubCell
+                  key={`${l.leagueSlug ?? 'u'}-${c.clubSlug ?? c.clubName}-${j}`}
+                  league={l.leagueName}
+                  club={c}
+                  widthPct={widthPct}
+                  color={color}
+                  isFirst={j === 0}
+                />
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function TreemapClubCell({
+  league,
+  club,
+  widthPct,
+  color,
+  isFirst,
+}: {
+  league: string
+  club: SquadGroupClub
+  widthPct: number
+  color: string
+  isFirst: boolean
+}) {
+  const showLabel = widthPct >= 12
+  return (
+    <div
+      title={`${league} · ${club.clubName} · ${club.count}`}
+      className="relative flex items-end px-1.5 py-1 overflow-hidden"
+      style={{
+        width: `${widthPct}%`,
+        background: `color-mix(in srgb, ${color} 28%, transparent)`,
+        borderLeft: isFirst ? 'none' : '1px solid var(--vmy-ink)',
+      }}
+    >
+      {showLabel && (
+        <div className="min-w-0 flex flex-col leading-tight">
+          <span
+            className="text-[10px] truncate"
+            style={{ color: 'var(--vmy-bone)', fontWeight: 500 }}
+          >
+            {club.clubName}
+          </span>
+          <span
+            className="text-[9px] font-mono"
+            style={{ color: 'color-mix(in srgb, var(--vmy-bone) 60%, transparent)' }}
+          >
+            {club.count}
+          </span>
+        </div>
+      )}
+      {!showLabel && (
+        <span
+          className="text-[9px] font-mono"
+          style={{ color: 'color-mix(in srgb, var(--vmy-bone) 75%, transparent)' }}
+        >
+          {club.count}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function SquadLegend({
+  leagues,
+  total,
+}: {
+  leagues: SquadGroupLeague[]
+  total: number
+}) {
+  return (
+    <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1">
+      {leagues.map((l, i) => {
+        const color = leagueColor(i, l.leagueSlug == null)
+        const pct = Math.round((l.count / total) * 100)
+        return (
+          <div
+            key={l.leagueSlug ?? `__unmatched-legend-${i}`}
+            className="flex items-baseline gap-1.5 min-w-0"
+          >
+            <span
+              className="w-2 h-2 shrink-0 rounded-sm"
+              style={{ background: `color-mix(in srgb, ${color} 60%, transparent)` }}
+            />
+            <span
+              className="text-[10px] truncate"
+              style={{ color: 'var(--vmy-bone)' }}
+            >
+              {l.leagueName}
+            </span>
+            <span
+              className="text-[10px] font-mono ml-auto shrink-0"
+              style={{ color: 'color-mix(in srgb, var(--vmy-bone) 55%, transparent)' }}
+            >
+              {l.count} · {pct}%
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function SquadRoster({ players }: { players: FifaWc26SquadPlayer[] }) {
+  // Group by FIFA position bucket. Position strings are free-form across
+  // sources ("GK", "Goalkeeper", "Defender" etc.) — normalize to a coarse
+  // bucket so the roster is scannable.
+  const buckets = useMemo(() => groupByBucket(players), [players])
+  return (
+    <div>
+      <p
+        className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
+        style={{ color: 'color-mix(in srgb, var(--vmy-bone) 45%, transparent)' }}
+      >
+        — Roster
+      </p>
+      <div className="space-y-3">
+        {buckets.map((b) => (
+          <div key={b.label}>
+            <div
+              className="text-[9px] font-mono uppercase tracking-[0.22em] mb-1"
+              style={{ color: 'color-mix(in srgb, var(--vmy-bone) 40%, transparent)' }}
+            >
+              {b.label} · {b.players.length}
+            </div>
+            <ul className="space-y-1">
+              {b.players.map((p) => (
+                <SquadPlayerRow key={p.playerEntityId} player={p} />
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface PositionBucket {
+  label: string
+  players: FifaWc26SquadPlayer[]
+}
+
+const POSITION_BUCKETS: { label: string; matches: (s: string) => boolean }[] = [
+  { label: 'Goalkeepers', matches: (s) => /^(gk|goalkeeper)/i.test(s) },
+  { label: 'Defenders', matches: (s) => /(def|back|cb|lb|rb|wb)/i.test(s) },
+  { label: 'Midfielders', matches: (s) => /(mid|cm|cdm|cam|dm|am)/i.test(s) },
+  { label: 'Forwards', matches: (s) => /(fwd|forward|striker|st|lw|rw|winger)/i.test(s) },
+]
+
+function bucketFor(player: FifaWc26SquadPlayer): string {
+  const raw = (player.position ?? player.primaryPosition ?? '').trim()
+  for (const b of POSITION_BUCKETS) if (raw && b.matches(raw)) return b.label
+  return 'Other'
+}
+
+function groupByBucket(players: FifaWc26SquadPlayer[]): PositionBucket[] {
+  const order = [...POSITION_BUCKETS.map((b) => b.label), 'Other']
+  const map = new Map<string, FifaWc26SquadPlayer[]>()
+  for (const p of players) {
+    const k = bucketFor(p)
+    if (!map.has(k)) map.set(k, [])
+    map.get(k)!.push(p)
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => {
+      const ja = a.jersey ?? Number.POSITIVE_INFINITY
+      const jb = b.jersey ?? Number.POSITIVE_INFINITY
+      if (ja !== jb) return ja - jb
+      return a.playerName.localeCompare(b.playerName)
+    })
+  }
+  return order
+    .filter((k) => map.has(k))
+    .map((k) => ({ label: k, players: map.get(k)! }))
+}
+
+function SquadPlayerRow({ player }: { player: FifaWc26SquadPlayer }) {
+  const clubLabel = player.clubName ?? player.clubNameRaw ?? '—'
+  const isUnmatched = !player.clubEntityId && !!player.clubNameRaw
+  const roleBadge = player.role === 'captain' ? 'C' : player.role === 'vice_captain' ? 'VC' : null
+  return (
+    <li
+      className="rounded-md px-2.5 py-1.5 flex items-baseline gap-2"
+      style={{
+        background: 'color-mix(in srgb, var(--vmy-bone) 4%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--vmy-bone) 6%, transparent)',
+      }}
+    >
+      <span
+        className="text-[10px] font-mono w-5 text-right shrink-0"
+        style={{
+          color: 'color-mix(in srgb, var(--vmy-bone) 55%, transparent)',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {player.jersey ?? '—'}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5">
+          <span
+            className="text-sm truncate leading-tight"
+            style={{ color: 'var(--vmy-bone)', fontWeight: 500 }}
+          >
+            {player.playerName}
+          </span>
+          {roleBadge && (
+            <span
+              className="text-[8.5px] font-mono px-1 rounded shrink-0"
+              style={{
+                background: 'color-mix(in srgb, var(--vmy-ember) 24%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--vmy-ember) 60%, transparent)',
+                color: 'var(--vmy-bone)',
+              }}
+            >
+              {roleBadge}
+            </span>
+          )}
+        </div>
+        <div
+          className="text-[10px] font-mono mt-0.5 truncate"
+          style={{ color: 'color-mix(in srgb, var(--vmy-bone) 50%, transparent)' }}
+        >
+          {clubLabel}
+          {isUnmatched && (
+            <span
+              className="ml-1.5"
+              style={{ color: 'color-mix(in srgb, var(--vmy-bone) 30%, transparent)' }}
+            >
+              · unverified
+            </span>
+          )}
+        </div>
+      </div>
+      {player.position && (
+        <span
+          className="text-[9px] font-mono uppercase tracking-[0.18em] shrink-0"
+          style={{ color: 'color-mix(in srgb, var(--vmy-bone) 50%, transparent)' }}
+        >
+          {player.position}
+        </span>
+      )}
+    </li>
   )
 }

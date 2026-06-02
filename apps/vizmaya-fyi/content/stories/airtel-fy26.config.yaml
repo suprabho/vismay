@@ -1,0 +1,305 @@
+# Story config — airtel-fy26
+#
+# Bharti Airtel Q4 / FY26 results scrollytelling.
+# 18 config sections map 1:1 to 18 markdown headings (1 hero + 17 ##).
+#
+# SUBSECTION ANCHORING:
+#   subsection.text must match the parent ## heading (case-insensitive prefix)
+#   so resolveAnchor can find the markdown section.
+#   paragraphs: N selects the Nth paragraph (0-indexed) of that section.
+#
+# Acts:
+#   1  hero                    — intro, India map atmospheric
+#   2  revenue-stat            — ₹2.1Tn stat, India pins
+#   3  revenue-momentum        — stacked bar by segment (5 quarters)
+#   4  ebitda-margin-stat      — 57.8% stat
+#   5  margins-built-to-last   — EBITDA grouped bar (step 0) → margin bar (step 1)
+#   6  arpu-stat               — ₹257 stat
+#   7  the-data-explosion      — ARPU bars (step 0) → data usage bars (step 1)
+#   8  homes-stat              — +41.7% stat
+#   9  homes-juggernaut        — homes subscribers + ARPU dual-axis chart
+#   10 africa-stat             — +22% stat, map pivots to Africa
+#   11 africa-turns-corner     — CC revenue bar (step 0) → EBITDA/MAU (step 1)
+#   12 airtel-money            — prose section
+#   13 debt-stat               — -19% stat, back to India
+#   14 demolishing-debt        — net debt vs FCF 3-year scissors chart
+#   15 profit-stat             — +51% stat
+#   16 profit-surge            — annual PAT FY24→FY26 bar
+#   17 stock-stat              — ₹1,784 stat
+#   18 what-market-sees        — Airtel vs Nifty indexed line chart
+#
+# MAP COORDINATES
+#   India center   [82.5, 22.5]  zoom 3.6
+#   India mobile   [78.9, 22.5]  zoom 4.2
+#   Africa         [20.0,  2.0]  zoom 2.8
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.50
+  pinColor: "#E8365D"
+  pinRadius: 10
+  flySpeed: 1.4
+  mapPalette:
+    land: "#0a0f1e"
+    water: "#050c17"
+    border: "#1e3050"
+    labelText: "#7a8ea8"
+    labelHalo: "#050c17"
+    road: "#0f1c30"
+
+sections:
+
+  # 1 ─── HERO
+  - id: hero
+    kind: hero
+    text: "Airtel's ₹2.1 Trillion Year"
+    eyebrow: "Finance · Q4 FY26 Results · May 2026"
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      mobile:
+        center: [82.5, 20.0]
+        zoom: 2.9
+
+  # 2 ─── REVENUE STAT
+  - id: rs-21-trillion
+    kind: stat
+    text: "₹2.1Tn"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.50
+      pins:
+        - { coordinates: [77.209, 28.613], label: "Delhi" }
+        - { coordinates: [72.877, 19.076], label: "Mumbai" }
+        - { coordinates: [80.270, 13.082], label: "Chennai" }
+        - { coordinates: [88.363, 22.572], label: "Kolkata" }
+        - { coordinates: [77.594, 12.971], label: "Bengaluru" }
+        - { coordinates: [78.486, 17.385], label: "Hyderabad" }
+        - { coordinates: [73.856, 18.520], label: "Pune" }
+        - { coordinates: [72.571, 23.022], label: "Ahmedabad" }
+
+  # 3 ─── REVENUE TREND CHART (stacked bar: India Mobile + India Other + Africa)
+  - id: five-quarters-of-acceleration
+    text: "Five Quarters of Acceleration"
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.12
+    foreground:
+      - type: chart
+        id: "revenue-trend"
+
+  # 4 ─── EBITDA MARGIN STAT
+  - id: 578-ebitda-margin
+    kind: stat
+    text: "57.8%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.45
+
+  # 5 ─── EBITDA SCALE CHART (2 steps via subsections)
+  #   step 0: "Margins Built to Last" para 0 → grouped bar (Revenue + EBITDA, FY24–FY26)
+  #   step 1: "Margins Built to Last" para 1 → EBITDA margin bar (54% → 58%)
+  - id: margins-built-to-last
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.12
+    subsections:
+      - text: "Margins Built to Last"
+        paragraphs: 0
+        foreground:
+          - type: chart
+            id: "ebitda-scale"
+      - text: "Margins Built to Last"
+        paragraphs: 1
+        foreground:
+          - type: chart
+            id: "ebitda-scale"
+
+  # 6 ─── ARPU STAT
+  - id: rs-257-arpu
+    kind: stat
+    text: "₹257"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.45
+      mobile:
+        center: [78.9, 20.0]
+        zoom: 3.4
+
+  # 7 ─── ARPU + DATA CHART (2 steps via subsections)
+  #   step 0: "The Data Explosion" para 0 → ARPU bar chart
+  #   step 1: "The Data Explosion" para 1 → data usage GB bar chart
+  - id: the-data-explosion
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.12
+    subsections:
+      - text: "The Data Explosion"
+        paragraphs: 0
+        foreground:
+          - type: chart
+            id: "arpu-data"
+      - text: "The Data Explosion"
+        paragraphs: 1
+        foreground:
+          - type: chart
+            id: "arpu-data"
+
+  # 8 ─── HOMES STAT
+  - id: 417-homes-subscribers
+    kind: stat
+    text: "+41.7%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.45
+
+  # 9 ─── HOMES CHART
+  - id: homes-the-quiet-juggernaut
+    text: "Homes: The Quiet Juggernaut"
+    map:
+      center: [78.9, 22.5]
+      zoom: 4.2
+      opacity: 0.12
+    foreground:
+      - type: chart
+        id: "homes-growth"
+
+  # 10 ─── AFRICA STAT (map pivots to Africa)
+  - id: plus-22-africa-revenue
+    kind: stat
+    text: "+22%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [20.0, 2.0]
+      zoom: 2.8
+      opacity: 0.50
+      pins:
+        - { coordinates: [3.389, 6.524], label: "Nigeria" }
+        - { coordinates: [36.817, -1.286], label: "Kenya" }
+        - { coordinates: [39.200, -6.173], label: "Tanzania" }
+        - { coordinates: [30.060, -1.944], label: "Rwanda" }
+        - { coordinates: [28.283, -15.417], label: "Zambia" }
+        - { coordinates: [-4.023, 5.345], label: "Côte d'Ivoire" }
+        - { coordinates: [15.058, 4.360], label: "DRC" }
+        - { coordinates: [14.460, 12.105], label: "Chad" }
+        - { coordinates: [2.213, 13.515], label: "Niger" }
+        - { coordinates: [-12.364, 12.364], label: "Guinea" }
+        - { coordinates: [-3.960, 12.364], label: "Mali" }
+        - { coordinates: [34.888, -13.254], label: "Malawi" }
+        - { coordinates: [47.521, -18.914], label: "Madagascar" }
+      mobile:
+        center: [20.0, 0.0]
+        zoom: 2.2
+
+  # 11 ─── AFRICA: CC REVENUE + MARGIN/AIRTEL MONEY (2 steps via subsections)
+  #   step 0: "Africa Turns the Corner" para 0 → CC revenue bar comparison
+  #   step 1: "Africa Turns the Corner" para 1 → EBITDA margin + Airtel Money MAUs
+  - id: africa-turns-the-corner
+    map:
+      center: [20.0, 2.0]
+      zoom: 2.8
+      opacity: 0.15
+    subsections:
+      - text: "Africa Turns the Corner"
+        paragraphs: 0
+        foreground:
+          - type: chart
+            id: "africa-comeback"
+      - text: "Africa Turns the Corner"
+        paragraphs: 1
+        foreground:
+          - type: chart
+            id: "africa-comeback"
+
+  # 12 ─── AIRTEL MONEY: PROSE SECTION (no chart — prose + Africa map)
+  - id: airtel-money-africas-hidden-compounding-engine
+    text: "Airtel Money: Africa's Hidden Compounding Engine"
+    map:
+      center: [20.0, 2.0]
+      zoom: 2.8
+      opacity: 0.30
+
+  # 13 ─── DEBT STAT (map returns to India)
+  - id: minus-19-net-debt
+    kind: stat
+    text: "-19%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.45
+
+  # 14 ─── DEBT + FCF SCISSORS CHART (3 years: debt falls, FCF rises)
+  - id: demolishing-the-debt
+    text: "Demolishing the Debt"
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.12
+    foreground:
+      - type: chart
+        id: "debt-fcf"
+
+  # 15 ─── NET INCOME STAT
+  - id: plus-51-net-income
+    kind: stat
+    text: "+51%"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.45
+
+  # 16 ─── PAT PROGRESSION CHART
+  - id: the-profit-surge
+    text: "The Profit Surge"
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.12
+    foreground:
+      - type: chart
+        id: "profit-leap"
+
+  # 17 ─── STOCK PRICE STAT
+  - id: rs-1784
+    kind: stat
+    text: "₹1,784"
+    mobileParagraphs:
+      - [0, 1]
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.40
+
+  # 18 ─── MARKET SCORECARD CHART
+  - id: what-the-market-sees-in-airtel
+    text: "What the Market Sees in Airtel"
+    map:
+      center: [82.5, 22.5]
+      zoom: 3.6
+      opacity: 0.12
+    foreground:
+      - type: chart
+        id: "market-scorecard"

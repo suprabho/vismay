@@ -1,0 +1,155 @@
+{
+  "steps": [
+    {
+      "title": "Domestic-departure User Development Fee, ₹ (excl. GST) — current AERA tariff orders. Ahmedabad and Hyderabad sit four-to-six times above Delhi.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}: ₹{c}"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "12%",
+          "bottom": "3%",
+          "top": "8%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "min": 0,
+          "max": 900,
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "₹{value}"
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "Delhi (DEL)",
+            "Chennai (MAA)",
+            "Kolkata (CCU)",
+            "Mumbai (BOM)",
+            "Patna (PAT)",
+            "Nagpur (NAG)",
+            "Varanasi (VNS)",
+            "Bhopal (BHO)",
+            "Bengaluru (BLR)",
+            "Hyderabad (HYD)",
+            "Ahmedabad (AMD)"
+          ],
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 12,
+            "fontFamily": "Inter"
+          }
+        },
+        "series": [
+          {
+            "name": "Domestic UDF",
+            "type": "bar",
+            "barWidth": 14,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "formatter": "₹{c}"
+            },
+            "data": [
+              {
+                "value": 129,
+                "itemStyle": {
+                  "color": "$teal"
+                }
+              },
+              {
+                "value": 154,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 153,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 175,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              },
+              {
+                "value": 200,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 200,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 200,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 200,
+                "itemStyle": {
+                  "color": "$muted"
+                }
+              },
+              {
+                "value": 550,
+                "itemStyle": {
+                  "color": "$positive"
+                }
+              },
+              {
+                "value": 750,
+                "itemStyle": {
+                  "color": "$teal"
+                }
+              },
+              {
+                "value": 775,
+                "itemStyle": {
+                  "color": "$accent"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

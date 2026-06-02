@@ -1,0 +1,38 @@
+# Phase 7 demo — proves the starship vertical scaffold.
+# `vertical: 'starship'` in the frontmatter is what registers the
+# `starship:viewer` module before the slot looks it up.
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.45
+
+sections:
+  - id: rotate-showcase
+    text: 'Rotate — showcase spin'
+    foreground:
+      - type: starship:viewer
+        mode: rotate
+        material: metal
+
+  - id: explode-assembly
+    text: 'Explode — assembly view'
+    foreground:
+      - type: starship:viewer
+        mode: explode
+        material: metal
+        scrubSteps: 1
+
+  - id: bellyflop-attitude
+    text: 'Bellyflop — re-entry attitude'
+    foreground:
+      - type: starship:viewer
+        mode: bellyflop
+        material: black
+        scrubSteps: 1
+
+  - id: inspect-parts
+    text: 'Inspect — orbit + part labels'
+    foreground:
+      - type: starship:viewer
+        mode: inspect
+        material: metal

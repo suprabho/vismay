@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { StandingRow } from '../types';
+import { teamCrestUrl } from '../data/teams';
 
 type Props = { rows: StandingRow[] };
 
@@ -43,15 +44,16 @@ export function StandingsTable({ rows }: Props) {
 
       {rows.map((r) => {
         const teamSlug = r.team?.slug;
+        const crestUri = r.team?.crest_url ?? (r.team ? teamCrestUrl(r.team.slug ?? r.team.name) : undefined);
         const content = (
           <View className="flex-row items-center px-3 py-2.5 border-b border-border/50">
             <View style={{ width: 28 }}>
               <Text className="text-text text-xs">{r.position}</Text>
             </View>
             <View style={{ flex: 1 }} className="flex-row items-center">
-              {r.team?.crest_url ? (
+              {crestUri ? (
                 <Image
-                  source={{ uri: r.team.crest_url }}
+                  source={{ uri: crestUri }}
                   style={{ width: 18, height: 18, marginRight: 8 }}
                   contentFit="contain"
                 />

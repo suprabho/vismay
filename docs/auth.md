@@ -191,6 +191,12 @@ and the OAuth swap follow once these have soaked.
 `vizmaya.vismay.xyz` / `vizf1.vismay.xyz` / `footshorts.vismay.xyz` since they
 share the registrable base. Dev (`localhost`) leaves the attribute unset.
 
+**Vercel preview deployments** (`VERCEL_ENV === 'preview'`) also leave the
+domain unset: they're served from `*.vercel.app`, which can't hold a
+`.vismay.xyz` cookie, so pinning the domain there makes login loop forever. The
+cookie falls back to host-only on the preview URL — auth stays on, the password
+is still required. An explicit `ADMIN_COOKIE_DOMAIN` still overrides this.
+
 The per-vertical `ADMIN_COOKIE_DOMAIN=.vizmaya.fyi` env knob is gone; that
 approach (deploy admin into a consumer TLD) is closed.
 

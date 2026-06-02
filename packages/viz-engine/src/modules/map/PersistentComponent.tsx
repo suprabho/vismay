@@ -212,6 +212,7 @@ export default function MapPersistentComponent({
       highlightColor={shell.defaults.highlightColor}
       palette={shell.defaults.mapPalette}
       fontstack={shell.defaults.mapFontstack}
+      basemapConfig={shell.defaults.basemapConfig}
       landscapeFocusArea={STORY_LANDSCAPE_FOCUS_AREA}
       portraitFocusArea={STORY_PORTRAIT_FOCUS_AREA}
       staticCapture={shell.isCapture}

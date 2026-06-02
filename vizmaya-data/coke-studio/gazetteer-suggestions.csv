@@ -1,0 +1,12 @@
+place_canonical,place_type,modern_country,lat,lon,confidence,first_seen_song,reason,suggested_at
+Nadiya,river,PK,30,70,low,cs_s01_e01_t03,place_type='river' not auto-added,2026-05-26T12:22:19.669Z
+Bhambore,city,PK,,,high,cs_s03_e04_t05,curated allowlist; 18 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Tashkurgan,city,CN,,,high,cs_s03_e01_t05,curated allowlist; 4 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Kech,region,PK,,,high,cs_s03_e04_t05,curated allowlist; 3 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Bajaur,region,PK,,,high,cs_s05_e01_t04,curated allowlist; 3 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Bhit Shah,shrine,PK,,,high,cs_s04_e04_t01,curated allowlist; 2 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Ganj Baksh,unknown,,,,low,cs_s05_e03_t02,2 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Arabia,region,SA,,,high,cs_s08_e01_t04,curated allowlist; 2 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Sialkot,city,PK,,,high,cs_s02_e03_t01,curated allowlist; geographic suffix; 1 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Lyallpur,city,PK,,,high,cs_s07_e07_t02,curated allowlist; geographic suffix; 1 mention(s) in lyrics,2026-05-26T13:46:44.567Z
+Rangpur,city,PK,,,high,cs_s12_e05_t02,curated allowlist; geographic suffix; 1 mention(s) in lyrics,2026-05-26T13:46:44.567Z

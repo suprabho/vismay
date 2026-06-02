@@ -2,8 +2,9 @@
 
 import { useMemo, type ReactNode } from 'react'
 import type { ResolvedUnit, StoryConfig } from '@vismay/viz-engine'
-import { ForegroundVizSlot } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import { ForegroundVizSlot, ForegroundLayoutSlot } from '@vismay/viz-engine'
+import { resolveSlotsFlat, resolveSlots, getVizModule } from '@vismay/viz-engine'
+import type { StoryFormat } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
 import { useStoryReadiness } from '@vismay/viz-engine'
@@ -23,6 +24,15 @@ interface Props {
   title: string
   units: ResolvedUnit[]
   config: StoryConfig
+  /**
+   * Story format. Map stories get the legacy heading + paragraphs + map +
+   * chart booklet layout. Deck stories get one full-page slide per unit,
+   * with the section's composed foreground (layouts, slot positions)
+   * preserved via `ForegroundLayoutSlot`.
+   */
+  format?: StoryFormat
+  /** Frontmatter aura slug — reserved for future per-page backdrop. */
+  aura?: string
   accessToken: string
   logo?: string
   print?: boolean
@@ -61,15 +71,21 @@ export default function ReportShell({
   title,
   units,
   config,
+  format = 'map',
+  aura: _aura,
   accessToken,
   logo,
   print = false,
   embed = false,
 }: Props) {
+  const isDeck = format === 'deck'
   const byline = useMemo(() => extractByline(units), [units])
   // Sum capture-blocking signals: each visible map page + each foreground
-  // viz layer (chart / image / video / rive / embed). Matches the unified
-  // readiness model in `lib/storyReadiness.ts`.
+  // viz layer (chart / image / video / rive / embed) WHOSE MODULE IS
+  // REGISTERED. Unknown layer types render null in `ForegroundVizSlot`
+  // without firing `noteReady`, so counting them would prevent
+  // `__pdfReady__` from ever flipping true. Matches the unified readiness
+  // model in `lib/storyReadiness.ts`.
   const expectedSignals = useMemo(() => {
     let total = 0
     for (const u of units) {
@@ -80,7 +96,11 @@ export default function ReportShell({
       if (!!center && typeof zoom === 'number' && !isReportMapHidden(u.parentConfig)) {
         total++
       }
-      total += resolveSlotsFlat(u.parentConfig).foreground.length
+      const layers = resolveSlotsFlat(u.parentConfig).foreground
+      for (const layer of layers) {
+        const mod = getVizModule(layer.type)
+        if (mod && mod.slots.includes('foreground')) total++
+      }
     }
     return total
   }, [units])
@@ -135,6 +155,84 @@ export default function ReportShell({
         </div>
       </section>
   )
+
+  /**
+   * Deck-format unit page. Renders one slide per page using the full canvas,
+   * delegating to `ForegroundLayoutSlot` so deck layouts and slot positions
+   * render identically to the live page.
+   *
+   * Hero/cover units overlay the section title in the bottom-left corner of
+   * the page over the foreground (matching the live cover treatment).
+   */
+  const renderDeckPage = (
+    unit: ResolvedUnit,
+    ui: number,
+    options: { breakBefore: boolean }
+  ): ReactNode => {
+    const resolved = resolveSlots(unit.parentConfig)
+    const rawKind = unit.parentConfig.kind ?? 'text'
+    const isHeroLike = rawKind === 'cover' || rawKind === 'hero'
+    return (
+      <section
+        key={ui}
+        className="relative overflow-hidden"
+        style={{
+          width: `${PAGE_W}px`,
+          height: `${PAGE_H}px`,
+          breakBefore: options.breakBefore ? 'page' : undefined,
+          breakInside: 'avoid',
+          background: 'var(--color-bg)',
+          fontFamily: 'var(--font-sans)',
+        }}
+      >
+        <div className="absolute inset-0">
+          <ForegroundLayoutSlot
+            slug={slug}
+            foreground={resolved.foreground}
+            unit={unit}
+            activeStep={unit.subIndex}
+            mode="print"
+            noteLayerReady={noteReady}
+          />
+        </div>
+        {isHeroLike && (
+          <div
+            className="absolute z-30 pointer-events-none flex flex-col gap-2"
+            style={{ left: '40px', right: '40px', bottom: '56px' }}
+          >
+            {unit.parentConfig.eyebrow && (
+              <div
+                className="font-[family-name:var(--font-mono)] uppercase tracking-[0.18em]"
+                style={{ fontSize: '11pt', color: 'var(--color-accent)' }}
+              >
+                {unit.parentConfig.eyebrow}
+              </div>
+            )}
+            {unit.heading && (
+              <h2
+                className="font-serif font-bold"
+                style={{
+                  fontSize: '28pt',
+                  lineHeight: 1.1,
+                  color: 'var(--color-text)',
+                  maxWidth: '72%',
+                }}
+              >
+                {unit.heading}
+              </h2>
+            )}
+          </div>
+        )}
+        <footer
+          className="absolute bottom-2 left-0 right-0 flex justify-between px-[40px] font-[family-name:var(--font-mono)] uppercase pointer-events-none"
+          style={{ fontSize: '8pt', letterSpacing: '0.15em', color: 'var(--color-muted)' }}
+        >
+          <span>{slug}</span>
+          <span>{ui + 1} / {units.length}</span>
+        </footer>
+      </section>
+    )
+  }
 
   const renderUnitPage = (
     unit: ResolvedUnit,
@@ -285,7 +383,9 @@ export default function ReportShell({
         <style>{`@page { size: A4 portrait; margin: 0; }`}</style>
         {renderCover()}
         {units.map((unit, ui) =>
-          renderUnitPage(unit, ui, { breakBefore: true })
+          isDeck
+            ? renderDeckPage(unit, ui, { breakBefore: true })
+            : renderUnitPage(unit, ui, { breakBefore: true })
         )}
       </div>
     )
@@ -337,7 +437,9 @@ export default function ReportShell({
           minNativeHeight={PAGE_H}
           maxWidth={`min(95vw, ${PAGE_W}px)`}
         >
-          {renderUnitPage(unit, ui, { breakBefore: false })}
+          {isDeck
+            ? renderDeckPage(unit, ui, { breakBefore: false })
+            : renderUnitPage(unit, ui, { breakBefore: false })}
         </PreviewFlowFrame>
       ))}
     </div>

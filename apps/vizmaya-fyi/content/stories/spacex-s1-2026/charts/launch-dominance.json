@@ -1,0 +1,54 @@
+{
+  "steps": [
+    {
+      "title": "Payload to LEO — metric tons",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "shadow" },
+          "formatter": "{b}: {c}t to LEO"
+        },
+        "grid": { "left": "2%", "right": "10%", "bottom": "12%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "category",
+          "data": ["Ariane 6", "Vulcan", "Falcon 9", "New Glenn", "Falcon Heavy", "Starship V3"],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11, "rotate": 15 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Tonnes to LEO",
+          "nameTextStyle": { "color": "$muted", "fontFamily": "Inter", "fontSize": 10 },
+          "axisLabel": { "formatter": "{value}t", "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "52%",
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12,
+              "fontWeight": "bold",
+              "formatter": "{c}t"
+            },
+            "data": [
+              { "value": 21, "itemStyle": { "color": "$muted", "opacity": 0.4, "borderRadius": [4,4,0,0] } },
+              { "value": 27, "itemStyle": { "color": "$muted", "opacity": 0.5, "borderRadius": [4,4,0,0] } },
+              { "value": 23, "itemStyle": { "color": "$accent2", "borderRadius": [4,4,0,0] } },
+              { "value": 45, "itemStyle": { "color": "$muted", "opacity": 0.5, "borderRadius": [4,4,0,0] } },
+              { "value": 64, "itemStyle": { "color": "$accent2", "opacity": 0.8, "borderRadius": [4,4,0,0] } },
+              { "value": 100, "itemStyle": { "color": "$accent", "borderRadius": [4,4,0,0] } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

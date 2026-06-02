@@ -1,0 +1,162 @@
+id: ebola-2026
+slug: ebola-2026
+title: "A new Ebola is moving through a war."
+deck: >
+  Bundibugyo virus — only the third outbreak of this species ever —
+  is spreading from a gold-mining town in eastern Congo into Kampala.
+  There is no licensed vaccine, no licensed treatment, and no clean
+  live data feed.
+status: active
+species: Bundibugyo
+species_scientific: Orthoebolavirus bundibugyoense
+countries:
+  - DR Congo
+  - Uganda
+reporting_date: 2026-05-29
+data_cutoff: 2026-05-26
+pheic_declared: 2026-05-17
+authors:
+  - Vizmaya editorial
+license: CC-BY-4.0
+
+tokens:
+  paper:  "#f5f1ea"
+  paper2: "#ebe6dd"
+  ink:    "#0f0e0c"
+  rule:   "#d8d2c5"
+  muted:  "#6b665d"
+  accent: "#c4391c"
+  warn:   "#c79100"
+  good:   "#2d6a4f"
+  species:
+    zaire:      "#6a1818"
+    sudan:      "#5c4ba0"
+    bundibugyo: "#c4391c"
+    tai:        "#2d6a4f"
+    reston:     "#6b665d"
+
+datasets:
+  outbreaks_history:
+    file: ebola_outbreaks_history.csv
+    schema: [year, country, location, species, cases, deaths, cfr_pct, notes]
+    rows: 58
+    coverage: 1976-2026
+    source_of_record: CDC Outbreak History
+  drc_zones_2026:
+    file: drc_2026_health_zones.csv
+    schema: [province, health_zone, confirmed_cases, confirmed_deaths, suspected_cases, listed_contacts, notes]
+    coverage: Ituri + North Kivu + South Kivu + Kampala
+    source_of_record: DRC MoH via WHO DON
+  timeline_2026:
+    file: timeline_2026.csv
+    schema: [date, event, location, source]
+    coverage: 2026-04-24 to 2026-05-26
+  by_species:
+    file: by_species.csv
+    schema: [species, scientific_name, first_identified, outbreaks_count, total_cases, total_deaths, typical_cfr_pct, vaccine_status, treatment_status]
+  genomic_2026:
+    file: genomic_2026.csv
+    schema: [aspect, value, source]
+    source_of_record: Nextstrain + virological.org
+
+charts:
+  growth:
+    file: charts/growth.json
+    type: line
+    title: "Doubling roughly every five days"
+    series: [confirmed, suspected]
+    data_from: timeline_2026
+  countries:
+    file: charts/countries.json
+    type: bar-horizontal
+    title: "Cumulative cases by country, 1976–2026"
+    data_from: outbreaks_history
+  health_zones:
+    file: charts/health-zones.json
+    type: bar-horizontal
+    title: "Confirmed cases by health zone, Ituri"
+    data_from: drc_zones_2026
+  species:
+    file: charts/species.json
+    type: column-grouped
+    title: "By species — cases and CFR"
+    data_from: by_species
+  genome:
+    file: charts/genome-timeline.json
+    type: scatter
+    title: "BDBV genomes through time"
+    data_from: genomic_2026
+  events:
+    file: charts/outbreak-timeline.json
+    type: timeline
+    title: "From hospital cluster to PHEIC in 12 days"
+    data_from: timeline_2026
+
+sections:
+  - id: now
+    label: "As of 26 May 2026"
+    kind: kpi-grid
+    items:
+      - { label: "Confirmed cases",  value: 128,   sub: "DRC 121 · Uganda 7" }
+      - { label: "Confirmed deaths", value: 18,    sub: "CFR ≈ 14% (rising)" }
+      - { label: "Suspected cases",  value: 1077,  sub: "238 suspected deaths", accent: true }
+      - { label: "Health zones affected", value: "9+", sub: "Ituri, N. Kivu, S. Kivu" }
+  - id: growth
+    label: "Growth"
+    kind: chart
+    chart: growth
+  - id: zones
+    label: "Where the cases sit"
+    kind: chart
+    chart: health_zones
+  - id: timeline
+    label: "From hospital cluster to PHEIC in 12 days"
+    kind: chart
+    chart: events
+  - id: countries
+    label: "Five countries hold 95% of Ebola history"
+    kind: chart
+    chart: countries
+  - id: species
+    label: "Ebola is not one disease"
+    kind: chart
+    chart: species
+  - id: genome
+    label: "A new spillover, not a survivor relapse"
+    kind: chart
+    chart: genome
+  - id: data
+    label: "Data accessibility for builders"
+    kind: source-table
+
+sources:
+  tier1_who_cdc:
+    - { title: "WHO DON 2026-DON603",          url: "https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON603" }
+    - { title: "WHO DON 2026-DON602",          url: "https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON602" }
+    - { title: "WHO PHEIC declaration 17 May", url: "https://www.who.int/news/item/17-05-2026-epidemic-of-ebola-disease-in-the-democratic-republic-of-the-congo-and-uganda-determined-a-public-health-emergency-of-international-concern" }
+    - { title: "WHO DG remarks 20 May",        url: "https://www.who.int/news-room/speeches/item/who-director-general-s-opening-remarks-at-the-media-briefing-on-ebola-outbreak-in-drc-and-uganda-20-may-2026" }
+    - { title: "WHO situation page",            url: "https://www.who.int/emergencies/situations/ebola-outbreak---drc-2026" }
+    - { title: "US CDC situation summary",      url: "https://www.cdc.gov/ebola/situation-summary/index.html" }
+    - { title: "US CDC outbreak history",       url: "https://www.cdc.gov/ebola/outbreaks/index.html" }
+    - { title: "US CDC HAN 530",                url: "https://www.cdc.gov/han/php/notices/han00530.html" }
+  tier1_regional:
+    - { title: "ECDC outbreak page",            url: "https://www.ecdc.europa.eu/en/ebola-virus-disease-outbreak-democratic-republic-congo-and-uganda" }
+    - { title: "Africa CDC situation report",   url: "https://africacdc.org/download/situation-report-bundibugyo-virus-disease-outbreak-in-the-drc-and-uganda/" }
+    - { title: "WHO AFRO weekly bulletin",      url: "https://www.afro.who.int/health-topics/disease-outbreaks/outbreaks-and-other-emergencies-updates" }
+  tier2_humanitarian:
+    - { title: "ReliefWeb API",                 url: "https://api.reliefweb.int/v1/reports" }
+    - { title: "HDX Ebola datasets",            url: "https://data.humdata.org/ebola" }
+  tier3_historical:
+    - { title: "cmrivers/ebola",                url: "https://github.com/cmrivers/ebola" }
+    - { title: "andersen-lab/ebola-drc-epidemiology", url: "https://github.com/andersen-lab/ebola-drc-epidemiology" }
+  tier4_genomic:
+    - { title: "Nextstrain",                    url: "https://nextstrain.org/" }
+    - { title: "Virological.org — 2026 BDBV genomes", url: "https://virological.org/t/initial-genomes-from-may-2026-bundibugyo-virus-disease-outbreak-in-the-democratic-republic-of-the-congo-and-uganda/1032" }
+    - { title: "NCBI Virus",                    url: "https://www.ncbi.nlm.nih.gov/labs/virus/" }
+
+caveats:
+  - Numbers move daily; figures anchored to 26–27 May 2026.
+  - Conflict in eastern DRC suppresses surveillance → real transmission likely higher than reported.
+  - Suspected → confirmed reclassification produces downward revisions that look like errors.
+  - WHO / CDC / ECDC / DRC MoH cite slightly different totals at the same point in time.
+  - ProMED reliability has been questioned since 2022; supplement, not source of record.

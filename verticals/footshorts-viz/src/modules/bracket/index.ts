@@ -31,6 +31,20 @@ import type { FixtureRow } from '../../types'
 export interface BracketConfig {
   type: 'fs:bracket'
   fixtures: FixtureRow[]
+  /**
+   * 'list' (default) = the stacked round list; 'tree' = full mirrored
+   * tournament tree (web only), which automatically switches to the vertical
+   * portrait tree when its container is too narrow for the wide layout;
+   * 'tree-vertical' = always render the portrait tree; 'tree-horizontal' =
+   * always render the wide mirrored tree (no auto-switch).
+   */
+  layout?: 'list' | 'tree' | 'tree-vertical' | 'tree-horizontal'
+  /** Team id whose path through the tree is emphasised (tree layout). */
+  highlightTeamId?: string
+  /** Caption shown by the centre emblem, e.g. "Final · Budapest". */
+  title?: string
+  /** Competition slug for the centre emblem colour + name (defaults to the fixtures' slug). */
+  competitionSlug?: string
 }
 
 function isObj(x: unknown): x is Record<string, unknown> {
@@ -52,7 +66,25 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Bracke
       )
     }
   }
-  return { type: 'fs:bracket', fixtures: raw.fixtures as unknown as FixtureRow[] }
+  const layout =
+    raw.layout === 'tree'
+      ? 'tree'
+      : raw.layout === 'tree-vertical'
+        ? 'tree-vertical'
+        : raw.layout === 'tree-horizontal'
+          ? 'tree-horizontal'
+          : 'list'
+  const highlightTeamId = typeof raw.highlightTeamId === 'string' ? raw.highlightTeamId : undefined
+  const title = typeof raw.title === 'string' ? raw.title : undefined
+  const competitionSlug = typeof raw.competitionSlug === 'string' ? raw.competitionSlug : undefined
+  return {
+    type: 'fs:bracket',
+    fixtures: raw.fixtures as unknown as FixtureRow[],
+    layout,
+    highlightTeamId,
+    title,
+    competitionSlug,
+  }
 }
 
 const bracketModule: VizModule<BracketConfig> = {
@@ -64,7 +96,7 @@ const bracketModule: VizModule<BracketConfig> = {
   readinessProfile: 'instant',
   stableIdentity: (config) => {
     const first = config.fixtures[0]!
-    return `fs:bracket:${first.competition_slug}:${first.season}:${config.fixtures.length}`
+    return `fs:bracket:${first.competition_slug}:${first.season}:${config.fixtures.length}:${config.layout ?? 'list'}`
   },
 }
 

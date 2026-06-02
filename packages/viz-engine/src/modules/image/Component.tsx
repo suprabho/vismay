@@ -19,18 +19,22 @@ import type { ImageLayerConfig } from './index'
  */
 export default function ImageLayerComponent({
   config,
+  mode,
   noteReady,
   captureRef,
 }: VizRenderProps<ImageLayerConfig>) {
   const imgRef = useRef<HTMLImageElement | null>(null)
   const url = resolveAssetUrl(config.src)
 
-  // Cached images can fire `onLoad` before React attaches our handler — read
-  // `complete` once on mount as the belt-and-braces signal.
+  // Cached images can fire `onLoad` (or `onError`) before React attaches our
+  // handlers — read `complete` once on mount as the belt-and-braces signal.
+  // Any `complete` state (success OR error) is terminal as far as readiness
+  // is concerned — we don't want to block a PDF render waiting for a 404 that
+  // already happened.
   useEffect(() => {
     const img = imgRef.current
     if (!img) return
-    if (img.complete && img.naturalWidth > 0) {
+    if (img.complete) {
       noteReady()
     }
   }, [noteReady])
@@ -63,6 +67,14 @@ export default function ImageLayerComponent({
     background: config.background,
   }
 
+  // Eager in capture/print so PDF/video readiness never waits on an unscrolled
+  // lazy image; otherwise eager only for priority (hero/LCP) images and lazy
+  // for the rest. `fetchPriority` lifts the hero ahead of other requests on cold
+  // cellular; `sizes` is forward-compatible for future srcset variants.
+  const isCapture = mode === 'capture' || mode === 'print'
+  const loading: 'eager' | 'lazy' = isCapture || config.priority ? 'eager' : 'lazy'
+  const fetchPriority: 'high' | 'auto' = config.priority ? 'high' : 'auto'
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -70,7 +82,15 @@ export default function ImageLayerComponent({
       src={url}
       alt={config.alt ?? ''}
       style={style}
+      loading={loading}
+      fetchPriority={fetchPriority}
+      decoding="async"
+      sizes={config.sizes ?? '100vw'}
       onLoad={() => noteReady()}
+      // Fire `noteReady` on error too so a missing/404 asset doesn't block
+      // the capture readiness signal indefinitely — PDF/share renders should
+      // proceed with a broken image rather than hang the whole render.
+      onError={() => noteReady()}
       draggable={false}
     />
   )

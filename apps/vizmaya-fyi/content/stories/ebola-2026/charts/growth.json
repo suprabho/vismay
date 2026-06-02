@@ -1,0 +1,209 @@
+{
+  "steps": [
+    {
+      "title": "Doubling roughly every five days",
+      "option": {
+        "grid": {
+          "left": 56,
+          "right": 64,
+          "top": 28,
+          "bottom": 44,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "cross",
+            "lineStyle": {
+              "color": "#6b665d",
+              "type": "dashed"
+            }
+          },
+          "backgroundColor": "#0f0e0c",
+          "borderColor": "#0f0e0c",
+          "textStyle": {
+            "color": "#f5f1ea",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          }
+        },
+        "legend": {
+          "bottom": 0,
+          "icon": "circle",
+          "itemWidth": 8,
+          "itemHeight": 8,
+          "textStyle": {
+            "color": "#6b665d",
+            "fontFamily": "Inter",
+            "fontSize": 11
+          }
+        },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": [
+            "15 May",
+            "16 May",
+            "20 May",
+            "21 May",
+            "24 May",
+            "26 May"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "#d8d2c5"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "#6b665d",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10
+          }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "Confirmed",
+            "nameTextStyle": {
+              "color": "#6b665d",
+              "fontFamily": "Inter",
+              "fontSize": 10
+            },
+            "axisLine": {
+              "show": false
+            },
+            "axisTick": {
+              "show": false
+            },
+            "splitLine": {
+              "lineStyle": {
+                "color": "#d8d2c5",
+                "type": "dashed"
+              }
+            },
+            "axisLabel": {
+              "color": "#6b665d",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            }
+          },
+          {
+            "type": "value",
+            "name": "Suspected",
+            "nameTextStyle": {
+              "color": "#6b665d",
+              "fontFamily": "Inter",
+              "fontSize": 10
+            },
+            "axisLine": {
+              "show": false
+            },
+            "axisTick": {
+              "show": false
+            },
+            "splitLine": {
+              "show": false
+            },
+            "axisLabel": {
+              "color": "#6b665d",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10
+            }
+          }
+        ],
+        "series": [
+          {
+            "name": "Confirmed cases",
+            "type": "line",
+            "data": [
+              8,
+              9,
+              53,
+              87,
+              101,
+              128
+            ],
+            "smooth": 0.3,
+            "symbol": "circle",
+            "symbolSize": 8,
+            "yAxisIndex": 0,
+            "lineStyle": {
+              "color": "#c4391c",
+              "width": 2.5
+            },
+            "itemStyle": {
+              "color": "#c4391c"
+            },
+            "areaStyle": {
+              "color": {
+                "type": "linear",
+                "x": 0,
+                "y": 0,
+                "x2": 0,
+                "y2": 1,
+                "colorStops": [
+                  {
+                    "offset": 0,
+                    "color": "rgba(196,57,28,0.22)"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "rgba(196,57,28,0.02)"
+                  }
+                ]
+              }
+            },
+            "markPoint": {
+              "symbol": "pin",
+              "symbolSize": 44,
+              "label": {
+                "color": "#f5f1ea",
+                "fontFamily": "JetBrains Mono",
+                "fontSize": 10
+              },
+              "itemStyle": {
+                "color": "#0f0e0c"
+              },
+              "data": [
+                {
+                  "name": "PHEIC",
+                  "coord": [
+                    "16 May",
+                    9
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "Suspected cases",
+            "type": "line",
+            "data": [
+              248,
+              380,
+              600,
+              746,
+              930,
+              1077
+            ],
+            "smooth": 0.3,
+            "symbol": "circle",
+            "symbolSize": 6,
+            "yAxisIndex": 1,
+            "lineStyle": {
+              "color": "#6b665d",
+              "width": 1.5,
+              "type": "dashed"
+            },
+            "itemStyle": {
+              "color": "#6b665d"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

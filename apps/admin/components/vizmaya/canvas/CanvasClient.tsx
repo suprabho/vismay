@@ -9,8 +9,8 @@ import {
   useState,
 } from 'react'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
-import { getForegroundLayout } from '@vismay/viz-engine'
+import type { ResolvedUnit, Theme, StoryDefaults } from '@vismay/viz-engine'
+import { getForegroundLayout, getVizModule } from '@vismay/viz-engine'
 import type { ClassicScheme, ReactArea2D } from 'rete-react-plugin'
 import {
   shareNode,
@@ -73,6 +73,7 @@ import {
 import EditorPanel from './EditorPanel'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
+import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
 
 interface Props {
@@ -98,6 +99,11 @@ interface Props {
     background: string[]
     foreground: string[]
   }
+  /**
+   * Story format from frontmatter. Drives deck-aware affordances (the Deck
+   * defaults editor; future deck-only graph framing). Defaults to `'map'`.
+   */
+  format?: 'map' | 'deck'
 }
 
 /**
@@ -121,6 +127,16 @@ type SlotTarget =
       unit: ResolvedUnit
       slotPath: SlotPath
       initial: ImageLayerDraft
+    }
+  // Generic form editor for any layer whose module declares an `adminForm`
+  // and has no bespoke visual editor (everything except map/image/chart).
+  // `initialLayer` is the on-disk layer object, used to seed the form.
+  | {
+      mode: 'form'
+      unit: ResolvedUnit
+      slotPath: SlotPath
+      layerType: string
+      initialLayer: Record<string, unknown>
     }
   | { mode: 'theme' }
 
@@ -375,6 +391,7 @@ export default function CanvasClient({
   theme,
   signedSrcById,
   moduleTypes,
+  format = 'map',
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
@@ -460,6 +477,13 @@ export default function CanvasClient({
   useEffect(() => {
     moduleTypesRef.current = moduleTypes
   }, [moduleTypes])
+  // Story format, mirrored for the same reason — the graph builder reads it to
+  // frame deck sections as slides (drop the map-era Background band, relabel
+  // the foreground as the slide).
+  const formatRef = useRef(format)
+  useEffect(() => {
+    formatRef.current = format
+  }, [format])
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
@@ -541,6 +565,20 @@ export default function CanvasClient({
         : null,
     [editorTarget, sources]
   )
+
+  // Story-wide deck defaults (config.yaml `defaults:`), parsed for the slot
+  // inspector's live preview so it merges `defaults.panel` etc. like the real
+  // render. Re-parses on each in-canvas config save.
+  const deckDefaults = useMemo<StoryDefaults>(() => {
+    try {
+      const doc = parseYaml(sources.configYaml ?? '') as
+        | { defaults?: StoryDefaults }
+        | null
+      return (doc?.defaults ?? {}) as StoryDefaults
+    } catch {
+      return {} as StoryDefaults
+    }
+  }, [sources.configYaml])
 
   // `Map-Edit` affordance for the editor panel header. Defined only when
   // the current slice is camera-shaped — a map layer, an autoplay map
@@ -1382,8 +1420,15 @@ export default function CanvasClient({
       function measureLeftHeight(g: InputGraph): number {
         // Content / Layout / Theme standalone block.
         let h = 3 * LEAF_H + 2 * LGAP_Y + BAND_GAP
-        // Background band (>=1 row: a placeholder when empty).
-        h += bandH(Math.max(1, g.background.layers.length)) + BAND_GAP
+        // Background band (>=1 row: a placeholder when empty). Deck sections
+        // with no per-section background drop the band entirely — the backdrop
+        // is page-level (edited via the Deck defaults button), so a
+        // "(no background)" box is just map-era noise. Must mirror mountInputs.
+        const deckNoBg =
+          formatRef.current === 'deck' && g.background.layers.length === 0
+        if (!deckNoBg) {
+          h += bandH(Math.max(1, g.background.layers.length)) + BAND_GAP
+        }
         // Foreground band.
         if (g.foreground.shape === 'regions') {
           const regions = g.foreground.regions
@@ -1572,6 +1617,34 @@ export default function CanvasClient({
                   slotPath: slot.path,
                   initial,
                 })
+              } else {
+                // Any other module with an adminForm opens the generic form
+                // editor. Types with no adminForm (chart, or a malformed /
+                // unknown layer that resolved to no module) fall through to
+                // the YAML layer editor — the surface they'd land on before.
+                const mod = getVizModule(slot.layerType)
+                if (mod?.adminForm) {
+                  const section = getSection(
+                    configYamlRef.current,
+                    targetUnit.parentIndex
+                  )
+                  const layer = section
+                    ? getLayer(section, slot.path)
+                    : null
+                  setSlotTargetRef.current({
+                    mode: 'form',
+                    unit: targetUnit,
+                    slotPath: slot.path,
+                    layerType: slot.layerType,
+                    initialLayer: layer ?? { type: slot.layerType },
+                  })
+                } else {
+                  setEditorTargetRef.current({
+                    kind: 'layer',
+                    unit: targetUnit,
+                    slotPath: slot.path,
+                  })
+                }
               }
             }
           } else if (editKind) {
@@ -1630,6 +1703,10 @@ export default function CanvasClient({
          * "layout" field is meaningless and saving one would clobber the
          * stack. Theme lives in markdown frontmatter and stays
          * non-editable here — frontmatter editing is its own concern. */
+        // Deck sections read as slide parts, not map inputs.
+        const isDeck = formatRef.current === 'deck'
+        const deckLeafLabel: Partial<Record<'content' | 'layout' | 'theme', string>> =
+          isDeck ? { content: 'Slide text', layout: 'Slide layout' } : {}
         for (const key of ['content', 'layout', 'theme'] as const) {
           let editKind: EditableKind | undefined
           if (key === 'content') {
@@ -1637,14 +1714,18 @@ export default function CanvasClient({
           } else if (key === 'layout' && g.foreground.shape === 'regions') {
             editKind = 'layout'
           }
-          const node = await addLeaf(g[key], regionColX, y, editKind)
+          const relabel = deckLeafLabel[key]
+          const data = relabel ? { ...g[key], label: relabel } : g[key]
+          const node = await addLeaf(data, regionColX, y, editKind)
           await wire(node, 'value', frame, key)
           y += LEAF_H + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 
-        /* Background band: layer leaves → Background group → frame. */
-        {
+        /* Background band: layer leaves → Background group → frame. Dropped
+           for deck sections with no per-section background (the backdrop is
+           page-level — see the Deck defaults editor); mirrors measureLeftHeight. */
+        if (!(isDeck && g.background.layers.length === 0)) {
           const leaves =
             g.background.layers.length > 0
               ? g.background.layers
@@ -1786,7 +1867,7 @@ export default function CanvasClient({
           // user can add a new region under foreground.regions; the
           // picker surfaces layout-defined region suggestions.
           const fgNode = await addJunction(
-            'Foreground',
+            isDeck ? 'Slide' : 'Foreground',
             fg.layout ? `layout: ${fg.layout}` : 'regions',
             groupColX,
             center - JUNCTION_H / 2,
@@ -1808,8 +1889,8 @@ export default function CanvasClient({
           // existing flat array. Switching shape (flat → regions) would
           // clobber the layer stack, so the picker stays in layer mode.
           const fgNode = await addJunction(
-            'Foreground',
-            'flat layer stack',
+            isDeck ? 'Slide' : 'Foreground',
+            isDeck ? 'single region' : 'flat layer stack',
             groupColX,
             y + h / 2 - JUNCTION_H / 2,
             makeEditClick('foreground'),
@@ -1836,8 +1917,8 @@ export default function CanvasClient({
           const defaultLayout = 'split-37-63-two-row'
           const defaultLayoutDef = getForegroundLayout(defaultLayout)
           const fgNode = await addJunction(
-            'Foreground',
-            'none',
+            isDeck ? 'Slide' : 'Foreground',
+            isDeck ? 'no slots yet' : 'none',
             groupColX,
             y,
             makeEditClick('foreground'),
@@ -2419,6 +2500,82 @@ export default function CanvasClient({
     [slug]
   )
 
+  const handleSlotFormApply = useCallback(
+    async (
+      nextConfig: Record<string, unknown>,
+      target: SlotTarget & { mode: 'form' }
+    ) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        const section = getSection(
+          configYamlRef.current,
+          target.unit.parentIndex
+        )
+        const originalLayer = section
+          ? (getLayer(section, target.slotPath) ?? {})
+          : {}
+        // Drop the keys this module's form manages from the on-disk layer,
+        // then overlay the form result. This honors fields the user cleared
+        // (absent from nextConfig) while preserving untracked keys (style,
+        // region, and any field the form doesn't expose). Dotted adminForm
+        // keys (e.g. `textStyle.size`) collapse to their top-level container
+        // (`textStyle`) so the whole nested object is form-managed.
+        const mod = getVizModule(target.layerType)
+        const managed = new Set(
+          (mod?.adminForm?.(originalLayer as never) ?? []).map(
+            (f) => f.key.split('.')[0]
+          )
+        )
+        // The inspector also owns the slot's `style` (position/size/panel),
+        // so treat it as managed — dropped from `preserved` and re-applied
+        // from the patch, which lets clearing it remove the key.
+        managed.add('style')
+        const preserved: Record<string, unknown> = {}
+        for (const [k, v] of Object.entries(originalLayer)) {
+          if (k === 'type' || managed.has(k)) continue
+          preserved[k] = v
+        }
+        const nextLayer: Record<string, unknown> = {
+          ...preserved,
+          ...nextConfig,
+          type: target.layerType,
+        }
+        const nextConfigYaml = replaceLayer(
+          configYamlRef.current,
+          target.unit.parentIndex,
+          target.slotPath,
+          nextLayer
+        )
+        await saveConfigYaml(slug, nextConfigYaml)
+        setSources((prev) => ({ ...prev, configYaml: nextConfigYaml }))
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug]
+  )
+
+  // Escape hatch from the form modal into the existing layer-YAML editor for
+  // the same slot. Closes the form first so the two surfaces never co-mount,
+  // then reuses the EditorPanel save path verbatim.
+  const openSlotAsYaml = useCallback(
+    (target: SlotTarget & { mode: 'form' }) => {
+      setSlotTarget(null)
+      setSlotError(null)
+      setEditorTarget({
+        kind: 'layer',
+        unit: target.unit,
+        slotPath: target.slotPath,
+      })
+    },
+    []
+  )
+
   const handleThemeSave = useCallback(
     async (nextTheme: Theme) => {
       setSlotSaving(true)
@@ -2552,11 +2709,25 @@ export default function CanvasClient({
               },
             })
           } else {
-            setEditorTarget({
-              kind: 'layer',
-              unit: targetUnit,
-              slotPath: next.path,
-            })
+            // Any other module with an adminForm opens the generic form
+            // editor seeded with the just-written layer; types without one
+            // (chart) land in the YAML editor.
+            const mod = getVizModule(choice.type)
+            if (mod?.adminForm) {
+              setSlotTarget({
+                mode: 'form',
+                unit: targetUnit,
+                slotPath: next.path,
+                layerType: choice.type,
+                initialLayer: seed,
+              })
+            } else {
+              setEditorTarget({
+                kind: 'layer',
+                unit: targetUnit,
+                slotPath: next.path,
+              })
+            }
           }
           return
         }
@@ -2721,6 +2892,28 @@ export default function CanvasClient({
         <span style={{ marginLeft: 12, color: '#888' }}>
           {sectionViews.length} sections · ← / → to paginate
         </span>
+        {format === 'deck' && sectionUnits.length > 0 && (
+          <button
+            onClick={() =>
+              setEditorTarget({ kind: 'defaults', unit: sectionUnits[0] })
+            }
+            title="Edit story-wide deck defaults — page backdrop, overlay, panel, scroll, chart"
+            style={{
+              pointerEvents: 'auto',
+              marginLeft: 12,
+              background: 'transparent',
+              color: '#9bb0d8',
+              border: '1px solid #2a4d8f',
+              borderRadius: 5,
+              padding: '3px 9px',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Deck defaults
+          </button>
+        )}
       </header>
       {editorSlice && (
         <EditorPanel
@@ -2767,6 +2960,23 @@ export default function CanvasClient({
           sectionLabel={imageSlotLabel(slotTarget, sectionUnits)}
           initial={slotTarget.initial}
           onApply={(next) => handleImageSlotApply(next, slotTarget)}
+          onClose={closeSlot}
+        />
+      )}
+      {slotTarget?.mode === 'form' && (
+        <SlotInspector
+          key={`${slotTarget.unit.parentIndex}:${JSON.stringify(slotTarget.slotPath)}`}
+          slug={slug}
+          sectionLabel={formSlotLabel(slotTarget, sectionUnits)}
+          layerType={slotTarget.layerType}
+          initialLayer={slotTarget.initialLayer}
+          theme={localTheme ?? theme}
+          defaults={deckDefaults}
+          unitKey={`${slotTarget.unit.parentIndex}.${slotTarget.unit.subIndex ?? 0}`}
+          saving={slotSaving}
+          error={slotError}
+          onApply={(next) => handleSlotFormApply(next, slotTarget)}
+          onEditAsYaml={() => openSlotAsYaml(slotTarget)}
           onClose={closeSlot}
         />
       )}
@@ -2961,6 +3171,30 @@ function nextOverrideTextFromPickerYaml(
 
 function imageSlotLabel(
   target: SlotTarget & { mode: 'image' },
+  sectionUnits: ResolvedUnit[]
+): string {
+  const idx = sectionUnits.findIndex(
+    (u) => u.parentIndex === target.unit.parentIndex
+  )
+  const base =
+    target.unit.heading ||
+    target.unit.parentConfig.id ||
+    `Section ${idx + 1}`
+  const path = target.slotPath
+  const where =
+    path.kind === 'background'
+      ? `background[${path.index}]`
+      : path.kind === 'foregroundFlat'
+        ? `foreground[${path.index}]`
+        : path.kind === 'foregroundRegion'
+          ? `foreground.${path.region}[${path.index}]`
+          : 'map'
+  return `${base} · ${where}`
+}
+
+/** Same as `imageSlotLabel` for the generic form-edit modal. */
+function formSlotLabel(
+  target: SlotTarget & { mode: 'form' },
   sectionUnits: ResolvedUnit[]
 ): string {
   const idx = sectionUnits.findIndex(

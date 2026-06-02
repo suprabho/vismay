@@ -79,7 +79,11 @@ export function resolveUnits(
         if (!md) console.warn(`[story:${slug}] anchor not found: "${sub.text}"`)
         const allParagraphs = md ? getParagraphs(md) : []
         const heading = sub.heading ?? md?.heading
-        const isStat = (section.kind ?? 'text') === 'stat'
+        // `bigStat` is the deck-format alias for `stat` — same italic-subheading
+        // extraction rule applies so the giant number renders cleanly with the
+        // first italic paragraph as its caption.
+        const sectionKind = section.kind ?? 'text'
+        const isStat = sectionKind === 'stat' || sectionKind === 'bigStat'
         const sliced = sliceParagraphs(allParagraphs, sub.paragraphs)
         const { subheading, paragraphs: statParagraphs } = isStat
           ? extractStatSubheading(sliced, sub.subheading)
@@ -167,7 +171,10 @@ export function resolveUnits(
       if (!md) console.warn(`[story:${slug}] anchor not found: "${section.text}"`)
       const allParagraphs = md ? getParagraphs(md) : []
       const heading = section.heading ?? md?.heading
-      const isStat = (section.kind ?? 'text') === 'stat'
+      // `bigStat` (deck alias for `stat`) and `cover` (deck alias for `hero`)
+      // share the legacy extraction rules so paragraphs slice the same way.
+      const sectionKind = section.kind ?? 'text'
+      const isStat = sectionKind === 'stat' || sectionKind === 'bigStat'
       const sliced = sliceParagraphs(allParagraphs, section.paragraphs)
       const { subheading, paragraphs: statParagraphs } = isStat
         ? extractStatSubheading(sliced, section.subheading)
@@ -187,7 +194,7 @@ export function resolveUnits(
       // Hero is special: it always splits into 2 mobile units (title, then
       // dek+byline) because the mobile DOM emits two snap sections for it.
       const mobileStart = mobileUnits.length
-      const isHero = (section.kind ?? 'text') === 'hero'
+      const isHero = sectionKind === 'hero' || sectionKind === 'cover'
       if (isHero) {
         hasMobileOverrides = true
         // Title-only half. Paragraphs are intentionally empty — the dek

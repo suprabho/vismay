@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // syntax compile inside the app.
   transpilePackages: [
     '@vismay/viz-engine',
+    '@vismay/story-embed',
     '@vismay/f1-viz',
     '@vizf1/brand',
   ],

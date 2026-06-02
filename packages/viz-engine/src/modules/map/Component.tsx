@@ -88,6 +88,7 @@ export default function MapLayerComponent({
       highlightColor={shell.defaults.highlightColor}
       palette={shell.defaults.mapPalette}
       fontstack={shell.defaults.mapFontstack}
+      basemapConfig={shell.defaults.basemapConfig}
       staticCapture={shell.isCapture}
       onReady={noteReady}
     />

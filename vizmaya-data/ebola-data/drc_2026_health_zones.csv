@@ -1,0 +1,10 @@
+province,health_zone,confirmed_cases,confirmed_deaths,suspected_cases,listed_contacts,notes
+Ituri,Rwampara,32,,,621,Epicenter accounts for largest contact list
+Ituri,Bunia,24,,,,Provincial capital; major transit hub
+Ituri,Mongbwalu,19,,,,Likely origin; high-traffic mining area
+Ituri,Other (Nyakunde and others),,,,,Additional Ituri health zones with cases
+North Kivu,Multiple incl Butembo,,,,,Imported cases from Ituri
+South Kivu,Multiple,,,,,Imported case from Tshopo
+Uganda,Kampala,7,1,,,Imported from DRC; one death
+TOTAL_DRC,All zones,121,17,1077,,Total reported by DRC MoH on 26 May 2026 (suspected deaths 238)
+TOTAL_BOTH,All,128,18,1077,,DRC + Uganda combined as of 26 May 2026

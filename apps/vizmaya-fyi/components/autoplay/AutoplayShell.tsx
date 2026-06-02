@@ -120,7 +120,7 @@ export default function AutoplayShell({
   /**
    * Cache-buster appended to the iframe URL. Bumped after a successful save
    * in the map editor so the iframe re-fetches /story/<slug> and the freshly
-   * persisted overrides flow through StoryMapShell — no waiting for ISR.
+   * persisted overrides flow through StoryShell — no waiting for ISR.
    */
   const [mapReloadNonce, setMapReloadNonce] = useState(0)
   const [ratio, setRatio] = useState<AutoplayRatio>(initialRatio)

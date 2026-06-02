@@ -21,6 +21,19 @@ export interface Theme {
 
 export type StoryStatus = 'draft' | 'published' | 'archived'
 
+/**
+ * Top-level renderer discriminator. Missing = 'map' so every existing story
+ * keeps rendering through the map-anchored shell unchanged.
+ *
+ * - `map`: legacy map-anchored scrollytelling. Every section has its own
+ *   `map:` camera state; foreground vizslots float over a persistent Mapbox
+ *   instance.
+ * - `deck`: snap-scrolled slide deck over a page-level aura backdrop.
+ *   Sections are slides composed of foreground vizslots in regions; the
+ *   `defaults.storyBackground` mounts once at the page level.
+ */
+export type StoryFormat = 'map' | 'deck'
+
 export interface Frontmatter {
   title: string
   subtitle: string
@@ -34,12 +47,37 @@ export interface Frontmatter {
   /** Aura embed slug (https://aura.promad.design/embed/<slug>) used as the home tile background. */
   aura?: string
   /**
+   * Editorial topic (e.g. "Energy", "Politics", "Markets"). Optional — when
+   * present, the home page surfaces it as a card pill and a rail filter chip.
+   */
+  topic?: string
+  /**
    * Vertical bundle to load for this story. When set, the page loads the
    * matching `components/story/viz/verticals/<vertical>/` module bundle so
    * its viz types are available to the registry. Unknown verticals are
    * ignored with a console warning. See `components/story/viz/verticals.ts`.
    */
   vertical?: string
+  /**
+   * Renderer format. Missing = 'map' (legacy default). See `StoryFormat`.
+   * The page route branches on this to mount either the map-anchored shell
+   * or the deck shell.
+   */
+  format?: StoryFormat
+  /**
+   * Optional cover image URL shown as the home page card thumbnail background.
+   * Accepts absolute `http(s)` URLs or same-origin `/path` references.
+   * Rendered full-bleed at full opacity with no card overlay — the image itself
+   * carries the look, so pick one that keeps the card's title/READ legible.
+   */
+  thumbnail?: string
+  /**
+   * Optional text colour for the home page card when a `thumbnail` is shown.
+   * Overrides the card's title/subtitle/kicker colour (the `--bn-text` token)
+   * so they stay legible over the cover image, without recolouring the story
+   * body. Any CSS colour string. Ignored when there's no `thumbnail`.
+   */
+  thumbnailTextColor?: string
 }
 
 export type BlockType =

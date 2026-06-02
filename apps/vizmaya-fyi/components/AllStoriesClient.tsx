@@ -79,9 +79,12 @@ export default function AllStoriesClient({ stories }: { stories: ArchiveStory[] 
     const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 60)
     window.addEventListener('scroll', onScroll)
 
+    // threshold:0 (any pixel) rather than a ratio — a tall list element can
+    // never satisfy a 0.12 ratio once it exceeds ~8× the viewport height,
+    // which would leave it stuck at opacity:0 but still clickable.
     const obs = new IntersectionObserver(
       (es) => es.forEach((e) => { if (e.isIntersecting) e.target.classList.add('v') }),
-      { threshold: 0.12 }
+      { threshold: 0, rootMargin: '0px 0px -64px 0px' }
     )
     document.querySelectorAll('.rv').forEach((el) => obs.observe(el))
 

@@ -95,7 +95,7 @@ function resolvePaintColor(color: string, fallback = '#D85A30'): string {
 
 /**
  * Resolve the map state for a unit, merging subsection overrides on top of
- * the parent section's map config — exactly matching StoryMapShell's logic.
+ * the parent section's map config — exactly matching StoryShell's logic.
  */
 function resolveMapStateFromUnit(
   unit: ResolvedUnit,
@@ -105,6 +105,10 @@ function resolveMapStateFromUnit(
   const parentMap = unit.parentConfig.map
   const sub = unit.parentConfig.subsections?.[unit.subIndex]
   const over = sub?.map
+
+  // Deck-format sections have no map block. Return the editor's zero-state so
+  // the map tab still mounts (it just has nothing meaningful to edit there).
+  if (!parentMap) return DEFAULT_MAP
 
   // Desktop-resolved values (subsection overrides parent)
   let center = over?.center ?? parentMap.center

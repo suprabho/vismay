@@ -1,0 +1,6 @@
+species,scientific_name,first_identified,outbreaks_count,total_cases,total_deaths,typical_cfr_pct,vaccine_status,treatment_status
+Zaire,Orthoebolavirus zairense,1976,30+,~46000,~22000,40-90,Ervebo (rVSV-ZEBOV) licensed,Inmazeb and Ebanga mAbs licensed
+Sudan,Orthoebolavirus sudanense,1976,8,~672,~270,40-50,No licensed vaccine (trial candidates),No licensed therapeutic
+Bundibugyo,Orthoebolavirus bundibugyoense,2007,3,~290+,~70+,25-50,No licensed vaccine,No licensed therapeutic
+Tai Forest,Orthoebolavirus taiense,1994,1,1,0,N/A,No vaccine,N/A (only 1 case)
+Reston,Orthoebolavirus restonense,1989,7,~13,0,0 (asymptomatic in humans),N/A,Does not cause disease in humans

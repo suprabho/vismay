@@ -92,6 +92,12 @@ interface MapboxBackgroundProps {
    * Used by share-card maps where labels crowd the small frame.
    */
   hideAllLabels?: boolean
+  /**
+   * Config properties for Mapbox v3 "Standard" / "Standard Satellite" styles,
+   * applied via `setConfigProperty('basemap', key, value)`. Only used when the
+   * active `style` is a Standard style; classic styles use `palette` instead.
+   */
+  basemapConfig?: Record<string, string | number | boolean>
 }
 
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/dark-v11'
@@ -821,7 +827,13 @@ export default function MapboxBackground({
   palette,
   fontstack,
   hideAllLabels = false,
+  basemapConfig,
 }: MapboxBackgroundProps) {
+  // Mapbox v3 "Standard"/"Standard Satellite" expose the whole basemap as a
+  // single `basemap` import driven by config props, not editable layers — so
+  // `applyMapPalette` (layer-walking) is a no-op there and we drive roads /
+  // labels / 3D / lighting via `setConfigProperty` instead.
+  const isStandardStyle = style.includes('standard')
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
@@ -874,6 +886,9 @@ export default function MapboxBackground({
       fadeDuration: 0,
       preserveDrawingBuffer: staticCapture,
       ...(pixelRatio != null ? { pixelRatio } : {}),
+      // Seed Standard-style config so the first paint already has the right
+      // roads / labels / lighting (avoids a flash before the load handler).
+      ...(isStandardStyle && basemapConfig ? { config: { basemap: basemapConfig } } : {}),
     })
 
     // Apply focal padding immediately so the first paint already has the
@@ -883,10 +898,25 @@ export default function MapboxBackground({
     }
 
     map.on('load', () => {
-      // Per-story palette + fontstack overrides. Run BEFORE the highlight
-      // block so the highlight fill color wins on top of any new label color.
-      if (palette) applyMapPalette(map, palette)
-      if (fontstack && fontstack.length > 0) applyMapFontstack(map, fontstack)
+      // Standard / Standard Satellite: drive the `basemap` import via config
+      // props (roads, labels, 3D objects, lightPreset). Layer-based palette /
+      // fontstack don't apply to these styles, so skip them.
+      if (isStandardStyle) {
+        if (basemapConfig) {
+          for (const [key, value] of Object.entries(basemapConfig)) {
+            try {
+              map.setConfigProperty('basemap', key, value)
+            } catch {
+              // Prop unsupported for this style (e.g. 3D toggles on Satellite).
+            }
+          }
+        }
+      } else {
+        // Classic styles: per-story palette + fontstack overrides. Run BEFORE the
+        // highlight block so the highlight fill color wins over any label color.
+        if (palette) applyMapPalette(map, palette)
+        if (fontstack && fontstack.length > 0) applyMapFontstack(map, fontstack)
+      }
 
       // Strip every basemap text label (covers categories that MapPalette
       // doesn't classify, like water/nature labels). Pin labels live on

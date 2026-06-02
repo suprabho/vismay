@@ -1,0 +1,50 @@
+{
+  "steps": [
+    {
+      "title": "Execution risk profile — impact scale (1–10)",
+      "option": {
+        "tooltip": { "trigger": "axis", "axisPointer": { "type": "shadow" } },
+        "grid": { "left": "2%", "right": "10%", "bottom": "8%", "top": "8%", "containLabel": true },
+        "xAxis": {
+          "type": "value",
+          "max": 10,
+          "axisLabel": { "color": "$muted", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": [
+            "AI Scrutiny &\nCompliance",
+            "Geopolitical &\nRegulatory",
+            "Capital &\nInfrastructure",
+            "Starship\nBottleneck"
+          ],
+          "axisLabel": { "color": "$muted", "fontFamily": "Inter", "fontSize": 11 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barWidth": "44%",
+            "label": {
+              "show": true,
+              "position": "right",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 12,
+              "fontWeight": "bold"
+            },
+            "data": [
+              { "value": 6, "itemStyle": { "color": "$amber", "borderRadius": [0,4,4,0] }, "label": { "color": "$amber", "formatter": "6 / 10" } },
+              { "value": 7, "itemStyle": { "color": "$amber", "borderRadius": [0,4,4,0] }, "label": { "color": "$amber", "formatter": "7 / 10" } },
+              { "value": 8, "itemStyle": { "color": "$red",   "borderRadius": [0,4,4,0] }, "label": { "color": "$red",   "formatter": "8 / 10" } },
+              { "value": 9, "itemStyle": { "color": "$red",   "borderRadius": [0,4,4,0] }, "label": { "color": "$red",   "formatter": "9 / 10" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

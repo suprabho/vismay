@@ -318,12 +318,14 @@ export function applyReportOverrides(
         // outright. Stash a side-channel flag the shell can read to suppress
         // map rendering without violating the type.
         ;(parent as unknown as { __hideMap?: boolean }).__hideMap = true
-      } else if (ov.mapOverride) {
+      } else if (ov.mapOverride && parent.map) {
         // Merge camera fields directly into parent.map so existing shells
         // (which already read parent.map.{center,zoom,...}) pick them up.
         // Style/palette can't be merged here — they live on `defaults`, not
         // on the section's map block — so we also stash the full override
         // on a side channel for shells that consume style/palette.
+        // Deck-format sections have no `map:` block — the override has
+        // nothing to merge into and is silently ignored.
         parent.map = {
           ...parent.map,
           ...(ov.mapOverride.center ? { center: ov.mapOverride.center } : {}),

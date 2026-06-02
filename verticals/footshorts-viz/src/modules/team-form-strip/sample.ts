@@ -1,0 +1,97 @@
+import type { TeamFormStripConfig } from './index'
+
+const team = {
+  id: 'middlesbrough',
+  slug: 'middlesbrough',
+  name: 'Middlesbrough',
+  crest_url: null,
+  primary_color: '#d2122e',
+}
+
+function opp(id: string, name: string) {
+  return { id, slug: id, name, crest_url: null }
+}
+
+// Oldest → newest: a W-D-W-L-W run from Boro's perspective.
+export const sample: TeamFormStripConfig = {
+  type: 'fs:team-form-strip',
+  teamId: 'middlesbrough',
+  label: 'Form · last 5',
+  fixtures: [
+    {
+      id: 'boro-form-1',
+      competition_slug: 'champ',
+      season: '2025',
+      matchday: 38,
+      stage: null,
+      kickoff_at: '2026-04-05T14:00:00Z',
+      status: 'finished',
+      home_score: 2,
+      away_score: 0,
+      home_team_name: 'Middlesbrough',
+      away_team_name: 'Leeds',
+      home: team,
+      away: opp('leeds', 'Leeds'),
+    },
+    {
+      id: 'boro-form-2',
+      competition_slug: 'champ',
+      season: '2025',
+      matchday: 39,
+      stage: null,
+      kickoff_at: '2026-04-12T14:00:00Z',
+      status: 'finished',
+      home_score: 1,
+      away_score: 1,
+      home_team_name: 'Sunderland',
+      away_team_name: 'Middlesbrough',
+      home: opp('sunderland', 'Sunderland'),
+      away: team,
+    },
+    {
+      id: 'boro-form-3',
+      competition_slug: 'champ',
+      season: '2025',
+      matchday: 40,
+      stage: null,
+      kickoff_at: '2026-04-19T14:00:00Z',
+      status: 'finished',
+      home_score: 3,
+      away_score: 1,
+      home_team_name: 'Middlesbrough',
+      away_team_name: 'Norwich',
+      home: team,
+      away: opp('norwich', 'Norwich'),
+    },
+    {
+      id: 'boro-form-4',
+      competition_slug: 'champ',
+      season: '2025',
+      matchday: 41,
+      stage: null,
+      kickoff_at: '2026-04-26T14:00:00Z',
+      status: 'finished',
+      home_score: 2,
+      away_score: 1,
+      home_team_name: 'Coventry',
+      away_team_name: 'Middlesbrough',
+      home: opp('coventry', 'Coventry'),
+      away: team,
+    },
+    {
+      id: 'boro-form-5',
+      competition_slug: 'champ',
+      season: '2025',
+      matchday: 42,
+      stage: null,
+      kickoff_at: '2026-05-03T14:00:00Z',
+      status: 'finished',
+      home_score: 1,
+      away_score: 0,
+      home_team_name: 'Middlesbrough',
+      away_team_name: 'Hull',
+      home: team,
+      away: opp('hull', 'Hull'),
+    },
+  ],
+}

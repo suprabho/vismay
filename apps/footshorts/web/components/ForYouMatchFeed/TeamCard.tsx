@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { TeamSection } from '@/lib/useFollowedFixtures';
 import type { FixtureRow } from '@/lib/useFixtures';
+import { TeamFormStrip } from '@vismay/footshorts-viz/web';
 import { CollapsedHeader, SectionLabel } from './CardShell';
 import { FixturesBlock } from './FixturesBlock';
 import { relativeDateLabel } from './relativeDateLabel';
@@ -43,45 +44,6 @@ function FormDot({ fixture, teamId }: { fixture: FixtureRow; teamId: string }) {
   return <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />;
 }
 
-function TeamFormPill({ fixture, teamId }: { fixture: FixtureRow; teamId: string }) {
-  const isHome = fixture.home?.id === teamId;
-  const teamGoals = isHome ? fixture.home_score : fixture.away_score;
-  const oppGoals = isHome ? fixture.away_score : fixture.home_score;
-  const opp = isHome ? fixture.away : fixture.home;
-  const oppName = opp?.name ?? (isHome ? fixture.away_team_name : fixture.home_team_name) ?? 'TBD';
-
-  let result: 'W' | 'D' | 'L' | '-' = '-';
-  if (fixture.status === 'finished' && teamGoals !== null && oppGoals !== null) {
-    result = teamGoals > oppGoals ? 'W' : teamGoals < oppGoals ? 'L' : 'D';
-  }
-  const resultColor =
-    result === 'W' ? '#00D26A' : result === 'L' ? '#EF4444' : result === 'D' ? '#8E8E99' : '#24242E';
-  const resultFg = result === 'W' || result === 'L' ? '#0B0B0F' : '#F4F4F5';
-  const scoreText = teamGoals !== null && oppGoals !== null ? `${teamGoals}–${oppGoals}` : '—';
-
-  return (
-    <div className="mr-2 flex min-w-[80px] flex-col items-center rounded-xl border border-white/20 bg-white/10 px-3 py-2">
-      <div className="mb-1 h-[40px] w-[40px]">
-        {opp?.crest_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={opp.crest_url} alt="" className="h-full w-full object-contain" />
-        ) : null}
-      </div>
-      <div className="text-base font-semibold text-text">{scoreText}</div>
-      <div className="mt-0.5 max-w-[62px] truncate text-xs text-text">
-        {isHome ? 'vs ' : '@ '}
-        {oppName}
-      </div>
-      <div
-        className="mt-1 rounded px-1.5 py-px text-[10px] font-bold"
-        style={{ backgroundColor: resultColor, color: resultFg }}
-      >
-        {result}
-      </div>
-    </div>
-  );
-}
-
 export function TeamCard({ section }: { section: TeamSection }) {
   const teamId = section.entity.id;
   const formItems = [...section.past].reverse();
@@ -113,16 +75,7 @@ export function TeamCard({ section }: { section: TeamSection }) {
             <FixturesBlock fixtures={upcoming} display="tile" />
           </div>
         ) : null}
-        {formItems.length > 0 ? (
-          <div className="mt-4">
-            <SectionLabel text="Form · last 5" />
-            <div className="flex overflow-x-auto pb-1">
-              {formItems.map((f) => (
-                <TeamFormPill key={f.id} fixture={f} teamId={teamId} />
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <TeamFormStrip fixtures={formItems} teamId={teamId} />
         <Link
           href={`/team/${section.entity.slug}`}
           className="mt-4 inline-block text-sm font-semibold text-accent hover:underline"

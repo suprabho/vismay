@@ -2,9 +2,9 @@
 // client components to import without dragging fs/path into the bundle.
 
 import type { MapRegionLayer, HeatmapLayer, MapTextLabel } from '../types/story'
-import type { VizLayer, VizLayerStyle, VizRef } from '../types'
+import type { VizLayer, VizLayerStyle, VizLayerPanel, VizRef } from '../types'
 
-export type { VizLayer, VizLayerStyle, VizRef }
+export type { VizLayer, VizLayerStyle, VizLayerPanel, VizRef }
 
 /** A whole-slot opt-out (e.g. `background: { type: 'none' }`). */
 export interface VizSlotNone {
@@ -80,6 +80,101 @@ export interface MapPalette {
   pedestrianPaths?: LayerOverride
 }
 
+/**
+ * Page-level backdrop config. Used by the deck format to mount a single
+ * persistent backdrop behind every section. Resolution order in the page
+ * route: `defaults.storyBackground` → frontmatter `aura` → `{ type: 'none' }`.
+ *
+ * The aura variant mounts the same embed used by the home tile; tint applies
+ * a CSS-multiply layer above the aura so the SpaceX-style deep-space palette
+ * stays coherent.
+ */
+export type StoryBackgroundConfig =
+  | {
+      type: 'aura'
+      slug: string
+      /** Whether the aura embed reacts to audio input. Defaults to off in deck context. */
+      input?: 'on' | 'off'
+      /** CSS color cast applied above the aura via a blend mode. */
+      tint?: string
+      /**
+       * Blend mode for the tint layer. Mirrors CSS `mix-blend-mode`. Defaults
+       * to `multiply` when `tint` is set.
+       */
+      tintBlendMode?: 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'difference' | 'normal'
+      /** When true, the backdrop stays pinned while the page scrolls. Defaults to true. */
+      fixed?: boolean
+    }
+  | {
+      type: 'image'
+      src: string
+      fit?: 'cover' | 'contain' | 'fill'
+      position?: string
+    }
+  | { type: 'color'; value: string }
+  | { type: 'none' }
+
+/**
+ * Optional darken/tint overlay painted between the story background and the
+ * foreground content. Critical for chart legibility over busy aura motion in
+ * the deck format.
+ */
+export interface OverlayConfig {
+  /** Solid color floor. Combined with `opacity` if both set. */
+  color?: string
+  /** 0..1. Applied to `color` when no gradient is supplied. */
+  opacity?: number
+  /** Optional radial/linear gradient layered above `color`. */
+  gradient?: {
+    type: 'radial' | 'linear'
+    from: string
+    to: string
+    /** Linear angle (deg) or CSS direction (`to bottom`). Ignored for radial. */
+    angle?: string
+  }
+}
+
+/**
+ * Deck-specific scroll behavior. `snap` produces a slide-deck feel where each
+ * section is one viewport-tall snap target; `continuous` is cinematic scroll.
+ */
+export interface DeckScrollConfig {
+  mode: 'snap' | 'continuous'
+  paddingY?: string
+}
+
+/**
+ * Story-wide defaults for chart appearance. Forwarded to the chart module's
+ * render path so individual chart JSONs don't need to repeat theme/grid.
+ */
+export interface ChartDefaults {
+  theme?: string
+  grid?: {
+    left?: number | string
+    right?: number | string
+    top?: number | string
+    bottom?: number | string
+  }
+}
+
+/**
+ * Per-section override of the persistent Vizmaya logo Rive's colors. Each value
+ * is a theme token (`"$accent"`, `"$teal"`, … — resolved against the active theme
+ * via `resolveSectionLogoPalettes`) or a concrete hex (`"#d8804a"`). Slots map to
+ * the `.riv` view-model bindings (text→textColor, teal→tealColor, accent→accentColor,
+ * accent2→accent2Color, surface→surfaceColor, muted→mutedColor, line→lineColor).
+ * Unset slots inherit: section override → story-wide `defaults.logoPalette` → theme.
+ */
+export interface LogoPalette {
+  text?: string
+  teal?: string
+  accent?: string
+  accent2?: string
+  surface?: string
+  muted?: string
+  line?: string
+}
+
 export interface StoryDefaults {
   mapStyle: string
   mapOpacity: number
@@ -98,6 +193,55 @@ export interface StoryDefaults {
    * to Mapbox Studio under your account, e.g. `["Vizmaya Serif Regular"]`).
    */
   mapFontstack?: string[]
+  /**
+   * Config properties for Mapbox v3 "Standard" / "Standard Satellite" styles
+   * (`mapbox://styles/mapbox/standard`, `…/standard-satellite`). Applied via
+   * `map.setConfigProperty('basemap', key, value)` on load and passed as the
+   * initial `config.basemap` at construction.
+   *
+   * Only meaningful on Standard styles — classic styles (dark-v11, etc.) ignore
+   * this and use `mapPalette` instead. Standard styles are NOT layer-addressable,
+   * so `mapPalette` does nothing on them; use this to control roads, labels,
+   * 3D objects, and lighting. Common keys:
+   *   lightPreset: 'dawn' | 'day' | 'dusk' | 'night'
+   *   show3dObjects, show3dBuildings           (Standard only; ignored on Satellite)
+   *   showRoadLabels, showPlaceLabels, showPointOfInterestLabels, showTransitLabels
+   *   showRoadsAndTransit, showPedestrianRoads (Standard Satellite)
+   * Unsupported keys for the active style are silently ignored.
+   */
+  basemapConfig?: Record<string, string | number | boolean>
+  /**
+   * Page-level backdrop for the deck format. Mounts once at the page level
+   * (outside the snap container) and persists across every section. When
+   * absent, the page route falls back to `frontmatter.aura` for deck stories
+   * and to `{ type: 'none' }` for map stories.
+   */
+  storyBackground?: StoryBackgroundConfig
+  /** Darken/tint layer between the story background and the foreground content. */
+  overlay?: OverlayConfig
+  /**
+   * Default frosted-glass styling for every foreground panel. Each vizslot
+   * inherits this unless its `style.panel` overrides per-field. Used by the
+   * deck format to apply a coherent card frame across the whole story.
+   */
+  panel?: VizLayerPanel
+  /** Deck scroll mode + viewport padding. Currently advisory; honored by the deck shell. */
+  scroll?: DeckScrollConfig
+  /** Story-wide chart defaults (theme + grid). Forwarded to the chart module. */
+  chart?: ChartDefaults
+  /**
+   * When true, the deck shell mounts a fixed right-edge step indicator
+   * (one hairline per snap unit, active one wider/darker) and a clickable
+   * jump-to-section affordance. Off by default so existing deck stories
+   * keep the cleaner empty edges.
+   */
+  progress?: boolean
+  /**
+   * Story-wide base override for the persistent Vizmaya logo Rive's colors.
+   * Applied on top of the theme palette; individual sections layer their own
+   * `logoPalette` over this. Values are theme tokens (`"$accent"`) or hex.
+   */
+  logoPalette?: LogoPalette
 }
 
 export interface MapPinConfig {
@@ -116,7 +260,34 @@ export interface MapPinConfig {
   image?: string
 }
 
-export type SectionKind = 'text' | 'hero' | 'stat'
+/**
+ * Section presentation kind. The original triple (`text` | `hero` | `stat`)
+ * drives the map-format text card. Deck-format aliases expand the vocabulary
+ * for slide composition:
+ *
+ *   cover    ≈ hero    (large title slide)
+ *   bigStat  ≈ stat    (giant number slide — but composed via a `bigStat`
+ *                       foreground vizslot, not the section text card)
+ *   bodyText ≈ text    (prose slide composed via a `bodyText` vizslot)
+ *
+ * The remaining values (`split` | `data` | `gallery` | `quote` | `divider` |
+ * `closing`) are deck-only compositional kinds. The deck shell suppresses the
+ * section text card for all kinds except `cover`/`hero`; the visual is
+ * carried by the section's foreground vizslots in their layout regions.
+ */
+export type SectionKind =
+  | 'text'
+  | 'hero'
+  | 'stat'
+  | 'cover'
+  | 'bigStat'
+  | 'bodyText'
+  | 'split'
+  | 'data'
+  | 'gallery'
+  | 'quote'
+  | 'divider'
+  | 'closing'
 
 /**
  * Theme palette token used to color a `kind: stat` panel's giant number.
@@ -251,10 +422,34 @@ export interface StorySectionConfig {
    */
   foreground?: ForegroundSlotInput
   /**
-   * Legacy map field. Kept indefinitely for back-compat; required iff no `background`
-   * declares a different layer type (the shim derives the background layer from this).
+   * Section-root layout name. Sugar for `foreground: { layout, regions }` when
+   * the section's `foreground:` is an unwrapped array (deck format). When both
+   * `section.layout` and `foreground.layout` are set, `foreground.layout` wins.
+   * Resolved against the `foregroundLayouts` registry.
    */
-  map: {
+  layout?: string
+  /**
+   * Per-section panel chrome override. Merged shallowly over `defaults.panel`
+   * (story-wide) which is itself merged over each vizslot's module default.
+   * Authors use this to swap the frame style on a single hero/closing slide
+   * without touching the deck-wide defaults.
+   */
+  panel?: VizLayerPanel
+  /**
+   * Per-section override for the persistent Vizmaya logo Rive's colors. Merged
+   * over `defaults.logoPalette` (story-wide) which is itself merged over the
+   * theme palette. As the reader scrolls into this section the logo re-tints.
+   * Values are theme tokens (`"$accent"`, `"$teal"`) or concrete hex.
+   */
+  logoPalette?: LogoPalette
+  /**
+   * Legacy map field. Optional in the type because the deck format never sets
+   * it and the loader/back-compat shims already tolerate its absence. For map
+   * stories it's effectively required — the loader's per-section validator
+   * enforces `map.center` + `map.zoom` when neither `background:` nor
+   * `foreground:` is declared.
+   */
+  map?: {
     center: [number, number]
     zoom: number
     pitch?: number

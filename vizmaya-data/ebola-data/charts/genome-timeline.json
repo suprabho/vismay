@@ -1,0 +1,91 @@
+{
+  "_meta": {
+    "id": "genome-timeline",
+    "title": "Bundibugyo virus genomes through time",
+    "subtitle": "All known BDBV sequences on Nextstrain, by outbreak cluster",
+    "source": "Nextstrain BDBV build + virological.org 2026 release",
+    "interpretation": "The 2026 viruses cluster together and are genetically distinct from the 2007 and 2012 lineages — consistent with a fresh zoonotic spillover, not human-survivor persistence."
+  },
+  "grid": { "left": 24, "right": 24, "top": 28, "bottom": 48, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0f0e0c",
+    "borderColor": "#0f0e0c",
+    "textStyle": { "color": "#f5f1ea", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{a}<br/>Cluster position {c}"
+  },
+  "legend": {
+    "bottom": 0,
+    "icon": "circle",
+    "itemWidth": 8,
+    "itemHeight": 8,
+    "textStyle": { "color": "#6b665d", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "xAxis": {
+    "type": "value",
+    "min": 2006,
+    "max": 2027,
+    "interval": 2,
+    "name": "Year sampled",
+    "nameLocation": "middle",
+    "nameGap": 26,
+    "nameTextStyle": { "color": "#6b665d", "fontFamily": "Inter", "fontSize": 10 },
+    "axisLine": { "lineStyle": { "color": "#d8d2c5" } },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#d8d2c5", "type": "dashed" } },
+    "axisLabel": { "color": "#6b665d", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "{value}" }
+  },
+  "yAxis": {
+    "type": "value",
+    "show": false,
+    "min": 0,
+    "max": 28
+  },
+  "series": [
+    {
+      "name": "2007 Uganda",
+      "type": "scatter",
+      "symbolSize": 10,
+      "itemStyle": { "color": "rgba(106,24,24,0.75)", "borderColor": "#6a1818", "borderWidth": 1 },
+      "data": [
+        [2007.8, 1], [2007.85, 2], [2007.9, 3], [2007.95, 1], [2008.0, 4],
+        [2008.05, 2], [2008.1, 3], [2008.15, 5], [2008.2, 2], [2008.25, 4],
+        [2007.9, 6], [2008.0, 5], [2008.1, 7], [2008.2, 6], [2008.0, 8],
+        [2008.1, 9], [2007.95, 10], [2008.05, 9], [2008.15, 8], [2008.0, 7],
+        [2008.1, 5], [2008.05, 3]
+      ]
+    },
+    {
+      "name": "2012 DRC",
+      "type": "scatter",
+      "symbolSize": 10,
+      "itemStyle": { "color": "rgba(92,75,160,0.75)", "borderColor": "#5c4ba0", "borderWidth": 1 },
+      "data": [
+        [2012.7, 11], [2012.75, 12], [2012.8, 13], [2012.85, 14], [2012.9, 11],
+        [2012.95, 12], [2013.0, 13], [2012.8, 15], [2012.85, 14], [2012.9, 13],
+        [2012.95, 15], [2013.0, 14]
+      ]
+    },
+    {
+      "name": "2026 DRC + Uganda",
+      "type": "scatter",
+      "symbolSize": 18,
+      "itemStyle": { "color": "rgba(196,57,28,0.95)", "borderColor": "#0f0e0c", "borderWidth": 1.5 },
+      "data": [
+        [2026.38, 25], [2026.40, 26], [2026.41, 25]
+      ],
+      "markPoint": {
+        "symbol": "rect",
+        "symbolSize": [0, 0],
+        "label": {
+          "formatter": "3 new genomes",
+          "color": "#c4391c",
+          "fontFamily": "Inter",
+          "fontSize": 11,
+          "fontWeight": 600
+        },
+        "data": [{ "coord": [2026.4, 22] }]
+      }
+    }
+  ]
+}

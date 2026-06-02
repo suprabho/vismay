@@ -1,0 +1,468 @@
+# =============================================================================
+# vizmaya · deck format · spacex-s1-2026
+# =============================================================================
+# This file demonstrates the new `format: "deck"` flavour declared in the
+# accompanying .md frontmatter. It is a sibling of the existing map-anchored
+# format — *not* a replacement. Where the legacy schema treats `map:` as the
+# default backdrop on every section, the deck format treats an **aura embed**
+# as a single page-level backdrop and treats every section as a "slide" of
+# composed foreground vizslots laid over it.
+#
+# Schema summary (full spec in docs/deck-format-spec.md):
+#
+#   defaults:
+#     storyBackground:        page-level background (aura | image | color | none).
+#                             Renders ONCE, persists across all sections, sits
+#                             behind every panel. Defaults to the frontmatter
+#                             `aura:` slug if omitted.
+#     overlay:                colour + opacity layer between aura and content,
+#                             so charts stay legible against busy motion.
+#     panel:                  default frosted-glass styling for foreground slots
+#                             (surface, border, blur, radius). Overridable per
+#                             slot.
+#     scroll:                 snap | continuous (deck behaves like a vertical
+#                             slide deck when snap is on; cinematic scroll when
+#                             continuous).
+#
+#   sections[]:
+#     id:                     unique id; matches markdown heading slug
+#     kind:                   cover | bigStat | bodyText | split | data |
+#                             gallery | quote | divider | closing
+#     text:                   anchor into the .md (heading text)
+#     paragraphs:             [start, end] slice of resolved paragraphs
+#     panel:                  per-section panel override
+#     foreground:             array of vizslot layers — chart | image |
+#                             imageGrid | bigStat | quote | bodyText | mapbox |
+#                             embed | keyValue | table
+#
+#   vizslot common style fields (panel/style) follow VizLayerStyle from the
+#   existing engine — position, size, opacity, blendMode, panel.
+# =============================================================================
+
+defaults:
+  # Editorial bone-white rebuild: flat color backdrop, no aura motion, no
+  # frosted-glass panels. The whole story should read like a printed S-1
+  # spread, not a generative-motion site.
+  storyBackground:
+    type: aura
+    slug: "blue-abstract-background-elegant-soft-waves-for-design"
+    fixed: true
+  overlay:
+    color: "transparent"
+    opacity: 0
+  # Default panel chrome is OFF — bone-white editorial wants type on paper,
+  # not cards on glass. Individual sections can opt back in if needed.
+  panel:
+    background: "transparent"
+    border: "none"
+    borderRadius: "0"
+    padding: "0"
+    backdropBlur: "0"
+    shadow: "none"
+  scroll:
+    mode: snap
+    paddingY: "12vh"
+  chart: 
+    theme: light-editorial
+    grid: { left: 64, right: 32, top: 56, bottom: 56 }
+  # Story-scoped feature flag — mounts the right-edge 15-step progress
+  # indicator. Other deck stories don't set this and stay unaffected.
+  progress: true
+  # Per-section Vizmaya-logo recolor (demo). The persistent top-left logo
+  # re-tints to each section's palette as you scroll. Values are theme tokens
+  # ("$accent", "$teal", "$muted", …) resolved against this story's theme, or a
+  # literal hex. `defaults.logoPalette` is the story-wide base; each section's
+  # own `logoPalette` layers over it. Slots: text/teal/accent/accent2/surface/
+  # muted/line → the logo's .riv color bindings.
+  logoPalette:
+    accent: "$accent2"   # story-wide base: the logo's accent slot uses accent2
+
+sections:
+
+  # ---------------------------------------------------------------------------
+  # 1 · Cover
+  # ---------------------------------------------------------------------------
+  - id: cover
+    kind: cover
+    layout: hero-full-bleed       # opts out of DECK_SAFE_AREA so the image goes edge-to-edge
+    text: "Cover"
+    eyebrow: "SpaceX S-1 · May 20, 2026 · $1.75 Trillion IPO Analysis"
+    heading: "A Rocket Company That Became the Internet"
+    dek: "SpaceX's S-1 reveals three companies inside one stock — and only one of them makes money."
+    panel:
+      background: "transparent"
+      border: "none"
+      backdropBlur: "0"
+    foreground:
+      # Falcon photograph, full-bleed. The hero text + bottom scrim are
+      # painted as an overlay inside MapStorySection (z-20 above the
+      # foreground image) when section.layout === 'hero-full-bleed'.
+      - type: image
+        src: /content/stories/spacex-ipo-2026/images/01-hero-orbital.webp
+        alt: "Falcon stage one re-entry plume over a Starlink constellation arc, deep dusk"
+        priority: true              # hero / LCP — load eager with fetchpriority=high
+        style:
+          position: { x: center, y: center }
+          size: { width: "100%", height: "100vh" }
+          opacity: 1
+          panel:
+            background: "transparent"
+            border: "none"
+            borderRadius: "0"
+
+  # ---------------------------------------------------------------------------
+  # 2 · $18.7B headline — the "bigStat" archetype
+  # ---------------------------------------------------------------------------
+  - id: revenue-headline
+    kind: bigStat
+    text: "$18.7B headline"
+    paragraphs: [0, 2]
+    logoPalette:
+      accent: "$teal"        # demo: tint the logo accent teal on this slide
+    foreground:
+      - type: bigStat
+        value: "$18.7B"
+        unit: ""
+        label: "SpaceX consolidated revenue, full year 2025"
+        delta: "+33% YoY · run-rate $18.8B in Q1 2026"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+
+  # ---------------------------------------------------------------------------
+  # 3 · Three segments — split text + chart
+  # ---------------------------------------------------------------------------
+  - id: three-segments
+    kind: split
+    text: "Three segments, three stories"
+    paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 dense paragraphs → 2 snaps (intro+Connectivity, then Space+AI)
+      - [0, 2]
+      - [2, 4]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: segment-revenue
+        caption: "2025 segment P&L · revenue, operating income, Adj. EBITDA"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 4 · Starlink prose-only — bodyText over aura
+  # ---------------------------------------------------------------------------
+  - id: starlink-machine
+    kind: bodyText
+    text: "Starlink: the machine behind the curtain"
+    paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 dense paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 4]
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+
+  # ---------------------------------------------------------------------------
+  # 5 · 10.3M subscribers — bigStat + chart row
+  # ---------------------------------------------------------------------------
+  - id: subscribers
+    kind: data
+    text: "10.3M subscribers"
+    paragraphs: [0, 2]
+    layout: stat-left-chart-right
+    foreground:
+      - type: bigStat
+        value: "10.3M"
+        label: "Starlink subscribers · March 31, 2026"
+        delta: "164 countries · +106% YoY"
+        deltaColor: positive
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: starlink-subscribers
+        caption: "Subscribers doubled in each of the last two years · S-1 disclosure"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 6 · Space prose — starship 3D rotate showcase
+  # ---------------------------------------------------------------------------
+  # The right column hosts a slow Y-axis rotation of Starship via the
+  # `starship:viewer` module from @vismay/starship-viz. The 3D viewer is
+  # available because the .md frontmatter declares `vertical: 'starship'`.
+  # Material `metal` matches the brushed-stainless flavour of SpaceX renders.
+  - id: space-budget
+    kind: split
+    text: "Space: the rocket that ate the budget"
+    paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs (p2 is long) → 2 snaps
+      - [0, 2]
+      - [2, 3]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: starship:viewer
+        model: falcon-9
+        mode: rotate
+        material: metal
+        ground:
+          show: true
+          color: '#ffffff'
+          opacity: 0
+        style:
+          position: { x: right, y: center }
+          size: { width: "44%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 7 · $15B+ Starship — bigStat + 3D explode
+  # ---------------------------------------------------------------------------
+  # The R&D dollar narrative is paired with an explode view of the ship: as
+  # the reader steps through the section, the three named parts (cone, tank,
+  # raptor) drift apart along ship-local Y. Visualises "what the $15B is
+  # buying" — the physical vehicle itself, not the cumulative spend bars.
+  # The legacy bar chart still ships in `charts/starship-rd-cumulative.json`
+  # if we want to swap it back in.
+  - id: starship-rd
+    kind: data
+    text: "$15B+ on Starship"
+    layout: stat-left-chart-right
+    # Two subsections turn this section into a 2-step scrub. As the reader
+    # advances beat 0 → 1, `activeStep` goes 0 → 1, which drives BOTH the
+    # explode and the camera move (progress = activeStep / scrubSteps). A deck
+    # section with no subsections is a single snap target, so activeStep would
+    # never leave 0 and neither animation would play. The bigStat + viewer are
+    # section-level foreground, so they persist across both beats.
+    subsections:
+      - text: "$15B+ on Starship"
+        paragraphs: [0, 2]
+      - text: "$15B+ on Starship"
+        paragraphs: [2, 3]
+    foreground:
+      - type: bigStat
+        value: "$15B+"
+        label: "Cumulative Starship R&D · per S-1 disclosure"
+        delta: "$3B in 2025 alone · $930M in Q1 2026"
+        deltaColor: amber
+        color: amber
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: starship:viewer
+        mode: explode
+        material: metal
+        scrubSteps: 1
+        # Scroll-scrubbed camera move over the same progress as the explode.
+        # Position lerps in spherical space around `target`. The dominant move
+        # is a vertical tilt — the camera lifts from a near-level 3/4 view
+        # (polar ~77°) to a high angle looking down (~59°) — because a pure
+        # horizontal orbit barely reads on a near-cylindrical rocket, whereas
+        # rising to look down clearly reveals the parts separating. It also
+        # dollies in (radius 6.3 → 5.6), tightens fov 40 → 36, and pans the
+        # look-at up to 0.1. `damping` glides between the two discrete steps
+        # instead of cutting straight across.
+        camera:
+          from: { position: [3.5, 1.4, 5], fov: 40, target: [0, 0, 0] }
+          to:   { position: [1.2, 3.0, 4.6], fov: 36, target: [0, 0.1, 0] }
+          easing: easeInOut
+          damping: 4
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 8 · AI black hole — split, image left, text right
+  # ---------------------------------------------------------------------------
+  - id: ai-black-hole
+    kind: split
+    text: "The AI black hole"
+    paragraphs: [0, 4]
+    mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 4]
+    layout: text-left-chart-right
+    foreground:
+      # Text first on the spine; the image becomes the right-hand visual so
+      # the section reads consistently with every other split section.
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: image
+        src: /content/stories/spacex-ipo-2026/images/02-colossus-data-center.webp
+        alt: "Inside view of COLOSSUS — gigawatt-scale AI training cluster, Memphis"
+        caption: "COLOSSUS · 220,000 Nvidia GPUs · 300MW · built in 120 days"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 9 · EBITDA bridge — bodyText + clustered-bar chart
+  # ---------------------------------------------------------------------------
+  - id: ebitda-bridge
+    kind: data
+    text: "The EBITDA bridge"
+    paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: ebitda-vs-gaap
+        caption: "Adj. EBITDA $6.6B · GAAP net loss $4.9B · accumulated deficit $41.3B"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 10 · Capex — donut centred, prose below
+  # ---------------------------------------------------------------------------
+  - id: capex-velocity
+    kind: data
+    text: "Capital at the speed of ambition"
+    paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
+    layout: text-left-chart-right
+    foreground:
+      # Flipped from chart-top-text-below to keep the section on the spine.
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: capex-by-segment
+        caption: "$20.7B in 2025 · AI alone spent $7.7B in Q1 2026"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 11 · Governance — twin donuts (42% vs 85%)
+  # ---------------------------------------------------------------------------
+  - id: governance
+    kind: data
+    text: "Elon's kingdom"
+    paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
+    layout: text-left-chart-right
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: voting-vs-economic
+        caption: "Class B · 10 votes per share · Nasdaq controlled-company exemptions"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 12 · $1.75T — closing bigStat + trajectory line
+  # ---------------------------------------------------------------------------
+  - id: valuation
+    kind: data
+    text: "$1.75T at IPO"
+    paragraphs: [0, 3]
+    logoPalette:
+      accent: "$accent"      # demo: the warm accent returns for the valuation slide
+      teal: "$accent2"
+    layout: stat-left-chart-right
+    foreground:
+      - type: bigStat
+        value: "$1.75T"
+        label: "Implied IPO valuation · analyst estimates"
+        delta: "Doubled in six months pre-roadshow"
+        deltaColor: amber
+        color: accent2
+        align: left
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }
+      - type: chart
+        id: valuation-trajectory
+        caption: "$12B (2015) → $1.75T (2026 target) · log scale"
+        style:
+          position: { x: right, y: center }
+          size: { width: "50%", height: "62vh" }
+
+  # ---------------------------------------------------------------------------
+  # 13 · Closing essay
+  # ---------------------------------------------------------------------------
+  - id: closing-essay
+    kind: closing
+    text: "When class wore the mask of margin"
+    paragraphs: [0, 4]
+    logoPalette:
+      accent: "$muted"       # demo: a muted, somber accent for the closing essay
+      text: "$accent"
+    mobileParagraphs:            # portrait: 4 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 4]
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "50%" }
+      - type: keyValue
+        title: "Three theses, one ticker"
+        items:
+          - { key: "Connectivity",  value: "Profitable broadband near-monopoly", color: accent2 }
+          - { key: "Space",         value: "Option premium on Starship & the lunar economy", color: amber }
+          - { key: "AI",            value: "Belief that Grok + X + orbital compute compounds", color: red }
+        style:
+          position: { x: right, y: center }
+          size: { width: "32%" }
+
+  # ---------------------------------------------------------------------------
+  # 14 · Methodology — quiet bodyText, smaller type
+  # ---------------------------------------------------------------------------
+  - id: methodology
+    kind: bodyText
+    text: "Methodology"
+    paragraphs: [0, 3]
+    mobileParagraphs:            # portrait: 3 paragraphs → 2 snaps
+      - [0, 2]
+      - [2, 3]
+    foreground:
+      - type: bodyText
+        from: text
+        textStyle:
+          size: small
+          color: muted
+        style:
+          position: { x: left, y: center }
+          size: { width: "44%" }

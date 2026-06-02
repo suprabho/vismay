@@ -47,12 +47,29 @@ export default function EditorPanel({
   // Local draft so the editor is responsive without round-tripping
   // through React state on every keystroke. Initialised from the slice;
   // resets when the slice identity changes (different node clicked).
+  // Also adopts external slice.text changes — e.g. the visual Map-Edit
+  // picker writing to the same file while this panel stays open — but
+  // only when the user has no unsaved edits we'd clobber. Without this,
+  // saving over a stale draft would silently overwrite the picker's
+  // just-applied YAML.
   const [draft, setDraft] = useState(slice.text)
   const sliceTitleRef = useRef(slice.title)
+  const sliceTextRef = useRef(slice.text)
   useEffect(() => {
     if (sliceTitleRef.current !== slice.title) {
       sliceTitleRef.current = slice.title
+      sliceTextRef.current = slice.text
       setDraft(slice.text)
+      return
+    }
+    if (sliceTextRef.current !== slice.text) {
+      // Same node, slice.text changed externally. Adopt iff the user's
+      // current draft still matches the previous slice.text (i.e. no
+      // unsaved local edits); otherwise leave their draft alone so a
+      // background write doesn't eat in-flight typing.
+      const prev = sliceTextRef.current
+      sliceTextRef.current = slice.text
+      setDraft((current) => (current === prev ? slice.text : current))
     }
   }, [slice.title, slice.text])
 
