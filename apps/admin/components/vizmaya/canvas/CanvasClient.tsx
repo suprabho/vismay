@@ -2927,10 +2927,10 @@ export default function CanvasClient({
           }}
           onMapEdit={editorMapEdit}
           slug={slug}
-          // Vertical slice: AI prompt input is wired for the content slot
-          // first. Widen to other EditableKinds by dropping this gate once the
-          // content flow is validated end-to-end.
-          aiKind={editorTarget?.kind === 'content' ? 'content' : undefined}
+          // Every EditorPanel-backed slot gets the AI prompt input. The slot's
+          // EditableKind is a subset of AiSlotKind, so it maps 1:1; aiSlots.ts
+          // supplies the modality, model subset, and default system prompt.
+          aiKind={editorTarget?.kind}
         />
       )}
       {/* Slot-edit surfaces — mutually exclusive by construction (slotTarget
@@ -2992,6 +2992,7 @@ export default function CanvasClient({
           error={slotError}
           onSave={handleThemeSave}
           onClose={closeSlot}
+          slug={slug}
         />
       )}
       {/* Floating +Add context menu. Anchored at the right-click cursor

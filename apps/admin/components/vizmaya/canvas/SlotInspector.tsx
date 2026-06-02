@@ -29,7 +29,9 @@ import {
   type StoryDefaults,
   type VizLayer,
 } from '@vismay/viz-engine'
+import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import VizConfigForm from '../VizConfigForm'
+import PromptBar from './PromptBar'
 
 type FormValue = string | number | boolean | object | null | undefined
 
@@ -82,6 +84,24 @@ function flattenContent(
     }
   }
   return flat
+}
+
+/** Parse AI-generated layer YAML into flattened form values, ready to merge
+ *  into `content`. Strips `type`/`style` (managed elsewhere) and reuses the
+ *  same dotted-key flattening as the seed. Returns null on invalid/non-object
+ *  YAML so the caller leaves the form untouched. */
+function parseLayerFields(
+  yaml: string,
+  schemaKeys: string[]
+): Record<string, FormValue> | null {
+  let parsed: unknown
+  try {
+    parsed = parseYaml(yaml)
+  } catch {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+  return flattenContent(parsed as Record<string, unknown>, schemaKeys)
 }
 
 function unflattenContent(value: Record<string, FormValue>): Record<string, unknown> {
@@ -362,6 +382,21 @@ export default function SlotInspector({
         {/* CONTENT — VizConfigForm with dark CSS vars scoped locally so its
             theme-token colors render legibly on the canvas surface. */}
         <Section title="Content">
+          {/* AI generation for this layer. The model emits the layer fields as
+              YAML; we flatten them onto the form values (merge, so untouched
+              fields survive) for review before Save. */}
+          <div style={{ marginBottom: 12 }}>
+            <PromptBar
+              slug={slug}
+              kind="layer"
+              layerType={layerType}
+              currentValue={yamlStringify(unflattenContent(content), { lineWidth: 80 })}
+              onApply={(yaml) => {
+                const fields = parseLayerFields(yaml, schemaKeys)
+                if (fields) setContent((c) => ({ ...c, ...fields }))
+              }}
+            />
+          </div>
           {hasForm ? (
             <div
               style={

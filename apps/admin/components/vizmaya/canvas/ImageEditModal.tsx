@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
+import PromptBar from './PromptBar'
 
 type ImageFit = 'cover' | 'contain' | 'fill' | 'scale-down' | 'none'
 
@@ -211,6 +212,18 @@ export default function ImageEditModal({
         {/* Left: form */}
         <div className="border-b md:border-b-0 md:border-r border-white/10 overflow-y-auto p-4 space-y-4 bg-neutral-950">
           <PreviewBox asset={selectedAsset} fit={draft.fit ?? 'cover'} focus={draft.focus} />
+
+          {/* AI image generation — uploads to story-assets and selects the
+              result as the layer source. Refresh so it appears in the grid. */}
+          <PromptBar
+            slug={slug}
+            kind="layer"
+            layerType="image"
+            onApplyImage={(result) => {
+              setDraft((d) => ({ ...d, src: result.assetRef }))
+              void refresh()
+            }}
+          />
 
           <Field label="Image source" hint="assets://… or absolute URL">
             <input
