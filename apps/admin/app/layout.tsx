@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import Link from 'next/link'
 import { LogoutButton } from '@vismay/admin-core'
 import { isAuthed, expectedToken } from '@/lib/adminAuth'
+import AssistantLauncher from '@/components/AssistantLauncher'
 import './globals.css'
 
 const inter = Inter({
@@ -43,6 +44,15 @@ export default async function RootLayout({
               >
                 view site
               </a>
+              {authed && (
+                <Link
+                  href="/vizmaya/ai-models"
+                  className="text-neutral-400 hover:text-white transition-colors"
+                >
+                  AI models
+                </Link>
+              )}
+              {authed && <AssistantLauncher />}
               {authed && (
                 <LogoutButton logoutEndpoint="/api/logout" />
               )}

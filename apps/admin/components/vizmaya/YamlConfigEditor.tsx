@@ -10,6 +10,8 @@ interface Props {
   onChange: (next: string) => void
   path: string
   onValidate?: (markers: CodeEditorMarker[]) => void
+  /** Forwarded to CodeEditor to enable the ✨ "Ask AI" selection overlay. */
+  ai?: { slug?: string; kind?: string; layerType?: string }
 }
 
 interface MapPickerTarget {
@@ -19,7 +21,7 @@ interface MapPickerTarget {
   label: string
 }
 
-export default function YamlConfigEditor({ value, onChange, path, onValidate }: Props) {
+export default function YamlConfigEditor({ value, onChange, path, onValidate, ai }: Props) {
   const apiRef = useRef<CodeEditorApi | null>(null)
   const [picker, setPicker] = useState<MapPickerTarget | null>(null)
 
@@ -80,6 +82,7 @@ export default function YamlConfigEditor({ value, onChange, path, onValidate }: 
         onReady={(api) => {
           apiRef.current = api
         }}
+        ai={ai}
       />
 
       {picker && (

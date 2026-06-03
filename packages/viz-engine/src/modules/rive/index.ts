@@ -1,173 +1,136 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { parseWithSchema } from '../../lib/zodConfig'
 
-export type RiveLayoutFit =
-  | 'cover'
-  | 'contain'
-  | 'fill'
-  | 'fitWidth'
-  | 'fitHeight'
-  | 'scaleDown'
-  | 'none'
+const RiveLayoutFitSchema = z.enum([
+  'cover',
+  'contain',
+  'fill',
+  'fitWidth',
+  'fitHeight',
+  'scaleDown',
+  'none',
+])
+export type RiveLayoutFit = z.infer<typeof RiveLayoutFitSchema>
 
-export type RiveLayoutAlignment =
-  | 'center'
-  | 'topLeft'
-  | 'topCenter'
-  | 'topRight'
-  | 'centerLeft'
-  | 'centerRight'
-  | 'bottomLeft'
-  | 'bottomCenter'
-  | 'bottomRight'
+const RiveLayoutAlignmentSchema = z.enum([
+  'center',
+  'topLeft',
+  'topCenter',
+  'topRight',
+  'centerLeft',
+  'centerRight',
+  'bottomLeft',
+  'bottomCenter',
+  'bottomRight',
+])
+export type RiveLayoutAlignment = z.infer<typeof RiveLayoutAlignmentSchema>
 
 /**
- * A single view-model binding. `value` is either:
- *   - a hex color string (`"#d8804a"`) → applied via `useViewModelInstanceColor`
- *   - a theme token (`"$accent"`)       → resolved via lib/theme.ts (color paths)
- *   - a number                          → applied via `useViewModelInstanceNumber`
- *   - a boolean                         → applied via `useViewModelInstanceBoolean`
- *   - a string                          → applied via `useViewModelInstanceString`
- *
- * The Component derives the node type from the value type. Authors who need
- * something more specific (e.g. enum) can fall back to a hex literal that
- * happens to encode the desired enum value.
+ * A single view-model binding value. The Component derives the Rive node type
+ * from the value type: hex color / theme token (`"$accent"`) / number / boolean
+ * / string.
  */
-export type RiveBindingValue = string | number | boolean
+const RiveBindingValueSchema = z.union([z.string(), z.number(), z.boolean()])
+export type RiveBindingValue = z.infer<typeof RiveBindingValueSchema>
 
-export interface RiveStepInputConfig {
-  /** State-machine input name (must match the .riv exactly). */
-  name: string
-  type: 'number' | 'boolean' | 'trigger'
-  /**
-   * How to derive the input value from `activeStep`:
-   *   linear:   `activeStep / Math.max(1, totalSteps - 1)` — yields 0..1.
-   *             Only valid for `type: 'number'`. Requires `totalSteps`.
-   *   stepwise: read from `values[activeStep]`. Length must match step count.
-   *   trigger:  fire the trigger on each step change (no value).
-   */
-  map: 'linear' | 'stepwise' | 'trigger'
-  values?: Array<number | boolean>
-  /** Required when map === 'linear'. */
-  totalSteps?: number
-}
+const RiveInputTypeSchema = z.enum(['number', 'boolean', 'trigger'])
 
-export interface RiveCaptureConfig {
-  /**
-   * Freeze strategy used by PDF / share / video captures.
-   *
-   *   currentFrame:        pause + a short settle delay; deterministic only if
-   *                        autoplay is off or the .riv has hit its idle state.
-   *   stateMachineInput:   write the configured input, then pause.
-   *   advanceMs:           play for N ms from the start, then pause.
-   *   posterImage:         skip Rive entirely; render the posterImage. Fastest.
-   */
-  mode: 'currentFrame' | 'stateMachineInput' | 'advanceMs' | 'posterImage'
-  advanceMs?: number
-  stateMachineInput?: { name: string; type: 'number' | 'boolean' | 'trigger'; value?: number | boolean }
-}
+/** Per-step state-machine / view-model input write. */
+export const riveStepInputSchema = z
+  .object({
+    name: z.string().describe('State-machine input name (must match the .riv exactly).'),
+    type: RiveInputTypeSchema,
+    map: z
+      .enum(['linear', 'stepwise', 'trigger'])
+      .describe(
+        "How activeStep derives the value: 'linear' (0..1, requires totalSteps), 'stepwise' (values[activeStep]), or 'trigger' (fire on step change).",
+      ),
+    values: z
+      .array(z.union([z.number(), z.boolean()]))
+      .optional()
+      .describe("Per-step values. Required when map === 'stepwise'."),
+    totalSteps: z.number().optional().describe("Step count. Required when map === 'linear'."),
+  })
+  .refine((s) => !(s.map === 'linear' && typeof s.totalSteps !== 'number'), {
+    message: "totalSteps required when map === 'linear'",
+    path: ['totalSteps'],
+  })
+  .refine((s) => !(s.map === 'stepwise' && !Array.isArray(s.values)), {
+    message: "values required when map === 'stepwise'",
+    path: ['values'],
+  })
+export type RiveStepInputConfig = z.infer<typeof riveStepInputSchema>
 
-export interface RiveLayerConfig {
-  type: 'rive'
-  /** `assets://<key>`, absolute URL, or same-origin `/public` path. */
-  src: string
-  artboard?: string
-  stateMachine?: string
-  layout?: { fit?: RiveLayoutFit; alignment?: RiveLayoutAlignment }
-  autoplay?: boolean
-  /** Optional fallback image while the `.riv` loads OR for capture.mode === 'posterImage'. */
-  posterImage?: string
-  /** Static view-model bindings applied once on mount. */
-  viewModel?: {
-    instance?: string
-    bindings?: Record<string, RiveBindingValue>
-  }
-  /** Per-step state-machine / view-model input writes. */
-  stepInput?: RiveStepInputConfig
-  /** Background color shown while loading. */
-  background?: string
-  /** Capture-mode behavior. Defaults to `{ mode: 'currentFrame' }`. */
-  capture?: RiveCaptureConfig
-}
+/** Freeze strategy used by PDF / share / video captures. */
+export const riveCaptureSchema = z.object({
+  mode: z
+    .enum(['currentFrame', 'stateMachineInput', 'advanceMs', 'posterImage'])
+    .describe(
+      'Freeze strategy: currentFrame (pause + settle), stateMachineInput (write then pause), advanceMs (play N ms then pause), posterImage (render the poster).',
+    ),
+  advanceMs: z.number().optional().describe("Milliseconds to play before pausing, for mode 'advanceMs'."),
+  stateMachineInput: z
+    .object({
+      name: z.string(),
+      type: RiveInputTypeSchema,
+      value: z.union([z.number(), z.boolean()]).optional(),
+    })
+    .optional()
+    .describe("Input to write for mode 'stateMachineInput'."),
+})
+export type RiveCaptureConfig = z.infer<typeof riveCaptureSchema>
+
+const RiveViewModelSchema = z.object({
+  instance: z.string().optional().describe('View-model instance name.'),
+  bindings: z
+    .record(z.string(), RiveBindingValueSchema)
+    .optional()
+    .describe('Map of binding name → value (hex / theme token / number / boolean / string).'),
+})
+
+const RiveLayoutSchema = z.object({
+  fit: RiveLayoutFitSchema.optional(),
+  alignment: RiveLayoutAlignmentSchema.optional(),
+})
+
+/**
+ * Zod schema for the `rive` module — a `.riv` animation layer with optional
+ * view-model bindings, per-step state-machine input, and a capture-freeze
+ * strategy for deterministic PDF/share renders.
+ */
+export const riveSchema = z.object({
+  type: z.literal('rive'),
+  src: z
+    .string()
+    .trim()
+    .min(1)
+    .describe('`assets://<key>`, absolute URL, or same-origin /public .riv path. Required.'),
+  artboard: z.string().optional().describe('Artboard name. Defaults to the .riv default.'),
+  stateMachine: z.string().optional().describe('State machine name. Omit for autoplay-only.'),
+  layout: RiveLayoutSchema.optional().describe('Fit + alignment of the artboard in its box.'),
+  autoplay: z.boolean().default(true).describe('Autoplay on mount. Defaults true.'),
+  posterImage: z
+    .string()
+    .optional()
+    .describe("Fallback image while the .riv loads, or for capture.mode 'posterImage'."),
+  viewModel: RiveViewModelSchema.optional().describe('Static view-model bindings applied once on mount.'),
+  stepInput: riveStepInputSchema.optional().describe('Per-step state-machine / view-model input writes.'),
+  background: z.string().optional().describe('Background color shown while loading.'),
+  capture: riveCaptureSchema.optional().describe("Capture-mode behavior. Defaults to { mode: 'currentFrame' }."),
+})
+
+export type RiveLayerConfig = z.infer<typeof riveSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): RiveLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: rive layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (typeof r.src !== 'string' || r.src.trim().length === 0) {
-    throw new Error(`${ctx.label}: rive layer requires 'src' (.riv URL or assets:// key)`)
-  }
-  const layout = (() => {
-    if (r.layout == null) return undefined
-    if (typeof r.layout !== 'object') throw new Error(`${ctx.label}: rive.layout must be an object`)
-    return r.layout as RiveLayerConfig['layout']
-  })()
-  const viewModel = (() => {
-    if (r.viewModel == null) return undefined
-    if (typeof r.viewModel !== 'object') {
-      throw new Error(`${ctx.label}: rive.viewModel must be an object`)
-    }
-    const vm = r.viewModel as Record<string, unknown>
-    if (vm.bindings != null && typeof vm.bindings !== 'object') {
-      throw new Error(`${ctx.label}: rive.viewModel.bindings must be a map`)
-    }
-    return {
-      instance: typeof vm.instance === 'string' ? vm.instance : undefined,
-      bindings: (vm.bindings as Record<string, RiveBindingValue> | undefined) ?? undefined,
-    }
-  })()
-  const stepInput = (() => {
-    if (r.stepInput == null) return undefined
-    if (typeof r.stepInput !== 'object') throw new Error(`${ctx.label}: rive.stepInput must be an object`)
-    const s = r.stepInput as Record<string, unknown>
-    if (typeof s.name !== 'string') throw new Error(`${ctx.label}: rive.stepInput.name required`)
-    if (s.type !== 'number' && s.type !== 'boolean' && s.type !== 'trigger') {
-      throw new Error(`${ctx.label}: rive.stepInput.type must be number | boolean | trigger`)
-    }
-    if (s.map !== 'linear' && s.map !== 'stepwise' && s.map !== 'trigger') {
-      throw new Error(`${ctx.label}: rive.stepInput.map must be linear | stepwise | trigger`)
-    }
-    if (s.map === 'linear' && typeof s.totalSteps !== 'number') {
-      throw new Error(`${ctx.label}: rive.stepInput.totalSteps required when map === 'linear'`)
-    }
-    if (s.map === 'stepwise' && !Array.isArray(s.values)) {
-      throw new Error(`${ctx.label}: rive.stepInput.values required when map === 'stepwise'`)
-    }
-    return s as unknown as RiveStepInputConfig
-  })()
-  const capture = (() => {
-    if (r.capture == null) return undefined
-    if (typeof r.capture !== 'object') throw new Error(`${ctx.label}: rive.capture must be an object`)
-    const c = r.capture as Record<string, unknown>
-    if (
-      c.mode !== 'currentFrame' &&
-      c.mode !== 'stateMachineInput' &&
-      c.mode !== 'advanceMs' &&
-      c.mode !== 'posterImage'
-    ) {
-      throw new Error(`${ctx.label}: rive.capture.mode must be currentFrame | stateMachineInput | advanceMs | posterImage`)
-    }
-    return c as unknown as RiveCaptureConfig
-  })()
-  return {
-    type: 'rive',
-    src: r.src,
-    artboard: typeof r.artboard === 'string' ? r.artboard : undefined,
-    stateMachine: typeof r.stateMachine === 'string' ? r.stateMachine : undefined,
-    layout,
-    autoplay: r.autoplay !== false,
-    posterImage: typeof r.posterImage === 'string' ? r.posterImage : undefined,
-    viewModel,
-    stepInput,
-    background: typeof r.background === 'string' ? r.background : undefined,
-    capture,
-  }
+  return parseWithSchema(riveSchema, raw, ctx)
 }
 
 const riveModule: VizModule<RiveLayerConfig> = {
   type: 'rive',
   label: 'Rive',
   slots: ['foreground', 'background'],
+  schema: riveSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',

@@ -1,78 +1,51 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { AlignSchema, parseWithSchema } from '../../lib/zodConfig'
 
-export type TableCellFormat = 'text' | 'number' | 'currency' | 'percent'
-export type TableCellAlign = 'left' | 'center' | 'right'
+const TableCellFormatSchema = z.enum(['text', 'number', 'currency', 'percent'])
+export type TableCellFormat = z.infer<typeof TableCellFormatSchema>
+export type TableCellAlign = z.infer<typeof AlignSchema>
 
-export interface TableColumn {
-  /** Object key to read from each row. */
-  key: string
-  /** Header label. Defaults to `key` if omitted. */
-  label?: string
-  /** Cell alignment. Default `left` for text, `right` for numerics. */
-  align?: TableCellAlign
-  /** How to format the cell value. Default `text`. */
-  format?: TableCellFormat
-  /** Decimal places for number/percent/currency. Default 0. */
-  decimals?: number
-  /** Currency code (e.g. `USD`) for `format: currency`. Default `USD`. */
-  currency?: string
-}
+const TableColumnSchema = z.object({
+  key: z.string().trim().min(1).describe('Object key read from each row. Required.'),
+  label: z.string().optional().describe('Header label. Defaults to the key.'),
+  align: AlignSchema.optional().describe('Cell alignment. Defaults left for text, right for numerics.'),
+  format: TableCellFormatSchema.default('text').describe('Cell value formatting. Defaults to text.'),
+  decimals: z.number().optional().describe('Decimal places for number / percent / currency.'),
+  currency: z.string().optional().describe("Currency code for format: currency (e.g. 'USD')."),
+})
+export type TableColumn = z.infer<typeof TableColumnSchema>
 
 /**
- * Layer config for the `table` module — the deck-format data table.
+ * Zod schema for the `table` module — the deck-format data table.
  *
- * Rows are an array of objects whose properties match `columns[].key`.
- * Format strings drive number / currency / percent formatting so authors
+ * Rows are an array of objects whose properties match `columns[].key`. The
+ * per-column `format` drives number / currency / percent rendering, so authors
  * write raw numbers in YAML rather than pre-formatted strings.
  */
-export interface TableLayerConfig {
-  type: 'table'
-  columns: TableColumn[]
-  rows: Record<string, unknown>[]
-  /** Optional caption rendered below the table. */
-  caption?: string
-}
+export const tableSchema = z.object({
+  type: z.literal('table'),
+  columns: z
+    .array(TableColumnSchema)
+    .min(1)
+    .describe('Non-empty list of column definitions: [{ key, label?, align?, format?, decimals?, currency? }].'),
+  rows: z
+    .array(z.record(z.string(), z.unknown()))
+    .describe('Array of row objects, each keyed by the columns’ `key` values.'),
+  caption: z.string().optional().describe('Optional caption rendered below the table.'),
+})
+
+export type TableLayerConfig = z.infer<typeof tableSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TableLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: table layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (!Array.isArray(r.columns) || r.columns.length === 0) {
-    throw new Error(`${ctx.label}: table 'columns' must be a non-empty array`)
-  }
-  if (!Array.isArray(r.rows)) {
-    throw new Error(`${ctx.label}: table 'rows' must be an array`)
-  }
-  const columns: TableColumn[] = r.columns.map((c, i) => {
-    if (!c || typeof c !== 'object') {
-      throw new Error(`${ctx.label}: table column ${i} must be an object`)
-    }
-    const col = c as Record<string, unknown>
-    if (typeof col.key !== 'string' || col.key.trim().length === 0) {
-      throw new Error(`${ctx.label}: table column ${i} 'key' is required`)
-    }
-    return {
-      key: col.key.trim(),
-      label: typeof col.label === 'string' ? col.label : undefined,
-      align: col.align as TableCellAlign | undefined,
-      format: (col.format as TableCellFormat | undefined) ?? 'text',
-      decimals: typeof col.decimals === 'number' ? col.decimals : undefined,
-      currency: typeof col.currency === 'string' ? col.currency : undefined,
-    }
-  })
-  return {
-    type: 'table',
-    columns,
-    rows: r.rows as Record<string, unknown>[],
-    caption: typeof r.caption === 'string' ? r.caption : undefined,
-  }
+  return parseWithSchema(tableSchema, raw, ctx)
 }
 
 const tableModule: VizModule<TableLayerConfig> = {
   type: 'table',
   label: 'Table',
   slots: ['foreground'],
+  schema: tableSchema,
   parseConfig,
   load: () => import('./Component'),
   // Tables paint synchronously but can have many rows; profile as first-paint

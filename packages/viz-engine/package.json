@@ -25,7 +25,8 @@
     "html-to-image": "^1.11.13",
     "mapbox-gl": "^3.21.0",
     "react-map-gl": "^8.1.1",
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",

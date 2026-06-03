@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { editor as MonacoEditor, IRange, MarkerSeverity } from 'monaco-editor'
 import type { Monaco, OnMount } from '@monaco-editor/react'
 import { installMonacoWorkers, configureMonacoLanguages } from './setupMonaco'
+import SelectionAiOverlay from './canvas/SelectionAiOverlay'
 
 // Lazy-load the Monaco React wrapper. Workers must be wired before Monaco
 // creates them, so `installMonacoWorkers()` runs here (loaded once, idempotent).
@@ -51,6 +52,9 @@ interface Props {
   onValidate?: (markers: CodeEditorMarker[]) => void
   /** Receives an imperative API once the editor has mounted. */
   onReady?: (api: CodeEditorApi) => void
+  /** When set, mounts the ✨ "Ask AI" selection overlay. `slug` is required for
+   *  in-place edits; `kind`/`layerType` sharpen the presets when known. */
+  ai?: { slug?: string; kind?: string; layerType?: string }
 }
 
 const SEVERITY_TO_LABEL: Record<MarkerSeverity, CodeEditorMarker['severity']> = {
@@ -68,12 +72,18 @@ export default function CodeEditor({
   readOnly,
   onValidate,
   onReady,
+  ai,
 }: Props) {
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null)
+  // Editor instance as state (only when `ai` is on) so the selection overlay can
+  // mount with a live instance — reading a ref during render is disallowed.
+  const [aiEditor, setAiEditor] =
+    useState<MonacoEditor.IStandaloneCodeEditor | null>(null)
 
   const handleMount: OnMount = useCallback(
     (editorInstance, monaco) => {
       editorRef.current = editorInstance
+      if (ai) setAiEditor(editorInstance)
 
       // Disable Monaco's default Cmd/Ctrl+S — the global handler in
       // EditorClient / ChartEditorClient already saves at the window level,
@@ -144,7 +154,7 @@ export default function CodeEditor({
         })
       }
     },
-    [onValidate, onReady],
+    [onValidate, onReady, ai],
   )
 
   const handleBeforeMount = useCallback((monaco: Monaco) => {
@@ -217,6 +227,15 @@ export default function CodeEditor({
           scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
         }}
       />
+      {ai && aiEditor && (
+        <SelectionAiOverlay
+          editor={aiEditor}
+          language={language}
+          slug={ai.slug}
+          kind={ai.kind}
+          layerType={ai.layerType}
+        />
+      )}
     </div>
   )
 }

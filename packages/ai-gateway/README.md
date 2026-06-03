@@ -111,10 +111,18 @@ Aliases live in [src/models.ts](src/models.ts). Today:
 
 | Alias | Gateway ID |
 |---|---|
-| `text.fast` | `google/gemini-2.5-flash` |
-| `text.pro` | `google/gemini-2.5-pro` |
-| `text.proPlus` | `google/gemini-3-pro` |
+| `text.fast` | `google/gemini-3-flash` |
+| `text.pro` | `google/gemini-3.1-pro-preview` |
+| `text.proPlus` | `openai/gpt-5.5` (cross-provider frontier) |
 | `text.claude` | `anthropic/claude-sonnet-4.6` |
+| `text.opus` | `anthropic/claude-opus-4.8` (frontier editorial/agentic) |
+| `text.code` | `openai/gpt-5.3-codex` (code/YAML/JSON default) |
+| `text.codeLong` | `alibaba/qwen3-coder-plus` (1M ctx coder) |
+| `text.codeBuild` | `xai/grok-build-0.1` (code-focused) |
+| `text.deepseek` | `deepseek/deepseek-v4-flash` (cheap reasoning, 1M ctx) |
+| `text.qwen` | `alibaba/qwen3.5-flash` (cheapest 1M-ctx general) |
+| `text.glm` | `zai/glm-4.7-flash` (ultra-cheap, 200K ctx) |
+| `text.codeCheap` | `alibaba/qwen3-coder-30b-a3b` (budget YAML/JSON coder) |
 | `image.default` | `google/gemini-3-pro-image` (multimodal LLM) |
 | `image.geminiFlashImage` | `google/gemini-2.5-flash-image` (multimodal LLM) |
 | `image.imagen` | `google/imagen-4.0-generate-001` |

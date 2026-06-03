@@ -13,13 +13,39 @@
 export const MODELS = {
   text: {
     /** Cheap, fast, decent quality. Workhorse for summaries, taggers, NER. */
-    fast: 'google/gemini-2.5-flash',
+    fast: 'google/gemini-3-flash',
     /** Reasoning, long context, strict JSON. Use for judge + complex extraction. */
-    pro: 'google/gemini-2.5-pro',
+    pro: 'google/gemini-3.1-pro-preview',
     /** Long-form prose, editorial register. Use for narrative content gen. */
     claude: 'anthropic/claude-sonnet-4.6',
-    /** Latest reasoning frontier — escalate here if pro misses. */
-    proPlus: 'google/gemini-3-pro',
+    /** Frontier editorial + long-horizon agentic. Escalate from claude here. */
+    opus: 'anthropic/claude-opus-4.8',
+    /**
+     * Cross-provider reasoning frontier — escalate here if `pro` (Gemini) misses.
+     * Deliberately a different lineage than `pro`/`opus` so it's a real second
+     * opinion, not the same family one tier up.
+     */
+    proPlus: 'openai/gpt-5.5',
+    /**
+     * Coding / structured-edit default. OpenAI Codex — best at producing and
+     * editing code, YAML, and JSON config with valid syntax. Use for tasks that
+     * emit or rewrite structured files rather than prose.
+     */
+    code: 'openai/gpt-5.3-codex',
+    /** Long-context coder (1M ctx). Reach for when the file/repo context is huge. */
+    codeLong: 'alibaba/qwen3-coder-plus',
+    /** xAI build/code-focused model. Alternative coder for cross-checking output. */
+    codeBuild: 'xai/grok-build-0.1',
+
+    /* ── Budget tier (Chinese providers, ~10–30× cheaper than `pro`) ── */
+    /** Cheap reasoning workhorse, 1M ctx. Strong default for high-volume tasks. */
+    deepseek: 'deepseek/deepseek-v4-flash',
+    /** Cheapest 1M-ctx general model (vision-capable). Bulk summarise/tag/extract. */
+    qwen: 'alibaba/qwen3.5-flash',
+    /** Ultra-cheap, 200K ctx, reasoning + tools. Lowest-cost option overall. */
+    glm: 'zai/glm-4.7-flash',
+    /** Budget coder for YAML/JSON when `code` is overkill. 262K ctx. */
+    codeCheap: 'alibaba/qwen3-coder-30b-a3b',
   },
   image: {
     /**
@@ -37,6 +63,8 @@ export const MODELS = {
     imagenFast: 'google/imagen-4.0-fast-generate-001',
     /** Highest-quality Imagen 4 — slower and pricier. */
     imagenUltra: 'google/imagen-4.0-ultra-generate-001',
+    /** ByteDance Seedream — cheap ($0.03/image) dedicated image model. Budget option. */
+    seedream: 'bytedance/seedream-4.0',
   },
 } as const
 
@@ -58,6 +86,24 @@ export const LLM_IMAGE_MODELS: ReadonlySet<string> = new Set([
 /** True if the image model id needs the LLM path instead of experimental_generateImage. */
 export function isLLMImageModel(id: string): boolean {
   return LLM_IMAGE_MODELS.has(id)
+}
+
+/**
+ * Stable fallbacks for volatile gateway ids — chiefly `-preview` releases, which
+ * Vercel can rename or retire without notice (a hard "model not found" at call
+ * time). When a primary id 404s, `generateText` retries ONCE with its fallback
+ * so a vanished preview degrades to a stable model instead of failing the
+ * request. Point fallbacks at GA models that won't disappear; once a primary
+ * goes GA, swap it in above and drop its entry here.
+ */
+export const MODEL_FALLBACKS: Readonly<Record<string, string>> = {
+  'google/gemini-3.1-pro-preview': 'google/gemini-2.5-pro',
+  'google/gemini-3-pro-preview': 'google/gemini-2.5-pro',
+}
+
+/** Stable fallback id for a volatile model id, or null if it has none. */
+export function fallbackModel(id: string): string | null {
+  return MODEL_FALLBACKS[id] ?? null
 }
 
 export type TextModelAlias = `text.${keyof typeof MODELS.text}`

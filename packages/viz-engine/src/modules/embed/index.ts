@@ -1,61 +1,53 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { parseWithSchema } from '../../lib/zodConfig'
 
-export interface EmbedLayerConfig {
-  type: 'embed'
-  /** Absolute URL of the embedded resource (tweet, observable notebook, youtube, etc.). */
-  src: string
-  /**
-   * REQUIRED. Static image used in `capture` / `print` mode — cross-origin
-   * iframes don't rasterize reliably into PDFs or share-card screenshots.
-   * Accepts the same shapes as image.src (assets://, https://, /public).
-   */
-  poster: string
-  /** CSS aspect-ratio. Defaults to '16 / 9'. Use 'auto' to let the iframe size itself. */
-  aspect?: string
-  /**
-   * iframe `sandbox` attribute. Defaults to 'allow-scripts' — minimal surface
-   * that still permits most read-only embeds. Authors can opt into more
-   * (allow-same-origin, allow-forms, allow-popups) on a per-embed basis when
-   * they trust the source.
-   */
-  sandbox?: string
-  /** iframe `allow` attribute (camera, autoplay, etc.). Empty by default. */
-  allow?: string
-  /** iframe `referrerpolicy`. Defaults to 'no-referrer-when-downgrade' (browser default). */
-  referrerPolicy?: string
-  /** Optional title for accessibility. Defaults to "Embedded content". */
-  title?: string
-}
+/**
+ * Zod schema for the `embed` module — an iframe for third-party content
+ * (tweets, Observable notebooks, YouTube, …). A `poster` is required because
+ * cross-origin iframes don't rasterize reliably into PDFs / share-card
+ * screenshots, so capture/print modes render the poster instead.
+ */
+export const embedSchema = z.object({
+  type: z.literal('embed'),
+  src: z
+    .string()
+    .trim()
+    .min(1)
+    .describe('Absolute URL of the embedded resource (tweet, Observable notebook, YouTube, …). Required.'),
+  poster: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "Static poster image (assets://, https://, or /public). Required — cross-origin iframes can't rasterize in PDF/share captures.",
+    ),
+  aspect: z
+    .string()
+    .default('16 / 9')
+    .describe("CSS aspect-ratio. Defaults to '16 / 9'; use 'auto' to let the iframe size itself."),
+  sandbox: z
+    .string()
+    .default('allow-scripts')
+    .describe(
+      "iframe sandbox attribute. Defaults to 'allow-scripts'; opt into more (allow-same-origin, allow-forms, …) only for trusted sources.",
+    ),
+  allow: z.string().optional().describe('iframe allow attribute (camera, autoplay, …). Empty by default.'),
+  referrerPolicy: z.string().optional().describe("iframe referrerpolicy. Defaults to the browser's."),
+  title: z.string().default('Embedded content').describe('Accessibility title. Defaults to "Embedded content".'),
+})
+
+export type EmbedLayerConfig = z.infer<typeof embedSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): EmbedLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: embed layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (typeof r.src !== 'string' || r.src.trim().length === 0) {
-    throw new Error(`${ctx.label}: embed layer requires 'src' (URL)`)
-  }
-  if (typeof r.poster !== 'string' || r.poster.trim().length === 0) {
-    throw new Error(
-      `${ctx.label}: embed layer requires 'poster' — cross-origin iframes can't rasterize in PDF/share captures`
-    )
-  }
-  return {
-    type: 'embed',
-    src: r.src,
-    poster: r.poster,
-    aspect: typeof r.aspect === 'string' ? r.aspect : '16 / 9',
-    sandbox: typeof r.sandbox === 'string' ? r.sandbox : 'allow-scripts',
-    allow: typeof r.allow === 'string' ? r.allow : undefined,
-    referrerPolicy: typeof r.referrerPolicy === 'string' ? r.referrerPolicy : undefined,
-    title: typeof r.title === 'string' ? r.title : 'Embedded content',
-  }
+  return parseWithSchema(embedSchema, raw, ctx)
 }
 
 const embedModule: VizModule<EmbedLayerConfig> = {
   type: 'embed',
   label: 'Embed (iframe)',
   slots: ['foreground', 'background'],
+  schema: embedSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',

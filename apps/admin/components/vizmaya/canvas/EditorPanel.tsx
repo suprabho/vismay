@@ -5,6 +5,19 @@ import dynamic from 'next/dynamic'
 import type { editor as MonacoEditorNs } from 'monaco-editor'
 import type { OnMount } from '@monaco-editor/react'
 import type { EditableSlice } from './canvasEditing'
+import PromptBar from './PromptBar'
+import type { AiSlotKind } from './aiSlots'
+import { setAssistantEditorSelection } from '@/lib/assistantContext'
+import SelectionAiOverlay from './SelectionAiOverlay'
+import type { SelectionLanguage } from './aiSelectionActions'
+
+/** Map a slice's Monaco language to the selection-overlay's language buckets. */
+function selectionLanguage(language: string): SelectionLanguage {
+  if (language === 'yaml') return 'yaml'
+  if (language === 'markdown') return 'markdown'
+  if (language === 'json') return 'json'
+  return 'plaintext'
+}
 
 // Monaco needs `window` — keep it out of the SSR bundle. The canvas page
 // is already 'use client' but dynamic import here avoids a hydration race
@@ -26,6 +39,14 @@ interface Props {
    *  map, an autoplay map override, a per-section share map). The panel
    *  itself doesn't know which — it just relays the click. */
   onMapEdit?: () => void
+  /** Story slug — required to surface the AI prompt input. */
+  slug?: string
+  /** When set (with `slug`), shows a `<PromptBar>` above the editor scoped to
+   *  this slot. The generated value lands in the editor draft for review; the
+   *  existing Save flow persists it. Left unset → no prompt input. */
+  aiKind?: AiSlotKind
+  /** Layer type for `aiKind === 'layer'` (routes image layers to image gen). */
+  aiLayerType?: string
 }
 
 /**
@@ -43,6 +64,9 @@ export default function EditorPanel({
   onSave,
   onClose,
   onMapEdit,
+  slug,
+  aiKind,
+  aiLayerType,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping
   // through React state on every keystroke. Initialised from the slice;
@@ -87,8 +111,13 @@ export default function EditorPanel({
   // "Hide Application" respectively; the latter can't be intercepted by a
   // web app at all. Cmd+Opt+F / Cmd+Opt+H avoid both.
   const editorRef = useRef<MonacoEditorNs.IStandaloneCodeEditor | null>(null)
+  // Editor instance as state (not just the ref) so the selection-AI overlay can
+  // mount with a live instance — reading a ref during render is disallowed.
+  const [monacoEditor, setMonacoEditor] =
+    useState<MonacoEditorNs.IStandaloneCodeEditor | null>(null)
   const handleMount: OnMount = useCallback((editorInstance, monaco) => {
     editorRef.current = editorInstance
+    setMonacoEditor(editorInstance)
     editorInstance.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
       () => {
@@ -101,7 +130,17 @@ export default function EditorPanel({
         editorInstance.getAction('editor.action.startFindReplaceAction')?.run()
       },
     )
+    // Publish the editor's selection to the ✨ Ask context channel — Monaco's
+    // selection lives in its own model, invisible to window.getSelection().
+    editorInstance.onDidChangeCursorSelection(() => {
+      const sel = editorInstance.getSelection()
+      const text = sel ? (editorInstance.getModel()?.getValueInRange(sel) ?? '') : ''
+      setAssistantEditorSelection(text)
+    })
   }, [])
+
+  // Clear the published selection when this editor unmounts.
+  useEffect(() => () => setAssistantEditorSelection(''), [])
 
   const openFind = () => {
     editorRef.current?.focus()
@@ -261,6 +300,25 @@ export default function EditorPanel({
         </div>
       )}
 
+      {slug && aiKind && (
+        <div
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid #2a2a2a',
+          }}
+        >
+          {/* Generated value lands in the draft; the user reviews it in Monaco
+              and the existing Save flow persists it through mergeSlice. */}
+          <PromptBar
+            slug={slug}
+            kind={aiKind}
+            layerType={aiLayerType}
+            currentValue={draft}
+            onApply={(v) => setDraft(v)}
+          />
+        </div>
+      )}
+
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <MonacoEditor
           value={draft}
@@ -293,6 +351,15 @@ export default function EditorPanel({
             </div>
           }
         />
+        {monacoEditor && (
+          <SelectionAiOverlay
+            editor={monacoEditor}
+            language={selectionLanguage(slice.language)}
+            slug={slug}
+            kind={aiKind}
+            layerType={aiLayerType}
+          />
+        )}
       </div>
     </div>
   )

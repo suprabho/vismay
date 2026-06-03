@@ -70,7 +70,17 @@ import {
   writeDefaultsMapStyle,
   type SlotPath,
 } from './canvasSlotEditing'
+import { appendStorySection } from '@vismay/content-source/storySection'
+import AssistantLauncher from '@/components/AssistantLauncher'
+import {
+  registerAssistantContextProvider,
+  capValue,
+} from '@/lib/assistantContext'
 import EditorPanel from './EditorPanel'
+import PromptBar from './PromptBar'
+import FixPanel from './FixPanel'
+import EvaluatorPanel from './EvaluatorPanel'
+import GenerationFeedback from './GenerationFeedback'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
@@ -145,6 +155,15 @@ const FRAME_W = 1920
 const FRAME_H = 1080
 const FRAME_MIN_W = 480
 const FRAME_MIN_H = 270
+
+/** Stringify a value to YAML for display, swallowing any serialisation error. */
+function safeStringifyYaml(value: unknown): string {
+  try {
+    return yamlStringify(value, { lineWidth: 0 }).trimEnd()
+  } catch {
+    return '# (could not render)'
+  }
+}
 
 const INPUT_W = 320
 const INPUT_H = 150
@@ -547,9 +566,34 @@ export default function CanvasClient({
     unit: ResolvedUnit
     regionKey?: string
     slotPath?: SlotPath
+    /** Open the standalone ✨ PromptBar for this slot instead of the full
+     *  EditorPanel (the on-node Generate affordance — Feature 1). */
+    promptOnly?: boolean
+    /** Open the ✨ FixPanel for this slot — schema-mismatch repair. Carries the
+     *  detected problems to feed the `canvas/fix` route. */
+    fix?: { problems: string[] }
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // ✨ Generate-section (section-generate): brief input, then a preview the
+  // author approves before anything is written. `genResult` holds the generated
+  // section while it awaits confirmation (null = still in the brief phase).
+  const [genSectionOpen, setGenSectionOpen] = useState(false)
+  const [genBrief, setGenBrief] = useState('')
+  const [genBusy, setGenBusy] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
+  const [genResult, setGenResult] = useState<{
+    heading: string
+    paragraphs: string[]
+    kind: string
+    body: Record<string, unknown>
+  } | null>(null)
+  // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
+  const [evalOpen, setEvalOpen] = useState(false)
+  // Audit-row id of the current draft (for the feedback row) + the author's
+  // refine note for the next regeneration.
+  const [genId, setGenId] = useState<string | null>(null)
+  const [genRefine, setGenRefine] = useState('')
   // Derived from editorTarget + current sources; updates if the user
   // saves and the slice re-derives, but the panel stays open.
   const editorSlice: EditableSlice | null = useMemo(
@@ -565,6 +609,65 @@ export default function CanvasClient({
         : null,
     [editorTarget, sources]
   )
+
+  // Refs so the (pull-based) assistant context provider reads fresh state.
+  const editorTargetRef = useRef(editorTarget)
+  const editorSliceRef = useRef(editorSlice)
+  useEffect(() => {
+    editorTargetRef.current = editorTarget
+  }, [editorTarget])
+  useEffect(() => {
+    editorSliceRef.current = editorSlice
+  }, [editorSlice])
+
+  // Expose "what the author is looking at" to the ✨ Ask assistant: the active
+  // section and the focused (open-in-editor) node. Pull-based — the launcher
+  // snapshots this on open; refs keep it current without re-registering.
+  useEffect(() => {
+    return registerAssistantContextProvider(() => {
+      const idx = stateRef.current.activeSectionIndex
+      const unit = sectionUnitsRef.current[idx]
+      const section = unit
+        ? {
+            slug,
+            index: idx,
+            id:
+              typeof unit.parentConfig?.id === 'string'
+                ? unit.parentConfig.id
+                : undefined,
+            kind:
+              typeof unit.parentConfig?.kind === 'string'
+                ? unit.parentConfig.kind
+                : undefined,
+            heading:
+              typeof unit.parentConfig?.text === 'string'
+                ? unit.parentConfig.text
+                : undefined,
+          }
+        : undefined
+
+      const t = editorTargetRef.current
+      const sl = editorSliceRef.current
+      let node:
+        | { label: string; kind: string; layerType?: string; value: string }
+        | undefined
+      if (t && sl) {
+        const layerType =
+          t.kind === 'layer'
+            ? sl.text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9]*)/m)?.[1]
+            : undefined
+        node = {
+          label: sl.title,
+          kind: t.kind,
+          layerType,
+          value: capValue(sl.text),
+        }
+      }
+
+      if (!section && !node) return null
+      return { section, node }
+    })
+  }, [slug])
 
   // Story-wide deck defaults (config.yaml `defaults:`), parsed for the slot
   // inspector's live preview so it merges `defaults.panel` etc. like the real
@@ -710,6 +813,10 @@ export default function CanvasClient({
         // override types). When present, the React renderer shows a
         // hover state + opens the editor panel on click.
         onClick?: () => void
+        // Set on editable text/YAML leaves (content/layout/overrides/YAML
+        // layers). When present, a ✨ chip opens the standalone PromptBar
+        // for this slot (Feature 1's on-node Generate affordance).
+        onGenerate?: () => void
         constructor(
           public label: string,
           public tag: string,
@@ -749,6 +856,9 @@ export default function CanvasClient({
       // stack at once would conflate layout + regions.
       class JunctionControl extends ClassicPreset.Control {
         onClick?: () => void
+        // Set on editable junctions (Background / Foreground / region) so a
+        // ✨ chip can open the standalone PromptBar for that slot's YAML.
+        onGenerate?: () => void
         // Right-click handler — set on Background / Foreground / region
         // junctions so the user can open the +Add picker from any of
         // them. Sticking it on the control (not the node) so the React
@@ -760,6 +870,10 @@ export default function CanvasClient({
         // view renders it as a small ⚠ chip so the user sees that the
         // region won't render until the layout is updated.
         warning?: string
+        // Set alongside `warning` so the ⚠ chip can offer a ✨ FIX action
+        // that opens the FixPanel against the whole foreground (renaming a
+        // region key / changing the layout spans the entire foreground).
+        onFix?: () => void
         constructor(public sub: string) {
           super()
         }
@@ -1080,6 +1194,7 @@ export default function CanvasClient({
         data: TextPreviewControl
       }) {
         const editable = typeof data.onClick === 'function'
+        const generatable = typeof data.onGenerate === 'function'
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -1087,11 +1202,15 @@ export default function CanvasClient({
           stop(e)
           data.onClick?.()
         }
+        const onGenerate = (e: React.MouseEvent) => {
+          stop(e)
+          data.onGenerate?.()
+        }
         return (
           <div
             onClick={onClick}
-            onPointerDown={editable ? stop : undefined}
-            onMouseDown={editable ? stop : undefined}
+            onPointerDown={editable || generatable ? stop : undefined}
+            onMouseDown={editable || generatable ? stop : undefined}
             title={editable ? 'click to edit' : undefined}
             style={{
               width: INPUT_W - 24,
@@ -1131,9 +1250,20 @@ export default function CanvasClient({
               }}
             >
               <span>{data.tag}</span>
-              {editable && (
-                <span style={{ color: '#3a5da0' }}>EDIT</span>
-              )}
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {generatable && (
+                  <span
+                    onClick={onGenerate}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    title="Generate with AI"
+                    style={{ color: '#b07cd8', cursor: 'pointer' }}
+                  >
+                    ✨ AI
+                  </span>
+                )}
+                {editable && <span style={{ color: '#3a5da0' }}>EDIT</span>}
+              </span>
             </div>
             {data.body}
           </div>
@@ -1233,15 +1363,25 @@ export default function CanvasClient({
         // junction is left-click editable.
         const editable = typeof data.onClick === 'function'
         const hasContextMenu = typeof data.onContextMenu === 'function'
-        // Pointer events need to be 'auto' if EITHER edit OR right-click
-        // is wired — otherwise the right-click event never reaches us.
-        const wantsPointer = editable || hasContextMenu
+        const generatable = typeof data.onGenerate === 'function'
+        const fixable = typeof data.onFix === 'function'
+        // Pointer events need to be 'auto' if edit, right-click, generate, OR
+        // fix is wired — otherwise those events never reach us.
+        const wantsPointer = editable || hasContextMenu || generatable || fixable
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
           if (!editable) return
           stop(e)
           data.onClick?.()
+        }
+        const onGenerate = (e: React.MouseEvent) => {
+          stop(e)
+          data.onGenerate?.()
+        }
+        const onFix = (e: React.MouseEvent) => {
+          stop(e)
+          data.onFix?.()
         }
         const onContextMenu = (e: React.MouseEvent) => {
           if (!hasContextMenu) return
@@ -1298,6 +1438,36 @@ export default function CanvasClient({
                 style={{ color: '#a07a3a', letterSpacing: '0.14em' }}
               >
                 ⚠ MISMATCH
+              </span>
+            )}
+            {data.warning && fixable && (
+              <span
+                onClick={onFix}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Fix this mismatch with AI"
+                style={{
+                  color: '#b07cd8',
+                  letterSpacing: '0.14em',
+                  cursor: 'pointer',
+                }}
+              >
+                ✨ FIX
+              </span>
+            )}
+            {generatable && !data.warning && (
+              <span
+                onClick={onGenerate}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Generate with AI"
+                style={{
+                  color: '#b07cd8',
+                  letterSpacing: '0.14em',
+                  cursor: 'pointer',
+                }}
+              >
+                ✨ AI
               </span>
             )}
             {editable && !data.warning && (
@@ -1466,6 +1636,47 @@ export default function CanvasClient({
             kind,
             unit: targetUnit,
             regionKey,
+          })
+        }
+      }
+
+      // Sibling of makeEditClick that opens the standalone ✨ PromptBar
+      // (promptOnly) for the slot instead of the full YAML editor. Shares the
+      // same target shape, so the generated value persists through handleSave.
+      function makeGenerateClick(
+        kind: EditableKind,
+        regionKey?: string,
+        slotPath?: SlotPath
+      ): () => void {
+        return () => {
+          const idx = stateRef.current.activeSectionIndex
+          const targetUnit = sectionUnitsRef.current[idx]
+          if (!targetUnit) return
+          setEditorTargetRef.current({
+            kind,
+            unit: targetUnit,
+            regionKey,
+            slotPath,
+            promptOnly: true,
+          })
+        }
+      }
+
+      // Sibling of makeGenerateClick that opens the ✨ FixPanel against the
+      // whole foreground. A region-key / layout mismatch can only be repaired
+      // by editing the whole foreground (rename the key OR change the layout),
+      // so the fix always targets `kind: 'foreground'` regardless of which
+      // region's ⚠ chip was clicked. `problems` carries the detected
+      // mismatch(es) through to the repair route.
+      function makeFixClick(problems: string[]): () => void {
+        return () => {
+          const idx = stateRef.current.activeSectionIndex
+          const targetUnit = sectionUnitsRef.current[idx]
+          if (!targetUnit) return
+          setEditorTargetRef.current({
+            kind: 'foreground',
+            unit: targetUnit,
+            fix: { problems },
           })
         }
       }
@@ -1649,6 +1860,23 @@ export default function CanvasClient({
             }
           } else if (editKind) {
             node.previewCtrl.onClick = makeEditClick(editKind)
+            node.previewCtrl.onGenerate = makeGenerateClick(editKind)
+          }
+          // ✨ Generate on layer leaves, but only those that edit through the
+          // YAML editor (map layers + types with no adminForm) — those persist
+          // via handleSave. Image + adminForm-form layers use separate editors
+          // (image modal / SlotInspector) and keep their in-panel AI for now.
+          if (d.slot && d.slot.kind !== 'theme' && d.slot.layerType !== 'image') {
+            const slot = d.slot
+            const usesYamlEditor =
+              slot.layerType === 'map' || !getVizModule(slot.layerType)?.adminForm
+            if (usesYamlEditor) {
+              node.previewCtrl.onGenerate = makeGenerateClick(
+                'layer',
+                undefined,
+                slot.path
+              )
+            }
           }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
@@ -1664,16 +1892,20 @@ export default function CanvasClient({
           opts?: {
             onContextMenu?: (clientX: number, clientY: number) => void
             warning?: string
+            onGenerate?: () => void
+            onFix?: () => void
           }
         ): Promise<JunctionNode> => {
           const node = new JunctionNode(label, sub)
           const ctrl = node.controls.ctrl as InstanceType<typeof JunctionControl>
           if (onClick) ctrl.onClick = onClick
-          // Set onContextMenu + warning BEFORE addNode so the initial React
-          // render sees them — the +ADD chip and ⚠ MISMATCH chip both
-          // depend on these being present at first paint.
+          if (opts?.onGenerate) ctrl.onGenerate = opts.onGenerate
+          // Set onContextMenu + warning + onFix BEFORE addNode so the initial
+          // React render sees them — the +ADD chip and the ⚠ MISMATCH / ✨ FIX
+          // chips all depend on these being present at first paint.
           if (opts?.onContextMenu) ctrl.onContextMenu = opts.onContextMenu
           if (opts?.warning) ctrl.warning = opts.warning
+          if (opts?.onFix) ctrl.onFix = opts.onFix
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
           leftNodeIds.add(node.id)
@@ -1764,6 +1996,7 @@ export default function CanvasClient({
                     ? { kind: 'background-create' }
                     : { kind: 'background-append' },
               }),
+              onGenerate: makeGenerateClick('background'),
             }
           )
           await wire(bgNode, 'value', frame, 'background')
@@ -1839,6 +2072,10 @@ export default function CanvasClient({
                   },
                 }),
                 warning: regionWarning,
+                onGenerate: makeGenerateClick('region', region.key),
+                onFix: regionWarning
+                  ? makeFixClick([regionWarning])
+                  : undefined,
               }
             )
             regionNodes.push(rj)
@@ -1878,6 +2115,7 @@ export default function CanvasClient({
                 existingKeys: existingRegionKeys,
                 layoutName,
               }),
+              onGenerate: makeGenerateClick('foreground'),
             }
           )
           await wire(fgNode, 'value', frame, 'foreground')
@@ -1900,6 +2138,7 @@ export default function CanvasClient({
                 label: 'Foreground (flat)',
                 dispatch: { kind: 'foreground-flat-append' },
               }),
+              onGenerate: makeGenerateClick('foreground'),
             }
           )
           await wire(fgNode, 'value', frame, 'foreground')
@@ -1930,6 +2169,7 @@ export default function CanvasClient({
                 existingKeys: [],
                 layoutName: defaultLayout,
               }),
+              onGenerate: makeGenerateClick('foreground'),
             }
           )
           await wire(fgNode, 'value', frame, 'foreground')
@@ -2079,6 +2319,7 @@ export default function CanvasClient({
               unit: targetUnit,
             })
           }
+          node.previewCtrl.onGenerate = makeGenerateClick(editKind)
           overrideMap.set(spec.socket, node)
           await editor.addNode(node)
           await area.translate(node.id, {
@@ -2358,6 +2599,96 @@ export default function CanvasClient({
     },
     [editorTarget, sources, slug]
   )
+
+  // ✨ Generate a section from the brief for REVIEW — produces a preview the
+  // author confirms before anything is written. Nothing touches the story here.
+  // When `refine` is passed, the current draft + the author's note are sent so
+  // the model revises that draft instead of starting fresh.
+  const handleGenerateSection = useCallback(
+    async (refine?: { feedback: string; previous: typeof genResult }) => {
+      const brief = genBrief.trim()
+      if (!brief || genBusy) return
+      setGenBusy(true)
+      setGenError(null)
+      try {
+        const res = await fetch(
+          `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              brief,
+              format,
+              feedback: refine?.feedback,
+              previous: refine?.previous ?? undefined,
+            }),
+          }
+        )
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean
+          generation?: { id?: string | null }
+          section?: {
+            heading: string
+            paragraphs: string[]
+            kind: string
+            body: Record<string, unknown>
+          }
+          error?: string
+        }
+        if (!res.ok || !body.ok || !body.section) {
+          throw new Error(body.error ?? `HTTP ${res.status}`)
+        }
+        setGenResult(body.section)
+        setGenId(body.generation?.id ?? null)
+        if (refine) setGenRefine('')
+      } catch (e) {
+        setGenError(e instanceof Error ? e.message : 'Section generation failed.')
+      } finally {
+        setGenBusy(false)
+      }
+    },
+    [genBrief, genBusy, slug, format]
+  )
+
+  // Apply the approved preview: append to the story (markdown + config via
+  // appendStorySection), save both, bump the nonce, and jump to the new section.
+  const handleApplySection = useCallback(async () => {
+    if (!genResult || genBusy) return
+    setGenBusy(true)
+    setGenError(null)
+    try {
+      const next = appendStorySection(
+        markdownRef.current ?? '',
+        configYamlRef.current ?? '',
+        {
+          heading: genResult.heading,
+          paragraphs: genResult.paragraphs,
+          kind: genResult.kind,
+          body: genResult.body,
+        }
+      )
+      // The appended section lands at the end → its index is the old count.
+      const newIndex = sectionViewsRef.current.length
+      await saveMarkdown(slug, next.markdown)
+      await saveConfigYaml(slug, next.configYaml)
+      setSources((prev) => ({
+        ...prev,
+        markdown: next.markdown,
+        configYaml: next.configYaml,
+      }))
+      setDataNonce((n) => n + 1)
+      setActiveSectionIndex(newIndex)
+      setGenSectionOpen(false)
+      setGenBrief('')
+      setGenResult(null)
+      setGenId(null)
+      setGenRefine('')
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : 'Could not apply section.')
+    } finally {
+      setGenBusy(false)
+    }
+  }, [genResult, genBusy, slug])
 
   /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
   // After a successful slot save we:
@@ -2892,6 +3223,54 @@ export default function CanvasClient({
         <span style={{ marginLeft: 12, color: '#888' }}>
           {sectionViews.length} sections · ← / → to paginate
         </span>
+        <span style={{ pointerEvents: 'auto', marginLeft: 12 }}>
+          <AssistantLauncher />
+        </span>
+        <button
+          onClick={() => {
+            setGenError(null)
+            setEvalOpen(false)
+            setGenSectionOpen((o) => !o)
+          }}
+          title="Generate a new section from a brief"
+          style={{
+            pointerEvents: 'auto',
+            marginLeft: 12,
+            background: 'transparent',
+            color: '#c79bd8',
+            border: '1px solid #5a2a8f',
+            borderRadius: 5,
+            padding: '3px 9px',
+            fontSize: 11,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          + ✨ Section
+        </button>
+        {sectionUnits.length > 0 && (
+          <button
+            onClick={() => {
+              setGenSectionOpen(false)
+              setEvalOpen((o) => !o)
+            }}
+            title="Evaluate the current section — render it and get a vision critique"
+            style={{
+              pointerEvents: 'auto',
+              marginLeft: 12,
+              background: 'transparent',
+              color: '#e8a04f',
+              border: '1px solid #8f5a2a',
+              borderRadius: 5,
+              padding: '3px 9px',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            ✦ Evaluate
+          </button>
+        )}
         {format === 'deck' && sectionUnits.length > 0 && (
           <button
             onClick={() =>
@@ -2915,7 +3294,338 @@ export default function CanvasClient({
           </button>
         )}
       </header>
-      {editorSlice && (
+      {evalOpen && sectionUnits[activeSectionIndex] && (
+        <EvaluatorPanel
+          slug={slug}
+          sectionId={
+            sectionUnits[activeSectionIndex].parentConfig?.id ??
+            `section-${sectionUnits[activeSectionIndex].parentIndex}`
+          }
+          sectionConfig={safeStringifyYaml(
+            sectionUnits[activeSectionIndex].parentConfig,
+          )}
+          onSendToPrompt={(aspect) => {
+            const u = sectionUnits[activeSectionIndex]
+            if (u) {
+              setEditorTarget({
+                kind: aspect as EditableKind,
+                unit: u,
+                promptOnly: true,
+              })
+            }
+            setEvalOpen(false)
+          }}
+          onClose={() => setEvalOpen(false)}
+        />
+      )}
+      {genSectionOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 64,
+            left: 16,
+            width: 440,
+            maxHeight: 'calc(100vh - 96px)',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 60,
+            background: '#0c0c0c',
+            border: '1px solid #2a2a2a',
+            borderRadius: 8,
+            pointerEvents: 'auto',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '12px 14px',
+              borderBottom: '1px solid #1f1f1f',
+            }}
+          >
+            <span style={{ fontSize: 12, color: '#ddd' }}>
+              {genResult ? '✨ Review section' : '✨ Generate section'}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setGenSectionOpen(false)
+                setGenResult(null)
+                setGenId(null)
+                setGenRefine('')
+                setGenError(null)
+              }}
+              aria-label="Close"
+              style={{
+                marginLeft: 'auto',
+                color: '#888',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 15,
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          <div style={{ overflowY: 'auto', padding: 14 }}>
+            {!genResult ? (
+              <>
+                <textarea
+                  value={genBrief}
+                  onChange={(e) => setGenBrief(e.target.value)}
+                  disabled={genBusy}
+                  rows={4}
+                  autoFocus
+                  placeholder="Describe the section you want… e.g. “a bigStat slide showing FY2025 revenue $18.7B with a +33% YoY delta”"
+                  style={{
+                    width: '100%',
+                    background: '#111',
+                    color: '#eee',
+                    border: '1px solid #2a2a2a',
+                    borderRadius: 6,
+                    padding: 8,
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 8,
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: '#666' }}>
+                    {format} story · appended at end
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleGenerateSection()}
+                    disabled={genBusy || !genBrief.trim()}
+                    style={{
+                      marginLeft: 'auto',
+                      background: '#fff',
+                      color: '#0a0a0a',
+                      border: 'none',
+                      borderRadius: 5,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      cursor:
+                        genBusy || !genBrief.trim() ? 'default' : 'pointer',
+                      opacity: genBusy || !genBrief.trim() ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genBusy ? 'Generating…' : 'Generate'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: '#666',
+                      letterSpacing: '0.12em',
+                      marginBottom: 2,
+                    }}
+                  >
+                    HEADING · {genResult.kind}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#eee', fontWeight: 600 }}>
+                    {genResult.heading}
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: '#666',
+                      letterSpacing: '0.12em',
+                      marginBottom: 4,
+                    }}
+                  >
+                    BODY
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    {genResult.paragraphs.map((p, i) => (
+                      <p
+                        key={i}
+                        style={{
+                          margin: 0,
+                          fontSize: 12,
+                          lineHeight: 1.55,
+                          color: '#bbb',
+                        }}
+                      >
+                        {p}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                {Object.keys(genResult.body).length > 0 && (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: '#666',
+                        letterSpacing: '0.12em',
+                        marginBottom: 4,
+                      }}
+                    >
+                      VISUAL (YAML)
+                    </div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        background: '#111',
+                        border: '1px solid #1f1f1f',
+                        borderRadius: 6,
+                        padding: 8,
+                        fontSize: 11,
+                        lineHeight: 1.5,
+                        color: '#9a9a9a',
+                        fontFamily:
+                          'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        whiteSpace: 'pre-wrap',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {safeStringifyYaml(genResult.body)}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Refine: revise this draft from a note instead of regenerating
+                    from scratch. Sends the current draft + the note to the route. */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <textarea
+                    value={genRefine}
+                    onChange={(e) => setGenRefine(e.target.value)}
+                    disabled={genBusy}
+                    rows={2}
+                    placeholder="Refine this draft… e.g. “tighten the prose”, “make it a quote section”, “fix the delta to +33%”"
+                    style={{
+                      flex: 1,
+                      background: '#111',
+                      color: '#eee',
+                      border: '1px solid #2a2a2a',
+                      borderRadius: 6,
+                      padding: 8,
+                      fontSize: 11,
+                      lineHeight: 1.5,
+                      resize: 'vertical',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleGenerateSection({
+                        feedback: genRefine,
+                        previous: genResult,
+                      })
+                    }
+                    disabled={genBusy || !genRefine.trim()}
+                    style={{
+                      flexShrink: 0,
+                      background: '#1a1a1a',
+                      color: '#eee',
+                      border: '1px solid #333',
+                      borderRadius: 5,
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      cursor: genBusy || !genRefine.trim() ? 'default' : 'pointer',
+                      opacity: genBusy || !genRefine.trim() ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genBusy ? 'Refining…' : 'Refine'}
+                  </button>
+                </div>
+
+                <GenerationFeedback slug={slug} generationId={genId} />
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 2,
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: '#666' }}>
+                    appended at end · not saved yet
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGenResult(null)
+                      setGenId(null)
+                      setGenRefine('')
+                      setGenError(null)
+                    }}
+                    disabled={genBusy}
+                    style={{
+                      marginLeft: 'auto',
+                      background: 'transparent',
+                      color: '#9bb0d8',
+                      border: '1px solid #2a4d8f',
+                      borderRadius: 5,
+                      padding: '5px 10px',
+                      fontSize: 12,
+                      cursor: genBusy ? 'default' : 'pointer',
+                      opacity: genBusy ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Regenerate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplySection}
+                    disabled={genBusy}
+                    style={{
+                      background: '#fff',
+                      color: '#0a0a0a',
+                      border: 'none',
+                      borderRadius: 5,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      cursor: genBusy ? 'default' : 'pointer',
+                      opacity: genBusy ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genBusy ? 'Applying…' : 'Apply section'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {genError && (
+              <div style={{ color: '#f87171', fontSize: 11, marginTop: 8 }}>
+                {genError}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {editorSlice && !editorTarget?.promptOnly && !editorTarget?.fix && (
         <EditorPanel
           slice={editorSlice}
           saving={saving}
@@ -2926,7 +3636,114 @@ export default function CanvasClient({
             setSaveError(null)
           }}
           onMapEdit={editorMapEdit}
+          slug={slug}
+          // Every EditorPanel-backed slot gets the AI prompt input. The slot's
+          // EditableKind is a subset of AiSlotKind, so it maps 1:1; aiSlots.ts
+          // supplies the modality, model subset, and default system prompt.
+          aiKind={editorTarget?.kind}
         />
+      )}
+      {/* On-node ✨ Generate (Feature 1): a standalone PromptBar for the slot,
+          no full editor. onApply persists straight through handleSave (the same
+          merge→save path) and closes. layerType is omitted so the bar recovers
+          a layer's type from its current YAML. */}
+      {editorSlice && editorTarget?.promptOnly && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 380,
+            background: '#0c0c0c',
+            borderLeft: '1px solid #262626',
+            zIndex: 50,
+            padding: 14,
+            overflowY: 'auto',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            <span style={{ fontSize: 12, color: '#ddd' }}>
+              ✨ Generate · {editorSlice.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditorTarget(null)
+                setSaveError(null)
+              }}
+              style={{
+                marginLeft: 'auto',
+                color: '#888',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 16,
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+          <PromptBar
+            slug={slug}
+            kind={editorTarget.kind}
+            currentValue={editorSlice.text}
+            onApply={(v) => handleSave(v)}
+            onClose={() => {
+              setEditorTarget(null)
+              setSaveError(null)
+            }}
+          />
+          {saveError && (
+            <div style={{ color: '#f87171', fontSize: 11, marginTop: 8 }}>
+              {saveError}
+            </div>
+          )}
+        </div>
+      )}
+      {/* ✨ Fix with AI: schema-mismatch repair for the foreground. Auto-runs
+          the canvas/fix route, previews the corrected YAML, and Apply persists
+          through the same handleSave (merge→save) path a manual edit uses. */}
+      {editorSlice && editorTarget?.fix && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 380,
+            background: '#0c0c0c',
+            borderLeft: '1px solid #262626',
+            zIndex: 50,
+            padding: 14,
+            overflowY: 'auto',
+          }}
+        >
+          <FixPanel
+            slug={slug}
+            kind={editorTarget.kind}
+            currentValue={editorSlice.text}
+            problems={editorTarget.fix.problems}
+            onApply={(v) => handleSave(v)}
+            onClose={() => {
+              setEditorTarget(null)
+              setSaveError(null)
+            }}
+          />
+          {saveError && (
+            <div style={{ color: '#f87171', fontSize: 11, marginTop: 8 }}>
+              {saveError}
+            </div>
+          )}
+        </div>
       )}
       {/* Slot-edit surfaces — mutually exclusive by construction (slotTarget
           is a single discriminated union). Map + image take over with their
@@ -2987,6 +3804,7 @@ export default function CanvasClient({
           error={slotError}
           onSave={handleThemeSave}
           onClose={closeSlot}
+          slug={slug}
         />
       )}
       {/* Floating +Add context menu. Anchored at the right-click cursor

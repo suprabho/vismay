@@ -1,66 +1,48 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
-import type { StatColor } from '../../lib/storyConfig.types'
+import { AlignSchema, StatColorSchema, parseWithSchema } from '../../lib/zodConfig'
 
 /**
- * Theme palette token used for the delta line. Mirrors `StatColor` plus the
- * `positive`/`amber`/`red` semantic tokens so authors can colour the delta
- * independently of the big number itself.
+ * Theme palette token used for the delta line. `StatColor` already includes
+ * `positive`, so the delta colour set is exactly `StatColor`.
  */
-export type DeltaColor = StatColor | 'positive'
+export type DeltaColor = z.infer<typeof StatColorSchema>
 
 /**
- * Layer config for the `bigStat` module — the deck format's composable
+ * Zod schema for the `bigStat` module — the deck format's composable
  * giant-number vizslot. Unlike the legacy `text` module's `kind: stat`
  * treatment (which centres in the whole section), `bigStat` lives inside a
- * region of a deck layout and respects the region's box. Use this when a
- * stat sits side-by-side with a chart, image, or prose body.
+ * region of a deck layout and respects the region's box. Use this when a stat
+ * sits side-by-side with a chart, image, or prose body.
+ *
+ * Single source of truth: validates `parseConfig` AND constrains the AI
+ * generation path (the `.describe()` lines are the field docs the model reads).
  */
-export interface BigStatLayerConfig {
-  type: 'bigStat'
-  /** The big number itself, e.g. "$18.7B" or "10.3M". Required. */
-  value: string
-  /**
-   * Optional unit/suffix rendered adjacent to the value at a smaller weight.
-   * Useful when the value is purely numeric ("18.7") and the unit ("B") is
-   * styled differently.
-   */
-  unit?: string
-  /** Short label beneath the number. Required for readability. */
-  label?: string
-  /**
-   * Secondary line below the label — typically a year-over-year delta or
-   * date qualifier (e.g. "+33% YoY · run-rate $18.8B in Q1 2026").
-   */
-  delta?: string
-  /** Theme token applied to the delta line. Defaults to `muted`. */
-  deltaColor?: DeltaColor
-  /** Theme token applied to the big number. Defaults to `accent2`. */
-  color?: StatColor
-  /** Horizontal alignment inside the region's box. Defaults to `left`. */
-  align?: 'left' | 'center' | 'right'
-}
+export const bigStatSchema = z.object({
+  type: z.literal('bigStat'),
+  value: z
+    .string()
+    .min(1)
+    .describe('The big number itself, e.g. "$18.7B" or "10.3M". Required.'),
+  unit: z
+    .string()
+    .optional()
+    .describe('Optional unit/suffix rendered smaller next to the value, e.g. "B".'),
+  label: z.string().optional().describe('Short label beneath the number.'),
+  delta: z
+    .string()
+    .optional()
+    .describe('Secondary line below the label — typically a YoY delta, e.g. "+33% YoY".'),
+  deltaColor: StatColorSchema.optional().describe('Theme token for the delta line. Defaults to muted.'),
+  color: StatColorSchema.optional().describe('Theme token for the big number. Defaults to accent2.'),
+  align: AlignSchema.default('left').describe('Horizontal alignment inside the region. Defaults to left.'),
+})
+
+/** Layer config for the `bigStat` module. Derived from {@link bigStatSchema}. */
+export type BigStatLayerConfig = z.infer<typeof bigStatSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): BigStatLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: bigStat layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (typeof r.value !== 'string' || r.value.trim().length === 0) {
-    throw new Error(`${ctx.label}: bigStat 'value' is required and must be a non-empty string`)
-  }
-  if (r.align != null && r.align !== 'left' && r.align !== 'center' && r.align !== 'right') {
-    throw new Error(`${ctx.label}: bigStat 'align' must be 'left' | 'center' | 'right'`)
-  }
-  return {
-    type: 'bigStat',
-    value: r.value,
-    unit: typeof r.unit === 'string' ? r.unit : undefined,
-    label: typeof r.label === 'string' ? r.label : undefined,
-    delta: typeof r.delta === 'string' ? r.delta : undefined,
-    deltaColor: r.deltaColor as DeltaColor | undefined,
-    color: r.color as StatColor | undefined,
-    align: (r.align as BigStatLayerConfig['align']) ?? 'left',
-  }
+  return parseWithSchema(bigStatSchema, raw, ctx)
 }
 
 /**
@@ -76,6 +58,7 @@ const bigStatModule: VizModule<BigStatLayerConfig> = {
   type: 'bigStat',
   label: 'Big stat',
   slots: ['foreground'],
+  schema: bigStatSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'instant',

@@ -16,6 +16,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type GenerationKind = 'image' | 'text'
 
+/** Author verdict on a generation. Mutable — re-rating overwrites. */
+export type FeedbackRating = 'up' | 'down'
+
 export interface GenerationRecord {
   id: string
   kind: GenerationKind
@@ -101,6 +104,34 @@ export async function recordGeneration(
     .single()
   if (error) throw new Error(`ai_generations insert: ${error.message}`)
   return rowToRecord(data)
+}
+
+/**
+ * Attach (or overwrite) an author's feedback on a generation. Idempotent per
+ * generation id — re-rating updates the same row. `comment` is optional; pass
+ * null to clear it. Stamps `feedback_at` so prompt-tuning review can sort by
+ * recency. Throws if the id doesn't exist (no row updated).
+ */
+export async function recordFeedback(
+  supabase: SupabaseClient,
+  input: {
+    generationId: string
+    rating: FeedbackRating
+    comment: string | null
+  },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('ai_generations')
+    .update({
+      rating: input.rating,
+      feedback_comment: input.comment,
+      feedback_at: new Date().toISOString(),
+    })
+    .eq('id', input.generationId)
+    .select('id')
+    .maybeSingle()
+  if (error) throw new Error(`ai_generations feedback: ${error.message}`)
+  if (!data) throw new Error(`no generation with id ${input.generationId}`)
 }
 
 interface RawRow {

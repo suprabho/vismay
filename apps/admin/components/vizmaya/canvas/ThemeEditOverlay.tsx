@@ -11,8 +11,10 @@
  */
 
 import { useState } from 'react'
+import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { Theme } from '@vismay/viz-engine'
 import ThemeEditor from '../ThemeEditor'
+import PromptBar from './PromptBar'
 
 interface Props {
   initial: Theme | null
@@ -20,6 +22,8 @@ interface Props {
   error: string | null
   onSave: (next: Theme) => void
   onClose: () => void
+  /** Story slug — required to surface the AI prompt input. */
+  slug?: string
 }
 
 export default function ThemeEditOverlay({
@@ -28,6 +32,7 @@ export default function ThemeEditOverlay({
   error,
   onSave,
   onClose,
+  slug,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping through
   // a server save on every color pick. The user explicitly hits Save.
@@ -161,6 +166,23 @@ export default function ThemeEditOverlay({
         </div>
       )}
 
+      {slug && (
+        <div style={{ padding: '10px 12px', borderBottom: '1px solid #2a2a2a' }}>
+          {/* Generated YAML is parsed and merged into the theme draft so a
+              partial theme (just colors, say) doesn't wipe existing fonts.
+              The user reviews in the form below, then Saves. */}
+          <PromptBar
+            slug={slug}
+            kind="theme"
+            currentValue={draft ? safeYaml(draft) : undefined}
+            onApply={(yaml) => {
+              const parsed = parseTheme(yaml)
+              if (parsed) setDraft((d) => ({ ...(d ?? {}), ...parsed }) as Theme)
+            }}
+          />
+        </div>
+      )}
+
       {/* ThemeEditor expects a flex parent that owns scrolling. The panel root
           is already flex column; the dark-on-dark Tailwind classes inside
           ThemeEditor blend with the panel surface visually. */}
@@ -172,4 +194,27 @@ export default function ThemeEditOverlay({
       </div>
     </div>
   )
+}
+
+/** Serialize a Theme to YAML for the prompt's "revise this" context. */
+function safeYaml(theme: Theme): string {
+  try {
+    return yamlStringify(theme, { lineWidth: 80 })
+  } catch {
+    return ''
+  }
+}
+
+/** Parse generated YAML into a partial Theme. Returns null on invalid YAML or
+ *  a non-object root so the caller leaves the draft untouched. */
+function parseTheme(yaml: string): Partial<Theme> | null {
+  try {
+    const parsed = parseYaml(yaml)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Partial<Theme>
+    }
+  } catch {
+    /* fall through */
+  }
+  return null
 }

@@ -1,39 +1,31 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { AlignSchema, parseWithSchema } from '../../lib/zodConfig'
 
 /**
- * Layer config for the `quote` module — a deck-format pull quote.
- *
- * Renders large italic serif text with an optional attribution line. The deck
- * layout typically pairs this with a prose body in a `text-left-quote-right`
- * split.
+ * Zod schema for the `quote` module — a deck-format pull quote. Renders large
+ * italic serif text with an optional attribution line. The deck layout
+ * typically pairs this with a prose body in a `text-left-quote-right` split.
  */
-export interface QuoteLayerConfig {
-  type: 'quote'
-  /** The quoted text. Required. May contain inline markdown for emphasis. */
-  text: string
-  /** Optional attribution line (e.g. "Falcon 9 → Starlink supply chain"). */
-  attribution?: string
-  /** Horizontal alignment inside the region. Defaults to `left`. */
-  align?: 'left' | 'center' | 'right'
-}
+export const quoteSchema = z.object({
+  type: z.literal('quote'),
+  text: z
+    .string()
+    .trim()
+    .min(1)
+    .describe('The quoted text. Required. May contain inline markdown for emphasis.'),
+  attribution: z
+    .string()
+    .trim()
+    .optional()
+    .describe('Optional attribution line, e.g. "Falcon 9 → Starlink supply chain".'),
+  align: AlignSchema.default('left').describe('Horizontal alignment inside the region. Defaults to left.'),
+})
+
+export type QuoteLayerConfig = z.infer<typeof quoteSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): QuoteLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: quote layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (typeof r.text !== 'string' || r.text.trim().length === 0) {
-    throw new Error(`${ctx.label}: quote 'text' is required and must be a non-empty string`)
-  }
-  if (r.align != null && r.align !== 'left' && r.align !== 'center' && r.align !== 'right') {
-    throw new Error(`${ctx.label}: quote 'align' must be 'left' | 'center' | 'right'`)
-  }
-  return {
-    type: 'quote',
-    text: r.text.trim(),
-    attribution: typeof r.attribution === 'string' ? r.attribution.trim() : undefined,
-    align: (r.align as QuoteLayerConfig['align']) ?? 'left',
-  }
+  return parseWithSchema(quoteSchema, raw, ctx)
 }
 
 /**
@@ -48,6 +40,7 @@ const quoteModule: VizModule<QuoteLayerConfig> = {
   type: 'quote',
   label: 'Quote',
   slots: ['foreground'],
+  schema: quoteSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'instant',
