@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { parse as parseYaml } from 'yaml'
+import { useMemo, useState } from 'react'
+import { parse as parseYaml, parseDocument, stringify as stringifyYaml } from 'yaml'
 import {
   allRegisteredTypes,
   getVizModule,
@@ -9,6 +9,7 @@ import {
   type AdminFormField,
 } from '@vismay/viz-engine'
 import { buildYamlModel } from '@vismay/content-source/yamlSections'
+import FixPanel from './canvas/FixPanel'
 
 /**
  * Read-only Deck composer (Phase 7 MVP).
@@ -28,9 +29,13 @@ import { buildYamlModel } from '@vismay/content-source/yamlSections'
  * to the Config tab — actual line-targeted scroll is a follow-up (Monaco's
  * editor API can do it but requires lifting a ref into EditorClient).
  *
- * Inline editing (mutating the YAML via yaml.Document round-trip) is the
- * follow-up to this MVP. The adminForm metadata is already in place to
- * power per-field inputs when that lands.
+ * Where a section has schema mismatches, a ✨ "Fix with AI" button (shown only
+ * when `onApplyFix` is wired) opens an inline {@link FixPanel}: it sends the
+ * section's whole `foreground` + the detected problems to the `canvas/fix`
+ * route, previews the corrected YAML, and on Apply splices it back into
+ * config.yaml via a comment-preserving `yaml.Document` round-trip
+ * ({@link spliceForeground}). Full per-field inline editing is still a
+ * follow-up; the adminForm metadata is in place to power it when that lands.
  */
 
 interface Slot {
@@ -56,12 +61,19 @@ interface DefaultsSummary {
 
 export default function DeckComposerPanel({
   value,
+  slug,
   onJumpToYaml,
+  onApplyFix,
 }: {
   /** Current config.yaml text. */
   value: string
+  /** Story slug — needed by the ✨ Fix-with-AI route. */
+  slug?: string
   /** Callback to switch the EditorClient to the Config tab. */
   onJumpToYaml?: () => void
+  /** Write a corrected config.yaml back to the host (the "Apply fix" action).
+   *  When absent, the Fix-with-AI affordance is hidden (read-only mode). */
+  onApplyFix?: (nextConfigYaml: string) => void
 }) {
   const { sections, defaults, parseError } = useMemo(() => parse(value), [value])
   const knownLayouts = useMemo(
@@ -94,9 +106,12 @@ export default function DeckComposerPanel({
       <DefaultsCard defaults={defaults} onJumpToYaml={onJumpToYaml} />
       <SectionsList
         sections={sections}
+        configText={value}
+        slug={slug}
         knownLayouts={knownLayouts}
         knownForegroundTypes={knownForegroundTypes}
         onJumpToYaml={onJumpToYaml}
+        onApplyFix={onApplyFix}
       />
     </div>
   )
@@ -171,14 +186,20 @@ function DefaultsCard({
 
 function SectionsList({
   sections,
+  configText,
+  slug,
   knownLayouts,
   knownForegroundTypes,
   onJumpToYaml,
+  onApplyFix,
 }: {
   sections: Section[]
+  configText: string
+  slug?: string
   knownLayouts: Set<string>
   knownForegroundTypes: Set<string>
   onJumpToYaml?: () => void
+  onApplyFix?: (nextConfigYaml: string) => void
 }) {
   if (sections.length === 0) {
     return (
@@ -195,9 +216,12 @@ function SectionsList({
           <SectionCard
             key={s.index}
             section={s}
+            configText={configText}
+            slug={slug}
             knownLayouts={knownLayouts}
             knownForegroundTypes={knownForegroundTypes}
             onJumpToYaml={onJumpToYaml}
+            onApplyFix={onApplyFix}
           />
         ))}
       </div>
@@ -207,76 +231,176 @@ function SectionsList({
 
 function SectionCard({
   section,
+  configText,
+  slug,
   knownLayouts,
   knownForegroundTypes,
   onJumpToYaml,
+  onApplyFix,
 }: {
   section: Section
+  configText: string
+  slug?: string
   knownLayouts: Set<string>
   knownForegroundTypes: Set<string>
   onJumpToYaml?: () => void
+  onApplyFix?: (nextConfigYaml: string) => void
 }) {
   const layoutKnown = section.layout == null || knownLayouts.has(section.layout)
+  const [fixing, setFixing] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
+
+  // Aggregate every schema mismatch on this section into author-readable lines —
+  // the same checks SectionCard/SlotCard/FieldRow render as ⚠ / red labels. This
+  // is both what we show in the Fix panel and what we feed the repair route.
+  const problems = useMemo(
+    () => sectionProblems(section, layoutKnown, knownForegroundTypes),
+    [section, layoutKnown, knownForegroundTypes]
+  )
+  const fixable = onApplyFix != null && slug != null && problems.length > 0
+
+  // The YAML fragment the fix operates on — the section's whole `foreground`,
+  // since layout / region keys / slot types / required fields are interdependent.
+  const foregroundYaml = useMemo(
+    () => readForegroundYaml(configText, section.index),
+    [configText, section.index]
+  )
+
+  function applyFix(fixedYaml: string) {
+    try {
+      const next = spliceForeground(configText, section.index, fixedYaml)
+      onApplyFix?.(next)
+      setApplyError(null)
+      setFixing(false)
+    } catch (e) {
+      setApplyError(e instanceof Error ? e.message : 'Could not apply fix to YAML.')
+    }
+  }
 
   return (
-    <details className="rounded-lg border border-white/10 bg-white/2 [&[open]>summary]:border-b [&[open]>summary]:border-white/10">
-      <summary className="px-4 py-3 cursor-pointer select-none flex items-center gap-3 list-none">
-        <span className="font-mono text-xs text-white/40 w-6 tabular-nums">
-          {String(section.index + 1).padStart(2, '0')}
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">
-            {section.text ?? section.id ?? <span className="opacity-50">(no anchor)</span>}
+    <div className="rounded-lg border border-white/10 bg-white/2 overflow-hidden">
+      <details className="[&[open]>summary]:border-b [&[open]>summary]:border-white/10">
+        <summary className="px-4 py-3 cursor-pointer select-none flex items-center gap-3 list-none">
+          <span className="font-mono text-xs text-white/40 w-6 tabular-nums">
+            {String(section.index + 1).padStart(2, '0')}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">
+              {section.text ?? section.id ?? <span className="opacity-50">(no anchor)</span>}
+            </div>
+            <div className="text-xs text-white/50 mt-0.5 truncate">
+              {[
+                section.id && `#${section.id}`,
+                section.kind && `kind=${section.kind}`,
+                section.layout && (
+                  <span key="layout" className={layoutKnown ? '' : 'text-amber-300'}>
+                    layout={section.layout}
+                    {!layoutKnown && ' ⚠'}
+                  </span>
+                ),
+                `${section.slots.length} slot${section.slots.length === 1 ? '' : 's'}`,
+              ]
+                .filter(Boolean)
+                .map((part, i, arr) => (
+                  <span key={i}>
+                    {part}
+                    {i < arr.length - 1 && ' · '}
+                  </span>
+                ))}
+            </div>
           </div>
-          <div className="text-xs text-white/50 mt-0.5 truncate">
-            {[
-              section.id && `#${section.id}`,
-              section.kind && `kind=${section.kind}`,
-              section.layout && (
-                <span key="layout" className={layoutKnown ? '' : 'text-amber-300'}>
-                  layout={section.layout}
-                  {!layoutKnown && ' ⚠'}
-                </span>
-              ),
-              `${section.slots.length} slot${section.slots.length === 1 ? '' : 's'}`,
-            ]
-              .filter(Boolean)
-              .map((part, i, arr) => (
-                <span key={i}>
-                  {part}
-                  {i < arr.length - 1 && ' · '}
-                </span>
-              ))}
-          </div>
+          {fixable && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setFixing((f) => !f)
+              }}
+              className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/15 text-fuchsia-200 hover:bg-fuchsia-500/25 whitespace-nowrap"
+              title={`${problems.length} schema mismatch${problems.length === 1 ? '' : 'es'} — fix with AI`}
+            >
+              ✨ {fixing ? 'Cancel' : 'Fix with AI'}
+            </button>
+          )}
+          {onJumpToYaml && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                onJumpToYaml()
+              }}
+              className="text-xs underline opacity-60 hover:opacity-100"
+            >
+              YAML →
+            </button>
+          )}
+        </summary>
+        <div className="px-4 py-3 space-y-3">
+          {section.slots.length === 0 ? (
+            <div className="text-white/50 italic text-xs">No foreground slots.</div>
+          ) : (
+            section.slots.map((slot, i) => (
+              <SlotCard
+                key={i}
+                slot={slot}
+                isKnown={knownForegroundTypes.has(slot.type)}
+              />
+            ))
+          )}
         </div>
-        {onJumpToYaml && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              onJumpToYaml()
-            }}
-            className="text-xs underline opacity-60 hover:opacity-100"
-          >
-            YAML →
-          </button>
-        )}
-      </summary>
-      <div className="px-4 py-3 space-y-3">
-        {section.slots.length === 0 ? (
-          <div className="text-white/50 italic text-xs">No foreground slots.</div>
-        ) : (
-          section.slots.map((slot, i) => (
-            <SlotCard
-              key={i}
-              slot={slot}
-              isKnown={knownForegroundTypes.has(slot.type)}
-            />
-          ))
-        )}
-      </div>
-    </details>
+      </details>
+      {fixing && fixable && slug && (
+        <div className="border-t border-white/10 px-4 py-3">
+          <FixPanel
+            slug={slug}
+            kind="foreground"
+            currentValue={foregroundYaml}
+            problems={problems}
+            onApply={applyFix}
+            onClose={() => setFixing(false)}
+          />
+          {applyError && (
+            <div className="text-xs text-red-300 mt-2">{applyError}</div>
+          )}
+        </div>
+      )}
+    </div>
   )
+}
+
+/** Every schema mismatch on a section, as author-readable lines for the fixer. */
+function sectionProblems(
+  section: Section,
+  layoutKnown: boolean,
+  knownForegroundTypes: Set<string>
+): string[] {
+  const out: string[] = []
+  if (!layoutKnown) {
+    out.push(
+      `Unknown layout "${section.layout}" — replace it with a registered layout (or restructure into layout + regions).`
+    )
+  }
+  for (const slot of section.slots) {
+    if (!knownForegroundTypes.has(slot.type)) {
+      out.push(
+        `Unregistered layer type "${slot.type}" — replace it with a valid foreground layer type.`
+      )
+      continue
+    }
+    const mod = getVizModule(slot.type)
+    const fields: AdminFormField[] = mod?.adminForm
+      ? mod.adminForm(slot.config as never)
+      : []
+    for (const field of fields) {
+      const required = 'required' in field && field.required
+      const v = slot.config[field.key]
+      if (required && (v == null || v === '')) {
+        out.push(`Missing required field "${field.label}" on layer "${slot.type}".`)
+      }
+    }
+  }
+  return out
 }
 
 /* ─── Slot inspector ────────────────────────────────────────────── */
@@ -458,4 +582,51 @@ function parse(yaml: string): {
 
 function emptyDefaults(): DefaultsSummary {
   return { storyBackground: null, overlay: null, panel: null, scroll: null }
+}
+
+/* ─── Fix-with-AI helpers ───────────────────────────────────────── */
+
+/**
+ * The section's `foreground` as YAML — the "before" fragment the fixer repairs.
+ * Falls back to a bare `layout:` mapping for a section that carries only an
+ * (invalid) layout and no foreground. Returns '' when nothing can be read.
+ */
+function readForegroundYaml(configText: string, index: number): string {
+  try {
+    const parsed = parseYaml(configText) as Record<string, unknown> | null
+    const sections = (parsed?.sections ?? []) as Record<string, unknown>[]
+    const sec = sections[index]
+    if (!sec) return ''
+    const fg = sec.foreground
+    if (fg == null) {
+      return sec.layout ? stringifyYaml({ layout: sec.layout }).trimEnd() : ''
+    }
+    return stringifyYaml(fg).trimEnd()
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Splice the corrected foreground back into config.yaml, preserving comments and
+ * untouched sections via a `yaml.Document` round-trip. If the fix carries its
+ * own `layout:` key, drop the now-duplicate section-level `layout`.
+ */
+function spliceForeground(
+  configText: string,
+  index: number,
+  fixedYaml: string
+): string {
+  const doc = parseDocument(configText)
+  const parsedFix = parseYaml(fixedYaml) as unknown
+  if (parsedFix == null) throw new Error('The AI returned empty YAML.')
+  doc.setIn(['sections', index, 'foreground'], doc.createNode(parsedFix))
+  if (
+    typeof parsedFix === 'object' &&
+    !Array.isArray(parsedFix) &&
+    'layout' in (parsedFix as Record<string, unknown>)
+  ) {
+    doc.deleteIn(['sections', index, 'layout'])
+  }
+  return String(doc)
 }

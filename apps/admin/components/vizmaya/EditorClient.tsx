@@ -148,7 +148,7 @@ export default function EditorClient({
   function save() {
     start(async () => {
       setApiStatus({ type: 'idle' })
-      const payload: Record<string, any> = {}
+      const payload: Record<string, unknown> = {}
       if (markdown !== initial.markdown) payload.markdown = markdown
       if (config !== initial.config_yaml) payload.config_yaml = config.length === 0 ? null : config
       if (parsed.data.status) payload.status = parsed.data.status
@@ -396,7 +396,12 @@ export default function EditorClient({
           </div>
         )}
         {tab === 'deck' && isDeck && (
-          <DeckComposerPanel value={config} onJumpToYaml={() => setTab('edit')} />
+          <DeckComposerPanel
+            value={config}
+            slug={slug}
+            onJumpToYaml={() => setTab('edit')}
+            onApplyFix={setConfig}
+          />
         )}
         {tab === 'charts' && (
           <ChartsList

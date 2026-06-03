@@ -78,6 +78,7 @@ import {
 } from '@/lib/assistantContext'
 import EditorPanel from './EditorPanel'
 import PromptBar from './PromptBar'
+import FixPanel from './FixPanel'
 import EvaluatorPanel from './EvaluatorPanel'
 import GenerationFeedback from './GenerationFeedback'
 import MapPickerModal from '../MapPickerModal'
@@ -568,6 +569,9 @@ export default function CanvasClient({
     /** Open the standalone ✨ PromptBar for this slot instead of the full
      *  EditorPanel (the on-node Generate affordance — Feature 1). */
     promptOnly?: boolean
+    /** Open the ✨ FixPanel for this slot — schema-mismatch repair. Carries the
+     *  detected problems to feed the `canvas/fix` route. */
+    fix?: { problems: string[] }
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -866,6 +870,10 @@ export default function CanvasClient({
         // view renders it as a small ⚠ chip so the user sees that the
         // region won't render until the layout is updated.
         warning?: string
+        // Set alongside `warning` so the ⚠ chip can offer a ✨ FIX action
+        // that opens the FixPanel against the whole foreground (renaming a
+        // region key / changing the layout spans the entire foreground).
+        onFix?: () => void
         constructor(public sub: string) {
           super()
         }
@@ -1356,9 +1364,10 @@ export default function CanvasClient({
         const editable = typeof data.onClick === 'function'
         const hasContextMenu = typeof data.onContextMenu === 'function'
         const generatable = typeof data.onGenerate === 'function'
-        // Pointer events need to be 'auto' if edit, right-click, OR generate
-        // is wired — otherwise those events never reach us.
-        const wantsPointer = editable || hasContextMenu || generatable
+        const fixable = typeof data.onFix === 'function'
+        // Pointer events need to be 'auto' if edit, right-click, generate, OR
+        // fix is wired — otherwise those events never reach us.
+        const wantsPointer = editable || hasContextMenu || generatable || fixable
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -1369,6 +1378,10 @@ export default function CanvasClient({
         const onGenerate = (e: React.MouseEvent) => {
           stop(e)
           data.onGenerate?.()
+        }
+        const onFix = (e: React.MouseEvent) => {
+          stop(e)
+          data.onFix?.()
         }
         const onContextMenu = (e: React.MouseEvent) => {
           if (!hasContextMenu) return
@@ -1425,6 +1438,21 @@ export default function CanvasClient({
                 style={{ color: '#a07a3a', letterSpacing: '0.14em' }}
               >
                 ⚠ MISMATCH
+              </span>
+            )}
+            {data.warning && fixable && (
+              <span
+                onClick={onFix}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Fix this mismatch with AI"
+                style={{
+                  color: '#b07cd8',
+                  letterSpacing: '0.14em',
+                  cursor: 'pointer',
+                }}
+              >
+                ✨ FIX
               </span>
             )}
             {generatable && !data.warning && (
@@ -1630,6 +1658,25 @@ export default function CanvasClient({
             regionKey,
             slotPath,
             promptOnly: true,
+          })
+        }
+      }
+
+      // Sibling of makeGenerateClick that opens the ✨ FixPanel against the
+      // whole foreground. A region-key / layout mismatch can only be repaired
+      // by editing the whole foreground (rename the key OR change the layout),
+      // so the fix always targets `kind: 'foreground'` regardless of which
+      // region's ⚠ chip was clicked. `problems` carries the detected
+      // mismatch(es) through to the repair route.
+      function makeFixClick(problems: string[]): () => void {
+        return () => {
+          const idx = stateRef.current.activeSectionIndex
+          const targetUnit = sectionUnitsRef.current[idx]
+          if (!targetUnit) return
+          setEditorTargetRef.current({
+            kind: 'foreground',
+            unit: targetUnit,
+            fix: { problems },
           })
         }
       }
@@ -1846,17 +1893,19 @@ export default function CanvasClient({
             onContextMenu?: (clientX: number, clientY: number) => void
             warning?: string
             onGenerate?: () => void
+            onFix?: () => void
           }
         ): Promise<JunctionNode> => {
           const node = new JunctionNode(label, sub)
           const ctrl = node.controls.ctrl as InstanceType<typeof JunctionControl>
           if (onClick) ctrl.onClick = onClick
           if (opts?.onGenerate) ctrl.onGenerate = opts.onGenerate
-          // Set onContextMenu + warning BEFORE addNode so the initial React
-          // render sees them — the +ADD chip and ⚠ MISMATCH chip both
-          // depend on these being present at first paint.
+          // Set onContextMenu + warning + onFix BEFORE addNode so the initial
+          // React render sees them — the +ADD chip and the ⚠ MISMATCH / ✨ FIX
+          // chips all depend on these being present at first paint.
           if (opts?.onContextMenu) ctrl.onContextMenu = opts.onContextMenu
           if (opts?.warning) ctrl.warning = opts.warning
+          if (opts?.onFix) ctrl.onFix = opts.onFix
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
           leftNodeIds.add(node.id)
@@ -2024,6 +2073,9 @@ export default function CanvasClient({
                 }),
                 warning: regionWarning,
                 onGenerate: makeGenerateClick('region', region.key),
+                onFix: regionWarning
+                  ? makeFixClick([regionWarning])
+                  : undefined,
               }
             )
             regionNodes.push(rj)
@@ -3573,7 +3625,7 @@ export default function CanvasClient({
           </div>
         </div>
       )}
-      {editorSlice && !editorTarget?.promptOnly && (
+      {editorSlice && !editorTarget?.promptOnly && !editorTarget?.fix && (
         <EditorPanel
           slice={editorSlice}
           saving={saving}
@@ -3644,6 +3696,42 @@ export default function CanvasClient({
             slug={slug}
             kind={editorTarget.kind}
             currentValue={editorSlice.text}
+            onApply={(v) => handleSave(v)}
+            onClose={() => {
+              setEditorTarget(null)
+              setSaveError(null)
+            }}
+          />
+          {saveError && (
+            <div style={{ color: '#f87171', fontSize: 11, marginTop: 8 }}>
+              {saveError}
+            </div>
+          )}
+        </div>
+      )}
+      {/* ✨ Fix with AI: schema-mismatch repair for the foreground. Auto-runs
+          the canvas/fix route, previews the corrected YAML, and Apply persists
+          through the same handleSave (merge→save) path a manual edit uses. */}
+      {editorSlice && editorTarget?.fix && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 380,
+            background: '#0c0c0c',
+            borderLeft: '1px solid #262626',
+            zIndex: 50,
+            padding: 14,
+            overflowY: 'auto',
+          }}
+        >
+          <FixPanel
+            slug={slug}
+            kind={editorTarget.kind}
+            currentValue={editorSlice.text}
+            problems={editorTarget.fix.problems}
             onApply={(v) => handleSave(v)}
             onClose={() => {
               setEditorTarget(null)

@@ -53,6 +53,13 @@ export const AI_FEATURES: AiFeature[] = [
     description: 'In-editor ✨ Edit on a selection (when it fits the slot’s model set).',
   },
   {
+    key: 'fix',
+    label: 'Schema fix',
+    modality: 'text',
+    default: 'text.pro',
+    description: 'The ✨ Fix with AI button — repairs a slot to match its schema (valid layout, layer types, required fields).',
+  },
+  {
     key: 'evaluate',
     label: 'Evaluator (vision)',
     modality: 'text',
