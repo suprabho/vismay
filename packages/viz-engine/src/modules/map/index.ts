@@ -26,6 +26,40 @@ export const mapSchema = z
       .length(2)
       .describe('[longitude, latitude]. Required.'),
     zoom: z.number().describe('Camera zoom level. Required.'),
+    pitch: z.number().optional().describe('Camera tilt in degrees (0 = top-down). Default 0.'),
+    bearing: z.number().optional().describe('Camera rotation in degrees. Default 0.'),
+    opacity: z.number().optional().describe('Map layer opacity 0–1. Defaults to the story map opacity.'),
+    flySpeed: z.number().optional().describe('Fly-to animation speed for transitions into this section.'),
+    pins: z
+      .array(z.record(z.string(), z.unknown()))
+      .optional()
+      .describe(
+        'Map markers: [{ coordinates: [lng, lat], label?, color?, radius?, pulse?, labelAnchor? (top|bottom|left|right), image? }].',
+      ),
+    regions: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        'Choropleth overlay: { level: "country"|"custom", items: [{ code, value?, color?, opacity?, label? }], colors?: string[], ramp?: number[], lineColor?, labels?, legend? }.',
+      ),
+    heatmap: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        'Heatmap overlay: { points: [{ coordinates: [lng, lat], weight? }], radius?, ramp?: string[], opacity? }.',
+      ),
+    textLabels: z
+      .array(z.record(z.string(), z.unknown()))
+      .optional()
+      .describe(
+        'Free-floating labels (no pin): [{ coordinates: [lng, lat], text, color?, anchor? (top|bottom|left|right), size? }].',
+      ),
+    mobile: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        'Portrait/mobile camera overrides — the same map fields (center?, zoom?, pitch?, bearing?, pins?, regions?, heatmap?, textLabels?).',
+      ),
   })
   .passthrough()
 
