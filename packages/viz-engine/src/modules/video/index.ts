@@ -1,90 +1,66 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { parseWithSchema } from '../../lib/zodConfig'
 
-export interface VideoStepSync {
-  /**
-   * How `activeStep` drives the video's `currentTime`.
-   *
-   *   stepwise: jump to `stepTimestamps[activeStep]` on each step change.
-   *   scrubbed: linearly interpolate `currentTime` across `[stepTimestamps[0], stepTimestamps[last]]`
-   *             using `activeStep / (totalSteps - 1)` as the fraction (Phase 4.5).
-   *
-   * For Phase 4 only `stepwise` ships — `scrubbed` is reserved.
-   */
-  mode: 'stepwise'
-  stepTimestamps: number[]
-}
+/**
+ * How `activeStep` drives the video's `currentTime`. For Phase 4 only
+ * `stepwise` ships (jump to `stepTimestamps[activeStep]` on each step change);
+ * `scrubbed` interpolation is reserved.
+ */
+export const videoStepSyncSchema = z.object({
+  mode: z.literal('stepwise').describe("Sync mode. Only 'stepwise' ships in Phase 4."),
+  stepTimestamps: z
+    .array(z.number())
+    .describe('Seconds to seek to per step — one timestamp per scroll step.'),
+})
 
-export interface VideoLayerConfig {
-  type: 'video'
-  /** `assets://<key>`, absolute URL, or same-origin `/public` path. */
-  src: string
-  /** Static image shown until the video has decoded its first frame. */
-  poster?: string
-  loop?: boolean
-  muted?: boolean
-  autoplay?: boolean
-  /** Object-fit. Defaults to 'cover'. */
-  fit?: 'cover' | 'contain' | 'fill' | 'scale-down' | 'none'
-  /** Object-position. */
-  focus?: string
-  /** Background color shown while loading or where `contain` letterboxes. */
-  background?: string
-  /**
-   * Seconds. When `freeze()` is invoked (PDF / share / video capture), the
-   * video is paused and seeked here so the frame is deterministic. Defaults
-   * to 0.
-   */
-  posterTime?: number
-  /** Optional scroll-driven seek. See `VideoStepSync`. */
-  stepSync?: VideoStepSync
-}
+export type VideoStepSync = z.infer<typeof videoStepSyncSchema>
+
+const VideoFitSchema = z.enum(['cover', 'contain', 'fill', 'scale-down', 'none'])
+
+/**
+ * Zod schema for the `video` module — a looping/auto-playing video layer with
+ * deterministic capture (seek to `posterTime` on freeze) and optional
+ * scroll-driven seek.
+ */
+export const videoSchema = z.object({
+  type: z.literal('video'),
+  src: z
+    .string()
+    .trim()
+    .min(1)
+    .describe('`assets://<key>`, absolute URL, or same-origin /public path. Required.'),
+  poster: z.string().optional().describe('Static image shown until the first frame decodes.'),
+  loop: z.boolean().default(true).describe('Loop playback. Defaults true.'),
+  muted: z
+    .boolean()
+    .default(true)
+    .describe('Mute audio. Defaults true (browsers refuse autoplay with sound).'),
+  autoplay: z.boolean().default(true).describe('Autoplay on mount. Defaults true.'),
+  fit: VideoFitSchema.default('cover').describe('CSS object-fit. Defaults to cover.'),
+  focus: z.string().optional().describe('CSS object-position.'),
+  background: z
+    .string()
+    .optional()
+    .describe('Background color shown while loading or where `contain` letterboxes.'),
+  posterTime: z
+    .number()
+    .default(0)
+    .describe('Seconds to seek for a deterministic capture frame. Defaults 0.'),
+  stepSync: videoStepSyncSchema.optional().describe('Optional scroll-driven seek.'),
+})
+
+export type VideoLayerConfig = z.infer<typeof videoSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): VideoLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: video layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (typeof r.src !== 'string' || r.src.trim().length === 0) {
-    throw new Error(`${ctx.label}: video layer requires 'src' (URL or assets://… key)`)
-  }
-  if (r.fit != null && !['cover', 'contain', 'fill', 'scale-down', 'none'].includes(r.fit as string)) {
-    throw new Error(`${ctx.label}: video 'fit' must be one of cover | contain | fill | scale-down | none`)
-  }
-  const stepSync = (() => {
-    if (r.stepSync == null) return undefined
-    if (typeof r.stepSync !== 'object') {
-      throw new Error(`${ctx.label}: video.stepSync must be an object`)
-    }
-    const s = r.stepSync as Record<string, unknown>
-    if (s.mode !== 'stepwise') {
-      throw new Error(`${ctx.label}: video.stepSync.mode must be 'stepwise' (only mode shipped in Phase 4)`)
-    }
-    if (!Array.isArray(s.stepTimestamps) || !s.stepTimestamps.every((t) => typeof t === 'number')) {
-      throw new Error(`${ctx.label}: video.stepSync.stepTimestamps must be an array of numbers (seconds)`)
-    }
-    return { mode: 'stepwise' as const, stepTimestamps: s.stepTimestamps as number[] }
-  })()
-  return {
-    type: 'video',
-    src: r.src,
-    poster: typeof r.poster === 'string' ? r.poster : undefined,
-    loop: r.loop !== false,
-    // Default muted — browsers refuse autoplay with sound, and silent ambient
-    // loops are the dominant editorial case.
-    muted: r.muted !== false,
-    autoplay: r.autoplay !== false,
-    fit: (r.fit as VideoLayerConfig['fit'] | undefined) ?? 'cover',
-    focus: typeof r.focus === 'string' ? r.focus : undefined,
-    background: typeof r.background === 'string' ? r.background : undefined,
-    posterTime: typeof r.posterTime === 'number' ? r.posterTime : 0,
-    stepSync,
-  }
+  return parseWithSchema(videoSchema, raw, ctx)
 }
 
 const videoModule: VizModule<VideoLayerConfig> = {
   type: 'video',
   label: 'Video',
   slots: ['foreground', 'background'],
+  schema: videoSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
