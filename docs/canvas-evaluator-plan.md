@@ -1,6 +1,17 @@
 # Plan: Evaluator node for the Vizmaya Canvas (Feature 3)
 
-**Status: plan-only. No code yet.**
+**Status: steps 1–2 shipped; step-3 component built, canvas mount pending.**
+- ✅ Step 1 — gateway vision (`generateText({ images })`) + `screenshotCanvasSection` helper.
+- ✅ Step 2 — `evaluate` route (vision critique, aspect-keyed Zod schema, audited).
+- ✅ Step 3 component — `EvaluatorPanel.tsx` (self-contained: fetch + render + route).
+- ⬜ Step 3 mount — held: CanvasClient + PromptBar are under active edit (the slot-gen
+  schema convergence). The mount is ~15 localized lines in CanvasClient:
+  - an "Evaluate" button in the story-name header (beside "+ ✨ Section"),
+  - `const [evalOpen, setEvalOpen] = useState(false)`,
+  - mount `<EvaluatorPanel slug={slug} sectionId={activeSectionId} sectionConfig={yamlStringify(activeUnit.parentConfig)} onClose={…} onSendToPrompt={(aspect) => { setEditorTarget({ kind: aspect, unit: activeUnit, promptOnly: true }); setEvalOpen(false) }} />`
+    where `activeSectionId = activeUnit.parentConfig.id ?? \`section-${activeUnit.parentIndex}\``.
+  `onSendToPrompt` reuses the Feature-1 `promptOnly` editorTarget — no PromptBar change.
+  Optional follow-up: add a `PromptBar initialPrompt` prop to prefill the suggested fix.
 
 ## Goal
 
