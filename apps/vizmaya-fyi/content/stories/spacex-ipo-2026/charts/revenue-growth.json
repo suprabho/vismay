@@ -1,0 +1,87 @@
+{
+  "steps": [
+    {
+      "title": "SpaceX consolidated revenue, US$B, FY2022–FY2025 (est.). ~33% YoY growth into FY2025; Q1 2026 run-rate ~$18.8B.",
+      "option": {
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          },
+          "formatter": "{b}: ${c}B"
+        },
+        "grid": {
+          "left": "3%",
+          "right": "6%",
+          "bottom": "3%",
+          "top": "10%",
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["2022", "2023", "2024", "2025"],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": false
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 11
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "US$B",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontFamily": "Inter",
+            "fontSize": 10
+          },
+          "axisLine": {
+            "show": false
+          },
+          "axisTick": {
+            "show": false
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line",
+              "type": "dashed"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 10,
+            "formatter": "${value}"
+          }
+        },
+        "series": [
+          {
+            "name": "Revenue",
+            "type": "bar",
+            "barWidth": "52%",
+            "itemStyle": {
+              "color": "$accent2",
+              "borderRadius": [3, 3, 0, 0]
+            },
+            "label": {
+              "show": true,
+              "position": "top",
+              "color": "$text",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "formatter": "${c}B"
+            },
+            "data": [4.6, 9, 14.1, 18.7]
+          }
+        ]
+      }
+    }
+  ]
+}
