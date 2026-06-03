@@ -105,10 +105,13 @@ context) are unaffected.
 
 ## Open decisions
 
-- **A. Selected-text source** — v1: `window.getSelection()` (covers panels,
-  previews, docs). The Monaco editor keeps its selection in its own model; if we
-  want code-editor selections too, read the Monaco instance later. Recommend
-  window selection for v1.
+- **A. Selected-text source** — DECIDED: read BOTH. `window.getSelection()`
+  covers panels/previews/docs, AND the Monaco editor's own selection (Monaco
+  keeps it in its own model, invisible to the window selection API) — so a
+  highlight inside the YAML/markdown editor is captured too. The launcher reads
+  whichever is non-empty (prefer Monaco when the editor is focused). Requires the
+  EditorPanel to expose its Monaco selection (e.g. via the same context channel,
+  or an onSelectionChange that publishes the selected text).
 - **B. Focused-node definition** — open editor/inspector > Rete-selected node >
   none (recommended). Alternative: always the active section's primary node.
 - **C. Snapshot vs live** — snapshot on open (v1); the chips let the author

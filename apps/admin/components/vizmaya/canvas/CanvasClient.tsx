@@ -71,6 +71,7 @@ import {
   type SlotPath,
 } from './canvasSlotEditing'
 import { appendStorySection } from '@vismay/content-source/storySection'
+import AssistantLauncher from '@/components/AssistantLauncher'
 import EditorPanel from './EditorPanel'
 import PromptBar from './PromptBar'
 import MapPickerModal from '../MapPickerModal'
@@ -3083,6 +3084,9 @@ export default function CanvasClient({
         <strong style={{ fontSize: 13 }}>{slug}</strong>
         <span style={{ marginLeft: 12, color: '#888' }}>
           {sectionViews.length} sections · ← / → to paginate
+        </span>
+        <span style={{ pointerEvents: 'auto', marginLeft: 12 }}>
+          <AssistantLauncher />
         </span>
         <button
           onClick={() => {
