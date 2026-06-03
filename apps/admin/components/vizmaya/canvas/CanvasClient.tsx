@@ -78,6 +78,7 @@ import {
 } from '@/lib/assistantContext'
 import EditorPanel from './EditorPanel'
 import PromptBar from './PromptBar'
+import EvaluatorPanel from './EvaluatorPanel'
 import GenerationFeedback from './GenerationFeedback'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
@@ -583,6 +584,8 @@ export default function CanvasClient({
     kind: string
     body: Record<string, unknown>
   } | null>(null)
+  // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
+  const [evalOpen, setEvalOpen] = useState(false)
   // Audit-row id of the current draft (for the feedback row) + the author's
   // refine note for the next regeneration.
   const [genId, setGenId] = useState<string | null>(null)
@@ -3174,6 +3177,7 @@ export default function CanvasClient({
         <button
           onClick={() => {
             setGenError(null)
+            setEvalOpen(false)
             setGenSectionOpen((o) => !o)
           }}
           title="Generate a new section from a brief"
@@ -3192,6 +3196,29 @@ export default function CanvasClient({
         >
           + ✨ Section
         </button>
+        {sectionUnits.length > 0 && (
+          <button
+            onClick={() => {
+              setGenSectionOpen(false)
+              setEvalOpen((o) => !o)
+            }}
+            title="Evaluate the current section — render it and get a vision critique"
+            style={{
+              pointerEvents: 'auto',
+              marginLeft: 12,
+              background: 'transparent',
+              color: '#e8a04f',
+              border: '1px solid #8f5a2a',
+              borderRadius: 5,
+              padding: '3px 9px',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            ✦ Evaluate
+          </button>
+        )}
         {format === 'deck' && sectionUnits.length > 0 && (
           <button
             onClick={() =>
@@ -3215,6 +3242,30 @@ export default function CanvasClient({
           </button>
         )}
       </header>
+      {evalOpen && sectionUnits[activeSectionIndex] && (
+        <EvaluatorPanel
+          slug={slug}
+          sectionId={
+            sectionUnits[activeSectionIndex].parentConfig?.id ??
+            `section-${sectionUnits[activeSectionIndex].parentIndex}`
+          }
+          sectionConfig={safeStringifyYaml(
+            sectionUnits[activeSectionIndex].parentConfig,
+          )}
+          onSendToPrompt={(aspect) => {
+            const u = sectionUnits[activeSectionIndex]
+            if (u) {
+              setEditorTarget({
+                kind: aspect as EditableKind,
+                unit: u,
+                promptOnly: true,
+              })
+            }
+            setEvalOpen(false)
+          }}
+          onClose={() => setEvalOpen(false)}
+        />
+      )}
       {genSectionOpen && (
         <div
           style={{
