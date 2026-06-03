@@ -15,7 +15,10 @@ import { buildAssistantSystemPrompt } from '@/lib/assistantKnowledge'
  * history is flattened into a transcript and the model continues it.
  */
 
-const MODEL = 'text.claude'
+// DeepSeek V4 Flash — ~20x cheaper than Sonnet. The assistant is grounded in a
+// knowledge pack (schemas + platform overview), so a cheap reasoner is enough;
+// swap back to 'text.claude' if answer quality regresses.
+const MODEL = 'text.deepseek'
 const MAX_MESSAGES = 24
 const MAX_CONTENT_LENGTH = 4000
 

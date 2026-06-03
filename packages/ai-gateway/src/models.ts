@@ -63,6 +63,8 @@ export const MODELS = {
     imagenFast: 'google/imagen-4.0-fast-generate-001',
     /** Highest-quality Imagen 4 — slower and pricier. */
     imagenUltra: 'google/imagen-4.0-ultra-generate-001',
+    /** ByteDance Seedream — cheap ($0.03/image) dedicated image model. Budget option. */
+    seedream: 'bytedance/seedream-4.0',
   },
 } as const
 

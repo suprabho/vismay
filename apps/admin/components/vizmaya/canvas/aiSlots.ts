@@ -64,6 +64,7 @@ const IMAGE_MODELS = [
   'image.imagen',
   'image.imagenFast',
   'image.imagenUltra',
+  'image.seedream',
 ] as const
 
 /** Friendly labels for the model dropdown. Falls back to the alias tail. */
@@ -84,6 +85,7 @@ export const MODEL_LABELS: Record<string, string> = {
   'image.imagen': 'Imagen 4',
   'image.imagenFast': 'Imagen 4 · fast',
   'image.imagenUltra': 'Imagen 4 · ultra',
+  'image.seedream': 'Seedream · cheap',
 }
 
 export function modelLabel(alias: string): string {
