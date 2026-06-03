@@ -46,12 +46,6 @@ const keyValueModule: VizModule<KeyValueLayerConfig> = {
     { kind: 'text', key: 'title', label: 'Optional title' },
     { kind: 'json', key: 'items', label: 'Items ([{ key, value, color? }])', required: true },
   ],
-  aiFieldExamples: {
-    items:
-      'items:\n' +
-      '  - { key: Launches, value: "134" }\n' +
-      '  - { key: Success rate, value: "99.3%", color: positive }',
-  },
 }
 
 export default keyValueModule

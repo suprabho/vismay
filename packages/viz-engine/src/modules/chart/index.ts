@@ -33,14 +33,6 @@ const chartModule: VizModule<ChartLayerConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
   stableIdentity: (config) => `chart:${config.id}`,
-  aiSchema:
-    `Accepted fields (a field marked (required) must be present):\n` +
-    `  - id: string (required) — references a chart already defined for this ` +
-    `story by its id. A chart layer only *references* a chart; you cannot ` +
-    `define the chart's data or type here.\n\n` +
-    `Example shape:\n` +
-    `type: chart\n` +
-    `id: revenue-growth`,
 }
 
 export default chartModule

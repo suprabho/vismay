@@ -1,8 +1,8 @@
 /**
  * Schema-aware system prompts for the canvas's non-layer ("override") slots.
  *
- * Layer slots derive their prompt from the module's `adminForm`
- * (`buildLayerSchemaPrompt` in `@vismay/viz-engine`). The override slots —
+ * Layer slots derive their prompt from the module's Zod schema
+ * (`describeLayerSchema` in `@vismay/viz-engine`). The override slots —
  * foreground/background/region structure, theme, defaults, and the
  * share/slides/report/map export overrides — are story-config shapes with no
  * module and no machine-readable schema, so their exact-shape prompts are
@@ -15,7 +15,7 @@
  * lives (image layers keep their artistic default, not a YAML schema).
  */
 
-import { buildLayerSchemaPrompt, listModulesForSlot } from '@vismay/viz-engine'
+import { describeLayerSchema, listModulesForSlot } from '@vismay/viz-engine'
 import { aiSlotConfig, type AiSlotKind } from './aiSlots'
 
 const RAW =
@@ -198,7 +198,7 @@ export function buildSlotSchemaPrompt(
   const config = aiSlotConfig(kind, layerType)
   if (!config || config.modality !== 'text') return null
   if (kind === 'layer') {
-    return layerType ? buildLayerSchemaPrompt(layerType) : null
+    return layerType ? describeLayerSchema(layerType) : null
   }
   return OVERRIDE_SCHEMAS[kind]?.() ?? null
 }

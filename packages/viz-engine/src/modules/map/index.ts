@@ -54,22 +54,6 @@ const mapModule: VizModule<MapLayerConfig> = {
   // Both BackgroundVizSlot and ForegroundVizSlot use this to dedupe.
   stableIdentity: () => 'map:default',
   regionPreferences: ['lead'],
-  aiSchema:
-    `Accepted fields (a field marked (required) must be present; omit optional ` +
-    `fields you don't need):\n` +
-    `  - center: [number, number] (required) — [longitude, latitude]\n` +
-    `  - zoom: number (required)\n` +
-    `  - pitch: number — camera tilt in degrees (0 = top-down, default 0)\n` +
-    `  - bearing: number — camera rotation in degrees (default 0)\n` +
-    `  - pins: a list of { coordinates: [lng, lat], label?, color?, radius? }\n` +
-    `  - (advanced overlays — regions, heatmap, textLabels — exist; omit unless asked)\n\n` +
-    `Example shape:\n` +
-    `type: map\n` +
-    `center: [-80.604, 28.608]\n` +
-    `zoom: 6\n` +
-    `pitch: 45\n` +
-    `pins:\n` +
-    `  - { coordinates: [-80.604, 28.608], label: "Cape Canaveral" }`,
 }
 
 export default mapModule

@@ -14,7 +14,7 @@
  * pack outgrows a comfortable token budget, switch the schema half to retrieval.
  */
 
-import { allRegisteredTypes, buildLayerSchemaPrompt } from '@vismay/viz-engine'
+import { allRegisteredTypes, describeLayerSchema } from '@vismay/viz-engine'
 import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
 import type { AiSlotKind } from '@/components/vizmaya/canvas/aiSlots'
 
@@ -92,7 +92,7 @@ Rules:
 /** Exact slot/layer schemas, generated from the live registry + override schemas. */
 function schemaReference(): string {
   const layers = allRegisteredTypes()
-    .map((t) => buildLayerSchemaPrompt(t))
+    .map((t) => describeLayerSchema(t))
     .filter((s): s is string => Boolean(s))
 
   const overrideKinds: AiSlotKind[] = [
