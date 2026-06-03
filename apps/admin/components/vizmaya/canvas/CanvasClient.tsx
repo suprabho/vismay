@@ -148,6 +148,15 @@ const FRAME_H = 1080
 const FRAME_MIN_W = 480
 const FRAME_MIN_H = 270
 
+/** Stringify a value to YAML for display, swallowing any serialisation error. */
+function safeStringifyYaml(value: unknown): string {
+  try {
+    return yamlStringify(value, { lineWidth: 0 }).trimEnd()
+  } catch {
+    return '# (could not render)'
+  }
+}
+
 const INPUT_W = 320
 const INPUT_H = 150
 
@@ -555,11 +564,19 @@ export default function CanvasClient({
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  // ✨ Generate-section (section-generate): brief input + busy/error state.
+  // ✨ Generate-section (section-generate): brief input, then a preview the
+  // author approves before anything is written. `genResult` holds the generated
+  // section while it awaits confirmation (null = still in the brief phase).
   const [genSectionOpen, setGenSectionOpen] = useState(false)
   const [genBrief, setGenBrief] = useState('')
   const [genBusy, setGenBusy] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
+  const [genResult, setGenResult] = useState<{
+    heading: string
+    paragraphs: string[]
+    kind: string
+    body: Record<string, unknown>
+  } | null>(null)
   // Derived from editorTarget + current sources; updates if the user
   // saves and the slice re-derives, but the panel stays open.
   const editorSlice: EditableSlice | null = useMemo(
@@ -2459,8 +2476,8 @@ export default function CanvasClient({
     [editorTarget, sources, slug]
   )
 
-  // ✨ Generate a whole new section from a brief, append it to the story
-  // (markdown + config via appendStorySection), save both, and jump to it.
+  // ✨ Generate a section from the brief for REVIEW — produces a preview the
+  // author confirms before anything is written. Nothing touches the story here.
   const handleGenerateSection = useCallback(async () => {
     const brief = genBrief.trim()
     if (!brief || genBusy) return
@@ -2488,14 +2505,29 @@ export default function CanvasClient({
       if (!res.ok || !body.ok || !body.section) {
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
+      setGenResult(body.section)
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : 'Section generation failed.')
+    } finally {
+      setGenBusy(false)
+    }
+  }, [genBrief, genBusy, slug, format])
+
+  // Apply the approved preview: append to the story (markdown + config via
+  // appendStorySection), save both, bump the nonce, and jump to the new section.
+  const handleApplySection = useCallback(async () => {
+    if (!genResult || genBusy) return
+    setGenBusy(true)
+    setGenError(null)
+    try {
       const next = appendStorySection(
         markdownRef.current ?? '',
         configYamlRef.current ?? '',
         {
-          heading: body.section.heading,
-          paragraphs: body.section.paragraphs,
-          kind: body.section.kind,
-          body: body.section.body,
+          heading: genResult.heading,
+          paragraphs: genResult.paragraphs,
+          kind: genResult.kind,
+          body: genResult.body,
         }
       )
       // The appended section lands at the end → its index is the old count.
@@ -2511,12 +2543,13 @@ export default function CanvasClient({
       setActiveSectionIndex(newIndex)
       setGenSectionOpen(false)
       setGenBrief('')
+      setGenResult(null)
     } catch (e) {
-      setGenError(e instanceof Error ? e.message : 'Section generation failed.')
+      setGenError(e instanceof Error ? e.message : 'Could not apply section.')
     } finally {
       setGenBusy(false)
     }
-  }, [genBrief, genBusy, slug, format])
+  }, [genResult, genBusy, slug])
 
   /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
   // After a successful slot save we:
@@ -3101,24 +3134,35 @@ export default function CanvasClient({
             position: 'absolute',
             top: 64,
             left: 16,
-            width: 400,
+            width: 440,
+            maxHeight: 'calc(100vh - 96px)',
+            display: 'flex',
+            flexDirection: 'column',
             zIndex: 60,
             background: '#0c0c0c',
             border: '1px solid #2a2a2a',
             borderRadius: 8,
-            padding: 14,
             pointerEvents: 'auto',
           }}
         >
           <div
-            style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '12px 14px',
+              borderBottom: '1px solid #1f1f1f',
+            }}
           >
             <span style={{ fontSize: 12, color: '#ddd' }}>
-              ✨ Generate section
+              {genResult ? '✨ Review section' : '✨ Generate section'}
             </span>
             <button
               type="button"
-              onClick={() => setGenSectionOpen(false)}
+              onClick={() => {
+                setGenSectionOpen(false)
+                setGenResult(null)
+                setGenError(null)
+              }}
               aria-label="Close"
               style={{
                 marginLeft: 'auto',
@@ -3132,62 +3176,209 @@ export default function CanvasClient({
               ×
             </button>
           </div>
-          <textarea
-            value={genBrief}
-            onChange={(e) => setGenBrief(e.target.value)}
-            disabled={genBusy}
-            rows={4}
-            autoFocus
-            placeholder="Describe the section you want… e.g. “a bigStat slide showing FY2025 revenue $18.7B with a +33% YoY delta”"
-            style={{
-              width: '100%',
-              background: '#111',
-              color: '#eee',
-              border: '1px solid #2a2a2a',
-              borderRadius: 6,
-              padding: 8,
-              fontSize: 12,
-              lineHeight: 1.5,
-              resize: 'vertical',
-              fontFamily: 'inherit',
-            }}
-          />
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 8,
-            }}
-          >
-            <span style={{ fontSize: 10, color: '#666' }}>
-              {format} story · appended at end
-            </span>
-            <button
-              type="button"
-              onClick={handleGenerateSection}
-              disabled={genBusy || !genBrief.trim()}
-              style={{
-                marginLeft: 'auto',
-                background: '#fff',
-                color: '#0a0a0a',
-                border: 'none',
-                borderRadius: 5,
-                padding: '5px 12px',
-                fontSize: 12,
-                cursor: genBusy || !genBrief.trim() ? 'default' : 'pointer',
-                opacity: genBusy || !genBrief.trim() ? 0.4 : 1,
-                fontFamily: 'inherit',
-              }}
-            >
-              {genBusy ? 'Generating…' : 'Generate'}
-            </button>
+
+          <div style={{ overflowY: 'auto', padding: 14 }}>
+            {!genResult ? (
+              <>
+                <textarea
+                  value={genBrief}
+                  onChange={(e) => setGenBrief(e.target.value)}
+                  disabled={genBusy}
+                  rows={4}
+                  autoFocus
+                  placeholder="Describe the section you want… e.g. “a bigStat slide showing FY2025 revenue $18.7B with a +33% YoY delta”"
+                  style={{
+                    width: '100%',
+                    background: '#111',
+                    color: '#eee',
+                    border: '1px solid #2a2a2a',
+                    borderRadius: 6,
+                    padding: 8,
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 8,
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: '#666' }}>
+                    {format} story · appended at end
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGenerateSection}
+                    disabled={genBusy || !genBrief.trim()}
+                    style={{
+                      marginLeft: 'auto',
+                      background: '#fff',
+                      color: '#0a0a0a',
+                      border: 'none',
+                      borderRadius: 5,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      cursor:
+                        genBusy || !genBrief.trim() ? 'default' : 'pointer',
+                      opacity: genBusy || !genBrief.trim() ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genBusy ? 'Generating…' : 'Generate'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: '#666',
+                      letterSpacing: '0.12em',
+                      marginBottom: 2,
+                    }}
+                  >
+                    HEADING · {genResult.kind}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#eee', fontWeight: 600 }}>
+                    {genResult.heading}
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: '#666',
+                      letterSpacing: '0.12em',
+                      marginBottom: 4,
+                    }}
+                  >
+                    BODY
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    {genResult.paragraphs.map((p, i) => (
+                      <p
+                        key={i}
+                        style={{
+                          margin: 0,
+                          fontSize: 12,
+                          lineHeight: 1.55,
+                          color: '#bbb',
+                        }}
+                      >
+                        {p}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                {Object.keys(genResult.body).length > 0 && (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: '#666',
+                        letterSpacing: '0.12em',
+                        marginBottom: 4,
+                      }}
+                    >
+                      VISUAL (YAML)
+                    </div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        background: '#111',
+                        border: '1px solid #1f1f1f',
+                        borderRadius: 6,
+                        padding: 8,
+                        fontSize: 11,
+                        lineHeight: 1.5,
+                        color: '#9a9a9a',
+                        fontFamily:
+                          'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        whiteSpace: 'pre-wrap',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {safeStringifyYaml(genResult.body)}
+                    </pre>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 2,
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: '#666' }}>
+                    appended at end · not saved yet
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGenResult(null)
+                      setGenError(null)
+                    }}
+                    disabled={genBusy}
+                    style={{
+                      marginLeft: 'auto',
+                      background: 'transparent',
+                      color: '#9bb0d8',
+                      border: '1px solid #2a4d8f',
+                      borderRadius: 5,
+                      padding: '5px 10px',
+                      fontSize: 12,
+                      cursor: genBusy ? 'default' : 'pointer',
+                      opacity: genBusy ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Regenerate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplySection}
+                    disabled={genBusy}
+                    style={{
+                      background: '#fff',
+                      color: '#0a0a0a',
+                      border: 'none',
+                      borderRadius: 5,
+                      padding: '5px 12px',
+                      fontSize: 12,
+                      cursor: genBusy ? 'default' : 'pointer',
+                      opacity: genBusy ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genBusy ? 'Applying…' : 'Apply section'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {genError && (
+              <div style={{ color: '#f87171', fontSize: 11, marginTop: 8 }}>
+                {genError}
+              </div>
+            )}
           </div>
-          {genError && (
-            <div style={{ color: '#f87171', fontSize: 11, marginTop: 6 }}>
-              {genError}
-            </div>
-          )}
         </div>
       )}
       {editorSlice && !editorTarget?.promptOnly && (
