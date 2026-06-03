@@ -12,6 +12,7 @@ import {
   modelsForLanguage,
   type AiSlotKind,
 } from '@/components/vizmaya/canvas/aiSlots'
+import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
 
 /**
  * Transform a *fragment* the author selected inside an editor — the in-place
@@ -143,11 +144,22 @@ export async function POST(
     )
   }
 
+  // Ground the edit in the slot's schema when we know the slot, so the model
+  // edits within the real field vocabulary instead of inventing fields.
+  const schemaPrompt = body.kind
+    ? buildSlotSchemaPrompt(body.kind, body.layerType)
+    : null
+  const system = schemaPrompt
+    ? `${systemPrompt(language)}\n\nThe fragment belongs to this slot. Keep your ` +
+      `edit consistent with its schema — use only these fields/shapes, do not ` +
+      `invent keys:\n${schemaPrompt}`
+    : systemPrompt(language)
+
   let raw: string
   try {
     const out = await generateText({
       model: modelAlias,
-      system: systemPrompt(language),
+      system,
       prompt: `Instruction: ${instruction}\n\nFragment:\n${selection}`,
       metadata: { feature: 'admin-canvas-transform', slug, language },
     })

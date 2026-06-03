@@ -49,6 +49,14 @@ const EXAMPLES = [
   'How do share-card overrides work?',
 ]
 
+/** Models offered in the Ask picker — keep in sync with ASSISTANT_MODELS. */
+const ASK_MODELS: { value: string; label: string }[] = [
+  { value: 'text.deepseek', label: 'DeepSeek · cheap' },
+  { value: 'text.fast', label: 'Gemini Flash' },
+  { value: 'text.pro', label: 'Gemini Pro' },
+  { value: 'text.claude', label: 'Claude Sonnet' },
+]
+
 /** A removable context chip shown above the composer. */
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
@@ -74,6 +82,7 @@ export default function AssistantLauncher() {
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [context, setContext] = useState<Attached>({})
+  const [model, setModel] = useState('text.deepseek')
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [history, setHistory] = useState<ConversationSummary[]>([])
   const [view, setView] = useState<'chat' | 'history'>('chat')
@@ -216,6 +225,7 @@ export default function AssistantLauncher() {
           messages: next,
           context: hasContext ? ctx : undefined,
           conversationId: convId ?? undefined,
+          model,
         }),
       })
       const body = (await res.json().catch(() => ({}))) as {
@@ -503,6 +513,21 @@ export default function AssistantLauncher() {
                 >
                   Send
                 </button>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[11px] text-neutral-500">Model</span>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  disabled={busy}
+                  className="rounded border border-white/10 bg-neutral-900 px-2 py-1 text-[12px] text-neutral-300 focus:border-white/30 focus:outline-none disabled:opacity-40"
+                >
+                  {ASK_MODELS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

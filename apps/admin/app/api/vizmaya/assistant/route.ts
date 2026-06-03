@@ -16,10 +16,16 @@ import { createServiceClient } from '@vismay/content-source/supabase'
  * history is flattened into a transcript and the model continues it.
  */
 
-// DeepSeek V4 Flash — ~20x cheaper than Sonnet. The assistant is grounded in a
-// knowledge pack (schemas + platform overview), so a cheap reasoner is enough;
-// swap back to 'text.claude' if answer quality regresses.
-const MODEL = 'text.deepseek'
+// Models the Ask picker may choose from. DeepSeek (cheap, grounded) is the
+// default; the others trade up for harder questions. Keep in sync with the
+// dropdown in AssistantLauncher.
+export const ASSISTANT_MODELS = [
+  'text.deepseek',
+  'text.fast',
+  'text.pro',
+  'text.claude',
+] as const
+const DEFAULT_MODEL = 'text.deepseek'
 const MAX_MESSAGES = 24
 const MAX_CONTENT_LENGTH = 4000
 
@@ -43,6 +49,8 @@ interface AssistantBody {
   context?: RequestContext
   /** Existing conversation to append to; omit to start a new one. */
   conversationId?: string
+  /** Model alias from ASSISTANT_MODELS; falls back to the default. */
+  model?: string
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i
@@ -136,8 +144,13 @@ export async function POST(req: Request) {
   let answer: string
   let modelUsed: string
   try {
+    const model = (ASSISTANT_MODELS as readonly string[]).includes(
+      body.model ?? '',
+    )
+      ? body.model!
+      : DEFAULT_MODEL
     const out = await generateText({
-      model: MODEL,
+      model,
       system,
       prompt: transcript,
       metadata: { feature: 'admin-assistant' },

@@ -28,6 +28,7 @@ import {
   type SelectionAction,
   type SelectionLanguage,
 } from './aiSelectionActions'
+import { aiSlotConfig, modelLabel, type AiSlotKind } from './aiSlots'
 import {
   openAssistant,
   setAssistantEditorSelection,
@@ -69,7 +70,13 @@ export default function SelectionAiOverlay({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [model, setModel] = useState('')
   const popoverRef = useRef<HTMLDivElement>(null)
+
+  // The slot's model set (same set the transform route allows) — for the picker.
+  const slotModels = kind
+    ? (aiSlotConfig(kind as AiSlotKind, layerType)?.models ?? [])
+    : []
 
   const actions = selectionActions(language, kind, layerType)
   const editActions = actions.filter((a) => a.mode === 'edit')
@@ -185,6 +192,7 @@ export default function SelectionAiOverlay({
             instruction: text,
             kind,
             layerType,
+            model: model || undefined,
           }),
         },
       )
@@ -316,6 +324,21 @@ export default function SelectionAiOverlay({
                   >
                     💬 Ask
                   </button>
+                  {slotModels.length > 1 && (
+                    <select
+                      value={model || slotModels[0]}
+                      onChange={(e) => setModel(e.target.value)}
+                      disabled={busy}
+                      title="Model (edits only)"
+                      className="rounded border border-white/10 bg-neutral-900 px-1.5 py-1 text-[10px] text-neutral-300 focus:outline-none disabled:opacity-40"
+                    >
+                      {slotModels.map((m) => (
+                        <option key={m} value={m}>
+                          {modelLabel(m)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
