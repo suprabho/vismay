@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { generateText } from '@vismay/ai-gateway'
 import { buildAssistantSystemPrompt } from '@/lib/assistantKnowledge'
+import { createServiceClient } from '@vismay/content-source/supabase'
 
 /**
  * Vizmaya platform Q&A assistant.
@@ -40,7 +41,13 @@ interface RequestContext {
 interface AssistantBody {
   messages: ChatMessage[]
   context?: RequestContext
+  /** Existing conversation to append to; omit to start a new one. */
+  conversationId?: string
 }
+
+const UUID_RE = /^[0-9a-f-]{36}$/i
+/** Title shown in the history list — derived from the first user message. */
+const TITLE_MAX = 80
 
 /** Render the attached context as a block prepended to the conversation. */
 function renderContext(ctx: RequestContext | undefined): string {
@@ -146,5 +153,72 @@ export async function POST(req: Request) {
     )
   }
 
-  return NextResponse.json({ ok: true, answer, model: modelUsed })
+  // Persist this turn (the new user message + the answer) so the thread can be
+  // revisited from the history panel. A failed insert must not fail the request
+  // — the author still gets their answer; persistence is best-effort.
+  const lastUser = clean[clean.length - 1].content
+  let conversationId = UUID_RE.test(body.conversationId ?? '')
+    ? body.conversationId!
+    : undefined
+  let persistWarning: string | null = null
+  try {
+    conversationId = await persistTurn({
+      conversationId,
+      storySlug: body.context?.section?.slug,
+      userContent: lastUser,
+      userMeta: (body.context ?? {}) as Record<string, unknown>,
+      answer,
+      model: modelUsed,
+    })
+  } catch (e) {
+    persistWarning = e instanceof Error ? e.message : 'failed to save conversation'
+  }
+
+  return NextResponse.json({
+    ok: true,
+    answer,
+    model: modelUsed,
+    conversationId,
+    persistWarning,
+  })
+}
+
+/**
+ * Append a user turn + assistant answer to a conversation, creating the
+ * conversation on first use. Returns the conversation id.
+ */
+async function persistTurn(args: {
+  conversationId?: string
+  storySlug?: string
+  userContent: string
+  userMeta: Record<string, unknown>
+  answer: string
+  model: string
+}): Promise<string> {
+  const supabase = createServiceClient()
+  let { conversationId } = args
+
+  if (!conversationId) {
+    const title = args.userContent.replace(/\s+/g, ' ').trim().slice(0, TITLE_MAX)
+    const { data, error } = await supabase
+      .from('assistant_conversations')
+      .insert({ title: title || 'New conversation', story_slug: args.storySlug ?? null })
+      .select('id')
+      .single()
+    if (error) throw new Error(error.message)
+    conversationId = data.id as string
+  } else {
+    await supabase
+      .from('assistant_conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', conversationId)
+  }
+
+  const { error: msgErr } = await supabase.from('assistant_messages').insert([
+    { conversation_id: conversationId, role: 'user', content: args.userContent, meta: args.userMeta },
+    { conversation_id: conversationId, role: 'assistant', content: args.answer, meta: { model: args.model } },
+  ])
+  if (msgErr) throw new Error(msgErr.message)
+
+  return conversationId
 }
