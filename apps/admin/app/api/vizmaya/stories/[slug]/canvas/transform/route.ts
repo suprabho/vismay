@@ -13,6 +13,7 @@ import {
   type AiSlotKind,
 } from '@/components/vizmaya/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Transform a *fragment* the author selected inside an editor — the in-place
@@ -132,8 +133,13 @@ export async function POST(
       ? slotConfig.models
       : modelsForLanguage(language)
   const requested = typeof body.model === 'string' ? body.model : null
+  const featureDefault = await getFeatureModel('transform')
   const modelAlias =
-    requested && allowed.includes(requested) ? requested : allowed[0]
+    requested && allowed.includes(requested)
+      ? requested
+      : allowed.includes(featureDefault)
+        ? featureDefault
+        : allowed[0]
   let modelId: string
   try {
     modelId = resolveModel(modelAlias)

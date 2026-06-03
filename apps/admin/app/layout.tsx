@@ -44,6 +44,14 @@ export default async function RootLayout({
               >
                 view site
               </a>
+              {authed && (
+                <Link
+                  href="/vizmaya/ai-models"
+                  className="text-neutral-400 hover:text-white transition-colors"
+                >
+                  AI models
+                </Link>
+              )}
               {authed && <AssistantLauncher />}
               {authed && (
                 <LogoutButton logoutEndpoint="/api/logout" />

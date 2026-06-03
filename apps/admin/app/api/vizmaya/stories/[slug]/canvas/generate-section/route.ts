@@ -8,6 +8,7 @@ import {
   normalizeSectionBody,
   GEN_FOREGROUND_TYPES,
 } from '@vismay/viz-engine'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Generate ONE new story section from a brief.
@@ -26,7 +27,6 @@ import {
  * `normalizeSectionBody` and serialise to YAML deterministically downstream.
  */
 
-const MODEL = 'text.pro'
 const MAX_BRIEF_LENGTH = 2000
 
 const SECTION_KINDS = [
@@ -144,11 +144,12 @@ export async function POST(
         `Revise that draft per this feedback (keep what works, change only what's noted):\n${feedback}`
       : brief
 
+  const model = await getFeatureModel('generateSection')
   let result: z.infer<typeof SectionResult>
-  let modelUsed = MODEL
+  let modelUsed = model
   try {
     const out = await generateText({
-      model: MODEL,
+      model,
       system: systemPrompt(format),
       prompt: userPrompt,
       schema: SectionResult,

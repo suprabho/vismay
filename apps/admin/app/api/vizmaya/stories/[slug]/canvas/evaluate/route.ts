@@ -4,6 +4,7 @@ import { isAuthed } from '@/lib/adminAuth'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { generateText, hashRequest, recordGeneration } from '@vismay/ai-gateway'
 import { screenshotCanvasSection } from '@/lib/canvasScreenshot'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Evaluate one rendered story section.
@@ -18,7 +19,6 @@ import { screenshotCanvasSection } from '@/lib/canvasScreenshot'
  */
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
-const MODEL = 'text.pro' // Gemini 3.1 Pro — vision + strict JSON ("judge" tier).
 const MAX_CONFIG_LENGTH = 8000
 
 const ASPECTS = [
@@ -118,7 +118,7 @@ export async function POST(
   let modelUsed: string
   try {
     const out = await generateText({
-      model: MODEL,
+      model: await getFeatureModel('evaluate'),
       system: SYSTEM,
       prompt,
       images: [{ data: shot.bytes.toString('base64'), mimeType: shot.mimeType }],

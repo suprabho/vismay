@@ -13,6 +13,7 @@ import {
 } from '@vismay/ai-gateway'
 import { aiSlotConfig, type AiSlotKind } from '@/components/vizmaya/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Generate the value for one editable canvas slot from a prompt.
@@ -107,12 +108,18 @@ export async function POST(
       ? body.system.trim().slice(0, MAX_SYSTEM_LENGTH)
       : (schemaPrompt ?? config.defaultSystem)
 
-  // Model: caller choice if it's in the allowed set, else the slot default.
+  // Model: caller choice if it's in the allowed set, else the mapped feature
+  // default (if it fits the slot), else the slot's first model.
   const requested = typeof body.model === 'string' ? body.model : null
+  const featureDefault = await getFeatureModel(
+    config.modality === 'image' ? 'generateImage' : 'generate',
+  )
   const modelAlias =
     requested && config.models.includes(requested)
       ? requested
-      : config.models[0]
+      : config.models.includes(featureDefault)
+        ? featureDefault
+        : config.models[0]
   let modelId: string
   try {
     modelId = resolveModel(modelAlias)

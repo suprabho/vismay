@@ -3,6 +3,7 @@ import { isAuthed } from '@/lib/adminAuth'
 import { generateText } from '@vismay/ai-gateway'
 import { buildAssistantSystemPrompt } from '@/lib/assistantKnowledge'
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Vizmaya platform Q&A assistant.
@@ -25,7 +26,6 @@ export const ASSISTANT_MODELS = [
   'text.pro',
   'text.claude',
 ] as const
-const DEFAULT_MODEL = 'text.deepseek'
 const MAX_MESSAGES = 24
 const MAX_CONTENT_LENGTH = 4000
 
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
       body.model ?? '',
     )
       ? body.model!
-      : DEFAULT_MODEL
+      : await getFeatureModel('assistant')
     const out = await generateText({
       model,
       system,
