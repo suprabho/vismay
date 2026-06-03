@@ -46,21 +46,31 @@ export interface AiSlotConfig {
 /* ─── Model alias sets (the "context-appropriate subset") ────────── */
 
 /** Long-form editorial prose — content + narration scripts. */
-const PROSE_MODELS = ['text.claude', 'text.pro', 'text.fast'] as const
+const PROSE_MODELS = ['text.claude', 'text.opus', 'text.pro', 'text.fast'] as const
 /** Structured / strict output — YAML slices, layout tokens, theme objects. */
-const STRUCT_MODELS = ['text.pro', 'text.proPlus', 'text.fast'] as const
+const STRUCT_MODELS = ['text.code', 'text.pro', 'text.codeLong', 'text.proPlus', 'text.fast'] as const
 /** Image layers. */
-const IMAGE_MODELS = ['image.default', 'image.imagen', 'image.imagenFast'] as const
+const IMAGE_MODELS = [
+  'image.default',
+  'image.imagen',
+  'image.imagenFast',
+  'image.imagenUltra',
+] as const
 
 /** Friendly labels for the model dropdown. Falls back to the alias tail. */
 export const MODEL_LABELS: Record<string, string> = {
-  'text.fast': 'Gemini Flash · fast',
-  'text.pro': 'Gemini 2.5 Pro',
-  'text.proPlus': 'Gemini 3 Pro',
+  'text.fast': 'Gemini 3 Flash · fast',
+  'text.pro': 'Gemini 3.1 Pro',
+  'text.proPlus': 'GPT-5.5 · frontier',
   'text.claude': 'Claude Sonnet',
+  'text.opus': 'Claude Opus · frontier',
+  'text.code': 'GPT-5 Codex · code/YAML',
+  'text.codeLong': 'Qwen3 Coder · 1M ctx',
+  'text.codeBuild': 'Grok Build · code',
   'image.default': 'Gemini Image',
   'image.imagen': 'Imagen 4',
   'image.imagenFast': 'Imagen 4 · fast',
+  'image.imagenUltra': 'Imagen 4 · ultra',
 }
 
 export function modelLabel(alias: string): string {
