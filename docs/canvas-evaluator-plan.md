@@ -92,13 +92,16 @@ Vercel `ai` SDK supports `{ type: 'image' }` content parts) instead of a bare
 `MODELS.text` (Gemini 3 flash/pro accept image input) — e.g. `text.vision`.
 *Honors the repo rule: extend the gateway, don't import a provider SDK.*
 
-**1b. Screenshot route.** Mirror `storyPdfRender.ts` but `page.screenshot({ type: 'png' })`
-against `/story/<slug>/canvas-frame/<id>`, waiting on the existing readiness
-signal (`window.__pdfReady__` or a canvas equivalent). Returns PNG bytes.
-**Open decision A (infra):** this route lives where Playwright already runs —
-`apps/vizmaya-fyi` — and the admin evaluate route calls it; vs. adding Playwright
-to `apps/admin`. Recommend the vizmaya-fyi route (reuses the browser + the
-canvas-frame page; one place owns headless rendering).
+**1b. Screenshot route — lives in `admin`.** Resolved: `apps/admin` already has
+Playwright *and* existing screenshot routes ([story-pdf](../apps/admin/app/api/story-pdf),
+[render-share](../apps/admin/app/api/vizmaya/social/posts/[id]/render-share)) that
+screenshot the **signed `canvas-frame` URL** (`signedSrcById`), which points at
+whichever story app renders that story. The structure is now multi-app
+(`vizmaya-fyi`/`footshorts`/`vizf1`/`catalog` + shared `story-reader`/`story-embed`),
+so we do NOT hardcode vizmaya-fyi. Add an admin screenshot route mirroring
+`render-share`: `page.screenshot({ type: 'png' })` against the signed canvas-frame
+URL for the active section, waiting on the canvas-frame readiness signal. App-
+agnostic, no cross-app call.
 
 ## Step 2 — Evaluate route + structured critique
 
