@@ -22,6 +22,7 @@
     "./socialPostText": "./src/socialPostText.ts",
     "./storyAudioDispatch": "./src/storyAudioDispatch.ts",
     "./storyConfig": "./src/storyConfig.ts",
+    "./storySection": "./src/storySection.ts",
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
     "./storyDemoConfig": "./src/storyDemoConfig.ts",
     "./storyPdf": "./src/storyPdf.ts",
