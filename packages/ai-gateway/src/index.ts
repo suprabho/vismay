@@ -23,6 +23,8 @@ export {
   hashRequest,
   lookupCachedGeneration,
   recordGeneration,
+  recordFeedback,
   type GenerationKind,
   type GenerationRecord,
+  type FeedbackRating,
 } from './cache'
