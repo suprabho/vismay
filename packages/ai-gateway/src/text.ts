@@ -1,7 +1,17 @@
-import { generateText as aiGenerateText, generateObject as aiGenerateObject } from 'ai'
+import {
+  generateText as aiGenerateText,
+  generateObject as aiGenerateObject,
+  type ModelMessage,
+} from 'ai'
 import type { z } from 'zod'
 import { getGatewayClient } from './client'
 import { resolveModel, fallbackModel, type TextModelAlias } from './models'
+
+/** An image attached to a vision request — raw base64 data + its mime type. */
+export interface GenerateImageInput {
+  data: string
+  mimeType: string
+}
 
 export interface GenerateTextOptions<S extends z.ZodType | undefined = undefined> {
   /** Alias from MODELS.text (preferred) or a raw gateway id. */
@@ -10,12 +20,43 @@ export interface GenerateTextOptions<S extends z.ZodType | undefined = undefined
   system?: string
   /** User message — the actual task input. */
   prompt: string
+  /**
+   * Optional images for vision models (Gemini / Claude / GPT). When set, the
+   * prompt + images are sent as a single multimodal user message instead of a
+   * bare text prompt. The chosen `model` must be vision-capable.
+   */
+  images?: GenerateImageInput[]
   /** Optional zod schema. When set, returns parsed `object` instead of `text`. */
   schema?: S
   temperature?: number
   maxOutputTokens?: number
   /** Forwarded to the gateway as headers — useful for tagging spend by feature. */
   metadata?: Record<string, string>
+}
+
+/**
+ * Build the model input: a bare `prompt` string, or — when images are present —
+ * a multimodal user `messages` array (text part + one image part per image).
+ */
+function buildInput(
+  prompt: string,
+  images: GenerateImageInput[] | undefined,
+): { prompt: string } | { messages: ModelMessage[] } {
+  if (!images?.length) return { prompt }
+  return {
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          ...images.map((img) => ({
+            type: 'image' as const,
+            image: `data:${img.mimeType};base64,${img.data}`,
+          })),
+        ],
+      },
+    ],
+  }
 }
 
 export interface GenerateTextResult<T = string> {
@@ -40,13 +81,14 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
 ): Promise<GenerateTextResult<S extends z.ZodType ? z.infer<S> : string>> {
   const gateway = getGatewayClient()
   const modelId = resolveModel(opts.model)
+  const input = buildInput(opts.prompt, opts.images)
 
   if (opts.schema) {
     const { res, modelUsed } = await withModelFallback(modelId, (id) =>
       aiGenerateObject({
         model: gateway(id),
         system: opts.system,
-        prompt: opts.prompt,
+        ...input,
         schema: opts.schema as z.ZodType,
         temperature: opts.temperature,
         maxOutputTokens: opts.maxOutputTokens,
@@ -65,7 +107,7 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
     aiGenerateText({
       model: gateway(id),
       system: opts.system,
-      prompt: opts.prompt,
+      ...input,
       temperature: opts.temperature,
       maxOutputTokens: opts.maxOutputTokens,
       headers: opts.metadata,

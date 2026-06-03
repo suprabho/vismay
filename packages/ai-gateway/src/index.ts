@@ -12,7 +12,11 @@
 
 export { getGatewayClient } from './client'
 export { MODELS, resolveModel, type ModelAlias, type ImageModelAlias } from './models'
-export { generateText, type GenerateTextOptions } from './text'
+export {
+  generateText,
+  type GenerateTextOptions,
+  type GenerateImageInput,
+} from './text'
 export { generateImage, type GenerateImageOptions, type ImageResult } from './image'
 export { definePrompt, type Prompt } from './prompt'
 export {
