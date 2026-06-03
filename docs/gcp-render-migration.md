@@ -2,6 +2,8 @@
 
 Migration of the four render workflows (`render-pdf`, `render-video`, `render-audio`, `render-share`) from GitHub Actions `workflow_dispatch` to GCP Cloud Run Jobs.
 
+> **Scope note.** This doc covers the **heavy render jobs** (Playwright + ffmpeg, ~2 GB image). The lightweight `tsx` worker / vizf1 AI-pipeline jobs are a different workload and are documented separately in [docs/fly-compute-migration.md](docs/fly-compute-migration.md) (Fly Machines). Render jobs *can* also run on Fly instead of Cloud Run — see [§12](#12-alternative-substrate-fly-machines) for the trade-off.
+
 ## TL;DR
 
 Move four GHA `workflow_dispatch` render workflows to Cloud Run Jobs, dispatched from Vercel via the Cloud Run Admin API.
@@ -791,6 +793,24 @@ Numbered so they can be tracked off this doc.
 **11.9 GHA workflow YAML cleanup timing.** Don't delete `.github/workflows/render-*.yml` until the GHA fallback branches in the dispatch files are also removed. The flag-based branching is the safety net; the workflows are the second layer of safety.
 
 **11.10 Cost monitoring.** Set a $50/month budget alert on the `vismay-render` project so any runaway loop (e.g. handler bug that dispatches in a tight loop) gets caught before it racks up serious money. `gcloud billing budgets create` if not done in §1.
+
+---
+
+## 12. Alternative substrate: Fly Machines
+
+Cloud Run Jobs is the recommendation for the render jobs in this doc, but **Fly Machines** is a viable alternative for the same workload, and it is the chosen substrate for the lightweight `tsx` worker / vizf1 AI-pipeline jobs (see [docs/fly-compute-migration.md](docs/fly-compute-migration.md)). This section records the trade-off so the choice is deliberate.
+
+**Recommended split (run all three — they're different workloads):**
+- **Render jobs (this doc) → Cloud Run.** The Playwright base image and per-job CPU/memory/timeout knobs map cleanly onto Cloud Run Jobs; the plan here is already detailed and rollout-ready.
+- **vizf1 AI pipeline → Fly Machines.** Bursty, minutes-long, LLM-bound jobs benefit from Fly's ~1–2 s boot (small Node image) and scale-to-zero. See the Fly doc.
+- **Cron (ingest, scrapes) → keep GitHub Actions.** Free, arbitrary cron, already wired.
+
+**If you'd rather host the render jobs on Fly too** (one fewer cloud to operate):
+- Build the same `render-runner` image (§3) and `fly deploy` it to a `vismay-render` Fly app.
+- Dispatch per render by creating an **auto-destroying** Machine via the Machines API (`auto_destroy: true`, `restart.policy: 'no'`), with a higher-spec guest (e.g. `performance-2x` / 8 GB for video) and `env` carrying `JOB_TYPE` + the per-render inputs — the exact same env contract the entrypoint already reads (§3 `entrypoint.sh`). The dispatch helper is the Fly analog of `cloudRunDispatch.ts` (`packages/content-source/src/flyDispatch.ts` in the Fly doc); the feature flag in each `story*Dispatch.ts` simply grows a third value (`gha | gcp | fly`).
+- **Caveats vs Cloud Run for renders:** Fly's ~2 GB image pull on a cold machine is comparable to Cloud Run's; Fly bills per-second while running (similar order to Cloud Run); the main loss is Cloud Run's native Cloud Logging/Monitoring integration (on Fly you lean on `fly logs` + the Supabase status rows). For the render workload specifically, Cloud Run's maturity around long-running, memory-heavy jobs is the reason it stays the primary recommendation here.
+
+Comparison matrix and the lightweight-worker setup live in [docs/fly-compute-migration.md §11](docs/fly-compute-migration.md).
 
 ---
 
