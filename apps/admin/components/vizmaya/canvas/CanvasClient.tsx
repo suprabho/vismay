@@ -70,6 +70,7 @@ import {
   writeDefaultsMapStyle,
   type SlotPath,
 } from './canvasSlotEditing'
+import { appendStorySection } from '@vismay/content-source/storySection'
 import EditorPanel from './EditorPanel'
 import PromptBar from './PromptBar'
 import MapPickerModal from '../MapPickerModal'
@@ -554,6 +555,11 @@ export default function CanvasClient({
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // ✨ Generate-section (section-generate): brief input + busy/error state.
+  const [genSectionOpen, setGenSectionOpen] = useState(false)
+  const [genBrief, setGenBrief] = useState('')
+  const [genBusy, setGenBusy] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
   // Derived from editorTarget + current sources; updates if the user
   // saves and the slice re-derives, but the panel stays open.
   const editorSlice: EditableSlice | null = useMemo(
@@ -2453,6 +2459,65 @@ export default function CanvasClient({
     [editorTarget, sources, slug]
   )
 
+  // ✨ Generate a whole new section from a brief, append it to the story
+  // (markdown + config via appendStorySection), save both, and jump to it.
+  const handleGenerateSection = useCallback(async () => {
+    const brief = genBrief.trim()
+    if (!brief || genBusy) return
+    setGenBusy(true)
+    setGenError(null)
+    try {
+      const res = await fetch(
+        `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brief, format }),
+        }
+      )
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean
+        section?: {
+          heading: string
+          paragraphs: string[]
+          kind: string
+          body: Record<string, unknown>
+        }
+        error?: string
+      }
+      if (!res.ok || !body.ok || !body.section) {
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
+      const next = appendStorySection(
+        markdownRef.current ?? '',
+        configYamlRef.current ?? '',
+        {
+          heading: body.section.heading,
+          paragraphs: body.section.paragraphs,
+          kind: body.section.kind,
+          body: body.section.body,
+        }
+      )
+      // The appended section lands at the end → its index is the old count.
+      const newIndex = sectionViewsRef.current.length
+      await saveMarkdown(slug, next.markdown)
+      await saveConfigYaml(slug, next.configYaml)
+      setSources((prev) => ({
+        ...prev,
+        markdown: next.markdown,
+        configYaml: next.configYaml,
+      }))
+      setDataNonce((n) => n + 1)
+      setActiveSectionIndex(newIndex)
+      setGenSectionOpen(false)
+      setGenBrief('')
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : 'Section generation failed.')
+    } finally {
+      setGenBusy(false)
+    }
+  }, [genBrief, genBusy, slug, format])
+
   /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
   // After a successful slot save we:
   //  1) splice the new layer / theme into the in-memory YAML/markdown
@@ -2986,6 +3051,27 @@ export default function CanvasClient({
         <span style={{ marginLeft: 12, color: '#888' }}>
           {sectionViews.length} sections · ← / → to paginate
         </span>
+        <button
+          onClick={() => {
+            setGenError(null)
+            setGenSectionOpen((o) => !o)
+          }}
+          title="Generate a new section from a brief"
+          style={{
+            pointerEvents: 'auto',
+            marginLeft: 12,
+            background: 'transparent',
+            color: '#c79bd8',
+            border: '1px solid #5a2a8f',
+            borderRadius: 5,
+            padding: '3px 9px',
+            fontSize: 11,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          + ✨ Section
+        </button>
         {format === 'deck' && sectionUnits.length > 0 && (
           <button
             onClick={() =>
@@ -3009,6 +3095,101 @@ export default function CanvasClient({
           </button>
         )}
       </header>
+      {genSectionOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 64,
+            left: 16,
+            width: 400,
+            zIndex: 60,
+            background: '#0c0c0c',
+            border: '1px solid #2a2a2a',
+            borderRadius: 8,
+            padding: 14,
+            pointerEvents: 'auto',
+          }}
+        >
+          <div
+            style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}
+          >
+            <span style={{ fontSize: 12, color: '#ddd' }}>
+              ✨ Generate section
+            </span>
+            <button
+              type="button"
+              onClick={() => setGenSectionOpen(false)}
+              aria-label="Close"
+              style={{
+                marginLeft: 'auto',
+                color: '#888',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 15,
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <textarea
+            value={genBrief}
+            onChange={(e) => setGenBrief(e.target.value)}
+            disabled={genBusy}
+            rows={4}
+            autoFocus
+            placeholder="Describe the section you want… e.g. “a bigStat slide showing FY2025 revenue $18.7B with a +33% YoY delta”"
+            style={{
+              width: '100%',
+              background: '#111',
+              color: '#eee',
+              border: '1px solid #2a2a2a',
+              borderRadius: 6,
+              padding: 8,
+              fontSize: 12,
+              lineHeight: 1.5,
+              resize: 'vertical',
+              fontFamily: 'inherit',
+            }}
+          />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 8,
+            }}
+          >
+            <span style={{ fontSize: 10, color: '#666' }}>
+              {format} story · appended at end
+            </span>
+            <button
+              type="button"
+              onClick={handleGenerateSection}
+              disabled={genBusy || !genBrief.trim()}
+              style={{
+                marginLeft: 'auto',
+                background: '#fff',
+                color: '#0a0a0a',
+                border: 'none',
+                borderRadius: 5,
+                padding: '5px 12px',
+                fontSize: 12,
+                cursor: genBusy || !genBrief.trim() ? 'default' : 'pointer',
+                opacity: genBusy || !genBrief.trim() ? 0.4 : 1,
+                fontFamily: 'inherit',
+              }}
+            >
+              {genBusy ? 'Generating…' : 'Generate'}
+            </button>
+          </div>
+          {genError && (
+            <div style={{ color: '#f87171', fontSize: 11, marginTop: 6 }}>
+              {genError}
+            </div>
+          )}
+        </div>
+      )}
       {editorSlice && !editorTarget?.promptOnly && (
         <EditorPanel
           slice={editorSlice}
