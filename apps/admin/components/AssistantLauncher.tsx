@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -32,7 +33,11 @@ export default function AssistantLauncher() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Portal target is only available on the client.
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -94,8 +99,10 @@ export default function AssistantLauncher() {
         ✨ Ask
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950 text-neutral-100">
+      {open &&
+        mounted &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950 text-neutral-100">
           {/* Header */}
           <div className="shrink-0 border-b border-white/10 bg-neutral-950">
             <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-3">
@@ -211,8 +218,9 @@ export default function AssistantLauncher() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   )
 }
