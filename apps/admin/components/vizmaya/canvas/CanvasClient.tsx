@@ -72,6 +72,10 @@ import {
 } from './canvasSlotEditing'
 import { appendStorySection } from '@vismay/content-source/storySection'
 import AssistantLauncher from '@/components/AssistantLauncher'
+import {
+  registerAssistantContextProvider,
+  capValue,
+} from '@/lib/assistantContext'
 import EditorPanel from './EditorPanel'
 import PromptBar from './PromptBar'
 import MapPickerModal from '../MapPickerModal'
@@ -593,6 +597,65 @@ export default function CanvasClient({
         : null,
     [editorTarget, sources]
   )
+
+  // Refs so the (pull-based) assistant context provider reads fresh state.
+  const editorTargetRef = useRef(editorTarget)
+  const editorSliceRef = useRef(editorSlice)
+  useEffect(() => {
+    editorTargetRef.current = editorTarget
+  }, [editorTarget])
+  useEffect(() => {
+    editorSliceRef.current = editorSlice
+  }, [editorSlice])
+
+  // Expose "what the author is looking at" to the ✨ Ask assistant: the active
+  // section and the focused (open-in-editor) node. Pull-based — the launcher
+  // snapshots this on open; refs keep it current without re-registering.
+  useEffect(() => {
+    return registerAssistantContextProvider(() => {
+      const idx = stateRef.current.activeSectionIndex
+      const unit = sectionUnitsRef.current[idx]
+      const section = unit
+        ? {
+            slug,
+            index: idx,
+            id:
+              typeof unit.parentConfig?.id === 'string'
+                ? unit.parentConfig.id
+                : undefined,
+            kind:
+              typeof unit.parentConfig?.kind === 'string'
+                ? unit.parentConfig.kind
+                : undefined,
+            heading:
+              typeof unit.parentConfig?.text === 'string'
+                ? unit.parentConfig.text
+                : undefined,
+          }
+        : undefined
+
+      const t = editorTargetRef.current
+      const sl = editorSliceRef.current
+      let node:
+        | { label: string; kind: string; layerType?: string; value: string }
+        | undefined
+      if (t && sl) {
+        const layerType =
+          t.kind === 'layer'
+            ? sl.text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9]*)/m)?.[1]
+            : undefined
+        node = {
+          label: sl.title,
+          kind: t.kind,
+          layerType,
+          value: capValue(sl.text),
+        }
+      }
+
+      if (!section && !node) return null
+      return { section, node }
+    })
+  }, [slug])
 
   // Story-wide deck defaults (config.yaml `defaults:`), parsed for the slot
   // inspector's live preview so it merges `defaults.panel` etc. like the real

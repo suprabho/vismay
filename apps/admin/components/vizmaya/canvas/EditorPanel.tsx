@@ -7,6 +7,7 @@ import type { OnMount } from '@monaco-editor/react'
 import type { EditableSlice } from './canvasEditing'
 import PromptBar from './PromptBar'
 import type { AiSlotKind } from './aiSlots'
+import { setAssistantEditorSelection } from '@/lib/assistantContext'
 
 // Monaco needs `window` — keep it out of the SSR bundle. The canvas page
 // is already 'use client' but dynamic import here avoids a hydration race
@@ -114,7 +115,17 @@ export default function EditorPanel({
         editorInstance.getAction('editor.action.startFindReplaceAction')?.run()
       },
     )
+    // Publish the editor's selection to the ✨ Ask context channel — Monaco's
+    // selection lives in its own model, invisible to window.getSelection().
+    editorInstance.onDidChangeCursorSelection(() => {
+      const sel = editorInstance.getSelection()
+      const text = sel ? (editorInstance.getModel()?.getValueInRange(sel) ?? '') : ''
+      setAssistantEditorSelection(text)
+    })
   }, [])
+
+  // Clear the published selection when this editor unmounts.
+  useEffect(() => () => setAssistantEditorSelection(''), [])
 
   const openFind = () => {
     editorRef.current?.focus()

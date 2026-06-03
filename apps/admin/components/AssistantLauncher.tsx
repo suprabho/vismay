@@ -14,10 +14,23 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  getAssistantContext,
+  capValue,
+  type AssistantNodeContext,
+  type AssistantSectionContext,
+} from '@/lib/assistantContext'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+}
+
+/** Context attached to the conversation, captured when the panel opens. */
+interface Attached {
+  node?: AssistantNodeContext
+  section?: AssistantSectionContext
+  selectedText?: string
 }
 
 const EXAMPLES = [
@@ -27,6 +40,23 @@ const EXAMPLES = [
   'How do share-card overrides work?',
 ]
 
+/** A removable context chip shown above the composer. */
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] text-neutral-300">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-neutral-500 hover:text-white"
+        aria-label={`Remove ${label}`}
+      >
+        ✕
+      </button>
+    </span>
+  )
+}
+
 export default function AssistantLauncher() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -34,10 +64,27 @@ export default function AssistantLauncher() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [context, setContext] = useState<Attached>({})
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Portal target is only available on the client.
+  // Portal target is only available on the client (one-time mount flag).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), [])
+
+  // Capture ambient context at the moment of opening — the text the author has
+  // selected (window or the code editor) and what the canvas is focused on —
+  // BEFORE the panel grabs focus and clears the window selection.
+  function handleOpen() {
+    const winSel = (window.getSelection?.()?.toString() ?? '').trim()
+    const ctx = getAssistantContext()
+    const selected = (ctx?.editorSelection || winSel || '').trim()
+    setContext({
+      node: ctx?.node,
+      section: ctx?.section,
+      selectedText: selected ? capValue(selected) : undefined,
+    })
+    setOpen(true)
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
@@ -67,10 +114,15 @@ export default function AssistantLauncher() {
     setInput('')
     setBusy(true)
     try {
+      const hasContext =
+        context.node || context.section || context.selectedText
       const res = await fetch('/api/vizmaya/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({
+          messages: next,
+          context: hasContext ? context : undefined,
+        }),
       })
       const body = (await res.json().catch(() => ({}))) as {
         ok?: boolean
@@ -92,7 +144,7 @@ export default function AssistantLauncher() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="text-neutral-400 hover:text-white transition-colors"
         title="Ask about the platform"
       >
@@ -192,6 +244,42 @@ export default function AssistantLauncher() {
           {/* Composer */}
           <div className="shrink-0 border-t border-white/10 bg-neutral-950">
             <div className="mx-auto w-full max-w-3xl px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+              {(context.node || context.section || context.selectedText) && (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-600">
+                    Context
+                  </span>
+                  {context.section && (
+                    <Chip
+                      label={`Section ${(context.section.index ?? 0) + 1}`}
+                      onRemove={() =>
+                        setContext((c) => ({ ...c, section: undefined }))
+                      }
+                    />
+                  )}
+                  {context.node && (
+                    <Chip
+                      label={
+                        (context.node.label || context.node.kind) +
+                        (context.node.layerType
+                          ? ` · ${context.node.layerType}`
+                          : '')
+                      }
+                      onRemove={() =>
+                        setContext((c) => ({ ...c, node: undefined }))
+                      }
+                    />
+                  )}
+                  {context.selectedText && (
+                    <Chip
+                      label={`Selected text (${context.selectedText.length})`}
+                      onRemove={() =>
+                        setContext((c) => ({ ...c, selectedText: undefined }))
+                      }
+                    />
+                  )}
+                </div>
+              )}
               <div className="flex items-end gap-2">
                 <textarea
                   value={input}
