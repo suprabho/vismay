@@ -78,6 +78,7 @@ import {
 } from '@/lib/assistantContext'
 import EditorPanel from './EditorPanel'
 import PromptBar from './PromptBar'
+import GenerationFeedback from './GenerationFeedback'
 import MapPickerModal from '../MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
@@ -582,6 +583,10 @@ export default function CanvasClient({
     kind: string
     body: Record<string, unknown>
   } | null>(null)
+  // Audit-row id of the current draft (for the feedback row) + the author's
+  // refine note for the next regeneration.
+  const [genId, setGenId] = useState<string | null>(null)
+  const [genRefine, setGenRefine] = useState('')
   // Derived from editorTarget + current sources; updates if the user
   // saves and the slice re-derives, but the panel stays open.
   const editorSlice: EditableSlice | null = useMemo(
@@ -2542,40 +2547,53 @@ export default function CanvasClient({
 
   // ✨ Generate a section from the brief for REVIEW — produces a preview the
   // author confirms before anything is written. Nothing touches the story here.
-  const handleGenerateSection = useCallback(async () => {
-    const brief = genBrief.trim()
-    if (!brief || genBusy) return
-    setGenBusy(true)
-    setGenError(null)
-    try {
-      const res = await fetch(
-        `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ brief, format }),
+  // When `refine` is passed, the current draft + the author's note are sent so
+  // the model revises that draft instead of starting fresh.
+  const handleGenerateSection = useCallback(
+    async (refine?: { feedback: string; previous: typeof genResult }) => {
+      const brief = genBrief.trim()
+      if (!brief || genBusy) return
+      setGenBusy(true)
+      setGenError(null)
+      try {
+        const res = await fetch(
+          `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              brief,
+              format,
+              feedback: refine?.feedback,
+              previous: refine?.previous ?? undefined,
+            }),
+          }
+        )
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean
+          generation?: { id?: string | null }
+          section?: {
+            heading: string
+            paragraphs: string[]
+            kind: string
+            body: Record<string, unknown>
+          }
+          error?: string
         }
-      )
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean
-        section?: {
-          heading: string
-          paragraphs: string[]
-          kind: string
-          body: Record<string, unknown>
+        if (!res.ok || !body.ok || !body.section) {
+          throw new Error(body.error ?? `HTTP ${res.status}`)
         }
-        error?: string
+        setGenResult(body.section)
+        setGenId(body.generation?.id ?? null)
+        if (refine) setGenRefine('')
+      } catch (e) {
+        setGenError(e instanceof Error ? e.message : 'Section generation failed.')
+      } finally {
+        setGenBusy(false)
       }
-      if (!res.ok || !body.ok || !body.section) {
-        throw new Error(body.error ?? `HTTP ${res.status}`)
-      }
-      setGenResult(body.section)
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : 'Section generation failed.')
-    } finally {
-      setGenBusy(false)
-    }
-  }, [genBrief, genBusy, slug, format])
+    },
+    [genBrief, genBusy, slug, format]
+  )
 
   // Apply the approved preview: append to the story (markdown + config via
   // appendStorySection), save both, bump the nonce, and jump to the new section.
@@ -2608,6 +2626,8 @@ export default function CanvasClient({
       setGenSectionOpen(false)
       setGenBrief('')
       setGenResult(null)
+      setGenId(null)
+      setGenRefine('')
     } catch (e) {
       setGenError(e instanceof Error ? e.message : 'Could not apply section.')
     } finally {
@@ -3228,6 +3248,8 @@ export default function CanvasClient({
               onClick={() => {
                 setGenSectionOpen(false)
                 setGenResult(null)
+                setGenId(null)
+                setGenRefine('')
                 setGenError(null)
               }}
               aria-label="Close"
@@ -3280,7 +3302,7 @@ export default function CanvasClient({
                   </span>
                   <button
                     type="button"
-                    onClick={handleGenerateSection}
+                    onClick={() => void handleGenerateSection()}
                     disabled={genBusy || !genBrief.trim()}
                     style={{
                       marginLeft: 'auto',
@@ -3385,6 +3407,56 @@ export default function CanvasClient({
                   </div>
                 )}
 
+                {/* Refine: revise this draft from a note instead of regenerating
+                    from scratch. Sends the current draft + the note to the route. */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <textarea
+                    value={genRefine}
+                    onChange={(e) => setGenRefine(e.target.value)}
+                    disabled={genBusy}
+                    rows={2}
+                    placeholder="Refine this draft… e.g. “tighten the prose”, “make it a quote section”, “fix the delta to +33%”"
+                    style={{
+                      flex: 1,
+                      background: '#111',
+                      color: '#eee',
+                      border: '1px solid #2a2a2a',
+                      borderRadius: 6,
+                      padding: 8,
+                      fontSize: 11,
+                      lineHeight: 1.5,
+                      resize: 'vertical',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleGenerateSection({
+                        feedback: genRefine,
+                        previous: genResult,
+                      })
+                    }
+                    disabled={genBusy || !genRefine.trim()}
+                    style={{
+                      flexShrink: 0,
+                      background: '#1a1a1a',
+                      color: '#eee',
+                      border: '1px solid #333',
+                      borderRadius: 5,
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      cursor: genBusy || !genRefine.trim() ? 'default' : 'pointer',
+                      opacity: genBusy || !genRefine.trim() ? 0.4 : 1,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genBusy ? 'Refining…' : 'Refine'}
+                  </button>
+                </div>
+
+                <GenerationFeedback slug={slug} generationId={genId} />
+
                 <div
                   style={{
                     display: 'flex',
@@ -3400,6 +3472,8 @@ export default function CanvasClient({
                     type="button"
                     onClick={() => {
                       setGenResult(null)
+                      setGenId(null)
+                      setGenRefine('')
                       setGenError(null)
                     }}
                     disabled={genBusy}
