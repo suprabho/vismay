@@ -11,6 +11,8 @@
     "ingest:circuits:ci": "tsx src/ingestCircuits.ts",
     "build:story-segments": "tsx --env-file=.env src/buildStorySegments.ts",
     "build:story-segments:ci": "tsx src/buildStorySegments.ts",
+    "capture:replay": "tsx src/captureReplayFixture.ts",
+    "gen:replay-fixture": "node scripts/genSyntheticReplayFixture.mjs",
     "eval": "tsx --env-file=.env src/eval/run.ts",
     "typecheck": "tsc --noEmit"
   },
