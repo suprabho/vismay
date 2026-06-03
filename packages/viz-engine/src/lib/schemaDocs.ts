@@ -65,8 +65,12 @@ function unwrap(schema: any): Unwrapped {
   return { inner: cur, optional, def, description }
 }
 
-/** A short type hint for a (already-unwrapped) Zod type. */
-function typeHint(s: any): string {
+/**
+ * A short type hint for a (already-unwrapped) Zod type. Recurses ONE level into
+ * nested objects / arrays-of-objects so sub-fields surface (e.g. rive's
+ * `viewModel: { instance?, bindings? }`); deeper nesting collapses to `object`.
+ */
+function typeHint(s: any, depth = 0): string {
   const t = s?._def?.typeName
   switch (t) {
     case 'ZodString':
@@ -79,12 +83,20 @@ function typeHint(s: any): string {
       return JSON.stringify(s._def.value)
     case 'ZodEnum':
       return (s._def.values as string[]).map((v) => `'${v}'`).join(' | ')
-    case 'ZodArray':
-      return `${typeHint(unwrap(s._def.type).inner)}[]`
+    case 'ZodArray': {
+      const elem = typeHint(unwrap(s._def.type).inner, depth)
+      return elem.includes(' | ') ? `(${elem})[]` : `${elem}[]`
+    }
     case 'ZodUnion':
-      return (s._def.options as any[]).map((o) => typeHint(unwrap(o).inner)).join(' | ')
-    case 'ZodObject':
-      return 'object'
+      return (s._def.options as any[]).map((o) => typeHint(unwrap(o).inner, depth)).join(' | ')
+    case 'ZodObject': {
+      if (depth >= 1) return 'object'
+      const fields = Object.entries(s.shape as Record<string, any>).map(([k, f]) => {
+        const u = unwrap(f)
+        return `${k}${u.optional || u.def !== undefined ? '?' : ''}: ${typeHint(u.inner, depth + 1)}`
+      })
+      return `{ ${fields.join(', ')} }`
+    }
     case 'ZodRecord':
       return 'map'
     default:
