@@ -36,6 +36,16 @@ export const MODELS = {
     codeLong: 'alibaba/qwen3-coder-plus',
     /** xAI build/code-focused model. Alternative coder for cross-checking output. */
     codeBuild: 'xai/grok-build-0.1',
+
+    /* ── Budget tier (Chinese providers, ~10–30× cheaper than `pro`) ── */
+    /** Cheap reasoning workhorse, 1M ctx. Strong default for high-volume tasks. */
+    deepseek: 'deepseek/deepseek-v4-flash',
+    /** Cheapest 1M-ctx general model (vision-capable). Bulk summarise/tag/extract. */
+    qwen: 'alibaba/qwen3.5-flash',
+    /** Ultra-cheap, 200K ctx, reasoning + tools. Lowest-cost option overall. */
+    glm: 'zai/glm-4.7-flash',
+    /** Budget coder for YAML/JSON when `code` is overkill. 262K ctx. */
+    codeCheap: 'alibaba/qwen3-coder-30b-a3b',
   },
   image: {
     /**

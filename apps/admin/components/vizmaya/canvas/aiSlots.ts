@@ -46,9 +46,18 @@ export interface AiSlotConfig {
 /* ─── Model alias sets (the "context-appropriate subset") ────────── */
 
 /** Long-form editorial prose — content + narration scripts. */
-const PROSE_MODELS = ['text.claude', 'text.opus', 'text.pro', 'text.fast'] as const
+const PROSE_MODELS = ['text.claude', 'text.opus', 'text.pro', 'text.fast', 'text.deepseek'] as const
 /** Structured / strict output — YAML slices, layout tokens, theme objects. */
-const STRUCT_MODELS = ['text.code', 'text.pro', 'text.codeLong', 'text.proPlus', 'text.fast'] as const
+const STRUCT_MODELS = [
+  'text.code',
+  'text.pro',
+  'text.codeLong',
+  'text.proPlus',
+  'text.fast',
+  'text.codeCheap',
+  'text.qwen',
+  'text.glm',
+] as const
 /** Image layers. */
 const IMAGE_MODELS = [
   'image.default',
@@ -67,6 +76,10 @@ export const MODEL_LABELS: Record<string, string> = {
   'text.code': 'GPT-5 Codex · code/YAML',
   'text.codeLong': 'Qwen3 Coder · 1M ctx',
   'text.codeBuild': 'Grok Build · code',
+  'text.deepseek': 'DeepSeek V4 · cheap',
+  'text.qwen': 'Qwen 3.5 Flash · cheap',
+  'text.glm': 'GLM 4.7 Flash · cheapest',
+  'text.codeCheap': 'Qwen3 Coder 30B · cheap',
   'image.default': 'Gemini Image',
   'image.imagen': 'Imagen 4',
   'image.imagenFast': 'Imagen 4 · fast',
