@@ -375,6 +375,7 @@ export default function EditorClient({
                 onChange={setMarkdown}
                 language="markdown"
                 path={`${slug}.md`}
+                ai={{ slug, kind: 'content' }}
               />
             </div>
             <div className="flex flex-col min-h-0">
@@ -389,6 +390,7 @@ export default function EditorClient({
                 value={config}
                 onChange={setConfig}
                 path={`${slug}.config.yaml`}
+                ai={{ slug }}
               />
             </div>
           </div>

@@ -94,6 +94,7 @@ export default function ChartEditorClient({
         language="json"
         path={`${chartId}.json`}
         onValidate={setMarkers}
+        ai={{ slug }}
       />
 
       <div className="sticky bottom-0 border-t border-white/10 bg-neutral-950/95 backdrop-blur flex items-center gap-3 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">

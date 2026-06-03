@@ -60,6 +60,36 @@ export function setAssistantEditorSelection(text: string): void {
   editorSelection = text
 }
 
+/* ─── Programmatic open ──────────────────────────────────────────── */
+
+/** Options for opening the assistant from elsewhere (e.g. the selection menu). */
+export interface OpenAssistantOptions {
+  /** A question to seed the composer with. */
+  prompt?: string
+  /** Send `prompt` immediately as a fresh question (default true when prompt set). */
+  autoSend?: boolean
+}
+
+type Opener = (opts?: OpenAssistantOptions) => void
+
+let opener: Opener | null = null
+
+/** Let the AssistantLauncher expose an open handler; returns an unregister fn. */
+export function registerAssistantOpener(fn: Opener): () => void {
+  opener = fn
+  return () => {
+    if (opener === fn) opener = null
+  }
+}
+
+/** Open the ✨ Ask panel (optionally with a seeded/auto-sent question). Returns
+ *  false when no launcher is mounted to handle it. */
+export function openAssistant(opts?: OpenAssistantOptions): boolean {
+  if (!opener) return false
+  opener(opts)
+  return true
+}
+
 /** Truncate a value to the context cap, with a marker when cut. */
 export function capValue(value: string): string {
   if (value.length <= MAX_CONTEXT_VALUE) return value

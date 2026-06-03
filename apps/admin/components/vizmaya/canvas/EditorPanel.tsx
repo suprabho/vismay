@@ -8,6 +8,16 @@ import type { EditableSlice } from './canvasEditing'
 import PromptBar from './PromptBar'
 import type { AiSlotKind } from './aiSlots'
 import { setAssistantEditorSelection } from '@/lib/assistantContext'
+import SelectionAiOverlay from './SelectionAiOverlay'
+import type { SelectionLanguage } from './aiSelectionActions'
+
+/** Map a slice's Monaco language to the selection-overlay's language buckets. */
+function selectionLanguage(language: string): SelectionLanguage {
+  if (language === 'yaml') return 'yaml'
+  if (language === 'markdown') return 'markdown'
+  if (language === 'json') return 'json'
+  return 'plaintext'
+}
 
 // Monaco needs `window` — keep it out of the SSR bundle. The canvas page
 // is already 'use client' but dynamic import here avoids a hydration race
@@ -101,8 +111,13 @@ export default function EditorPanel({
   // "Hide Application" respectively; the latter can't be intercepted by a
   // web app at all. Cmd+Opt+F / Cmd+Opt+H avoid both.
   const editorRef = useRef<MonacoEditorNs.IStandaloneCodeEditor | null>(null)
+  // Editor instance as state (not just the ref) so the selection-AI overlay can
+  // mount with a live instance — reading a ref during render is disallowed.
+  const [monacoEditor, setMonacoEditor] =
+    useState<MonacoEditorNs.IStandaloneCodeEditor | null>(null)
   const handleMount: OnMount = useCallback((editorInstance, monaco) => {
     editorRef.current = editorInstance
+    setMonacoEditor(editorInstance)
     editorInstance.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyF,
       () => {
@@ -336,6 +351,15 @@ export default function EditorPanel({
             </div>
           }
         />
+        {monacoEditor && (
+          <SelectionAiOverlay
+            editor={monacoEditor}
+            language={selectionLanguage(slice.language)}
+            slug={slug}
+            kind={aiKind}
+            layerType={aiLayerType}
+          />
+        )}
       </div>
     </div>
   )
