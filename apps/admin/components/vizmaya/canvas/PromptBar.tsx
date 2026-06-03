@@ -26,6 +26,7 @@ import {
   type AiSlotKind,
 } from './aiSlots'
 import { buildSlotSchemaPrompt } from './overrideSchemas'
+import GenerationFeedback from './GenerationFeedback'
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'] as const
 type AspectRatio = (typeof ASPECT_RATIOS)[number]
@@ -99,14 +100,25 @@ export default function PromptBar({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  // Last generation's audit-row id (for the feedback row) and, for text slots,
+  // the value it produced — fed back as `current` when the author refines.
+  const [generationId, setGenerationId] = useState<string | null>(null)
+  const [lastValue, setLastValue] = useState<string | null>(null)
+  const [refineNote, setRefineNote] = useState('')
 
   if (!config) return null
   const isImage = config.modality === 'image'
 
-  async function handleGenerate() {
-    const trimmed = prompt.trim()
+  /**
+   * Run a generation. With no override it uses the author's prompt + the slot's
+   * current value as context. The refine path passes an override: the change
+   * instruction as the prompt and the *just-generated* value as `current`, so
+   * the route revises the last output rather than the saved slot.
+   */
+  async function handleGenerate(override?: { prompt: string; current: string }) {
+    const trimmed = override?.prompt.trim() ?? prompt.trim()
     if (!trimmed) {
-      setError('Prompt is empty.')
+      setError(override ? 'Refine note is empty.' : 'Prompt is empty.')
       return
     }
     setBusy(true)
@@ -125,7 +137,7 @@ export default function PromptBar({
             system: system.trim() || undefined,
             model,
             aspectRatio: isImage ? aspect : undefined,
-            current: currentValue,
+            current: override?.current ?? currentValue,
           }),
         },
       )
@@ -133,7 +145,12 @@ export default function PromptBar({
         ok?: boolean
         value?: string
         asset?: PromptBarImageResult
-        generation?: { model?: string; warning?: string | null; auditWarning?: string | null }
+        generation?: {
+          id?: string | null
+          model?: string
+          warning?: string | null
+          auditWarning?: string | null
+        }
         error?: string
       }
       if (!res.ok || !body.ok) {
@@ -146,7 +163,12 @@ export default function PromptBar({
       } else {
         if (typeof body.value !== 'string') throw new Error('no value returned')
         onApply?.(body.value)
+        setLastValue(body.value)
       }
+
+      // A fresh generation supersedes any prior feedback target.
+      setGenerationId(body.generation?.id ?? null)
+      if (override) setRefineNote('')
 
       const served = body.generation?.model
       const warn = body.generation?.warning
@@ -247,7 +269,7 @@ export default function PromptBar({
 
           <button
             type="button"
-            onClick={handleGenerate}
+            onClick={() => void handleGenerate()}
             disabled={busy || !prompt.trim()}
             className="ml-auto text-xs px-3 py-1.5 rounded bg-white text-neutral-950 disabled:opacity-40"
           >
@@ -258,6 +280,34 @@ export default function PromptBar({
         {error && <div className="text-[11px] text-red-400">{error}</div>}
         {!error && note && (
           <div className="text-[10px] text-emerald-300/70">{note}</div>
+        )}
+
+        {/* After a generation: refine the result (text slots) and rate it. */}
+        {note && !isImage && lastValue !== null && (
+          <div className="flex items-start gap-2">
+            <textarea
+              value={refineNote}
+              onChange={(e) => setRefineNote(e.target.value)}
+              disabled={busy}
+              rows={2}
+              placeholder="Refine it… e.g. “shorter”, “warmer tone”, “fix the number to 18.7”"
+              className="flex-1 resize-vertical rounded border border-white/10 bg-neutral-900 p-1.5 text-[11px] leading-relaxed text-neutral-200 focus:border-white/30 focus:outline-none disabled:opacity-40"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                void handleGenerate({ prompt: refineNote, current: lastValue })
+              }
+              disabled={busy || !refineNote.trim()}
+              className="shrink-0 rounded bg-white/10 px-2.5 py-1.5 text-[11px] text-neutral-100 hover:bg-white/20 disabled:opacity-40"
+            >
+              Refine
+            </button>
+          </div>
+        )}
+
+        {note && (
+          <GenerationFeedback slug={slug} generationId={generationId} />
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import type { CSSProperties, ComponentType, RefObject } from 'react'
+import type { ZodTypeAny } from 'zod'
 
 export type VizSlot = 'foreground' | 'background'
 
@@ -161,6 +162,21 @@ export interface VizModule<TConfig = unknown> {
   label: string
   slots: readonly VizSlot[]
   parseConfig: (raw: unknown, ctx: { slug: string; label: string }) => TConfig
+  /**
+   * Zod schema that validates this layer's config — the single source of truth
+   * behind `parseConfig` (which delegates to it via `parseWithSchema`) and the
+   * AI generation path (the model's structured output is constrained to it, so
+   * a generated layer can't fail to parse). Present on modules migrated to the
+   * schema-first model; absent on the few still using a hand-written
+   * `parseConfig`. The `.describe()` annotations on each field double as the
+   * field docs the model reads, so keep them author-facing.
+   *
+   * Typed `ZodTypeAny` (not `ZodType<TConfig>`) so a schema whose *input* type
+   * diverges from its *output* — e.g. a `.default()`ed field is optional going
+   * in, required coming out — still assigns without variance friction. Each
+   * module's own `z.infer<typeof schema>` is the authoritative `TConfig`.
+   */
+  schema?: ZodTypeAny
   load: () => Promise<{ default: ComponentType<VizRenderProps<TConfig>> }>
   /** Variant component for `persistent-aggregated` mounting. Required when `mountingMode === 'persistent-aggregated'`. */
   loadPersistent?: () => Promise<{ default: ComponentType<VizPersistentRenderProps<TConfig>> }>

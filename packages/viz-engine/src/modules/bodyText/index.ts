@@ -1,70 +1,54 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { parseWithSchema } from '../../lib/zodConfig'
 
-export type BodyTextSize = 'small' | 'normal' | 'large'
-export type BodyTextColor = 'text' | 'muted' | 'accent' | 'accent2'
+const BodyTextSizeSchema = z.enum(['small', 'normal', 'large'])
+const BodyTextColorSchema = z.enum(['text', 'muted', 'accent', 'accent2'])
+
+export type BodyTextSize = z.infer<typeof BodyTextSizeSchema>
+export type BodyTextColor = z.infer<typeof BodyTextColorSchema>
 
 /**
- * Layer config for the `bodyText` module — the deck format's prose vizslot.
- * Composed alongside charts and stats in a region, reads its paragraphs from
+ * Zod schema for the `bodyText` module — the deck format's prose vizslot.
+ * Composed alongside charts and stats in a region; reads its paragraphs from
  * the anchored markdown unit by default.
  *
- * Two `from` modes:
- *   - `'text'` (default) → pulls paragraphs from the current unit's resolved
- *     content via `ForegroundContentContext` (the common case for deck slides
- *     whose markdown heading anchors the section).
- *   - `'section-id'` → pulls from a literal `content` field instead. (Future
- *     extension: pull from another section by id; not implemented yet.)
+ * `from` has only one supported mode today (`'text'`, the default), which pulls
+ * paragraphs from the current unit's resolved content. Set `content` to supply
+ * literal prose that doesn't live in the markdown.
  */
-export interface BodyTextLayerConfig {
-  type: 'bodyText'
-  /** Source mode. `'text'` reads the current unit's paragraphs. Default `'text'`. */
-  from?: 'text'
-  /**
-   * Literal paragraph(s). When set, takes precedence over the unit's
-   * resolved paragraphs — use for ad-hoc prose that doesn't live in the
-   * markdown.
-   */
-  content?: string | string[]
-  /** Optional heading rendered above the paragraphs. Falls back to unit heading. */
-  heading?: string
-  /** Whether to render the heading at all. Defaults to false (deck slides typically suppress it). */
-  showHeading?: boolean
-  /** Text styling. */
-  textStyle?: {
-    size?: BodyTextSize
-    color?: BodyTextColor
-  }
-}
+export const bodyTextSchema = z.object({
+  type: z.literal('bodyText'),
+  from: z
+    .literal('text')
+    .default('text')
+    .describe("Source mode. Only 'text' is supported (reads the unit's paragraphs)."),
+  content: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .describe('Literal paragraph(s) — a string or array of strings. Overrides the unit paragraphs.'),
+  heading: z.string().optional().describe('Optional heading rendered above the paragraphs.'),
+  showHeading: z.boolean().default(false).describe('Whether to render the heading. Defaults to false.'),
+  textStyle: z
+    .object({
+      size: BodyTextSizeSchema.optional(),
+      color: BodyTextColorSchema.optional(),
+    })
+    .default({})
+    .describe('Text styling: size (small | normal | large) and color (text | muted | accent | accent2).'),
+})
+
+export type BodyTextLayerConfig = z.infer<typeof bodyTextSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): BodyTextLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: bodyText layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (r.from != null && r.from !== 'text') {
-    throw new Error(`${ctx.label}: bodyText 'from' must be 'text' (other sources not yet supported)`)
-  }
-  if (r.content != null && typeof r.content !== 'string' && !Array.isArray(r.content)) {
-    throw new Error(`${ctx.label}: bodyText 'content' must be a string or array of strings`)
-  }
-  const ts = (r.textStyle ?? {}) as Record<string, unknown>
-  return {
-    type: 'bodyText',
-    from: 'text',
-    content: r.content as string | string[] | undefined,
-    heading: typeof r.heading === 'string' ? r.heading : undefined,
-    showHeading: r.showHeading === true,
-    textStyle: {
-      size: ts.size as BodyTextSize | undefined,
-      color: ts.color as BodyTextColor | undefined,
-    },
-  }
+  return parseWithSchema(bodyTextSchema, raw, ctx)
 }
 
 const bodyTextModule: VizModule<BodyTextLayerConfig> = {
   type: 'bodyText',
   label: 'Body text',
   slots: ['foreground'],
+  schema: bodyTextSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'instant',

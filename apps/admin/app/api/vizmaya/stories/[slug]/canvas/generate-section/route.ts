@@ -1,21 +1,29 @@
 import { NextResponse } from 'next/server'
-import { parse as parseYaml } from 'yaml'
 import { z } from 'zod'
 import { isAuthed } from '@/lib/adminAuth'
-import { generateText } from '@vismay/ai-gateway'
-import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
+import { createServiceClient } from '@vismay/content-source/supabase'
+import { generateText, hashRequest, recordGeneration } from '@vismay/ai-gateway'
+import {
+  sectionBodySchema,
+  normalizeSectionBody,
+  GEN_FOREGROUND_TYPES,
+} from '@vismay/viz-engine'
 
 /**
  * Generate ONE new story section from a brief.
  *
  * Unlike the slot `generate` route (which returns a single string for an
  * existing slot), a section is multi-part: a heading + prose for the markdown
- * AND a config.yaml `sections[]` entry. The model returns a structured object;
- * the client assembles it through `appendStorySection` and saves via the normal
- * PUT (which validates), so nothing here writes to disk.
+ * AND a config.yaml `sections[]` entry. The model returns a fully structured
+ * object — including the visual `body` — which the client assembles through
+ * `appendStorySection` and saves via the normal PUT (which validates), so
+ * nothing here writes to disk.
  *
- * The system prompt composes the foreground/background schema prompts already
- * derived from the layer modules, so the generated visual content parses.
+ * The visual content is NOT a hand-written YAML string anymore. `body` is
+ * constrained by `sectionBodySchema` (built from the same Zod layer schemas the
+ * renderer validates with), so the model fills typed JSON at the provider
+ * level — it cannot emit malformed YAML. We reshape it with
+ * `normalizeSectionBody` and serialise to YAML deterministically downstream.
  */
 
 const MODEL = 'text.pro'
@@ -44,41 +52,54 @@ const SectionResult = z.object({
     .array(z.string())
     .describe('Section body prose, one string per paragraph (factual magazine register)'),
   kind: z.enum(SECTION_KINDS).describe('The section kind'),
-  configBody: z
-    .string()
-    .describe(
-      'YAML for the section VISUAL content only — the foreground:/background:/map: keys. ' +
-        'NOT id, text, or kind. Must be valid YAML.',
-    ),
+  body: sectionBodySchema.describe(
+    'The section VISUAL content: foreground layers (and optional background/map). ' +
+      'Leave empty for a text-only section.',
+  ),
 })
+
+/** The shape the route returns and the client re-sends to refine. */
+interface SectionDraft {
+  heading: string
+  paragraphs: string[]
+  kind: string
+  body: Record<string, unknown>
+}
 
 interface Body {
   brief: string
   format?: 'deck' | 'map'
+  /** Refine loop: the author's note on what to change about `previous`. */
+  feedback?: string
+  /** Refine loop: the prior draft the feedback is about. */
+  previous?: SectionDraft
 }
+
+const MAX_FEEDBACK_LENGTH = 2000
 
 function systemPrompt(format: 'deck' | 'map'): string {
   const formatGuidance =
     format === 'map'
-      ? 'This is a MAP story. configBody should be a `map:` camera block ' +
-        '(center [lng, lat], zoom, optional pitch/bearing/pins). A foreground is optional.'
-      : 'This is a DECK story. configBody should be a `foreground:` with composable ' +
-        'layers (a list, a single layer, or a layout: + regions: mapping). A background is optional.'
+      ? 'This is a MAP story. Set `body.map` to the section camera (center [lng, lat], ' +
+        'zoom, optional pitch/bearing/pins). A foreground is optional.'
+      : 'This is a DECK story. Set `body.foreground`: either a flat `layers` list, or a ' +
+        '`layout` name plus `regions` (each region maps to its own layers). A background is optional.'
+
+  const layerMenu = GEN_FOREGROUND_TYPES.map((l) => `- ${l.type}: ${l.label}`).join('\n')
 
   return (
     `You author ONE new section for a Vizmaya ${format} story from the author's brief.\n\n` +
-    `Produce:\n` +
+    `Produce a structured object:\n` +
     `- heading: a short, specific section heading (becomes the markdown ## heading and the config text anchor).\n` +
     `- paragraphs: the body prose, one string per paragraph, factual and concise.\n` +
     `- kind: one of ${SECTION_KINDS.join(' | ')}.\n` +
-    `- configBody: valid YAML for the section's VISUAL content ONLY (foreground:/background:/map: keys). ` +
-    `Do NOT include id, text, or kind in configBody.\n\n` +
+    `- body: the section's VISUAL content as structured fields (NOT YAML, NOT a string). ` +
+    `Each foreground layer has a \`type\` and that type's own fields.\n\n` +
     `${formatGuidance}\n\n` +
-    `Reference existing theme tokens (accent, accent2, teal, positive, amber, red, muted) for colors; ` +
-    `do not invent asset URLs — omit images unless the brief supplies a source.\n\n` +
-    `The foreground/background follow these EXACT layer schemas:\n\n` +
-    `${buildSlotSchemaPrompt('foreground') ?? ''}\n\n` +
-    `${buildSlotSchemaPrompt('background') ?? ''}`
+    `Available foreground layer types:\n${layerMenu}\n\n` +
+    `Reference existing theme tokens (accent, accent2, teal, positive, amber, red, muted) for colors. ` +
+    `Do not invent image/asset URLs — omit image and imageGrid layers unless the brief supplies a source. ` +
+    `For a chart layer, only reference a chart id the brief names; do not invent one.`
   )
 }
 
@@ -110,16 +131,31 @@ export async function POST(
   }
   const format = body.format === 'map' ? 'map' : 'deck'
 
+  // Refine loop: when the author sends a note about the prior draft, fold both
+  // into the user prompt so the model revises that draft instead of starting
+  // over. The system prompt (layer menu, constraints) is unchanged.
+  const feedback =
+    typeof body.feedback === 'string'
+      ? body.feedback.trim().slice(0, MAX_FEEDBACK_LENGTH)
+      : ''
+  const userPrompt =
+    feedback && body.previous
+      ? `${brief}\n\nPrevious draft:\n${JSON.stringify(body.previous)}\n\n` +
+        `Revise that draft per this feedback (keep what works, change only what's noted):\n${feedback}`
+      : brief
+
   let result: z.infer<typeof SectionResult>
+  let modelUsed = MODEL
   try {
     const out = await generateText({
       model: MODEL,
       system: systemPrompt(format),
-      prompt: brief,
+      prompt: userPrompt,
       schema: SectionResult,
       metadata: { feature: 'admin-generate-section', slug },
     })
     result = out.result
+    modelUsed = out.modelUsed
   } catch (e) {
     return NextResponse.json(
       { error: `section generation failed: ${e instanceof Error ? e.message : String(e)}` },
@@ -127,32 +163,42 @@ export async function POST(
     )
   }
 
-  // Parse the visual YAML into the config-entry body. A parse failure is a soft
-  // warning — the client can still review/insert and the PUT save re-validates.
-  let sectionBody: Record<string, unknown> = {}
-  let warning: string | null = null
-  const rawBody = result.configBody?.trim()
-  if (rawBody) {
-    try {
-      const parsed = parseYaml(rawBody)
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        sectionBody = parsed as Record<string, unknown>
-      } else {
-        warning = 'configBody did not parse to a mapping; section has no visual content'
-      }
-    } catch (e) {
-      warning = `configBody is not valid YAML: ${e instanceof Error ? e.message : 'parse error'}`
-    }
+  // The body is already schema-valid structured JSON — reshape it into the
+  // config-entry the engine parses (regions array → mapping, drop empties).
+  // No YAML parsing, no fixers: the section can never carry invalid visual YAML.
+  const sectionBody = normalizeSectionBody(result.body)
+  const section: SectionDraft = {
+    heading: result.heading,
+    paragraphs: result.paragraphs,
+    kind: result.kind,
+    body: sectionBody,
+  }
+
+  // Audit row (text kind, the whole section serialised) so the draft can be
+  // rated. Best-effort: a logging failure must not sink the generation — the
+  // author still gets their section, just without a feedback handle.
+  let generationId: string | null = null
+  try {
+    const supabase = createServiceClient()
+    const params = { feature: 'generate-section', format, refined: Boolean(feedback) }
+    const row = await recordGeneration(supabase, {
+      kind: 'text',
+      storySlug: slug,
+      prompt: userPrompt,
+      model: modelUsed,
+      params,
+      requestHash: hashRequest({ model: modelUsed, prompt: userPrompt, params }),
+      resultRef: null,
+      resultText: JSON.stringify(section),
+    })
+    generationId = row.id
+  } catch {
+    // swallow — generationId stays null, rating UI just won't show
   }
 
   return NextResponse.json({
     ok: true,
-    section: {
-      heading: result.heading,
-      paragraphs: result.paragraphs,
-      kind: result.kind,
-      body: sectionBody,
-    },
-    warning,
+    generation: { id: generationId },
+    section,
   })
 }

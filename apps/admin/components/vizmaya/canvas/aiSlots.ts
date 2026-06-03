@@ -289,3 +289,14 @@ export function modelsForSlot(
 ): readonly string[] {
   return aiSlotConfig(kind, layerType)?.models ?? []
 }
+
+/** Model aliases appropriate for a raw format, when no slot kind is in play
+ *  (e.g. the JSON chart-data editor, or a selection transform). Prose models
+ *  for markdown/plaintext, structured models for yaml/json. Default first. */
+export function modelsForLanguage(
+  language: 'yaml' | 'markdown' | 'plaintext' | 'json',
+): readonly string[] {
+  return language === 'markdown' || language === 'plaintext'
+    ? PROSE_MODELS
+    : STRUCT_MODELS
+}

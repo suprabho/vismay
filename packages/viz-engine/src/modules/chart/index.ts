@@ -1,25 +1,34 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
+import { parseWithSchema } from '../../lib/zodConfig'
 
-export interface ChartLayerConfig {
-  type: 'chart'
-  id: string
-}
+/**
+ * Zod schema for the `chart` module. A chart layer only *references* a chart
+ * already defined for the story by its id — it cannot define the chart's data
+ * or type inline.
+ */
+export const chartSchema = z.object({
+  type: z.literal('chart'),
+  id: z
+    .string()
+    .min(1)
+    .describe(
+      'References a chart already defined for this story by its id (e.g. "revenue-growth"). ' +
+        'A chart layer only references a chart; it cannot define the data or type here.',
+    ),
+})
+
+export type ChartLayerConfig = z.infer<typeof chartSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): ChartLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: chart layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (typeof r.id !== 'string' || r.id.trim().length === 0) {
-    throw new Error(`${ctx.label}: chart layer requires 'id' (string)`)
-  }
-  return { type: 'chart', id: r.id }
+  return parseWithSchema(chartSchema, raw, ctx)
 }
 
 const chartModule: VizModule<ChartLayerConfig> = {
   type: 'chart',
   label: 'Chart',
   slots: ['foreground'],
+  schema: chartSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',

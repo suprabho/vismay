@@ -1,54 +1,43 @@
+import { z } from 'zod'
 import type { VizModule } from '../../types'
-import type { StatColor } from '../../lib/storyConfig.types'
+import { StatColorSchema, parseWithSchema } from '../../lib/zodConfig'
 
-export type TextKind = 'text' | 'stat'
+const TextKindSchema = z.enum(['text', 'stat'])
+export type TextKind = z.infer<typeof TextKindSchema>
 
 /**
- * Layer config for the `text` module. Every field is optional — the renderer
- * falls back to the active unit's resolved content (`ForegroundContentContext`)
- * for any field the layer omits. This lets authors either rely on the section's
- * own heading / paragraphs (the common case) or override with literal text
- * when slotting a text panel into a non-default region.
+ * Zod schema for the `text` module. Every field is optional — the renderer
+ * falls back to the active unit's resolved content for any field the layer
+ * omits. This lets authors either rely on the section's own heading /
+ * paragraphs (the common case) or override with literal text when slotting a
+ * text panel into a non-default region.
  */
-export interface TextLayerConfig {
-  type: 'text'
-  /** Visual variant. Default 'text'. */
-  kind?: TextKind
-  /** Inline heading override. Falls back to `unit.heading`. */
-  heading?: string
-  /** Inline subheading override (label beneath stat number, or eyebrow above text). */
-  subheading?: string
-  /** Inline content override. String → single paragraph; array → multi-paragraph. */
-  content?: string | string[]
-  /** Stat-kind only: theme palette token for the giant number's color. Default 'accent2'. */
-  color?: StatColor
-}
+export const textSchema = z.object({
+  type: z.literal('text'),
+  kind: TextKindSchema.default('text').describe("Visual variant: 'text' (paragraphs) or 'stat' (big number)."),
+  heading: z.string().optional().describe('Inline heading override. Falls back to the unit heading.'),
+  subheading: z
+    .string()
+    .optional()
+    .describe('Inline subheading override (label beneath a stat number, or eyebrow above text).'),
+  content: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .describe('Inline content override — a string (one paragraph) or array of strings.'),
+  color: StatColorSchema.optional().describe("Stat-kind only: theme token for the giant number. Default accent2."),
+})
+
+export type TextLayerConfig = z.infer<typeof textSchema>
 
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TextLayerConfig {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`${ctx.label}: text layer must be an object`)
-  }
-  const r = raw as Record<string, unknown>
-  if (r.kind != null && r.kind !== 'text' && r.kind !== 'stat') {
-    throw new Error(`${ctx.label}: text 'kind' must be 'text' or 'stat'`)
-  }
-  if (r.content != null && typeof r.content !== 'string' && !Array.isArray(r.content)) {
-    throw new Error(`${ctx.label}: text 'content' must be a string or array of strings`)
-  }
-  return {
-    type: 'text',
-    kind: (r.kind as TextKind | undefined) ?? 'text',
-    heading: typeof r.heading === 'string' ? r.heading : undefined,
-    subheading: typeof r.subheading === 'string' ? r.subheading : undefined,
-    content: r.content as string | string[] | undefined,
-    color: r.color as StatColor | undefined,
-  }
+  return parseWithSchema(textSchema, raw, ctx)
 }
 
 const textModule: VizModule<TextLayerConfig> = {
   type: 'text',
   label: 'Text',
   slots: ['foreground'],
+  schema: textSchema,
   parseConfig,
   load: () => import('./Component'),
   readinessProfile: 'instant',

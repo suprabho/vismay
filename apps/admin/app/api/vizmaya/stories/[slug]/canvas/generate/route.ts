@@ -182,7 +182,7 @@ export async function POST(
     }
   }
 
-  const auditWarning = await safeRecord(supabase, {
+  const audit = await safeRecord(supabase, {
     kind: 'text',
     storySlug: slug,
     prompt,
@@ -196,7 +196,7 @@ export async function POST(
     ok: true,
     value,
     language: config.language,
-    generation: { model: modelId, warning, auditWarning },
+    generation: { id: audit.id, model: modelId, warning, auditWarning: audit.warning },
   })
 }
 
@@ -244,7 +244,7 @@ async function handleImage(args: {
     return NextResponse.json({ error: uploadErr.message }, { status: 500 })
   }
 
-  const auditWarning = await safeRecord(supabase, {
+  const audit = await safeRecord(supabase, {
     kind: 'image',
     storySlug: slug,
     prompt: rawPrompt,
@@ -265,14 +265,15 @@ async function handleImage(args: {
       size: imageBytes.byteLength,
       contentType: mimeType,
     },
-    generation: { model: modelId, warning: null, auditWarning },
+    generation: { id: audit.id, model: modelId, warning: null, auditWarning: audit.warning },
   })
 }
 
 /* ─── Helpers ─────────────────────────────────────────────────────── */
 
 /** Record an audit row without failing the request if the insert errors.
- *  Returns a soft warning string (or null). */
+ *  Returns the new row's id (so the client can attach feedback) and a soft
+ *  warning string — at most one is non-null. */
 async function safeRecord(
   supabase: ReturnType<typeof createServiceClient>,
   input: {
@@ -284,17 +285,17 @@ async function safeRecord(
     resultRef: string | null
     resultText: string | null
   },
-): Promise<string | null> {
+): Promise<{ id: string | null; warning: string | null }> {
   const requestHash = hashRequest({
     model: input.model,
     prompt: input.prompt,
     params: input.params,
   })
   try {
-    await recordGeneration(supabase, { ...input, requestHash })
-    return null
+    const row = await recordGeneration(supabase, { ...input, requestHash })
+    return { id: row.id, warning: null }
   } catch (e) {
-    return e instanceof Error ? e.message : 'audit log insert failed'
+    return { id: null, warning: e instanceof Error ? e.message : 'audit log insert failed' }
   }
 }
 
