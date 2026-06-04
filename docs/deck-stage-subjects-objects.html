@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deck stage — subjects &amp; objects (a 3-tier model)</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #161922; --ink: #e7e9ee; --muted: #9aa3b2;
+    --line: #262b36; --accent: #818cf8; --crit: #f87171; --ok: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 21px; margin: 40px 0 14px; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; margin: 22px 0 6px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 15px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--ink);
+  }
+  .chip b { color: var(--accent); font-weight: 600; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin: 14px 0;
+  }
+  .callout { border-left: 3px solid var(--accent); padding-left: 16px; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td code, p code, li code { background: #0b0d13; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  .yes { color: var(--ok); } .warn { color: var(--warn); } .no { color: var(--crit); }
+  ol li, ul li { margin: 6px 0; }
+  .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--accent); color: #0b0d13; border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; }
+  .tier { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--panel); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Deck stage — subjects &amp; objects</h1>
+  <p class="sub">A 3-tier model: background · vizslots (cut) · subjects &amp; objects (own flow). Design exploration captured from discussion — nothing built yet.</p>
+  <div class="meta">
+    <span class="chip">Status <b>design / not built</b></span>
+    <span class="chip">Relates to <b>deck-layouts-de-hardcode.md</b></span>
+    <span class="chip">June fit <b>roadmap-june-2026.md</b></span>
+    <span class="chip">Generated <b>June 4, 2026</b></span>
+  </div>
+</header>
+
+<div class="callout">
+  <strong>TL;DR.</strong> Evolve the Deck format from 2 tiers (background + foreground vizslots) into a
+  <strong>3-tier "stage"</strong>: background · vizslots (which <em>cut</em> between beats) · a new
+  <strong>Subjects &amp; Objects</strong> tier of persistent entities that live in their own flow across
+  beats. This dissolves the fragile "matched-layer morph between two slide DOMs" problem by making
+  continuity a <strong>first-class entity</strong>, and it's <span class="yes">friendlier to
+  deterministic video/PDF capture</span>, not harder. The kicker: <strong>the map module is already
+  exactly this pattern</strong> — Tier 1 is a generalization of an existing mechanic, not a new engine.
+</div>
+
+<h2>The model</h2>
+<p>Three z-tiers instead of two:</p>
+<ol>
+  <li><strong>Background</strong> — the persistent backdrop (map / aura). Exists today.</li>
+  <li><strong>Vizslots (the beat composition)</strong> — the per-beat grid of content. <strong>These cut; they don't tween.</strong> Each beat is a clean composed frame. (The tier the layout-affordance work improves.)</li>
+  <li><strong>Subjects &amp; Objects (new)</strong> — persistent entities that live in <em>their own flow</em>, independent of the beat grid. They are the things that actually move/morph across beats.</li>
+</ol>
+<p>
+  Advancing a beat is a <strong>cue</strong> that retargets everyone: the set (vizslots) cuts to the next
+  shot; the cast and props (subjects/objects) are continuous across shots. A theater / scene-graph model.
+</p>
+
+<h3>Subject vs Object</h3>
+<ul>
+  <li><strong>Subject</strong> — <em>center stage</em>. The focal actor a beat is "about"; gets the morph/continuity, can take z-focus (step in front of content), and is <strong>interactive/responsive</strong> (grab/scrub).</li>
+  <li><strong>Object</strong> — <em>decor</em>. Ambient set-dressing that persists and drifts (the starship cruising through the SpaceX story). Non-interactive.</li>
+</ul>
+<p>
+  Both have <strong>lifetime tracks</strong> — enter/exit over a beat range — with a per-beat
+  <strong>state track</strong> (position / size / opacity / rotation / z) interpolated on beat change.
+</p>
+
+<h2>Why this beats id-matched layers</h2>
+<p>
+  The earlier idea — a layer with the same <code>id</code> in consecutive slides morphing between its two
+  states — is fragile: it morphs between two independent slide DOMs at different scroll offsets. Making
+  continuity a <strong>first-class staged entity</strong> removes that: the morphing thing was never part
+  of a slide. And explicit per-beat states make the timeline <strong>fully determined</strong> — exactly
+  what deterministic video/PDF capture needs. (Free-morph <em>fought</em> capture; this doesn't.)
+</p>
+
+<h2>The map is the prototype</h2>
+<p>
+  The map module is already a persistent instance that flows across beats: one Mapbox context for the
+  whole story, an array of per-beat camera configs, and <code>activeUnit</code> drives a <code>flyTo</code>
+  interpolation between them (<code>mountingMode: 'persistent-aggregated'</code>,
+  <code>modules/map/index.ts</code> + <code>BackgroundVizSlot</code>). That <strong>is</strong> the subject
+  pattern. Subjects/objects = promote it from a quirk of one module into a first-class authorable tier.
+</p>
+
+<h2>The cost cliff (3D)</h2>
+<p>Two dreams wear the word "3D", ~4–5× apart in cost:</p>
+<ul>
+  <li><strong>(A) Real 3D <em>content</em> on a fixed-z stage</strong> — genuine 3D subjects (the starship turns, parallaxes; the camera orbits) but the 3D canvas sits at a fixed z-band relative to the DOM vizslots. Depth happens <em>within</em> the canvas, not <em>between</em> a 3D object and the HTML text.</li>
+  <li><strong>(B) True z-traversal through the content plane</strong> — a subject flies <em>behind this headline and in front of that chart</em> as actual depth.</li>
+</ul>
+<p>
+  The hard truth: <strong>a WebGL canvas is a single DOM layer.</strong> You can't pixel-depth-interleave
+  one object between two sibling HTML elements. Real (B) means rendering text into the 3D scene (losing
+  crisp DOM text + interactivity + a11y), stacked canvases with occluder proxies (fragile vs responsive
+  reflow), or CSS-3D compositing (an engine). On flat screens with DOM content,
+  <strong>(A) is the sane target — already ~80% of "amazeballs."</strong>
+</p>
+<div class="callout">
+  <strong>z-traversal-lite:</strong> split the DOM into a content-behind band and a content-front band with
+  the 3D canvas between them. A subject is authored per-beat as "behind" or "in front," and crosses the
+  plane on the beat where it transitions — reads as moving <em>through</em> depth on a flat screen, with no
+  pixel-depth interleaving. ~10% more than fixed-z, most of the wow.
+</div>
+
+<h2>The "spread out" cost — surface by surface</h2>
+<table>
+  <tr><th>Surface</th><th>Cost</th></tr>
+  <tr><td><strong>Live web scroll</strong></td><td>New persistent r3f/three canvas tier (a client island, like starship today); beats → camera/entity interpolation. Moderate.</td></tr>
+  <tr><td><strong>Autoplay</strong></td><td>Same scene, timeline-driven instead of scroll. Cheap once the beat-state model exists.</td></tr>
+  <tr><td><strong>Video capture</strong></td><td>The real tax — tween must be deterministic &amp; seekable ("be at beat N's state at time T") and hook the readiness machinery (GLB loaded → first frame → settle). The map already does this dance.</td></tr>
+  <tr><td><strong>PDF / print</strong></td><td>Each beat = a still at that beat's state; needs the <code>__pdfReady__</code> gate to wait on model load + a painted frame.</td></tr>
+  <tr><td><strong>Mobile / portrait</strong></td><td>The expensive surface — three + Mapbox + ECharts on a phone is GPU/memory/battery pressure. Likely a degrade path (objects → 2D sprites / fewer under reduced-motion).</td></tr>
+  <tr><td><strong>Admin authoring</strong></td><td>The biggest hidden cost — per-beat 3D camera + transforms is a different editor than 2D boxes. Start with numeric/YAML; defer a visual 3D editor or it balloons.</td></tr>
+  <tr><td><strong>SSG + assets</strong></td><td>Stage is client-only (no SSR — fine, starship already is). GLB assets need optimization (draco), loading states, the <code>assets://</code> pipeline.</td></tr>
+</table>
+<p>The pattern: the renderer is the fun part; the tax is <strong>determinism (capture) + authoring + mobile degradation</strong>. The map having solved persistence-+-capture makes this a generalization.</p>
+
+<h2>Effort tiers</h2>
+<ol>
+  <li><span class="tier">1</span><strong>Subjects/objects as a tier, 2D screen-space persistence</strong> — smallest. "The map pattern, generalized to any layer." Continuity + subject/object distinction + lifetime tracks, flat. <span class="yes">← the June candidate.</span></li>
+  <li><span class="tier">2</span><strong>+ Fixed-z 3D stage</strong> (real models, camera, parallax) — meaningfully larger: persistent 3D canvas, per-beat transform tracks, capture hooks, mobile degrade.</li>
+  <li><span class="tier">3</span><strong>+ z-traversal-lite</strong> (2 DOM bands) — small delta on top of 2.</li>
+  <li><span class="tier">4</span><strong>True z-interleave (B)</strong> — the cliff: a compositing + authoring engine. <span class="no">Park indefinitely.</span></li>
+</ol>
+<p>
+  <strong>Recommendation:</strong> Tier 1 as the foundation, then 2+3 — and design the data model
+  <strong>3D-ready from day one</strong> (subjects in a shared coordinate space with per-beat transform
+  tracks) so Tier 4 isn't foreclosed, but don't build it until something forces it.
+</p>
+
+<h2>Decisions captured</h2>
+<ul>
+  <li>3D space is the goal, but cost-aware — fixed-z bands first, designed traversal-ready.</li>
+  <li>"z fixed" is the practical truth (every consumption surface is flat); z-traversal is the dream → resolved via fixed-z + z-traversal-lite, not true interleave.</li>
+  <li>Subjects are interactive/responsive; objects are not.</li>
+  <li>Subjects/objects have explicit enter/exit lifetimes.</li>
+  <li><strong>The starship (spacex-ipo) is a SUBJECT</strong> — center-stage, interactive (orbit/scrub), gets the cross-beat morph; not ambient decor. The first real subject is 3D, so Tier 1's data model should be authored 3D-ready (a transform track) even though the Tier 1 renderer stays flat/2D.</li>
+</ul>
+
+<h2>Open questions</h2>
+<ul>
+  <li>Authoring: per-beat transforms in <strong>YAML</strong> (like the map's camera today) vs eventually a <strong>visual 3D editor</strong> in the admin canvas — the difference between "ambitious feature" and "we built a 3D editor."</li>
+</ul>
+
+<footer>
+  Captured June 4, 2026 from a design conversation. No implementation yet; Tier 1 is scoped into the June roadmap as a ④ Deck extension.
+</footer>
+
+</div>
+</body>
+</html>
