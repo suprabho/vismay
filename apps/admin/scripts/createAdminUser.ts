@@ -40,7 +40,24 @@ async function main() {
     console.error('failed to create user:', error.message)
     process.exit(1)
   }
-  console.log('created admin user:', data.user?.email, '·', data.user?.id)
+  console.log('created user:', data.user?.email, '·', data.user?.id)
+
+  // This Supabase project is shared with footshorts; admin access is gated by
+  // the ADMIN_ALLOWED_EMAILS allowlist (see lib/adminAuth.ts), not by merely
+  // existing. Warn if the new account won't actually be able to reach admin.
+  const allow = (process.env.ADMIN_ALLOWED_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  const target = (email ?? '').trim().toLowerCase()
+  const domain = target.slice(target.indexOf('@'))
+  const allowed = allow.some((e) => (e.startsWith('@') ? e === domain : e === target))
+  if (!allowed) {
+    console.warn(
+      `\n⚠️  ${email} is NOT in ADMIN_ALLOWED_EMAILS — it can sign in to Supabase but will be denied admin.\n` +
+        `   Add it to ADMIN_ALLOWED_EMAILS in apps/admin/.env (comma-separated; '@domain' allowed).`,
+    )
+  }
 }
 
 main()

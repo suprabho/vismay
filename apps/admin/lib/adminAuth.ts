@@ -37,12 +37,40 @@ export function isConfigured(): boolean {
   return isSupabaseConfigured() || auth.expectedToken() !== null
 }
 
-/** The auth boundary. Backed by a Supabase session, or the legacy HMAC cookie. */
+/**
+ * Admin allowlist. The Supabase project is **shared** with footshorts (which has
+ * open consumer self-signup), so a valid Supabase session is NOT sufficient —
+ * the session email must be explicitly allowed. Set `ADMIN_ALLOWED_EMAILS` to a
+ * comma-separated list; an entry starting with `@` matches a whole domain
+ * (e.g. `@promad.design`). Fails CLOSED: unset/empty ⇒ nobody is admin.
+ */
+function isAllowedEmail(email: string | null | undefined): boolean {
+  if (!email) return false
+  const raw = process.env.ADMIN_ALLOWED_EMAILS
+  if (!raw) return false
+  const target = email.trim().toLowerCase()
+  const domain = target.slice(target.indexOf('@')) // includes '@'
+  for (const entryRaw of raw.split(',')) {
+    const entry = entryRaw.trim().toLowerCase()
+    if (!entry) continue
+    if (entry.startsWith('@')) {
+      if (domain === entry) return true
+    } else if (entry === target) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * The auth boundary. In Supabase mode the session user must also be in the
+ * admin allowlist (see `isAllowedEmail`). Legacy mode keeps the HMAC cookie.
+ */
 export async function isAuthed(): Promise<boolean> {
   if (isSupabaseConfigured()) {
     const supabase = await createServerSupabase()
     const { data, error } = await supabase.auth.getUser()
-    return !error && Boolean(data.user)
+    return !error && isAllowedEmail(data.user?.email)
   }
   return auth.isAuthed()
 }
@@ -59,7 +87,15 @@ export async function signIn(
   if (isSupabaseConfigured()) {
     const supabase = await createServerSupabase()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return error ? { ok: false, error: error.message } : { ok: true }
+    if (error) return { ok: false, error: error.message }
+    // Credentials are valid, but this project also holds consumer (footshorts)
+    // users — only allowlisted emails may hold an admin session. Reject and
+    // drop the just-created session so no dangling cookie is left behind.
+    if (!isAllowedEmail(email)) {
+      await supabase.auth.signOut()
+      return { ok: false, error: 'This account is not an authorized admin.' }
+    }
+    return { ok: true }
   }
   if (auth.checkPassword(password)) {
     await auth.setAuthCookie()

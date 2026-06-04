@@ -2,14 +2,19 @@
 --
 -- Admin sign-in moved from a single shared password to per-user Supabase Auth.
 -- `auth.users` holds the credentials; this table mirrors each user with an
--- app-facing `role` so future role-gating has a home. v1 gates on
--- authentication only — any `auth.users` session is treated as admin — so
--- `role` is forward-looking and defaults to 'admin'.
+-- app-facing `role` so future role-gating has a home.
+--
+-- This project is SHARED with footshorts (open consumer signup), so the trigger
+-- below creates a profile for every auth user — including consumers. The admin
+-- boundary therefore gates on an explicit email allowlist (`ADMIN_ALLOWED_EMAILS`,
+-- see lib/adminAuth.ts), NOT on this `role`. `role` defaults to the least-
+-- privileged value so it's never a stand-in for "is admin"; promote real admins
+-- deliberately if/when role-based gating is adopted.
 
 create table if not exists public.profiles (
   id         uuid primary key references auth.users (id) on delete cascade,
   email      text,
-  role       text not null default 'admin' check (role in ('admin', 'editor', 'viewer')),
+  role       text not null default 'viewer' check (role in ('admin', 'editor', 'viewer')),
   created_at timestamptz not null default now()
 );
 
