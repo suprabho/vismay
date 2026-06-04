@@ -1,25 +1,20 @@
 import { createAuth } from '@vismay/admin-core/auth'
+import { createServerSupabase, isSupabaseConfigured } from '@/lib/supabaseServer'
 
 /**
- * Admin's HMAC-cookie session. Canonical to `vismay.xyz` — the cookie is
- * scoped to `.vismay.xyz` in production so all admin subdomains
- * (`vizmaya.vismay.xyz`, `vizf1.vismay.xyz`, `footshorts.vismay.xyz`) share
- * one login. Consumer TLDs (vizmaya.fyi, vizf1.com, footshorts.com) never
- * carry this cookie — cross-TLD authorization there goes through
- * `signOutputUrl()` instead. See [docs/auth.md](../../../docs/auth.md).
+ * Admin session. Per-user **Supabase Auth** when the project is configured
+ * (`NEXT_PUBLIC_SUPABASE_URL` set); otherwise falls back to the legacy shared-
+ * password HMAC cookie so dev / preview / CI without Supabase still work.
  *
- * `ADMIN_COOKIE_DOMAIN` env var overrides the default for staging hosts that
- * use a different parent (e.g. `.vismay-staging.dev`); leaving it unset in
- * dev keeps the cookie host-only on `localhost`.
+ * The `isAuthed()` boundary is identical in both modes — every admin page guard
+ * and `/api/*` route (and `authedOrAction()` on top of them) calls it unchanged.
+ * Only the implementation behind it swaps.
  *
- * Vercel **preview** deployments (`VERCEL_ENV === 'preview'`) run with
- * `NODE_ENV=production` but are served from `*.vercel.app`, which can't carry a
- * `.vismay.xyz` cookie — the browser silently drops the `Set-Cookie` and login
- * loops back to `/login`. On preview we leave the domain unset so the cookie is
- * host-only and sticks to the preview URL. Auth stays fully on (the password is
- * still required); only the cookie's domain scope changes. An explicit
- * `ADMIN_COOKIE_DOMAIN` still wins, so a custom preview domain can opt back
- * into a shared cookie.
+ * The HMAC cookie was canonical to `vismay.xyz` and scoped to `.vismay.xyz` so
+ * all admin subdomains share one login; the Supabase session cookies carry the
+ * same domain scope (see `lib/supabaseServer.ts` → `cookieDomain`). Consumer
+ * TLDs (vizmaya.fyi, vizf1.com, …) never carry the admin cookie — cross-TLD
+ * authorization goes through signed URLs / action tokens. See docs/auth.md.
  */
 const COOKIE_DOMAIN =
   process.env.NODE_ENV === 'production'
@@ -27,6 +22,7 @@ const COOKIE_DOMAIN =
       (process.env.VERCEL_ENV === 'preview' ? undefined : '.vismay.xyz')
     : undefined
 
+/** Legacy shared-password gate — used only when Supabase isn't configured. */
 export const auth = createAuth({
   cookieName: 'vmy_admin',
   passwordEnv: 'ADMIN_PASSWORD',
@@ -35,8 +31,49 @@ export const auth = createAuth({
 })
 
 export const ADMIN_COOKIE_NAME = auth.cookieName
-export const expectedToken = auth.expectedToken
-export const isAuthed = auth.isAuthed
-export const setAuthCookie = auth.setAuthCookie
-export const clearAuthCookie = auth.clearAuthCookie
-export const checkPassword = auth.checkPassword
+
+/** True when auth is configured at all (Supabase project OR legacy password). */
+export function isConfigured(): boolean {
+  return isSupabaseConfigured() || auth.expectedToken() !== null
+}
+
+/** The auth boundary. Backed by a Supabase session, or the legacy HMAC cookie. */
+export async function isAuthed(): Promise<boolean> {
+  if (isSupabaseConfigured()) {
+    const supabase = await createServerSupabase()
+    const { data, error } = await supabase.auth.getUser()
+    return !error && Boolean(data.user)
+  }
+  return auth.isAuthed()
+}
+
+/**
+ * Establish a session. Supabase mode verifies `email`+`password` and sets the
+ * session cookies; legacy mode treats `password` as the shared password and
+ * ignores `email`.
+ */
+export async function signIn(
+  email: string,
+  password: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (isSupabaseConfigured()) {
+    const supabase = await createServerSupabase()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return error ? { ok: false, error: error.message } : { ok: true }
+  }
+  if (auth.checkPassword(password)) {
+    await auth.setAuthCookie()
+    return { ok: true }
+  }
+  return { ok: false, error: 'invalid password' }
+}
+
+/** Clear the session. */
+export async function signOut(): Promise<void> {
+  if (isSupabaseConfigured()) {
+    const supabase = await createServerSupabase()
+    await supabase.auth.signOut()
+    return
+  }
+  await auth.clearAuthCookie()
+}

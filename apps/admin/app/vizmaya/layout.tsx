@@ -1,10 +1,10 @@
-import { isAuthed, expectedToken } from '@/lib/adminAuth'
+import { isAuthed, isConfigured } from '@/lib/adminAuth'
 import { AdminTabs } from '@/components/vizmaya/AdminTabs'
 
 export const dynamic = 'force-dynamic'
 
 export default async function VizmayaLayout({ children }: { children: React.ReactNode }) {
-  const configured = expectedToken() !== null
+  const configured = isConfigured()
   const authed = await isAuthed()
   const showTabs = authed && configured
   return (

@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { isAuthed, expectedToken } from '@/lib/adminAuth'
+import { isAuthed, isConfigured } from '@/lib/adminAuth'
 import { getApp } from '@vismay/content-source/apps'
 import { AppAdminTabs } from '@/components/section/AppAdminTabs'
 
@@ -28,7 +28,7 @@ export default async function AppSectionLayout({
   const app = await getApp(appSlug)
   if (!app) notFound()
 
-  const configured = expectedToken() !== null
+  const configured = isConfigured()
   const authed = await isAuthed()
   const showTabs = authed && configured
 
