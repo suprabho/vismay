@@ -7,7 +7,19 @@
 **Payoff:** the generalized content engine producing a Deck-format story end-to-end (vizmaya pack)
 **Parked → July tail:** ③ Rete · ⑥ Footshorts · ⑦ Ovo (③ as an opportunistic pickup)
 
-**Related:** [vizf1-integration-vs-roadmap.md](vizf1-integration-vs-roadmap.md) (scoping comparison) · [generalized-content-engine.md](generalized-content-engine.md) (the engine reframe) · [vizf1-ai-pipeline-integration.md](vizf1-ai-pipeline-integration.md) (original spec)
+**Related:** [vizf1-integration-vs-roadmap.md](vizf1-integration-vs-roadmap.md) (scoping comparison) · [generalized-content-engine.md](generalized-content-engine.md) (the engine reframe) · [vizf1-ai-pipeline-integration.md](vizf1-ai-pipeline-integration.md) (original spec) · [deck-layouts-de-hardcode.md](deck-layouts-de-hardcode.md) (④ layouts) · [deck-stage-subjects-objects.md](deck-stage-subjects-objects.md) (④ stage tier)
+
+---
+
+## Update — Jun 4, 2026
+
+Early-week progress shifts the plan:
+
+- **① Auth — done ~1.5 weeks early.** Per-user Supabase auth shipped (PR #161), with an **email allowlist** because the project is shared with footshorts' open consumer signup. This frees Track A capacity.
+- **② rohit/test** — merged (#155); junk-file cleanup in PR #164. `f1_backend` kept as the ⑤ donor.
+- **④ Deck — kicked off.** Layout **affordances** shipped (PR #162: the 8 deck layouts got real region geometry + inline regions + a `/layouts` gallery; doc #163). ④ now **also** carries a new **subjects/objects Tier 1** — generalize the map's persistent-instance pattern into a first-class **2D screen-space entity tier** with per-beat state tracks + lifetimes (see [deck-stage-subjects-objects.md](deck-stage-subjects-objects.md)). Flat only; 3D tiers are parked.
+
+**Honest capacity trade-off:** auth landing early is what makes room for the ④ stage work. But Tier 1 grows ④ and competes with the ⑤ research→render convergence for the back half of June — and **⑤ is still gated by Decision 2** (research source). Tier 1 is feasible *as a ④ extension* only if ⑤ stays scoped; if ⑤ expands, Tier 1 slips to the July tail with the 3D tiers.
 
 ---
 
@@ -97,7 +109,8 @@ Wire ⑤ to emit a ④ Deck-format story end-to-end, QA, bugfix, buffer. The del
 | 1 | Supabase Auth | `apps/admin` (not viz-admin) | ~5% | 8–12h | ✅ |
 | 2 | Merge rohit/test (keep `f1_backend` donor) | branch `rohit/test` | additive · 0 deletions | ~1h | ✅ |
 | 3 | Rete delete/disconnect | `apps/admin/components/vizmaya/canvas` | ~40% | 3–6h | ⚠️ opportunistic |
-| 4 | Grow Deck format | `packages/viz-engine`, `apps/admin` | ~65% | 10–18h | ✅ |
+| 4 | Grow Deck format — layouts | `packages/viz-engine`, `apps/admin` | shipped (#162/#163) | 10–18h | ✅ |
+| 4b | Deck stage — subjects/objects **Tier 1** (2D persistence) | `packages/viz-engine` (+ `story-reader`) | ~5% · design only | 10–16h | ✅ if ⑤ stays scoped |
 | 5 | Generalized research→render engine | `packages/story-pipeline`, `ai-gateway`, `apps/admin/api` | ~25% | 12–20h | ✅ |
 | 6 | Footshorts pipeline | `apps/footshorts`, `verticals/footshorts-viz` | ~75% | 12–20h | ⛔ parked |
 | 7 | Ovo / Kidzovo scaffold | `docs/kidzovo-vertical-plan.md` (greenfield) | ~10% | 12–16h | ⛔ parked |
