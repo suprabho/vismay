@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generalized content engine — reframing f1_backend as donor, not merge</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #161922; --ink: #e7e9ee; --muted: #9aa3b2;
+    --line: #262b36; --accent: #818cf8; --crit: #f87171; --ok: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 21px; margin: 40px 0 14px; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; margin: 22px 0 6px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 15px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--ink);
+  }
+  .chip b { color: var(--accent); font-weight: 600; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin: 14px 0;
+  }
+  .callout { border-left: 3px solid var(--accent); padding-left: 16px; margin: 12px 0; }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.warn { border-left-color: var(--warn); }
+  pre.ascii {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; overflow-x: auto; font: 13px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--ink);
+  }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td code, p code, li code { background: #0b0d13; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  .yes { color: var(--ok); } .warn { color: var(--warn); } .no { color: var(--crit); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+  .pill.reuse { background: rgba(52,211,153,.13); color: var(--ok); border: 1px solid rgba(52,211,153,.35); }
+  .pill.rebuild { background: rgba(251,191,36,.13); color: var(--warn); border: 1px solid rgba(251,191,36,.35); }
+  .pill.skin { background: rgba(248,113,113,.13); color: var(--crit); border: 1px solid rgba(248,113,113,.35); }
+  ol li, ul li { margin: 6px 0; }
+  .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--accent); color: #0b0d13; border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Generalized content engine</h1>
+  <div class="sub">Reframing <code>f1_backend</code> as a donor, not a merge · fuses with roadmap ⑤ "AI research → stories"</div>
+  <div class="meta">
+    <span class="chip"><b>Model:</b> one engine · N thin packs</span>
+    <span class="chip"><b>Donors:</b> contract · components · heuristics</span>
+    <span class="chip"><b>Charts:</b> Apex → ECharts</span>
+    <span class="chip"><b>First consumer:</b> vizf1</span>
+    <span class="chip"><b>Order:</b> generic-first (build once)</span>
+  </div>
+</header>
+
+<h2>The one-line reframe</h2>
+<div class="card">
+  <p><code>f1_backend</code> stops being a thing you <strong>merge</strong> and becomes two donors:</p>
+  <ol>
+    <li><strong>A component + contract donor</strong> for vismay's shared render layer.</li>
+    <li><strong>An architecture + heuristics blueprint</strong> for the generalized research→render engine (roadmap ⑤).</li>
+  </ol>
+  <p style="margin-bottom:0">vizf1 is then just the <strong>first <code>DomainPack</code></strong> that plugs into that engine — not a parallel month-sized port. The expensive, reusable machinery is built once; each vertical is a thin pack + a skin.</p>
+</div>
+
+<pre class="ascii">
+                    ┌───────────────────────────────────────────────┐
+                    │   packages/story-pipeline  (generic, built once)│
+                    │                                                 │
+  DomainPack ──────▶│  runner:     signal → angle → [curate] →        │
+  (per vertical)    │              generate → embed → render          │
+                    │  heuristics: verify-claims · filter-brief ·      │
+                    │              resolve-entities · coherence-judge  │
+                    │  contract:   GraphSpec + ContentBlock            │
+                    │  render:     GraphSpecChart (ECharts)            │
+                    └───────────────────────────────────────────────┘
+                          ▲                ▲                ▲
+                    ┌─────┴─────┐    ┌─────┴─────┐    ┌─────┴──────┐
+                    │ vizf1     │    │ vizmaya   │    │ footshots  │
+                    │ pack +    │    │ pack +    │    │ pack +     │
+                    │ F1 skin   │    │ Deck      │    │ match skin │
+                    │ (first)   │    │ (⑤)       │    │ (parked ⑥) │
+                    └───────────┘    └───────────┘    └────────────┘
+</pre>
+
+<h2>Axis 1 · Recycle the frontend (into the shared layer, not one app)</h2>
+<div class="callout warn">
+  <strong>Decisive fact:</strong> <code>f1_backend</code> renders on <strong>ApexCharts</strong>; vismay renders on <strong>ECharts</strong>
+  (<code>echarts</code> is a dep of <code>packages/viz-engine</code> + <code>apps/vizmaya-fyi</code>; <code>apexcharts</code> appears <strong>nowhere</strong> in vismay).
+  So "recycle" splits into <em>recycle the contract &amp; shells</em> vs <em>rebuild the chart leaves on ECharts</em>.
+</div>
+<table>
+  <thead><tr><th><code>f1_backend</code> asset</th><th>Reuse mode</th><th>Lands in</th></tr></thead>
+  <tbody>
+    <tr><td><strong>GraphSpec / ContentBlock type system</strong> (<code>Frontend/src/types.ts</code> — 12 chart types, <code>paragraph / heading / quote / stat / graph_embed</code>)</td><td><span class="pill reuse">recycle as-is</span> render-lib-agnostic; becomes the cross-vertical render schema</td><td><code>packages/story-pipeline/src/types.ts</code></td></tr>
+    <tr><td><strong><code>GraphBlock.tsx</code> dispatcher</strong> (switch on <code>spec.type</code>, empty-state, AI badge, caption)</td><td><span class="pill reuse">recycle shell</span> swap the 8 <code>Apex*</code> leaves for ECharts builders</td><td>viz-engine module <code>graph-spec</code> + <code>GraphSpecChart.tsx</code></td></tr>
+    <tr><td><strong><code>Apex*Chart.tsx</code></strong> (line / multiline / projection / bar / scatter / heatmap / tiremap / svg)</td><td><span class="pill rebuild">rebuild on ECharts</span> (<code>StoryEChart</code>), reusing series/annotation mapping</td><td><code>verticals/f1-viz/.../builders/*</code></td></tr>
+    <tr><td><strong>Admin panels</strong> (<code>AngleReview</code>, <code>RunsPanel</code>, <code>WorkflowPanel</code>, <code>PipelineDAG</code>, <code>AuditPanel</code>, <code>GraphSimulator</code>, <code>StoriesPanel</code>)</td><td><span class="pill reuse">UX reference</span> rebuild on service-role fetches, drop Firebase/axios</td><td><code>apps/admin/components/&lt;vertical&gt;/</code> (generic)</td></tr>
+    <tr><td><strong><code>StoryRenderer.tsx</code></strong> (content-block → JSX)</td><td><span class="pill reuse">recycle shell</span> for the native reader</td><td><code>apps/vizf1/web/.../StoryBlocks.tsx</code></td></tr>
+    <tr><td><strong><code>race/*</code></strong> (<code>TrackViewport</code>, <code>Sparkline</code>, <code>PlaybackControls</code>, <code>DriverToggleList</code>) + <code>utils/trackProjection.ts</code></td><td><span class="pill skin">F1-only</span> recycle into vizf1's consumer app, not the generic engine</td><td><code>apps/vizf1/web</code> (vertical skin)</td></tr>
+    <tr><td><strong><code>utils/regression.ts</code></strong> (linear/poly fit)</td><td><span class="pill reuse">recycle</span> generic projection math</td><td>shared grounding utils</td></tr>
+  </tbody>
+</table>
+<p><strong>Dividing line:</strong> the GraphSpec contract + the dispatcher pattern + the admin curation UX are <strong>generic</strong> (shared layer); the F1 chart styling and race components are the <strong>vertical skin</strong> (stay in vizf1).</p>
+
+<h2>Axis 2 · Generalize the pipeline architecture + heuristics</h2>
+<p>The F1-specific parts are thinner than the integration doc implied — the <strong>shape</strong> is already generic. Two LangGraph flows + one CrewAI chain map 1:1 onto roadmap ⑤'s <code>research → outline → sections</code>:</p>
+<pre class="ascii">
+f1_backend                          generalized ⑤ engine
+──────────                          ─────────────────────
+telemetry → signals          ≡      research / ingest → signals
+angle discovery (per scope)  ≡      outline / angle discovery
+[admin selects angles]       ≡      [admin curation]      ← same human gate
+story_crew (5 agents)        ≡      section / story generation
+story_graph_pipeline (embed) ≡      chart embed + render
+StoryRun status / logs       ≡      run tracking
+</pre>
+
+<h3>The <code>DomainPack</code> seam is the whole game — promote it to day 1</h3>
+<p>The integration doc made this Phase 6. Here it's the <strong>organizing principle</strong>: a vertical supplies its Stage-A signal source, personas/prompts, entity roster, and chart types; the runner is vertical-agnostic. F1's lap-windows, drivers/teams, and telemetry channels are just <em>one pack's</em> values.</p>
+<ul>
+  <li><strong>vizf1 pack</strong> → Stage-A = race signals; entities = drivers/teams; slice = lap-window</li>
+  <li><strong>vizmaya pack</strong> (roadmap ⑤) → Stage-A = web/news/docs research; entities = topic-dependent; slice = research-chunk window</li>
+  <li><strong>footshots pack</strong> (parked ⑥) → Stage-A = match data; entities = players/clubs</li>
+</ul>
+
+<h3>The heuristics are the crown jewels — port them generically first</h3>
+<p><code>AI/app/utils/grounding.py</code> (448 LOC) and <code>judge.py</code> are <strong>pure, framework-free, TS-portable rule logic</strong> — and every vertical wants them. This is the highest-leverage extraction: it's what makes an AI content engine <em>trustworthy</em>, not just functional.</p>
+<table>
+  <thead><tr><th>Heuristic</th><th>What it does</th><th>Generalized form</th></tr></thead>
+  <tbody>
+    <tr><td><code>verify_claims_against_slice</code></td><td>Post-gen check: every cited number/lap is consistent with the data the model actually saw (±0.10s tol)</td><td><strong>Generic claim-verifier</strong> — "did the model invent a figure not in the source slice?" The anti-hallucination spine for <em>all</em> verticals</td></tr>
+    <tr><td><code>filter_brief_for_angle</code></td><td>Keep only brief sentences mentioning the focus entities</td><td><strong>Generic context-narrowing</strong> — stops the model latching onto unrelated storylines</td></tr>
+    <tr><td><code>resolve_angle_entities</code> + <code>lap_window_from_angle</code></td><td>Parse angle text → which entities + data window it's about</td><td><strong>Generic "resolve entities + slice"</strong> — lap-window is F1's notion of slice; vizmaya's is a date/chunk range</td></tr>
+    <tr><td><code>judge_angle_coherence</code> (<code>judge.py</code>)</td><td>LLM-as-judge → sets <code>needs_review</code></td><td><strong>Generic coherence gate</strong> before publish</td></tr>
+  </tbody>
+</table>
+
+<h3>The embed sub-pipeline <em>is</em> the "render" half</h3>
+<p><code>AI/app/pipelines/story_graph_pipeline.py</code> is a gem worth lifting wholesale (as TS):</p>
+<pre class="ascii">
+load available charts → LLM picks which + where → materialize net-new
+→ embed with a guaranteed fallback (a story is NEVER chart-less)
+</pre>
+<p>It generalizes directly to "given content blocks + a chart pool, decide embeds" for any vertical, and already ships robustness worth keeping: graph-type alias normalization, caption→title token-overlap resolution, ranked fallback embedding.</p>
+
+<h3>Keep vismay's runtime, drop <code>f1_backend</code>'s</h3>
+<p><code>AI/app/main.py</code> is FastAPI + Mongo + ThreadPoolExecutor. <strong>Don't port the runtime</strong> — port the <em>patterns</em> onto vismay's proven async-job lane (admin route → <code>workflow_dispatch</code> → worker <code>tsx</code> → Supabase status → realtime), exactly as the integration doc already decided. Patterns worth keeping:</p>
+<ul>
+  <li><strong>Human-gated two-phase</strong>: propose → curate → generate</li>
+  <li><strong>Bounded concurrency caps</strong>: <code>MAX_TOTAL_ANGLES</code> / <code>STORY_CONCURRENCY</code> / <code>ANGLES_PER_SCOPE</code></li>
+  <li><strong>Idempotent draft reuse</strong>: <code>_ensure_angle_draft</code> reuses <code>storyId</code> on re-run</li>
+  <li><strong><code>StoryRun</code> status/log tracking</strong> (→ <code>vizf1_workflow_events</code> / a generic <code>*_story_runs</code>)</li>
+</ul>
+
+<h2>What this changes vs. the integration doc &amp; the roadmap</h2>
+<div class="card">
+  <div class="callout ok"><strong>Order flips, cost drops.</strong> Integration doc = vizf1-specific → generalize at the end (build twice). Reframe = build the generic engine + guardrails + render layer <strong>once</strong>; vizf1 is the first thin pack. No vizf1→refactor tax.</div>
+  <div class="callout ok"><strong>It IS roadmap ⑤, supercharged.</strong> ⑤'s "research→outline→section loop on ai-gateway" gets <code>f1_backend</code>'s stage choreography, the claim-verifier guardrail, and the never-chart-less embed flow for free. ⑤ becomes "wire the vizmaya <code>DomainPack</code> into the shared engine."</div>
+  <div class="callout ok"><strong>vizf1 leaves the critical path.</strong> No longer a month-sized parallel port — it's "write the F1 <code>DomainPack</code> + ECharts builders + race skin" on top of an engine that already exists. Days, not weeks; it becomes the <em>demo</em> that proves the seam.</div>
+  <div class="callout ok"><strong>Shared investment, thin verticals.</strong> Runner, heuristics, GraphSpec contract, <code>GraphSpecChart</code>, curation UI built once in <code>packages/story-pipeline</code> + viz-engine; each vertical is a pack + a skin.</div>
+</div>
+<p><strong>New mental model:</strong> one generic content engine (roadmap ⑤), three donors from <code>f1_backend</code> (contract, components, heuristics), N thin packs (vizf1 first).</p>
+
+<h2>Reframed phased sequence (generic-first)</h2>
+<table>
+  <thead><tr><th>Phase</th><th>Build</th><th>Why first</th></tr></thead>
+  <tbody>
+    <tr><td><strong>G0</strong></td><td><code>packages/story-pipeline</code>: GraphSpec/ContentBlock contract (recycled from <code>types.ts</code>) + <code>DomainPack</code> interface + run/event types</td><td>Everything downstream depends on the contract + seam</td></tr>
+    <tr><td><strong>G1</strong></td><td>Port the <strong>heuristics</strong> as pure TS (<code>grounding/*</code>, <code>judge</code>) with unit tests lifted from <code>f1_backend</code> behaviour</td><td>Framework-free, no external deps, immediately testable — the trust spine</td></tr>
+    <tr><td><strong>G2</strong></td><td>Generic <strong>runner</strong> on vismay's async-job lane; port the embed sub-pipeline</td><td>The choreography every vertical reuses</td></tr>
+    <tr><td><strong>G3</strong></td><td><strong>Render layer</strong>: <code>GraphSpecChart</code> (ECharts) + <code>graph-spec</code> viz module + catalog sample; recycle <code>GraphBlock</code>/<code>StoryRenderer</code> shells</td><td>The "render" half; previews in <code>apps/catalog</code> before real data</td></tr>
+    <tr><td><strong>G4</strong></td><td>Generic <strong>admin curation UI</strong> (recycle the f1_backend panels' UX on service-role fetches)</td><td>Human gate, reused across verticals</td></tr>
+    <tr><td><strong>V1</strong></td><td><strong>vizf1 <code>DomainPack</code></strong>: F1 signal source, personas, roster, lap-window slice + F1 ECharts builders + race skin</td><td>First consumer — proves the seam end-to-end</td></tr>
+    <tr><td><strong>V2</strong></td><td><strong>vizmaya <code>DomainPack</code></strong> (= roadmap ⑤): research source, Deck output</td><td>Second consumer — proves cross-vertical with a different Stage-A input</td></tr>
+    <tr><td>later</td><td>footshots pack; deep F1 telemetry numerics (integration doc Phase 7)</td><td>Deferred — needs richer data</td></tr>
+  </tbody>
+</table>
+
+<h2>Bottom line</h2>
+<p>The integration doc and roadmap ⑤ describe the <strong>same engine</strong> seen from two ends. Reframing <code>f1_backend</code> as a <strong>donor</strong> (contract + components + heuristics) rather than a <strong>merge target</strong> resolves the tension: build the generic research→render engine once, recycle f1_backend's frontend contract + curation UX into the shared layer (rebuilding chart leaves on ECharts), port its heuristics as the trust spine, and ship verticals as thin <code>DomainPack</code>s — vizf1 first as the proof, vizmaya (⑤) second.</p>
+
+<footer>
+  Generated June 3, 2026 · reframe basis: <code>f1_backend</code> as donor for a generic content engine; all repo claims verified.
+</footer>
+
+</div>
+</body>
+</html>

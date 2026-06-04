@@ -8,6 +8,7 @@ import { sample as raceRowSample } from '@vismay/f1-viz/modules/race-row/sample'
 import { sample as raceCardSample } from '@vismay/f1-viz/modules/race-card/sample'
 import { sample as driverStandingsSample } from '@vismay/f1-viz/modules/driver-standings/sample'
 import { sample as positionChartSample } from '@vismay/f1-viz/modules/position-chart/sample'
+import { sample as raceReplaySample } from '@vismay/f1-viz/modules/race-replay/sample'
 import { sample as matchCardSample } from '@vismay/footshorts-viz/modules/match-card/sample'
 import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-row/sample'
 import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
@@ -72,6 +73,7 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'f1:race-card', category: 'F1', sample: raceCardSample },
   { type: 'f1:driver-standings', category: 'F1', sample: driverStandingsSample },
   { type: 'f1:position-chart', category: 'F1', sample: positionChartSample },
+  { type: 'f1:race-replay', category: 'F1', sample: raceReplaySample },
   { type: 'fs:match-card', category: 'Footshorts', sample: matchCardSample },
   { type: 'fs:match-row', category: 'Footshorts', sample: matchRowSample },
   { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },

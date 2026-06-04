@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vizf1 AI-pipeline plan vs. June 2026 roadmap — scoping comparison</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #161922; --ink: #e7e9ee; --muted: #9aa3b2;
+    --line: #262b36; --accent: #818cf8; --crit: #f87171; --ok: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 21px; margin: 40px 0 14px; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; margin: 22px 0 6px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 15px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--ink);
+  }
+  .chip b { color: var(--accent); font-weight: 600; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin: 14px 0;
+  }
+  .callout { border-left: 3px solid var(--accent); padding-left: 16px; margin: 12px 0; }
+  .callout.crit { border-left-color: var(--crit); }
+  .callout.ok { border-left-color: var(--ok); }
+  .callout.warn { border-left-color: var(--warn); }
+  pre.ascii {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; overflow-x: auto; font: 13px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--ink);
+  }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td code, p code, li code { background: #0b0d13; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  .yes { color: var(--ok); } .warn { color: var(--warn); } .no { color: var(--crit); }
+  ol li, ul li { margin: 6px 0; }
+  .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--accent); color: #0b0d13; border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; }
+  .opt { display: inline-block; padding: 2px 10px; border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; background: var(--accent); color: #0b0d13; }
+  .opt.rec { background: var(--ok); }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>vizf1 AI-pipeline plan vs. June 2026 roadmap</h1>
+  <div class="sub">Scoping comparison · <code>docs/vizf1-ai-pipeline-integration.md</code> ⇄ <code>docs/roadmap-june-2026.md</code></div>
+  <div class="meta">
+    <span class="chip"><b>Verdict:</b> two scopes, not one</span>
+    <span class="chip"><b>Conflict:</b> f1_backend (roadmap mis-reads it)</span>
+    <span class="chip"><b>vizf1 size:</b> ~20–28 days (peer of the whole roadmap)</span>
+    <span class="chip"><b>Recommendation:</b> Option 2 (vizf1 = July)</span>
+  </div>
+</header>
+
+<h2>TL;DR</h2>
+<div class="card">
+  <p>These two documents are <strong>not two views of the same work</strong>. They describe <strong>different AI pipelines, for different verticals, at different altitudes</strong> — and they contradict each other on one load-bearing fact (<code>f1_backend/</code>). The June roadmap does <strong>not</strong> schedule the vizf1 integration; that integration is a separate initiative roughly the size of the entire roadmap.</p>
+  <div class="callout">
+    <strong>① The roadmap's "AI engine" (⑤) ≠ the integration doc's pipeline.</strong>
+    ⑤ is a generic <em>research→outline→section→Deck</em> loop for vizmaya-fyi (~12–20h). The integration doc is a vizf1-specific
+    <em>signals→angles→curation→stories+charts→render</em> pipeline ported from <code>f1_backend</code> (~20–28 working days, 7 phases).
+  </div>
+  <div class="callout crit">
+    <strong>② The roadmap mis-reads <code>rohit/test</code></strong> on three counts (LOC, "empty" <code>f1_backend</code>, "removed footshorts deps") — all verified false below. Its decision-3 advice to <em>drop</em> <code>f1_backend</code> would delete the reference implementation the integration doc ports from.
+  </div>
+  <div class="callout">
+    <strong>③ vizf1 integration is a peer of the whole roadmap, not a sub-task</strong> — it can't be added to June without re-scoping the month.
+  </div>
+</div>
+
+<h2>1 · What each document is</h2>
+<table>
+  <thead><tr><th>&nbsp;</th><th>vizf1-ai-pipeline-integration.md</th><th>roadmap-june-2026 (.md ≡ .html)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Altitude</strong></td><td>Deep technical spec for <strong>one</strong> initiative</td><td>Month-level plan across <strong>7</strong> tracks</td></tr>
+    <tr><td><strong>Vertical</strong></td><td><strong>vizf1</strong> (F1 racing)</td><td>Platform + <strong>vizmaya-fyi</strong> Deck stories</td></tr>
+    <tr><td><strong>AI pipeline</strong></td><td>signals → angles → human curation → stories+charts → render (ported from <code>f1_backend</code>)</td><td>research → outline → multi-section → Deck story</td></tr>
+    <tr><td><strong>Output</strong></td><td><code>vizf1_stories</code> + GraphSpec→ECharts charts</td><td>a Deck-format vizmaya story</td></tr>
+    <tr><td><strong>Size</strong></td><td>New package + 3 migrations + admin UI + charts + native reader = multi-month, 7 phases</td><td>Item ⑤ is one of 7 tracks, scoped at <strong>12–20h</strong> over W1–W3</td></tr>
+  </tbody>
+</table>
+<p class="sub">The <code>.md</code> and <code>.html</code> roadmaps are the same content in two formats.</p>
+
+<h2>2 · Core finding: the roadmap does not contain this work</h2>
+<p>The integration doc reads like it should map onto roadmap item ⑤ ("AI research → stories"). It doesn't — they're two different engines:</p>
+<ul>
+  <li><strong>Roadmap ⑤</strong> — a <em>generic, source-driven</em> loop (web/news/docs → outline → sections) producing a <strong>Deck</strong> story for vizmaya-fyi, built on <code>packages/ai-gateway</code>'s <code>generateText</code>. Light, ~25% done.</li>
+  <li><strong>Integration doc</strong> — a <em>vizf1-specific, data-driven</em> pipeline (race signals → analysis angles → curation → narrative + GraphSpec charts) requiring a new <code>packages/story-pipeline</code> package, three Supabase migrations, an admin curation UI, an f1-viz chart module, and a native <code>/analysis</code> reader.</li>
+</ul>
+<p>Different inputs (research sources vs. race data), different outputs (Deck vs. GraphSpec charts), different verticals, order-of-magnitude difference in size. <strong>vizf1 does not appear anywhere in the roadmap's 7 items.</strong></p>
+
+<h2>3 · The <code>rohit/test</code> / <code>f1_backend</code> correction</h2>
+<p>The roadmap's read of <code>rohit/test</code> is wrong on three counts, and all three feed decision 3. Here is <code>main...rohit/test</code> as it actually is:</p>
+<table>
+  <thead><tr><th>Roadmap claims</th><th>Repo reality (verified)</th></tr></thead>
+  <tbody>
+    <tr><td>"3 commits / <strong>~2,000 LOC</strong>"</td><td>3 commits, but <strong>36,264 insertions across 210 files</strong> (~18×)</td></tr>
+    <tr><td>"adds an <strong>empty</strong> <code>f1_backend/</code> scaffold"</td><td><code>f1_backend/</code> is <strong>fully populated — 203 tracked files, ~35K LOC</strong>: working Python AI pipeline (<code>grounding.py</code>, LangGraph/CrewAI agents), Express backend, Vite frontend (<code>RacePage.tsx</code> 440 LOC, <code>trackProjection.ts</code>, <code>regression.ts</code>…)</td></tr>
+    <tr><td>"silently <strong>removes 2 footshorts deps</strong>"</td><td><strong>Zero deletions</strong> on the branch — <code>36,264 insertions(+)</code>, no <code>(-)</code>. No deps removed, no footshorts files touched</td></tr>
+  </tbody>
+</table>
+
+<h3>Commit breakdown</h3>
+<ul>
+  <li><code>ffe0a80 Add f1_backend folder structure</code> → the entire ~35K-LOC <code>f1_backend/</code> tree</li>
+  <li><code>f091fac future-plan</code> → <code>docs/vizf1-ai-pipeline-integration.md</code> + <code>paris-road-to-budapest.config.yaml</code> (551) + 3 <strong>empty junk files</strong> (<code>_probe_copy.txt</code>, <code>_snip.txt</code>, <code>vismay_tc.log</code>)</li>
+  <li><code>ccd7bc0 future-plan</code> → two migration docs (<code>fly-compute-migration.md</code>, <code>gcp-render-migration.md</code>)</li>
+</ul>
+<p>The branch touches <strong>nothing</strong> under <code>apps/</code>, <code>packages/</code>, or <code>verticals/</code> — there is <strong>no landing or canvas work in it</strong>. (The modified <code>canvas-frame</code> page is an <em>uncommitted</em> working-tree edit, not part of these commits.) So the roadmap's premise that ② "unblocks the canvas for ③/④" isn't supported by the diff.</p>
+
+<div class="card">
+  <h3 style="margin-top:0">Recommendation — keep <code>f1_backend/</code>, don't drop it</h3>
+  <ol>
+    <li>It's the <strong>reference implementation the integration doc ports from</strong>. Dropping it deletes <code>grounding.py</code>, <code>Story.model.ts</code>, and the staged-pipeline source the entire vizf1 plan is built on.</li>
+    <li>It's <strong>zero-cost to keep</strong>: not a pnpm-workspace member (globs are <code>apps/*</code>, <code>apps/footshorts/*</code>, <code>apps/vizf1/*</code>, <code>packages/*</code>, <code>verticals/*</code> — <code>f1_backend/</code> matches none), so turbo/CI never builds it. Inert reference tree.</li>
+    <li>The merge is <strong>trivial and risk-free</strong> — purely additive, no conflicts.</li>
+  </ol>
+  <p style="margin-bottom:0">Only real cleanup: <strong>drop the 3 empty junk files</strong> and relocate <code>paris-road-to-budapest.config.yaml</code> (root is odd). The roadmap's "6–12h integrate" estimate is misleading — the <em>merge</em> is ~10 minutes; the <em>35K LOC</em> is reference material you port from later (§6), not integrate.</p>
+</div>
+
+<h2>4 · Where the docs actually touch (verified)</h2>
+<table>
+  <thead><tr><th>Roadmap item</th><th>Relationship to integration doc</th><th>Repo check</th></tr></thead>
+  <tbody>
+    <tr><td><strong>② rohit/test</strong></td><td class="no">Direct conflict — drops the <code>f1_backend/</code> the doc ports from</td><td><code>f1_backend/</code> is real (203 files), not empty</td></tr>
+    <tr><td><strong>① Supabase Auth</strong></td><td class="warn">Compatible but coupled — doc relies on the <em>current</em> HMAC <code>isAuthed()</code> for every <code>/api/vizf1/*</code> route; ① swaps HMAC→Supabase session. Fine <em>if <code>isAuthed()</code> stays the boundary</em></td><td><code>apps/admin/lib/adminAuth.ts</code>, <code>apps/admin/middleware.ts</code> exist</td></tr>
+    <tr><td><strong>⑤ AI research→stories</strong></td><td>Conceptual cousin, not the same — same <code>generateText</code> base, different pipeline/vertical/output</td><td>—</td></tr>
+    <tr><td><strong>⑥ Footshorts (parked)</strong></td><td>Loosely related to the doc's Phase 6 <code>DomainPack</code> "football pack stub"</td><td>—</td></tr>
+    <tr><td>③ Rete, ④ Deck, ⑦ Ovo</td><td>Unrelated to the integration doc</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h2>5 · Open items — verified</h2>
+<table>
+  <thead><tr><th>Item</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td><strong><code>003_</code> collision</strong> (doc: "a <code>003_</code> already collides")</td><td class="yes">✅ Real — <code>apps/vizf1/supabase/migrations/</code> has two <code>002_</code> <em>and</em> two <code>003_</code> files. Doc's "continue from <code>004_</code>" is correct.</td></tr>
+    <tr><td><strong><code>043_ai_generations.sql</code></strong> (auth-alignment dependency)</td><td class="warn">⚠ Exists, but under <code>apps/vizmaya-fyi/supabase/migrations/043_ai_generations.sql</code> — <strong>NOT under vizf1</strong>. Three separate migration dirs exist (vizmaya-fyi / vizf1 / footshorts). The doc assumes vizf1 shares vizmaya-fyi's Supabase project. <strong>If they're separate projects, <code>ai_generations</code> won't exist in vizf1's DB</strong> and every <code>recordGeneration</code> call breaks. Confirm the shared-project assumption before Phase 0.</td></tr>
+    <tr><td><strong>Roadmap ⑤'s <code>section-generate</code> route + <code>appendStorySection</code></strong></td><td class="no">❌ Neither exists by name. The real per-asset generation route is <code>apps/admin/app/api/vizmaya/stories/[slug]/assets/generate/route.ts</code> — exactly what the <em>integration doc</em> cites (precisely), not what the roadmap cites (loosely). No <code>appendStorySection</code> in <code>packages/content-source/src/</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>6 · Slotting vizf1 into the June roadmap</h2>
+<p>Blunt finding: <strong>the integration doc is itself ~a full month for one engineer — a peer of the entire roadmap, not a sub-task.</strong> Rough sizing:</p>
+<table>
+  <thead><tr><th>Phase</th><th>Work</th><th>Est.</th><th>Earliest fit / dependency</th></tr></thead>
+  <tbody>
+    <tr><td><strong>0</strong></td><td>Migrations 004/005/006 + scaffold <code>story-pipeline</code> types + <code>transpilePackages</code></td><td>~1–2d</td><td>Needs the <strong>043 shared-project</strong> check (§5) resolved first</td></tr>
+    <tr><td><strong>1</strong></td><td>Stage A signals over positions/results + <code>run.ts</code> CLI + event plumbing</td><td>~2–3d</td><td>After 0</td></tr>
+    <tr><td><strong>2</strong></td><td>Stage B angles: port <code>grounding/*</code>, F1 personas, <code>generateText({schema})</code></td><td>~3–4d</td><td>After 1; ports from <code>f1_backend</code> (§3 — must keep it)</td></tr>
+    <tr><td><strong>3</strong></td><td>Admin curation UI + <code>vizf1-ai-pipeline.yml</code> + dispatch + realtime pages</td><td>~4–5d</td><td><strong>Couples to roadmap ①</strong> — relies on <code>isAuthed()</code> as the boundary</td></tr>
+    <tr><td><strong>4</strong></td><td>Stage D stories+charts: sequential chain, claim-verifier, coherence judge</td><td>~4–5d</td><td>After 2+3</td></tr>
+    <tr><td><strong>5</strong></td><td><code>f1:graph-spec</code> ECharts module + catalog sample + <code>/analysis</code> native reader</td><td>~3–4d</td><td>After 4</td></tr>
+    <tr><td><strong>6</strong></td><td>Cross-vertical <code>DomainPack</code> seam + football-pack stub</td><td>~2–3d</td><td>After 5; conceptual kin to parked ⑥ footshorts</td></tr>
+    <tr><td>7</td><td>Deep telemetry numerics</td><td>deferred</td><td>Needs 3.7Hz ingest (not in vizf1 today)</td></tr>
+  </tbody>
+</table>
+<p><strong>Total ≈ 20–28 working days, one engineer</strong> — consumes or overflows the entire June window on its own. It <strong>cannot</strong> run alongside ②→①→⑤→④ with current staffing. Three honest placements:</p>
+
+<div class="card">
+  <h3 style="margin-top:0"><span class="opt">Option 1</span> Swap, don't add (make June about vizf1)</h3>
+  <p style="margin-bottom:0">Replace the vizmaya-oriented ⑤+④ convergence with vizf1 Phases 0–5. Still do ① (Phase 3 needs it); ② becomes trivial (just keep <code>f1_backend</code>). The month's payoff changes from "AI→Deck story" to "AI→GraphSpec analysis on vizf1.com." Cleanest fit if vizf1 is the priority — but it's a <strong>re-scope of the month</strong>, not an addition.</p>
+</div>
+<div class="card">
+  <h3 style="margin-top:0"><span class="opt rec">Option 2</span> Keep June as-is; vizf1 is the July initiative <span class="sub">(recommended)</span></h3>
+  <p style="margin-bottom:0">The roadmap already has a "July tail." vizf1 integration is a better-defined July block than the parked ⑥/⑦. June's ⑤ (generic research→Deck) ships first and de-risks the <code>story-pipeline</code> patterns vizf1 later reuses.</p>
+</div>
+<div class="card">
+  <h3 style="margin-top:0"><span class="opt">Option 3</span> Thin vizf1 spike inside June (Phases 0–2 only)</h3>
+  <p style="margin-bottom:0">Tables + Stage A signals + Stage B angles landing as <code>proposed</code> — no admin UI, no frontend. ~6–9 days, provable via the worker CLI (<code>pipeline:signals</code>→<code>:angles</code>) + Supabase rows. Proves the pipeline against real data without UI/render cost; defers Phases 3–6. Fits beside a reduced roadmap.</p>
+</div>
+
+<h3>Two hard dependencies regardless of placement</h3>
+<ul>
+  <li><strong>Keep <code>isAuthed()</code> as the trust boundary</strong> when doing roadmap ① (HMAC→Supabase). Every <code>/api/vizf1/*</code> route opens with <code>if (!(await isAuthed())) return 401</code> — swap the <em>implementation</em> behind <code>isAuthed()</code>, not the <em>contract</em>, or Phase 3 breaks.</li>
+  <li><strong>Resolve the 043 / shared-Supabase-project question</strong> (§5) before Phase 0, or spend-tracking is dead on arrival.</li>
+</ul>
+
+<h2>Bottom line</h2>
+<ol>
+  <li><span class="num">1</span><strong>Two scopes, not one.</strong> Roadmap ⑤ = generic vizmaya Deck pipeline; integration doc = vizf1 F1 pipeline ported from <code>f1_backend</code>. The latter is month-sized.</li>
+  <li><span class="num">2</span><strong>Keep <code>f1_backend/</code> before the rohit/test cherry-pick</strong> (roadmap ②) — the roadmap's "empty scaffold / drop it" note is wrong; the integration plan ports from it.</li>
+  <li><span class="num">3</span><strong>Keep <code>isAuthed()</code> as the boundary</strong> when doing roadmap ① (HMAC→Supabase), or every <code>/api/vizf1/*</code> route breaks.</li>
+  <li><span class="num">4</span><strong>Verify 043 / shared-Supabase-project</strong> before any vizf1 pipeline work.</li>
+</ol>
+<p><strong>Recommended placement: Option 2</strong> (June ships the generic engine; vizf1 integration is the July initiative) or <strong>Option 3</strong> if a vizf1 proof is wanted sooner. Option 1 is viable only as a deliberate re-scope of the month.</p>
+
+<footer>
+  Generated June 3, 2026 · scope basis: comparison of the vizf1 integration spec against the 1-month foundation-first roadmap, all repo claims verified on <code>rohit/test</code>.
+</footer>
+
+</div>
+</body>
+</html>

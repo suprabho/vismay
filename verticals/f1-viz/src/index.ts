@@ -20,16 +20,19 @@ export async function register(): Promise<void> {
     { default: driverStandingsModule },
     { default: positionChartModule },
     { default: raceCardModule },
+    { default: raceReplayModule },
   ] = await Promise.all([
     import('./modules/race-row'),
     import('./modules/driver-standings'),
     import('./modules/position-chart'),
     import('./modules/race-card'),
+    import('./modules/race-replay'),
   ])
   registerVizModule(raceRowModule)
   registerVizModule(driverStandingsModule)
   registerVizModule(positionChartModule)
   registerVizModule(raceCardModule)
+  registerVizModule(raceReplayModule)
   // TODO(vizf1-scaffold): register constructor-standings, qualifying-results,
   // fp-results, sprint-results, news-card.
 }

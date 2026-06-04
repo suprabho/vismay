@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vismay — 1-Month Roadmap (June 2026)</title>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+    primaryColor: '#eef2ff', primaryBorderColor: '#6366f1', primaryTextColor: '#1e1b4b',
+    fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+  }});
+</script>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #161922; --ink: #e7e9ee; --muted: #9aa3b2;
+    --line: #262b36; --accent: #818cf8; --crit: #f87171; --ok: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 21px; margin: 40px 0 14px; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; margin: 22px 0 6px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 15px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--ink);
+  }
+  .chip b { color: var(--accent); font-weight: 600; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin: 14px 0;
+  }
+  .callout { border-left: 3px solid var(--accent); padding-left: 16px; margin: 12px 0; }
+  .mermaid { background: #fff; border-radius: 12px; padding: 18px; margin: 18px 0; overflow-x: auto; }
+  pre.ascii {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; overflow-x: auto; font: 13px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--ink);
+  }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td code, p code, li code { background: #0b0d13; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  .yes { color: var(--ok); } .warn { color: var(--warn); } .no { color: var(--crit); }
+  ol li, ul li { margin: 6px 0; }
+  .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--accent); color: #0b0d13; border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Vismay — 1-Month Roadmap</h1>
+  <div class="sub">June 3 – June 30, 2026 · ~4 weeks / ~20 working days</div>
+  <div class="meta">
+    <span class="chip"><b>Tracks:</b> 3–4 parallel</span>
+    <span class="chip"><b>Strategy:</b> Foundation-first</span>
+    <span class="chip"><b>Scope:</b> Foundation + AI engine only</span>
+    <span class="chip"><b>Focus:</b> ② → ① → ⑤ → ④</span>
+    <span class="chip"><b>Payoff:</b> content engine → Deck story (vizmaya pack)</span>
+  </div>
+  <div class="sub" style="margin-top:12px">
+    Related: <a href="vizf1-integration-vs-roadmap.html">vizf1-integration-vs-roadmap</a> (scoping comparison) ·
+    <a href="generalized-content-engine.html">generalized-content-engine</a> (the engine reframe) ·
+    <code>vizf1-ai-pipeline-integration.md</code> (original spec)
+  </div>
+</header>
+
+<h2>Three findings that reframe the plan</h2>
+<div class="card">
+  <div class="callout">
+    <strong>① "Auth to viz-admin" actually targets <code>apps/admin</code>.</strong>
+    <code>packages/viz-admin</code> is a component library with no auth boundary — the real auth lives in
+    <code>apps/admin/lib/adminAuth.ts</code> (HMAC cookie). <code>@supabase/supabase-js</code> is already wired in
+    <code>packages/content-source</code> and vizmaya-fyi, so the gap is a users table (migration 055) + a session-store
+    swap, not a from-scratch integration.
+  </div>
+  <div class="callout" style="border-left-color: var(--warn)">
+    <strong>② rohit/test is purely additive (3 commits, ~36K insertions, 0 deletions).</strong>
+    <span class="warn">Correcting the earlier read:</span> the bulk is <code>f1_backend/</code> — a
+    <strong>fully-populated ~35K-LOC reference implementation</strong> (Python AI pipeline, Express backend, Vite frontend),
+    <strong>not</strong> an empty scaffold, and <strong>no footshorts deps are removed</strong>. It isn't a pnpm-workspace
+    member, so it never builds. This is a <strong>trivial keep-and-clean, not a fraught merge</strong> — and
+    <code>f1_backend</code> is the <em>donor</em> for the content engine (⑤), not something to drop.
+  </div>
+  <div class="callout" style="border-left-color: var(--ok)">
+    <strong>③ The AI engine (⑤) is best built generic-first, with <code>f1_backend</code> as a donor — not a vizf1-specific port.</strong>
+    ⑤ becomes one generalized <em>research→render</em> engine (<code>packages/story-pipeline</code>) that recycles
+    f1_backend's GraphSpec/ContentBlock contract + curation UX (charts rebuilt on ECharts) and ports its grounding
+    heuristics as the trust spine; each vertical is a thin <code>DomainPack</code>. vizmaya is the June consumer;
+    vizf1 is the first proof-of-seam. See <a href="generalized-content-engine.html">generalized-content-engine</a>.
+  </div>
+</div>
+
+<h2>Gantt</h2>
+<pre class="mermaid">
+gantt
+    title Vismay — 1-Month Roadmap (Foundation + AI Engine)
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    todayMarker off
+
+    section Foundation
+    2  rohit/test keep f1_backend + clean junk          :m2, 2026-06-03, 1d
+    1  Auth — scope decision + migration 055 users      :a1a, 2026-06-03, 4d
+    1  Auth — HMAC to Supabase session + login UI       :a1b, after a1a, 5d
+
+    section AI Engine
+    5  Research-source spike (DECISION)                 :crit, a5a, 2026-06-03, 3d
+    5  Research to outline to section loop              :a5b, after a5a, 6d
+    5  Story scaffolding from research + admin UI       :a5c, after a5b, 6d
+
+    section Deck
+    4  Layout system to config (de-hardcode)            :a4a, after m2, 5d
+    4  Share-card variations + per-section overrides    :a4b, after a4a, 6d
+
+    section Convergence
+    AI to Deck story end-to-end + QA + buffer           :crit, c1, 2026-06-22, 7d
+
+    section Parked (July tail)
+    3  Rete delete/disconnect (opportunistic)           :p3, 2026-06-23, 3d
+    6  Footshorts pipeline + native reader              :p6, 2026-07-01, 6d
+    7  Ovo / Kidzovo scaffolding                        :p7, 2026-07-01, 8d
+</pre>
+
+<h3>Inline-readable version</h3>
+<pre class="ascii">
+TRACK / ITEM                    │  W1      W2      W3      W4    │  Jul+
+                                │  Jun3    Jun10   Jun17   Jun24 │  (tail)
+────────────────────────────────┼───────────────────────────────┼─────────
+FOUNDATION
+ ②  rohit/test keep+clean        │  █                            │
+ ①  Supabase Auth (apps/admin)   │  █████████████                │
+AI ENGINE
+ ⑤  research→render engine ⚡    │  ███████████████████████      │
+ ④  Deck format grow             │      ███████████████          │
+CONVERGENCE  ← the month's payoff
+ ★  AI→Deck story E2E + QA        │                    ██████████ │
+PARKED → spills to July
+ ③  Rete delete/disconnect       │                   ░░░ opportun.│
+ ⑥  Footshorts pipeline          │                               │  ▒▒▒▒▒▒
+ ⑦  Ovo (Kidzovo) scaffold       │                               │  ▒▒▒▒▒▒
+⚡ critical path   ░ opportunistic   ▒ parked
+</pre>
+
+<h2>Track breakdown</h2>
+
+<h3>Track A — Platform (you): ① Supabase Auth · ~8–12h</h3>
+<p>Decide scope (decision 1) → write migration 055 (<code>auth.users</code>) → add <code>@supabase/auth-helpers-next</code>
+→ swap the HMAC cookie in <code>apps/admin/middleware.ts</code> for a Supabase session, keeping the <code>.vismay.xyz</code>
+cookie domain. Ships end of W2. Frees this person to take the opportunistic Rete fix in W3.</p>
+
+<h3>Track B — Canvas/Deck (Rohit + 1): ② → ④ · ~16–22h</h3>
+<p>W1: merge rohit/test (purely additive — <strong>keep</strong> <code>f1_backend/</code> as the engine donor; just delete the
+3 empty junk files; no footshorts deps were removed), run tests. W1–W3: Deck grow, starting with the highest-leverage move — <strong>de-hardcode the layout list</strong> in
+<code>packages/viz-engine/src/foregroundLayouts.ts</code> (~30 layouts in code), which unblocks share-card variations +
+per-section overrides surfaced in <code>apps/admin/components/vizmaya/DeckComposerPanel.tsx</code>.</p>
+
+<h3>Track C — AI engine (1): ⑤ generalized research→render engine · ~12–20h</h3>
+<p>W1: <strong>research-source spike</strong> (the gating blocker — decision 2). W1–W3: build the generic
+research→outline→multi-section→render loop on <code>packages/ai-gateway</code>'s <code>generateText({schema})</code>,
+scaffolded as <code>packages/story-pipeline</code> behind a <code>DomainPack</code> seam. Recycle f1_backend's
+GraphSpec/ContentBlock contract + grounding heuristics (claim-verifier, context-narrowing, coherence judge) as the trust
+spine; clone the per-asset generate route at <code>apps/admin/app/api/vizmaya/stories/[slug]/assets/generate/route.ts</code>
+(note: there is no <code>section-generate</code> route or <code>appendStorySection</code> helper — those names don't exist
+in the repo). vizmaya is the June <code>DomainPack</code>; vizf1 is the first proof. See
+<a href="generalized-content-engine.html">generalized-content-engine</a>.</p>
+
+<h3>W4 — Convergence (all)</h3>
+<p>Wire ⑤ to emit a ④ Deck-format story end-to-end, QA, bugfix, buffer. The deliberate intersection of the two scope picks
+— the "content engine" working as one thing.</p>
+
+<h2>Effort &amp; state reference</h2>
+<table>
+  <thead><tr><th>#</th><th>Item</th><th>Target location</th><th>State</th><th>Effort</th><th>In month?</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Supabase Auth</td><td><code>apps/admin</code> (not viz-admin)</td><td>~5%</td><td>8–12h</td><td class="yes">✅</td></tr>
+    <tr><td>2</td><td>Merge rohit/test (keep <code>f1_backend</code> donor)</td><td>branch <code>rohit/test</code></td><td>additive · 0 deletions</td><td>~1h</td><td class="yes">✅</td></tr>
+    <tr><td>3</td><td>Rete delete/disconnect</td><td><code>apps/admin/.../canvas</code></td><td>~40%</td><td>3–6h</td><td class="warn">⚠ opportunistic</td></tr>
+    <tr><td>4</td><td>Grow Deck format</td><td><code>packages/viz-engine</code>, <code>apps/admin</code></td><td>~65%</td><td>10–18h</td><td class="yes">✅</td></tr>
+    <tr><td>5</td><td>Generalized research→render engine</td><td><code>packages/story-pipeline</code>, <code>ai-gateway</code>, <code>apps/admin/api</code></td><td>~25%</td><td>12–20h</td><td class="yes">✅</td></tr>
+    <tr><td>6</td><td>Footshorts pipeline</td><td><code>apps/footshorts</code>, <code>verticals/footshorts-viz</code></td><td>~75%</td><td>12–20h</td><td class="no">⛔ parked</td></tr>
+    <tr><td>7</td><td>Ovo / Kidzovo scaffold</td><td><code>docs/kidzovo-vertical-plan.md</code> (greenfield)</td><td>~10%</td><td>12–16h</td><td class="no">⛔ parked</td></tr>
+  </tbody>
+</table>
+
+<h2>Critical path &amp; the 3 decisions that firm this up</h2>
+<ol>
+  <li><span class="num">1</span><strong>Auth scope (gates Track A):</strong> simplest is admin password → Supabase email/password session. The bigger version is team SSO/OIDC (Google Workspace) with a user-management UI. First fits the month; second eats ~+1 week.</li>
+  <li><span class="num">2</span><strong>Research source for ⑤ (gates Track C — can't start without it):</strong> web search? a news/data API? uploaded documents? The single biggest unknown in the plan.</li>
+  <li><span class="num">3</span><strong>rohit/test — keep <code>f1_backend</code>? <span class="yes">Resolved: yes.</span></strong> It's a real ~35K-LOC reference impl (not an empty scaffold) and the donor for ⑤'s engine; not a pnpm-workspace member, so it never builds. The merge is purely additive (0 deletions — the "removed footshorts deps" concern was unfounded). Only cleanup: delete 3 empty junk files (<code>_probe_copy.txt</code>, <code>_snip.txt</code>, <code>vismay_tc.log</code>) + relocate <code>paris-road-to-budapest.config.yaml</code>.</li>
+</ol>
+
+<footer>
+  Generated June 3, 2026 · scope basis: 3–4 tracks, 1-month horizon, foundation-first, "foundation + AI engine only".
+</footer>
+
+</div>
+</body>
+</html>

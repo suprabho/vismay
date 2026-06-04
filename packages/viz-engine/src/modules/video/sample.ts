@@ -7,4 +7,5 @@ export const sample: VideoLayerConfig = {
   muted: true,
   autoplay: true,
   fit: 'cover',
+  posterTime: 0,
 }
