@@ -5,17 +5,18 @@
  * the service-role key. The `054_admin_profiles` trigger auto-creates the
  * matching `public.profiles` row.
  *
- * Run (cwd is apps/admin via the filter):
- *   pnpm --filter admin exec tsx --env-file=.env scripts/createAdminUser.ts <email> <password>
+ * Run:
+ *   pnpm --filter admin run create-admin-user <email> <password>
  *
- * Uses NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (already in .env).
+ * Uses NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (already in .env;
+ * loaded via the script's `tsx --env-file=.env`).
  */
 import { createClient } from '@supabase/supabase-js'
 
 async function main() {
   const [email, password] = process.argv.slice(2)
   if (!email || !password) {
-    console.error('usage: tsx --env-file=.env scripts/createAdminUser.ts <email> <password>')
+    console.error('usage: pnpm --filter admin run create-admin-user <email> <password>')
     process.exit(1)
   }
 
