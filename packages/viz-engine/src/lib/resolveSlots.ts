@@ -3,8 +3,10 @@ import type {
   VizLayer,
   ForegroundSlotInput,
   ForegroundRegionsInput,
+  ForegroundRegionDef,
   BackgroundSlotInput,
 } from './storyConfig.types'
+import type { ForegroundLayoutDef, ForegroundLayoutRegion } from '../types'
 
 /**
  * Back-compat shim. Translates a section's legacy `chart:` and `map:` fields
@@ -22,7 +24,17 @@ import type {
 
 export type ResolvedForeground =
   | { kind: 'flat'; layers: VizLayer[] }
-  | { kind: 'regions'; layout: string; regions: Record<string, VizLayer[]> }
+  | {
+      kind: 'regions'
+      layout: string
+      regions: Record<string, VizLayer[]>
+      /**
+       * A layout def synthesized from inline region `style`s (approach 3). When
+       * present, `ForegroundLayoutSlot` uses it directly instead of looking
+       * `layout` up in the registry.
+       */
+      inlineDef?: ForegroundLayoutDef
+    }
 
 export type ResolvedLayers = {
   /** Region-aware foreground description. */
@@ -59,12 +71,26 @@ function asBackgroundArray(input: BackgroundSlotInput | undefined): VizLayer[] {
 }
 
 function isRegionsInput(input: ForegroundSlotInput): input is ForegroundRegionsInput {
+  // `layout` is optional (inline-region form omits it), so discriminate on
+  // `regions` — but a `map` VizLayer also carries a `regions` field, so exclude
+  // anything that looks like a layer (`type`).
   return (
     !Array.isArray(input) &&
     typeof input === 'object' &&
     input != null &&
-    'layout' in input &&
-    'regions' in input
+    'regions' in input &&
+    !('type' in input)
+  )
+}
+
+/** A region value that carries its own geometry (`{ style, layers }`) vs. bare layers. */
+function isRegionDef(v: VizLayer | VizLayer[] | ForegroundRegionDef): v is ForegroundRegionDef {
+  return (
+    !Array.isArray(v) &&
+    typeof v === 'object' &&
+    v != null &&
+    'layers' in v &&
+    !('type' in v)
   )
 }
 
@@ -73,10 +99,28 @@ function resolveForeground(section: StorySectionConfig): ResolvedForeground {
   if (fg !== undefined) {
     if (isRegionsInput(fg)) {
       const regions: Record<string, VizLayer[]> = {}
+      const inlineStyles: Record<string, ForegroundLayoutRegion> = {}
+      let hasInline = false
       for (const [key, val] of Object.entries(fg.regions)) {
-        regions[key] = asLayerArray(val)
+        if (isRegionDef(val)) {
+          regions[key] = asLayerArray(val.layers)
+          inlineStyles[key] = { style: val.style }
+          hasInline = true
+        } else {
+          regions[key] = asLayerArray(val)
+        }
       }
-      return { kind: 'regions', layout: fg.layout, regions }
+      let inlineDef: ForegroundLayoutDef | undefined
+      if (hasInline) {
+        // Any region declared without an inline style still needs a box so its
+        // layers aren't dropped — give it a full fill.
+        const defRegions: Record<string, ForegroundLayoutRegion> = {}
+        for (const key of Object.keys(regions)) {
+          defRegions[key] = inlineStyles[key] ?? { style: { position: 'absolute', inset: 0 } }
+        }
+        inlineDef = { name: fg.layout ?? 'inline', regions: defRegions, stackOnPortrait: true }
+      }
+      return { kind: 'regions', layout: fg.layout ?? '', regions, inlineDef }
     }
     // Deck-format sugar: `section.layout` at the root paired with a flat
     // `foreground:` array becomes a region-aware foreground using a single

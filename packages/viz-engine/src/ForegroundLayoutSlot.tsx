@@ -61,8 +61,10 @@ export default function ForegroundLayoutSlot({
         regions: { default: foreground.layers } as Record<string, typeof foreground.layers>,
       }
     }
-    const def = getForegroundLayout(foreground.layout)
-    if (!def && typeof window !== 'undefined') {
+    // Inline-region foregrounds carry their own synthesized layout def
+    // (geometry declared in the section); otherwise resolve the named layout.
+    const def = foreground.inlineDef ?? getForegroundLayout(foreground.layout)
+    if (!def && foreground.layout && typeof window !== 'undefined') {
       console.warn(
         `[ForegroundLayoutSlot] unknown layout '${foreground.layout}', falling back to '${DEFAULT_FOREGROUND_LAYOUT}'`
       )
