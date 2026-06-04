@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import CatalogGrid from '@/components/CatalogGrid'
 import { catalogModules } from '@/lib/catalogModules'
 
@@ -9,6 +10,14 @@ export default function HomePage() {
         <p className="mt-2 text-sm text-[color:var(--color-muted)]">
           {catalogModules.length} viz modules available across core, F1, Footshorts, and Starship verticals.
           Click any card for the adminForm schema + sample YAML.
+        </p>
+        <p className="mt-3 text-sm">
+          <Link
+            href="/layouts"
+            className="text-[color:var(--color-text)] underline underline-offset-4 decoration-[color:var(--color-line)] hover:decoration-[color:var(--color-muted)]"
+          >
+            Browse deck layouts →
+          </Link>
         </p>
       </header>
       <CatalogGrid />

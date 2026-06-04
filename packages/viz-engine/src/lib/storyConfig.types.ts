@@ -1,6 +1,7 @@
 // Pure type definitions for story configs. No runtime imports — safe for
 // client components to import without dragging fs/path into the bundle.
 
+import type { CSSProperties } from 'react'
 import type { MapRegionLayer, HeatmapLayer, MapTextLabel } from '../types/story'
 import type { VizLayer, VizLayerStyle, VizLayerPanel, VizRef } from '../types'
 
@@ -12,13 +13,30 @@ export interface VizSlotNone {
 }
 
 /**
- * Region-aware foreground input. Authors declare a layout name (resolved via
- * the `foregroundLayouts` registry) and a map from region name to its layer
- * stack. A single `VizLayer` per region is sugar for a one-element array.
+ * Inline region descriptor: geometry + layers declared right in the section,
+ * instead of referencing a registered layout. Lets a section define a one-off
+ * split when no named layout fits. `style` is applied as the region wrapper's
+ * inline CSS (same vocabulary as a registered layout's region `style`).
+ */
+export interface ForegroundRegionDef {
+  style: CSSProperties
+  /** A single `VizLayer` is sugar for a one-element array. */
+  layers: VizLayer | VizLayer[]
+}
+
+/**
+ * Region-aware foreground input. Two shapes, both keyed by region name:
+ *   - named layout: `{ layout: 'text-left-chart-right', regions: { text: [...], chart: [...] } }`
+ *     — geometry comes from the `foregroundLayouts` registry.
+ *   - inline: `{ regions: { lead: { style: {...}, layers: [...] } } }` — geometry
+ *     is supplied per region; `layout` may be omitted. (Mixed regions without a
+ *     `style` fall back to a full-fill box.)
+ * A single `VizLayer` per region is sugar for a one-element array.
  */
 export interface ForegroundRegionsInput {
-  layout: string
-  regions: Record<string, VizLayer | VizLayer[]>
+  /** Registered layout name. Optional when regions carry inline `style`. */
+  layout?: string
+  regions: Record<string, VizLayer | VizLayer[] | ForegroundRegionDef>
 }
 
 export type ForegroundSlotInput = VizLayer | VizLayer[] | ForegroundRegionsInput
