@@ -115,9 +115,11 @@ roadmap).
   → resolved via fixed-z + z-traversal-lite, not true interleave.
 - Subjects are interactive/responsive; objects are not.
 - Subjects/objects have explicit enter/exit lifetimes.
+- **The starship (spacex-ipo) is a SUBJECT** — center-stage, interactive (orbit/scrub), and gets the
+  cross-beat morph; not ambient decor. So the first real subject is 3D — Tier 1's data model should be
+  authored 3D-ready (a transform track) even though the Tier 1 renderer stays flat/2D.
 
 ## Open questions
-- Is the **starship** a *subject* (grabbable, the focus of those beats) or an *object* (ambient drift)?
 - Authoring: per-beat transforms in **YAML** (like the map's camera today) vs eventually a **visual 3D
   editor** in the admin canvas — the difference between "ambitious feature" and "we built a 3D editor."
 
