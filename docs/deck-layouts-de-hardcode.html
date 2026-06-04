@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deck layout de-hardcode — assessment &amp; approach</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #161922; --ink: #e7e9ee; --muted: #9aa3b2;
+    --line: #262b36; --accent: #818cf8; --crit: #f87171; --ok: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 32px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 21px; margin: 40px 0 14px; letter-spacing: -0.01em; }
+  h3 { font-size: 16px; margin: 22px 0 6px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 15px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: 13px; color: var(--ink);
+  }
+  .chip b { color: var(--accent); font-weight: 600; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin: 14px 0;
+  }
+  .callout { border-left: 3px solid var(--accent); padding-left: 16px; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td code, p code, li code { background: #0b0d13; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  .yes { color: var(--ok); } .warn { color: var(--warn); } .no { color: var(--crit); }
+  ol li, ul li { margin: 6px 0; }
+  .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+    background: var(--accent); color: #0b0d13; border-radius: 6px; font-weight: 700; font-size: 13px; margin-right: 6px; }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  a { color: var(--accent); }
+  code.path { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Deck layout de-hardcode — assessment &amp; approach</h1>
+  <p class="sub">Roadmap item ④ "Grow Deck format" · Track B — what it really involves, and the decision inside it.</p>
+  <div class="meta">
+    <span class="chip">Roadmap <b>④ Deck · Track B</b></span>
+    <span class="chip">Target <b>packages/viz-engine/src/foregroundLayouts.ts</b></span>
+    <span class="chip">Generated <b>June 4, 2026</b></span>
+  </div>
+</header>
+
+<div class="callout">
+  <strong>TL;DR.</strong> The roadmap calls this <em>"de-hardcode the ~30 layouts in code."</em> In reality there are
+  <strong>~11 registered layouts, and 8 of them are identical no-op stubs</strong> that collapse to the same box. So the task
+  is less a mechanical extraction and more: <strong>make layout names mean something and make them data-driven</strong>, which
+  then unblocks per-section overrides and share-card variations. It's a <em>design</em> task (the config shape is the real
+  decision), it's <span class="yes">independent of auth (#161) and the ⑤ research-source decision</span>, and the admin / AI
+  side mostly comes along for free because it already reads the layout registry.
+</div>
+
+<h2>What it actually is (vs. how the roadmap frames it)</h2>
+<p>
+  <code>foregroundLayouts.ts</code> registers ~11 layouts, but the shape matters more than the count:
+</p>
+<ul>
+  <li><strong>Real layouts:</strong> <code>single-fill</code>, <code>split-37-63-two-row</code> (+ portrait variant), <code>hero-full-bleed</code>.</li>
+  <li>
+    <strong>8 "deck" names</strong> (<code>text-left-chart-right</code>, <code>text-left-quote-right</code>,
+    <code>image-left-text-right</code>, <code>stat-top-chart-below</code>, <code>stat-left-chart-right</code>,
+    <code>chart-top-text-below</code>, <code>centered</code>, <code>free</code>) are generated from a string array and
+    <strong>all collapse to the same <code>DECK_SAFE_AREA</code> box</strong>. They carry no distinct geometry. The file's own
+    comment says they exist so "authors signal intent and the admin form / preview can render the right scaffolding" — the
+    actual positioning is done <strong>per-slot</strong> via <code>style.position</code> + <code>style.size</code>.
+  </li>
+</ul>
+<p>
+  So "de-hardcode the layout list" rests on a looser premise than stated: there isn't a rich list of geometries trapped in
+  code — there are 8 placeholder names with no real layout behind them. (This mirrors how the roadmap's <code>rohit/test</code>
+  reads were corrected against the repo.)
+</p>
+
+<h2>What's already in place (so the task is smaller than it sounds)</h2>
+<ul>
+  <li>
+    A registry seam already exists: <code>registerForegroundLayout()</code> / <code>getForegroundLayout()</code> /
+    <code>listForegroundLayouts()</code> — and verticals can register their own layouts without touching core.
+  </li>
+  <li>
+    The admin <strong><code>DeckComposerPanel</code></strong> and the AI canvas routes (<code>canvas/evaluate</code>,
+    <code>canvas/fix</code>) already <strong>read the registry</strong> (<code>knownLayouts</code>) to validate a section's
+    <code>layout</code> and warn on an unknown one. They do <strong>not</strong> hardcode a layout list. So once layouts are
+    config-driven, the admin + AI validation comes along largely for free.
+  </li>
+</ul>
+
+<h2>What it unblocks (the roadmap's payoff)</h2>
+<ol>
+  <li><strong>Per-section overrides</strong> — a section could adjust its region geometry inline instead of someone adding a new hardcoded TS layout. (<code>section.layout</code> already exists; the gap is overriding <em>regions</em>.)</li>
+  <li><strong>Share-card variations</strong> — the social / OG share card could render a different crop or framing of a section than the on-page layout.</li>
+</ol>
+
+<h2>The real work — and the decision inside it</h2>
+<p>The core fork is <strong>how a layout becomes data</strong>:</p>
+<ol>
+  <li><span class="num">1</span>A config file (JSON/YAML) of <code>ForegroundLayoutDef</code>s loaded into the registry at boot.</li>
+  <li><span class="num">2</span>Give the 8 deck names <strong>real</strong> region splits (so <code>text-left-chart-right</code> actually maps slots to a left/right region instead of one fill box).</li>
+  <li><span class="num">3</span>Let story / section YAML define <strong>inline <code>regions</code></strong>, with the named layouts as presets.</li>
+</ol>
+<p>
+  These aren't mutually exclusive — the likely answer is <strong>(2) + (3)</strong>. Because it's genuinely multi-approach,
+  this wants a short <strong>plan checkpoint before coding</strong>.
+</p>
+
+<h2>Scope · risk · dependencies</h2>
+<table>
+  <tr><th>Dimension</th><th>Read</th></tr>
+  <tr><td><strong>Effort</strong></td><td>The Deck track is scoped ~10–18h; this is its leverage piece — a solid multi-file change in <code>viz-engine</code> + light admin wiring.</td></tr>
+  <tr><td><strong>Blast radius</strong></td><td>Medium — touches the foreground render path (<code>ForegroundLayoutSlot</code>, <code>ForegroundVizSlot</code>) every Deck story uses. Verify against the catalog + a real Deck story (spacex-ipo / paris) for no render regression.</td></tr>
+  <tr><td><strong>Dependencies</strong></td><td><span class="yes">Independent of #161 (auth) and Decision 2 (research source)</span> — fully parallelizable. Independent of <code>f1_backend</code>.</td></tr>
+  <tr><td><strong>Ownership</strong></td><td>This is roadmap <strong>Track B (Rohit + 1)</strong>, not Track A. Picking it up means doing Track B work — reasonable since auth landed early and freed capacity, but worth naming.</td></tr>
+</table>
+
+<h2>Recommendation</h2>
+<p>
+  A real, unblocked, critical-path improvement — but a <strong>design</strong> task (config shape) more than a mechanical
+  de-hardcode. Recommended path: a short plan (approach <strong>(2)+(3)</strong>) for sign-off, then build in
+  <code>viz-engine</code> with catalog + Deck-story verification. Can run in parallel while #161 is tested and Decision 2 is
+  pending.
+</p>
+
+<footer>
+  Generated June 4, 2026 · basis: direct read of the layout registry and its admin/AI consumers, verified against the repo on <code>main</code>.
+</footer>
+
+</div>
+</body>
+</html>
