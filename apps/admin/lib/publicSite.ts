@@ -22,6 +22,30 @@ export const footshortsPublicUrl: string = normalize(
 )
 
 /**
+ * Per-vertical admin origins. Admin is reachable on its own subdomain of each
+ * consumer TLD (admin.vizmaya.fyi, admin.footshorts.com, admin.vizf1.com) in
+ * addition to the vismay.xyz family. These are trusted admin surfaces, listed
+ * here so the middleware CORS allow-list accepts a cross-origin admin `/api/*`
+ * call between them. Env-overridable for staging hosts.
+ */
+export const adminVizmayaUrl: string = normalize(
+  process.env.NEXT_PUBLIC_ADMIN_VIZMAYA_URL || 'https://admin.vizmaya.fyi'
+)
+export const adminFootshortsUrl: string = normalize(
+  process.env.NEXT_PUBLIC_ADMIN_FOOTSHORTS_URL || 'https://admin.footshorts.com'
+)
+export const adminVizf1Url: string = normalize(
+  process.env.NEXT_PUBLIC_ADMIN_VIZF1_URL || 'https://admin.vizf1.com'
+)
+
+/** All per-vertical admin origins, for the CORS allow-list. */
+export const adminPublicOrigins: string[] = [
+  adminVizmayaUrl,
+  adminFootshortsUrl,
+  adminVizf1Url,
+]
+
+/**
  * Return both the apex and `www.` variants of a base URL.
  *
  * Vercel's default redirect rules send the apex (`vizmaya.fyi`) to the `www`

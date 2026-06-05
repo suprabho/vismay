@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { NextRequest, NextResponse } from 'next/server'
 
 /**
@@ -14,9 +14,12 @@ import type { NextRequest, NextResponse } from 'next/server'
  *   - `createMiddlewareSupabase(req, res)` — for middleware (reads the request
  *     cookies, writes refreshed session cookies onto the response).
  *
- * Cookie domain mirrors the legacy `adminAuth.ts` logic so the session is shared
- * across `.vismay.xyz` admin subdomains (and stays host-only in dev / on Vercel
- * preview URLs that can't carry a `.vismay.xyz` cookie). See docs/auth.md.
+ * Cookie domain is host-aware: the `.vismay.xyz` admin family shares one cookie,
+ * while each consumer-TLD admin host (admin.vizmaya.fyi, admin.footshorts.com,
+ * admin.vizf1.com) gets a host-only cookie — a different registrable domain
+ * can't carry a `.vismay.xyz` cookie, so each runs its own independent
+ * per-vertical session. Also host-only in dev / on Vercel preview URLs. See
+ * docs/auth.md.
  */
 
 const URL_ENV = 'NEXT_PUBLIC_SUPABASE_URL'
@@ -34,17 +37,23 @@ function requireEnv(): { url: string; key: string } {
   return { url, key }
 }
 
-function cookieDomain(): string | undefined {
+function cookieDomainForHost(host: string | null | undefined): string | undefined {
   if (process.env.NODE_ENV !== 'production') return undefined
-  return (
-    process.env.ADMIN_COOKIE_DOMAIN ||
-    (process.env.VERCEL_ENV === 'preview' ? undefined : '.vismay.xyz')
-  )
+  if (process.env.ADMIN_COOKIE_DOMAIN) return process.env.ADMIN_COOKIE_DOMAIN
+  if (process.env.VERCEL_ENV === 'preview') return undefined
+  // Share ONE cookie across the vismay.xyz admin family (vismay.xyz +
+  // *.vismay.xyz). Every other admin host — admin.vizmaya.fyi,
+  // admin.footshorts.com, admin.vizf1.com — is a different registrable domain
+  // that can't carry a `.vismay.xyz` cookie, so it gets a host-only cookie and
+  // therefore its own independent per-vertical session.
+  const h = (host ?? '').split(':')[0].toLowerCase()
+  if (h === 'vismay.xyz' || h.endsWith('.vismay.xyz')) return '.vismay.xyz'
+  return undefined
 }
 
-/** Merge the shared-subdomain cookie domain into Supabase's per-cookie options. */
-function withDomain(options: CookieOptions): CookieOptions {
-  const domain = cookieDomain()
+/** Merge the host-appropriate cookie domain into Supabase's per-cookie options. */
+function withDomain(options: CookieOptions, host: string | null | undefined): CookieOptions {
+  const domain = cookieDomainForHost(host)
   return domain ? { ...options, domain } : options
 }
 
@@ -52,6 +61,7 @@ function withDomain(options: CookieOptions): CookieOptions {
 export async function createServerSupabase() {
   const { url, key } = requireEnv()
   const jar = await cookies()
+  const host = (await headers()).get('host')
   return createServerClient(url, key, {
     cookies: {
       getAll() {
@@ -60,7 +70,7 @@ export async function createServerSupabase() {
       setAll(cookiesToSet) {
         try {
           for (const { name, value, options } of cookiesToSet) {
-            jar.set(name, value, withDomain(options))
+            jar.set(name, value, withDomain(options, host))
           }
         } catch {
           // `setAll` invoked from a Server Component, where the cookie jar is
@@ -79,6 +89,7 @@ export async function createServerSupabase() {
  */
 export function createMiddlewareSupabase(req: NextRequest, res: NextResponse) {
   const { url, key } = requireEnv()
+  const host = req.headers.get('host')
   return createServerClient(url, key, {
     cookies: {
       getAll() {
@@ -89,7 +100,7 @@ export function createMiddlewareSupabase(req: NextRequest, res: NextResponse) {
           req.cookies.set(name, value)
         }
         for (const { name, value, options } of cookiesToSet) {
-          res.cookies.set(name, value, withDomain(options))
+          res.cookies.set(name, value, withDomain(options, host))
         }
       },
     },

@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     '@vismay/viz-engine',
     '@vismay/footshorts-viz',
     '@vismay/f1-viz',
+    '@vismay/ui',
   ],
 }
 

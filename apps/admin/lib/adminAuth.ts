@@ -44,7 +44,7 @@ export function isConfigured(): boolean {
  * comma-separated list; an entry starting with `@` matches a whole domain
  * (e.g. `@promad.design`). Fails CLOSED: unset/empty ⇒ nobody is admin.
  */
-function isAllowedEmail(email: string | null | undefined): boolean {
+export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false
   const raw = process.env.ADMIN_ALLOWED_EMAILS
   if (!raw) return false

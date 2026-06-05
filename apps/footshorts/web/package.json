@@ -16,6 +16,8 @@
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/story-embed": "workspace:*",
+    "@vismay/ui": "workspace:*",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-query": "^5.56.2",
     "mapbox-gl": "^3.21.0",
