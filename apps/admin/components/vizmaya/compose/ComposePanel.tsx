@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { TEXT_MODEL_CHOICES, DEFAULT_TEXT_MODEL } from '@vismay/story-pipeline'
+// Import the model list from the pure `./models` subpath, NOT the package root:
+// the root re-exports the ingest pipeline (jsdom/fs/pdf-parse), which can't be
+// bundled into this client component. Types below are erased, so the root is fine.
+import { TEXT_MODEL_CHOICES, DEFAULT_TEXT_MODEL } from '@vismay/story-pipeline/models'
 import type {
   ResearchBrief,
   ClarifyingQuestion,
