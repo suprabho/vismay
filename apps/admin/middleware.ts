@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminMiddleware } from '@vismay/admin-core/middleware'
 import { auth } from '@/lib/adminAuth'
+import { isSupabaseConfigured } from '@/lib/supabaseServer'
+import { supabaseSessionGuard } from '@/lib/supabaseMiddleware'
 import {
   vizmayaPublicUrl,
   vizf1PublicUrl,
@@ -42,13 +44,12 @@ function corsHeadersFor(origin: string): Record<string, string> {
   }
 }
 
-const adminMiddleware = createAdminMiddleware({
-  auth,
-  loginPath: '/login',
-  bypassPaths: ['/', '/login'],
-})
+const SESSION_OPTIONS = { loginPath: '/login', bypassPaths: ['/', '/login'] }
 
-export function middleware(req: NextRequest): NextResponse {
+// Legacy shared-password gate, used only when Supabase isn't configured.
+const adminMiddleware = createAdminMiddleware({ auth, ...SESSION_OPTIONS })
+
+export async function middleware(req: NextRequest): Promise<NextResponse> {
   const origin = req.headers.get('origin')
   const allowedOrigin =
     origin && ALLOWED_CONSUMER_ORIGINS.has(origin) ? origin : null
@@ -76,7 +77,9 @@ export function middleware(req: NextRequest): NextResponse {
     return res
   }
 
-  const res = adminMiddleware(req)
+  const res = isSupabaseConfigured()
+    ? await supabaseSessionGuard(req, SESSION_OPTIONS)
+    : adminMiddleware(req)
 
   // Attach CORS headers to the regular response so the browser lets the
   // editor read the body (including any 401 the middleware emitted — without

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { LoginForm } from '@vismay/admin-core'
+import AdminLoginForm from '@/components/AdminLoginForm'
 
 interface Props {
   next?: string
@@ -61,11 +61,11 @@ export function LoginModal({ next = '/', label = 'Sign in', variant = 'primary' 
             <div id="login-modal-title" className="sr-only">
               Sign in to Vismay admin
             </div>
-            <LoginForm
+            <AdminLoginForm
               next={next}
               loginEndpoint="/api/login"
               title="Sign in"
-              subtitle="Vismay admin · shared password."
+              subtitle="Vismay admin"
             />
           </div>
         </div>

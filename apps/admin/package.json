@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "create-admin-user": "tsx --env-file=.env scripts/createAdminUser.ts"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
     "@monaco-editor/react": "^4.7.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.103.0",
     "@vismay/admin-core": "workspace:*",
     "@vismay/ai-gateway": "workspace:*",
@@ -45,6 +47,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { LoginForm } from '@vismay/admin-core'
+import AdminLoginForm from '@/components/AdminLoginForm'
 import { isAuthed } from '@/lib/adminAuth'
 
 interface Props {
@@ -11,7 +11,7 @@ export default async function AdminLoginPage({ searchParams }: Props) {
   const { next } = await searchParams
   return (
     <div className="flex-1 flex items-center justify-center p-6">
-      <LoginForm next={next ?? '/'} loginEndpoint="/api/login" />
+      <AdminLoginForm next={next ?? '/'} loginEndpoint="/api/login" />
     </div>
   )
 }

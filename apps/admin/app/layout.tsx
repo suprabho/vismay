@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Link from 'next/link'
 import { LogoutButton } from '@vismay/admin-core'
-import { isAuthed, expectedToken } from '@/lib/adminAuth'
+import { isAuthed, isConfigured } from '@/lib/adminAuth'
 import AssistantLauncher from '@/components/AssistantLauncher'
 import './globals.css'
 
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const configured = expectedToken() !== null
+  const configured = isConfigured()
   const authed = await isAuthed()
   const siteUrl = process.env.NEXT_PUBLIC_VIZMAYA_URL || 'https://vizmaya.fyi'
 

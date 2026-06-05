@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
-import { checkPassword, setAuthCookie } from '@/lib/adminAuth'
+import { signIn } from '@/lib/adminAuth'
 
 export async function POST(req: Request) {
-  const { password } = (await req.json().catch(() => ({}))) as { password?: string }
-  if (typeof password !== 'string' || !checkPassword(password)) {
-    return NextResponse.json({ error: 'invalid password' }, { status: 401 })
+  const { email, password } = (await req.json().catch(() => ({}))) as {
+    email?: string
+    password?: string
   }
-  await setAuthCookie()
+  if (typeof password !== 'string' || password.length === 0) {
+    return NextResponse.json({ error: 'password required' }, { status: 400 })
+  }
+  const result = await signIn(typeof email === 'string' ? email : '', password)
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error ?? 'invalid credentials' }, { status: 401 })
+  }
   return NextResponse.json({ ok: true })
 }
