@@ -4,11 +4,12 @@ import { useRef, useCallback, useMemo, useState, forwardRef, useImperativeHandle
 import { toPng } from 'html-to-image'
 import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility, VizLayer, MapRegionLayer, HeatmapLayer } from '@vismay/viz-engine'
 import type { MapTextLabel } from '@vismay/viz-engine'
-import { ForegroundVizSlot, resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlotsFlat } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
 import ShareTextCard from './ShareTextCard'
 import ShareStatCard from './ShareStatCard'
 import ShareHeroCard from './ShareHeroCard'
+import ShareDeckForeground from './ShareDeckForeground'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
@@ -161,8 +162,14 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
   // paragraphs via ShareTextCard / ShareHeroCard / ShareStatCard — emitting a
   // duplicate "viz" card for a `- type: text` layer would render the same copy
   // twice.
+  // Visual foreground layers — text/bodyText prose is carried by the text card,
+  // so exclude it here (a `graph` card is purely visual). Keeps a pure-bodyText
+  // section from emitting an empty graph card.
   const vizForegroundLayers = useMemo(
-    () => resolvedSlots.foreground.filter((l) => l.type !== 'text'),
+    () =>
+      resolvedSlots.foreground.filter(
+        (l) => l.type !== 'text' && l.type !== 'bodyText'
+      ),
     [resolvedSlots]
   )
   // Per-subsection share override — sits between the section-level share
@@ -508,56 +515,35 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                 </div>
               )
             ) : isGraph && hasVizForeground ? (
-              /* Foreground-viz card — renders the section's foreground stack
-                 through the slot dispatcher so any registered viz module
-                 (chart, image, video, embed, rive, vertical-specific cards
-                 like `fs:match-card` or `f1:race-row`) appears on share,
-                 not just the legacy `chart:` field. `activeStep` is driven
-                 by the unit's subIndex so chart steps animate per card. */
-              <div className="w-full h-full flex flex-col p-[10px] pb-[32px]">
-                {(chartHeading || chartSubheading) && (
-                  <div className="shrink-0">
-                    {chartHeading && (
-                      <h4
-                        className="font-serif text-[20px] text-center font-bold leading-[1.2]"
-                        style={{ color: 'var(--color-accent)' }}
-                      >
-                        {chartHeading}
-                      </h4>
-                    )}
-                    {chartSubheading && (
-                      <p
-                        className="text-[17px] text-center leading-[1.4]"
-                        style={{ color: 'var(--color-muted)' }}
-                      >
-                        {chartSubheading}
-                      </p>
-                    )}
-                  </div>
-                )}
-                <div className="flex-1 min-h-0 relative">
-                  <div className="absolute inset-0 overflow-hidden **:min-h-0!">
-                    <ForegroundVizSlot
-                      slug={slug}
-                      layers={vizForegroundLayers}
-                      unitKey={`${unit.parentIndex}-${unit.subIndex}`}
-                      activeStep={unit.subIndex}
-                      mode="capture"
-                    />
-                  </div>
-                </div>
-              </div>
+              /* Foreground-viz card — composes the deck section's visual
+                 foreground (chart / image / bigStat / 3D / vertical modules)
+                 responsively per ratio. ShareDeckForeground routes through the
+                 deck's own ForegroundLayoutSlot so charts resize and multi-layer
+                 sections stack instead of squishing; hero/cover sections fill
+                 with the title overlaid. */
+              <ShareDeckForeground
+                slug={slug}
+                unit={unit}
+                ratio={ratio}
+                cardHeight={h}
+                heroEyebrow={parentConfig.eyebrow}
+                heroHeading={heroHeading}
+                heroDek={heroDek}
+                chartHeading={chartHeading}
+                chartSubheading={chartSubheading}
+              />
             ) : kind === 'hero' && heroHeading ? (
-              <ShareHeroCard title={heroHeading} dek={heroDek} />
+              <ShareHeroCard title={heroHeading} dek={heroDek} ratio={ratio} />
             ) : kind === 'stat' && heading ? (
               <ShareStatCard
                 value={heading}
                 subheading={subheading}
                 description={statDescription}
                 color={parentConfig.color}
+                ratio={ratio}
               />
             ) : (
-              <ShareTextCard heading={heading} subheading={subheading} paragraphs={paragraphs} hidePretext={hidePretext} />
+              <ShareTextCard heading={heading} subheading={subheading} paragraphs={paragraphs} hidePretext={hidePretext} ratio={ratio} />
             )}
           </div>
 
