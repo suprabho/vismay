@@ -124,3 +124,51 @@ export async function loadSession(id: string): Promise<ComposeSession | null> {
     return null
   }
 }
+
+export async function deleteSession(id: string): Promise<void> {
+  await fs.rm(sessionPath(id), { force: true })
+}
+
+/** A lightweight summary for the resume picker (no heavy sources/section bodies). */
+export interface ComposeSessionSummary {
+  id: string
+  title: string
+  status: ComposeSession['status']
+  updatedAt: string
+  done: number
+  total: number
+  format?: StoryFormat
+  slug?: string
+}
+
+/** List saved sessions, newest first — powers reload-resume. */
+export async function listSessions(): Promise<ComposeSessionSummary[]> {
+  let files: string[]
+  try {
+    files = await fs.readdir(sessionsDir())
+  } catch {
+    return [] // dir doesn't exist yet → no sessions
+  }
+  const out: ComposeSessionSummary[] = []
+  for (const f of files) {
+    if (!f.endsWith('.json')) continue
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const raw = await fs.readFile(path.join(sessionsDir(), f), 'utf8')
+      const s = JSON.parse(raw) as ComposeSession
+      out.push({
+        id: s.id,
+        title: s.outline?.title ?? s.brief?.summary?.slice(0, 80) ?? '(untitled)',
+        status: s.status,
+        updatedAt: s.updatedAt ?? s.createdAt,
+        done: (s.sections ?? []).filter(Boolean).length,
+        total: s.outline?.sections.length ?? 0,
+        format: s.format,
+        slug: s.slug,
+      })
+    } catch {
+      // skip unreadable/corrupt session file
+    }
+  }
+  return out.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+}

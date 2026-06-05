@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 // Import the model list from the pure `./models` subpath, NOT the package root:
 // the root re-exports the ingest pipeline (jsdom/fs/pdf-parse), which can't be
 // bundled into this client component. Types below are erased, so the root is fine.
@@ -41,6 +41,30 @@ interface DoneInfo {
   issues: ValidationIssue[]
 }
 
+interface SessionSummary {
+  id: string
+  title: string
+  status: 'researched' | 'generating' | 'done' | 'error'
+  updatedAt: string
+  done: number
+  total: number
+  format?: StoryFormat
+  slug?: string
+}
+
+interface LoadedSession {
+  id: string
+  model: string
+  format?: StoryFormat
+  answers: Record<string, string>
+  sources: SourceDoc[]
+  brief: ResearchBrief
+  outline?: StoryOutline
+  sections: (GeneratedSection | null)[]
+  slug?: string
+  status: string
+}
+
 type GenEvent =
   | { type: 'outline'; outline: StoryOutline }
   | { type: 'section'; index: number; total: number; section: GeneratedSection; cached?: boolean }
@@ -76,7 +100,23 @@ export function ComposePanel() {
   const [feedbacks, setFeedbacks] = useState<Record<number, string>>({})
   const [regenIndex, setRegenIndex] = useState<number | null>(null)
 
+  const [pastSessions, setPastSessions] = useState<SessionSummary[]>([])
+
   const busy = phase === 'researching' || phase === 'generating'
+
+  // Load saved sessions on mount so the editor can resume after a reload.
+  useEffect(() => {
+    let live = true
+    fetch('/api/vizmaya/compose/sessions')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (live && d?.ok) setPastSessions(d.sessions as SessionSummary[])
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [])
 
   async function runResearch() {
     setError(null)
@@ -220,6 +260,70 @@ export function ComposePanel() {
     }
   }
 
+  async function resumeSession(id: string) {
+    setError(null)
+    try {
+      const res = await fetch(`/api/vizmaya/compose/sessions/${id}`)
+      const data = (await res.json()) as
+        | {
+            ok: true
+            session: LoadedSession
+            previewUrl: string | null
+            issues: ValidationIssue[]
+            imagePrompts: ImagePrompt[]
+            done: number
+            total: number
+          }
+        | { error: string }
+      if (!res.ok || !('ok' in data)) throw new Error('error' in data ? data.error : 'failed to load session')
+      const s = data.session
+      const fmt = s.format ?? s.brief.suggestedFormat
+      setSessionId(s.id)
+      setSources(s.sources ?? [])
+      setFailures([])
+      setBrief(s.brief)
+      setQuestions(s.brief.questions)
+      setAnswers(s.answers ?? {})
+      setModel(s.model || DEFAULT_TEXT_MODEL)
+      setFormat(fmt)
+      setFeedbacks({})
+      if (s.outline) {
+        setOutline(s.outline)
+        setGenSections((s.sections ?? []) as GeneratedSection[])
+        setDone(
+          s.slug
+            ? {
+                slug: s.slug,
+                previewUrl: data.previewUrl ?? `/story/${s.slug}`,
+                format: fmt,
+                imagePrompts: data.imagePrompts ?? [],
+                issues: data.issues ?? [],
+              }
+            : null,
+        )
+        setRemaining((data.total || s.outline.sections.length) - (data.done || 0))
+        setPhase('done')
+      } else {
+        setOutline(null)
+        setGenSections([])
+        setDone(null)
+        setRemaining(0)
+        setPhase('questions')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  async function removeSession(id: string) {
+    try {
+      await fetch(`/api/vizmaya/compose/sessions/${id}`, { method: 'DELETE' })
+    } catch {
+      // ignore — best effort
+    }
+    setPastSessions((prev) => prev.filter((s) => s.id !== id))
+  }
+
   function reset() {
     setPhase('input')
     setError(null)
@@ -265,6 +369,46 @@ export function ComposePanel() {
               ))}
             </ul>
           </div>
+        )}
+
+        {/* Resume a previous session (survives a reload). */}
+        {phase === 'input' && pastSessions.length > 0 && (
+          <section className={`mt-6 ${card}`}>
+            <div className={label}>Resume a session</div>
+            <div className="mt-2 space-y-2">
+              {pastSessions.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-3 rounded-md border border-white/10 bg-neutral-950/50 px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm text-neutral-200">{s.title}</div>
+                    <div className="text-xs text-neutral-500">
+                      {s.status}
+                      {' · '}
+                      {s.total ? `${s.done}/${s.total} sections` : 'not generated'}
+                      {s.format ? ` · ${s.format}` : ''}
+                      {' · '}
+                      {new Date(s.updatedAt).toLocaleString()}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => resumeSession(s.id)}
+                    className="rounded-md border border-sky-400/40 bg-sky-500/10 px-3 py-1 text-xs text-sky-200 hover:bg-sky-500/20"
+                  >
+                    Resume
+                  </button>
+                  <button
+                    onClick={() => removeSession(s.id)}
+                    title="Delete session"
+                    className="rounded-md border border-white/10 px-2 py-1 text-xs text-neutral-500 hover:border-red-400/40 hover:text-red-300"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Step 1 — sources */}
