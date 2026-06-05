@@ -9,7 +9,7 @@
 | Auth | Email + OAuth (Google, Apple) |
 | Backend | Supabase (Postgres + Auth + Edge Functions) |
 | Summarization | Gemini 2.5 Flash |
-| Stats API | football-data.org (MVP) → api-football (growth) |
+| Stats API | football-data.org (MVP) → api-football (growth) — see [`football-data-api.md`](./football-data-api.md) |
 | News source | RSS from 10+ publishers (commercially sound) |
 | Monetization | Deferred — revisit post-launch |
 
