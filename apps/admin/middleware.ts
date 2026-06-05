@@ -7,6 +7,7 @@ import {
   vizmayaPublicUrl,
   vizf1PublicUrl,
   footshortsPublicUrl,
+  adminPublicOrigins,
   originVariants,
 } from '@/lib/publicSite'
 import { ACTION_TOKEN_HEADER } from '@vismay/admin-core/actionToken'
@@ -31,6 +32,9 @@ const ALLOWED_CONSUMER_ORIGINS = new Set<string>([
   ...originVariants(vizmayaPublicUrl),
   ...originVariants(vizf1PublicUrl),
   ...originVariants(footshortsPublicUrl),
+  // Per-vertical admin hosts (admin.vizmaya.fyi, …) — trusted admin surfaces.
+  // Exact origins (no www variant — these subdomains have no www redirect).
+  ...adminPublicOrigins,
 ])
 
 function corsHeadersFor(origin: string): Record<string, string> {
@@ -44,7 +48,10 @@ function corsHeadersFor(origin: string): Record<string, string> {
   }
 }
 
-const SESSION_OPTIONS = { loginPath: '/login', bypassPaths: ['/', '/login'] }
+// `/auth/callback` must bypass the session guard: it runs while the user is not
+// yet authenticated (it's the route that establishes the session by exchanging
+// the OAuth / magic-link code), so guarding it would redirect it to /login.
+const SESSION_OPTIONS = { loginPath: '/login', bypassPaths: ['/', '/login', '/auth/callback'] }
 
 // Legacy shared-password gate, used only when Supabase isn't configured.
 const adminMiddleware = createAdminMiddleware({ auth, ...SESSION_OPTIONS })

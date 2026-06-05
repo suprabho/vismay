@@ -47,6 +47,9 @@ importers:
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../verticals/footshorts-viz
+      '@vismay/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -340,6 +343,9 @@ importers:
       '@footshorts/shared':
         specifier: workspace:*
         version: link:../shared
+      '@supabase/ssr':
+        specifier: ^0.10.3
+        version: 0.10.3(@supabase/supabase-js@2.105.4)
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.105.4
@@ -355,6 +361,9 @@ importers:
       '@vismay/story-embed':
         specifier: workspace:*
         version: link:../../../packages/story-embed
+      '@vismay/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../../packages/viz-engine
@@ -926,7 +935,33 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  packages/ui: {}
+  packages/ui:
+    dependencies:
+      '@supabase/ssr':
+        specifier: ^0.10.3
+        version: 0.10.3(@supabase/supabase-js@2.105.4)
+      '@supabase/supabase-js':
+        specifier: ^2.103.0
+        version: 2.105.4
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/viz-admin:
     dependencies:
