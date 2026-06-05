@@ -82,6 +82,13 @@ interface Props {
   accessToken: string
   /** Card variant — 'auto' picks by section kind, 'map-title' forces map + title overlay */
   variant?: CardVariant
+  /**
+   * For `variant === 'graph'`, which subset of the section's foreground to
+   * render: `'stat'` (lead callout only), `'chart'` (visual only), or `'all'`
+   * (combined — the default). Decks that pair a bigStat with a chart emit a
+   * `'stat'` card followed by a `'chart'` card.
+   */
+  graphScope?: 'all' | 'stat' | 'chart'
   /** Per-section overrides from share config */
   shareOverride?: ShareSectionOverride
   /** Story-wide map palette (forwarded to the share map background). */
@@ -122,7 +129,7 @@ export function extractHeroBits(paragraphs: string[]): { dek: string; byline: st
 }
 
 const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
-  { unit, index, ratio, slug, title, accessToken, variant = 'auto', shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
+  { unit, index, ratio, slug, title, accessToken, variant = 'auto', graphScope = 'all', shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
   ref
 ) {
   const captureRef = useRef<HTMLDivElement>(null)
@@ -531,6 +538,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                 heroDek={heroDek}
                 chartHeading={chartHeading}
                 chartSubheading={chartSubheading}
+                layerScope={graphScope}
               />
             ) : kind === 'hero' && heroHeading ? (
               <ShareHeroCard title={heroHeading} dek={heroDek} ratio={ratio} />

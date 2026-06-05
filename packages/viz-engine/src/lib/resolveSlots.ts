@@ -166,3 +166,50 @@ export function resolveSlotsFlat(section: StorySectionConfig): ResolvedLayersFla
       : Object.values(r.foreground.regions).flat()
   return { foreground, background: r.background }
 }
+
+/**
+ * Foreground layer-type classification, shared by the live stack renderer and
+ * the share-card builders so they agree on what counts as a chart-like
+ * "visual" layer vs. a self-sizing "lead" callout vs. prose copy.
+ *
+ *   • `visual` — modules with no intrinsic block height that fill / stack as
+ *     the card's graphic (chart, image, 3D viewer, embed, map…). Mirrors
+ *     `ForegroundVizSlot`'s `STACK_VISUAL_TYPES`.
+ *   • `prose`  — copy layers (`text` / `bodyText`) carried by the separate
+ *     text card; dropped from the visual / graph cards.
+ *   • `lead`   — everything else (`bigStat`, `keyValue`, `quote`…): self-sizing
+ *     callouts that pair with a visual on the deck slide.
+ */
+export const FOREGROUND_VISUAL_TYPES: ReadonlySet<string> = new Set([
+  'chart',
+  'image',
+  'imageGrid',
+  'mapbox',
+  'map',
+  'embed',
+  'rive',
+  'starship:viewer',
+])
+
+export const FOREGROUND_PROSE_TYPES: ReadonlySet<string> = new Set(['text', 'bodyText'])
+
+export interface ClassifiedForegroundLayers {
+  /** Self-sizing callouts: `bigStat`, `keyValue`, `quote`… */
+  lead: VizLayer[]
+  /** Chart-like graphics that fill or stack as the card's visual. */
+  visual: VizLayer[]
+  /** Prose carried by the separate text card. */
+  prose: VizLayer[]
+}
+
+export function classifyForegroundLayers(layers: VizLayer[]): ClassifiedForegroundLayers {
+  const lead: VizLayer[] = []
+  const visual: VizLayer[] = []
+  const prose: VizLayer[] = []
+  for (const l of layers) {
+    if (FOREGROUND_PROSE_TYPES.has(l.type)) prose.push(l)
+    else if (FOREGROUND_VISUAL_TYPES.has(l.type)) visual.push(l)
+    else lead.push(l)
+  }
+  return { lead, visual, prose }
+}

@@ -11,7 +11,7 @@ import type {
   ResolvedUnit,
   ShareSectionOverride,
 } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 
 export interface ShareCardEntry {
   /** Stable identity used for storage paths and share_card_ids. */
@@ -21,6 +21,12 @@ export interface ShareCardEntry {
   /** Index within an expanded variant (split paragraphs). 0 for non-split. */
   sliceIndex: number
   variant: 'auto' | 'map-title' | 'graph'
+  /**
+   * For `variant === 'graph'`, which foreground subset this card renders:
+   * `'stat'` (lead callout only) or `'chart'` (visual only). Omitted for the
+   * combined graph card and for non-graph variants.
+   */
+  graphScope?: 'stat' | 'chart'
   label: string
   /** A short human description for the picker UI. */
   preview: string
@@ -54,12 +60,18 @@ export function buildShareCardList(
     if (sectionId && overrides?.[sectionId]?.hide) continue
 
     const kind = unit.parentConfig.kind ?? 'text'
-    // Mirrors ShareShell.buildCardList — any visual foreground viz layer
-    // (legacy `chart:` or anything in the new `foreground:` slot except
-    // `type: 'text'`) triggers a graph card.
-    const hasVizForeground = resolveSlotsFlat(unit.parentConfig).foreground.some(
-      (l) => l.type !== 'text'
+    const layoutName =
+      typeof unit.parentConfig.layout === 'string' ? unit.parentConfig.layout : ''
+    const isHeroLike =
+      kind === 'cover' || kind === 'hero' || layoutName === 'hero-full-bleed'
+    // Mirrors ShareShell.buildCardList — any non-prose foreground layer (legacy
+    // `chart:` or anything in the new `foreground:` slot except text/bodyText)
+    // triggers a graph card. A lead callout (bigStat…) paired with a visual
+    // (chart…) splits into a stat card then a chart card.
+    const { lead: leadLayers, visual: visualLayers } = classifyForegroundLayers(
+      resolveSlotsFlat(unit.parentConfig).foreground
     )
+    const hasVizForeground = leadLayers.length + visualLayers.length > 0
     const shareOverride = sectionId ? overrides?.[sectionId] : undefined
 
     const subsectionConfig = unit.parentConfig.subsections?.[unit.subIndex]
@@ -79,15 +91,41 @@ export function buildShareCardList(
     }
 
     if (hasVizForeground) {
-      cards.push({
-        id: `${unit.parentIndex}-${unit.subIndex}-0-graph`,
-        parentIndex: unit.parentIndex,
-        subIndex: unit.subIndex,
-        sliceIndex: 0,
-        variant: 'graph',
-        label: 'graph',
-        preview: previewFor(unit, 'graph'),
-      })
+      if (!isHeroLike && leadLayers.length > 0 && visualLayers.length > 0) {
+        // Split: stat card (sliceIndex 0) then chart card (sliceIndex 1). The
+        // sliceIndex mirrors ShareShell's per-variant slice counter so the
+        // ids line up with window.__shareCards__ at capture time.
+        cards.push({
+          id: `${unit.parentIndex}-${unit.subIndex}-0-graph`,
+          parentIndex: unit.parentIndex,
+          subIndex: unit.subIndex,
+          sliceIndex: 0,
+          variant: 'graph',
+          graphScope: 'stat',
+          label: 'stat',
+          preview: `Stat · ${unit.heading || unit.parentConfig.heading || ''}`.trim(),
+        })
+        cards.push({
+          id: `${unit.parentIndex}-${unit.subIndex}-1-graph`,
+          parentIndex: unit.parentIndex,
+          subIndex: unit.subIndex,
+          sliceIndex: 1,
+          variant: 'graph',
+          graphScope: 'chart',
+          label: 'graph',
+          preview: previewFor(unit, 'graph'),
+        })
+      } else {
+        cards.push({
+          id: `${unit.parentIndex}-${unit.subIndex}-0-graph`,
+          parentIndex: unit.parentIndex,
+          subIndex: unit.subIndex,
+          sliceIndex: 0,
+          variant: 'graph',
+          label: 'graph',
+          preview: previewFor(unit, 'graph'),
+        })
+      }
     }
 
     const subOverride = shareOverride?.subsections?.[unit.subIndex]
