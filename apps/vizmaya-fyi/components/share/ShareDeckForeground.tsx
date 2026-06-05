@@ -1,7 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
-import { ForegroundLayoutSlot, resolveSlots } from '@vismay/viz-engine'
+import {
+  ForegroundLayoutSlot,
+  resolveSlots,
+  FOREGROUND_VISUAL_TYPES as VISUAL_TYPES,
+  FOREGROUND_PROSE_TYPES as PROSE_TYPES,
+} from '@vismay/viz-engine'
 import type {
   ResolvedUnit,
   VizLayer,
@@ -33,19 +38,9 @@ import type { AspectRatio } from './AspectRatioToggle'
  * carried by the separate text card, so the graph card stays purely visual.
  */
 
-// Visual modules with no intrinsic block height — they need an explicit size
-// when stacked or they collapse. Mirrors viz-engine's STACK_VISUAL_TYPES.
-const VISUAL_TYPES = new Set<string>([
-  'chart',
-  'image',
-  'imageGrid',
-  'mapbox',
-  'map',
-  'embed',
-  'rive',
-  'starship:viewer',
-])
-const PROSE_TYPES = new Set<string>(['text', 'bodyText'])
+// `VISUAL_TYPES` (chart-like modules with no intrinsic block height) and
+// `PROSE_TYPES` (text/bodyText) are imported from viz-engine so this renderer
+// and the share-card builders classify layers identically.
 
 /** Strip authored `position`/`size` so the layer fills its region (inset:0)
  *  instead of honoring the deck slide's `width:50%`/`position:right`/`62vh`. */
@@ -83,6 +78,13 @@ interface Props {
   heroDek?: string
   chartHeading?: string
   chartSubheading?: string
+  /**
+   * Which subset of the section's foreground to render. Decks that pair a
+   * `bigStat` lead with a chart emit two share cards — one `'stat'` (lead only)
+   * and one `'chart'` (visual only) — instead of stacking both onto one card.
+   * `'all'` (default) keeps the legacy combined behavior.
+   */
+  layerScope?: 'all' | 'stat' | 'chart'
 }
 
 interface BuiltForeground {
@@ -100,6 +102,7 @@ export default function ShareDeckForeground({
   heroDek,
   chartHeading,
   chartSubheading,
+  layerScope = 'all',
 }: Props) {
   const { parentConfig } = unit
   const rawKind = parentConfig.kind ?? 'text'
@@ -114,7 +117,10 @@ export default function ShareDeckForeground({
       resolved.foreground.kind === 'flat'
         ? resolved.foreground.layers
         : Object.values(resolved.foreground.regions).flat()
-    const layers = allLayers.filter((l) => !PROSE_TYPES.has(l.type))
+    let layers = allLayers.filter((l) => !PROSE_TYPES.has(l.type))
+    // Stat/chart split: narrow to just the lead callout or just the visual.
+    if (layerScope === 'stat') layers = layers.filter((l) => !VISUAL_TYPES.has(l.type))
+    else if (layerScope === 'chart') layers = layers.filter((l) => VISUAL_TYPES.has(l.type))
     if (layers.length === 0) return null
 
     // Hero/cover: keep the image's authored full-bleed sizing; it fills + crops.
@@ -156,7 +162,7 @@ export default function ShareDeckForeground({
       foreground: { kind: 'regions', layout: 'share-card-stack', regions: { default: stacked }, inlineDef },
       isPortrait: true,
     }
-  }, [parentConfig, isHeroLike, isLandscape, cardHeight])
+  }, [parentConfig, isHeroLike, isLandscape, cardHeight, layerScope])
 
   if (!built) return null
 
@@ -226,7 +232,7 @@ export default function ShareDeckForeground({
   // composed (filled / side-by-side / stacked) foreground.
   return (
     <div className="w-full h-full flex flex-col p-[14px] pb-[34px]">
-      {(chartHeading || chartSubheading) && (
+      {layerScope !== 'stat' && (chartHeading || chartSubheading) && (
         <div className="shrink-0 mb-1">
           {chartHeading && (
             <h4

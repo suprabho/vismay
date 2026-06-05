@@ -5,7 +5,7 @@ import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import type { ResolvedUnit, StoryConfig, ShareSectionOverride } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
 import ShareEditDrawer, { type SelectedCard } from './ShareEditDrawer'
@@ -39,6 +39,8 @@ interface CardEntry {
   unit: ResolvedUnit
   variant: CardVariant
   label: string
+  /** For `variant === 'graph'`, which foreground subset to render (split decks). */
+  graphScope?: 'stat' | 'chart'
 }
 
 /**
@@ -78,9 +80,10 @@ function buildCardList(
     // layers (text / bodyText) are excluded — share mode renders the section
     // copy via the auto / hero / stat / text variants, so a bodyText-only
     // section emits no (empty) graph card.
-    const hasVizForeground = resolvedFlat.foreground.some(
-      (l) => l.type !== 'text' && l.type !== 'bodyText'
+    const { lead: leadLayers, visual: visualLayers } = classifyForegroundLayers(
+      resolvedFlat.foreground
     )
+    const hasVizForeground = leadLayers.length + visualLayers.length > 0
     // Whether this section actually has a map — deck stories don't, so they
     // must NOT emit the (otherwise empty) map-title card.
     const hasMap = resolvedFlat.background.some(
@@ -108,8 +111,17 @@ function buildCardList(
     // 2. Graph — one per subsection when a visual foreground viz is
     // configured, so each chart step (driven by subIndex) gets its own share
     // card. Sections without subsections still emit exactly one graph card.
+    // When a deck section pairs a lead callout (bigStat / keyValue / quote)
+    // with a visual (chart / image / 3D…), split them onto two cards — stat
+    // first, then chart — instead of stacking both onto one. Hero/cover
+    // sections never split (their title rides the image as an overlay).
     if (hasVizForeground) {
-      cards.push({ unit, variant: 'graph', label: 'graph' })
+      if (!isHeroLike && leadLayers.length > 0 && visualLayers.length > 0) {
+        cards.push({ unit, variant: 'graph', label: 'stat', graphScope: 'stat' })
+        cards.push({ unit, variant: 'graph', label: 'graph', graphScope: 'chart' })
+      } else {
+        cards.push({ unit, variant: 'graph', label: 'graph' })
+      }
     }
 
     // Deck cover/hero with an image foreground: the eyebrow/title/dek are
@@ -576,6 +588,7 @@ export default function ShareShell({
                       title={title}
                       accessToken={accessToken}
                       variant={card.variant}
+                      graphScope={card.graphScope ?? 'all'}
                       shareOverride={sectionId ? draftOverrides[sectionId] : undefined}
                       palette={config.defaults.mapPalette}
                       fontstack={config.defaults.mapFontstack}
