@@ -10,13 +10,27 @@
 -- see lib/adminAuth.ts), NOT on this `role`. `role` defaults to the least-
 -- privileged value so it's never a stand-in for "is admin"; promote real admins
 -- deliberately if/when role-based gating is adopted.
+--
+-- IMPORTANT: footshorts' `20260420000000_init.sql` ALREADY created
+-- `public.profiles` in this shared project with a different shape
+-- (id, display_name, onboarded_at, created_at — no `email`/`role`). A plain
+-- `create table ... (email, role)` here would no-op against that pre-existing
+-- table and the trigger below (which inserts `email`) would fail every
+-- auth.users insert with "Database error saving new user". So create only the
+-- baseline and add the admin columns with idempotent `alter ... if not exists`,
+-- which reconciles both a fresh DB and the footshorts-seeded shared DB.
 
 create table if not exists public.profiles (
   id         uuid primary key references auth.users (id) on delete cascade,
-  email      text,
-  role       text not null default 'viewer' check (role in ('admin', 'editor', 'viewer')),
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists email text;
+alter table public.profiles add column if not exists role  text not null default 'viewer';
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('admin', 'editor', 'viewer'));
 
 -- Auto-create a profile whenever a Supabase auth user is created (dashboard,
 -- admin API, or the createAdminUser script). `security definer` so the trigger
