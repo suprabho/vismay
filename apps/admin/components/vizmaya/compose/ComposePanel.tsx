@@ -21,6 +21,7 @@ type Phase = 'input' | 'researching' | 'questions' | 'generating' | 'done'
 
 interface ResearchResponse {
   ok: true
+  sessionId: string
   sources: SourceDoc[]
   failures: IngestFailure[]
   brief: ResearchBrief
@@ -59,6 +60,7 @@ export function ComposePanel() {
   const [files, setFiles] = useState<File[]>([])
   const [model, setModel] = useState<string>(DEFAULT_TEXT_MODEL)
 
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [sources, setSources] = useState<SourceDoc[]>([])
   const [failures, setFailures] = useState<IngestFailure[]>([])
   const [brief, setBrief] = useState<ResearchBrief | null>(null)
@@ -91,6 +93,7 @@ export function ComposePanel() {
         if (err.failures?.length) setFailures(err.failures)
         throw new Error(err.error ?? 'research failed')
       }
+      setSessionId(data.sessionId)
       setSources(data.sources)
       setFailures(data.failures ?? [])
       setBrief(data.brief)
@@ -144,7 +147,9 @@ export function ComposePanel() {
       const res = await fetch('/api/vizmaya/compose/generate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sources, brief, answers, format, model }),
+        // sessionId drives resume + persistence; sources/brief are a fallback
+        // if the session file is missing.
+        body: JSON.stringify({ sessionId, answers, format, model, sources, brief }),
       })
       // Auth / validation failures come back as JSON, not a stream.
       if (!res.ok || !res.body || res.headers.get('content-type')?.includes('application/json')) {
@@ -181,15 +186,17 @@ export function ComposePanel() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          sessionId,
+          index,
+          feedback: feedbacks[index] ?? '',
+          model,
+          // Fallback payload if the session file is gone.
           slug: done.slug,
           outline,
           sections: genSections,
-          index,
-          feedback: feedbacks[index] ?? '',
           sources,
           brief,
           answers,
-          model,
         }),
       })
       const data = (await res.json()) as
@@ -213,6 +220,7 @@ export function ComposePanel() {
     setPhase('input')
     setError(null)
     setFailures([])
+    setSessionId(null)
     setSources([])
     setBrief(null)
     setQuestions([])
@@ -393,14 +401,19 @@ export function ComposePanel() {
                 disabled={busy}
                 className={`mt-5 bg-emerald-500 text-white hover:bg-emerald-400 ${btn}`}
               >
-                {phase === 'generating' ? 'Generating…' : 'Generate story'}
+                {phase === 'generating'
+                  ? 'Generating…'
+                  : outline
+                    ? `Resume generation (${genSections.filter(Boolean).length}/${outline.sections.length} saved)`
+                    : 'Generate story'}
               </button>
             )}
           </section>
         )}
 
-        {/* Step 3 — story building live, section by section */}
-        {(phase === 'generating' || phase === 'done') && (
+        {/* Step 3 — story building live, section by section (stays visible after
+            an error so you can see what was saved and resume). */}
+        {(phase === 'generating' || phase === 'done' || !!outline) && (
           <section className={`mt-4 ${card}`}>
             <div className="flex items-center justify-between">
               <div className={label}>

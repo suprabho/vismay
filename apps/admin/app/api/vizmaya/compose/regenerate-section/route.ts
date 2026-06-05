@@ -13,12 +13,18 @@ import {
   type ResearchBrief,
   type ComposeAnswers,
 } from '@vismay/story-pipeline'
-import { storyContentDir, writeStoryFiles, previewUrlFor } from '../shared'
+import {
+  storyContentDir,
+  writeStoryFiles,
+  previewUrlFor,
+  loadSession,
+  saveSession,
+} from '../shared'
 
 /**
- * Manual refine — regenerate ONE section against editor feedback, then rewrite
- * the story files in place (same slug). The client holds the outline + the
- * current sections and sends them back with the index to change.
+ * Manual refine — regenerate ONE section against editor feedback, rewrite the
+ * story files in place (same slug), and persist the change to the session so it
+ * survives a reload.
  */
 
 export const runtime = 'nodejs'
@@ -28,15 +34,17 @@ export const maxDuration = 120
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 
 interface Body {
-  slug: string
-  outline: StoryOutline
-  sections: GeneratedSection[]
+  sessionId?: string
   index: number
   feedback?: string
-  sources: SourceDoc[]
-  brief: ResearchBrief
-  answers: ComposeAnswers
   model?: string
+  // Fallback when there's no session on disk.
+  slug?: string
+  outline?: StoryOutline
+  sections?: GeneratedSection[]
+  sources?: SourceDoc[]
+  brief?: ResearchBrief
+  answers?: ComposeAnswers
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -50,13 +58,25 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return NextResponse.json({ error: 'expected JSON body' }, { status: 400 })
   }
-
-  const { slug, outline, sections, index } = body
-  if (!slug || !SAFE_SLUG.test(slug)) {
-    return NextResponse.json({ error: 'bad slug' }, { status: 400 })
+  const { index } = body
+  if (typeof index !== 'number') {
+    return NextResponse.json({ error: 'missing index' }, { status: 400 })
   }
-  if (!outline || !Array.isArray(sections) || typeof index !== 'number') {
-    return NextResponse.json({ error: 'missing outline / sections / index' }, { status: 400 })
+
+  // Prefer the saved session (source of truth); fall back to the inline payload.
+  const session = body.sessionId ? await loadSession(body.sessionId) : null
+  const outline = session?.outline ?? body.outline
+  const sections = (session?.sections?.filter(Boolean) as GeneratedSection[]) ?? body.sections
+  const sources = session?.sources ?? body.sources ?? []
+  const brief = session?.brief ?? body.brief
+  const answers = session?.answers ?? body.answers ?? {}
+  const slug = session?.slug ?? body.slug
+
+  if (!outline || !Array.isArray(sections) || !brief) {
+    return NextResponse.json({ error: 'missing outline / sections / brief' }, { status: 400 })
+  }
+  if (!slug || !SAFE_SLUG.test(slug)) {
+    return NextResponse.json({ error: 'bad or missing slug' }, { status: 400 })
   }
   const stub = outline.sections?.[index]
   if (!stub || !sections[index]) {
@@ -71,10 +91,13 @@ export async function POST(req: Request): Promise<Response> {
       {
         outline,
         stub,
-        sources: body.sources,
-        brief: body.brief,
-        answers: body.answers ?? {},
-        refine: { feedback: body.feedback?.trim() || 'Regenerate this section with a fresh take.', previous: sections[index]! },
+        sources,
+        brief,
+        answers,
+        refine: {
+          feedback: body.feedback?.trim() || 'Regenerate this section with a fresh take.',
+          previous: sections[index]!,
+        },
       },
       { model },
     )
@@ -85,7 +108,7 @@ export async function POST(req: Request): Promise<Response> {
     )
   }
 
-  // Splice the new section in and rewrite the story files under the SAME slug.
+  // Splice in, rewrite files under the same slug, and persist to the session.
   const nextSections = sections.slice()
   nextSections[index] = newSection
   const story = assembleStory(outline, nextSections)
@@ -98,6 +121,11 @@ export async function POST(req: Request): Promise<Response> {
       { error: `failed to write story files: ${e instanceof Error ? e.message : String(e)}` },
       { status: 500 },
     )
+  }
+
+  if (session) {
+    session.sections[index] = newSection
+    await saveSession(session).catch(() => {})
   }
 
   return NextResponse.json({

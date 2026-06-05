@@ -13,16 +13,26 @@ import {
   type ComposeAnswers,
   type StoryFormat,
 } from '@vismay/story-pipeline'
-import { storyContentDir, uniqueSlug, writeStoryFiles, previewUrlFor } from '../shared'
+import {
+  storyContentDir,
+  uniqueSlug,
+  writeStoryFiles,
+  previewUrlFor,
+  newSessionId,
+  loadSession,
+  saveSession,
+  type ComposeSession,
+} from '../shared'
 
 /**
- * Phase 2 — generate the story IN STEPS and stream progress over SSE.
+ * Phase 2 — generate the story IN STEPS, stream progress over SSE, and PERSIST
+ * each step.
  *
- * One fast outline call, then one short call per section, so the gateway header
- * timeout (which killed the old single non-streaming call) never triggers. Each
- * step is emitted as it lands: `outline` → `section` (per section) → `done`.
- * The client keeps the outline + sections so it can regenerate any one section
- * afterwards (see the regenerate-section route).
+ * One fast outline call, then one short call per section. Every step is saved to
+ * the compose session the instant it lands, so a run that fails partway can be
+ * retried with the same `sessionId` and resumes — reusing the outline and any
+ * sections already written instead of re-paying for them. Events: `outline` →
+ * `section` (per section) → `done`.
  */
 
 export const runtime = 'nodejs'
@@ -30,11 +40,13 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 interface GenerateBody {
-  sources: SourceDoc[]
-  brief: ResearchBrief
-  answers: ComposeAnswers
+  sessionId?: string
+  answers?: ComposeAnswers
   format?: StoryFormat
   model?: string
+  // Fallback when there's no session on disk (e.g. it was pruned).
+  sources?: SourceDoc[]
+  brief?: ResearchBrief
 }
 
 function log(msg: string): void {
@@ -52,12 +64,38 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return Response.json({ error: 'expected JSON body' }, { status: 400 })
   }
-  if (!Array.isArray(body.sources) || body.sources.length === 0 || !body.brief) {
-    return Response.json({ error: 'missing sources or brief' }, { status: 400 })
-  }
 
   const model = isAllowedTextModel(body.model ?? '') ? body.model! : DEFAULT_TEXT_MODEL
-  const input = { sources: body.sources, brief: body.brief, answers: body.answers ?? {} }
+
+  // Resolve the session: prefer the saved one (enables resume); else build a
+  // fresh persisted session from the inline sources/brief fallback.
+  let session = body.sessionId ? await loadSession(body.sessionId) : null
+  if (!session) {
+    if (!Array.isArray(body.sources) || body.sources.length === 0 || !body.brief) {
+      return Response.json({ error: 'missing session or sources/brief' }, { status: 400 })
+    }
+    const now = new Date().toISOString()
+    session = {
+      id: newSessionId(),
+      createdAt: now,
+      updatedAt: now,
+      model,
+      answers: body.answers ?? {},
+      sources: body.sources,
+      brief: body.brief,
+      sections: [],
+      status: 'researched',
+    }
+  }
+  // The session is non-null from here.
+  const s: ComposeSession = session
+  s.model = model
+  s.format = body.format ?? s.format
+  s.answers = body.answers ?? s.answers ?? {}
+  s.status = 'generating'
+  await saveSession(s).catch(() => {})
+
+  const input = { sources: s.sources, brief: s.brief, answers: s.answers }
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream<Uint8Array>({
@@ -66,33 +104,58 @@ export async function POST(req: Request): Promise<Response> {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(evt)}\n\n`))
 
       try {
-        log(`outline: ${body.format ?? body.brief.suggestedFormat} story with ${model}…`)
-        const t0 = Date.now()
-        const outline = await generateOutline(input, { format: body.format, model })
-        log(`outline done in ${Date.now() - t0}ms — ${outline.sections.length} sections`)
+        // Outline — reuse the saved one on resume.
+        let resumed = 0
+        let outline = s.outline
+        if (outline) {
+          log(`resuming session ${s.id} — outline + ${s.sections.filter(Boolean).length} section(s) cached`)
+        } else {
+          log(`outline: ${s.format ?? s.brief.suggestedFormat} story with ${model}…`)
+          const t0 = Date.now()
+          outline = await generateOutline(input, { format: s.format, model })
+          s.outline = outline
+          s.sections = new Array(outline.sections.length).fill(null)
+          await saveSession(s).catch(() => {})
+          log(`outline done in ${Date.now() - t0}ms — ${outline.sections.length} sections`)
+        }
         send({ type: 'outline', outline })
 
-        const sections: GeneratedSection[] = []
-        for (let i = 0; i < outline.sections.length; i++) {
+        const total = outline.sections.length
+        for (let i = 0; i < total; i++) {
+          const cached = s.sections[i]
+          if (cached) {
+            resumed++
+            send({ type: 'section', index: i, total, section: cached, cached: true })
+            continue
+          }
           const stub = outline.sections[i]!
           const ts = Date.now()
           // eslint-disable-next-line no-await-in-loop
           const section = await generateSection({ outline, stub, ...input }, { model })
-          sections.push(section)
-          log(`section ${i + 1}/${outline.sections.length} "${stub.heading}" in ${Date.now() - ts}ms`)
-          send({ type: 'section', index: i, total: outline.sections.length, section })
+          s.sections[i] = section
+          // Persist immediately — this is the expensive call we never want to lose.
+          // eslint-disable-next-line no-await-in-loop
+          await saveSession(s).catch(() => {})
+          log(`section ${i + 1}/${total} "${stub.heading}" in ${Date.now() - ts}ms (saved)`)
+          send({ type: 'section', index: i, total, section })
         }
+        if (resumed) log(`reused ${resumed} cached section(s) — no regeneration cost`)
 
+        const sections = s.sections.filter((x): x is GeneratedSection => x != null)
         const story = assembleStory(outline, sections)
         const issues = validateStory(story)
         const art = serializeStory(story)
         const dir = storyContentDir()
-        const slug = await uniqueSlug(dir, art.slug)
+        const slug = s.slug ?? (await uniqueSlug(dir, art.slug))
         await writeStoryFiles(dir, slug, art)
+        s.slug = slug
+        s.status = 'done'
+        await saveSession(s).catch(() => {})
         log(`wrote ${slug} (${art.charts.length} chart file(s))${issues.length ? `, ${issues.length} issue(s)` : ''}`)
 
         send({
           type: 'done',
+          sessionId: s.id,
           slug,
           previewUrl: previewUrlFor(slug),
           format: story.format,
@@ -102,8 +165,10 @@ export async function POST(req: Request): Promise<Response> {
         })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
-        log(`failed: ${msg}`)
-        send({ type: 'error', error: msg })
+        s.status = 'error'
+        await saveSession(s).catch(() => {})
+        log(`failed: ${msg} (progress saved — retry the same session to resume)`)
+        send({ type: 'error', error: msg, sessionId: s.id })
       } finally {
         controller.close()
       }

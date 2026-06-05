@@ -49,3 +49,6 @@ epstein-network-data/
 vizmaya-data/
 
 
+
+# Compose progress sessions (scratch — hold extracted source text)
+content/stories/.compose/

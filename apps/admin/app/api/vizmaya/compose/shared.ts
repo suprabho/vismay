@@ -1,6 +1,15 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { StoryArtifacts } from '@vismay/story-pipeline'
+import { randomBytes } from 'node:crypto'
+import type {
+  StoryArtifacts,
+  SourceDoc,
+  ResearchBrief,
+  StoryOutline,
+  GeneratedSection,
+  ComposeAnswers,
+  StoryFormat,
+} from '@vismay/story-pipeline'
 
 // Shared helpers for the compose routes (not a route itself — only route.ts /
 // page.tsx are routes in the app dir).
@@ -62,4 +71,56 @@ export async function writeStoryFiles(
 export function previewUrlFor(slug: string): string {
   const base = process.env.VIZMAYA_BASE_URL ?? ''
   return `${base}/story/${slug}`
+}
+
+// ── Compose session store ──────────────────────────────────────────────────
+//
+// Each step (research brief, outline, every section) is persisted as it lands,
+// so a generation that fails partway can be resumed without re-paying for the
+// expensive calls already completed. Filesystem-backed for this first cut (a
+// `.compose/<id>.json` next to the stories); a DB table is the upgrade path.
+
+export interface ComposeSession {
+  id: string
+  createdAt: string
+  updatedAt: string
+  model: string
+  format?: StoryFormat
+  answers: ComposeAnswers
+  sources: SourceDoc[]
+  brief: ResearchBrief
+  outline?: StoryOutline
+  /** Indexed to `outline.sections`; null = not generated yet (resume target). */
+  sections: (GeneratedSection | null)[]
+  slug?: string
+  status: 'researched' | 'generating' | 'done' | 'error'
+}
+
+const SAFE_SESSION_ID = /^[a-f0-9]{8,}$/
+
+function sessionsDir(): string {
+  return path.join(storyContentDir(), '.compose')
+}
+
+export function newSessionId(): string {
+  return randomBytes(12).toString('hex')
+}
+
+export function sessionPath(id: string): string {
+  if (!SAFE_SESSION_ID.test(id)) throw new Error('bad session id')
+  return path.join(sessionsDir(), `${id}.json`)
+}
+
+export async function saveSession(session: ComposeSession): Promise<void> {
+  await fs.mkdir(sessionsDir(), { recursive: true })
+  session.updatedAt = new Date().toISOString()
+  await fs.writeFile(sessionPath(session.id), JSON.stringify(session, null, 2), 'utf8')
+}
+
+export async function loadSession(id: string): Promise<ComposeSession | null> {
+  try {
+    return JSON.parse(await fs.readFile(sessionPath(id), 'utf8')) as ComposeSession
+  } catch {
+    return null
+  }
 }

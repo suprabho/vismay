@@ -9,6 +9,7 @@ import {
   DEFAULT_TEXT_MODEL,
   type InputFile,
 } from '@vismay/story-pipeline'
+import { newSessionId, saveSession, type ComposeSession } from '../shared'
 
 /** Tagged server log so progress is visible in the dev terminal. */
 function log(msg: string): void {
@@ -111,8 +112,29 @@ export async function POST(req: Request): Promise<Response> {
     // swallow
   }
 
+  // Persist the session so generation (and any retry) can resume from here
+  // without re-paying for ingestion + research.
+  const sessionId = newSessionId()
+  const session: ComposeSession = {
+    id: sessionId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    model,
+    answers: {},
+    sources,
+    brief,
+    sections: [],
+    status: 'researched',
+  }
+  try {
+    await saveSession(session)
+  } catch (e) {
+    log(`warning: failed to persist session: ${e instanceof Error ? e.message : String(e)}`)
+  }
+
   return NextResponse.json({
     ok: true,
+    sessionId,
     sources,
     failures,
     brief,
