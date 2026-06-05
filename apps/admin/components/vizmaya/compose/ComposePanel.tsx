@@ -43,8 +43,8 @@ interface DoneInfo {
 
 type GenEvent =
   | { type: 'outline'; outline: StoryOutline }
-  | { type: 'section'; index: number; total: number; section: GeneratedSection }
-  | ({ type: 'done' } & DoneInfo & { outline: StoryOutline })
+  | { type: 'section'; index: number; total: number; section: GeneratedSection; cached?: boolean }
+  | ({ type: 'done' | 'paused' } & DoneInfo & { outline: StoryOutline; done: number; total: number })
   | { type: 'error'; error: string }
 
 const card = 'rounded-lg border border-white/10 bg-neutral-900/60 p-4'
@@ -72,6 +72,7 @@ export function ComposePanel() {
   const [outline, setOutline] = useState<StoryOutline | null>(null)
   const [genSections, setGenSections] = useState<GeneratedSection[]>([])
   const [done, setDone] = useState<DoneInfo | null>(null)
+  const [remaining, setRemaining] = useState(0)
   const [feedbacks, setFeedbacks] = useState<Record<number, string>>({})
   const [regenIndex, setRegenIndex] = useState<number | null>(null)
 
@@ -111,8 +112,9 @@ export function ComposePanel() {
 
   function handleEvent(evt: GenEvent) {
     if (evt.type === 'outline') {
+      // Don't clear sections here — on continue/resume the server replays every
+      // section (cached ones included) by index, so keeping them avoids a flash.
       setOutline(evt.outline)
-      setGenSections([])
       setFormat(evt.outline.format)
     } else if (evt.type === 'section') {
       setGenSections((prev) => {
@@ -120,7 +122,7 @@ export function ComposePanel() {
         next[evt.index] = evt.section
         return next
       })
-    } else if (evt.type === 'done') {
+    } else if (evt.type === 'done' || evt.type === 'paused') {
       setOutline(evt.outline)
       setDone({
         slug: evt.slug,
@@ -129,6 +131,7 @@ export function ComposePanel() {
         imagePrompts: evt.imagePrompts,
         issues: evt.issues,
       })
+      setRemaining(evt.total - evt.done)
       setPhase('done')
     } else if (evt.type === 'error') {
       setError(evt.error)
@@ -140,8 +143,9 @@ export function ComposePanel() {
     if (!brief) return
     setError(null)
     setDone(null)
-    setOutline(null)
-    setGenSections([])
+    setRemaining(0)
+    // Keep outline + genSections so the next batch streams in under the existing
+    // sections (a fresh run already starts empty; reset() clears between stories).
     setPhase('generating')
     try {
       const res = await fetch('/api/vizmaya/compose/generate', {
@@ -228,6 +232,7 @@ export function ComposePanel() {
     setOutline(null)
     setGenSections([])
     setDone(null)
+    setRemaining(0)
     setFeedbacks({})
     setRegenIndex(null)
   }
@@ -460,7 +465,7 @@ export function ComposePanel() {
                       </p>
                     )}
 
-                    {phase === 'done' && (
+                    {phase === 'done' && section && (
                       <div className="mt-2 flex items-center gap-2">
                         <input
                           type="text"
@@ -483,6 +488,21 @@ export function ComposePanel() {
                 )
               })}
             </div>
+
+            {/* Continue — generate the next batch of sections. */}
+            {phase === 'done' && remaining > 0 && (
+              <button
+                onClick={runGenerate}
+                disabled={busy}
+                className={`mt-3 w-full bg-emerald-500 text-white hover:bg-emerald-400 ${btn}`}
+              >
+                Continue — generate next {Math.min(3, remaining)} (
+                {genSections.filter(Boolean).length}/{stubs.length} done)
+              </button>
+            )}
+            {phase === 'generating' && outline && (
+              <div className="mt-3 text-sm text-neutral-400">Writing the next sections…</div>
+            )}
 
             {done && (
               <div className="mt-4 border-t border-white/10 pt-4">

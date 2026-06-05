@@ -39,11 +39,15 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+const DEFAULT_BATCH = 3
+
 interface GenerateBody {
   sessionId?: string
   answers?: ComposeAnswers
   format?: StoryFormat
   model?: string
+  /** How many NEW sections to generate this run, then pause (default 3). */
+  batchSize?: number
   // Fallback when there's no session on disk (e.g. it was pruned).
   sources?: SourceDoc[]
   brief?: ResearchBrief
@@ -66,6 +70,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const model = isAllowedTextModel(body.model ?? '') ? body.model! : DEFAULT_TEXT_MODEL
+  const batchSize = Math.max(1, Math.min(10, Math.floor(body.batchSize ?? DEFAULT_BATCH)))
 
   // Resolve the session: prefer the saved one (enables resume); else build a
   // fresh persisted session from the inline sources/brief fallback.
@@ -120,7 +125,11 @@ export async function POST(req: Request): Promise<Response> {
         }
         send({ type: 'outline', outline })
 
+        // Generate at most `batchSize` NEW sections this run, then pause — keeps
+        // each request short/cheap and lets the editor review in chunks. Cached
+        // sections (from the session) stream back instantly and don't count.
         const total = outline.sections.length
+        let madeThisRun = 0
         for (let i = 0; i < total; i++) {
           const cached = s.sections[i]
           if (cached) {
@@ -128,11 +137,13 @@ export async function POST(req: Request): Promise<Response> {
             send({ type: 'section', index: i, total, section: cached, cached: true })
             continue
           }
+          if (madeThisRun >= batchSize) break // pause — leave the rest for "Continue"
           const stub = outline.sections[i]!
           const ts = Date.now()
           // eslint-disable-next-line no-await-in-loop
           const section = await generateSection({ outline, stub, ...input }, { model })
           s.sections[i] = section
+          madeThisRun++
           // Persist immediately — this is the expensive call we never want to lose.
           // eslint-disable-next-line no-await-in-loop
           await saveSession(s).catch(() => {})
@@ -141,7 +152,9 @@ export async function POST(req: Request): Promise<Response> {
         }
         if (resumed) log(`reused ${resumed} cached section(s) — no regeneration cost`)
 
+        // Write the story so far (partial or complete) so it's previewable.
         const sections = s.sections.filter((x): x is GeneratedSection => x != null)
+        const allDone = sections.length === total
         const story = assembleStory(outline, sections)
         const issues = validateStory(story)
         const art = serializeStory(story)
@@ -149,12 +162,14 @@ export async function POST(req: Request): Promise<Response> {
         const slug = s.slug ?? (await uniqueSlug(dir, art.slug))
         await writeStoryFiles(dir, slug, art)
         s.slug = slug
-        s.status = 'done'
+        s.status = allDone ? 'done' : 'generating'
         await saveSession(s).catch(() => {})
-        log(`wrote ${slug} (${art.charts.length} chart file(s))${issues.length ? `, ${issues.length} issue(s)` : ''}`)
+        log(
+          `wrote ${slug} — ${sections.length}/${total} sections${allDone ? ' (complete)' : ' (paused)'}`,
+        )
 
         send({
-          type: 'done',
+          type: allDone ? 'done' : 'paused',
           sessionId: s.id,
           slug,
           previewUrl: previewUrlFor(slug),
@@ -162,6 +177,8 @@ export async function POST(req: Request): Promise<Response> {
           outline,
           imagePrompts: art.imagePrompts,
           issues,
+          done: sections.length,
+          total,
         })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
