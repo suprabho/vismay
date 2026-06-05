@@ -33,7 +33,7 @@ export default function LoginPage() {
       <div className="mx-auto w-full max-w-sm">
         <AuthWidget
           authClient={authClient}
-          providers={['password', 'google', 'magic']}
+          providers={['password', 'google']}
           allowSignup
           brand={{ name: 'Footshorts' }}
           copy={{ signupSubtitle: 'Create an account to follow teams.' }}

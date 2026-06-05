@@ -49,7 +49,7 @@ export default function AdminAuth({ next, brandName, accent, accentFg }: Props) 
   return (
     <AuthWidget
       authClient={authClient}
-      providers={['password', 'google', 'magic']}
+      providers={['password', 'google']}
       allowSignup={false}
       brand={{ name: brandName }}
       redirectTo={redirectTo}
