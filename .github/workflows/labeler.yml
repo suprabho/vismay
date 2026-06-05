@@ -1,0 +1,90 @@
+name: PR labeler
+
+# Labels PRs two ways: by changed paths (.github/labeler.yml) and by size.
+#
+# `pull_request_target` runs in the BASE repo context, so the GITHUB_TOKEN can
+# write labels (including on fork PRs) and the labeler config is read from the
+# base branch — not from the PR. This is safe here because the workflow never
+# checks out or executes the PR's code; it only reads metadata via the API.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: labeler-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  area:
+    name: Area / path labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          # Keep area labels in sync with the current diff: remove a managed
+          # label once the PR no longer touches those paths.
+          sync-labels: true
+
+  size:
+    name: Size label
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            // Ignore generated / vendored files so they don't inflate the size.
+            const IGNORE = [
+              /(^|\/)pnpm-lock\.yaml$/,
+              /(^|\/)package-lock\.json$/,
+              /\.lock$/,
+              /(^|\/)dist\//,
+              /(^|\/)\.next\//,
+              /\.snap$/,
+            ];
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            let total = 0;
+            for (const f of files) {
+              if (IGNORE.some((re) => re.test(f.filename))) continue;
+              total += (f.additions || 0) + (f.deletions || 0);
+            }
+
+            const buckets = [
+              [10, 'size:XS'],
+              [50, 'size:S'],
+              [200, 'size:M'],
+              [600, 'size:L'],
+              [Infinity, 'size:XL'],
+            ];
+            const desired = buckets.find(([max]) => total <= max)[1];
+            const sizeLabels = buckets.map(([, name]) => name);
+            const current = (pr.labels || []).map((l) => l.name);
+
+            // Drop any stale size label, then apply the right one.
+            for (const name of current) {
+              if (sizeLabels.includes(name) && name !== desired) {
+                await github.rest.issues
+                  .removeLabel({ ...context.repo, issue_number: pr.number, name })
+                  .catch(() => {});
+              }
+            }
+            if (!current.includes(desired)) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: pr.number,
+                labels: [desired],
+              });
+            }
+            core.info(`PR #${pr.number}: ${total} significant changed lines -> ${desired}`);

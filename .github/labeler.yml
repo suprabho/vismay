@@ -1,0 +1,48 @@
+# Path-based PR labels — applied by .github/workflows/labeler.yml (actions/labeler v5).
+# Each label maps to glob rules over the PR's changed files. Edit freely; new
+# label names are created automatically the first time they're applied (colors
+# for the ones we ship are set via `gh label create` — see the PR description).
+
+"area:admin":
+  - changed-files:
+      - any-glob-to-any-file: "apps/admin/**"
+
+"area:footshorts":
+  - changed-files:
+      - any-glob-to-any-file: "apps/footshorts/**"
+
+"area:vizmaya":
+  - changed-files:
+      - any-glob-to-any-file: "apps/vizmaya-fyi/**"
+
+"area:vizf1":
+  - changed-files:
+      - any-glob-to-any-file: "apps/vizf1/**"
+
+"area:catalog":
+  - changed-files:
+      - any-glob-to-any-file: "apps/catalog/**"
+
+"pkg":
+  - changed-files:
+      - any-glob-to-any-file: "packages/**"
+
+# Reuse the repo's existing default "documentation" label.
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+
+"ci":
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+"infra":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/supabase/**"
+          - "**/*.sql"
+          - "pnpm-lock.yaml"
+          - "pnpm-workspace.yaml"
+          - "turbo.json"
