@@ -1,11 +1,17 @@
 import fs from 'fs'
 import path from 'path'
+import { parse as parseCsv } from 'csv-parse/sync'
 
 /**
- * Format-agnostic extractor. Returns clean text the structurer can feed
- * to an LLM. `body` uses light Markdown (paragraphs separated by blank
- * lines, tables preserved where possible) — anything downstream should
- * treat it as untrusted prose, not as a validated format.
+ * Format-agnostic extractor. Returns clean text the structurer can feed to an
+ * LLM. `body` uses light Markdown (paragraphs separated by blank lines, tables
+ * preserved where possible) — anything downstream should treat it as untrusted
+ * prose, not as a validated format.
+ *
+ * Moved here from `apps/vizmaya-fyi/scripts/ingest/extract.ts` so both the
+ * ingest scripts and the admin compose route share one implementation. Added a
+ * buffer-first entry (`extractBuffer`) because uploaded files arrive as bytes,
+ * not paths, plus `.csv` and `.json` cases.
  */
 export interface ExtractedSource {
   title: string
@@ -15,10 +21,19 @@ export interface ExtractedSource {
   tables?: Array<{ headers: string[]; rows: string[][] }>
 }
 
+/** Extract from a file on disk (used by the ingest CLI scripts). */
 export async function extract(inputPath: string): Promise<ExtractedSource> {
   const ext = path.extname(inputPath).toLowerCase()
   const buf = fs.readFileSync(inputPath)
-  switch (ext) {
+  return extractBuffer(buf, ext)
+}
+
+/**
+ * Extract from raw bytes + a file extension. The buffer-first form the admin
+ * route uses for uploaded files and fetched links.
+ */
+export async function extractBuffer(buf: Buffer, ext: string): Promise<ExtractedSource> {
+  switch (ext.toLowerCase()) {
     case '.pdf':
       return extractPdf(buf)
     case '.eml':
@@ -26,6 +41,10 @@ export async function extract(inputPath: string): Promise<ExtractedSource> {
     case '.html':
     case '.htm':
       return extractHtml(buf.toString('utf8'))
+    case '.csv':
+      return extractCsv(buf.toString('utf8'))
+    case '.json':
+      return extractJson(buf.toString('utf8'))
     case '.md':
     case '.markdown':
     case '.txt':
@@ -96,6 +115,43 @@ async function extractHtml(html: string): Promise<ExtractedSource> {
 async function extractText(raw: string): Promise<ExtractedSource> {
   const { title, byline, body } = splitTitleAndByline(raw)
   return { title: title || 'Untitled', byline, body }
+}
+
+/**
+ * CSV → a kept table plus a readable text rendering. The structurer can lift
+ * the table straight into a chart, while the text body gives the LLM context.
+ */
+async function extractCsv(raw: string): Promise<ExtractedSource> {
+  const rows = parseCsv(raw, {
+    skip_empty_lines: true,
+    relax_column_count: true,
+  }) as string[][]
+  if (rows.length === 0) return { title: 'Untitled', body: '' }
+  const [headers = [], ...dataRows] = rows
+  const lines = [
+    headers.join(' | '),
+    headers.map(() => '---').join(' | '),
+    ...dataRows.map((r) => r.join(' | ')),
+  ]
+  return {
+    title: 'Tabular data',
+    body: lines.join('\n'),
+    tables: [{ headers, rows: dataRows }],
+  }
+}
+
+/** JSON → pretty-printed body. The LLM reads the structure as context. */
+async function extractJson(raw: string): Promise<ExtractedSource> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch (e) {
+    throw new Error(`invalid JSON source: ${e instanceof Error ? e.message : String(e)}`)
+  }
+  return {
+    title: 'JSON data',
+    body: JSON.stringify(parsed, null, 2),
+  }
 }
 
 /**

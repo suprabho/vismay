@@ -47,6 +47,9 @@ importers:
       '@vismay/footshorts-viz':
         specifier: workspace:*
         version: link:../../verticals/footshorts-viz
+      '@vismay/story-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/story-pipeline
       '@vismay/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -636,6 +639,9 @@ importers:
       '@vismay/starship-viz':
         specifier: workspace:*
         version: link:../../verticals/starship-viz
+      '@vismay/story-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/story-pipeline
       '@vismay/story-reader':
         specifier: workspace:*
         version: link:../../packages/story-reader
@@ -897,6 +903,58 @@ importers:
       '@types/react':
         specifier: ^19
         version: 19.2.14
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/story-pipeline:
+    dependencies:
+      '@mozilla/readability':
+        specifier: ^0.6.0
+        version: 0.6.0
+      '@vismay/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
+      '@vismay/content-source':
+        specifier: workspace:*
+        version: link:../content-source
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../viz-engine
+      csv-parse:
+        specifier: ^6.2.1
+        version: 6.2.1
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      jsdom:
+        specifier: ^29.0.2
+        version: 29.1.1(@noble/hashes@1.8.0)
+      mailparser:
+        specifier: ^3.9.8
+        version: 3.9.8
+      pdf-parse:
+        specifier: ^2.4.5
+        version: 2.4.5
+      yaml:
+        specifier: ^2.8.3
+        version: 2.9.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/jsdom':
+        specifier: ^28.0.1
+        version: 28.0.3
+      '@types/mailparser':
+        specifier: ^3.4.6
+        version: 3.4.6
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.1
       typescript:
         specifier: ^5
         version: 5.9.3
