@@ -7,11 +7,17 @@ import { hashRequest, recordGeneration } from '@vismay/ai-gateway'
 import {
   generateStory,
   serializeStory,
+  isAllowedTextModel,
+  DEFAULT_TEXT_MODEL,
   type SourceDoc,
   type ResearchBrief,
   type ComposeAnswers,
   type StoryFormat,
 } from '@vismay/story-pipeline'
+
+function log(msg: string): void {
+  console.log(`[compose/generate] ${msg}`)
+}
 
 /**
  * Phase 2 of the story composer: generate the full story from sources + brief +
@@ -32,6 +38,7 @@ interface GenerateBody {
   brief: ResearchBrief
   answers: ComposeAnswers
   format?: StoryFormat
+  model?: string
 }
 
 /** Where generated stories land. Defaults to the vizmaya-fyi content dir (monorepo dev). */
@@ -78,16 +85,25 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'missing sources or brief' }, { status: 400 })
   }
 
+  const model = isAllowedTextModel(body.model ?? '') ? body.model! : DEFAULT_TEXT_MODEL
+
   let story
   let issues
   try {
+    log(`generating ${body.format ?? body.brief.suggestedFormat} story from ${body.sources.length} source(s) with ${model}…`)
+    const t0 = Date.now()
     const out = await generateStory(
       { sources: body.sources, brief: body.brief, answers: body.answers ?? {} },
-      { format: body.format },
+      { format: body.format, model },
     )
     story = out.story
     issues = out.issues
+    log(
+      `done in ${Date.now() - t0}ms — ${story.sections.length} sections, ${story.charts.length} charts` +
+        (issues.length ? `, ${issues.length} residual issue(s)` : ''),
+    )
   } catch (e) {
+    log(`generation failed: ${e instanceof Error ? e.message : String(e)}`)
     return NextResponse.json(
       { error: `generation failed: ${e instanceof Error ? e.message : String(e)}` },
       { status: 502 },
@@ -118,23 +134,25 @@ export async function POST(req: Request): Promise<Response> {
       )
     }
   } catch (e) {
+    log(`failed to write story files: ${e instanceof Error ? e.message : String(e)}`)
     return NextResponse.json(
       { error: `failed to write story files: ${e instanceof Error ? e.message : String(e)}` },
       { status: 500 },
     )
   }
+  log(`wrote ${slug} (${art.charts.length} chart file(s)) to ${dir}`)
 
   // Best-effort audit.
   try {
     const supabase = createServiceClient()
-    const params = { feature: 'compose-generate', format: story.format, sections: story.sections.length }
+    const params = { feature: 'compose-generate', format: story.format, sections: story.sections.length, model }
     await recordGeneration(supabase, {
       kind: 'text',
       storySlug: slug,
       prompt: body.brief.summary,
-      model: 'text.pro',
+      model,
       params,
-      requestHash: hashRequest({ model: 'text.pro', prompt: slug, params }),
+      requestHash: hashRequest({ model, prompt: slug, params }),
       resultRef: null,
       resultText: art.markdown.slice(0, 4000),
     })

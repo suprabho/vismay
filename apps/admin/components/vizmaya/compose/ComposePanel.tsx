@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { TEXT_MODEL_CHOICES, DEFAULT_TEXT_MODEL } from '@vismay/story-pipeline'
 import type {
   ResearchBrief,
   ClarifyingQuestion,
@@ -8,6 +9,7 @@ import type {
   StoryFormat,
   ImagePrompt,
   ValidationIssue,
+  IngestFailure,
 } from '@vismay/story-pipeline'
 
 type Phase = 'input' | 'researching' | 'questions' | 'generating' | 'done'
@@ -15,8 +17,14 @@ type Phase = 'input' | 'researching' | 'questions' | 'generating' | 'done'
 interface ResearchResponse {
   ok: true
   sources: SourceDoc[]
+  failures: IngestFailure[]
   brief: ResearchBrief
   questions: ClarifyingQuestion[]
+}
+
+interface ErrorResponse {
+  error: string
+  failures?: IngestFailure[]
 }
 
 interface GenerateResponse {
@@ -41,8 +49,10 @@ export function ComposePanel() {
 
   const [links, setLinks] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [model, setModel] = useState<string>(DEFAULT_TEXT_MODEL)
 
   const [sources, setSources] = useState<SourceDoc[]>([])
+  const [failures, setFailures] = useState<IngestFailure[]>([])
   const [brief, setBrief] = useState<ResearchBrief | null>(null)
   const [questions, setQuestions] = useState<ClarifyingQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -54,17 +64,22 @@ export function ComposePanel() {
 
   async function runResearch() {
     setError(null)
+    setFailures([])
     setPhase('researching')
     try {
       const form = new FormData()
       form.set('links', links)
+      form.set('model', model)
       for (const f of files) form.append('files', f)
       const res = await fetch('/api/vizmaya/compose/research', { method: 'POST', body: form })
-      const data = (await res.json()) as ResearchResponse | { error: string }
+      const data = (await res.json()) as ResearchResponse | ErrorResponse
       if (!res.ok || !('ok' in data)) {
-        throw new Error('error' in data ? data.error : 'research failed')
+        const err = data as ErrorResponse
+        if (err.failures?.length) setFailures(err.failures)
+        throw new Error(err.error ?? 'research failed')
       }
       setSources(data.sources)
+      setFailures(data.failures ?? [])
       setBrief(data.brief)
       setQuestions(data.questions)
       setFormat(data.brief.suggestedFormat)
@@ -87,7 +102,7 @@ export function ComposePanel() {
       const res = await fetch('/api/vizmaya/compose/generate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sources, brief, answers, format }),
+        body: JSON.stringify({ sources, brief, answers, format, model }),
       })
       const data = (await res.json()) as GenerateResponse | { error: string }
       if (!res.ok || !('ok' in data)) {
@@ -104,6 +119,7 @@ export function ComposePanel() {
   function reset() {
     setPhase('input')
     setError(null)
+    setFailures([])
     setSources([])
     setBrief(null)
     setQuestions([])
@@ -122,6 +138,19 @@ export function ComposePanel() {
       {error && (
         <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
           {error}
+        </div>
+      )}
+
+      {failures.length > 0 && (
+        <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
+          <div className="font-medium">{failures.length} source(s) skipped:</div>
+          <ul className="mt-1 space-y-0.5">
+            {failures.map((f, i) => (
+              <li key={i}>
+                <span className="text-amber-200/80">{f.origin}</span> — {f.reason}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -149,6 +178,24 @@ export function ComposePanel() {
             <span className="text-xs text-neutral-500">{files.length} file(s)</span>
           )}
         </div>
+
+        <div className="mt-3">
+          <div className={label}>Model</div>
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={busy}
+            className="mt-1 w-full rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-white/30 disabled:opacity-60"
+          >
+            {TEXT_MODEL_CHOICES.map((m) => (
+              <option key={m.alias} value={m.alias}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">Used for both research and generation.</p>
+        </div>
+
         {phase === 'input' && (
           <button
             onClick={runResearch}

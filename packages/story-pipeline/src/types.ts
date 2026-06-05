@@ -95,6 +95,18 @@ export interface GeneratedStory {
   imagePrompts: ImagePrompt[]
 }
 
+/** A source that could not be ingested, with the reason it was skipped. */
+export interface IngestFailure {
+  origin: string
+  reason: string
+}
+
+/** The outcome of ingestion: what was read, and what was skipped (and why). */
+export interface IngestResult {
+  sources: SourceDoc[]
+  failures: IngestFailure[]
+}
+
 /** A surfaced validation problem from `validateStory`. */
 export interface ValidationIssue {
   section?: string

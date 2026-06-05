@@ -103,7 +103,7 @@ function staticStory(): GeneratedStory {
 
 async function offline(): Promise<void> {
   console.log('— ingest —')
-  const sources = await ingestSources({
+  const { sources } = await ingestSources({
     files: [
       { name: 'sample.md', buffer: readFileSync(here('./sample.md')) },
       { name: 'sample.csv', buffer: readFileSync(here('./sample.csv')) },
@@ -136,7 +136,7 @@ async function offline(): Promise<void> {
 
 async function live(): Promise<void> {
   console.log('— research (live LLM) —')
-  const sources = await ingestSources({
+  const { sources } = await ingestSources({
     files: [{ name: 'sample.md', buffer: readFileSync(here('./sample.md')) }],
   })
   const brief = await research(sources)

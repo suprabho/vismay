@@ -18,3 +18,9 @@ export { validateStory } from './validate'
 export { serializeStory } from './serialize'
 export { buildChartData, buildEChartsOption } from './chart'
 export { DEFAULT_THEME, defaultsFor } from './defaults'
+export {
+  TEXT_MODEL_CHOICES,
+  DEFAULT_TEXT_MODEL,
+  isAllowedTextModel,
+  type ModelChoice,
+} from './models'

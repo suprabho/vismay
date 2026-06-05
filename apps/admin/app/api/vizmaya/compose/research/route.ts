@@ -2,7 +2,18 @@ import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { hashRequest, recordGeneration } from '@vismay/ai-gateway'
-import { ingestSources, research, type InputFile } from '@vismay/story-pipeline'
+import {
+  ingestSources,
+  research,
+  isAllowedTextModel,
+  DEFAULT_TEXT_MODEL,
+  type InputFile,
+} from '@vismay/story-pipeline'
+
+/** Tagged server log so progress is visible in the dev terminal. */
+function log(msg: string): void {
+  console.log(`[compose/research] ${msg}`)
+}
 
 /**
  * Phase 1 of the story composer: ingest pasted links + uploaded files, research
@@ -50,18 +61,32 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'add at least one link or file' }, { status: 400 })
   }
 
-  const sources = await ingestSources({ links, files })
+  const modelInput = String(form.get('model') ?? '')
+  const model = isAllowedTextModel(modelInput) ? modelInput : DEFAULT_TEXT_MODEL
+
+  log(`ingesting ${links.length} link(s) + ${files.length} file(s)…`)
+  const { sources, failures } = await ingestSources({ links, files })
+  for (const f of failures) log(`  ✗ skipped ${f.origin} — ${f.reason}`)
+  for (const s of sources) log(`  ✓ read ${s.origin} (${s.body.length} chars)`)
   if (sources.length === 0) {
+    log('no readable sources — returning 422')
     return NextResponse.json(
-      { error: 'none of the sources could be read (unreachable links or unsupported files)' },
+      {
+        error: 'none of the sources could be read',
+        failures,
+      },
       { status: 422 },
     )
   }
 
   let brief
   try {
-    brief = await research(sources)
+    log(`researching ${sources.length} source(s) with ${model}…`)
+    const t0 = Date.now()
+    brief = await research(sources, { model })
+    log(`done in ${Date.now() - t0}ms — ${brief.questions.length} question(s), suggested format: ${brief.suggestedFormat}`)
   } catch (e) {
+    log(`research failed: ${e instanceof Error ? e.message : String(e)}`)
     return NextResponse.json(
       { error: `research failed: ${e instanceof Error ? e.message : String(e)}` },
       { status: 502 },
@@ -71,14 +96,14 @@ export async function POST(req: Request): Promise<Response> {
   // Best-effort audit — never let a logging failure sink the response.
   try {
     const supabase = createServiceClient()
-    const params = { feature: 'compose-research', sources: sources.length }
+    const params = { feature: 'compose-research', sources: sources.length, model }
     await recordGeneration(supabase, {
       kind: 'text',
       storySlug: 'compose',
       prompt: sources.map((s) => s.origin).join(', '),
-      model: 'text.pro',
+      model,
       params,
-      requestHash: hashRequest({ model: 'text.pro', prompt: 'compose-research', params }),
+      requestHash: hashRequest({ model, prompt: 'compose-research', params }),
       resultRef: null,
       resultText: JSON.stringify(brief),
     })
@@ -89,6 +114,7 @@ export async function POST(req: Request): Promise<Response> {
   return NextResponse.json({
     ok: true,
     sources,
+    failures,
     brief,
     questions: brief.questions,
   })
