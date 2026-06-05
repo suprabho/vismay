@@ -72,13 +72,24 @@ function buildCardList(
     if (sectionId && overrides?.[sectionId]?.hide) continue
 
     const kind = unit.parentConfig.kind ?? 'text'
-    // A visual foreground layer (chart / image / video / embed / rive / any
-    // vertical-specific viz module) gets its own "graph" card, mirroring the
-    // legacy `chart:` field. Text layers are excluded — share mode already
-    // renders the section text via the auto / hero / stat / text variants.
-    const hasVizForeground = resolveSlotsFlat(unit.parentConfig).foreground.some(
-      (l) => l.type !== 'text'
+    const resolvedFlat = resolveSlotsFlat(unit.parentConfig)
+    // A visual foreground layer (chart / image / bigStat / video / embed / rive
+    // / any vertical-specific viz module) gets its own "graph" card. Prose
+    // layers (text / bodyText) are excluded — share mode renders the section
+    // copy via the auto / hero / stat / text variants, so a bodyText-only
+    // section emits no (empty) graph card.
+    const hasVizForeground = resolvedFlat.foreground.some(
+      (l) => l.type !== 'text' && l.type !== 'bodyText'
     )
+    // Whether this section actually has a map — deck stories don't, so they
+    // must NOT emit the (otherwise empty) map-title card.
+    const hasMap = resolvedFlat.background.some(
+      (l) => l.type === 'map' && Array.isArray((l as { center?: number[] }).center)
+    )
+    const isHeroLike =
+      kind === 'cover' ||
+      kind === 'hero' ||
+      unit.parentConfig.layout === 'hero-full-bleed'
     const shareOverride = sectionId ? overrides?.[sectionId] : undefined
 
     // 1. Map + Heading — emitted for the first unit of each parent (using
@@ -89,7 +100,9 @@ function buildCardList(
     const isFirstForParent = !seenParentsForMap.has(unit.parentIndex)
     if (isFirstForParent || hasSubsectionMap) {
       if (isFirstForParent) seenParentsForMap.add(unit.parentIndex)
-      cards.push({ unit, variant: 'map-title', label: 'map-title' })
+      // Only when the section has a real map — otherwise (deck stories) this
+      // renders as an empty translucent caption box over blank canvas.
+      if (hasMap) cards.push({ unit, variant: 'map-title', label: 'map-title' })
     }
 
     // 2. Graph — one per subsection when a visual foreground viz is
@@ -98,6 +111,12 @@ function buildCardList(
     if (hasVizForeground) {
       cards.push({ unit, variant: 'graph', label: 'graph' })
     }
+
+    // Deck cover/hero with an image foreground: the eyebrow/title/dek are
+    // overlaid on the graph card (ShareDeckForeground), so the separate text
+    // content card below would be redundant. Map heroes keep their text card
+    // (their hero copy rides the map-title card instead).
+    if (isHeroLike && hasVizForeground && !hasMap) continue
 
     // 3. Content cards.
     // Per-subsection overrides take precedence over section-level overrides —
