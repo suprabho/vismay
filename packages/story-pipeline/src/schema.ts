@@ -109,7 +109,26 @@ export const generatedSectionSchema = z.object({
   ),
 })
 
-export const storyGenSchema = z.object({
+// ── Step 1: outline (fast — the skeleton, no prose) ────────────────────────
+
+export const sectionStubSchema = z.object({
+  heading: z
+    .string()
+    .describe('Short, specific section heading — becomes the markdown ## and config text anchor.'),
+  kind: z.enum(SECTION_KINDS).describe('The section kind.'),
+  intent: z
+    .string()
+    .describe(
+      'One or two sentences: what this section covers AND which visual it features ' +
+        '(a big stat, a chart, a pull quote, or just prose).',
+    ),
+  chartId: z
+    .string()
+    .optional()
+    .describe('If this section features a chart, the id of a chart from the charts list.'),
+})
+
+export const outlineSchema = z.object({
   format: z.enum(['deck', 'map']).describe('The story format to produce.'),
   title: z.string().describe('Story headline.'),
   subtitle: z.string().describe('One-line deck/subtitle.'),
@@ -121,17 +140,17 @@ export const storyGenSchema = z.object({
     })
     .optional()
     .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
-  sections: z
-    .array(generatedSectionSchema)
-    .min(3)
-    .max(8)
-    .describe('3–8 sections that tell the story start to finish.'),
   charts: z
     .array(chartSpecSchema)
-    .describe('Every chart referenced by a chart layer, by id. Empty if none.'),
+    .describe('Every chart any section references, by id. Empty if none.'),
   imagePrompts: z
     .array(imagePromptSchema)
-    .describe('Image prompts for sections that want imagery (a sidecar, not wired in yet).'),
+    .describe('Image prompts for sections that want imagery (a sidecar).'),
+  sections: z
+    .array(sectionStubSchema)
+    .min(3)
+    .max(8)
+    .describe('3–8 section stubs that tell the story start to finish.'),
 })
 
-export type StoryGenOutput = z.infer<typeof storyGenSchema>
+export type OutlineOutput = z.infer<typeof outlineSchema>

@@ -1,12 +1,19 @@
 import { generateText } from '@vismay/ai-gateway'
 import { normalizeSectionBody } from './vizEngine'
-import { storyGenSchema, type StoryGenOutput } from './schema'
-import { generateSystem, buildGeneratePrompt } from './prompts'
+import { outlineSchema, generatedSectionSchema, type OutlineOutput } from './schema'
+import {
+  outlineSystem,
+  buildOutlinePrompt,
+  sectionSystem,
+  buildSectionPrompt,
+} from './prompts'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
   GeneratedStory,
   GeneratedSection,
+  StoryOutline,
+  SectionStub,
   ResearchBrief,
   SourceDoc,
   ComposeAnswers,
@@ -17,10 +24,8 @@ import type {
 export interface GenerateOptions {
   /** Override the model alias. Defaults to `text.pro`. */
   model?: string
-  /** Force the story format; otherwise the brief's suggestion (and the editor's answers) win. */
+  /** Force the story format; otherwise the brief's suggestion wins. */
   format?: StoryFormat
-  /** Validate + re-prompt once on failure (default true). */
-  repair?: boolean
 }
 
 export interface GenerateInput {
@@ -29,96 +34,134 @@ export interface GenerateInput {
   answers: ComposeAnswers
 }
 
-/** kebab-case slug from a title, prefixed so generated stories are easy to spot. */
-function slugify(title: string): string {
-  const base =
+/** kebab-case slug from a title. */
+export function slugify(title: string): string {
+  return (
     title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
       .slice(0, 50) || 'story'
-  return base
+  )
 }
 
-function buildFrontmatter(out: StoryGenOutput, format: StoryFormat): Record<string, unknown> {
+function buildFrontmatter(outline: StoryOutline): Record<string, unknown> {
   const colors: Record<string, string> = { ...DEFAULT_THEME.colors }
-  if (out.accentColors?.accent) colors.accent = out.accentColors.accent
-  if (out.accentColors?.accent2) colors.accent2 = out.accentColors.accent2
+  if (outline.accentColors?.accent) colors.accent = outline.accentColors.accent
+  if (outline.accentColors?.accent2) colors.accent2 = outline.accentColors.accent2
   return {
-    title: out.title,
-    subtitle: out.subtitle,
-    byline: out.byline,
+    title: outline.title,
+    subtitle: outline.subtitle,
+    byline: outline.byline,
     date: new Date().toISOString().slice(0, 10),
-    format,
+    format: outline.format,
     status: 'draft',
     theme: { colors, fonts: DEFAULT_THEME.fonts },
   }
 }
 
-function toGeneratedStory(out: StoryGenOutput, format: StoryFormat): GeneratedStory {
-  const sections: GeneratedSection[] = out.sections.map((s) => ({
-    heading: s.heading,
-    paragraphs: s.paragraphs,
-    kind: s.kind,
-    body: normalizeSectionBody(s.body),
-  }))
+/**
+ * Step 1 — the fast outline call. Returns the story skeleton (title, charts,
+ * section stubs) without any prose, so it comes back quickly. The format is the
+ * caller's choice (the editor's answer), not the model's.
+ */
+export async function generateOutline(
+  input: GenerateInput,
+  opts: GenerateOptions = {},
+): Promise<StoryOutline> {
+  const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
+  const { result } = await generateText({
+    model: opts.model ?? 'text.pro',
+    system: outlineSystem(format),
+    prompt: buildOutlinePrompt(input.sources, input.brief, input.answers),
+    schema: outlineSchema,
+    metadata: { feature: 'story-pipeline-outline', format },
+  })
+  return toOutline(result, format)
+}
+
+function toOutline(out: OutlineOutput, format: StoryFormat): StoryOutline {
   return {
-    slug: slugify(out.title),
-    format,
-    frontmatter: buildFrontmatter(out, format),
-    sections,
+    format, // force the caller's format
+    title: out.title,
+    subtitle: out.subtitle,
+    byline: out.byline,
+    accentColors: out.accentColors,
     charts: out.charts,
     imagePrompts: out.imagePrompts,
+    sections: out.sections,
   }
 }
 
-/** Render validation issues as a corrective instruction for the repair pass. */
-function repairNote(issues: ValidationIssue[]): string {
-  const lines = issues.map((i) => {
-    const where = [i.section, i.layer].filter(Boolean).join(' / ')
-    return `- ${where ? `[${where}] ` : ''}${i.message}`
+/**
+ * Step 2 — generate ONE section from its stub. Short call (one section's prose +
+ * visual), so it never trips the gateway header timeout. Pass `refine` to
+ * regenerate a section against editor feedback.
+ */
+export async function generateSection(
+  args: {
+    outline: StoryOutline
+    stub: SectionStub
+    sources: SourceDoc[]
+    brief: ResearchBrief
+    answers: ComposeAnswers
+    refine?: { feedback: string; previous: GeneratedSection }
+  },
+  opts: GenerateOptions = {},
+): Promise<GeneratedSection> {
+  const { outline, stub, sources, brief, answers, refine } = args
+  const { result } = await generateText({
+    model: opts.model ?? 'text.pro',
+    system: sectionSystem(outline.format),
+    prompt: buildSectionPrompt(outline, stub, sources, brief, answers, refine),
+    schema: generatedSectionSchema,
+    metadata: { feature: 'story-pipeline-section', heading: stub.heading },
   })
-  return (
-    `Your previous draft had these validation problems. Fix ONLY these and keep the rest:\n` +
-    lines.join('\n')
-  )
+  return {
+    // Keep the planned heading so the markdown anchor stays stable across
+    // regenerations (the config `text` is written from this exact string).
+    heading: stub.heading,
+    paragraphs: result.paragraphs,
+    kind: result.kind,
+    body: normalizeSectionBody(result.body),
+  }
+}
+
+/** Compose an outline + its generated sections into a full story. */
+export function assembleStory(
+  outline: StoryOutline,
+  sections: GeneratedSection[],
+): GeneratedStory {
+  return {
+    slug: slugify(outline.title),
+    format: outline.format,
+    frontmatter: buildFrontmatter(outline),
+    sections,
+    charts: outline.charts,
+    imagePrompts: outline.imagePrompts,
+  }
 }
 
 /**
- * Phase 2 — generate the full story from sources + brief + the editor's
- * answers. The model fills `storyGenSchema` (section bodies constrained by
- * viz-engine's own layer schemas), the result is normalised into engine config,
- * validated, and — on failure — regenerated once with the issues fed back.
+ * Convenience: run the whole step-wise flow (outline → each section) and
+ * validate. Used by the offline verify harness; the streaming route drives the
+ * same steps directly so it can emit progress between them.
  */
 export async function generateStory(
   input: GenerateInput,
   opts: GenerateOptions = {},
 ): Promise<{ story: GeneratedStory; issues: ValidationIssue[] }> {
-  const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
-  const model = opts.model ?? 'text.pro'
-  const system = generateSystem(format)
-  const basePrompt = buildGeneratePrompt(input.sources, input.brief, input.answers)
-
-  let prompt = basePrompt
-  let story: GeneratedStory | null = null
-  let issues: ValidationIssue[] = []
-  const maxAttempts = opts.repair === false ? 1 : 2
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const { result } = await generateText({
-      model,
-      system,
-      prompt,
-      schema: storyGenSchema,
-      metadata: { feature: 'story-pipeline-generate', format, attempt: String(attempt) },
-    })
-    story = toGeneratedStory(result, format)
-    issues = validateStory(story)
-    if (issues.length === 0) break
-    // Re-prompt once with the concrete problems appended.
-    prompt = `${basePrompt}\n\n${repairNote(issues)}`
+  const outline = await generateOutline(input, opts)
+  const sections: GeneratedSection[] = []
+  for (const stub of outline.sections) {
+    // eslint-disable-next-line no-await-in-loop
+    sections.push(
+      await generateSection(
+        { outline, stub, sources: input.sources, brief: input.brief, answers: input.answers },
+        opts,
+      ),
+    )
   }
-
-  // story is always assigned (the loop runs at least once).
-  return { story: story as GeneratedStory, issues }
+  const story = assembleStory(outline, sections)
+  return { story, issues: validateStory(story) }
 }

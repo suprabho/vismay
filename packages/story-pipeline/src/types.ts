@@ -75,6 +75,28 @@ export interface ImagePrompt {
   aspectRatio: AspectRatio
 }
 
+/** A planned section from the outline step — heading + intent, no prose yet. */
+export interface SectionStub {
+  heading: string
+  kind: string
+  /** What this section should cover — drives the per-section generation. */
+  intent: string
+  /** Optional chart id (defined in the outline's `charts`) this section features. */
+  chartId?: string
+}
+
+/** The fast first step: the story skeleton, before any section prose is written. */
+export interface StoryOutline {
+  format: StoryFormat
+  title: string
+  subtitle: string
+  byline: string
+  accentColors?: { accent?: string; accent2?: string }
+  charts: ChartSpec[]
+  imagePrompts: ImagePrompt[]
+  sections: SectionStub[]
+}
+
 /** One generated section, with its visual `body` already normalised for the engine. */
 export interface GeneratedSection {
   heading: string

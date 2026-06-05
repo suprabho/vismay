@@ -13,7 +13,15 @@ export * from './types'
 export { ingestSources, extract, extractBuffer } from './ingest'
 export type { IngestInput, InputFile, ExtractedSource } from './ingest'
 export { research, type ResearchOptions } from './research'
-export { generateStory, type GenerateInput, type GenerateOptions } from './generate'
+export {
+  generateStory,
+  generateOutline,
+  generateSection,
+  assembleStory,
+  slugify,
+  type GenerateInput,
+  type GenerateOptions,
+} from './generate'
 export { validateStory } from './validate'
 export { serializeStory } from './serialize'
 export { buildChartData, buildEChartsOption } from './chart'
