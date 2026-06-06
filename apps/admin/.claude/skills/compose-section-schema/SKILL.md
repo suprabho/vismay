@@ -106,16 +106,36 @@ Color fields take a **theme token**, never a raw hex (the engine supplies the
 palette): `accent · accent2 · red · positive · amber · teal · muted`. Defaults:
 `bigStat.color` → `accent2`, delta/most secondary text → `muted`.
 
-## Hard rules (these are what the validator checks)
+## Rules
 
-1. **Anchor exact-match** — `## heading` and config `text` are the same string.
-2. **No invented chart ids** — a `chart` layer's `id` must exist in the story's
+Split by *who enforces them* — verified by running the worked example and
+deliberate rule-violations through the real `validateStory` (see the
+self-validation contract below).
+
+**Enforced by `validateStory` (a violation is a hard error before persist):**
+
+1. **No invented chart ids** — a `chart` layer's `id` must exist in the story's
    top-level `charts` list.
-3. **No fabricated asset `src`** — don't emit `image`/`imageGrid` in generation.
-4. **Layers go in regions that accept them** (table above).
-5. **Theme tokens for colors**, not hex.
-6. **Ground every figure in the sources** — do not invent data.
-7. **Unique, non-empty headings** within a story.
+2. **Registered layout + real region names** — the `layout` must exist and every
+   `regions` key must belong to it (e.g. `stat-left-chart-right` has `stat`,
+   `chart`, `default`).
+3. **Every layer parses against its module schema** — valid `type`, all required
+   fields present (e.g. `bigStat.value`), and color fields must be a theme token
+   (a raw hex or unknown token fails here).
+4. **Unique, non-empty headings** within a story.
+
+**Authoring rules (correctness/visual — `validateStory` does NOT catch all of these):**
+
+5. **Anchor exact-match** — `## heading` and config `text` are the same string
+   (guaranteed by writing both from one string; `validateStory` only checks
+   empty/duplicate headings, not the anchor pairing).
+6. **No fabricated asset `src`** — don't emit `image`/`imageGrid` in generation;
+   request imagery via `imagePrompts`. (A fabricated `src` parses fine — nothing
+   flags it — but the asset won't exist.)
+7. **Place layers in regions that *accept* them** (the layout table above). A
+   `quote` in a `stat` region renders wrong but is **not** flagged by
+   `validateStory` — it only checks the region name exists, not its `accepts`.
+8. **Ground every figure in the sources** — do not invent data.
 
 ## Minimal valid section
 
