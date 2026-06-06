@@ -37,7 +37,7 @@ content/
     <slug>/charts/*.json # Chart data (served at runtime)
 lib/                # Content loaders, render pipelines, helpers
 scripts/            # CLI utilities (audio gen, data ingestion, migrations)
-supabase/migrations # SQL migrations
+# SQL migrations now live at repo root: /supabase/vizmaya-fyi/migrations
 ```
 
 ---

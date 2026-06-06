@@ -5,7 +5,7 @@
  * page and a curated set of vizmaya stories. Tables: `epics`, `story_epics`,
  * plus per-epic data tables like `iea_news` / `iea_countries`.
  *
- * Schema: supabase/migrations/015_epics_iea.sql
+ * Schema: supabase/vizmaya-fyi/migrations/015_epics_iea.sql
  */
 
 import { createServiceClient } from './supabase'

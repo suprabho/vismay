@@ -16,10 +16,10 @@ vizmaya-data/coke-studio/                    # source-of-truth CSVs (sibling rep
   gazetteer-suggestions.csv                  # written by extract-places.ts (review queue)
   lyrics-misses.csv                          # written by fetch-lyrics.ts
 
+supabase/vizmaya-fyi/migrations/             # repo root (moved out of apps/)
+  046_coke_studio_epic.sql                   # schema + epic row (draft, hidden)
+  047_coke_studio_song_lyrics.sql            # lyrics cache (RLS, service-role only)
 apps/vizmaya-fyi/
-  supabase/migrations/
-    046_coke_studio_epic.sql                 # schema + epic row (draft, hidden)
-    047_coke_studio_song_lyrics.sql          # lyrics cache (RLS, service-role only)
   scripts/coke-studio/
     import.ts                                # CSV → Supabase upsert (idempotent)
     fetch-lyrics.ts                          # multi-source orchestrator

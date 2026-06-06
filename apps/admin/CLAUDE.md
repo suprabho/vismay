@@ -20,7 +20,7 @@ which wraps the Vercel AI Gateway. Do not import `@google/genai`, `@anthropic-ai
   and [app/api/vizmaya/stories/[slug]/assets/generate/route.ts](app/api/vizmaya/stories/[slug]/assets/generate/route.ts).
   Generated images land in the `story-assets` Supabase bucket the same as
   manual uploads, and every call writes a row to `ai_generations` (migration
-  [043_ai_generations.sql](../vizmaya-fyi/supabase/migrations/043_ai_generations.sql))
+  [043_ai_generations.sql](../../supabase/vizmaya-fyi/migrations/043_ai_generations.sql))
   for audit + future "Regenerate" affordances.
 
 **Planned (not built yet):**

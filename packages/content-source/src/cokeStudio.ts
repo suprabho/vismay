@@ -1,7 +1,7 @@
 /**
  * Server-side read helpers for the Coke Studio Pakistan corpus epic.
  *
- * Schema: supabase/migrations/046_coke_studio_epic.sql
+ * Schema: supabase/vizmaya-fyi/migrations/046_coke_studio_epic.sql
  *
  * Tables:
  *   coke_studio_songs           one row per recorded song (Phase 1)

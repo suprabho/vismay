@@ -34,7 +34,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...  # anon key, safe to ship
 
 ### 1. Supabase project
 - Create project at supabase.com
-- Go to SQL editor, paste `supabase/migrations/20260420000000_init.sql`, run
+- Go to SQL editor, paste `supabase/footshorts/migrations/20260420000000_init.sql`, run
 - Settings → API: grab `url`, `anon` key, `service_role` key
 - Auth → Providers: enable Email, Google, Apple
   - Google: configure OAuth client in Google Cloud Console, add `https://xxxxx.supabase.co/auth/v1/callback` as redirect
