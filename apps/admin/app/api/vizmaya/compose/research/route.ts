@@ -8,6 +8,7 @@ import {
   isAllowedTextModel,
   DEFAULT_TEXT_MODEL,
   type InputFile,
+  type InputText,
 } from '@vismay/story-pipeline'
 import { newSessionId, saveSession, type ComposeSession } from '../shared'
 
@@ -58,15 +59,18 @@ export async function POST(req: Request): Promise<Response> {
     files.push({ name: f.name, buffer: Buffer.from(await f.arrayBuffer()) })
   }
 
-  if (links.length === 0 && files.length === 0) {
-    return NextResponse.json({ error: 'add at least one link or file' }, { status: 400 })
+  const pasted = String(form.get('text') ?? '').trim()
+  const texts: InputText[] = pasted ? [{ body: pasted }] : []
+
+  if (links.length === 0 && files.length === 0 && texts.length === 0) {
+    return NextResponse.json({ error: 'add at least one link, file, or some text' }, { status: 400 })
   }
 
   const modelInput = String(form.get('model') ?? '')
   const model = isAllowedTextModel(modelInput) ? modelInput : DEFAULT_TEXT_MODEL
 
-  log(`ingesting ${links.length} link(s) + ${files.length} file(s)…`)
-  const { sources, failures } = await ingestSources({ links, files })
+  log(`ingesting ${links.length} link(s) + ${files.length} file(s) + ${texts.length} pasted text(s)…`)
+  const { sources, failures } = await ingestSources({ links, files, texts })
   for (const f of failures) log(`  ✗ skipped ${f.origin} — ${f.reason}`)
   for (const s of sources) log(`  ✓ read ${s.origin} (${s.body.length} chars)`)
   if (sources.length === 0) {

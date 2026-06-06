@@ -10,8 +10,8 @@
  */
 
 export * from './types'
-export { ingestSources, extract, extractBuffer } from './ingest'
-export type { IngestInput, InputFile, ExtractedSource } from './ingest'
+export { ingestSources, extract, extractBuffer, extractText } from './ingest'
+export type { IngestInput, InputFile, InputText, ExtractedSource } from './ingest'
 export { research, type ResearchOptions } from './research'
 export {
   generateStory,

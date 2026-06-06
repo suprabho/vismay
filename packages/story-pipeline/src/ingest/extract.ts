@@ -112,7 +112,7 @@ async function extractHtml(html: string): Promise<ExtractedSource> {
   }
 }
 
-async function extractText(raw: string): Promise<ExtractedSource> {
+export async function extractText(raw: string): Promise<ExtractedSource> {
   const { title, byline, body } = splitTitleAndByline(raw)
   return { title: title || 'Untitled', byline, body }
 }

@@ -82,6 +82,7 @@ export function ComposePanel() {
 
   const [links, setLinks] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [text, setText] = useState('')
   const [model, setModel] = useState<string>(DEFAULT_TEXT_MODEL)
 
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -125,6 +126,7 @@ export function ComposePanel() {
     try {
       const form = new FormData()
       form.set('links', links)
+      form.set('text', text)
       form.set('model', model)
       for (const f of files) form.append('files', f)
       const res = await fetch('/api/vizmaya/compose/research', { method: 'POST', body: form })
@@ -328,6 +330,7 @@ export function ComposePanel() {
     setPhase('input')
     setError(null)
     setFailures([])
+    setText('')
     setSessionId(null)
     setSources([])
     setBrief(null)
@@ -348,8 +351,9 @@ export function ComposePanel() {
       <div className="mx-auto max-w-3xl px-4 py-8 text-neutral-100">
         <h1 className="text-xl font-semibold">Compose a story from sources</h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Paste links and drop files. The agent researches them, asks a few questions, then writes a
-          Deck or mapStory section by section — regenerate any section you don&apos;t like.
+          Paste links, drop files, or paste text directly. The agent researches them, asks a few
+          questions, then writes a Deck or mapStory section by section — regenerate any section you
+          don&apos;t like.
         </p>
 
         {error && (
@@ -436,6 +440,18 @@ export function ComposePanel() {
             )}
           </div>
 
+          <div className="mt-4">
+            <div className={label}>Pasted text</div>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              disabled={phase !== 'input'}
+              rows={5}
+              placeholder={'Paste prose directly — notes, an email body, a transcript…\nThe first line becomes the title.'}
+              className="mt-2 w-full rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-white/30 disabled:opacity-60"
+            />
+          </div>
+
           <div className="mt-3">
             <div className={label}>Model</div>
             <select
@@ -456,7 +472,7 @@ export function ComposePanel() {
           {phase === 'input' && (
             <button
               onClick={runResearch}
-              disabled={busy || (!links.trim() && files.length === 0)}
+              disabled={busy || (!links.trim() && files.length === 0 && !text.trim())}
               className={`mt-4 bg-sky-500 text-white hover:bg-sky-400 ${btn}`}
             >
               Research

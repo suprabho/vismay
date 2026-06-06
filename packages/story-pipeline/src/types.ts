@@ -12,9 +12,9 @@ export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
 
 /** One ingested source — a fetched link or an uploaded file, normalised to text. */
 export interface SourceDoc {
-  /** The URL (links) or filename (files) the text came from. */
+  /** The URL (links), filename (files), or a label (pasted text) the text came from. */
   origin: string
-  kind: 'link' | 'file'
+  kind: 'link' | 'file' | 'text'
   title: string
   byline?: string
   /** Clean, light-markdown body. Treat as untrusted prose, not validated format. */
