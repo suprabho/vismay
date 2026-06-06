@@ -23,7 +23,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { extract } from './ingest/extract'
+import { extract } from '@vismay/story-pipeline/ingest'
 import { structure } from './ingest/structure'
 
 const ROOT = path.resolve(__dirname, '..')

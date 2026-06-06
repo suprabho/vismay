@@ -4,6 +4,7 @@ import { AdminTabs as Tabs, type AdminTab } from '@vismay/admin-core'
 
 const TABS: AdminTab[] = [
   { href: '/vizmaya', label: 'Stories', exact: true },
+  { href: '/vizmaya/compose', label: 'Compose' },
   { href: '/vizmaya/epics', label: 'Epics' },
   { href: '/vizmaya/apps', label: 'Apps' },
   { href: '/vizmaya/demos', label: 'Demos' },

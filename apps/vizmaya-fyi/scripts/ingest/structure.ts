@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { parse as parseYaml } from 'yaml'
-import type { ExtractedSource } from './extract'
+import type { ExtractedSource } from '@vismay/story-pipeline/ingest'
 
 const ROOT = path.resolve(__dirname, '..', '..')
 const STORIES_DIR = path.join(ROOT, 'content/stories')

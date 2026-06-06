@@ -19,6 +19,7 @@
     "@vismay/admin-core": "workspace:*",
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
+    "@vismay/story-pipeline": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/ui": "workspace:*",
