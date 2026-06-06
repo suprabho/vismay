@@ -1,4 +1,4 @@
-import { generateText } from '@vismay/ai-gateway'
+import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
 import { outlineSchema, generatedSectionSchema, type OutlineOutput } from './schema'
 import {
@@ -70,8 +70,8 @@ export async function generateOutline(
   opts: GenerateOptions = {},
 ): Promise<StoryOutline> {
   const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
-  const { result } = await generateText({
-    model: opts.model ?? 'text.pro',
+  const result = await generateStructured({
+    model: opts.model,
     system: outlineSystem(format),
     prompt: buildOutlinePrompt(input.sources, input.brief, input.answers),
     schema: outlineSchema,
@@ -110,8 +110,8 @@ export async function generateSection(
   opts: GenerateOptions = {},
 ): Promise<GeneratedSection> {
   const { outline, stub, sources, brief, answers, refine } = args
-  const { result } = await generateText({
-    model: opts.model ?? 'text.pro',
+  const result = await generateStructured({
+    model: opts.model,
     system: sectionSystem(outline.format),
     prompt: buildSectionPrompt(outline, stub, sources, brief, answers, refine),
     schema: generatedSectionSchema,

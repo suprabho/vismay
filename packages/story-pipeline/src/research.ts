@@ -1,10 +1,10 @@
-import { generateText } from '@vismay/ai-gateway'
+import { generateStructured } from './ai'
 import { researchBriefSchema } from './schema'
 import { RESEARCH_SYSTEM, renderSources } from './prompts'
 import type { ResearchBrief, SourceDoc } from './types'
 
 export interface ResearchOptions {
-  /** Override the model alias (e.g. `text.pro`). Defaults to `text.pro`. */
+  /** Override the model alias. Defaults to DEFAULT_TEXT_MODEL. */
   model?: string
 }
 
@@ -17,12 +17,11 @@ export async function research(
   sources: SourceDoc[],
   opts: ResearchOptions = {},
 ): Promise<ResearchBrief> {
-  const { result } = await generateText({
-    model: opts.model ?? 'text.pro',
+  return generateStructured({
+    model: opts.model,
     system: RESEARCH_SYSTEM,
     prompt: renderSources(sources),
     schema: researchBriefSchema,
     metadata: { feature: 'story-pipeline-research' },
   })
-  return result
 }
