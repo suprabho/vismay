@@ -16,6 +16,14 @@ export const MODELS = {
     fast: 'google/gemini-3-flash',
     /** Reasoning, long context, strict JSON. Use for judge + complex extraction. */
     pro: 'google/gemini-3.1-pro-preview',
+    /**
+     * Gemma 4 (open-weights, vision-capable). Transcribes rasterised PDF pages
+     * to clean markdown for the compose source-extraction worker — reads
+     * graphical/financial/scanned PDFs the deterministic pdf-parse text layer
+     * mangles. Slow on the gateway (~75–130s/page), so it runs ONLY in the
+     * async GitHub Actions worker, never inside a request route.
+     */
+    gemma: 'google/gemma-4-31b-it',
     /** Long-form prose, editorial register. Use for narrative content gen. */
     claude: 'anthropic/claude-sonnet-4.6',
     /** Frontier editorial + long-horizon agentic. Escalate from claude here. */
@@ -99,6 +107,8 @@ export function isLLMImageModel(id: string): boolean {
 export const MODEL_FALLBACKS: Readonly<Record<string, string>> = {
   'google/gemini-3.1-pro-preview': 'google/gemini-2.5-pro',
   'google/gemini-3-pro-preview': 'google/gemini-2.5-pro',
+  // If the dense Gemma is unavailable, degrade to the MoE variant (also vision).
+  'google/gemma-4-31b-it': 'google/gemma-4-26b-a4b-it',
 }
 
 /** Stable fallback id for a volatile model id, or null if it has none. */

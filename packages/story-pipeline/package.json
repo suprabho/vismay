@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
+    "@napi-rs/canvas": "^0.1.80",
     "@vismay/ai-gateway": "workspace:*",
     "@vismay/content-source": "workspace:*",
     "@vismay/viz-engine": "workspace:*",

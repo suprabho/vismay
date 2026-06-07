@@ -1,0 +1,61 @@
+name: Extract compose source
+
+# Triggered by the compose upload route's `workflow_dispatch` POST when a PDF is
+# added to a story. PDFs are transcribed by an open-weights Gemma vision model
+# (~75–130s per page) which can't run inside a serverless function's time
+# limit — a GitHub runner has no such cap. The worker writes the extracted text
+# straight back onto the `story_sources` row; the compose UI polls until it
+# flips to `extracted`. Same dispatch lane as render-video.yml.
+#
+# Required secrets (Production environment):
+#   NEXT_PUBLIC_SUPABASE_URL   — same value as in Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY  — service role key for storage + row writes
+#   AI_GATEWAY_API_KEY         — Vercel AI Gateway key for the Gemma calls
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_id:
+        description: story_sources row id to extract
+        required: true
+        type: string
+      slug:
+        description: Story slug the source belongs to (for logs/traceability)
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Resolve secrets.X from the Production environment, where the Supabase +
+    # gateway secrets are already configured (matches render-video.yml).
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/admin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 reads it from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket; pdf-parse's
+          # @napi-rs/canvas ships a linux-x64 prebuilt that installs here.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Extract
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: pnpm exec tsx scripts/extract-compose-source.ts "${{ inputs.source_id }}"

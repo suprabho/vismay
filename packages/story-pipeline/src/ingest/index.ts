@@ -3,6 +3,9 @@ import { extractBuffer, extractText, type ExtractedSource } from './extract'
 import type { SourceDoc, IngestResult, IngestFailure } from '../types'
 
 export { extract, extractBuffer, extractText, type ExtractedSource } from './extract'
+// The vision PDF extractor is async-only (Gemma, ~75–130s/page) — used by the
+// compose extraction worker, never inside `ingestSources` (which is synchronous).
+export { extractPdfVision, type VisionPdfOptions } from './visionPdf'
 
 /**
  * A browser-like User-Agent + Accept. Many sites 403 a bare server fetch (no
