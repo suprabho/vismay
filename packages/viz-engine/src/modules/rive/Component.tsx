@@ -234,6 +234,7 @@ export default function RiveLayerComponent({
   mode,
   noteReady,
   captureRef,
+  isActive,
 }: VizRenderProps<RiveLayerConfig>) {
   const src = resolveAssetUrl(config.src)
   const posterUrl = config.posterImage ? resolveAssetUrl(config.posterImage) : undefined
@@ -258,9 +259,23 @@ export default function RiveLayerComponent({
     artboard: config.artboard,
     stateMachines,
     layout,
-    autoplay: wantsAutoplay,
+    // Gate the initial autoplay on visibility so a section that mounts below
+    // the fold loads paused at frame 0 instead of burning its entrance before
+    // the reader scrolls to it. The effect below resumes/pauses on scroll.
+    autoplay: wantsAutoplay && isActive,
     onLoad: () => noteReady(),
   })
+
+  // Live scroll: run the timeline/state-machine only while this section is the
+  // active (on-screen) unit. Off-screen sections stay paused and resume when
+  // scrolled into view; scrolling away pauses again. In autoplay/capture/print
+  // the foreground mounts only the active unit, so `isActive` is always true
+  // and playback matches the pre-gating behavior.
+  useEffect(() => {
+    if (!rive) return
+    if (wantsAutoplay && isActive) rive.play()
+    else rive.pause()
+  }, [rive, isActive, wantsAutoplay])
 
   const bindings = config.viewModel?.bindings
   const hasBindings = bindings != null && Object.keys(bindings).length > 0

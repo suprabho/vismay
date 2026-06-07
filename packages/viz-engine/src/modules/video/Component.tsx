@@ -24,6 +24,7 @@ export default function VideoLayerComponent({
   mode,
   noteReady,
   captureRef,
+  isActive,
 }: VizRenderProps<VideoLayerConfig>) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const src = resolveAssetUrl(config.src)
@@ -47,6 +48,18 @@ export default function VideoLayerComponent({
       v.currentTime = t
     }
   }, [activeStep, config.stepSync])
+
+  // Live scroll: play only while this section is the active (on-screen) unit.
+  // A video below the fold stays paused (the `autoPlay` attr is gated on
+  // isActive too) until scrolled into view, then plays; scrolling away pauses
+  // it. autoplay/capture/print mount only the active unit, so isActive is
+  // always true there and playback is unchanged.
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (wantsAutoplay && isActive) void v.play().catch(() => {})
+    else v.pause()
+  }, [isActive, wantsAutoplay])
 
   useImperativeHandle<VizCaptureHandle | null, VizCaptureHandle>(
     captureRef ?? { current: null },
@@ -95,7 +108,7 @@ export default function VideoLayerComponent({
         poster={posterUrl}
         loop={config.loop ?? true}
         muted={config.muted ?? true}
-        autoPlay={wantsAutoplay}
+        autoPlay={wantsAutoplay && isActive}
         playsInline
         // `preload="auto"` so the first frame is decoded before scroll lands
         // on this section — keeps the readiness signal honest.

@@ -477,6 +477,11 @@ export default function StoryShell({
             slug={slug ?? ''}
             mode={mode}
             isPortrait={isPortrait}
+            // Deck in-flow: only the active (on-screen) section animates its
+            // vizslots — rive/video/chart hold until the reader scrolls in.
+            // The fixed-overlay paths (map format, autoplay, capture) mount
+            // only the active unit, so they keep isActive=true by default.
+            isActive={i === activeUnit}
           />
         ))}
       </div>
