@@ -8,8 +8,11 @@ import {
 } from '@vismay/content-source/storyConfig'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
+import { readComposeState } from '@vismay/content-source/composeState'
+import { listStorySources } from '@vismay/content-source/storySources'
 import { vizmayaPublicUrl } from '@/lib/publicSite'
 import CanvasClient from '@/components/vizmaya/canvas/CanvasClient'
+import { ComposeFlowPanel } from '@/components/vizmaya/canvas/compose/ComposeFlowPanel'
 import {
   canvasFrameId,
   outputSpecsForUnit,
@@ -101,15 +104,28 @@ export default async function CanvasPage({ params }: Props) {
       : undefined
   )
 
+  // Compose scaffold (migration 056) — present only while a draft is being
+  // composed. Best-effort: a missing column / fs-only dev just yields null and
+  // the overlay doesn't render, leaving normal canvas editing untouched.
+  const [composeState, composeSources] = await Promise.all([
+    readComposeState(slug).catch(() => null),
+    listStorySources(slug).catch(() => []),
+  ])
+
   return (
-    <CanvasClient
-      slug={slug}
-      units={units}
-      sources={sources}
-      theme={story.frontmatter.theme ?? null}
-      signedSrcById={signedSrcById}
-      moduleTypes={moduleTypes}
-      format={story.frontmatter.format === 'deck' ? 'deck' : 'map'}
-    />
+    <>
+      <CanvasClient
+        slug={slug}
+        units={units}
+        sources={sources}
+        theme={story.frontmatter.theme ?? null}
+        signedSrcById={signedSrcById}
+        moduleTypes={moduleTypes}
+        format={story.frontmatter.format === 'deck' ? 'deck' : 'map'}
+      />
+      {composeState && (
+        <ComposeFlowPanel slug={slug} initialState={composeState} initialSources={composeSources} />
+      )}
+    </>
   )
 }
