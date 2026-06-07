@@ -42,13 +42,24 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     return NextResponse.json({ error: 'draft story files are missing' }, { status: 404 })
   }
 
-  // Clean base: keep the frontmatter block + config `defaults`, drop all
-  // existing sections (the seed placeholder). The final write is atomic, so the
-  // canvas never observes the transient section-less state.
-  const fmMatch = markdown.match(/^---\n([\s\S]*?)\n---\n?/)
-  let md = fmMatch ? `---\n${fmMatch[1]}\n---\n` : ''
-  const cfgObj = (parseYaml(configYaml) ?? {}) as { defaults?: unknown }
-  let cfg = yamlStringify({ defaults: cfgObj.defaults ?? {} })
+  // Choose the base to append onto:
+  //  • attached (compose started on an existing story) → keep the story whole,
+  //    so the new sections land AFTER the author's real content.
+  //  • seeded draft → keep only the frontmatter + config `defaults` and drop the
+  //    throwaway placeholder section.
+  // Either way the final write is atomic, so the canvas never observes a
+  // transient section-less state.
+  let md: string
+  let cfg: string
+  if (state.attached) {
+    md = markdown
+    cfg = configYaml
+  } else {
+    const fmMatch = markdown.match(/^---\n([\s\S]*?)\n---\n?/)
+    md = fmMatch ? `---\n${fmMatch[1]}\n---\n` : ''
+    const cfgObj = (parseYaml(configYaml) ?? {}) as { defaults?: unknown }
+    cfg = yamlStringify({ defaults: cfgObj.defaults ?? {} })
+  }
 
   const placeholderBody =
     state.format === 'map'

@@ -37,6 +37,14 @@ export interface ComposeOutlineEntry {
 export interface ComposeState {
   phase: ComposePhase
   format: ComposeFormat
+  /**
+   * Set when compose was started on a pre-existing story (via the canvas
+   * `start` route) rather than a freshly-seeded draft (route 0). Materialise
+   * uses it to APPEND new sections instead of replacing the story's body — a
+   * seeded draft has only a throwaway placeholder section, but an attached
+   * story has real content that must survive.
+   */
+  attached?: boolean
   /** The text model alias the author picked for this draft. */
   model?: string
   angles: ComposeAngle[]

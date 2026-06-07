@@ -266,6 +266,13 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
           ))}
         </ol>
 
+        {st.attached && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            Composing into an existing story — materialised sections are{' '}
+            <span className="font-medium">appended</span>, leaving your current content untouched.
+          </div>
+        )}
+
         {/* ── Sources ── */}
         <section className="space-y-2">
           <h3 className="text-xs font-medium text-neutral-300">Sources ({extracted} ready)</h3>
@@ -430,7 +437,9 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
                 disabled={!!busy || acceptedCount === 0}
                 className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
               >
-                {busy === 'materialize' ? 'Creating…' : `Materialize ${acceptedCount} →`}
+                {busy === 'materialize'
+                  ? 'Creating…'
+                  : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
               </button>
             </div>
           </section>
