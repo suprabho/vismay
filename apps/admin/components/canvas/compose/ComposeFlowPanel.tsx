@@ -32,6 +32,7 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   const [outlineFeedback, setOutlineFeedback] = useState('')
   const [written, setWritten] = useState<Set<string>>(new Set())
   const [sectionFb, setSectionFb] = useState<Record<string, string>>({})
+  const [imgDone, setImgDone] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const extracted = sources.filter((s) => s.status === 'extracted').length
@@ -175,6 +176,40 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       setWritten((w) => new Set(w).add(sectionId))
       setSectionFb((f) => ({ ...f, [sectionId]: '' }))
     }
+  }
+
+  // ── Images: generate each imagePrompt into the story-assets bucket via the
+  // existing assets route, so they're available to place in the canvas. ───────
+  async function genImages() {
+    const prompts = ((st.imagePrompts ?? []) as Array<{ section?: string; prompt?: string; aspectRatio?: string }>)
+      .filter((p) => p.prompt)
+    if (!prompts.length || busy) return
+    setBusy('images')
+    setError(null)
+    setImgDone(0)
+    let done = 0
+    for (const p of prompts) {
+      const slugPart =
+        (p.section ?? 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'image'
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const res = await fetch(`${base}/${slug}/assets/generate`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prompt: p.prompt, aspectRatio: p.aspectRatio ?? '16:9', filename: `compose-${slugPart}-${done}.png` }),
+        })
+        if (res.ok) {
+          done++
+          setImgDone(done)
+        } else {
+          const d = await res.json().catch(() => ({}))
+          setError(d.error ?? 'image generation failed')
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    }
+    setBusy(null)
   }
 
   const phase = st.phase
@@ -431,6 +466,17 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
                   </li>
                 ))}
             </ul>
+            {(st.imagePrompts?.length ?? 0) > 0 && (
+              <button
+                onClick={genImages}
+                disabled={!!busy}
+                className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
+              >
+                {busy === 'images'
+                  ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
+                  : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
+              </button>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"

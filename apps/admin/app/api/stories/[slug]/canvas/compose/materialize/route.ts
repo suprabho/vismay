@@ -4,6 +4,7 @@ import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { appendStorySection } from '@vismay/content-source/storySection'
 import { readComposeState, writeComposeState } from '@vismay/content-source/composeState'
+import { buildEChartsOption, type ChartSpec } from '@vismay/story-pipeline'
 
 /**
  * Compose stage 3.5 — materialise the accepted outline entries into real story
@@ -76,6 +77,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
       { error: `failed to write sections: ${e instanceof Error ? e.message : String(e)}` },
       { status: 500 },
     )
+  }
+
+  // Expand the outline's charts into chart_data so any chart layer the VISUAL
+  // pass later emits (which references a chart id) actually resolves.
+  const charts = ((state.storyOutline as { charts?: ChartSpec[] } | null)?.charts ?? [])
+  for (const c of charts) {
+    // eslint-disable-next-line no-await-in-loop
+    await src.writeChart(slug, c.id, buildEChartsOption(c)).catch(() => {})
   }
 
   await writeComposeState(slug, { ...state, outline: nextOutline, phase: 'content' })
