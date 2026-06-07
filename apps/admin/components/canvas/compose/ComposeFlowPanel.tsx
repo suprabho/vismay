@@ -164,6 +164,11 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
     if (data?.ok) window.location.reload()
   }
 
+  async function finish() {
+    const data = await call<{ ok: boolean }>('finish', 'finish', { method: 'POST' })
+    if (data?.ok) window.location.reload()
+  }
+
   // ── Sections (CONTENT + VISUAL passes) ───────────────────────────────────
   async function genSection(sectionId: string) {
     const fb = sectionFb[sectionId]?.trim()
@@ -482,6 +487,13 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
               className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
             >
               Reload canvas to view ↻
+            </button>
+            <button
+              onClick={finish}
+              disabled={!!busy}
+              className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
+            >
+              {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
             </button>
           </section>
         )}
