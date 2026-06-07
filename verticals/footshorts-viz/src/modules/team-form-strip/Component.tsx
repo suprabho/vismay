@@ -14,6 +14,9 @@ export default function TeamFormStripVizComponent({
     return () => cancelAnimationFrame(h)
   }, [noteReady])
 
+  // Grids fan out wider than a single strip, so give them more room to breathe.
+  const maxWidth = config.layout === 'grid' ? '900px' : '640px'
+
   return (
     <div
       style={{
@@ -25,11 +28,15 @@ export default function TeamFormStripVizComponent({
         padding: '1rem',
       }}
     >
-      <div style={{ width: '100%', maxWidth: '640px' }}>
+      <div style={{ width: '100%', maxWidth }}>
         <TeamFormStrip
           fixtures={config.fixtures}
           teamId={config.teamId}
           label={config.label}
+          layout={config.layout}
+          columns={config.columns}
+          rows={config.rows}
+          cardWidth={config.cardWidth}
         />
       </div>
     </div>

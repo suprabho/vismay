@@ -20,7 +20,10 @@ import {
   sampleTreeVertical as bracketSampleTreeVertical,
 } from '@vismay/footshorts-viz/modules/bracket/sample'
 import { sample as tacticsBoardSample } from '@vismay/footshorts-viz/modules/tactics-board/sample'
-import { sample as teamFormStripSample } from '@vismay/footshorts-viz/modules/team-form-strip/sample'
+import {
+  sample as teamFormStripSample,
+  sampleGrid as teamFormGridSample,
+} from '@vismay/footshorts-viz/modules/team-form-strip/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
 
 export type CatalogCategory = 'Core' | 'F1' | 'Footshorts' | 'Starship'
@@ -100,6 +103,13 @@ export const catalogModules: CatalogEntry[] = [
   },
   { type: 'fs:tactics-board', category: 'Footshorts', sample: tacticsBoardSample },
   { type: 'fs:team-form-strip', category: 'Footshorts', sample: teamFormStripSample },
+  {
+    type: 'fs:team-form-strip',
+    id: 'fs:team-form-strip@grid',
+    label: 'Footshorts — team form grid',
+    category: 'Footshorts',
+    sample: teamFormGridSample,
+  },
   {
     type: 'starship:viewer',
     category: 'Starship',
