@@ -8,7 +8,7 @@ import { getFullVideo, type CachedVideo } from '@vismay/content-source/storyVide
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
 import type { NarrationUnit } from '@/components/vizmaya/NarrationEditor'
-import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
+import type { AssetListEntry } from '@/app/api/stories/[slug]/assets/route'
 
 export type VideoCache = {
   '9:16': CachedVideo | null

@@ -20,7 +20,7 @@ export function ComposeCreateEntry() {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch('/api/vizmaya/stories/compose', {
+      const res = await fetch('/api/stories/compose', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ title: t, format }),

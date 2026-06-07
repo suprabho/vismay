@@ -11,8 +11,8 @@ import {
   aiSlotConfig,
   modelsForLanguage,
   type AiSlotKind,
-} from '@/components/vizmaya/canvas/aiSlots'
-import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
+} from '@/components/canvas/aiSlots'
+import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**

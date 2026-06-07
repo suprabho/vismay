@@ -18,7 +18,7 @@ interface Props {
   initialSources: StorySource[]
 }
 
-const base = `/api/vizmaya/stories`
+const base = `/api/stories`
 
 export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) {
   const [st, setSt] = useState<ComposeState>(initialState)

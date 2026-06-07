@@ -57,7 +57,7 @@ export default function FixPanel({
     setNote(null)
     try {
       const res = await fetch(
-        `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/fix`,
+        `/api/stories/${encodeURIComponent(slug)}/canvas/fix`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -5,7 +5,7 @@
  * GET → 200 { raw: string | null }
  * PUT → 200 { ok: true }   body: { raw: string | null }
  *
- * Admin-auth gated (matches the rest of /api/vizmaya/stories). The body is
+ * Admin-auth gated (matches the rest of /api/stories). The body is
  * opaque YAML — parsing happens at script time in `loadTtsOverrides`, so a
  * malformed save just means the next render falls back to default narration
  * rather than crashing.

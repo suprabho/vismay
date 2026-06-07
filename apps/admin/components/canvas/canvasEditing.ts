@@ -726,12 +726,12 @@ export function mergeSlice(
  * rejects with the server's error message on 4xx/5xx.
  *
  * Endpoint layout:
- *   share    → PUT  /api/vizmaya/stories/<slug>          { share_yaml }
- *   config   → PUT  /api/vizmaya/stories/<slug>          { config_yaml }
- *   markdown → PUT  /api/vizmaya/stories/<slug>          { markdown }
- *   report   → PUT  /api/vizmaya/stories/<slug>/report   { raw }
- *   map      → PUT  /api/vizmaya/stories/<slug>/map      { raw }
- *   tts      → PUT  /api/vizmaya/stories/<slug>/tts      { raw }
+ *   share    → PUT  /api/stories/<slug>          { share_yaml }
+ *   config   → PUT  /api/stories/<slug>          { config_yaml }
+ *   markdown → PUT  /api/stories/<slug>          { markdown }
+ *   report   → PUT  /api/stories/<slug>/report   { raw }
+ *   map      → PUT  /api/stories/<slug>/map      { raw }
+ *   tts      → PUT  /api/stories/<slug>/tts      { raw }
  */
 export async function saveSlice(
   slug: string,
@@ -751,10 +751,10 @@ export async function saveSlice(
   let url: string
   let body: unknown
   if (storyKey) {
-    url = `/api/vizmaya/stories/${encodeURIComponent(slug)}`
+    url = `/api/stories/${encodeURIComponent(slug)}`
     body = { [storyKey]: newRaw }
   } else {
-    url = `/api/vizmaya/stories/${encodeURIComponent(slug)}/${target}`
+    url = `/api/stories/${encodeURIComponent(slug)}/${target}`
     body = { raw: newRaw }
   }
 

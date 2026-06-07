@@ -17,7 +17,7 @@
  *   - **label**     — short human label for the prompt UI header.
  *
  * Both the client (`PromptBar.tsx`) and the server route
- * (`app/api/vizmaya/stories/[slug]/canvas/generate/route.ts`) read from here so
+ * (`app/api/stories/[slug]/canvas/generate/route.ts`) read from here so
  * the offered models, output format, and default prompt can never drift apart.
  */
 

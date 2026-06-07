@@ -372,7 +372,7 @@ export default function ShareShell({
     setSaving(true)
     setSaveError(null)
     try {
-      const res = await fetch(`${adminBaseUrl}/api/vizmaya/stories/${slug}`, {
+      const res = await fetch(`${adminBaseUrl}/api/stories/${slug}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

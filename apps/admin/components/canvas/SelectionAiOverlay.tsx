@@ -182,7 +182,7 @@ export default function SelectionAiOverlay({
     setError(null)
     try {
       const res = await fetch(
-        `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/transform`,
+        `/api/stories/${encodeURIComponent(slug)}/canvas/transform`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

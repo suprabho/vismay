@@ -12,8 +12,8 @@
  *   - `theme` → opens the existing ThemeEditor inside the side panel
  *
  * Save endpoints (same as EditorClient's tab editors):
- *   - config.yaml   → PUT /api/vizmaya/stories/<slug>  { config_yaml }
- *   - frontmatter   → PUT /api/vizmaya/stories/<slug>  { markdown }
+ *   - config.yaml   → PUT /api/stories/<slug>  { config_yaml }
+ *   - frontmatter   → PUT /api/stories/<slug>  { markdown }
  */
 
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
@@ -205,7 +205,7 @@ export async function saveMarkdown(slug: string, markdown: string): Promise<void
 }
 
 async function putStory(slug: string, body: Record<string, unknown>): Promise<void> {
-  const res = await fetch(`/api/vizmaya/stories/${encodeURIComponent(slug)}`, {
+  const res = await fetch(`/api/stories/${encodeURIComponent(slug)}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

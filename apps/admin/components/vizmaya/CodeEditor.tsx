@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import type { editor as MonacoEditor, IRange, MarkerSeverity } from 'monaco-editor'
 import type { Monaco, OnMount } from '@monaco-editor/react'
 import { installMonacoWorkers, configureMonacoLanguages } from './setupMonaco'
-import SelectionAiOverlay from './canvas/SelectionAiOverlay'
+import SelectionAiOverlay from '@/components/canvas/SelectionAiOverlay'
 
 // Lazy-load the Monaco React wrapper. Workers must be wired before Monaco
 // creates them, so `installMonacoWorkers()` runs here (loaded once, idempotent).

@@ -11,8 +11,8 @@ import {
   recordGeneration,
   resolveModel,
 } from '@vismay/ai-gateway'
-import { aiSlotConfig, type AiSlotKind } from '@/components/vizmaya/canvas/aiSlots'
-import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
+import { aiSlotConfig, type AiSlotKind } from '@/components/canvas/aiSlots'
+import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**

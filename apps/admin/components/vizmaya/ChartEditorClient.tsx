@@ -52,7 +52,7 @@ export default function ChartEditorClient({
   function save() {
     start(async () => {
       setStatus({ type: 'idle' })
-      const res = await fetch(`/api/vizmaya/stories/${slug}/charts/${chartId}`, {
+      const res = await fetch(`/api/stories/${slug}/charts/${chartId}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ raw: value }),

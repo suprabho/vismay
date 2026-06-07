@@ -81,7 +81,7 @@ import PromptBar from './PromptBar'
 import FixPanel from './FixPanel'
 import EvaluatorPanel from './EvaluatorPanel'
 import GenerationFeedback from './GenerationFeedback'
-import MapPickerModal from '../MapPickerModal'
+import MapPickerModal from '@/components/vizmaya/MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
@@ -2612,7 +2612,7 @@ export default function CanvasClient({
       setGenError(null)
       try {
         const res = await fetch(
-          `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
+          `/api/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

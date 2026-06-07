@@ -37,7 +37,7 @@ export default function GenerationFeedback({ slug, generationId }: Props) {
     setError(null)
     try {
       const res = await fetch(
-        `/api/vizmaya/stories/${encodeURIComponent(slug)}/generation-feedback`,
+        `/api/stories/${encodeURIComponent(slug)}/generation-feedback`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
