@@ -1,7 +1,7 @@
 /**
  * Server-side read helpers for the apps lookup table.
  *
- * Schema: supabase/migrations/039_content_apps.sql
+ * Schema: supabase/vizmaya-fyi/migrations/039_content_apps.sql
  */
 
 import { createServiceClient } from './supabase'

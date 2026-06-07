@@ -12,7 +12,7 @@
  * sheet shows a team's metrics plus its rank among the 48 on squad value and
  * GDP per capita; ranks are computed here.
  *
- * Schema: apps/vizmaya-fyi/supabase/migrations/025_fifa_wc26.sql
+ * Schema: supabase/vizmaya-fyi/migrations/025_fifa_wc26.sql
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'

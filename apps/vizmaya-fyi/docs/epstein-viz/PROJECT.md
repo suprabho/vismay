@@ -112,7 +112,7 @@ path for v1.
 ### What the curated import unlocks
 
 Loader: [`scripts/epstein/import-curated.ts`](../../scripts/epstein/import-curated.ts)
-Migration: [`supabase/migrations/016_epstein_curated.sql`](../../supabase/migrations/016_epstein_curated.sql)
+Migration: [`supabase/vizmaya-fyi/migrations/016_epstein_curated.sql`](../../../../supabase/vizmaya-fyi/migrations/016_epstein_curated.sql)
 
 ```bash
 GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 \
