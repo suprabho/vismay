@@ -12,7 +12,7 @@ import crypto from 'crypto'
  * Why a separate primitive: the signed URL ties the grant to a specific
  * pathname, which is the right shape for "GET /share." Saves go to a
  * different path than the page that hosts the editor (page = /story/<slug>
- * /share on vizmaya.fyi; save = /api/vizmaya/stories/<slug> on
+ * /share on vizmaya.fyi; save = /api/stories/<slug> on
  * vismay.xyz), so the URL signature can't double as the save credential.
  * The action token carries the editor's authority over to the API call.
  *

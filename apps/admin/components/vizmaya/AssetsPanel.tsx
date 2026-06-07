@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
+import type { AssetListEntry } from '@/app/api/stories/[slug]/assets/route'
 import ComposeVizPanel from './ComposeVizPanel'
 import GenerateImagePanel from './GenerateImagePanel'
 
@@ -44,7 +44,7 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
 
   const refresh = useCallback(async () => {
     setError(null)
-    const res = await fetch(`/api/vizmaya/stories/${slug}/assets`)
+    const res = await fetch(`/api/stories/${slug}/assets`)
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       setError(body?.error ?? `Failed to list assets (HTTP ${res.status})`)
@@ -69,7 +69,7 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
           form.append('file', file)
           let res: Response
           try {
-            res = await fetch(`/api/vizmaya/stories/${slug}/assets`, {
+            res = await fetch(`/api/stories/${slug}/assets`, {
               method: 'POST',
               body: form,
             })
@@ -143,7 +143,7 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
   async function deleteAsset(filename: string) {
     if (!confirm(`Delete "${filename}"? This cannot be undone, and any story config or markdown that references it will break until updated.`)) return
     setError(null)
-    const res = await fetch(`/api/vizmaya/stories/${slug}/assets/${encodeURIComponent(filename)}`, {
+    const res = await fetch(`/api/stories/${slug}/assets/${encodeURIComponent(filename)}`, {
       method: 'DELETE',
     })
     if (!res.ok) {

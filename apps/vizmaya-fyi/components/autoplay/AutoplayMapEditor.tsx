@@ -48,7 +48,7 @@ interface Props {
   mapStyle: string
   onClose?: () => void
   /**
-   * Fired after a successful PUT to admin's `/api/vizmaya/stories/<slug>/map`.
+   * Fired after a successful PUT to admin's `/api/stories/<slug>/map`.
    * AutoplayShell uses this to reload the preview iframe so the fresh
    * overrides take effect immediately instead of waiting for ISR.
    */
@@ -171,7 +171,7 @@ export default function AutoplayMapEditor({
     setSaving(true)
     setStatus({ type: 'idle' })
     try {
-      const res = await fetch(`${adminBaseUrl}/api/vizmaya/stories/${slug}/map`, {
+      const res = await fetch(`${adminBaseUrl}/api/stories/${slug}/map`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

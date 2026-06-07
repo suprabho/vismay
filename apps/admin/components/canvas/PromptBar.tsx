@@ -126,7 +126,7 @@ export default function PromptBar({
     setNote(null)
     try {
       const res = await fetch(
-        `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate`,
+        `/api/stories/${encodeURIComponent(slug)}/canvas/generate`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
+import type { AssetListEntry } from '@/app/api/stories/[slug]/assets/route'
 import PromptBar from './PromptBar'
 
 type ImageFit = 'cover' | 'contain' | 'fill' | 'scale-down' | 'none'
@@ -72,7 +72,7 @@ export default function ImageEditModal({
   const refresh = useCallback(async (): Promise<void> => {
     try {
       const res = await fetch(
-        `/api/vizmaya/stories/${encodeURIComponent(slug)}/assets`
+        `/api/stories/${encodeURIComponent(slug)}/assets`
       )
       if (!res.ok) {
         const body = await res.json().catch(() => null)
@@ -125,7 +125,7 @@ export default function ImageEditModal({
         const form = new FormData()
         form.append('file', file)
         const res = await fetch(
-          `/api/vizmaya/stories/${encodeURIComponent(slug)}/assets`,
+          `/api/stories/${encodeURIComponent(slug)}/assets`,
           { method: 'POST', body: form }
         )
         if (!res.ok) {

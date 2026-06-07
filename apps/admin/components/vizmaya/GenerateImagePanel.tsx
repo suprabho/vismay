@@ -2,7 +2,7 @@
 
 /**
  * Prompt-to-image panel for the AssetsPanel. Sends the prompt + aspect ratio
- * to /api/vizmaya/stories/<slug>/assets/generate, which routes through
+ * to /api/stories/<slug>/assets/generate, which routes through
  * @vismay/ai-gateway → Vercel AI Gateway → Gemini image model, uploads the
  * bytes to the same story-assets bucket as manual uploads, and returns the
  * newly-created AssetListEntry. The parent appends it to the grid.
@@ -18,7 +18,7 @@
  */
 
 import { useState } from 'react'
-import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
+import type { AssetListEntry } from '@/app/api/stories/[slug]/assets/route'
 
 const ASPECT_RATIOS = [
   { value: '1:1', label: 'Square' },
@@ -52,7 +52,7 @@ export default function GenerateImagePanel({ slug, onClose, onGenerated }: Props
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/vizmaya/stories/${slug}/assets/generate`, {
+      const res = await fetch(`/api/stories/${slug}/assets/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: trimmed, aspectRatio: aspect }),

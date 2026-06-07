@@ -16,7 +16,7 @@ import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
-import type { AssetListEntry } from '@/app/api/vizmaya/stories/[slug]/assets/route'
+import type { AssetListEntry } from '@/app/api/stories/[slug]/assets/route'
 
 type Tab = 'theme' | 'edit' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
 
@@ -161,7 +161,7 @@ export default function EditorClient({
       if (parsed.data.status) payload.status = parsed.data.status
       if (parsed.data.listed !== undefined) payload.listed = parsed.data.listed
       if (parsed.data.displayOrder !== undefined) payload.displayOrder = parsed.data.displayOrder
-      const res = await fetch(`/api/vizmaya/stories/${slug}`, {
+      const res = await fetch(`/api/stories/${slug}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
@@ -211,7 +211,7 @@ export default function EditorClient({
           // Share has no editor buffer (it's edited on /story/<slug>/share),
           // so persist directly — same pattern as chart JSON below.
           const text = await file.text()
-          const res = await fetch(`/api/vizmaya/stories/${slug}`, {
+          const res = await fetch(`/api/stories/${slug}`, {
             method: 'PUT',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ share_yaml: text.length === 0 ? null : text }),
@@ -238,7 +238,7 @@ export default function EditorClient({
             errors.push(`${name}: JSON parse — ${err instanceof Error ? err.message : 'invalid'}`)
             continue
           }
-          const res = await fetch(`/api/vizmaya/stories/${slug}/charts/${id}`, {
+          const res = await fetch(`/api/stories/${slug}/charts/${id}`, {
             method: 'PUT',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ raw: text }),
@@ -486,7 +486,7 @@ function ChartsList({
 
   async function downloadChart(id: string) {
     setError(null)
-    const res = await fetch(`/api/vizmaya/stories/${slug}/charts/${id}`)
+    const res = await fetch(`/api/stories/${slug}/charts/${id}`)
     if (!res.ok) {
       setError(`Failed to fetch ${id}.json (HTTP ${res.status})`)
       return
@@ -521,7 +521,7 @@ function ChartsList({
   async function deleteChart(id: string) {
     if (!confirm(`Delete ${id}.json? This cannot be undone, and any story config that references "${id}" will break until updated.`)) return
     setError(null)
-    const res = await fetch(`/api/vizmaya/stories/${slug}/charts/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/stories/${slug}/charts/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       setError(body?.error ?? `Delete failed (HTTP ${res.status})`)
@@ -550,7 +550,7 @@ function ChartsList({
       return
     }
     setUploading(true)
-    const res = await fetch(`/api/vizmaya/stories/${slug}/charts/${id}`, {
+    const res = await fetch(`/api/stories/${slug}/charts/${id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ raw: text }),

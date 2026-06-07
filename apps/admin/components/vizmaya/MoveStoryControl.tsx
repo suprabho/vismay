@@ -26,7 +26,7 @@ const UNASSIGNED = '' // select value standing in for null
 
 /**
  * Inline "move to app" dropdown. Immediately PUTs the chosen app (or null to
- * unassign) to /api/vizmaya/stories/<slug>/app — app_slug is a column, not
+ * unassign) to /api/stories/<slug>/app — app_slug is a column, not
  * frontmatter, so this is a dedicated write, not part of the editor's Save.
  */
 export default function MoveStoryControl({
@@ -54,7 +54,7 @@ export default function MoveStoryControl({
     setErr(null)
     const appSlug = next === UNASSIGNED ? null : next
     try {
-      const res = await fetch(`/api/vizmaya/stories/${slug}/app`, {
+      const res = await fetch(`/api/stories/${slug}/app`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ appSlug }),

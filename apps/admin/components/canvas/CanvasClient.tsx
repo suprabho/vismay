@@ -2612,7 +2612,7 @@ export default function CanvasClient({
       setGenError(null)
       try {
         const res = await fetch(
-          `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
+          `/api/stories/${encodeURIComponent(slug)}/canvas/generate-section`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
