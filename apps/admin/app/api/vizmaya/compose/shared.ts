@@ -10,6 +10,7 @@ import type {
   ComposeAnswers,
   StoryFormat,
 } from '@vismay/story-pipeline'
+import { appStoryUrl } from '@/lib/publicSite'
 
 // Shared helpers for the compose routes (not a route itself — only route.ts /
 // page.tsx are routes in the app dir).
@@ -69,8 +70,11 @@ export async function writeStoryFiles(
 }
 
 export function previewUrlFor(slug: string): string {
-  const base = process.env.VIZMAYA_BASE_URL ?? ''
-  return `${base}/story/${slug}`
+  // Admin runs on its own host, so the link must be absolute or it 404s
+  // against the admin origin. `appStoryUrl` resolves to the vizmaya.fyi base
+  // (env-overridable via NEXT_PUBLIC_VIZMAYA_URL for local dev). Stories always
+  // live on vizmaya-fyi, so the helper never returns null here.
+  return appStoryUrl('vizmaya-fyi', slug) ?? `https://vizmaya.fyi/story/${slug}`
 }
 
 // ── Compose session store ──────────────────────────────────────────────────

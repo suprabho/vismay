@@ -296,7 +296,7 @@ export function ComposePanel() {
           s.slug
             ? {
                 slug: s.slug,
-                previewUrl: data.previewUrl ?? `/story/${s.slug}`,
+                previewUrl: data.previewUrl ?? `https://vizmaya.fyi/story/${s.slug}`,
                 format: fmt,
                 imagePrompts: data.imagePrompts ?? [],
                 issues: data.issues ?? [],
@@ -666,13 +666,21 @@ export function ComposePanel() {
 
             {done && (
               <div className="mt-4 border-t border-white/10 pt-4">
+                {/* Open in the admin editor first to review/tweak before it
+                    goes public; the editor is on this same admin host. */}
+                <a
+                  href={`/vizmaya/${done.slug}`}
+                  className="inline-block rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400"
+                >
+                  Open in editor →
+                </a>
                 <a
                   href={done.previewUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-block rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400"
+                  className="ml-3 inline-block rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-neutral-300 hover:border-white/30"
                 >
-                  Open in vizmaya →
+                  View on vizmaya ↗
                 </a>
                 <button
                   onClick={reset}

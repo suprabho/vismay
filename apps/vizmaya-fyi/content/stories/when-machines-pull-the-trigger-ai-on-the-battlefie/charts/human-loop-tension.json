@@ -1,0 +1,63 @@
+{
+  "steps": [
+    {
+      "title": "Pentagon vs. Anthropic: Human-in-the-Loop Standoff",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Pentagon: Speed & Autonomy",
+            "Anthropic: Human Oversight",
+            "Hoover Wargame Recommendation: Human-in-Loop"
+          ],
+          "name": "Position",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Relative Priority Score (illustrative)",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Priority Weight",
+            "type": "bar",
+            "data": [
+              90,
+              70,
+              85
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
