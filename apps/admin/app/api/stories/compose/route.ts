@@ -3,7 +3,7 @@ import { stringify as yamlStringify } from 'yaml'
 import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { writeComposeState } from '@vismay/content-source/composeState'
-import { slugify, defaultsFor, type StoryFormat } from '@vismay/story-pipeline'
+import { slugify, defaultsFor, DEFAULT_THEME, type StoryFormat } from '@vismay/story-pipeline'
 
 /**
  * Route 0 — create a compose draft and open it in the canvas.
@@ -35,6 +35,11 @@ function seedStory(title: string, format: StoryFormat): { markdown: string; conf
     format,
     status: 'published',
     listed: false,
+    // The renderer hard-reads `frontmatter.theme.{colors,fonts}` on every path
+    // (themeToMapPalette, getFontImportUrl, ThemeProvider), so a draft without a
+    // theme crashes the canvas. Seed the same neutral base `buildFrontmatter`
+    // injects; the compose passes can fold accent overrides over it later.
+    theme: DEFAULT_THEME,
   }
   const markdown = `---\n${yamlStringify(frontmatter)}---\n\n## Draft\n\nStart composing from your sources.\n`
 
