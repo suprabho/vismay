@@ -11,11 +11,13 @@ import type {
   StoryFormat,
 } from '@vismay/story-pipeline'
 import { appStoryUrl } from '@/lib/publicSite'
+import { getContentSource } from '@vismay/content-source/contentSource'
 
 // Shared helpers for the compose routes (not a route itself — only route.ts /
 // page.tsx are routes in the app dir).
 
-/** Where generated stories land. Defaults to the vizmaya-fyi content dir (monorepo dev). */
+/** Where the fs session store lives. Stories themselves now persist through the
+ *  content source (fs or db). Defaults to the vizmaya-fyi content dir (dev). */
 export function storyContentDir(): string {
   return (
     process.env.STORY_CONTENT_DIR ||
@@ -23,50 +25,39 @@ export function storyContentDir(): string {
   )
 }
 
-export async function exists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p)
-    return true
-  } catch {
-    return false
+/**
+ * Persist a generated story through the active content source (fs or db, per
+ * CONTENT_SOURCE). `writeMarkdown` runs FIRST — in db mode it upserts the
+ * `stories` row, and the config/chart writes are updates that silently no-op if
+ * the row is absent. In fs mode this writes the same `<slug>.md` /
+ * `<slug>.config.yaml` / `<slug>/charts/<id>.json` layout the renderer reads.
+ *
+ * (The old `.imageprompts.json` sidecar is dropped — imagePrompts ride the route
+ * response today and move into `compose_state` once the canvas flow lands.)
+ */
+export async function persistStory(slug: string, art: StoryArtifacts): Promise<void> {
+  const src = getContentSource()
+  await src.writeMarkdown(slug, art.markdown)
+  await src.writeConfigYaml(slug, art.configYaml)
+  for (const c of art.charts) {
+    // c.json is a serialized ECharts option; store as parsed JSON so db mode
+    // gets jsonb and fs mode re-serialises to the same file.
+    // eslint-disable-next-line no-await-in-loop
+    await src.writeChart(slug, c.id, JSON.parse(c.json))
   }
 }
 
-/** Pick a non-colliding slug so a new story never clobbers an existing one. */
-export async function uniqueSlug(dir: string, base: string): Promise<string> {
+/** Pick a non-colliding slug, checking the active content source (fs or db). */
+export async function uniqueStorySlug(base: string): Promise<string> {
+  const src = getContentSource()
   let slug = base
   let n = 2
   // eslint-disable-next-line no-await-in-loop
-  while (await exists(path.join(dir, `${slug}.md`))) {
+  while ((await src.readMarkdown(slug)) != null) {
     slug = `${base}-${n}`
     n++
   }
   return slug
-}
-
-/** Write the paired story files (md + config + chart JSONs + imagePrompts sidecar). */
-export async function writeStoryFiles(
-  dir: string,
-  slug: string,
-  art: StoryArtifacts,
-): Promise<void> {
-  await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(path.join(dir, `${slug}.md`), art.markdown, 'utf8')
-  await fs.writeFile(path.join(dir, `${slug}.config.yaml`), art.configYaml, 'utf8')
-  if (art.charts.length > 0) {
-    const chartsDir = path.join(dir, slug, 'charts')
-    await fs.mkdir(chartsDir, { recursive: true })
-    await Promise.all(
-      art.charts.map((c) => fs.writeFile(path.join(chartsDir, `${c.id}.json`), c.json, 'utf8')),
-    )
-  }
-  if (art.imagePrompts.length > 0) {
-    await fs.writeFile(
-      path.join(dir, `${slug}.imageprompts.json`),
-      JSON.stringify(art.imagePrompts, null, 2),
-      'utf8',
-    )
-  }
 }
 
 export function previewUrlFor(slug: string): string {

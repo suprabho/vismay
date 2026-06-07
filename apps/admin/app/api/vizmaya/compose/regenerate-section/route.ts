@@ -14,8 +14,7 @@ import {
   type ComposeAnswers,
 } from '@vismay/story-pipeline'
 import {
-  storyContentDir,
-  writeStoryFiles,
+  persistStory,
   previewUrlFor,
   loadSession,
   saveSession,
@@ -108,17 +107,17 @@ export async function POST(req: Request): Promise<Response> {
     )
   }
 
-  // Splice in, rewrite files under the same slug, and persist to the session.
+  // Splice in, rewrite the story under the same slug, and persist to the session.
   const nextSections = sections.slice()
   nextSections[index] = newSection
   const story = assembleStory(outline, nextSections)
   const issues = validateStory(story)
   const art = serializeStory(story)
   try {
-    await writeStoryFiles(storyContentDir(), slug, art)
+    await persistStory(slug, art)
   } catch (e) {
     return NextResponse.json(
-      { error: `failed to write story files: ${e instanceof Error ? e.message : String(e)}` },
+      { error: `failed to write story: ${e instanceof Error ? e.message : String(e)}` },
       { status: 500 },
     )
   }

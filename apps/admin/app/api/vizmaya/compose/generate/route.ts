@@ -14,9 +14,8 @@ import {
   type StoryFormat,
 } from '@vismay/story-pipeline'
 import {
-  storyContentDir,
-  uniqueSlug,
-  writeStoryFiles,
+  persistStory,
+  uniqueStorySlug,
   previewUrlFor,
   newSessionId,
   loadSession,
@@ -158,9 +157,8 @@ export async function POST(req: Request): Promise<Response> {
         const story = assembleStory(outline, sections)
         const issues = validateStory(story)
         const art = serializeStory(story)
-        const dir = storyContentDir()
-        const slug = s.slug ?? (await uniqueSlug(dir, art.slug))
-        await writeStoryFiles(dir, slug, art)
+        const slug = s.slug ?? (await uniqueStorySlug(art.slug))
+        await persistStory(slug, art)
         s.slug = slug
         s.status = allDone ? 'done' : 'generating'
         await saveSession(s).catch(() => {})
