@@ -1,13 +1,38 @@
 # Plan: Compose a story from sources (staged, in-canvas)
 
+> **⚠️ RECONCILED 2026-06-07 — read this first.** This doc was written as if
+> greenfield, but a *different* first cut shipped in the meantime: a standalone,
+> **filesystem-backed** composer (`packages/story-pipeline` + the
+> `/vizmaya/compose` `ComposePanel`) that this doc never mentions. The approved,
+> up-to-date execution plan — which treats the work as a **cutover** of that fs
+> composer onto this canvas/DB design, in independently-shippable phases A–H — is
+> tracked separately and supersedes the phase/file lists below where they
+> conflict. The staged UX, data model, and route shapes below remain the target.
+>
+> Corrections to the original text that follow:
+> - **Migration number is 056, not 054.** 054 (`admin_profiles`) and 055 are
+>   taken; 056 is the next free slot.
+> - **The `pdf-parse → DOMMatrix` premise is stale.** `pdf-parse` 2.x works today
+>   in `packages/story-pipeline/src/ingest/extract.ts`. Gemini multimodal
+>   extraction is an **upgrade for scanned PDFs/images**, not a fix for a broken
+>   path — keep pdf-parse as the fast default and add multimodal as a per-source
+>   fallback/re-extract (do **not** "retire pdf-parse entirely").
+> - **Most "reuse" primitives already exist and are shipped** (canvas,
+>   `generate-section` + refine loop, `dbSource`, the PUT save path,
+>   `recordGeneration`, the Assets image-gen path). The real work is reconciling
+>   the shipped fs composer with them, not building from scratch.
+> - **There are two section generators today** (`story-pipeline`'s and the canvas
+>   `generate-section` route's) sharing only `sectionBodySchema`. Phase A
+>   canonicalizes on the package and shrinks the route to a delegating adapter.
+
 ## Context
 
 "Compose a story from sources" lets an author paste links + drop files (PDFs,
 emails, HTML), have the agent research them, then write a Deck or mapStory
-**section by section**, regenerating any section. The first cut tried to do this
-in one shot and (a) choked on PDFs (`pdf-parse` → `DOMMatrix is not defined` in
-Node) and (b) conflated *narrative* with *visuals*, so there was nowhere to
-correct course mid-draft.
+**section by section**, regenerating any section. The first (in-canvas) attempt
+conflated *narrative* with *visuals*, so there was nowhere to correct course
+mid-draft; a later standalone fs cut got the staged narrative/research right but
+sits outside the canvas and persists to disk. This plan converges them.
 
 This plan breaks the flow into **review-gated stages**, each independently
 accept / reject / refine-able, so the author steers at every step instead of
@@ -22,19 +47,22 @@ upload → extract → draft story
       → ASSETS        (chart JSON, generated images)           ← per-asset refine
 ```
 
-**This document is plan-only. No code is to be written yet.**
-
 ### Decisions (from the user)
 
 1. **Draft state** = reuse the existing `stories` row + **one new table**. Angles
-   and the outline live in a JSONB column on `stories`; raw extracted source text
-   lives in a `story_sources` table. No separate `story_drafts` entity.
-2. **Extraction** = **Gemini multimodal** via `@vismay/ai-gateway`. PDF/image
-   bytes go straight to the model (handles scanned PDFs; no DOM dependency). This
-   retires the `pdf-parse` path entirely.
+   and the outline live in a JSONB column on `stories` (`compose_state`); raw
+   extracted source text lives in a `story_sources` table. No separate
+   `story_drafts` entity. This **replaces** the shipped fs composer's
+   `.compose/<id>.json` session store (the session id collapses into the slug).
+2. **Extraction** = `pdf-parse` 2.x fast path (already working) **+ Gemini
+   multimodal via `@vismay/ai-gateway` as a per-source fallback** for scanned
+   PDFs/images (and the re-extract target for `story_sources.status='failed'`
+   rows). Multimodal sends bytes straight to the model; no DOM dependency.
 3. **UI surface** = **all inside the canvas**. No separate wizard — the front
    stages are canvas nodes feeding the existing `FrameNode`, so the whole pipeline
-   shares the canvas's save/merge/render plumbing.
+   shares the canvas's save/merge/render plumbing. Review happens primarily in the
+   canvas, with the markdown editor (`/vizmaya/<slug>`) and the public page kept
+   as secondary links.
 
 ---
 
@@ -70,9 +98,9 @@ ones via `appendStorySection`.
 
 ---
 
-## Data model (migration **054**)
+## Data model (migration **056**)
 
-`supabase/vizmaya-fyi/migrations/054_compose_from_sources.sql`:
+`supabase/vizmaya-fyi/migrations/056_compose_from_sources.sql`:
 
 1. **`stories.compose_state jsonb`** (nullable). The whole pipeline scaffold for a
    draft, set/cleared as authoring proceeds. Shape:
@@ -216,27 +244,37 @@ online-content-migration plan was never built.)
 ## Files
 
 **New:**
-`supabase/vizmaya-fyi/migrations/054_compose_from_sources.sql`,
+`supabase/vizmaya-fyi/migrations/056_compose_from_sources.sql`,
 `app/api/vizmaya/stories/compose/route.ts`,
 `app/api/vizmaya/stories/[slug]/canvas/compose/sources/route.ts`,
 `app/api/vizmaya/stories/[slug]/canvas/compose/angles/route.ts`,
 `app/api/vizmaya/stories/[slug]/canvas/compose/outline/route.ts`,
 `components/vizmaya/canvas/compose/{SourcesNode,AngleNode,OutlineNode}.tsx`,
-a compose-state helper (`lib/composeState.ts`) + the angle/outline Zod schemas,
-extraction helper (`lib/sourceExtract.ts`, Gemini multimodal).
+the angle/outline Zod schemas, multimodal extraction fallback helper.
+(Compose-state read/write lives in `packages/content-source`, alongside the
+`story_sources` accessors — not a separate admin `lib/` helper.)
 
 **Modify:**
-`app/api/vizmaya/stories/[slug]/canvas/generate-section/route.ts` (add `phase`
-content/visual split), `CanvasClient.tsx` (register compose nodes + wire to
-FrameNode + hydrate compose_state), `app/page.tsx` (entry action),
+`packages/story-pipeline/src/{generate,prompts,schema}.ts` (split section gen into
+content/visual passes — the single canonical generator),
+`app/api/vizmaya/stories/[slug]/canvas/generate-section/route.ts` (shrinks to a
+delegating adapter that adds `phase` + auth/audit/model-pick),
+`CanvasClient.tsx` (register compose nodes + wire to FrameNode + hydrate
+compose_state), the `/vizmaya/compose` entry (create form → route 0 → redirect),
 `packages/content-source` reader/writer for the new `compose_state` column +
 `story_sources` accessors.
 
 **Reuse unchanged:** `appendStorySection`, `generate`/`evaluate` routes, `aiSlots.ts`,
 `<PromptBar>`, `@vismay/ai-gateway`, `sectionBodySchema`, asset/chart save paths.
 
-**Retire:** the `pdf-parse` dependency and `apps/vizmaya-fyi/scripts/ingest/extract.ts`
-PDF branch (the DOMMatrix source) — superseded by Gemini multimodal extraction.
+**Cut over (fs → DB):** the shipped composer's `writeStoryFiles` + `.compose/<id>.json`
+session store (`app/api/vizmaya/compose/shared.ts`) move to `dbSource` writes +
+`compose_state`; the `compose/{generate,regenerate-section,sessions}` routes and
+`ComposePanel.tsx` are retired once the canvas path is proven.
+
+**Extraction:** keep `pdf-parse` as the fast default; add Gemini multimodal only as
+a per-source fallback for scanned/image PDFs (NOT a wholesale retire of pdf-parse;
+the `apps/vizmaya-fyi/scripts/ingest/extract.ts` ingest CLI is unaffected).
 
 ---
 
@@ -256,8 +294,9 @@ PDF branch (the DOMMatrix source) — superseded by Gemini multimodal extraction
 ## Verification
 
 - `pnpm --filter admin typecheck && pnpm --filter admin lint`; `pnpm build` (db mode).
-- Manual E2E in admin canvas: create a compose draft → drop a PDF (the failing ITC
-  one) → confirm Gemini extraction succeeds where `pdf-parse` failed → generate
-  angles → pick one → outline → accept/reorder → materialize → per-section CONTENT
-  refine → VISUAL refine → confirm `config.yaml`/markdown persist and the frame
-  re-renders → `ai_generations` rows written at each stage.
+- Manual E2E in admin canvas (CONTENT_SOURCE=db): create a compose draft → drop a
+  PDF (e.g. the ITC one) → confirm `pdf-parse` extracts it (and that a scanned/image
+  PDF falls back to multimodal) → generate angles → pick one → outline →
+  accept/reorder → materialize → per-section CONTENT refine → VISUAL refine →
+  confirm `config.yaml`/markdown persist and the frame re-renders → `stories` /
+  `story_sources` / `ai_generations` rows written at each stage.

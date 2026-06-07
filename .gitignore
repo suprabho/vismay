@@ -9,3 +9,5 @@ brandz
 .claude
 .vscode
 apps/vizmaya-fyi/public/content
+# Supabase CLI scratch
+supabase/.temp/
