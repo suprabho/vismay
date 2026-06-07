@@ -24,7 +24,7 @@ export default function DemosListClient({ initialDemos }: Props) {
 
   useEffect(() => {
     if (!showNew || storiesLoaded) return
-    fetch('/api/vizmaya/stories')
+    fetch('/api/stories')
       .then((r) => r.json())
       .then((data: { slug: string; title: string }[]) => {
         setStories(data.map((s) => ({ slug: s.slug, title: s.title })))

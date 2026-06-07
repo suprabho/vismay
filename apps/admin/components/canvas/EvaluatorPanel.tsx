@@ -62,7 +62,7 @@ export default function EvaluatorPanel({
       setError(null)
       try {
         const res = await fetch(
-          `/api/vizmaya/stories/${encodeURIComponent(slug)}/canvas/evaluate`,
+          `/api/stories/${encodeURIComponent(slug)}/canvas/evaluate`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

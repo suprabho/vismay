@@ -18,7 +18,7 @@ export interface MiddlewareOptions {
    * instead of a 307 redirect to `loginPath`. Default `['/api/']`.
    *
    * Why: `NextResponse.redirect` returns a 307 that preserves the method, so a
-   * non-GET fetch (e.g. `PUT /api/vizmaya/stories/<slug>`) would follow the
+   * non-GET fetch (e.g. `PUT /api/stories/<slug>`) would follow the
    * redirect with the same method into a page route, which returns 404. Mutating
    * API callers expect machine-readable failures, not a UI redirect chain.
    */

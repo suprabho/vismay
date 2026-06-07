@@ -38,7 +38,7 @@ function buildStoriesUrl(query: string, appSlug: string | null): string {
   if (query) params.set('q', query)
   if (appSlug) params.set('app', appSlug)
   const qs = params.toString()
-  return qs ? `/api/vizmaya/stories?${qs}` : '/api/vizmaya/stories'
+  return qs ? `/api/stories?${qs}` : '/api/stories'
 }
 
 export default function StoriesListClient({ appSlug = null, basePath }: Props) {
@@ -90,7 +90,7 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
     meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>
   ) {
     setUpdating(slug)
-    const res = await fetch(`/api/vizmaya/stories/${slug}`, {
+    const res = await fetch(`/api/stories/${slug}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(meta),
@@ -191,7 +191,7 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
     // app-scoped list. Omitted for the Vizmaya "all" view, which lists regardless.
     if (appSlug) payload.appSlug = appSlug
 
-    const res = await fetch(`/api/vizmaya/stories/${slug}`, {
+    const res = await fetch(`/api/stories/${slug}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
@@ -231,7 +231,7 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
         errors.push(`${f.name}: JSON parse — ${err instanceof Error ? err.message : 'invalid'}`)
         continue
       }
-      const cr = await fetch(`/api/vizmaya/stories/${slug}/charts/${id}`, {
+      const cr = await fetch(`/api/stories/${slug}/charts/${id}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ raw: text }),

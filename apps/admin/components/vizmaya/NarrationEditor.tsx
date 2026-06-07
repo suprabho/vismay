@@ -138,7 +138,7 @@ export default function NarrationEditor({ slug, units, initialYaml, videoCache, 
     setSaving(true)
     setStatus({ type: 'idle' })
     try {
-      const res = await fetch(`/api/vizmaya/stories/${slug}/tts`, {
+      const res = await fetch(`/api/stories/${slug}/tts`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ raw: draftYaml }),
@@ -161,7 +161,7 @@ export default function NarrationEditor({ slug, units, initialYaml, videoCache, 
     setRegenerating(true)
     setStatus({ type: 'idle' })
     try {
-      const res = await fetch(`/api/vizmaya/stories/${slug}/audio/regen`, {
+      const res = await fetch(`/api/stories/${slug}/audio/regen`, {
         method: 'POST',
       })
       const body = await res.json().catch(() => ({}))

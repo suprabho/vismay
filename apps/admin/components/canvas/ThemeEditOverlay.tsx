@@ -13,7 +13,7 @@
 import { useState } from 'react'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { Theme } from '@vismay/viz-engine'
-import ThemeEditor from '../ThemeEditor'
+import ThemeEditor from '@/components/vizmaya/ThemeEditor'
 import PromptBar from './PromptBar'
 
 interface Props {

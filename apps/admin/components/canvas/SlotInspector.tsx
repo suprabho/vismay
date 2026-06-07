@@ -30,7 +30,7 @@ import {
   type VizLayer,
 } from '@vismay/viz-engine'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import VizConfigForm from '../VizConfigForm'
+import VizConfigForm from '@/components/vizmaya/VizConfigForm'
 import PromptBar from './PromptBar'
 
 type FormValue = string | number | boolean | object | null | undefined
