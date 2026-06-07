@@ -13,6 +13,7 @@ export * from './types'
 export { ingestSources, extract, extractBuffer, extractText } from './ingest'
 export type { IngestInput, InputFile, InputText, ExtractedSource } from './ingest'
 export { research, type ResearchOptions } from './research'
+export { generateAngles } from './angles'
 export {
   generateStory,
   generateOutline,

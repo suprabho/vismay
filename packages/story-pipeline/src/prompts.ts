@@ -40,6 +40,17 @@ export const RESEARCH_SYSTEM =
   `questions with concrete options; use "text" only when open input is genuinely needed.\n\n` +
   `Be specific and grounded in the sources — do not invent facts.`
 
+export const ANGLES_SYSTEM =
+  `You are a research analyst preparing a data-driven visual story for the Vizmaya desk. ` +
+  `Read the provided sources and produce:\n` +
+  `- summary: what the material is really about.\n` +
+  `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
+  `- entities: the main people, orgs, places, things.\n` +
+  `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
+  `- angles: 3–5 DISTINCT angles the story could take. Each is a title, a one-sentence ` +
+  `thesis (the claim it makes), and a rationale (why it's worth taking) — all grounded in ` +
+  `the sources.\n\nBe specific and grounded — do not invent facts.`
+
 /** Render the editor's answers to the clarifying questions. */
 function renderAnswers(brief: ResearchBrief, answers: ComposeAnswers): string {
   const qa = brief.questions
@@ -81,8 +92,9 @@ export function buildOutlinePrompt(
   sources: SourceDoc[],
   brief: ResearchBrief,
   answers: ComposeAnswers,
+  refine?: { feedback: string; previous: unknown },
 ): string {
-  return (
+  const base =
     `RESEARCH BRIEF\n` +
     `Summary: ${brief.summary}\n` +
     `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n` +
@@ -90,7 +102,13 @@ export function buildOutlinePrompt(
     `Candidate angles:\n${brief.candidateAngles.map((a) => `- ${a}`).join('\n')}\n\n` +
     `EDITOR'S ANSWERS\n${renderAnswers(brief, answers)}\n\n` +
     `SOURCES\n${renderSources(sources)}`
-  )
+  if (refine) {
+    return (
+      `${base}\n\nPREVIOUS OUTLINE:\n${JSON.stringify(refine.previous)}\n\n` +
+      `Revise that outline per this feedback (keep what works, change only what's noted):\n${refine.feedback}`
+    )
+  }
+  return base
 }
 
 // ── Step 2: one section, in two passes (CONTENT then VISUAL) ───────────────

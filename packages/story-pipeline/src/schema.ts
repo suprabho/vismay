@@ -67,6 +67,38 @@ export const researchBriefSchema = z.object({
 
 export type ResearchBriefOutput = z.infer<typeof researchBriefSchema>
 
+// ── Angles (the canvas compose flow's research gate) ───────────────────────
+//
+// Like the research brief, but the human gate is "pick an angle" rather than a
+// clarifying-questions form: each angle is a rich card (title + thesis +
+// rationale) the author chooses between before the outline is written.
+
+export const angleSchema = z.object({
+  title: z.string().describe('A short, specific angle headline.'),
+  thesis: z.string().describe('The one-sentence claim this angle makes.'),
+  rationale: z.string().describe('Why this angle is worth taking, grounded in the sources.'),
+})
+
+export const anglesBriefSchema = z.object({
+  summary: z.string().describe('A tight 2–4 sentence synthesis of what the sources are about.'),
+  keyFacts: z
+    .array(z.string())
+    .describe('The load-bearing facts/figures a data story would be built on.'),
+  entities: z
+    .array(z.string())
+    .describe('The main people, orgs, places, or things the story concerns.'),
+  suggestedFormat: z
+    .enum(['deck', 'map'])
+    .describe('"deck" for a slide narrative; "map" when geography is central.'),
+  angles: z
+    .array(angleSchema)
+    .min(3)
+    .max(5)
+    .describe('3–5 distinct angles the story could take.'),
+})
+
+export type AnglesBriefOutput = z.infer<typeof anglesBriefSchema>
+
 // ── Phase 2: story generation ──────────────────────────────────────────────
 
 export const chartSpecSchema = z.object({

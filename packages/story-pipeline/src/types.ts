@@ -50,6 +50,24 @@ export interface ResearchBrief {
 /** The user's answers to the clarifying questions: `{ [questionId]: answer }`. */
 export type ComposeAnswers = Record<string, string>
 
+/** One angle the story could take — the human gate in the canvas compose flow. */
+export interface StoryAngle {
+  /** Stable id the chosen angle is referenced by. */
+  id: string
+  title: string
+  thesis: string
+  rationale: string
+}
+
+/** The angles-stage output: a brief plus the rich angles to choose between. */
+export interface AnglesBrief {
+  summary: string
+  keyFacts: string[]
+  entities: string[]
+  suggestedFormat: StoryFormat
+  angles: StoryAngle[]
+}
+
 /**
  * A simplified chart spec the model emits. Deterministically expanded into a
  * full ECharts option by `buildEChartsOption` — keeps the structured-output

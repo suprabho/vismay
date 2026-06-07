@@ -45,6 +45,9 @@ export interface ComposeState {
   /** The research brief + editor answers, kept for re-running later stages. */
   brief?: unknown
   answers?: Record<string, string>
+  /** The raw `StoryOutline` (charts + title/byline meta) the outline stage
+   *  produced — needed when materialising sections + charts. */
+  storyOutline?: unknown
   /** Image prompts the outline emitted (a sidecar until resolved in ASSETS). */
   imagePrompts?: unknown[]
 }

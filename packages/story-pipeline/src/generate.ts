@@ -71,13 +71,13 @@ function buildFrontmatter(outline: StoryOutline): Record<string, unknown> {
  */
 export async function generateOutline(
   input: GenerateInput,
-  opts: GenerateOptions = {},
+  opts: GenerateOptions & { refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<StoryOutline> {
   const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
   const result = await generateStructured({
     model: opts.model,
     system: outlineSystem(format),
-    prompt: buildOutlinePrompt(input.sources, input.brief, input.answers),
+    prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, opts.refine),
     schema: outlineSchema,
     metadata: { feature: 'story-pipeline-outline', format },
   })
