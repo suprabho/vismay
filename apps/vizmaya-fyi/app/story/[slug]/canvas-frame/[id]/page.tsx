@@ -63,7 +63,64 @@ export default async function CanvasFramePage({ params }: RouteParams) {
       u.subIndex === 0 &&
       (u.parentConfig.id === id || `section-${u.parentIndex}` === id)
   )
-  if (focusedUnits.length === 0) notFound()
+  // Outline-only section: the compose flow lets an author preview sections
+  // whose content hasn't been generated yet. Such a section has an outline /
+  // config entry but no resolvable body, so `resolveUnits` emits no unit for
+  // it. Render a calm placeholder instead of a hard 404 — the canvas frame is
+  // an admin-only preview surface, so a broken "this page couldn't load" error
+  // there is never the right answer; "no content yet" is.
+  if (focusedUnits.length === 0) {
+    const outlineSection = config.sections.find(
+      (s, i) => s.id === id || `section-${i}` === id
+    )
+    const heading =
+      outlineSection?.heading ??
+      outlineSection?.text ??
+      id.replace(/^section-(\d+)$/, 'Section $1').replace(/-/g, ' ')
+    return (
+      <main
+        style={{
+          display: 'flex',
+          height: '100svh',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.6rem',
+          padding: '2rem',
+          textAlign: 'center',
+          background: '#0b0b0f',
+          color: '#e7e5e4',
+          fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.65rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: '#7dd3fc',
+          }}
+        >
+          Outline · no content yet
+        </span>
+        <h1 style={{ margin: 0, maxWidth: '24ch', fontSize: '1.4rem', fontWeight: 600 }}>
+          {heading}
+        </h1>
+        <p
+          style={{
+            margin: 0,
+            maxWidth: '34ch',
+            fontSize: '0.85rem',
+            lineHeight: 1.5,
+            color: '#a8a29e',
+          }}
+        >
+          This section is still an outline. Generate its content from the
+          Compose panel (Write), then reload the canvas to preview it here.
+        </p>
+      </main>
+    )
+  }
 
   // StoryShell handles units[] uniformly — passing a length-1 array makes
   // it a story-of-one. The IntersectionObserver, scroll snap, and active-unit
