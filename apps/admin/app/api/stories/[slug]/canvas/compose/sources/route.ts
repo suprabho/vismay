@@ -10,6 +10,10 @@ import {
   removeSourceFile,
   sourceStoragePath,
 } from '@vismay/content-source/storySources'
+import {
+  isSourceExtractDispatchConfigured,
+  dispatchSourceExtractJob,
+} from '@vismay/content-source/storySourceExtractDispatch'
 
 /**
  * Compose stage 1 — add and extract a source for a draft.
@@ -19,8 +23,14 @@ import {
  * extraction can be re-run later; the extracted text lands on the `story_sources`
  * row. GET lists a draft's sources (node hydration); DELETE removes one.
  *
- * Extraction uses the pipeline's pdf-parse/html/csv path today; a multimodal
- * fallback for scanned PDFs/images is a later upgrade.
+ * PDFs are read by an open-weights Gemma vision model (rasterise each page →
+ * markdown), which is far cleaner than the pdf-parse text layer for
+ * graphical/financial/scanned PDFs but runs ~75–130s/page — too slow for a
+ * request route. So when dispatch is configured the row is left `pending` and a
+ * GitHub Actions worker extracts it and writes back (the compose UI polls
+ * `GET …/sources`); see `storySourceExtractDispatch`. With dispatch unset
+ * (local dev) PDFs fall back to SYNCHRONOUS deterministic text extraction.
+ * HTML/CSV/links/pasted text are always extracted synchronously here.
  */
 
 export const runtime = 'nodejs'
@@ -56,6 +66,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     const buffer = Buffer.from(await f.arrayBuffer())
     const mime = f.type || 'application/octet-stream'
 
+    const isPdf = f.name.toLowerCase().endsWith('.pdf') || mime.includes('pdf')
+
     const row = await insertStorySource({
       storySlug: slug,
       kind: 'file',
@@ -63,25 +75,50 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       mime,
       status: 'pending',
     })
+
+    // Persist the original to the bucket first — the async worker reads it back
+    // from there, and the sync path re-extracts from it later.
+    const storagePath = sourceStoragePath(slug, row.id, f.name)
     try {
-      const storagePath = sourceStoragePath(slug, row.id, f.name)
       await uploadSourceFile(storagePath, buffer, mime)
+      await updateStorySource(row.id, { storagePath })
+    } catch (e) {
+      const error = `upload failed: ${e instanceof Error ? e.message : String(e)}`
+      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+      return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+    }
+
+    // ── PDFs → async Gemma worker (when configured) ──────────────────────────
+    // Leave the row `pending` and hand off to a GitHub runner; the UI polls
+    // until the worker flips it to extracted/failed.
+    if (isPdf && isSourceExtractDispatchConfigured()) {
+      try {
+        await dispatchSourceExtractJob({ sourceId: row.id, slug })
+        return NextResponse.json({ ok: true, source: { ...row, storagePath, status: 'pending' } })
+      } catch (e) {
+        const error = `extraction dispatch failed: ${e instanceof Error ? e.message : String(e)}`
+        await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+        return NextResponse.json({ ok: true, source: { ...row, storagePath, status: 'failed', error } })
+      }
+    }
+
+    // ── Everything else (and PDFs in local dev) → synchronous text extraction ─
+    try {
       const { sources, failures } = await ingestSources({ files: [{ name: f.name, buffer }] })
       if (sources.length === 0) {
         const error = failures[0]?.reason ?? 'could not extract text'
-        await updateStorySource(row.id, { storagePath, status: 'failed', error })
+        await updateStorySource(row.id, { status: 'failed', error })
         return NextResponse.json({ ok: true, source: { ...row, storagePath, status: 'failed', error } })
       }
       const s = sources[0]!
       const patch = {
-        storagePath,
         title: s.title,
         byline: s.byline ?? null,
         extractedText: s.body,
         status: 'extracted' as const,
       }
       await updateStorySource(row.id, patch)
-      return NextResponse.json({ ok: true, source: { ...row, ...patch } })
+      return NextResponse.json({ ok: true, source: { ...row, storagePath, ...patch } })
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e)
       await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})

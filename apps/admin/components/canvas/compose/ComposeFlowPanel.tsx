@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
 
@@ -36,6 +36,29 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   const fileRef = useRef<HTMLInputElement>(null)
 
   const extracted = sources.filter((s) => s.status === 'extracted').length
+  const pending = sources.filter((s) => s.status === 'pending').length
+
+  // While a PDF is being extracted by the async Gemma worker its row stays
+  // `pending`; poll the sources list until everything settles, so the statuses
+  // (and the "Generate angles" gate) update without a manual reload.
+  useEffect(() => {
+    if (pending === 0) return
+    let cancelled = false
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`${base}/${slug}/canvas/compose/sources`, { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as { sources?: StorySource[] }
+        if (!cancelled && Array.isArray(data.sources)) setSources(data.sources)
+      } catch {
+        // transient — keep polling
+      }
+    }, 8000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [pending, slug])
 
   async function call<T>(label: string, path: string, init: RequestInit): Promise<T | null> {
     setBusy(label)
@@ -266,9 +289,18 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
           ))}
         </ol>
 
+        {st.attached && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            Composing into an existing story — materialised sections are{' '}
+            <span className="font-medium">appended</span>, leaving your current content untouched.
+          </div>
+        )}
+
         {/* ── Sources ── */}
         <section className="space-y-2">
-          <h3 className="text-xs font-medium text-neutral-300">Sources ({extracted} ready)</h3>
+          <h3 className="text-xs font-medium text-neutral-300">
+            Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
+          </h3>
           <ul className="space-y-1">
             {sources.map((s) => (
               <li
@@ -332,6 +364,12 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
           >
             {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
           </button>
+          {pending > 0 && (
+            <p className="text-[11px] text-amber-300/80">
+              Extracting {pending} PDF{pending > 1 ? 's' : ''} with Gemma — this runs in the
+              background and can take a few minutes. Statuses update automatically.
+            </p>
+          )}
         </section>
 
         {/* ── Angles ── */}
@@ -430,7 +468,9 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
                 disabled={!!busy || acceptedCount === 0}
                 className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
               >
-                {busy === 'materialize' ? 'Creating…' : `Materialize ${acceptedCount} →`}
+                {busy === 'materialize'
+                  ? 'Creating…'
+                  : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
               </button>
             </div>
           </section>

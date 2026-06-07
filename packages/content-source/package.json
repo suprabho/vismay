@@ -31,6 +31,7 @@
     "./storyPdfDispatch": "./src/storyPdfDispatch.ts",
     "./storyShareDispatch": "./src/storyShareDispatch.ts",
     "./storyShareRender": "./src/storyShareRender.ts",
+    "./storySourceExtractDispatch": "./src/storySourceExtractDispatch.ts",
     "./storyTts": "./src/storyTts.ts",
     "./storyVideo": "./src/storyVideo.ts",
     "./storyVideoDispatch": "./src/storyVideoDispatch.ts",

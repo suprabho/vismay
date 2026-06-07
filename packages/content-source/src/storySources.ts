@@ -79,6 +79,26 @@ export async function listStorySources(slug: string): Promise<StorySource[]> {
   return (data ?? []).map(fromRow)
 }
 
+/** One source row by id, or null if it doesn't exist. Used by the async worker. */
+export async function getStorySourceById(id: string): Promise<StorySource | null> {
+  const sb = createServiceClient()
+  const { data, error } = await sb.from('story_sources').select('*').eq('id', id).maybeSingle()
+  if (error) throw new Error(`getStorySourceById ${id}: ${error.message}`)
+  return data ? fromRow(data) : null
+}
+
+/** All sources for a slug in a given status — drives the worker's pending sweep. */
+export async function listStorySourcesByStatus(status: SourceStatus): Promise<StorySource[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('story_sources')
+    .select('*')
+    .eq('status', status)
+    .order('created_at', { ascending: true })
+  if (error) throw new Error(`listStorySourcesByStatus ${status}: ${error.message}`)
+  return (data ?? []).map(fromRow)
+}
+
 export async function insertStorySource(input: NewStorySource): Promise<StorySource> {
   const sb = createServiceClient()
   const { data, error } = await sb

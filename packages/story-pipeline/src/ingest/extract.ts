@@ -54,7 +54,34 @@ export async function extractBuffer(buf: Buffer, ext: string): Promise<Extracted
   }
 }
 
+/**
+ * pdf-parse 2.x renders graphical PDF ops (images, vector logos, table rules)
+ * through pdfjs, which needs the browser globals `DOMMatrix`/`ImageData`/
+ * `Path2D`. pdf-parse normally polyfills them by self-`require`-ing its
+ * `@napi-rs/canvas` dependency — but Next.js externalises pdf-parse into a
+ * hashed `.next/.../node_modules/pdf-parse-<hash>/` copy from which that
+ * relative require can't resolve, so the polyfill silently no-ops and any PDF
+ * with graphics throws `DOMMatrix is not defined`. Text-only PDFs never hit the
+ * path, which is why the breakage looks intermittent. We set the globals from
+ * our OWN module graph (which resolves `@napi-rs/canvas` fine) before parsing.
+ * Idempotent and best-effort: if canvas is unavailable, text-only PDFs still
+ * extract.
+ */
+export async function ensureCanvasGlobals(): Promise<void> {
+  const g = globalThis as Record<string, unknown>
+  if (g.DOMMatrix) return
+  try {
+    const canvas = (await import('@napi-rs/canvas')) as unknown as Record<string, unknown>
+    for (const k of ['DOMMatrix', 'ImageData', 'Path2D', 'DOMPoint'] as const) {
+      if (!g[k] && canvas[k]) g[k] = canvas[k]
+    }
+  } catch {
+    // Best-effort — leave globals unset; text-only PDFs parse without them.
+  }
+}
+
 async function extractPdf(buf: Buffer): Promise<ExtractedSource> {
+  await ensureCanvasGlobals()
   // pdf-parse 2.x exposes a PDFParse class (not a default function).
   // Signature: new PDFParse({ data: Uint8Array }); then await getText() / getInfo().
   const mod = (await import('pdf-parse')) as unknown as {
