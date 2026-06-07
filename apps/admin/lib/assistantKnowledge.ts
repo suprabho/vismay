@@ -15,8 +15,8 @@
  */
 
 import { allRegisteredTypes, describeLayerSchema } from '@vismay/viz-engine'
-import { buildSlotSchemaPrompt } from '@/components/vizmaya/canvas/overrideSchemas'
-import type { AiSlotKind } from '@/components/vizmaya/canvas/aiSlots'
+import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
+import type { AiSlotKind } from '@/components/canvas/aiSlots'
 
 const PLATFORM_OVERVIEW = `# Vizmaya platform overview
 

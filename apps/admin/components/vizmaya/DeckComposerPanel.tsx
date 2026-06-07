@@ -9,7 +9,7 @@ import {
   type AdminFormField,
 } from '@vismay/viz-engine'
 import { buildYamlModel } from '@vismay/content-source/yamlSections'
-import FixPanel from './canvas/FixPanel'
+import FixPanel from '@/components/canvas/FixPanel'
 
 /**
  * Read-only Deck composer (Phase 7 MVP).

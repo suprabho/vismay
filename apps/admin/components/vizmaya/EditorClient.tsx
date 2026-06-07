@@ -81,6 +81,13 @@ export default function EditorClient({
   signedLinks: SignedStoryLinks
 }) {
   const previewUrl = appStoryUrl(appSlug, slug) ?? vizmayaUrl(`/story/${slug}`)
+  // Canvas mirrors the editor's own routing split: vizmaya keeps its bespoke
+  // /vizmaya/* tree, every other vertical (and unassigned Drafts) goes through
+  // the generic /[appSlug]/* tree.
+  const canvasHref =
+    appSlug && appSlug !== 'vizmaya-fyi'
+      ? `/${appSlug}/${slug}/canvas`
+      : `/vizmaya/${slug}/canvas`
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
@@ -292,6 +299,12 @@ export default function EditorClient({
           onChange={bulkUpload}
           className="hidden"
         />
+        <Link
+          href={canvasHref}
+          className="text-sm text-neutral-200 hover:text-white shrink-0"
+        >
+          ✎ canvas
+        </Link>
         <Link
           href={signedLinks.reports}
           target="_blank"
