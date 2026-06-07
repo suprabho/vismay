@@ -17,10 +17,13 @@ export {
   generateStory,
   generateOutline,
   generateSection,
+  generateSectionContent,
+  generateSectionVisual,
   assembleStory,
   slugify,
   type GenerateInput,
   type GenerateOptions,
+  type SectionGenOptions,
 } from './generate'
 export { validateStory } from './validate'
 export { serializeStory } from './serialize'

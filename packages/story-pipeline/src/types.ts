@@ -106,6 +106,33 @@ export interface GeneratedSection {
   body: Record<string, unknown>
 }
 
+/** The prose half of a section (the CONTENT pass output): no visual `body` yet. */
+export interface SectionContentDraft {
+  heading: string
+  paragraphs: string[]
+  kind: string
+}
+
+/**
+ * What a section generator is grounded in. Two shapes so the one engine serves
+ * both callers:
+ * - `outline` — the full compose pipeline (outline stub + research brief +
+ *   sources + editor answers). Heading is the planned stub heading (stable
+ *   markdown anchor).
+ * - `brief` — a lean free-text brief (the canvas PromptBar), where the model
+ *   also chooses the heading.
+ */
+export type SectionContext =
+  | {
+      source: 'outline'
+      outline: StoryOutline
+      stub: SectionStub
+      sources: SourceDoc[]
+      brief: ResearchBrief
+      answers: ComposeAnswers
+    }
+  | { source: 'brief'; format: StoryFormat; brief: string }
+
 /** The full generated story, before serialization to files. */
 export interface GeneratedStory {
   slug: string

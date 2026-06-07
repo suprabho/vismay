@@ -1,17 +1,21 @@
 import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
-import { outlineSchema, generatedSectionSchema, type OutlineOutput } from './schema'
+import { outlineSchema, sectionContentSchema, sectionVisualSchema, type OutlineOutput } from './schema'
 import {
   outlineSystem,
   buildOutlinePrompt,
-  sectionSystem,
-  buildSectionPrompt,
+  contentSystem,
+  buildContentPrompt,
+  visualSystem,
+  buildVisualPrompt,
 } from './prompts'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
   GeneratedStory,
   GeneratedSection,
+  SectionContentDraft,
+  SectionContext,
   StoryOutline,
   SectionStub,
   ResearchBrief,
@@ -93,10 +97,62 @@ function toOutline(out: OutlineOutput, format: StoryFormat): StoryOutline {
   }
 }
 
+/** Per-pass options for the split section generators. */
+export interface SectionGenOptions {
+  /** Override the model alias. Defaults to `text.pro`. */
+  model?: string
+  /** Refine loop: feedback on a prior draft to revise instead of restart. */
+  refine?: { feedback: string; previous: unknown }
+}
+
 /**
- * Step 2 — generate ONE section from its stub. Short call (one section's prose +
- * visual), so it never trips the gateway header timeout. Pass `refine` to
- * regenerate a section against editor feedback.
+ * Step 2a — the CONTENT pass: generate ONE section's prose (heading +
+ * paragraphs + kind), no visual body. In `outline` context the planned stub
+ * heading is kept stable so the markdown anchor never drifts; in `brief`
+ * context the model chooses the heading.
+ */
+export async function generateSectionContent(
+  ctx: SectionContext,
+  opts: SectionGenOptions = {},
+): Promise<SectionContentDraft> {
+  const result = await generateStructured({
+    model: opts.model,
+    system: contentSystem(ctx.source === 'outline' ? ctx.outline.format : ctx.format),
+    prompt: buildContentPrompt(ctx, opts.refine),
+    schema: sectionContentSchema,
+    metadata: { feature: 'story-pipeline-section-content' },
+  })
+  return {
+    heading: ctx.source === 'outline' ? ctx.stub.heading : result.heading,
+    paragraphs: result.paragraphs,
+    kind: result.kind,
+  }
+}
+
+/**
+ * Step 2b — the VISUAL pass: design ONE section's config `body`, given the
+ * already-accepted prose. The body is constrained by viz-engine's own layer
+ * schemas, so it can never carry malformed visual config.
+ */
+export async function generateSectionVisual(
+  ctx: SectionContext,
+  content: SectionContentDraft,
+  opts: SectionGenOptions = {},
+): Promise<{ body: Record<string, unknown> }> {
+  const result = await generateStructured({
+    model: opts.model,
+    system: visualSystem(ctx.source === 'outline' ? ctx.outline.format : ctx.format),
+    prompt: buildVisualPrompt(ctx, content, opts.refine),
+    schema: sectionVisualSchema,
+    metadata: { feature: 'story-pipeline-section-visual' },
+  })
+  return { body: normalizeSectionBody(result.body) }
+}
+
+/**
+ * Step 2 (combined) — run the CONTENT then VISUAL pass and merge. The
+ * canonical single-call section generator: the offline harness, `generateStory`,
+ * and the fs compose routes use this. Pass `refine` to revise a prior section.
  */
 export async function generateSection(
   args: {
@@ -109,22 +165,34 @@ export async function generateSection(
   },
   opts: GenerateOptions = {},
 ): Promise<GeneratedSection> {
-  const { outline, stub, sources, brief, answers, refine } = args
-  const result = await generateStructured({
-    model: opts.model,
-    system: sectionSystem(outline.format),
-    prompt: buildSectionPrompt(outline, stub, sources, brief, answers, refine),
-    schema: generatedSectionSchema,
-    metadata: { feature: 'story-pipeline-section', heading: stub.heading },
-  })
-  return {
-    // Keep the planned heading so the markdown anchor stays stable across
-    // regenerations (the config `text` is written from this exact string).
-    heading: stub.heading,
-    paragraphs: result.paragraphs,
-    kind: result.kind,
-    body: normalizeSectionBody(result.body),
+  const ctx: SectionContext = {
+    source: 'outline',
+    outline: args.outline,
+    stub: args.stub,
+    sources: args.sources,
+    brief: args.brief,
+    answers: args.answers,
   }
+  const content = await generateSectionContent(ctx, {
+    model: opts.model,
+    refine: args.refine
+      ? {
+          feedback: args.refine.feedback,
+          previous: {
+            heading: args.refine.previous.heading,
+            paragraphs: args.refine.previous.paragraphs,
+            kind: args.refine.previous.kind,
+          },
+        }
+      : undefined,
+  })
+  const visual = await generateSectionVisual(ctx, content, {
+    model: opts.model,
+    refine: args.refine
+      ? { feedback: args.refine.feedback, previous: { body: args.refine.previous.body } }
+      : undefined,
+  })
+  return { ...content, body: visual.body }
 }
 
 /** Compose an outline + its generated sections into a full story. */

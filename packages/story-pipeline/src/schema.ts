@@ -94,7 +94,14 @@ export const imagePromptSchema = z.object({
   aspectRatio: z.enum(ASPECT_RATIOS).describe('Target aspect ratio.'),
 })
 
-export const generatedSectionSchema = z.object({
+/**
+ * The two passes a section is generated in. The CONTENT pass writes the prose
+ * (markdown); the VISUAL pass designs the config `body` given the accepted
+ * prose. Splitting them lets an author refine narrative and visuals
+ * independently, and keeps each call's schema small. `generatedSectionSchema`
+ * is the merged shape the combined `generateSection` wrapper returns.
+ */
+export const sectionContentSchema = z.object({
   heading: z
     .string()
     .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
@@ -102,12 +109,17 @@ export const generatedSectionSchema = z.object({
     .array(z.string())
     .describe('Body prose, one string per paragraph (factual magazine register).'),
   kind: z.enum(SECTION_KINDS).describe('The section kind.'),
+})
+
+export const sectionVisualSchema = z.object({
   body: sectionBodySchema.describe(
     'The section VISUAL content: foreground layers (and optional background/map). ' +
       'Omit image/imageGrid layers — request images via imagePrompts instead. ' +
       'A chart layer references a chart id defined in the top-level charts list.',
   ),
 })
+
+export const generatedSectionSchema = sectionContentSchema.merge(sectionVisualSchema)
 
 // ── Step 1: outline (fast — the skeleton, no prose) ────────────────────────
 
