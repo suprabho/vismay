@@ -16,6 +16,7 @@ import type {
   ValidationIssue,
   IngestFailure,
 } from '@vismay/story-pipeline'
+import { ComposeCreateEntry } from './ComposeCreateEntry'
 
 type Phase = 'input' | 'researching' | 'questions' | 'generating' | 'done'
 
@@ -355,6 +356,8 @@ export function ComposePanel() {
           questions, then writes a Deck or mapStory section by section — regenerate any section you
           don&apos;t like.
         </p>
+
+        <ComposeCreateEntry />
 
         {error && (
           <div className="mt-4 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
