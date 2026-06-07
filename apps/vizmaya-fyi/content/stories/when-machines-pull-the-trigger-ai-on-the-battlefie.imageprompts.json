@@ -1,0 +1,27 @@
+[
+  {
+    "section": "A School in Minab: The Sharpest Edge of AI War",
+    "prompt": "Bombed-out elementary school building in a dusty Iranian town, rubble strewn across a collapsed classroom, small colourful backpacks visible among the debris, golden late-afternoon light cutting through haze, photojournalistic style, sombre and visceral, no people",
+    "aspectRatio": "16:9"
+  },
+  {
+    "section": "From Ukraine to Gaza to Iran: AI Goes to War",
+    "prompt": "Split composite image — left: Ukrainian artillery crew watching a tablet screen with targeting data overlaid in blue digital text; right: military drone swarm at dusk over a dark sea, blinking navigation lights, wide aerial perspective, documentary photography style",
+    "aspectRatio": "16:9"
+  },
+  {
+    "section": "The Escalation Ladder: From Cold War Theory to AI Reality",
+    "prompt": "A tall monolithic ladder disappearing into storm clouds, each rung glowing progressively from cool blue at the bottom to burning red-orange at the top, abstract digital-graphic aesthetic, dramatic chiaroscuro lighting, the uppermost rung engulfed in a nuclear flash",
+    "aspectRatio": "3:4"
+  },
+  {
+    "section": "The Wargame That Feels Less Like Fiction",
+    "prompt": "Overhead view of a crisis simulation war-room table: printed satellite maps of the Taiwan Strait, miniature naval vessels, sticky notes, laptops with data dashboards, hands of diverse participants pointing at a map, fluorescent conference room lighting, editorial documentary style",
+    "aspectRatio": "16:9"
+  },
+  {
+    "section": "Can We Build Off-Ramps? Arms Control for the AI Age",
+    "prompt": "Two diplomats shaking hands across a wide negotiating table, each side's monitors displaying abstract network diagrams and AI interface wireframes, neutral international conference room, cool blue ambient light, hope and caution simultaneously conveyed, clean editorial illustration style",
+    "aspectRatio": "16:9"
+  }
+]

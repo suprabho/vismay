@@ -1,0 +1,64 @@
+{
+  "steps": [
+    {
+      "title": "Standalone Segment Revenue (Q4 FY2026)",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Cigarettes",
+            "FMCG - Others",
+            "Agri Business",
+            "Paperboards & Packaging"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Rs in Crores",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Q4 FY26 Revenue (Rs Cr)",
+            "type": "bar",
+            "data": [
+              11066.02,
+              6303.73,
+              3074.86,
+              2227.52
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

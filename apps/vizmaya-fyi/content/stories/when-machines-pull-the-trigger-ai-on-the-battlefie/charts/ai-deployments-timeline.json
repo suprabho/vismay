@@ -1,0 +1,65 @@
+{
+  "steps": [
+    {
+      "title": "Major Real-World AI Battlefield Deployments",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Maven Smart System (Ukraine)",
+            "Lavender AI (Gaza)",
+            "Minab Strike (Iran)",
+            "AI Drone Hellscape (Taiwan — planned)"
+          ],
+          "name": "Deployment / Theatre",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Reported Scale (targets or incidents per day / error rate %)",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Reported daily targets processed or error rate (%)",
+            "type": "bar",
+            "data": [
+              60,
+              10,
+              175,
+              0
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

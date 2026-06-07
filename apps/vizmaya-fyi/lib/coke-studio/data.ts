@@ -1,6 +1,6 @@
 // Server-side reads for the /coke-studio epic landing + detail sheet.
 //
-// Schema lives in supabase/migrations/046_coke_studio_epic.sql. The data was
+// Schema lives in supabase/vizmaya-fyi/migrations/046_coke_studio_epic.sql. The data was
 // produced by scripts/coke-studio/{import,fetch-lyrics,extract-places}.ts.
 // docs/coke-studio-pipeline.md explains the end-to-end flow.
 //

@@ -52,7 +52,13 @@ export interface ContentSource {
 // ---------------------------------------------------------------------------
 // Filesystem source — mirrors current behavior.
 
-const STORIES_DIR = path.join(process.cwd(), 'content/stories')
+// Defaults to `<cwd>/content/stories` (each consumer app reads its own content).
+// `STORY_CONTENT_DIR` overrides it so an app whose cwd isn't the content root
+// can point at another app's stories — admin runs from `apps/admin` but reads
+// (and the compose feature writes) `apps/vizmaya-fyi/content/stories`, so they
+// share this one env var to agree on the directory.
+const STORIES_DIR =
+  process.env.STORY_CONTENT_DIR || path.join(process.cwd(), 'content/stories')
 
 function fsReadIfExists(filePath: string): string | null {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null

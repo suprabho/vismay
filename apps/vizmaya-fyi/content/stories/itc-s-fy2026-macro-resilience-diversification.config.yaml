@@ -1,0 +1,178 @@
+defaults:
+  storyBackground:
+    type: color
+    value: "#f6f4ef"
+    fixed: true
+  overlay:
+    color: transparent
+    opacity: 0
+  panel:
+    background: transparent
+    border: none
+  scroll:
+    mode: snap
+    paddingY: 12vh
+  chart:
+    theme: light-editorial
+  progress: true
+sections:
+  - id: itc-s-resilient-fy2026
+    text: ITC's Resilient FY2026
+    kind: cover
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        left:
+          - type: bigStat
+            value: 80,867
+            unit: Cr
+            label: Standalone Gross Revenue (Rs Cr)
+            align: left
+          - type: text
+            kind: text
+            subheading: REVENUE GROWTH YoY
+          - type: bigStat
+            value: +10.1%
+            unit: "%"
+            label: Macroeconomic resilience
+            align: left
+          - type: text
+            kind: text
+            subheading: EBITDA GROWTH
+          - type: bigStat
+            value: +4.9%
+            unit: "%"
+            label: Rs 25,208 Crore
+            align: left
+        right:
+          - type: chart
+            id: segment-revenue-q4-fy26
+    background:
+      type: none
+
+
+  - id: top-line-growth
+    text: Top-Line Growth
+    kind: bigStat
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        stat:
+          - type: bigStat
+            value: ₹80,867 cr
+            unit: ""
+            label: FY2026 Standalone Gross Revenue
+            delta: +10.1% YoY
+            deltaColor: positive
+            color: accent2
+            align: left
+          - type: bigStat
+            value: ₹25,208 cr
+            unit: ""
+            label: EBITDA (FY2026)
+            delta: +4.9% YoY
+            deltaColor: positive
+            color: teal
+            align: left
+          - type: keyValue
+            title: Key FY2026 Metrics
+            items:
+              - key: EPS (Continuing Ops)
+                value: ₹16.20
+                color: accent2
+              - key: Total Dividend / Share
+                value: ₹14.50
+                color: positive
+              - key: Total Dividend Outflow
+                value: ₹18,168 cr
+                color: muted
+              - key: H2 Revenue Growth
+                value: +12.2% YoY
+                color: positive
+              - key: H2 EBITDA Growth
+                value: +7.5% YoY
+                color: positive
+        chart:
+          - type: chart
+            id: revenue-growth-fy25-fy26
+
+  - id: structural-resilience
+    text: Structural Resilience
+    kind: data
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        stat:
+          - type: bigStat
+            value: ₹80,867 Cr
+            label: Standalone Gross Revenue FY2026
+            delta: +10.1% YoY
+            deltaColor: positive
+            color: accent2
+            align: left
+          - type: bigStat
+            value: ₹25,208 Cr
+            label: EBITDA FY2026
+            delta: +4.9% YoY
+            deltaColor: positive
+            color: teal
+            align: left
+          - type: keyValue
+            title: Key Financials
+            items:
+              - key: EPS (FY2026)
+                value: ₹16.20
+                color: accent2
+              - key: EPS (FY2025)
+                value: ₹16.07
+                color: muted
+              - key: Total Dividend / Share
+                value: ₹14.50
+                color: positive
+              - key: Dividend Cash Outflow
+                value: ₹18,168 Cr
+                color: muted
+              - key: H2 Revenue Growth
+                value: +12.2% YoY
+                color: teal
+              - key: H2 EBITDA Growth
+                value: +7.5% YoY
+                color: teal
+        chart:
+          - type: chart
+            id: revenue-growth-fy25-fy26
+
+  - id: segment-breakdown
+    text: Segment Breakdown
+    kind: data
+    foreground:
+      layout: text-left-chart-right
+      regions:
+        text:
+          - type: bigStat
+            value: 15%
+            unit: "% YoY growth within standalone FMCG-Others segment for the final quarter of FY2026, driving the overarching top-line momentum across the non-cigarette businesses alongside a 60% surge in the digital-first and organic sub-segments to over an Rs 1,350 crore annual run rate, offsetting macroeconomic disruptions in the agri-business segment. The growth profile signifies the scaling of ITC's diversification strategy away from punitive tobacco tax impacts and into fast-moving consumer durables, hygiene, and nutrition categories anchored by the acquisition of Sresta Natural Bioproducts which integrates a sustainable network of 27,500 farmers nationwide and sets up a robust structural foundation against supply chain constraints caused by geopolitical uncertainties globally."
+            label: FMCG-Others Q4 YoY Growth
+            align: left
+          - type: bigStat
+            value: "15"
+            unit: "% YoY growth within standalone FMCG-Others segment for the final quarter of FY2026, driving the overarching top-line momentum across the non-cigarette businesses alongside a 60% surge in the digital-first and organic sub-segments to over an Rs 1,350 crore annual run rate, offsetting macroeconomic disruptions in the agri-business segment. The growth profile signifies the scaling of ITC's diversification strategy away from punitive tobacco tax impacts and into fast-moving consumer durables, hygiene, and nutrition categories anchored by the acquisition of Sresta Natural Bioproducts which integrates a sustainable network of 27,500 farmers nationwide and sets up a robust structural foundation against supply chain constraints caused by geopolitical uncertainties globally."
+            align: left
+          - type: bigStat
+            value: 15%
+            label: FMCG-Others Q4 YoY Growth
+            delta: ARR > Rs 1,350 cr (Organic/Digital)
+            deltaColor: accent2
+            color: positive
+            align: left
+          - type: bodyText
+            from: text
+            showHeading: false
+            textStyle:
+              size: normal
+              color: text
+        chart:
+          - type: chart
+            id: segment-revenue-q4-fy26
+    background:
+      type: none

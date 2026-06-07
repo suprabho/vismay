@@ -67,6 +67,38 @@ export const researchBriefSchema = z.object({
 
 export type ResearchBriefOutput = z.infer<typeof researchBriefSchema>
 
+// ── Angles (the canvas compose flow's research gate) ───────────────────────
+//
+// Like the research brief, but the human gate is "pick an angle" rather than a
+// clarifying-questions form: each angle is a rich card (title + thesis +
+// rationale) the author chooses between before the outline is written.
+
+export const angleSchema = z.object({
+  title: z.string().describe('A short, specific angle headline.'),
+  thesis: z.string().describe('The one-sentence claim this angle makes.'),
+  rationale: z.string().describe('Why this angle is worth taking, grounded in the sources.'),
+})
+
+export const anglesBriefSchema = z.object({
+  summary: z.string().describe('A tight 2–4 sentence synthesis of what the sources are about.'),
+  keyFacts: z
+    .array(z.string())
+    .describe('The load-bearing facts/figures a data story would be built on.'),
+  entities: z
+    .array(z.string())
+    .describe('The main people, orgs, places, or things the story concerns.'),
+  suggestedFormat: z
+    .enum(['deck', 'map'])
+    .describe('"deck" for a slide narrative; "map" when geography is central.'),
+  angles: z
+    .array(angleSchema)
+    .min(3)
+    .max(5)
+    .describe('3–5 distinct angles the story could take.'),
+})
+
+export type AnglesBriefOutput = z.infer<typeof anglesBriefSchema>
+
 // ── Phase 2: story generation ──────────────────────────────────────────────
 
 export const chartSpecSchema = z.object({
@@ -94,7 +126,14 @@ export const imagePromptSchema = z.object({
   aspectRatio: z.enum(ASPECT_RATIOS).describe('Target aspect ratio.'),
 })
 
-export const generatedSectionSchema = z.object({
+/**
+ * The two passes a section is generated in. The CONTENT pass writes the prose
+ * (markdown); the VISUAL pass designs the config `body` given the accepted
+ * prose. Splitting them lets an author refine narrative and visuals
+ * independently, and keeps each call's schema small. `generatedSectionSchema`
+ * is the merged shape the combined `generateSection` wrapper returns.
+ */
+export const sectionContentSchema = z.object({
   heading: z
     .string()
     .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
@@ -102,12 +141,17 @@ export const generatedSectionSchema = z.object({
     .array(z.string())
     .describe('Body prose, one string per paragraph (factual magazine register).'),
   kind: z.enum(SECTION_KINDS).describe('The section kind.'),
+})
+
+export const sectionVisualSchema = z.object({
   body: sectionBodySchema.describe(
     'The section VISUAL content: foreground layers (and optional background/map). ' +
       'Omit image/imageGrid layers — request images via imagePrompts instead. ' +
       'A chart layer references a chart id defined in the top-level charts list.',
   ),
 })
+
+export const generatedSectionSchema = sectionContentSchema.merge(sectionVisualSchema)
 
 // ── Step 1: outline (fast — the skeleton, no prose) ────────────────────────
 

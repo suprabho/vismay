@@ -1,8 +1,8 @@
 import path from 'path'
-import { extractBuffer, type ExtractedSource } from './extract'
+import { extractBuffer, extractText, type ExtractedSource } from './extract'
 import type { SourceDoc, IngestResult, IngestFailure } from '../types'
 
-export { extract, extractBuffer, type ExtractedSource } from './extract'
+export { extract, extractBuffer, extractText, type ExtractedSource } from './extract'
 
 /**
  * A browser-like User-Agent + Accept. Many sites 403 a bare server fetch (no
@@ -22,11 +22,21 @@ export interface InputFile {
   buffer: Buffer
 }
 
+/** A block of prose pasted straight into the composer (no URL, no file). */
+export interface InputText {
+  /** Raw text. The first line becomes the title (see `splitTitleAndByline`). */
+  body: string
+  /** Optional label for provenance; defaults to "Pasted text". */
+  label?: string
+}
+
 export interface IngestInput {
   /** Public URLs to fetch and read. */
   links?: string[]
   /** Uploaded files (bytes + filename). */
   files?: InputFile[]
+  /** Prose pasted directly into the composer. */
+  texts?: InputText[]
 }
 
 /** Map a fetched response's content-type to an extractor extension. */
@@ -79,6 +89,18 @@ export async function ingestSources(input: IngestInput): Promise<IngestResult> {
       sources.push(toDoc('file', file.name, ex))
     } catch (e) {
       failures.push({ origin: file.name, reason: e instanceof Error ? e.message : String(e) })
+    }
+  }
+
+  for (const text of input.texts ?? []) {
+    const origin = text.label?.trim() || 'Pasted text'
+    if (!text.body.trim()) continue
+    try {
+      const ex = await extractText(text.body)
+      if (!ex.body.trim()) throw new Error('pasted text was empty')
+      sources.push(toDoc('text', origin, ex))
+    } catch (e) {
+      failures.push({ origin, reason: e instanceof Error ? e.message : String(e) })
     }
   }
 

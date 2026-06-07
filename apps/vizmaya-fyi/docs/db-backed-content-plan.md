@@ -46,7 +46,7 @@ story_versions
 
 - `@supabase/supabase-js` installed (`package.json`)
 - `lib/supabase.ts` exports `createBrowserClient()` and `createServiceClient()`
-- Existing migrations in `supabase/migrations/` (001 story_audio, 002–004 epstein). Next migration number: **005**.
+- Existing migrations in `supabase/vizmaya-fyi/migrations/` (001 story_audio, 002–004 epstein). Next migration number: **005**.
 - Env vars assumed: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 This cuts phase 1 to zero and simplifies phase 6 (auth).
@@ -55,7 +55,7 @@ This cuts phase 1 to zero and simplifies phase 6 (auth).
 
 ## Phase 2 — Schema + migration script (~1 day)
 
-1. `supabase/migrations/005_story_content.sql` — `stories`, `chart_data`, `story_versions` + indices + RLS (public read on published, service-role write).
+1. `supabase/vizmaya-fyi/migrations/005_story_content.sql` — `stories`, `chart_data`, `story_versions` + indices + RLS (public read on published, service-role write).
 2. `scripts/migrate-content-to-db.ts` — walk `content/stories/`, upsert each story's md/yaml/share into `stories`; walk `content/stories/<slug>/charts/*.json` into `chart_data`. Idempotent (upsert by slug).
 3. Run once against Supabase.
 4. Keep files in git as backup. Do not delete.

@@ -12,9 +12,9 @@ export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
 
 /** One ingested source — a fetched link or an uploaded file, normalised to text. */
 export interface SourceDoc {
-  /** The URL (links) or filename (files) the text came from. */
+  /** The URL (links), filename (files), or a label (pasted text) the text came from. */
   origin: string
-  kind: 'link' | 'file'
+  kind: 'link' | 'file' | 'text'
   title: string
   byline?: string
   /** Clean, light-markdown body. Treat as untrusted prose, not validated format. */
@@ -49,6 +49,24 @@ export interface ResearchBrief {
 
 /** The user's answers to the clarifying questions: `{ [questionId]: answer }`. */
 export type ComposeAnswers = Record<string, string>
+
+/** One angle the story could take — the human gate in the canvas compose flow. */
+export interface StoryAngle {
+  /** Stable id the chosen angle is referenced by. */
+  id: string
+  title: string
+  thesis: string
+  rationale: string
+}
+
+/** The angles-stage output: a brief plus the rich angles to choose between. */
+export interface AnglesBrief {
+  summary: string
+  keyFacts: string[]
+  entities: string[]
+  suggestedFormat: StoryFormat
+  angles: StoryAngle[]
+}
 
 /**
  * A simplified chart spec the model emits. Deterministically expanded into a
@@ -105,6 +123,33 @@ export interface GeneratedSection {
   /** Normalised config-entry body (foreground / background / map). */
   body: Record<string, unknown>
 }
+
+/** The prose half of a section (the CONTENT pass output): no visual `body` yet. */
+export interface SectionContentDraft {
+  heading: string
+  paragraphs: string[]
+  kind: string
+}
+
+/**
+ * What a section generator is grounded in. Two shapes so the one engine serves
+ * both callers:
+ * - `outline` — the full compose pipeline (outline stub + research brief +
+ *   sources + editor answers). Heading is the planned stub heading (stable
+ *   markdown anchor).
+ * - `brief` — a lean free-text brief (the canvas PromptBar), where the model
+ *   also chooses the heading.
+ */
+export type SectionContext =
+  | {
+      source: 'outline'
+      outline: StoryOutline
+      stub: SectionStub
+      sources: SourceDoc[]
+      brief: ResearchBrief
+      answers: ComposeAnswers
+    }
+  | { source: 'brief'; format: StoryFormat; brief: string }
 
 /** The full generated story, before serialization to files. */
 export interface GeneratedStory {

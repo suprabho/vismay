@@ -7,9 +7,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./apps": "./src/apps.ts",
+    "./composeState": "./src/composeState.ts",
     "./content": "./src/content.ts",
     "./contentAnchors": "./src/contentAnchors.ts",
     "./contentSource": "./src/contentSource.ts",
+    "./storySources": "./src/storySources.ts",
     "./demoAuth": "./src/demoAuth.ts",
     "./demos": "./src/demos.ts",
     "./epics": "./src/epics.ts",

@@ -1,0 +1,117 @@
+defaults:
+  scroll:
+    mode: continuous
+  chart:
+    theme: light-editorial
+sections:
+  - id: a-school-in-minab-the-sharpest-edge-of-a
+    text: "A School in Minab: The Sharpest Edge of AI War"
+    kind: cover
+    foreground:
+      type: bigStat
+      value: 175+
+      unit: killed
+      label: Minab school strike — mostly children
+      delta: AI targeting systems in use across the campaign
+      deltaColor: muted
+      color: red
+      align: left
+    map:
+      center:
+        - 57.08
+        - 27.09
+      zoom: 7.5
+      pitch: 40
+      bearing: 12
+      pins:
+        - coordinates:
+            - 57.0824
+            - 27.0934
+          label: Minab, Iran — School Strike
+          color: red
+          radius: 10
+
+
+  - id: from-ukraine-to-gaza-to-iran-ai-goes-to-
+    text: "From Ukraine to Gaza to Iran: AI Goes to War"
+    kind: split
+    foreground:
+      - type: chart
+        id: ai-deployments-timeline
+      - type: keyValue
+        title: AI Systems by Theatre
+        items:
+          - key: Ukraine
+            value: Maven Smart System — dozens of targets/day
+            color: amber
+          - key: Gaza
+            value: Lavender — ~10% reported error rate
+            color: red
+          - key: Iran campaign
+            value: Claude + Maven — used throughout; Minab school strike killed 175+
+            color: red
+    map:
+      center:
+        - 45
+        - 30
+      zoom: 3.2
+      pitch: 20
+      bearing: 10
+      pins:
+        - coordinates:
+            - 31
+            - 49
+          label: Ukraine — Maven Smart System
+          color: amber
+        - coordinates:
+            - 34.78
+            - 31.42
+          label: Gaza — Lavender AI
+          color: red
+        - coordinates:
+            - 57.08
+            - 27.15
+          label: Minab, Iran — 175 killed
+          color: red
+
+  - id: the-escalation-ladder-from-cold-war-theo
+    text: "The Escalation Ladder: From Cold War Theory to AI Reality"
+    kind: data
+    foreground:
+      - type: chart
+        id: escalation-ladder
+      - type: quote
+        text: The scenarios we run have **felt a little bit less like science fiction** lately.
+        attribution: Jacquelyn Schneider, Director, Hoover Wargaming & Crisis Simulation Initiative
+        align: left
+      - type: keyValue
+        title: Kahn's Ladder vs. the AI Age
+        items:
+          - key: Kahn's ladder (1965)
+            value: 44 rungs, nuclear era
+            color: muted
+          - key: Rung 1
+            value: Nonviolent Cold War standoff
+          - key: Rung ~15
+            value: Limited nuclear exchange threshold
+            color: amber
+          - key: Rung 44
+            value: Mindless nuclear 'spasm'
+            color: red
+          - key: AI compression risk
+            value: Rungs skipped in milliseconds
+            color: red
+          - key: Cuban Missile Crisis (1962)
+            value: B-59 nearly fired; hotline created
+            color: amber
+          - key: AI error rate (Israel 'Lavender')
+            value: ~10% reported
+            color: amber
+    map:
+      center:
+        - -96
+        - 38
+      zoom: 2.2
+      pitch: 0
+      bearing: 0
+      opacity: 0.18

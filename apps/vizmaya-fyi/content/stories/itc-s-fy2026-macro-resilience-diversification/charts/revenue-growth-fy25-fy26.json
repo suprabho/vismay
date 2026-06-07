@@ -1,0 +1,60 @@
+{
+  "steps": [
+    {
+      "title": "Standalone Gross Revenue Growth",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "FY2025",
+            "FY2026"
+          ],
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Rs in Crores",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Gross Revenue (Rs Cr)",
+            "type": "bar",
+            "data": [
+              73466.61,
+              80867.49
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "steps": [
+    {
+      "title": "Kahn's 44-Rung Escalation Ladder: Key Thresholds",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Cold War (Rung 1)",
+            "Conventional War Begins (~Rung 5)",
+            "Limited Nuclear Use (~Rung 15)",
+            "All-Out Nuclear 'Spasm' (Rung 44)"
+          ],
+          "name": "Escalation Rung",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Rung Number",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Rung on Kahn Ladder",
+            "type": "bar",
+            "data": [
+              1,
+              5,
+              15,
+              44
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
