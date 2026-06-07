@@ -18,6 +18,7 @@ const ALIGN_TO_FLEX: Record<NonNullable<BigStatLayerConfig['align']>, string> = 
 
 export default function BigStatLayerComponent({
   config,
+  mode,
   noteReady,
 }: VizRenderProps<BigStatLayerConfig>) {
   useEffect(() => {
@@ -29,6 +30,15 @@ export default function BigStatLayerComponent({
   const deltaColor = tokenVar(config.deltaColor, 'muted')
   const alignClasses = ALIGN_TO_FLEX[align]
 
+  // Share cards render the foreground in a fixed ~390px box, but the deck's
+  // `vw`-based number sizing resolves against the full browser viewport — so
+  // `11vw` balloons to the 7.5rem cap and clips inside the narrow card. In
+  // capture mode (share cards only), size the number/unit with flat,
+  // card-relative values instead.
+  const isCapture = mode === 'capture'
+  const numberSize = isCapture ? '4rem' : 'clamp(3.5rem, 11vw, 7.5rem)'
+  const unitSize = isCapture ? '1.75rem' : 'clamp(1.75rem, 5vw, 3rem)'
+
   return (
     <div className={`w-full h-full flex flex-col justify-center ${alignClasses}`}>
       <div className="flex items-baseline gap-2">
@@ -36,7 +46,7 @@ export default function BigStatLayerComponent({
           className="font-serif font-bold leading-none"
           style={{
             color: numberColor,
-            fontSize: 'clamp(3.5rem, 11vw, 7.5rem)',
+            fontSize: numberSize,
           }}
         >
           {config.value}
@@ -46,7 +56,7 @@ export default function BigStatLayerComponent({
             className="font-serif font-bold leading-none"
             style={{
               color: numberColor,
-              fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+              fontSize: unitSize,
               opacity: 0.8,
             }}
           >
