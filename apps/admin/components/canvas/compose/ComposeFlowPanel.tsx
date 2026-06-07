@@ -30,6 +30,8 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   const [text, setText] = useState('')
   const [angleFeedback, setAngleFeedback] = useState('')
   const [outlineFeedback, setOutlineFeedback] = useState('')
+  const [written, setWritten] = useState<Set<string>>(new Set())
+  const [sectionFb, setSectionFb] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
 
   const extracted = sources.filter((s) => s.status === 'extracted').length
@@ -159,6 +161,20 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   async function materialize() {
     const data = await call<{ ok: boolean }>('materialize', 'materialize', { method: 'POST' })
     if (data?.ok) window.location.reload()
+  }
+
+  // ── Sections (CONTENT + VISUAL passes) ───────────────────────────────────
+  async function genSection(sectionId: string) {
+    const fb = sectionFb[sectionId]?.trim()
+    const data = await call<{ ok: boolean }>(`section:${sectionId}`, 'section', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sectionId, phase: 'combined', ...(fb ? { feedback: fb } : {}) }),
+    })
+    if (data?.ok) {
+      setWritten((w) => new Set(w).add(sectionId))
+      setSectionFb((f) => ({ ...f, [sectionId]: '' }))
+    }
   }
 
   const phase = st.phase
@@ -325,7 +341,7 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
         )}
 
         {/* ── Outline ── */}
-        {st.outline.length > 0 && (
+        {phase === 'outline' && st.outline.length > 0 && (
           <section className="space-y-2 border-t border-white/10 pt-3">
             <h3 className="text-xs font-medium text-neutral-300">
               Outline — click status to accept/reject
@@ -380,10 +396,47 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
           </section>
         )}
 
+        {/* ── Sections: per-section CONTENT + VISUAL ── */}
         {(phase === 'content' || phase === 'visual' || phase === 'done') && (
-          <section className="space-y-1 border-t border-white/10 pt-3 text-xs text-neutral-400">
-            <p className="text-emerald-300">Sections created.</p>
-            <p>Edit prose and visuals per section in the canvas. (Per-section AI passes land next.)</p>
+          <section className="space-y-2 border-t border-white/10 pt-3">
+            <h3 className="text-xs font-medium text-neutral-300">Write sections</h3>
+            <ul className="space-y-2">
+              {st.outline
+                .filter((e) => e.sectionId)
+                .map((e) => (
+                  <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                      {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
+                    </div>
+                    <div className="mt-1 flex gap-1">
+                      <input
+                        value={sectionFb[e.sectionId!] ?? ''}
+                        onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
+                        placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
+                        className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
+                      />
+                      <button
+                        onClick={() => genSection(e.sectionId!)}
+                        disabled={!!busy}
+                        className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+                      >
+                        {busy === `section:${e.sectionId}`
+                          ? '…'
+                          : written.has(e.sectionId!)
+                            ? 'Rewrite'
+                            : 'Write'}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
+            >
+              Reload canvas to view ↻
+            </button>
           </section>
         )}
       </div>
