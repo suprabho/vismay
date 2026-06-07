@@ -12,7 +12,7 @@ import {
 } from '@vismay/viz-engine'
 import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
-import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette } from '@vismay/viz-engine'
+import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette, VizLayer } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
 
 /** Props for the home-link wrapper the shell renders around the logo. */
@@ -215,6 +215,28 @@ export default function StoryShell({
     [current]
   )
   const usesRegions = currentResolvedForeground.kind === 'regions'
+
+  // 9:16 autoplay (the vertical video render) hides deck `bodyText` prose so the
+  // portrait frame shows only the visual (chart / bigStat / image / map) — the
+  // same default the map format applies to its text card (see MapStorySection's
+  // `isAutoplay`). Gated on the `?autoplay=1` PARAM, NOT `mode`: the video
+  // pipeline loads `?autoplay=1&capture=1`, so `mode` is 'capture' during the
+  // real render (apps/vizmaya-fyi/lib/storyVideoRender.ts). 16:9 autoplay stays
+  // landscape (isPortrait false) and keeps the prose; the snap target still
+  // mounts either way, so section cue timing is unchanged.
+  const overlayForeground = useMemo<ReturnType<typeof resolveSlots>['foreground']>(() => {
+    if (
+      !(isDeckFormat && isAutoplay && isPortrait) ||
+      currentResolvedForeground.kind !== 'regions'
+    ) {
+      return currentResolvedForeground
+    }
+    const regions: Record<string, VizLayer[]> = {}
+    for (const [name, layers] of Object.entries(currentResolvedForeground.regions)) {
+      regions[name] = layers.filter((layer) => layer.type !== 'bodyText')
+    }
+    return { ...currentResolvedForeground, regions }
+  }, [currentResolvedForeground, isDeckFormat, isAutoplay, isPortrait])
 
   // On portrait, a subsection split into multiple slices via `mobileParagraphs`
   // produces consecutive units that share the same (parentIndex, subIndex).
@@ -441,7 +463,7 @@ export default function StoryShell({
         <div className="fixed inset-0 z-10 pointer-events-none">
           <ForegroundLayoutSlot
             slug={slug ?? ''}
-            foreground={currentResolvedForeground}
+            foreground={overlayForeground}
             unit={current}
             activeStep={activeSub}
             mode={mode}
