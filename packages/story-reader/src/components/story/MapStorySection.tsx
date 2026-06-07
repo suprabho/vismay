@@ -34,6 +34,13 @@ interface Props {
   mode?: 'scroll' | 'autoplay' | 'capture' | 'print'
   /** Portrait (mobile) viewport — forwarded to in-flow foreground slots. */
   isPortrait?: boolean
+  /**
+   * Whether this section is the active (on-screen) unit. Only meaningful for
+   * the in-flow deck path (`renderForegroundInline`): forwarded to the inline
+   * foreground so animated modules (rive, video, chart) hold their animation
+   * until the reader scrolls the section into view. Defaults true.
+   */
+  isActive?: boolean
 }
 
 /**
@@ -104,6 +111,7 @@ export default function MapStorySection({
   slug = '',
   mode = 'scroll',
   isPortrait = false,
+  isActive = true,
 }: Props) {
   const { parentConfig, heading, subheading, paragraphs, heroPart } = unit
   const rawKind = parentConfig.kind ?? 'text'
@@ -138,6 +146,7 @@ export default function MapStorySection({
       activeStep={unit.subIndex ?? 0}
       mode={mode}
       isPortrait={isPortrait}
+      isActive={isActive}
     />
   )
   // Deck-format kinds (other than cover/hero) carry their visual entirely

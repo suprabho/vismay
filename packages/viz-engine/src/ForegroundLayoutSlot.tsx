@@ -26,6 +26,13 @@ interface ForegroundLayoutSlotProps {
   mode: 'scroll' | 'autoplay' | 'capture' | 'print'
   isPortrait?: boolean
   noteLayerReady?: (key: string) => void
+  /**
+   * Whether this layout's section is the active (on-screen) unit. Forwarded to
+   * every region's `ForegroundVizSlot` so animated modules defer their
+   * animation until the reader scrolls in. Defaults true so the fixed-overlay
+   * call sites (map format, autoplay, capture) animate immediately.
+   */
+  isActive?: boolean
 }
 
 /**
@@ -52,6 +59,7 @@ export default function ForegroundLayoutSlot({
   mode,
   isPortrait = false,
   noteLayerReady,
+  isActive = true,
 }: ForegroundLayoutSlotProps) {
   const { layoutDef, regions } = useMemo(() => {
     if (foreground.kind === 'flat') {
@@ -110,6 +118,7 @@ export default function ForegroundLayoutSlot({
               isPortrait={isPortrait}
               portraitStack={portraitStack}
               noteLayerReady={noteLayerReady}
+              isActive={isActive}
             />
           </div>
         )

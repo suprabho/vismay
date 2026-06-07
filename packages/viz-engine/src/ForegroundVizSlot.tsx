@@ -33,6 +33,14 @@ interface ForegroundVizSlotProps {
    * Defaults to a no-op so the slot is safe to use outside the readiness flow.
    */
   noteLayerReady?: (layerKey: string) => void
+  /**
+   * Whether this slot's section is the active (on-screen) unit. Forwarded to
+   * each layer's module as `isActive` so animated modules (rive, video, chart)
+   * defer their animation until the reader scrolls the section into view.
+   * Defaults true so the fixed-overlay call sites (map format, autoplay,
+   * capture) — which only ever mount the active unit — animate immediately.
+   */
+  isActive?: boolean
 }
 
 /**
@@ -170,6 +178,7 @@ interface LayerProps {
   isPortrait: boolean
   stack: boolean
   noteReady: () => void
+  isActive: boolean
 }
 
 function ForegroundLayer({
@@ -183,6 +192,7 @@ function ForegroundLayer({
   isPortrait,
   stack,
   noteReady,
+  isActive,
 }: LayerProps) {
   const captureRef = useRef<VizCaptureHandle | null>(null)
   // Lazy import the module's component once per module. `useMemo` keys on the
@@ -211,7 +221,7 @@ function ForegroundLayer({
           mode={mode}
           noteReady={noteReady}
           captureRef={captureRef}
-          isActive={true}
+          isActive={isActive}
         />
       </Suspense>
     </div>
@@ -227,6 +237,7 @@ export default function ForegroundVizSlot({
   isPortrait = false,
   portraitStack = false,
   noteLayerReady,
+  isActive = true,
 }: ForegroundVizSlotProps) {
   if (layers.length === 0) return null
 
@@ -257,6 +268,7 @@ export default function ForegroundVizSlot({
         isPortrait={isPortrait}
         stack={portraitStack}
         noteReady={() => noteLayerReady?.(layerKey)}
+        isActive={isActive}
       />
     )
   })
