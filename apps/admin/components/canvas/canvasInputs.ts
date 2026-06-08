@@ -281,7 +281,13 @@ function layerLeaf(
     // and types with neither (chart, malformed/unknown) → the YAML editor.
     // Keeping the routing decision out of here lets canvasInputs stay
     // presentation-only.
-    slot: { kind: 'layer', layerType: type, path },
+    //
+    // Chart layers carry their referenced `chartId` so `mountInputs` can hang a
+    // dedicated Chart Data node off the leaf without re-parsing the config.
+    slot:
+      type === 'chart' && typeof (layer as { id?: unknown }).id === 'string'
+        ? { kind: 'layer', layerType: type, path, chartId: (layer as { id?: string }).id }
+        : { kind: 'layer', layerType: type, path },
   }
 }
 

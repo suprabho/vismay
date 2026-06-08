@@ -7,6 +7,14 @@ import { canvasFrameId } from '../canvasOutputs'
 
 type ComposeFormat = ComposeState['format']
 
+/** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
+interface ChartRequirementView {
+  id: string
+  title?: string
+  chartType: 'bar' | 'line'
+  requirement: string
+}
+
 /**
  * A schematic wireframe of a planned deck layout — the "what will this section
  * look like" demo shown BEFORE materialising. Region rectangles mirror the real
@@ -182,7 +190,15 @@ export function ComposeFlow({
   // (the page isn't reloaded between writes, so the signed URL is cache-busted).
   const [frameNonce, setFrameNonce] = useState<Record<string, number>>({})
   const [imgDone, setImgDone] = useState(0)
+  // Per-chart generation outcome (id → ok), set by the batch "Generate charts"
+  // step so each chart shows ✓ / ✗ after a run.
+  const [chartResults, setChartResults] = useState<Record<string, boolean>>({})
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Chart REQUIREMENTS the outline planned (no data yet) — the batch step turns
+  // these into chart_data via the source-grounded generateChart pass.
+  const charts =
+    ((st.storyOutline as { charts?: ChartRequirementView[] } | undefined)?.charts) ?? []
 
   const extracted = sources.filter((s) => s.status === 'extracted').length
   const pending = sources.filter((s) => s.status === 'pending').length
@@ -332,16 +348,27 @@ export function ComposeFlow({
       setError('pick an angle first')
       return
     }
-    const data = await call<{ outline: ComposeOutlineEntry[] }>('outline', 'outline', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        chosenAngleId: st.chosenAngleId,
-        ...(outlineFeedback.trim() ? { feedback: outlineFeedback.trim(), previous: st.outline } : {}),
-      }),
-    })
+    const data = await call<{ outline: ComposeOutlineEntry[]; storyOutline?: unknown }>(
+      'outline',
+      'outline',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          chosenAngleId: st.chosenAngleId,
+          ...(outlineFeedback.trim() ? { feedback: outlineFeedback.trim(), previous: st.outline } : {}),
+        }),
+      },
+    )
     if (data?.outline) {
-      setSt((s) => ({ ...s, phase: 'outline', outline: data.outline }))
+      // Capture storyOutline too so the Charts subsection (which reads its chart
+      // requirements) appears immediately, without waiting for a reload.
+      setSt((s) => ({
+        ...s,
+        phase: 'outline',
+        outline: data.outline,
+        storyOutline: data.storyOutline ?? s.storyOutline,
+      }))
       setOutlineFeedback('')
     }
   }
@@ -463,6 +490,22 @@ export function ComposeFlow({
       }
     }
     setBusy(null)
+  }
+
+  // ── Charts: turn the outline's chart requirements into source-grounded
+  // chart_data in one batch (per-chart regenerate also lives on the canvas). ──
+  async function genCharts() {
+    if (!charts.length || busy) return
+    const data = await call<{ charts: Array<{ id: string; ok: boolean }> }>('charts', 'charts', {
+      method: 'POST',
+    })
+    if (data?.charts) {
+      setChartResults((prev) => {
+        const next = { ...prev }
+        for (const c of data.charts) next[c.id] = c.ok
+        return next
+      })
+    }
   }
 
   const phase = st.phase
@@ -766,6 +809,47 @@ export function ComposeFlow({
               </div>
             </>
           )}
+        </section>
+      )}
+
+      {/* ── Charts ── (the outline plans chart REQUIREMENTS; this generates the
+          actual data, grounded in the sources. Per-chart regenerate lives on the
+          canvas chart node.) */}
+      {showOutline && charts.length > 0 && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">Charts ({charts.length})</h3>
+          <ul className="space-y-1">
+            {charts.map((c) => {
+              const result = chartResults[c.id]
+              return (
+                <li
+                  key={c.id}
+                  className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">
+                      {c.title ?? c.id}
+                    </span>
+                    <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">
+                      {c.chartType}
+                    </span>
+                    {result === true && <span className="text-emerald-400">✓</span>}
+                    {result === false && <span className="text-red-400" title="Generation failed">✗</span>}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">{c.requirement}</p>
+                </li>
+              )
+            })}
+          </ul>
+          <button
+            onClick={genCharts}
+            disabled={!!busy}
+            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
+          >
+            {busy === 'charts'
+              ? `Generating charts… (${charts.length})`
+              : `Generate ${charts.length} chart${charts.length > 1 ? 's' : ''} → data`}
+          </button>
         </section>
       )}
 

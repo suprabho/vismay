@@ -120,6 +120,48 @@ export const chartSpecSchema = z.object({
   yLabel: z.string().optional(),
 })
 
+/**
+ * A chart REQUIREMENT — what the outline plans, with no numbers. The outline is
+ * a skeleton (no prose, no data); fabricating accurate series there is
+ * unreliable, so the outline only declares the chart's shape + a precise
+ * `requirement` describing what to plot. A focused, source-grounded
+ * `generateChart` pass then fills in the data (see `chartDataSchema`).
+ */
+export const chartRequirementSchema = z.object({
+  id: z
+    .string()
+    .describe('kebab-case id; a chart layer references this exact id.'),
+  title: z.string().optional().describe('Chart title.'),
+  chartType: z.enum(['bar', 'line']).describe('Chart type.'),
+  requirement: z
+    .string()
+    .describe(
+      'Exactly what this chart must plot — which figures/series/categories and ' +
+        'over what range/time, all sourced from the material. Concrete, NOT generic; ' +
+        'do NOT invent the numbers here (the data pass produces them).',
+    ),
+  xLabel: z.string().optional(),
+  yLabel: z.string().optional(),
+})
+
+/**
+ * The data-only OUTPUT of the `generateChart` pass: categories + numeric series
+ * grounded in the sources. Merged with its `chartRequirement` (id/title/type/
+ * axes) to form a full `ChartSpec` that `buildEChartsOption` expands.
+ */
+export const chartDataSchema = z.object({
+  categories: z.array(z.string()).describe('X-axis category labels.'),
+  series: z
+    .array(
+      z.object({
+        name: z.string().describe('Series name (shown in the legend).'),
+        data: z.array(z.number()).describe('One value per category, same order.'),
+      }),
+    )
+    .min(1)
+    .describe('One or more data series, each with one value per category.'),
+})
+
 export const imagePromptSchema = z.object({
   section: z.string().describe('The section heading this image belongs to.'),
   prompt: z.string().describe('A vivid, specific image-generation prompt.'),
@@ -206,8 +248,11 @@ export const outlineSchema = z.object({
     .optional()
     .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
   charts: z
-    .array(chartSpecSchema)
-    .describe('Every chart any section references, by id. Empty if none.'),
+    .array(chartRequirementSchema)
+    .describe(
+      'Every chart any section references, declared as a REQUIREMENT (id, type, ' +
+        'title, what to plot) — no numbers. The data is generated in a later pass.',
+    ),
   imagePrompts: z
     .array(imagePromptSchema)
     .describe('Image prompts for sections that want imagery (a sidecar).'),

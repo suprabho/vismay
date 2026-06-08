@@ -1,6 +1,12 @@
 import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
-import { outlineSchema, sectionContentSchema, sectionVisualSchema, type OutlineOutput } from './schema'
+import {
+  outlineSchema,
+  sectionContentSchema,
+  sectionVisualSchema,
+  chartDataSchema,
+  type OutlineOutput,
+} from './schema'
 import {
   outlineSystem,
   buildOutlinePrompt,
@@ -8,6 +14,8 @@ import {
   buildContentPrompt,
   visualSystem,
   buildVisualPrompt,
+  CHART_SYSTEM,
+  buildChartPrompt,
 } from './prompts'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
@@ -18,6 +26,8 @@ import type {
   SectionContext,
   StoryOutline,
   SectionStub,
+  ChartRequirement,
+  ChartSpec,
   ResearchBrief,
   SourceDoc,
   ComposeAnswers,
@@ -95,6 +105,29 @@ function toOutline(out: OutlineOutput, format: StoryFormat): StoryOutline {
     imagePrompts: out.imagePrompts,
     sections: out.sections,
   }
+}
+
+/**
+ * The chart DATA pass — turn ONE chart REQUIREMENT (from the outline) into a
+ * full `ChartSpec` by generating the numeric series grounded in the sources.
+ * Decoupled from the outline so chart numbers are produced by a focused call
+ * rather than fabricated as a byproduct of skeleton planning. The model emits
+ * only `categories` + `series`; the id/title/chartType/axes come from the
+ * requirement and are merged in here.
+ */
+export async function generateChart(
+  args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
+  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+): Promise<ChartSpec> {
+  const data = await generateStructured({
+    model: opts.model,
+    system: CHART_SYSTEM,
+    prompt: buildChartPrompt(args.requirement, args.brief, args.sources, opts.refine),
+    schema: chartDataSchema,
+    metadata: { feature: 'story-pipeline-chart' },
+  })
+  const { requirement: _omit, ...meta } = args.requirement
+  return { ...meta, categories: data.categories, series: data.series }
 }
 
 /** Per-pass options for the split section generators. */
@@ -195,17 +228,22 @@ export async function generateSection(
   return { ...content, body: visual.body }
 }
 
-/** Compose an outline + its generated sections into a full story. */
+/**
+ * Compose an outline + its generated sections into a full story. `charts` are
+ * the data-bearing `ChartSpec`s produced by `generateChart` (the outline only
+ * holds requirements), defaulting to none.
+ */
 export function assembleStory(
   outline: StoryOutline,
   sections: GeneratedSection[],
+  charts: ChartSpec[] = [],
 ): GeneratedStory {
   return {
     slug: slugify(outline.title),
     format: outline.format,
     frontmatter: buildFrontmatter(outline),
     sections,
-    charts: outline.charts,
+    charts,
     imagePrompts: outline.imagePrompts,
   }
 }
@@ -220,6 +258,18 @@ export async function generateStory(
   opts: GenerateOptions = {},
 ): Promise<{ story: GeneratedStory; issues: ValidationIssue[] }> {
   const outline = await generateOutline(input, opts)
+  // Chart DATA pass: turn each outline chart requirement into a full ChartSpec
+  // grounded in the sources (the outline only declares requirements).
+  const charts: ChartSpec[] = []
+  for (const requirement of outline.charts) {
+    // eslint-disable-next-line no-await-in-loop
+    charts.push(
+      await generateChart(
+        { requirement, brief: input.brief, sources: input.sources },
+        { model: opts.model },
+      ),
+    )
+  }
   const sections: GeneratedSection[] = []
   for (const stub of outline.sections) {
     // eslint-disable-next-line no-await-in-loop
@@ -230,6 +280,6 @@ export async function generateStory(
       ),
     )
   }
-  const story = assembleStory(outline, sections)
+  const story = assembleStory(outline, sections, charts)
   return { story, issues: validateStory(story) }
 }

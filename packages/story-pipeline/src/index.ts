@@ -17,6 +17,7 @@ export { generateAngles } from './angles'
 export {
   generateStory,
   generateOutline,
+  generateChart,
   generateSection,
   generateSectionContent,
   generateSectionVisual,

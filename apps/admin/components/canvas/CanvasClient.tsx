@@ -85,6 +85,7 @@ import MapPickerModal from '@/components/vizmaya/MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
+import ChartEditPanel from './ChartEditPanel'
 import { ComposeFlowPanel } from './compose/ComposeFlowPanel'
 import type { ComposeState } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
@@ -160,6 +161,10 @@ type SlotTarget =
       initialLayer: Record<string, unknown>
     }
   | { mode: 'theme' }
+  // A chart's DATA, keyed only by chartId. The data lives in the `chart_data`
+  // store (not config.yaml), so its editor saves via the chart PUT route rather
+  // than the config-slot save path — hence no `unit`/`slotPath`.
+  | { mode: 'chart'; chartId: string }
 
 /* ─── Layout constants ───────────────────────────────────────────── */
 const FRAME_W = 1920
@@ -174,6 +179,12 @@ function safeStringifyYaml(value: unknown): string {
   } catch {
     return '# (could not render)'
   }
+}
+
+/** Clip a multi-line preview to a node-sized excerpt (first N lines). */
+function truncateForNode(text: string, maxLines = 12): string {
+  const lines = text.split('\n')
+  return lines.length <= maxLines ? text : `${lines.slice(0, maxLines).join('\n')}\n…`
 }
 
 const INPUT_W = 320
@@ -1830,6 +1841,12 @@ export default function CanvasClient({
                 setSlotTargetRef.current({ mode: 'theme' })
                 return
               }
+              if (slot.kind === 'chartData') {
+                // Chart data is story-scoped by id (no section unit needed) and
+                // saves to the chart_data store via its own editor.
+                setSlotTargetRef.current({ mode: 'chart', chartId: slot.chartId })
+                return
+              }
               const idx = stateRef.current.activeSectionIndex
               const targetUnit = sectionUnitsRef.current[idx]
               if (!targetUnit) return
@@ -1906,7 +1923,7 @@ export default function CanvasClient({
           // YAML editor (map layers + types with no adminForm) — those persist
           // via handleSave. Image + adminForm-form layers use separate editors
           // (image modal / SlotInspector) and keep their in-panel AI for now.
-          if (d.slot && d.slot.kind !== 'theme' && d.slot.layerType !== 'image') {
+          if (d.slot && d.slot.kind === 'layer' && d.slot.layerType !== 'image') {
             const slot = d.slot
             const usesYamlEditor =
               slot.layerType === 'map' || !getVizModule(slot.layerType)?.adminForm
@@ -1965,6 +1982,64 @@ export default function CanvasClient({
               dstKey
             ) as Schemes['Connection']
           )
+        }
+
+        // Chart layers reference a chart id; the chart's DATA lives in the
+        // separate chart_data store, not the section config. For each distinct
+        // chart id in the section we hang a "Chart Data" node one column LEFT of
+        // its chart leaf, feeding the same junction the leaf does, and lazily
+        // load the data into the node's body. Clicking it opens the chart editor
+        // (generate / edit / save). Routed through `addLeaf` so the node lands in
+        // `leftNodeIds` and is torn down on section switch like every other leaf.
+        const mountedChartIds = new Set<string>()
+        const addChartDataNode = async (
+          chartId: string,
+          dst: JunctionNode,
+          leafX: number,
+          leafY: number
+        ): Promise<void> => {
+          if (mountedChartIds.has(chartId)) return
+          mountedChartIds.add(chartId)
+          const node = await addLeaf(
+            {
+              label: 'Chart Data',
+              tag: 'JSON',
+              body: '…loading chart data',
+              variant: 'mono',
+              slot: { kind: 'chartData', chartId },
+            },
+            leafX - LCOL_PITCH,
+            leafY
+          )
+          await wire(node, 'value', dst, 'in')
+          void (async () => {
+            let body: string
+            try {
+              const res = await fetch(
+                `/api/stories/${encodeURIComponent(slug)}/charts/${encodeURIComponent(chartId)}`,
+                { cache: 'no-store' }
+              )
+              if (res.ok) {
+                const json = (await res.json()) as { data?: unknown }
+                body =
+                  json.data != null
+                    ? truncateForNode(JSON.stringify(json.data, null, 2))
+                    : '(no data yet — click to generate)'
+              } else if (res.status === 404) {
+                body = '(no data yet — click to generate)'
+              } else {
+                body = '(failed to load chart data)'
+              }
+            } catch {
+              return // section likely switched away; leave the placeholder
+            }
+            try {
+              node.previewCtrl.body = body
+              await area.update('control', node.previewCtrl.id)
+            } catch {
+              // node torn down by a section switch before the fetch resolved
+            }
+          })()
         }
 
         let y = offset
@@ -2124,6 +2199,9 @@ export default function CanvasClient({
             for (const leaf of leaves) {
               const ln = await addLeaf(leaf, leafColX, ly)
               await wire(ln, 'value', rj, 'in')
+              if ('slot' in leaf && leaf.slot?.kind === 'layer' && leaf.slot.chartId) {
+                await addChartDataNode(leaf.slot.chartId, rj, leafColX, ly)
+              }
               ly += LEAF_H + LGAP_Y
             }
             y += h + LGAP_Y
@@ -2186,6 +2264,9 @@ export default function CanvasClient({
           for (const leaf of leaves) {
             const ln = await addLeaf(leaf, regionColX, ly)
             await wire(ln, 'value', fgNode, 'in')
+            if (leaf.slot?.kind === 'layer' && leaf.slot.chartId) {
+              await addChartDataNode(leaf.slot.chartId, fgNode, regionColX, ly)
+            }
             ly += LEAF_H + LGAP_Y
           }
         } else {
@@ -2860,6 +2941,37 @@ export default function CanvasClient({
         )
         await saveConfigYaml(slug, nextConfigYaml)
         setSources((prev) => ({ ...prev, configYaml: nextConfigYaml }))
+        setDataNonce((n) => n + 1)
+        setSlotTarget(null)
+      } catch (e) {
+        setSlotError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSlotSaving(false)
+      }
+    },
+    [slug]
+  )
+
+  // Persist a chart's DATA to the chart_data store (its own route — NOT the
+  // config-YAML slot save path). The frame iframe fetches chart data at
+  // runtime, so a `dataNonce` bump is enough to re-render it.
+  const handleChartSave = useCallback(
+    async (raw: string, chartId: string) => {
+      setSlotSaving(true)
+      setSlotError(null)
+      try {
+        const res = await fetch(
+          `/api/stories/${encodeURIComponent(slug)}/charts/${encodeURIComponent(chartId)}`,
+          {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ raw }),
+          }
+        )
+        if (!res.ok) {
+          const err = await res.json().catch(() => null)
+          throw new Error(err?.error ?? `Save failed (${res.status})`)
+        }
         setDataNonce((n) => n + 1)
         setSlotTarget(null)
       } catch (e) {
@@ -3879,6 +3991,17 @@ export default function CanvasClient({
           onSave={handleThemeSave}
           onClose={closeSlot}
           slug={slug}
+        />
+      )}
+      {slotTarget?.mode === 'chart' && (
+        <ChartEditPanel
+          key={slotTarget.chartId}
+          slug={slug}
+          chartId={slotTarget.chartId}
+          saving={slotSaving}
+          error={slotError}
+          onSave={(raw) => handleChartSave(raw, slotTarget.chartId)}
+          onClose={closeSlot}
         />
       )}
       {/* Floating +Add context menu. Anchored at the right-click cursor

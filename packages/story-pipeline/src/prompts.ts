@@ -7,6 +7,7 @@ import type {
   StoryFormat,
   SectionContext,
   SectionContentDraft,
+  ChartRequirement,
 } from './types'
 
 /** Per-source character cap so a few long PDFs don't blow the context budget. */
@@ -90,8 +91,11 @@ export function outlineSystem(format: StoryFormat): string {
     `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
     `- title, subtitle, byline.\n` +
-    `- charts: every chart the story needs, as a simple spec (chartType bar|line, categories, ` +
-    `numeric series) with a kebab-case id. Sections reference charts by id.\n` +
+    `- charts: every chart the story needs, declared as a REQUIREMENT — a kebab-case id, ` +
+    `chartType (bar|line), a title, and a precise "requirement" describing exactly what to ` +
+    `plot (which figures/series/categories and over what range, all from the sources). Do ` +
+    `NOT fabricate the numbers here — the data is generated in a focused later pass. Sections ` +
+    `reference charts by id.\n` +
     `- imagePrompts: vivid prompts for sections that want imagery.\n` +
     `- sections (3–8): each a stub with —\n` +
     `  • heading and kind (${SECTION_KINDS.join(' | ')}).\n` +
@@ -125,6 +129,62 @@ export function buildOutlinePrompt(
     return (
       `${base}\n\nPREVIOUS OUTLINE:\n${JSON.stringify(refine.previous)}\n\n` +
       `Revise that outline per this feedback (keep what works, change only what's noted):\n${refine.feedback}`
+    )
+  }
+  return base
+}
+
+// ── Chart data pass (turns a chart REQUIREMENT into numeric series) ────────
+//
+// Decoupled from the outline so chart data is grounded in the sources by a
+// focused call rather than fabricated as a byproduct of skeleton planning. The
+// model emits ONLY categories + numeric series; the id/title/chartType/axes
+// come from the requirement and are merged in deterministically.
+
+export const CHART_SYSTEM =
+  `You produce the DATA for ONE chart in a Vizmaya data story, grounded strictly ` +
+  `in the provided sources. Given a chart requirement (what to plot) and the ` +
+  `research material, return:\n` +
+  `- categories: the X-axis labels, in the order they should appear.\n` +
+  `- series: one or more named series, each with one number per category (same ` +
+  `order as categories).\n\n` +
+  `Rules:\n` +
+  `- Use ONLY figures present in or directly derivable from the sources — never ` +
+  `invent or estimate numbers. If the requirement asks for data the sources don't ` +
+  `support, plot the closest subset the sources DO support and keep categories/` +
+  `series consistent.\n` +
+  `- Every series must have exactly one value per category.\n` +
+  `- Keep it tight and legible (a handful of categories; few series).`
+
+/** Render a chart requirement for the data prompt. */
+function renderChartRequirement(req: ChartRequirement): string {
+  return (
+    `CHART REQUIREMENT\n` +
+    `id: ${req.id}\n` +
+    `type: ${req.chartType}\n` +
+    (req.title ? `title: ${req.title}\n` : '') +
+    (req.xLabel ? `x-axis: ${req.xLabel}\n` : '') +
+    (req.yLabel ? `y-axis: ${req.yLabel}\n` : '') +
+    `what to plot: ${req.requirement}`
+  )
+}
+
+export function buildChartPrompt(
+  req: ChartRequirement,
+  brief: ResearchBrief,
+  sources: SourceDoc[],
+  refine?: { feedback: string; previous: unknown },
+): string {
+  const base =
+    `${renderChartRequirement(req)}\n\n` +
+    `RESEARCH BRIEF\n` +
+    `Summary: ${brief.summary}\n` +
+    `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n\n` +
+    `SOURCES\n${renderSources(sources)}`
+  if (refine) {
+    return (
+      `${base}\n\nPREVIOUS CHART DATA:\n${JSON.stringify(refine.previous)}\n\n` +
+      `Revise it per this feedback (keep what works, change only what's noted):\n${refine.feedback}`
     )
   }
   return base

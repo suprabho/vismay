@@ -85,6 +85,21 @@ export interface ChartSpec {
   yLabel?: string
 }
 
+/**
+ * A chart the outline plans, WITHOUT data — the skeleton declares the chart's
+ * shape + a precise `requirement`; the `generateChart` pass produces the
+ * numeric series, yielding a full {@link ChartSpec}.
+ */
+export interface ChartRequirement {
+  id: string
+  title?: string
+  chartType: 'bar' | 'line'
+  /** What to plot — figures/series/categories/range, grounded in the sources. */
+  requirement: string
+  xLabel?: string
+  yLabel?: string
+}
+
 /** An emitted image prompt — a sidecar deliverable, not yet wired into a layer. */
 export interface ImagePrompt {
   /** The section heading/id this image is for. */
@@ -118,7 +133,8 @@ export interface StoryOutline {
   subtitle: string
   byline: string
   accentColors?: { accent?: string; accent2?: string }
-  charts: ChartSpec[]
+  /** Chart requirements (no data) — the data pass turns these into `ChartSpec`s. */
+  charts: ChartRequirement[]
   imagePrompts: ImagePrompt[]
   sections: SectionStub[]
 }

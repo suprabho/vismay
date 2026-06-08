@@ -40,7 +40,11 @@ export type SlotPath =
 /** Identifies one clickable leaf in the canvas. Attached to InputNodeData. */
 export type SlotDescriptor =
   | { kind: 'theme' }
-  | { kind: 'layer'; layerType: string; path: SlotPath }
+  | { kind: 'layer'; layerType: string; path: SlotPath; chartId?: string }
+  // A chart's DATA (categories + series), keyed only by chartId — it lives in
+  // the `chart_data` store, not config.yaml, so it has its own save path (the
+  // chart PUT route) rather than a SlotPath into the section config.
+  | { kind: 'chartData'; chartId: string }
 
 /* ─── Section + layer access ─────────────────────────────────────── */
 
