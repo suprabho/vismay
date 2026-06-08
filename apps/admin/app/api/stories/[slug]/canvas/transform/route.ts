@@ -14,6 +14,7 @@ import {
 } from '@/components/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
+import { buildSlotContext } from '@/lib/slotContext'
 
 /**
  * Transform a *fragment* the author selected inside an editor — the in-place
@@ -47,6 +48,11 @@ interface TransformBody {
   layerType?: string
   /** Optional model alias; must belong to the resolved allowed set. */
   model?: string
+  /** The section the fragment lives in (indexes config.sections) — lets the
+   *  route load the live story/section/data context. Optional: degrades to the
+   *  story-frame-only context when absent. */
+  parentIndex?: number
+  subIndex?: number
 }
 
 const LANGUAGE_LABEL: Record<TransformLanguage, string> = {
@@ -70,6 +76,11 @@ function systemPrompt(language: TransformLanguage): string {
     `no explanation. If the instruction reads as a question rather than an edit, ` +
     `still return only the (possibly unchanged) fragment.`
   )
+}
+
+/** Coerce a body field to a non-negative integer, or undefined. */
+function intOrUndefined(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : undefined
 }
 
 /** Strip a leading/trailing markdown code fence the model sometimes adds. */
@@ -161,12 +172,26 @@ export async function POST(
       `invent keys:\n${schemaPrompt}`
     : systemPrompt(language)
 
+  // Live story/section/data context so a fragment edit stays consistent with
+  // the story it's embedded in (palette, real chart ids, established facts).
+  // Best effort — a context failure must never block the edit.
+  const context = await buildSlotContext({
+    slug,
+    parentIndex: intOrUndefined(body.parentIndex),
+    subIndex: intOrUndefined(body.subIndex),
+    kind: body.kind,
+    layerType: body.layerType,
+  }).catch(() => null)
+  const userPrompt = context
+    ? `${context}\n\n---\n\nInstruction: ${instruction}\n\nFragment:\n${selection}`
+    : `Instruction: ${instruction}\n\nFragment:\n${selection}`
+
   let raw: string
   try {
     const out = await generateText({
       model: modelAlias,
       system,
-      prompt: `Instruction: ${instruction}\n\nFragment:\n${selection}`,
+      prompt: userPrompt,
       metadata: { feature: 'admin-canvas-transform', slug, language },
     })
     raw = out.result

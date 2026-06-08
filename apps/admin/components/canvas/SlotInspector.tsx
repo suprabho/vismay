@@ -55,6 +55,10 @@ interface Props {
   defaults: StoryDefaults
   /** Stable identity for the previewed unit (resets layer state across slots). */
   unitKey: string
+  /** The section this layer belongs to (indexes config.sections) — forwarded to
+   *  the AI prompt so the layer generation is grounded in the live story. */
+  parentIndex?: number
+  subIndex?: number
   saving: boolean
   error: string | null
   onApply: (next: Record<string, unknown>) => void
@@ -177,6 +181,8 @@ export default function SlotInspector({
   theme,
   defaults,
   unitKey,
+  parentIndex,
+  subIndex,
   saving,
   error,
   onApply,
@@ -390,6 +396,8 @@ export default function SlotInspector({
               slug={slug}
               kind="layer"
               layerType={layerType}
+              parentIndex={parentIndex}
+              subIndex={subIndex}
               currentValue={yamlStringify(unflattenContent(content), { lineWidth: 80 })}
               onApply={(yaml) => {
                 const fields = parseLayerFields(yaml, schemaKeys)

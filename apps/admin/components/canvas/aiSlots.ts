@@ -106,8 +106,10 @@ const SLOTS: Record<AiSlotKind, AiSlotConfig> = {
     defaultSystem:
       'You write editorial prose for one section of a data-driven story. ' +
       'Given the author instruction, produce the section’s markdown body: ' +
-      'paragraphs separated by blank lines, an optional heading. Keep a clear, ' +
-      'factual magazine register. ' +
+      'paragraphs separated by blank lines. If the section already has a ' +
+      'heading (a `## …` line), keep it EXACTLY as written — it is the ' +
+      'section’s stable anchor — and revise only the paragraphs beneath it. ' +
+      'Keep a clear, factual magazine register. ' +
       RAW_TEXT_RULE,
   },
   narration: {

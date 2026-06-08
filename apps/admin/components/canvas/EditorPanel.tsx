@@ -47,6 +47,11 @@ interface Props {
   aiKind?: AiSlotKind
   /** Layer type for `aiKind === 'layer'` (routes image layers to image gen). */
   aiLayerType?: string
+  /** The section this slot belongs to (indexes config.sections). Forwarded to
+   *  the AI surfaces so the generation/edit is grounded in the live story
+   *  context for that section. */
+  aiParentIndex?: number
+  aiSubIndex?: number
 }
 
 /**
@@ -67,6 +72,8 @@ export default function EditorPanel({
   slug,
   aiKind,
   aiLayerType,
+  aiParentIndex,
+  aiSubIndex,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping
   // through React state on every keystroke. Initialised from the slice;
@@ -313,6 +320,8 @@ export default function EditorPanel({
             slug={slug}
             kind={aiKind}
             layerType={aiLayerType}
+            parentIndex={aiParentIndex}
+            subIndex={aiSubIndex}
             currentValue={draft}
             onApply={(v) => setDraft(v)}
           />
@@ -358,6 +367,8 @@ export default function EditorPanel({
             slug={slug}
             kind={aiKind}
             layerType={aiLayerType}
+            parentIndex={aiParentIndex}
+            subIndex={aiSubIndex}
           />
         )}
       </div>

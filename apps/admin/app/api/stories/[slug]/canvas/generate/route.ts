@@ -14,6 +14,7 @@ import {
 import { aiSlotConfig, type AiSlotKind } from '@/components/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
+import { buildSlotContext } from '@/lib/slotContext'
 
 /**
  * Generate the value for one editable canvas slot from a prompt.
@@ -56,6 +57,11 @@ interface GenerateBody {
   aspectRatio?: AspectRatio
   /** Optional current slice text, supplied as context for an iterative edit. */
   current?: string
+  /** The section being edited (indexes config.sections) — lets the route load
+   *  the live story/section/data context for the generation. Optional: surfaces
+   *  with no unit in scope degrade to the story-frame-only context. */
+  parentIndex?: number
+  subIndex?: number
 }
 
 export async function POST(
@@ -158,10 +164,22 @@ export async function POST(
 
   // ─── Text modality ──────────────────────────────────────────────
   // Give the model the current value as context when iterating on an edit.
-  const userPrompt =
+  const base =
     typeof body.current === 'string' && body.current.trim()
       ? `${prompt}\n\nCurrent value (revise this):\n${body.current.trim()}`
       : prompt
+
+  // Live story/section/data context, prepended so schema-valid output is also
+  // contextually correct (real chart ids, palette, established facts). Best
+  // effort — a context failure must never block the generation.
+  const context = await buildSlotContext({
+    slug,
+    parentIndex: intOrUndefined(body.parentIndex),
+    subIndex: intOrUndefined(body.subIndex),
+    kind: body.kind,
+    layerType: body.layerType,
+  }).catch(() => null)
+  const userPrompt = context ? `${context}\n\n---\n\n${base}` : base
 
   let raw: string
   try {
@@ -313,6 +331,11 @@ function stripCodeFence(text: string): string {
   const fence = /^```[a-zA-Z]*\n([\s\S]*?)\n?```$/
   const m = t.match(fence)
   return (m ? m[1] : t).trim()
+}
+
+/** Coerce a body field to a non-negative integer, or undefined. */
+function intOrUndefined(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : undefined
 }
 
 function extensionForMime(mime: string): string {

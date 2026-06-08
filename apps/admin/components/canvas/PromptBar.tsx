@@ -42,6 +42,10 @@ interface Props {
   kind: AiSlotKind
   /** Required for image layers — routes `kind: 'layer'` to image generation. */
   layerType?: string
+  /** The section being edited (indexes config.sections). Sent to the route so
+   *  it can ground the generation in the live story/section/data context. */
+  parentIndex?: number
+  subIndex?: number
   /** Current slice value, sent as context so the model revises rather than
    *  starts from scratch. */
   currentValue?: string
@@ -70,6 +74,8 @@ export default function PromptBar({
   slug,
   kind,
   layerType,
+  parentIndex,
+  subIndex,
   currentValue,
   onApply,
   onApplyImage,
@@ -133,6 +139,8 @@ export default function PromptBar({
           body: JSON.stringify({
             kind,
             layerType: effectiveLayerType,
+            parentIndex,
+            subIndex,
             prompt: trimmed,
             system: system.trim() || undefined,
             model,

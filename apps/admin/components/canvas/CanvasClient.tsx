@@ -3827,6 +3827,8 @@ export default function CanvasClient({
           // EditableKind is a subset of AiSlotKind, so it maps 1:1; aiSlots.ts
           // supplies the modality, model subset, and default system prompt.
           aiKind={editorTarget?.kind}
+          aiParentIndex={editorTarget?.unit.parentIndex}
+          aiSubIndex={editorTarget?.unit.subIndex}
         />
       )}
       {/* On-node ✨ Generate (Feature 1): a standalone PromptBar for the slot,
@@ -3881,6 +3883,8 @@ export default function CanvasClient({
           <PromptBar
             slug={slug}
             kind={editorTarget.kind}
+            parentIndex={editorTarget.unit.parentIndex}
+            subIndex={editorTarget.unit.subIndex}
             currentValue={editorSlice.text}
             onApply={(v) => handleSave(v)}
             onClose={() => {
@@ -3976,6 +3980,8 @@ export default function CanvasClient({
           theme={localTheme ?? theme}
           defaults={deckDefaults}
           unitKey={`${slotTarget.unit.parentIndex}.${slotTarget.unit.subIndex ?? 0}`}
+          parentIndex={slotTarget.unit.parentIndex}
+          subIndex={slotTarget.unit.subIndex}
           saving={slotSaving}
           error={slotError}
           onApply={(next) => handleSlotFormApply(next, slotTarget)}
