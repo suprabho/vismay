@@ -62,6 +62,8 @@ interface GenerateBody {
    *  with no unit in scope degrade to the story-frame-only context. */
   parentIndex?: number
   subIndex?: number
+  /** The chart being edited, when the slot is a specific chart's data. */
+  chartId?: string
 }
 
 export async function POST(
@@ -178,6 +180,7 @@ export async function POST(
     subIndex: intOrUndefined(body.subIndex),
     kind: body.kind,
     layerType: body.layerType,
+    chartId: typeof body.chartId === 'string' ? body.chartId : undefined,
   }).catch(() => null)
   const userPrompt = context ? `${context}\n\n---\n\n${base}` : base
 

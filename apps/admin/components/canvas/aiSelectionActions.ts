@@ -170,6 +170,20 @@ const EXTRAS_BY_KIND: Record<string, SelectionAction[]> = {
       text: 'Explain what these map camera values (center, zoom, pitch, bearing) do to the view.',
     },
   ],
+  chartData: [
+    {
+      id: 'add-point',
+      label: 'Add data point',
+      mode: 'edit',
+      text: 'Add one more category and its value(s) to this chart, following the exact existing structure. Use only a figure grounded in the story context — do not invent numbers.',
+    },
+    {
+      id: 'check-numbers',
+      label: 'Check numbers',
+      mode: 'ask',
+      text: 'Check these chart numbers against the story context — do the categories and values match the established facts?',
+    },
+  ],
 }
 
 /** Extras keyed by a layer's type (only consulted when `kind === 'layer'`). */

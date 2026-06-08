@@ -284,6 +284,7 @@ export default function ChartEditPanel({
             language="json"
             path={`${chartId}.json`}
             onValidate={setMarkers}
+            ai={{ slug, kind: 'chartData', chartId }}
           />
         )}
       </div>

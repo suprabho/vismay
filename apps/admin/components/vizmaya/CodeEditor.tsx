@@ -53,8 +53,17 @@ interface Props {
   /** Receives an imperative API once the editor has mounted. */
   onReady?: (api: CodeEditorApi) => void
   /** When set, mounts the ✨ "Ask AI" selection overlay. `slug` is required for
-   *  in-place edits; `kind`/`layerType` sharpen the presets when known. */
-  ai?: { slug?: string; kind?: string; layerType?: string }
+   *  in-place edits; `kind`/`layerType` sharpen the presets when known.
+   *  `parentIndex`/`subIndex`/`chartId` ground the edit in the live story
+   *  (section context, the specific chart being edited). */
+  ai?: {
+    slug?: string
+    kind?: string
+    layerType?: string
+    parentIndex?: number
+    subIndex?: number
+    chartId?: string
+  }
 }
 
 const SEVERITY_TO_LABEL: Record<MarkerSeverity, CodeEditorMarker['severity']> = {
@@ -234,6 +243,9 @@ export default function CodeEditor({
           slug={ai.slug}
           kind={ai.kind}
           layerType={ai.layerType}
+          parentIndex={ai.parentIndex}
+          subIndex={ai.subIndex}
+          chartId={ai.chartId}
         />
       )}
     </div>

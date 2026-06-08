@@ -31,6 +31,9 @@ export interface SlotContextInput {
   /** Slot identity — only lightly used (to decide how hard to surface charts). */
   kind?: string
   layerType?: string
+  /** The chart being edited, when the slot is a specific chart's data. Spotlights
+   *  that chart's requirement + current data so the edit stays grounded. */
+  chartId?: string
 }
 
 /** Hard caps so the context block can never blow the prompt window. */
@@ -93,6 +96,12 @@ export async function buildSlotContext(
     )
   }
   if (storyLines.length) blocks.push(storyLines.join('\n'))
+
+  /* ── Focus chart (when a specific chart's data is being edited) ──── */
+  if (input.chartId) {
+    const focus = await describeCharts(slug, [input.chartId], chartReqs)
+    if (focus) blocks.push(focus.replace(/^CHART DATA\n/, 'CHART BEING EDITED\n'))
+  }
 
   /* ── Section frame ──────────────────────────────────────────────── */
   if (hasCoords && story && config) {

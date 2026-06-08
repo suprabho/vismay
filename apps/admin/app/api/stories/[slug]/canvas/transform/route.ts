@@ -53,6 +53,9 @@ interface TransformBody {
    *  story-frame-only context when absent. */
   parentIndex?: number
   subIndex?: number
+  /** The chart being edited, when the fragment is chart data — spotlights that
+   *  chart's requirement + data in the context. */
+  chartId?: string
 }
 
 const LANGUAGE_LABEL: Record<TransformLanguage, string> = {
@@ -181,6 +184,7 @@ export async function POST(
     subIndex: intOrUndefined(body.subIndex),
     kind: body.kind,
     layerType: body.layerType,
+    chartId: typeof body.chartId === 'string' ? body.chartId : undefined,
   }).catch(() => null)
   const userPrompt = context
     ? `${context}\n\n---\n\nInstruction: ${instruction}\n\nFragment:\n${selection}`
