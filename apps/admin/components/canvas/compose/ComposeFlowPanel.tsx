@@ -182,6 +182,13 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
   }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
+    // Persist immediately (fire-and-forget) so the choice survives a reload
+    // before the outline stage writes it through.
+    fetch(`${base}/${slug}/canvas/compose/angles`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chosenAngleId: id }),
+    }).catch(() => {})
   }
 
   // ── Outline ────────────────────────────────────────────────────────────
@@ -286,6 +293,14 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
 
   const phase = st.phase
   const acceptedCount = st.outline.filter((e) => e.status === 'accepted').length
+  // The outline is interactively editable only during the outline stage of a
+  // live draft. Once it's been materialised (content/visual/done) or the draft
+  // is archived (finished), the outline is shown read-only so the retained
+  // research stays visible without offering destructive re-materialise.
+  const outlineEditable = phase === 'outline' && !st.archived
+  const showOutline =
+    st.outline.length > 0 &&
+    (phase === 'outline' || phase === 'content' || phase === 'visual' || phase === 'done')
 
   return (
     <div className="space-y-4">
@@ -309,11 +324,19 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
         ))}
       </ol>
 
-      {st.attached && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-          Composing into an existing story — materialised sections are{' '}
-          <span className="font-medium">appended</span>, leaving your current content untouched.
+      {st.archived ? (
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
+          Finished — this is now a normal story. Its sources and outline are{' '}
+          <span className="font-medium">retained</span> here for reference and stay
+          reopenable.
         </div>
+      ) : (
+        st.attached && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            Composing into an existing story — materialised sections are{' '}
+            <span className="font-medium">appended</span>, leaving your current content untouched.
+          </div>
+        )
       )}
 
       {/* ── Sources ── */}
@@ -448,61 +471,78 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
         </section>
       )}
 
-      {/* ── Outline ── */}
-      {phase === 'outline' && st.outline.length > 0 && (
+      {/* ── Outline ── (interactive at the outline stage; read-only once
+          materialised or archived, so the retained research stays visible). */}
+      {showOutline && (
         <section className="space-y-2 border-t border-white/10 pt-3">
           <h3 className="text-xs font-medium text-neutral-300">
-            Outline — click status to accept/reject
+            {outlineEditable ? 'Outline — click status to accept/reject' : 'Outline'}
           </h3>
           <ul className="space-y-1">
-            {st.outline.map((e, i) => (
-              <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => cycleStatus(e.id)}
-                    className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${
-                      e.status === 'accepted'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : e.status === 'rejected'
-                          ? 'bg-red-500/20 text-red-300'
-                          : 'bg-white/10 text-neutral-400'
-                    }`}
-                  >
-                    {e.status}
-                  </button>
-                  <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                  <span className="text-[10px] text-neutral-500">{e.kind}</span>
-                  <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                    ↑
-                  </button>
-                  <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                    ↓
-                  </button>
-                </div>
-                <p className="mt-1 line-clamp-2 text-neutral-400">{e.intent}</p>
-              </li>
-            ))}
+            {st.outline.map((e, i) => {
+              const statusCls =
+                e.status === 'accepted'
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : e.status === 'rejected'
+                    ? 'bg-red-500/20 text-red-300'
+                    : 'bg-white/10 text-neutral-400'
+              return (
+                <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    {outlineEditable ? (
+                      <button
+                        onClick={() => cycleStatus(e.id)}
+                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}
+                      >
+                        {e.status}
+                      </button>
+                    ) : (
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}>
+                        {e.status}
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                    <span className="text-[10px] text-neutral-500">{e.kind}</span>
+                    {outlineEditable && (
+                      <>
+                        <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
+                          ↑
+                        </button>
+                        <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
+                          ↓
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-neutral-400">{e.intent}</p>
+                </li>
+              )
+            })}
           </ul>
-          <input
-            value={outlineFeedback}
-            onChange={(e) => setOutlineFeedback(e.target.value)}
-            placeholder="Regenerate outline with a note (optional)…"
-            className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-          />
-          <div className="flex gap-2">
-            <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-              Regenerate
-            </button>
-            <button
-              onClick={materialize}
-              disabled={!!busy || acceptedCount === 0}
-              className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
-            >
-              {busy === 'materialize'
-                ? 'Creating…'
-                : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
-            </button>
-          </div>
+          {outlineEditable && (
+            <>
+              <input
+                value={outlineFeedback}
+                onChange={(e) => setOutlineFeedback(e.target.value)}
+                placeholder="Regenerate outline with a note (optional)…"
+                className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+              />
+              <div className="flex gap-2">
+                <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+                  Regenerate
+                </button>
+                <button
+                  onClick={materialize}
+                  disabled={!!busy || acceptedCount === 0}
+                  className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
+                >
+                  {busy === 'materialize'
+                    ? 'Creating…'
+                    : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
+                </button>
+              </div>
+            </>
+          )}
         </section>
       )}
 

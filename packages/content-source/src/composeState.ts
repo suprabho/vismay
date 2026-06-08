@@ -45,6 +45,14 @@ export interface ComposeState {
    * story has real content that must survive.
    */
   attached?: boolean
+  /**
+   * Set by the `finish` route when the author marks the draft a normal story.
+   * The scaffold (angles + outline) and its sources are RETAINED rather than
+   * deleted — `archived` only stops the draft from auto-surfacing the overlay
+   * and drops it out of the in-progress resume picker. The research stays
+   * reopenable from the canvas/editor.
+   */
+  archived?: boolean
   /** The text model alias the author picked for this draft. */
   model?: string
   angles: ComposeAngle[]
@@ -105,7 +113,11 @@ export async function listComposeDrafts(): Promise<ComposeDraftSummary[]> {
     .not('compose_state', 'is', null)
     .order('updated_at', { ascending: false })
   if (error) throw new Error(`listComposeDrafts: ${error.message}`)
-  return (data ?? []).map((row: any) => {
+  return (data ?? [])
+    // Archived drafts are retained but finished — keep them out of the
+    // "resume in-progress" picker so completed stories don't clutter it.
+    .filter((row: any) => !(row.compose_state as Partial<ComposeState> | null)?.archived)
+    .map((row: any) => {
     const state = (row.compose_state ?? {}) as Partial<ComposeState>
     return {
       slug: row.slug as string,

@@ -82,3 +82,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   return NextResponse.json({ ok: true, angles: result.angles, suggestedFormat: result.suggestedFormat })
 }
+
+/**
+ * Persist the author's angle pick. Selecting an angle is otherwise client-only
+ * until the outline stage writes it through, so a reload between picking and
+ * outlining would lose the choice. This stores `chosenAngleId` immediately.
+ */
+export async function PATCH(req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const { slug } = await params
+
+  let body: { chosenAngleId?: string } = {}
+  try {
+    body = (await req.json()) as typeof body
+  } catch {
+    return NextResponse.json({ error: 'invalid body' }, { status: 400 })
+  }
+
+  const state = await readComposeState(slug)
+  if (!state) return NextResponse.json({ error: 'no compose draft for this slug' }, { status: 404 })
+  if (!state.angles.some((a) => a.id === body.chosenAngleId)) {
+    return NextResponse.json({ error: 'unknown angle' }, { status: 422 })
+  }
+
+  await writeComposeState(slug, { ...state, chosenAngleId: body.chosenAngleId })
+  return NextResponse.json({ ok: true })
+}
