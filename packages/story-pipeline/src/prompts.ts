@@ -10,18 +10,33 @@ import type {
   ChartRequirement,
 } from './types'
 
-/** Per-source character cap so a few long PDFs don't blow the context budget. */
+/** Per-source character cap so a few long PDFs don't blow the context budget.
+ *  The prose passes (research / angles / outline / content) read for gist, so
+ *  the tight default is fine. The CHART data pass overrides it — see below. */
 const MAX_SOURCE_CHARS = 12_000
 
-/** Render the ingested sources as a titled, bounded prompt block. */
-export function renderSources(sources: SourceDoc[]): string {
+/**
+ * The chart DATA pass needs the actual numbers, which in data-heavy sources
+ * (a long CSV, a stats-dense report) often sit well past the prose cap — and
+ * tabular numeric data is exactly what the tight default truncates away. So
+ * the chart pass renders sources with a much larger budget; numeric fidelity
+ * matters more there than keeping the prompt lean.
+ */
+const CHART_SOURCE_CHARS = 48_000
+
+/** Render the ingested sources as a titled, bounded prompt block. `maxChars`
+ *  caps each source's body (the chart pass passes a larger budget). */
+export function renderSources(
+  sources: SourceDoc[],
+  maxChars: number = MAX_SOURCE_CHARS,
+): string {
   if (sources.length === 0) return '(no sources provided)'
   return sources
     .map((s, i) => {
       const head = `### Source ${i + 1}: ${s.title}${s.byline ? ` — ${s.byline}` : ''}\n(${s.kind}: ${s.origin})`
       const body =
-        s.body.length > MAX_SOURCE_CHARS
-          ? `${s.body.slice(0, MAX_SOURCE_CHARS)}\n…[truncated]`
+        s.body.length > maxChars
+          ? `${s.body.slice(0, maxChars)}\n…[truncated]`
           : s.body
       return `${head}\n\n${body}`
     })
@@ -180,7 +195,7 @@ export function buildChartPrompt(
     `RESEARCH BRIEF\n` +
     `Summary: ${brief.summary}\n` +
     `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n\n` +
-    `SOURCES\n${renderSources(sources)}`
+    `SOURCES\n${renderSources(sources, CHART_SOURCE_CHARS)}`
   if (refine) {
     return (
       `${base}\n\nPREVIOUS CHART DATA:\n${JSON.stringify(refine.previous)}\n\n` +
