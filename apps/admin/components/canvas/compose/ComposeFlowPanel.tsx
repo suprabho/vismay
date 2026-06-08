@@ -3,6 +3,116 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
+import { canvasFrameId } from '../canvasOutputs'
+
+type ComposeFormat = ComposeState['format']
+
+/**
+ * A schematic wireframe of a planned deck layout — the "what will this section
+ * look like" demo shown BEFORE materialising. Region rectangles mirror the real
+ * `foregroundLayouts` arrangement (percent-of-frame), tinted by slot type. A map
+ * section or an unknown layout falls back to a single full/centred box.
+ */
+type PreviewRegion = { label: string; type: string; x: number; y: number; w: number; h: number }
+
+const LAYOUT_REGIONS: Record<string, PreviewRegion[]> = {
+  'stat-left-chart-right': [
+    { label: 'stat', type: 'stat', x: 4, y: 8, w: 34, h: 84 },
+    { label: 'chart', type: 'chart', x: 42, y: 8, w: 54, h: 84 },
+  ],
+  'text-left-chart-right': [
+    { label: 'text', type: 'text', x: 4, y: 8, w: 38, h: 84 },
+    { label: 'chart', type: 'chart', x: 46, y: 8, w: 50, h: 84 },
+  ],
+  'text-left-quote-right': [
+    { label: 'text', type: 'text', x: 4, y: 8, w: 42, h: 84 },
+    { label: 'quote', type: 'quote', x: 50, y: 8, w: 46, h: 84 },
+  ],
+  'image-left-text-right': [
+    { label: 'image', type: 'image', x: 4, y: 8, w: 46, h: 84 },
+    { label: 'text', type: 'text', x: 54, y: 8, w: 42, h: 84 },
+  ],
+  'stat-top-chart-below': [
+    { label: 'stat', type: 'stat', x: 6, y: 8, w: 88, h: 28 },
+    { label: 'chart', type: 'chart', x: 6, y: 40, w: 88, h: 52 },
+  ],
+  'chart-top-text-below': [
+    { label: 'chart', type: 'chart', x: 6, y: 8, w: 88, h: 46 },
+    { label: 'text', type: 'text', x: 6, y: 58, w: 88, h: 34 },
+  ],
+  centered: [{ label: 'content', type: 'text', x: 20, y: 22, w: 60, h: 56 }],
+  'hero-full-bleed': [{ label: 'hero', type: 'hero', x: 4, y: 8, w: 92, h: 84 }],
+}
+
+const REGION_TINT: Record<string, string> = {
+  stat: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300',
+  chart: 'border-sky-400/40 bg-sky-400/10 text-sky-300',
+  text: 'border-neutral-400/30 bg-white/5 text-neutral-300',
+  quote: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+  image: 'border-violet-400/40 bg-violet-400/10 text-violet-300',
+  hero: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200',
+  map: 'border-teal-400/40 bg-teal-400/10 text-teal-200',
+}
+
+function LayoutPreview({ layout, format }: { layout?: string; format: ComposeFormat }) {
+  const regions: PreviewRegion[] =
+    format === 'map'
+      ? [{ label: 'map', type: 'map', x: 2, y: 2, w: 96, h: 96 }]
+      : (layout ? LAYOUT_REGIONS[layout] : undefined) ?? [
+          { label: 'content', type: 'text', x: 8, y: 12, w: 84, h: 76 },
+        ]
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
+      style={{ paddingTop: '56.25%' }}
+      title={layout ? `Layout: ${layout}` : 'Planned layout'}
+    >
+      {regions.map((r, i) => (
+        <div
+          key={i}
+          className={`absolute flex items-center justify-center rounded-sm border text-[8px] uppercase tracking-wide ${
+            REGION_TINT[r.type] ?? REGION_TINT.text
+          }`}
+          style={{ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` }}
+        >
+          {r.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * A live thumbnail of a MATERIALISED section — the signed canvas-frame render
+ * the canvas itself uses, scaled down (rendered at 4× the box then scaled to
+ * fit, so the section sees a desktop-ish viewport). Static (pointer-events off);
+ * the corner link opens the full render.
+ */
+function SectionFrame({ src, title }: { src: string; title: string }) {
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
+      style={{ paddingTop: '56.25%' }}
+    >
+      <iframe
+        src={src}
+        title={title}
+        loading="lazy"
+        className="absolute left-0 top-0 origin-top-left"
+        style={{ width: '400%', height: '400%', transform: 'scale(0.25)', border: 0, pointerEvents: 'none' }}
+      />
+      <a
+        href={src}
+        target="_blank"
+        rel="noreferrer"
+        className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] text-neutral-200 hover:bg-black/80"
+        title="Open the full render"
+      >
+        open ↗
+      </a>
+    </div>
+  )
+}
 
 /**
  * The canvas-native compose flow. Walks the author through
@@ -31,11 +141,27 @@ interface ComposeFlowProps {
    * tab leaves it unset (always visible).
    */
   active?: boolean
+  /**
+   * Signed canvas-frame iframe URLs keyed by `canvasFrameId(sectionId)` — the
+   * SAME map the canvas signs. When present (canvas context) materialised
+   * sections show their real render; absent (editor tab) they fall back to the
+   * planned-layout schematic.
+   */
+  frameSrcById?: Record<string, string>
 }
 
 const base = `/api/stories`
 
-export function ComposeFlow({ slug, initialState, initialSources, active }: ComposeFlowProps) {
+/** How many section "Write"/"Rewrite" calls may materialise concurrently. */
+const MAX_CONCURRENT_SECTIONS = 3
+
+export function ComposeFlow({
+  slug,
+  initialState,
+  initialSources,
+  active,
+  frameSrcById,
+}: ComposeFlowProps) {
   const [st, setSt] = useState<ComposeState>(initialState)
   const [sources, setSources] = useState<StorySource[]>(initialSources)
   const [busy, setBusy] = useState<string | null>(null)
@@ -46,7 +172,15 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
   const [outlineFeedback, setOutlineFeedback] = useState('')
   const [openOutline, setOpenOutline] = useState<Set<string>>(new Set())
   const [written, setWritten] = useState<Set<string>>(new Set())
+  // Section writes run in their own concurrency lane (up to
+  // MAX_CONCURRENT_SECTIONS at once) — the set of section ids with a write
+  // in flight. The rest of the pipeline (sources/angles/outline/finish/images)
+  // stays single-flight via `busy`.
+  const [writing, setWriting] = useState<Set<string>>(new Set())
   const [sectionFb, setSectionFb] = useState<Record<string, string>>({})
+  // Bumped per section on a successful write so its frame thumbnail reloads
+  // (the page isn't reloaded between writes, so the signed URL is cache-busted).
+  const [frameNonce, setFrameNonce] = useState<Record<string, number>>({})
   const [imgDone, setImgDone] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -254,17 +388,48 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
   }
 
   // ── Sections (CONTENT + VISUAL passes) ───────────────────────────────────
+  // Section writes don't go through `call`/`busy`: several may be in flight at
+  // once (capped at MAX_CONCURRENT_SECTIONS), tracked by id in `writing`.
   async function genSection(sectionId: string) {
+    // Already writing this one, or at the concurrency cap — ignore (the button
+    // disabled state is the primary guard; this backstops rapid clicks).
+    if (writing.has(sectionId) || writing.size >= MAX_CONCURRENT_SECTIONS) return
     const fb = sectionFb[sectionId]?.trim()
-    const data = await call<{ ok: boolean }>(`section:${sectionId}`, 'section', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sectionId, phase: 'combined', ...(fb ? { feedback: fb } : {}) }),
-    })
-    if (data?.ok) {
-      setWritten((w) => new Set(w).add(sectionId))
-      setSectionFb((f) => ({ ...f, [sectionId]: '' }))
+    setWriting((w) => new Set(w).add(sectionId))
+    setError(null)
+    try {
+      const res = await fetch(`${base}/${slug}/canvas/compose/section`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sectionId, phase: 'combined', ...(fb ? { feedback: fb } : {}) }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `section:${sectionId} failed`)
+        return
+      }
+      if (data?.ok) {
+        setWritten((w) => new Set(w).add(sectionId))
+        setSectionFb((f) => ({ ...f, [sectionId]: '' }))
+        setFrameNonce((n) => ({ ...n, [sectionId]: (n[sectionId] ?? 0) + 1 }))
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setWriting((w) => {
+        const next = new Set(w)
+        next.delete(sectionId)
+        return next
+      })
     }
+  }
+
+  /** Signed canvas-frame URL for a materialised section, cache-busted on write. */
+  function frameSrcFor(sectionId: string): string | null {
+    const url = frameSrcById?.[canvasFrameId(sectionId)]
+    if (!url) return null
+    const v = frameNonce[sectionId]
+    return v ? `${url}${url.includes('?') ? '&' : '?'}_v=${v}` : url
   }
 
   // ── Images: generate each imagePrompt into the story-assets bucket via the
@@ -544,6 +709,13 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
                     )}
                   </div>
                   <p className={`mt-1 text-neutral-400 ${open ? '' : 'line-clamp-2'}`}>{e.intent}</p>
+                  {/* Layout demo — a wireframe of what this section will look
+                      like, shown before you materialise it. */}
+                  {outlineEditable && (
+                    <div className="mt-2">
+                      <LayoutPreview layout={e.layout} format={st.format} />
+                    </div>
+                  )}
                   {open && hasDetail && (
                     <dl className="mt-2 space-y-1.5 border-t border-white/5 pt-2 text-[11px]">
                       {e.expectedContent && (
@@ -600,42 +772,67 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
       {/* ── Sections: per-section CONTENT + VISUAL ── */}
       {(phase === 'content' || phase === 'visual' || phase === 'done') && (
         <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">Write sections</h3>
+          <h3 className="text-xs font-medium text-neutral-300">
+            Materialized sections — what got created
+          </h3>
           <ul className="space-y-2">
             {st.outline
               .filter((e) => e.sectionId)
-              .map((e) => (
-                <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                    {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
-                  </div>
-                  <div className="mt-1 flex gap-1">
-                    <input
-                      value={sectionFb[e.sectionId!] ?? ''}
-                      onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
-                      placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
-                      className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
-                    />
-                    <button
-                      onClick={() => genSection(e.sectionId!)}
-                      disabled={!!busy}
-                      className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-                    >
-                      {busy === `section:${e.sectionId}`
-                        ? '…'
-                        : written.has(e.sectionId!)
-                          ? 'Rewrite'
-                          : 'Write'}
-                    </button>
-                  </div>
-                </li>
-              ))}
+              .map((e) => {
+                const frame = frameSrcFor(e.sectionId!)
+                const isWriting = writing.has(e.sectionId!)
+                const atCap = writing.size >= MAX_CONCURRENT_SECTIONS
+                return (
+                  <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                      {e.layout && (
+                        <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">{e.layout}</span>
+                      )}
+                      {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
+                    </div>
+                    {/* What was materialised: the live render when the canvas has
+                        signed it, else the planned-layout wireframe. */}
+                    <div className="mt-2">
+                      {frame ? (
+                        <SectionFrame src={frame} title={e.heading} />
+                      ) : (
+                        <LayoutPreview layout={e.layout} format={st.format} />
+                      )}
+                    </div>
+                    {e.visual && (
+                      <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
+                        <span className="text-neutral-400">Planned:</span> {e.visual}
+                      </p>
+                    )}
+                    <div className="mt-1 flex gap-1">
+                      <input
+                        value={sectionFb[e.sectionId!] ?? ''}
+                        onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
+                        placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
+                        className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
+                      />
+                      <button
+                        onClick={() => genSection(e.sectionId!)}
+                        disabled={!!busy || isWriting || atCap}
+                        title={
+                          atCap && !isWriting
+                            ? `Up to ${MAX_CONCURRENT_SECTIONS} sections write at once — wait for one to finish`
+                            : undefined
+                        }
+                        className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+                      >
+                        {isWriting ? '…' : written.has(e.sectionId!) ? 'Rewrite' : 'Write'}
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
           </ul>
           {(st.imagePrompts?.length ?? 0) > 0 && (
             <button
               onClick={genImages}
-              disabled={!!busy}
+              disabled={!!busy || writing.size > 0}
               className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
             >
               {busy === 'images'
@@ -651,7 +848,7 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
           </button>
           <button
             onClick={finish}
-            disabled={!!busy}
+            disabled={!!busy || writing.size > 0}
             className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
           >
             {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
@@ -670,6 +867,9 @@ interface PanelProps {
    *  research inside survives close → reopen. */
   open: boolean
   onClose: () => void
+  /** Signed canvas-frame URLs (keyed by `canvasFrameId`) so materialised
+   *  sections show their real render. Passed straight through to `ComposeFlow`. */
+  frameSrcById?: Record<string, string>
 }
 
 /**
@@ -677,7 +877,14 @@ interface PanelProps {
  * controlled by `open` (display toggle — NOT conditional mount) so the
  * `ComposeFlow` inside keeps its state when dismissed and reopened.
  */
-export function ComposeFlowPanel({ slug, initialState, initialSources, open, onClose }: PanelProps) {
+export function ComposeFlowPanel({
+  slug,
+  initialState,
+  initialSources,
+  open,
+  onClose,
+  frameSrcById,
+}: PanelProps) {
   return (
     <div
       className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur"
@@ -695,6 +902,7 @@ export function ComposeFlowPanel({ slug, initialState, initialSources, open, onC
           initialState={initialState}
           initialSources={initialSources}
           active={open}
+          frameSrcById={frameSrcById}
         />
       </div>
     </div>

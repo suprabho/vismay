@@ -3365,6 +3365,7 @@ export default function CanvasClient({
           initialSources={composeSources}
           open={composeOpen}
           onClose={() => setComposeOpen(false)}
+          frameSrcById={signedSrcById}
         />
       )}
       {evalOpen && sectionUnits[activeSectionIndex] && (
