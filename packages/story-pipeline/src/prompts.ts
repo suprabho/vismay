@@ -63,26 +63,45 @@ function renderAnswers(brief: ResearchBrief, answers: ComposeAnswers): string {
   return qa || '(none provided — use your best judgement)'
 }
 
-const LAYER_MENU = GEN_FOREGROUND_TYPES.filter(
+const LAYER_TYPES = GEN_FOREGROUND_TYPES.filter(
   (l) => l.type !== 'image' && l.type !== 'imageGrid',
 )
-  .map((l) => `- ${l.type}: ${l.label}`)
-  .join('\n')
+const LAYER_MENU = LAYER_TYPES.map((l) => `- ${l.type}: ${l.label}`).join('\n')
+const LAYER_TYPES_INLINE = LAYER_TYPES.map((l) => l.type).join(', ')
+
+/** The deck layouts the VISUAL pass can actually build (no image-only layouts). */
+const DECK_LAYOUTS =
+  'stat-left-chart-right, text-left-chart-right, text-left-quote-right, ' +
+  'stat-top-chart-below, chart-top-text-below, centered, hero-full-bleed'
 
 // ── Step 1: outline ────────────────────────────────────────────────────────
 
 export function outlineSystem(format: StoryFormat): string {
+  const visualGuidance =
+    format === 'map'
+      ? `For each section's "visual" describe the map moment (where the camera sits, what it ` +
+        `marks/pins) plus any stat or quote overlaid; leave "layout" empty.`
+      : `For each section's "visual" name the foreground layers it features (${LAYER_TYPES_INLINE}) ` +
+        `and what each shows, and set "layout" to the deck layout that frames them best ` +
+        `(${DECK_LAYOUTS}).`
   return (
     `You plan a Vizmaya ${format} data story from research + the editor's answers — the ` +
-    `SKELETON only, no prose yet.\n\n` +
+    `SKELETON only, no prose yet. The downstream writer and designer act ONLY on what you put ` +
+    `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
     `- title, subtitle, byline.\n` +
     `- charts: every chart the story needs, as a simple spec (chartType bar|line, categories, ` +
     `numeric series) with a kebab-case id. Sections reference charts by id.\n` +
     `- imagePrompts: vivid prompts for sections that want imagery.\n` +
-    `- sections (3–8): each a stub with a heading, a kind (${SECTION_KINDS.join(' | ')}), an ` +
-    `intent (1–2 sentences on what it covers and which visual it features — stat / chart / ` +
-    `quote / prose), and an optional chartId.\n\n` +
+    `- sections (3–8): each a stub with —\n` +
+    `  • heading and kind (${SECTION_KINDS.join(' | ')}).\n` +
+    `  • intent: one line on the section's job.\n` +
+    `  • context: how it connects to the sections around it (what it follows from, what it sets up).\n` +
+    `  • expectedContent: the specific facts, figures, and quotes it must carry — concrete and ` +
+    `grounded in the sources, NOT generic placeholders.\n` +
+    `  • visual: the visualisation it features (see below).\n` +
+    `  • optional chartId when the section features a chart.\n` +
+    `${visualGuidance}\n\n` +
     `Open with a cover/hero and end with a closing section. Ground every figure in the sources; ` +
     `do not invent data.`
   )
@@ -137,6 +156,10 @@ function contextBlock(ctx: SectionContext): string {
     `Heading: ${stub.heading}\n` +
     `Kind: ${stub.kind}\n` +
     `Intent: ${stub.intent}\n` +
+    (stub.context ? `Context (role in the story): ${stub.context}\n` : '') +
+    (stub.expectedContent ? `Expected content (must cover): ${stub.expectedContent}\n` : '') +
+    (stub.visual ? `Planned visual: ${stub.visual}\n` : '') +
+    (stub.layout ? `Planned layout: ${stub.layout}\n` : '') +
     (stub.chartId ? `Feature chart: ${stub.chartId}\n` : '') +
     `\nBRIEF\nSummary: ${brief.summary}\n` +
     `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n` +
@@ -162,6 +185,7 @@ export function contentSystem(format: StoryFormat): string {
     `- heading: short and specific (becomes the markdown ## and the config text anchor).\n` +
     `- paragraphs: the body prose, one string per paragraph, factual magazine register.\n` +
     `- kind: one of ${SECTION_KINDS.join(' | ')}.\n\n` +
+    `Cover the section's planned "expected content" and honour its context in the arc. ` +
     `Ground every figure in the provided material; do not invent data. No visual layout here ` +
     `— the visual is designed in a later pass.`
   )
@@ -182,8 +206,7 @@ export function visualSystem(format: StoryFormat): string {
       ? `This is a MAP story. Set body.map to the section camera (center [lng, lat], zoom, ` +
         `optional pitch/bearing/pins with [lng, lat] coordinates). A foreground is optional.`
       : `This is a DECK story. Set body.foreground: either a flat layers list, or a layout name ` +
-        `plus regions (each region maps to its layers). Good layouts: stat-left-chart-right, ` +
-        `text-left-chart-right, text-left-quote-right, chart-top-text-below, centered, hero-full-bleed.`
+        `plus regions (each region maps to its layers). Good layouts: ${DECK_LAYOUTS}.`
 
   return (
     `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
@@ -192,6 +215,8 @@ export function visualSystem(format: StoryFormat): string {
     `${formatGuidance}\n\n` +
     `Available foreground layer types:\n${LAYER_MENU}\n\n` +
     `Rules:\n` +
+    `- Honour the section's planned visual and layout when the outline gives one; deviate only ` +
+    `if the written prose clearly calls for it.\n` +
     `- Reference theme tokens (accent, accent2, teal, positive, amber, red, muted) for colours.\n` +
     `- Do NOT emit image or imageGrid layers — carry the section with stats, charts, quotes, prose.\n` +
     `- A chart layer references an existing chart id; do not invent chart ids.\n` +

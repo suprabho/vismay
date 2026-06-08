@@ -44,6 +44,7 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
   const [text, setText] = useState('')
   const [angleFeedback, setAngleFeedback] = useState('')
   const [outlineFeedback, setOutlineFeedback] = useState('')
+  const [openOutline, setOpenOutline] = useState<Set<string>>(new Set())
   const [written, setWritten] = useState<Set<string>>(new Set())
   const [sectionFb, setSectionFb] = useState<Record<string, string>>({})
   const [imgDone, setImgDone] = useState(0)
@@ -225,6 +226,14 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
         e.id === id ? { ...e, status: order[(order.indexOf(e.status) + 1) % 3]! } : e,
       ),
     )
+  }
+  function toggleOutline(id: string) {
+    setOpenOutline((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
   function move(id: string, dir: -1 | 1) {
     const i = st.outline.findIndex((e) => e.id === id)
@@ -486,6 +495,8 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
                   : e.status === 'rejected'
                     ? 'bg-red-500/20 text-red-300'
                     : 'bg-white/10 text-neutral-400'
+              const open = openOutline.has(e.id)
+              const hasDetail = Boolean(e.visual || e.context || e.expectedContent)
               return (
                 <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
                   <div className="flex items-center gap-1">
@@ -502,6 +513,14 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
                       </span>
                     )}
                     <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                    {e.layout && (
+                      <span
+                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
+                        title="Planned deck layout"
+                      >
+                        {e.layout}
+                      </span>
+                    )}
                     <span className="text-[10px] text-neutral-500">{e.kind}</span>
                     {outlineEditable && (
                       <>
@@ -513,8 +532,40 @@ export function ComposeFlow({ slug, initialState, initialSources, active }: Comp
                         </button>
                       </>
                     )}
+                    {hasDetail && (
+                      <button
+                        onClick={() => toggleOutline(e.id)}
+                        className="text-neutral-500 hover:text-neutral-200"
+                        aria-expanded={open}
+                        title={open ? 'Hide details' : 'Show context, content & visual'}
+                      >
+                        {open ? '▾' : '▸'}
+                      </button>
+                    )}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-neutral-400">{e.intent}</p>
+                  <p className={`mt-1 text-neutral-400 ${open ? '' : 'line-clamp-2'}`}>{e.intent}</p>
+                  {open && hasDetail && (
+                    <dl className="mt-2 space-y-1.5 border-t border-white/5 pt-2 text-[11px]">
+                      {e.expectedContent && (
+                        <div>
+                          <dt className="text-neutral-500">Expected content</dt>
+                          <dd className="text-neutral-300">{e.expectedContent}</dd>
+                        </div>
+                      )}
+                      {e.visual && (
+                        <div>
+                          <dt className="text-neutral-500">Visualization</dt>
+                          <dd className="text-neutral-300">{e.visual}</dd>
+                        </div>
+                      )}
+                      {e.context && (
+                        <div>
+                          <dt className="text-neutral-500">Context</dt>
+                          <dd className="text-neutral-300">{e.context}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
                 </li>
               )
             })}

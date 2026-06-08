@@ -93,12 +93,20 @@ export interface ImagePrompt {
   aspectRatio: AspectRatio
 }
 
-/** A planned section from the outline step — heading + intent, no prose yet. */
+/** A planned section from the outline step — the per-section brief, no prose yet. */
 export interface SectionStub {
   heading: string
   kind: string
-  /** What this section should cover — drives the per-section generation. */
+  /** One line on the section's job — drives the per-section generation. */
   intent: string
+  /** How this section connects to the ones around it (its narrative role). */
+  context?: string
+  /** The specific facts/figures/quotes this section must carry. */
+  expectedContent?: string
+  /** The visualisation the section features (which layers and what each shows). */
+  visual?: string
+  /** Deck only: the named foreground layout that frames the visual. */
+  layout?: string
   /** Optional chart id (defined in the outline's `charts`) this section features. */
   chartId?: string
 }

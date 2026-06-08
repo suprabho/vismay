@@ -29,6 +29,16 @@ export interface ComposeOutlineEntry {
   heading: string
   intent: string
   kind: string
+  /**
+   * The per-section expectations the outline planned (issue: outlines lacked
+   * what each section needs). Surfaced in the outline tab and passed on to the
+   * CONTENT/VISUAL passes. Optional so drafts written before this stays valid.
+   */
+  context?: string
+  expectedContent?: string
+  /** The planned visualisation + (deck) named layout that frames it. */
+  visual?: string
+  layout?: string
   status: ComposeOutlineStatus
   /** Set once the entry has been materialised into a real story section. */
   sectionId: string | null

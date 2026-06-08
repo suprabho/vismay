@@ -160,11 +160,32 @@ export const sectionStubSchema = z.object({
     .string()
     .describe('Short, specific section heading — becomes the markdown ## and config text anchor.'),
   kind: z.enum(SECTION_KINDS).describe('The section kind.'),
-  intent: z
+  intent: z.string().describe("One line on this section's job in the story."),
+  context: z
     .string()
     .describe(
-      'One or two sentences: what this section covers AND which visual it features ' +
-        '(a big stat, a chart, a pull quote, or just prose).',
+      'How this section connects to the ones around it — what it follows from and what it ' +
+        'sets up. The narrative role the writer needs.',
+    ),
+  expectedContent: z
+    .string()
+    .describe(
+      'The specific facts, figures, and quotes this section must carry — concrete and ' +
+        'grounded in the sources, NOT generic. This is what the writer fills the prose with.',
+    ),
+  visual: z
+    .string()
+    .describe(
+      'The visualisation this section features: for a deck, which foreground layers ' +
+        '(bigStat, chart, quote, keyValue, bodyText) and what each shows; for a map, the ' +
+        'camera moment (where it sits, what it marks).',
+    ),
+  layout: z
+    .string()
+    .optional()
+    .describe(
+      'Deck only: the named foreground layout that frames the visual (e.g. ' +
+        'stat-left-chart-right, text-left-chart-right, centered, hero-full-bleed).',
     ),
   chartId: z
     .string()

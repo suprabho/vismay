@@ -78,6 +78,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       heading: entry.heading,
       kind: entry.kind,
       intent: entry.intent,
+      context: entry.context,
+      expectedContent: entry.expectedContent,
+      visual: entry.visual,
+      layout: entry.layout,
     }
   const sb = (state.brief ?? {}) as StoredBrief
   const chosen = state.angles.find((a) => a.id === state.chosenAngleId) ?? state.angles[0]
