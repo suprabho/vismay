@@ -85,6 +85,9 @@ import MapPickerModal from '@/components/vizmaya/MapPickerModal'
 import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
+import { ComposeFlowPanel } from './compose/ComposeFlowPanel'
+import type { ComposeState } from '@vismay/content-source/composeState'
+import type { StorySource } from '@vismay/content-source/storySources'
 
 interface Props {
   slug: string
@@ -114,6 +117,14 @@ interface Props {
    * defaults editor; future deck-only graph framing). Defaults to `'map'`.
    */
   format?: 'map' | 'deck'
+  /**
+   * Compose scaffold for this story, if one is in progress (sources → angles →
+   * outline). Non-null surfaces the "✨ Research & outline" drawer from the
+   * header; null surfaces a one-click "start compose" on the same button.
+   */
+  composeState?: ComposeState | null
+  /** Sources already attached to the compose draft (hydrates the drawer). */
+  composeSources?: StorySource[]
 }
 
 /**
@@ -411,6 +422,8 @@ export default function CanvasClient({
   signedSrcById,
   moduleTypes,
   format = 'map',
+  composeState = null,
+  composeSources = [],
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
@@ -590,6 +603,33 @@ export default function CanvasClient({
   } | null>(null)
   // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
   const [evalOpen, setEvalOpen] = useState(false)
+  // ✨ Research & outline (compose) drawer. The panel stays mounted while this
+  // toggles (visibility only) so in-session research survives close → reopen.
+  // `composeStarting` covers the no-state case where the header button kicks
+  // off a fresh compose scaffold (then reloads).
+  const [composeOpen, setComposeOpen] = useState(false)
+  const [composeStarting, setComposeStarting] = useState(false)
+  // Header button: if a compose scaffold exists, toggle the drawer; otherwise
+  // attach a fresh one (the `start` route) and reload so it mounts.
+  async function onComposeButton() {
+    if (composeState) {
+      setComposeOpen((o) => !o)
+      return
+    }
+    if (composeStarting) return
+    setComposeStarting(true)
+    try {
+      const res = await fetch(`/api/stories/${slug}/canvas/compose/start`, { method: 'POST' })
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean }
+      if (res.ok && data.ok) {
+        window.location.reload()
+        return
+      }
+    } catch {
+      // fall through to re-enable the button
+    }
+    setComposeStarting(false)
+  }
   // Audit-row id of the current draft (for the feedback row) + the author's
   // refine note for the next regeneration.
   const [genId, setGenId] = useState<string | null>(null)
@@ -3227,6 +3267,30 @@ export default function CanvasClient({
           <AssistantLauncher />
         </span>
         <button
+          onClick={onComposeButton}
+          disabled={composeStarting}
+          title={
+            composeState
+              ? 'Research the sources and draft an outline for this story'
+              : 'Start researching sources and drafting an outline for this story'
+          }
+          style={{
+            pointerEvents: 'auto',
+            marginLeft: 12,
+            background: composeState && composeOpen ? '#10303f' : 'transparent',
+            color: '#7dd3fc',
+            border: `1px solid ${composeState && composeOpen ? '#5aa9d8' : '#2a6d8f'}`,
+            borderRadius: 5,
+            padding: '3px 9px',
+            fontSize: 11,
+            cursor: composeStarting ? 'default' : 'pointer',
+            fontFamily: 'inherit',
+            opacity: composeStarting ? 0.5 : 1,
+          }}
+        >
+          {composeStarting ? 'Starting…' : '✨ Research & outline'}
+        </button>
+        <button
           onClick={() => {
             setGenError(null)
             setEvalOpen(false)
@@ -3294,6 +3358,15 @@ export default function CanvasClient({
           </button>
         )}
       </header>
+      {composeState && (
+        <ComposeFlowPanel
+          slug={slug}
+          initialState={composeState}
+          initialSources={composeSources}
+          open={composeOpen}
+          onClose={() => setComposeOpen(false)}
+        />
+      )}
       {evalOpen && sectionUnits[activeSectionIndex] && (
         <EvaluatorPanel
           slug={slug}

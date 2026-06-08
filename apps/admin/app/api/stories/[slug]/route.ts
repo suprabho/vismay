@@ -142,6 +142,36 @@ export async function PUT(
   return NextResponse.json({ ok: true })
 }
 
+/**
+ * Permanently delete a story (markdown/config/sidecars + charts + compose
+ * sources). Admin-only — surfaced by the "delete draft" action. Destructive and
+ * irreversible; the UI guards it behind a confirm.
+ */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const { slug } = await params
+  if (!SAFE_SLUG.test(slug)) return NextResponse.json({ error: 'bad slug' }, { status: 400 })
+
+  const src = getContentSource()
+  if ((await src.readMarkdown(slug)) == null) {
+    return NextResponse.json({ error: 'not found' }, { status: 404 })
+  }
+  try {
+    await src.deleteStory(slug)
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'delete failed' },
+      { status: 500 }
+    )
+  }
+  revalidatePaths(slug)
+  revalidatePath('/vizmaya')
+  return NextResponse.json({ ok: true })
+}
+
 function revalidatePaths(slug: string) {
   // Flush every route that renders this story so edits go live without a rebuild.
   revalidatePath(`/story/${slug}`)

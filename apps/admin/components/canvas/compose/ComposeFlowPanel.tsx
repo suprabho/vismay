@@ -5,27 +5,41 @@ import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/c
 import type { StorySource } from '@vismay/content-source/storySources'
 
 /**
- * The canvas-native compose flow, as an overlay on the canvas page (shown only
- * when the story has a compose_state). Walks the author through
+ * The canvas-native compose flow. Walks the author through
  * sources → angles → outline → materialise, persisting each step to
  * compose_state via the canvas/compose routes. On materialise it reloads so the
- * Rete2 graph re-reads the freshly-created sections.
+ * Rete2 graph (or editor) re-reads the freshly-created sections.
+ *
+ * Two exports:
+ *  - `ComposeFlow`        — the pipeline UI with no positioning of its own.
+ *                           Embedded in both the canvas drawer and the editor's
+ *                           "Research & outline" tab.
+ *  - `ComposeFlowPanel`   — a controlled right-side drawer wrapper around it,
+ *                           used on the canvas. It stays MOUNTED while open is
+ *                           toggled (visibility only) so in-session research
+ *                           survives close → reopen.
  */
 
-interface Props {
+interface ComposeFlowProps {
   slug: string
   initialState: ComposeState
   initialSources: StorySource[]
+  /**
+   * Toggled true by the parent when the surface is (re)shown. On a false→true
+   * transition `ComposeFlow` re-pulls the sources list so async PDF extraction
+   * that settled while the drawer was hidden shows up. Optional — the editor
+   * tab leaves it unset (always visible).
+   */
+  active?: boolean
 }
 
 const base = `/api/stories`
 
-export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) {
+export function ComposeFlow({ slug, initialState, initialSources, active }: ComposeFlowProps) {
   const [st, setSt] = useState<ComposeState>(initialState)
   const [sources, setSources] = useState<StorySource[]>(initialSources)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [collapsed, setCollapsed] = useState(false)
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
   const [angleFeedback, setAngleFeedback] = useState('')
@@ -59,6 +73,27 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       clearInterval(id)
     }
   }, [pending, slug])
+
+  // Refresh-on-reopen backstop: when the drawer is re-shown, re-pull sources so
+  // anything that changed while it was hidden (e.g. a worker finishing) is in
+  // sync even if polling had already stopped.
+  useEffect(() => {
+    if (!active) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`${base}/${slug}/canvas/compose/sources`, { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as { sources?: StorySource[] }
+        if (!cancelled && Array.isArray(data.sources)) setSources(data.sources)
+      } catch {
+        // ignore — the poll/interval covers the live case
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [active, slug])
 
   async function call<T>(label: string, path: string, init: RequestInit): Promise<T | null> {
     setBusy(label)
@@ -119,6 +154,16 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       method: 'DELETE',
     })
     if (data?.ok) setSources((s) => s.filter((x) => x.id !== id))
+  }
+  // Re-run extraction for a source that previously failed (or to refresh it).
+  // The original file/link is retained server-side, so this re-reads it.
+  async function reextract(id: string) {
+    const data = await call<{ source: StorySource }>('reextract', 'sources', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (data?.source) setSources((s) => s.map((x) => (x.id === id ? data.source : x)))
   }
 
   // ── Angles ─────────────────────────────────────────────────────────────
@@ -220,7 +265,6 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       const slugPart =
         (p.section ?? 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'image'
       try {
-        // eslint-disable-next-line no-await-in-loop
         const res = await fetch(`${base}/${slug}/assets/generate`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -243,301 +287,327 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   const phase = st.phase
   const acceptedCount = st.outline.filter((e) => e.status === 'accepted').length
 
-  if (collapsed) {
-    return (
-      <button
-        onClick={() => setCollapsed(false)}
-        className="fixed right-3 top-3 z-50 rounded-md border border-sky-500/40 bg-neutral-900/90 px-3 py-1.5 text-xs font-medium text-sky-200 shadow-lg hover:border-sky-400"
-      >
-        Compose · {phase}
-      </button>
-    )
-  }
-
   return (
-    <div className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">Compose</span>
-          <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-neutral-400">
-            {phase}
-          </span>
+    <div className="space-y-4">
+      {error && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
         </div>
-        <button onClick={() => setCollapsed(true)} className="text-neutral-400 hover:text-neutral-200">
-          ✕
-        </button>
-      </div>
+      )}
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {error && (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            {error}
-          </div>
-        )}
+      {/* Step indicator */}
+      <ol className="flex gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
+        {(['sources', 'angles', 'outline', 'content'] as const).map((p) => (
+          <li
+            key={p}
+            className={`flex-1 rounded px-1.5 py-1 text-center ${
+              phase === p ? 'bg-sky-500/20 text-sky-300' : 'bg-white/5'
+            }`}
+          >
+            {p}
+          </li>
+        ))}
+      </ol>
 
-        {/* Step indicator */}
-        <ol className="flex gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-          {(['sources', 'angles', 'outline', 'content'] as const).map((p) => (
+      {st.attached && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+          Composing into an existing story — materialised sections are{' '}
+          <span className="font-medium">appended</span>, leaving your current content untouched.
+        </div>
+      )}
+
+      {/* ── Sources ── */}
+      <section className="space-y-2">
+        <h3 className="text-xs font-medium text-neutral-300">
+          Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
+        </h3>
+        <ul className="space-y-1">
+          {sources.map((s) => (
             <li
-              key={p}
-              className={`flex-1 rounded px-1.5 py-1 text-center ${
-                phase === p ? 'bg-sky-500/20 text-sky-300' : 'bg-white/5'
-              }`}
+              key={s.id}
+              className="flex items-center justify-between gap-2 rounded border border-white/10 bg-neutral-900/50 px-2 py-1 text-xs"
             >
-              {p}
+              <span className="min-w-0 flex-1 truncate" title={s.error ?? s.title ?? s.sourceUrl ?? s.filename ?? ''}>
+                {s.title ?? s.sourceUrl ?? s.filename ?? 'source'}
+              </span>
+              <span
+                className={
+                  s.status === 'extracted'
+                    ? 'text-emerald-400'
+                    : s.status === 'failed'
+                      ? 'text-red-400'
+                      : 'text-neutral-500'
+                }
+              >
+                {s.status === 'extracted' ? '✓' : s.status === 'failed' ? '✗' : '…'}
+              </span>
+              {s.status === 'failed' && (
+                <button
+                  onClick={() => reextract(s.id)}
+                  disabled={!!busy}
+                  title={`Re-run extraction${s.error ? ` — ${s.error}` : ''}`}
+                  className="text-neutral-400 hover:text-sky-300 disabled:opacity-40"
+                >
+                  {busy === 'reextract' ? '…' : '↻'}
+                </button>
+              )}
+              <button onClick={() => removeSource(s.id)} className="text-neutral-500 hover:text-red-300">
+                ✕
+              </button>
             </li>
           ))}
-        </ol>
-
-        {st.attached && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-            Composing into an existing story — materialised sections are{' '}
-            <span className="font-medium">appended</span>, leaving your current content untouched.
-          </div>
+        </ul>
+        <div className="flex gap-1">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addUrl()}
+            placeholder="Paste a link…"
+            className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+          />
+          <button onClick={addUrl} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+            Add
+          </button>
+        </div>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="…or paste text"
+          rows={2}
+          className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+        />
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => text.trim() && addText()} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+            Add text
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
+            className="text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-neutral-200"
+          />
+        </div>
+        <button
+          onClick={genAngles}
+          disabled={!!busy || extracted === 0}
+          className="w-full rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+        >
+          {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
+        </button>
+        {pending > 0 && (
+          <p className="text-[11px] text-amber-300/80">
+            Extracting {pending} PDF{pending > 1 ? 's' : ''} with Gemma — this runs in the
+            background and can take a few minutes. Statuses update automatically.
+          </p>
         )}
+      </section>
 
-        {/* ── Sources ── */}
-        <section className="space-y-2">
+      {/* ── Angles ── */}
+      {st.angles.length > 0 && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">Pick an angle</h3>
+          {st.angles.map((a) => (
+            <label
+              key={a.id}
+              className={`block cursor-pointer rounded border p-2 text-xs ${
+                st.chosenAngleId === a.id ? 'border-sky-500/60 bg-sky-500/10' : 'border-white/10 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  checked={st.chosenAngleId === a.id}
+                  onChange={() => pickAngle(a.id)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <div className="font-medium text-neutral-100">{a.title}</div>
+                  <div className="mt-0.5 text-neutral-400">{a.thesis}</div>
+                </div>
+              </div>
+            </label>
+          ))}
+          <input
+            value={angleFeedback}
+            onChange={(e) => setAngleFeedback(e.target.value)}
+            placeholder="Regenerate with a note (optional)…"
+            className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+          />
+          <div className="flex gap-2">
+            <button onClick={genAngles} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+              Regenerate
+            </button>
+            <button
+              onClick={genOutline}
+              disabled={!!busy || !st.chosenAngleId}
+              className="flex-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+            >
+              {busy === 'outline' ? 'Outlining…' : 'Generate outline →'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ── Outline ── */}
+      {phase === 'outline' && st.outline.length > 0 && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
           <h3 className="text-xs font-medium text-neutral-300">
-            Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
+            Outline — click status to accept/reject
           </h3>
           <ul className="space-y-1">
-            {sources.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-2 rounded border border-white/10 bg-neutral-900/50 px-2 py-1 text-xs"
-              >
-                <span className="min-w-0 flex-1 truncate" title={s.title ?? s.sourceUrl ?? s.filename ?? ''}>
-                  {s.title ?? s.sourceUrl ?? s.filename ?? 'source'}
-                </span>
-                <span
-                  className={
-                    s.status === 'extracted'
-                      ? 'text-emerald-400'
-                      : s.status === 'failed'
-                        ? 'text-red-400'
-                        : 'text-neutral-500'
-                  }
-                >
-                  {s.status === 'extracted' ? '✓' : s.status === 'failed' ? '✗' : '…'}
-                </span>
-                <button onClick={() => removeSource(s.id)} className="text-neutral-500 hover:text-red-300">
-                  ✕
-                </button>
+            {st.outline.map((e, i) => (
+              <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => cycleStatus(e.id)}
+                    className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${
+                      e.status === 'accepted'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : e.status === 'rejected'
+                          ? 'bg-red-500/20 text-red-300'
+                          : 'bg-white/10 text-neutral-400'
+                    }`}
+                  >
+                    {e.status}
+                  </button>
+                  <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                  <span className="text-[10px] text-neutral-500">{e.kind}</span>
+                  <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
+                    ↑
+                  </button>
+                  <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
+                    ↓
+                  </button>
+                </div>
+                <p className="mt-1 line-clamp-2 text-neutral-400">{e.intent}</p>
               </li>
             ))}
           </ul>
-          <div className="flex gap-1">
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              placeholder="Paste a link…"
-              className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-            />
-            <button onClick={addUrl} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-              Add
-            </button>
-          </div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="…or paste text"
-            rows={2}
+          <input
+            value={outlineFeedback}
+            onChange={(e) => setOutlineFeedback(e.target.value)}
+            placeholder="Regenerate outline with a note (optional)…"
             className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
           />
-          <div className="flex items-center justify-between gap-2">
-            <button onClick={() => text.trim() && addText()} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-              Add text
+          <div className="flex gap-2">
+            <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+              Regenerate
             </button>
-            <input
-              ref={fileRef}
-              type="file"
-              onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
-              className="text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-neutral-200"
-            />
+            <button
+              onClick={materialize}
+              disabled={!!busy || acceptedCount === 0}
+              className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
+            >
+              {busy === 'materialize'
+                ? 'Creating…'
+                : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
+            </button>
           </div>
-          <button
-            onClick={genAngles}
-            disabled={!!busy || extracted === 0}
-            className="w-full rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-          >
-            {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
-          </button>
-          {pending > 0 && (
-            <p className="text-[11px] text-amber-300/80">
-              Extracting {pending} PDF{pending > 1 ? 's' : ''} with Gemma — this runs in the
-              background and can take a few minutes. Statuses update automatically.
-            </p>
-          )}
         </section>
+      )}
 
-        {/* ── Angles ── */}
-        {st.angles.length > 0 && (
-          <section className="space-y-2 border-t border-white/10 pt-3">
-            <h3 className="text-xs font-medium text-neutral-300">Pick an angle</h3>
-            {st.angles.map((a) => (
-              <label
-                key={a.id}
-                className={`block cursor-pointer rounded border p-2 text-xs ${
-                  st.chosenAngleId === a.id ? 'border-sky-500/60 bg-sky-500/10' : 'border-white/10 hover:border-white/30'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <input
-                    type="radio"
-                    checked={st.chosenAngleId === a.id}
-                    onChange={() => pickAngle(a.id)}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <div className="font-medium text-neutral-100">{a.title}</div>
-                    <div className="mt-0.5 text-neutral-400">{a.thesis}</div>
-                  </div>
-                </div>
-              </label>
-            ))}
-            <input
-              value={angleFeedback}
-              onChange={(e) => setAngleFeedback(e.target.value)}
-              placeholder="Regenerate with a note (optional)…"
-              className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-            />
-            <div className="flex gap-2">
-              <button onClick={genAngles} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-                Regenerate
-              </button>
-              <button
-                onClick={genOutline}
-                disabled={!!busy || !st.chosenAngleId}
-                className="flex-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-              >
-                {busy === 'outline' ? 'Outlining…' : 'Generate outline →'}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* ── Outline ── */}
-        {phase === 'outline' && st.outline.length > 0 && (
-          <section className="space-y-2 border-t border-white/10 pt-3">
-            <h3 className="text-xs font-medium text-neutral-300">
-              Outline — click status to accept/reject
-            </h3>
-            <ul className="space-y-1">
-              {st.outline.map((e, i) => (
+      {/* ── Sections: per-section CONTENT + VISUAL ── */}
+      {(phase === 'content' || phase === 'visual' || phase === 'done') && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">Write sections</h3>
+          <ul className="space-y-2">
+            {st.outline
+              .filter((e) => e.sectionId)
+              .map((e) => (
                 <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => cycleStatus(e.id)}
-                      className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${
-                        e.status === 'accepted'
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : e.status === 'rejected'
-                            ? 'bg-red-500/20 text-red-300'
-                            : 'bg-white/10 text-neutral-400'
-                      }`}
-                    >
-                      {e.status}
-                    </button>
+                  <div className="flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                    <span className="text-[10px] text-neutral-500">{e.kind}</span>
-                    <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                      ↑
-                    </button>
-                    <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                      ↓
+                    {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
+                  </div>
+                  <div className="mt-1 flex gap-1">
+                    <input
+                      value={sectionFb[e.sectionId!] ?? ''}
+                      onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
+                      placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
+                      className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
+                    />
+                    <button
+                      onClick={() => genSection(e.sectionId!)}
+                      disabled={!!busy}
+                      className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+                    >
+                      {busy === `section:${e.sectionId}`
+                        ? '…'
+                        : written.has(e.sectionId!)
+                          ? 'Rewrite'
+                          : 'Write'}
                     </button>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-neutral-400">{e.intent}</p>
                 </li>
               ))}
-            </ul>
-            <input
-              value={outlineFeedback}
-              onChange={(e) => setOutlineFeedback(e.target.value)}
-              placeholder="Regenerate outline with a note (optional)…"
-              className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-            />
-            <div className="flex gap-2">
-              <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-                Regenerate
-              </button>
-              <button
-                onClick={materialize}
-                disabled={!!busy || acceptedCount === 0}
-                className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
-              >
-                {busy === 'materialize'
-                  ? 'Creating…'
-                  : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* ── Sections: per-section CONTENT + VISUAL ── */}
-        {(phase === 'content' || phase === 'visual' || phase === 'done') && (
-          <section className="space-y-2 border-t border-white/10 pt-3">
-            <h3 className="text-xs font-medium text-neutral-300">Write sections</h3>
-            <ul className="space-y-2">
-              {st.outline
-                .filter((e) => e.sectionId)
-                .map((e) => (
-                  <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                      {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
-                    </div>
-                    <div className="mt-1 flex gap-1">
-                      <input
-                        value={sectionFb[e.sectionId!] ?? ''}
-                        onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
-                        placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
-                        className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
-                      />
-                      <button
-                        onClick={() => genSection(e.sectionId!)}
-                        disabled={!!busy}
-                        className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-                      >
-                        {busy === `section:${e.sectionId}`
-                          ? '…'
-                          : written.has(e.sectionId!)
-                            ? 'Rewrite'
-                            : 'Write'}
-                      </button>
-                    </div>
-                  </li>
-                ))}
-            </ul>
-            {(st.imagePrompts?.length ?? 0) > 0 && (
-              <button
-                onClick={genImages}
-                disabled={!!busy}
-                className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
-              >
-                {busy === 'images'
-                  ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
-                  : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
-              </button>
-            )}
+          </ul>
+          {(st.imagePrompts?.length ?? 0) > 0 && (
             <button
-              onClick={() => window.location.reload()}
-              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
-            >
-              Reload canvas to view ↻
-            </button>
-            <button
-              onClick={finish}
+              onClick={genImages}
               disabled={!!busy}
-              className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
+              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
             >
-              {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
+              {busy === 'images'
+                ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
+                : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
             </button>
-          </section>
-        )}
+          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
+          >
+            Reload to view ↻
+          </button>
+          <button
+            onClick={finish}
+            disabled={!!busy}
+            className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
+          >
+            {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
+          </button>
+        </section>
+      )}
+    </div>
+  )
+}
+
+interface PanelProps {
+  slug: string
+  initialState: ComposeState
+  initialSources: StorySource[]
+  /** Controlled visibility. The drawer stays mounted while this toggles so the
+   *  research inside survives close → reopen. */
+  open: boolean
+  onClose: () => void
+}
+
+/**
+ * Canvas drawer wrapper. Renders the fixed right-side panel; visibility is
+ * controlled by `open` (display toggle — NOT conditional mount) so the
+ * `ComposeFlow` inside keeps its state when dismissed and reopened.
+ */
+export function ComposeFlowPanel({ slug, initialState, initialSources, open, onClose }: PanelProps) {
+  return (
+    <div
+      className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur"
+      style={{ display: open ? 'flex' : 'none' }}
+    >
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <span className="text-sm font-semibold">Research &amp; outline</span>
+        <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200" aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <ComposeFlow
+          slug={slug}
+          initialState={initialState}
+          initialSources={initialSources}
+          active={open}
+        />
       </div>
     </div>
   )
 }
+
+export default ComposeFlowPanel

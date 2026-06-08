@@ -5,6 +5,8 @@ import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyCon
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { defaultNarrationText } from '@vismay/content-source/storyTts'
 import { getFullVideo, type CachedVideo } from '@vismay/content-source/storyVideo'
+import { readComposeState, type ComposeState } from '@vismay/content-source/composeState'
+import { listStorySources, type StorySource } from '@vismay/content-source/storySources'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
 import type { NarrationUnit } from '@/components/vizmaya/NarrationEditor'
@@ -24,6 +26,22 @@ export interface StoryEditorData {
   tts_yaml: string | null
   videoCache: VideoCache
   appSlug: string | null
+  /** Compose scaffold for the "Research & outline" tab (null if not composing). */
+  composeState: ComposeState | null
+  composeSources: StorySource[]
+}
+
+// Best-effort compose scaffold load — DB-only, like the video/asset lookups. In
+// fs-only dev (no Supabase) both calls throw and we fall back to null/[] so the
+// editor still renders; the tab then offers to start a fresh compose.
+async function loadCompose(
+  slug: string,
+): Promise<{ state: ComposeState | null; sources: StorySource[] }> {
+  const [state, sources] = await Promise.all([
+    readComposeState(slug).catch(() => null),
+    listStorySources(slug).catch(() => []),
+  ])
+  return { state, sources }
 }
 
 // Walk a parsed YAML tree and collect every `chart:` string. A bare id
@@ -101,7 +119,7 @@ async function loadAssets(slug: string): Promise<AssetListEntry[]> {
 // Returns null when the markdown source is missing (the page should 404).
 export async function loadStoryEditorData(slug: string): Promise<StoryEditorData | null> {
   const src = getContentSource()
-  const videoCache = await loadVideoCache(slug)
+  const [videoCache, compose] = await Promise.all([loadVideoCache(slug), loadCompose(slug)])
   const [markdown, config_yaml, jsonChartIds, tts_yaml, assets, metas] = await Promise.all([
     src.readMarkdown(slug),
     src.readConfigYaml(slug),
@@ -169,5 +187,7 @@ export async function loadStoryEditorData(slug: string): Promise<StoryEditorData
     tts_yaml: tts_yaml ?? null,
     videoCache,
     appSlug,
+    composeState: compose.state,
+    composeSources: compose.sources,
   }
 }

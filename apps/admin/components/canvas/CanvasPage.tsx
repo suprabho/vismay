@@ -12,8 +12,6 @@ import { readComposeState } from '@vismay/content-source/composeState'
 import { listStorySources } from '@vismay/content-source/storySources'
 import { vizmayaPublicUrl } from '@/lib/publicSite'
 import CanvasClient from '@/components/canvas/CanvasClient'
-import { ComposeFlowPanel } from '@/components/canvas/compose/ComposeFlowPanel'
-import { ComposeStartButton } from '@/components/canvas/compose/ComposeStartButton'
 import {
   canvasFrameId,
   outputSpecsForUnit,
@@ -126,21 +124,16 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
   ])
 
   return (
-    <>
-      <CanvasClient
-        slug={slug}
-        units={units}
-        sources={sources}
-        theme={story.frontmatter.theme ?? null}
-        signedSrcById={signedSrcById}
-        moduleTypes={moduleTypes}
-        format={story.frontmatter.format === 'deck' ? 'deck' : 'map'}
-      />
-      {composeState ? (
-        <ComposeFlowPanel slug={slug} initialState={composeState} initialSources={composeSources} />
-      ) : (
-        <ComposeStartButton slug={slug} />
-      )}
-    </>
+    <CanvasClient
+      slug={slug}
+      units={units}
+      sources={sources}
+      theme={story.frontmatter.theme ?? null}
+      signedSrcById={signedSrcById}
+      moduleTypes={moduleTypes}
+      format={story.frontmatter.format === 'deck' ? 'deck' : 'map'}
+      composeState={composeState}
+      composeSources={composeSources}
+    />
   )
 }

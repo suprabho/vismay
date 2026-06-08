@@ -10,15 +10,18 @@ import DeckComposerPanel from './DeckComposerPanel'
 import FileActions from './FileActions'
 import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
+import { ComposeFlow } from '@/components/canvas/compose/ComposeFlowPanel'
 import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
 import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
 import type { CachedVideo } from '@vismay/content-source/storyVideo'
+import type { ComposeState } from '@vismay/content-source/composeState'
+import type { StorySource } from '@vismay/content-source/storySources'
 import type { AssetListEntry } from '@/app/api/stories/[slug]/assets/route'
 
-type Tab = 'theme' | 'edit' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
+type Tab = 'theme' | 'edit' | 'compose' | 'deck' | 'charts' | 'assets' | 'narration' | 'settings'
 
 interface ChartEntry {
   id: string
@@ -36,11 +39,14 @@ interface InitialState {
     '9:16': CachedVideo | null
     '16:9': CachedVideo | null
   }
+  composeState: ComposeState | null
+  composeSources: StorySource[]
 }
 
 const TABS: { id: Tab; label: string; deckOnly?: boolean }[] = [
   { id: 'theme', label: 'Theme' },
   { id: 'edit', label: 'Markdown + Config' },
+  { id: 'compose', label: 'Research & outline' },
   { id: 'deck', label: 'Deck', deckOnly: true },
   { id: 'charts', label: 'Charts' },
   { id: 'assets', label: 'Assets' },
@@ -55,7 +61,7 @@ interface BulkResult {
   errors: string[]
 }
 
-const TAB_IDS = new Set<Tab>(['theme', 'edit', 'deck', 'charts', 'assets', 'narration', 'settings'])
+const TAB_IDS = new Set<Tab>(['theme', 'edit', 'compose', 'deck', 'charts', 'assets', 'narration', 'settings'])
 function isTab(v: string | null): v is Tab {
   return v != null && TAB_IDS.has(v as Tab)
 }
@@ -408,6 +414,21 @@ export default function EditorClient({
             </div>
           </div>
         )}
+        {tab === 'compose' && (
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
+            {initial.composeState ? (
+              <div className="max-w-xl">
+                <ComposeFlow
+                  slug={slug}
+                  initialState={initial.composeState}
+                  initialSources={initial.composeSources}
+                />
+              </div>
+            ) : (
+              <ComposeStartInline slug={slug} />
+            )}
+          </div>
+        )}
         {tab === 'deck' && isDeck && (
           <DeckComposerPanel
             value={config}
@@ -652,6 +673,56 @@ function ChartsList({
           )}
         </ul>
       )}
+    </div>
+  )
+}
+
+function ComposeStartInline({ slug }: { slug: string }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function start() {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/stories/${slug}/canvas/compose/start`, { method: 'POST' })
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? 'Failed to start compose')
+        setBusy(false)
+        return
+      }
+      // Reload so the page re-loads with the fresh compose scaffold and the tab
+      // swaps to the full flow.
+      window.location.reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="max-w-md space-y-3">
+      <h3 className="text-sm font-medium text-neutral-200">Research &amp; outline</h3>
+      <p className="text-sm text-neutral-400">
+        Add sources (links, PDFs, pasted text), generate story angles, and draft an
+        outline — then materialize it into sections. Progress is saved and also
+        shows up on the canvas.
+      </p>
+      {error && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={start}
+        disabled={busy}
+        className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+      >
+        {busy ? 'Starting…' : '✨ Start research & outline'}
+      </button>
     </div>
   )
 }
