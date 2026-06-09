@@ -1,3 +1,26 @@
+# Story config — _sample-adani-map  (CARTOGRAPHIC reference)
+#
+# This is the "Kashmir-style" cartographic recreation of the Adani story:
+# a scroll-driven PROSE RAIL over a live map, with charts attached via the
+# legacy `chart: data:<id>` field and place data carried by `map.pins`.
+#
+# It deliberately uses NO `foreground:` panels. On a map story a foreground
+# slot SUPPRESSES the section's prose rail (see DECK_KINDS_NO_TEXT_CARD in
+# MapStorySection.tsx) — which is why the earlier deck version of this file
+# rendered none of the rich narrative in _sample-adani-map.md. The deck
+# (panel-over-map) version is preserved in git history.
+#
+# Mode/format guide: apps/vizmaya-fyi/docs/map-story-authoring.md
+#
+# Section `text:` must match a markdown `#`/`##` heading (anchor lookup is
+# level-agnostic + case/dash tolerant). Charts resolve from
+# _sample-adani-map/charts/<id>.json via `chart: data:<id>`.
+#
+# NOTE — choropleth: this story's data is point/site-based (specific airports,
+# Khavda, Godda, silo corridors), so the faithful cartographic treatment is a
+# prose rail + rich pins, NOT a forced state choropleth. For an areal-metric
+# example of `map.regions`, see kashmir-1941-land-reform.config.yaml.
+
 defaults:
   scroll:
     mode: continuous
@@ -8,22 +31,14 @@ defaults:
   pinColor: "#d4612a"
   pinRadius: 8
   flySpeed: 1.2
+
 sections:
+
+  # ── HERO ──────────────────────────────────────────────
   - id: a-decade-of-deals
     text: A Decade of Deals
-    kind: cover
-    foreground:
-      layout: panel-right
-      regions:
-        text:
-          - type: bigStat
-            value: "6"
-            unit: airports
-            label: Won in a single round — zero prior experience
-            delta: ₹85,000+ crore across five sectors in one decade
-            deltaColor: muted
-            color: accent2
-            align: left
+    kind: hero
+    eyebrow: "Adani Group · Five Sectors · One Decade"
     map:
       center:
         - 78.9629
@@ -99,41 +114,14 @@ sections:
           color: "#9CA3AF"
           radius: 6
 
-
+  # ── The pattern, stated ───────────────────────────────
   - id: five-sectors-one-pattern
     text: Five Sectors, One Pattern
-    kind: stat
-    foreground:
-      layout: panel-right
-      regions:
-        text:
-          - type: bodyText
-            from: text
-            content: 4 of 5 claims rated substantially accurate. In each sector, a safeguard proposed by a government body was overruled — and Adani was among the primary beneficiaries.
-            heading: Five Sectors, One Pattern
-            showHeading: true
-            textStyle:
-              size: small
-              color: muted
-        chart:
-          - type: keyValue
-            title: Safeguard Dropped → Adani Outcome
-            items:
-              - key: ✈ Airports
-                value: 2-airport cap & experience req. dropped → Adani wins all 6
-                color: accent
-              - key: 🌾 Grain Silos
-                value: FCI anti-monopoly clause dropped → ₹9,700 cr in contracts
-                color: accent
-              - key: ☀ Kutch RE Land
-                value: Defence border rules relaxed → largest share (~19,000 ha)
-                color: accent
-              - key: ⚡ Godda Power
-                value: SEZ + Telegraph Act + Aug 2024 amendment → only 100% export plant
-                color: accent
-              - key: 🌿 Western Ghats
-                value: Conflict of interest documented; final clearance ultimately denied
-                color: muted
+    kind: text
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
     map:
       center:
         - 78.9629
@@ -168,37 +156,17 @@ sections:
           label: Western Ghats Clearances
           color: muted
 
+  # ── Airports — chart + prose ──────────────────────────
   - id: the-airport-clean-sweep
     text: The Airport Clean Sweep
-    kind: data
-    foreground:
-      layout: panel-right
-      regions:
-        chart:
-          - type: chart
-            id: airport-bids-comparison
-        text:
-          - type: keyValue
-            title: The Cap That Was Never Imposed
-            items:
-              - key: DEA recommended cap
-                value: 2 airports per bidder
-                color: positive
-              - key: Cap actually imposed
-                value: None
-                color: red
-              - key: DEA note discussed at PPPAC (11 Dec 2018)
-                value: Not on the agenda
-                color: amber
-              - key: Adani's prior airport experience
-                value: Zero
-                color: red
-              - key: Airports won by Adani
-                value: All 6 of 6
-                color: accent2
-              - key: AAI windfall (ICRA est.)
-                value: ₹600+ crore / year
-                color: muted
+    kind: text
+    chart: data:airport-bids-comparison
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
     map:
       center:
         - 76.5
@@ -226,34 +194,19 @@ sections:
           color: amber
           radius: 7
 
+  # ── Rupee concentration — chart + prose ───────────────
   - id: where-the-rupees-flowed
     text: Where the Rupees Flowed
-    kind: data
-    foreground:
-      layout: panel-right
-      regions:
-        chart:
-          - type: chart
-            id: contract-value-by-sector
-        text:
-          - type: keyValue
-            title: "Adani Group: Rupee Concentration by Sector"
-            items:
-              - key: FCI Grain Silos
-                value: ₹9,700+ cr (110 of 134 contracts)
-                color: accent
-              - key: Western Ghats MoU †
-                value: ₹60,000 cr (proposed only — EAC rejected flagship)
-                color: muted
-              - key: Airports (6 + Mumbai CSMIA)
-                value: ₹177/pax bid; CSMIA acquired 2020
-                color: accent2
-              - key: Khavda RE Park
-                value: ~19,000 ha · ~9.5 GW (largest share in 30 GW park)
-                color: teal
-              - key: Godda (Jharkhand)
-                value: "Only Indian plant: 100% export to Bangladesh; SEZ status"
-                color: amber
+    kind: text
+    chart: data:contract-value-by-sector
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
     map:
       center:
         - 80.9
@@ -288,40 +241,17 @@ sections:
           label: "FCI Silo Hub: Delhi NCR / North India cluster"
           color: accent
 
+  # ── Silos — chart + prose ─────────────────────────────
   - id: the-silo-duopoly
     text: The Silo Duopoly
-    kind: bodyText
-    foreground:
-      layout: panel-right
-      regions:
-        chart:
-          - type: chart
-            id: silo-contract-concentration
-        text:
-          - type: keyValue
-            title: The Dropped Safeguard
-            items:
-              - key: Programme value
-                value: ~₹20,000 crore
-                color: accent2
-              - key: Total contracts
-                value: "134"
-                color: muted
-              - key: Won by Adani + Leap India
-                value: 110 of 134 (~77.5%)
-                color: red
-              - key: Capacity cornered
-                value: 46.5 LMT of 60 LMT
-                color: red
-              - key: Adani alone
-                value: ₹9,700+ crore
-                color: accent2
-              - key: Anti-monopoly clause proposed by
-                value: FCI (nodal agency)
-                color: positive
-              - key: Clause dropped by
-                value: NITI Aayog + DEA, 2022
-                color: red
+    kind: text
+    chart: data:silo-contract-concentration
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
     map:
       center:
         - 77.5
@@ -329,6 +259,10 @@ sections:
       zoom: 5.2
       pitch: 30
       bearing: 0
+      # The grain-silo case is the one genuinely AREAL slice (contract/capacity
+      # share by north-Indian state). It is shown here as pins; to render it as
+      # a choropleth instead, attach `map.regions` with an India-states GeoJSON
+      # and per-state values — see docs/map-story-authoring.md → "Choropleth".
       pins:
         - coordinates:
             - 75.8
@@ -355,40 +289,18 @@ sections:
           color: "#f59e0b"
           radius: 8
 
+  # ── Khavda — chart + prose ────────────────────────────
   - id: border-land-and-the-rann-of-kutch
     text: Border Land and the Rann of Kutch
-    kind: bodyText
-    foreground:
-      layout: panel-right
-      regions:
-        text:
-          - type: keyValue
-            title: Khavda Park — Developer Parcels
-            items:
-              - key: Adani Green Energy
-                value: ~19,000 ha / ~9.5 GW
-                color: amber
-              - key: SECI (surrendered Jul 2023)
-                value: 23,000 ha → returned to state
-                color: muted
-              - key: NTPC
-                value: ~4,750 MW
-                color: accent
-              - key: GSECL / GIPCL
-                value: Further allocations
-                color: teal
-              - key: Suzlon (Sarjan Realties)
-                value: Present
-                color: teal
-              - key: Total park
-                value: ~72,600 ha · 30 GW · 445 sq km
-                color: accent2
-              - key: Defence rules relaxed
-                value: 8 May 2023 (MoD guidelines)
-                color: muted
-              - key: Nodal agency
-                value: GPCL (Gujarat state entity)
-                color: muted
+    kind: text
+    chart: data:khavda-land-allocation
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
     map:
       center:
         - 69.8
@@ -422,30 +334,16 @@ sections:
           color: "#50E3C2"
           radius: 8
 
+  # ── Godda — prose ─────────────────────────────────────
   - id: godda-india-s-only-100-export-plant
     text: "Godda: India's Only 100% Export Plant"
-    kind: quote
-    foreground:
-      layout: panel-left
-      regions:
-        text:
-          - type: quote
-            text: Godda is, factually, the only Indian plant contracted to export **100% of its output** to a neighbouring country.
-            attribution: Cross-party fact-check conclusion — undisputed by all parties
-            align: left
-        chart:
-          - type: keyValue
-            title: Three Unprecedented Regulatory Privileges
-            items:
-              - key: SEZ Status
-                value: No precedent for a captive cross-border power facility in India
-                color: red
-              - key: Telegraph Act Powers
-                value: Right-of-way to lay dedicated Bangladesh transmission line — bypassing normal private-developer easements
-                color: amber
-              - key: Aug 2024 Grid Amendment
-                value: MoP OM amended clauses 5.2(a) & 8.9 — 'may permit' co-connection to national grid; in practice applies only to Godda
-                color: accent2
+    kind: text
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
     map:
       center:
         - 87.2
@@ -473,36 +371,17 @@ sections:
           color: teal
           radius: 6
 
+  # ── Verdict ───────────────────────────────────────────
   - id: pattern-or-coincidence-you-decide
     text: Pattern or Coincidence? You Decide
-    kind: closing
-    foreground:
-      layout: panel-right
-      regions:
-        text:
-          - type: keyValue
-            title: "Five Sectors: Safeguard Scorecard"
-            items:
-              - key: FCI Silos — DEA / NITI Aayog
-                value: Accurate
-                color: positive
-              - key: Airports — DEA / NITI Aayog
-                value: Accurate
-                color: positive
-              - key: Khavda RE Land — Defence Ministry
-                value: Accurate
-                color: positive
-              - key: Godda Export Plant — MoP
-                value: Accurate
-                color: positive
-              - key: Western Ghats EAC — Conflict of Interest
-                value: Overstated
-                color: amber
-        chart:
-          - type: quote
-            text: A bidder lacking sufficient technical capacity can well jeopardise the project.
-            attribution: NITI Aayog warning, Dec 2018 · Six airports later, the question remains open.
-            align: left
+    kind: text
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
     map:
       center:
         - 78.9629
