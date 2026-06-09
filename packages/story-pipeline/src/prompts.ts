@@ -1,5 +1,5 @@
 import { GEN_FOREGROUND_TYPES, getForegroundLayout } from './vizEngine'
-import { SECTION_KINDS } from './schema'
+import { SECTION_KINDS, sectionKindsFor } from './schema'
 import type {
   SourceDoc,
   ResearchBrief,
@@ -352,12 +352,19 @@ function refineBlock(noun: string, refine?: { feedback: string; previous: unknow
 // CONTENT pass — prose only (no visual body).
 
 export function contentSystem(format: StoryFormat): string {
+  const kindLine =
+    format === 'map'
+      ? `- kind: one of ${sectionKindsFor('map').join(' | ')}. (A MAP story uses these ` +
+        `narrative kinds only — they keep the scroll prose rail; deck/panel kinds would ` +
+        `suppress it and leave the prose unrendered.)\n`
+      : `- kind: one of ${SECTION_KINDS.join(' | ')}.\n`
   return (
     `You write the PROSE for ONE section of a Vizmaya ${format} data story.\n\n` +
     `Produce:\n` +
     `- heading: short and specific (becomes the markdown ## and the config text anchor).\n` +
     `- paragraphs: the body prose, one string per paragraph, factual magazine register.\n` +
-    `- kind: one of ${SECTION_KINDS.join(' | ')}.\n\n` +
+    kindLine +
+    `\n` +
     `Cover the section's planned "expected content" and honour its context in the arc. ` +
     `Ground every figure in the provided material; do not invent data. No visual layout here ` +
     `— the visual is designed in a later pass.`

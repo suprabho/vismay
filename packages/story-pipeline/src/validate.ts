@@ -1,4 +1,5 @@
 import { getVizModule, getForegroundLayout } from './vizEngine'
+import { sectionKindsFor } from './schema'
 import type { GeneratedStory, GeneratedSection, ValidationIssue } from './types'
 
 /** A foreground layer is any object with a string `type`. */
@@ -71,6 +72,18 @@ export function validateStory(story: GeneratedStory): ValidationIssue[] {
       seenHeadings.add(section.heading)
     }
 
+    // MAP prose-rail guard: a map section renders its prose in the scroll rail.
+    // The renderer suppresses that rail two ways — a deck `kind`, OR a regions/
+    // panel `foreground` (`usesRegions`) — and on a map section the prose then
+    // renders nowhere. Schema/prompt steer the generator away from both; this is
+    // the hard backstop for drift and hand-edited configs.
+    if (story.format === 'map' && !sectionKindsFor('map').includes(section.kind)) {
+      issues.push({
+        section: label,
+        message: `kind "${section.kind}" suppresses the map prose rail — use ${sectionKindsFor('map').join(' / ')}`,
+      })
+    }
+
     validateSectionLayers(story, section, label, chartIds, issues)
   }
 
@@ -85,6 +98,16 @@ function validateSectionLayers(
   issues: ValidationIssue[],
 ): void {
   const { layers, layout, regionNames } = collectLayers(section.body)
+
+  // MAP sections must not carry a regions/panel foreground: it renders ON TOP of
+  // the map and suppresses the prose rail (`usesRegions` in MapStorySection). A
+  // lone flat bigStat (no layout, no named regions) is the one allowed overlay.
+  if (story.format === 'map' && (layout || regionNames.length > 0)) {
+    issues.push({
+      section: label,
+      message: `foreground ${layout ? `layout "${layout}"` : 'regions'} over a map suppresses the prose rail — drop the foreground; reference a chart by id and let the prose render in the rail`,
+    })
+  }
 
   if (layout) {
     const def = getForegroundLayout(layout)

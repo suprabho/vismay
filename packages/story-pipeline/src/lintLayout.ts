@@ -19,6 +19,7 @@
  */
 
 import { getForegroundLayout } from './vizEngine'
+import { sectionKindsFor } from './schema'
 import type { StoryOutline, GeneratedSection } from './types'
 
 /** ForegroundLayoutSlot's fallback when a layout name is unknown/absent. */
@@ -130,7 +131,28 @@ export function lintStory(sections: GeneratedSection[]): LayoutLintIssue[] {
  */
 export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
   const issues: LayoutLintIssue[] = []
+  const mapKinds = sectionKindsFor('map')
   for (const s of outline.sections) {
+    // MAP planning guard: a map section's prose lives in the scroll rail, which a
+    // deck `kind` or a named `layout` (a foreground panel over the map) would
+    // suppress — leaving the prose unrendered. Map sections carry the visual on
+    // the map itself (pins / choropleth) + a chart referenced by id.
+    if (outline.format === 'map') {
+      if (!mapKinds.includes(s.kind)) {
+        issues.push({
+          section: s.heading,
+          severity: 'drop',
+          message: `map section kind '${s.kind}' suppresses the prose rail → use ${mapKinds.join(' / ')}`,
+        })
+      }
+      if (s.layout) {
+        issues.push({
+          section: s.heading,
+          severity: 'drop',
+          message: `map section plans foreground layout '${s.layout}' → a panel over the map suppresses the prose rail; drop it`,
+        })
+      }
+    }
     if (s.layout && !getForegroundLayout(s.layout)) {
       issues.push({
         section: s.heading,

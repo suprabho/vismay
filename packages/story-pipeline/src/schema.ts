@@ -25,6 +25,31 @@ export const SECTION_KINDS = [
   'closing',
 ] as const
 
+/**
+ * Section kinds allowed on a MAP story. A map section renders its prose in the
+ * scroll rail; the remaining (deck/panel) kinds live in the renderer's
+ * `DECK_KINDS_NO_TEXT_CARD` set (story-reader's MapStorySection) and SUPPRESS
+ * that rail — and on a map section there is no foreground panel meant to carry
+ * the copy, so the markdown then renders nowhere (a blank snap target). Map
+ * stories are therefore restricted to the narrative kinds that keep the rail.
+ */
+export const MAP_SECTION_KINDS = ['text', 'hero', 'stat', 'cover'] as const
+
+/** The section-kind tuple a given story format may use. */
+export function sectionKindsFor(format: 'deck' | 'map'): readonly string[] {
+  return format === 'map' ? MAP_SECTION_KINDS : SECTION_KINDS
+}
+
+/** A `kind` enum field narrowed to what the format allows, with format-specific copy. */
+function kindField(format: 'deck' | 'map') {
+  const desc =
+    format === 'map'
+      ? 'Section kind — a MAP story uses narrative kinds only: text | hero | stat | cover. ' +
+        'These keep the scroll prose rail; deck/panel kinds would suppress it and orphan the prose.'
+      : 'The section kind.'
+  return (format === 'map' ? z.enum(MAP_SECTION_KINDS) : z.enum(SECTION_KINDS)).describe(desc)
+}
+
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'] as const
 
 // ── Phase 1: research brief ────────────────────────────────────────────────
@@ -232,15 +257,21 @@ export const imagePromptSchema = z.object({
  * independently, and keeps each call's schema small. `generatedSectionSchema`
  * is the merged shape the combined `generateSection` wrapper returns.
  */
-export const sectionContentSchema = z.object({
-  heading: z
-    .string()
-    .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
-  paragraphs: z
-    .array(z.string())
-    .describe('Body prose, one string per paragraph (factual magazine register).'),
-  kind: z.enum(SECTION_KINDS).describe('The section kind.'),
-})
+/** The CONTENT-pass output schema, with `kind` narrowed to the format's allowed kinds. */
+export function sectionContentSchemaFor(format: 'deck' | 'map') {
+  return z.object({
+    heading: z
+      .string()
+      .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
+    paragraphs: z
+      .array(z.string())
+      .describe('Body prose, one string per paragraph (factual magazine register).'),
+    kind: kindField(format),
+  })
+}
+
+/** Back-compat default (full kind menu). Prefer {@link sectionContentSchemaFor}. */
+export const sectionContentSchema = sectionContentSchemaFor('deck')
 
 export const sectionVisualSchema = z.object({
   body: sectionBodySchema.describe(

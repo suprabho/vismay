@@ -2,7 +2,7 @@ import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
 import {
   outlineSchema,
-  sectionContentSchema,
+  sectionContentSchemaFor,
   sectionVisualSchema,
   chartDataSchema,
   regionDataSchema,
@@ -193,11 +193,12 @@ export async function generateSectionContent(
   ctx: SectionContext,
   opts: SectionGenOptions = {},
 ): Promise<SectionContentDraft> {
+  const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
   const result = await generateStructured({
     model: opts.model,
-    system: contentSystem(ctx.source === 'outline' ? ctx.outline.format : ctx.format),
+    system: contentSystem(format),
     prompt: buildContentPrompt(ctx, opts.refine),
-    schema: sectionContentSchema,
+    schema: sectionContentSchemaFor(format),
     metadata: { feature: 'story-pipeline-section-content' },
   })
   return {
