@@ -321,13 +321,20 @@ export function visualSystem(format: StoryFormat): string {
     `${formatGuidance}\n\n` +
     `Available foreground layer types:\n${LAYER_MENU}\n\n` +
     `Rules:\n` +
-    `- COVER/HERO sections (see Kind) are ONE beat: emit a SINGLE foreground layer — one bigStat, ` +
-    `OR a one-line bodyText standfirst, OR one short quote. NEVER stack a stat + prose + a ` +
-    `keyValue/table on the opener; that overflows. The full breakdown / "at a glance" belongs in a ` +
-    `later section, not the cover.\n` +
+    `- ONE primary element per region: put a SINGLE chart, bigStat, keyValue, quote, or prose ` +
+    `block in each region — never stack a stat AND a table AND prose into one region or one box. ` +
+    `Match the number of elements to the layout's regions; if the prose carries more than the ` +
+    `layout holds, lead with the essentials (a later section can carry the rest) or pick a layout ` +
+    `with more regions. A multi-row keyValue is ONE element; do not also pile a stat and prose on it.\n` +
+    `- COVER/HERO sections (see Kind) are the strict case — ONE foreground layer total: one ` +
+    `bigStat, OR a one-line standfirst, OR one short quote. The full breakdown / "at a glance" ` +
+    `belongs in a later section, not the opener.\n` +
     `- Place layers ONLY in regions the chosen layout defines (see the list above). A layer in a ` +
-    `region the layout does not have will NOT render. For a single-box layout like hero-full-bleed, ` +
-    `use a FLAT layers list with ONE overlay layer — do not invent 'lead'/'body'/'stat' regions.\n` +
+    `region the layout does not have will NOT render. Single-box / single-content layouts ` +
+    `(hero-full-bleed, single-fill, centered) hold EXACTLY ONE element — if a section needs two ` +
+    `(e.g. a closing line plus a recap stat), pick a two-region layout (stat-top-chart-below, ` +
+    `text-left-chart-right, text-left-quote-right), never centered. Do not invent 'lead'/'body'/'stat' ` +
+    `regions a layout doesn't list.\n` +
     `- Honour the section's planned visual and layout when the outline gives one; deviate only ` +
     `if the written prose clearly calls for it.\n` +
     `- Reference theme tokens (accent, accent2, teal, positive, amber, red, muted) for colours.\n` +

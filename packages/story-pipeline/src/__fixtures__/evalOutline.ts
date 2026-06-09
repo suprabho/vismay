@@ -7,7 +7,8 @@
  *   EVAL_N=8 pnpm --filter @vismay/story-pipeline eval:outline        # 8 runs
  *   EVAL_SOURCES=/path/to/dir pnpm ... eval:outline                   # any folder of sources
  *   EVAL_MODEL=text.opus pnpm ... eval:outline                        # pick the model
- *   EVAL_DEEP=cover pnpm ... eval:outline                             # also render run #1's cover (content+visual)
+ *   EVAL_DEEP=cover pnpm ... eval:outline                             # render+lint run #1's cover
+ *   EVAL_DEEP=all   pnpm ... eval:outline                             # render+lint EVERY section of run #1
  *   EVAL_FORMAT=map pnpm ... eval:outline                             # force deck|map (else brief decides)
  *   EVAL_LINT_DIR=.eval-out/<stamp> pnpm ... eval:outline             # offline re-lint a prior run (NO LLM)
  *   EVAL_DIRECT=1 pnpm ... eval:outline                               # bypass the gateway → Anthropic direct (own quota)
@@ -31,6 +32,7 @@ import {
   research,
   generateOutline,
   generateSection,
+  slugify,
   lintOutline,
   lintSectionBody,
   formatLintIssue,
@@ -96,6 +98,28 @@ function coverOf(outline: StoryOutline): SectionStub {
 const trunc = (s: string | undefined, n: number): string =>
   !s ? '—' : s.length > n ? `${s.slice(0, n)}…` : s
 
+/** The layer types in a region value (array, single layer object, or absent). */
+function layerTypes(v: unknown): string {
+  const arr = Array.isArray(v) ? v : v ? [v] : []
+  return arr.map((l) => (l && typeof l === 'object' ? ((l as { type?: string }).type ?? '?') : '?')).join('+')
+}
+
+/** Compact "what's in each region" summary for a rendered section body. */
+function layerSummary(body: Record<string, unknown>): string {
+  const parts: string[] = []
+  if (body.map) parts.push('map')
+  const fg = body.foreground
+  if (fg && typeof fg === 'object' && !Array.isArray(fg) && (fg as { regions?: unknown }).regions) {
+    const layout = (fg as { layout?: string }).layout ?? 'flat'
+    const regions = (fg as { regions: Record<string, unknown> }).regions
+    const r = Object.entries(regions).map(([k, v]) => `${k}[${layerTypes(v)}]`).join(' ')
+    parts.push(`${layout}: ${r}`)
+  } else if (fg) {
+    parts.push(`flat[${layerTypes(fg)}]`)
+  }
+  return parts.join(' · ') || '(no foreground)'
+}
+
 /** Indented lint block (or a clean tick) for a set of issues. */
 function printLint(issues: LayoutLintIssue[], label: string): void {
   if (issues.length === 0) {
@@ -138,16 +162,22 @@ function lintDir(dir: string): void {
     console.log(`\n  ${f} — "${outline.title}"`)
     printLint(issues, 'planned layouts')
   }
-  if (files.includes('cover-section.json')) {
-    const section = JSON.parse(readFileSync(join(dir, 'cover-section.json'), 'utf8')) as {
+  // Rendered section bodies — `deep-NN-*.json` (EVAL_DEEP), or legacy `cover-section.json`.
+  let flagged = 0
+  const bodyFiles = files.filter((n) => /^deep-\d+-.*\.json$/.test(n) || n === 'cover-section.json').sort()
+  for (const f of bodyFiles) {
+    const section = JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
       heading: string
+      kind?: string
       body: Record<string, unknown>
     }
     const issues = lintSectionBody(section.body, section.heading)
     total += issues.length
-    console.log(`\n  cover-section.json — "${section.heading}"`)
-    printLint(issues, 'rendered cover body')
+    if (issues.length) flagged++
+    console.log(`\n  ${f} — [${section.kind ?? '?'}] "${section.heading}"`)
+    printLint(issues, 'rendered body')
   }
+  if (bodyFiles.length > 1) console.log(`\n  rendered bodies: ${flagged}/${bodyFiles.length} flagged`)
   console.log(`\n✓ lint complete — ${total} issue(s) across ${basename(dir)}`)
 }
 
@@ -214,18 +244,38 @@ async function main(): Promise<void> {
     console.log(`  layout-lint: ${flagged}/${outlines.length} runs flagged`)
   }
 
-  // Optional deep-dive: render run #1's cover end to end (content → visual) so the
-  // actual layered `body` that produced the overlap is on disk to inspect.
-  if (process.env.EVAL_DEEP === 'cover' && outlines[0]) {
-    console.log(`\n— deep: cover content+visual for run 1 —`)
+  // Deep-dive: render run #1's sections end to end (content → visual) and lint
+  // each rendered body — the authoritative layout check. EVAL_DEEP=cover does
+  // just the cover; EVAL_DEEP=all does every section (the layout discipline now
+  // applies to ALL sections, not only the opener).
+  const deep = process.env.EVAL_DEEP
+  if ((deep === 'cover' || deep === 'all') && outlines[0]) {
     const outline = outlines[0]
-    const section = await generateSection(
-      { outline, stub: coverOf(outline), sources, brief, answers },
-      { model, format },
-    )
-    writeFileSync(join(outDir, 'cover-section.json'), JSON.stringify(section, null, 2))
-    console.log(`  cover body:\n${JSON.stringify(section.body, null, 2)}`)
-    printLint(lintSectionBody(section.body, section.heading), 'rendered cover body')
+    const stubs = deep === 'all' ? outline.sections : [coverOf(outline)]
+    console.log(`\n— deep: ${deep === 'all' ? `all ${stubs.length} sections` : 'cover'} (content+visual) for run 1 —`)
+    let flagged = 0
+    for (let i = 0; i < stubs.length; i++) {
+      const stub = stubs[i]!
+      let section
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        section = await generateSection({ outline, stub, sources, brief, answers }, { model, format })
+      } catch (e) {
+        // One flaky/invalid section shouldn't abort the whole-story lint.
+        flagged++
+        console.log(`\n  [${stub.kind}] ${stub.heading}`)
+        console.log(`    ✗ generation FAILED: ${(e as Error).message}`)
+        continue
+      }
+      const nn = String(i + 1).padStart(2, '0')
+      writeFileSync(join(outDir, `deep-${nn}-${slugify(section.heading)}.json`), JSON.stringify(section, null, 2))
+      const issues = lintSectionBody(section.body, section.heading)
+      if (issues.length) flagged++
+      const layers = layerSummary(section.body)
+      console.log(`\n  [${section.kind}] ${section.heading}  (${layers})`)
+      printLint(issues, 'rendered body')
+    }
+    console.log(`\n  deep lint: ${flagged}/${stubs.length} section(s) flagged`)
   }
 
   console.log(`\n✓ ${outlines.length}/${N} outlines written to ${outDir}`)

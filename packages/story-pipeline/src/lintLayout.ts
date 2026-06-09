@@ -118,15 +118,20 @@ export function lintStory(sections: GeneratedSection[]): LayoutLintIssue[] {
 }
 
 /**
- * Lint the OUTLINE's planned layouts — stubs carry a layout name (deck) but no
- * body yet, so the check is: is the layout real, and is a cover/hero parked on a
- * stacking layout (where a stat + text will pile up)?
+ * Lint the OUTLINE's planned layouts. A stub carries a layout NAME but no body,
+ * so the stub-level checks are deliberately conservative — only what's
+ * structurally certain:
+ *   - the layout name is real (else the renderer falls back to the default), and
+ *   - a cover/hero doesn't feature a CHART on a single-box layout (a chart has no
+ *     region to sit in there, so it collides with the title overlay).
+ * A cover that carries just one stat or one line is FINE on hero-full-bleed —
+ * single layer, nothing to stack — so those are not flagged here; the
+ * rendered-body lint (`lintSectionBody`) is the authority on actual pile-ups.
  */
 export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
   const issues: LayoutLintIssue[] = []
   for (const s of outline.sections) {
-    if (!s.layout) continue
-    if (!getForegroundLayout(s.layout)) {
+    if (s.layout && !getForegroundLayout(s.layout)) {
       issues.push({
         section: s.heading,
         severity: 'unknown',
@@ -134,11 +139,12 @@ export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
       })
       continue
     }
-    if (COVER_KINDS.has(s.kind) && isStacking(s.layout)) {
+    const stacking = !s.layout || isStacking(s.layout)
+    if (COVER_KINDS.has(s.kind) && stacking && s.chartId) {
       issues.push({
         section: s.heading,
         severity: 'overlap',
-        message: `cover/hero on stacking layout '${s.layout}' — a stat + text pile into one box; use a separated layout or keep the cover to ONE overlay layer`,
+        message: `cover/hero features a chart (${s.chartId}) on single-box layout '${s.layout ?? 'flat'}' — a chart needs its own region; move it to a later section or use a separated layout`,
       })
     }
   }
