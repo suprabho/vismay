@@ -121,7 +121,8 @@ export function outlineSystem(format: StoryFormat): string {
   const visualGuidance =
     format === 'map'
       ? `For each section's "visual" describe the map moment (where the camera sits, what it ` +
-        `marks/pins) plus any stat or quote overlaid; leave "layout" empty.`
+        `marks/pins) plus the COMPACT overlay it features — favour a single chart, keyValue, or ` +
+        `stat panel so the map stays the star (the visual pass positions it).`
       : `For each section's "visual" name the foreground layers it features (${LAYER_TYPES_INLINE}) ` +
         `and what each shows, and set "layout" to the deck layout that frames them best ` +
         `(${DECK_LAYOUTS}).`
@@ -309,16 +310,22 @@ export function visualSystem(format: StoryFormat): string {
   const formatGuidance =
     format === 'map'
       ? `This is a MAP story. Set body.map to the section camera (center [lng, lat], zoom, ` +
-        `optional pitch/bearing/pins with [lng, lat] coordinates). A foreground is optional.`
-      : `This is a DECK story. Set body.foreground: either a FLAT layers list (no layout), or a ` +
-        `layout name plus regions — where each region maps to its layers. Layouts and the ` +
-        `regions they define:\n${DECK_LAYOUT_MENU}`
+        `optional pitch/bearing/pins with [lng, lat] coordinates). The map is the star: keep the ` +
+        `foreground overlay COMPACT so it never buries the map or its pin labels — favour a single ` +
+        `chart or keyValue panel, and avoid a bare stat/prose floating over the map.`
+      : `This is a DECK story (no map backdrop).`
 
+  // The foreground overlay uses the SAME renderer + layouts in BOTH formats, so the
+  // region menu and placement rules below apply to deck AND map. (Map sections
+  // previously lacked the menu and guessed region names like 'left'/'right' → drop.)
   return (
     `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
     `You are given the section's heading and prose; produce body — the visual content as ` +
     `structured fields (NOT YAML, NOT a string).\n\n` +
     `${formatGuidance}\n\n` +
+    `The foreground${format === 'map' ? ' overlay (optional on a map)' : ''} is either a FLAT layers ` +
+    `list (no layout), or a layout name plus regions — each region maps to its layers. Layouts and ` +
+    `the regions they define:\n${DECK_LAYOUT_MENU}\n\n` +
     `Available foreground layer types:\n${LAYER_MENU}\n\n` +
     `Rules:\n` +
     `- ONE primary element per region: put a SINGLE chart, bigStat, keyValue, quote, or prose ` +
