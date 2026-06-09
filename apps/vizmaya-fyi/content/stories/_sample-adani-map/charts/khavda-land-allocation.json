@@ -1,0 +1,69 @@
+{
+  "steps": [
+    {
+      "title": "Khavda RE Park: Land Allocated by Developer (approx. hectares)",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Adani Green Energy",
+            "NTPC",
+            "GSECL",
+            "GIPCL",
+            "SECI",
+            "Suzlon / Sarjan Realties"
+          ],
+          "name": "Developer",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Approximate Hectares Allocated",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Approximate Hectares Allocated",
+            "type": "bar",
+            "data": [
+              19000,
+              9500,
+              0,
+              0,
+              0,
+              0
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

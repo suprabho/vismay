@@ -1,0 +1,79 @@
+{
+  "steps": [
+    {
+      "title": "Contract Value Won by Adani vs. All Others",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "legend": {
+          "top": 0,
+          "textStyle": {
+            "color": "$muted"
+          }
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "FCI Silo Programme",
+            "Airport Privatisation (2018–19)"
+          ],
+          "name": "Sector",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Contract Value (₹ crore)",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Adani Group",
+            "type": "bar",
+            "data": [
+              9700,
+              100
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          },
+          {
+            "name": "All Others",
+            "type": "bar",
+            "data": [
+              6800,
+              0
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$teal"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
