@@ -8,6 +8,7 @@ import type {
   SectionContext,
   SectionContentDraft,
   ChartRequirement,
+  RegionRequirement,
 } from './types'
 
 /** Per-source character cap so a few long PDFs don't blow the context budget.
@@ -100,29 +101,38 @@ const DECK_LAYOUT_NAMES = [
 const DECK_LAYOUTS = DECK_LAYOUT_NAMES.join(', ')
 
 /**
- * Each curated layout with the regions it ACTUALLY defines, read from
+ * Render a layout-name list with the regions each ACTUALLY defines, read from
  * viz-engine's registry so it can never drift from the renderer. The renderer
  * places layers ONLY into a layout's real regions — a layer in any other region
  * is silently dropped — so the VISUAL pass is shown the exact region vocabulary
  * and told not to invent regions. Single-box layouts (hero-full-bleed) are
  * called out so a cover doesn't emit `lead`/`body` it can't place.
  */
-const DECK_LAYOUT_MENU = DECK_LAYOUT_NAMES.map((name) => {
-  const def = getForegroundLayout(name)
-  const regions = def ? Object.keys(def.regions ?? {}).filter((k) => k !== 'default') : []
-  return regions.length
-    ? `- ${name} — regions: ${regions.join(', ')}`
-    : `- ${name} — ONE full-bleed box (single overlay layer; no named regions)`
-}).join('\n')
+function layoutMenu(names: readonly string[]): string {
+  return names
+    .map((name) => {
+      const def = getForegroundLayout(name)
+      const regions = def ? Object.keys(def.regions ?? {}).filter((k) => k !== 'default') : []
+      return regions.length
+        ? `- ${name} — regions: ${regions.join(', ')}`
+        : `- ${name} — ONE full-bleed box (single overlay layer; no named regions)`
+    })
+    .join('\n')
+}
+const DECK_LAYOUT_MENU = layoutMenu(DECK_LAYOUT_NAMES)
 
 // ── Step 1: outline ────────────────────────────────────────────────────────
 
 export function outlineSystem(format: StoryFormat): string {
   const visualGuidance =
     format === 'map'
-      ? `For each section's "visual" describe the map moment (where the camera sits, what it ` +
-        `marks/pins) plus the COMPACT overlay it features — favour a single chart, keyValue, or ` +
-        `stat panel so the map stays the star (the visual pass positions it).`
+      ? `A Vizmaya MAP section shades GEOGRAPHY: the camera frames a region and a choropleth shades ` +
+        `each area by a value — the map IS the chart, not a backdrop. For each section's "visual" ` +
+        `describe the camera moment (where it sits, what it frames, any focal pins). When the section ` +
+        `shades regions by a metric, ALSO set "regionRequirement" (metric + level + which regions); ` +
+        `for generated stories use level "country" (built-in boundaries, ISO codes) unless the sources ` +
+        `ship custom GeoJSON. The prose renders in the scroll rail and any supporting chart is ` +
+        `referenced by id — do NOT plan a side panel over the map.`
       : `For each section's "visual" name the foreground layers it features (${LAYER_TYPES_INLINE}) ` +
         `and what each shows, and set "layout" to the deck layout that frames them best ` +
         `(${DECK_LAYOUTS}).`
@@ -139,13 +149,15 @@ export function outlineSystem(format: StoryFormat): string {
     `reference charts by id.\n` +
     `- imagePrompts: vivid prompts for sections that want imagery.\n` +
     `- sections (3–8): each a stub with —\n` +
-    `  • heading and kind (${SECTION_KINDS.join(' | ')}).\n` +
+    `  • heading (UNIQUE across all sections — it is the markdown anchor, so a duplicate heading ` +
+    `collides and that section loses its prose) and kind (${SECTION_KINDS.join(' | ')}).\n` +
     `  • intent: one line on the section's job.\n` +
     `  • context: how it connects to the sections around it (what it follows from, what it sets up).\n` +
     `  • expectedContent: the specific facts, figures, and quotes it must carry — concrete and ` +
     `grounded in the sources, NOT generic placeholders.\n` +
     `  • visual: the visualisation it features (see below).\n` +
     `  • optional chartId when the section features a chart.\n` +
+    `  • optional regionRequirement (MAP only) when the section shades geography by a metric.\n` +
     `${visualGuidance}\n\n` +
     `THE COVER is one beat, not a summary: a sharp title plus EXACTLY ONE supporting element — ` +
     `either a single headline stat OR a one-line standfirst, never both, and never a multi-row ` +
@@ -236,6 +248,61 @@ export function buildChartPrompt(
   return base
 }
 
+// ── Map-region data pass (turns a choropleth REQUIREMENT into per-region values)
+//
+// The exact mirror of the chart data pass, for the PRIMARY visual of a map
+// story. Reads the sources with the larger CHART_SOURCE_CHARS budget — region
+// values are numeric data (often a long table of countries), so numeric
+// fidelity matters more than keeping the prompt lean.
+
+export const REGIONS_SYSTEM =
+  `You produce the DATA for ONE map choropleth in a Vizmaya map story, grounded ` +
+  `strictly in the provided sources. Given a region requirement (what metric to ` +
+  `shade, which regions) and the research material, return:\n` +
+  `- items: one entry per region — { code, value } — where \`code\` is the ` +
+  `region's ISO 3166-1 alpha-2 code (level: country) or the GeoJSON feature id ` +
+  `(level: custom), and \`value\` is the metric for that region.\n\n` +
+  `Rules:\n` +
+  `- Use ONLY figures present in or directly derivable from the sources — never ` +
+  `invent or estimate values. Include only regions the sources actually support.\n` +
+  `- For level: country, \`code\` MUST be a valid ISO alpha-2 (US, IN, NO, CN, …) ` +
+  `— never a country name, never alpha-3.\n` +
+  `- Exactly one value per region; no duplicate codes.\n` +
+  `- Shade as many regions as the sources support — a world metric can be 150+; ` +
+  `do not artificially trim the set.`
+
+/** Render a choropleth requirement for the region data prompt. */
+function renderRegionRequirement(req: RegionRequirement): string {
+  return (
+    `CHOROPLETH REQUIREMENT\n` +
+    `metric: ${req.metric}\n` +
+    `level: ${req.level}\n` +
+    (req.level === 'custom' && req.idProperty ? `feature id property: ${req.idProperty}\n` : '') +
+    `what to shade: ${req.requirement}`
+  )
+}
+
+export function buildRegionsPrompt(
+  req: RegionRequirement,
+  brief: ResearchBrief,
+  sources: SourceDoc[],
+  refine?: { feedback: string; previous: unknown },
+): string {
+  const base =
+    `${renderRegionRequirement(req)}\n\n` +
+    `RESEARCH BRIEF\n` +
+    `Summary: ${brief.summary}\n` +
+    `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n\n` +
+    `SOURCES\n${renderSources(sources, CHART_SOURCE_CHARS)}`
+  if (refine) {
+    return (
+      `${base}\n\nPREVIOUS CHOROPLETH DATA:\n${JSON.stringify(refine.previous)}\n\n` +
+      `Revise it per this feedback (keep what works, change only what's noted):\n${refine.feedback}`
+    )
+  }
+  return base
+}
+
 // ── Step 2: one section, in two passes (CONTENT then VISUAL) ───────────────
 //
 // The CONTENT pass writes prose; the VISUAL pass designs the config `body`
@@ -309,23 +376,23 @@ export function buildContentPrompt(
 export function visualSystem(format: StoryFormat): string {
   const formatGuidance =
     format === 'map'
-      ? `This is a MAP story. Set body.map to the section camera (center [lng, lat], zoom, ` +
-        `optional pitch/bearing/pins with [lng, lat] coordinates). The map is the star: keep the ` +
-        `foreground overlay COMPACT so it never buries the map or its pin labels — favour a single ` +
-        `chart or keyValue panel, and avoid a bare stat/prose floating over the map.`
-      : `This is a DECK story (no map backdrop).`
+      ? `This is a MAP story — the MAP itself is the visual. Set body.map to the section camera ` +
+        `(center [lng, lat], zoom, optional pitch/bearing, and focal pins with [lng, lat] ` +
+        `coordinates). If this section shades regions, its choropleth (map.regions) is filled by a ` +
+        `separate source-grounded pass and merged in for you — do NOT author region values; just ` +
+        `frame the camera so the shaded geography reads well. PREFER NO foreground on a map section: ` +
+        `the prose renders in the scroll rail and any chart is referenced by id. Add a foreground ` +
+        `ONLY for a lone hero stat (a single bigStat). NEVER place prose/keyValue/quote panels over ` +
+        `the map — they bury it and suppress the prose rail.`
+      : `This is a DECK story (no map backdrop). Set body.foreground: either a FLAT layers list (no ` +
+        `layout), or a layout name plus regions — each region maps to its layers. Layouts and the ` +
+        `regions they define:\n${DECK_LAYOUT_MENU}`
 
-  // The foreground overlay uses the SAME renderer + layouts in BOTH formats, so the
-  // region menu and placement rules below apply to deck AND map. (Map sections
-  // previously lacked the menu and guessed region names like 'left'/'right' → drop.)
   return (
     `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
     `You are given the section's heading and prose; produce body — the visual content as ` +
     `structured fields (NOT YAML, NOT a string).\n\n` +
     `${formatGuidance}\n\n` +
-    `The foreground${format === 'map' ? ' overlay (optional on a map)' : ''} is either a FLAT layers ` +
-    `list (no layout), or a layout name plus regions — each region maps to its layers. Layouts and ` +
-    `the regions they define:\n${DECK_LAYOUT_MENU}\n\n` +
     `Available foreground layer types:\n${LAYER_MENU}\n\n` +
     `Rules:\n` +
     `- ONE primary element per region: put a SINGLE chart, bigStat, keyValue, quote, or prose ` +

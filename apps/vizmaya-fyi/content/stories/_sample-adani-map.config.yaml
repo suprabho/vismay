@@ -3,16 +3,137 @@ defaults:
     mode: continuous
   chart:
     theme: light-editorial
+  mapStyle: mapbox://styles/mapbox/light-v11
+  mapOpacity: 0.6
+  pinColor: "#d4612a"
+  pinRadius: 8
+  flySpeed: 1.2
 sections:
-  - id: one-pattern-five-sectors
-    text: One Pattern, Five Sectors
+  - id: a-decade-of-deals
+    text: A Decade of Deals
     kind: cover
     foreground:
-      type: bigStat
-      value: ₹26,000 cr+
-      label: Contracts & concessions to Adani — airports & silos alone
-      color: accent2
-      align: left
+      layout: panel-right
+      regions:
+        text:
+          - type: bigStat
+            value: "6"
+            unit: airports
+            label: Won in a single round — zero prior experience
+            delta: ₹85,000+ crore across five sectors in one decade
+            deltaColor: muted
+            color: accent2
+            align: left
+    map:
+      center:
+        - 78.9629
+        - 22.5937
+      zoom: 4.2
+      pitch: 20
+      bearing: 0
+      pins:
+        - coordinates:
+            - 72.6369
+            - 23.0225
+          label: Ahmedabad
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 80.8948
+            - 26.8467
+          label: Lucknow
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 75.7873
+            - 26.8241
+          label: Jaipur
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 91.5859
+            - 26.1061
+          label: Guwahati
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 76.9366
+            - 8.4875
+          label: Thiruvananthapuram
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 74.8559
+            - 12.9141
+          label: Mangaluru
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 69.7167
+            - 23.8833
+          label: Khavda / Rann of Kutch
+          color: "#EAB308"
+          radius: 7
+        - coordinates:
+            - 86.9842
+            - 24.1628
+          label: Godda, Jharkhand
+          color: "#F97316"
+          radius: 7
+        - coordinates:
+            - 74.124
+            - 16.544
+          label: Western Ghats
+          color: "#22C55E"
+          radius: 7
+        - coordinates:
+            - 77.209
+            - 28.6139
+          label: FCI Silo Hub — Delhi
+          color: "#9CA3AF"
+          radius: 6
+        - coordinates:
+            - 80.3318
+            - 26.4499
+          label: FCI Silo Hub — Kanpur
+          color: "#9CA3AF"
+          radius: 6
+
+
+  - id: five-sectors-one-pattern
+    text: Five Sectors, One Pattern
+    kind: stat
+    foreground:
+      layout: panel-right
+      regions:
+        text:
+          - type: bodyText
+            from: text
+            content: 4 of 5 claims rated substantially accurate. In each sector, a safeguard proposed by a government body was overruled — and Adani was among the primary beneficiaries.
+            heading: Five Sectors, One Pattern
+            showHeading: true
+            textStyle:
+              size: small
+              color: muted
+        chart:
+          - type: keyValue
+            title: Safeguard Dropped → Adani Outcome
+            items:
+              - key: ✈ Airports
+                value: 2-airport cap & experience req. dropped → Adani wins all 6
+                color: accent
+              - key: 🌾 Grain Silos
+                value: FCI anti-monopoly clause dropped → ₹9,700 cr in contracts
+                color: accent
+              - key: ☀ Kutch RE Land
+                value: Defence border rules relaxed → largest share (~19,000 ha)
+                color: accent
+              - key: ⚡ Godda Power
+                value: SEZ + Telegraph Act + Aug 2024 amendment → only 100% export plant
+                color: accent
+              - key: 🌿 Western Ghats
+                value: Conflict of interest documented; final clearance ultimately denied
+                color: muted
     map:
       center:
         - 78.9629
@@ -22,373 +143,117 @@ sections:
       bearing: 0
       pins:
         - coordinates:
-            - 72.5714
-            - 23.0225
-          label: Ahmedabad Airport
+            - 72.8777
+            - 22.3072
+          label: Airports (6 cities)
           color: accent
         - coordinates:
-            - 80.8949
-            - 26.8467
-          label: Lucknow Airport
+            - 75.8577
+            - 22.7196
+          label: FCI Grain Silos
           color: accent
         - coordinates:
-            - 78.9629
-            - 24.5
-          label: FCI Silo Hubs
-          color: amber
-        - coordinates:
-            - 69.7833
-            - 23.8833
-          label: Khavda / Rann of Kutch
-          color: teal
-        - coordinates:
-            - 87
-            - 24.15
-          label: Godda, Jharkhand
-          color: accent2
-        - coordinates:
-            - 74.5
-            - 16
-          label: Western Ghats
-          color: positive
-
-
-  - id: one-pattern-five-sectors-2
-    text: One Pattern, Five Sectors
-    kind: split
-    foreground:
-      layout: text-left-chart-right
-      regions:
-        text:
-          - type: bodyText
-            from: text
-            content: In four of five sectors, government technical bodies proposed a safeguard — then were overruled. Adani subsequently won a disproportionate share of what was on offer. The fifth claim is overstated.
-            heading: One Pattern, Five Sectors
-            showHeading: true
-            textStyle:
-              size: small
-              color: muted
-        chart:
-          - type: keyValue
-            title: "Five Sectors: Safeguard → Outcome"
-            items:
-              - key: ✈ Airports
-                value: Cap & experience req. dropped → Adani won all 6
-                color: amber
-              - key: 🌾 FCI Silos
-                value: Anti-monopoly clause dropped → 78% to Adani + Leap India
-                color: amber
-              - key: ☀ Khavda Land
-                value: Border rules relaxed → Adani largest parcel (19,000 ha)
-                color: amber
-              - key: ⚡ Godda Power
-                value: SEZ + Telegraph Act + grid amendment → only 100%-export plant
-                color: amber
-              - key: 🌿 W. Ghats
-                value: EAC rejected expansion — conflict of interest documented
-                color: muted
-    map:
-      center:
-        - 80.5
-        - 22.5
-      zoom: 4.2
-      pitch: 0
-      bearing: 0
-      pins:
-        - coordinates:
-            - 72.5714
-            - 23.0225
-          label: Airports (6 won)
-          color: "#f59e0b"
-        - coordinates:
-            - 77.1025
-            - 28.7041
-          label: FCI Silos (110/134)
-          color: "#f59e0b"
-        - coordinates:
-            - 69.65
+            - 69.7
             - 23.85
-          label: Khavda RE Land
-          color: "#f59e0b"
+          label: Khavda / Kutch RE Land
+          color: accent
         - coordinates:
-            - 87.15
-            - 24.52
-          label: Godda Power
-          color: "#f59e0b"
+            - 87.03
+            - 24.51
+          label: Godda Power Export
+          color: accent
         - coordinates:
-            - 74.1
-            - 16.7
-          label: Western Ghats
-          color: "#6b7280"
+            - 74
+            - 16.5
+          label: Western Ghats Clearances
+          color: muted
 
-  - id: airports-the-cleanest-case
-    text: "Airports: The Cleanest Case"
+  - id: the-airport-clean-sweep
+    text: The Airport Clean Sweep
     kind: data
     foreground:
-      layout: text-left-chart-right
+      layout: panel-right
       regions:
-        text:
-          - type: keyValue
-            title: Three Rules Changed
-            items:
-              - key: Experience required?
-                value: Removed
-                color: red
-              - key: Airports per bidder
-                value: No cap set
-                color: red
-              - key: Bid metric
-                value: Per-passenger fee (highest wins)
-                color: amber
-              - key: DEA recommendation
-                value: ≤ 2 airports per bidder
-                color: muted
-              - key: DEA note discussed?
-                value: Not at 11 Dec 2018 PPPAC
-                color: muted
-              - key: Adani airports won
-                value: All six (+ Mumbai in 2020)
-                color: accent
         chart:
           - type: chart
-            id: airport-bid-comparison
+            id: airport-bids-comparison
+        text:
+          - type: keyValue
+            title: The Cap That Was Never Imposed
+            items:
+              - key: DEA recommended cap
+                value: 2 airports per bidder
+                color: positive
+              - key: Cap actually imposed
+                value: None
+                color: red
+              - key: DEA note discussed at PPPAC (11 Dec 2018)
+                value: Not on the agenda
+                color: amber
+              - key: Adani's prior airport experience
+                value: Zero
+                color: red
+              - key: Airports won by Adani
+                value: All 6 of 6
+                color: accent2
+              - key: AAI windfall (ICRA est.)
+                value: ₹600+ crore / year
+                color: muted
     map:
       center:
-        - 78.5
-        - 20.5
-      zoom: 4.8
-      pitch: 0
+        - 76.5
+        - 24
+      zoom: 5.2
+      pitch: 30
       bearing: 0
       pins:
         - coordinates:
             - 72.6369
             - 23.0225
-          label: Ahmedabad
-          color: "#f59e0b"
-        - coordinates:
-            - 80.8893
-            - 26.8467
-          label: Lucknow
-          color: "#f59e0b"
-        - coordinates:
-            - 75.8122
-            - 26.8245
-          label: Jaipur
-          color: "#f59e0b"
-        - coordinates:
-            - 91.5859
-            - 26.1061
-          label: Guwahati
-          color: "#f59e0b"
-        - coordinates:
-            - 76.92
-            - 8.4875
-          label: Thiruvananthapuram
-          color: "#f59e0b"
-        - coordinates:
-            - 74.8908
-            - 12.9136
-          label: Mangaluru
-          color: "#f59e0b"
-
-  - id: silos-and-solar-where-the-numbers-concen
-    text: "Silos and Solar: Where the Numbers Concentrate"
-    kind: data
-    foreground:
-      layout: text-left-chart-right
-      regions:
-        text:
-          - type: keyValue
-            title: FCI Silo Concentration
-            items:
-              - key: Total Phase I contracts
-                value: "134"
-              - key: Won by Adani + Leap India
-                value: 110 (82%)
-                color: red
-              - key: Capacity secured
-                value: 46.5 of 60 LMT
-                color: red
-              - key: AIKS concentration estimate
-                value: ~77.5%
-                color: amber
-              - key: Adani contract value alone
-                value: ₹9,700 cr+
-                color: accent2
-              - key: "Phase II: Adani wins"
-                value: 0 contracts
-                color: positive
-              - key: "Khavda: Adani Green holding"
-                value: ~19,000 ha / 9.5 GW
-                color: accent2
-              - key: SECI parcel surrendered
-                value: 23,000 ha (Jul 2023)
-                color: amber
-        chart:
-          - type: chart
-            id: khavda-land-allocation
-    map:
-      center:
-        - 69.85
-        - 23.85
-      zoom: 7.5
-      pitch: 30
-      bearing: 0
-      pins:
-        - coordinates:
-            - 69.65
-            - 23.85
-          label: Khavda RE Park
+          label: Ahmedabad Airport
           color: accent2
           radius: 10
         - coordinates:
-            - 72.83
-            - 21.17
-          label: FCI Silo Programme (Gujarat hub)
+            - 80.8893
+            - 26.7606
+          label: Lucknow Airport
+          color: accent2
+          radius: 10
+        - coordinates:
+            - 77.209
+            - 28.6139
+          label: Delhi — PPPAC (11 Dec 2018)
           color: amber
           radius: 7
 
-  - id: godda-one-plant-one-customer
-    text: "Godda: One Plant, One Customer"
-    kind: bodyText
+  - id: where-the-rupees-flowed
+    text: Where the Rupees Flowed
+    kind: data
     foreground:
-      layout: text-left-chart-right
+      layout: panel-right
       regions:
-        text:
-          - type: bodyText
-            from: text
-            content: Adani Power's 1,600-MW Godda plant is the only Indian generating station licensed to export 100% of its output — every unit crosses into Bangladesh under a long-term BPDB contract. No equivalent arrangement exists anywhere else in Indian energy policy.
-            heading: "Godda: One Plant, One Customer"
-            showHeading: true
-            textStyle:
-              size: small
-              color: text
-        chart:
-          - type: keyValue
-            title: Documented Structural Privileges
-            items:
-              - key: SEZ status granted
-                value: Tax exemptions unavailable to any conventional generator
-                color: red
-              - key: Telegraph Act powers
-                value: Right-of-way over 400-kV line corridor — no other cross-border producer holds this
-                color: amber
-              - key: Aug 2024 MoP amendment
-                value: Clause 8.9 proviso on co-use of dedicated line — Godda is currently the only plant it can affect
-                color: accent2
-              - key: Clause 8.9 origin
-                value: Present in original Dec 2018 guidelines — NOT inserted in Jul 2019 (that addendum changed only clause 5.2a)
-                color: muted
-    map:
-      center:
-        - 87.2
-        - 24.5
-      zoom: 7.5
-      pitch: 30
-      bearing: 10
-      pins:
-        - coordinates:
-            - 87.21
-            - 24.83
-          label: Godda, Jharkhand
-          color: red
-          radius: 8
-        - coordinates:
-            - 88.95
-            - 23.62
-          label: Bangladesh border
-          color: amber
-          radius: 6
-
-  - id: western-ghats-where-the-claim-breaks-dow
-    text: "Western Ghats: Where the Claim Breaks Down"
-    kind: bodyText
-    foreground:
-      layout: text-left-chart-right
-      regions:
-        text:
-          - type: bodyText
-            from: text
-            content: Maharashtra MoU (June 2022) and fast preliminary appraisals are real and documented. But the EAC ultimately rejected Adani's flagship mining expansion and applied heightened scrutiny to all Western Ghats pumped-storage projects — not only Adani's. The anomalously fast final-clearance claim is not borne out.
-            heading: "Western Ghats: Two-Part Verdict"
-            showHeading: true
-            textStyle:
-              size: small
-              color: muted
-        chart:
-          - type: keyValue
-            title: Verdict at a Glance
-            items:
-              - key: MoU value (June 2022)
-                value: ₹60,000 crore
-                color: amber
-              - key: Fast preliminary appraisals
-                value: Documented
-                color: amber
-              - key: Clearance-speed claim (final decisions)
-                value: Overstated
-                color: red
-              - key: "EAC outcome: flagship mining expansion"
-                value: Rejected / Returned
-                color: positive
-              - key: "Extra scrutiny: all pumped-storage projects"
-                value: Applied broadly
-                color: teal
-              - key: Conflict of interest (Adani adviser on EAC)
-                value: Documented
-                color: accent
-    map:
-      center:
-        - 74.5
-        - 15.5
-      zoom: 6.5
-      pitch: 30
-      bearing: -10
-      pins:
-        - coordinates:
-            - 73.8
-            - 19
-          label: Maharashtra MoU zone
-          color: amber
-        - coordinates:
-            - 74.2
-            - 15.3
-          label: EAC rejected mining expansion
-          color: positive
-        - coordinates:
-            - 74
-            - 14
-          label: Pumped-storage scrutiny zone
-          color: teal
-
-  - id: what-the-evidence-does-and-doesn-t-show
-    text: What the Evidence Does — and Doesn't — Show
-    kind: closing
-    foreground:
-      layout: text-left-chart-right
-      regions:
-        text:
-          - type: keyValue
-            title: The Structural Finding
-            items:
-              - key: Airports
-                value: All 6 won; DEA & NITI Aayog overruled
-                color: amber
-              - key: Silos
-                value: ₹9,700 cr+ contracts; anti-monopoly clause dropped
-                color: amber
-              - key: Khavda
-                value: ~19,000 ha / 9.5 GW; SECI's 23,000 ha unexplained
-                color: teal
-              - key: Godda
-                value: Only plant exporting 100% output abroad
-                color: accent
-              - key: W. Ghats
-                value: Claim overstated; EAC rejected expansion
-                color: muted
         chart:
           - type: chart
-            id: contract-value-concentration
+            id: contract-value-by-sector
+        text:
+          - type: keyValue
+            title: "Adani Group: Rupee Concentration by Sector"
+            items:
+              - key: FCI Grain Silos
+                value: ₹9,700+ cr (110 of 134 contracts)
+                color: accent
+              - key: Western Ghats MoU †
+                value: ₹60,000 cr (proposed only — EAC rejected flagship)
+                color: muted
+              - key: Airports (6 + Mumbai CSMIA)
+                value: ₹177/pax bid; CSMIA acquired 2020
+                color: accent2
+              - key: Khavda RE Park
+                value: ~19,000 ha · ~9.5 GW (largest share in 30 GW park)
+                color: teal
+              - key: Godda (Jharkhand)
+                value: "Only Indian plant: 100% export to Bangladesh; SEZ status"
+                color: amber
     map:
       center:
         - 80.9
@@ -401,24 +266,290 @@ sections:
             - 72.6
             - 23
           label: Ahmedabad Airport
+          color: accent2
+        - coordinates:
+            - 70.5
+            - 23.9
+          label: Khavda, Rann of Kutch (~9.5 GW)
+          color: teal
+        - coordinates:
+            - 86.1
+            - 24.2
+          label: Godda, Jharkhand (100% export to Bangladesh)
+          color: amber
+        - coordinates:
+            - 73.8
+            - 17.9
+          label: Western Ghats MoU (₹60,000 cr — EAC rejected)
+          color: muted
+        - coordinates:
+            - 77.2
+            - 28.6
+          label: "FCI Silo Hub: Delhi NCR / North India cluster"
+          color: accent
+
+  - id: the-silo-duopoly
+    text: The Silo Duopoly
+    kind: bodyText
+    foreground:
+      layout: panel-right
+      regions:
+        chart:
+          - type: chart
+            id: silo-contract-concentration
+        text:
+          - type: keyValue
+            title: The Dropped Safeguard
+            items:
+              - key: Programme value
+                value: ~₹20,000 crore
+                color: accent2
+              - key: Total contracts
+                value: "134"
+                color: muted
+              - key: Won by Adani + Leap India
+                value: 110 of 134 (~77.5%)
+                color: red
+              - key: Capacity cornered
+                value: 46.5 LMT of 60 LMT
+                color: red
+              - key: Adani alone
+                value: ₹9,700+ crore
+                color: accent2
+              - key: Anti-monopoly clause proposed by
+                value: FCI (nodal agency)
+                color: positive
+              - key: Clause dropped by
+                value: NITI Aayog + DEA, 2022
+                color: red
+    map:
+      center:
+        - 77.5
+        - 29.5
+      zoom: 5.2
+      pitch: 30
+      bearing: 0
+      pins:
+        - coordinates:
+            - 75.8
+            - 30.9
+          label: Punjab corridor
           color: "#f59e0b"
+          radius: 10
+        - coordinates:
+            - 76.8
+            - 29
+          label: Haryana corridor
+          color: "#f59e0b"
+          radius: 10
         - coordinates:
             - 80.9
             - 26.8
-          label: Lucknow Airport
+          label: UP corridor
           color: "#f59e0b"
+          radius: 10
         - coordinates:
-            - 69.8
-            - 23.8
-          label: Khavda RE Park
-          color: "#10b981"
+            - 77.2
+            - 28.6
+          label: Delhi NCR hub
+          color: "#f59e0b"
+          radius: 8
+
+  - id: border-land-and-the-rann-of-kutch
+    text: Border Land and the Rann of Kutch
+    kind: bodyText
+    foreground:
+      layout: panel-right
+      regions:
+        text:
+          - type: keyValue
+            title: Khavda Park — Developer Parcels
+            items:
+              - key: Adani Green Energy
+                value: ~19,000 ha / ~9.5 GW
+                color: amber
+              - key: SECI (surrendered Jul 2023)
+                value: 23,000 ha → returned to state
+                color: muted
+              - key: NTPC
+                value: ~4,750 MW
+                color: accent
+              - key: GSECL / GIPCL
+                value: Further allocations
+                color: teal
+              - key: Suzlon (Sarjan Realties)
+                value: Present
+                color: teal
+              - key: Total park
+                value: ~72,600 ha · 30 GW · 445 sq km
+                color: accent2
+              - key: Defence rules relaxed
+                value: 8 May 2023 (MoD guidelines)
+                color: muted
+              - key: Nodal agency
+                value: GPCL (Gujarat state entity)
+                color: muted
+    map:
+      center:
+        - 69.8
+        - 23.85
+      zoom: 9
+      pitch: 30
+      bearing: 10
+      pins:
         - coordinates:
-            - 87.1
+            - 69.65
+            - 23.95
+          label: Adani Green ~19,000 ha (~9.5 GW)
+          color: "#F5A623"
+          radius: 18
+        - coordinates:
+            - 69.9
+            - 23.75
+          label: NTPC ~4,750 MW
+          color: "#4A90D9"
+          radius: 12
+        - coordinates:
+            - 70.05
+            - 23.9
+          label: SECI — surrendered 23,000 ha (Jul 2023)
+          color: "#8A8A8A"
+          radius: 12
+        - coordinates:
+            - 69.75
+            - 23.65
+          label: Khavda RE Park — 30 GW / 72,600 ha
+          color: "#50E3C2"
+          radius: 8
+
+  - id: godda-india-s-only-100-export-plant
+    text: "Godda: India's Only 100% Export Plant"
+    kind: quote
+    foreground:
+      layout: panel-left
+      regions:
+        text:
+          - type: quote
+            text: Godda is, factually, the only Indian plant contracted to export **100% of its output** to a neighbouring country.
+            attribution: Cross-party fact-check conclusion — undisputed by all parties
+            align: left
+        chart:
+          - type: keyValue
+            title: Three Unprecedented Regulatory Privileges
+            items:
+              - key: SEZ Status
+                value: No precedent for a captive cross-border power facility in India
+                color: red
+              - key: Telegraph Act Powers
+                value: Right-of-way to lay dedicated Bangladesh transmission line — bypassing normal private-developer easements
+                color: amber
+              - key: Aug 2024 Grid Amendment
+                value: MoP OM amended clauses 5.2(a) & 8.9 — 'may permit' co-connection to national grid; in practice applies only to Godda
+                color: accent2
+    map:
+      center:
+        - 87.2
+        - 24.6
+      zoom: 7
+      pitch: 30
+      bearing: 10
+      pins:
+        - coordinates:
+            - 87.2185
+            - 24.5873
+          label: Godda Power Plant (1,600 MW)
+          color: red
+          radius: 10
+        - coordinates:
+            - 90.4125
+            - 23.8103
+          label: Dhaka, Bangladesh
+          color: amber
+          radius: 7
+        - coordinates:
+            - 88.69
+            - 24.63
+          label: India–Bangladesh Border (Transmission Crossing)
+          color: teal
+          radius: 6
+
+  - id: pattern-or-coincidence-you-decide
+    text: Pattern or Coincidence? You Decide
+    kind: closing
+    foreground:
+      layout: panel-right
+      regions:
+        text:
+          - type: keyValue
+            title: "Five Sectors: Safeguard Scorecard"
+            items:
+              - key: FCI Silos — DEA / NITI Aayog
+                value: Accurate
+                color: positive
+              - key: Airports — DEA / NITI Aayog
+                value: Accurate
+                color: positive
+              - key: Khavda RE Land — Defence Ministry
+                value: Accurate
+                color: positive
+              - key: Godda Export Plant — MoP
+                value: Accurate
+                color: positive
+              - key: Western Ghats EAC — Conflict of Interest
+                value: Overstated
+                color: amber
+        chart:
+          - type: quote
+            text: A bidder lacking sufficient technical capacity can well jeopardise the project.
+            attribution: NITI Aayog warning, Dec 2018 · Six airports later, the question remains open.
+            align: left
+    map:
+      center:
+        - 78.9629
+        - 22.5937
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      pins:
+        - coordinates:
+            - 77.209
+            - 28.6139
+          label: New Delhi (Regulatory Hub)
+          color: "#e8c84a"
+          radius: 10
+        - coordinates:
+            - 72.5714
+            - 23.0225
+          label: Ahmedabad Airport
+          color: "#e05c3a"
+          radius: 7
+        - coordinates:
+            - 80.9462
+            - 26.8467
+          label: Lucknow Airport
+          color: "#e05c3a"
+          radius: 7
+        - coordinates:
+            - 69.5
+            - 23.85
+          label: Khavda, Rann of Kutch
+          color: "#3a9e6e"
+          radius: 7
+        - coordinates:
+            - 87
             - 24.5
-          label: Godda Power Plant
-          color: "#6366f1"
+          label: Godda, Jharkhand
+          color: "#3a7ec8"
+          radius: 7
         - coordinates:
             - 73.5
-            - 16.5
+            - 19.5
           label: Western Ghats
-          color: "#94a3b8"
+          color: "#a0a0a0"
+          radius: 7
+        - coordinates:
+            - 77.5
+            - 26
+          label: FCI Silo Network
+          color: "#e8c84a"
+          radius: 7

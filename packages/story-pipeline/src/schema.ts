@@ -162,6 +162,63 @@ export const chartDataSchema = z.object({
     .describe('One or more data series, each with one value per category.'),
 })
 
+// ── Map-region (choropleth) requirement + data pass ────────────────────────
+//
+// The exact mirror of the chart split, for the PRIMARY visual of a map story:
+// the outline declares a per-section choropleth REQUIREMENT (what metric, which
+// regions — no numbers), and a focused `generateRegions` pass fills the
+// per-region values grounded in the sources. Decoupled for the same reason as
+// charts: fabricating accurate per-region figures as a byproduct of skeleton
+// planning is unreliable.
+
+/**
+ * A choropleth REQUIREMENT — what a map section plans to shade, with no values.
+ * Custom GeoJSON needs an author-supplied data asset, so generated stories
+ * default to `level: "country"` (built-in boundaries, ISO alpha-2 codes).
+ */
+export const regionRequirementSchema = z.object({
+  metric: z
+    .string()
+    .describe(
+      'What each region is shaded by — the choropleth metric, e.g. "press-freedom score (0–100)" ' +
+        'or "Muslim share of population (%)". Concrete and grounded in the sources.',
+    ),
+  level: z
+    .enum(['country', 'custom'])
+    .describe(
+      '"country" shades built-in country boundaries by ISO alpha-2 code — the default for ' +
+        'generated stories. "custom" needs an author-supplied geojsonUrl + idProperty.',
+    ),
+  geojsonUrl: z.string().optional().describe('level: custom only — author-supplied GeoJSON path.'),
+  idProperty: z.string().optional().describe('level: custom only — feature id property.'),
+  requirement: z
+    .string()
+    .describe(
+      'Exactly which regions to shade and over what range, all from the sources — e.g. "every ' +
+        'G20 country by its 2026 RSF score". Concrete; do NOT invent the values here (the data pass does).',
+    ),
+})
+
+/**
+ * The data-only OUTPUT of `generateRegions`: one grounded `{ code, value }` per
+ * shaded region. Merged with its requirement (level/geojson/idProperty) and
+ * default ramp/legend into a full `MapRegionLayer`.
+ */
+export const regionDataSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        code: z
+          .string()
+          .describe('ISO 3166-1 alpha-2 (level: country) or the GeoJSON feature id (level: custom).'),
+        value: z.number().describe('The choropleth metric for this region, from the sources.'),
+        label: z.string().optional().describe('Optional display label (defaults to the region name).'),
+      }),
+    )
+    .min(1)
+    .describe('One entry per shaded region — every value grounded in the sources.'),
+})
+
 export const imagePromptSchema = z.object({
   section: z.string().describe('The section heading this image belongs to.'),
   prompt: z.string().describe('A vivid, specific image-generation prompt.'),
@@ -233,6 +290,12 @@ export const sectionStubSchema = z.object({
     .string()
     .optional()
     .describe('If this section features a chart, the id of a chart from the charts list.'),
+  regionRequirement: regionRequirementSchema
+    .optional()
+    .describe(
+      'MAP only: if this section shades geography (a choropleth), the region requirement — what ' +
+        'metric, which regions. The map carries the data here; a focused pass fills the values.',
+    ),
 })
 
 export const outlineSchema = z.object({

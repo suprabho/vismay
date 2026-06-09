@@ -38,6 +38,14 @@ export function defaultsFor(format: StoryFormat): Record<string, unknown> {
     return {
       scroll: { mode: 'continuous' },
       chart: { theme: 'light-editorial' },
+      // Declare the map look explicitly (instead of relying on renderer
+      // fallbacks): a light basemap that matches the editorial theme, dimmed so
+      // overlays read, with accent-coloured pins.
+      mapStyle: 'mapbox://styles/mapbox/light-v11',
+      mapOpacity: 0.6,
+      pinColor: DEFAULT_THEME.colors.accent2,
+      pinRadius: 8,
+      flySpeed: 1.2,
     }
   }
   return {

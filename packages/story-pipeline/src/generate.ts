@@ -5,6 +5,7 @@ import {
   sectionContentSchema,
   sectionVisualSchema,
   chartDataSchema,
+  regionDataSchema,
   type OutlineOutput,
 } from './schema'
 import {
@@ -16,7 +17,10 @@ import {
   buildVisualPrompt,
   CHART_SYSTEM,
   buildChartPrompt,
+  REGIONS_SYSTEM,
+  buildRegionsPrompt,
 } from './prompts'
+import { buildRegionLayer } from './regions'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
@@ -28,6 +32,8 @@ import type {
   SectionStub,
   ChartRequirement,
   ChartSpec,
+  RegionRequirement,
+  RegionData,
   ResearchBrief,
   SourceDoc,
   ComposeAnswers,
@@ -130,6 +136,45 @@ export async function generateChart(
   return { ...meta, categories: data.categories, series: data.series }
 }
 
+/**
+ * The map-region DATA pass — turn ONE choropleth REQUIREMENT into a full
+ * `map.regions` layer by generating the per-region values grounded in the
+ * sources. The exact mirror of {@link generateChart}: the model emits only the
+ * `{ code, value }` items; the level/geometry come from the requirement and the
+ * ramp/legend are built deterministically by {@link buildRegionLayer}. In a map
+ * story the polygons carry the numbers, so this is the section's primary data.
+ */
+export async function generateRegions(
+  args: { requirement: RegionRequirement; brief: ResearchBrief; sources: SourceDoc[] },
+  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+): Promise<Record<string, unknown>> {
+  const data: RegionData = await generateStructured({
+    model: opts.model,
+    system: REGIONS_SYSTEM,
+    prompt: buildRegionsPrompt(args.requirement, args.brief, args.sources, opts.refine),
+    schema: regionDataSchema,
+    metadata: { feature: 'story-pipeline-regions' },
+  })
+  return buildRegionLayer(args.requirement, data)
+}
+
+/**
+ * Merge a generated choropleth into a section body's `map.regions`, creating the
+ * `map` block if the visual pass didn't emit one. The visual pass frames the
+ * camera; the region values are filled by `generateRegions` and merged here —
+ * the model never authors the per-region numbers.
+ */
+function injectRegions(
+  body: Record<string, unknown>,
+  regions: Record<string, unknown>,
+): Record<string, unknown> {
+  const map =
+    body.map && typeof body.map === 'object' && !Array.isArray(body.map)
+      ? (body.map as Record<string, unknown>)
+      : {}
+  return { ...body, map: { ...map, regions } }
+}
+
 /** Per-pass options for the split section generators. */
 export interface SectionGenOptions {
   /** Override the model alias. Defaults to `text.pro`. */
@@ -225,7 +270,19 @@ export async function generateSection(
       ? { feedback: args.refine.feedback, previous: { body: args.refine.previous.body } }
       : undefined,
   })
-  return { ...content, body: visual.body }
+  let body = visual.body
+  // MAP choropleth: fill this section's per-region values in a focused,
+  // source-grounded pass and merge them into body.map.regions. The visual pass
+  // frames the camera; it does NOT author the numbers (the chart-data split,
+  // applied to maps). Only runs for map sections that declared a requirement.
+  if (args.outline.format === 'map' && args.stub.regionRequirement) {
+    const regions = await generateRegions(
+      { requirement: args.stub.regionRequirement, brief: args.brief, sources: args.sources },
+      { model: opts.model },
+    )
+    body = injectRegions(body, regions)
+  }
+  return { ...content, body }
 }
 
 /**
