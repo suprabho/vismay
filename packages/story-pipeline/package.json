@@ -11,9 +11,11 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "verify": "tsx src/__fixtures__/run.ts"
+    "verify": "tsx src/__fixtures__/run.ts",
+    "eval:outline": "tsx src/__fixtures__/evalOutline.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
     "@mozilla/readability": "^0.6.0",
     "@napi-rs/canvas": "^0.1.80",
     "@vismay/ai-gateway": "workspace:*",
@@ -25,7 +27,8 @@
     "mailparser": "^3.9.8",
     "pdf-parse": "^2.4.5",
     "yaml": "^2.8.3",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/jsdom": "^28.0.1",

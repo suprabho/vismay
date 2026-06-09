@@ -28,6 +28,14 @@ export {
   type SectionGenOptions,
 } from './generate'
 export { validateStory } from './validate'
+export {
+  lintOutline,
+  lintStory,
+  lintSectionBody,
+  formatLintIssue,
+  type LayoutLintIssue,
+  type LintSeverity,
+} from './lintLayout'
 export { serializeStory } from './serialize'
 export { buildChartData, buildEChartsOption } from './chart'
 export { DEFAULT_THEME, defaultsFor } from './defaults'

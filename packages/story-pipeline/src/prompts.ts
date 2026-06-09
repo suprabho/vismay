@@ -1,4 +1,4 @@
-import { GEN_FOREGROUND_TYPES } from './vizEngine'
+import { GEN_FOREGROUND_TYPES, getForegroundLayout } from './vizEngine'
 import { SECTION_KINDS } from './schema'
 import type {
   SourceDoc,
@@ -86,9 +86,34 @@ const LAYER_MENU = LAYER_TYPES.map((l) => `- ${l.type}: ${l.label}`).join('\n')
 const LAYER_TYPES_INLINE = LAYER_TYPES.map((l) => l.type).join(', ')
 
 /** The deck layouts the VISUAL pass can actually build (no image-only layouts). */
-const DECK_LAYOUTS =
-  'stat-left-chart-right, text-left-chart-right, text-left-quote-right, ' +
-  'stat-top-chart-below, chart-top-text-below, centered, hero-full-bleed'
+const DECK_LAYOUT_NAMES = [
+  'stat-left-chart-right',
+  'text-left-chart-right',
+  'text-left-quote-right',
+  'stat-top-chart-below',
+  'chart-top-text-below',
+  'centered',
+  'hero-full-bleed',
+] as const
+
+/** Names only — enough for the outline pass, which just picks a layout. */
+const DECK_LAYOUTS = DECK_LAYOUT_NAMES.join(', ')
+
+/**
+ * Each curated layout with the regions it ACTUALLY defines, read from
+ * viz-engine's registry so it can never drift from the renderer. The renderer
+ * places layers ONLY into a layout's real regions — a layer in any other region
+ * is silently dropped — so the VISUAL pass is shown the exact region vocabulary
+ * and told not to invent regions. Single-box layouts (hero-full-bleed) are
+ * called out so a cover doesn't emit `lead`/`body` it can't place.
+ */
+const DECK_LAYOUT_MENU = DECK_LAYOUT_NAMES.map((name) => {
+  const def = getForegroundLayout(name)
+  const regions = def ? Object.keys(def.regions ?? {}).filter((k) => k !== 'default') : []
+  return regions.length
+    ? `- ${name} — regions: ${regions.join(', ')}`
+    : `- ${name} — ONE full-bleed box (single overlay layer; no named regions)`
+}).join('\n')
 
 // ── Step 1: outline ────────────────────────────────────────────────────────
 
@@ -121,7 +146,12 @@ export function outlineSystem(format: StoryFormat): string {
     `  • visual: the visualisation it features (see below).\n` +
     `  • optional chartId when the section features a chart.\n` +
     `${visualGuidance}\n\n` +
-    `Open with a cover/hero and end with a closing section. Ground every figure in the sources; ` +
+    `THE COVER is one beat, not a summary: a sharp title plus EXACTLY ONE supporting element — ` +
+    `either a single headline stat OR a one-line standfirst, never both, and never a multi-row ` +
+    `table or full paragraph. Its "visual" names that ONE layer only. The cover must NOT carry the ` +
+    `whole thesis or the data breakdown — give the "at a glance" / pattern summary its OWN early ` +
+    `section. Keep the cover's expectedContent to the hook plus that one figure.\n` +
+    `Open with this cover and end with a closing section. Ground every figure in the sources; ` +
     `do not invent data.`
   )
 }
@@ -280,8 +310,9 @@ export function visualSystem(format: StoryFormat): string {
     format === 'map'
       ? `This is a MAP story. Set body.map to the section camera (center [lng, lat], zoom, ` +
         `optional pitch/bearing/pins with [lng, lat] coordinates). A foreground is optional.`
-      : `This is a DECK story. Set body.foreground: either a flat layers list, or a layout name ` +
-        `plus regions (each region maps to its layers). Good layouts: ${DECK_LAYOUTS}.`
+      : `This is a DECK story. Set body.foreground: either a FLAT layers list (no layout), or a ` +
+        `layout name plus regions — where each region maps to its layers. Layouts and the ` +
+        `regions they define:\n${DECK_LAYOUT_MENU}`
 
   return (
     `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
@@ -290,6 +321,13 @@ export function visualSystem(format: StoryFormat): string {
     `${formatGuidance}\n\n` +
     `Available foreground layer types:\n${LAYER_MENU}\n\n` +
     `Rules:\n` +
+    `- COVER/HERO sections (see Kind) are ONE beat: emit a SINGLE foreground layer — one bigStat, ` +
+    `OR a one-line bodyText standfirst, OR one short quote. NEVER stack a stat + prose + a ` +
+    `keyValue/table on the opener; that overflows. The full breakdown / "at a glance" belongs in a ` +
+    `later section, not the cover.\n` +
+    `- Place layers ONLY in regions the chosen layout defines (see the list above). A layer in a ` +
+    `region the layout does not have will NOT render. For a single-box layout like hero-full-bleed, ` +
+    `use a FLAT layers list with ONE overlay layer — do not invent 'lead'/'body'/'stat' regions.\n` +
     `- Honour the section's planned visual and layout when the outline gives one; deviate only ` +
     `if the written prose clearly calls for it.\n` +
     `- Reference theme tokens (accent, accent2, teal, positive, amber, red, muted) for colours.\n` +
