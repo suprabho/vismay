@@ -27,7 +27,7 @@ const DEFAULT_LAYOUT = 'split-37-63-two-row'
 
 const COVER_KINDS = new Set(['cover', 'hero'])
 
-export type LintSeverity = 'drop' | 'overlap' | 'unknown'
+export type LintSeverity = 'drop' | 'overlap' | 'unknown' | 'missing'
 
 export interface LayoutLintIssue {
   section: string
@@ -132,6 +132,32 @@ export function lintStory(sections: GeneratedSection[]): LayoutLintIssue[] {
 export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
   const issues: LayoutLintIssue[] = []
   const mapKinds = sectionKindsFor('map')
+  // Every story opens with a title card — a stat/text opener drops the reader
+  // in mid-arc (the outline prompt demands a cover; this catches the misses).
+  const first = outline.sections[0]
+  if (first && !COVER_KINDS.has(first.kind)) {
+    issues.push({
+      section: first.heading,
+      severity: 'missing',
+      message: `story opens with kind '${first.kind}' — the first section should be a cover/hero title card`,
+    })
+  }
+  // Headings are markdown anchors and share ONE namespace across sections AND
+  // sub-beats — a duplicate silently steals the other's prose.
+  const seen = new Set<string>()
+  for (const s of outline.sections) {
+    for (const h of [s.heading, ...(s.subsections ?? []).map((x) => x.heading)]) {
+      const key = h.trim()
+      if (seen.has(key)) {
+        issues.push({
+          section: h,
+          severity: 'drop',
+          message: `duplicate heading '${h}' — anchors collide and one block loses its prose`,
+        })
+      }
+      seen.add(key)
+    }
+  }
   for (const s of outline.sections) {
     // MAP planning guard: a map section's prose lives in the scroll rail, which a
     // deck `kind` or a named `layout` (a foreground panel over the map) would
@@ -151,6 +177,35 @@ export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
           severity: 'drop',
           message: `map section plans foreground layout '${s.layout}' → a panel over the map suppresses the prose rail; drop it`,
         })
+      }
+      // Region-awareness: a map section with no planned geo leaves the camera to
+      // be invented downstream — the story stops travelling through its geography.
+      if (!s.geo) {
+        issues.push({
+          section: s.heading,
+          severity: 'missing',
+          message: `map section plans no geo (focus + center + zoom) → the camera will be invented downstream`,
+        })
+      }
+      // Numeric stats only: a map `stat` section renders its HEADING as the giant
+      // figure (StatPanel), so a phrase heading becomes a giant sentence.
+      if (s.kind === 'stat' && !/\d/.test(s.heading)) {
+        issues.push({
+          section: s.heading,
+          severity: 'missing',
+          message: `map stat section's heading renders as the giant figure but contains no number — make the heading the stat itself (e.g. "18.7 GW")`,
+        })
+      }
+      // Sub-beats: each needs its camera dive, and never its own choropleth
+      // (the parent's regions are the shared context the beats explore).
+      for (const sub of s.subsections ?? []) {
+        if (!sub.geo) {
+          issues.push({
+            section: `${s.heading} › ${sub.heading}`,
+            severity: 'missing',
+            message: `sub-beat plans no geo (the camera dive) → it will sit on the parent's framing`,
+          })
+        }
       }
     }
     if (s.layout && !getForegroundLayout(s.layout)) {

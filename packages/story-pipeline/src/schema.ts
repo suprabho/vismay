@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { sectionBodySchema } from './vizEngine'
+import { sectionBodySchema, genPinSchema } from './vizEngine'
 
 /**
  * Zod schemas that constrain the two LLM calls at the provider level (via
@@ -45,7 +45,9 @@ function kindField(format: 'deck' | 'map') {
   const desc =
     format === 'map'
       ? 'Section kind — a MAP story uses narrative kinds only: text | hero | stat | cover. ' +
-        'These keep the scroll prose rail; deck/panel kinds would suppress it and orphan the prose.'
+        'These keep the scroll prose rail; deck/panel kinds would suppress it and orphan the prose. ' +
+        '"stat" renders the section HEADING as a giant figure, so use it only when the heading is ' +
+        'a number (e.g. "18.7 GW").'
       : 'The section kind.'
   return (format === 'map' ? z.enum(MAP_SECTION_KINDS) : z.enum(SECTION_KINDS)).describe(desc)
 }
@@ -259,13 +261,30 @@ export const imagePromptSchema = z.object({
  */
 /** The CONTENT-pass output schema, with `kind` narrowed to the format's allowed kinds. */
 export function sectionContentSchemaFor(format: 'deck' | 'map') {
+  const paragraphs =
+    format === 'map'
+      ? z
+          .array(z.string())
+          .min(1)
+          .max(4)
+          .describe(
+            'Body prose, one string per paragraph — TIGHT beats: 2–4 paragraphs of 20–45 words ' +
+              'each, ≤ ~110 words total (the rail card clips on portrait, it does not scroll). ' +
+              'Factual magazine register.',
+          )
+      : z
+          .array(z.string())
+          .min(1)
+          .max(5)
+          .describe(
+            'Body prose, one string per paragraph — lean panel copy: 30–60 words per paragraph, ' +
+              'no padding. Factual magazine register.',
+          )
   return z.object({
     heading: z
       .string()
       .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
-    paragraphs: z
-      .array(z.string())
-      .describe('Body prose, one string per paragraph (factual magazine register).'),
+    paragraphs,
     kind: kindField(format),
   })
 }
@@ -281,15 +300,113 @@ export const sectionVisualSchema = z.object({
   ),
 })
 
+// ── Subsection passes (MAP only — the sub-beats of a parent section) ────────
+
+/** The CONTENT-pass output for ONE sub-beat: prose only. The heading is the
+ *  planned stub heading (stable anchor) and the kind is the parent's, so the
+ *  model emits neither. Same tight length discipline as a map section — each
+ *  beat is one snap target. */
+export const subsectionContentSchema = z.object({
+  paragraphs: z
+    .array(z.string())
+    .min(1)
+    .max(4)
+    .describe(
+      'Body prose for this beat, one string per paragraph — TIGHT: 1–3 paragraphs of 20–45 ' +
+        'words each, ≤ ~90 words total (each beat is one snap; portrait clips, it does not ' +
+        'scroll). Factual magazine register.',
+    ),
+})
+
+/**
+ * The VISUAL-pass output for ONE sub-beat: the parts of its camera dive the
+ * outline does not plan. Center/zoom come from the planned `geo` and are merged
+ * deterministically; the model adds only tilt and the grounded focal pins.
+ */
+export const subsectionVisualSchema = z.object({
+  pitch: z
+    .number()
+    .optional()
+    .describe('Camera tilt in degrees for the dive (0 = top-down; 15–30 adds drama; omit to keep the parent\'s).'),
+  bearing: z.number().optional().describe('Camera rotation in degrees. Usually omit.'),
+  pins: z
+    .array(genPinSchema)
+    .max(5)
+    .optional()
+    .describe(
+      'The focal pins for this beat — the cities/sites the prose names, each ' +
+        '{ coordinates: [lng, lat], label }. REPLACES the parent\'s pins for this snap. ' +
+        'Omit to keep the parent\'s pins.',
+    ),
+})
+
 export const generatedSectionSchema = sectionContentSchema.merge(sectionVisualSchema)
 
 // ── Step 1: outline (fast — the skeleton, no prose) ────────────────────────
 
-export const sectionStubSchema = z.object({
+/**
+ * The structured geography a MAP section frames. Coordinates here are general
+ * geographic knowledge (where a country/region sits), not source data, so the
+ * outline may emit them — unlike chart/region VALUES, which a grounded pass
+ * fills. `center` is a 2-item array (not a tuple) for provider structured-
+ * output compatibility.
+ */
+export const sectionGeoSchema = z.object({
+  focus: z
+    .string()
+    .describe(
+      'The named place this section frames — a region/country/city, e.g. "the Persian Gulf", ' +
+        '"Sub-Saharan Africa", "Gujarat\'s coastline".',
+    ),
+  center: z
+    .array(z.number())
+    .min(2)
+    .max(2)
+    .describe('Camera center as [lng, lat] — longitude FIRST (the engine\'s order).'),
+  zoom: z
+    .number()
+    .describe('Camera zoom: ≈1–1.5 world, ≈3 continent, ≈4–5.5 country, 6+ sub-region/city.'),
+})
+
+/**
+ * A planned sub-beat of a MAP section (the press-freedom pattern): the parent
+ * holds the shared map context — camera, choropleth, pin field — and each
+ * subsection is its own snap target with its own prose anchor and a camera
+ * DIVE within the parent's framing. The parent's prose never renders when
+ * subsections exist, so the children must carry all the copy.
+ */
+export const subsectionStubSchema = z.object({
+  heading: z
+    .string()
+    .describe(
+      'Short, specific heading — becomes this beat\'s markdown ## anchor. Must be UNIQUE ' +
+        'across the whole story (sections and subsections share one anchor namespace).',
+    ),
+  intent: z.string().describe("One line on this beat's job within the parent's context."),
+  expectedContent: z
+    .string()
+    .describe(
+      'The specific facts, figures, and places this beat must carry — concrete and grounded ' +
+        'in the sources.',
+    ),
+  geo: sectionGeoSchema.describe(
+    "The camera DIVE for this beat — a closer framing INSIDE the parent's geography " +
+      '(e.g. parent frames the Nordics at z3.4, beats dive to Norway z4.2, the Baltics z4.5). ' +
+      "Overrides the parent camera for this snap only.",
+  ),
+  visual: z
+    .string()
+    .describe(
+      'What this beat marks: the focal pins (which places) and what the dive framing makes ' +
+        'visible in the shared choropleth/pin field.',
+    ),
+})
+
+/** The stub fields every format shares. */
+const stubCommon = {
   heading: z
     .string()
     .describe('Short, specific section heading — becomes the markdown ## and config text anchor.'),
-  kind: z.enum(SECTION_KINDS).describe('The section kind.'),
   intent: z.string().describe("One line on this section's job in the story."),
   context: z
     .string()
@@ -303,58 +420,117 @@ export const sectionStubSchema = z.object({
       'The specific facts, figures, and quotes this section must carry — concrete and ' +
         'grounded in the sources, NOT generic. This is what the writer fills the prose with.',
     ),
-  visual: z
-    .string()
-    .describe(
-      'The visualisation this section features: for a deck, which foreground layers ' +
-        '(bigStat, chart, quote, keyValue, bodyText) and what each shows; for a map, the ' +
-        'camera moment (where it sits, what it marks).',
-    ),
-  layout: z
-    .string()
-    .optional()
-    .describe(
-      'Deck only: the named foreground layout that frames the visual (e.g. ' +
-        'stat-left-chart-right, text-left-chart-right, centered, hero-full-bleed).',
-    ),
   chartId: z
     .string()
     .optional()
     .describe('If this section features a chart, the id of a chart from the charts list.'),
-  regionRequirement: regionRequirementSchema
-    .optional()
-    .describe(
-      'MAP only: if this section shades geography (a choropleth), the region requirement — what ' +
-        'metric, which regions. The map carries the data here; a focused pass fills the values.',
-    ),
-})
+}
 
-export const outlineSchema = z.object({
-  format: z.enum(['deck', 'map']).describe('The story format to produce.'),
-  title: z.string().describe('Story headline.'),
-  subtitle: z.string().describe('One-line deck/subtitle.'),
-  byline: z.string().describe('Attribution line, e.g. "By the Vizmaya desk".'),
-  accentColors: z
-    .object({
-      accent: z.string().optional().describe('Primary accent hex.'),
-      accent2: z.string().optional().describe('Secondary accent hex.'),
+/**
+ * The section-stub schema, narrowed to the format — so a map outline can never
+ * plan deck kinds (which suppress the prose rail), never plans a deck `layout`
+ * panel over the map, and MUST declare the geography each section frames. The
+ * deck variant is unchanged from the historic shape.
+ */
+export function sectionStubSchemaFor(format: 'deck' | 'map') {
+  if (format === 'map') {
+    return z.object({
+      ...stubCommon,
+      heading: z
+        .string()
+        .describe(
+          'Short, specific section heading — becomes the markdown ## and config text anchor. ' +
+            'For kind "stat" the heading IS the rendered giant figure, so it must be the number ' +
+            'itself (e.g. "18.7 GW", "10 million homes") — never a phrase.',
+        ),
+      kind: kindField('map'),
+      visual: z
+        .string()
+        .describe(
+          'The camera moment this section features: what the framing shows, any focal pins, ' +
+            'and what the shaded regions (if any) make visible.',
+        ),
+      geo: sectionGeoSchema.describe(
+        'The geography this section frames — focus + camera center + zoom. REQUIRED on every ' +
+          'map section: it is the spine the camera follows through the story.',
+      ),
+      regionRequirement: regionRequirementSchema
+        .optional()
+        .describe(
+          'If this section shades geography (a choropleth), the region requirement — what ' +
+            'metric, which regions. The map carries the data here; a focused pass fills the values. ' +
+            'Choropleths shade AREAL units only (countries, states, regions) — cities/towns/sites ' +
+            'are pins, never shaded.',
+        ),
+      subsections: z
+        .array(subsectionStubSchema)
+        .min(2)
+        .max(4)
+        .optional()
+        .describe(
+          'Optional 2–4 sub-beats that explore THIS section\'s shared map context as separate ' +
+            'snap targets — use when one data context (its choropleth or pin field) deserves ' +
+            'several beats: the camera dives place to place while the shaded data stays. The ' +
+            'parent carries the regionRequirement and the wide framing; subsections never ' +
+            'carry a regionRequirement. When subsections exist the parent has no prose of its ' +
+            'own — the beats carry all the copy.',
+        ),
     })
-    .optional()
-    .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
-  charts: z
-    .array(chartRequirementSchema)
-    .describe(
-      'Every chart any section references, declared as a REQUIREMENT (id, type, ' +
-        'title, what to plot) — no numbers. The data is generated in a later pass.',
-    ),
-  imagePrompts: z
-    .array(imagePromptSchema)
-    .describe('Image prompts for sections that want imagery (a sidecar).'),
-  sections: z
-    .array(sectionStubSchema)
-    .min(3)
-    .max(8)
-    .describe('3–8 section stubs that tell the story start to finish.'),
-})
+  }
+  return z.object({
+    ...stubCommon,
+    kind: kindField('deck'),
+    visual: z
+      .string()
+      .describe(
+        'The visualisation this section features: which foreground layers (bigStat, chart, ' +
+          'quote, keyValue, bodyText) and what each shows.',
+      ),
+    layout: z
+      .string()
+      .optional()
+      .describe(
+        'The named foreground layout that frames the visual (e.g. ' +
+          'stat-left-chart-right, text-left-chart-right, centered, hero-full-bleed).',
+      ),
+  })
+}
+
+/** Back-compat default (deck shape). Prefer {@link sectionStubSchemaFor}. */
+export const sectionStubSchema = sectionStubSchemaFor('deck')
+
+/** The outline schema, with section stubs narrowed to the format. */
+export function outlineSchemaFor(format: 'deck' | 'map') {
+  return z.object({
+    format: z.enum(['deck', 'map']).describe('The story format to produce.'),
+    title: z.string().describe('Story headline.'),
+    subtitle: z.string().describe('One-line deck/subtitle.'),
+    byline: z.string().describe('Attribution line, e.g. "By the Vizmaya desk".'),
+    accentColors: z
+      .object({
+        accent: z.string().optional().describe('Primary accent hex.'),
+        accent2: z.string().optional().describe('Secondary accent hex.'),
+      })
+      .optional()
+      .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
+    charts: z
+      .array(chartRequirementSchema)
+      .describe(
+        'Every chart any section references, declared as a REQUIREMENT (id, type, ' +
+          'title, what to plot) — no numbers. The data is generated in a later pass.',
+      ),
+    imagePrompts: z
+      .array(imagePromptSchema)
+      .describe('Image prompts for sections that want imagery (a sidecar).'),
+    sections: z
+      .array(sectionStubSchemaFor(format))
+      .min(3)
+      .max(8)
+      .describe('3–8 section stubs that tell the story start to finish.'),
+  })
+}
+
+/** Back-compat default (deck shape). Prefer {@link outlineSchemaFor}. */
+export const outlineSchema = outlineSchemaFor('deck')
 
 export type OutlineOutput = z.infer<typeof outlineSchema>

@@ -5,8 +5,13 @@ import { hashRequest, recordGeneration } from '@vismay/ai-gateway'
 import {
   generateSectionContent,
   generateSectionVisual,
+  generateSubsectionContent,
+  generateSubsectionVisual,
+  generateRegions,
+  injectRegions,
   type SectionContext,
   type SectionStub,
+  type SubsectionStub,
   type StoryOutline,
   type ResearchBrief,
   type StoryFormat,
@@ -82,6 +87,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       expectedContent: entry.expectedContent,
       visual: entry.visual,
       layout: entry.layout,
+      chartId: entry.chartId,
+      geo: entry.geo,
+      regionRequirement: entry.regionRequirement,
+      subsections: entry.subsections,
     }
   const sb = (state.brief ?? {}) as StoredBrief
   const chosen = state.angles.find((a) => a.id === state.chosenAngleId) ?? state.angles[0]
@@ -120,32 +129,85 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   let newMarkdown = markdown
   let newConfig = configYaml
-  const result: { heading: string; paragraphs?: string[]; kind?: string; body?: Record<string, unknown> } = {
+  const result: {
+    heading: string
+    paragraphs?: string[]
+    kind?: string
+    body?: Record<string, unknown>
+    subsections?: Array<{ heading: string; paragraphs: string[] }>
+  } = {
     heading: entry.heading,
   }
+  // A parent with sub-beats has no prose of its own — the engine ignores it.
+  // CONTENT writes each beat's prose under its own `## heading`; VISUAL designs
+  // the parent camera + per-beat dives.
+  const subStubs: SubsectionStub[] = state.format === 'map' ? (stub.subsections ?? []) : []
+  const hasSubs = subStubs.length > 0
 
   try {
     if (phase === 'content' || phase === 'combined') {
-      const refine =
-        feedback && phase === 'content'
-          ? {
-              feedback,
-              previous: { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind },
-            }
-          : undefined
-      const content = await generateSectionContent(ctx, { model, refine })
-      newMarkdown = replaceMarkdownProse(newMarkdown, entry.heading, content.paragraphs)
-      result.paragraphs = content.paragraphs
-      result.kind = content.kind
+      if (hasSubs) {
+        const subsOut: Array<{ heading: string; paragraphs: string[] }> = []
+        for (const sub of subStubs) {
+          // eslint-disable-next-line no-await-in-loop
+          const c = await generateSubsectionContent(ctx, stub, sub, { model })
+          newMarkdown = replaceMarkdownProse(newMarkdown, sub.heading, c.paragraphs)
+          subsOut.push(c)
+        }
+        result.subsections = subsOut
+        result.kind = entry.kind
+      } else {
+        const refine =
+          feedback && phase === 'content'
+            ? {
+                feedback,
+                previous: { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind },
+              }
+            : undefined
+        const content = await generateSectionContent(ctx, { model, refine })
+        newMarkdown = replaceMarkdownProse(newMarkdown, entry.heading, content.paragraphs)
+        result.paragraphs = content.paragraphs
+        result.kind = content.kind
+      }
     }
     if (phase === 'visual' || phase === 'combined') {
-      const contentForVisual = result.paragraphs
-        ? { heading: entry.heading, paragraphs: result.paragraphs, kind: result.kind ?? entry.kind }
-        : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind }
+      const contentForVisual = hasSubs
+        ? { heading: entry.heading, paragraphs: [], kind: entry.kind }
+        : result.paragraphs
+          ? { heading: entry.heading, paragraphs: result.paragraphs, kind: result.kind ?? entry.kind }
+          : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind }
       const refine = feedback && phase === 'visual' ? { feedback, previous: { heading: entry.heading } } : undefined
       const visual = await generateSectionVisual(ctx, contentForVisual, { model, refine })
-      newConfig = replaceConfigBody(newConfig, entry.sectionId, visual.body)
-      result.body = visual.body
+      let visualBody = visual.body
+      // MAP choropleth: the visual pass frames the camera but never authors the
+      // per-region values — fill them with the focused source-grounded pass and
+      // merge into body.map.regions, exactly as generateSection does offline.
+      if (state.format === 'map' && stub.regionRequirement) {
+        const regions = await generateRegions(
+          { requirement: stub.regionRequirement, brief, sources: docs },
+          { model },
+        )
+        visualBody = injectRegions(visualBody, regions)
+      }
+      if (hasSubs) {
+        // Per-beat camera dives: center/zoom from the planned geo, tilt + focal
+        // pins from the sub visual pass, grounded in the beat's written prose.
+        const subEntries: Array<Record<string, unknown>> = []
+        for (const sub of subStubs) {
+          const paragraphs =
+            result.subsections?.find((s) => s.heading === sub.heading)?.paragraphs ??
+            readMarkdownProse(newMarkdown, sub.heading)
+          // eslint-disable-next-line no-await-in-loop
+          const map = await generateSubsectionVisual(ctx, stub, sub, { paragraphs }, { model })
+          subEntries.push({
+            text: sub.heading,
+            ...(Object.keys(map).length ? { map } : {}),
+          })
+        }
+        visualBody = { ...visualBody, subsections: subEntries }
+      }
+      newConfig = replaceConfigBody(newConfig, entry.sectionId, visualBody)
+      result.body = visualBody
     }
   } catch (e) {
     return NextResponse.json(

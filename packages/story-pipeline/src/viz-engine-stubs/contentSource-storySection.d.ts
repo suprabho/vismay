@@ -10,6 +10,11 @@ export interface NewSection {
   paragraphs: string[]
   kind?: string
   body?: Record<string, unknown>
+  subsections?: Array<{
+    heading: string
+    paragraphs: string[]
+    map?: Record<string, unknown>
+  }>
 }
 
 export interface AppendSectionResult {

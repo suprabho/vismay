@@ -22,6 +22,7 @@ export function serializeStory(story: GeneratedStory): StoryArtifacts {
       paragraphs: section.paragraphs,
       kind: section.kind,
       body: section.body,
+      subsections: section.subsections,
     })
     markdown = res.markdown
     configYaml = res.configYaml

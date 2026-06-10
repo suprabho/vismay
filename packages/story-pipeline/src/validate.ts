@@ -72,6 +72,21 @@ export function validateStory(story: GeneratedStory): ValidationIssue[] {
       seenHeadings.add(section.heading)
     }
 
+    // Sub-beat anchors share the same markdown namespace as section headings.
+    for (const sub of section.subsections ?? []) {
+      const subLabel = `${label} › ${sub.heading || '(untitled beat)'}`
+      if (!sub.heading?.trim()) {
+        issues.push({ section: subLabel, message: 'subsection heading is empty' })
+      } else if (seenHeadings.has(sub.heading)) {
+        issues.push({ section: subLabel, message: 'duplicate heading (anchors collide)' })
+      } else {
+        seenHeadings.add(sub.heading)
+      }
+      if (!sub.paragraphs.length) {
+        issues.push({ section: subLabel, message: 'subsection has no prose' })
+      }
+    }
+
     // MAP prose-rail guard: a map section renders its prose in the scroll rail.
     // The renderer suppresses that rail two ways — a deck `kind`, OR a regions/
     // panel `foreground` (`usesRegions`) — and on a map section the prose then
@@ -98,6 +113,12 @@ function validateSectionLayers(
   issues: ValidationIssue[],
 ): void {
   const { layers, layout, regionNames } = collectLayers(section.body)
+
+  // Section-root layout (the editorial cover surface) must be a real layout.
+  const rootLayout = section.body.layout
+  if (typeof rootLayout === 'string' && !getForegroundLayout(rootLayout)) {
+    issues.push({ section: label, message: `unknown section-root layout "${rootLayout}"` })
+  }
 
   // MAP sections must not carry a regions/panel foreground: it renders ON TOP of
   // the map and suppresses the prose rail (`usesRegions` in MapStorySection). A

@@ -710,7 +710,7 @@ export function ComposeFlow({
                     ? 'bg-red-500/20 text-red-300'
                     : 'bg-white/10 text-neutral-400'
               const open = openOutline.has(e.id)
-              const hasDetail = Boolean(e.visual || e.context || e.expectedContent)
+              const hasDetail = Boolean(e.visual || e.context || e.expectedContent || e.subsections?.length)
               return (
                 <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
                   <div className="flex items-center gap-1">
@@ -737,6 +737,14 @@ export function ComposeFlow({
                         title="Planned deck layout"
                       >
                         {e.layout}
+                      </span>
+                    )}
+                    {!!e.subsections?.length && (
+                      <span
+                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
+                        title="Sub-beats sharing this section's map context"
+                      >
+                        ⤷ {e.subsections.length} beats
                       </span>
                     )}
                     <span className="text-[10px] text-neutral-500">{e.kind}</span>
@@ -787,6 +795,24 @@ export function ComposeFlow({
                         <div>
                           <dt className="text-neutral-500">Context</dt>
                           <dd className="text-neutral-300">{e.context}</dd>
+                        </div>
+                      )}
+                      {!!e.subsections?.length && (
+                        <div>
+                          <dt className="text-neutral-500">Beats (shared map context)</dt>
+                          <dd>
+                            <ul className="mt-0.5 space-y-1">
+                              {e.subsections.map((s) => (
+                                <li key={s.heading} className="border-l border-white/10 pl-2">
+                                  <span className="text-neutral-200">{s.heading}</span>
+                                  {s.geo && (
+                                    <span className="text-neutral-500"> — dives to {s.geo.focus}</span>
+                                  )}
+                                  <p className="text-neutral-400">{s.intent}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          </dd>
                         </div>
                       )}
                     </dl>
