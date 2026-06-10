@@ -9,9 +9,12 @@ import { readComposeState, writeComposeState } from '@vismay/content-source/comp
  * Compose stage 3.5 — materialise the accepted outline entries into real story
  * sections, then advance to the CONTENT phase.
  *
- * Rebuilds the story from a clean base (the existing frontmatter + config
- * `defaults`, with the seed placeholder section dropped) and appends one section
- * per accepted entry via `appendStorySection`. Each section gets a placeholder
+ * Incremental: only accepted entries WITHOUT a sectionId are created, so the
+ * step can run again for stragglers accepted after the first pass. The first
+ * run on a seeded draft rebuilds from a clean base (the existing frontmatter +
+ * config `defaults`, with the seed placeholder section dropped); every later
+ * run — and the attached flow — appends onto the story as-is, so already
+ * written sections are never touched. Each new section gets a placeholder
  * visual (empty `foreground` for deck, a default `map` camera for map) so it
  * clears `loadStoryConfig`; the CONTENT/VISUAL passes fill them in. The
  * generated section id is recorded back onto the outline entry.
@@ -26,10 +29,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
 
   const state = await readComposeState(slug)
   if (!state) return NextResponse.json({ error: 'no compose draft for this slug' }, { status: 404 })
+  if (state.archived) {
+    return NextResponse.json({ error: 'draft is finished — reopen it before materialising' }, { status: 400 })
+  }
 
-  const accepted = state.outline.filter((e) => e.status === 'accepted')
+  // Only accepted entries that haven't been materialised yet — re-runs append
+  // the newly accepted stragglers without duplicating earlier sections.
+  const accepted = state.outline.filter((e) => e.status === 'accepted' && !e.sectionId)
   if (accepted.length === 0) {
-    return NextResponse.json({ error: 'accept at least one outline section first' }, { status: 400 })
+    return NextResponse.json({ error: 'accept at least one new outline section first' }, { status: 400 })
   }
 
   const src = getContentSource()
@@ -44,13 +52,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
   // Choose the base to append onto:
   //  • attached (compose started on an existing story) → keep the story whole,
   //    so the new sections land AFTER the author's real content.
-  //  • seeded draft → keep only the frontmatter + config `defaults` and drop the
-  //    throwaway placeholder section.
+  //  • a re-run (some entry already materialised) → keep the story whole, so
+  //    earlier materialised sections and their written content survive.
+  //  • first run on a seeded draft → keep only the frontmatter + config
+  //    `defaults` and drop the throwaway placeholder section.
   // Either way the final write is atomic, so the canvas never observes a
   // transient section-less state.
+  const alreadyMaterialised = state.outline.some((e) => e.sectionId)
   let md: string
   let cfg: string
-  if (state.attached) {
+  if (state.attached || alreadyMaterialised) {
     md = markdown
     cfg = configYaml
   } else {
@@ -94,7 +105,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
   // canvas chart node) — the outline only declares chart REQUIREMENTS now, so
   // there's nothing to expand here.
 
-  await writeComposeState(slug, { ...state, outline: nextOutline, phase: 'content' })
+  // Advance outline → content; a re-run from a later phase keeps its phase.
+  await writeComposeState(slug, {
+    ...state,
+    outline: nextOutline,
+    phase: state.phase === 'outline' ? 'content' : state.phase,
+  })
 
   return NextResponse.json({
     ok: true,
