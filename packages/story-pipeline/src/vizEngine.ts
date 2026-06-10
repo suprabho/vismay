@@ -16,6 +16,7 @@ export {
   sectionBodySchema,
   normalizeSectionBody,
   GEN_FOREGROUND_TYPES,
+  genPinSchema,
   type SectionBody,
 } from '@vismay/viz-engine/src/lib/genSchema'
 

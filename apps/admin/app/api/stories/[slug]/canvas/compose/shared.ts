@@ -79,7 +79,9 @@ export function replaceConfigBody(
   const index = model.sections.findIndex((s) => s.id === sectionId)
   if (index < 0) throw new Error(`section "${sectionId}" not found in config`)
   const existing = model.sections[index]!
-  const entry: Record<string, unknown> = { id: existing.id, text: existing.text }
+  // A subsections parent has no `text` anchor of its own — don't write one back.
+  const entry: Record<string, unknown> = { id: existing.id }
+  if (existing.text) entry.text = existing.text
   if (existing.kind) entry.kind = existing.kind
   for (const [k, v] of Object.entries(body)) {
     if (k !== 'id' && k !== 'text') entry[k] = v

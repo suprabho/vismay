@@ -96,6 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     chartId: s.chartId,
     geo: s.geo,
     regionRequirement: s.regionRequirement,
+    subsections: s.subsections,
     status: 'pending',
     sectionId: null,
   }))

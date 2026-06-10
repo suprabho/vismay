@@ -4,6 +4,8 @@ import {
   outlineSchemaFor,
   sectionContentSchemaFor,
   sectionVisualSchema,
+  subsectionContentSchema,
+  subsectionVisualSchema,
   chartDataSchema,
   regionDataSchema,
 } from './schema'
@@ -14,6 +16,10 @@ import {
   buildContentPrompt,
   visualSystem,
   buildVisualPrompt,
+  SUBSECTION_CONTENT_SYSTEM,
+  buildSubsectionContentPrompt,
+  SUBSECTION_VISUAL_SYSTEM,
+  buildSubsectionVisualPrompt,
   CHART_SYSTEM,
   buildChartPrompt,
   REGIONS_SYSTEM,
@@ -25,10 +31,12 @@ import { validateStory } from './validate'
 import type {
   GeneratedStory,
   GeneratedSection,
+  GeneratedSubsection,
   SectionContentDraft,
   SectionContext,
   StoryOutline,
   SectionStub,
+  SubsectionStub,
   ChartRequirement,
   ChartSpec,
   RegionRequirement,
@@ -236,6 +244,82 @@ export async function generateSectionVisual(
 }
 
 /**
+ * Subsection CONTENT pass — the prose for ONE sub-beat of a map section. The
+ * heading is the planned stub heading (stable markdown anchor); the model
+ * emits only the paragraphs, under the same tight length discipline as a map
+ * section (each beat is one snap target).
+ */
+export async function generateSubsectionContent(
+  ctx: SectionContext,
+  parent: SectionStub,
+  sub: SubsectionStub,
+  opts: SectionGenOptions = {},
+): Promise<{ heading: string; paragraphs: string[] }> {
+  const result = await generateStructured({
+    model: opts.model,
+    system: SUBSECTION_CONTENT_SYSTEM,
+    prompt: buildSubsectionContentPrompt(ctx, parent, sub, opts.refine),
+    schema: subsectionContentSchema,
+    metadata: { feature: 'story-pipeline-subsection-content' },
+  })
+  return { heading: sub.heading, paragraphs: result.paragraphs }
+}
+
+/**
+ * Subsection VISUAL pass — the camera dive's unplanned parts (tilt + grounded
+ * focal pins). Center/zoom come from the planned `geo` and are merged here
+ * deterministically, mirroring how chart/region data passes keep the model
+ * away from what the plan already fixes. Returns the engine's
+ * `SubsectionMapOverride` fields (`map` on a subsection config entry).
+ */
+export async function generateSubsectionVisual(
+  ctx: SectionContext,
+  parent: SectionStub,
+  sub: SubsectionStub,
+  content: { paragraphs: string[] },
+  opts: SectionGenOptions = {},
+): Promise<Record<string, unknown>> {
+  const result = await generateStructured({
+    model: opts.model,
+    system: SUBSECTION_VISUAL_SYSTEM,
+    prompt: buildSubsectionVisualPrompt(ctx, parent, sub, content, opts.refine),
+    schema: subsectionVisualSchema,
+    metadata: { feature: 'story-pipeline-subsection-visual' },
+  })
+  const map: Record<string, unknown> = {}
+  if (sub.geo?.center) map.center = sub.geo.center
+  if (sub.geo?.zoom != null) map.zoom = sub.geo.zoom
+  if (result.pitch != null) map.pitch = result.pitch
+  if (result.bearing != null) map.bearing = result.bearing
+  if (result.pins?.length) map.pins = result.pins
+  return map
+}
+
+/**
+ * Generate every sub-beat of a parent stub: per-sub CONTENT then VISUAL.
+ * Sequential on purpose — each beat's prose should flow from the previous one.
+ */
+export async function generateSubsections(
+  ctx: SectionContext,
+  parent: SectionStub,
+  opts: SectionGenOptions = {},
+): Promise<GeneratedSubsection[]> {
+  const subs: GeneratedSubsection[] = []
+  for (const sub of parent.subsections ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    const content = await generateSubsectionContent(ctx, parent, sub, { model: opts.model })
+    // eslint-disable-next-line no-await-in-loop
+    const map = await generateSubsectionVisual(ctx, parent, sub, content, { model: opts.model })
+    subs.push({
+      heading: content.heading,
+      paragraphs: content.paragraphs,
+      ...(Object.keys(map).length ? { map } : {}),
+    })
+  }
+  return subs
+}
+
+/**
  * Step 2 (combined) — run the CONTENT then VISUAL pass and merge. The
  * canonical single-call section generator: the offline harness, `generateStory`,
  * and the fs compose routes use this. Pass `refine` to revise a prior section.
@@ -259,19 +343,24 @@ export async function generateSection(
     brief: args.brief,
     answers: args.answers,
   }
-  const content = await generateSectionContent(ctx, {
-    model: opts.model,
-    refine: args.refine
-      ? {
-          feedback: args.refine.feedback,
-          previous: {
-            heading: args.refine.previous.heading,
-            paragraphs: args.refine.previous.paragraphs,
-            kind: args.refine.previous.kind,
-          },
-        }
-      : undefined,
-  })
+  // A parent with subsections has no prose of its own (the engine ignores it —
+  // the beats carry all the copy), so the parent CONTENT pass is skipped.
+  const hasSubs = args.outline.format === 'map' && !!args.stub.subsections?.length
+  const content = hasSubs
+    ? { heading: args.stub.heading, paragraphs: [], kind: args.stub.kind || 'text' }
+    : await generateSectionContent(ctx, {
+        model: opts.model,
+        refine: args.refine
+          ? {
+              feedback: args.refine.feedback,
+              previous: {
+                heading: args.refine.previous.heading,
+                paragraphs: args.refine.previous.paragraphs,
+                kind: args.refine.previous.kind,
+              },
+            }
+          : undefined,
+      })
   const visual = await generateSectionVisual(ctx, content, {
     model: opts.model,
     refine: args.refine
@@ -290,7 +379,9 @@ export async function generateSection(
     )
     body = injectRegions(body, regions)
   }
-  return { ...content, body }
+  if (!hasSubs) return { ...content, body }
+  const subsections = await generateSubsections(ctx, args.stub, { model: opts.model })
+  return { ...content, body, subsections }
 }
 
 /**

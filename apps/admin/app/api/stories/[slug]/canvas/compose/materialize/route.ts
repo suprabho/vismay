@@ -86,6 +86,16 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
       paragraphs: [entry.intent || ''],
       kind: entry.kind,
       body: placeholderBody(entry),
+      // MAP sub-beats: each gets its own anchor + a placeholder camera dive
+      // from its planned geo; the CONTENT/VISUAL passes fill prose and pins.
+      subsections: entry.subsections?.map((s) => ({
+        heading: s.heading,
+        paragraphs: [s.intent || ''],
+        map: {
+          ...(s.geo?.center ? { center: s.geo.center } : {}),
+          ...(s.geo?.zoom != null ? { zoom: s.geo.zoom } : {}),
+        },
+      })),
     })
     md = r.markdown
     cfg = r.configYaml

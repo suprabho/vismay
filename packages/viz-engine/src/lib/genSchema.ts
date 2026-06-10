@@ -110,21 +110,102 @@ export function normalizeForeground(fg: GenForeground | undefined): unknown {
   return null
 }
 
-/** A `[lng, lat]` map pin. */
-const genPinSchema = z.object({
-  coordinates: z.array(z.number()).length(2).describe('[longitude, latitude].'),
-  label: z.string().optional(),
-  color: z
-    .string()
-    .optional()
-    .describe('Theme token ("$accent", "$red", …) or hex. Omit to use the story default pin color.'),
-  radius: z.number().optional(),
-  pulse: z.boolean().optional().describe('Animate a pulsing ring (use sparingly — for the focal pin).'),
-  labelAnchor: z
-    .enum(['top', 'bottom', 'left', 'right'])
-    .optional()
-    .describe('Which side of the pin the label sits on.'),
-})
+/**
+ * Repair the pin shapes models commonly emit instead of the canonical
+ * `coordinates: [lng, lat]`: Mapbox-style `{lng, lat}` (also `lon`/`longitude`/
+ * `latitude`) keys on the pin itself, a `{lng, lat}` OBJECT under
+ * `coordinates`, or numeric strings. The JSON schema advertised to the model
+ * stays canonical (zod-to-json-schema's default 'input' effect strategy emits
+ * the inner schema); this preprocess only makes VALIDATION tolerant, so a
+ * near-miss pin is repaired instead of failing the whole section generation.
+ */
+/** The theme color tokens a generated map layer may reference (`$name` resolves to `--color-<name>`). */
+const THEME_COLOR_TOKEN_VALUES = [
+  '$accent',
+  '$accent2',
+  '$teal',
+  '$positive',
+  '$amber',
+  '$red',
+  '$muted',
+  '$surface',
+  '$background',
+  '$text',
+  '$line',
+] as const
+
+/** Map color fields are ENFORCED to this enum — the advertised JSON schema
+ *  constrains the model to tokens, so generated maps always follow the theme. */
+const themeColorToken = z.enum(THEME_COLOR_TOKEN_VALUES)
+
+/**
+ * Normalize a color to an allowed `$`-token: bare names ("accent") gain the
+ * `$`; anything else — raw hex, unknown names — DROPS to undefined so the
+ * layer falls back to the theme default instead of failing validation or
+ * de-theming the map.
+ */
+function repairColorToken(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined
+  const t = v.startsWith('$') ? v : `$${v}`
+  return (THEME_COLOR_TOKEN_VALUES as readonly string[]).includes(t) ? t : undefined
+}
+
+function repairPin(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+  const p = { ...(raw as Record<string, unknown>) }
+  p.color = repairColorToken(p.color)
+  const num = (v: unknown): number | null => {
+    if (typeof v === 'number' && Number.isFinite(v)) return v
+    if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v)
+    return null
+  }
+  const lngOf = (o: Record<string, unknown>) => num(o.lng ?? o.lon ?? o.longitude)
+  const latOf = (o: Record<string, unknown>) => num(o.lat ?? o.latitude)
+  // `coordinates: { lng, lat }` object → [lng, lat]
+  if (p.coordinates && !Array.isArray(p.coordinates) && typeof p.coordinates === 'object') {
+    const c = p.coordinates as Record<string, unknown>
+    const lng = lngOf(c)
+    const lat = latOf(c)
+    if (lng != null && lat != null) p.coordinates = [lng, lat]
+  }
+  // `coordinates: ["76.5", "24"]` strings → numbers
+  if (Array.isArray(p.coordinates)) {
+    const nums = p.coordinates.map(num)
+    if (nums.length === 2 && nums.every((n) => n != null)) p.coordinates = nums as number[]
+  }
+  // bare `{ lng, lat }` keys on the pin instead of `coordinates`
+  if (p.coordinates == null) {
+    const lng = lngOf(p)
+    const lat = latOf(p)
+    if (lng != null && lat != null) p.coordinates = [lng, lat]
+  }
+  return p
+}
+
+/** A `[lng, lat]` map pin. Exported for the story pipeline's subsection
+ *  map-override pass, which emits pins outside a full section body. */
+export const genPinSchema = z.preprocess(
+  repairPin,
+  z.object({
+    coordinates: z
+      .array(z.number())
+      .length(2)
+      .describe('[longitude, latitude] — longitude FIRST, as a 2-number array (never lng/lat keys).'),
+    label: z.string().optional(),
+    color: themeColorToken
+      .optional()
+      .describe(
+        'Theme token (follows the story theme; raw hex is not accepted). Omit to use the story ' +
+          'default pin color — most pins should.',
+      ),
+    radius: z.number().optional(),
+    pulse: z.boolean().optional().describe('Animate a pulsing ring (use sparingly — for the focal pin).'),
+    labelAnchor: z
+      .enum(['top', 'bottom', 'left', 'right'])
+      .optional()
+      .describe('Which side of the pin the label sits on.'),
+  }),
+)
 
 // ── Choropleth regions — the PRIMARY data visual of a Vizmaya map story ──────
 //
@@ -134,21 +215,30 @@ const genPinSchema = z.object({
 // while staying provider-structured-output safe — array-shaped, no `z.record`.
 
 /** One shaded region: an explicit `color`, or a `value` driven through the ramp. */
-const genRegionItemSchema = z.object({
-  code: z
-    .string()
-    .describe('ISO 3166-1 alpha-2 (level: country) or the GeoJSON feature id (level: custom).'),
-  value: z
-    .number()
-    .optional()
-    .describe('The choropleth metric — mapped through `colors`/`ramp` when `color` is omitted.'),
-  color: z
-    .string()
-    .optional()
-    .describe('Explicit fill ($-token or hex) — overrides the ramp. Use for categorical shading.'),
-  opacity: z.number().optional().describe('Fill opacity 0–1. Default 0.55.'),
-  label: z.string().optional().describe('Optional region label.'),
-})
+const genRegionItemSchema = z.preprocess(
+  (raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+    const item = raw as Record<string, unknown>
+    return { ...item, color: repairColorToken(item.color) }
+  },
+  z.object({
+    code: z
+      .string()
+      .describe('ISO 3166-1 alpha-2 (level: country) or the GeoJSON feature id (level: custom).'),
+    value: z
+      .number()
+      .optional()
+      .describe('The choropleth metric — mapped through `colors`/`ramp` when `color` is omitted.'),
+    color: themeColorToken
+      .optional()
+      .describe(
+        'Explicit fill — a theme token (raw hex is not accepted); overrides the ramp. ' +
+          'Use for categorical shading.',
+      ),
+    opacity: z.number().optional().describe('Fill opacity 0–1. Default 0.55.'),
+    label: z.string().optional().describe('Optional region label.'),
+  }),
+)
 
 /** Auto-label config for a region layer (region name, optionally with its value). */
 const genRegionLabelsSchema = z.object({
@@ -170,41 +260,63 @@ const genRegionLegendSchema = z.object({
     .describe('Placement within the frame. Default "top-left".'),
 })
 
+/** Repair a region layer's colors to enforced tokens: bare names gain the `$`;
+ *  a ramp with any unrepairable stop drops whole (the engine default applies)
+ *  so the stops never fall out of step with `ramp`. */
+function repairRegionColors(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+  const r = { ...(raw as Record<string, unknown>) }
+  r.lineColor = repairColorToken(r.lineColor)
+  if (Array.isArray(r.colors)) {
+    const stops = r.colors.map(repairColorToken)
+    r.colors = stops.every((c) => c != null) ? stops : undefined
+  }
+  return r
+}
+
 /**
  * A choropleth overlay for a map section. Shades each region in `items` by its
  * `value` (interpolated across `colors`/`ramp`) or an explicit `color`.
  * `level: "country"` uses built-in country boundaries (code = ISO alpha-2);
  * `level: "custom"` requires `geojsonUrl` + `idProperty`.
  */
-const genRegionsSchema = z.object({
-  level: z
-    .enum(['country', 'custom'])
-    .describe('"country" = built-in country boundaries; "custom" = your own GeoJSON (needs geojsonUrl + idProperty).'),
-  geojsonUrl: z
-    .string()
-    .optional()
-    .describe('level: custom — URL or absolute /public path to the GeoJSON.'),
-  idProperty: z
-    .string()
-    .optional()
-    .describe('level: custom — the GeoJSON feature property whose value matches items[].code.'),
-  items: z
-    .array(genRegionItemSchema)
-    .min(1)
-    .describe('One entry per shaded region. Source-grounded: each `value` must come from the material.'),
-  colors: z
-    .array(z.string())
-    .optional()
-    .describe('Ramp color stops ($-tokens or hex), low→high. Values interpolate between them.'),
-  ramp: z
-    .array(z.number())
-    .optional()
-    .describe('Domain values matching `colors` (same length). Omit to auto-fit [min,max] from items.'),
-  lineColor: z.string().optional().describe('Border color ($-token or hex).'),
-  lineWidth: z.number().optional().describe('Border width in px. Default 0.6.'),
-  labels: genRegionLabelsSchema.optional().describe('Auto-label regions on the map.'),
-  legend: genRegionLegendSchema.optional().describe('Color-ramp legend overlay.'),
-})
+const genRegionsSchema = z.preprocess(
+  repairRegionColors,
+  z.object({
+    level: z
+      .enum(['country', 'custom'])
+      .describe('"country" = built-in country boundaries; "custom" = your own GeoJSON (needs geojsonUrl + idProperty).'),
+    geojsonUrl: z
+      .string()
+      .optional()
+      .describe('level: custom — URL or absolute /public path to the GeoJSON.'),
+    idProperty: z
+      .string()
+      .optional()
+      .describe('level: custom — the GeoJSON feature property whose value matches items[].code.'),
+    items: z
+      .array(genRegionItemSchema)
+      .min(1)
+      .describe('One entry per shaded region. Source-grounded: each `value` must come from the material.'),
+    colors: z
+      .array(themeColorToken)
+      .optional()
+      .describe(
+        'Ramp color stops, low→high — theme tokens only (e.g. "$surface", "$teal", "$accent"; ' +
+          'raw hex is not accepted — tokens follow the story theme). Values interpolate between them.',
+      ),
+    ramp: z
+      .array(z.number())
+      .optional()
+      .describe('Domain values matching `colors` (same length). Omit to auto-fit [min,max] from items.'),
+    lineColor: themeColorToken
+      .optional()
+      .describe('Border color — a theme token, typically "$background" or "$surface".'),
+    lineWidth: z.number().optional().describe('Border width in px. Default 0.6.'),
+    labels: genRegionLabelsSchema.optional().describe('Auto-label regions on the map.'),
+    legend: genRegionLegendSchema.optional().describe('Color-ramp legend overlay.'),
+  }),
+)
 
 /**
  * A map layer for the BACKGROUND slot — a clean (non-passthrough) view of the
@@ -281,6 +393,32 @@ export const sectionBodySchema = z.object({
       'Map-format only: the section camera (center/zoom/pitch) plus its `regions` choropleth — ' +
         'shade regions by value. This is where a map section carries its data, not the foreground.',
     ),
+  // ── Editorial cover surface (HERO/COVER sections only) ────────────────────
+  // These land on the section entry itself (not inside foreground). The deck
+  // renderer's full-bleed cover branch fires ONLY on section-root
+  // `layout: "hero-full-bleed"` — a layout inside `foreground` does not reach it.
+  layout: z
+    .string()
+    .optional()
+    .describe(
+      'HERO/COVER only — section-root layout. Set "hero-full-bleed" to render the editorial ' +
+        'full-bleed cover (scrim + headline overlay; the hero image is attached later). ' +
+        'Non-cover sections set layout INSIDE foreground, not here.',
+    ),
+  eyebrow: z
+    .string()
+    .optional()
+    .describe(
+      'HERO/COVER kicker line above the title — "Topic · Date · What this is" ' +
+        '(e.g. "SpaceX S-1 · May 20, 2026 · $1.75 Trillion IPO Analysis").',
+    ),
+  dek: z
+    .string()
+    .optional()
+    .describe(
+      'HERO/COVER one-line standfirst rendered below the title on the full-bleed cover. ' +
+        'Deck covers only — a map hero carries its dek in the markdown prose.',
+    ),
 })
 
 export type SectionBody = z.infer<typeof sectionBodySchema>
@@ -296,5 +434,8 @@ export function normalizeSectionBody(body: SectionBody): Record<string, unknown>
   if (fg) out.foreground = fg
   if (body.background) out.background = body.background
   if (body.map) out.map = body.map
+  if (body.layout?.trim()) out.layout = body.layout.trim()
+  if (body.eyebrow?.trim()) out.eyebrow = body.eyebrow.trim()
+  if (body.dek?.trim()) out.dek = body.dek.trim()
   return out
 }

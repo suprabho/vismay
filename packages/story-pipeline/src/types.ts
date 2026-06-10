@@ -145,6 +145,26 @@ export interface ImagePrompt {
   aspectRatio: AspectRatio
 }
 
+/**
+ * A planned sub-beat of a MAP section — the press-freedom pattern: the parent
+ * holds the shared map context (camera + choropleth/pin field) and each
+ * subsection is its own snap target with its own prose anchor and a camera
+ * DIVE within the parent's framing. The parent's prose is never rendered when
+ * subsections exist — the children carry all the copy.
+ */
+export interface SubsectionStub {
+  /** Becomes the sub's markdown ## anchor — must be unique across the story. */
+  heading: string
+  /** One line on this beat's job. */
+  intent: string
+  /** The specific facts/figures this beat must carry. */
+  expectedContent?: string
+  /** The camera dive for this beat (overrides the parent's center/zoom). */
+  geo?: SectionGeo
+  /** What the beat marks — focal pins, what the framing shows. */
+  visual?: string
+}
+
 /** A planned section from the outline step — the per-section brief, no prose yet. */
 export interface SectionStub {
   heading: string
@@ -165,6 +185,8 @@ export interface SectionStub {
   geo?: SectionGeo
   /** MAP only: if this section shades geography, the choropleth requirement (no values). */
   regionRequirement?: RegionRequirement
+  /** MAP only: sub-beats exploring this section's shared map context (2–4). */
+  subsections?: SubsectionStub[]
 }
 
 /** The fast first step: the story skeleton, before any section prose is written. */
@@ -180,6 +202,16 @@ export interface StoryOutline {
   sections: SectionStub[]
 }
 
+/** One generated sub-beat: its prose plus the engine's subsection config entry
+ *  fields (a partial `map` override — center/zoom from the planned geo, pins
+ *  and tilt from the sub visual pass). */
+export interface GeneratedSubsection {
+  heading: string
+  paragraphs: string[]
+  /** `SubsectionMapOverride` fields (center/zoom/pitch/bearing/pins). */
+  map?: Record<string, unknown>
+}
+
 /** One generated section, with its visual `body` already normalised for the engine. */
 export interface GeneratedSection {
   heading: string
@@ -187,6 +219,9 @@ export interface GeneratedSection {
   kind: string
   /** Normalised config-entry body (foreground / background / map). */
   body: Record<string, unknown>
+  /** MAP only: generated sub-beats. When present the parent's `paragraphs` are
+   *  empty and never rendered — the engine snaps through the children. */
+  subsections?: GeneratedSubsection[]
 }
 
 /** The prose half of a section (the CONTENT pass output): no visual `body` yet. */

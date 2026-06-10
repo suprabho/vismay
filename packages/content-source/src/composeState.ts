@@ -57,6 +57,18 @@ export interface ComposeOutlineEntry {
     idProperty?: string
     requirement: string
   }
+  /**
+   * MAP sub-beats (the press-freedom pattern): this entry holds the shared map
+   * context and each subsection is its own snap target with its own prose
+   * anchor and a camera dive. Mirrors story-pipeline's `SubsectionStub`.
+   */
+  subsections?: Array<{
+    heading: string
+    intent: string
+    expectedContent?: string
+    geo?: { focus: string; center?: number[]; zoom?: number }
+    visual?: string
+  }>
   status: ComposeOutlineStatus
   /** Set once the entry has been materialised into a real story section. */
   sectionId: string | null

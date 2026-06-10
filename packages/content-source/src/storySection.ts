@@ -27,6 +27,19 @@ export interface NewSection {
   /** The rest of the config entry (foreground / background / map / layout / …).
    *  `id` and `text` are set by this function and must not be supplied here. */
   body?: Record<string, unknown>
+  /**
+   * MAP sub-beats. When present, the engine ignores the parent's own prose —
+   * so the parent gets NO markdown block and NO config `text`; instead each
+   * subsection gets its own `## heading` + prose in the markdown and a
+   * `{ text, map }` entry in the config's `subsections:` list. The heading
+   * still names the parent (drives the section id).
+   */
+  subsections?: Array<{
+    heading: string
+    paragraphs: string[]
+    /** Partial map override (center/zoom/pitch/bearing/pins) for this beat. */
+    map?: Record<string, unknown>
+  }>
 }
 
 export interface AppendSectionResult {
@@ -121,7 +134,12 @@ export function appendStorySection(
     .filter((id): id is string => !!id)
   const id = makeSectionId(heading, existingIds)
 
-  const entry: Record<string, unknown> = { id, text: heading }
+  const subs = section.subsections?.filter((s) => s.heading.trim()) ?? []
+
+  // A parent with subsections carries no anchor of its own — the engine ignores
+  // parent prose when `subsections` is present, so writing a `text:` would only
+  // point at a heading that never renders.
+  const entry: Record<string, unknown> = subs.length ? { id } : { id, text: heading }
   if (section.kind) entry.kind = section.kind
   if (section.body) {
     for (const [k, v] of Object.entries(section.body)) {
@@ -129,9 +147,24 @@ export function appendStorySection(
       entry[k] = v
     }
   }
+  if (subs.length) {
+    entry.subsections = subs.map((s) => ({
+      text: s.heading.trim(),
+      ...(s.map && Object.keys(s.map).length ? { map: s.map } : {}),
+    }))
+  }
+
+  // Markdown: one `## heading` block per beat (the anchors the config points
+  // at); a flat section writes its own single block as before.
+  let md = markdown
+  if (subs.length) {
+    for (const s of subs) md = appendSectionToMarkdown(md, s.heading.trim(), s.paragraphs)
+  } else {
+    md = appendSectionToMarkdown(md, heading, section.paragraphs)
+  }
 
   return {
-    markdown: appendSectionToMarkdown(markdown, heading, section.paragraphs),
+    markdown: md,
     configYaml: appendSectionToConfig(configYaml, entry),
     id,
   }

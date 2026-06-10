@@ -137,7 +137,10 @@ function printRun(i: number, outline: StoryOutline): void {
     .map((s) => {
       const geo = s.geo ? ` @ ${s.geo.focus}${s.geo.zoom != null ? ` z${s.geo.zoom}` : ''}` : ''
       const choro = s.regionRequirement ? ' ▦' : ''
-      return `${s.heading} (${s.kind}${geo}${choro})`
+      const subs = s.subsections?.length
+        ? ` ⤷[${s.subsections.map((x) => x.heading).join(' | ')}]`
+        : ''
+      return `${s.heading} (${s.kind}${geo}${choro}${subs})`
     })
     .join(' · ')
   console.log(`\n── run ${i} ──────────────────────────────────────────────`)
