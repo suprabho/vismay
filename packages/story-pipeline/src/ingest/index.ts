@@ -3,8 +3,9 @@ import { extractBuffer, extractText, type ExtractedSource } from './extract'
 import type { SourceDoc, IngestResult, IngestFailure } from '../types'
 
 export { extract, extractBuffer, extractText, type ExtractedSource } from './extract'
-// The vision PDF extractor is async-only (Gemma, ~75–130s/page) — used by the
-// compose extraction worker, never inside `ingestSources` (which is synchronous).
+// The vision PDF extractor is async-only (model-transcribed, seconds per page,
+// unbounded on long PDFs) — used by the compose extraction worker, never inside
+// `ingestSources` (which is synchronous).
 export { extractPdfVision, type VisionPdfOptions } from './visionPdf'
 
 /**

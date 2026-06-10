@@ -1,6 +1,7 @@
 /**
- * Vision-based PDF extraction — rasterise each page and have an open-weights
- * Gemma vision model transcribe it to clean GitHub-flavored markdown.
+ * Vision-based PDF extraction — rasterise each page and have a vision model
+ * (Claude Sonnet, falling back to Gemini per page) transcribe it to clean
+ * GitHub-flavored markdown.
  *
  * Why this exists: the deterministic `pdf-parse` text layer (see `extract.ts`)
  * mangles graphical/financial PDFs — column order collapses, glyphs come out as
@@ -28,6 +29,13 @@ const CONCURRENCY = Number(process.env.COMPOSE_PDF_VISION_CONCURRENCY) || 3
 const SCALE = 2
 /** Per-page output budget — a dense financial page can run long. */
 const MAX_TOKENS_PER_PAGE = 6000
+/** Primary transcription model — Claude Sonnet (vision-capable). */
+const PRIMARY_MODEL = 'text.claude'
+/**
+ * Per-page fallback when the primary call fails — Gemini, a different provider
+ * lineage, so a Claude outage or refusal doesn't sink the whole extraction.
+ */
+const FALLBACK_MODEL = 'text.pro'
 
 const PAGE_PROMPT =
   'Transcribe this single document page to clean GitHub-flavored markdown. ' +
@@ -58,7 +66,10 @@ interface PdfParseModule {
 export interface VisionPdfOptions {
   /** Filename/label, used as a title fallback when the page has no heading. */
   label?: string
-  /** Model alias or gateway id. Defaults to the registry's Gemma alias. */
+  /**
+   * Model alias or gateway id. Defaults to Claude Sonnet with a per-page
+   * Gemini fallback; passing an explicit model disables the fallback.
+   */
   model?: string
 }
 
@@ -100,8 +111,21 @@ export async function extractPdfVision(
   }
   if (!pages.length) throw new Error('could not rasterise any page')
 
-  const model = opts.model ?? 'text.gemma'
+  const model = opts.model ?? PRIMARY_MODEL
+  const fallback = opts.model ? null : FALLBACK_MODEL
   const transcripts = new Array<string>(pages.length)
+
+  async function transcribePage(withModel: string, b64: string): Promise<string> {
+    const { result } = await generateText({
+      model: withModel,
+      prompt: PAGE_PROMPT,
+      images: [{ data: b64, mimeType: 'image/png' }],
+      maxOutputTokens: MAX_TOKENS_PER_PAGE,
+      metadata: { feature: 'compose-pdf-vision' },
+    })
+    return (result as string).trim()
+  }
+
   // Bounded-concurrency worker pool over the page list, preserving page order.
   let next = 0
   async function worker(): Promise<void> {
@@ -110,14 +134,12 @@ export async function extractPdfVision(
       if (i >= pages.length) return
       const page = pages[i]!
       const b64 = Buffer.from(page.data).toString('base64')
-      const { result } = await generateText({
-        model,
-        prompt: PAGE_PROMPT,
-        images: [{ data: b64, mimeType: 'image/png' }],
-        maxOutputTokens: MAX_TOKENS_PER_PAGE,
-        metadata: { feature: 'compose-pdf-vision' },
-      })
-      transcripts[i] = (result as string).trim()
+      try {
+        transcripts[i] = await transcribePage(model, b64)
+      } catch (e) {
+        if (!fallback) throw e
+        transcripts[i] = await transcribePage(fallback, b64)
+      }
     }
   }
   await Promise.all(

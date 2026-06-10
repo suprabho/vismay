@@ -1,8 +1,8 @@
 /**
  * Dispatch a compose-source extraction job to GitHub Actions.
  *
- * PDF sources are read with an open-weights Gemma vision model that runs
- * ~75–130s per page — far past any serverless function limit. So when
+ * PDF sources are transcribed page-by-page by a vision model (Claude Sonnet,
+ * Gemini fallback) — a long PDF blows past serverless function limits. So when
  * `GITHUB_DISPATCH_TOKEN` is configured we fire a `workflow_dispatch` and let a
  * real Linux runner do the work (see `.github/workflows/extract-compose-source.yml`);
  * the runner writes the extracted text straight back onto the `story_sources`
