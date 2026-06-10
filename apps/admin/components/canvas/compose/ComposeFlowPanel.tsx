@@ -509,12 +509,17 @@ export function ComposeFlow({
   }
 
   const phase = st.phase
-  const acceptedCount = st.outline.filter((e) => e.status === 'accepted').length
-  // The outline is interactively editable only during the outline stage of a
-  // live draft. Once it's been materialised (content/visual/done) or the draft
-  // is archived (finished), the outline is shown read-only so the retained
-  // research stays visible without offering destructive re-materialise.
+  // Accepted entries not yet materialised — what the Materialize button creates.
+  const newAcceptedCount = st.outline.filter((e) => e.status === 'accepted' && !e.sectionId).length
+  // STRUCTURE edits (reorder, regenerate) are only offered during the outline
+  // stage of a live draft — regenerating after materialise would orphan the
+  // created sections. STATUS stays togglable on not-yet-materialised entries
+  // through content/visual too: materialise is incremental (it only appends
+  // entries without a sectionId), so stragglers can be accepted + appended
+  // later. Archived (finished) drafts are fully read-only.
   const outlineEditable = phase === 'outline' && !st.archived
+  const statusEditable =
+    !st.archived && (phase === 'outline' || phase === 'content' || phase === 'visual')
   const showOutline =
     st.outline.length > 0 &&
     (phase === 'outline' || phase === 'content' || phase === 'visual' || phase === 'done')
@@ -688,12 +693,13 @@ export function ComposeFlow({
         </section>
       )}
 
-      {/* ── Outline ── (interactive at the outline stage; read-only once
-          materialised or archived, so the retained research stays visible). */}
+      {/* ── Outline ── (structure edits at the outline stage; statuses stay
+          togglable on unmaterialised entries until the draft is finished, so
+          stragglers can be accepted + appended later. Archived = read-only.) */}
       {showOutline && (
         <section className="space-y-2 border-t border-white/10 pt-3">
           <h3 className="text-xs font-medium text-neutral-300">
-            {outlineEditable ? 'Outline — click status to accept/reject' : 'Outline'}
+            {statusEditable ? 'Outline — click status to accept/reject' : 'Outline'}
           </h3>
           <ul className="space-y-1">
             {st.outline.map((e, i) => {
@@ -708,15 +714,19 @@ export function ComposeFlow({
               return (
                 <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
                   <div className="flex items-center gap-1">
-                    {outlineEditable ? (
+                    {statusEditable && !e.sectionId ? (
                       <button
                         onClick={() => cycleStatus(e.id)}
-                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}
+                        title="Click to cycle pending → accepted → rejected"
+                        className={`cursor-pointer rounded px-1.5 py-0.5 text-[10px] uppercase ring-white/30 hover:ring-1 ${statusCls}`}
                       >
                         {e.status}
                       </button>
                     ) : (
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}>
+                      <span
+                        title={e.sectionId ? 'Already materialised' : undefined}
+                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}
+                      >
                         {e.status}
                       </span>
                     )}
@@ -799,15 +809,29 @@ export function ComposeFlow({
                 </button>
                 <button
                   onClick={materialize}
-                  disabled={!!busy || acceptedCount === 0}
+                  disabled={!!busy || newAcceptedCount === 0}
                   className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
                 >
                   {busy === 'materialize'
                     ? 'Creating…'
-                    : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
+                    : `${st.attached ? 'Append' : 'Materialize'} ${newAcceptedCount} →`}
                 </button>
               </div>
             </>
+          )}
+          {/* Post-materialise: stragglers accepted later get appended after the
+              existing sections — materialise is incremental, nothing written is
+              touched. */}
+          {!outlineEditable && statusEditable && newAcceptedCount > 0 && (
+            <button
+              onClick={materialize}
+              disabled={!!busy}
+              className="w-full rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
+            >
+              {busy === 'materialize'
+                ? 'Creating…'
+                : `Append ${newAcceptedCount} new section${newAcceptedCount > 1 ? 's' : ''} →`}
+            </button>
           )}
         </section>
       )}
