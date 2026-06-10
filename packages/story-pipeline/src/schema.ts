@@ -25,6 +25,31 @@ export const SECTION_KINDS = [
   'closing',
 ] as const
 
+/**
+ * Section kinds allowed on a MAP story. A map section renders its prose in the
+ * scroll rail; the remaining (deck/panel) kinds live in the renderer's
+ * `DECK_KINDS_NO_TEXT_CARD` set (story-reader's MapStorySection) and SUPPRESS
+ * that rail — and on a map section there is no foreground panel meant to carry
+ * the copy, so the markdown then renders nowhere (a blank snap target). Map
+ * stories are therefore restricted to the narrative kinds that keep the rail.
+ */
+export const MAP_SECTION_KINDS = ['text', 'hero', 'stat', 'cover'] as const
+
+/** The section-kind tuple a given story format may use. */
+export function sectionKindsFor(format: 'deck' | 'map'): readonly string[] {
+  return format === 'map' ? MAP_SECTION_KINDS : SECTION_KINDS
+}
+
+/** A `kind` enum field narrowed to what the format allows, with format-specific copy. */
+function kindField(format: 'deck' | 'map') {
+  const desc =
+    format === 'map'
+      ? 'Section kind — a MAP story uses narrative kinds only: text | hero | stat | cover. ' +
+        'These keep the scroll prose rail; deck/panel kinds would suppress it and orphan the prose.'
+      : 'The section kind.'
+  return (format === 'map' ? z.enum(MAP_SECTION_KINDS) : z.enum(SECTION_KINDS)).describe(desc)
+}
+
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'] as const
 
 // ── Phase 1: research brief ────────────────────────────────────────────────
@@ -120,6 +145,105 @@ export const chartSpecSchema = z.object({
   yLabel: z.string().optional(),
 })
 
+/**
+ * A chart REQUIREMENT — what the outline plans, with no numbers. The outline is
+ * a skeleton (no prose, no data); fabricating accurate series there is
+ * unreliable, so the outline only declares the chart's shape + a precise
+ * `requirement` describing what to plot. A focused, source-grounded
+ * `generateChart` pass then fills in the data (see `chartDataSchema`).
+ */
+export const chartRequirementSchema = z.object({
+  id: z
+    .string()
+    .describe('kebab-case id; a chart layer references this exact id.'),
+  title: z.string().optional().describe('Chart title.'),
+  chartType: z.enum(['bar', 'line']).describe('Chart type.'),
+  requirement: z
+    .string()
+    .describe(
+      'Exactly what this chart must plot — which figures/series/categories and ' +
+        'over what range/time, all sourced from the material. Concrete, NOT generic; ' +
+        'do NOT invent the numbers here (the data pass produces them).',
+    ),
+  xLabel: z.string().optional(),
+  yLabel: z.string().optional(),
+})
+
+/**
+ * The data-only OUTPUT of the `generateChart` pass: categories + numeric series
+ * grounded in the sources. Merged with its `chartRequirement` (id/title/type/
+ * axes) to form a full `ChartSpec` that `buildEChartsOption` expands.
+ */
+export const chartDataSchema = z.object({
+  categories: z.array(z.string()).describe('X-axis category labels.'),
+  series: z
+    .array(
+      z.object({
+        name: z.string().describe('Series name (shown in the legend).'),
+        data: z.array(z.number()).describe('One value per category, same order.'),
+      }),
+    )
+    .min(1)
+    .describe('One or more data series, each with one value per category.'),
+})
+
+// ── Map-region (choropleth) requirement + data pass ────────────────────────
+//
+// The exact mirror of the chart split, for the PRIMARY visual of a map story:
+// the outline declares a per-section choropleth REQUIREMENT (what metric, which
+// regions — no numbers), and a focused `generateRegions` pass fills the
+// per-region values grounded in the sources. Decoupled for the same reason as
+// charts: fabricating accurate per-region figures as a byproduct of skeleton
+// planning is unreliable.
+
+/**
+ * A choropleth REQUIREMENT — what a map section plans to shade, with no values.
+ * Custom GeoJSON needs an author-supplied data asset, so generated stories
+ * default to `level: "country"` (built-in boundaries, ISO alpha-2 codes).
+ */
+export const regionRequirementSchema = z.object({
+  metric: z
+    .string()
+    .describe(
+      'What each region is shaded by — the choropleth metric, e.g. "press-freedom score (0–100)" ' +
+        'or "Muslim share of population (%)". Concrete and grounded in the sources.',
+    ),
+  level: z
+    .enum(['country', 'custom'])
+    .describe(
+      '"country" shades built-in country boundaries by ISO alpha-2 code — the default for ' +
+        'generated stories. "custom" needs an author-supplied geojsonUrl + idProperty.',
+    ),
+  geojsonUrl: z.string().optional().describe('level: custom only — author-supplied GeoJSON path.'),
+  idProperty: z.string().optional().describe('level: custom only — feature id property.'),
+  requirement: z
+    .string()
+    .describe(
+      'Exactly which regions to shade and over what range, all from the sources — e.g. "every ' +
+        'G20 country by its 2026 RSF score". Concrete; do NOT invent the values here (the data pass does).',
+    ),
+})
+
+/**
+ * The data-only OUTPUT of `generateRegions`: one grounded `{ code, value }` per
+ * shaded region. Merged with its requirement (level/geojson/idProperty) and
+ * default ramp/legend into a full `MapRegionLayer`.
+ */
+export const regionDataSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        code: z
+          .string()
+          .describe('ISO 3166-1 alpha-2 (level: country) or the GeoJSON feature id (level: custom).'),
+        value: z.number().describe('The choropleth metric for this region, from the sources.'),
+        label: z.string().optional().describe('Optional display label (defaults to the region name).'),
+      }),
+    )
+    .min(1)
+    .describe('One entry per shaded region — every value grounded in the sources.'),
+})
+
 export const imagePromptSchema = z.object({
   section: z.string().describe('The section heading this image belongs to.'),
   prompt: z.string().describe('A vivid, specific image-generation prompt.'),
@@ -133,15 +257,21 @@ export const imagePromptSchema = z.object({
  * independently, and keeps each call's schema small. `generatedSectionSchema`
  * is the merged shape the combined `generateSection` wrapper returns.
  */
-export const sectionContentSchema = z.object({
-  heading: z
-    .string()
-    .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
-  paragraphs: z
-    .array(z.string())
-    .describe('Body prose, one string per paragraph (factual magazine register).'),
-  kind: z.enum(SECTION_KINDS).describe('The section kind.'),
-})
+/** The CONTENT-pass output schema, with `kind` narrowed to the format's allowed kinds. */
+export function sectionContentSchemaFor(format: 'deck' | 'map') {
+  return z.object({
+    heading: z
+      .string()
+      .describe('Short, specific heading — becomes the markdown ## and the config text anchor.'),
+    paragraphs: z
+      .array(z.string())
+      .describe('Body prose, one string per paragraph (factual magazine register).'),
+    kind: kindField(format),
+  })
+}
+
+/** Back-compat default (full kind menu). Prefer {@link sectionContentSchemaFor}. */
+export const sectionContentSchema = sectionContentSchemaFor('deck')
 
 export const sectionVisualSchema = z.object({
   body: sectionBodySchema.describe(
@@ -160,16 +290,43 @@ export const sectionStubSchema = z.object({
     .string()
     .describe('Short, specific section heading — becomes the markdown ## and config text anchor.'),
   kind: z.enum(SECTION_KINDS).describe('The section kind.'),
-  intent: z
+  intent: z.string().describe("One line on this section's job in the story."),
+  context: z
     .string()
     .describe(
-      'One or two sentences: what this section covers AND which visual it features ' +
-        '(a big stat, a chart, a pull quote, or just prose).',
+      'How this section connects to the ones around it — what it follows from and what it ' +
+        'sets up. The narrative role the writer needs.',
+    ),
+  expectedContent: z
+    .string()
+    .describe(
+      'The specific facts, figures, and quotes this section must carry — concrete and ' +
+        'grounded in the sources, NOT generic. This is what the writer fills the prose with.',
+    ),
+  visual: z
+    .string()
+    .describe(
+      'The visualisation this section features: for a deck, which foreground layers ' +
+        '(bigStat, chart, quote, keyValue, bodyText) and what each shows; for a map, the ' +
+        'camera moment (where it sits, what it marks).',
+    ),
+  layout: z
+    .string()
+    .optional()
+    .describe(
+      'Deck only: the named foreground layout that frames the visual (e.g. ' +
+        'stat-left-chart-right, text-left-chart-right, centered, hero-full-bleed).',
     ),
   chartId: z
     .string()
     .optional()
     .describe('If this section features a chart, the id of a chart from the charts list.'),
+  regionRequirement: regionRequirementSchema
+    .optional()
+    .describe(
+      'MAP only: if this section shades geography (a choropleth), the region requirement — what ' +
+        'metric, which regions. The map carries the data here; a focused pass fills the values.',
+    ),
 })
 
 export const outlineSchema = z.object({
@@ -185,8 +342,11 @@ export const outlineSchema = z.object({
     .optional()
     .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
   charts: z
-    .array(chartSpecSchema)
-    .describe('Every chart any section references, by id. Empty if none.'),
+    .array(chartRequirementSchema)
+    .describe(
+      'Every chart any section references, declared as a REQUIREMENT (id, type, ' +
+        'title, what to plot) — no numbers. The data is generated in a later pass.',
+    ),
   imagePrompts: z
     .array(imagePromptSchema)
     .describe('Image prompts for sections that want imagery (a sidecar).'),

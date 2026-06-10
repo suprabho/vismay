@@ -243,10 +243,58 @@ const heroFullBleed: ForegroundLayoutDef = {
   },
 }
 
+/**
+ * Map-forward overlay layouts. On a MAP story the foreground sits ON TOP of the
+ * live map, so a full-width deck layout (82vw) buries the globe. A side panel
+ * keeps the overlay to a ~40vw column on one edge — `chart` region on top, a
+ * `text` region beneath — leaving the rest of the viewport for the map. Both
+ * regions carry a translucent scrim (`--color-panel-rgb`) + blur so bare
+ * stats/keyValues stay legible over the map tiles and pin labels instead of
+ * colliding with them. Mirror left/right so the panel can dodge dense pins.
+ */
+const PANEL_W = '40vw'
+const PANEL_SCRIM: CSSProperties = {
+  background: 'rgb(var(--color-panel-rgb) / 0.5)',
+  border: '0.5px solid var(--color-line)',
+  borderRadius: 8,
+  backdropFilter: 'blur(4px)',
+}
+function sidePanel(side: 'left' | 'right'): ForegroundLayoutDef {
+  const edge: CSSProperties = side === 'right' ? { right: SAFE.right } : { left: SAFE.left }
+  const name = `panel-${side}`
+  return {
+    name,
+    stackOnPortrait: true,
+    regions: {
+      default: { style: DECK_SAFE_AREA },
+      chart: {
+        style: { position: 'absolute', top: SAFE.top, ...edge, width: PANEL_W, height: '40vh', ...PANEL_SCRIM },
+        accepts: ['chart', 'map', 'keyValue', 'bigStat'],
+      },
+      text: {
+        style: { position: 'absolute', bottom: SAFE.bottom, ...edge, width: PANEL_W, height: '44vh', ...PANEL_SCRIM },
+        accepts: ['text', 'bodyText', 'quote', 'keyValue', 'bigStat'],
+      },
+    },
+    portrait: {
+      name: `${name}.portrait`,
+      regions: {
+        default: { style: DECK_SAFE_AREA_PORTRAIT },
+        chart: { style: P_TOP },
+        text: { style: P_BOTTOM },
+      },
+    },
+  }
+}
+const panelLeft = sidePanel('left')
+const panelRight = sidePanel('right')
+
 const registry = new Map<string, ForegroundLayoutDef>([
   [singleFill.name, singleFill],
   [splitThreeSevenTwoRow.name, splitThreeSevenTwoRow],
   [heroFullBleed.name, heroFullBleed],
+  [panelLeft.name, panelLeft],
+  [panelRight.name, panelRight],
   ...deckLayouts.map((l): [string, ForegroundLayoutDef] => [l.name, l]),
 ])
 

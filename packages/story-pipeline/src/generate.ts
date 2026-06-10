@@ -1,6 +1,13 @@
 import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
-import { outlineSchema, sectionContentSchema, sectionVisualSchema, type OutlineOutput } from './schema'
+import {
+  outlineSchema,
+  sectionContentSchemaFor,
+  sectionVisualSchema,
+  chartDataSchema,
+  regionDataSchema,
+  type OutlineOutput,
+} from './schema'
 import {
   outlineSystem,
   buildOutlinePrompt,
@@ -8,7 +15,12 @@ import {
   buildContentPrompt,
   visualSystem,
   buildVisualPrompt,
+  CHART_SYSTEM,
+  buildChartPrompt,
+  REGIONS_SYSTEM,
+  buildRegionsPrompt,
 } from './prompts'
+import { buildRegionLayer } from './regions'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
@@ -18,6 +30,10 @@ import type {
   SectionContext,
   StoryOutline,
   SectionStub,
+  ChartRequirement,
+  ChartSpec,
+  RegionRequirement,
+  RegionData,
   ResearchBrief,
   SourceDoc,
   ComposeAnswers,
@@ -97,6 +113,68 @@ function toOutline(out: OutlineOutput, format: StoryFormat): StoryOutline {
   }
 }
 
+/**
+ * The chart DATA pass — turn ONE chart REQUIREMENT (from the outline) into a
+ * full `ChartSpec` by generating the numeric series grounded in the sources.
+ * Decoupled from the outline so chart numbers are produced by a focused call
+ * rather than fabricated as a byproduct of skeleton planning. The model emits
+ * only `categories` + `series`; the id/title/chartType/axes come from the
+ * requirement and are merged in here.
+ */
+export async function generateChart(
+  args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
+  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+): Promise<ChartSpec> {
+  const data = await generateStructured({
+    model: opts.model,
+    system: CHART_SYSTEM,
+    prompt: buildChartPrompt(args.requirement, args.brief, args.sources, opts.refine),
+    schema: chartDataSchema,
+    metadata: { feature: 'story-pipeline-chart' },
+  })
+  const { requirement: _omit, ...meta } = args.requirement
+  return { ...meta, categories: data.categories, series: data.series }
+}
+
+/**
+ * The map-region DATA pass — turn ONE choropleth REQUIREMENT into a full
+ * `map.regions` layer by generating the per-region values grounded in the
+ * sources. The exact mirror of {@link generateChart}: the model emits only the
+ * `{ code, value }` items; the level/geometry come from the requirement and the
+ * ramp/legend are built deterministically by {@link buildRegionLayer}. In a map
+ * story the polygons carry the numbers, so this is the section's primary data.
+ */
+export async function generateRegions(
+  args: { requirement: RegionRequirement; brief: ResearchBrief; sources: SourceDoc[] },
+  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+): Promise<Record<string, unknown>> {
+  const data: RegionData = await generateStructured({
+    model: opts.model,
+    system: REGIONS_SYSTEM,
+    prompt: buildRegionsPrompt(args.requirement, args.brief, args.sources, opts.refine),
+    schema: regionDataSchema,
+    metadata: { feature: 'story-pipeline-regions' },
+  })
+  return buildRegionLayer(args.requirement, data)
+}
+
+/**
+ * Merge a generated choropleth into a section body's `map.regions`, creating the
+ * `map` block if the visual pass didn't emit one. The visual pass frames the
+ * camera; the region values are filled by `generateRegions` and merged here —
+ * the model never authors the per-region numbers.
+ */
+function injectRegions(
+  body: Record<string, unknown>,
+  regions: Record<string, unknown>,
+): Record<string, unknown> {
+  const map =
+    body.map && typeof body.map === 'object' && !Array.isArray(body.map)
+      ? (body.map as Record<string, unknown>)
+      : {}
+  return { ...body, map: { ...map, regions } }
+}
+
 /** Per-pass options for the split section generators. */
 export interface SectionGenOptions {
   /** Override the model alias. Defaults to `text.pro`. */
@@ -115,11 +193,12 @@ export async function generateSectionContent(
   ctx: SectionContext,
   opts: SectionGenOptions = {},
 ): Promise<SectionContentDraft> {
+  const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
   const result = await generateStructured({
     model: opts.model,
-    system: contentSystem(ctx.source === 'outline' ? ctx.outline.format : ctx.format),
+    system: contentSystem(format),
     prompt: buildContentPrompt(ctx, opts.refine),
-    schema: sectionContentSchema,
+    schema: sectionContentSchemaFor(format),
     metadata: { feature: 'story-pipeline-section-content' },
   })
   return {
@@ -192,20 +271,37 @@ export async function generateSection(
       ? { feedback: args.refine.feedback, previous: { body: args.refine.previous.body } }
       : undefined,
   })
-  return { ...content, body: visual.body }
+  let body = visual.body
+  // MAP choropleth: fill this section's per-region values in a focused,
+  // source-grounded pass and merge them into body.map.regions. The visual pass
+  // frames the camera; it does NOT author the numbers (the chart-data split,
+  // applied to maps). Only runs for map sections that declared a requirement.
+  if (args.outline.format === 'map' && args.stub.regionRequirement) {
+    const regions = await generateRegions(
+      { requirement: args.stub.regionRequirement, brief: args.brief, sources: args.sources },
+      { model: opts.model },
+    )
+    body = injectRegions(body, regions)
+  }
+  return { ...content, body }
 }
 
-/** Compose an outline + its generated sections into a full story. */
+/**
+ * Compose an outline + its generated sections into a full story. `charts` are
+ * the data-bearing `ChartSpec`s produced by `generateChart` (the outline only
+ * holds requirements), defaulting to none.
+ */
 export function assembleStory(
   outline: StoryOutline,
   sections: GeneratedSection[],
+  charts: ChartSpec[] = [],
 ): GeneratedStory {
   return {
     slug: slugify(outline.title),
     format: outline.format,
     frontmatter: buildFrontmatter(outline),
     sections,
-    charts: outline.charts,
+    charts,
     imagePrompts: outline.imagePrompts,
   }
 }
@@ -220,6 +316,18 @@ export async function generateStory(
   opts: GenerateOptions = {},
 ): Promise<{ story: GeneratedStory; issues: ValidationIssue[] }> {
   const outline = await generateOutline(input, opts)
+  // Chart DATA pass: turn each outline chart requirement into a full ChartSpec
+  // grounded in the sources (the outline only declares requirements).
+  const charts: ChartSpec[] = []
+  for (const requirement of outline.charts) {
+    // eslint-disable-next-line no-await-in-loop
+    charts.push(
+      await generateChart(
+        { requirement, brief: input.brief, sources: input.sources },
+        { model: opts.model },
+      ),
+    )
+  }
   const sections: GeneratedSection[] = []
   for (const stub of outline.sections) {
     // eslint-disable-next-line no-await-in-loop
@@ -230,6 +338,6 @@ export async function generateStory(
       ),
     )
   }
-  const story = assembleStory(outline, sections)
+  const story = assembleStory(outline, sections, charts)
   return { story, issues: validateStory(story) }
 }

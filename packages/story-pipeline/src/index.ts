@@ -17,6 +17,8 @@ export { generateAngles } from './angles'
 export {
   generateStory,
   generateOutline,
+  generateChart,
+  generateRegions,
   generateSection,
   generateSectionContent,
   generateSectionVisual,
@@ -27,8 +29,17 @@ export {
   type SectionGenOptions,
 } from './generate'
 export { validateStory } from './validate'
+export {
+  lintOutline,
+  lintStory,
+  lintSectionBody,
+  formatLintIssue,
+  type LayoutLintIssue,
+  type LintSeverity,
+} from './lintLayout'
 export { serializeStory } from './serialize'
 export { buildChartData, buildEChartsOption } from './chart'
+export { buildRegionLayer } from './regions'
 export { DEFAULT_THEME, defaultsFor } from './defaults'
 export {
   TEXT_MODEL_CHOICES,

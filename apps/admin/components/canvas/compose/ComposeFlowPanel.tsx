@@ -3,37 +3,202 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
+import { canvasFrameId } from '../canvasOutputs'
+
+type ComposeFormat = ComposeState['format']
+
+/** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
+interface ChartRequirementView {
+  id: string
+  title?: string
+  chartType: 'bar' | 'line'
+  requirement: string
+}
 
 /**
- * The canvas-native compose flow, as an overlay on the canvas page (shown only
- * when the story has a compose_state). Walks the author through
+ * A schematic wireframe of a planned deck layout — the "what will this section
+ * look like" demo shown BEFORE materialising. Region rectangles mirror the real
+ * `foregroundLayouts` arrangement (percent-of-frame), tinted by slot type. A map
+ * section or an unknown layout falls back to a single full/centred box.
+ */
+type PreviewRegion = { label: string; type: string; x: number; y: number; w: number; h: number }
+
+const LAYOUT_REGIONS: Record<string, PreviewRegion[]> = {
+  'stat-left-chart-right': [
+    { label: 'stat', type: 'stat', x: 4, y: 8, w: 34, h: 84 },
+    { label: 'chart', type: 'chart', x: 42, y: 8, w: 54, h: 84 },
+  ],
+  'text-left-chart-right': [
+    { label: 'text', type: 'text', x: 4, y: 8, w: 38, h: 84 },
+    { label: 'chart', type: 'chart', x: 46, y: 8, w: 50, h: 84 },
+  ],
+  'text-left-quote-right': [
+    { label: 'text', type: 'text', x: 4, y: 8, w: 42, h: 84 },
+    { label: 'quote', type: 'quote', x: 50, y: 8, w: 46, h: 84 },
+  ],
+  'image-left-text-right': [
+    { label: 'image', type: 'image', x: 4, y: 8, w: 46, h: 84 },
+    { label: 'text', type: 'text', x: 54, y: 8, w: 42, h: 84 },
+  ],
+  'stat-top-chart-below': [
+    { label: 'stat', type: 'stat', x: 6, y: 8, w: 88, h: 28 },
+    { label: 'chart', type: 'chart', x: 6, y: 40, w: 88, h: 52 },
+  ],
+  'chart-top-text-below': [
+    { label: 'chart', type: 'chart', x: 6, y: 8, w: 88, h: 46 },
+    { label: 'text', type: 'text', x: 6, y: 58, w: 88, h: 34 },
+  ],
+  centered: [{ label: 'content', type: 'text', x: 20, y: 22, w: 60, h: 56 }],
+  'hero-full-bleed': [{ label: 'hero', type: 'hero', x: 4, y: 8, w: 92, h: 84 }],
+}
+
+const REGION_TINT: Record<string, string> = {
+  stat: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300',
+  chart: 'border-sky-400/40 bg-sky-400/10 text-sky-300',
+  text: 'border-neutral-400/30 bg-white/5 text-neutral-300',
+  quote: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+  image: 'border-violet-400/40 bg-violet-400/10 text-violet-300',
+  hero: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200',
+  map: 'border-teal-400/40 bg-teal-400/10 text-teal-200',
+}
+
+function LayoutPreview({ layout, format }: { layout?: string; format: ComposeFormat }) {
+  const regions: PreviewRegion[] =
+    format === 'map'
+      ? [{ label: 'map', type: 'map', x: 2, y: 2, w: 96, h: 96 }]
+      : (layout ? LAYOUT_REGIONS[layout] : undefined) ?? [
+          { label: 'content', type: 'text', x: 8, y: 12, w: 84, h: 76 },
+        ]
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
+      style={{ paddingTop: '56.25%' }}
+      title={layout ? `Layout: ${layout}` : 'Planned layout'}
+    >
+      {regions.map((r, i) => (
+        <div
+          key={i}
+          className={`absolute flex items-center justify-center rounded-sm border text-[8px] uppercase tracking-wide ${
+            REGION_TINT[r.type] ?? REGION_TINT.text
+          }`}
+          style={{ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` }}
+        >
+          {r.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * A live thumbnail of a MATERIALISED section — the signed canvas-frame render
+ * the canvas itself uses, scaled down (rendered at 4× the box then scaled to
+ * fit, so the section sees a desktop-ish viewport). Static (pointer-events off);
+ * the corner link opens the full render.
+ */
+function SectionFrame({ src, title }: { src: string; title: string }) {
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
+      style={{ paddingTop: '56.25%' }}
+    >
+      <iframe
+        src={src}
+        title={title}
+        loading="lazy"
+        className="absolute left-0 top-0 origin-top-left"
+        style={{ width: '400%', height: '400%', transform: 'scale(0.25)', border: 0, pointerEvents: 'none' }}
+      />
+      <a
+        href={src}
+        target="_blank"
+        rel="noreferrer"
+        className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] text-neutral-200 hover:bg-black/80"
+        title="Open the full render"
+      >
+        open ↗
+      </a>
+    </div>
+  )
+}
+
+/**
+ * The canvas-native compose flow. Walks the author through
  * sources → angles → outline → materialise, persisting each step to
  * compose_state via the canvas/compose routes. On materialise it reloads so the
- * Rete2 graph re-reads the freshly-created sections.
+ * Rete2 graph (or editor) re-reads the freshly-created sections.
+ *
+ * Two exports:
+ *  - `ComposeFlow`        — the pipeline UI with no positioning of its own.
+ *                           Embedded in both the canvas drawer and the editor's
+ *                           "Research & outline" tab.
+ *  - `ComposeFlowPanel`   — a controlled right-side drawer wrapper around it,
+ *                           used on the canvas. It stays MOUNTED while open is
+ *                           toggled (visibility only) so in-session research
+ *                           survives close → reopen.
  */
 
-interface Props {
+interface ComposeFlowProps {
   slug: string
   initialState: ComposeState
   initialSources: StorySource[]
+  /**
+   * Toggled true by the parent when the surface is (re)shown. On a false→true
+   * transition `ComposeFlow` re-pulls the sources list so async PDF extraction
+   * that settled while the drawer was hidden shows up. Optional — the editor
+   * tab leaves it unset (always visible).
+   */
+  active?: boolean
+  /**
+   * Signed canvas-frame iframe URLs keyed by `canvasFrameId(sectionId)` — the
+   * SAME map the canvas signs. When present (canvas context) materialised
+   * sections show their real render; absent (editor tab) they fall back to the
+   * planned-layout schematic.
+   */
+  frameSrcById?: Record<string, string>
 }
 
 const base = `/api/stories`
 
-export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) {
+/** How many section "Write"/"Rewrite" calls may materialise concurrently. */
+const MAX_CONCURRENT_SECTIONS = 3
+
+export function ComposeFlow({
+  slug,
+  initialState,
+  initialSources,
+  active,
+  frameSrcById,
+}: ComposeFlowProps) {
   const [st, setSt] = useState<ComposeState>(initialState)
   const [sources, setSources] = useState<StorySource[]>(initialSources)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [collapsed, setCollapsed] = useState(false)
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
   const [angleFeedback, setAngleFeedback] = useState('')
   const [outlineFeedback, setOutlineFeedback] = useState('')
+  const [openOutline, setOpenOutline] = useState<Set<string>>(new Set())
   const [written, setWritten] = useState<Set<string>>(new Set())
+  // Section writes run in their own concurrency lane (up to
+  // MAX_CONCURRENT_SECTIONS at once) — the set of section ids with a write
+  // in flight. The rest of the pipeline (sources/angles/outline/finish/images)
+  // stays single-flight via `busy`.
+  const [writing, setWriting] = useState<Set<string>>(new Set())
   const [sectionFb, setSectionFb] = useState<Record<string, string>>({})
+  // Bumped per section on a successful write so its frame thumbnail reloads
+  // (the page isn't reloaded between writes, so the signed URL is cache-busted).
+  const [frameNonce, setFrameNonce] = useState<Record<string, number>>({})
   const [imgDone, setImgDone] = useState(0)
+  // Per-chart generation outcome (id → ok), set by the batch "Generate charts"
+  // step so each chart shows ✓ / ✗ after a run.
+  const [chartResults, setChartResults] = useState<Record<string, boolean>>({})
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Chart REQUIREMENTS the outline planned (no data yet) — the batch step turns
+  // these into chart_data via the source-grounded generateChart pass.
+  const charts =
+    ((st.storyOutline as { charts?: ChartRequirementView[] } | undefined)?.charts) ?? []
 
   const extracted = sources.filter((s) => s.status === 'extracted').length
   const pending = sources.filter((s) => s.status === 'pending').length
@@ -59,6 +224,27 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       clearInterval(id)
     }
   }, [pending, slug])
+
+  // Refresh-on-reopen backstop: when the drawer is re-shown, re-pull sources so
+  // anything that changed while it was hidden (e.g. a worker finishing) is in
+  // sync even if polling had already stopped.
+  useEffect(() => {
+    if (!active) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`${base}/${slug}/canvas/compose/sources`, { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as { sources?: StorySource[] }
+        if (!cancelled && Array.isArray(data.sources)) setSources(data.sources)
+      } catch {
+        // ignore — the poll/interval covers the live case
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [active, slug])
 
   async function call<T>(label: string, path: string, init: RequestInit): Promise<T | null> {
     setBusy(label)
@@ -120,6 +306,16 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
     })
     if (data?.ok) setSources((s) => s.filter((x) => x.id !== id))
   }
+  // Re-run extraction for a source that previously failed (or to refresh it).
+  // The original file/link is retained server-side, so this re-reads it.
+  async function reextract(id: string) {
+    const data = await call<{ source: StorySource }>('reextract', 'sources', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (data?.source) setSources((s) => s.map((x) => (x.id === id ? data.source : x)))
+  }
 
   // ── Angles ─────────────────────────────────────────────────────────────
   async function genAngles() {
@@ -137,6 +333,13 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
+    // Persist immediately (fire-and-forget) so the choice survives a reload
+    // before the outline stage writes it through.
+    fetch(`${base}/${slug}/canvas/compose/angles`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chosenAngleId: id }),
+    }).catch(() => {})
   }
 
   // ── Outline ────────────────────────────────────────────────────────────
@@ -145,16 +348,27 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       setError('pick an angle first')
       return
     }
-    const data = await call<{ outline: ComposeOutlineEntry[] }>('outline', 'outline', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        chosenAngleId: st.chosenAngleId,
-        ...(outlineFeedback.trim() ? { feedback: outlineFeedback.trim(), previous: st.outline } : {}),
-      }),
-    })
+    const data = await call<{ outline: ComposeOutlineEntry[]; storyOutline?: unknown }>(
+      'outline',
+      'outline',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          chosenAngleId: st.chosenAngleId,
+          ...(outlineFeedback.trim() ? { feedback: outlineFeedback.trim(), previous: st.outline } : {}),
+        }),
+      },
+    )
     if (data?.outline) {
-      setSt((s) => ({ ...s, phase: 'outline', outline: data.outline }))
+      // Capture storyOutline too so the Charts subsection (which reads its chart
+      // requirements) appears immediately, without waiting for a reload.
+      setSt((s) => ({
+        ...s,
+        phase: 'outline',
+        outline: data.outline,
+        storyOutline: data.storyOutline ?? s.storyOutline,
+      }))
       setOutlineFeedback('')
     }
   }
@@ -173,6 +387,14 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
         e.id === id ? { ...e, status: order[(order.indexOf(e.status) + 1) % 3]! } : e,
       ),
     )
+  }
+  function toggleOutline(id: string) {
+    setOpenOutline((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
   function move(id: string, dir: -1 | 1) {
     const i = st.outline.findIndex((e) => e.id === id)
@@ -193,17 +415,48 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
   }
 
   // ── Sections (CONTENT + VISUAL passes) ───────────────────────────────────
+  // Section writes don't go through `call`/`busy`: several may be in flight at
+  // once (capped at MAX_CONCURRENT_SECTIONS), tracked by id in `writing`.
   async function genSection(sectionId: string) {
+    // Already writing this one, or at the concurrency cap — ignore (the button
+    // disabled state is the primary guard; this backstops rapid clicks).
+    if (writing.has(sectionId) || writing.size >= MAX_CONCURRENT_SECTIONS) return
     const fb = sectionFb[sectionId]?.trim()
-    const data = await call<{ ok: boolean }>(`section:${sectionId}`, 'section', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sectionId, phase: 'combined', ...(fb ? { feedback: fb } : {}) }),
-    })
-    if (data?.ok) {
-      setWritten((w) => new Set(w).add(sectionId))
-      setSectionFb((f) => ({ ...f, [sectionId]: '' }))
+    setWriting((w) => new Set(w).add(sectionId))
+    setError(null)
+    try {
+      const res = await fetch(`${base}/${slug}/canvas/compose/section`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sectionId, phase: 'combined', ...(fb ? { feedback: fb } : {}) }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `section:${sectionId} failed`)
+        return
+      }
+      if (data?.ok) {
+        setWritten((w) => new Set(w).add(sectionId))
+        setSectionFb((f) => ({ ...f, [sectionId]: '' }))
+        setFrameNonce((n) => ({ ...n, [sectionId]: (n[sectionId] ?? 0) + 1 }))
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setWriting((w) => {
+        const next = new Set(w)
+        next.delete(sectionId)
+        return next
+      })
     }
+  }
+
+  /** Signed canvas-frame URL for a materialised section, cache-busted on write. */
+  function frameSrcFor(sectionId: string): string | null {
+    const url = frameSrcById?.[canvasFrameId(sectionId)]
+    if (!url) return null
+    const v = frameNonce[sectionId]
+    return v ? `${url}${url.includes('?') ? '&' : '?'}_v=${v}` : url
   }
 
   // ── Images: generate each imagePrompt into the story-assets bucket via the
@@ -220,7 +473,6 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
       const slugPart =
         (p.section ?? 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'image'
       try {
-        // eslint-disable-next-line no-await-in-loop
         const res = await fetch(`${base}/${slug}/assets/generate`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -240,255 +492,403 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
     setBusy(null)
   }
 
-  const phase = st.phase
-  const acceptedCount = st.outline.filter((e) => e.status === 'accepted').length
-
-  if (collapsed) {
-    return (
-      <button
-        onClick={() => setCollapsed(false)}
-        className="fixed right-3 top-3 z-50 rounded-md border border-sky-500/40 bg-neutral-900/90 px-3 py-1.5 text-xs font-medium text-sky-200 shadow-lg hover:border-sky-400"
-      >
-        Compose · {phase}
-      </button>
-    )
+  // ── Charts: turn the outline's chart requirements into source-grounded
+  // chart_data in one batch (per-chart regenerate also lives on the canvas). ──
+  async function genCharts() {
+    if (!charts.length || busy) return
+    const data = await call<{ charts: Array<{ id: string; ok: boolean }> }>('charts', 'charts', {
+      method: 'POST',
+    })
+    if (data?.charts) {
+      setChartResults((prev) => {
+        const next = { ...prev }
+        for (const c of data.charts) next[c.id] = c.ok
+        return next
+      })
+    }
   }
 
+  const phase = st.phase
+  const acceptedCount = st.outline.filter((e) => e.status === 'accepted').length
+  // The outline is interactively editable only during the outline stage of a
+  // live draft. Once it's been materialised (content/visual/done) or the draft
+  // is archived (finished), the outline is shown read-only so the retained
+  // research stays visible without offering destructive re-materialise.
+  const outlineEditable = phase === 'outline' && !st.archived
+  const showOutline =
+    st.outline.length > 0 &&
+    (phase === 'outline' || phase === 'content' || phase === 'visual' || phase === 'done')
+
   return (
-    <div className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">Compose</span>
-          <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-neutral-400">
-            {phase}
-          </span>
+    <div className="space-y-4">
+      {error && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
         </div>
-        <button onClick={() => setCollapsed(true)} className="text-neutral-400 hover:text-neutral-200">
-          ✕
-        </button>
-      </div>
+      )}
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {error && (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            {error}
-          </div>
-        )}
+      {/* Step indicator */}
+      <ol className="flex gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
+        {(['sources', 'angles', 'outline', 'content'] as const).map((p) => (
+          <li
+            key={p}
+            className={`flex-1 rounded px-1.5 py-1 text-center ${
+              phase === p ? 'bg-sky-500/20 text-sky-300' : 'bg-white/5'
+            }`}
+          >
+            {p}
+          </li>
+        ))}
+      </ol>
 
-        {/* Step indicator */}
-        <ol className="flex gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-          {(['sources', 'angles', 'outline', 'content'] as const).map((p) => (
-            <li
-              key={p}
-              className={`flex-1 rounded px-1.5 py-1 text-center ${
-                phase === p ? 'bg-sky-500/20 text-sky-300' : 'bg-white/5'
-              }`}
-            >
-              {p}
-            </li>
-          ))}
-        </ol>
-
-        {st.attached && (
+      {st.archived ? (
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
+          Finished — this is now a normal story. Its sources and outline are{' '}
+          <span className="font-medium">retained</span> here for reference and stay
+          reopenable.
+        </div>
+      ) : (
+        st.attached && (
           <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
             Composing into an existing story — materialised sections are{' '}
             <span className="font-medium">appended</span>, leaving your current content untouched.
           </div>
-        )}
+        )
+      )}
 
-        {/* ── Sources ── */}
-        <section className="space-y-2">
-          <h3 className="text-xs font-medium text-neutral-300">
-            Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
-          </h3>
-          <ul className="space-y-1">
-            {sources.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-2 rounded border border-white/10 bg-neutral-900/50 px-2 py-1 text-xs"
+      {/* ── Sources ── */}
+      <section className="space-y-2">
+        <h3 className="text-xs font-medium text-neutral-300">
+          Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
+        </h3>
+        <ul className="space-y-1">
+          {sources.map((s) => (
+            <li
+              key={s.id}
+              className="flex items-center justify-between gap-2 rounded border border-white/10 bg-neutral-900/50 px-2 py-1 text-xs"
+            >
+              <span className="min-w-0 flex-1 truncate" title={s.error ?? s.title ?? s.sourceUrl ?? s.filename ?? ''}>
+                {s.title ?? s.sourceUrl ?? s.filename ?? 'source'}
+              </span>
+              <span
+                className={
+                  s.status === 'extracted'
+                    ? 'text-emerald-400'
+                    : s.status === 'failed'
+                      ? 'text-red-400'
+                      : 'text-neutral-500'
+                }
               >
-                <span className="min-w-0 flex-1 truncate" title={s.title ?? s.sourceUrl ?? s.filename ?? ''}>
-                  {s.title ?? s.sourceUrl ?? s.filename ?? 'source'}
-                </span>
-                <span
-                  className={
-                    s.status === 'extracted'
-                      ? 'text-emerald-400'
-                      : s.status === 'failed'
-                        ? 'text-red-400'
-                        : 'text-neutral-500'
-                  }
+                {s.status === 'extracted' ? '✓' : s.status === 'failed' ? '✗' : '…'}
+              </span>
+              {s.status === 'failed' && (
+                <button
+                  onClick={() => reextract(s.id)}
+                  disabled={!!busy}
+                  title={`Re-run extraction${s.error ? ` — ${s.error}` : ''}`}
+                  className="text-neutral-400 hover:text-sky-300 disabled:opacity-40"
                 >
-                  {s.status === 'extracted' ? '✓' : s.status === 'failed' ? '✗' : '…'}
-                </span>
-                <button onClick={() => removeSource(s.id)} className="text-neutral-500 hover:text-red-300">
-                  ✕
+                  {busy === 'reextract' ? '…' : '↻'}
                 </button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-1">
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-              placeholder="Paste a link…"
-              className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-            />
-            <button onClick={addUrl} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-              Add
-            </button>
-          </div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="…or paste text"
-            rows={2}
+              )}
+              <button onClick={() => removeSource(s.id)} className="text-neutral-500 hover:text-red-300">
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-1">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addUrl()}
+            placeholder="Paste a link…"
+            className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+          />
+          <button onClick={addUrl} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+            Add
+          </button>
+        </div>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="…or paste text"
+          rows={2}
+          className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+        />
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => text.trim() && addText()} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+            Add text
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
+            className="text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-neutral-200"
+          />
+        </div>
+        <button
+          onClick={genAngles}
+          disabled={!!busy || extracted === 0}
+          className="w-full rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+        >
+          {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
+        </button>
+        {pending > 0 && (
+          <p className="text-[11px] text-amber-300/80">
+            Extracting {pending} PDF{pending > 1 ? 's' : ''} with Gemma — this runs in the
+            background and can take a few minutes. Statuses update automatically.
+          </p>
+        )}
+      </section>
+
+      {/* ── Angles ── */}
+      {st.angles.length > 0 && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">Pick an angle</h3>
+          {st.angles.map((a) => (
+            <label
+              key={a.id}
+              className={`block cursor-pointer rounded border p-2 text-xs ${
+                st.chosenAngleId === a.id ? 'border-sky-500/60 bg-sky-500/10' : 'border-white/10 hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  checked={st.chosenAngleId === a.id}
+                  onChange={() => pickAngle(a.id)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <div className="font-medium text-neutral-100">{a.title}</div>
+                  <div className="mt-0.5 text-neutral-400">{a.thesis}</div>
+                </div>
+              </div>
+            </label>
+          ))}
+          <input
+            value={angleFeedback}
+            onChange={(e) => setAngleFeedback(e.target.value)}
+            placeholder="Regenerate with a note (optional)…"
             className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
           />
-          <div className="flex items-center justify-between gap-2">
-            <button onClick={() => text.trim() && addText()} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-              Add text
+          <div className="flex gap-2">
+            <button onClick={genAngles} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+              Regenerate
             </button>
-            <input
-              ref={fileRef}
-              type="file"
-              onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
-              className="text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-neutral-200"
-            />
+            <button
+              onClick={genOutline}
+              disabled={!!busy || !st.chosenAngleId}
+              className="flex-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+            >
+              {busy === 'outline' ? 'Outlining…' : 'Generate outline →'}
+            </button>
           </div>
-          <button
-            onClick={genAngles}
-            disabled={!!busy || extracted === 0}
-            className="w-full rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-          >
-            {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
-          </button>
-          {pending > 0 && (
-            <p className="text-[11px] text-amber-300/80">
-              Extracting {pending} PDF{pending > 1 ? 's' : ''} with Gemma — this runs in the
-              background and can take a few minutes. Statuses update automatically.
-            </p>
-          )}
         </section>
+      )}
 
-        {/* ── Angles ── */}
-        {st.angles.length > 0 && (
-          <section className="space-y-2 border-t border-white/10 pt-3">
-            <h3 className="text-xs font-medium text-neutral-300">Pick an angle</h3>
-            {st.angles.map((a) => (
-              <label
-                key={a.id}
-                className={`block cursor-pointer rounded border p-2 text-xs ${
-                  st.chosenAngleId === a.id ? 'border-sky-500/60 bg-sky-500/10' : 'border-white/10 hover:border-white/30'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <input
-                    type="radio"
-                    checked={st.chosenAngleId === a.id}
-                    onChange={() => pickAngle(a.id)}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <div className="font-medium text-neutral-100">{a.title}</div>
-                    <div className="mt-0.5 text-neutral-400">{a.thesis}</div>
-                  </div>
-                </div>
-              </label>
-            ))}
-            <input
-              value={angleFeedback}
-              onChange={(e) => setAngleFeedback(e.target.value)}
-              placeholder="Regenerate with a note (optional)…"
-              className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-            />
-            <div className="flex gap-2">
-              <button onClick={genAngles} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-                Regenerate
-              </button>
-              <button
-                onClick={genOutline}
-                disabled={!!busy || !st.chosenAngleId}
-                className="flex-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-              >
-                {busy === 'outline' ? 'Outlining…' : 'Generate outline →'}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* ── Outline ── */}
-        {phase === 'outline' && st.outline.length > 0 && (
-          <section className="space-y-2 border-t border-white/10 pt-3">
-            <h3 className="text-xs font-medium text-neutral-300">
-              Outline — click status to accept/reject
-            </h3>
-            <ul className="space-y-1">
-              {st.outline.map((e, i) => (
+      {/* ── Outline ── (interactive at the outline stage; read-only once
+          materialised or archived, so the retained research stays visible). */}
+      {showOutline && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">
+            {outlineEditable ? 'Outline — click status to accept/reject' : 'Outline'}
+          </h3>
+          <ul className="space-y-1">
+            {st.outline.map((e, i) => {
+              const statusCls =
+                e.status === 'accepted'
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : e.status === 'rejected'
+                    ? 'bg-red-500/20 text-red-300'
+                    : 'bg-white/10 text-neutral-400'
+              const open = openOutline.has(e.id)
+              const hasDetail = Boolean(e.visual || e.context || e.expectedContent)
+              return (
                 <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => cycleStatus(e.id)}
-                      className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${
-                        e.status === 'accepted'
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : e.status === 'rejected'
-                            ? 'bg-red-500/20 text-red-300'
-                            : 'bg-white/10 text-neutral-400'
-                      }`}
-                    >
-                      {e.status}
-                    </button>
+                    {outlineEditable ? (
+                      <button
+                        onClick={() => cycleStatus(e.id)}
+                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}
+                      >
+                        {e.status}
+                      </button>
+                    ) : (
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}>
+                        {e.status}
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                    {e.layout && (
+                      <span
+                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
+                        title="Planned deck layout"
+                      >
+                        {e.layout}
+                      </span>
+                    )}
                     <span className="text-[10px] text-neutral-500">{e.kind}</span>
-                    <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                      ↑
-                    </button>
-                    <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                      ↓
-                    </button>
+                    {outlineEditable && (
+                      <>
+                        <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
+                          ↑
+                        </button>
+                        <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
+                          ↓
+                        </button>
+                      </>
+                    )}
+                    {hasDetail && (
+                      <button
+                        onClick={() => toggleOutline(e.id)}
+                        className="text-neutral-500 hover:text-neutral-200"
+                        aria-expanded={open}
+                        title={open ? 'Hide details' : 'Show context, content & visual'}
+                      >
+                        {open ? '▾' : '▸'}
+                      </button>
+                    )}
                   </div>
-                  <p className="mt-1 line-clamp-2 text-neutral-400">{e.intent}</p>
+                  <p className={`mt-1 text-neutral-400 ${open ? '' : 'line-clamp-2'}`}>{e.intent}</p>
+                  {/* Layout demo — a wireframe of what this section will look
+                      like, shown before you materialise it. */}
+                  {outlineEditable && (
+                    <div className="mt-2">
+                      <LayoutPreview layout={e.layout} format={st.format} />
+                    </div>
+                  )}
+                  {open && hasDetail && (
+                    <dl className="mt-2 space-y-1.5 border-t border-white/5 pt-2 text-[11px]">
+                      {e.expectedContent && (
+                        <div>
+                          <dt className="text-neutral-500">Expected content</dt>
+                          <dd className="text-neutral-300">{e.expectedContent}</dd>
+                        </div>
+                      )}
+                      {e.visual && (
+                        <div>
+                          <dt className="text-neutral-500">Visualization</dt>
+                          <dd className="text-neutral-300">{e.visual}</dd>
+                        </div>
+                      )}
+                      {e.context && (
+                        <div>
+                          <dt className="text-neutral-500">Context</dt>
+                          <dd className="text-neutral-300">{e.context}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
                 </li>
-              ))}
-            </ul>
-            <input
-              value={outlineFeedback}
-              onChange={(e) => setOutlineFeedback(e.target.value)}
-              placeholder="Regenerate outline with a note (optional)…"
-              className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-            />
-            <div className="flex gap-2">
-              <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-                Regenerate
-              </button>
-              <button
-                onClick={materialize}
-                disabled={!!busy || acceptedCount === 0}
-                className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
-              >
-                {busy === 'materialize'
-                  ? 'Creating…'
-                  : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
-              </button>
-            </div>
-          </section>
-        )}
+              )
+            })}
+          </ul>
+          {outlineEditable && (
+            <>
+              <input
+                value={outlineFeedback}
+                onChange={(e) => setOutlineFeedback(e.target.value)}
+                placeholder="Regenerate outline with a note (optional)…"
+                className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+              />
+              <div className="flex gap-2">
+                <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+                  Regenerate
+                </button>
+                <button
+                  onClick={materialize}
+                  disabled={!!busy || acceptedCount === 0}
+                  className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
+                >
+                  {busy === 'materialize'
+                    ? 'Creating…'
+                    : `${st.attached ? 'Append' : 'Materialize'} ${acceptedCount} →`}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
-        {/* ── Sections: per-section CONTENT + VISUAL ── */}
-        {(phase === 'content' || phase === 'visual' || phase === 'done') && (
-          <section className="space-y-2 border-t border-white/10 pt-3">
-            <h3 className="text-xs font-medium text-neutral-300">Write sections</h3>
-            <ul className="space-y-2">
-              {st.outline
-                .filter((e) => e.sectionId)
-                .map((e) => (
+      {/* ── Charts ── (the outline plans chart REQUIREMENTS; this generates the
+          actual data, grounded in the sources. Per-chart regenerate lives on the
+          canvas chart node.) */}
+      {showOutline && charts.length > 0 && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">Charts ({charts.length})</h3>
+          <ul className="space-y-1">
+            {charts.map((c) => {
+              const result = chartResults[c.id]
+              return (
+                <li
+                  key={c.id}
+                  className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">
+                      {c.title ?? c.id}
+                    </span>
+                    <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">
+                      {c.chartType}
+                    </span>
+                    {result === true && <span className="text-emerald-400">✓</span>}
+                    {result === false && <span className="text-red-400" title="Generation failed">✗</span>}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">{c.requirement}</p>
+                </li>
+              )
+            })}
+          </ul>
+          <button
+            onClick={genCharts}
+            disabled={!!busy}
+            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
+          >
+            {busy === 'charts'
+              ? `Generating charts… (${charts.length})`
+              : `Generate ${charts.length} chart${charts.length > 1 ? 's' : ''} → data`}
+          </button>
+        </section>
+      )}
+
+      {/* ── Sections: per-section CONTENT + VISUAL ── */}
+      {(phase === 'content' || phase === 'visual' || phase === 'done') && (
+        <section className="space-y-2 border-t border-white/10 pt-3">
+          <h3 className="text-xs font-medium text-neutral-300">
+            Materialized sections — what got created
+          </h3>
+          <ul className="space-y-2">
+            {st.outline
+              .filter((e) => e.sectionId)
+              .map((e) => {
+                const frame = frameSrcFor(e.sectionId!)
+                const isWriting = writing.has(e.sectionId!)
+                const atCap = writing.size >= MAX_CONCURRENT_SECTIONS
+                return (
                   <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
+                      {e.layout && (
+                        <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">{e.layout}</span>
+                      )}
                       {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
                     </div>
+                    {/* What was materialised: the live render when the canvas has
+                        signed it, else the planned-layout wireframe. */}
+                    <div className="mt-2">
+                      {frame ? (
+                        <SectionFrame src={frame} title={e.heading} />
+                      ) : (
+                        <LayoutPreview layout={e.layout} format={st.format} />
+                      )}
+                    </div>
+                    {e.visual && (
+                      <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
+                        <span className="text-neutral-400">Planned:</span> {e.visual}
+                      </p>
+                    )}
                     <div className="mt-1 flex gap-1">
                       <input
                         value={sectionFb[e.sectionId!] ?? ''}
@@ -498,46 +898,99 @@ export function ComposeFlowPanel({ slug, initialState, initialSources }: Props) 
                       />
                       <button
                         onClick={() => genSection(e.sectionId!)}
-                        disabled={!!busy}
+                        disabled={!!busy || isWriting || atCap}
+                        title={
+                          atCap && !isWriting
+                            ? `Up to ${MAX_CONCURRENT_SECTIONS} sections write at once — wait for one to finish`
+                            : undefined
+                        }
                         className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
                       >
-                        {busy === `section:${e.sectionId}`
-                          ? '…'
-                          : written.has(e.sectionId!)
-                            ? 'Rewrite'
-                            : 'Write'}
+                        {isWriting ? '…' : written.has(e.sectionId!) ? 'Rewrite' : 'Write'}
                       </button>
                     </div>
                   </li>
-                ))}
-            </ul>
-            {(st.imagePrompts?.length ?? 0) > 0 && (
-              <button
-                onClick={genImages}
-                disabled={!!busy}
-                className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
-              >
-                {busy === 'images'
-                  ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
-                  : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
-              </button>
-            )}
+                )
+              })}
+          </ul>
+          {(st.imagePrompts?.length ?? 0) > 0 && (
             <button
-              onClick={() => window.location.reload()}
-              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
+              onClick={genImages}
+              disabled={!!busy || writing.size > 0}
+              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
             >
-              Reload canvas to view ↻
+              {busy === 'images'
+                ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
+                : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
             </button>
-            <button
-              onClick={finish}
-              disabled={!!busy}
-              className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
-            >
-              {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
-            </button>
-          </section>
-        )}
+          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
+          >
+            Reload to view ↻
+          </button>
+          <button
+            onClick={finish}
+            disabled={!!busy || writing.size > 0}
+            className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
+          >
+            {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
+          </button>
+        </section>
+      )}
+    </div>
+  )
+}
+
+interface PanelProps {
+  slug: string
+  initialState: ComposeState
+  initialSources: StorySource[]
+  /** Controlled visibility. The drawer stays mounted while this toggles so the
+   *  research inside survives close → reopen. */
+  open: boolean
+  onClose: () => void
+  /** Signed canvas-frame URLs (keyed by `canvasFrameId`) so materialised
+   *  sections show their real render. Passed straight through to `ComposeFlow`. */
+  frameSrcById?: Record<string, string>
+}
+
+/**
+ * Canvas drawer wrapper. Renders the fixed right-side panel; visibility is
+ * controlled by `open` (display toggle — NOT conditional mount) so the
+ * `ComposeFlow` inside keeps its state when dismissed and reopened.
+ */
+export function ComposeFlowPanel({
+  slug,
+  initialState,
+  initialSources,
+  open,
+  onClose,
+  frameSrcById,
+}: PanelProps) {
+  return (
+    <div
+      className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur"
+      style={{ display: open ? 'flex' : 'none' }}
+    >
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <span className="text-sm font-semibold">Research &amp; outline</span>
+        <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200" aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <ComposeFlow
+          slug={slug}
+          initialState={initialState}
+          initialSources={initialSources}
+          active={open}
+          frameSrcById={frameSrcById}
+        />
       </div>
     </div>
   )
 }
+
+export default ComposeFlowPanel

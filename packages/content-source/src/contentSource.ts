@@ -14,6 +14,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createServiceClient } from './supabase'
+import { listStorySources, removeSourceFile } from './storySources'
 
 export type StoryStatus = 'draft' | 'published' | 'archived'
 
@@ -45,6 +46,9 @@ export interface ContentSource {
   writeMapYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
   deleteChart(slug: string, chartId: string): Promise<void>
+  /** Permanently delete a story and its sidecar content (charts, compose
+   *  sources). Used by the admin "delete draft" action. Callers handle auth. */
+  deleteStory(slug: string): Promise<void>
   updateMetadata(slug: string, meta: Partial<Pick<StoryMeta, 'status' | 'listed' | 'displayOrder' | 'appSlug'>>): Promise<void>
   listChartIds(slug: string): Promise<string[]>
 }
@@ -181,6 +185,16 @@ const fsSource: ContentSource = {
   async deleteChart(slug, chartId) {
     const p = path.join(STORIES_DIR, slug, 'charts', `${chartId}.json`)
     if (fs.existsSync(p)) fs.unlinkSync(p)
+  },
+  async deleteStory(slug) {
+    // Remove every per-story file + the charts directory. Best-effort per
+    // path — a missing sidecar (e.g. no .map.yaml) isn't an error.
+    for (const suffix of ['.md', '.config.yaml', '.share.yaml', '.report.yaml', '.tts.yaml', '.map.yaml']) {
+      const p = path.join(STORIES_DIR, `${slug}${suffix}`)
+      if (fs.existsSync(p)) fs.unlinkSync(p)
+    }
+    const dir = path.join(STORIES_DIR, slug)
+    if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true })
   },
   async listChartIds(slug) {
     const dir = path.join(STORIES_DIR, slug, 'charts')
@@ -407,6 +421,23 @@ const dbSource: ContentSource = {
       .eq('slug', slug)
       .eq('chart_id', chartId)
     if (error) throw new Error(`deleteChart ${slug}/${chartId}: ${error.message}`)
+  },
+  async deleteStory(slug) {
+    const sb = createServiceClient()
+    // Best-effort: clear the retained source originals from the bucket (the
+    // story_sources rows themselves cascade-delete with the stories row).
+    try {
+      const rows = await listStorySources(slug)
+      for (const r of rows) {
+        if (r.storagePath) await removeSourceFile(r.storagePath).catch(() => {})
+      }
+    } catch {
+      // bucket/table unreachable — proceed with the row delete anyway
+    }
+    // chart_data has no cascade onto stories, so drop it explicitly first.
+    await sb.from('chart_data').delete().eq('slug', slug)
+    const { error } = await sb.from('stories').delete().eq('slug', slug)
+    if (error) throw new Error(`deleteStory ${slug}: ${error.message}`)
   },
   async listChartIds(slug) {
     const sb = createServiceClient()

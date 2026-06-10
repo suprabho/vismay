@@ -41,13 +41,19 @@ export function isListed(fm: Pick<Frontmatter, 'status' | 'listed'>): boolean {
  * Throws for drafts in production so the story route renders a 404 rather than
  * leaking unfinished work.
  */
-export async function getStoryContent(slug: string): Promise<StoryContent> {
+export async function getStoryContent(
+  slug: string,
+  opts: { allowDraft?: boolean } = {}
+): Promise<StoryContent> {
   const raw = await getContentSource().readMarkdown(slug)
   if (raw == null) throw new Error(`Story "${slug}" not found`)
   const { data, content } = matter(raw)
 
   const frontmatter = data as Frontmatter
-  if (!isViewable(frontmatter)) {
+  // `allowDraft` is for signed, admin-only preview surfaces (the canvas frame)
+  // that exist precisely to render unpublished work. The public story route
+  // omits it, so drafts stay hidden in production via `isViewable`.
+  if (!opts.allowDraft && !isViewable(frontmatter)) {
     throw new Error(`Story "${slug}" is a draft and not viewable in this environment`)
   }
 

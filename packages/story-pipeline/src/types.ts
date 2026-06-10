@@ -85,6 +85,43 @@ export interface ChartSpec {
   yLabel?: string
 }
 
+/**
+ * A chart the outline plans, WITHOUT data — the skeleton declares the chart's
+ * shape + a precise `requirement`; the `generateChart` pass produces the
+ * numeric series, yielding a full {@link ChartSpec}.
+ */
+export interface ChartRequirement {
+  id: string
+  title?: string
+  chartType: 'bar' | 'line'
+  /** What to plot — figures/series/categories/range, grounded in the sources. */
+  requirement: string
+  xLabel?: string
+  yLabel?: string
+}
+
+/**
+ * A choropleth the outline plans for a map section, WITHOUT values — the mirror
+ * of {@link ChartRequirement}. `generateRegions` fills the per-region figures.
+ */
+export interface RegionRequirement {
+  /** What each region is shaded by (the choropleth metric). */
+  metric: string
+  /** `country` (built-in boundaries, ISO alpha-2) or `custom` (author GeoJSON). */
+  level: 'country' | 'custom'
+  /** level: custom — author-supplied GeoJSON path. */
+  geojsonUrl?: string
+  /** level: custom — feature id property matching item codes. */
+  idProperty?: string
+  /** Which regions to shade and over what range, grounded in the sources. */
+  requirement: string
+}
+
+/** The grounded output of `generateRegions`: one `{ code, value }` per region. */
+export interface RegionData {
+  items: Array<{ code: string; value: number; label?: string }>
+}
+
 /** An emitted image prompt — a sidecar deliverable, not yet wired into a layer. */
 export interface ImagePrompt {
   /** The section heading/id this image is for. */
@@ -93,14 +130,24 @@ export interface ImagePrompt {
   aspectRatio: AspectRatio
 }
 
-/** A planned section from the outline step — heading + intent, no prose yet. */
+/** A planned section from the outline step — the per-section brief, no prose yet. */
 export interface SectionStub {
   heading: string
   kind: string
-  /** What this section should cover — drives the per-section generation. */
+  /** One line on the section's job — drives the per-section generation. */
   intent: string
+  /** How this section connects to the ones around it (its narrative role). */
+  context?: string
+  /** The specific facts/figures/quotes this section must carry. */
+  expectedContent?: string
+  /** The visualisation the section features (which layers and what each shows). */
+  visual?: string
+  /** Deck only: the named foreground layout that frames the visual. */
+  layout?: string
   /** Optional chart id (defined in the outline's `charts`) this section features. */
   chartId?: string
+  /** MAP only: if this section shades geography, the choropleth requirement (no values). */
+  regionRequirement?: RegionRequirement
 }
 
 /** The fast first step: the story skeleton, before any section prose is written. */
@@ -110,7 +157,8 @@ export interface StoryOutline {
   subtitle: string
   byline: string
   accentColors?: { accent?: string; accent2?: string }
-  charts: ChartSpec[]
+  /** Chart requirements (no data) — the data pass turns these into `ChartSpec`s. */
+  charts: ChartRequirement[]
   imagePrompts: ImagePrompt[]
   sections: SectionStub[]
 }

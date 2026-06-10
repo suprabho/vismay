@@ -29,6 +29,16 @@ export interface ComposeOutlineEntry {
   heading: string
   intent: string
   kind: string
+  /**
+   * The per-section expectations the outline planned (issue: outlines lacked
+   * what each section needs). Surfaced in the outline tab and passed on to the
+   * CONTENT/VISUAL passes. Optional so drafts written before this stays valid.
+   */
+  context?: string
+  expectedContent?: string
+  /** The planned visualisation + (deck) named layout that frames it. */
+  visual?: string
+  layout?: string
   status: ComposeOutlineStatus
   /** Set once the entry has been materialised into a real story section. */
   sectionId: string | null
@@ -45,6 +55,14 @@ export interface ComposeState {
    * story has real content that must survive.
    */
   attached?: boolean
+  /**
+   * Set by the `finish` route when the author marks the draft a normal story.
+   * The scaffold (angles + outline) and its sources are RETAINED rather than
+   * deleted — `archived` only stops the draft from auto-surfacing the overlay
+   * and drops it out of the in-progress resume picker. The research stays
+   * reopenable from the canvas/editor.
+   */
+  archived?: boolean
   /** The text model alias the author picked for this draft. */
   model?: string
   angles: ComposeAngle[]
@@ -105,7 +123,11 @@ export async function listComposeDrafts(): Promise<ComposeDraftSummary[]> {
     .not('compose_state', 'is', null)
     .order('updated_at', { ascending: false })
   if (error) throw new Error(`listComposeDrafts: ${error.message}`)
-  return (data ?? []).map((row: any) => {
+  return (data ?? [])
+    // Archived drafts are retained but finished — keep them out of the
+    // "resume in-progress" picker so completed stories don't clutter it.
+    .filter((row: any) => !(row.compose_state as Partial<ComposeState> | null)?.archived)
+    .map((row: any) => {
     const state = (row.compose_state ?? {}) as Partial<ComposeState>
     return {
       slug: row.slug as string,

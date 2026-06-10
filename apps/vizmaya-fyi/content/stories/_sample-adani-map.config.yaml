@@ -1,0 +1,434 @@
+# Story config — _sample-adani-map  (CARTOGRAPHIC reference)
+#
+# This is the "Kashmir-style" cartographic recreation of the Adani story:
+# a scroll-driven PROSE RAIL over a live map, with charts attached via the
+# legacy `chart: data:<id>` field and place data carried by `map.pins`.
+#
+# It deliberately uses NO `foreground:` panels. On a map story a foreground
+# slot SUPPRESSES the section's prose rail (see DECK_KINDS_NO_TEXT_CARD in
+# MapStorySection.tsx) — which is why the earlier deck version of this file
+# rendered none of the rich narrative in _sample-adani-map.md. The deck
+# (panel-over-map) version is preserved in git history.
+#
+# Mode/format guide: apps/vizmaya-fyi/docs/map-story-authoring.md
+#
+# Section `text:` must match a markdown `#`/`##` heading (anchor lookup is
+# level-agnostic + case/dash tolerant). Charts resolve from
+# _sample-adani-map/charts/<id>.json via `chart: data:<id>`.
+#
+# NOTE — choropleth: this story's data is point/site-based (specific airports,
+# Khavda, Godda, silo corridors), so the faithful cartographic treatment is a
+# prose rail + rich pins, NOT a forced state choropleth. For an areal-metric
+# example of `map.regions`, see kashmir-1941-land-reform.config.yaml.
+
+defaults:
+  scroll:
+    mode: continuous
+  chart:
+    theme: light-editorial
+  mapStyle: mapbox://styles/mapbox/light-v11
+  mapOpacity: 0.6
+  pinColor: "#d4612a"
+  pinRadius: 8
+  flySpeed: 1.2
+
+sections:
+
+  # ── HERO ──────────────────────────────────────────────
+  - id: a-decade-of-deals
+    text: A Decade of Deals
+    kind: hero
+    eyebrow: "Adani Group · Five Sectors · One Decade"
+    map:
+      center:
+        - 78.9629
+        - 22.5937
+      zoom: 4.2
+      pitch: 20
+      bearing: 0
+      pins:
+        - coordinates:
+            - 72.6369
+            - 23.0225
+          label: Ahmedabad
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 80.8948
+            - 26.8467
+          label: Lucknow
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 75.7873
+            - 26.8241
+          label: Jaipur
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 91.5859
+            - 26.1061
+          label: Guwahati
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 76.9366
+            - 8.4875
+          label: Thiruvananthapuram
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 74.8559
+            - 12.9141
+          label: Mangaluru
+          color: "#3B82F6"
+          radius: 7
+        - coordinates:
+            - 69.7167
+            - 23.8833
+          label: Khavda / Rann of Kutch
+          color: "#EAB308"
+          radius: 7
+        - coordinates:
+            - 86.9842
+            - 24.1628
+          label: Godda, Jharkhand
+          color: "#F97316"
+          radius: 7
+        - coordinates:
+            - 74.124
+            - 16.544
+          label: Western Ghats
+          color: "#22C55E"
+          radius: 7
+        - coordinates:
+            - 77.209
+            - 28.6139
+          label: FCI Silo Hub — Delhi
+          color: "#9CA3AF"
+          radius: 6
+        - coordinates:
+            - 80.3318
+            - 26.4499
+          label: FCI Silo Hub — Kanpur
+          color: "#9CA3AF"
+          radius: 6
+
+  # ── The pattern, stated ───────────────────────────────
+  - id: five-sectors-one-pattern
+    text: Five Sectors, One Pattern
+    kind: text
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+    map:
+      center:
+        - 78.9629
+        - 22.5937
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      pins:
+        - coordinates:
+            - 72.8777
+            - 22.3072
+          label: Airports (6 cities)
+          color: accent
+        - coordinates:
+            - 75.8577
+            - 22.7196
+          label: FCI Grain Silos
+          color: accent
+        - coordinates:
+            - 69.7
+            - 23.85
+          label: Khavda / Kutch RE Land
+          color: accent
+        - coordinates:
+            - 87.03
+            - 24.51
+          label: Godda Power Export
+          color: accent
+        - coordinates:
+            - 74
+            - 16.5
+          label: Western Ghats Clearances
+          color: muted
+
+  # ── Airports — chart + prose ──────────────────────────
+  - id: the-airport-clean-sweep
+    text: The Airport Clean Sweep
+    kind: text
+    chart: data:airport-bids-comparison
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+    map:
+      center:
+        - 76.5
+        - 24
+      zoom: 5.2
+      pitch: 30
+      bearing: 0
+      pins:
+        - coordinates:
+            - 72.6369
+            - 23.0225
+          label: Ahmedabad Airport
+          color: accent2
+          radius: 10
+        - coordinates:
+            - 80.8893
+            - 26.7606
+          label: Lucknow Airport
+          color: accent2
+          radius: 10
+        - coordinates:
+            - 77.209
+            - 28.6139
+          label: Delhi — PPPAC (11 Dec 2018)
+          color: amber
+          radius: 7
+
+  # ── Rupee concentration — chart + prose ───────────────
+  - id: where-the-rupees-flowed
+    text: Where the Rupees Flowed
+    kind: text
+    chart: data:contract-value-by-sector
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+    map:
+      center:
+        - 80.9
+        - 22.5
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      pins:
+        - coordinates:
+            - 72.6
+            - 23
+          label: Ahmedabad Airport
+          color: accent2
+        - coordinates:
+            - 70.5
+            - 23.9
+          label: Khavda, Rann of Kutch (~9.5 GW)
+          color: teal
+        - coordinates:
+            - 86.1
+            - 24.2
+          label: Godda, Jharkhand (100% export to Bangladesh)
+          color: amber
+        - coordinates:
+            - 73.8
+            - 17.9
+          label: Western Ghats MoU (₹60,000 cr — EAC rejected)
+          color: muted
+        - coordinates:
+            - 77.2
+            - 28.6
+          label: "FCI Silo Hub: Delhi NCR / North India cluster"
+          color: accent
+
+  # ── Silos — chart + prose ─────────────────────────────
+  - id: the-silo-duopoly
+    text: The Silo Duopoly
+    kind: text
+    chart: data:silo-contract-concentration
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+    map:
+      center:
+        - 77.5
+        - 29.5
+      zoom: 5.2
+      pitch: 30
+      bearing: 0
+      # The grain-silo case is the one genuinely AREAL slice (contract/capacity
+      # share by north-Indian state). It is shown here as pins; to render it as
+      # a choropleth instead, attach `map.regions` with an India-states GeoJSON
+      # and per-state values — see docs/map-story-authoring.md → "Choropleth".
+      pins:
+        - coordinates:
+            - 75.8
+            - 30.9
+          label: Punjab corridor
+          color: "#f59e0b"
+          radius: 10
+        - coordinates:
+            - 76.8
+            - 29
+          label: Haryana corridor
+          color: "#f59e0b"
+          radius: 10
+        - coordinates:
+            - 80.9
+            - 26.8
+          label: UP corridor
+          color: "#f59e0b"
+          radius: 10
+        - coordinates:
+            - 77.2
+            - 28.6
+          label: Delhi NCR hub
+          color: "#f59e0b"
+          radius: 8
+
+  # ── Khavda — chart + prose ────────────────────────────
+  - id: border-land-and-the-rann-of-kutch
+    text: Border Land and the Rann of Kutch
+    kind: text
+    chart: data:khavda-land-allocation
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+    map:
+      center:
+        - 69.8
+        - 23.85
+      zoom: 9
+      pitch: 30
+      bearing: 10
+      pins:
+        - coordinates:
+            - 69.65
+            - 23.95
+          label: Adani Green ~19,000 ha (~9.5 GW)
+          color: "#F5A623"
+          radius: 18
+        - coordinates:
+            - 69.9
+            - 23.75
+          label: NTPC ~4,750 MW
+          color: "#4A90D9"
+          radius: 12
+        - coordinates:
+            - 70.05
+            - 23.9
+          label: SECI — surrendered 23,000 ha (Jul 2023)
+          color: "#8A8A8A"
+          radius: 12
+        - coordinates:
+            - 69.75
+            - 23.65
+          label: Khavda RE Park — 30 GW / 72,600 ha
+          color: "#50E3C2"
+          radius: 8
+
+  # ── Godda — prose ─────────────────────────────────────
+  - id: godda-india-s-only-100-export-plant
+    text: "Godda: India's Only 100% Export Plant"
+    kind: text
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+    map:
+      center:
+        - 87.2
+        - 24.6
+      zoom: 7
+      pitch: 30
+      bearing: 10
+      pins:
+        - coordinates:
+            - 87.2185
+            - 24.5873
+          label: Godda Power Plant (1,600 MW)
+          color: red
+          radius: 10
+        - coordinates:
+            - 90.4125
+            - 23.8103
+          label: Dhaka, Bangladesh
+          color: amber
+          radius: 7
+        - coordinates:
+            - 88.69
+            - 24.63
+          label: India–Bangladesh Border (Transmission Crossing)
+          color: teal
+          radius: 6
+
+  # ── Verdict ───────────────────────────────────────────
+  - id: pattern-or-coincidence-you-decide
+    text: Pattern or Coincidence? You Decide
+    kind: text
+    mobileParagraphs:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+    map:
+      center:
+        - 78.9629
+        - 22.5937
+      zoom: 4.2
+      pitch: 0
+      bearing: 0
+      pins:
+        - coordinates:
+            - 77.209
+            - 28.6139
+          label: New Delhi (Regulatory Hub)
+          color: "#e8c84a"
+          radius: 10
+        - coordinates:
+            - 72.5714
+            - 23.0225
+          label: Ahmedabad Airport
+          color: "#e05c3a"
+          radius: 7
+        - coordinates:
+            - 80.9462
+            - 26.8467
+          label: Lucknow Airport
+          color: "#e05c3a"
+          radius: 7
+        - coordinates:
+            - 69.5
+            - 23.85
+          label: Khavda, Rann of Kutch
+          color: "#3a9e6e"
+          radius: 7
+        - coordinates:
+            - 87
+            - 24.5
+          label: Godda, Jharkhand
+          color: "#3a7ec8"
+          radius: 7
+        - coordinates:
+            - 73.5
+            - 19.5
+          label: Western Ghats
+          color: "#a0a0a0"
+          radius: 7
+        - coordinates:
+            - 77.5
+            - 26
+          label: FCI Silo Network
+          color: "#e8c84a"
+          radius: 7

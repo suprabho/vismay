@@ -1,0 +1,79 @@
+{
+  "steps": [
+    {
+      "title": "Winning vs. Runner-Up Airport Bids (₹ per passenger)",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "legend": {
+          "top": 0,
+          "textStyle": {
+            "color": "$muted"
+          }
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Ahmedabad",
+            "Lucknow"
+          ],
+          "name": "Airport",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Bid (₹ per passenger)",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Adani Bid (₹/passenger)",
+            "type": "bar",
+            "data": [
+              177,
+              171
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          },
+          {
+            "name": "Runner-Up Bid (₹/passenger)",
+            "type": "bar",
+            "data": [
+              85,
+              139
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$teal"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

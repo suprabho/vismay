@@ -38,7 +38,11 @@ export default async function CanvasFramePage({ params }: RouteParams) {
   let config
   let mapYaml: string | null = null
   try {
-    story = await getStoryContent(slug)
+    // The canvas frame is a signed, admin-only preview surface — render drafts
+    // too. Without `allowDraft`, getStoryContent throws for draft stories on any
+    // Vercel deploy (NODE_ENV==='production' even on previews), which the catch
+    // below turns into a 404 "This page couldn't load".
+    story = await getStoryContent(slug, { allowDraft: true })
     if (!(await hasStoryConfig(slug))) notFound()
     config = await loadStoryConfig(slug)
     if (story.frontmatter.vertical === 'footshorts') {

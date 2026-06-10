@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npx tsx scripts/sync-fs-to-db.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

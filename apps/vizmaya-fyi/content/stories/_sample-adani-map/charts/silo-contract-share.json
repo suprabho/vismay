@@ -1,0 +1,61 @@
+{
+  "steps": [
+    {
+      "title": "FCI Silo Contracts: Share of 134 Awards",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Adani Agri Logistics + Leap India",
+            "All Other Bidders"
+          ],
+          "name": "Bidder Group",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Number of Contracts Won",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Contracts Won",
+            "type": "bar",
+            "data": [
+              110,
+              24
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

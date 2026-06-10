@@ -114,8 +114,96 @@ export function normalizeForeground(fg: GenForeground | undefined): unknown {
 const genPinSchema = z.object({
   coordinates: z.array(z.number()).length(2).describe('[longitude, latitude].'),
   label: z.string().optional(),
-  color: z.string().optional(),
+  color: z
+    .string()
+    .optional()
+    .describe('Theme token ("$accent", "$red", …) or hex. Omit to use the story default pin color.'),
   radius: z.number().optional(),
+  pulse: z.boolean().optional().describe('Animate a pulsing ring (use sparingly — for the focal pin).'),
+  labelAnchor: z
+    .enum(['top', 'bottom', 'left', 'right'])
+    .optional()
+    .describe('Which side of the pin the label sits on.'),
+})
+
+// ── Choropleth regions — the PRIMARY data visual of a Vizmaya map story ──────
+//
+// In a real map story the polygons carry the numbers: the camera frames the
+// region in focus and `regions` shades each area by a source-derived value (the
+// map IS the chart). This mirrors viz-engine's `MapRegionLayer` (types/story.ts)
+// while staying provider-structured-output safe — array-shaped, no `z.record`.
+
+/** One shaded region: an explicit `color`, or a `value` driven through the ramp. */
+const genRegionItemSchema = z.object({
+  code: z
+    .string()
+    .describe('ISO 3166-1 alpha-2 (level: country) or the GeoJSON feature id (level: custom).'),
+  value: z
+    .number()
+    .optional()
+    .describe('The choropleth metric — mapped through `colors`/`ramp` when `color` is omitted.'),
+  color: z
+    .string()
+    .optional()
+    .describe('Explicit fill ($-token or hex) — overrides the ramp. Use for categorical shading.'),
+  opacity: z.number().optional().describe('Fill opacity 0–1. Default 0.55.'),
+  label: z.string().optional().describe('Optional region label.'),
+})
+
+/** Auto-label config for a region layer (region name, optionally with its value). */
+const genRegionLabelsSchema = z.object({
+  show: z.boolean().optional().describe('Label each region with its name.'),
+  withValue: z.boolean().optional().describe("Append each region's value after its name."),
+  valueSuffix: z.string().optional().describe('Suffix wrapped around the value (e.g. "%").'),
+  size: z.number().optional().describe('Label text size in px. Default 11.'),
+})
+
+/** Color-ramp legend overlay. */
+const genRegionLegendSchema = z.object({
+  show: z.boolean().optional(),
+  title: z.string().optional().describe('Legend caption (e.g. "Muslim share of population, 1941").'),
+  lowLabel: z.string().optional().describe('Label for the low end of the ramp.'),
+  highLabel: z.string().optional().describe('Label for the high end of the ramp.'),
+  position: z
+    .enum(['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top', 'bottom'])
+    .optional()
+    .describe('Placement within the frame. Default "top-left".'),
+})
+
+/**
+ * A choropleth overlay for a map section. Shades each region in `items` by its
+ * `value` (interpolated across `colors`/`ramp`) or an explicit `color`.
+ * `level: "country"` uses built-in country boundaries (code = ISO alpha-2);
+ * `level: "custom"` requires `geojsonUrl` + `idProperty`.
+ */
+const genRegionsSchema = z.object({
+  level: z
+    .enum(['country', 'custom'])
+    .describe('"country" = built-in country boundaries; "custom" = your own GeoJSON (needs geojsonUrl + idProperty).'),
+  geojsonUrl: z
+    .string()
+    .optional()
+    .describe('level: custom — URL or absolute /public path to the GeoJSON.'),
+  idProperty: z
+    .string()
+    .optional()
+    .describe('level: custom — the GeoJSON feature property whose value matches items[].code.'),
+  items: z
+    .array(genRegionItemSchema)
+    .min(1)
+    .describe('One entry per shaded region. Source-grounded: each `value` must come from the material.'),
+  colors: z
+    .array(z.string())
+    .optional()
+    .describe('Ramp color stops ($-tokens or hex), low→high. Values interpolate between them.'),
+  ramp: z
+    .array(z.number())
+    .optional()
+    .describe('Domain values matching `colors` (same length). Omit to auto-fit [min,max] from items.'),
+  lineColor: z.string().optional().describe('Border color ($-token or hex).'),
+  lineWidth: z.number().optional().describe('Border width in px. Default 0.6.'),
+  labels: genRegionLabelsSchema.optional().describe('Auto-label regions on the map.'),
+  legend: genRegionLegendSchema.optional().describe('Color-ramp legend overlay.'),
 })
 
 /**
@@ -129,7 +217,11 @@ const genMapLayerSchema = z.object({
   zoom: z.number().describe('Camera zoom level.'),
   pitch: z.number().optional().describe('Camera tilt in degrees (0 = top-down).'),
   bearing: z.number().optional().describe('Camera rotation in degrees.'),
+  opacity: z.number().optional().describe('Map layer opacity, 0..1.'),
   pins: z.array(genPinSchema).optional().describe('Optional location pins.'),
+  regions: genRegionsSchema
+    .optional()
+    .describe('Choropleth overlay — shade regions by a source-derived value (the map IS the chart).'),
 })
 
 /** Suppress the section backdrop entirely. */
@@ -161,6 +253,12 @@ export const genMapCameraSchema = z.object({
   opacity: z.number().optional().describe('Map opacity, 0..1.'),
   flySpeed: z.number().optional().describe('Camera fly-to speed multiplier.'),
   pins: z.array(genPinSchema).optional().describe('Optional location pins.'),
+  regions: genRegionsSchema
+    .optional()
+    .describe(
+      'Choropleth overlay — the PRIMARY data visual of a map section: shade each region by a ' +
+        'source-derived `value`. The camera frames the region in focus; the polygons carry the numbers.',
+    ),
 })
 
 export type GenMapCamera = z.infer<typeof genMapCameraSchema>
@@ -179,7 +277,10 @@ export const sectionBodySchema = z.object({
     .describe('Optional image/map backdrop for this section, or { type: none }.'),
   map: genMapCameraSchema
     .optional()
-    .describe('Map-format only: the autoplay camera for this section.'),
+    .describe(
+      'Map-format only: the section camera (center/zoom/pitch) plus its `regions` choropleth — ' +
+        'shade regions by value. This is where a map section carries its data, not the foreground.',
+    ),
 })
 
 export type SectionBody = z.infer<typeof sectionBodySchema>

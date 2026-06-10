@@ -26,7 +26,7 @@ import type { EditableKind } from './canvasEditing'
 /** Every slot the prompt UI can target: the editable kinds plus the theme slot
  *  (which lives in frontmatter, not the EditableKind union). Image layers reuse
  *  `kind: 'layer'` with `layerType: 'image'` — see {@link aiSlotConfig}. */
-export type AiSlotKind = EditableKind | 'theme'
+export type AiSlotKind = EditableKind | 'theme' | 'chartData'
 
 export type AiModality = 'text' | 'image'
 
@@ -34,7 +34,7 @@ export interface AiSlotConfig {
   modality: AiModality
   /** Output format the model must emit (text modality only). Drives the
    *  fence-stripping + validity check on the server and Monaco language hints. */
-  language: 'yaml' | 'markdown' | 'plaintext'
+  language: 'yaml' | 'markdown' | 'plaintext' | 'json'
   /** Context-appropriate model aliases. First entry is the default. */
   models: readonly string[]
   /** Editable default system prompt surfaced in the PromptBar. */
@@ -106,8 +106,10 @@ const SLOTS: Record<AiSlotKind, AiSlotConfig> = {
     defaultSystem:
       'You write editorial prose for one section of a data-driven story. ' +
       'Given the author instruction, produce the section’s markdown body: ' +
-      'paragraphs separated by blank lines, an optional heading. Keep a clear, ' +
-      'factual magazine register. ' +
+      'paragraphs separated by blank lines. If the section already has a ' +
+      'heading (a `## …` line), keep it EXACTLY as written — it is the ' +
+      'section’s stable anchor — and revise only the paragraphs beneath it. ' +
+      'Keep a clear, factual magazine register. ' +
       RAW_TEXT_RULE,
   },
   narration: {
@@ -251,6 +253,20 @@ const SLOTS: Record<AiSlotKind, AiSlotConfig> = {
       'bearing/pins, or a chart: id/props). ' +
       'Output ONLY valid YAML for the layer mapping. ' +
       RAW_TEXT_RULE,
+  },
+  chartData: {
+    modality: 'text',
+    language: 'json',
+    models: STRUCT_MODELS,
+    label: 'Chart data',
+    defaultSystem:
+      'You edit the DATA for one chart in a data story. The value is the ' +
+      'renderer’s chart-data JSON — `{ steps: [{ title?, option }] }`, where ' +
+      '`option` is an ECharts option (xAxis.data for categories, series[].data ' +
+      'for the numbers). Apply the instruction to the series/numbers, preserve ' +
+      'the steps/option structure, and use only figures grounded in the ' +
+      'provided context — never invent data. ' +
+      'Output ONLY valid JSON — no code fences, no commentary.',
   },
 }
 

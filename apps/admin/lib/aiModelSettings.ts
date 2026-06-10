@@ -46,6 +46,13 @@ export const AI_FEATURES: AiFeature[] = [
     description: 'Generate a whole new section from a brief.',
   },
   {
+    key: 'generateChart',
+    label: 'Chart data generate',
+    modality: 'text',
+    default: 'text.pro',
+    description: 'Generate a chart’s categories + numeric series, grounded in the story’s sources.',
+  },
+  {
     key: 'transform',
     label: 'Selection edit',
     modality: 'text',

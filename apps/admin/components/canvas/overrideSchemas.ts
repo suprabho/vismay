@@ -132,6 +132,29 @@ const OVERRIDE_SCHEMAS: Partial<Record<AiSlotKind, () => string>> = {
     `    heading: "$18.7B"\n\n` +
     RAW,
 
+  chartData: () =>
+    `You edit the DATA for one chart — the renderer's chart-data contract, as ` +
+    `JSON:\n` +
+    `  { "steps": [ { "title"?: string, "option": EChartsOption } ] }\n` +
+    `Each \`option\` is a standard ECharts option: \`xAxis.data\` holds the ` +
+    `category labels, each \`series[].data\` holds one number per category (same ` +
+    `order). Keep the steps/option structure intact and change only what the ` +
+    `instruction asks; ground every number in the provided context — never ` +
+    `invent figures.\n\n` +
+    `Example shape:\n` +
+    `{\n` +
+    `  "steps": [\n` +
+    `    {\n` +
+    `      "option": {\n` +
+    `        "xAxis": { "type": "category", "data": ["FY22", "FY23", "FY24"] },\n` +
+    `        "yAxis": { "type": "value" },\n` +
+    `        "series": [{ "type": "bar", "name": "Revenue", "data": [8.7, 11.3, 14] }]\n` +
+    `      }\n` +
+    `    }\n` +
+    `  ]\n` +
+    `}\n\n` +
+    `Output ONLY valid JSON — no code fences, no commentary, no surrounding keys.`,
+
   slides: () => exportPagePrompt('slides'),
   report: () => exportPagePrompt('report'),
 

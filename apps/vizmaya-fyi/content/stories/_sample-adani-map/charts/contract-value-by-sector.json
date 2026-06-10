@@ -1,0 +1,67 @@
+{
+  "steps": [
+    {
+      "title": "Adani Group Contract Value Across Sectors (₹ crore)",
+      "option": {
+        "grid": {
+          "left": 48,
+          "right": 24,
+          "top": 32,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "tooltip": {
+          "trigger": "axis"
+        },
+        "xAxis": {
+          "type": "category",
+          "data": [
+            "Western Ghats MoU",
+            "FCI Grain Silos (Adani)",
+            "Airports (AAI windfall/year)",
+            "Khavda RE (9.5 GW allocation)",
+            "Godda SEZ (tax saving/year)"
+          ],
+          "name": "Sector",
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "yAxis": {
+          "type": "value",
+          "name": "Value (₹ crore)",
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "name": "Value (₹ crore)",
+            "type": "bar",
+            "data": [
+              60000,
+              9700,
+              600,
+              0,
+              320
+            ],
+            "smooth": false,
+            "itemStyle": {
+              "color": "$accent"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

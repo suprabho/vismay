@@ -48,6 +48,12 @@ interface Props {
   /** Slot identity, when known — sharpens presets + the transform model set. */
   kind?: string
   layerType?: string
+  /** The section the edited fragment lives in (indexes config.sections). Sent
+   *  to the transform route so the edit is grounded in the live story context. */
+  parentIndex?: number
+  subIndex?: number
+  /** The chart being edited, when the fragment is chart data. */
+  chartId?: string
 }
 
 /** Minimum selected chars before the trigger appears (ignore stray clicks). */
@@ -59,6 +65,9 @@ export default function SelectionAiOverlay({
   slug,
   kind,
   layerType,
+  parentIndex,
+  subIndex,
+  chartId,
 }: Props) {
   const [anchor, setAnchor] = useState<Anchor | null>(null)
   const [open, setOpen] = useState(false)
@@ -192,6 +201,9 @@ export default function SelectionAiOverlay({
             instruction: text,
             kind,
             layerType,
+            parentIndex,
+            subIndex,
+            chartId,
             model: model || undefined,
           }),
         },

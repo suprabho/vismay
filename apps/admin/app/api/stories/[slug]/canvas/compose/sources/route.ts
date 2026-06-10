@@ -8,6 +8,7 @@ import {
   deleteStorySource,
   uploadSourceFile,
   removeSourceFile,
+  downloadSourceFile,
   sourceStoragePath,
 } from '@vismay/content-source/storySources'
 import {
@@ -176,6 +177,112 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
 
   return NextResponse.json({ error: 'provide a file, "url", or "text"' }, { status: 400 })
+}
+
+/**
+ * Re-run extraction for a single source that previously `failed` (or to refresh
+ * one). Body: `{ id }`. Reuses the same extraction branches as POST — files are
+ * re-read from the retained `story-sources` original (PDFs re-dispatch the Gemma
+ * worker when configured, else sync); links are re-fetched. Pasted text has
+ * nothing to re-extract, so it's a no-op.
+ */
+export async function PATCH(req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const { slug } = await params
+
+  let body: { id?: string }
+  try {
+    body = (await req.json()) as { id?: string }
+  } catch {
+    return NextResponse.json({ error: 'expected JSON body' }, { status: 400 })
+  }
+  const id = typeof body.id === 'string' ? body.id : ''
+  if (!id) return NextResponse.json({ error: 'missing "id"' }, { status: 400 })
+
+  const row = (await listStorySources(slug)).find((s) => s.id === id)
+  if (!row) return NextResponse.json({ error: 'source not found' }, { status: 404 })
+
+  // ── File: re-read the retained original from the bucket ────────────────────
+  if (row.kind === 'file') {
+    if (!row.storagePath) {
+      return NextResponse.json({ error: 'no stored original to re-extract' }, { status: 400 })
+    }
+    let buffer: Buffer
+    try {
+      buffer = Buffer.from(await downloadSourceFile(row.storagePath))
+    } catch (e) {
+      const error = `could not read stored file: ${e instanceof Error ? e.message : String(e)}`
+      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+      return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+    }
+    const filename = row.filename ?? 'source'
+    const mime = row.mime ?? 'application/octet-stream'
+    const isPdf = filename.toLowerCase().endsWith('.pdf') || mime.includes('pdf')
+
+    if (isPdf && isSourceExtractDispatchConfigured()) {
+      try {
+        await updateStorySource(row.id, { status: 'pending', error: null })
+        await dispatchSourceExtractJob({ sourceId: row.id, slug })
+        return NextResponse.json({ ok: true, source: { ...row, status: 'pending', error: null } })
+      } catch (e) {
+        const error = `extraction dispatch failed: ${e instanceof Error ? e.message : String(e)}`
+        await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+        return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+      }
+    }
+
+    try {
+      const { sources, failures } = await ingestSources({ files: [{ name: filename, buffer }] })
+      if (sources.length === 0) {
+        const error = failures[0]?.reason ?? 'could not extract text'
+        await updateStorySource(row.id, { status: 'failed', error })
+        return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+      }
+      const s = sources[0]!
+      const patch = {
+        title: s.title,
+        byline: s.byline ?? null,
+        extractedText: s.body,
+        status: 'extracted' as const,
+        error: null,
+      }
+      await updateStorySource(row.id, patch)
+      return NextResponse.json({ ok: true, source: { ...row, ...patch } })
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e)
+      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+      return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+    }
+  }
+
+  // ── Link: re-fetch + re-extract ────────────────────────────────────────────
+  if (row.kind === 'link' && row.sourceUrl) {
+    try {
+      const { sources, failures } = await ingestSources({ links: [row.sourceUrl] })
+      if (sources.length === 0) {
+        const error = failures[0]?.reason ?? 'could not fetch/extract'
+        await updateStorySource(row.id, { status: 'failed', error })
+        return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+      }
+      const s = sources[0]!
+      const patch = {
+        title: s.title,
+        byline: s.byline ?? null,
+        extractedText: s.body,
+        status: 'extracted' as const,
+        error: null,
+      }
+      await updateStorySource(row.id, patch)
+      return NextResponse.json({ ok: true, source: { ...row, ...patch } })
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e)
+      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+      return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
+    }
+  }
+
+  // ── Pasted text: nothing to re-extract ─────────────────────────────────────
+  return NextResponse.json({ error: 'this source has no original to re-extract' }, { status: 400 })
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ slug: string }> }) {
