@@ -133,7 +133,13 @@ function printLint(issues: LayoutLintIssue[], label: string): void {
 /** Per-run skeleton + cover line for the side-by-side console comparison. */
 function printRun(i: number, outline: StoryOutline): void {
   const cover = coverOf(outline)
-  const skeleton = outline.sections.map((s) => `${s.heading} (${s.kind})`).join(' · ')
+  const skeleton = outline.sections
+    .map((s) => {
+      const geo = s.geo ? ` @ ${s.geo.focus}${s.geo.zoom != null ? ` z${s.geo.zoom}` : ''}` : ''
+      const choro = s.regionRequirement ? ' ▦' : ''
+      return `${s.heading} (${s.kind}${geo}${choro})`
+    })
+    .join(' · ')
   console.log(`\n── run ${i} ──────────────────────────────────────────────`)
   console.log(`  title:    ${outline.title}`)
   console.log(`  subtitle: ${trunc(outline.subtitle, 80)}`)

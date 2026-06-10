@@ -19,6 +19,7 @@ export {
   generateOutline,
   generateChart,
   generateRegions,
+  injectRegions,
   generateSection,
   generateSectionContent,
   generateSectionVisual,

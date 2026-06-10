@@ -126,16 +126,33 @@ const DECK_LAYOUT_MENU = layoutMenu(DECK_LAYOUT_NAMES)
 export function outlineSystem(format: StoryFormat): string {
   const visualGuidance =
     format === 'map'
-      ? `A Vizmaya MAP section shades GEOGRAPHY: the camera frames a region and a choropleth shades ` +
-        `each area by a value — the map IS the chart, not a backdrop. For each section's "visual" ` +
-        `describe the camera moment (where it sits, what it frames, any focal pins). When the section ` +
-        `shades regions by a metric, ALSO set "regionRequirement" (metric + level + which regions); ` +
-        `for generated stories use level "country" (built-in boundaries, ISO codes) unless the sources ` +
-        `ship custom GeoJSON. The prose renders in the scroll rail and any supporting chart is ` +
-        `referenced by id — do NOT plan a side panel over the map.`
+      ? `A Vizmaya MAP story is a JOURNEY THROUGH GEOGRAPHY: each section frames a place and the ` +
+        `map itself carries the data (pins, or a choropleth shading areas by value) — the map IS ` +
+        `the chart, not a backdrop. Every section MUST set "geo": the named focus plus camera ` +
+        `center [lng, lat] and zoom. Successive sections should MOVE the camera — vary center and ` +
+        `zoom so the story travels through its geography (open wide, dive into the regions the ` +
+        `narrative visits, pull back out to close); never park every section on the same world ` +
+        `view. For each section's "visual" describe the camera moment (what the framing shows, any ` +
+        `focal pins). When the section shades regions by a metric, ALSO set "regionRequirement" ` +
+        `(metric + level + which regions) and make sure its "geo" framing actually contains those ` +
+        `regions; for generated stories use level "country" (built-in boundaries, ISO codes) unless ` +
+        `the sources ship custom GeoJSON. Level "country" shades whole COUNTRIES only — when the ` +
+        `metric is sub-national (states, districts) and there is no custom GeoJSON, do NOT plan a ` +
+        `choropleth; carry the comparison with focal pins plus a supporting bar chart instead. Only ` +
+        `shade when the metric is AREAL (a value per region); point-shaped data (sites, routes, ` +
+        `events) wants pins. The prose ` +
+        `renders in the scroll rail and any supporting chart is referenced by id — do NOT plan a ` +
+        `side panel or deck layout over the map.`
       : `For each section's "visual" name the foreground layers it features (${LAYER_TYPES_INLINE}) ` +
         `and what each shows, and set "layout" to the deck layout that frames them best ` +
         `(${DECK_LAYOUTS}).`
+  const stubFields =
+    format === 'map'
+      ? `  • geo: the geography it frames — focus + camera center [lng, lat] + zoom (REQUIRED).\n` +
+        `  • optional chartId when the section features a supporting chart.\n` +
+        `  • optional regionRequirement when the section shades geography by a metric.\n`
+      : `  • optional layout naming the deck layout that frames the visual.\n` +
+        `  • optional chartId when the section features a chart.\n`
   return (
     `You plan a Vizmaya ${format} data story from research + the editor's answers — the ` +
     `SKELETON only, no prose yet. The downstream writer and designer act ONLY on what you put ` +
@@ -150,14 +167,13 @@ export function outlineSystem(format: StoryFormat): string {
     `- imagePrompts: vivid prompts for sections that want imagery.\n` +
     `- sections (3–8): each a stub with —\n` +
     `  • heading (UNIQUE across all sections — it is the markdown anchor, so a duplicate heading ` +
-    `collides and that section loses its prose) and kind (${SECTION_KINDS.join(' | ')}).\n` +
+    `collides and that section loses its prose) and kind (${sectionKindsFor(format).join(' | ')}).\n` +
     `  • intent: one line on the section's job.\n` +
     `  • context: how it connects to the sections around it (what it follows from, what it sets up).\n` +
     `  • expectedContent: the specific facts, figures, and quotes it must carry — concrete and ` +
     `grounded in the sources, NOT generic placeholders.\n` +
     `  • visual: the visualisation it features (see below).\n` +
-    `  • optional chartId when the section features a chart.\n` +
-    `  • optional regionRequirement (MAP only) when the section shades geography by a metric.\n` +
+    stubFields +
     `${visualGuidance}\n\n` +
     `THE COVER is one beat, not a summary: a sharp title plus EXACTLY ONE supporting element — ` +
     `either a single headline stat OR a one-line standfirst, never both, and never a multi-row ` +
@@ -334,6 +350,16 @@ function contextBlock(ctx: SectionContext): string {
     (stub.visual ? `Planned visual: ${stub.visual}\n` : '') +
     (stub.layout ? `Planned layout: ${stub.layout}\n` : '') +
     (stub.chartId ? `Feature chart: ${stub.chartId}\n` : '') +
+    (stub.geo
+      ? `Planned geography: ${stub.geo.focus}` +
+        (stub.geo.center ? ` — camera center [${stub.geo.center.join(', ')}]` : '') +
+        (stub.geo.zoom != null ? `, zoom ${stub.geo.zoom}` : '') +
+        `\n`
+      : '') +
+    (stub.regionRequirement
+      ? `Planned choropleth: ${stub.regionRequirement.metric} — ${stub.regionRequirement.requirement} ` +
+        `(the per-region values are filled by a separate source-grounded pass)\n`
+      : '') +
     `\nBRIEF\nSummary: ${brief.summary}\n` +
     `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n` +
     `EDITOR'S ANSWERS\n${renderAnswers(brief, answers)}\n\n` +
@@ -385,7 +411,10 @@ export function visualSystem(format: StoryFormat): string {
     format === 'map'
       ? `This is a MAP story — the MAP itself is the visual. Set body.map to the section camera ` +
         `(center [lng, lat], zoom, optional pitch/bearing, and focal pins with [lng, lat] ` +
-        `coordinates). If this section shades regions, its choropleth (map.regions) is filled by a ` +
+        `coordinates). When the section context gives a "Planned geography", anchor the camera to ` +
+        `it — keep its focus and stay close to its center/zoom, adjusting only for framing (pins ` +
+        `in view, shaded regions filling the viewport). If this section shades regions, its ` +
+        `choropleth (map.regions) is filled by a ` +
         `separate source-grounded pass and merged in for you — do NOT author region values; just ` +
         `frame the camera so the shaded geography reads well. PREFER NO foreground on a map section: ` +
         `the prose renders in the scroll rail and any chart is referenced by id. Add a foreground ` +

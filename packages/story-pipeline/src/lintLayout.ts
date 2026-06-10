@@ -27,7 +27,7 @@ const DEFAULT_LAYOUT = 'split-37-63-two-row'
 
 const COVER_KINDS = new Set(['cover', 'hero'])
 
-export type LintSeverity = 'drop' | 'overlap' | 'unknown'
+export type LintSeverity = 'drop' | 'overlap' | 'unknown' | 'missing'
 
 export interface LayoutLintIssue {
   section: string
@@ -150,6 +150,15 @@ export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
           section: s.heading,
           severity: 'drop',
           message: `map section plans foreground layout '${s.layout}' → a panel over the map suppresses the prose rail; drop it`,
+        })
+      }
+      // Region-awareness: a map section with no planned geo leaves the camera to
+      // be invented downstream — the story stops travelling through its geography.
+      if (!s.geo) {
+        issues.push({
+          section: s.heading,
+          severity: 'missing',
+          message: `map section plans no geo (focus + center + zoom) → the camera will be invented downstream`,
         })
       }
     }

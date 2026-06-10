@@ -285,11 +285,35 @@ export const generatedSectionSchema = sectionContentSchema.merge(sectionVisualSc
 
 // ── Step 1: outline (fast — the skeleton, no prose) ────────────────────────
 
-export const sectionStubSchema = z.object({
+/**
+ * The structured geography a MAP section frames. Coordinates here are general
+ * geographic knowledge (where a country/region sits), not source data, so the
+ * outline may emit them — unlike chart/region VALUES, which a grounded pass
+ * fills. `center` is a 2-item array (not a tuple) for provider structured-
+ * output compatibility.
+ */
+export const sectionGeoSchema = z.object({
+  focus: z
+    .string()
+    .describe(
+      'The named place this section frames — a region/country/city, e.g. "the Persian Gulf", ' +
+        '"Sub-Saharan Africa", "Gujarat\'s coastline".',
+    ),
+  center: z
+    .array(z.number())
+    .min(2)
+    .max(2)
+    .describe('Camera center as [lng, lat] — longitude FIRST (the engine\'s order).'),
+  zoom: z
+    .number()
+    .describe('Camera zoom: ≈1–1.5 world, ≈3 continent, ≈4–5.5 country, 6+ sub-region/city.'),
+})
+
+/** The stub fields every format shares. */
+const stubCommon = {
   heading: z
     .string()
     .describe('Short, specific section heading — becomes the markdown ## and config text anchor.'),
-  kind: z.enum(SECTION_KINDS).describe('The section kind.'),
   intent: z.string().describe("One line on this section's job in the story."),
   context: z
     .string()
@@ -303,58 +327,95 @@ export const sectionStubSchema = z.object({
       'The specific facts, figures, and quotes this section must carry — concrete and ' +
         'grounded in the sources, NOT generic. This is what the writer fills the prose with.',
     ),
-  visual: z
-    .string()
-    .describe(
-      'The visualisation this section features: for a deck, which foreground layers ' +
-        '(bigStat, chart, quote, keyValue, bodyText) and what each shows; for a map, the ' +
-        'camera moment (where it sits, what it marks).',
-    ),
-  layout: z
-    .string()
-    .optional()
-    .describe(
-      'Deck only: the named foreground layout that frames the visual (e.g. ' +
-        'stat-left-chart-right, text-left-chart-right, centered, hero-full-bleed).',
-    ),
   chartId: z
     .string()
     .optional()
     .describe('If this section features a chart, the id of a chart from the charts list.'),
-  regionRequirement: regionRequirementSchema
-    .optional()
-    .describe(
-      'MAP only: if this section shades geography (a choropleth), the region requirement — what ' +
-        'metric, which regions. The map carries the data here; a focused pass fills the values.',
-    ),
-})
+}
 
-export const outlineSchema = z.object({
-  format: z.enum(['deck', 'map']).describe('The story format to produce.'),
-  title: z.string().describe('Story headline.'),
-  subtitle: z.string().describe('One-line deck/subtitle.'),
-  byline: z.string().describe('Attribution line, e.g. "By the Vizmaya desk".'),
-  accentColors: z
-    .object({
-      accent: z.string().optional().describe('Primary accent hex.'),
-      accent2: z.string().optional().describe('Secondary accent hex.'),
+/**
+ * The section-stub schema, narrowed to the format — so a map outline can never
+ * plan deck kinds (which suppress the prose rail), never plans a deck `layout`
+ * panel over the map, and MUST declare the geography each section frames. The
+ * deck variant is unchanged from the historic shape.
+ */
+export function sectionStubSchemaFor(format: 'deck' | 'map') {
+  if (format === 'map') {
+    return z.object({
+      ...stubCommon,
+      kind: kindField('map'),
+      visual: z
+        .string()
+        .describe(
+          'The camera moment this section features: what the framing shows, any focal pins, ' +
+            'and what the shaded regions (if any) make visible.',
+        ),
+      geo: sectionGeoSchema.describe(
+        'The geography this section frames — focus + camera center + zoom. REQUIRED on every ' +
+          'map section: it is the spine the camera follows through the story.',
+      ),
+      regionRequirement: regionRequirementSchema
+        .optional()
+        .describe(
+          'If this section shades geography (a choropleth), the region requirement — what ' +
+            'metric, which regions. The map carries the data here; a focused pass fills the values.',
+        ),
     })
-    .optional()
-    .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
-  charts: z
-    .array(chartRequirementSchema)
-    .describe(
-      'Every chart any section references, declared as a REQUIREMENT (id, type, ' +
-        'title, what to plot) — no numbers. The data is generated in a later pass.',
-    ),
-  imagePrompts: z
-    .array(imagePromptSchema)
-    .describe('Image prompts for sections that want imagery (a sidecar).'),
-  sections: z
-    .array(sectionStubSchema)
-    .min(3)
-    .max(8)
-    .describe('3–8 section stubs that tell the story start to finish.'),
-})
+  }
+  return z.object({
+    ...stubCommon,
+    kind: kindField('deck'),
+    visual: z
+      .string()
+      .describe(
+        'The visualisation this section features: which foreground layers (bigStat, chart, ' +
+          'quote, keyValue, bodyText) and what each shows.',
+      ),
+    layout: z
+      .string()
+      .optional()
+      .describe(
+        'The named foreground layout that frames the visual (e.g. ' +
+          'stat-left-chart-right, text-left-chart-right, centered, hero-full-bleed).',
+      ),
+  })
+}
+
+/** Back-compat default (deck shape). Prefer {@link sectionStubSchemaFor}. */
+export const sectionStubSchema = sectionStubSchemaFor('deck')
+
+/** The outline schema, with section stubs narrowed to the format. */
+export function outlineSchemaFor(format: 'deck' | 'map') {
+  return z.object({
+    format: z.enum(['deck', 'map']).describe('The story format to produce.'),
+    title: z.string().describe('Story headline.'),
+    subtitle: z.string().describe('One-line deck/subtitle.'),
+    byline: z.string().describe('Attribution line, e.g. "By the Vizmaya desk".'),
+    accentColors: z
+      .object({
+        accent: z.string().optional().describe('Primary accent hex.'),
+        accent2: z.string().optional().describe('Secondary accent hex.'),
+      })
+      .optional()
+      .describe('Optional accent overrides; the engine supplies the rest of the theme.'),
+    charts: z
+      .array(chartRequirementSchema)
+      .describe(
+        'Every chart any section references, declared as a REQUIREMENT (id, type, ' +
+          'title, what to plot) — no numbers. The data is generated in a later pass.',
+      ),
+    imagePrompts: z
+      .array(imagePromptSchema)
+      .describe('Image prompts for sections that want imagery (a sidecar).'),
+    sections: z
+      .array(sectionStubSchemaFor(format))
+      .min(3)
+      .max(8)
+      .describe('3–8 section stubs that tell the story start to finish.'),
+  })
+}
+
+/** Back-compat default (deck shape). Prefer {@link outlineSchemaFor}. */
+export const outlineSchema = outlineSchemaFor('deck')
 
 export type OutlineOutput = z.infer<typeof outlineSchema>

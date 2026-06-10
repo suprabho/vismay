@@ -71,9 +71,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     cfg = yamlStringify({ defaults: cfgObj.defaults ?? {} })
   }
 
-  const placeholderBody =
+  // Map placeholders anchor to the outline's planned geo when present, so a
+  // freshly materialised section already frames its geography instead of the
+  // null island world view.
+  const placeholderBody = (entry: (typeof accepted)[number]) =>
     state.format === 'map'
-      ? { map: { center: [0, 0], zoom: 1 } }
+      ? { map: { center: entry.geo?.center ?? [0, 0], zoom: entry.geo?.zoom ?? 1 } }
       : { foreground: [] as unknown[] }
 
   const nextOutline = state.outline.map((e) => ({ ...e }))
@@ -82,7 +85,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
       heading: entry.heading,
       paragraphs: [entry.intent || ''],
       kind: entry.kind,
-      body: placeholderBody,
+      body: placeholderBody(entry),
     })
     md = r.markdown
     cfg = r.configYaml

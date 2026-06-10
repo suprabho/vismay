@@ -101,6 +101,21 @@ export interface ChartRequirement {
 }
 
 /**
+ * The structured geography a MAP section frames — the outline's camera plan.
+ * Free-text `visual` describes the moment; `geo` is the machine-readable spine
+ * the downstream passes (and the materialise placeholder) anchor the camera to,
+ * so a map story actually travels through its geography.
+ */
+export interface SectionGeo {
+  /** The named place this section frames, e.g. "the Strait of Hormuz", "Sub-Saharan Africa". */
+  focus: string
+  /** Camera center as [lng, lat] (longitude first — the engine's order). */
+  center?: number[]
+  /** Camera zoom (≈1–1.5 world, ≈3 continent, ≈4–5.5 country, 6+ sub-region/city). */
+  zoom?: number
+}
+
+/**
  * A choropleth the outline plans for a map section, WITHOUT values — the mirror
  * of {@link ChartRequirement}. `generateRegions` fills the per-region figures.
  */
@@ -146,6 +161,8 @@ export interface SectionStub {
   layout?: string
   /** Optional chart id (defined in the outline's `charts`) this section features. */
   chartId?: string
+  /** MAP only: the structured geography (camera focus/center/zoom) the section frames. */
+  geo?: SectionGeo
   /** MAP only: if this section shades geography, the choropleth requirement (no values). */
   regionRequirement?: RegionRequirement
 }

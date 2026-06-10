@@ -5,6 +5,8 @@ import { hashRequest, recordGeneration } from '@vismay/ai-gateway'
 import {
   generateSectionContent,
   generateSectionVisual,
+  generateRegions,
+  injectRegions,
   type SectionContext,
   type SectionStub,
   type StoryOutline,
@@ -82,6 +84,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       expectedContent: entry.expectedContent,
       visual: entry.visual,
       layout: entry.layout,
+      chartId: entry.chartId,
+      geo: entry.geo,
+      regionRequirement: entry.regionRequirement,
     }
   const sb = (state.brief ?? {}) as StoredBrief
   const chosen = state.angles.find((a) => a.id === state.chosenAngleId) ?? state.angles[0]
@@ -144,8 +149,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind }
       const refine = feedback && phase === 'visual' ? { feedback, previous: { heading: entry.heading } } : undefined
       const visual = await generateSectionVisual(ctx, contentForVisual, { model, refine })
-      newConfig = replaceConfigBody(newConfig, entry.sectionId, visual.body)
-      result.body = visual.body
+      let visualBody = visual.body
+      // MAP choropleth: the visual pass frames the camera but never authors the
+      // per-region values — fill them with the focused source-grounded pass and
+      // merge into body.map.regions, exactly as generateSection does offline.
+      if (state.format === 'map' && stub.regionRequirement) {
+        const regions = await generateRegions(
+          { requirement: stub.regionRequirement, brief, sources: docs },
+          { model },
+        )
+        visualBody = injectRegions(visualBody, regions)
+      }
+      newConfig = replaceConfigBody(newConfig, entry.sectionId, visualBody)
+      result.body = visualBody
     }
   } catch (e) {
     return NextResponse.json(

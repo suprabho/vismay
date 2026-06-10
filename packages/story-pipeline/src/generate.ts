@@ -1,12 +1,11 @@
 import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
 import {
-  outlineSchema,
+  outlineSchemaFor,
   sectionContentSchemaFor,
   sectionVisualSchema,
   chartDataSchema,
   regionDataSchema,
-  type OutlineOutput,
 } from './schema'
 import {
   outlineSystem,
@@ -93,14 +92,21 @@ export async function generateOutline(
   const result = await generateStructured({
     model: opts.model,
     system: outlineSystem(format),
+    // Format-aware schema: a map outline is narrowed to rail-safe kinds, loses
+    // the deck-only `layout`, and must declare each section's `geo`.
+    schema: outlineSchemaFor(format),
     prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, opts.refine),
-    schema: outlineSchema,
     metadata: { feature: 'story-pipeline-outline', format },
   })
   return toOutline(result, format)
 }
 
-function toOutline(out: OutlineOutput, format: StoryFormat): StoryOutline {
+/** The schema output, structurally — both format variants of the stub satisfy SectionStub. */
+interface OutlineLike extends Omit<StoryOutline, 'format'> {
+  format: StoryFormat
+}
+
+function toOutline(out: OutlineLike, format: StoryFormat): StoryOutline {
   return {
     format, // force the caller's format
     title: out.title,
@@ -162,9 +168,10 @@ export async function generateRegions(
  * Merge a generated choropleth into a section body's `map.regions`, creating the
  * `map` block if the visual pass didn't emit one. The visual pass frames the
  * camera; the region values are filled by `generateRegions` and merged here —
- * the model never authors the per-region numbers.
+ * the model never authors the per-region numbers. Exported so split-pass callers
+ * (the canvas compose section route) can run the same merge as `generateSection`.
  */
-function injectRegions(
+export function injectRegions(
   body: Record<string, unknown>,
   regions: Record<string, unknown>,
 ): Record<string, unknown> {

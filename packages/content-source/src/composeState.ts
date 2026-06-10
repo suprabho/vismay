@@ -39,6 +39,24 @@ export interface ComposeOutlineEntry {
   /** The planned visualisation + (deck) named layout that frames it. */
   visual?: string
   layout?: string
+  /** Chart id (from the outline's chart requirements) this section features. */
+  chartId?: string
+  /**
+   * MAP: the structured geography the section frames (camera focus/center/zoom)
+   * and, when it shades a metric, the choropleth requirement. Carried here so
+   * the materialise placeholder and the section passes stay region-aware even
+   * when the entry can't be matched back to the stored `storyOutline` (shapes
+   * mirror story-pipeline's `SectionGeo` / `RegionRequirement` — kept inline so
+   * content-source doesn't depend on the pipeline package).
+   */
+  geo?: { focus: string; center?: number[]; zoom?: number }
+  regionRequirement?: {
+    metric: string
+    level: 'country' | 'custom'
+    geojsonUrl?: string
+    idProperty?: string
+    requirement: string
+  }
   status: ComposeOutlineStatus
   /** Set once the entry has been materialised into a real story section. */
   sectionId: string | null
