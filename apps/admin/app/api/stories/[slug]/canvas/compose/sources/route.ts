@@ -24,10 +24,10 @@ import {
  * extraction can be re-run later; the extracted text lands on the `story_sources`
  * row. GET lists a draft's sources (node hydration); DELETE removes one.
  *
- * PDFs are read by an open-weights Gemma vision model (rasterise each page →
- * markdown), which is far cleaner than the pdf-parse text layer for
- * graphical/financial/scanned PDFs but runs ~75–130s/page — too slow for a
- * request route. So when dispatch is configured the row is left `pending` and a
+ * PDFs are read by a vision model (Claude Sonnet, Gemini fallback — rasterise
+ * each page → markdown), which is far cleaner than the pdf-parse text layer for
+ * graphical/financial/scanned PDFs but too slow for a request route on long
+ * documents. So when dispatch is configured the row is left `pending` and a
  * GitHub Actions worker extracts it and writes back (the compose UI polls
  * `GET …/sources`); see `storySourceExtractDispatch`. With dispatch unset
  * (local dev) PDFs fall back to SYNCHRONOUS deterministic text extraction.
@@ -89,7 +89,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
     }
 
-    // ── PDFs → async Gemma worker (when configured) ──────────────────────────
+    // ── PDFs → async vision worker (when configured) ─────────────────────────
     // Leave the row `pending` and hand off to a GitHub runner; the UI polls
     // until the worker flips it to extracted/failed.
     if (isPdf && isSourceExtractDispatchConfigured()) {
@@ -182,8 +182,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 /**
  * Re-run extraction for a single source that previously `failed` (or to refresh
  * one). Body: `{ id }`. Reuses the same extraction branches as POST — files are
- * re-read from the retained `story-sources` original (PDFs re-dispatch the Gemma
- * worker when configured, else sync); links are re-fetched. Pasted text has
+ * re-read from the retained `story-sources` original (PDFs re-dispatch the
+ * vision worker when configured, else sync); links are re-fetched. Pasted text has
  * nothing to re-extract, so it's a no-op.
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ slug: string }> }) {

@@ -1,16 +1,16 @@
 name: Extract compose source
 
 # Triggered by the compose upload route's `workflow_dispatch` POST when a PDF is
-# added to a story. PDFs are transcribed by an open-weights Gemma vision model
-# (~75–130s per page) which can't run inside a serverless function's time
-# limit — a GitHub runner has no such cap. The worker writes the extracted text
-# straight back onto the `story_sources` row; the compose UI polls until it
-# flips to `extracted`. Same dispatch lane as render-video.yml.
+# added to a story. PDFs are transcribed page-by-page by a vision model (Claude
+# Sonnet, Gemini fallback), which on a long PDF can't run inside a serverless
+# function's time limit — a GitHub runner has no such cap. The worker writes the
+# extracted text straight back onto the `story_sources` row; the compose UI
+# polls until it flips to `extracted`. Same dispatch lane as render-video.yml.
 #
 # Required secrets (Production environment):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as in Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for storage + row writes
-#   AI_GATEWAY_API_KEY         — Vercel AI Gateway key for the Gemma calls
+#   AI_GATEWAY_API_KEY         — Vercel AI Gateway key for the model calls
 
 on:
   workflow_dispatch:

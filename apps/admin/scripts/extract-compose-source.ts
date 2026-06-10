@@ -2,15 +2,16 @@
  * Async compose-source extractor — the GitHub Actions worker.
  *
  * Reads a `story_sources` row (a PDF uploaded in the compose flow), downloads
- * the original from the private `story-sources` bucket, transcribes it with the
- * open-weights Gemma vision model (rasterise each page → markdown), and writes
- * the result back onto the row (`status: extracted` + `extracted_text`, or
- * `status: failed` + `error`). The compose UI polls `GET …/sources` and
- * re-enables "Generate angles" once the row flips to `extracted`.
+ * the original from the private `story-sources` bucket, transcribes it with a
+ * vision model (Claude Sonnet, Gemini fallback — rasterise each page →
+ * markdown), and writes the result back onto the row (`status: extracted` +
+ * `extracted_text`, or `status: failed` + `error`). The compose UI polls
+ * `GET …/sources` and re-enables "Generate angles" once the row flips to
+ * `extracted`.
  *
- * Why a worker and not a request route: Gemma on the gateway runs ~75–130s per
- * page, so a multi-page PDF blows past any serverless function limit. A GitHub
- * runner has no such cap (see render-video.yml — same dispatch lane).
+ * Why a worker and not a request route: a multi-page PDF's page-by-page
+ * transcription can blow past serverless function limits. A GitHub runner has
+ * no such cap (see render-video.yml — same dispatch lane).
  *
  *   pnpm exec tsx scripts/extract-compose-source.ts <source_id> [<source_id> …]
  *   pnpm exec tsx scripts/extract-compose-source.ts --all-pending
@@ -55,7 +56,7 @@ async function extractOne(src: StorySource): Promise<void> {
   console.log(`→ ${label}: downloading…`)
   try {
     const bytes = await downloadSourceFile(src.storagePath)
-    console.log(`→ ${label}: transcribing ${bytes.length} bytes with Gemma…`)
+    console.log(`→ ${label}: transcribing ${bytes.length} bytes…`)
     const ex = await extractPdfVision(Buffer.from(bytes), { label: src.filename ?? undefined })
     await updateStorySource(src.id, {
       title: ex.title,

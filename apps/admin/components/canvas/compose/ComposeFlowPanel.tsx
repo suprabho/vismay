@@ -203,7 +203,7 @@ export function ComposeFlow({
   const extracted = sources.filter((s) => s.status === 'extracted').length
   const pending = sources.filter((s) => s.status === 'pending').length
 
-  // While a PDF is being extracted by the async Gemma worker its row stays
+  // While a PDF is being extracted by the async vision worker its row stays
   // `pending`; poll the sources list until everything settles, so the statuses
   // (and the "Generate angles" gate) update without a manual reload.
   useEffect(() => {
@@ -641,7 +641,7 @@ export function ComposeFlow({
         </button>
         {pending > 0 && (
           <p className="text-[11px] text-amber-300/80">
-            Extracting {pending} PDF{pending > 1 ? 's' : ''} with Gemma — this runs in the
+            Extracting {pending} PDF{pending > 1 ? 's' : ''} with Claude — this runs in the
             background and can take a few minutes. Statuses update automatically.
           </p>
         )}
