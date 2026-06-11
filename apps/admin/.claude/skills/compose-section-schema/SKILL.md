@@ -79,6 +79,36 @@ can hand-add richer layers (`table`, `rive`, `video`, `embed`, `map`) later.
 > imagery via the outline's `imagePrompts` sidecar instead, and carry the section
 > with stats / charts / quotes / prose.
 
+## Deck cover sections (completed deterministically)
+
+A deck `kind: cover` is the one section the pipeline finishes in code
+(`packages/story-pipeline/src/cover.ts`). The visual pass authors only
+`eyebrow` + `dek`; the pipeline then anchors the section at `## Cover`
+(id `cover`, `text: Cover`), moves the display title to the config `heading`,
+forces section-root `layout: hero-full-bleed`, neutralises the panel
+(`panel: { background: transparent, border: none, backdropBlur: "0" }`), and
+attaches the full-bleed hero image as a flat foreground:
+
+```yaml
+  - id: cover
+    text: Cover
+    kind: cover
+    layout: hero-full-bleed
+    heading: A Rocket Company That Became the Internet
+    eyebrow: SpaceX S-1 · May 20, 2026 · $1.75 Trillion IPO Analysis
+    dek: SpaceX's S-1 reveals three companies inside one stock.
+    panel: { background: transparent, border: none, backdropBlur: "0" }
+    foreground:
+      - { type: image, src: assets://<slug>/compose-<section>-<i>.png, alt: …, priority: true }
+```
+
+The image `src` points at the asset key the compose "Generate images" step
+uploads to — both sides compute the filename with `composeImageFilename`, so
+the ref resolves once images are generated (never a fabricated URL). The deck
+outline must always plan one 16:9 `imagePrompt` whose `section` matches the
+cover's heading. Never author the title, dek, or a stat as foreground layers
+on a cover.
+
 ## Deck layouts and their regions
 
 When you use `layout` + `regions`, the region **names** and what each **accepts**

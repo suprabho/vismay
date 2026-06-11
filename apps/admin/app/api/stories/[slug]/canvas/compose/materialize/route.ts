@@ -4,6 +4,7 @@ import { isAuthed } from '@/lib/adminAuth'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { appendStorySection } from '@vismay/content-source/storySection'
 import { readComposeState, writeComposeState } from '@vismay/content-source/composeState'
+import { COVER_ANCHOR, completeCoverBody, isDeckCover } from '@vismay/story-pipeline/cover'
 
 /**
  * Compose stage 3.5 — materialise the accepted outline entries into real story
@@ -80,12 +81,25 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
       : { foreground: [] as unknown[] }
 
   const nextOutline = state.outline.map((e) => ({ ...e }))
+  // The first deck `cover` entry gets the editorial-cover shape: it anchors at
+  // `## Cover` (id `cover`) with the display title in the config `heading`, a
+  // transparent panel, and the section-root hero-full-bleed layout. Only the
+  // first — a second `Cover` anchor would collide in the markdown namespace.
+  let coverDone =
+    nextOutline.some((e) => e.sectionId && isDeckCover(state.format, e.kind)) ||
+    // Attached flows append onto an existing story, which may already anchor
+    // its own `## Cover` — a second one would collide in the markdown namespace.
+    new RegExp(`^##\\s+${COVER_ANCHOR}\\s*$`, 'm').test(md)
   for (const entry of accepted) {
+    const asCover = !coverDone && isDeckCover(state.format, entry.kind)
+    if (asCover) coverDone = true
     const r = appendStorySection(md, cfg, {
-      heading: entry.heading,
+      heading: asCover ? COVER_ANCHOR : entry.heading,
       paragraphs: [entry.intent || ''],
       kind: entry.kind,
-      body: placeholderBody(entry),
+      body: asCover
+        ? completeCoverBody(placeholderBody(entry), { heading: entry.heading })
+        : placeholderBody(entry),
       // MAP sub-beats: each gets its own anchor + a placeholder camera dive
       // from its planned geo; the CONTENT/VISUAL passes fill prose and pins.
       subsections: entry.subsections?.map((s) => ({

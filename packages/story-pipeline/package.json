@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./ingest": "./src/ingest/index.ts",
-    "./models": "./src/models.ts"
+    "./models": "./src/models.ts",
+    "./cover": "./src/cover.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
