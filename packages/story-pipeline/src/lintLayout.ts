@@ -142,6 +142,16 @@ export function lintOutline(outline: StoryOutline): LayoutLintIssue[] {
       message: `story opens with kind '${first.kind}' — the first section should be a cover/hero title card`,
     })
   }
+  // Map cold-open: the beat right after the hero is a stat — the story's single
+  // most arresting figure as a giant number (the kashmir opener pattern).
+  const second = outline.sections[1]
+  if (outline.format === 'map' && second && second.kind !== 'stat') {
+    issues.push({
+      section: second.heading,
+      severity: 'missing',
+      message: `map story's second section is kind '${second.kind}' — the beat after the hero must be a stat cold-open (heading IS the figure, e.g. "4,021,616")`,
+    })
+  }
   // Headings are markdown anchors and share ONE namespace across sections AND
   // sub-beats — a duplicate silently steals the other's prose.
   const seen = new Set<string>()

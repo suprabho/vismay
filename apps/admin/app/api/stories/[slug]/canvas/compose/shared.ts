@@ -28,7 +28,9 @@ export function sourcesToDocs(rows: StorySource[]): SourceDoc[] {
 
 // ── In-place section surgery (for the per-section CONTENT/VISUAL passes) ────
 
-const HEADING_RE = /^##\s+/
+// Section anchors are level-1 OR level-2 headings (a hero anchors at the
+// document `# H1`; everything else at `## H2`) — mirror contentAnchors.
+const HEADING_RE = /^##?\s+/
 
 function sectionSpan(lines: string[], heading: string): [number, number] | null {
   const h = heading.trim()
@@ -44,13 +46,15 @@ function sectionSpan(lines: string[], heading: string): [number, number] | null 
   return [start, end]
 }
 
-/** Replace the prose under a `## heading` block (CONTENT pass writes markdown). */
+/** Replace the prose under a `## heading` block (CONTENT pass writes markdown).
+ *  Preserves the existing anchor level — a hero's `# H1` stays an H1. */
 export function replaceMarkdownProse(markdown: string, heading: string, paragraphs: string[]): string {
   const lines = markdown.split('\n')
   const span = sectionSpan(lines, heading)
   if (!span) return markdown
+  const hashes = lines[span[0]]!.match(/^#+/)?.[0] ?? '##'
   const body = paragraphs.map((p) => p.trim()).filter(Boolean).join('\n\n')
-  const block = [`## ${heading.trim()}`, '', body, '']
+  const block = [`${hashes} ${heading.trim()}`, '', body, '']
   return [...lines.slice(0, span[0]), ...block, ...lines.slice(span[1])].join('\n')
 }
 

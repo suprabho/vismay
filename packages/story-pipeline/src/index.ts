@@ -51,6 +51,7 @@ export {
   findCoverImagePrompt,
   coverImageLayer,
 } from './cover'
+export { completeMapHero, completeMapHeroProse } from './mapHero'
 export { buildChartData, buildEChartsOption } from './chart'
 export { buildRegionLayer } from './regions'
 export { DEFAULT_THEME, defaultsFor } from './defaults'

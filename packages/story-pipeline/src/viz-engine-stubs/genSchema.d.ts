@@ -9,6 +9,7 @@
 import type { ZodTypeAny } from 'zod'
 
 export declare const sectionBodySchema: ZodTypeAny
+export declare function mapSectionBodySchemaFor(opts?: { requireEyebrow?: boolean }): ZodTypeAny
 export declare const genPinSchema: ZodTypeAny
 export declare function normalizeSectionBody(body: unknown): Record<string, unknown>
 export declare const GEN_FOREGROUND_TYPES: ReadonlyArray<{ type: string; label: string }>
