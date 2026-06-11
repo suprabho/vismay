@@ -205,6 +205,13 @@ const COL_GAP = 280
 const LEAF_H = 176
 const JUNCTION_H = 96
 const LGAP_Y = 28
+/* Collapsible Content leaf. Collapsed = header-only chip; expanded = the
+ * full section markdown in a max-height scroll container. These are the
+ * layout-walk pitches for the Content row (the other leaves keep LEAF_H);
+ * CONTENT_BODY_MAX_H is the inner scroll viewport inside the node. */
+const CONTENT_COLLAPSED_H = 120
+const CONTENT_EXPANDED_H = 440
+const CONTENT_BODY_MAX_H = 320
 const BAND_GAP = 64
 // Horizontal pitch between the three left tiers.
 const LCOL_PITCH = INPUT_W + 150
@@ -530,6 +537,11 @@ export default function CanvasClient({
   useEffect(() => {
     formatRef.current = format
   }, [format])
+  // Collapsible Content node — per-session memory (survives section
+  // switches and graph rebuilds; resets on page load). Read by mountInputs
+  // when it lays the left column out; toggling re-mounts the left input
+  // graph so the stack re-walks at the new height. Default: expanded.
+  const contentCollapsedRef = useRef(false)
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
@@ -871,6 +883,15 @@ export default function CanvasClient({
         // layers). When present, a ✨ chip opens the standalone PromptBar
         // for this slot (Feature 1's on-node Generate affordance).
         onGenerate?: () => void
+        // Collapse toggle — set on the frame's Content leaf only. When
+        // present, a chip in the tag row collapses the card to a header-
+        // only chip / re-expands it; the toggle re-mounts the left graph
+        // so dependent node positions re-walk at the new height.
+        collapse?: { collapsed: boolean; onToggle: () => void }
+        // Max body height in px. When set (the expanded Content leaf), the
+        // body renders inside an internal scroll container instead of
+        // growing the node unboundedly.
+        bodyMaxHeight?: number
         constructor(
           public label: string,
           public tag: string,
@@ -1249,6 +1270,9 @@ export default function CanvasClient({
       }) {
         const editable = typeof data.onClick === 'function'
         const generatable = typeof data.onGenerate === 'function'
+        const collapsible = data.collapse !== undefined
+        const collapsed = data.collapse?.collapsed ?? false
+        const wantsPointer = editable || generatable || collapsible
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -1260,15 +1284,19 @@ export default function CanvasClient({
           stop(e)
           data.onGenerate?.()
         }
+        const onToggleCollapse = (e: React.MouseEvent) => {
+          stop(e)
+          data.collapse?.onToggle()
+        }
         return (
           <div
             onClick={onClick}
-            onPointerDown={editable || generatable ? stop : undefined}
-            onMouseDown={editable || generatable ? stop : undefined}
+            onPointerDown={wantsPointer ? stop : undefined}
+            onMouseDown={wantsPointer ? stop : undefined}
             title={editable ? 'click to edit' : undefined}
             style={{
               width: INPUT_W - 24,
-              minHeight: 96,
+              minHeight: collapsed ? undefined : 96,
               padding: 8,
               background: '#0a0a0a',
               border: '1px solid #262626',
@@ -1298,13 +1326,24 @@ export default function CanvasClient({
                 fontSize: 9,
                 color: '#666',
                 letterSpacing: '0.14em',
-                marginBottom: 4,
+                marginBottom: collapsed ? 0 : 4,
                 display: 'flex',
                 justifyContent: 'space-between',
               }}
             >
               <span>{data.tag}</span>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {collapsible && (
+                  <span
+                    onClick={onToggleCollapse}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    title={collapsed ? 'Expand' : 'Collapse'}
+                    style={{ color: '#888', cursor: 'pointer' }}
+                  >
+                    {collapsed ? '▸ EXPAND' : '▾ COLLAPSE'}
+                  </span>
+                )}
                 {generatable && (
                   <span
                     onClick={onGenerate}
@@ -1319,7 +1358,23 @@ export default function CanvasClient({
                 {editable && <span style={{ color: '#3a5da0' }}>EDIT</span>}
               </span>
             </div>
-            {data.body}
+            {!collapsed &&
+              (data.bodyMaxHeight != null ? (
+                <div
+                  // Internal scroll viewport for long bodies (the expanded
+                  // Content leaf). Wheel events must not bubble to the Rete
+                  // area or scrolling the body would zoom the canvas.
+                  onWheel={(e) => e.stopPropagation()}
+                  style={{
+                    maxHeight: data.bodyMaxHeight,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {data.body}
+                </div>
+              ) : (
+                data.body
+              ))}
           </div>
         )
       }
@@ -1706,12 +1761,18 @@ export default function CanvasClient({
       const stackH = (n: number): number =>
         n > 0 ? n * LEAF_H + (n - 1) * LGAP_Y : 0
       const bandH = (n: number): number => Math.max(stackH(n), JUNCTION_H)
+      // The Content leaf's layout pitch depends on its collapse state —
+      // read through the ref at walk time so measureLeftHeight and
+      // mountInputs always agree.
+      const contentLeafH = (): number =>
+        contentCollapsedRef.current ? CONTENT_COLLAPSED_H : CONTENT_EXPANDED_H
 
       // Total height of the left graph, used to vertically center it on the
       // frame. Mirrors the placement walk in `mountInputs`.
       function measureLeftHeight(g: InputGraph): number {
-        // Content / Layout / Theme standalone block.
-        let h = 3 * LEAF_H + 2 * LGAP_Y + BAND_GAP
+        // Content / Layout / Theme standalone block (Content's row height
+        // varies with its collapse state).
+        let h = contentLeafH() + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
         // Background band (>=1 row: a placeholder when empty). Deck sections
         // with no per-section background drop the band entirely — the backdrop
         // is page-level (edited via the Deck defaults button), so a
@@ -1901,7 +1962,13 @@ export default function CanvasClient({
           },
           x: number,
           y: number,
-          editKind?: EditableKind
+          editKind?: EditableKind,
+          // Per-leaf control extras — set BEFORE addNode so the initial
+          // React render sees them (same rule as the junction opts).
+          extras?: {
+            collapse?: { collapsed: boolean; onToggle: () => void }
+            bodyMaxHeight?: number
+          }
         ): Promise<DataNode> => {
           const node = new DataNode(d.label, d.tag, d.body, d.variant)
           // Two complementary click paths share addLeaf:
@@ -2013,6 +2080,10 @@ export default function CanvasClient({
                 slot.path
               )
             }
+          }
+          if (extras?.collapse) node.previewCtrl.collapse = extras.collapse
+          if (extras?.bodyMaxHeight != null) {
+            node.previewCtrl.bodyMaxHeight = extras.bodyMaxHeight
           }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
@@ -2142,9 +2213,27 @@ export default function CanvasClient({
           }
           const relabel = deckLeafLabel[key]
           const data = relabel ? { ...g[key], label: relabel } : g[key]
-          const node = await addLeaf(data, regionColX, y, editKind)
+          // Content is collapsible: collapsed = header-only chip, expanded =
+          // the full markdown body scrolling inside CONTENT_BODY_MAX_H.
+          // Toggling flips the session ref then re-mounts the left graph so
+          // every dependent node re-walks at the new pitch.
+          const extras =
+            key === 'content'
+              ? {
+                  collapse: {
+                    collapsed: contentCollapsedRef.current,
+                    onToggle: () => {
+                      contentCollapsedRef.current =
+                        !contentCollapsedRef.current
+                      void refreshInputs()
+                    },
+                  },
+                  bodyMaxHeight: CONTENT_BODY_MAX_H,
+                }
+              : undefined
+          const node = await addLeaf(data, regionColX, y, editKind, extras)
           await wire(node, 'value', frame, key)
-          y += LEAF_H + LGAP_Y
+          y += (key === 'content' ? contentLeafH() : LEAF_H) + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 
@@ -2404,6 +2493,22 @@ export default function CanvasClient({
         }
         for (const id of leftNodeIds) await editor.removeNode(id)
         leftNodeIds = new Set<string>()
+      }
+
+      /**
+       * Re-mount the left input graph for the active section in place.
+       * Used when a node's intrinsic height changes (the Content leaf
+       * collapse toggle) — the stacked layout positions are computed at
+       * mount time, so a height change needs a re-walk. Narrower than
+       * applySection: the frame iframe and the expanded output group are
+       * untouched (no iframe reloads).
+       */
+      async function refreshInputs(): Promise<void> {
+        const view =
+          sectionViewsRef.current[stateRef.current.activeSectionIndex]
+        if (!view) return
+        await unmountInputs()
+        await mountInputs(view)
       }
 
       await mountInputs(initialView)
