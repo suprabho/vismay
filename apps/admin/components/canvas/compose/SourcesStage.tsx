@@ -55,7 +55,13 @@ export function SourcesStage({
 
   const list =
     sources.length > 0 ? (
-      <ul className="space-y-1.5">
+      <ul
+        className={
+          wide
+            ? 'grid grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] items-start gap-1.5'
+            : 'space-y-1.5'
+        }
+      >
         {sources.map((s) => (
           <SourceRow
             key={s.id}

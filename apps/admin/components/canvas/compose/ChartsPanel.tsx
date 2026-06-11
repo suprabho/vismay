@@ -24,7 +24,13 @@ export function ChartsPanel({
   return (
     <section className="space-y-3 border-t border-white/10 pt-4">
       <SectionHeading title="Charts" count={charts.length} hint="tap a chart for its full requirement" />
-      <ul className={wide ? 'grid items-start gap-1.5 md:grid-cols-2' : 'space-y-1.5'}>
+      <ul
+        className={
+          wide
+            ? 'grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] items-start gap-1.5'
+            : 'space-y-1.5'
+        }
+      >
         {charts.map((c) => (
           <ChartCard key={c.id} chart={c} result={results[c.id]} />
         ))}

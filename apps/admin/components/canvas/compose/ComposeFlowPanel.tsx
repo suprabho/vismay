@@ -84,6 +84,7 @@ export function ComposeFlow({
       <StageTabs
         tab={tab}
         onSelect={flow.setTab}
+        wide={wide}
         unlocked={unlocked}
         counts={{
           sources: flow.sources.length,

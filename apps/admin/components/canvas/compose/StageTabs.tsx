@@ -21,14 +21,21 @@ export function StageTabs({
   onSelect,
   unlocked,
   counts,
+  wide,
 }: {
   tab: ComposeStage
   onSelect: (tab: ComposeStage) => void
   unlocked: Record<ComposeStage, boolean>
   counts: Partial<Record<ComposeStage, number>>
+  /** In the editor's full-width layout the pills hug their content instead of
+   *  stretching across the whole row. */
+  wide?: boolean
 }) {
   return (
-    <div role="tablist" className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+    <div
+      role="tablist"
+      className={`flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1 ${wide ? 'w-fit' : ''}`}
+    >
       {TABS.map((t) => {
         const active = tab === t.id
         const enabled = unlocked[t.id]
@@ -41,7 +48,7 @@ export function StageTabs({
             aria-selected={active}
             disabled={!enabled}
             onClick={() => onSelect(t.id)}
-            className={`flex-1 rounded-md px-1 py-1.5 text-center text-[10px] font-medium uppercase tracking-wider transition-colors ${
+            className={`${wide ? 'px-4' : 'flex-1 px-1'} rounded-md py-1.5 text-center text-[10px] font-medium uppercase tracking-wider transition-colors ${
               active
                 ? 'bg-sky-500/20 text-sky-300'
                 : enabled

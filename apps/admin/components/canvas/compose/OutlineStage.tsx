@@ -62,7 +62,13 @@ export function OutlineStage({
       {outlineEditable && (
         <LayoutLegend layouts={st.outline.map((e) => e.layout)} format={st.format} />
       )}
-      <ul className={wide ? 'grid items-start gap-2 md:grid-cols-2' : 'space-y-2'}>
+      <ul
+        className={
+          wide
+            ? 'grid grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] items-start gap-2'
+            : 'space-y-2'
+        }
+      >
         {st.outline.map((e, i) => (
           <OutlineEntryCard
             key={e.id}

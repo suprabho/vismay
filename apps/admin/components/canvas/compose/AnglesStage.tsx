@@ -59,7 +59,13 @@ export function AnglesStage({
   return (
     <section className="space-y-3">
       <SectionHeading title="Angle" count={angles.length} hint="pick one to outline" />
-      <div className={wide ? 'grid items-start gap-2 md:grid-cols-2 xl:grid-cols-3' : 'space-y-2'}>
+      <div
+        className={
+          wide
+            ? 'grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] items-start gap-2'
+            : 'space-y-2'
+        }
+      >
         {angles.map((a) => (
           <AngleCard
             key={a.id}
