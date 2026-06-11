@@ -1,11 +1,17 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { MatchRow } from '@vismay/footshorts-viz/web';
-import { StandingsTable } from '@vismay/footshorts-viz/web';
+import {
+  MatchRow,
+  StandingsTable,
+  BracketTree,
+  buildBracket,
+  isLeagueCompetition,
+} from '@vismay/footshorts-viz/web';
 import { useEntity } from '@/lib/useEntity';
 import { useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
-import { useStandings } from '@/lib/useStandings';
+import { useStandings, groupStandings } from '@/lib/useStandings';
 
 function Spinner() {
   return (
@@ -51,6 +57,19 @@ export default function LeaguePage() {
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
+  // Bracket only applies to cups/tournaments — skip the wide fetch for plain
+  // leagues (which never have knockout fixtures) by disabling the query there.
+  const isLeague = isLeagueCompetition(slug);
+  const bracketFixtures = useLeagueFixtures(isLeague ? undefined : slug, 'all', 200);
+
+  const standingGroups = useMemo(
+    () => (standings.data ? groupStandings(standings.data) : []),
+    [standings.data],
+  );
+  const bracket = useMemo(
+    () => buildBracket(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
 
   if (league.isLoading) return <Spinner />;
 
@@ -84,12 +103,29 @@ export default function LeaguePage() {
       <Section title="Standings">
         {standings.isLoading ? (
           <Spinner />
-        ) : standings.data && standings.data.length > 0 ? (
-          <StandingsTable rows={standings.data} />
+        ) : standingGroups.length > 0 ? (
+          <div className="space-y-5">
+            {standingGroups.map((group) => (
+              <div key={group.label || 'overall'}>
+                {group.label ? (
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+                    {group.label}
+                  </h3>
+                ) : null}
+                <StandingsTable rows={group.rows} />
+              </div>
+            ))}
+          </div>
         ) : (
           <p className="text-sm text-muted">No standings yet.</p>
         )}
       </Section>
+
+      {bracket ? (
+        <Section title="Knockout bracket">
+          <BracketTree bracket={bracket} competitionSlug={slug} title={league.data.name} />
+        </Section>
+      ) : null}
 
       <Section title="Recent results">
         <FixtureList

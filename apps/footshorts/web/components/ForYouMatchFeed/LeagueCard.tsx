@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { stageLabel } from '@vismay/footshorts-viz/web';
+import { stageLabel, competitionFollowLabel } from '@vismay/footshorts-viz/web';
 import type { LeagueSection } from '@/lib/useFollowedFixtures';
 import { CollapsedHeader, SectionLabel } from './CardShell';
 import { FixturesBlock } from './FixturesBlock';
@@ -68,7 +68,7 @@ export function LeagueCard({ section }: { section: LeagueSection }) {
           href={`/league/${section.entity.slug}`}
           className="mt-4 inline-block text-sm font-semibold text-accent hover:underline"
         >
-          View league →
+          {competitionFollowLabel(section.entity.slug)}
         </Link>
       </div>
     </details>

@@ -11,4 +11,6 @@ export {
   getCompetitionDisplayName,
   getCompetitionPalette,
   darkenHex,
+  isLeagueCompetition,
+  competitionFollowLabel,
 } from '../competitionMeta'
