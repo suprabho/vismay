@@ -95,11 +95,32 @@ export type AddMenuChoice =
   | { kind: 'region'; key: string }
   | { kind: 'override' }
 
+/**
+ * Optional delete affordance riding along with (or instead of) the add
+ * pickers. `destructive: true` arms a two-click confirm — used when the
+ * delete would discard real content (a region with layers, an override
+ * with non-trivial fields).
+ */
+export interface AddMenuDeletable {
+  /** Row/button label, e.g. `Delete region 'charts'`. */
+  label: string
+  /** One-line consequence summary shown above the button. */
+  description?: string
+  /** Require a second confirming click before firing onDelete. */
+  destructive: boolean
+}
+
 interface Props {
   /** Viewport coordinates where the menu should anchor (cursor at right-click). */
   position: { x: number; y: number }
-  target: AddMenuTarget
+  /** What the menu can ADD. Null renders a delete-only menu (requires
+   *  `deletable` + `onDelete`). */
+  target: AddMenuTarget | null
+  /** Optional delete affordance appended below the picker (or standalone
+   *  when `target` is null). */
+  deletable?: AddMenuDeletable | null
   onPick: (choice: AddMenuChoice) => void
+  onDelete?: () => void
   onClose: () => void
 }
 
@@ -111,7 +132,14 @@ const PAD = 8
  * Position math clamps to the viewport so an edge-of-screen right-click
  * doesn't push the menu offscreen.
  */
-export default function AddMenu({ position, target, onPick, onClose }: Props) {
+export default function AddMenu({
+  position,
+  target,
+  deletable,
+  onPick,
+  onDelete,
+  onClose,
+}: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close on outside click / Escape. Capture so we beat any in-menu
@@ -166,14 +194,21 @@ export default function AddMenu({ position, target, onPick, onClose }: Props) {
         overflow: 'hidden',
       }}
     >
-      {target.kind === 'layer' && (
+      {target?.kind === 'layer' && (
         <LayerPicker target={target} onPick={onPick} />
       )}
-      {target.kind === 'region' && (
+      {target?.kind === 'region' && (
         <RegionPicker target={target} onPick={onPick} />
       )}
-      {target.kind === 'override' && (
+      {target?.kind === 'override' && (
         <OverridePicker target={target} onPick={onPick} />
+      )}
+      {deletable && onDelete && (
+        <DeleteSection
+          deletable={deletable}
+          onDelete={onDelete}
+          standalone={!target}
+        />
       )}
     </div>,
     document.body
@@ -415,6 +450,92 @@ function OverridePicker({
           }}
         >
           Seed &amp; edit
+        </button>
+      </div>
+    </>
+  )
+}
+
+/* ─── Delete section ────────────────────────────────────────────── */
+
+/**
+ * Delete affordance — appended under the add picker (with a "Danger zone"
+ * separator) or rendered standalone when the menu has nothing to add
+ * (layer leaves, override cards, keyboard-delete confirms).
+ *
+ * Destructive deletes arm on first click and fire on the second; the
+ * armed state styles red so the consequence reads at a glance. Non-
+ * destructive deletes fire immediately.
+ */
+function DeleteSection({
+  deletable,
+  onDelete,
+  standalone,
+}: {
+  deletable: AddMenuDeletable
+  onDelete: () => void
+  standalone: boolean
+}) {
+  const [armed, setArmed] = useState(false)
+  const needsConfirm = deletable.destructive
+  return (
+    <>
+      {standalone ? (
+        <Header
+          title={deletable.label}
+          subtitle={deletable.description ?? 'Writes through the same save path as edits.'}
+        />
+      ) : (
+        <>
+          <Separator label="Danger zone" />
+          {deletable.description && (
+            <div
+              style={{
+                padding: '2px 12px 0',
+                fontSize: 10,
+                color: '#888',
+                lineHeight: 1.5,
+              }}
+            >
+              {deletable.description}
+            </div>
+          )}
+        </>
+      )}
+      <div style={{ padding: 12 }}>
+        {needsConfirm && armed && (
+          <div
+            style={{
+              fontSize: 10,
+              color: '#cc6666',
+              marginBottom: 6,
+              lineHeight: 1.5,
+            }}
+          >
+            This removes existing content. Click again to confirm.
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (needsConfirm && !armed) {
+              setArmed(true)
+              return
+            }
+            onDelete()
+          }}
+          style={{
+            width: '100%',
+            background: armed ? '#7a2e2e' : 'transparent',
+            color: armed ? '#fff' : '#e07070',
+            border: '1px solid #6a3030',
+            borderRadius: 4,
+            padding: '6px 0',
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          {armed ? 'Confirm delete' : deletable.label}
         </button>
       </div>
     </>

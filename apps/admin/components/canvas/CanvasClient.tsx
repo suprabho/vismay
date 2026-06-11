@@ -39,9 +39,23 @@ import {
   seedMapOverride,
   seedTtsUnit,
 } from './canvasSlotAdd'
+import {
+  removeLayer,
+  removeForegroundRegion,
+  removeShareSection,
+  removeReportPage,
+  removeMapOverride,
+  removeTtsUnit,
+  shareSectionState,
+  reportPageState,
+  mapOverrideState,
+  ttsUnitState,
+  type OverrideState,
+} from './canvasSlotRemove'
 import AddMenu, {
   type AddMenuTarget,
   type AddMenuChoice,
+  type AddMenuDeletable,
 } from './AddMenu'
 // Re-imported for the addLeaf type — InputNodeData['slot'] is the discriminator
 // the leaf click dispatcher branches on.
@@ -172,6 +186,47 @@ type SlotTarget =
  * one per per-section override file entry the canvas knows how to create.
  */
 type OverrideSeedKind = 'share' | 'slides' | 'report' | 'map' | 'narration'
+
+const OVERRIDE_SEED_KINDS: readonly OverrideSeedKind[] = [
+  'share',
+  'slides',
+  'report',
+  'map',
+  'narration',
+]
+function isOverrideSeedKind(kind: EditableKind): kind is OverrideSeedKind {
+  return (OVERRIDE_SEED_KINDS as readonly string[]).includes(kind)
+}
+
+/**
+ * What a delete pick should remove — the inverse of the +Add dispatches.
+ * Resolved against the active section's unit at execute time (same rule
+ * as the add flow): the dispatch carries identity, not section indices.
+ */
+type DeleteDispatch =
+  | { kind: 'layer'; path: SlotPath }
+  | { kind: 'region'; regionKey: string }
+  | { kind: 'override'; overrideKind: OverrideSeedKind }
+
+/** A ready-to-surface delete option: menu copy + the dispatch to run. */
+interface DeletableInfo {
+  spec: AddMenuDeletable
+  dispatch: DeleteDispatch
+}
+
+/** Human-readable slot-path location for delete confirmations. */
+function describeSlotPath(path: SlotPath): string {
+  switch (path.kind) {
+    case 'legacyMap':
+      return 'the legacy map block'
+    case 'background':
+      return `background[${path.index}]`
+    case 'foregroundFlat':
+      return `foreground[${path.index}]`
+    case 'foregroundRegion':
+      return `foreground.${path.region}[${path.index}]`
+  }
+}
 
 /* ─── Layout constants ───────────────────────────────────────────── */
 const FRAME_W = 1920
@@ -513,14 +568,18 @@ export default function CanvasClient({
     | { kind: 'override'; overrideKind: OverrideSeedKind }
   const [addMenu, setAddMenu] = useState<{
     position: { x: number; y: number }
-    target: AddMenuTarget
+    /** Null = delete-only menu (a deletable with nothing to add). */
+    target: AddMenuTarget | null
     /** Section the menu was opened against. The dispatcher reads the
      *  section's current sources at save time, but the unit identity
      *  (parentIndex / subIndex) is captured here so the menu acts on the
      *  section the user right-clicked, not whatever section becomes
      *  active by the time they pick. */
     sourceSectionIndex: number
-    context: AddDispatchContext
+    /** Null exactly when `target` is null. */
+    context: AddDispatchContext | null
+    /** Delete option to render under (or instead of) the add picker. */
+    del: DeletableInfo | null
   } | null>(null)
   const setAddMenuRef = useRef(setAddMenu)
   useEffect(() => {
@@ -813,6 +872,112 @@ export default function CanvasClient({
     stateRef.current.expandedGroup = expandedGroup
   }, [expandedGroup])
 
+  /* ─── Delete executor ─────────────────────────────────────────── */
+  // Runs a DeleteDispatch against the section it was opened on: route to
+  // the matching canvasSlotRemove helper, persist through the same save
+  // path the add/edit flows use (saveConfigYaml / saveSlice), patch
+  // `sources` locally so the graph rebuilds, and bump the iframe nonce.
+  // Open editors are closed first — a layer delete shifts sibling
+  // indices, so any captured SlotPath could now point at the wrong slot.
+  const executeDelete = useCallback(
+    async (sectionIndex: number, dispatch: DeleteDispatch) => {
+      const targetUnit =
+        sectionUnitsRef.current[sectionIndex] ??
+        sectionUnitsRef.current[stateRef.current.activeSectionIndex]
+      if (!targetUnit) return
+      setEditorTarget(null)
+      setSlotTarget((cur) => (cur?.mode === 'theme' ? cur : null))
+      try {
+        if (dispatch.kind === 'layer') {
+          const nextYaml = removeLayer(
+            configYamlRef.current,
+            targetUnit.parentIndex,
+            dispatch.path
+          )
+          await saveConfigYaml(slug, nextYaml)
+          setSources((p) => ({ ...p, configYaml: nextYaml }))
+        } else if (dispatch.kind === 'region') {
+          const nextYaml = removeForegroundRegion(
+            configYamlRef.current,
+            targetUnit.parentIndex,
+            dispatch.regionKey
+          )
+          await saveConfigYaml(slug, nextYaml)
+          setSources((p) => ({ ...p, configYaml: nextYaml }))
+        } else {
+          const s = sourcesRef.current
+          const sectionId =
+            targetUnit.parentConfig.id ?? `section-${targetUnit.parentIndex}`
+          let nextRaw: string
+          let patch: Partial<CanvasSources>
+          let target: 'share' | 'report' | 'map' | 'tts'
+          switch (dispatch.overrideKind) {
+            case 'share':
+              nextRaw = removeShareSection(s.shareYaml, sectionId)
+              patch = { shareYaml: nextRaw }
+              target = 'share'
+              break
+            case 'slides':
+              nextRaw = removeReportPage(
+                s.reportYaml,
+                'slides',
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { reportYaml: nextRaw }
+              target = 'report'
+              break
+            case 'report':
+              nextRaw = removeReportPage(
+                s.reportYaml,
+                'report',
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { reportYaml: nextRaw }
+              target = 'report'
+              break
+            case 'map':
+              nextRaw = removeMapOverride(
+                s.mapYaml,
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { mapYaml: nextRaw }
+              target = 'map'
+              break
+            case 'narration':
+              nextRaw = removeTtsUnit(
+                s.ttsYaml,
+                targetUnit.parentIndex,
+                targetUnit.subIndex,
+                targetUnit.sliceIndex ?? 0
+              )
+              patch = { ttsYaml: nextRaw }
+              target = 'tts'
+              break
+          }
+          await saveSlice(slug, { target, patch, newRaw: nextRaw })
+          setSources((p) => ({ ...p, ...patch }))
+        }
+        setDataNonce((n) => n + 1)
+      } catch (e) {
+        // Same posture as the +Add dispatcher: console is the error
+        // surface for now; the absent side effect is the user's signal.
+        console.error('[CanvasClient] delete failed:', e)
+      } finally {
+        setAddMenu(null)
+      }
+    },
+    [slug]
+  )
+  // Latest executor for closures captured during the editor build
+  // (keyboard Delete handler) — same ref pattern as the setters above.
+  const executeDeleteRef = useRef(executeDelete)
+  useEffect(() => {
+    executeDeleteRef.current = executeDelete
+  }, [executeDelete])
+
   // The editor scene — populated by the build effect, consumed by the
   // apply-* effects. `null` until the async setup completes.
   type Scene = {
@@ -884,6 +1049,10 @@ export default function CanvasClient({
         // layers). When present, a ✨ chip opens the standalone PromptBar
         // for this slot (Feature 1's on-node Generate affordance).
         onGenerate?: () => void
+        // Right-click handler — set on deletable cards (layer leaves +
+        // override cards) so the context menu (delete, today) opens from
+        // the card body. Mirrors JunctionControl.onContextMenu.
+        onContextMenu?: (clientX: number, clientY: number) => void
         // Collapse toggle — set on the frame's Content leaf only. When
         // present, a chip in the tag row collapses the card to a header-
         // only chip / re-expands it; the toggle re-mounts the left graph
@@ -1271,9 +1440,11 @@ export default function CanvasClient({
       }) {
         const editable = typeof data.onClick === 'function'
         const generatable = typeof data.onGenerate === 'function'
+        const hasContextMenu = typeof data.onContextMenu === 'function'
         const collapsible = data.collapse !== undefined
         const collapsed = data.collapse?.collapsed ?? false
-        const wantsPointer = editable || generatable || collapsible
+        const wantsPointer =
+          editable || generatable || collapsible || hasContextMenu
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -1289,12 +1460,26 @@ export default function CanvasClient({
           stop(e)
           data.collapse?.onToggle()
         }
+        const onContextMenu = (e: React.MouseEvent) => {
+          if (!hasContextMenu) return
+          e.preventDefault()
+          stop(e)
+          data.onContextMenu?.(e.clientX, e.clientY)
+        }
+        const titleHint = editable
+          ? hasContextMenu
+            ? 'click to edit · right-click for more'
+            : 'click to edit'
+          : hasContextMenu
+            ? 'right-click for options'
+            : undefined
         return (
           <div
             onClick={onClick}
+            onContextMenu={onContextMenu}
             onPointerDown={wantsPointer ? stop : undefined}
             onMouseDown={wantsPointer ? stop : undefined}
-            title={editable ? 'click to edit' : undefined}
+            title={titleHint}
             style={{
               width: INPUT_W - 24,
               minHeight: collapsed ? undefined : 96,
@@ -1901,56 +2086,148 @@ export default function CanvasClient({
           }
 
       /**
-       * Open the Add menu at `(cx, cy)`. The single opener factory for every
-       * Add surface: junction right-click, the persistent `+ ADD` chip on
-       * junctions, and the group headers. Reads the active section + module
-       * types through refs at call time so the menu acts on the section the
-       * user is looking at, not the build-time one.
+       * Open the Add/Delete menu at `(cx, cy)`. The single opener factory
+       * for every context surface: junction right-click, the persistent
+       * `+ ADD` chips, the group headers, and the deletable cards (layer
+       * leaves / override cards, which pass `spec: null` for a delete-only
+       * menu). Reads the active section + module types through refs at
+       * call time so the menu acts on the section the user is looking at,
+       * not the build-time one.
+       *
+       * `getDeletable` is a thunk, evaluated at open time, so the delete
+       * row's existence and its confirm requirement always reflect the
+       * latest sources (e.g. an override deleted elsewhere stops offering
+       * itself). Returning null omits the row.
        *
        * Returns nothing — the controls' onContextMenu is what the React
        * event fires into; this helper produces those handlers.
        */
       function makeAddOpener(
-        spec: AddTargetSpec
+        spec: AddTargetSpec | null,
+        getDeletable?: () => DeletableInfo | null
       ): (clientX: number, clientY: number) => void {
         return (clientX, clientY) => {
           const idx = stateRef.current.activeSectionIndex
-          let target: AddMenuTarget
-          let context: AddDispatchContext
-          switch (spec.kind) {
-            case 'layer':
-              target = {
-                kind: 'layer',
-                slot: spec.slot,
-                availableTypes: moduleTypesRef.current[spec.slot],
-                label: spec.label,
-              }
-              context = { kind: 'layer', dispatch: spec.dispatch }
-              break
-            case 'region':
-              target = {
-                kind: 'region',
-                knownKeys: spec.knownKeys,
-                existingKeys: spec.existingKeys,
-                layoutName: spec.layoutName,
-              }
-              context = { kind: 'region', layoutHint: spec.layoutName }
-              break
-            case 'override':
-              target = {
-                kind: 'override',
-                label: spec.label,
-                overrideKind: spec.overrideKind,
-              }
-              context = { kind: 'override', overrideKind: spec.overrideKind }
-              break
+          let target: AddMenuTarget | null = null
+          let context: AddDispatchContext | null = null
+          if (spec) {
+            switch (spec.kind) {
+              case 'layer':
+                target = {
+                  kind: 'layer',
+                  slot: spec.slot,
+                  availableTypes: moduleTypesRef.current[spec.slot],
+                  label: spec.label,
+                }
+                context = { kind: 'layer', dispatch: spec.dispatch }
+                break
+              case 'region':
+                target = {
+                  kind: 'region',
+                  knownKeys: spec.knownKeys,
+                  existingKeys: spec.existingKeys,
+                  layoutName: spec.layoutName,
+                }
+                context = { kind: 'region', layoutHint: spec.layoutName }
+                break
+              case 'override':
+                target = {
+                  kind: 'override',
+                  label: spec.label,
+                  overrideKind: spec.overrideKind,
+                }
+                context = { kind: 'override', overrideKind: spec.overrideKind }
+                break
+            }
           }
+          const del = getDeletable?.() ?? null
+          if (!target && !del) return
           setAddMenuRef.current({
             position: { x: clientX, y: clientY },
             target,
             sourceSectionIndex: idx,
             context,
+            del,
           })
+        }
+      }
+
+      /* ── Deletable registry (keyboard Delete/Backspace) ─────────────
+       * Node id → the same getDeletable thunk its context menu uses.
+       * The keydown handler walks the current selection through this map,
+       * so keyboard delete and right-click delete stay one code path.
+       * Entries are registered where nodes are created (addLeaf, region
+       * junctions, override cards) and cleared in unmountInputs /
+       * unmountGroup alongside the nodes themselves. */
+      const deletableByNodeId = new Map<string, () => DeletableInfo | null>()
+
+      // Where each override kind lives on disk — used in delete confirms.
+      const OVERRIDE_FILE: Record<OverrideSeedKind, string> = {
+        share: 'share.yaml',
+        slides: 'report.yaml (slides.pages)',
+        report: 'report.yaml (report.pages)',
+        map: 'map.yaml',
+        narration: 'tts.yaml',
+      }
+
+      /**
+       * Delete thunk for an override card. Evaluated at open/keypress
+       * time: no entry in the file → no delete option (the card is just
+       * the "(no override)" placeholder); an entry with real content →
+       * destructive (confirm step); a bare seed → immediate delete.
+       */
+      function makeOverrideDeletable(
+        kind: OverrideSeedKind
+      ): () => DeletableInfo | null {
+        return () => {
+          const idx = stateRef.current.activeSectionIndex
+          const unit = sectionUnitsRef.current[idx]
+          if (!unit) return null
+          const s = sourcesRef.current
+          const sectionId =
+            unit.parentConfig.id ?? `section-${unit.parentIndex}`
+          let state: OverrideState
+          switch (kind) {
+            case 'share':
+              state = shareSectionState(s.shareYaml, sectionId)
+              break
+            case 'slides':
+              state = reportPageState(
+                s.reportYaml,
+                'slides',
+                unit.parentIndex,
+                unit.subIndex
+              )
+              break
+            case 'report':
+              state = reportPageState(
+                s.reportYaml,
+                'report',
+                unit.parentIndex,
+                unit.subIndex
+              )
+              break
+            case 'map':
+              state = mapOverrideState(s.mapYaml, unit.parentIndex, unit.subIndex)
+              break
+            case 'narration':
+              state = ttsUnitState(
+                s.ttsYaml,
+                unit.parentIndex,
+                unit.subIndex,
+                unit.sliceIndex ?? 0
+              )
+              break
+          }
+          if (!state.exists) return null
+          return {
+            spec: {
+              label: `Delete ${kind} override`,
+              description: `Removes this section's entry from ${OVERRIDE_FILE[kind]}.`,
+              destructive: state.nonTrivial,
+            },
+            dispatch: { kind: 'override', overrideKind: kind },
+          }
         }
       }
 
@@ -2090,6 +2367,26 @@ export default function CanvasClient({
           if (extras?.collapse) node.previewCtrl.collapse = extras.collapse
           if (extras?.bodyMaxHeight != null) {
             node.previewCtrl.bodyMaxHeight = extras.bodyMaxHeight
+          }
+          // Every layer leaf is user-deletable — the inverse of the +Add
+          // seeds. Right-click opens the delete-only menu; the same thunk
+          // registers for keyboard Delete/Backspace on the selected node.
+          // Chart Data leaves are excluded (their data lives in the
+          // chart_data store, not the section config) — as are the
+          // standalone Content/Layout/Theme leaves and placeholders.
+          if (d.slot && d.slot.kind === 'layer') {
+            const path = d.slot.path
+            const label = d.label
+            const getDel = (): DeletableInfo => ({
+              spec: {
+                label: `Delete ${label} layer`,
+                description: `Removes ${describeSlotPath(path)} from this section in config.yaml.`,
+                destructive: false,
+              },
+              dispatch: { kind: 'layer', path },
+            })
+            node.previewCtrl.onContextMenu = makeAddOpener(null, getDel)
+            deletableByNodeId.set(node.id, getDel)
           }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
@@ -2348,6 +2645,24 @@ export default function CanvasClient({
             // generic 'region' kind handles any region name the layout
             // produces; the regionKey is what tells canvasEditing which
             // slot to read or splice.
+            //
+            // Regions are also deletable: the context menu carries a
+            // delete row under the layer picker. Deleting a region with
+            // layers discards content, so that case arms the confirm.
+            const regionLayerCount = region.layers.length
+            const getRegionDel = (): DeletableInfo => ({
+              spec: {
+                label: `Delete region '${region.key}'`,
+                description:
+                  regionLayerCount > 0
+                    ? `Removes foreground.regions.${region.key} and the ${regionLayerCount} layer${
+                        regionLayerCount === 1 ? '' : 's'
+                      } inside it.`
+                    : `Removes the empty region foreground.regions.${region.key}.`,
+                destructive: regionLayerCount > 0,
+              },
+              dispatch: { kind: 'region', regionKey: region.key },
+            })
             const rj = await addJunction(
               region.label,
               `${region.layers.length} layer${
@@ -2357,15 +2672,18 @@ export default function CanvasClient({
               y + h / 2 - JUNCTION_H / 2,
               makeEditClick('region', region.key),
               {
-                onContextMenu: makeAddOpener({
-                  kind: 'layer',
-                  slot: 'foreground',
-                  label: `${region.label} region`,
-                  dispatch: {
-                    kind: 'foreground-region-append',
-                    regionKey: region.key,
+                onContextMenu: makeAddOpener(
+                  {
+                    kind: 'layer',
+                    slot: 'foreground',
+                    label: `${region.label} region`,
+                    dispatch: {
+                      kind: 'foreground-region-append',
+                      regionKey: region.key,
+                    },
                   },
-                }),
+                  getRegionDel
+                ),
                 warning: regionWarning,
                 onGenerate: makeGenerateClick('region', region.key),
                 onFix: regionWarning
@@ -2373,6 +2691,7 @@ export default function CanvasClient({
                   : undefined,
               }
             )
+            deletableByNodeId.set(rj.id, getRegionDel)
             regionNodes.push(rj)
             regionCenters.push(y + h / 2)
             let ly = y + (h - stackH(leaves.length)) / 2
@@ -2501,7 +2820,10 @@ export default function CanvasClient({
             await editor.removeConnection(conn.id)
           }
         }
-        for (const id of leftNodeIds) await editor.removeNode(id)
+        for (const id of leftNodeIds) {
+          deletableByNodeId.delete(id)
+          await editor.removeNode(id)
+        }
         leftNodeIds = new Set<string>()
       }
 
@@ -2638,6 +2960,17 @@ export default function CanvasClient({
             })
           }
           node.previewCtrl.onGenerate = makeGenerateClick(editKind)
+          // Right-click on an override card offers Delete for the
+          // underlying per-section entry (when one exists — the thunk
+          // returns null for the "(no override)" placeholder state).
+          // `content` is excluded (it's the shared markdown body, not an
+          // override) and so is `shareMap` (a sub-block owned by the
+          // share entry — delete the share override to clear it whole).
+          if (isOverrideSeedKind(editKind)) {
+            const getDel = makeOverrideDeletable(editKind)
+            node.previewCtrl.onContextMenu = makeAddOpener(null, getDel)
+            deletableByNodeId.set(node.id, getDel)
+          }
           overrideMap.set(spec.socket, node)
           await editor.addNode(node)
           await area.translate(node.id, {
@@ -2751,6 +3084,7 @@ export default function CanvasClient({
           }
         }
         for (const id of slotNodeIds) {
+          deletableByNodeId.delete(id)
           await editor.removeNode(id)
         }
         expandedSlot = null
@@ -2838,10 +3172,68 @@ export default function CanvasClient({
 
       await AreaExtensions.zoomAt(area, editor.getNodes())
 
+      /* ── Keyboard delete (Delete / Backspace on a selected node) ──
+       * Walks the current selection (selectableNodes sets `selected` on
+       * the node) through the deletable registry — the exact thunks the
+       * right-click menus use, so both surfaces stay one code path.
+       * Destructive deletes route through the AddMenu's confirm step,
+       * anchored at the node's on-screen position; trivial ones execute
+       * immediately. One delete per keypress. */
+      const onDeleteKey = (e: KeyboardEvent) => {
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return
+        const t = e.target
+        if (
+          t instanceof HTMLInputElement ||
+          t instanceof HTMLTextAreaElement ||
+          (t instanceof HTMLElement && t.isContentEditable)
+        ) {
+          return
+        }
+        for (const n of editor.getNodes()) {
+          if (!(n as { selected?: boolean }).selected) continue
+          const getDel = deletableByNodeId.get(n.id)
+          if (!getDel) continue
+          const del = getDel()
+          if (!del) continue
+          e.preventDefault()
+          if (del.spec.destructive) {
+            const el = area.nodeViews.get(n.id)?.element
+            const rect = el?.getBoundingClientRect()
+            setAddMenuRef.current({
+              position: {
+                x: rect ? rect.left + 16 : window.innerWidth / 2,
+                y: rect ? rect.top + 16 : window.innerHeight / 2,
+              },
+              target: null,
+              sourceSectionIndex: stateRef.current.activeSectionIndex,
+              context: null,
+              del,
+            })
+          } else {
+            void executeDeleteRef.current(
+              stateRef.current.activeSectionIndex,
+              del.dispatch
+            )
+          }
+          return
+        }
+      }
+      // Disposed mid-setup → the parent cleanup already ran with a null
+      // scene; tear the area down here and don't register a listener
+      // nobody would remove.
+      if (disposed) {
+        area.destroy()
+        return
+      }
+      window.addEventListener('keydown', onDeleteKey)
+
       sceneRef.current = {
         applySection,
         applyExpandedGroup,
-        destroy: () => area.destroy(),
+        destroy: () => {
+          window.removeEventListener('keydown', onDeleteKey)
+          area.destroy()
+        },
       }
     })().catch((err) => {
       console.error('[CanvasClient] setup failed', err)
@@ -3316,7 +3708,9 @@ export default function CanvasClient({
   const handleAddMenuPick = useCallback(
     async (choice: AddMenuChoice) => {
       const cur = addMenu
-      if (!cur) return
+      // context is null only for delete-only menus, which render no add
+      // picker — a pick can't arrive, but guard for type-safety anyway.
+      if (!cur || !cur.context) return
       const targetUnit =
         sectionUnitsRef.current[cur.sourceSectionIndex] ??
         sectionUnitsRef.current[stateRef.current.activeSectionIndex]
@@ -4207,14 +4601,23 @@ export default function CanvasClient({
           onClose={closeSlot}
         />
       )}
-      {/* Floating +Add context menu. Anchored at the right-click cursor
-          via React portal so it isn't clipped by the rete canvas's
-          transformed area. */}
+      {/* Floating +Add / delete context menu. Anchored at the right-click
+          cursor (or the node, for keyboard deletes) via React portal so it
+          isn't clipped by the rete canvas's transformed area. */}
       {addMenu && (
         <AddMenu
           position={addMenu.position}
           target={addMenu.target}
+          deletable={addMenu.del?.spec ?? null}
           onPick={handleAddMenuPick}
+          onDelete={
+            addMenu.del
+              ? () => {
+                  const { dispatch } = addMenu.del!
+                  void executeDelete(addMenu.sourceSectionIndex, dispatch)
+                }
+              : undefined
+          }
           onClose={() => setAddMenu(null)}
         />
       )}
