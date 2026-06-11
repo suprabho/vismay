@@ -64,14 +64,26 @@ const genRegionSchema = z.object({
   name: z
     .string()
     .describe('A region name from the chosen layout, e.g. "lead", "chart", "body".'),
-  layers: z.array(genForegroundLayerSchema).describe('The layers placed in this region.'),
+  layers: z
+    .array(genForegroundLayerSchema)
+    .max(1)
+    .describe(
+      'The single layer placed in this region (max 1). Generated layers carry no position, ' +
+        'so each fills its whole region — a second layer would paint on top of the first.'
+    ),
 })
 
 /**
  * The section foreground. Use `layout` + `regions` for a composed deck slide,
- * or just `layers` for a simple stacked list. Leave the whole object out for a
- * text-only section. Shared by the section generator and the per-slot
+ * or just `layers` for a single full-slot layer. Leave the whole object out for
+ * a text-only section. Shared by the section generator and the per-slot
  * `foreground` editor.
+ *
+ * Both arms cap at ONE layer per box: generated layers cannot author
+ * `style.position`/`style.size`, so every layer is unpositioned and fills its
+ * region (`ForegroundVizSlot` gives it `inset: 0`) — two layers in the same
+ * region always overlap rather than stack. Positioned multi-layer compositing
+ * (badge over chart, scrim over image) stays a hand-authored-config pattern.
  */
 export const genForegroundSchema = z.object({
   layout: z
@@ -81,11 +93,15 @@ export const genForegroundSchema = z.object({
   regions: z
     .array(genRegionSchema)
     .optional()
-    .describe('Named regions, used WITH `layout` — each maps a layout region to its layers.'),
+    .describe('Named regions, used WITH `layout` — each maps a layout region to its single layer.'),
   layers: z
     .array(genForegroundLayerSchema)
+    .max(1)
     .optional()
-    .describe('A flat list of foreground layers, used when there is no `layout`.'),
+    .describe(
+      'A single full-slot foreground layer (max 1), used when there is no `layout` — ' +
+        'layout-less layers fill the slot, so a second would paint on top of the first.'
+    ),
 })
 
 export type GenForeground = z.infer<typeof genForegroundSchema>

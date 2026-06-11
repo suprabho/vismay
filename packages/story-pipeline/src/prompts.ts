@@ -462,9 +462,9 @@ export function visualSystem(format: StoryFormat): string {
         `theme tokens — "$accent", "$accent2", "$teal", "$positive", "$amber", "$red", "$muted", ` +
         `"$surface", "$background" — the schema rejects raw hex; most pins should omit color ` +
         `entirely and take the story default.`
-      : `This is a DECK story (no map backdrop). Set body.foreground: either a FLAT layers list (no ` +
-        `layout), or a layout name plus regions — each region maps to its layers. Layouts and the ` +
-        `regions they define:\n${DECK_LAYOUT_MENU}\n` +
+      : `This is a DECK story (no map backdrop). Set body.foreground: either a single full-slot ` +
+        `layer (no layout), or a layout name plus regions — each region holds AT MOST ONE layer ` +
+        `(the schema rejects more). Layouts and the regions they define:\n${DECK_LAYOUT_MENU}\n` +
         `COVER/HERO sections use the EDITORIAL COVER SURFACE, not content layers: set ` +
         `body.layout = "hero-full-bleed" (section-root — NOT inside foreground; the cover render ` +
         `path only fires on the section-root field), body.eyebrow ("Topic · Date · What this is"), ` +
