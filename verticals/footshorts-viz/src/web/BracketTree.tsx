@@ -4,7 +4,7 @@ import { useId } from 'react'
 import type { Bracket as BracketModel, BracketRound, BracketTie, FixtureTeamRef } from '../types'
 import { stageLabel } from '../stageLabel'
 import { Crest } from '../data/Crest'
-import { findTeam } from '../data/teams'
+import { teamCode } from '../data/teamCodes'
 import { getCompetitionDisplayName, getCompetitionPalette } from '../competitionMeta'
 
 /**
@@ -102,12 +102,6 @@ function tieInvolves(tie: BracketTie, teamId: string | undefined): boolean {
   return tie.teamA?.id === teamId || tie.teamB?.id === teamId
 }
 
-function teamShort(ref: FixtureTeamRef, fallback: string): string {
-  const key = ref?.slug ?? ref?.name ?? fallback
-  const t = findTeam(key)
-  return t?.shortName ?? t?.name ?? ref?.name ?? fallback
-}
-
 function TeamLine({
   teamRef,
   name,
@@ -124,7 +118,9 @@ function TeamLine({
   return (
     <div className="flex items-center gap-1.5 px-2" style={{ height: CELL_H / 2 }}>
       <Crest team={slug} crestUrl={teamRef?.crest_url ?? undefined} size={18} className="shrink-0 object-contain" />
-      <span className={`min-w-0 flex-1 truncate text-[12px] ${tone}`}>{teamShort(teamRef, name)}</span>
+      <span className={`min-w-0 flex-1 truncate text-[12px] uppercase tracking-wide ${tone}`}>
+        {teamCode(teamRef?.slug ?? teamRef?.name, name)}
+      </span>
       <span className={`tabular-nums text-[12px] ${tone}`}>{score ?? '–'}</span>
     </div>
   )
