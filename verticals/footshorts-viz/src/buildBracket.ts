@@ -154,3 +154,17 @@ export function buildBracket(fixtures: FixtureRow[]): Bracket | null {
     rounds,
   }
 }
+
+/**
+ * Whether a bracket's draw is actually set — i.e. at least one tie has both
+ * teams known. Before a tournament's knockout draw exists, football-data.org
+ * seeds the rounds with TBD placeholders (null team refs); rendering those as a
+ * tree produces an empty, broken-looking bracket, so callers use this to fall
+ * back to a schedule view until real matchups appear.
+ */
+export function isBracketDrawn(bracket: Bracket | null): boolean {
+  if (!bracket) return false
+  return bracket.rounds.some((round) =>
+    round.ties.some((tie) => !!tie.teamA && !!tie.teamB),
+  )
+}

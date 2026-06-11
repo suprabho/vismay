@@ -11,6 +11,8 @@ import {
   MatchRow,
   Bracket,
   buildBracket,
+  isBracketDrawn,
+  groupFixturesByRound,
   isLeagueCompetition,
 } from '@vismay/footshorts-viz/native';
 
@@ -38,6 +40,13 @@ export default function LeagueScreen() {
   );
   const bracket = useMemo(
     () => buildBracket(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
+  // The bracket only reads as a tree once the draw is set; until then show the
+  // full schedule grouped by round so users can see who plays who and when.
+  const bracketDrawn = isBracketDrawn(bracket);
+  const scheduleRounds = useMemo(
+    () => groupFixturesByRound(bracketFixtures.data ?? []),
     [bracketFixtures.data],
   );
 
@@ -111,27 +120,57 @@ export default function LeagueScreen() {
           )}
         </Section>
 
-        {bracket ? (
+        {bracketDrawn ? (
           <Section title="Knockout bracket">
-            <Bracket bracket={bracket} />
+            <Bracket bracket={bracket!} />
           </Section>
         ) : null}
 
-        <Section title="Recent results">
-          <FixtureList
-            loading={pastFixtures.isLoading}
-            data={pastFixtures.data ?? []}
-            emptyText="No recent results."
-          />
-        </Section>
+        {isLeague ? (
+          <>
+            <Section title="Recent results">
+              <FixtureList
+                loading={pastFixtures.isLoading}
+                data={pastFixtures.data ?? []}
+                emptyText="No recent results."
+              />
+            </Section>
 
-        <Section title="Upcoming">
-          <FixtureList
-            loading={upcomingFixtures.isLoading}
-            data={upcomingFixtures.data ?? []}
-            emptyText="No upcoming fixtures."
-          />
-        </Section>
+            <Section title="Upcoming">
+              <FixtureList
+                loading={upcomingFixtures.isLoading}
+                data={upcomingFixtures.data ?? []}
+                emptyText="No upcoming fixtures."
+              />
+            </Section>
+          </>
+        ) : (
+          <Section title="Schedule">
+            {bracketFixtures.isLoading ? (
+              <ActivityIndicator color="#00D26A" />
+            ) : scheduleRounds.length > 0 ? (
+              <View style={{ gap: 20 }}>
+                {scheduleRounds.map((round) => (
+                  <View key={round.key}>
+                    <Text
+                      className="text-muted text-[11px] font-bold uppercase mb-2"
+                      style={{ letterSpacing: 1.2 }}
+                    >
+                      {round.label}
+                    </Text>
+                    <View className="rounded-xl overflow-hidden border border-border bg-surface">
+                      {round.fixtures.map((f) => (
+                        <MatchRow key={f.id} fixture={f} />
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <EmptyNote text="No fixtures scheduled yet." />
+            )}
+          </Section>
+        )}
       </View>
     </ScrollView>
   );

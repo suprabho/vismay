@@ -7,6 +7,8 @@ import {
   StandingsTable,
   BracketTree,
   buildBracket,
+  isBracketDrawn,
+  groupFixturesByRound,
   isLeagueCompetition,
 } from '@vismay/footshorts-viz/web';
 import { useEntity } from '@/lib/useEntity';
@@ -70,6 +72,13 @@ export default function LeaguePage() {
     () => buildBracket(bracketFixtures.data ?? []),
     [bracketFixtures.data],
   );
+  // The bracket only reads as a tree once the draw is set; until then show the
+  // full schedule grouped by round so users can see who plays who and when.
+  const bracketDrawn = isBracketDrawn(bracket);
+  const scheduleRounds = useMemo(
+    () => groupFixturesByRound(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
 
   if (league.isLoading) return <Spinner />;
 
@@ -121,27 +130,54 @@ export default function LeaguePage() {
         )}
       </Section>
 
-      {bracket ? (
+      {bracketDrawn ? (
         <Section title="Knockout bracket">
-          <BracketTree bracket={bracket} competitionSlug={slug} title={league.data.name} />
+          <BracketTree bracket={bracket!} competitionSlug={slug} title={league.data.name} />
         </Section>
       ) : null}
 
-      <Section title="Recent results">
-        <FixtureList
-          loading={pastFixtures.isLoading}
-          data={pastFixtures.data ?? []}
-          emptyText="No recent results."
-        />
-      </Section>
+      {isLeague ? (
+        <>
+          <Section title="Recent results">
+            <FixtureList
+              loading={pastFixtures.isLoading}
+              data={pastFixtures.data ?? []}
+              emptyText="No recent results."
+            />
+          </Section>
 
-      <Section title="Upcoming">
-        <FixtureList
-          loading={upcomingFixtures.isLoading}
-          data={upcomingFixtures.data ?? []}
-          emptyText="No upcoming fixtures."
-        />
-      </Section>
+          <Section title="Upcoming">
+            <FixtureList
+              loading={upcomingFixtures.isLoading}
+              data={upcomingFixtures.data ?? []}
+              emptyText="No upcoming fixtures."
+            />
+          </Section>
+        </>
+      ) : (
+        <Section title="Schedule">
+          {bracketFixtures.isLoading ? (
+            <Spinner />
+          ) : scheduleRounds.length > 0 ? (
+            <div className="space-y-5">
+              {scheduleRounds.map((round) => (
+                <div key={round.key}>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+                    {round.label}
+                  </h3>
+                  <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                    {round.fixtures.map((f) => (
+                      <MatchRow key={f.id} fixture={f} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No fixtures scheduled yet.</p>
+          )}
+        </Section>
+      )}
     </main>
   );
 }
