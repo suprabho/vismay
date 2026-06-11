@@ -417,13 +417,12 @@ export default function EditorClient({
         {tab === 'compose' && (
           <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {initial.composeState ? (
-              <div className="max-w-xl">
-                <ComposeFlow
-                  slug={slug}
-                  initialState={initial.composeState}
-                  initialSources={initial.composeSources}
-                />
-              </div>
+              <ComposeFlow
+                slug={slug}
+                initialState={initial.composeState}
+                initialSources={initial.composeSources}
+                layout="wide"
+              />
             ) : (
               <ComposeStartInline slug={slug} />
             )}
