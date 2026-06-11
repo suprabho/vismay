@@ -39,6 +39,7 @@ import {
   TieCard,
   buildBracket,
   stageLabel,
+  competitionFollowLabel,
 } from '@vismay/footshorts-viz/native';
 
 // Match web's "Upcoming" tile strip: wide enough that two tiles read clearly
@@ -575,7 +576,9 @@ function LeagueCardContent({
           hitSlop={8}
           className="w-full items-center mt-4 self-start"
         >
-          <Text className="text-accent text-sm font-semibold">View league →</Text>
+          <Text className="text-accent text-sm font-semibold">
+            {competitionFollowLabel(section.entity.slug)}
+          </Text>
         </Pressable>
       </ExpandableBody>
     </View>

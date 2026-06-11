@@ -2,11 +2,19 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMemo } from 'react';
 import { useEntity } from '@/lib/useEntity';
-import { useStandings } from '@/lib/useStandings';
+import { useStandings, groupStandings } from '@/lib/useStandings';
 import { useLeagueFixtures } from '@/lib/useFixtures';
-import { StandingsTable } from '@vismay/footshorts-viz/native';
-import { MatchRow } from '@vismay/footshorts-viz/native';
+import {
+  StandingsTable,
+  MatchRow,
+  Bracket,
+  buildBracket,
+  isBracketDrawn,
+  groupFixturesByRound,
+  isLeagueCompetition,
+} from '@vismay/footshorts-viz/native';
 
 // Mirror web's max-w-2xl readable column so the league hub sits in a
 // centered 640px frame on tablets/landscape and bleeds-to-edge on phones.
@@ -21,6 +29,26 @@ export default function LeagueScreen() {
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
+  // Bracket only applies to cups/tournaments — skip the wide fetch for plain
+  // leagues (which never have knockout fixtures) by disabling the query there.
+  const isLeague = isLeagueCompetition(slug);
+  const bracketFixtures = useLeagueFixtures(isLeague ? undefined : slug, 'all', 200);
+
+  const standingGroups = useMemo(
+    () => (standings.data ? groupStandings(standings.data) : []),
+    [standings.data],
+  );
+  const bracket = useMemo(
+    () => buildBracket(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
+  // The bracket only reads as a tree once the draw is set; until then show the
+  // full schedule grouped by round so users can see who plays who and when.
+  const bracketDrawn = isBracketDrawn(bracket);
+  const scheduleRounds = useMemo(
+    () => groupFixturesByRound(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
 
   if (league.isLoading) {
     return (
@@ -71,28 +99,78 @@ export default function LeagueScreen() {
         <Section title="Standings">
           {standings.isLoading ? (
             <ActivityIndicator color="#00D26A" />
-          ) : standings.data && standings.data.length > 0 ? (
-            <StandingsTable rows={standings.data} />
+          ) : standingGroups.length > 0 ? (
+            <View style={{ gap: 20 }}>
+              {standingGroups.map((group) => (
+                <View key={group.label || 'overall'}>
+                  {group.label ? (
+                    <Text
+                      className="text-muted text-[11px] font-bold uppercase mb-2"
+                      style={{ letterSpacing: 1.2 }}
+                    >
+                      {group.label}
+                    </Text>
+                  ) : null}
+                  <StandingsTable rows={group.rows} />
+                </View>
+              ))}
+            </View>
           ) : (
             <EmptyNote text="No standings yet." />
           )}
         </Section>
 
-        <Section title="Recent results">
-          <FixtureList
-            loading={pastFixtures.isLoading}
-            data={pastFixtures.data ?? []}
-            emptyText="No recent results."
-          />
-        </Section>
+        {bracketDrawn ? (
+          <Section title="Knockout bracket">
+            <Bracket bracket={bracket!} />
+          </Section>
+        ) : null}
 
-        <Section title="Upcoming">
-          <FixtureList
-            loading={upcomingFixtures.isLoading}
-            data={upcomingFixtures.data ?? []}
-            emptyText="No upcoming fixtures."
-          />
-        </Section>
+        {isLeague ? (
+          <>
+            <Section title="Recent results">
+              <FixtureList
+                loading={pastFixtures.isLoading}
+                data={pastFixtures.data ?? []}
+                emptyText="No recent results."
+              />
+            </Section>
+
+            <Section title="Upcoming">
+              <FixtureList
+                loading={upcomingFixtures.isLoading}
+                data={upcomingFixtures.data ?? []}
+                emptyText="No upcoming fixtures."
+              />
+            </Section>
+          </>
+        ) : (
+          <Section title="Schedule">
+            {bracketFixtures.isLoading ? (
+              <ActivityIndicator color="#00D26A" />
+            ) : scheduleRounds.length > 0 ? (
+              <View style={{ gap: 20 }}>
+                {scheduleRounds.map((round) => (
+                  <View key={round.key}>
+                    <Text
+                      className="text-muted text-[11px] font-bold uppercase mb-2"
+                      style={{ letterSpacing: 1.2 }}
+                    >
+                      {round.label}
+                    </Text>
+                    <View className="rounded-xl overflow-hidden border border-border bg-surface">
+                      {round.fixtures.map((f) => (
+                        <MatchRow key={f.id} fixture={f} />
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <EmptyNote text="No fixtures scheduled yet." />
+            )}
+          </Section>
+        )}
       </View>
     </ScrollView>
   );

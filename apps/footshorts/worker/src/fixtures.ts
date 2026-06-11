@@ -1,9 +1,10 @@
 /**
  * Sync fixtures + standings from football-data.org into Supabase.
  *
- * Runs per-competition: pulls all matches of the current season + the TOTAL
- * standings table. Idempotent — upserts on football_data_id for fixtures and
- * on (competition_slug, season, team_id) for standings.
+ * Runs per-competition: pulls all matches of the current season + every TOTAL
+ * standings table (one per group for group-stage cups). Idempotent — upserts on
+ * football_data_id for fixtures and on
+ * (competition_slug, season, group_label, team_id) for standings.
  *
  * Free tier caveats:
  *   - 10 req/min → 6.5s sleep between calls.
@@ -49,6 +50,19 @@ function normalizeSeason(s: FdSeason): string {
   const end = new Date(s.endDate).getUTCFullYear();
   if (start === end) return String(start);
   return `${String(start).slice(-2)}-${String(end).slice(-2)}`;
+}
+
+// football-data.org tags group-stage standings tables with a `group` like
+// "GROUP_A". Normalise to the "Group A" display label the standings UI buckets
+// on; non-group (league) tables carry `group: null` → '' (the column default).
+function formatGroupLabel(group: string | null | undefined): string {
+  if (!group) return '';
+  return group
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 function normalizeStatus(s: string): string {
@@ -156,46 +170,75 @@ async function syncStandings(
     return;
   }
 
-  const total = data.standings.find((s: any) => s.type === 'TOTAL');
-  if (!total) {
+  // Group-stage competitions (World Cup, Euros) return one TOTAL table per
+  // group — each carrying a `group` like "GROUP_A". Domestic leagues return a
+  // single TOTAL with `group: null`. Ingest every TOTAL table so all groups
+  // land, not just the first one `.find` would have returned.
+  const totals = data.standings.filter((s: any) => s.type === 'TOTAL');
+  if (totals.length === 0) {
     console.log(`  [${comp.slug}] standings: no TOTAL table`);
     return;
   }
 
   const season = normalizeSeason(data.season);
-  const rows = total.table
-    .map((r: any) => {
-      const teamId = teamIndex.get(r.team?.id);
-      if (!teamId) return null;
-      return {
-        competition_slug: comp.slug,
-        season,
-        team_id: teamId,
-        position: r.position,
-        played: r.playedGames,
-        won: r.won,
-        draw: r.draw,
-        lost: r.lost,
-        goals_for: r.goalsFor,
-        goals_against: r.goalsAgainst,
-        goal_difference: r.goalDifference,
-        points: r.points,
-        form: r.form ?? null,
-        updated_at: new Date().toISOString(),
-      };
-    })
-    .filter((r: any): r is NonNullable<typeof r> => r !== null);
+  const rows = totals.flatMap((table: any) => {
+    const groupLabel = formatGroupLabel(table.group);
+    const phase = table.group ? 'group' : 'league';
+    return (table.table ?? [])
+      .map((r: any) => {
+        const teamId = teamIndex.get(r.team?.id);
+        if (!teamId) return null;
+        return {
+          competition_slug: comp.slug,
+          season,
+          team_id: teamId,
+          group_label: groupLabel,
+          phase,
+          position: r.position,
+          played: r.playedGames,
+          won: r.won,
+          draw: r.draw,
+          lost: r.lost,
+          goals_for: r.goalsFor,
+          goals_against: r.goalsAgainst,
+          goal_difference: r.goalDifference,
+          points: r.points,
+          form: r.form ?? null,
+          updated_at: new Date().toISOString(),
+        };
+      })
+      .filter((r: any): r is NonNullable<typeof r> => r !== null);
+  });
 
   if (rows.length === 0) {
     console.log(`  [${comp.slug}] standings: 0 (no mapped teams)`);
     return;
   }
 
+  // Clear this competition+season's standings before re-inserting. Group-stage
+  // tables were previously written with group_label='' (only the first group
+  // survived `.find`); without this delete those stale rows would linger under
+  // a phantom "overall" group alongside the new per-group rows. Scoped to the
+  // season we're about to write, and only once we have fresh rows in hand, so a
+  // failed fetch never wipes good data.
+  const { error: delError } = await supabase
+    .from('standings')
+    .delete()
+    .eq('competition_slug', comp.slug)
+    .eq('season', season);
+  if (delError) throw delError;
+
+  // Conflict target matches the post-20260521 PK (group_label included) so the
+  // same team can hold a row in different groups.
   const { error } = await supabase
     .from('standings')
-    .upsert(rows, { onConflict: 'competition_slug,season,team_id' });
+    .upsert(rows, { onConflict: 'competition_slug,season,group_label,team_id' });
   if (error) throw error;
-  console.log(`  [${comp.slug}] standings: +${rows.length}`);
+  const groupCount = new Set(rows.map((r: any) => r.group_label)).size;
+  console.log(
+    `  [${comp.slug}] standings: +${rows.length}` +
+      (groupCount > 1 ? ` (${groupCount} groups)` : ''),
+  );
 }
 
 async function main() {

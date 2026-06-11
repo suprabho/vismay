@@ -40,6 +40,44 @@ const COMPETITION_PALETTE: Record<string, string> = {
 }
 
 /**
+ * Competitions that are NOT domestic round-robin leagues — international
+ * tournaments and continental club cups. These are stored as `league`-type
+ * entities (football-data.org models everything as a "competition"), but for
+ * copy purposes a follow card should read "View competition", not "View
+ * league", and the competition hub should surface a knockout bracket.
+ *
+ * Mirrors the worker's NON_DOMESTIC_LEAGUE_CODES (CL, EL, WC, EC). `fa-cup` is
+ * listed for the bundled match-card palette set even though it isn't seeded by
+ * the Footshorts worker today.
+ */
+const NON_LEAGUE_COMPETITIONS = new Set<string>([
+  'champions-league',
+  'europa-league',
+  'world-cup',
+  'european-championship',
+  'fa-cup',
+])
+
+/**
+ * Whether a competition slug is a domestic round-robin league (Premier League,
+ * La Liga, …) as opposed to a cup/international tournament (World Cup, Euros,
+ * Champions League). Unknown slugs default to `true` — a plain league is the
+ * common case and the safer copy ("View league").
+ */
+export function isLeagueCompetition(slug: string | null | undefined): boolean {
+  if (!slug) return true
+  return !NON_LEAGUE_COMPETITIONS.has(slug)
+}
+
+/**
+ * "View league →" / "View competition →" link copy for a follow card, chosen by
+ * whether the competition is a domestic league or a cup/tournament.
+ */
+export function competitionFollowLabel(slug: string | null | undefined): string {
+  return isLeagueCompetition(slug) ? 'View league →' : 'View competition →'
+}
+
+/**
  * Pretty display name for a competition slug. Falls back to the slug itself
  * (so unknown competitions render with at least the raw identifier).
  */

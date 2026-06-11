@@ -1,0 +1,58 @@
+name: Footshorts - fixtures & standings sync
+
+# Syncs the full fixture list + standings (one table per group for group-stage
+# cups like the World Cup) from football-data.org into the footshorts Supabase.
+# Idempotent — upserts fixtures on football_data_id and standings on
+# (competition_slug, season, group_label, team_id). Use `workflow_dispatch` to
+# refresh on demand (e.g. after a knockout draw or a new group table appears).
+#
+# Required repo secrets (in `Production` — shared project-wide with vizmaya /
+# vizf1 / energy-profile workflows):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshorts-only)
+
+on:
+  schedule:
+    # Once daily at 05:00 UTC. The fixture schedule + group tables change far
+    # less often than live scores (handled by footshorts-scores). GH cron is UTC
+    # and can drift up to ~15 min under load.
+    - cron: '0 5 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: footshorts-fixtures
+  cancel-in-progress: false
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/footshorts/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Sync fixtures & standings
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+        run: pnpm fixtures:ci

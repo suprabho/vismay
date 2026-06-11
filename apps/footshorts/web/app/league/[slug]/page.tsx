@@ -1,11 +1,19 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { MatchRow } from '@vismay/footshorts-viz/web';
-import { StandingsTable } from '@vismay/footshorts-viz/web';
+import {
+  MatchRow,
+  StandingsTable,
+  BracketTree,
+  buildBracket,
+  isBracketDrawn,
+  groupFixturesByRound,
+  isLeagueCompetition,
+} from '@vismay/footshorts-viz/web';
 import { useEntity } from '@/lib/useEntity';
 import { useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
-import { useStandings } from '@/lib/useStandings';
+import { useStandings, groupStandings } from '@/lib/useStandings';
 
 function Spinner() {
   return (
@@ -51,6 +59,26 @@ export default function LeaguePage() {
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
+  // Bracket only applies to cups/tournaments — skip the wide fetch for plain
+  // leagues (which never have knockout fixtures) by disabling the query there.
+  const isLeague = isLeagueCompetition(slug);
+  const bracketFixtures = useLeagueFixtures(isLeague ? undefined : slug, 'all', 200);
+
+  const standingGroups = useMemo(
+    () => (standings.data ? groupStandings(standings.data) : []),
+    [standings.data],
+  );
+  const bracket = useMemo(
+    () => buildBracket(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
+  // The bracket only reads as a tree once the draw is set; until then show the
+  // full schedule grouped by round so users can see who plays who and when.
+  const bracketDrawn = isBracketDrawn(bracket);
+  const scheduleRounds = useMemo(
+    () => groupFixturesByRound(bracketFixtures.data ?? []),
+    [bracketFixtures.data],
+  );
 
   if (league.isLoading) return <Spinner />;
 
@@ -84,28 +112,72 @@ export default function LeaguePage() {
       <Section title="Standings">
         {standings.isLoading ? (
           <Spinner />
-        ) : standings.data && standings.data.length > 0 ? (
-          <StandingsTable rows={standings.data} />
+        ) : standingGroups.length > 0 ? (
+          <div className="space-y-5">
+            {standingGroups.map((group) => (
+              <div key={group.label || 'overall'}>
+                {group.label ? (
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+                    {group.label}
+                  </h3>
+                ) : null}
+                <StandingsTable rows={group.rows} />
+              </div>
+            ))}
+          </div>
         ) : (
           <p className="text-sm text-muted">No standings yet.</p>
         )}
       </Section>
 
-      <Section title="Recent results">
-        <FixtureList
-          loading={pastFixtures.isLoading}
-          data={pastFixtures.data ?? []}
-          emptyText="No recent results."
-        />
-      </Section>
+      {bracketDrawn ? (
+        <Section title="Knockout bracket">
+          <BracketTree bracket={bracket!} competitionSlug={slug} title={league.data.name} />
+        </Section>
+      ) : null}
 
-      <Section title="Upcoming">
-        <FixtureList
-          loading={upcomingFixtures.isLoading}
-          data={upcomingFixtures.data ?? []}
-          emptyText="No upcoming fixtures."
-        />
-      </Section>
+      {isLeague ? (
+        <>
+          <Section title="Recent results">
+            <FixtureList
+              loading={pastFixtures.isLoading}
+              data={pastFixtures.data ?? []}
+              emptyText="No recent results."
+            />
+          </Section>
+
+          <Section title="Upcoming">
+            <FixtureList
+              loading={upcomingFixtures.isLoading}
+              data={upcomingFixtures.data ?? []}
+              emptyText="No upcoming fixtures."
+            />
+          </Section>
+        </>
+      ) : (
+        <Section title="Schedule">
+          {bracketFixtures.isLoading ? (
+            <Spinner />
+          ) : scheduleRounds.length > 0 ? (
+            <div className="space-y-5">
+              {scheduleRounds.map((round) => (
+                <div key={round.key}>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+                    {round.label}
+                  </h3>
+                  <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                    {round.fixtures.map((f) => (
+                      <MatchRow key={f.id} fixture={f} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No fixtures scheduled yet.</p>
+          )}
+        </Section>
+      )}
     </main>
   );
 }
