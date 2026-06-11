@@ -35,8 +35,12 @@ sections is `packages/story-pipeline/src/{generate,schema,validate}.ts`.
 The `text` field and the `## heading` are written from the **same string**, so
 the anchor always matches by construction. Never paraphrase one without the other.
 
-`kind` is one of: `text · hero · stat · cover · bigStat · bodyText · split ·
-data · gallery · quote · divider · closing`.
+`kind` is format-narrowed (`sectionKindsFor` in `story-pipeline/src/schema.ts`).
+A **deck** section may use any of: `text · hero · stat · cover · bigStat ·
+bodyText · split · data · gallery · quote · divider · closing`. A **map**
+section is restricted to the narrative kinds `text · hero · stat · cover` —
+the deck kinds suppress the prose scroll rail, and on a map section the
+markdown then renders nowhere (a blank snap target).
 
 ## The `body` shape
 
@@ -46,13 +50,15 @@ data · gallery · quote · divider · closing`.
 body:
   foreground: <flat layer list>  OR  { layout, regions }   # deck
   background: <a single layer, or { type: none }>          # optional
-  map: { center:[lng,lat], zoom, pitch?, bearing?, pins? } # map stories only
+  map: { center:[lng,lat], zoom, pitch?, bearing?, pins?, regions? } # map stories only
 ```
 
 - **Deck** → set `foreground`: either a **flat `layers` list**, or a **`layout`
   name + `regions`** (each region maps to its layers). Leave `foreground` out
   entirely for a text-only section (the prose carries it).
-- **Map** → set `body.map` to the section camera. A `foreground` is optional.
+- **Map** → set `body.map` to the section camera. Adding a `foreground` turns
+  the section into a deck-style interstitial and **suppresses the prose rail**
+  — leave it out unless the section is meant to be a full-viewport panel.
 
 ## Generatable foreground layer types
 
@@ -99,6 +105,20 @@ A flat `layers` list (no `layout`) always works for simple stacked sections.
 `center: [lng, lat]` (note **lng first**), `zoom`, optional `pitch`, `bearing`,
 and `pins: [{ coordinates: [lng, lat], … }]`. Coordinates are `[number, number]`,
 never an object.
+
+Two additions for map stories (full reference:
+`apps/vizmaya-fyi/docs/map-story-authoring.md`, the canonical authoring guide):
+
+- **`map.regions`** — a geographic **choropleth** (shade areas by a value):
+  `{ level: country|custom, geojsonUrl?, idProperty?, ramp, colors (theme
+  tokens), legend?, items: [{ code, value }] }`. Only for **areal** data — a
+  metric per district/state/country; point-shaped stories (sites, plants,
+  corridors) use `pins`, not a contrived shading. Not to be confused with a
+  layout's `foreground.regions`.
+- **Subsections** — a map section may carry sub-beats, each its own snap
+  target with its own prose anchor and a camera **dive** inside the parent's
+  geography. When subsections exist the children carry all the copy; the
+  parent's prose is not rendered.
 
 ## Theme color tokens
 
