@@ -166,6 +166,12 @@ type SlotTarget =
   // than the config-slot save path — hence no `unit`/`slotPath`.
   | { mode: 'chart'; chartId: string }
 
+/**
+ * Override kinds the +Add seed flow (and the delete flow) can target —
+ * one per per-section override file entry the canvas knows how to create.
+ */
+type OverrideSeedKind = 'share' | 'slides' | 'report' | 'map' | 'narration'
+
 /* ─── Layout constants ───────────────────────────────────────────── */
 const FRAME_W = 1920
 const FRAME_H = 1080
@@ -496,10 +502,7 @@ export default function CanvasClient({
           | { kind: 'foreground-region-append'; regionKey: string }
       }
     | { kind: 'region'; layoutHint: string }
-    | {
-        kind: 'override'
-        overrideKind: 'share' | 'slides' | 'report' | 'map' | 'narration'
-      }
+    | { kind: 'override'; overrideKind: OverrideSeedKind }
   const [addMenu, setAddMenu] = useState<{
     position: { x: number; y: number }
     target: AddMenuTarget
@@ -1397,6 +1400,43 @@ export default function CanvasClient({
                 ? 'loaded'
                 : `${data.childCount} · click`}
             </span>
+            {data.onContextMenu && (
+              // Persistent `+ ADD` chip — opens the same override-seed
+              // AddMenu the header right-click does. Span (not button) so
+              // we don't nest interactive buttons; stopPropagation keeps
+              // the header's expand toggle out of the way.
+              <span
+                role="button"
+                onClick={(e) => {
+                  stop(e)
+                  data.onContextMenu?.(e.clientX, e.clientY)
+                }}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Add override for this section"
+                style={{
+                  fontSize: 10,
+                  color: '#9a9a9a',
+                  letterSpacing: '0.12em',
+                  cursor: 'pointer',
+                  border: '1px solid #333',
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                  whiteSpace: 'nowrap',
+                  transition: 'border-color 120ms, color 120ms',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#3a5da0'
+                  e.currentTarget.style.color = '#cfd8ea'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#333'
+                  e.currentTarget.style.color = '#9a9a9a'
+                }}
+              >
+                + ADD
+              </span>
+            )}
           </button>
         )
       }
@@ -1442,11 +1482,18 @@ export default function CanvasClient({
         }
         const titleHint = editable
           ? hasContextMenu
-            ? 'click to edit · right-click to add'
+            ? 'click to edit · + Add (or right-click) to add'
             : 'click to edit'
           : hasContextMenu
-            ? 'right-click to add'
+            ? '+ Add (or right-click) to add'
             : undefined
+        // Persistent, clickable `+ ADD` button — same AddMenu the
+        // right-click opens, anchored at the button. Right-click stays as
+        // a shortcut; this chip is the discoverable affordance.
+        const onAddClick = (e: React.MouseEvent) => {
+          stop(e)
+          data.onContextMenu?.(e.clientX, e.clientY)
+        }
         return (
           <div
             onClick={onClick}
@@ -1526,8 +1573,32 @@ export default function CanvasClient({
                 EDIT
               </span>
             )}
-            {hasContextMenu && !editable && !data.warning && (
-              <span style={{ color: '#555', letterSpacing: '0.14em' }}>
+            {hasContextMenu && (
+              <span
+                role="button"
+                onClick={onAddClick}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Add to this node"
+                style={{
+                  color: '#9a9a9a',
+                  letterSpacing: '0.14em',
+                  cursor: 'pointer',
+                  border: '1px solid #333',
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                  whiteSpace: 'nowrap',
+                  transition: 'border-color 120ms, color 120ms',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#3a5da0'
+                  e.currentTarget.style.color = '#cfd8ea'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#333'
+                  e.currentTarget.style.color = '#9a9a9a'
+                }}
+              >
                 + ADD
               </span>
             )}
@@ -1733,77 +1804,85 @@ export default function CanvasClient({
       }
 
       /**
-       * Open the +Add menu at `(cx, cy)`. The `context` field travels
-       * with the menu's target so the dispatcher knows what to do when
-       * the user picks. Reads the active section through refs at call
-       * time so right-clicking targets the section the user is looking
-       * at, not the build-time one.
-       *
-       * Returns nothing — the JunctionControl's onContextMenu is what
-       * the React event fires into; this helper produces those handlers.
+       * What an Add opener can offer. One discriminated spec replaces the
+       * old trio of near-identical maker functions (layer / region /
+       * override) — the AddMenu `target` and the dispatcher `context` are
+       * both derived from it at open time, so the two can't drift apart.
        */
-      function makeAddLayerOpener(opts: {
-        slot: 'background' | 'foreground'
-        label: string
-        /** Discriminator for the dispatcher: how to splice the new layer. */
-        dispatch:
-          | { kind: 'background-append' }
-          | { kind: 'background-create' }
-          | { kind: 'foreground-flat-append' }
-          | { kind: 'foreground-region-append'; regionKey: string }
-      }): (clientX: number, clientY: number) => void {
-        return (clientX, clientY) => {
-          const idx = stateRef.current.activeSectionIndex
-          setAddMenuRef.current({
-            position: { x: clientX, y: clientY },
-            target: {
-              kind: 'layer',
-              slot: opts.slot,
-              availableTypes: moduleTypesRef.current[opts.slot],
-              label: opts.label,
-            },
-            sourceSectionIndex: idx,
-            context: { kind: 'layer', dispatch: opts.dispatch },
-          })
-        }
-      }
+      type AddTargetSpec =
+        | {
+            kind: 'layer'
+            slot: 'background' | 'foreground'
+            label: string
+            /** Discriminator for the dispatcher: how to splice the new layer. */
+            dispatch:
+              | { kind: 'background-append' }
+              | { kind: 'background-create' }
+              | { kind: 'foreground-flat-append' }
+              | { kind: 'foreground-region-append'; regionKey: string }
+          }
+        | {
+            kind: 'region'
+            knownKeys: string[]
+            existingKeys: string[]
+            layoutName: string
+          }
+        | {
+            kind: 'override'
+            label: string
+            overrideKind: OverrideSeedKind
+          }
 
-      function makeAddRegionOpener(opts: {
-        knownKeys: string[]
-        existingKeys: string[]
-        layoutName: string
-      }): (clientX: number, clientY: number) => void {
+      /**
+       * Open the Add menu at `(cx, cy)`. The single opener factory for every
+       * Add surface: junction right-click, the persistent `+ ADD` chip on
+       * junctions, and the group headers. Reads the active section + module
+       * types through refs at call time so the menu acts on the section the
+       * user is looking at, not the build-time one.
+       *
+       * Returns nothing — the controls' onContextMenu is what the React
+       * event fires into; this helper produces those handlers.
+       */
+      function makeAddOpener(
+        spec: AddTargetSpec
+      ): (clientX: number, clientY: number) => void {
         return (clientX, clientY) => {
           const idx = stateRef.current.activeSectionIndex
+          let target: AddMenuTarget
+          let context: AddDispatchContext
+          switch (spec.kind) {
+            case 'layer':
+              target = {
+                kind: 'layer',
+                slot: spec.slot,
+                availableTypes: moduleTypesRef.current[spec.slot],
+                label: spec.label,
+              }
+              context = { kind: 'layer', dispatch: spec.dispatch }
+              break
+            case 'region':
+              target = {
+                kind: 'region',
+                knownKeys: spec.knownKeys,
+                existingKeys: spec.existingKeys,
+                layoutName: spec.layoutName,
+              }
+              context = { kind: 'region', layoutHint: spec.layoutName }
+              break
+            case 'override':
+              target = {
+                kind: 'override',
+                label: spec.label,
+                overrideKind: spec.overrideKind,
+              }
+              context = { kind: 'override', overrideKind: spec.overrideKind }
+              break
+          }
           setAddMenuRef.current({
             position: { x: clientX, y: clientY },
-            target: {
-              kind: 'region',
-              knownKeys: opts.knownKeys,
-              existingKeys: opts.existingKeys,
-              layoutName: opts.layoutName,
-            },
+            target,
             sourceSectionIndex: idx,
-            context: { kind: 'region', layoutHint: opts.layoutName },
-          })
-        }
-      }
-
-      function makeAddOverrideOpener(opts: {
-        label: string
-        overrideKind: 'share' | 'slides' | 'report' | 'map' | 'narration'
-      }): (clientX: number, clientY: number) => void {
-        return (clientX, clientY) => {
-          const idx = stateRef.current.activeSectionIndex
-          setAddMenuRef.current({
-            position: { x: clientX, y: clientY },
-            target: {
-              kind: 'override',
-              label: opts.label,
-              overrideKind: opts.overrideKind,
-            },
-            sourceSectionIndex: idx,
-            context: { kind: 'override', overrideKind: opts.overrideKind },
+            context,
           })
         }
       }
@@ -2103,7 +2182,8 @@ export default function CanvasClient({
             y + h / 2 - JUNCTION_H / 2,
             makeEditClick('background'),
             {
-              onContextMenu: makeAddLayerOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'layer',
                 slot: 'background',
                 label: 'Background',
                 dispatch:
@@ -2178,7 +2258,8 @@ export default function CanvasClient({
               y + h / 2 - JUNCTION_H / 2,
               makeEditClick('region', region.key),
               {
-                onContextMenu: makeAddLayerOpener({
+                onContextMenu: makeAddOpener({
+                  kind: 'layer',
                   slot: 'foreground',
                   label: `${region.label} region`,
                   dispatch: {
@@ -2228,7 +2309,8 @@ export default function CanvasClient({
             center - JUNCTION_H / 2,
             makeEditClick('foreground'),
             {
-              onContextMenu: makeAddRegionOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'region',
                 knownKeys: layoutKnownKeys,
                 existingKeys: existingRegionKeys,
                 layoutName,
@@ -2251,7 +2333,8 @@ export default function CanvasClient({
             y + h / 2 - JUNCTION_H / 2,
             makeEditClick('foreground'),
             {
-              onContextMenu: makeAddLayerOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'layer',
                 slot: 'foreground',
                 label: 'Foreground (flat)',
                 dispatch: { kind: 'foreground-flat-append' },
@@ -2283,7 +2366,8 @@ export default function CanvasClient({
             y,
             makeEditClick('foreground'),
             {
-              onContextMenu: makeAddRegionOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'region',
                 knownKeys: defaultLayoutDef
                   ? Object.keys(defaultLayoutDef.regions)
                   : [],
@@ -2339,10 +2423,7 @@ export default function CanvasClient({
       // narration as the canonical Autoplay add (map overrides are
       // editable in-place via the map override card or the map slot on
       // the canvas's left side).
-      const GROUP_OVERRIDE_KIND: Record<
-        OutputGroupId,
-        'share' | 'slides' | 'report' | 'map' | 'narration'
-      > = {
+      const GROUP_OVERRIDE_KIND: Record<OutputGroupId, OverrideSeedKind> = {
         share: 'share',
         slides: 'slides',
         report: 'report',
@@ -2366,7 +2447,8 @@ export default function CanvasClient({
         // server-side: if the override already exists for this section,
         // the seed helper leaves it alone so the user can still right-
         // click to re-open the editor on a missing field.
-        node.headerCtrl.onContextMenu = makeAddOverrideOpener({
+        node.headerCtrl.onContextMenu = makeAddOpener({
+          kind: 'override',
           label: `${group.label} · this section`,
           overrideKind: GROUP_OVERRIDE_KIND[group.id],
         })
