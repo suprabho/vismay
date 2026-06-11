@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
+import { composeImageFilename } from '@vismay/story-pipeline/cover'
 import { canvasFrameId } from '../canvasOutputs'
 
 type ComposeFormat = ComposeState['format']
@@ -469,14 +470,15 @@ export function ComposeFlow({
     setError(null)
     setImgDone(0)
     let done = 0
-    for (const p of prompts) {
-      const slugPart =
-        (p.section ?? 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'image'
+    for (const [i, p] of prompts.entries()) {
       try {
+        // The filename is deterministic on the prompt's INDEX (not the success
+        // count) so the cover's pre-attached `assets://` ref — computed with the
+        // same helper in the pipeline — lands on this exact key.
         const res = await fetch(`${base}/${slug}/assets/generate`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ prompt: p.prompt, aspectRatio: p.aspectRatio ?? '16:9', filename: `compose-${slugPart}-${done}.png` }),
+          body: JSON.stringify({ prompt: p.prompt, aspectRatio: p.aspectRatio ?? '16:9', filename: composeImageFilename(p.section, i) }),
         })
         if (res.ok) {
           done++

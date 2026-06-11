@@ -67,6 +67,17 @@ export function readMarkdownProse(markdown: string, heading: string): string[] {
     .filter(Boolean)
 }
 
+/** The markdown anchor a section's prose lives under — the config entry's
+ *  `text` field. Falls back to null when the entry has none (subsections
+ *  parent) or the id is unknown. Needed because a deck cover anchors at
+ *  `## Cover` while its outline entry keeps the display title as `heading`. */
+export function sectionAnchor(configYaml: string, sectionId: string): string | null {
+  const model = buildYamlModel(configYaml)
+  if (model.parseError) return null
+  const s = model.sections.find((x) => x.id === sectionId)
+  return s?.text ?? null
+}
+
 /** Replace a section's visual `body` in the config, keyed by id, preserving its
  *  id/text/kind (VISUAL pass writes config.yaml). */
 export function replaceConfigBody(

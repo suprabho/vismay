@@ -26,6 +26,7 @@ import {
   buildRegionsPrompt,
 } from './prompts'
 import { buildRegionLayer } from './regions'
+import { completeCoverBody, isDeckCover } from './cover'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
@@ -233,14 +234,22 @@ export async function generateSectionVisual(
   content: SectionContentDraft,
   opts: SectionGenOptions = {},
 ): Promise<{ body: Record<string, unknown> }> {
+  const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
   const result = await generateStructured({
     model: opts.model,
-    system: visualSystem(ctx.source === 'outline' ? ctx.outline.format : ctx.format),
+    system: visualSystem(format),
     prompt: buildVisualPrompt(ctx, content, opts.refine),
     schema: sectionVisualSchema,
     metadata: { feature: 'story-pipeline-section-visual' },
   })
-  return { body: normalizeSectionBody(result.body) }
+  let body = normalizeSectionBody(result.body)
+  // Deck covers are completed deterministically (section-root layout, display
+  // heading, transparent panel) — the model only authors eyebrow/dek. The hero
+  // image is attached where the real story slug is known (serialize / routes).
+  if (isDeckCover(format, content.kind)) {
+    body = completeCoverBody(body, { heading: content.heading })
+  }
+  return { body }
 }
 
 /**

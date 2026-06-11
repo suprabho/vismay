@@ -178,7 +178,9 @@ export function outlineSystem(format: StoryFormat): string {
     `plot (which figures/series/categories and over what range, all from the sources). Do ` +
     `NOT fabricate the numbers here — the data is generated in a focused later pass. Sections ` +
     `reference charts by id.\n` +
-    `- imagePrompts: vivid prompts for sections that want imagery.\n` +
+    `- imagePrompts: vivid prompts for sections that want imagery. For a DECK story ALWAYS ` +
+    `include one 16:9 prompt whose "section" EXACTLY matches the cover's heading — it becomes ` +
+    `the full-bleed cover hero image.\n` +
     `- sections (3–8): each a stub with —\n` +
     `  • heading (UNIQUE across all sections — it is the markdown anchor, so a duplicate heading ` +
     `collides and that section loses its prose) and kind (${sectionKindsFor(format).join(' | ')}).\n` +
@@ -466,11 +468,11 @@ export function visualSystem(format: StoryFormat): string {
         `layer (no layout), or a layout name plus regions — each region holds AT MOST ONE layer ` +
         `(the schema rejects more). Layouts and the regions they define:\n${DECK_LAYOUT_MENU}\n` +
         `COVER/HERO sections use the EDITORIAL COVER SURFACE, not content layers: set ` +
-        `body.layout = "hero-full-bleed" (section-root — NOT inside foreground; the cover render ` +
-        `path only fires on the section-root field), body.eyebrow ("Topic · Date · What this is"), ` +
-        `and body.dek (a one-line standfirst). Leave foreground EMPTY — the hero image is attached ` +
-        `later from the image prompts, and the title renders from the section heading over a ` +
-        `scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.`
+        `body.eyebrow ("Topic · Date · What this is") and body.dek (a one-line standfirst). ` +
+        `Leave foreground EMPTY — the pipeline completes the cover deterministically (section-root ` +
+        `layout "hero-full-bleed", the display heading, transparent panel chrome, and the hero ` +
+        `image from the planned image prompt), and the title renders from the section heading over ` +
+        `a scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.`
 
   return (
     `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +

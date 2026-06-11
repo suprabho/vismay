@@ -14,6 +14,9 @@ import {
   type SubsectionStub,
   type StoryOutline,
   type ResearchBrief,
+  completeCoverBody,
+  coverImageLayer,
+  isDeckCover,
   type StoryFormat,
   type ComposeAnswers,
 } from '@vismay/story-pipeline'
@@ -26,6 +29,7 @@ import {
   replaceMarkdownProse,
   readMarkdownProse,
   replaceConfigBody,
+  sectionAnchor,
 } from '../shared'
 
 /**
@@ -129,6 +133,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   let newMarkdown = markdown
   let newConfig = configYaml
+  // The markdown anchor the prose lives under — the config `text`, NOT the
+  // outline heading: a deck cover anchors at `## Cover` while its entry keeps
+  // the display title (which lives in the config `heading` field).
+  const anchor = sectionAnchor(configYaml, entry.sectionId) ?? entry.heading
   const result: {
     heading: string
     paragraphs?: string[]
@@ -161,11 +169,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           feedback && phase === 'content'
             ? {
                 feedback,
-                previous: { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind },
+                previous: { heading: entry.heading, paragraphs: readMarkdownProse(markdown, anchor), kind: entry.kind },
               }
             : undefined
         const content = await generateSectionContent(ctx, { model, refine })
-        newMarkdown = replaceMarkdownProse(newMarkdown, entry.heading, content.paragraphs)
+        newMarkdown = replaceMarkdownProse(newMarkdown, anchor, content.paragraphs)
         result.paragraphs = content.paragraphs
         result.kind = content.kind
       }
@@ -175,10 +183,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         ? { heading: entry.heading, paragraphs: [], kind: entry.kind }
         : result.paragraphs
           ? { heading: entry.heading, paragraphs: result.paragraphs, kind: result.kind ?? entry.kind }
-          : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, entry.heading), kind: entry.kind }
+          : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, anchor), kind: entry.kind }
       const refine = feedback && phase === 'visual' ? { feedback, previous: { heading: entry.heading } } : undefined
       const visual = await generateSectionVisual(ctx, contentForVisual, { model, refine })
       let visualBody = visual.body
+      // DECK cover: complete the editorial cover surface and attach the hero
+      // image — its `assets://` ref points at the key the compose image step
+      // uploads to (same deterministic filename on both sides), so it never
+      // dangles on a fabricated URL.
+      if (isDeckCover(state.format, contentForVisual.kind)) {
+        visualBody = completeCoverBody(visualBody, {
+          heading: entry.heading,
+          image: coverImageLayer(slug, storyOutline?.imagePrompts, entry.heading),
+        })
+      }
       // MAP choropleth: the visual pass frames the camera but never authors the
       // per-region values — fill them with the focused source-grounded pass and
       // merge into body.map.regions, exactly as generateSection does offline.

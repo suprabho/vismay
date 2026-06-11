@@ -42,6 +42,15 @@ export {
   type LintSeverity,
 } from './lintLayout'
 export { serializeStory } from './serialize'
+export {
+  COVER_ANCHOR,
+  COVER_PANEL,
+  isDeckCover,
+  completeCoverBody,
+  composeImageFilename,
+  findCoverImagePrompt,
+  coverImageLayer,
+} from './cover'
 export { buildChartData, buildEChartsOption } from './chart'
 export { buildRegionLayer } from './regions'
 export { DEFAULT_THEME, defaultsFor } from './defaults'
