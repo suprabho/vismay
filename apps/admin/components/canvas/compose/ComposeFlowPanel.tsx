@@ -5,7 +5,9 @@ import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/c
 import type { StorySource } from '@vismay/content-source/storySources'
 import { canvasFrameId } from '../canvasOutputs'
 import { LayoutPreview, SectionFrame } from './LayoutPreview'
-import { Notice } from './ui'
+import { AngleCard } from './AngleCard'
+import { SourceRow } from './SourceRow'
+import { Notice, SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
 /** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
 interface ChartRequirementView {
@@ -464,85 +466,66 @@ export function ComposeFlow({
       )}
 
       {/* ── Sources ── */}
-      <section className="space-y-2">
-        <h3 className="text-xs font-medium text-neutral-300">
-          Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
-        </h3>
-        <ul className="space-y-1">
-          {sources.map((s) => (
-            <li
-              key={s.id}
-              className="flex items-center justify-between gap-2 rounded border border-white/10 bg-neutral-900/50 px-2 py-1 text-xs"
-            >
-              <span className="min-w-0 flex-1 truncate" title={s.error ?? s.title ?? s.sourceUrl ?? s.filename ?? ''}>
-                {s.title ?? s.sourceUrl ?? s.filename ?? 'source'}
-              </span>
-              <span
-                className={
-                  s.status === 'extracted'
-                    ? 'text-emerald-400'
-                    : s.status === 'failed'
-                      ? 'text-red-400'
-                      : 'text-neutral-500'
-                }
-              >
-                {s.status === 'extracted' ? '✓' : s.status === 'failed' ? '✗' : '…'}
-              </span>
-              {s.status === 'failed' && (
-                <button
-                  onClick={() => reextract(s.id)}
-                  disabled={!!busy}
-                  title={`Re-run extraction${s.error ? ` — ${s.error}` : ''}`}
-                  className="text-neutral-400 hover:text-sky-300 disabled:opacity-40"
-                >
-                  {busy === 'reextract' ? '…' : '↻'}
-                </button>
-              )}
-              <button onClick={() => removeSource(s.id)} className="text-neutral-500 hover:text-red-300">
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="flex gap-1">
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-            placeholder="Paste a link…"
-            className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-          />
-          <button onClick={addUrl} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-            Add
-          </button>
-        </div>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="…or paste text"
-          rows={2}
-          className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+      <section className="space-y-3">
+        <SectionHeading
+          title="Sources"
+          count={`${extracted} ready${pending > 0 ? ` · ${pending} extracting` : ''}`}
         />
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={() => text.trim() && addText()} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-            Add text
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
-            className="text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-neutral-200"
+        {sources.length > 0 && (
+          <ul className="space-y-1.5">
+            {sources.map((s) => (
+              <SourceRow
+                key={s.id}
+                source={s}
+                busy={!!busy}
+                reextracting={busy === 'reextract'}
+                onReextract={() => reextract(s.id)}
+                onRemove={() => removeSource(s.id)}
+              />
+            ))}
+          </ul>
+        )}
+        <div className="space-y-1.5">
+          <div className="flex gap-1.5">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
+              placeholder="Paste a link…"
+              className={`min-w-0 flex-1 ${inputCls}`}
+            />
+            <button onClick={addUrl} disabled={!!busy} className={`shrink-0 ${btnGhostCls}`}>
+              Add
+            </button>
+          </div>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="…or paste text"
+            rows={2}
+            className={`w-full resize-y ${inputCls}`}
           />
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={() => text.trim() && addText()} disabled={!!busy} className={`shrink-0 ${btnGhostCls}`}>
+              Add text
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
+              className="min-w-0 text-xs text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2.5 file:py-1.5 file:text-xs file:text-neutral-200 file:transition-colors hover:file:bg-white/15"
+            />
+          </div>
         </div>
         <button
           onClick={genAngles}
           disabled={!!busy || extracted === 0}
-          className="w-full rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+          className={`w-full ${btnPrimaryCls} py-2`}
         >
           {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
         </button>
         {pending > 0 && (
-          <p className="text-[11px] text-amber-300/80">
+          <p className="text-[11px] leading-relaxed text-amber-300/80">
             Extracting {pending} PDF{pending > 1 ? 's' : ''} with Claude — this runs in the
             background and can take a few minutes. Statuses update automatically.
           </p>
@@ -551,43 +534,32 @@ export function ComposeFlow({
 
       {/* ── Angles ── */}
       {st.angles.length > 0 && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">Pick an angle</h3>
-          {st.angles.map((a) => (
-            <label
-              key={a.id}
-              className={`block cursor-pointer rounded border p-2 text-xs ${
-                st.chosenAngleId === a.id ? 'border-sky-500/60 bg-sky-500/10' : 'border-white/10 hover:border-white/30'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <input
-                  type="radio"
-                  checked={st.chosenAngleId === a.id}
-                  onChange={() => pickAngle(a.id)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <div className="font-medium text-neutral-100">{a.title}</div>
-                  <div className="mt-0.5 text-neutral-400">{a.thesis}</div>
-                </div>
-              </div>
-            </label>
-          ))}
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading title="Angle" count={st.angles.length} hint="pick one to outline" />
+          <div className="space-y-2">
+            {st.angles.map((a) => (
+              <AngleCard
+                key={a.id}
+                angle={a}
+                selected={st.chosenAngleId === a.id}
+                onPick={() => pickAngle(a.id)}
+              />
+            ))}
+          </div>
           <input
             value={angleFeedback}
             onChange={(e) => setAngleFeedback(e.target.value)}
             placeholder="Regenerate with a note (optional)…"
-            className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+            className={`w-full ${inputCls}`}
           />
           <div className="flex gap-2">
-            <button onClick={genAngles} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+            <button onClick={genAngles} disabled={!!busy} className={`flex-1 ${btnGhostCls}`}>
               Regenerate
             </button>
             <button
               onClick={genOutline}
               disabled={!!busy || !st.chosenAngleId}
-              className="flex-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+              className={`flex-1 ${btnPrimaryCls}`}
             >
               {busy === 'outline' ? 'Outlining…' : 'Generate outline →'}
             </button>
