@@ -5,123 +5,13 @@ import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/c
 import type { StorySource } from '@vismay/content-source/storySources'
 import { composeImageFilename } from '@vismay/story-pipeline/cover'
 import { canvasFrameId } from '../canvasOutputs'
-
-type ComposeFormat = ComposeState['format']
-
-/** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
-interface ChartRequirementView {
-  id: string
-  title?: string
-  chartType: 'bar' | 'line'
-  requirement: string
-}
-
-/**
- * A schematic wireframe of a planned deck layout — the "what will this section
- * look like" demo shown BEFORE materialising. Region rectangles mirror the real
- * `foregroundLayouts` arrangement (percent-of-frame), tinted by slot type. A map
- * section or an unknown layout falls back to a single full/centred box.
- */
-type PreviewRegion = { label: string; type: string; x: number; y: number; w: number; h: number }
-
-const LAYOUT_REGIONS: Record<string, PreviewRegion[]> = {
-  'stat-left-chart-right': [
-    { label: 'stat', type: 'stat', x: 4, y: 8, w: 34, h: 84 },
-    { label: 'chart', type: 'chart', x: 42, y: 8, w: 54, h: 84 },
-  ],
-  'text-left-chart-right': [
-    { label: 'text', type: 'text', x: 4, y: 8, w: 38, h: 84 },
-    { label: 'chart', type: 'chart', x: 46, y: 8, w: 50, h: 84 },
-  ],
-  'text-left-quote-right': [
-    { label: 'text', type: 'text', x: 4, y: 8, w: 42, h: 84 },
-    { label: 'quote', type: 'quote', x: 50, y: 8, w: 46, h: 84 },
-  ],
-  'image-left-text-right': [
-    { label: 'image', type: 'image', x: 4, y: 8, w: 46, h: 84 },
-    { label: 'text', type: 'text', x: 54, y: 8, w: 42, h: 84 },
-  ],
-  'stat-top-chart-below': [
-    { label: 'stat', type: 'stat', x: 6, y: 8, w: 88, h: 28 },
-    { label: 'chart', type: 'chart', x: 6, y: 40, w: 88, h: 52 },
-  ],
-  'chart-top-text-below': [
-    { label: 'chart', type: 'chart', x: 6, y: 8, w: 88, h: 46 },
-    { label: 'text', type: 'text', x: 6, y: 58, w: 88, h: 34 },
-  ],
-  centered: [{ label: 'content', type: 'text', x: 20, y: 22, w: 60, h: 56 }],
-  'hero-full-bleed': [{ label: 'hero', type: 'hero', x: 4, y: 8, w: 92, h: 84 }],
-}
-
-const REGION_TINT: Record<string, string> = {
-  stat: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300',
-  chart: 'border-sky-400/40 bg-sky-400/10 text-sky-300',
-  text: 'border-neutral-400/30 bg-white/5 text-neutral-300',
-  quote: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
-  image: 'border-violet-400/40 bg-violet-400/10 text-violet-300',
-  hero: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200',
-  map: 'border-teal-400/40 bg-teal-400/10 text-teal-200',
-}
-
-function LayoutPreview({ layout, format }: { layout?: string; format: ComposeFormat }) {
-  const regions: PreviewRegion[] =
-    format === 'map'
-      ? [{ label: 'map', type: 'map', x: 2, y: 2, w: 96, h: 96 }]
-      : (layout ? LAYOUT_REGIONS[layout] : undefined) ?? [
-          { label: 'content', type: 'text', x: 8, y: 12, w: 84, h: 76 },
-        ]
-  return (
-    <div
-      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
-      style={{ paddingTop: '56.25%' }}
-      title={layout ? `Layout: ${layout}` : 'Planned layout'}
-    >
-      {regions.map((r, i) => (
-        <div
-          key={i}
-          className={`absolute flex items-center justify-center rounded-sm border text-[8px] uppercase tracking-wide ${
-            REGION_TINT[r.type] ?? REGION_TINT.text
-          }`}
-          style={{ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` }}
-        >
-          {r.label}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/**
- * A live thumbnail of a MATERIALISED section — the signed canvas-frame render
- * the canvas itself uses, scaled down (rendered at 4× the box then scaled to
- * fit, so the section sees a desktop-ish viewport). Static (pointer-events off);
- * the corner link opens the full render.
- */
-function SectionFrame({ src, title }: { src: string; title: string }) {
-  return (
-    <div
-      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
-      style={{ paddingTop: '56.25%' }}
-    >
-      <iframe
-        src={src}
-        title={title}
-        loading="lazy"
-        className="absolute left-0 top-0 origin-top-left"
-        style={{ width: '400%', height: '400%', transform: 'scale(0.25)', border: 0, pointerEvents: 'none' }}
-      />
-      <a
-        href={src}
-        target="_blank"
-        rel="noreferrer"
-        className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] text-neutral-200 hover:bg-black/80"
-        title="Open the full render"
-      >
-        open ↗
-      </a>
-    </div>
-  )
-}
+import { LayoutLegend } from './LayoutPreview'
+import { AngleCard } from './AngleCard'
+import { ChartCard, type ChartRequirementView } from './ChartCard'
+import { MaterializedSectionCard } from './MaterializedSectionCard'
+import { OutlineEntryCard } from './OutlineEntryCard'
+import { SourceRow } from './SourceRow'
+import { Notice, SectionHeading, btnGhostCls, btnPrimaryCls, btnSuccessCls, inputCls } from './ui'
 
 /**
  * The canvas-native compose flow. Walks the author through
@@ -526,21 +416,30 @@ export function ComposeFlow({
     st.outline.length > 0 &&
     (phase === 'outline' || phase === 'content' || phase === 'visual' || phase === 'done')
 
-  return (
-    <div className="space-y-4">
-      {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-          {error}
-        </div>
-      )}
+  // Which step pill lights up — visual/done are sub-states of the content stage.
+  const STEPS = ['sources', 'angles', 'outline', 'content'] as const
+  const stepIdx =
+    phase === 'visual' || phase === 'done'
+      ? STEPS.length - 1
+      : STEPS.indexOf(phase as (typeof STEPS)[number])
 
-      {/* Step indicator */}
-      <ol className="flex gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-        {(['sources', 'angles', 'outline', 'content'] as const).map((p) => (
+  return (
+    <div className="space-y-5">
+      {error && <Notice tone="red">{error}</Notice>}
+
+      {/* Step indicator — past steps dim to "done", the current one is sky. */}
+      <ol className="flex items-center gap-1">
+        {STEPS.map((p, i) => (
           <li
             key={p}
-            className={`flex-1 rounded px-1.5 py-1 text-center ${
-              phase === p ? 'bg-sky-500/20 text-sky-300' : 'bg-white/5'
+            className={`flex-1 rounded-md px-1 py-1.5 text-center text-[10px] font-medium uppercase tracking-wider ${
+              phase === 'done'
+                ? 'bg-emerald-500/10 text-emerald-300/80'
+                : i === stepIdx
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : i < stepIdx
+                    ? 'bg-white/10 text-neutral-400'
+                    : 'bg-white/5 text-neutral-600'
             }`}
           >
             {p}
@@ -549,100 +448,81 @@ export function ComposeFlow({
       </ol>
 
       {st.archived ? (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
+        <Notice tone="emerald">
           Finished — this is now a normal story. Its sources and outline are{' '}
           <span className="font-medium">retained</span> here for reference and stay
           reopenable.
-        </div>
+        </Notice>
       ) : (
         st.attached && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+          <Notice tone="amber">
             Composing into an existing story — materialised sections are{' '}
             <span className="font-medium">appended</span>, leaving your current content untouched.
-          </div>
+          </Notice>
         )
       )}
 
       {/* ── Sources ── */}
-      <section className="space-y-2">
-        <h3 className="text-xs font-medium text-neutral-300">
-          Sources ({extracted} ready{pending > 0 ? `, ${pending} extracting…` : ''})
-        </h3>
-        <ul className="space-y-1">
-          {sources.map((s) => (
-            <li
-              key={s.id}
-              className="flex items-center justify-between gap-2 rounded border border-white/10 bg-neutral-900/50 px-2 py-1 text-xs"
-            >
-              <span className="min-w-0 flex-1 truncate" title={s.error ?? s.title ?? s.sourceUrl ?? s.filename ?? ''}>
-                {s.title ?? s.sourceUrl ?? s.filename ?? 'source'}
-              </span>
-              <span
-                className={
-                  s.status === 'extracted'
-                    ? 'text-emerald-400'
-                    : s.status === 'failed'
-                      ? 'text-red-400'
-                      : 'text-neutral-500'
-                }
-              >
-                {s.status === 'extracted' ? '✓' : s.status === 'failed' ? '✗' : '…'}
-              </span>
-              {s.status === 'failed' && (
-                <button
-                  onClick={() => reextract(s.id)}
-                  disabled={!!busy}
-                  title={`Re-run extraction${s.error ? ` — ${s.error}` : ''}`}
-                  className="text-neutral-400 hover:text-sky-300 disabled:opacity-40"
-                >
-                  {busy === 'reextract' ? '…' : '↻'}
-                </button>
-              )}
-              <button onClick={() => removeSource(s.id)} className="text-neutral-500 hover:text-red-300">
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="flex gap-1">
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addUrl()}
-            placeholder="Paste a link…"
-            className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
-          />
-          <button onClick={addUrl} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-            Add
-          </button>
-        </div>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="…or paste text"
-          rows={2}
-          className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+      <section className="space-y-3">
+        <SectionHeading
+          title="Sources"
+          count={`${extracted} ready${pending > 0 ? ` · ${pending} extracting` : ''}`}
         />
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={() => text.trim() && addText()} disabled={!!busy} className="rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
-            Add text
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
-            className="text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-neutral-200"
+        {sources.length > 0 && (
+          <ul className="space-y-1.5">
+            {sources.map((s) => (
+              <SourceRow
+                key={s.id}
+                source={s}
+                busy={!!busy}
+                reextracting={busy === 'reextract'}
+                onReextract={() => reextract(s.id)}
+                onRemove={() => removeSource(s.id)}
+              />
+            ))}
+          </ul>
+        )}
+        <div className="space-y-1.5">
+          <div className="flex gap-1.5">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addUrl()}
+              placeholder="Paste a link…"
+              className={`min-w-0 flex-1 ${inputCls}`}
+            />
+            <button onClick={addUrl} disabled={!!busy} className={`shrink-0 ${btnGhostCls}`}>
+              Add
+            </button>
+          </div>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="…or paste text"
+            rows={2}
+            className={`w-full resize-y ${inputCls}`}
           />
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={() => text.trim() && addText()} disabled={!!busy} className={`shrink-0 ${btnGhostCls}`}>
+              Add text
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              onChange={(e) => e.target.files?.[0] && addFile(e.target.files[0])}
+              className="min-w-0 text-xs text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2.5 file:py-1.5 file:text-xs file:text-neutral-200 file:transition-colors hover:file:bg-white/15"
+            />
+          </div>
         </div>
         <button
           onClick={genAngles}
           disabled={!!busy || extracted === 0}
-          className="w-full rounded-md bg-sky-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+          className={`w-full ${btnPrimaryCls} py-2`}
         >
           {busy === 'angles' ? 'Generating angles…' : 'Generate angles →'}
         </button>
         {pending > 0 && (
-          <p className="text-[11px] text-amber-300/80">
+          <p className="text-[11px] leading-relaxed text-amber-300/80">
             Extracting {pending} PDF{pending > 1 ? 's' : ''} with Claude — this runs in the
             background and can take a few minutes. Statuses update automatically.
           </p>
@@ -651,43 +531,32 @@ export function ComposeFlow({
 
       {/* ── Angles ── */}
       {st.angles.length > 0 && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">Pick an angle</h3>
-          {st.angles.map((a) => (
-            <label
-              key={a.id}
-              className={`block cursor-pointer rounded border p-2 text-xs ${
-                st.chosenAngleId === a.id ? 'border-sky-500/60 bg-sky-500/10' : 'border-white/10 hover:border-white/30'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <input
-                  type="radio"
-                  checked={st.chosenAngleId === a.id}
-                  onChange={() => pickAngle(a.id)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <div className="font-medium text-neutral-100">{a.title}</div>
-                  <div className="mt-0.5 text-neutral-400">{a.thesis}</div>
-                </div>
-              </div>
-            </label>
-          ))}
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading title="Angle" count={st.angles.length} hint="pick one to outline" />
+          <div className="space-y-2">
+            {st.angles.map((a) => (
+              <AngleCard
+                key={a.id}
+                angle={a}
+                selected={st.chosenAngleId === a.id}
+                onPick={() => pickAngle(a.id)}
+              />
+            ))}
+          </div>
           <input
             value={angleFeedback}
             onChange={(e) => setAngleFeedback(e.target.value)}
             placeholder="Regenerate with a note (optional)…"
-            className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+            className={`w-full ${inputCls}`}
           />
           <div className="flex gap-2">
-            <button onClick={genAngles} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+            <button onClick={genAngles} disabled={!!busy} className={`flex-1 ${btnGhostCls}`}>
               Regenerate
             </button>
             <button
               onClick={genOutline}
               disabled={!!busy || !st.chosenAngleId}
-              className="flex-1 rounded-md bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+              className={`flex-1 ${btnPrimaryCls}`}
             >
               {busy === 'outline' ? 'Outlining…' : 'Generate outline →'}
             </button>
@@ -699,129 +568,31 @@ export function ComposeFlow({
           togglable on unmaterialised entries until the draft is finished, so
           stragglers can be accepted + appended later. Archived = read-only.) */}
       {showOutline && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">
-            {statusEditable ? 'Outline — click status to accept/reject' : 'Outline'}
-          </h3>
-          <ul className="space-y-1">
-            {st.outline.map((e, i) => {
-              const statusCls =
-                e.status === 'accepted'
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : e.status === 'rejected'
-                    ? 'bg-red-500/20 text-red-300'
-                    : 'bg-white/10 text-neutral-400'
-              const open = openOutline.has(e.id)
-              const hasDetail = Boolean(e.visual || e.context || e.expectedContent || e.subsections?.length)
-              return (
-                <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    {statusEditable && !e.sectionId ? (
-                      <button
-                        onClick={() => cycleStatus(e.id)}
-                        title="Click to cycle pending → accepted → rejected"
-                        className={`cursor-pointer rounded px-1.5 py-0.5 text-[10px] uppercase ring-white/30 hover:ring-1 ${statusCls}`}
-                      >
-                        {e.status}
-                      </button>
-                    ) : (
-                      <span
-                        title={e.sectionId ? 'Already materialised' : undefined}
-                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}
-                      >
-                        {e.status}
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                    {e.layout && (
-                      <span
-                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
-                        title="Planned deck layout"
-                      >
-                        {e.layout}
-                      </span>
-                    )}
-                    {!!e.subsections?.length && (
-                      <span
-                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
-                        title="Sub-beats sharing this section's map context"
-                      >
-                        ⤷ {e.subsections.length} beats
-                      </span>
-                    )}
-                    <span className="text-[10px] text-neutral-500">{e.kind}</span>
-                    {outlineEditable && (
-                      <>
-                        <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                          ↑
-                        </button>
-                        <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                          ↓
-                        </button>
-                      </>
-                    )}
-                    {hasDetail && (
-                      <button
-                        onClick={() => toggleOutline(e.id)}
-                        className="text-neutral-500 hover:text-neutral-200"
-                        aria-expanded={open}
-                        title={open ? 'Hide details' : 'Show context, content & visual'}
-                      >
-                        {open ? '▾' : '▸'}
-                      </button>
-                    )}
-                  </div>
-                  <p className={`mt-1 text-neutral-400 ${open ? '' : 'line-clamp-2'}`}>{e.intent}</p>
-                  {/* Layout demo — a wireframe of what this section will look
-                      like, shown before you materialise it. */}
-                  {outlineEditable && (
-                    <div className="mt-2">
-                      <LayoutPreview layout={e.layout} format={st.format} />
-                    </div>
-                  )}
-                  {open && hasDetail && (
-                    <dl className="mt-2 space-y-1.5 border-t border-white/5 pt-2 text-[11px]">
-                      {e.expectedContent && (
-                        <div>
-                          <dt className="text-neutral-500">Expected content</dt>
-                          <dd className="text-neutral-300">{e.expectedContent}</dd>
-                        </div>
-                      )}
-                      {e.visual && (
-                        <div>
-                          <dt className="text-neutral-500">Visualization</dt>
-                          <dd className="text-neutral-300">{e.visual}</dd>
-                        </div>
-                      )}
-                      {e.context && (
-                        <div>
-                          <dt className="text-neutral-500">Context</dt>
-                          <dd className="text-neutral-300">{e.context}</dd>
-                        </div>
-                      )}
-                      {!!e.subsections?.length && (
-                        <div>
-                          <dt className="text-neutral-500">Beats (shared map context)</dt>
-                          <dd>
-                            <ul className="mt-0.5 space-y-1">
-                              {e.subsections.map((s) => (
-                                <li key={s.heading} className="border-l border-white/10 pl-2">
-                                  <span className="text-neutral-200">{s.heading}</span>
-                                  {s.geo && (
-                                    <span className="text-neutral-500"> — dives to {s.geo.focus}</span>
-                                  )}
-                                  <p className="text-neutral-400">{s.intent}</p>
-                                </li>
-                              ))}
-                            </ul>
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
-                  )}
-                </li>
-              )
-            })}
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading
+            title="Outline"
+            count={st.outline.length}
+            hint={statusEditable ? 'click a status chip to accept / reject' : undefined}
+          />
+          {outlineEditable && (
+            <LayoutLegend layouts={st.outline.map((e) => e.layout)} format={st.format} />
+          )}
+          <ul className="space-y-2">
+            {st.outline.map((e, i) => (
+              <OutlineEntryCard
+                key={e.id}
+                entry={e}
+                index={i}
+                total={st.outline.length}
+                open={openOutline.has(e.id)}
+                format={st.format}
+                statusEditable={statusEditable}
+                outlineEditable={outlineEditable}
+                onCycleStatus={() => cycleStatus(e.id)}
+                onToggle={() => toggleOutline(e.id)}
+                onMove={(dir) => move(e.id, dir)}
+              />
+            ))}
           </ul>
           {outlineEditable && (
             <>
@@ -829,16 +600,16 @@ export function ComposeFlow({
                 value={outlineFeedback}
                 onChange={(e) => setOutlineFeedback(e.target.value)}
                 placeholder="Regenerate outline with a note (optional)…"
-                className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+                className={`w-full ${inputCls}`}
               />
               <div className="flex gap-2">
-                <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+                <button onClick={genOutline} disabled={!!busy} className={`flex-1 ${btnGhostCls}`}>
                   Regenerate
                 </button>
                 <button
                   onClick={materialize}
                   disabled={!!busy || newAcceptedCount === 0}
-                  className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
+                  className={`flex-1 ${btnSuccessCls}`}
                 >
                   {busy === 'materialize'
                     ? 'Creating…'
@@ -851,11 +622,7 @@ export function ComposeFlow({
               existing sections — materialise is incremental, nothing written is
               touched. */}
           {!outlineEditable && statusEditable && newAcceptedCount > 0 && (
-            <button
-              onClick={materialize}
-              disabled={!!busy}
-              className="w-full rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
-            >
+            <button onClick={materialize} disabled={!!busy} className={`w-full ${btnSuccessCls}`}>
               {busy === 'materialize'
                 ? 'Creating…'
                 : `Append ${newAcceptedCount} new section${newAcceptedCount > 1 ? 's' : ''} →`}
@@ -868,36 +635,14 @@ export function ComposeFlow({
           actual data, grounded in the sources. Per-chart regenerate lives on the
           canvas chart node.) */}
       {showOutline && charts.length > 0 && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">Charts ({charts.length})</h3>
-          <ul className="space-y-1">
-            {charts.map((c) => {
-              const result = chartResults[c.id]
-              return (
-                <li
-                  key={c.id}
-                  className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">
-                      {c.title ?? c.id}
-                    </span>
-                    <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">
-                      {c.chartType}
-                    </span>
-                    {result === true && <span className="text-emerald-400">✓</span>}
-                    {result === false && <span className="text-red-400" title="Generation failed">✗</span>}
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">{c.requirement}</p>
-                </li>
-              )
-            })}
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading title="Charts" count={charts.length} hint="tap a chart for its full requirement" />
+          <ul className="space-y-1.5">
+            {charts.map((c) => (
+              <ChartCard key={c.id} chart={c} result={chartResults[c.id]} />
+            ))}
           </ul>
-          <button
-            onClick={genCharts}
-            disabled={!!busy}
-            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
-          >
+          <button onClick={genCharts} disabled={!!busy} className={`w-full ${btnGhostCls} py-2`}>
             {busy === 'charts'
               ? `Generating charts… (${charts.length})`
               : `Generate ${charts.length} chart${charts.length > 1 ? 's' : ''} → data`}
@@ -907,88 +652,55 @@ export function ComposeFlow({
 
       {/* ── Sections: per-section CONTENT + VISUAL ── */}
       {(phase === 'content' || phase === 'visual' || phase === 'done') && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">
-            Materialized sections — what got created
-          </h3>
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading
+            title="Materialized sections"
+            count={st.outline.filter((e) => e.sectionId).length}
+            hint="what got created"
+          />
           <ul className="space-y-2">
             {st.outline
               .filter((e) => e.sectionId)
-              .map((e) => {
-                const frame = frameSrcFor(e.sectionId!)
-                const isWriting = writing.has(e.sectionId!)
-                const atCap = writing.size >= MAX_CONCURRENT_SECTIONS
-                return (
-                  <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                      {e.layout && (
-                        <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">{e.layout}</span>
-                      )}
-                      {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
-                    </div>
-                    {/* What was materialised: the live render when the canvas has
-                        signed it, else the planned-layout wireframe. */}
-                    <div className="mt-2">
-                      {frame ? (
-                        <SectionFrame src={frame} title={e.heading} />
-                      ) : (
-                        <LayoutPreview layout={e.layout} format={st.format} />
-                      )}
-                    </div>
-                    {e.visual && (
-                      <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
-                        <span className="text-neutral-400">Planned:</span> {e.visual}
-                      </p>
-                    )}
-                    <div className="mt-1 flex gap-1">
-                      <input
-                        value={sectionFb[e.sectionId!] ?? ''}
-                        onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
-                        placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
-                        className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
-                      />
-                      <button
-                        onClick={() => genSection(e.sectionId!)}
-                        disabled={!!busy || isWriting || atCap}
-                        title={
-                          atCap && !isWriting
-                            ? `Up to ${MAX_CONCURRENT_SECTIONS} sections write at once — wait for one to finish`
-                            : undefined
-                        }
-                        className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-                      >
-                        {isWriting ? '…' : written.has(e.sectionId!) ? 'Rewrite' : 'Write'}
-                      </button>
-                    </div>
-                  </li>
-                )
-              })}
+              .map((e) => (
+                <MaterializedSectionCard
+                  key={e.id}
+                  entry={e}
+                  frameSrc={frameSrcFor(e.sectionId!)}
+                  format={st.format}
+                  written={written.has(e.sectionId!)}
+                  isWriting={writing.has(e.sectionId!)}
+                  atCap={writing.size >= MAX_CONCURRENT_SECTIONS}
+                  busy={!!busy}
+                  maxConcurrent={MAX_CONCURRENT_SECTIONS}
+                  feedback={sectionFb[e.sectionId!] ?? ''}
+                  onFeedbackChange={(v) => setSectionFb((f) => ({ ...f, [e.sectionId!]: v }))}
+                  onWrite={() => genSection(e.sectionId!)}
+                />
+              ))}
           </ul>
-          {(st.imagePrompts?.length ?? 0) > 0 && (
-            <button
-              onClick={genImages}
-              disabled={!!busy || writing.size > 0}
-              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
-            >
-              {busy === 'images'
-                ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
-                : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
+          <div className="space-y-1.5 pt-1">
+            {(st.imagePrompts?.length ?? 0) > 0 && (
+              <button
+                onClick={genImages}
+                disabled={!!busy || writing.size > 0}
+                className={`w-full ${btnGhostCls} py-2`}
+              >
+                {busy === 'images'
+                  ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
+                  : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
+              </button>
+            )}
+            <button onClick={() => window.location.reload()} className={`w-full ${btnGhostCls} py-2`}>
+              Reload to view ↻
             </button>
-          )}
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
-          >
-            Reload to view ↻
-          </button>
-          <button
-            onClick={finish}
-            disabled={!!busy || writing.size > 0}
-            className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
-          >
-            {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
-          </button>
+            <button
+              onClick={finish}
+              disabled={!!busy || writing.size > 0}
+              className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 transition-colors hover:border-emerald-400 hover:bg-emerald-500/15 disabled:opacity-40"
+            >
+              {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
+            </button>
+          </div>
         </section>
       )}
     </div>
@@ -1026,9 +738,16 @@ export function ComposeFlowPanel({
       className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur"
       style={{ display: open ? 'flex' : 'none' }}
     >
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <span className="text-sm font-semibold">Research &amp; outline</span>
-        <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200" aria-label="Close">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold tracking-tight">Research &amp; outline</h2>
+          <p className="truncate text-[11px] text-neutral-500">{slug}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 rounded-md p-1.5 leading-none text-neutral-400 transition-colors hover:bg-white/10 hover:text-neutral-200"
+          aria-label="Close"
+        >
           ✕
         </button>
       </div>
