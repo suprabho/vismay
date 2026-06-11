@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { stringify as yamlStringify } from 'yaml'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource } from '@vismay/content-source/contentSource'
+import { getContentSource, verticalForApp } from '@vismay/content-source/contentSource'
 import { writeComposeState } from '@vismay/content-source/composeState'
 import { slugify, defaultsFor, DEFAULT_THEME, type StoryFormat } from '@vismay/story-pipeline'
 
@@ -25,14 +25,23 @@ interface Body {
 
 /** A minimal valid story: one section with `text` + an (empty) `foreground` so
  *  `loadStoryConfig` accepts it without a legacy `map:` block. */
-function seedStory(title: string, format: StoryFormat): { markdown: string; configYaml: string } {
+function seedStory(
+  title: string,
+  format: StoryFormat,
+  appSlug: string,
+): { markdown: string; configYaml: string } {
   const today = new Date().toISOString().slice(0, 10)
+  // footshorts/vizf1 drafts must declare their `vertical` or the app's viz
+  // bundle (`fs:` / `f1:` module types) never registers in the canvas/reader.
+  // vizmaya-fyi maps to null — its drafts seed no vertical key (core registry).
+  const vertical = verticalForApp(appSlug)
   const frontmatter = {
     title,
     subtitle: '',
     byline: '',
     date: today,
     format,
+    ...(vertical ? { vertical } : {}),
     status: 'published',
     listed: false,
     // The renderer hard-reads `frontmatter.theme.{colors,fonts}` on every path
@@ -69,6 +78,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'missing "title"' }, { status: 400 })
   }
   const format: StoryFormat = body.format === 'map' ? 'map' : 'deck'
+  // Default kept for backward compat — vizmaya's entry posts no appSlug.
+  const appSlug =
+    typeof body.appSlug === 'string' && body.appSlug.trim() ? body.appSlug.trim() : 'vizmaya-fyi'
   const slug = slugify(title)
   if (!slug) {
     return NextResponse.json({ error: 'title produced an empty slug' }, { status: 400 })
@@ -84,11 +96,11 @@ export async function POST(req: Request) {
     )
   }
 
-  const { markdown, configYaml } = seedStory(title, format)
+  const { markdown, configYaml } = seedStory(title, format, appSlug)
   try {
     await src.writeMarkdown(slug, markdown) // creates the row (db upsert)
     await src.writeConfigYaml(slug, configYaml)
-    await src.updateMetadata(slug, { appSlug: body.appSlug ?? 'vizmaya-fyi' })
+    await src.updateMetadata(slug, { appSlug })
     await writeComposeState(slug, { phase: 'sources', format, angles: [], outline: [] })
   } catch (e) {
     return NextResponse.json(
@@ -97,5 +109,12 @@ export async function POST(req: Request) {
     )
   }
 
-  return NextResponse.json({ ok: true, slug })
+  // vizmaya-fyi keeps its own static /vizmaya tree (the dynamic [appSlug]
+  // layout redirects `vizmaya-fyi` there, dropping the rest of the path — so
+  // we must not send it through `/${appSlug}/...`). Every other app's canvas
+  // mounts at the universal `/[appSlug]/[slug]/canvas` route.
+  const canvasPath =
+    appSlug === 'vizmaya-fyi' ? `/vizmaya/${slug}/canvas` : `/${appSlug}/${slug}/canvas`
+
+  return NextResponse.json({ ok: true, slug, canvasPath })
 }
