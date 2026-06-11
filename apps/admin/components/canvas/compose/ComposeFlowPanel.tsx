@@ -4,18 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
 import { canvasFrameId } from '../canvasOutputs'
-import { LayoutPreview, SectionFrame } from './LayoutPreview'
+import { LayoutLegend } from './LayoutPreview'
 import { AngleCard } from './AngleCard'
+import { ChartCard, type ChartRequirementView } from './ChartCard'
+import { MaterializedSectionCard } from './MaterializedSectionCard'
+import { OutlineEntryCard } from './OutlineEntryCard'
 import { SourceRow } from './SourceRow'
-import { Notice, SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
-
-/** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
-interface ChartRequirementView {
-  id: string
-  title?: string
-  chartType: 'bar' | 'line'
-  requirement: string
-}
+import { Notice, SectionHeading, btnGhostCls, btnPrimaryCls, btnSuccessCls, inputCls } from './ui'
 
 /**
  * The canvas-native compose flow. Walks the author through
@@ -571,129 +566,31 @@ export function ComposeFlow({
           togglable on unmaterialised entries until the draft is finished, so
           stragglers can be accepted + appended later. Archived = read-only.) */}
       {showOutline && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">
-            {statusEditable ? 'Outline — click status to accept/reject' : 'Outline'}
-          </h3>
-          <ul className="space-y-1">
-            {st.outline.map((e, i) => {
-              const statusCls =
-                e.status === 'accepted'
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : e.status === 'rejected'
-                    ? 'bg-red-500/20 text-red-300'
-                    : 'bg-white/10 text-neutral-400'
-              const open = openOutline.has(e.id)
-              const hasDetail = Boolean(e.visual || e.context || e.expectedContent || e.subsections?.length)
-              return (
-                <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    {statusEditable && !e.sectionId ? (
-                      <button
-                        onClick={() => cycleStatus(e.id)}
-                        title="Click to cycle pending → accepted → rejected"
-                        className={`cursor-pointer rounded px-1.5 py-0.5 text-[10px] uppercase ring-white/30 hover:ring-1 ${statusCls}`}
-                      >
-                        {e.status}
-                      </button>
-                    ) : (
-                      <span
-                        title={e.sectionId ? 'Already materialised' : undefined}
-                        className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${statusCls}`}
-                      >
-                        {e.status}
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                    {e.layout && (
-                      <span
-                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
-                        title="Planned deck layout"
-                      >
-                        {e.layout}
-                      </span>
-                    )}
-                    {!!e.subsections?.length && (
-                      <span
-                        className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400"
-                        title="Sub-beats sharing this section's map context"
-                      >
-                        ⤷ {e.subsections.length} beats
-                      </span>
-                    )}
-                    <span className="text-[10px] text-neutral-500">{e.kind}</span>
-                    {outlineEditable && (
-                      <>
-                        <button onClick={() => move(e.id, -1)} disabled={i === 0} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                          ↑
-                        </button>
-                        <button onClick={() => move(e.id, 1)} disabled={i === st.outline.length - 1} className="text-neutral-500 hover:text-neutral-200 disabled:opacity-30">
-                          ↓
-                        </button>
-                      </>
-                    )}
-                    {hasDetail && (
-                      <button
-                        onClick={() => toggleOutline(e.id)}
-                        className="text-neutral-500 hover:text-neutral-200"
-                        aria-expanded={open}
-                        title={open ? 'Hide details' : 'Show context, content & visual'}
-                      >
-                        {open ? '▾' : '▸'}
-                      </button>
-                    )}
-                  </div>
-                  <p className={`mt-1 text-neutral-400 ${open ? '' : 'line-clamp-2'}`}>{e.intent}</p>
-                  {/* Layout demo — a wireframe of what this section will look
-                      like, shown before you materialise it. */}
-                  {outlineEditable && (
-                    <div className="mt-2">
-                      <LayoutPreview layout={e.layout} format={st.format} />
-                    </div>
-                  )}
-                  {open && hasDetail && (
-                    <dl className="mt-2 space-y-1.5 border-t border-white/5 pt-2 text-[11px]">
-                      {e.expectedContent && (
-                        <div>
-                          <dt className="text-neutral-500">Expected content</dt>
-                          <dd className="text-neutral-300">{e.expectedContent}</dd>
-                        </div>
-                      )}
-                      {e.visual && (
-                        <div>
-                          <dt className="text-neutral-500">Visualization</dt>
-                          <dd className="text-neutral-300">{e.visual}</dd>
-                        </div>
-                      )}
-                      {e.context && (
-                        <div>
-                          <dt className="text-neutral-500">Context</dt>
-                          <dd className="text-neutral-300">{e.context}</dd>
-                        </div>
-                      )}
-                      {!!e.subsections?.length && (
-                        <div>
-                          <dt className="text-neutral-500">Beats (shared map context)</dt>
-                          <dd>
-                            <ul className="mt-0.5 space-y-1">
-                              {e.subsections.map((s) => (
-                                <li key={s.heading} className="border-l border-white/10 pl-2">
-                                  <span className="text-neutral-200">{s.heading}</span>
-                                  {s.geo && (
-                                    <span className="text-neutral-500"> — dives to {s.geo.focus}</span>
-                                  )}
-                                  <p className="text-neutral-400">{s.intent}</p>
-                                </li>
-                              ))}
-                            </ul>
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
-                  )}
-                </li>
-              )
-            })}
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading
+            title="Outline"
+            count={st.outline.length}
+            hint={statusEditable ? 'click a status chip to accept / reject' : undefined}
+          />
+          {outlineEditable && (
+            <LayoutLegend layouts={st.outline.map((e) => e.layout)} format={st.format} />
+          )}
+          <ul className="space-y-2">
+            {st.outline.map((e, i) => (
+              <OutlineEntryCard
+                key={e.id}
+                entry={e}
+                index={i}
+                total={st.outline.length}
+                open={openOutline.has(e.id)}
+                format={st.format}
+                statusEditable={statusEditable}
+                outlineEditable={outlineEditable}
+                onCycleStatus={() => cycleStatus(e.id)}
+                onToggle={() => toggleOutline(e.id)}
+                onMove={(dir) => move(e.id, dir)}
+              />
+            ))}
           </ul>
           {outlineEditable && (
             <>
@@ -701,16 +598,16 @@ export function ComposeFlow({
                 value={outlineFeedback}
                 onChange={(e) => setOutlineFeedback(e.target.value)}
                 placeholder="Regenerate outline with a note (optional)…"
-                className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-white/30"
+                className={`w-full ${inputCls}`}
               />
               <div className="flex gap-2">
-                <button onClick={genOutline} disabled={!!busy} className="flex-1 rounded border border-white/10 px-2 py-1 text-xs hover:border-white/30 disabled:opacity-40">
+                <button onClick={genOutline} disabled={!!busy} className={`flex-1 ${btnGhostCls}`}>
                   Regenerate
                 </button>
                 <button
                   onClick={materialize}
                   disabled={!!busy || newAcceptedCount === 0}
-                  className="flex-1 rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
+                  className={`flex-1 ${btnSuccessCls}`}
                 >
                   {busy === 'materialize'
                     ? 'Creating…'
@@ -723,11 +620,7 @@ export function ComposeFlow({
               existing sections — materialise is incremental, nothing written is
               touched. */}
           {!outlineEditable && statusEditable && newAcceptedCount > 0 && (
-            <button
-              onClick={materialize}
-              disabled={!!busy}
-              className="w-full rounded-md bg-emerald-500 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-400 disabled:opacity-40"
-            >
+            <button onClick={materialize} disabled={!!busy} className={`w-full ${btnSuccessCls}`}>
               {busy === 'materialize'
                 ? 'Creating…'
                 : `Append ${newAcceptedCount} new section${newAcceptedCount > 1 ? 's' : ''} →`}
@@ -740,36 +633,14 @@ export function ComposeFlow({
           actual data, grounded in the sources. Per-chart regenerate lives on the
           canvas chart node.) */}
       {showOutline && charts.length > 0 && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">Charts ({charts.length})</h3>
-          <ul className="space-y-1">
-            {charts.map((c) => {
-              const result = chartResults[c.id]
-              return (
-                <li
-                  key={c.id}
-                  className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">
-                      {c.title ?? c.id}
-                    </span>
-                    <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">
-                      {c.chartType}
-                    </span>
-                    {result === true && <span className="text-emerald-400">✓</span>}
-                    {result === false && <span className="text-red-400" title="Generation failed">✗</span>}
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">{c.requirement}</p>
-                </li>
-              )
-            })}
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading title="Charts" count={charts.length} hint="tap a chart for its full requirement" />
+          <ul className="space-y-1.5">
+            {charts.map((c) => (
+              <ChartCard key={c.id} chart={c} result={chartResults[c.id]} />
+            ))}
           </ul>
-          <button
-            onClick={genCharts}
-            disabled={!!busy}
-            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
-          >
+          <button onClick={genCharts} disabled={!!busy} className={`w-full ${btnGhostCls} py-2`}>
             {busy === 'charts'
               ? `Generating charts… (${charts.length})`
               : `Generate ${charts.length} chart${charts.length > 1 ? 's' : ''} → data`}
@@ -779,88 +650,55 @@ export function ComposeFlow({
 
       {/* ── Sections: per-section CONTENT + VISUAL ── */}
       {(phase === 'content' || phase === 'visual' || phase === 'done') && (
-        <section className="space-y-2 border-t border-white/10 pt-3">
-          <h3 className="text-xs font-medium text-neutral-300">
-            Materialized sections — what got created
-          </h3>
+        <section className="space-y-3 border-t border-white/10 pt-4">
+          <SectionHeading
+            title="Materialized sections"
+            count={st.outline.filter((e) => e.sectionId).length}
+            hint="what got created"
+          />
           <ul className="space-y-2">
             {st.outline
               .filter((e) => e.sectionId)
-              .map((e) => {
-                const frame = frameSrcFor(e.sectionId!)
-                const isWriting = writing.has(e.sectionId!)
-                const atCap = writing.size >= MAX_CONCURRENT_SECTIONS
-                return (
-                  <li key={e.id} className="rounded border border-white/10 bg-neutral-900/50 p-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate font-medium text-neutral-100">{e.heading}</span>
-                      {e.layout && (
-                        <span className="rounded bg-white/5 px-1 py-0.5 text-[9px] text-neutral-400">{e.layout}</span>
-                      )}
-                      {written.has(e.sectionId!) && <span className="text-emerald-400">✓</span>}
-                    </div>
-                    {/* What was materialised: the live render when the canvas has
-                        signed it, else the planned-layout wireframe. */}
-                    <div className="mt-2">
-                      {frame ? (
-                        <SectionFrame src={frame} title={e.heading} />
-                      ) : (
-                        <LayoutPreview layout={e.layout} format={st.format} />
-                      )}
-                    </div>
-                    {e.visual && (
-                      <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
-                        <span className="text-neutral-400">Planned:</span> {e.visual}
-                      </p>
-                    )}
-                    <div className="mt-1 flex gap-1">
-                      <input
-                        value={sectionFb[e.sectionId!] ?? ''}
-                        onChange={(ev) => setSectionFb((f) => ({ ...f, [e.sectionId!]: ev.target.value }))}
-                        placeholder={written.has(e.sectionId!) ? 'Refine note…' : 'Optional note…'}
-                        className="min-w-0 flex-1 rounded border border-white/10 bg-neutral-950 px-2 py-1 outline-none focus:border-white/30"
-                      />
-                      <button
-                        onClick={() => genSection(e.sectionId!)}
-                        disabled={!!busy || isWriting || atCap}
-                        title={
-                          atCap && !isWriting
-                            ? `Up to ${MAX_CONCURRENT_SECTIONS} sections write at once — wait for one to finish`
-                            : undefined
-                        }
-                        className="rounded-md bg-sky-500 px-2 py-1 font-medium text-white hover:bg-sky-400 disabled:opacity-40"
-                      >
-                        {isWriting ? '…' : written.has(e.sectionId!) ? 'Rewrite' : 'Write'}
-                      </button>
-                    </div>
-                  </li>
-                )
-              })}
+              .map((e) => (
+                <MaterializedSectionCard
+                  key={e.id}
+                  entry={e}
+                  frameSrc={frameSrcFor(e.sectionId!)}
+                  format={st.format}
+                  written={written.has(e.sectionId!)}
+                  isWriting={writing.has(e.sectionId!)}
+                  atCap={writing.size >= MAX_CONCURRENT_SECTIONS}
+                  busy={!!busy}
+                  maxConcurrent={MAX_CONCURRENT_SECTIONS}
+                  feedback={sectionFb[e.sectionId!] ?? ''}
+                  onFeedbackChange={(v) => setSectionFb((f) => ({ ...f, [e.sectionId!]: v }))}
+                  onWrite={() => genSection(e.sectionId!)}
+                />
+              ))}
           </ul>
-          {(st.imagePrompts?.length ?? 0) > 0 && (
-            <button
-              onClick={genImages}
-              disabled={!!busy || writing.size > 0}
-              className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30 disabled:opacity-40"
-            >
-              {busy === 'images'
-                ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
-                : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
+          <div className="space-y-1.5 pt-1">
+            {(st.imagePrompts?.length ?? 0) > 0 && (
+              <button
+                onClick={genImages}
+                disabled={!!busy || writing.size > 0}
+                className={`w-full ${btnGhostCls} py-2`}
+              >
+                {busy === 'images'
+                  ? `Generating images… ${imgDone}/${st.imagePrompts!.length}`
+                  : `Generate ${st.imagePrompts!.length} image(s) → Assets`}
+              </button>
+            )}
+            <button onClick={() => window.location.reload()} className={`w-full ${btnGhostCls} py-2`}>
+              Reload to view ↻
             </button>
-          )}
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-300 hover:border-white/30"
-          >
-            Reload to view ↻
-          </button>
-          <button
-            onClick={finish}
-            disabled={!!busy || writing.size > 0}
-            className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400 disabled:opacity-40"
-          >
-            {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
-          </button>
+            <button
+              onClick={finish}
+              disabled={!!busy || writing.size > 0}
+              className="w-full rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-300 transition-colors hover:border-emerald-400 hover:bg-emerald-500/15 disabled:opacity-40"
+            >
+              {busy === 'finish' ? 'Finishing…' : 'Finish — make it a normal story'}
+            </button>
+          </div>
         </section>
       )}
     </div>
