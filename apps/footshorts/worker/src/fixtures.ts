@@ -215,6 +215,19 @@ async function syncStandings(
     return;
   }
 
+  // Clear this competition+season's standings before re-inserting. Group-stage
+  // tables were previously written with group_label='' (only the first group
+  // survived `.find`); without this delete those stale rows would linger under
+  // a phantom "overall" group alongside the new per-group rows. Scoped to the
+  // season we're about to write, and only once we have fresh rows in hand, so a
+  // failed fetch never wipes good data.
+  const { error: delError } = await supabase
+    .from('standings')
+    .delete()
+    .eq('competition_slug', comp.slug)
+    .eq('season', season);
+  if (delError) throw delError;
+
   // Conflict target matches the post-20260521 PK (group_label included) so the
   // same team can hold a row in different groups.
   const { error } = await supabase
