@@ -23,6 +23,20 @@ Early-week progress shifts the plan:
 
 ---
 
+## Update — Jun 11, 2026
+
+⑤ reached the W4 convergence payoff ~2 weeks early — the composer ships Deck/mapStory stories end-to-end (#172→#188: canvas-native DB-backed compose, two-pass charts, choropleth/pins maps, eval harness + layout lint). Decision 2 resolved as **uploaded sources** (text + PDF vision + URLs). ① Auth also overshot scope (#161/#168/#169 — per-vertical admin login; `docs/auth.md` needs updating). The freed back-half capacity goes to two new sub-tracks:
+
+- **⑤b — Compose UX + reuse** (~14–22h):
+  - **Research & outline design pass** — `ComposeFlowPanel.tsx` is one 1,046-line text-heavy accordion serving two contexts (canvas drawer + editor tab); needs typographic hierarchy, outline-entry cards, source/angle/chart previews.
+  - **Angles → new story** — angles are per-story `compose_state` JSONB; add cross-story accessors + a "start from angle" seed path on route 0 + picker UI (unchosen angles are the asset).
+  - **Stories/epics as research sources** — extend `SourceKind` with `'story'` (additive migration on the 056 CHECK constraint), extractor mapping `getStoryContent()` → `SourceDoc`, sources-route branch, picker UI.
+- **③ Rete finishing — promoted from opportunistic to committed** (~8–14h): unify the Add affordance (AddMenu already centralizes pickers, but 6 right-click-only junction triggers via 3 dispatch makers — discoverability is the bug); collapsible content node (fixed 150px / 8-line truncate today); JSON-rendering fixes (chart-data preview bypasses `safeYamlStringify`, no try/catch); plus the original delete/disconnect gap (~60% missing: no user-facing delete on layers/regions/overrides).
+
+**Trade-off:** this consumes the capacity ⑤ freed. **④b subjects/objects Tier 1 formally slips to the July tail** with the 3D tiers (per the Jun 4 condition — ⑤ expanded), and the full layout-system-to-config de-hardcode stays parked unless W4 has room.
+
+---
+
 ## Three findings that reframe the plan
 
 - **① "Auth to viz-admin" actually targets `apps/admin`.** `packages/viz-admin` is a *component library* with no auth boundary — the real auth lives in `apps/admin/lib/adminAuth.ts` (HMAC cookie). `@supabase/supabase-js` is already wired in `packages/content-source` and vizmaya-fyi, so the gap is a users table (migration 055) + a session-store swap, not a from-scratch integration.
