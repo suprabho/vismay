@@ -608,3 +608,19 @@ function safeYamlStringify(value: unknown): string {
     return '(failed to stringify YAML)'
   }
 }
+
+/**
+ * JSON sibling of `safeYamlStringify` for node bodies that show raw JSON
+ * (the Chart Data card). Two guards `JSON.stringify` alone doesn't give:
+ *   - it can THROW (circular refs, BigInt) — caught, fallback copy;
+ *   - it can return `undefined` (bare undefined / function / symbol) —
+ *     coerced, since a node body must always be a string.
+ */
+export function safeJsonStringify(value: unknown): string {
+  try {
+    const text = JSON.stringify(value, null, 2)
+    return typeof text === 'string' ? text : String(value)
+  } catch {
+    return '(failed to render JSON)'
+  }
+}

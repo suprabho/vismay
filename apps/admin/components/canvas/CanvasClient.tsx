@@ -22,6 +22,7 @@ import {
   parseCanvasSources,
   liveUnit,
   buildInputGraph,
+  safeJsonStringify,
   type CanvasSources,
   type InputGraph,
 } from './canvasInputs'
@@ -1309,6 +1310,11 @@ export default function CanvasClient({
               color: data.variant === 'mono' ? '#9a9a9a' : '#555',
               lineHeight: 1.5,
               whiteSpace: 'pre-wrap',
+              // pre-wrap alone won't break long unbroken tokens (minified
+              // JSON, long URLs/base64 strings) — they'd clip silently at
+              // overflow:hidden. Break anywhere so every character stays
+              // visible inside the fixed card width.
+              overflowWrap: 'anywhere',
               fontStyle: data.variant === 'muted' ? 'italic' : 'normal',
               overflow: 'hidden',
               cursor: editable ? 'pointer' : 'default',
@@ -2173,7 +2179,7 @@ export default function CanvasClient({
                 const json = (await res.json()) as { data?: unknown }
                 body =
                   json.data != null
-                    ? truncateForNode(JSON.stringify(json.data, null, 2))
+                    ? truncateForNode(safeJsonStringify(json.data))
                     : '(no data yet — click to generate)'
               } else if (res.status === 404) {
                 body = '(no data yet — click to generate)'
@@ -2181,7 +2187,11 @@ export default function CanvasClient({
                 body = '(failed to load chart data)'
               }
             } catch {
-              return // section likely switched away; leave the placeholder
+              // Fetch / body-parse failed — a real network error, or the
+              // section switched away mid-flight. Show the failure copy
+              // rather than leaving "…loading" forever; the guarded
+              // area.update below is a no-op if the node is already gone.
+              body = '(failed to load chart data)'
             }
             try {
               node.previewCtrl.body = body
