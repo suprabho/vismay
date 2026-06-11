@@ -14,6 +14,7 @@
 // The AI-generation contract — the same zod layer schemas the renderer validates with.
 export {
   sectionBodySchema,
+  mapSectionBodySchemaFor,
   normalizeSectionBody,
   GEN_FOREGROUND_TYPES,
   genPinSchema,

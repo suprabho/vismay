@@ -146,8 +146,10 @@ export function outlineSystem(format: StoryFormat): string {
         `never shade them. Conversely, country/region-level data wants shading, not one pin per ` +
         `country. STAT sections are NUMERIC ONLY: kind "stat" renders the section ` +
         `heading as a giant figure, so its heading must BE the number ("18.7 GW", "10 million ` +
-        `homes"), never a phrase — plan one only when a single hard source-grounded figure ` +
-        `carries the beat. SUBSECTIONS: when ONE data context deserves several beats — the same ` +
+        `homes"), never a phrase — every stat needs a single hard source-grounded figure. ` +
+        `THE OPENING IS FIXED: section 1 is the hero (kind "hero" — the establishing shot; a map ` +
+        `story has no "cover" kind), and section 2 MUST be kind "stat" — the cold-open: the ` +
+        `story's single most arresting figure as its heading. SUBSECTIONS: when ONE data context deserves several beats — the same ` +
         `choropleth or pin field explored place by place — plan 2–4 "subsections" on that section ` +
         `instead of sibling sections: the parent holds the wide framing and the regionRequirement; ` +
         `each subsection is its own snap with its own heading, prose, and a camera DIVE (geo) ` +
@@ -191,7 +193,8 @@ export function outlineSystem(format: StoryFormat): string {
     `  • visual: the visualisation it features (see below).\n` +
     stubFields +
     `${visualGuidance}\n\n` +
-    `THE COVER is one beat, not a summary: a sharp title, an eyebrow kicker ("Topic · Date · ` +
+    `THE COVER (on a MAP story: the kind "hero" opener) is one beat, not a summary: a sharp ` +
+    `title, an eyebrow kicker ("Topic · Date · ` +
     `What this is"), and EXACTLY ONE supporting line — a one-line standfirst (dek) OR a single ` +
     `headline stat, never both, and never a multi-row table or full paragraph. Its "visual" ` +
     `describes that cover surface (and for a deck, the hero image to prompt for). The cover must ` +
@@ -411,7 +414,10 @@ export function contentSystem(format: StoryFormat): string {
         `the WHOLE section. The prose renders in a small scroll-rail card over the map — portrait ` +
         `clips rather than scrolls, so every extra sentence is lost. One idea per paragraph; cut ` +
         `throat-clearing and restated context. For kind "stat" the heading is the giant figure ` +
-        `and the paragraphs are its caption — 1–2 lines, no more.`
+        `and the paragraphs are its caption — 1–2 lines, no more. For kind "hero" the paragraphs ` +
+        `are EXACTLY ONE standfirst (dek): a single 35–70-word scene-setting paragraph wrapped ` +
+        `in *single asterisks* (it renders as the italic dek under the title) — no second ` +
+        `paragraph, no byline.`
       : `Keep it lean: panel copy, not an essay — 30–60 words per paragraph, no padding, no ` +
         `restated context. The figures the visual needs must appear in the prose, but say each ` +
         `thing once.`
@@ -439,46 +445,57 @@ export function buildContentPrompt(
 // VISUAL pass — the config `body`, given the already-written prose.
 
 export function visualSystem(format: StoryFormat): string {
-  const formatGuidance =
-    format === 'map'
-      ? `This is a MAP story — the MAP itself is the visual. Set body.map to the section camera ` +
-        `(center [lng, lat], zoom, optional pitch/bearing, and focal pins). Every pin is ` +
-        `{ coordinates: [lng, lat], label } — coordinates is a 2-number array, longitude FIRST; ` +
-        `NEVER emit lng/lat keys. When the section context gives a "Planned geography", anchor the camera to ` +
-        `it — keep its focus and stay close to its center/zoom, adjusting only for framing (pins ` +
-        `in view, shaded regions filling the viewport). If this section shades regions, its ` +
-        `choropleth (map.regions) is filled by a ` +
-        `separate source-grounded pass and merged in for you — do NOT author region values; just ` +
-        `frame the camera so the shaded geography reads well. HERO/COVER sections are the ` +
-        `ESTABLISHING SHOT: set body.eyebrow ("Topic · Period · What this is", e.g. "Jammu & ` +
-        `Kashmir · 1941–1951 · Census + Land Reform"), and frame the camera with a slight pitch ` +
-        `(10–20), opacity 0.45–0.6 so the title card reads over the dimmed map, and ONE focal pin ` +
-        `with pulse: true on the story's anchor place. The title and dek come from the heading ` +
-        `and prose — never a foreground. PREFER NO foreground on a map section: ` +
-        `the prose renders in the scroll rail and any chart is referenced by id. Add a foreground ` +
-        `ONLY for a lone hero stat (a single bigStat) — and its value must be a NUMBER from the ` +
-        `prose with a short label, never a sentence. NEVER place prose/keyValue/quote panels over ` +
-        `the map — they bury it and suppress the prose rail. Choropleths shade AREAL units ` +
-        `(countries, states, regions); cities, towns, and points of interest are POINTS — pin ` +
-        `them, never shade them. All map colours (pin color, choropleth colors/lineColor) are ` +
-        `theme tokens — "$accent", "$accent2", "$teal", "$positive", "$amber", "$red", "$muted", ` +
-        `"$surface", "$background" — the schema rejects raw hex; most pins should omit color ` +
-        `entirely and take the story default.`
-      : `This is a DECK story (no map backdrop). Set body.foreground: either a single full-slot ` +
-        `layer (no layout), or a layout name plus regions — each region holds AT MOST ONE layer ` +
-        `(the schema rejects more). Layouts and the regions they define:\n${DECK_LAYOUT_MENU}\n` +
-        `COVER/HERO sections use the EDITORIAL COVER SURFACE, not content layers: set ` +
-        `body.eyebrow ("Topic · Date · What this is") and body.dek (a one-line standfirst). ` +
-        `Leave foreground EMPTY — the pipeline completes the cover deterministically (section-root ` +
-        `layout "hero-full-bleed", the display heading, transparent panel chrome, and the hero ` +
-        `image from the planned image prompt), and the title renders from the section heading over ` +
-        `a scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.`
-
-  return (
+  const intro =
     `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
     `You are given the section's heading and prose; produce body — the visual content as ` +
-    `structured fields (NOT YAML, NOT a string).\n\n` +
-    `${formatGuidance}\n\n` +
+    `structured fields (NOT YAML, NOT a string).\n\n`
+
+  if (format === 'map') {
+    return (
+      intro +
+      `This is a MAP story — the MAP itself is the visual. Set body.map to the section camera ` +
+      `(center [lng, lat] + zoom, ALWAYS both; optional pitch/bearing/opacity, and focal pins). ` +
+      `Every pin is ` +
+      `{ coordinates: [lng, lat], label } — coordinates is a 2-number array, longitude FIRST; ` +
+      `NEVER emit lng/lat keys. When the section context gives a "Planned geography", anchor the camera to ` +
+      `it — keep its focus and stay close to its center/zoom, adjusting only for framing (pins ` +
+      `in view, shaded regions filling the viewport). If this section shades regions, its ` +
+      `choropleth (map.regions) is filled by a ` +
+      `separate source-grounded pass and merged in for you — do NOT author region values; just ` +
+      `frame the camera so the shaded geography reads well. HERO sections are the ` +
+      `ESTABLISHING SHOT: set body.eyebrow ("Topic · Period · What this is", e.g. "Jammu & ` +
+      `Kashmir · 1941–1951 · Census + Land Reform"), and frame the camera with a slight pitch ` +
+      `(10–20), opacity 0.45–0.6 so the title card reads over the dimmed map, and ONE focal pin ` +
+      `with pulse: true on the story's anchor place. The title and dek come from the heading ` +
+      `and prose — never a foreground.\n\n` +
+      `Rules:\n` +
+      `- The prose renders in the scroll rail beside the map; a planned chart is attached BY ID ` +
+      `automatically — never author chart layers, panels, or layouts (they do not exist on map ` +
+      `sections).\n` +
+      `- The ONLY foreground a map section may carry is a single lone bigStat ` +
+      `(foreground.layers, max 1) whose value is a NUMBER from the prose with a short label — ` +
+      `and omit even that for nearly every section.\n` +
+      `- Choropleths shade AREAL units (countries, states, regions); cities, towns, and points ` +
+      `of interest are POINTS — pin them, never shade them.\n` +
+      `- All map colours (pin color, choropleth colors/lineColor) are theme tokens — "$accent", ` +
+      `"$accent2", "$teal", "$positive", "$amber", "$red", "$muted", "$surface", "$background" — ` +
+      `the schema rejects raw hex; most pins should omit color entirely and take the story ` +
+      `default.\n` +
+      `- Surface the figures already in the prose; do not invent data.`
+    )
+  }
+
+  return (
+    intro +
+    `This is a DECK story (no map backdrop). Set body.foreground: either a single full-slot ` +
+    `layer (no layout), or a layout name plus regions — each region holds AT MOST ONE layer ` +
+    `(the schema rejects more). Layouts and the regions they define:\n${DECK_LAYOUT_MENU}\n` +
+    `COVER/HERO sections use the EDITORIAL COVER SURFACE, not content layers: set ` +
+    `body.eyebrow ("Topic · Date · What this is") and body.dek (a one-line standfirst). ` +
+    `Leave foreground EMPTY — the pipeline completes the cover deterministically (section-root ` +
+    `layout "hero-full-bleed", the display heading, transparent panel chrome, and the hero ` +
+    `image from the planned image prompt), and the title renders from the section heading over ` +
+    `a scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.\n\n` +
     `Available foreground layer types:\n${LAYER_MENU}\n\n` +
     `Rules:\n` +
     `- ONE primary element per region: put a SINGLE chart, bigStat, keyValue, quote, or prose ` +
@@ -487,7 +504,7 @@ export function visualSystem(format: StoryFormat): string {
     `layout holds, lead with the essentials (a later section can carry the rest) or pick a layout ` +
     `with more regions. A multi-row keyValue is ONE element; do not also pile a stat and prose on it.\n` +
     `- COVER/HERO sections follow the cover rule in the format guidance above — the editorial ` +
-    `cover surface (layout/eyebrow/dek as section fields, or the map establishing shot), NEVER ` +
+    `cover surface (layout/eyebrow/dek as section fields), NEVER ` +
     `content foreground layers. The full breakdown / "at a glance" belongs in a later section, ` +
     `not the opener.\n` +
     `- Place layers ONLY in regions the chosen layout defines (see the list above). A layer in a ` +

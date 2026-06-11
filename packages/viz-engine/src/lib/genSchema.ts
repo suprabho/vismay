@@ -440,6 +440,52 @@ export const sectionBodySchema = z.object({
 export type SectionBody = z.infer<typeof sectionBodySchema>
 
 /**
+ * The MAP-format narrowing of {@link sectionBodySchema} — on a map section the
+ * map IS the visual (camera + pins + choropleth carry the data; the prose
+ * renders in the scroll rail). Deck panels over the map bury both, so here they
+ * are UNREPRESENTABLE rather than discouraged:
+ *   - `map` is required — a map section without a camera doesn't exist;
+ *   - `foreground` cannot take `layout`/`regions` — at most ONE lone bigStat;
+ *   - `eyebrow` is required when `requireEyebrow` (hero sections — the
+ *     establishing shot always carries its kicker line).
+ * Charts are attached at the section level (`chart: data:<id>`) by the
+ * pipeline, never authored as layers. The output is a structural subset of
+ * {@link SectionBody}, so {@link normalizeSectionBody} applies unchanged.
+ */
+export function mapSectionBodySchemaFor(opts: { requireEyebrow?: boolean } = {}) {
+  const eyebrow = z
+    .string()
+    .describe(
+      'HERO kicker line above the title — "Topic · Period · What this is" ' +
+        '(e.g. "Jammu & Kashmir · 1941–1951 · Census + Land Reform").',
+    )
+  return z.object({
+    map: genMapCameraSchema.describe(
+      'The section camera: center [lng, lat] + zoom (always set both), optional pitch/bearing/' +
+        'opacity, focal pins, and the `regions` choropleth — the map is where a map section ' +
+        'carries its data.',
+    ),
+    foreground: z
+      .object({
+        // Optional so a stray deck-panel shape (layout/regions — stripped as
+        // unknown keys) degrades to an empty foreground that normalizes away,
+        // instead of failing the whole section generation.
+        layers: z
+          .array(bigStatSchema)
+          .max(1)
+          .optional()
+          .describe('The single hero bigStat — its value must be a NUMBER from the prose.'),
+      })
+      .optional()
+      .describe(
+        'RARE — a lone giant-number overlay. Omit for nearly every section: the prose renders ' +
+          'in the scroll rail, and deck layouts/panels do not exist on map sections.',
+      ),
+    eyebrow: opts.requireEyebrow ? eyebrow : eyebrow.optional(),
+  })
+}
+
+/**
  * Reshape the validated generation body into the config-entry `body` object the
  * engine parses (and `appendStorySection` serialises). Folds the foreground via
  * {@link normalizeForeground} and drops empty branches.

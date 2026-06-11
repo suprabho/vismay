@@ -3,7 +3,7 @@ import { normalizeSectionBody } from './vizEngine'
 import {
   outlineSchemaFor,
   sectionContentSchemaFor,
-  sectionVisualSchema,
+  sectionVisualSchemaFor,
   subsectionContentSchema,
   subsectionVisualSchema,
   chartDataSchema,
@@ -27,6 +27,8 @@ import {
 } from './prompts'
 import { buildRegionLayer } from './regions'
 import { completeCoverBody, isDeckCover } from './cover'
+import { completeMapHero, completeMapHeroProse } from './mapHero'
+import { lintOutline, lintSectionBody, formatLintIssue } from './lintLayout'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
@@ -98,16 +100,35 @@ export async function generateOutline(
   opts: GenerateOptions & { refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<StoryOutline> {
   const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
-  const result = await generateStructured({
-    model: opts.model,
-    system: outlineSystem(format),
-    // Format-aware schema: a map outline is narrowed to rail-safe kinds, loses
-    // the deck-only `layout`, and must declare each section's `geo`.
-    schema: outlineSchemaFor(format),
-    prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, opts.refine),
-    metadata: { feature: 'story-pipeline-outline', format },
-  })
-  return toOutline(result, format)
+  const run = (refine?: { feedback: string; previous: unknown }) =>
+    generateStructured({
+      model: opts.model,
+      system: outlineSystem(format),
+      // Format-aware schema: a map outline is narrowed to rail-safe kinds, loses
+      // the deck-only `layout`, and must declare each section's `geo`.
+      schema: outlineSchemaFor(format),
+      prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, refine),
+      metadata: { feature: 'story-pipeline-outline', format },
+    })
+  const result = await run(opts.refine)
+  const outline = toOutline(result, format)
+  // Structural lint + ONE corrective retry. The lint rules (hero opener, map
+  // stat second, numeric stat headings, geo on every map section, …) are
+  // prompt guidance first — this catches the misses instead of trusting them.
+  const issues = lintOutline(outline)
+  if (issues.length === 0) return outline
+  const retried = toOutline(
+    await run({
+      feedback:
+        `The outline has structural problems — fix exactly these, keeping everything ` +
+        `else (headings, charts, prose plans) as it was:\n` +
+        issues.map(formatLintIssue).join('\n'),
+      previous: result,
+    }),
+    format,
+  )
+  // Keep the retry only if it actually improved.
+  return lintOutline(retried).length <= issues.length ? retried : outline
 }
 
 /** The schema output, structurally — both format variants of the stub satisfy SectionStub. */
@@ -217,9 +238,13 @@ export async function generateSectionContent(
     schema: sectionContentSchemaFor(format),
     metadata: { feature: 'story-pipeline-section-content' },
   })
+  // Map heroes carry their dek in the markdown as ONE `*italic*` standfirst
+  // (the extractHeroBits convention) — guaranteed in code, not just prompted.
+  const isMapHero =
+    format === 'map' && (result.kind === 'hero' || result.kind === 'cover')
   return {
     heading: ctx.source === 'outline' ? ctx.stub.heading : result.heading,
-    paragraphs: result.paragraphs,
+    paragraphs: isMapHero ? completeMapHeroProse(result.paragraphs) : result.paragraphs,
     kind: result.kind,
   }
 }
@@ -227,7 +252,9 @@ export async function generateSectionContent(
 /**
  * Step 2b — the VISUAL pass: design ONE section's config `body`, given the
  * already-accepted prose. The body is constrained by viz-engine's own layer
- * schemas, so it can never carry malformed visual config.
+ * schemas — and for MAP sections by the narrowed map body schema (required
+ * camera, no deck panels, eyebrow on heroes) — so it can never carry malformed
+ * or format-breaking visual config.
  */
 export async function generateSectionVisual(
   ctx: SectionContext,
@@ -235,19 +262,49 @@ export async function generateSectionVisual(
   opts: SectionGenOptions = {},
 ): Promise<{ body: Record<string, unknown> }> {
   const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
-  const result = await generateStructured({
-    model: opts.model,
-    system: visualSystem(format),
-    prompt: buildVisualPrompt(ctx, content, opts.refine),
-    schema: sectionVisualSchema,
-    metadata: { feature: 'story-pipeline-section-visual' },
-  })
+  const run = (refine?: { feedback: string; previous: unknown }) =>
+    generateStructured({
+      model: opts.model,
+      system: visualSystem(format),
+      prompt: buildVisualPrompt(ctx, content, refine),
+      schema: sectionVisualSchemaFor(format, content.kind),
+      metadata: { feature: 'story-pipeline-section-visual' },
+    })
+  let result = await run(opts.refine)
   let body = normalizeSectionBody(result.body)
+  // Placement lint + ONE corrective retry: dropped regions / stacked layers
+  // (deck bodies — the map schema makes these unrepresentable).
+  const issues = lintSectionBody(body, content.heading)
+  if (issues.length > 0) {
+    result = await run({
+      feedback:
+        `The visual has layout placement problems — fix exactly these, keeping the ` +
+        `content (stats, charts, copy) as it was:\n` +
+        issues.map(formatLintIssue).join('\n'),
+      previous: { body: result.body },
+    })
+    body = normalizeSectionBody(result.body)
+  }
   // Deck covers are completed deterministically (section-root layout, display
   // heading, transparent panel) — the model only authors eyebrow/dek. The hero
   // image is attached where the real story slug is known (serialize / routes).
   if (isDeckCover(format, content.kind)) {
     body = completeCoverBody(body, { heading: content.heading })
+  }
+  if (format === 'map') {
+    // A planned chart is attached BY ID at the section level (the kashmir
+    // `chart: data:<id>` rail treatment) — the model never authors chart
+    // placement on a map, so it can't reach for a deck panel to hold one.
+    if (ctx.source === 'outline' && ctx.stub.chartId) {
+      body = { ...body, chart: `data:${ctx.stub.chartId}` }
+    }
+    // Map heroes are completed deterministically (pitch/opacity/pulse pin,
+    // camera fallback from the planned geo, no foreground) — see mapHero.ts.
+    if (content.kind === 'hero' || content.kind === 'cover') {
+      body = completeMapHero(body, {
+        geo: ctx.source === 'outline' ? ctx.stub.geo : undefined,
+      })
+    }
   }
   return { body }
 }

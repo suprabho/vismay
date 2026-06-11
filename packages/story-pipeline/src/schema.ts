@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { sectionBodySchema, genPinSchema } from './vizEngine'
+import { sectionBodySchema, mapSectionBodySchemaFor, genPinSchema } from './vizEngine'
 
 /**
  * Zod schemas that constrain the two LLM calls at the provider level (via
@@ -32,8 +32,11 @@ export const SECTION_KINDS = [
  * that rail — and on a map section there is no foreground panel meant to carry
  * the copy, so the markdown then renders nowhere (a blank snap target). Map
  * stories are therefore restricted to the narrative kinds that keep the rail.
+ * `cover` is deliberately absent: the renderer just aliases it to `hero`, and
+ * letting the model say "cover" invites deck-cover habits — a map story opens
+ * with a `hero` establishing shot.
  */
-export const MAP_SECTION_KINDS = ['text', 'hero', 'stat', 'cover'] as const
+export const MAP_SECTION_KINDS = ['text', 'hero', 'stat'] as const
 
 /** The section-kind tuple a given story format may use. */
 export function sectionKindsFor(format: 'deck' | 'map'): readonly string[] {
@@ -44,8 +47,9 @@ export function sectionKindsFor(format: 'deck' | 'map'): readonly string[] {
 function kindField(format: 'deck' | 'map') {
   const desc =
     format === 'map'
-      ? 'Section kind — a MAP story uses narrative kinds only: text | hero | stat | cover. ' +
+      ? 'Section kind — a MAP story uses narrative kinds only: text | hero | stat. ' +
         'These keep the scroll prose rail; deck/panel kinds would suppress it and orphan the prose. ' +
+        '"hero" is the opening establishing shot (a map story has no "cover"). ' +
         '"stat" renders the section HEADING as a giant figure, so use it only when the heading is ' +
         'a number (e.g. "18.7 GW").'
       : 'The section kind.'
@@ -299,6 +303,24 @@ export const sectionVisualSchema = z.object({
       'A chart layer references a chart id defined in the top-level charts list.',
   ),
 })
+
+/**
+ * The VISUAL-pass schema, narrowed to the format (and, for maps, the section
+ * kind). A MAP section's body is constrained at the provider level so the
+ * deck-panel failure mode is unrepresentable: required camera, foreground at
+ * most a lone bigStat (no layout/regions), and a required `eyebrow` on hero
+ * sections. Deck sections keep the historic full-body shape.
+ */
+export function sectionVisualSchemaFor(format: 'deck' | 'map', kind?: string) {
+  if (format !== 'map') return sectionVisualSchema
+  const isHero = kind === 'hero' || kind === 'cover' // legacy stubs may still say "cover"
+  return z.object({
+    body: mapSectionBodySchemaFor({ requireEyebrow: isHero }).describe(
+      'The section VISUAL: the map camera (+ pins / choropleth framing). The prose renders in ' +
+        'the scroll rail; a planned chart is attached by id automatically — never as a layer.',
+    ),
+  })
+}
 
 // ── Subsection passes (MAP only — the sub-beats of a parent section) ────────
 
