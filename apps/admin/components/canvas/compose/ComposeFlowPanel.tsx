@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { ComposeState, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
 import { canvasFrameId } from '../canvasOutputs'
-
-type ComposeFormat = ComposeState['format']
+import { LayoutPreview, SectionFrame } from './LayoutPreview'
+import { Notice } from './ui'
 
 /** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
 interface ChartRequirementView {
@@ -13,113 +13,6 @@ interface ChartRequirementView {
   title?: string
   chartType: 'bar' | 'line'
   requirement: string
-}
-
-/**
- * A schematic wireframe of a planned deck layout — the "what will this section
- * look like" demo shown BEFORE materialising. Region rectangles mirror the real
- * `foregroundLayouts` arrangement (percent-of-frame), tinted by slot type. A map
- * section or an unknown layout falls back to a single full/centred box.
- */
-type PreviewRegion = { label: string; type: string; x: number; y: number; w: number; h: number }
-
-const LAYOUT_REGIONS: Record<string, PreviewRegion[]> = {
-  'stat-left-chart-right': [
-    { label: 'stat', type: 'stat', x: 4, y: 8, w: 34, h: 84 },
-    { label: 'chart', type: 'chart', x: 42, y: 8, w: 54, h: 84 },
-  ],
-  'text-left-chart-right': [
-    { label: 'text', type: 'text', x: 4, y: 8, w: 38, h: 84 },
-    { label: 'chart', type: 'chart', x: 46, y: 8, w: 50, h: 84 },
-  ],
-  'text-left-quote-right': [
-    { label: 'text', type: 'text', x: 4, y: 8, w: 42, h: 84 },
-    { label: 'quote', type: 'quote', x: 50, y: 8, w: 46, h: 84 },
-  ],
-  'image-left-text-right': [
-    { label: 'image', type: 'image', x: 4, y: 8, w: 46, h: 84 },
-    { label: 'text', type: 'text', x: 54, y: 8, w: 42, h: 84 },
-  ],
-  'stat-top-chart-below': [
-    { label: 'stat', type: 'stat', x: 6, y: 8, w: 88, h: 28 },
-    { label: 'chart', type: 'chart', x: 6, y: 40, w: 88, h: 52 },
-  ],
-  'chart-top-text-below': [
-    { label: 'chart', type: 'chart', x: 6, y: 8, w: 88, h: 46 },
-    { label: 'text', type: 'text', x: 6, y: 58, w: 88, h: 34 },
-  ],
-  centered: [{ label: 'content', type: 'text', x: 20, y: 22, w: 60, h: 56 }],
-  'hero-full-bleed': [{ label: 'hero', type: 'hero', x: 4, y: 8, w: 92, h: 84 }],
-}
-
-const REGION_TINT: Record<string, string> = {
-  stat: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300',
-  chart: 'border-sky-400/40 bg-sky-400/10 text-sky-300',
-  text: 'border-neutral-400/30 bg-white/5 text-neutral-300',
-  quote: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
-  image: 'border-violet-400/40 bg-violet-400/10 text-violet-300',
-  hero: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200',
-  map: 'border-teal-400/40 bg-teal-400/10 text-teal-200',
-}
-
-function LayoutPreview({ layout, format }: { layout?: string; format: ComposeFormat }) {
-  const regions: PreviewRegion[] =
-    format === 'map'
-      ? [{ label: 'map', type: 'map', x: 2, y: 2, w: 96, h: 96 }]
-      : (layout ? LAYOUT_REGIONS[layout] : undefined) ?? [
-          { label: 'content', type: 'text', x: 8, y: 12, w: 84, h: 76 },
-        ]
-  return (
-    <div
-      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
-      style={{ paddingTop: '56.25%' }}
-      title={layout ? `Layout: ${layout}` : 'Planned layout'}
-    >
-      {regions.map((r, i) => (
-        <div
-          key={i}
-          className={`absolute flex items-center justify-center rounded-sm border text-[8px] uppercase tracking-wide ${
-            REGION_TINT[r.type] ?? REGION_TINT.text
-          }`}
-          style={{ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` }}
-        >
-          {r.label}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/**
- * A live thumbnail of a MATERIALISED section — the signed canvas-frame render
- * the canvas itself uses, scaled down (rendered at 4× the box then scaled to
- * fit, so the section sees a desktop-ish viewport). Static (pointer-events off);
- * the corner link opens the full render.
- */
-function SectionFrame({ src, title }: { src: string; title: string }) {
-  return (
-    <div
-      className="relative w-full overflow-hidden rounded border border-white/10 bg-neutral-950"
-      style={{ paddingTop: '56.25%' }}
-    >
-      <iframe
-        src={src}
-        title={title}
-        loading="lazy"
-        className="absolute left-0 top-0 origin-top-left"
-        style={{ width: '400%', height: '400%', transform: 'scale(0.25)', border: 0, pointerEvents: 'none' }}
-      />
-      <a
-        href={src}
-        target="_blank"
-        rel="noreferrer"
-        className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[9px] text-neutral-200 hover:bg-black/80"
-        title="Open the full render"
-      >
-        open ↗
-      </a>
-    </div>
-  )
 }
 
 /**
@@ -524,21 +417,30 @@ export function ComposeFlow({
     st.outline.length > 0 &&
     (phase === 'outline' || phase === 'content' || phase === 'visual' || phase === 'done')
 
-  return (
-    <div className="space-y-4">
-      {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-          {error}
-        </div>
-      )}
+  // Which step pill lights up — visual/done are sub-states of the content stage.
+  const STEPS = ['sources', 'angles', 'outline', 'content'] as const
+  const stepIdx =
+    phase === 'visual' || phase === 'done'
+      ? STEPS.length - 1
+      : STEPS.indexOf(phase as (typeof STEPS)[number])
 
-      {/* Step indicator */}
-      <ol className="flex gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-        {(['sources', 'angles', 'outline', 'content'] as const).map((p) => (
+  return (
+    <div className="space-y-5">
+      {error && <Notice tone="red">{error}</Notice>}
+
+      {/* Step indicator — past steps dim to "done", the current one is sky. */}
+      <ol className="flex items-center gap-1">
+        {STEPS.map((p, i) => (
           <li
             key={p}
-            className={`flex-1 rounded px-1.5 py-1 text-center ${
-              phase === p ? 'bg-sky-500/20 text-sky-300' : 'bg-white/5'
+            className={`flex-1 rounded-md px-1 py-1.5 text-center text-[10px] font-medium uppercase tracking-wider ${
+              phase === 'done'
+                ? 'bg-emerald-500/10 text-emerald-300/80'
+                : i === stepIdx
+                  ? 'bg-sky-500/20 text-sky-300'
+                  : i < stepIdx
+                    ? 'bg-white/10 text-neutral-400'
+                    : 'bg-white/5 text-neutral-600'
             }`}
           >
             {p}
@@ -547,17 +449,17 @@ export function ComposeFlow({
       </ol>
 
       {st.archived ? (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
+        <Notice tone="emerald">
           Finished — this is now a normal story. Its sources and outline are{' '}
           <span className="font-medium">retained</span> here for reference and stay
           reopenable.
-        </div>
+        </Notice>
       ) : (
         st.attached && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+          <Notice tone="amber">
             Composing into an existing story — materialised sections are{' '}
             <span className="font-medium">appended</span>, leaving your current content untouched.
-          </div>
+          </Notice>
         )
       )}
 
@@ -1024,9 +926,16 @@ export function ComposeFlowPanel({
       className="fixed right-0 top-0 z-50 flex h-full w-96 flex-col border-l border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur"
       style={{ display: open ? 'flex' : 'none' }}
     >
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <span className="text-sm font-semibold">Research &amp; outline</span>
-        <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200" aria-label="Close">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold tracking-tight">Research &amp; outline</h2>
+          <p className="truncate text-[11px] text-neutral-500">{slug}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 rounded-md p-1.5 leading-none text-neutral-400 transition-colors hover:bg-white/10 hover:text-neutral-200"
+          aria-label="Close"
+        >
           ✕
         </button>
       </div>
