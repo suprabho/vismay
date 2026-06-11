@@ -33,7 +33,14 @@ async function fdFetch<T>(path: string): Promise<T> {
     headers: { 'X-Auth-Token': FD_TOKEN },
   });
   if (!res.ok) {
-    throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
+    // Surface football-data's response body — a bare status is useless to debug
+    // (a 400 with "Your API token is invalid." looks identical to any other 400
+    // until you read the message).
+    const body = await res.text().catch(() => '');
+    const detail = body.replace(/\s+/g, ' ').trim().slice(0, 300);
+    throw new Error(
+      `football-data ${path} failed: ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ''}`,
+    );
   }
   return res.json() as Promise<T>;
 }
