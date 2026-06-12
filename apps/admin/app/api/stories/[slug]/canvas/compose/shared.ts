@@ -1,48 +1,18 @@
 import { stringify as yamlStringify } from 'yaml'
-import matter from 'gray-matter'
 import {
   isAllowedTextModel,
   DEFAULT_TEXT_MODEL,
-  packForVertical,
-  type DomainPack,
   type SourceDoc,
 } from '@vismay/story-pipeline'
 import { buildYamlModel, replaceSection } from '@vismay/content-source/yamlSections'
-import { getContentSource, verticalForApp } from '@vismay/content-source/contentSource'
 import type { StorySource } from '@vismay/content-source/storySources'
 
 /** Shared helpers for the canvas compose routes (sources / angles / outline / section). */
 
-/**
- * Resolve the story's editorial desk (DomainPack) — voice + vertical layer
- * menu for every compose generation pass.
- *
- *   1. frontmatter `vertical` (Tier 1 seeds it on per-app drafts; read via
- *      raw markdown + gray-matter so drafts resolve too),
- *   2. else the stories-row appSlug → verticalForApp (covers stories assigned
- *      to an app before the vertical seeding existed),
- *   3. else the vizmaya desk.
- */
-export async function resolveStoryPack(slug: string): Promise<DomainPack> {
-  const src = getContentSource()
-  try {
-    const md = await src.readMarkdown(slug)
-    if (md) {
-      const vertical = (matter(md).data as Record<string, unknown>).vertical
-      if (typeof vertical === 'string' && vertical) return packForVertical(vertical)
-    }
-  } catch {
-    // fall through to the app-slug mapping
-  }
-  try {
-    const row = (await src.listStories()).find((s) => s.slug === slug)
-    const vertical = verticalForApp(row?.appSlug)
-    if (vertical) return packForVertical(vertical)
-  } catch {
-    // fall through to the default desk
-  }
-  return packForVertical(null)
-}
+// Desk (DomainPack) resolution lives in the shared admin lib now — other AI
+// surfaces (canvas slot prompts, the Ask-AI assistant) reuse the exact same
+// resolution. Re-exported so the compose routes keep their import path.
+export { resolveStoryPack } from '@/lib/storyPack'
 
 /** Resolve a text-model alias from request input, then a stored fallback. */
 export function resolveModel(input: unknown, fallback?: string | null): string {
