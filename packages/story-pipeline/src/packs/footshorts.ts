@@ -48,7 +48,10 @@ const matchCard: PackLayerType = {
     score: z
       .string()
       .optional()
-      .describe('Display score/status, e.g. "2 – 1" or "FT" — post-match only.'),
+      .describe(
+        'Display score/status, e.g. "2 – 1" or "FT" — post-match only. A trailing ' +
+          'parenthetical renders as a smaller sub-line: "3 – 3 (4 – 2 pens)".',
+      ),
     kickoff: z
       .string()
       .optional()

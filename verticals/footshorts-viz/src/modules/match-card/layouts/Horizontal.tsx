@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react'
 import { Crest } from '../../../data/Crest'
 import type { MatchCardConfig } from '../index'
-import { darken, resolveFixture, splitGradient } from './shared'
+import { darken, resolveFixture, splitGradient, splitScoreNote } from './shared'
 
 /**
  * Horizontal feature card — wider hero with a split home/away gradient (or a
@@ -12,6 +12,7 @@ import { darken, resolveFixture, splitGradient } from './shared'
  */
 export default function HorizontalLayout({ config }: { config: MatchCardConfig }) {
   const f = resolveFixture(config)
+  const { main: scoreMain, note: scoreNote } = splitScoreNote(f.score)
   const bg = config.backgroundImage
     ? `linear-gradient(105deg, ${f.homeColor}cc 0%, ${darken(f.awayColor, 0.2)}cc 100%), url(${config.backgroundImage}) center/cover`
     : splitGradient(f.homeColor, f.awayColor)
@@ -119,7 +120,8 @@ export default function HorizontalLayout({ config }: { config: MatchCardConfig }
             <span style={teamName}>{f.homeShort}</span>
           </div>
           <div style={scoreBox}>
-            <span style={scoreText}>{f.scorePlaceholder ? (config.kickoff ?? 'vs') : f.score}</span>
+            <span style={scoreText}>{f.scorePlaceholder ? (config.kickoff ?? 'vs') : scoreMain}</span>
+            {!f.scorePlaceholder && scoreNote && <span style={kickoffText}>{scoreNote}</span>}
             {!f.scorePlaceholder && config.kickoff && (
               <span style={kickoffText}>FT</span>
             )}

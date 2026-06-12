@@ -32,6 +32,12 @@ export interface TeamEntry {
 /** football-data.org public crest CDN. */
 const fd = (id: number) => `https://crests.football-data.org/${id}.png`
 
+/** flagcdn.com flag URL (CC0, same source as f1-viz) — national teams badge
+ *  with their flag, not a crest; football-data.org serves national "crests"
+ *  inconsistently (.svg only, some 404). Codes are ISO-3166-1 alpha-2 plus
+ *  flagcdn's gb-eng/gb-sct/gb-wls subdivisions. */
+const flag = (code: string) => `https://flagcdn.com/w320/${code}.png`
+
 export const TEAMS: Record<string, TeamEntry> = {
   arsenal: { name: 'Arsenal', color: '#EF0107', secondary: '#FFFFFF', monogram: 'AFC', crest: fd(57) },
   chelsea: { name: 'Chelsea', color: '#034694', secondary: '#FFFFFF', monogram: 'CFC', crest: fd(61) },
@@ -107,6 +113,36 @@ export const TEAMS: Record<string, TeamEntry> = {
   sporting: { name: 'Sporting CP', shortName: 'Sporting', color: '#008057', secondary: '#FFFFFF', monogram: 'SCP', crest: fd(498) },
   'club-brugge': { name: 'Club Brugge', shortName: 'Brugge', color: '#0066B3', secondary: '#000000', monogram: 'CLB', crest: fd(851) },
   celtic: { name: 'Celtic', color: '#018749', secondary: '#FFFFFF', monogram: 'CEL', crest: fd(732) },
+
+  // National teams — badge is the country flag (flagcdn), monogram is the FIFA
+  // trigram, colors are the primary kit / association palette.
+  argentina: { name: 'Argentina', color: '#6CACE4', secondary: '#FFFFFF', monogram: 'ARG', crest: flag('ar') },
+  france: { name: 'France', color: '#0055A4', secondary: '#FFFFFF', monogram: 'FRA', crest: flag('fr') },
+  brazil: { name: 'Brazil', color: '#FFDC02', secondary: '#009739', monogram: 'BRA', crest: flag('br') },
+  england: { name: 'England', color: '#001E44', secondary: '#FFFFFF', monogram: 'ENG', crest: flag('gb-eng') },
+  spain: { name: 'Spain', color: '#AA151B', secondary: '#F1BF00', monogram: 'ESP', crest: flag('es') },
+  germany: { name: 'Germany', color: '#000000', secondary: '#DD0000', monogram: 'GER', crest: flag('de') },
+  portugal: { name: 'Portugal', color: '#DA291C', secondary: '#046A38', monogram: 'POR', crest: flag('pt') },
+  netherlands: { name: 'Netherlands', color: '#F36C21', secondary: '#FFFFFF', monogram: 'NED', crest: flag('nl') },
+  italy: { name: 'Italy', color: '#0066BC', secondary: '#FFFFFF', monogram: 'ITA', crest: flag('it') },
+  belgium: { name: 'Belgium', color: '#E30613', secondary: '#FDDA24', monogram: 'BEL', crest: flag('be') },
+  croatia: { name: 'Croatia', color: '#ED1C24', secondary: '#FFFFFF', monogram: 'CRO', crest: flag('hr') },
+  uruguay: { name: 'Uruguay', color: '#55B5E5', secondary: '#FFFFFF', monogram: 'URU', crest: flag('uy') },
+  mexico: { name: 'Mexico', color: '#006847', secondary: '#FFFFFF', monogram: 'MEX', crest: flag('mx') },
+  'united-states': {
+    name: 'United States',
+    shortName: 'USA',
+    color: '#002868',
+    secondary: '#BF0A30',
+    monogram: 'USA',
+    crest: flag('us'),
+  },
+  japan: { name: 'Japan', color: '#13294B', secondary: '#FFFFFF', monogram: 'JPN', crest: flag('jp') },
+  algeria: { name: 'Algeria', color: '#006233', secondary: '#FFFFFF', monogram: 'ALG', crest: flag('dz') },
+  austria: { name: 'Austria', color: '#EF3340', secondary: '#FFFFFF', monogram: 'AUT', crest: flag('at') },
+  jordan: { name: 'Jordan', color: '#CE1126', secondary: '#FFFFFF', monogram: 'JOR', crest: flag('jo') },
+  morocco: { name: 'Morocco', color: '#C1272D', secondary: '#006233', monogram: 'MAR', crest: flag('ma') },
+  canada: { name: 'Canada', color: '#FF0000', secondary: '#FFFFFF', monogram: 'CAN', crest: flag('ca') },
 }
 
 /**
@@ -138,6 +174,9 @@ const ALIASES: Record<string, string> = {
   'ac-milan': 'milan',
   'paris-saint-germain': 'psg',
   brugge: 'club-brugge',
+  usa: 'united-states',
+  'united-states-of-america': 'united-states',
+  holland: 'netherlands',
 }
 
 /** Slugify a display name so YAML can pass `home: "Arsenal"` and we still find the entry. */
