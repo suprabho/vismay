@@ -36,6 +36,16 @@ export function resolveFixture(config: MatchCardConfig): ResolvedFixture {
   }
 }
 
+/**
+ * Split a trailing parenthetical off a display score, so layouts can render
+ * the shootout/extra-time note smaller under the full-time result:
+ * "3 – 3 (4 – 2 pens)" → { main: "3 – 3", note: "4 – 2 pens" }.
+ */
+export function splitScoreNote(score: string): { main: string; note?: string } {
+  const m = score.match(/^(.*\S)\s*\((.+)\)$/)
+  return m ? { main: m[1], note: m[2] } : { main: score }
+}
+
 /** Diagonal split-color gradient: home on the left, away on the right. */
 export function splitGradient(home: string, away: string): string {
   return `linear-gradient(105deg, ${home} 0%, ${home} 45%, ${away} 55%, ${away} 100%)`

@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react'
 import { Crest } from '../../../data/Crest'
 import type { MatchCardConfig } from '../index'
-import { resolveFixture } from './shared'
+import { resolveFixture, splitScoreNote } from './shared'
 
 /**
  * Score-forward layout — refined version of the original card. Editorial
@@ -13,6 +13,7 @@ import { resolveFixture } from './shared'
 export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
   const f = resolveFixture(config)
   const accent = config.accent ?? f.competitionColor ?? 'var(--color-accent)'
+  const { main: scoreMain, note: scoreNote } = splitScoreNote(f.score)
 
   const wrap: CSSProperties = {
     width: '100%',
@@ -62,12 +63,28 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
     fontSize: '15px',
     fontWeight: 600,
   }
+  const scoreCol: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
+    minWidth: '92px',
+  }
   const score: CSSProperties = {
     fontFamily: 'var(--font-mono)',
     fontSize: '28px',
     fontWeight: 700,
     color: accent,
-    minWidth: '92px',
+    lineHeight: 1,
+  }
+  const scoreSub: CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: accent,
+    opacity: 0.75,
   }
   const kickoff: CSSProperties = {
     fontFamily: 'var(--font-mono)',
@@ -85,7 +102,10 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
             <Crest team={config.home} size={44} crestUrl={config.homeCrestUrl} />
             <span style={teamName}>{f.homeName}</span>
           </div>
-          <span style={score}>{f.score}</span>
+          <div style={scoreCol}>
+            <span style={score}>{scoreMain}</span>
+            {scoreNote && <span style={scoreSub}>{scoreNote}</span>}
+          </div>
           <div style={teamCol}>
             <Crest team={config.away} size={44} crestUrl={config.awayCrestUrl} />
             <span style={teamName}>{f.awayName}</span>

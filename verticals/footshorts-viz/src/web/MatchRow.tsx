@@ -135,7 +135,7 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
   const awayName = fixture.away?.name ?? fixture.away_team_name ?? 'TBD';
   const isFinished = fixture.status === 'finished';
   const scoreText =
-    isFinished && fixture.home_score !== null && fixture.away_score !== null
+    isFinished && fixture.home_score != null && fixture.away_score != null
       ? `${fixture.home_score} – ${fixture.away_score}`
       : 'vs';
 

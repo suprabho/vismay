@@ -36,7 +36,7 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
   // Top-left label: score for finished games, LIVE pill, or local kick-off
   // time. Day label for non-today fixtures so a strip of tiles self-orients.
   let topLabel: React.ReactNode;
-  if (isFinished && fixture.home_score !== null && fixture.away_score !== null) {
+  if (isFinished && fixture.home_score != null && fixture.away_score != null) {
     topLabel = (
       <span className="font-bold tabular-nums">
         {fixture.home_score} – {fixture.away_score}
