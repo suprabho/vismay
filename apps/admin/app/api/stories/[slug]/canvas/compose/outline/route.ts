@@ -14,7 +14,7 @@ import {
   writeComposeState,
   type ComposeOutlineEntry,
 } from '@vismay/content-source/composeState'
-import { resolveModel, sourcesToDocs } from '../shared'
+import { resolveModel, resolveStoryPack, sourcesToDocs } from '../shared'
 
 /**
  * Compose stage 3 — generate (or refine) the outline grounded in the chosen
@@ -71,11 +71,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const feedback = typeof body.feedback === 'string' ? body.feedback.trim() : ''
   const refine = feedback && body.previous ? { feedback, previous: body.previous } : undefined
 
+  const pack = await resolveStoryPack(slug)
   let outline
   try {
     outline = await generateOutline(
       { sources: docs, brief, answers },
-      { format: state.format, model, refine },
+      { format: state.format, model, refine, pack },
     )
   } catch (e) {
     return NextResponse.json(

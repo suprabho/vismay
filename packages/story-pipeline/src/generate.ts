@@ -16,15 +16,17 @@ import {
   buildContentPrompt,
   visualSystem,
   buildVisualPrompt,
-  SUBSECTION_CONTENT_SYSTEM,
+  subsectionContentSystem,
   buildSubsectionContentPrompt,
-  SUBSECTION_VISUAL_SYSTEM,
+  subsectionVisualSystem,
   buildSubsectionVisualPrompt,
-  CHART_SYSTEM,
+  chartSystem,
   buildChartPrompt,
-  REGIONS_SYSTEM,
+  regionsSystem,
   buildRegionsPrompt,
 } from './prompts'
+import { VIZMAYA_PACK } from './packs/vizmaya'
+import type { DomainPack } from './packs/types'
 import { buildRegionLayer } from './regions'
 import { completeCoverBody, isDeckCover } from './cover'
 import { completeMapHero, completeMapHeroProse } from './mapHero'
@@ -56,6 +58,8 @@ export interface GenerateOptions {
   model?: string
   /** Force the story format; otherwise the brief's suggestion wins. */
   format?: StoryFormat
+  /** The vertical's editorial desk (voice + vertical layer menu). Defaults to vizmaya. */
+  pack?: DomainPack
 }
 
 export interface GenerateInput {
@@ -100,13 +104,14 @@ export async function generateOutline(
   opts: GenerateOptions & { refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<StoryOutline> {
   const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
+  const pack = opts.pack ?? VIZMAYA_PACK
   const run = (refine?: { feedback: string; previous: unknown }) =>
     generateStructured({
       model: opts.model,
-      system: outlineSystem(format),
+      system: outlineSystem(format, pack),
       // Format-aware schema: a map outline is narrowed to rail-safe kinds, loses
       // the deck-only `layout`, and must declare each section's `geo`.
-      schema: outlineSchemaFor(format),
+      schema: outlineSchemaFor(format, pack),
       prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, refine),
       metadata: { feature: 'story-pipeline-outline', format },
     })
@@ -159,11 +164,11 @@ function toOutline(out: OutlineLike, format: StoryFormat): StoryOutline {
  */
 export async function generateChart(
   args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
-  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+  opts: { model?: string; pack?: DomainPack; refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<ChartSpec> {
   const data = await generateStructured({
     model: opts.model,
-    system: CHART_SYSTEM,
+    system: chartSystem(opts.pack),
     prompt: buildChartPrompt(args.requirement, args.brief, args.sources, opts.refine),
     schema: chartDataSchema,
     metadata: { feature: 'story-pipeline-chart' },
@@ -182,11 +187,11 @@ export async function generateChart(
  */
 export async function generateRegions(
   args: { requirement: RegionRequirement; brief: ResearchBrief; sources: SourceDoc[] },
-  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+  opts: { model?: string; pack?: DomainPack; refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<Record<string, unknown>> {
   const data: RegionData = await generateStructured({
     model: opts.model,
-    system: REGIONS_SYSTEM,
+    system: regionsSystem(opts.pack),
     prompt: buildRegionsPrompt(args.requirement, args.brief, args.sources, opts.refine),
     schema: regionDataSchema,
     metadata: { feature: 'story-pipeline-regions' },
@@ -216,6 +221,8 @@ export function injectRegions(
 export interface SectionGenOptions {
   /** Override the model alias. Defaults to `text.pro`. */
   model?: string
+  /** The vertical's editorial desk (voice + vertical layer menu). Defaults to vizmaya. */
+  pack?: DomainPack
   /** Refine loop: feedback on a prior draft to revise instead of restart. */
   refine?: { feedback: string; previous: unknown }
 }
@@ -233,7 +240,7 @@ export async function generateSectionContent(
   const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
   const result = await generateStructured({
     model: opts.model,
-    system: contentSystem(format),
+    system: contentSystem(format, opts.pack),
     prompt: buildContentPrompt(ctx, opts.refine),
     schema: sectionContentSchemaFor(format),
     metadata: { feature: 'story-pipeline-section-content' },
@@ -262,19 +269,21 @@ export async function generateSectionVisual(
   opts: SectionGenOptions = {},
 ): Promise<{ body: Record<string, unknown> }> {
   const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
+  const pack = opts.pack ?? VIZMAYA_PACK
   const run = (refine?: { feedback: string; previous: unknown }) =>
     generateStructured({
       model: opts.model,
-      system: visualSystem(format),
+      system: visualSystem(format, pack),
       prompt: buildVisualPrompt(ctx, content, refine),
-      schema: sectionVisualSchemaFor(format, content.kind),
+      schema: sectionVisualSchemaFor(format, content.kind, pack),
       metadata: { feature: 'story-pipeline-section-visual' },
     })
   let result = await run(opts.refine)
   let body = normalizeSectionBody(result.body)
   // Placement lint + ONE corrective retry: dropped regions / stacked layers
   // (deck bodies — the map schema makes these unrepresentable).
-  const issues = lintSectionBody(body, content.heading)
+  const extraTypes = pack.extraLayerTypes.map((t) => t.type)
+  const issues = lintSectionBody(body, content.heading, { extraTypes })
   if (issues.length > 0) {
     result = await run({
       feedback:
@@ -323,7 +332,7 @@ export async function generateSubsectionContent(
 ): Promise<{ heading: string; paragraphs: string[] }> {
   const result = await generateStructured({
     model: opts.model,
-    system: SUBSECTION_CONTENT_SYSTEM,
+    system: subsectionContentSystem(opts.pack),
     prompt: buildSubsectionContentPrompt(ctx, parent, sub, opts.refine),
     schema: subsectionContentSchema,
     metadata: { feature: 'story-pipeline-subsection-content' },
@@ -347,7 +356,7 @@ export async function generateSubsectionVisual(
 ): Promise<Record<string, unknown>> {
   const result = await generateStructured({
     model: opts.model,
-    system: SUBSECTION_VISUAL_SYSTEM,
+    system: subsectionVisualSystem(opts.pack),
     prompt: buildSubsectionVisualPrompt(ctx, parent, sub, content, opts.refine),
     schema: subsectionVisualSchema,
     metadata: { feature: 'story-pipeline-subsection-visual' },
@@ -373,9 +382,9 @@ export async function generateSubsections(
   const subs: GeneratedSubsection[] = []
   for (const sub of parent.subsections ?? []) {
     // eslint-disable-next-line no-await-in-loop
-    const content = await generateSubsectionContent(ctx, parent, sub, { model: opts.model })
+    const content = await generateSubsectionContent(ctx, parent, sub, { model: opts.model, pack: opts.pack })
     // eslint-disable-next-line no-await-in-loop
-    const map = await generateSubsectionVisual(ctx, parent, sub, content, { model: opts.model })
+    const map = await generateSubsectionVisual(ctx, parent, sub, content, { model: opts.model, pack: opts.pack })
     subs.push({
       heading: content.heading,
       paragraphs: content.paragraphs,
@@ -416,6 +425,7 @@ export async function generateSection(
     ? { heading: args.stub.heading, paragraphs: [], kind: args.stub.kind || 'text' }
     : await generateSectionContent(ctx, {
         model: opts.model,
+        pack: opts.pack,
         refine: args.refine
           ? {
               feedback: args.refine.feedback,
@@ -429,6 +439,7 @@ export async function generateSection(
       })
   const visual = await generateSectionVisual(ctx, content, {
     model: opts.model,
+    pack: opts.pack,
     refine: args.refine
       ? { feedback: args.refine.feedback, previous: { body: args.refine.previous.body } }
       : undefined,
@@ -441,12 +452,12 @@ export async function generateSection(
   if (args.outline.format === 'map' && args.stub.regionRequirement) {
     const regions = await generateRegions(
       { requirement: args.stub.regionRequirement, brief: args.brief, sources: args.sources },
-      { model: opts.model },
+      { model: opts.model, pack: opts.pack },
     )
     body = injectRegions(body, regions)
   }
   if (!hasSubs) return { ...content, body }
-  const subsections = await generateSubsections(ctx, args.stub, { model: opts.model })
+  const subsections = await generateSubsections(ctx, args.stub, { model: opts.model, pack: opts.pack })
   return { ...content, body, subsections }
 }
 
@@ -488,7 +499,7 @@ export async function generateStory(
     charts.push(
       await generateChart(
         { requirement, brief: input.brief, sources: input.sources },
-        { model: opts.model },
+        { model: opts.model, pack: opts.pack },
       ),
     )
   }
@@ -503,5 +514,5 @@ export async function generateStory(
     )
   }
   const story = assembleStory(outline, sections, charts)
-  return { story, issues: validateStory(story) }
+  return { story, issues: validateStory(story, { pack: opts.pack }) }
 }

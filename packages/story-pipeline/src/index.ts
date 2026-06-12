@@ -10,6 +10,14 @@
  */
 
 export * from './types'
+export {
+  packForVertical,
+  VIZMAYA_PACK,
+  F1_PACK,
+  FOOTSHORTS_PACK,
+  type DomainPack,
+  type PackLayerType,
+} from './packs'
 export { ingestSources, extract, extractBuffer, extractText, extractPdfVision } from './ingest'
 export type { IngestInput, InputFile, InputText, ExtractedSource, VisionPdfOptions } from './ingest'
 export { research, type ResearchOptions } from './research'

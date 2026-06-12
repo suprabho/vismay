@@ -1,6 +1,14 @@
 import { getVizModule, getForegroundLayout } from './vizEngine'
 import { sectionKindsFor } from './schema'
+import type { DomainPack } from './packs/types'
 import type { GeneratedStory, GeneratedSection, ValidationIssue } from './types'
+
+export interface ValidateOptions {
+  /** The story's desk. When a vertical bundle isn't registered in this process
+   *  (offline harness), a pack layer type falls back to its pack zod schema —
+   *  the real module `parseConfig` still wins whenever it IS registered. */
+  pack?: DomainPack
+}
 
 /** A foreground layer is any object with a string `type`. */
 function isLayer(v: unknown): v is { type: string; [k: string]: unknown } {
@@ -52,7 +60,7 @@ function collectLayers(body: Record<string, unknown>): {
  * registry, and chart layers are cross-referenced to the emitted chart specs.
  * Returns a flat issue list (empty = valid).
  */
-export function validateStory(story: GeneratedStory): ValidationIssue[] {
+export function validateStory(story: GeneratedStory, opts: ValidateOptions = {}): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   if (story.sections.length === 0) {
     issues.push({ message: 'story has no sections' })
@@ -99,7 +107,7 @@ export function validateStory(story: GeneratedStory): ValidationIssue[] {
       })
     }
 
-    validateSectionLayers(story, section, label, chartIds, issues)
+    validateSectionLayers(story, section, label, chartIds, issues, opts.pack)
   }
 
   return issues
@@ -111,6 +119,7 @@ function validateSectionLayers(
   label: string,
   chartIds: Set<string>,
   issues: ValidationIssue[],
+  pack?: DomainPack,
 ): void {
   const { layers, layout, regionNames } = collectLayers(section.body)
 
@@ -150,7 +159,21 @@ function validateSectionLayers(
   for (const layer of layers) {
     const mod = getVizModule(layer.type)
     if (!mod) {
-      issues.push({ section: label, layer: layer.type, message: 'unknown layer type' })
+      // Pack fallback: the vertical bundle may not be registered in this
+      // process (offline harness) — validate against the pack's zod mirror.
+      const packType = pack?.extraLayerTypes.find((t) => t.type === layer.type)
+      if (packType) {
+        const parsed = packType.schema.safeParse(layer)
+        if (!parsed.success) {
+          issues.push({
+            section: label,
+            layer: layer.type,
+            message: parsed.error.issues[0]?.message ?? 'invalid vertical layer config',
+          })
+        }
+      } else {
+        issues.push({ section: label, layer: layer.type, message: 'unknown layer type' })
+      }
       continue
     }
     try {

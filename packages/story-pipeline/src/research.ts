@@ -1,11 +1,14 @@
 import { generateStructured } from './ai'
 import { researchBriefSchema } from './schema'
-import { RESEARCH_SYSTEM, renderSources } from './prompts'
+import { researchSystem, renderSources } from './prompts'
+import type { DomainPack } from './packs/types'
 import type { ResearchBrief, SourceDoc } from './types'
 
 export interface ResearchOptions {
   /** Override the model alias. Defaults to DEFAULT_TEXT_MODEL. */
   model?: string
+  /** The vertical's editorial desk. Defaults to vizmaya. */
+  pack?: DomainPack
 }
 
 /**
@@ -19,7 +22,7 @@ export async function research(
 ): Promise<ResearchBrief> {
   return generateStructured({
     model: opts.model,
-    system: RESEARCH_SYSTEM,
+    system: researchSystem(opts.pack),
     prompt: renderSources(sources),
     schema: researchBriefSchema,
     metadata: { feature: 'story-pipeline-research' },

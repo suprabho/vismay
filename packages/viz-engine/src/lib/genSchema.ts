@@ -47,6 +47,31 @@ export const genForegroundLayerSchema = z.discriminatedUnion('type', [
 
 export type GenForegroundLayer = z.infer<typeof genForegroundLayerSchema>
 
+/** A schema admissible as a member of the layer discriminated union — one
+ *  `z.object` with a `type: z.literal(...)` discriminator. Vertical packages
+ *  (story-pipeline DomainPacks) supply these to extend the generatable menu. */
+export type GenLayerOption = z.ZodDiscriminatedUnionOption<'type'>
+
+/**
+ * The layer union extended with vertical module schemas (e.g. `f1:race-card`).
+ * Zero extras returns the canonical {@link genForegroundLayerSchema} instance,
+ * so the default generation contract is untouched by the seam.
+ */
+export function genForegroundLayerSchemaWith(extra: readonly GenLayerOption[]) {
+  if (extra.length === 0) return genForegroundLayerSchema
+  return z.discriminatedUnion('type', [
+    bigStatSchema,
+    chartSchema,
+    bodyTextSchema,
+    textSchema,
+    quoteSchema,
+    keyValueSchema,
+    imageSchema,
+    imageGridSchema,
+    ...extra,
+  ])
+}
+
 /** `[{ type, label }]` for the offered foreground layer types — used in the prompt. */
 export const GEN_FOREGROUND_TYPES: ReadonlyArray<{ type: string; label: string }> = [
   { type: 'bigStat', label: 'a giant number with label + delta' },
@@ -59,19 +84,25 @@ export const GEN_FOREGROUND_TYPES: ReadonlyArray<{ type: string; label: string }
   { type: 'imageGrid', label: '2–6 images in a mosaic' },
 ]
 
+/** One named region of a foreground layout, parameterized on the layer union
+ *  so vertical extras flow through. The describes live here, once. */
+function buildRegionSchema<L extends z.ZodTypeAny>(layer: L) {
+  return z.object({
+    name: z
+      .string()
+      .describe('A region name from the chosen layout, e.g. "lead", "chart", "body".'),
+    layers: z
+      .array(layer)
+      .max(1)
+      .describe(
+        'The single layer placed in this region (max 1). Generated layers carry no position, ' +
+          'so each fills its whole region — a second layer would paint on top of the first.'
+      ),
+  })
+}
+
 /** One named region of a foreground layout. */
-const genRegionSchema = z.object({
-  name: z
-    .string()
-    .describe('A region name from the chosen layout, e.g. "lead", "chart", "body".'),
-  layers: z
-    .array(genForegroundLayerSchema)
-    .max(1)
-    .describe(
-      'The single layer placed in this region (max 1). Generated layers carry no position, ' +
-        'so each fills its whole region — a second layer would paint on top of the first.'
-    ),
-})
+const genRegionSchema = buildRegionSchema(genForegroundLayerSchema)
 
 /**
  * The section foreground. Use `layout` + `regions` for a composed deck slide,
@@ -85,26 +116,37 @@ const genRegionSchema = z.object({
  * region always overlap rather than stack. Positioned multi-layer compositing
  * (badge over chart, scrim over image) stays a hand-authored-config pattern.
  */
-export const genForegroundSchema = z.object({
-  layout: z
-    .string()
-    .optional()
-    .describe('Optional named deck layout (e.g. "stat-left-chart-right"). Pair with `regions`.'),
-  regions: z
-    .array(genRegionSchema)
-    .optional()
-    .describe('Named regions, used WITH `layout` — each maps a layout region to its single layer.'),
-  layers: z
-    .array(genForegroundLayerSchema)
-    .max(1)
-    .optional()
-    .describe(
-      'A single full-slot foreground layer (max 1), used when there is no `layout` — ' +
-        'layout-less layers fill the slot, so a second would paint on top of the first.'
-    ),
-})
+function buildForegroundSchema<L extends z.ZodTypeAny>(layer: L) {
+  return z.object({
+    layout: z
+      .string()
+      .optional()
+      .describe('Optional named deck layout (e.g. "stat-left-chart-right"). Pair with `regions`.'),
+    regions: z
+      .array(buildRegionSchema(layer))
+      .optional()
+      .describe('Named regions, used WITH `layout` — each maps a layout region to its single layer.'),
+    layers: z
+      .array(layer)
+      .max(1)
+      .optional()
+      .describe(
+        'A single full-slot foreground layer (max 1), used when there is no `layout` — ' +
+          'layout-less layers fill the slot, so a second would paint on top of the first.'
+      ),
+  })
+}
+
+export const genForegroundSchema = buildForegroundSchema(genForegroundLayerSchema)
 
 export type GenForeground = z.infer<typeof genForegroundSchema>
+
+/** The foreground schema with vertical extras in its layer union. Zero extras
+ *  returns the canonical {@link genForegroundSchema} instance. */
+export function genForegroundSchemaWith(extra: readonly GenLayerOption[]) {
+  if (extra.length === 0) return genForegroundSchema
+  return buildForegroundSchema(genForegroundLayerSchemaWith(extra))
+}
 
 /**
  * Reshape a validated `genForegroundSchema` into the foreground value the engine
@@ -396,8 +438,9 @@ export type GenMapCamera = z.infer<typeof genMapCameraSchema>
  * deck section typically sets `foreground`; a map section sets `map`. `id`,
  * `text`, and `kind` live on the section entry itself, NOT here.
  */
-export const sectionBodySchema = z.object({
-  foreground: genForegroundSchema
+function buildSectionBodySchema<F extends z.ZodTypeAny>(foreground: F) {
+  return z.object({
+  foreground: foreground
     .optional()
     .describe('Deck content layered over the backdrop.'),
   background: genBackgroundSchema
@@ -435,9 +478,25 @@ export const sectionBodySchema = z.object({
       'HERO/COVER one-line standfirst rendered below the title on the full-bleed cover. ' +
         'Deck covers only — a map hero carries its dek in the markdown prose.',
     ),
-})
+  })
+}
+
+export const sectionBodySchema = buildSectionBodySchema(genForegroundSchema)
 
 export type SectionBody = z.infer<typeof sectionBodySchema>
+
+/**
+ * The section-body schema with vertical module schemas spliced into the
+ * foreground layer union — the DomainPack seam's provider contract. Zero
+ * extras returns the canonical {@link sectionBodySchema} instance, so default
+ * (vizmaya) generation is structurally untouched. Map narrowings
+ * ({@link mapSectionBodySchemaFor}) take no extras — vertical layers are a
+ * deck-only concern.
+ */
+export function sectionBodySchemaWith(extra: readonly GenLayerOption[]) {
+  if (extra.length === 0) return sectionBodySchema
+  return buildSectionBodySchema(genForegroundSchemaWith(extra))
+}
 
 /**
  * The MAP-format narrowing of {@link sectionBodySchema} — on a map section the
