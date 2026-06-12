@@ -3,7 +3,7 @@ import { catalogModules, catalogEntryId, type CatalogCategory } from '../lib/cat
 import CategorySection from './CategorySection'
 import ModuleCard from './ModuleCard'
 
-const CATEGORY_ORDER: CatalogCategory[] = ['Core', 'F1', 'Footshorts', 'Starship']
+const CATEGORY_ORDER: CatalogCategory[] = ['Core', 'F1', 'Footshorts', 'Starship', 'Kidzovo']
 
 export default async function CatalogGrid() {
   // Layout boots verticals too, but awaiting here defends against any
@@ -13,6 +13,7 @@ export default async function CatalogGrid() {
     loadVertical('f1'),
     loadVertical('footshorts'),
     loadVertical('starship'),
+    loadVertical('kidzovo'),
   ])
   const byCategory = new Map<CatalogCategory, typeof catalogModules>()
   for (const cat of CATEGORY_ORDER) byCategory.set(cat, [])
