@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from 'react';
 import type { FixtureRow } from '../types';
+import { Crest } from '../data/Crest';
 
 function TeamFormPill({
   fixture,
@@ -22,14 +23,17 @@ function TeamFormPill({
   const opp = isHome ? fixture.away : fixture.home;
   const oppName = opp?.name ?? (isHome ? fixture.away_team_name : fixture.home_team_name) ?? 'TBD';
 
+  // Scores arrive as `null` from DB rows but `undefined` from generated story
+  // configs (the pipeline omits them for unplayed fixtures) — treat both as
+  // "no score" or they render literally as "undefined–undefined".
   let result: 'W' | 'D' | 'L' | '-' = '-';
-  if (fixture.status === 'finished' && teamGoals !== null && oppGoals !== null) {
+  if (fixture.status === 'finished' && teamGoals != null && oppGoals != null) {
     result = teamGoals > oppGoals ? 'W' : teamGoals < oppGoals ? 'L' : 'D';
   }
   const resultColor =
     result === 'W' ? '#00D26A' : result === 'L' ? '#EF4444' : result === 'D' ? '#8E8E99' : '#24242E';
   const resultFg = result === 'W' || result === 'L' ? '#0B0B0F' : '#F4F4F5';
-  const scoreText = teamGoals !== null && oppGoals !== null ? `${teamGoals}–${oppGoals}` : '—';
+  const scoreText = teamGoals != null && oppGoals != null ? `${teamGoals}–${oppGoals}` : '—';
 
   // A card is "bounded" when its width is constrained (fixed px or a stretched
   // grid cell). Only then can the opponent name truncate; otherwise the card
@@ -44,10 +48,7 @@ function TeamFormPill({
       style={cardStyle}
     >
       <div className="mb-1 h-[40px] w-[40px]">
-        {opp?.crest_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={opp.crest_url} alt="" className="h-full w-full object-contain" />
-        ) : null}
+        <Crest team={oppName} crestUrl={opp?.crest_url ?? undefined} size={40} />
       </div>
       <div className="text-base font-semibold text-text">{scoreText}</div>
       <div
