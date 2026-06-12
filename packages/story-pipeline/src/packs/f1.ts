@@ -100,6 +100,13 @@ export const F1_PACK: DomainPack = {
     'VizF1 desk. Your reader follows Formula 1 race by race: be precise with the units ' +
     'that matter — laps, sectors, tenths, grid slots, championship points — and exact ' +
     'with driver, team, and circuit names. ',
+  outlineGuidance:
+    'PLAN THE VIZF1 MODULES (deck stories): when the sources carry a race result or fixture, ' +
+    'that beat\'s "visual" should FEATURE f1:race-card — name the type explicitly; when they ' +
+    'carry a drivers\' championship table, plan f1:driver-standings. These REPLACE a generic ' +
+    'chart/keyValue for fixture and standings beats — plan charts only for trends (points ' +
+    'progression, lap-time evolution), never as table furniture. A typical F1 story features ' +
+    'at least one of these modules when the sources support it.',
   contentGuidance:
     'VOICE: motorsport desk, not a press release — championship stakes over hype, the ' +
     'engineering reason under every gap, exact figures (laps, tenths, points) from the ' +

@@ -129,7 +129,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     // best-effort audit
   }
 
-  return NextResponse.json({ ok: true, outline: entries, storyOutline: outline })
+  return NextResponse.json({ ok: true, outline: entries, storyOutline: outline, desk: pack.id })
 }
 
 /** Persist the author's accept/reject/reorder edits to the outline entries. */

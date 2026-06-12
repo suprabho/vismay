@@ -81,7 +81,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     // best-effort audit
   }
 
-  return NextResponse.json({ ok: true, angles: result.angles, suggestedFormat: result.suggestedFormat })
+  return NextResponse.json({
+    ok: true,
+    angles: result.angles,
+    suggestedFormat: result.suggestedFormat,
+    desk: pack.id,
+  })
 }
 
 /**

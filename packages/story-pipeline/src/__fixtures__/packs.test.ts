@@ -72,6 +72,8 @@ check('fs menu has fs types', fsVisual.includes('fs:match-card') && fsVisual.inc
 check('fs menu has no f1 types', !fsVisual.includes('f1:'))
 check('vizmaya menu has no vertical types', !vmVisual.includes('f1:') && !vmVisual.includes('fs:'))
 check('f1 outline inline list has f1 types', outlineSystem('deck', F1_PACK).includes('f1:race-card'))
+check('f1 outline plans the modules', outlineSystem('deck', F1_PACK).includes(F1_PACK.outlineGuidance!))
+check('fs outline plans the modules', outlineSystem('deck', FOOTSHORTS_PACK).includes(FOOTSHORTS_PACK.outlineGuidance!))
 check('packForVertical resolves', packForVertical('f1') === F1_PACK && packForVertical('footshorts') === FOOTSHORTS_PACK && packForVertical(null) === VIZMAYA_PACK && packForVertical('starship') === VIZMAYA_PACK)
 
 // ── 3. voice splice ─────────────────────────────────────────────────────────
