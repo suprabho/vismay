@@ -6,6 +6,65 @@
  *   - kz:bubble   — Speech bubble with per-step text + tail (phase 3).
  */
 
+/* ─── Per-rive input schema ─────────────────────────────────────── */
+
+/**
+ * Descriptor for ONE state-machine input on a character's .riv. Plain,
+ * serializable DATA (not zod) so the same schema can later drive an admin
+ * costume picker or a Kidzovo DomainPack's generatable layer schema.
+ *
+ * Each .riv declares its OWN schema — the engine-level rive module keeps
+ * `staticInputs` generic/permissive; this is the kidzovo-layer contract
+ * that `kz:character` validates `costume` against at parse time.
+ *
+ * A .riv's enums are opaque from outside Rive Studio, so number inputs
+ * record how much of the enum has been discovered:
+ *   - `values` are CONFIRMED name → number pairs (visually inspected or
+ *     introspected via /inspect-riv);
+ *   - `enumComplete` marks `values` as the whole enum (unlisted numbers
+ *     become parse errors);
+ *   - `brokenValues` are numbers confirmed to render wrong — always
+ *     rejected, with the recorded reason in the error.
+ */
+export type RiveInputDescriptor =
+  | {
+      kind: 'number'
+      /**
+       * Confirmed name → number pairs. When present, costume YAML may use
+       * the NAME as a string (`costume: { Headgear: hair }`) and it
+       * resolves to the number at parse time. Raw numbers matching a named
+       * value also pass.
+       */
+      values?: Record<string, number>
+      /**
+       * True when `values` enumerates the input's complete enum — numbers
+       * outside it are rejected at parse time. When false/omitted the enum
+       * is not fully discovered: unlisted numbers are ACCEPTED (the costume
+       * system shipped using them) but unverified — say so in `doc`.
+       */
+      enumComplete?: boolean
+      /**
+       * Numbers confirmed broken by inspection, keyed by value, with the
+       * recorded reason. Rejected at parse time even on unknown-enum inputs.
+       */
+      brokenValues?: Record<number, string>
+      /** Human notes: what's confirmed, what's unverified, how it was found. */
+      doc?: string
+    }
+  | { kind: 'boolean'; doc?: string }
+  | {
+      /**
+       * Triggers are momentary events, not state — they cannot be set via
+       * `costume` (rejected at parse time). Declared anyway so the schema
+       * is a complete picture of the .riv's input surface.
+       */
+      kind: 'trigger'
+      doc?: string
+    }
+
+/** Input name (case-sensitive, must match the .riv exactly) → descriptor. */
+export type RiveInputSchema = Record<string, RiveInputDescriptor>
+
 /**
  * A named character pose. Each character entry in `data/characters.ts`
  * declares a `poses: Record<string, number>` map that resolves these
@@ -65,10 +124,15 @@ export interface KzCharacterConfig {
   bindings?: Record<string, string | number | boolean>
   /**
    * One-shot state-machine input writes, applied once on mount. Use for
-   * costume layers (Hat / Specs / BG / Muffler / Skin) and any other
+   * costume layers (Headgear / Specs / BG / Muffler / Skin) and any other
    * named number/boolean input the .riv exposes beyond the pose state.
-   * Keys are case-sensitive .riv input names. Unknown names are silently
-   * skipped at render time.
+   *
+   * Validated at PARSE time against the character's declared
+   * `inputs: RiveInputSchema` (see `data/characters.ts`): unknown input
+   * names, type mismatches, trigger inputs, and known-broken values are
+   * parse errors. In YAML a value may also be a confirmed value NAME
+   * (`costume: { Headgear: hair }`) — names resolve to numbers at parse
+   * time, so this parsed shape only ever holds numbers/booleans.
    *
    * Example:
    *   costume: { Headgear: 11, Muffler: 3, BG: 5 }

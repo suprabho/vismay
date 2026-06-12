@@ -1,6 +1,8 @@
 import type { VizModule } from '@vismay/viz-engine'
 
 import { listCharacters, resolveCharacter } from '../../data/characters'
+import type { CharacterEntry } from '../../data/characters'
+import { resolveCostume } from '../../data/riveInputs'
 import type { CharacterPoseConfig, KzCharacterConfig } from '../../types'
 
 /**
@@ -94,28 +96,30 @@ function parseConfig(
       r.bindings != null && typeof r.bindings === 'object'
         ? (r.bindings as KzCharacterConfig['bindings'])
         : undefined,
-    costume: parseCostume(r.costume, { label: ctx.label }),
+    costume: parseCostume(r.costume, palette, { label: ctx.label }),
   }
 }
 
 function parseCostume(
   raw: unknown,
+  palette: CharacterEntry,
   ctx: { label: string }
 ): KzCharacterConfig['costume'] {
   if (raw == null) return undefined
   if (typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error(`${ctx.label}: kz:character.costume must be an object map`)
   }
-  const out: Record<string, number | boolean> = {}
-  for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof value !== 'number' && typeof value !== 'boolean') {
-      throw new Error(
-        `${ctx.label}: kz:character.costume['${name}'] must be a number or boolean (got ${typeof value})`
-      )
-    }
-    out[name] = value
-  }
-  return Object.keys(out).length > 0 ? out : undefined
+  // Validate against the character's OWN declared .riv input schema and
+  // resolve confirmed value names (e.g. `Headgear: hair`) to numbers —
+  // typos, type mismatches, trigger writes, and known-broken values are
+  // parse errors here instead of silent render-time no-ops. See
+  // data/riveInputs.ts for the unconfirmed-enum policy.
+  const resolved = resolveCostume(
+    raw as Record<string, unknown>,
+    palette.inputs,
+    `${ctx.label}: kz:character.costume`
+  )
+  return Object.keys(resolved).length > 0 ? resolved : undefined
 }
 
 const characterModule: VizModule<KzCharacterConfig> = {
@@ -155,7 +159,7 @@ const characterModule: VizModule<KzCharacterConfig> = {
     },
     { kind: 'json', key: 'anchor', label: 'Anchor ({x, y})' },
     { kind: 'json', key: 'bindings', label: 'Rive view-model bindings' },
-    { kind: 'json', key: 'costume', label: 'State-machine input writes (e.g. {Headgear: 11})' },
+    { kind: 'json', key: 'costume', label: 'Costume input writes (e.g. {"Headgear": "hair", "Muffler": 3})' },
   ],
 }
 
