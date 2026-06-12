@@ -164,6 +164,13 @@ export const FOOTSHORTS_PACK: DomainPack = {
     'Footshorts desk. Your reader lives the match-week rhythm: be precise with scorelines, ' +
     'matchdays, league positions, and competition names, and exact with team and player ' +
     'names. ',
+  outlineGuidance:
+    'PLAN THE FOOTSHORTS MODULES (deck stories): when the sources carry a fixture or result, ' +
+    'that beat\'s "visual" should FEATURE fs:match-card — name the type explicitly; a league ' +
+    'table wants fs:standings-table; one team\'s recent run wants fs:team-form-strip. These ' +
+    'REPLACE a generic chart/keyValue for fixture, table, and form beats — plan charts only ' +
+    'for trends (goals per matchday, points progression), never as table furniture. A typical ' +
+    'football story features at least one of these modules when the sources support it.',
   contentGuidance:
     'VOICE: football desk, not a fan blog — form and table context over hot takes, exact ' +
     'scorelines and matchdays from the sources, competitions by their proper names. One ' +
