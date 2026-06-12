@@ -139,9 +139,13 @@ export function completeCoverBody(
   out.panel = { ...COVER_PANEL }
   if (opts.image && !hasForegroundContent(out.foreground)) {
     out.foreground = [opts.image]
-  } else if (Array.isArray(out.foreground) && out.foreground.length === 0) {
-    // Drop the materialise placeholder rather than serialising `foreground: []`.
-    delete out.foreground
+  } else if (!hasForegroundContent(out.foreground)) {
+    // No hero image (yet) — keep an EMPTY `foreground` rather than dropping the
+    // key: a section with neither `foreground`/`background` nor a legacy `map:`
+    // fails loadStoryConfig ("missing 'map.center'"), 404ing the canvas/story
+    // page on the next load. The empty list is the same placeholder the seeded
+    // draft uses; the visual/serialise pass attaches the hero image into it.
+    out.foreground = []
   }
   return out
 }
