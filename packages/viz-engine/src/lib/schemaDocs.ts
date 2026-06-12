@@ -104,13 +104,27 @@ function typeHint(s: any, depth = 0): string {
   }
 }
 
+/** A layer option described directly from a schema — for layer types that live
+ *  OUTSIDE the module registry (e.g. a DomainPack's vertical zod mirrors). */
+export interface LayerOptionDoc {
+  /** The `type:` discriminant, e.g. `fs:match-card`. */
+  type: string
+  /** Short human label for the lead sentence. */
+  label: string
+  /** The layer's zod object schema (with `.describe()` field docs). */
+  schema: unknown
+  /** Optional usage guidance, inserted between the role line and the fields
+   *  (e.g. a DomainPack `promptDoc`). */
+  doc?: string
+}
+
 /**
- * Build the exact-shape prompt for a layer type from its Zod schema, or null
- * when the type is unknown / has no schema.
+ * Build the exact-shape prompt for an arbitrary layer option from its Zod
+ * schema, or null when the schema is not a zod object. The schema-accepting
+ * core of {@link describeLayerSchema}, for layer types outside the registry.
  */
-export function describeLayerSchema(type: string): string | null {
-  const mod = getVizModule(type)
-  const schema = mod?.schema as any
+export function describeLayerOption(opt: LayerOptionDoc): string | null {
+  const schema = opt.schema as any
   if (!schema?._def || schema._def.typeName !== 'ZodObject') return null
 
   const shape = schema.shape as Record<string, any>
@@ -126,10 +140,21 @@ export function describeLayerSchema(type: string): string | null {
   }
 
   return (
-    `You author one \`${mod!.type}\` layer (“${mod!.label}”) for a data-driven ` +
-    `story, as YAML. The layer is a mapping discriminated by \`type: ${mod!.type}\`.\n\n` +
+    `You author one \`${opt.type}\` layer (“${opt.label}”) for a data-driven ` +
+    `story, as YAML. The layer is a mapping discriminated by \`type: ${opt.type}\`.\n\n` +
+    (opt.doc ? `${opt.doc}\n\n` : '') +
     `Accepted fields (a field marked (required) must be present; omit optional ` +
     `fields you don't need):\n${lines.join('\n')}\n\n` +
     RAW_YAML_RULE
   )
+}
+
+/**
+ * Build the exact-shape prompt for a layer type from its Zod schema, or null
+ * when the type is unknown / has no schema.
+ */
+export function describeLayerSchema(type: string): string | null {
+  const mod = getVizModule(type)
+  if (!mod?.schema) return null
+  return describeLayerOption({ type: mod.type, label: mod.label, schema: mod.schema })
 }
