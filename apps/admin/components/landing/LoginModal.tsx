@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import AdminLoginForm from '@/components/AdminLoginForm'
+import AdminAuth from '@/components/AdminAuth'
 
 interface Props {
   next?: string
@@ -61,11 +61,11 @@ export function LoginModal({ next = '/', label = 'Sign in', variant = 'primary' 
             <div id="login-modal-title" className="sr-only">
               Sign in to Vismay admin
             </div>
-            <AdminLoginForm
+            <AdminAuth
               next={next}
-              loginEndpoint="/api/login"
-              title="Sign in"
-              subtitle="Vismay admin"
+              brandName="Vismay Admin"
+              accent="#E07A60"
+              accentFg="#0a0a0a"
             />
           </div>
         </div>
