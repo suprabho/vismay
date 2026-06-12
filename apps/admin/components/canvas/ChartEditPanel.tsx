@@ -274,7 +274,8 @@ export default function ChartEditPanel({
         </div>
       )}
 
-      <div style={{ flex: 1, minHeight: 0 }}>
+      {/* CodeEditor's root is `flex-1` — it only stretches inside a flex column. */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {loading ? (
           <div style={{ padding: 16, fontSize: 12, color: '#666' }}>Loading chart data…</div>
         ) : (
