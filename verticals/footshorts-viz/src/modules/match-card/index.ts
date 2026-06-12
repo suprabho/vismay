@@ -42,6 +42,12 @@ export interface MatchCardConfig {
   competitionSlug?: string
   /** Optional accent color override (hex). Defaults to the theme's accent. */
   accent?: string
+  /** Box fill of the score-layout card. Any CSS color/gradient; defaults to a dark translucent wash. */
+  cardColor?: string
+  /** Border color of the score-layout card. Defaults to the accent. */
+  borderColor?: string
+  /** Team-name / date text color on the score-layout card. Pair with a light `cardColor`. */
+  textColor?: string
   /** Hex override for the home team's brand color. Bundled palette is the default. */
   homeColor?: string
   /** Hex override for the away team's brand color. */
@@ -92,6 +98,9 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchC
     competition: asString(r.competition),
     competitionSlug: asString(r.competitionSlug),
     accent: asString(r.accent),
+    cardColor: asString(r.cardColor),
+    borderColor: asString(r.borderColor),
+    textColor: asString(r.textColor),
     homeColor: asString(r.homeColor),
     awayColor: asString(r.awayColor),
     homeCrestUrl: asString(r.homeCrestUrl),
@@ -124,6 +133,9 @@ function adminForm(): AdminFormField[] {
     { kind: 'text', key: 'watchOn', label: 'Watch-on line (portrait layout)' },
     { kind: 'text', key: 'dateLabel', label: 'Date label (portrait layout)' },
     { kind: 'text', key: 'accent', label: 'Accent color override (hex)' },
+    { kind: 'text', key: 'cardColor', label: 'Card box color (score layout)' },
+    { kind: 'text', key: 'borderColor', label: 'Card border color (score layout)' },
+    { kind: 'text', key: 'textColor', label: 'Card text color (score layout)' },
   ]
 }
 
