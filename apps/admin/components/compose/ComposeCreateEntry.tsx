@@ -2,13 +2,24 @@
 
 import { useState } from 'react'
 
+interface Props {
+  /**
+   * The app the draft belongs to. Omitted on the vizmaya entry page — route 0
+   * defaults to `vizmaya-fyi` and keeps that flow byte-identical. Per-app
+   * entries (footshorts, vizf1, …) pass their own slug so the draft is tagged
+   * to the app and seeded with the matching `vertical` frontmatter.
+   */
+  appSlug?: string
+}
+
 /**
  * Create a compose draft and jump straight into the canvas (the new
  * canvas-native flow). Seeds a minimal story via route 0, then redirects to
- * `/vizmaya/<slug>/canvas`. Shown above the classic in-panel composer while the
- * canvas front stages are built out.
+ * the canvas route the API hands back (`/vizmaya/<slug>/canvas` for vizmaya,
+ * `/<appSlug>/<slug>/canvas` for every other app). Shown above the classic
+ * in-panel composer while the canvas front stages are built out.
  */
-export function ComposeCreateEntry() {
+export function ComposeCreateEntry({ appSlug }: Props) {
   const [title, setTitle] = useState('')
   const [format, setFormat] = useState<'deck' | 'map'>('deck')
   const [busy, setBusy] = useState(false)
@@ -23,15 +34,20 @@ export function ComposeCreateEntry() {
       const res = await fetch('/api/stories/compose', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ title: t, format }),
+        body: JSON.stringify({ title: t, format, ...(appSlug ? { appSlug } : {}) }),
       })
-      const data = (await res.json()) as { ok?: boolean; slug?: string; error?: string }
+      const data = (await res.json()) as {
+        ok?: boolean
+        slug?: string
+        canvasPath?: string
+        error?: string
+      }
       if (!res.ok || !data.slug) {
         setError(data.error ?? 'Failed to create draft')
         setBusy(false)
         return
       }
-      window.location.href = `/vizmaya/${data.slug}/canvas`
+      window.location.href = data.canvasPath ?? `/vizmaya/${data.slug}/canvas`
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setBusy(false)

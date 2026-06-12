@@ -14,10 +14,13 @@
 // The AI-generation contract — the same zod layer schemas the renderer validates with.
 export {
   sectionBodySchema,
+  sectionBodySchemaWith,
+  mapSectionBodySchemaFor,
   normalizeSectionBody,
   GEN_FOREGROUND_TYPES,
   genPinSchema,
   type SectionBody,
+  type GenLayerOption,
 } from '@vismay/viz-engine/src/lib/genSchema'
 
 // The live module registry — used to re-validate emitted layers via their real parseConfig.

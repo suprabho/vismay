@@ -64,17 +64,20 @@ export function makeSectionId(heading: string, existingIds: string[]): string {
   return `${base}-${n}`
 }
 
-/** Append a `## heading` + prose block to the end of a markdown body. */
+/** Append a `## heading` + prose block to the end of a markdown body.
+ *  `level: 1` writes the document-title `# heading` instead (hero sections —
+ *  the loader anchors heading levels 1 and 2 alike). */
 export function appendSectionToMarkdown(
   markdown: string,
   heading: string,
   paragraphs: string[],
+  level: 1 | 2 = 2,
 ): string {
   const body = paragraphs
     .map((p) => p.trim())
     .filter(Boolean)
     .join('\n\n')
-  const block = `## ${heading}\n\n${body}\n`
+  const block = `${'#'.repeat(level)} ${heading}\n\n${body}\n`
   const base = markdown.replace(/\s+$/, '')
   return base ? `${base}\n\n${block}` : block
 }
@@ -155,12 +158,13 @@ export function appendStorySection(
   }
 
   // Markdown: one `## heading` block per beat (the anchors the config points
-  // at); a flat section writes its own single block as before.
+  // at); a flat section writes its own single block as before. A hero is the
+  // story's title block, so its anchor is the document H1 (`# heading`).
   let md = markdown
   if (subs.length) {
     for (const s of subs) md = appendSectionToMarkdown(md, s.heading.trim(), s.paragraphs)
   } else {
-    md = appendSectionToMarkdown(md, heading, section.paragraphs)
+    md = appendSectionToMarkdown(md, heading, section.paragraphs, section.kind === 'hero' ? 1 : 2)
   }
 
   return {

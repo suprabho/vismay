@@ -3,7 +3,7 @@ import { normalizeSectionBody } from './vizEngine'
 import {
   outlineSchemaFor,
   sectionContentSchemaFor,
-  sectionVisualSchema,
+  sectionVisualSchemaFor,
   subsectionContentSchema,
   subsectionVisualSchema,
   chartDataSchema,
@@ -16,16 +16,21 @@ import {
   buildContentPrompt,
   visualSystem,
   buildVisualPrompt,
-  SUBSECTION_CONTENT_SYSTEM,
+  subsectionContentSystem,
   buildSubsectionContentPrompt,
-  SUBSECTION_VISUAL_SYSTEM,
+  subsectionVisualSystem,
   buildSubsectionVisualPrompt,
-  CHART_SYSTEM,
+  chartSystem,
   buildChartPrompt,
-  REGIONS_SYSTEM,
+  regionsSystem,
   buildRegionsPrompt,
 } from './prompts'
+import { VIZMAYA_PACK } from './packs/vizmaya'
+import type { DomainPack } from './packs/types'
 import { buildRegionLayer } from './regions'
+import { completeCoverBody, isDeckCover } from './cover'
+import { completeMapHero, completeMapHeroProse } from './mapHero'
+import { lintOutline, lintSectionBody, formatLintIssue } from './lintLayout'
 import { DEFAULT_THEME } from './defaults'
 import { validateStory } from './validate'
 import type {
@@ -53,6 +58,8 @@ export interface GenerateOptions {
   model?: string
   /** Force the story format; otherwise the brief's suggestion wins. */
   format?: StoryFormat
+  /** The vertical's editorial desk (voice + vertical layer menu). Defaults to vizmaya. */
+  pack?: DomainPack
 }
 
 export interface GenerateInput {
@@ -97,16 +104,36 @@ export async function generateOutline(
   opts: GenerateOptions & { refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<StoryOutline> {
   const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
-  const result = await generateStructured({
-    model: opts.model,
-    system: outlineSystem(format),
-    // Format-aware schema: a map outline is narrowed to rail-safe kinds, loses
-    // the deck-only `layout`, and must declare each section's `geo`.
-    schema: outlineSchemaFor(format),
-    prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, opts.refine),
-    metadata: { feature: 'story-pipeline-outline', format },
-  })
-  return toOutline(result, format)
+  const pack = opts.pack ?? VIZMAYA_PACK
+  const run = (refine?: { feedback: string; previous: unknown }) =>
+    generateStructured({
+      model: opts.model,
+      system: outlineSystem(format, pack),
+      // Format-aware schema: a map outline is narrowed to rail-safe kinds, loses
+      // the deck-only `layout`, and must declare each section's `geo`.
+      schema: outlineSchemaFor(format, pack),
+      prompt: buildOutlinePrompt(input.sources, input.brief, input.answers, refine),
+      metadata: { feature: 'story-pipeline-outline', format },
+    })
+  const result = await run(opts.refine)
+  const outline = toOutline(result, format)
+  // Structural lint + ONE corrective retry. The lint rules (hero opener, map
+  // stat second, numeric stat headings, geo on every map section, …) are
+  // prompt guidance first — this catches the misses instead of trusting them.
+  const issues = lintOutline(outline)
+  if (issues.length === 0) return outline
+  const retried = toOutline(
+    await run({
+      feedback:
+        `The outline has structural problems — fix exactly these, keeping everything ` +
+        `else (headings, charts, prose plans) as it was:\n` +
+        issues.map(formatLintIssue).join('\n'),
+      previous: result,
+    }),
+    format,
+  )
+  // Keep the retry only if it actually improved.
+  return lintOutline(retried).length <= issues.length ? retried : outline
 }
 
 /** The schema output, structurally — both format variants of the stub satisfy SectionStub. */
@@ -137,11 +164,11 @@ function toOutline(out: OutlineLike, format: StoryFormat): StoryOutline {
  */
 export async function generateChart(
   args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
-  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+  opts: { model?: string; pack?: DomainPack; refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<ChartSpec> {
   const data = await generateStructured({
     model: opts.model,
-    system: CHART_SYSTEM,
+    system: chartSystem(opts.pack),
     prompt: buildChartPrompt(args.requirement, args.brief, args.sources, opts.refine),
     schema: chartDataSchema,
     metadata: { feature: 'story-pipeline-chart' },
@@ -160,11 +187,11 @@ export async function generateChart(
  */
 export async function generateRegions(
   args: { requirement: RegionRequirement; brief: ResearchBrief; sources: SourceDoc[] },
-  opts: { model?: string; refine?: { feedback: string; previous: unknown } } = {},
+  opts: { model?: string; pack?: DomainPack; refine?: { feedback: string; previous: unknown } } = {},
 ): Promise<Record<string, unknown>> {
   const data: RegionData = await generateStructured({
     model: opts.model,
-    system: REGIONS_SYSTEM,
+    system: regionsSystem(opts.pack),
     prompt: buildRegionsPrompt(args.requirement, args.brief, args.sources, opts.refine),
     schema: regionDataSchema,
     metadata: { feature: 'story-pipeline-regions' },
@@ -194,6 +221,8 @@ export function injectRegions(
 export interface SectionGenOptions {
   /** Override the model alias. Defaults to `text.pro`. */
   model?: string
+  /** The vertical's editorial desk (voice + vertical layer menu). Defaults to vizmaya. */
+  pack?: DomainPack
   /** Refine loop: feedback on a prior draft to revise instead of restart. */
   refine?: { feedback: string; previous: unknown }
 }
@@ -211,14 +240,18 @@ export async function generateSectionContent(
   const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
   const result = await generateStructured({
     model: opts.model,
-    system: contentSystem(format),
+    system: contentSystem(format, opts.pack),
     prompt: buildContentPrompt(ctx, opts.refine),
     schema: sectionContentSchemaFor(format),
     metadata: { feature: 'story-pipeline-section-content' },
   })
+  // Map heroes carry their dek in the markdown as ONE `*italic*` standfirst
+  // (the extractHeroBits convention) — guaranteed in code, not just prompted.
+  const isMapHero =
+    format === 'map' && (result.kind === 'hero' || result.kind === 'cover')
   return {
     heading: ctx.source === 'outline' ? ctx.stub.heading : result.heading,
-    paragraphs: result.paragraphs,
+    paragraphs: isMapHero ? completeMapHeroProse(result.paragraphs) : result.paragraphs,
     kind: result.kind,
   }
 }
@@ -226,21 +259,63 @@ export async function generateSectionContent(
 /**
  * Step 2b — the VISUAL pass: design ONE section's config `body`, given the
  * already-accepted prose. The body is constrained by viz-engine's own layer
- * schemas, so it can never carry malformed visual config.
+ * schemas — and for MAP sections by the narrowed map body schema (required
+ * camera, no deck panels, eyebrow on heroes) — so it can never carry malformed
+ * or format-breaking visual config.
  */
 export async function generateSectionVisual(
   ctx: SectionContext,
   content: SectionContentDraft,
   opts: SectionGenOptions = {},
 ): Promise<{ body: Record<string, unknown> }> {
-  const result = await generateStructured({
-    model: opts.model,
-    system: visualSystem(ctx.source === 'outline' ? ctx.outline.format : ctx.format),
-    prompt: buildVisualPrompt(ctx, content, opts.refine),
-    schema: sectionVisualSchema,
-    metadata: { feature: 'story-pipeline-section-visual' },
-  })
-  return { body: normalizeSectionBody(result.body) }
+  const format = ctx.source === 'outline' ? ctx.outline.format : ctx.format
+  const pack = opts.pack ?? VIZMAYA_PACK
+  const run = (refine?: { feedback: string; previous: unknown }) =>
+    generateStructured({
+      model: opts.model,
+      system: visualSystem(format, pack),
+      prompt: buildVisualPrompt(ctx, content, refine),
+      schema: sectionVisualSchemaFor(format, content.kind, pack),
+      metadata: { feature: 'story-pipeline-section-visual' },
+    })
+  let result = await run(opts.refine)
+  let body = normalizeSectionBody(result.body)
+  // Placement lint + ONE corrective retry: dropped regions / stacked layers
+  // (deck bodies — the map schema makes these unrepresentable).
+  const extraTypes = pack.extraLayerTypes.map((t) => t.type)
+  const issues = lintSectionBody(body, content.heading, { extraTypes })
+  if (issues.length > 0) {
+    result = await run({
+      feedback:
+        `The visual has layout placement problems — fix exactly these, keeping the ` +
+        `content (stats, charts, copy) as it was:\n` +
+        issues.map(formatLintIssue).join('\n'),
+      previous: { body: result.body },
+    })
+    body = normalizeSectionBody(result.body)
+  }
+  // Deck covers are completed deterministically (section-root layout, display
+  // heading, transparent panel) — the model only authors eyebrow/dek. The hero
+  // image is attached where the real story slug is known (serialize / routes).
+  if (isDeckCover(format, content.kind)) {
+    body = completeCoverBody(body, { heading: content.heading })
+  }
+  if (format === 'map') {
+    // A planned chart is attached BY ID at the section level (the kashmir
+    // `chart: data:<id>` rail treatment) — the model never authors chart
+    // placement on a map, so it can't reach for a deck panel to hold one.
+    if (ctx.source === 'outline' && ctx.stub.chartId) {
+      body = { ...body, chart: `data:${ctx.stub.chartId}` }
+    }
+    // Map heroes are completed deterministically (pitch/opacity/pulse pin,
+    // camera fallback from the planned geo, no foreground) — see mapHero.ts.
+    if (content.kind === 'hero' || content.kind === 'cover') {
+      body = completeMapHero(body, {
+        geo: ctx.source === 'outline' ? ctx.stub.geo : undefined,
+      })
+    }
+  }
+  return { body }
 }
 
 /**
@@ -257,7 +332,7 @@ export async function generateSubsectionContent(
 ): Promise<{ heading: string; paragraphs: string[] }> {
   const result = await generateStructured({
     model: opts.model,
-    system: SUBSECTION_CONTENT_SYSTEM,
+    system: subsectionContentSystem(opts.pack),
     prompt: buildSubsectionContentPrompt(ctx, parent, sub, opts.refine),
     schema: subsectionContentSchema,
     metadata: { feature: 'story-pipeline-subsection-content' },
@@ -281,7 +356,7 @@ export async function generateSubsectionVisual(
 ): Promise<Record<string, unknown>> {
   const result = await generateStructured({
     model: opts.model,
-    system: SUBSECTION_VISUAL_SYSTEM,
+    system: subsectionVisualSystem(opts.pack),
     prompt: buildSubsectionVisualPrompt(ctx, parent, sub, content, opts.refine),
     schema: subsectionVisualSchema,
     metadata: { feature: 'story-pipeline-subsection-visual' },
@@ -307,9 +382,9 @@ export async function generateSubsections(
   const subs: GeneratedSubsection[] = []
   for (const sub of parent.subsections ?? []) {
     // eslint-disable-next-line no-await-in-loop
-    const content = await generateSubsectionContent(ctx, parent, sub, { model: opts.model })
+    const content = await generateSubsectionContent(ctx, parent, sub, { model: opts.model, pack: opts.pack })
     // eslint-disable-next-line no-await-in-loop
-    const map = await generateSubsectionVisual(ctx, parent, sub, content, { model: opts.model })
+    const map = await generateSubsectionVisual(ctx, parent, sub, content, { model: opts.model, pack: opts.pack })
     subs.push({
       heading: content.heading,
       paragraphs: content.paragraphs,
@@ -350,6 +425,7 @@ export async function generateSection(
     ? { heading: args.stub.heading, paragraphs: [], kind: args.stub.kind || 'text' }
     : await generateSectionContent(ctx, {
         model: opts.model,
+        pack: opts.pack,
         refine: args.refine
           ? {
               feedback: args.refine.feedback,
@@ -363,6 +439,7 @@ export async function generateSection(
       })
   const visual = await generateSectionVisual(ctx, content, {
     model: opts.model,
+    pack: opts.pack,
     refine: args.refine
       ? { feedback: args.refine.feedback, previous: { body: args.refine.previous.body } }
       : undefined,
@@ -375,12 +452,12 @@ export async function generateSection(
   if (args.outline.format === 'map' && args.stub.regionRequirement) {
     const regions = await generateRegions(
       { requirement: args.stub.regionRequirement, brief: args.brief, sources: args.sources },
-      { model: opts.model },
+      { model: opts.model, pack: opts.pack },
     )
     body = injectRegions(body, regions)
   }
   if (!hasSubs) return { ...content, body }
-  const subsections = await generateSubsections(ctx, args.stub, { model: opts.model })
+  const subsections = await generateSubsections(ctx, args.stub, { model: opts.model, pack: opts.pack })
   return { ...content, body, subsections }
 }
 
@@ -422,7 +499,7 @@ export async function generateStory(
     charts.push(
       await generateChart(
         { requirement, brief: input.brief, sources: input.sources },
-        { model: opts.model },
+        { model: opts.model, pack: opts.pack },
       ),
     )
   }
@@ -437,5 +514,5 @@ export async function generateStory(
     )
   }
   const story = assembleStory(outline, sections, charts)
-  return { story, issues: validateStory(story) }
+  return { story, issues: validateStory(story, { pack: opts.pack }) }
 }

@@ -96,10 +96,19 @@ function safeParseYaml(raw: string | null): unknown {
  * override columns on the right side of the canvas.
  */
 
-export function contentNode(unit: ResolvedUnit): InputNodeData {
+/**
+ * Section markdown preview. `maxLines` defaults to the compact 8-line
+ * excerpt the override cards use; the frame's collapsible Content leaf
+ * passes a much higher budget (the node body scrolls internally there,
+ * so the clip is only a guard against pathological section sizes).
+ */
+export function contentNode(
+  unit: ResolvedUnit,
+  maxLines: number = 8
+): InputNodeData {
   const body =
     unit.paragraphs.length > 0
-      ? truncateLines(unit.paragraphs.join('\n\n'), 8)
+      ? truncateLines(unit.paragraphs.join('\n\n'), maxLines)
       : '(no markdown anchored)'
   return {
     id: 'content',
@@ -371,13 +380,18 @@ export function buildForegroundGraph(unit: ResolvedUnit): ForegroundGraph {
   return { shape: 'flat', layout: null, regions: [], layers }
 }
 
+/** Line budget for the frame's Content leaf — effectively "the whole
+ *  section body" for any sane section; the canvas renders it inside a
+ *  max-height scroll container, so this is a guard, not a layout clamp. */
+const CONTENT_LEAF_MAX_LINES = 240
+
 /** Whole input subgraph for one section frame. */
 export function buildInputGraph(
   unit: ResolvedUnit,
   theme: Theme | null
 ): InputGraph {
   return {
-    content: contentNode(unit),
+    content: contentNode(unit, CONTENT_LEAF_MAX_LINES),
     layout: layoutNode(unit),
     theme: themeNode(theme),
     background: buildBackgroundGraph(unit),
@@ -592,5 +606,21 @@ function safeYamlStringify(value: unknown): string {
     return yamlStringify(value, { lineWidth: 60 })
   } catch {
     return '(failed to stringify YAML)'
+  }
+}
+
+/**
+ * JSON sibling of `safeYamlStringify` for node bodies that show raw JSON
+ * (the Chart Data card). Two guards `JSON.stringify` alone doesn't give:
+ *   - it can THROW (circular refs, BigInt) — caught, fallback copy;
+ *   - it can return `undefined` (bare undefined / function / symbol) —
+ *     coerced, since a node body must always be a string.
+ */
+export function safeJsonStringify(value: unknown): string {
+  try {
+    const text = JSON.stringify(value, null, 2)
+    return typeof text === 'string' ? text : String(value)
+  } catch {
+    return '(failed to render JSON)'
   }
 }

@@ -13,7 +13,7 @@ import {
   type StoryFormat,
 } from '@vismay/story-pipeline'
 import { getFeatureModel } from '@/lib/aiModelSettings'
-import { sourcesToDocs } from '../shared'
+import { resolveStoryPack, sourcesToDocs } from '../shared'
 
 /**
  * Compose stage 3.6 — generate the DATA for every chart the outline planned.
@@ -68,6 +68,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     questions: [],
   }
   const model = await getFeatureModel('generateChart')
+  const pack = await resolveStoryPack(slug)
   const src = getContentSource()
   const supabase = createServiceClient()
 
@@ -76,7 +77,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     requirement: ChartRequirement,
   ): Promise<{ id: string; ok: boolean; error?: string }> => {
     try {
-      const spec = await generateChart({ requirement, brief, sources: docs }, { model })
+      const spec = await generateChart({ requirement, brief, sources: docs }, { model, pack })
       await src.writeChart(slug, requirement.id, buildChartData(spec))
       try {
         const params2 = { feature: 'compose-chart' }

@@ -76,6 +76,21 @@ const VERTICAL_TO_APP_SLUG: Record<string, string> = {
   f1: 'vizf1',
 }
 
+/**
+ * Inverse of `VERTICAL_TO_APP_SLUG`: the `vertical` frontmatter key a story
+ * owned by `appSlug` must declare so its viz bundle (`fs:` / `f1:` module
+ * types) registers in the canvas and reader. vizmaya-fyi stories use only the
+ * core registry and declare no vertical — callers get `null` and should omit
+ * the frontmatter key entirely.
+ */
+export function verticalForApp(appSlug: string | null | undefined): string | null {
+  if (!appSlug) return null
+  for (const [vertical, app] of Object.entries(VERTICAL_TO_APP_SLUG)) {
+    if (app === appSlug) return vertical
+  }
+  return null
+}
+
 function deriveAppSlugFromFrontmatter(data: Record<string, unknown>): string {
   const explicit = data.appSlug ?? data.app_slug
   if (typeof explicit === 'string' && explicit.length > 0) return explicit

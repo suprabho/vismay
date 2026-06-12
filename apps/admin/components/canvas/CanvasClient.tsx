@@ -22,6 +22,7 @@ import {
   parseCanvasSources,
   liveUnit,
   buildInputGraph,
+  safeJsonStringify,
   type CanvasSources,
   type InputGraph,
 } from './canvasInputs'
@@ -38,9 +39,23 @@ import {
   seedMapOverride,
   seedTtsUnit,
 } from './canvasSlotAdd'
+import {
+  removeLayer,
+  removeForegroundRegion,
+  removeShareSection,
+  removeReportPage,
+  removeMapOverride,
+  removeTtsUnit,
+  shareSectionState,
+  reportPageState,
+  mapOverrideState,
+  ttsUnitState,
+  type OverrideState,
+} from './canvasSlotRemove'
 import AddMenu, {
   type AddMenuTarget,
   type AddMenuChoice,
+  type AddMenuDeletable,
 } from './AddMenu'
 // Re-imported for the addLeaf type — InputNodeData['slot'] is the discriminator
 // the leaf click dispatcher branches on.
@@ -166,6 +181,53 @@ type SlotTarget =
   // than the config-slot save path — hence no `unit`/`slotPath`.
   | { mode: 'chart'; chartId: string }
 
+/**
+ * Override kinds the +Add seed flow (and the delete flow) can target —
+ * one per per-section override file entry the canvas knows how to create.
+ */
+type OverrideSeedKind = 'share' | 'slides' | 'report' | 'map' | 'narration'
+
+const OVERRIDE_SEED_KINDS: readonly OverrideSeedKind[] = [
+  'share',
+  'slides',
+  'report',
+  'map',
+  'narration',
+]
+function isOverrideSeedKind(kind: EditableKind): kind is OverrideSeedKind {
+  return (OVERRIDE_SEED_KINDS as readonly string[]).includes(kind)
+}
+
+/**
+ * What a delete pick should remove — the inverse of the +Add dispatches.
+ * Resolved against the active section's unit at execute time (same rule
+ * as the add flow): the dispatch carries identity, not section indices.
+ */
+type DeleteDispatch =
+  | { kind: 'layer'; path: SlotPath }
+  | { kind: 'region'; regionKey: string }
+  | { kind: 'override'; overrideKind: OverrideSeedKind }
+
+/** A ready-to-surface delete option: menu copy + the dispatch to run. */
+interface DeletableInfo {
+  spec: AddMenuDeletable
+  dispatch: DeleteDispatch
+}
+
+/** Human-readable slot-path location for delete confirmations. */
+function describeSlotPath(path: SlotPath): string {
+  switch (path.kind) {
+    case 'legacyMap':
+      return 'the legacy map block'
+    case 'background':
+      return `background[${path.index}]`
+    case 'foregroundFlat':
+      return `foreground[${path.index}]`
+    case 'foregroundRegion':
+      return `foreground.${path.region}[${path.index}]`
+  }
+}
+
 /* ─── Layout constants ───────────────────────────────────────────── */
 const FRAME_W = 1920
 const FRAME_H = 1080
@@ -199,6 +261,13 @@ const COL_GAP = 280
 const LEAF_H = 176
 const JUNCTION_H = 96
 const LGAP_Y = 28
+/* Collapsible Content leaf. Collapsed = header-only chip; expanded = the
+ * full section markdown in a max-height scroll container. These are the
+ * layout-walk pitches for the Content row (the other leaves keep LEAF_H);
+ * CONTENT_BODY_MAX_H is the inner scroll viewport inside the node. */
+const CONTENT_COLLAPSED_H = 120
+const CONTENT_EXPANDED_H = 440
+const CONTENT_BODY_MAX_H = 320
 const BAND_GAP = 64
 // Horizontal pitch between the three left tiers.
 const LCOL_PITCH = INPUT_W + 150
@@ -496,20 +565,21 @@ export default function CanvasClient({
           | { kind: 'foreground-region-append'; regionKey: string }
       }
     | { kind: 'region'; layoutHint: string }
-    | {
-        kind: 'override'
-        overrideKind: 'share' | 'slides' | 'report' | 'map' | 'narration'
-      }
+    | { kind: 'override'; overrideKind: OverrideSeedKind }
   const [addMenu, setAddMenu] = useState<{
     position: { x: number; y: number }
-    target: AddMenuTarget
+    /** Null = delete-only menu (a deletable with nothing to add). */
+    target: AddMenuTarget | null
     /** Section the menu was opened against. The dispatcher reads the
      *  section's current sources at save time, but the unit identity
      *  (parentIndex / subIndex) is captured here so the menu acts on the
      *  section the user right-clicked, not whatever section becomes
      *  active by the time they pick. */
     sourceSectionIndex: number
-    context: AddDispatchContext
+    /** Null exactly when `target` is null. */
+    context: AddDispatchContext | null
+    /** Delete option to render under (or instead of) the add picker. */
+    del: DeletableInfo | null
   } | null>(null)
   const setAddMenuRef = useRef(setAddMenu)
   useEffect(() => {
@@ -527,6 +597,11 @@ export default function CanvasClient({
   useEffect(() => {
     formatRef.current = format
   }, [format])
+  // Collapsible Content node — per-session memory (survives section
+  // switches and graph rebuilds; resets on page load). Read by mountInputs
+  // when it lays the left column out; toggling re-mounts the left input
+  // graph so the stack re-walks at the new height. Default: expanded.
+  const contentCollapsedRef = useRef(false)
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
   const sectionUnits = useMemo(
@@ -797,6 +872,112 @@ export default function CanvasClient({
     stateRef.current.expandedGroup = expandedGroup
   }, [expandedGroup])
 
+  /* ─── Delete executor ─────────────────────────────────────────── */
+  // Runs a DeleteDispatch against the section it was opened on: route to
+  // the matching canvasSlotRemove helper, persist through the same save
+  // path the add/edit flows use (saveConfigYaml / saveSlice), patch
+  // `sources` locally so the graph rebuilds, and bump the iframe nonce.
+  // Open editors are closed first — a layer delete shifts sibling
+  // indices, so any captured SlotPath could now point at the wrong slot.
+  const executeDelete = useCallback(
+    async (sectionIndex: number, dispatch: DeleteDispatch) => {
+      const targetUnit =
+        sectionUnitsRef.current[sectionIndex] ??
+        sectionUnitsRef.current[stateRef.current.activeSectionIndex]
+      if (!targetUnit) return
+      setEditorTarget(null)
+      setSlotTarget((cur) => (cur?.mode === 'theme' ? cur : null))
+      try {
+        if (dispatch.kind === 'layer') {
+          const nextYaml = removeLayer(
+            configYamlRef.current,
+            targetUnit.parentIndex,
+            dispatch.path
+          )
+          await saveConfigYaml(slug, nextYaml)
+          setSources((p) => ({ ...p, configYaml: nextYaml }))
+        } else if (dispatch.kind === 'region') {
+          const nextYaml = removeForegroundRegion(
+            configYamlRef.current,
+            targetUnit.parentIndex,
+            dispatch.regionKey
+          )
+          await saveConfigYaml(slug, nextYaml)
+          setSources((p) => ({ ...p, configYaml: nextYaml }))
+        } else {
+          const s = sourcesRef.current
+          const sectionId =
+            targetUnit.parentConfig.id ?? `section-${targetUnit.parentIndex}`
+          let nextRaw: string
+          let patch: Partial<CanvasSources>
+          let target: 'share' | 'report' | 'map' | 'tts'
+          switch (dispatch.overrideKind) {
+            case 'share':
+              nextRaw = removeShareSection(s.shareYaml, sectionId)
+              patch = { shareYaml: nextRaw }
+              target = 'share'
+              break
+            case 'slides':
+              nextRaw = removeReportPage(
+                s.reportYaml,
+                'slides',
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { reportYaml: nextRaw }
+              target = 'report'
+              break
+            case 'report':
+              nextRaw = removeReportPage(
+                s.reportYaml,
+                'report',
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { reportYaml: nextRaw }
+              target = 'report'
+              break
+            case 'map':
+              nextRaw = removeMapOverride(
+                s.mapYaml,
+                targetUnit.parentIndex,
+                targetUnit.subIndex
+              )
+              patch = { mapYaml: nextRaw }
+              target = 'map'
+              break
+            case 'narration':
+              nextRaw = removeTtsUnit(
+                s.ttsYaml,
+                targetUnit.parentIndex,
+                targetUnit.subIndex,
+                targetUnit.sliceIndex ?? 0
+              )
+              patch = { ttsYaml: nextRaw }
+              target = 'tts'
+              break
+          }
+          await saveSlice(slug, { target, patch, newRaw: nextRaw })
+          setSources((p) => ({ ...p, ...patch }))
+        }
+        setDataNonce((n) => n + 1)
+      } catch (e) {
+        // Same posture as the +Add dispatcher: console is the error
+        // surface for now; the absent side effect is the user's signal.
+        console.error('[CanvasClient] delete failed:', e)
+      } finally {
+        setAddMenu(null)
+      }
+    },
+    [slug]
+  )
+  // Latest executor for closures captured during the editor build
+  // (keyboard Delete handler) — same ref pattern as the setters above.
+  const executeDeleteRef = useRef(executeDelete)
+  useEffect(() => {
+    executeDeleteRef.current = executeDelete
+  }, [executeDelete])
+
   // The editor scene — populated by the build effect, consumed by the
   // apply-* effects. `null` until the async setup completes.
   type Scene = {
@@ -868,6 +1049,19 @@ export default function CanvasClient({
         // layers). When present, a ✨ chip opens the standalone PromptBar
         // for this slot (Feature 1's on-node Generate affordance).
         onGenerate?: () => void
+        // Right-click handler — set on deletable cards (layer leaves +
+        // override cards) so the context menu (delete, today) opens from
+        // the card body. Mirrors JunctionControl.onContextMenu.
+        onContextMenu?: (clientX: number, clientY: number) => void
+        // Collapse toggle — set on the frame's Content leaf only. When
+        // present, a chip in the tag row collapses the card to a header-
+        // only chip / re-expands it; the toggle re-mounts the left graph
+        // so dependent node positions re-walk at the new height.
+        collapse?: { collapsed: boolean; onToggle: () => void }
+        // Max body height in px. When set (the expanded Content leaf), the
+        // body renders inside an internal scroll container instead of
+        // growing the node unboundedly.
+        bodyMaxHeight?: number
         constructor(
           public label: string,
           public tag: string,
@@ -1246,6 +1440,11 @@ export default function CanvasClient({
       }) {
         const editable = typeof data.onClick === 'function'
         const generatable = typeof data.onGenerate === 'function'
+        const hasContextMenu = typeof data.onContextMenu === 'function'
+        const collapsible = data.collapse !== undefined
+        const collapsed = data.collapse?.collapsed ?? false
+        const wantsPointer =
+          editable || generatable || collapsible || hasContextMenu
         const stop = (e: React.MouseEvent | React.PointerEvent) =>
           e.stopPropagation()
         const onClick = (e: React.MouseEvent) => {
@@ -1257,15 +1456,33 @@ export default function CanvasClient({
           stop(e)
           data.onGenerate?.()
         }
+        const onToggleCollapse = (e: React.MouseEvent) => {
+          stop(e)
+          data.collapse?.onToggle()
+        }
+        const onContextMenu = (e: React.MouseEvent) => {
+          if (!hasContextMenu) return
+          e.preventDefault()
+          stop(e)
+          data.onContextMenu?.(e.clientX, e.clientY)
+        }
+        const titleHint = editable
+          ? hasContextMenu
+            ? 'click to edit · right-click for more'
+            : 'click to edit'
+          : hasContextMenu
+            ? 'right-click for options'
+            : undefined
         return (
           <div
             onClick={onClick}
-            onPointerDown={editable || generatable ? stop : undefined}
-            onMouseDown={editable || generatable ? stop : undefined}
-            title={editable ? 'click to edit' : undefined}
+            onContextMenu={onContextMenu}
+            onPointerDown={wantsPointer ? stop : undefined}
+            onMouseDown={wantsPointer ? stop : undefined}
+            title={titleHint}
             style={{
               width: INPUT_W - 24,
-              minHeight: 96,
+              minHeight: collapsed ? undefined : 96,
               padding: 8,
               background: '#0a0a0a',
               border: '1px solid #262626',
@@ -1278,6 +1495,11 @@ export default function CanvasClient({
               color: data.variant === 'mono' ? '#9a9a9a' : '#555',
               lineHeight: 1.5,
               whiteSpace: 'pre-wrap',
+              // pre-wrap alone won't break long unbroken tokens (minified
+              // JSON, long URLs/base64 strings) — they'd clip silently at
+              // overflow:hidden. Break anywhere so every character stays
+              // visible inside the fixed card width.
+              overflowWrap: 'anywhere',
               fontStyle: data.variant === 'muted' ? 'italic' : 'normal',
               overflow: 'hidden',
               cursor: editable ? 'pointer' : 'default',
@@ -1295,13 +1517,24 @@ export default function CanvasClient({
                 fontSize: 9,
                 color: '#666',
                 letterSpacing: '0.14em',
-                marginBottom: 4,
+                marginBottom: collapsed ? 0 : 4,
                 display: 'flex',
                 justifyContent: 'space-between',
               }}
             >
               <span>{data.tag}</span>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {collapsible && (
+                  <span
+                    onClick={onToggleCollapse}
+                    onPointerDown={stop}
+                    onMouseDown={stop}
+                    title={collapsed ? 'Expand' : 'Collapse'}
+                    style={{ color: '#888', cursor: 'pointer' }}
+                  >
+                    {collapsed ? '▸ EXPAND' : '▾ COLLAPSE'}
+                  </span>
+                )}
                 {generatable && (
                   <span
                     onClick={onGenerate}
@@ -1316,7 +1549,23 @@ export default function CanvasClient({
                 {editable && <span style={{ color: '#3a5da0' }}>EDIT</span>}
               </span>
             </div>
-            {data.body}
+            {!collapsed &&
+              (data.bodyMaxHeight != null ? (
+                <div
+                  // Internal scroll viewport for long bodies (the expanded
+                  // Content leaf). Wheel events must not bubble to the Rete
+                  // area or scrolling the body would zoom the canvas.
+                  onWheel={(e) => e.stopPropagation()}
+                  style={{
+                    maxHeight: data.bodyMaxHeight,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {data.body}
+                </div>
+              ) : (
+                data.body
+              ))}
           </div>
         )
       }
@@ -1397,6 +1646,43 @@ export default function CanvasClient({
                 ? 'loaded'
                 : `${data.childCount} · click`}
             </span>
+            {data.onContextMenu && (
+              // Persistent `+ ADD` chip — opens the same override-seed
+              // AddMenu the header right-click does. Span (not button) so
+              // we don't nest interactive buttons; stopPropagation keeps
+              // the header's expand toggle out of the way.
+              <span
+                role="button"
+                onClick={(e) => {
+                  stop(e)
+                  data.onContextMenu?.(e.clientX, e.clientY)
+                }}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Add override for this section"
+                style={{
+                  fontSize: 10,
+                  color: '#9a9a9a',
+                  letterSpacing: '0.12em',
+                  cursor: 'pointer',
+                  border: '1px solid #333',
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                  whiteSpace: 'nowrap',
+                  transition: 'border-color 120ms, color 120ms',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#3a5da0'
+                  e.currentTarget.style.color = '#cfd8ea'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#333'
+                  e.currentTarget.style.color = '#9a9a9a'
+                }}
+              >
+                + ADD
+              </span>
+            )}
           </button>
         )
       }
@@ -1442,11 +1728,18 @@ export default function CanvasClient({
         }
         const titleHint = editable
           ? hasContextMenu
-            ? 'click to edit · right-click to add'
+            ? 'click to edit · + Add (or right-click) to add'
             : 'click to edit'
           : hasContextMenu
-            ? 'right-click to add'
+            ? '+ Add (or right-click) to add'
             : undefined
+        // Persistent, clickable `+ ADD` button — same AddMenu the
+        // right-click opens, anchored at the button. Right-click stays as
+        // a shortcut; this chip is the discoverable affordance.
+        const onAddClick = (e: React.MouseEvent) => {
+          stop(e)
+          data.onContextMenu?.(e.clientX, e.clientY)
+        }
         return (
           <div
             onClick={onClick}
@@ -1526,8 +1819,32 @@ export default function CanvasClient({
                 EDIT
               </span>
             )}
-            {hasContextMenu && !editable && !data.warning && (
-              <span style={{ color: '#555', letterSpacing: '0.14em' }}>
+            {hasContextMenu && (
+              <span
+                role="button"
+                onClick={onAddClick}
+                onPointerDown={stop}
+                onMouseDown={stop}
+                title="Add to this node"
+                style={{
+                  color: '#9a9a9a',
+                  letterSpacing: '0.14em',
+                  cursor: 'pointer',
+                  border: '1px solid #333',
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                  whiteSpace: 'nowrap',
+                  transition: 'border-color 120ms, color 120ms',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#3a5da0'
+                  e.currentTarget.style.color = '#cfd8ea'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#333'
+                  e.currentTarget.style.color = '#9a9a9a'
+                }}
+              >
                 + ADD
               </span>
             )}
@@ -1635,12 +1952,18 @@ export default function CanvasClient({
       const stackH = (n: number): number =>
         n > 0 ? n * LEAF_H + (n - 1) * LGAP_Y : 0
       const bandH = (n: number): number => Math.max(stackH(n), JUNCTION_H)
+      // The Content leaf's layout pitch depends on its collapse state —
+      // read through the ref at walk time so measureLeftHeight and
+      // mountInputs always agree.
+      const contentLeafH = (): number =>
+        contentCollapsedRef.current ? CONTENT_COLLAPSED_H : CONTENT_EXPANDED_H
 
       // Total height of the left graph, used to vertically center it on the
       // frame. Mirrors the placement walk in `mountInputs`.
       function measureLeftHeight(g: InputGraph): number {
-        // Content / Layout / Theme standalone block.
-        let h = 3 * LEAF_H + 2 * LGAP_Y + BAND_GAP
+        // Content / Layout / Theme standalone block (Content's row height
+        // varies with its collapse state).
+        let h = contentLeafH() + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
         // Background band (>=1 row: a placeholder when empty). Deck sections
         // with no per-section background drop the band entirely — the backdrop
         // is page-level (edited via the Deck defaults button), so a
@@ -1733,78 +2056,178 @@ export default function CanvasClient({
       }
 
       /**
-       * Open the +Add menu at `(cx, cy)`. The `context` field travels
-       * with the menu's target so the dispatcher knows what to do when
-       * the user picks. Reads the active section through refs at call
-       * time so right-clicking targets the section the user is looking
-       * at, not the build-time one.
-       *
-       * Returns nothing — the JunctionControl's onContextMenu is what
-       * the React event fires into; this helper produces those handlers.
+       * What an Add opener can offer. One discriminated spec replaces the
+       * old trio of near-identical maker functions (layer / region /
+       * override) — the AddMenu `target` and the dispatcher `context` are
+       * both derived from it at open time, so the two can't drift apart.
        */
-      function makeAddLayerOpener(opts: {
-        slot: 'background' | 'foreground'
-        label: string
-        /** Discriminator for the dispatcher: how to splice the new layer. */
-        dispatch:
-          | { kind: 'background-append' }
-          | { kind: 'background-create' }
-          | { kind: 'foreground-flat-append' }
-          | { kind: 'foreground-region-append'; regionKey: string }
-      }): (clientX: number, clientY: number) => void {
+      type AddTargetSpec =
+        | {
+            kind: 'layer'
+            slot: 'background' | 'foreground'
+            label: string
+            /** Discriminator for the dispatcher: how to splice the new layer. */
+            dispatch:
+              | { kind: 'background-append' }
+              | { kind: 'background-create' }
+              | { kind: 'foreground-flat-append' }
+              | { kind: 'foreground-region-append'; regionKey: string }
+          }
+        | {
+            kind: 'region'
+            knownKeys: string[]
+            existingKeys: string[]
+            layoutName: string
+          }
+        | {
+            kind: 'override'
+            label: string
+            overrideKind: OverrideSeedKind
+          }
+
+      /**
+       * Open the Add/Delete menu at `(cx, cy)`. The single opener factory
+       * for every context surface: junction right-click, the persistent
+       * `+ ADD` chips, the group headers, and the deletable cards (layer
+       * leaves / override cards, which pass `spec: null` for a delete-only
+       * menu). Reads the active section + module types through refs at
+       * call time so the menu acts on the section the user is looking at,
+       * not the build-time one.
+       *
+       * `getDeletable` is a thunk, evaluated at open time, so the delete
+       * row's existence and its confirm requirement always reflect the
+       * latest sources (e.g. an override deleted elsewhere stops offering
+       * itself). Returning null omits the row.
+       *
+       * Returns nothing — the controls' onContextMenu is what the React
+       * event fires into; this helper produces those handlers.
+       */
+      function makeAddOpener(
+        spec: AddTargetSpec | null,
+        getDeletable?: () => DeletableInfo | null
+      ): (clientX: number, clientY: number) => void {
         return (clientX, clientY) => {
           const idx = stateRef.current.activeSectionIndex
+          let target: AddMenuTarget | null = null
+          let context: AddDispatchContext | null = null
+          if (spec) {
+            switch (spec.kind) {
+              case 'layer':
+                target = {
+                  kind: 'layer',
+                  slot: spec.slot,
+                  availableTypes: moduleTypesRef.current[spec.slot],
+                  label: spec.label,
+                }
+                context = { kind: 'layer', dispatch: spec.dispatch }
+                break
+              case 'region':
+                target = {
+                  kind: 'region',
+                  knownKeys: spec.knownKeys,
+                  existingKeys: spec.existingKeys,
+                  layoutName: spec.layoutName,
+                }
+                context = { kind: 'region', layoutHint: spec.layoutName }
+                break
+              case 'override':
+                target = {
+                  kind: 'override',
+                  label: spec.label,
+                  overrideKind: spec.overrideKind,
+                }
+                context = { kind: 'override', overrideKind: spec.overrideKind }
+                break
+            }
+          }
+          const del = getDeletable?.() ?? null
+          if (!target && !del) return
           setAddMenuRef.current({
             position: { x: clientX, y: clientY },
-            target: {
-              kind: 'layer',
-              slot: opts.slot,
-              availableTypes: moduleTypesRef.current[opts.slot],
-              label: opts.label,
-            },
+            target,
             sourceSectionIndex: idx,
-            context: { kind: 'layer', dispatch: opts.dispatch },
+            context,
+            del,
           })
         }
       }
 
-      function makeAddRegionOpener(opts: {
-        knownKeys: string[]
-        existingKeys: string[]
-        layoutName: string
-      }): (clientX: number, clientY: number) => void {
-        return (clientX, clientY) => {
-          const idx = stateRef.current.activeSectionIndex
-          setAddMenuRef.current({
-            position: { x: clientX, y: clientY },
-            target: {
-              kind: 'region',
-              knownKeys: opts.knownKeys,
-              existingKeys: opts.existingKeys,
-              layoutName: opts.layoutName,
-            },
-            sourceSectionIndex: idx,
-            context: { kind: 'region', layoutHint: opts.layoutName },
-          })
-        }
+      /* ── Deletable registry (keyboard Delete/Backspace) ─────────────
+       * Node id → the same getDeletable thunk its context menu uses.
+       * The keydown handler walks the current selection through this map,
+       * so keyboard delete and right-click delete stay one code path.
+       * Entries are registered where nodes are created (addLeaf, region
+       * junctions, override cards) and cleared in unmountInputs /
+       * unmountGroup alongside the nodes themselves. */
+      const deletableByNodeId = new Map<string, () => DeletableInfo | null>()
+
+      // Where each override kind lives on disk — used in delete confirms.
+      const OVERRIDE_FILE: Record<OverrideSeedKind, string> = {
+        share: 'share.yaml',
+        slides: 'report.yaml (slides.pages)',
+        report: 'report.yaml (report.pages)',
+        map: 'map.yaml',
+        narration: 'tts.yaml',
       }
 
-      function makeAddOverrideOpener(opts: {
-        label: string
-        overrideKind: 'share' | 'slides' | 'report' | 'map' | 'narration'
-      }): (clientX: number, clientY: number) => void {
-        return (clientX, clientY) => {
+      /**
+       * Delete thunk for an override card. Evaluated at open/keypress
+       * time: no entry in the file → no delete option (the card is just
+       * the "(no override)" placeholder); an entry with real content →
+       * destructive (confirm step); a bare seed → immediate delete.
+       */
+      function makeOverrideDeletable(
+        kind: OverrideSeedKind
+      ): () => DeletableInfo | null {
+        return () => {
           const idx = stateRef.current.activeSectionIndex
-          setAddMenuRef.current({
-            position: { x: clientX, y: clientY },
-            target: {
-              kind: 'override',
-              label: opts.label,
-              overrideKind: opts.overrideKind,
+          const unit = sectionUnitsRef.current[idx]
+          if (!unit) return null
+          const s = sourcesRef.current
+          const sectionId =
+            unit.parentConfig.id ?? `section-${unit.parentIndex}`
+          let state: OverrideState
+          switch (kind) {
+            case 'share':
+              state = shareSectionState(s.shareYaml, sectionId)
+              break
+            case 'slides':
+              state = reportPageState(
+                s.reportYaml,
+                'slides',
+                unit.parentIndex,
+                unit.subIndex
+              )
+              break
+            case 'report':
+              state = reportPageState(
+                s.reportYaml,
+                'report',
+                unit.parentIndex,
+                unit.subIndex
+              )
+              break
+            case 'map':
+              state = mapOverrideState(s.mapYaml, unit.parentIndex, unit.subIndex)
+              break
+            case 'narration':
+              state = ttsUnitState(
+                s.ttsYaml,
+                unit.parentIndex,
+                unit.subIndex,
+                unit.sliceIndex ?? 0
+              )
+              break
+          }
+          if (!state.exists) return null
+          return {
+            spec: {
+              label: `Delete ${kind} override`,
+              description: `Removes this section's entry from ${OVERRIDE_FILE[kind]}.`,
+              destructive: state.nonTrivial,
             },
-            sourceSectionIndex: idx,
-            context: { kind: 'override', overrideKind: opts.overrideKind },
-          })
+            dispatch: { kind: 'override', overrideKind: kind },
+          }
         }
       }
 
@@ -1822,7 +2245,13 @@ export default function CanvasClient({
           },
           x: number,
           y: number,
-          editKind?: EditableKind
+          editKind?: EditableKind,
+          // Per-leaf control extras — set BEFORE addNode so the initial
+          // React render sees them (same rule as the junction opts).
+          extras?: {
+            collapse?: { collapsed: boolean; onToggle: () => void }
+            bodyMaxHeight?: number
+          }
         ): Promise<DataNode> => {
           const node = new DataNode(d.label, d.tag, d.body, d.variant)
           // Two complementary click paths share addLeaf:
@@ -1935,6 +2364,30 @@ export default function CanvasClient({
               )
             }
           }
+          if (extras?.collapse) node.previewCtrl.collapse = extras.collapse
+          if (extras?.bodyMaxHeight != null) {
+            node.previewCtrl.bodyMaxHeight = extras.bodyMaxHeight
+          }
+          // Every layer leaf is user-deletable — the inverse of the +Add
+          // seeds. Right-click opens the delete-only menu; the same thunk
+          // registers for keyboard Delete/Backspace on the selected node.
+          // Chart Data leaves are excluded (their data lives in the
+          // chart_data store, not the section config) — as are the
+          // standalone Content/Layout/Theme leaves and placeholders.
+          if (d.slot && d.slot.kind === 'layer') {
+            const path = d.slot.path
+            const label = d.label
+            const getDel = (): DeletableInfo => ({
+              spec: {
+                label: `Delete ${label} layer`,
+                description: `Removes ${describeSlotPath(path)} from this section in config.yaml.`,
+                destructive: false,
+              },
+              dispatch: { kind: 'layer', path },
+            })
+            node.previewCtrl.onContextMenu = makeAddOpener(null, getDel)
+            deletableByNodeId.set(node.id, getDel)
+          }
           await editor.addNode(node)
           await area.translate(node.id, { x, y })
           leftNodeIds.add(node.id)
@@ -2023,7 +2476,7 @@ export default function CanvasClient({
                 const json = (await res.json()) as { data?: unknown }
                 body =
                   json.data != null
-                    ? truncateForNode(JSON.stringify(json.data, null, 2))
+                    ? truncateForNode(safeJsonStringify(json.data))
                     : '(no data yet — click to generate)'
               } else if (res.status === 404) {
                 body = '(no data yet — click to generate)'
@@ -2031,7 +2484,11 @@ export default function CanvasClient({
                 body = '(failed to load chart data)'
               }
             } catch {
-              return // section likely switched away; leave the placeholder
+              // Fetch / body-parse failed — a real network error, or the
+              // section switched away mid-flight. Show the failure copy
+              // rather than leaving "…loading" forever; the guarded
+              // area.update below is a no-op if the node is already gone.
+              body = '(failed to load chart data)'
             }
             try {
               node.previewCtrl.body = body
@@ -2063,9 +2520,27 @@ export default function CanvasClient({
           }
           const relabel = deckLeafLabel[key]
           const data = relabel ? { ...g[key], label: relabel } : g[key]
-          const node = await addLeaf(data, regionColX, y, editKind)
+          // Content is collapsible: collapsed = header-only chip, expanded =
+          // the full markdown body scrolling inside CONTENT_BODY_MAX_H.
+          // Toggling flips the session ref then re-mounts the left graph so
+          // every dependent node re-walks at the new pitch.
+          const extras =
+            key === 'content'
+              ? {
+                  collapse: {
+                    collapsed: contentCollapsedRef.current,
+                    onToggle: () => {
+                      contentCollapsedRef.current =
+                        !contentCollapsedRef.current
+                      void refreshInputs()
+                    },
+                  },
+                  bodyMaxHeight: CONTENT_BODY_MAX_H,
+                }
+              : undefined
+          const node = await addLeaf(data, regionColX, y, editKind, extras)
           await wire(node, 'value', frame, key)
-          y += LEAF_H + LGAP_Y
+          y += (key === 'content' ? contentLeafH() : LEAF_H) + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 
@@ -2103,7 +2578,8 @@ export default function CanvasClient({
             y + h / 2 - JUNCTION_H / 2,
             makeEditClick('background'),
             {
-              onContextMenu: makeAddLayerOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'layer',
                 slot: 'background',
                 label: 'Background',
                 dispatch:
@@ -2169,6 +2645,24 @@ export default function CanvasClient({
             // generic 'region' kind handles any region name the layout
             // produces; the regionKey is what tells canvasEditing which
             // slot to read or splice.
+            //
+            // Regions are also deletable: the context menu carries a
+            // delete row under the layer picker. Deleting a region with
+            // layers discards content, so that case arms the confirm.
+            const regionLayerCount = region.layers.length
+            const getRegionDel = (): DeletableInfo => ({
+              spec: {
+                label: `Delete region '${region.key}'`,
+                description:
+                  regionLayerCount > 0
+                    ? `Removes foreground.regions.${region.key} and the ${regionLayerCount} layer${
+                        regionLayerCount === 1 ? '' : 's'
+                      } inside it.`
+                    : `Removes the empty region foreground.regions.${region.key}.`,
+                destructive: regionLayerCount > 0,
+              },
+              dispatch: { kind: 'region', regionKey: region.key },
+            })
             const rj = await addJunction(
               region.label,
               `${region.layers.length} layer${
@@ -2178,14 +2672,18 @@ export default function CanvasClient({
               y + h / 2 - JUNCTION_H / 2,
               makeEditClick('region', region.key),
               {
-                onContextMenu: makeAddLayerOpener({
-                  slot: 'foreground',
-                  label: `${region.label} region`,
-                  dispatch: {
-                    kind: 'foreground-region-append',
-                    regionKey: region.key,
+                onContextMenu: makeAddOpener(
+                  {
+                    kind: 'layer',
+                    slot: 'foreground',
+                    label: `${region.label} region`,
+                    dispatch: {
+                      kind: 'foreground-region-append',
+                      regionKey: region.key,
+                    },
                   },
-                }),
+                  getRegionDel
+                ),
                 warning: regionWarning,
                 onGenerate: makeGenerateClick('region', region.key),
                 onFix: regionWarning
@@ -2193,6 +2691,7 @@ export default function CanvasClient({
                   : undefined,
               }
             )
+            deletableByNodeId.set(rj.id, getRegionDel)
             regionNodes.push(rj)
             regionCenters.push(y + h / 2)
             let ly = y + (h - stackH(leaves.length)) / 2
@@ -2228,7 +2727,8 @@ export default function CanvasClient({
             center - JUNCTION_H / 2,
             makeEditClick('foreground'),
             {
-              onContextMenu: makeAddRegionOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'region',
                 knownKeys: layoutKnownKeys,
                 existingKeys: existingRegionKeys,
                 layoutName,
@@ -2251,7 +2751,8 @@ export default function CanvasClient({
             y + h / 2 - JUNCTION_H / 2,
             makeEditClick('foreground'),
             {
-              onContextMenu: makeAddLayerOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'layer',
                 slot: 'foreground',
                 label: 'Foreground (flat)',
                 dispatch: { kind: 'foreground-flat-append' },
@@ -2283,7 +2784,8 @@ export default function CanvasClient({
             y,
             makeEditClick('foreground'),
             {
-              onContextMenu: makeAddRegionOpener({
+              onContextMenu: makeAddOpener({
+                kind: 'region',
                 knownKeys: defaultLayoutDef
                   ? Object.keys(defaultLayoutDef.regions)
                   : [],
@@ -2318,8 +2820,27 @@ export default function CanvasClient({
             await editor.removeConnection(conn.id)
           }
         }
-        for (const id of leftNodeIds) await editor.removeNode(id)
+        for (const id of leftNodeIds) {
+          deletableByNodeId.delete(id)
+          await editor.removeNode(id)
+        }
         leftNodeIds = new Set<string>()
+      }
+
+      /**
+       * Re-mount the left input graph for the active section in place.
+       * Used when a node's intrinsic height changes (the Content leaf
+       * collapse toggle) — the stacked layout positions are computed at
+       * mount time, so a height change needs a re-walk. Narrower than
+       * applySection: the frame iframe and the expanded output group are
+       * untouched (no iframe reloads).
+       */
+      async function refreshInputs(): Promise<void> {
+        const view =
+          sectionViewsRef.current[stateRef.current.activeSectionIndex]
+        if (!view) return
+        await unmountInputs()
+        await mountInputs(view)
       }
 
       await mountInputs(initialView)
@@ -2339,10 +2860,7 @@ export default function CanvasClient({
       // narration as the canonical Autoplay add (map overrides are
       // editable in-place via the map override card or the map slot on
       // the canvas's left side).
-      const GROUP_OVERRIDE_KIND: Record<
-        OutputGroupId,
-        'share' | 'slides' | 'report' | 'map' | 'narration'
-      > = {
+      const GROUP_OVERRIDE_KIND: Record<OutputGroupId, OverrideSeedKind> = {
         share: 'share',
         slides: 'slides',
         report: 'report',
@@ -2366,7 +2884,8 @@ export default function CanvasClient({
         // server-side: if the override already exists for this section,
         // the seed helper leaves it alone so the user can still right-
         // click to re-open the editor on a missing field.
-        node.headerCtrl.onContextMenu = makeAddOverrideOpener({
+        node.headerCtrl.onContextMenu = makeAddOpener({
+          kind: 'override',
           label: `${group.label} · this section`,
           overrideKind: GROUP_OVERRIDE_KIND[group.id],
         })
@@ -2441,6 +2960,17 @@ export default function CanvasClient({
             })
           }
           node.previewCtrl.onGenerate = makeGenerateClick(editKind)
+          // Right-click on an override card offers Delete for the
+          // underlying per-section entry (when one exists — the thunk
+          // returns null for the "(no override)" placeholder state).
+          // `content` is excluded (it's the shared markdown body, not an
+          // override) and so is `shareMap` (a sub-block owned by the
+          // share entry — delete the share override to clear it whole).
+          if (isOverrideSeedKind(editKind)) {
+            const getDel = makeOverrideDeletable(editKind)
+            node.previewCtrl.onContextMenu = makeAddOpener(null, getDel)
+            deletableByNodeId.set(node.id, getDel)
+          }
           overrideMap.set(spec.socket, node)
           await editor.addNode(node)
           await area.translate(node.id, {
@@ -2554,6 +3084,7 @@ export default function CanvasClient({
           }
         }
         for (const id of slotNodeIds) {
+          deletableByNodeId.delete(id)
           await editor.removeNode(id)
         }
         expandedSlot = null
@@ -2641,10 +3172,68 @@ export default function CanvasClient({
 
       await AreaExtensions.zoomAt(area, editor.getNodes())
 
+      /* ── Keyboard delete (Delete / Backspace on a selected node) ──
+       * Walks the current selection (selectableNodes sets `selected` on
+       * the node) through the deletable registry — the exact thunks the
+       * right-click menus use, so both surfaces stay one code path.
+       * Destructive deletes route through the AddMenu's confirm step,
+       * anchored at the node's on-screen position; trivial ones execute
+       * immediately. One delete per keypress. */
+      const onDeleteKey = (e: KeyboardEvent) => {
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return
+        const t = e.target
+        if (
+          t instanceof HTMLInputElement ||
+          t instanceof HTMLTextAreaElement ||
+          (t instanceof HTMLElement && t.isContentEditable)
+        ) {
+          return
+        }
+        for (const n of editor.getNodes()) {
+          if (!(n as { selected?: boolean }).selected) continue
+          const getDel = deletableByNodeId.get(n.id)
+          if (!getDel) continue
+          const del = getDel()
+          if (!del) continue
+          e.preventDefault()
+          if (del.spec.destructive) {
+            const el = area.nodeViews.get(n.id)?.element
+            const rect = el?.getBoundingClientRect()
+            setAddMenuRef.current({
+              position: {
+                x: rect ? rect.left + 16 : window.innerWidth / 2,
+                y: rect ? rect.top + 16 : window.innerHeight / 2,
+              },
+              target: null,
+              sourceSectionIndex: stateRef.current.activeSectionIndex,
+              context: null,
+              del,
+            })
+          } else {
+            void executeDeleteRef.current(
+              stateRef.current.activeSectionIndex,
+              del.dispatch
+            )
+          }
+          return
+        }
+      }
+      // Disposed mid-setup → the parent cleanup already ran with a null
+      // scene; tear the area down here and don't register a listener
+      // nobody would remove.
+      if (disposed) {
+        area.destroy()
+        return
+      }
+      window.addEventListener('keydown', onDeleteKey)
+
       sceneRef.current = {
         applySection,
         applyExpandedGroup,
-        destroy: () => area.destroy(),
+        destroy: () => {
+          window.removeEventListener('keydown', onDeleteKey)
+          area.destroy()
+        },
       }
     })().catch((err) => {
       console.error('[CanvasClient] setup failed', err)
@@ -3119,7 +3708,9 @@ export default function CanvasClient({
   const handleAddMenuPick = useCallback(
     async (choice: AddMenuChoice) => {
       const cur = addMenu
-      if (!cur) return
+      // context is null only for delete-only menus, which render no add
+      // picker — a pick can't arrive, but guard for type-safety anyway.
+      if (!cur || !cur.context) return
       const targetUnit =
         sectionUnitsRef.current[cur.sourceSectionIndex] ??
         sectionUnitsRef.current[stateRef.current.activeSectionIndex]
@@ -4010,14 +4601,23 @@ export default function CanvasClient({
           onClose={closeSlot}
         />
       )}
-      {/* Floating +Add context menu. Anchored at the right-click cursor
-          via React portal so it isn't clipped by the rete canvas's
-          transformed area. */}
+      {/* Floating +Add / delete context menu. Anchored at the right-click
+          cursor (or the node, for keyboard deletes) via React portal so it
+          isn't clipped by the rete canvas's transformed area. */}
       {addMenu && (
         <AddMenu
           position={addMenu.position}
           target={addMenu.target}
+          deletable={addMenu.del?.spec ?? null}
           onPick={handleAddMenuPick}
+          onDelete={
+            addMenu.del
+              ? () => {
+                  const { dispatch } = addMenu.del!
+                  void executeDelete(addMenu.sourceSectionIndex, dispatch)
+                }
+              : undefined
+          }
           onClose={() => setAddMenu(null)}
         />
       )}

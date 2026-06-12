@@ -1,5 +1,7 @@
 import { GEN_FOREGROUND_TYPES, getForegroundLayout } from './vizEngine'
 import { SECTION_KINDS, sectionKindsFor } from './schema'
+import { VIZMAYA_PACK } from './packs/vizmaya'
+import type { DomainPack } from './packs/types'
 import type {
   SourceDoc,
   ResearchBrief,
@@ -46,29 +48,48 @@ export function renderSources(
     .join('\n\n---\n\n')
 }
 
-export const RESEARCH_SYSTEM =
-  `You are a research analyst preparing a data-driven visual story for the Vizmaya desk. ` +
-  `Read the provided sources and produce a structured brief:\n` +
-  `- summary: what the material is really about.\n` +
-  `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
-  `- entities: the main people, orgs, places, things.\n` +
-  `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
-  `- candidateAngles: 2–4 distinct angles.\n` +
-  `- questions: 3–6 sharp clarifying questions an editor MUST answer before you write ` +
-  `(format choice, lead angle, audience, scope, what to emphasise). Prefer "choice" ` +
-  `questions with concrete options; use "text" only when open input is genuinely needed.\n\n` +
-  `Be specific and grounded in the sources — do not invent facts.`
+/** A pack's per-stage guidance, appended as its own paragraph when set. The
+ *  vizmaya pack sets none, so every default-pack prompt stays byte-identical
+ *  to the pre-seam snapshot. */
+function guidance(text: string | undefined): string {
+  return text ? `\n\n${text}` : ''
+}
 
-export const ANGLES_SYSTEM =
-  `You are a research analyst preparing a data-driven visual story for the Vizmaya desk. ` +
-  `Read the provided sources and produce:\n` +
-  `- summary: what the material is really about.\n` +
-  `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
-  `- entities: the main people, orgs, places, things.\n` +
-  `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
-  `- angles: 3–5 DISTINCT angles the story could take. Each is a title, a one-sentence ` +
-  `thesis (the claim it makes), and a rationale (why it's worth taking) — all grounded in ` +
-  `the sources.\n\nBe specific and grounded — do not invent facts.`
+export function researchSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+    pack.persona +
+    `Read the provided sources and produce a structured brief:\n` +
+    `- summary: what the material is really about.\n` +
+    `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
+    `- entities: the main people, orgs, places, things.\n` +
+    `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
+    `- candidateAngles: 2–4 distinct angles.\n` +
+    `- questions: 3–6 sharp clarifying questions an editor MUST answer before you write ` +
+    `(format choice, lead angle, audience, scope, what to emphasise). Prefer "choice" ` +
+    `questions with concrete options; use "text" only when open input is genuinely needed.\n\n` +
+    `Be specific and grounded in the sources — do not invent facts.` +
+    guidance(pack.researchGuidance)
+  )
+}
+
+export const RESEARCH_SYSTEM = researchSystem()
+
+export function anglesSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+    pack.persona +
+    `Read the provided sources and produce:\n` +
+    `- summary: what the material is really about.\n` +
+    `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
+    `- entities: the main people, orgs, places, things.\n` +
+    `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
+    `- angles: 3–5 DISTINCT angles the story could take. Each is a title, a one-sentence ` +
+    `thesis (the claim it makes), and a rationale (why it's worth taking) — all grounded in ` +
+    `the sources.\n\nBe specific and grounded — do not invent facts.` +
+    guidance(pack.angleGuidance)
+  )
+}
+
+export const ANGLES_SYSTEM = anglesSystem()
 
 /** Render the editor's answers to the clarifying questions. */
 function renderAnswers(brief: ResearchBrief, answers: ComposeAnswers): string {
@@ -85,8 +106,32 @@ function renderAnswers(brief: ResearchBrief, answers: ComposeAnswers): string {
 const LAYER_TYPES = GEN_FOREGROUND_TYPES.filter(
   (l) => l.type !== 'image' && l.type !== 'imageGrid',
 )
-const LAYER_MENU = LAYER_TYPES.map((l) => `- ${l.type}: ${l.label}`).join('\n')
-const LAYER_TYPES_INLINE = LAYER_TYPES.map((l) => l.type).join(', ')
+
+/** The offered layer entries for a pack: core types + the pack's vertical
+ *  modules. Vizmaya (no extras) reproduces the pre-seam menu exactly. */
+function packLayerEntries(pack: DomainPack): ReadonlyArray<{ type: string; label: string }> {
+  if (pack.extraLayerTypes.length === 0) return LAYER_TYPES
+  return [...LAYER_TYPES, ...pack.extraLayerTypes.map((t) => ({ type: t.type, label: t.label }))]
+}
+function layerMenuFor(pack: DomainPack): string {
+  return packLayerEntries(pack).map((l) => `- ${l.type}: ${l.label}`).join('\n')
+}
+function layerTypesInlineFor(pack: DomainPack): string {
+  return packLayerEntries(pack).map((l) => l.type).join(', ')
+}
+
+/** The VISUAL pass's vertical-module doc block — present only when the pack
+ *  offers extras, so the vizmaya prompt carries no trace of the seam. */
+function verticalModuleBlock(pack: DomainPack): string {
+  if (pack.extraLayerTypes.length === 0) return ''
+  const docs = pack.extraLayerTypes
+    .map((t) => `- ${t.type} (suits regions: ${t.regions.join(', ')}) — ${t.promptDoc}`)
+    .join('\n')
+  return (
+    `${pack.name.toUpperCase()} VERTICAL MODULES — use each ONLY for the content it names, ` +
+    `placed in regions it suits; the core types above stay available:\n${docs}\n\n`
+  )
+}
 
 /** The deck layouts the VISUAL pass can actually build (no image-only layouts). */
 const DECK_LAYOUT_NAMES = [
@@ -125,10 +170,10 @@ const DECK_LAYOUT_MENU = layoutMenu(DECK_LAYOUT_NAMES)
 
 // ── Step 1: outline ────────────────────────────────────────────────────────
 
-export function outlineSystem(format: StoryFormat): string {
+export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
   const visualGuidance =
     format === 'map'
-      ? `A Vizmaya MAP story is a JOURNEY THROUGH GEOGRAPHY: each section frames a place and the ` +
+      ? `A ${pack.name} MAP story is a JOURNEY THROUGH GEOGRAPHY: each section frames a place and the ` +
         `map itself carries the data (pins, or a choropleth shading areas by value) — the map IS ` +
         `the chart, not a backdrop. Every section MUST set "geo": the named focus plus camera ` +
         `center [lng, lat] and zoom. Successive sections should MOVE the camera — vary center and ` +
@@ -146,8 +191,10 @@ export function outlineSystem(format: StoryFormat): string {
         `never shade them. Conversely, country/region-level data wants shading, not one pin per ` +
         `country. STAT sections are NUMERIC ONLY: kind "stat" renders the section ` +
         `heading as a giant figure, so its heading must BE the number ("18.7 GW", "10 million ` +
-        `homes"), never a phrase — plan one only when a single hard source-grounded figure ` +
-        `carries the beat. SUBSECTIONS: when ONE data context deserves several beats — the same ` +
+        `homes"), never a phrase — every stat needs a single hard source-grounded figure. ` +
+        `THE OPENING IS FIXED: section 1 is the hero (kind "hero" — the establishing shot; a map ` +
+        `story has no "cover" kind), and section 2 MUST be kind "stat" — the cold-open: the ` +
+        `story's single most arresting figure as its heading. SUBSECTIONS: when ONE data context deserves several beats — the same ` +
         `choropleth or pin field explored place by place — plan 2–4 "subsections" on that section ` +
         `instead of sibling sections: the parent holds the wide framing and the regionRequirement; ` +
         `each subsection is its own snap with its own heading, prose, and a camera DIVE (geo) ` +
@@ -156,7 +203,7 @@ export function outlineSystem(format: StoryFormat): string {
         `sake — a beat that changes data context is its own section. The prose ` +
         `renders in the scroll rail and any supporting chart is referenced by id — do NOT plan a ` +
         `side panel or deck layout over the map.`
-      : `For each section's "visual" name the foreground layers it features (${LAYER_TYPES_INLINE}) ` +
+      : `For each section's "visual" name the foreground layers it features (${layerTypesInlineFor(pack)}) ` +
         `and what each shows, and set "layout" to the deck layout that frames them best ` +
         `(${DECK_LAYOUTS}).`
   const stubFields =
@@ -168,7 +215,7 @@ export function outlineSystem(format: StoryFormat): string {
       : `  • optional layout naming the deck layout that frames the visual.\n` +
         `  • optional chartId when the section features a chart.\n`
   return (
-    `You plan a Vizmaya ${format} data story from research + the editor's answers — the ` +
+    `You plan a ${pack.name} ${format} data story from research + the editor's answers — the ` +
     `SKELETON only, no prose yet. The downstream writer and designer act ONLY on what you put ` +
     `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
@@ -178,7 +225,9 @@ export function outlineSystem(format: StoryFormat): string {
     `plot (which figures/series/categories and over what range, all from the sources). Do ` +
     `NOT fabricate the numbers here — the data is generated in a focused later pass. Sections ` +
     `reference charts by id.\n` +
-    `- imagePrompts: vivid prompts for sections that want imagery.\n` +
+    `- imagePrompts: vivid prompts for sections that want imagery. For a DECK story ALWAYS ` +
+    `include one 16:9 prompt whose "section" EXACTLY matches the cover's heading — it becomes ` +
+    `the full-bleed cover hero image.\n` +
     `- sections (3–8): each a stub with —\n` +
     `  • heading (UNIQUE across all sections — it is the markdown anchor, so a duplicate heading ` +
     `collides and that section loses its prose) and kind (${sectionKindsFor(format).join(' | ')}).\n` +
@@ -189,14 +238,16 @@ export function outlineSystem(format: StoryFormat): string {
     `  • visual: the visualisation it features (see below).\n` +
     stubFields +
     `${visualGuidance}\n\n` +
-    `THE COVER is one beat, not a summary: a sharp title, an eyebrow kicker ("Topic · Date · ` +
+    `THE COVER (on a MAP story: the kind "hero" opener) is one beat, not a summary: a sharp ` +
+    `title, an eyebrow kicker ("Topic · Date · ` +
     `What this is"), and EXACTLY ONE supporting line — a one-line standfirst (dek) OR a single ` +
     `headline stat, never both, and never a multi-row table or full paragraph. Its "visual" ` +
     `describes that cover surface (and for a deck, the hero image to prompt for). The cover must ` +
     `NOT carry the whole thesis or the data breakdown — give the "at a glance" / pattern summary ` +
     `its OWN early section. Keep the cover's expectedContent to the hook plus that one figure.\n` +
     `Open with this cover and end with a closing section. Ground every figure in the sources; ` +
-    `do not invent data.`
+    `do not invent data.` +
+    guidance(pack.outlineGuidance)
   )
 }
 
@@ -230,8 +281,9 @@ export function buildOutlinePrompt(
 // model emits ONLY categories + numeric series; the id/title/chartType/axes
 // come from the requirement and are merged in deterministically.
 
-export const CHART_SYSTEM =
-  `You produce the DATA for ONE chart in a Vizmaya data story, grounded strictly ` +
+export function chartSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You produce the DATA for ONE chart in a ${pack.name} data story, grounded strictly ` +
   `in the provided sources. Given a chart requirement (what to plot) and the ` +
   `research material, return:\n` +
   `- categories: the X-axis labels, in the order they should appear.\n` +
@@ -244,6 +296,10 @@ export const CHART_SYSTEM =
   `series consistent.\n` +
   `- Every series must have exactly one value per category.\n` +
   `- Keep it tight and legible (a handful of categories; few series).`
+  )
+}
+
+export const CHART_SYSTEM = chartSystem()
 
 /** Render a chart requirement for the data prompt. */
 function renderChartRequirement(req: ChartRequirement): string {
@@ -286,8 +342,9 @@ export function buildChartPrompt(
 // values are numeric data (often a long table of countries), so numeric
 // fidelity matters more than keeping the prompt lean.
 
-export const REGIONS_SYSTEM =
-  `You produce the DATA for ONE map choropleth in a Vizmaya map story, grounded ` +
+export function regionsSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You produce the DATA for ONE map choropleth in a ${pack.name} map story, grounded ` +
   `strictly in the provided sources. Given a region requirement (what metric to ` +
   `shade, which regions) and the research material, return:\n` +
   `- items: one entry per region — { code, value } — where \`code\` is the ` +
@@ -301,6 +358,10 @@ export const REGIONS_SYSTEM =
   `- Exactly one value per region; no duplicate codes.\n` +
   `- Shade as many regions as the sources support — a world metric can be 150+; ` +
   `do not artificially trim the set.`
+  )
+}
+
+export const REGIONS_SYSTEM = regionsSystem()
 
 /** Render a choropleth requirement for the region data prompt. */
 function renderRegionRequirement(req: RegionRequirement): string {
@@ -392,7 +453,7 @@ function refineBlock(noun: string, refine?: { feedback: string; previous: unknow
 
 // CONTENT pass — prose only (no visual body).
 
-export function contentSystem(format: StoryFormat): string {
+export function contentSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
   const kindLine =
     format === 'map'
       ? `- kind: one of ${sectionKindsFor('map').join(' | ')}. (A MAP story uses these ` +
@@ -409,12 +470,15 @@ export function contentSystem(format: StoryFormat): string {
         `the WHOLE section. The prose renders in a small scroll-rail card over the map — portrait ` +
         `clips rather than scrolls, so every extra sentence is lost. One idea per paragraph; cut ` +
         `throat-clearing and restated context. For kind "stat" the heading is the giant figure ` +
-        `and the paragraphs are its caption — 1–2 lines, no more.`
+        `and the paragraphs are its caption — 1–2 lines, no more. For kind "hero" the paragraphs ` +
+        `are EXACTLY ONE standfirst (dek): a single 35–70-word scene-setting paragraph wrapped ` +
+        `in *single asterisks* (it renders as the italic dek under the title) — no second ` +
+        `paragraph, no byline.`
       : `Keep it lean: panel copy, not an essay — 30–60 words per paragraph, no padding, no ` +
         `restated context. The figures the visual needs must appear in the prose, but say each ` +
         `thing once.`
   return (
-    `You write the PROSE for ONE section of a Vizmaya ${format} data story.\n\n` +
+    `You write the PROSE for ONE section of a ${pack.name} ${format} data story.\n\n` +
     `Produce:\n` +
     `- heading: short and specific (becomes the markdown ## and the config text anchor).\n` +
     `- paragraphs: the body prose, one string per paragraph, factual magazine register.\n` +
@@ -423,7 +487,8 @@ export function contentSystem(format: StoryFormat): string {
     `${lengthRules}\n\n` +
     `Cover the section's planned "expected content" and honour its context in the arc. ` +
     `Ground every figure in the provided material; do not invent data. No visual layout here ` +
-    `— the visual is designed in a later pass.`
+    `— the visual is designed in a later pass.` +
+    guidance(pack.contentGuidance)
   )
 }
 
@@ -436,48 +501,60 @@ export function buildContentPrompt(
 
 // VISUAL pass — the config `body`, given the already-written prose.
 
-export function visualSystem(format: StoryFormat): string {
-  const formatGuidance =
-    format === 'map'
-      ? `This is a MAP story — the MAP itself is the visual. Set body.map to the section camera ` +
-        `(center [lng, lat], zoom, optional pitch/bearing, and focal pins). Every pin is ` +
-        `{ coordinates: [lng, lat], label } — coordinates is a 2-number array, longitude FIRST; ` +
-        `NEVER emit lng/lat keys. When the section context gives a "Planned geography", anchor the camera to ` +
-        `it — keep its focus and stay close to its center/zoom, adjusting only for framing (pins ` +
-        `in view, shaded regions filling the viewport). If this section shades regions, its ` +
-        `choropleth (map.regions) is filled by a ` +
-        `separate source-grounded pass and merged in for you — do NOT author region values; just ` +
-        `frame the camera so the shaded geography reads well. HERO/COVER sections are the ` +
-        `ESTABLISHING SHOT: set body.eyebrow ("Topic · Period · What this is", e.g. "Jammu & ` +
-        `Kashmir · 1941–1951 · Census + Land Reform"), and frame the camera with a slight pitch ` +
-        `(10–20), opacity 0.45–0.6 so the title card reads over the dimmed map, and ONE focal pin ` +
-        `with pulse: true on the story's anchor place. The title and dek come from the heading ` +
-        `and prose — never a foreground. PREFER NO foreground on a map section: ` +
-        `the prose renders in the scroll rail and any chart is referenced by id. Add a foreground ` +
-        `ONLY for a lone hero stat (a single bigStat) — and its value must be a NUMBER from the ` +
-        `prose with a short label, never a sentence. NEVER place prose/keyValue/quote panels over ` +
-        `the map — they bury it and suppress the prose rail. Choropleths shade AREAL units ` +
-        `(countries, states, regions); cities, towns, and points of interest are POINTS — pin ` +
-        `them, never shade them. All map colours (pin color, choropleth colors/lineColor) are ` +
-        `theme tokens — "$accent", "$accent2", "$teal", "$positive", "$amber", "$red", "$muted", ` +
-        `"$surface", "$background" — the schema rejects raw hex; most pins should omit color ` +
-        `entirely and take the story default.`
-      : `This is a DECK story (no map backdrop). Set body.foreground: either a single full-slot ` +
-        `layer (no layout), or a layout name plus regions — each region holds AT MOST ONE layer ` +
-        `(the schema rejects more). Layouts and the regions they define:\n${DECK_LAYOUT_MENU}\n` +
-        `COVER/HERO sections use the EDITORIAL COVER SURFACE, not content layers: set ` +
-        `body.layout = "hero-full-bleed" (section-root — NOT inside foreground; the cover render ` +
-        `path only fires on the section-root field), body.eyebrow ("Topic · Date · What this is"), ` +
-        `and body.dek (a one-line standfirst). Leave foreground EMPTY — the hero image is attached ` +
-        `later from the image prompts, and the title renders from the section heading over a ` +
-        `scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.`
+export function visualSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
+  const intro =
+    `You design the VISUAL for ONE already-written section of a ${pack.name} ${format} data story. ` +
+    `You are given the section's heading and prose; produce body — the visual content as ` +
+    `structured fields (NOT YAML, NOT a string).\n\n`
+
+  if (format === 'map') {
+    return (
+      intro +
+      `This is a MAP story — the MAP itself is the visual. Set body.map to the section camera ` +
+      `(center [lng, lat] + zoom, ALWAYS both; optional pitch/bearing/opacity, and focal pins). ` +
+      `Every pin is ` +
+      `{ coordinates: [lng, lat], label } — coordinates is a 2-number array, longitude FIRST; ` +
+      `NEVER emit lng/lat keys. When the section context gives a "Planned geography", anchor the camera to ` +
+      `it — keep its focus and stay close to its center/zoom, adjusting only for framing (pins ` +
+      `in view, shaded regions filling the viewport). If this section shades regions, its ` +
+      `choropleth (map.regions) is filled by a ` +
+      `separate source-grounded pass and merged in for you — do NOT author region values; just ` +
+      `frame the camera so the shaded geography reads well. HERO sections are the ` +
+      `ESTABLISHING SHOT: set body.eyebrow ("Topic · Period · What this is", e.g. "Jammu & ` +
+      `Kashmir · 1941–1951 · Census + Land Reform"), and frame the camera with a slight pitch ` +
+      `(10–20), opacity 0.45–0.6 so the title card reads over the dimmed map, and ONE focal pin ` +
+      `with pulse: true on the story's anchor place. The title and dek come from the heading ` +
+      `and prose — never a foreground.\n\n` +
+      `Rules:\n` +
+      `- The prose renders in the scroll rail beside the map; a planned chart is attached BY ID ` +
+      `automatically — never author chart layers, panels, or layouts (they do not exist on map ` +
+      `sections).\n` +
+      `- The ONLY foreground a map section may carry is a single lone bigStat ` +
+      `(foreground.layers, max 1) whose value is a NUMBER from the prose with a short label — ` +
+      `and omit even that for nearly every section.\n` +
+      `- Choropleths shade AREAL units (countries, states, regions); cities, towns, and points ` +
+      `of interest are POINTS — pin them, never shade them.\n` +
+      `- All map colours (pin color, choropleth colors/lineColor) are theme tokens — "$accent", ` +
+      `"$accent2", "$teal", "$positive", "$amber", "$red", "$muted", "$surface", "$background" — ` +
+      `the schema rejects raw hex; most pins should omit color entirely and take the story ` +
+      `default.\n` +
+      `- Surface the figures already in the prose; do not invent data.`
+    )
+  }
 
   return (
-    `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
-    `You are given the section's heading and prose; produce body — the visual content as ` +
-    `structured fields (NOT YAML, NOT a string).\n\n` +
-    `${formatGuidance}\n\n` +
-    `Available foreground layer types:\n${LAYER_MENU}\n\n` +
+    intro +
+    `This is a DECK story (no map backdrop). Set body.foreground: either a single full-slot ` +
+    `layer (no layout), or a layout name plus regions — each region holds AT MOST ONE layer ` +
+    `(the schema rejects more). Layouts and the regions they define:\n${DECK_LAYOUT_MENU}\n` +
+    `COVER/HERO sections use the EDITORIAL COVER SURFACE, not content layers: set ` +
+    `body.eyebrow ("Topic · Date · What this is") and body.dek (a one-line standfirst). ` +
+    `Leave foreground EMPTY — the pipeline completes the cover deterministically (section-root ` +
+    `layout "hero-full-bleed", the display heading, transparent panel chrome, and the hero ` +
+    `image from the planned image prompt), and the title renders from the section heading over ` +
+    `a scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.\n\n` +
+    `Available foreground layer types:\n${layerMenuFor(pack)}\n\n` +
+    verticalModuleBlock(pack) +
     `Rules:\n` +
     `- ONE primary element per region: put a SINGLE chart, bigStat, keyValue, quote, or prose ` +
     `block in each region — never stack a stat AND a table AND prose into one region or one box. ` +
@@ -485,7 +562,7 @@ export function visualSystem(format: StoryFormat): string {
     `layout holds, lead with the essentials (a later section can carry the rest) or pick a layout ` +
     `with more regions. A multi-row keyValue is ONE element; do not also pile a stat and prose on it.\n` +
     `- COVER/HERO sections follow the cover rule in the format guidance above — the editorial ` +
-    `cover surface (layout/eyebrow/dek as section fields, or the map establishing shot), NEVER ` +
+    `cover surface (layout/eyebrow/dek as section fields), NEVER ` +
     `content foreground layers. The full breakdown / "at a glance" belongs in a later section, ` +
     `not the opener.\n` +
     `- Place layers ONLY in regions the chosen layout defines (see the list above). A layer in a ` +
@@ -499,7 +576,8 @@ export function visualSystem(format: StoryFormat): string {
     `- Reference theme tokens (accent, accent2, teal, positive, amber, red, muted) for colours.\n` +
     `- Do NOT emit image or imageGrid layers — carry the section with stats, charts, quotes, prose.\n` +
     `- A chart layer references an existing chart id; do not invent chart ids.\n` +
-    `- Surface the figures already in the prose; do not invent data.`
+    `- Surface the figures already in the prose; do not invent data.` +
+    guidance(pack.visualGuidance)
   )
 }
 
@@ -566,8 +644,9 @@ function subsectionGrounding(ctx: SectionContext): string {
   )
 }
 
-export const SUBSECTION_CONTENT_SYSTEM =
-  `You write the PROSE for ONE sub-beat of a Vizmaya map story section. The parent section ` +
+export function subsectionContentSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You write the PROSE for ONE sub-beat of a ${pack.name} map story section. The parent section ` +
   `holds a shared map context (its camera framing and any choropleth/pins); this beat dives ` +
   `the camera to one place and carries its own copy in the scroll rail.\n\n` +
   `Produce paragraphs only — the heading is fixed by the plan.\n\n` +
@@ -576,6 +655,10 @@ export const SUBSECTION_CONTENT_SYSTEM =
   `no throat-clearing, no restating the parent's setup — flow from the previous beat.\n\n` +
   `Cover the beat's expected content. Ground every figure in the provided material; do not ` +
   `invent data.`
+  )
+}
+
+export const SUBSECTION_CONTENT_SYSTEM = subsectionContentSystem()
 
 export function buildSubsectionContentPrompt(
   ctx: SectionContext,
@@ -586,8 +669,9 @@ export function buildSubsectionContentPrompt(
   return subsectionBlock(parent, sub) + `\n` + subsectionGrounding(ctx) + refineBlock('DRAFT', refine)
 }
 
-export const SUBSECTION_VISUAL_SYSTEM =
-  `You design the camera DIVE for ONE sub-beat of a Vizmaya map story section, given its ` +
+export function subsectionVisualSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You design the camera DIVE for ONE sub-beat of a ${pack.name} map story section, given its ` +
   `already-written prose. The camera center and zoom come from the plan and are merged for ` +
   `you — emit ONLY:\n` +
   `- pitch (optional): tilt in degrees; 15–30 adds drama on a close dive, omit for top-down.\n` +
@@ -598,6 +682,10 @@ export const SUBSECTION_VISUAL_SYSTEM =
   `("$accent", "$teal", …) and most pins should omit color for the story default. Pins REPLACE ` +
   `the parent's pins on this snap; omit the field to keep the parent's.\n\n` +
   `Mark only what the prose talks about — a beat with no named places needs no pins.`
+  )
+}
+
+export const SUBSECTION_VISUAL_SYSTEM = subsectionVisualSystem()
 
 export function buildSubsectionVisualPrompt(
   ctx: SectionContext,

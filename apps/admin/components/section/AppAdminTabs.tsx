@@ -9,6 +9,7 @@ interface Props {
 export function AppAdminTabs({ appSlug }: Props) {
   const tabs: AdminTab[] = [
     { href: `/${appSlug}`, label: 'Stories', exact: true },
+    { href: `/${appSlug}/compose`, label: 'Compose' },
     { href: `/${appSlug}/epics`, label: 'Epics' },
   ]
   return <Tabs tabs={tabs} />

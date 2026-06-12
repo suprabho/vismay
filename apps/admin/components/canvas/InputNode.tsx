@@ -85,6 +85,9 @@ export default function InputNode({ data }: { data: InputNodeData }) {
           color: data.variant === 'mono' ? '#9a9a9a' : '#555',
           lineHeight: 1.5,
           whiteSpace: 'pre-wrap',
+          // Break long unbroken tokens (minified JSON, URLs, base64) so
+          // they wrap inside the card instead of clipping at the edge.
+          overflowWrap: 'anywhere',
           fontStyle: data.variant === 'muted' ? 'italic' : 'normal',
         }}
       >

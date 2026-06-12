@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
-import { ComposeCreateEntry } from '@/components/vizmaya/compose/ComposeCreateEntry'
+import { ComposeCreateEntry } from '@/components/compose/ComposeCreateEntry'
 
 export const dynamic = 'force-dynamic'
 

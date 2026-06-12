@@ -10,6 +10,14 @@
  */
 
 export * from './types'
+export {
+  packForVertical,
+  VIZMAYA_PACK,
+  F1_PACK,
+  FOOTSHORTS_PACK,
+  type DomainPack,
+  type PackLayerType,
+} from './packs'
 export { ingestSources, extract, extractBuffer, extractText, extractPdfVision } from './ingest'
 export type { IngestInput, InputFile, InputText, ExtractedSource, VisionPdfOptions } from './ingest'
 export { research, type ResearchOptions } from './research'
@@ -42,6 +50,16 @@ export {
   type LintSeverity,
 } from './lintLayout'
 export { serializeStory } from './serialize'
+export {
+  COVER_ANCHOR,
+  COVER_PANEL,
+  isDeckCover,
+  completeCoverBody,
+  composeImageFilename,
+  findCoverImagePrompt,
+  coverImageLayer,
+} from './cover'
+export { completeMapHero, completeMapHeroProse } from './mapHero'
 export { buildChartData, buildEChartsOption } from './chart'
 export { buildRegionLayer } from './regions'
 export { DEFAULT_THEME, defaultsFor } from './defaults'
