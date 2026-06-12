@@ -16,7 +16,11 @@ export default function StandingsOverMatchdaysVizComponent({
   }, [noteReady])
 
   // Animate for live viewing only — capture/print render the final, fully-drawn
-  // frame so the headless snapshot can't freeze mid-draw.
+  // frame so the headless snapshot can't freeze mid-draw. Both live modes
+  // (scroll, and autoplay pages like the catalog / footshorts storyboards,
+  // which mount every section up front) leave the chart on the component's
+  // default 'in-view' trigger, so the draw starts when the chart scrolls into
+  // the viewport — not on page load — and replays on each re-entry.
   const animate = mode !== 'capture' && mode !== 'print'
 
   return (
@@ -37,6 +41,8 @@ export default function StandingsOverMatchdaysVizComponent({
           totalMatchdays={config.totalMatchdays}
           matchdayRange={config.matchdayRange}
           animate={animate}
+          loop={config.loop}
+          loopDelayMs={config.loopDelayMs}
         />
       </div>
     </div>

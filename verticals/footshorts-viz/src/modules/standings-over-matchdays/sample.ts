@@ -8,6 +8,11 @@ import type { StandingsOverMatchdaysConfig } from './index'
 export const sample: StandingsOverMatchdaysConfig = {
   type: 'fs:standings-over-matchdays',
   competitionLabel: 'Premier League · 2025/26 (sample)',
+  // Showcase the loop in the catalog: the line-draw entrance replays
+  // continuously, resting 2.5s on the drawn frame between replays (loopDelayMs
+  // defaults to 1600). Omit both in real stories for a single in-view draw.
+  loop: true,
+  loopDelayMs: 2500,
   lanes: [
     {
       team_id: 'man-utd',
