@@ -1,6 +1,6 @@
 'use client'
 
-import { useId } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Crest } from '../data/Crest'
 import type { TeamLane } from '../types'
@@ -33,6 +33,26 @@ type Props = {
    * StoryEChart, which disables ECharts animation in capture mode.
    */
   animate?: boolean
+  /**
+   * When the entrance starts. `'in-view'` (default) holds the chart blank until
+   * it scrolls into the viewport, then draws — and replays on every re-entry.
+   * `'mount'` starts immediately (the pre-existing behaviour) — for hosts that
+   * only mount the chart once it's already on screen, or hidden/headless pages
+   * where IntersectionObserver never fires. Environments without
+   * IntersectionObserver fall back to mount behaviour automatically.
+   */
+  trigger?: 'in-view' | 'mount'
+  /**
+   * Replay the entrance continuously while the chart is on screen. Each cycle
+   * rests on the fully-drawn frame for a beat before redrawing. Paused while
+   * off-screen (the next cycle starts on re-entry).
+   */
+  loop?: boolean
+  /**
+   * How long each loop cycle rests on the fully-drawn frame before the next
+   * replay, in milliseconds. Defaults to 1600. Only meaningful with `loop`.
+   */
+  loopDelayMs?: number
 }
 
 const PADDING = { top: 16, right: 12, bottom: 24, left: 28 }
@@ -48,6 +68,8 @@ const STAGGER_MS = 100 // per-lane draw stagger
 const CREST_IN_MS = 360 // crest pop-in duration
 const CREST_SIZE = 40 // crest diameter (px) at each lane's endpoint
 const CREST_SIZE_HIGHLIGHT = 80 // larger crest for the highlighted lane
+const LOOP_HOLD_MS = 1600 // default rest on the final frame between loop replays (`loopDelayMs` overrides)
+const IN_VIEW_THRESHOLD = 0.3 // fraction of the card visible before the draw starts
 // Total entrance time stays well under the viz-engine's post-ready settle window
 // (~2s), so the snapshot — taken after readiness — always lands on the final
 // frame even when `animate` is left on. Capture/print disable it anyway.
@@ -145,13 +167,70 @@ export function StandingsOverMatchdays({
   matchdayRange,
   xTickFormat = (n) => `MD${n}`,
   animate = true,
+  trigger = 'in-view',
+  loop = false,
+  loopDelayMs = LOOP_HOLD_MS,
 }: Props) {
   // Stable, collision-safe id for the plot clip-path (several charts can share a
   // page). Called unconditionally, before the early return, per the rules of hooks.
   const clipId = `somd-clip-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
+  // `cycle` counts entrance replays; 0 = not started (chart held blank while it
+  // waits to scroll into view). Bumping it re-keys the paths/crests, which
+  // remounts them and restarts their CSS animations.
+  const [cycle, setCycle] = useState(animate && trigger === 'mount' ? 1 : 0)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  // Tracked via ref (not state) so the loop timeout reads visibility without
+  // re-running the effect on every scroll in/out.
+  const inViewRef = useRef(trigger === 'mount')
+
+  useEffect(() => {
+    if (!animate || trigger !== 'in-view') return
+    const el = rootRef.current
+    // No element or no IntersectionObserver (SSR-adjacent runtimes, legacy
+    // embeds): fail open and draw immediately rather than staying blank.
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      inViewRef.current = true
+      setCycle((c) => c || 1)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1]
+        if (!entry) return
+        inViewRef.current = entry.isIntersecting
+        if (entry.isIntersecting) setCycle((c) => c + 1)
+      },
+      { threshold: IN_VIEW_THRESHOLD },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [animate, trigger])
+
+  // Loop: after each cycle finishes (+ a hold on the final frame), start the
+  // next one — but only while on screen. Off-screen the chain stops; the
+  // in-view observer's re-entry bump restarts it.
+  const laneCount = lanes.length
+  useEffect(() => {
+    if (!animate || !loop || cycle === 0) return
+    // Negative/NaN config degrades to no rest rather than a broken timer.
+    const hold = Number.isFinite(loopDelayMs) ? Math.max(0, loopDelayMs) : LOOP_HOLD_MS
+    const cycleMs =
+      DRAW_MS + Math.max(0, laneCount - 1) * STAGGER_MS + CREST_IN_MS + hold
+    const t = window.setTimeout(() => {
+      if (inViewRef.current) setCycle((c) => c + 1)
+    }, cycleMs)
+    return () => window.clearTimeout(t)
+  }, [animate, loop, cycle, laneCount, loopDelayMs])
+
   if (lanes.length === 0) {
     return <div style={emptyStyle}>No matchday data</div>
   }
+
+  // Three render phases: `playing` runs the entrance keyframes, `pending` holds
+  // everything at the pre-draw frame (blank lines, hidden crests) until the
+  // chart scrolls into view, and plain `animate=false` renders the final frame.
+  const playing = animate && cycle > 0
+  const pending = animate && cycle === 0
 
   const allPoints = lanes.flatMap((l) => l.points)
   const matchdays = allPoints.map((p) => p.matchday)
@@ -216,7 +295,7 @@ export function StandingsOverMatchdays({
   })
 
   return (
-    <div style={cardStyle}>
+    <div ref={rootRef} style={cardStyle}>
       {animate && <style>{KEYFRAMES}</style>}
       <div style={headerStyle}>
         <span style={titleStyle}>{title}</span>
@@ -279,16 +358,20 @@ export function StandingsOverMatchdays({
               than the data doesn't spill lines over the axes. */}
           <g clipPath={matchdayRange ? `url(#${clipId})` : undefined}>
             {drawn.map(({ lane, d }, i) => {
-              const drawStyle: CSSProperties = animate
+              // `pending` keeps the dash fully offset with no animation, so the
+              // lines sit invisible until the in-view bump re-keys them.
+              const drawStyle: CSSProperties = playing
                 ? {
                     strokeDasharray: '1',
                     strokeDashoffset: '1',
                     animation: `som-draw ${DRAW_MS}ms ease-out ${i * STAGGER_MS}ms forwards`,
                   }
-                : {}
+                : pending
+                  ? { strokeDasharray: '1', strokeDashoffset: '1' }
+                  : {}
               return (
                 <path
-                  key={lane.team_id}
+                  key={`${lane.team_id}-${cycle}`}
                   d={d}
                   pathLength={animate ? 1 : undefined}
                   fill="none"
@@ -310,7 +393,7 @@ export function StandingsOverMatchdays({
           const crestDelay = Math.max(0, i * STAGGER_MS + DRAW_MS - 120)
           return (
             <div
-              key={lane.team_id}
+              key={`${lane.team_id}-${cycle}`}
               style={{
                 position: 'absolute',
                 left: `${(endX / VIEW_W) * 100}%`,
@@ -330,11 +413,13 @@ export function StandingsOverMatchdays({
                   boxShadow: lane.highlight
                     ? `0 0 0 2px ${lane.color}`
                     : '0 0 0 1px var(--color-line, #1f2a42)',
-                  ...(animate
+                  ...(playing
                     ? {
                         animation: `som-crest-in ${CREST_IN_MS}ms ease-out ${crestDelay}ms both`,
                       }
-                    : null),
+                    : pending
+                      ? { opacity: 0 }
+                      : null),
                 }}
               >
                 <Crest

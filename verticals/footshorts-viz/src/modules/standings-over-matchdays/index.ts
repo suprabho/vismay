@@ -18,6 +18,13 @@ import type { TeamLane } from '../../types'
  *       # Optional x-axis window. `from` defaults to the first matchday in the
  *       # data (so trimmed series fill the chart); `to` overrides totalMatchdays.
  *       matchdayRange: { from: 20, to: 38 }
+ *       # Optional: replay the line-draw entrance continuously while the chart
+ *       # is on screen (default false — the entrance plays once, when the chart
+ *       # scrolls into view, and again on each re-entry).
+ *       loop: true
+ *       # Optional: with `loop`, how long the chart rests on the fully-drawn
+ *       # frame before the next replay, in ms (default 1600).
+ *       loopDelayMs: 3000
  *       lanes:
  *         - team_id: man-utd
  *           team_name: 'Manchester United'
@@ -41,6 +48,17 @@ export interface StandingsOverMatchdaysConfig {
    * right edge and takes precedence over `totalMatchdays`.
    */
   matchdayRange?: { from?: number; to?: number }
+  /**
+   * Replay the line-draw entrance continuously while the chart is on screen.
+   * Defaults to false: the entrance plays once when the chart scrolls into
+   * view, and again on each re-entry.
+   */
+  loop?: boolean
+  /**
+   * With `loop`, how long the chart rests on the fully-drawn frame before the
+   * next replay, in milliseconds. Defaults to 1600.
+   */
+  loopDelayMs?: number
 }
 
 function parseConfig(
@@ -76,6 +94,8 @@ function parseConfig(
     lanes: r.lanes as unknown as TeamLane[],
     totalMatchdays: typeof r.totalMatchdays === 'number' ? r.totalMatchdays : undefined,
     matchdayRange,
+    loop: typeof r.loop === 'boolean' ? r.loop : undefined,
+    loopDelayMs: typeof r.loopDelayMs === 'number' ? r.loopDelayMs : undefined,
   }
 }
 
