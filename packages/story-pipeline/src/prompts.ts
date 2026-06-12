@@ -1,5 +1,7 @@
 import { GEN_FOREGROUND_TYPES, getForegroundLayout } from './vizEngine'
 import { SECTION_KINDS, sectionKindsFor } from './schema'
+import { VIZMAYA_PACK } from './packs/vizmaya'
+import type { DomainPack } from './packs/types'
 import type {
   SourceDoc,
   ResearchBrief,
@@ -46,29 +48,48 @@ export function renderSources(
     .join('\n\n---\n\n')
 }
 
-export const RESEARCH_SYSTEM =
-  `You are a research analyst preparing a data-driven visual story for the Vizmaya desk. ` +
-  `Read the provided sources and produce a structured brief:\n` +
-  `- summary: what the material is really about.\n` +
-  `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
-  `- entities: the main people, orgs, places, things.\n` +
-  `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
-  `- candidateAngles: 2–4 distinct angles.\n` +
-  `- questions: 3–6 sharp clarifying questions an editor MUST answer before you write ` +
-  `(format choice, lead angle, audience, scope, what to emphasise). Prefer "choice" ` +
-  `questions with concrete options; use "text" only when open input is genuinely needed.\n\n` +
-  `Be specific and grounded in the sources — do not invent facts.`
+/** A pack's per-stage guidance, appended as its own paragraph when set. The
+ *  vizmaya pack sets none, so every default-pack prompt stays byte-identical
+ *  to the pre-seam snapshot. */
+function guidance(text: string | undefined): string {
+  return text ? `\n\n${text}` : ''
+}
 
-export const ANGLES_SYSTEM =
-  `You are a research analyst preparing a data-driven visual story for the Vizmaya desk. ` +
-  `Read the provided sources and produce:\n` +
-  `- summary: what the material is really about.\n` +
-  `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
-  `- entities: the main people, orgs, places, things.\n` +
-  `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
-  `- angles: 3–5 DISTINCT angles the story could take. Each is a title, a one-sentence ` +
-  `thesis (the claim it makes), and a rationale (why it's worth taking) — all grounded in ` +
-  `the sources.\n\nBe specific and grounded — do not invent facts.`
+export function researchSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+    pack.persona +
+    `Read the provided sources and produce a structured brief:\n` +
+    `- summary: what the material is really about.\n` +
+    `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
+    `- entities: the main people, orgs, places, things.\n` +
+    `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
+    `- candidateAngles: 2–4 distinct angles.\n` +
+    `- questions: 3–6 sharp clarifying questions an editor MUST answer before you write ` +
+    `(format choice, lead angle, audience, scope, what to emphasise). Prefer "choice" ` +
+    `questions with concrete options; use "text" only when open input is genuinely needed.\n\n` +
+    `Be specific and grounded in the sources — do not invent facts.` +
+    guidance(pack.researchGuidance)
+  )
+}
+
+export const RESEARCH_SYSTEM = researchSystem()
+
+export function anglesSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+    pack.persona +
+    `Read the provided sources and produce:\n` +
+    `- summary: what the material is really about.\n` +
+    `- keyFacts: the load-bearing facts and figures a story would stand on.\n` +
+    `- entities: the main people, orgs, places, things.\n` +
+    `- suggestedFormat: "deck" for a slide narrative, "map" when geography is the spine.\n` +
+    `- angles: 3–5 DISTINCT angles the story could take. Each is a title, a one-sentence ` +
+    `thesis (the claim it makes), and a rationale (why it's worth taking) — all grounded in ` +
+    `the sources.\n\nBe specific and grounded — do not invent facts.` +
+    guidance(pack.angleGuidance)
+  )
+}
+
+export const ANGLES_SYSTEM = anglesSystem()
 
 /** Render the editor's answers to the clarifying questions. */
 function renderAnswers(brief: ResearchBrief, answers: ComposeAnswers): string {
@@ -85,8 +106,32 @@ function renderAnswers(brief: ResearchBrief, answers: ComposeAnswers): string {
 const LAYER_TYPES = GEN_FOREGROUND_TYPES.filter(
   (l) => l.type !== 'image' && l.type !== 'imageGrid',
 )
-const LAYER_MENU = LAYER_TYPES.map((l) => `- ${l.type}: ${l.label}`).join('\n')
-const LAYER_TYPES_INLINE = LAYER_TYPES.map((l) => l.type).join(', ')
+
+/** The offered layer entries for a pack: core types + the pack's vertical
+ *  modules. Vizmaya (no extras) reproduces the pre-seam menu exactly. */
+function packLayerEntries(pack: DomainPack): ReadonlyArray<{ type: string; label: string }> {
+  if (pack.extraLayerTypes.length === 0) return LAYER_TYPES
+  return [...LAYER_TYPES, ...pack.extraLayerTypes.map((t) => ({ type: t.type, label: t.label }))]
+}
+function layerMenuFor(pack: DomainPack): string {
+  return packLayerEntries(pack).map((l) => `- ${l.type}: ${l.label}`).join('\n')
+}
+function layerTypesInlineFor(pack: DomainPack): string {
+  return packLayerEntries(pack).map((l) => l.type).join(', ')
+}
+
+/** The VISUAL pass's vertical-module doc block — present only when the pack
+ *  offers extras, so the vizmaya prompt carries no trace of the seam. */
+function verticalModuleBlock(pack: DomainPack): string {
+  if (pack.extraLayerTypes.length === 0) return ''
+  const docs = pack.extraLayerTypes
+    .map((t) => `- ${t.type} (suits regions: ${t.regions.join(', ')}) — ${t.promptDoc}`)
+    .join('\n')
+  return (
+    `${pack.name.toUpperCase()} VERTICAL MODULES — use each ONLY for the content it names, ` +
+    `placed in regions it suits; the core types above stay available:\n${docs}\n\n`
+  )
+}
 
 /** The deck layouts the VISUAL pass can actually build (no image-only layouts). */
 const DECK_LAYOUT_NAMES = [
@@ -125,10 +170,10 @@ const DECK_LAYOUT_MENU = layoutMenu(DECK_LAYOUT_NAMES)
 
 // ── Step 1: outline ────────────────────────────────────────────────────────
 
-export function outlineSystem(format: StoryFormat): string {
+export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
   const visualGuidance =
     format === 'map'
-      ? `A Vizmaya MAP story is a JOURNEY THROUGH GEOGRAPHY: each section frames a place and the ` +
+      ? `A ${pack.name} MAP story is a JOURNEY THROUGH GEOGRAPHY: each section frames a place and the ` +
         `map itself carries the data (pins, or a choropleth shading areas by value) — the map IS ` +
         `the chart, not a backdrop. Every section MUST set "geo": the named focus plus camera ` +
         `center [lng, lat] and zoom. Successive sections should MOVE the camera — vary center and ` +
@@ -158,7 +203,7 @@ export function outlineSystem(format: StoryFormat): string {
         `sake — a beat that changes data context is its own section. The prose ` +
         `renders in the scroll rail and any supporting chart is referenced by id — do NOT plan a ` +
         `side panel or deck layout over the map.`
-      : `For each section's "visual" name the foreground layers it features (${LAYER_TYPES_INLINE}) ` +
+      : `For each section's "visual" name the foreground layers it features (${layerTypesInlineFor(pack)}) ` +
         `and what each shows, and set "layout" to the deck layout that frames them best ` +
         `(${DECK_LAYOUTS}).`
   const stubFields =
@@ -170,7 +215,7 @@ export function outlineSystem(format: StoryFormat): string {
       : `  • optional layout naming the deck layout that frames the visual.\n` +
         `  • optional chartId when the section features a chart.\n`
   return (
-    `You plan a Vizmaya ${format} data story from research + the editor's answers — the ` +
+    `You plan a ${pack.name} ${format} data story from research + the editor's answers — the ` +
     `SKELETON only, no prose yet. The downstream writer and designer act ONLY on what you put ` +
     `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
@@ -201,7 +246,8 @@ export function outlineSystem(format: StoryFormat): string {
     `NOT carry the whole thesis or the data breakdown — give the "at a glance" / pattern summary ` +
     `its OWN early section. Keep the cover's expectedContent to the hook plus that one figure.\n` +
     `Open with this cover and end with a closing section. Ground every figure in the sources; ` +
-    `do not invent data.`
+    `do not invent data.` +
+    guidance(pack.outlineGuidance)
   )
 }
 
@@ -235,8 +281,9 @@ export function buildOutlinePrompt(
 // model emits ONLY categories + numeric series; the id/title/chartType/axes
 // come from the requirement and are merged in deterministically.
 
-export const CHART_SYSTEM =
-  `You produce the DATA for ONE chart in a Vizmaya data story, grounded strictly ` +
+export function chartSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You produce the DATA for ONE chart in a ${pack.name} data story, grounded strictly ` +
   `in the provided sources. Given a chart requirement (what to plot) and the ` +
   `research material, return:\n` +
   `- categories: the X-axis labels, in the order they should appear.\n` +
@@ -249,6 +296,10 @@ export const CHART_SYSTEM =
   `series consistent.\n` +
   `- Every series must have exactly one value per category.\n` +
   `- Keep it tight and legible (a handful of categories; few series).`
+  )
+}
+
+export const CHART_SYSTEM = chartSystem()
 
 /** Render a chart requirement for the data prompt. */
 function renderChartRequirement(req: ChartRequirement): string {
@@ -291,8 +342,9 @@ export function buildChartPrompt(
 // values are numeric data (often a long table of countries), so numeric
 // fidelity matters more than keeping the prompt lean.
 
-export const REGIONS_SYSTEM =
-  `You produce the DATA for ONE map choropleth in a Vizmaya map story, grounded ` +
+export function regionsSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You produce the DATA for ONE map choropleth in a ${pack.name} map story, grounded ` +
   `strictly in the provided sources. Given a region requirement (what metric to ` +
   `shade, which regions) and the research material, return:\n` +
   `- items: one entry per region — { code, value } — where \`code\` is the ` +
@@ -306,6 +358,10 @@ export const REGIONS_SYSTEM =
   `- Exactly one value per region; no duplicate codes.\n` +
   `- Shade as many regions as the sources support — a world metric can be 150+; ` +
   `do not artificially trim the set.`
+  )
+}
+
+export const REGIONS_SYSTEM = regionsSystem()
 
 /** Render a choropleth requirement for the region data prompt. */
 function renderRegionRequirement(req: RegionRequirement): string {
@@ -397,7 +453,7 @@ function refineBlock(noun: string, refine?: { feedback: string; previous: unknow
 
 // CONTENT pass — prose only (no visual body).
 
-export function contentSystem(format: StoryFormat): string {
+export function contentSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
   const kindLine =
     format === 'map'
       ? `- kind: one of ${sectionKindsFor('map').join(' | ')}. (A MAP story uses these ` +
@@ -422,7 +478,7 @@ export function contentSystem(format: StoryFormat): string {
         `restated context. The figures the visual needs must appear in the prose, but say each ` +
         `thing once.`
   return (
-    `You write the PROSE for ONE section of a Vizmaya ${format} data story.\n\n` +
+    `You write the PROSE for ONE section of a ${pack.name} ${format} data story.\n\n` +
     `Produce:\n` +
     `- heading: short and specific (becomes the markdown ## and the config text anchor).\n` +
     `- paragraphs: the body prose, one string per paragraph, factual magazine register.\n` +
@@ -431,7 +487,8 @@ export function contentSystem(format: StoryFormat): string {
     `${lengthRules}\n\n` +
     `Cover the section's planned "expected content" and honour its context in the arc. ` +
     `Ground every figure in the provided material; do not invent data. No visual layout here ` +
-    `— the visual is designed in a later pass.`
+    `— the visual is designed in a later pass.` +
+    guidance(pack.contentGuidance)
   )
 }
 
@@ -444,9 +501,9 @@ export function buildContentPrompt(
 
 // VISUAL pass — the config `body`, given the already-written prose.
 
-export function visualSystem(format: StoryFormat): string {
+export function visualSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
   const intro =
-    `You design the VISUAL for ONE already-written section of a Vizmaya ${format} data story. ` +
+    `You design the VISUAL for ONE already-written section of a ${pack.name} ${format} data story. ` +
     `You are given the section's heading and prose; produce body — the visual content as ` +
     `structured fields (NOT YAML, NOT a string).\n\n`
 
@@ -496,7 +553,8 @@ export function visualSystem(format: StoryFormat): string {
     `layout "hero-full-bleed", the display heading, transparent panel chrome, and the hero ` +
     `image from the planned image prompt), and the title renders from the section heading over ` +
     `a scrim. Never put the title, standfirst, or a stat into foreground layers on a cover.\n\n` +
-    `Available foreground layer types:\n${LAYER_MENU}\n\n` +
+    `Available foreground layer types:\n${layerMenuFor(pack)}\n\n` +
+    verticalModuleBlock(pack) +
     `Rules:\n` +
     `- ONE primary element per region: put a SINGLE chart, bigStat, keyValue, quote, or prose ` +
     `block in each region — never stack a stat AND a table AND prose into one region or one box. ` +
@@ -518,7 +576,8 @@ export function visualSystem(format: StoryFormat): string {
     `- Reference theme tokens (accent, accent2, teal, positive, amber, red, muted) for colours.\n` +
     `- Do NOT emit image or imageGrid layers — carry the section with stats, charts, quotes, prose.\n` +
     `- A chart layer references an existing chart id; do not invent chart ids.\n` +
-    `- Surface the figures already in the prose; do not invent data.`
+    `- Surface the figures already in the prose; do not invent data.` +
+    guidance(pack.visualGuidance)
   )
 }
 
@@ -585,8 +644,9 @@ function subsectionGrounding(ctx: SectionContext): string {
   )
 }
 
-export const SUBSECTION_CONTENT_SYSTEM =
-  `You write the PROSE for ONE sub-beat of a Vizmaya map story section. The parent section ` +
+export function subsectionContentSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You write the PROSE for ONE sub-beat of a ${pack.name} map story section. The parent section ` +
   `holds a shared map context (its camera framing and any choropleth/pins); this beat dives ` +
   `the camera to one place and carries its own copy in the scroll rail.\n\n` +
   `Produce paragraphs only — the heading is fixed by the plan.\n\n` +
@@ -595,6 +655,10 @@ export const SUBSECTION_CONTENT_SYSTEM =
   `no throat-clearing, no restating the parent's setup — flow from the previous beat.\n\n` +
   `Cover the beat's expected content. Ground every figure in the provided material; do not ` +
   `invent data.`
+  )
+}
+
+export const SUBSECTION_CONTENT_SYSTEM = subsectionContentSystem()
 
 export function buildSubsectionContentPrompt(
   ctx: SectionContext,
@@ -605,8 +669,9 @@ export function buildSubsectionContentPrompt(
   return subsectionBlock(parent, sub) + `\n` + subsectionGrounding(ctx) + refineBlock('DRAFT', refine)
 }
 
-export const SUBSECTION_VISUAL_SYSTEM =
-  `You design the camera DIVE for ONE sub-beat of a Vizmaya map story section, given its ` +
+export function subsectionVisualSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+  `You design the camera DIVE for ONE sub-beat of a ${pack.name} map story section, given its ` +
   `already-written prose. The camera center and zoom come from the plan and are merged for ` +
   `you — emit ONLY:\n` +
   `- pitch (optional): tilt in degrees; 15–30 adds drama on a close dive, omit for top-down.\n` +
@@ -617,6 +682,10 @@ export const SUBSECTION_VISUAL_SYSTEM =
   `("$accent", "$teal", …) and most pins should omit color for the story default. Pins REPLACE ` +
   `the parent's pins on this snap; omit the field to keep the parent's.\n\n` +
   `Mark only what the prose talks about — a beat with no named places needs no pins.`
+  )
+}
+
+export const SUBSECTION_VISUAL_SYSTEM = subsectionVisualSystem()
 
 export function buildSubsectionVisualPrompt(
   ctx: SectionContext,

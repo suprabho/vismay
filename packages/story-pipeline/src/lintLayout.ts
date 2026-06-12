@@ -108,14 +108,66 @@ function lintForeground(fg: unknown, section: string): LayoutLintIssue[] {
   return issues
 }
 
-/** Lint ONE generated section's normalised `body` (foreground placement only). */
-export function lintSectionBody(body: Record<string, unknown>, section: string): LayoutLintIssue[] {
-  return lintForeground(body.foreground, section)
+/** A vertical-namespaced layer type, e.g. `f1:race-card`. */
+const VERTICAL_TYPE_RE = /^\w+:/
+
+/** Every layer `type` in a normalised foreground value (flat list, single
+ *  layer mapping, or `{ layout?, regions }`). */
+function collectForegroundTypes(fg: unknown): string[] {
+  if (!fg || typeof fg !== 'object') return []
+  const typeOf = (v: unknown): string | null =>
+    v && typeof v === 'object' && typeof (v as { type?: unknown }).type === 'string'
+      ? ((v as { type: string }).type)
+      : null
+  if (Array.isArray(fg)) return fg.map(typeOf).filter((t): t is string => !!t)
+  const single = typeOf(fg)
+  if (single) return [single]
+  const regions = (fg as { regions?: unknown }).regions
+  if (!regions || typeof regions !== 'object') return []
+  const types: string[] = []
+  for (const raw of Object.values(regions as Record<string, unknown>)) {
+    for (const l of asLayers(raw)) {
+      const t = typeOf(l)
+      if (t) types.push(t)
+    }
+  }
+  return types
+}
+
+export interface LintBodyOptions {
+  /** The vertical layer types this story's desk offers (DomainPack extras).
+   *  A namespaced type outside this set is flagged — a vizmaya story must
+   *  never carry `f1:`/`fs:` layers. */
+  extraTypes?: readonly string[]
+}
+
+/** Lint ONE generated section's normalised `body` (foreground placement +
+ *  vertical-type isolation). */
+export function lintSectionBody(
+  body: Record<string, unknown>,
+  section: string,
+  opts: LintBodyOptions = {},
+): LayoutLintIssue[] {
+  const issues = lintForeground(body.foreground, section)
+  const allowed = new Set(opts.extraTypes ?? [])
+  for (const t of collectForegroundTypes(body.foreground)) {
+    if (VERTICAL_TYPE_RE.test(t) && !allowed.has(t)) {
+      issues.push({
+        section,
+        severity: 'unknown',
+        message: `vertical layer type '${t}' is not offered to this story's desk — use a core layer or a type from its menu`,
+      })
+    }
+  }
+  return issues
 }
 
 /** Lint every section of an assembled story. */
-export function lintStory(sections: GeneratedSection[]): LayoutLintIssue[] {
-  return sections.flatMap((s) => lintSectionBody(s.body, s.heading))
+export function lintStory(
+  sections: GeneratedSection[],
+  opts: LintBodyOptions = {},
+): LayoutLintIssue[] {
+  return sections.flatMap((s) => lintSectionBody(s.body, s.heading, opts))
 }
 
 /**

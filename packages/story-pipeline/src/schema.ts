@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { sectionBodySchema, mapSectionBodySchemaFor, genPinSchema } from './vizEngine'
+import {
+  sectionBodySchema,
+  sectionBodySchemaWith,
+  mapSectionBodySchemaFor,
+  genPinSchema,
+} from './vizEngine'
+import { VIZMAYA_PACK } from './packs/vizmaya'
+import type { DomainPack } from './packs/types'
 
 /**
  * Zod schemas that constrain the two LLM calls at the provider level (via
@@ -311,8 +318,26 @@ export const sectionVisualSchema = z.object({
  * most a lone bigStat (no layout/regions), and a required `eyebrow` on hero
  * sections. Deck sections keep the historic full-body shape.
  */
-export function sectionVisualSchemaFor(format: 'deck' | 'map', kind?: string) {
-  if (format !== 'map') return sectionVisualSchema
+export function sectionVisualSchemaFor(
+  format: 'deck' | 'map',
+  kind?: string,
+  pack: DomainPack = VIZMAYA_PACK,
+) {
+  if (format !== 'map') {
+    // Deck bodies take the pack's vertical layer types in the foreground
+    // union; zero extras (vizmaya) is the canonical schema instance. The
+    // extended schema VALIDATES the extras at runtime but is declared as the
+    // canonical shape — the extras are vertical-module configs the pipeline
+    // only ever passes through opaquely.
+    if (pack.extraLayerTypes.length === 0) return sectionVisualSchema
+    return z.object({
+      body: sectionBodySchemaWith(pack.extraLayerTypes.map((t) => t.schema)).describe(
+        'The section VISUAL content: foreground layers (and optional background/map). ' +
+          'Omit image/imageGrid layers — request images via imagePrompts instead. ' +
+          'A chart layer references a chart id defined in the top-level charts list.',
+      ),
+    }) as unknown as typeof sectionVisualSchema
+  }
   const isHero = kind === 'hero' || kind === 'cover' // legacy stubs may still say "cover"
   return z.object({
     body: mapSectionBodySchemaFor({ requireEyebrow: isHero }).describe(
@@ -522,12 +547,12 @@ export function sectionStubSchemaFor(format: 'deck' | 'map') {
 export const sectionStubSchema = sectionStubSchemaFor('deck')
 
 /** The outline schema, with section stubs narrowed to the format. */
-export function outlineSchemaFor(format: 'deck' | 'map') {
+export function outlineSchemaFor(format: 'deck' | 'map', pack: DomainPack = VIZMAYA_PACK) {
   return z.object({
     format: z.enum(['deck', 'map']).describe('The story format to produce.'),
     title: z.string().describe('Story headline.'),
     subtitle: z.string().describe('One-line deck/subtitle.'),
-    byline: z.string().describe('Attribution line, e.g. "By the Vizmaya desk".'),
+    byline: z.string().describe(`Attribution line, e.g. "${pack.bylineExample}".`),
     accentColors: z
       .object({
         accent: z.string().optional().describe('Primary accent hex.'),

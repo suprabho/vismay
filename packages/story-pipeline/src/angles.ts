@@ -1,6 +1,6 @@
 import { generateStructured } from './ai'
 import { anglesBriefSchema } from './schema'
-import { ANGLES_SYSTEM, renderSources } from './prompts'
+import { anglesSystem, renderSources } from './prompts'
 import type { GenerateOptions } from './generate'
 import type { AnglesBrief, SourceDoc } from './types'
 
@@ -22,7 +22,7 @@ export async function generateAngles(
   }
   const r = await generateStructured({
     model: opts.model,
-    system: ANGLES_SYSTEM,
+    system: anglesSystem(opts.pack),
     prompt,
     schema: anglesBriefSchema,
     metadata: { feature: 'story-pipeline-angles' },
