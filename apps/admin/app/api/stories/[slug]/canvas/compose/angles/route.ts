@@ -5,7 +5,7 @@ import { hashRequest, recordGeneration } from '@vismay/ai-gateway'
 import { generateAngles } from '@vismay/story-pipeline'
 import { listStorySources } from '@vismay/content-source/storySources'
 import { readComposeState, writeComposeState } from '@vismay/content-source/composeState'
-import { resolveModel, sourcesToDocs } from '../shared'
+import { resolveModel, resolveStoryPack, sourcesToDocs } from '../shared'
 
 /**
  * Compose stage 2 — generate (or refine) the angle options from the draft's
@@ -40,9 +40,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const feedback = typeof body.feedback === 'string' ? body.feedback.trim() : ''
   const refine = feedback && body.previous ? { feedback, previous: body.previous } : undefined
 
+  const pack = await resolveStoryPack(slug)
   let result
   try {
-    result = await generateAngles(docs, { model, refine })
+    result = await generateAngles(docs, { model, refine, pack })
   } catch (e) {
     return NextResponse.json(
       { error: `angle generation failed: ${e instanceof Error ? e.message : String(e)}` },

@@ -25,6 +25,7 @@ import { listStorySources } from '@vismay/content-source/storySources'
 import { readComposeState } from '@vismay/content-source/composeState'
 import {
   resolveModel,
+  resolveStoryPack,
   sourcesToDocs,
   replaceMarkdownProse,
   readMarkdownProse,
@@ -78,6 +79,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const docs = sourcesToDocs(await listStorySources(slug))
   const model = resolveModel(body.model, state.model)
+  const pack = await resolveStoryPack(slug)
   const feedback = typeof body.feedback === 'string' ? body.feedback.trim() : ''
 
   // Rebuild the rich outline context the section generators expect.
@@ -158,7 +160,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         const subsOut: Array<{ heading: string; paragraphs: string[] }> = []
         for (const sub of subStubs) {
           // eslint-disable-next-line no-await-in-loop
-          const c = await generateSubsectionContent(ctx, stub, sub, { model })
+          const c = await generateSubsectionContent(ctx, stub, sub, { model, pack })
           newMarkdown = replaceMarkdownProse(newMarkdown, sub.heading, c.paragraphs)
           subsOut.push(c)
         }
@@ -172,7 +174,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
                 previous: { heading: entry.heading, paragraphs: readMarkdownProse(markdown, anchor), kind: entry.kind },
               }
             : undefined
-        const content = await generateSectionContent(ctx, { model, refine })
+        const content = await generateSectionContent(ctx, { model, pack, refine })
         newMarkdown = replaceMarkdownProse(newMarkdown, anchor, content.paragraphs)
         result.paragraphs = content.paragraphs
         result.kind = content.kind
@@ -185,7 +187,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           ? { heading: entry.heading, paragraphs: result.paragraphs, kind: result.kind ?? entry.kind }
           : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, anchor), kind: entry.kind }
       const refine = feedback && phase === 'visual' ? { feedback, previous: { heading: entry.heading } } : undefined
-      const visual = await generateSectionVisual(ctx, contentForVisual, { model, refine })
+      const visual = await generateSectionVisual(ctx, contentForVisual, { model, pack, refine })
       let visualBody = visual.body
       // DECK cover: complete the editorial cover surface and attach the hero
       // image — its `assets://` ref points at the key the compose image step
@@ -203,7 +205,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       if (state.format === 'map' && stub.regionRequirement) {
         const regions = await generateRegions(
           { requirement: stub.regionRequirement, brief, sources: docs },
-          { model },
+          { model, pack },
         )
         visualBody = injectRegions(visualBody, regions)
       }
@@ -216,7 +218,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
             result.subsections?.find((s) => s.heading === sub.heading)?.paragraphs ??
             readMarkdownProse(newMarkdown, sub.heading)
           // eslint-disable-next-line no-await-in-loop
-          const map = await generateSubsectionVisual(ctx, stub, sub, { paragraphs }, { model })
+          const map = await generateSubsectionVisual(ctx, stub, sub, { paragraphs }, { model, pack })
           subEntries.push({
             text: sub.heading,
             ...(Object.keys(map).length ? { map } : {}),
