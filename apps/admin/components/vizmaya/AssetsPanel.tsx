@@ -64,22 +64,40 @@ export default function AssetsPanel({ slug, initialAssets }: Props) {
         // Serial uploads — Supabase Storage handles parallel fine, but a serial
         // loop gives the UI deterministic ordering and lets a single rejected
         // file stop the batch with a clear message instead of mixing errors.
+        //
+        // Two-step flow: ask our API for a signed upload URL, then PUT the file
+        // straight to Supabase Storage. Proxying the body through the Next.js
+        // route 413s on Vercel (~4.5 MB request cap), which blocked videos.
         for (const file of list) {
-          const form = new FormData()
-          form.append('file', file)
-          let res: Response
           try {
-            res = await fetch(`/api/stories/${slug}/assets`, {
+            const signRes = await fetch(`/api/stories/${slug}/assets/sign-upload`, {
               method: 'POST',
-              body: form,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: file.name, contentType: file.type }),
             })
+            if (!signRes.ok) {
+              const body = await signRes.json().catch(() => null)
+              setError(body?.error ?? `Upload of "${file.name}" failed (HTTP ${signRes.status})`)
+              break
+            }
+            const { signedUrl, contentType } = (await signRes.json()) as {
+              signedUrl: string
+              contentType: string
+            }
+            const putRes = await fetch(signedUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+              body: file,
+            })
+            if (!putRes.ok) {
+              const body = await putRes.json().catch(() => null)
+              setError(
+                body?.message ?? body?.error ?? `Upload of "${file.name}" failed (HTTP ${putRes.status})`
+              )
+              break
+            }
           } catch (err) {
             setError(`Upload of "${file.name}" failed: ${err instanceof Error ? err.message : 'network error'}`)
-            break
-          }
-          if (!res.ok) {
-            const body = await res.json().catch(() => null)
-            setError(body?.error ?? `Upload of "${file.name}" failed (HTTP ${res.status})`)
             break
           }
         }
