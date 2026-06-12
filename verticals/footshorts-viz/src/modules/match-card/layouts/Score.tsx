@@ -13,6 +13,9 @@ import { resolveFixture } from './shared'
 export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
   const f = resolveFixture(config)
   const accent = config.accent ?? f.competitionColor ?? 'var(--color-accent)'
+  const borderColor = config.borderColor ?? accent
+  const cardColor = config.cardColor ?? 'rgba(0,0,0,0.18)'
+  const textColor = config.textColor ?? 'var(--color-text, #fff)'
 
   const wrap: CSSProperties = {
     width: '100%',
@@ -30,12 +33,12 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
     alignItems: 'center',
     gap: '12px',
     padding: '20px 28px',
-    border: `1px solid ${accent}`,
+    border: `1px solid ${borderColor}`,
     borderRadius: '12px',
-    color: 'var(--color-text, #fff)',
+    color: textColor,
     minWidth: '300px',
     textAlign: 'center',
-    background: 'rgba(0,0,0,0.18)',
+    background: cardColor,
   }
   const competition: CSSProperties = {
     fontFamily: 'var(--font-mono)',
@@ -73,7 +76,8 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
     fontFamily: 'var(--font-mono)',
     fontSize: '10px',
     letterSpacing: '0.18em',
-    color: 'rgba(255,255,255,0.6)',
+    color: config.textColor ?? 'rgba(255,255,255,0.6)',
+    opacity: config.textColor ? 0.65 : 1,
   }
 
   return (
