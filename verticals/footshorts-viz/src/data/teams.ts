@@ -143,6 +143,54 @@ export const TEAMS: Record<string, TeamEntry> = {
   jordan: { name: 'Jordan', color: '#CE1126', secondary: '#FFFFFF', monogram: 'JOR', crest: flag('jo') },
   morocco: { name: 'Morocco', color: '#C1272D', secondary: '#006233', monogram: 'MAR', crest: flag('ma') },
   canada: { name: 'Canada', color: '#FF0000', secondary: '#FFFFFF', monogram: 'CAN', crest: flag('ca') },
+
+  // 2026 World Cup qualifiers not already above — UEFA
+  'czech-republic': { name: 'Czech Republic', shortName: 'Czechia', color: '#D7141A', secondary: '#11457E', monogram: 'CZE', crest: flag('cz') },
+  'bosnia-and-herzegovina': {
+    name: 'Bosnia and Herzegovina',
+    shortName: 'Bosnia',
+    color: '#002F6C',
+    secondary: '#FECB00',
+    monogram: 'BIH',
+    crest: flag('ba'),
+  },
+  switzerland: { name: 'Switzerland', color: '#D52B1E', secondary: '#FFFFFF', monogram: 'SUI', crest: flag('ch') },
+  scotland: { name: 'Scotland', color: '#003078', secondary: '#FFFFFF', monogram: 'SCO', crest: flag('gb-sct') },
+  turkey: { name: 'Turkey', color: '#E30A17', secondary: '#FFFFFF', monogram: 'TUR', crest: flag('tr') },
+  sweden: { name: 'Sweden', color: '#FECC02', secondary: '#006AA7', monogram: 'SWE', crest: flag('se') },
+  norway: { name: 'Norway', color: '#C8102E', secondary: '#00205B', monogram: 'NOR', crest: flag('no') },
+
+  // CAF
+  'south-africa': { name: 'South Africa', color: '#FFB612', secondary: '#007749', monogram: 'RSA', crest: flag('za') },
+  'ivory-coast': { name: 'Ivory Coast', color: '#FF8200', secondary: '#009A44', monogram: 'CIV', crest: flag('ci') },
+  tunisia: { name: 'Tunisia', color: '#E70013', secondary: '#FFFFFF', monogram: 'TUN', crest: flag('tn') },
+  egypt: { name: 'Egypt', color: '#CE1126', secondary: '#FFFFFF', monogram: 'EGY', crest: flag('eg') },
+  'cape-verde': { name: 'Cape Verde', color: '#003893', secondary: '#CF2027', monogram: 'CPV', crest: flag('cv') },
+  senegal: { name: 'Senegal', color: '#00853F', secondary: '#FDEF42', monogram: 'SEN', crest: flag('sn') },
+  'dr-congo': { name: 'DR Congo', color: '#0085CA', secondary: '#F7D618', monogram: 'COD', crest: flag('cd') },
+  ghana: { name: 'Ghana', color: '#CE1126', secondary: '#FCD116', monogram: 'GHA', crest: flag('gh') },
+
+  // AFC
+  'south-korea': { name: 'South Korea', color: '#E6002D', secondary: '#000000', monogram: 'KOR', crest: flag('kr') },
+  qatar: { name: 'Qatar', color: '#8A1538', secondary: '#FFFFFF', monogram: 'QAT', crest: flag('qa') },
+  australia: { name: 'Australia', color: '#FFCD00', secondary: '#00843D', monogram: 'AUS', crest: flag('au') },
+  iran: { name: 'Iran', color: '#239F40', secondary: '#DA0000', monogram: 'IRN', crest: flag('ir') },
+  'saudi-arabia': { name: 'Saudi Arabia', color: '#006C35', secondary: '#FFFFFF', monogram: 'KSA', crest: flag('sa') },
+  iraq: { name: 'Iraq', color: '#007A3D', secondary: '#FFFFFF', monogram: 'IRQ', crest: flag('iq') },
+  uzbekistan: { name: 'Uzbekistan', color: '#0099B5', secondary: '#FFFFFF', monogram: 'UZB', crest: flag('uz') },
+
+  // CONCACAF
+  haiti: { name: 'Haiti', color: '#00209F', secondary: '#D21034', monogram: 'HAI', crest: flag('ht') },
+  curacao: { name: 'Curaçao', color: '#002B7F', secondary: '#F9E814', monogram: 'CUW', crest: flag('cw') },
+  panama: { name: 'Panama', color: '#DA121A', secondary: '#005293', monogram: 'PAN', crest: flag('pa') },
+
+  // CONMEBOL
+  paraguay: { name: 'Paraguay', color: '#D52B1E', secondary: '#0038A8', monogram: 'PAR', crest: flag('py') },
+  ecuador: { name: 'Ecuador', color: '#FFDD00', secondary: '#034EA2', monogram: 'ECU', crest: flag('ec') },
+  colombia: { name: 'Colombia', color: '#FCD116', secondary: '#003893', monogram: 'COL', crest: flag('co') },
+
+  // OFC
+  'new-zealand': { name: 'New Zealand', color: '#000000', secondary: '#FFFFFF', monogram: 'NZL', crest: flag('nz') },
 }
 
 /**
@@ -177,6 +225,20 @@ const ALIASES: Record<string, string> = {
   usa: 'united-states',
   'united-states-of-america': 'united-states',
   holland: 'netherlands',
+  czechia: 'czech-republic',
+  bosnia: 'bosnia-and-herzegovina',
+  'bosnia-herzegovina': 'bosnia-and-herzegovina',
+  turkiye: 'turkey', // slugify("Türkiye")
+  'cote-d-ivoire': 'ivory-coast', // slugify("Côte d'Ivoire")
+  'cote-divoire': 'ivory-coast',
+  'cabo-verde': 'cape-verde',
+  'congo-dr': 'dr-congo',
+  'democratic-republic-of-the-congo': 'dr-congo',
+  drc: 'dr-congo',
+  'korea-republic': 'south-korea', // FIFA's official name
+  korea: 'south-korea',
+  'ir-iran': 'iran', // FIFA's official name
+  ksa: 'saudi-arabia',
 }
 
 /** Slugify a display name so YAML can pass `home: "Arsenal"` and we still find the entry. */
