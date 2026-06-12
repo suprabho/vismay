@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+/* Tailwind v4 JIT only scans the importing package by default. The kidzovo
+ * vertical's modules (kz:character, kz:bubble) ship Tailwind-free, but their
+ * surrounding components and the engine's foreground slots use utility
+ * classes — point the scanner at both. */
+@source '../../../../verticals/kidzovo-viz/src';
+@source '../../../../packages/viz-engine/src';
+
+html,
+body {
+  background: var(--color-bg, #fff7ec);
+  color: var(--color-text, #3d2a17);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  margin: 0;
+}

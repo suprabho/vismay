@@ -116,6 +116,12 @@ export const riveSchema = z.object({
     .describe("Fallback image while the .riv loads, or for capture.mode 'posterImage'."),
   viewModel: RiveViewModelSchema.optional().describe('Static view-model bindings applied once on mount.'),
   stepInput: riveStepInputSchema.optional().describe('Per-step state-machine / view-model input writes.'),
+  staticInputs: z
+    .record(z.string(), z.union([z.number(), z.boolean()]))
+    .optional()
+    .describe(
+      'One-shot writes to state-machine inputs, applied once the .riv loads. Keys are input names (case-sensitive, must match the .riv exactly); values are numbers or booleans. Triggers are intentionally excluded — they are events, not state. Unknown input names are silently skipped so a config that outlives a .riv refactor does not 500 the page.',
+    ),
   background: z.string().optional().describe('Background color shown while loading.'),
   capture: riveCaptureSchema.optional().describe("Capture-mode behavior. Defaults to { mode: 'currentFrame' }."),
 })
@@ -159,6 +165,7 @@ const riveModule: VizModule<RiveLayerConfig> = {
     { kind: 'boolean', key: 'autoplay', label: 'Autoplay' },
     { kind: 'json', key: 'viewModel', label: 'View model bindings (JSON)', placeholder: '{"instance":"default","bindings":{}}' },
     { kind: 'json', key: 'stepInput', label: 'Scroll → input mapping (JSON)' },
+    { kind: 'json', key: 'staticInputs', label: 'Static state-machine input writes (JSON)' },
     { kind: 'json', key: 'capture', label: 'Capture freeze (JSON)' },
   ],
 }

@@ -1,0 +1,90 @@
+# Phase 3 demo — three panels with Ovi on stage plus a kz:bubble on the
+# middle panel. Demonstrates:
+#
+#   - kz-storybook layout (phase 1) — background, caption, stage, bubbles
+#   - kz:character module (phase 2) — Ovi resolved from data/characters.ts,
+#     positioned via anchor, pose pinned per-panel via pose.static
+#   - kz:bubble module (phase 3) — gentle-tone bubble in panel 2 with the
+#     tail auto-anchored to Ovi via `speaker: ovi` (resolves to her
+#     center-bottom anchor → bottom-center tail)
+#
+# No `defaults:` block — the kidzovo host doesn't render the engine's map
+# background, so the parser's hardcoded defaults (DEFAULTS in
+# packages/content-source/src/storyConfig.ts) are accepted as no-ops.
+# Each section sets `background: { type: none }` — the explicit "no
+# section-level background" sentinel that the parser accepts in place
+# of the legacy `map.center` / `map.zoom` requirements. The visible
+# background lives inside the kz-storybook layout's `background` region.
+
+sections:
+  - id: ovi-plays
+    text: "Ovi plays"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-1.svg"
+            alt: "Pink-to-cream gradient placeholder for Ovi's room"
+            fit: cover
+        caption:
+          - type: text
+            content: "Ovi loved to play in her room all day long."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: idle
+            anchor: { x: center, y: bottom }
+
+  - id: great-big-mess
+    text: "A great big mess"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-2.svg"
+            alt: "Teal-to-cream gradient placeholder for the messy floor"
+            fit: cover
+        caption:
+          - type: text
+            content: "She threw toys, crayons, socks, and clothes everywhere while playing."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: painting
+            anchor: { x: center, y: bottom }
+        bubbles:
+          - type: kz:bubble
+            tone: gentle
+            speaker: ovi
+            textStepwise:
+              - "This is so much fun!"
+
+  - id: ovi-sits
+    text: "Ovi sits in the mess"
+    background:
+      type: none
+    foreground:
+      layout: kz-storybook
+      regions:
+        background:
+          - type: image
+            src: "/kidzovo-demo/panel-3.svg"
+            alt: "Pink-to-teal gradient placeholder after the mess settles"
+            fit: cover
+        caption:
+          - type: text
+            content: "Tired from playing, Ovi sat down in the middle of the mess."
+        stage:
+          - type: kz:character
+            who: ovi
+            pose:
+              static: listening
+            anchor: { x: center, y: bottom }
