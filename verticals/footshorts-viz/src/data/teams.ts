@@ -103,6 +103,17 @@ export const TEAMS: Record<string, TeamEntry> = {
   newcastle: { name: 'Newcastle United', shortName: 'Newcastle', color: '#241F20', secondary: '#FFFFFF', monogram: 'NEW', crest: fd(67) },
   'aston-villa': { name: 'Aston Villa', shortName: 'Villa', color: '#670E36', secondary: '#95BFE5', monogram: 'AVL', crest: fd(58) },
   brighton: { name: 'Brighton & Hove Albion', shortName: 'Brighton', color: '#0057B8', secondary: '#FFFFFF', monogram: 'BHA', crest: fd(397) },
+  fulham: { name: 'Fulham', color: '#000000', secondary: '#FFFFFF', monogram: 'FUL', crest: fd(63) },
+  'west-ham': { name: 'West Ham United', shortName: 'West Ham', color: '#7A263A', secondary: '#1BB1E7', monogram: 'WHU', crest: fd(563) },
+  everton: { name: 'Everton', color: '#003399', secondary: '#FFFFFF', monogram: 'EVE', crest: fd(62) },
+  'crystal-palace': { name: 'Crystal Palace', shortName: 'Palace', color: '#1B458F', secondary: '#C4122E', monogram: 'CRY', crest: fd(354) },
+  bournemouth: { name: 'AFC Bournemouth', shortName: 'Bournemouth', color: '#DA291C', secondary: '#000000', monogram: 'BOU', crest: fd(1044) },
+  leeds: { name: 'Leeds United', shortName: 'Leeds', color: '#1D428A', secondary: '#FFCD00', monogram: 'LEE', crest: fd(341) },
+  brentford: { name: 'Brentford', color: '#E30613', secondary: '#FFFFFF', monogram: 'BRE', crest: fd(402) },
+  sunderland: { name: 'Sunderland', color: '#EB172B', secondary: '#FFFFFF', monogram: 'SUN', crest: fd(71) },
+  'nottingham-forest': { name: 'Nottingham Forest', shortName: 'Forest', color: '#DD0000', secondary: '#FFFFFF', monogram: 'NFO', crest: fd(351) },
+  wolves: { name: 'Wolverhampton Wanderers', shortName: 'Wolves', color: '#FDB913', secondary: '#231F20', monogram: 'WOL', crest: fd(76) },
+  burnley: { name: 'Burnley', color: '#6C1D45', secondary: '#99D6EA', monogram: 'BUR', crest: fd(328) },
   brest: { name: 'Stade Brestois', shortName: 'Brest', color: '#E2001A', secondary: '#FFFFFF', monogram: 'BRE', crest: fd(512) },
   lille: { name: 'Lille', color: '#E01E13', secondary: '#FFFFFF', monogram: 'LIL', crest: fd(521) },
   ajax: { name: 'Ajax', color: '#D2122E', secondary: '#FFFFFF', monogram: 'AJX', crest: fd(678) },
@@ -215,6 +226,15 @@ const ALIASES: Record<string, string> = {
   atletico: 'atletico-madrid',
   atleti: 'atletico-madrid',
   villa: 'aston-villa',
+  'newcastle-united': 'newcastle',
+  'brighton-hove-albion': 'brighton',
+  'brighton-and-hove-albion': 'brighton',
+  'west-ham-united': 'west-ham',
+  'afc-bournemouth': 'bournemouth',
+  'leeds-united': 'leeds',
+  'nottm-forest': 'nottingham-forest',
+  'wolverhampton-wanderers': 'wolves',
+  wolverhampton: 'wolves',
   'bayern-munich': 'bayern',
   'borussia-dortmund': 'dortmund',
   bvb: 'dortmund',
@@ -253,15 +273,20 @@ export function slugify(s: string): string {
 
 /**
  * Lookup with display-name + alias fallback. Tries the raw key, then the
- * slugified form, then the alias map. Returns `null` if no bundled entry matches.
+ * slugified form, then the alias map — and retries all three with a trailing
+ * "FC"/"AFC" stripped, since football-data.org entity names carry the suffix
+ * ("Newcastle United FC") while the registry keys don't.
+ * Returns `null` if no bundled entry matches.
  */
 export function findTeam(slugOrName: string): TeamEntry | null {
   const direct = TEAMS[slugOrName]
   if (direct) return direct
-  const slug = slugify(slugOrName)
-  if (TEAMS[slug]) return TEAMS[slug]
-  const aliased = ALIASES[slug]
-  return aliased ? TEAMS[aliased] ?? null : null
+  for (const slug of [slugify(slugOrName), slugify(slugOrName).replace(/-a?fc$/, '')]) {
+    if (TEAMS[slug]) return TEAMS[slug]
+    const aliased = ALIASES[slug]
+    if (aliased && TEAMS[aliased]) return TEAMS[aliased]
+  }
+  return null
 }
 
 /** Resolve the display color for a team — YAML override wins, then bundled, then fallback. */
