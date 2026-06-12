@@ -9,6 +9,7 @@ import {
   type SectionContentDraft,
 } from '@vismay/story-pipeline'
 import { getFeatureModel } from '@/lib/aiModelSettings'
+import { resolveStoryPack } from '@/lib/storyPack'
 
 /**
  * Generate ONE story section from a free-text brief.
@@ -97,17 +98,22 @@ export async function POST(
 
   const ctx: SectionContext = { source: 'brief', format, brief }
   const model = await getFeatureModel('generateSection')
+  // The story's editorial desk: vertical stories get their pack's voice and
+  // extra layer types in the structured-output schema (sectionBodySchemaWith),
+  // so the visual pass can EMIT vertical layers. The vizmaya pack (no extras)
+  // keeps the canonical schema instance — default behavior unchanged.
+  const pack = await resolveStoryPack(slug)
 
   let section: SectionDraft
   try {
     if (phase === 'content') {
-      section = await generateSectionContent(ctx, { model, refine })
+      section = await generateSectionContent(ctx, { model, pack, refine })
     } else if (phase === 'visual') {
-      const { body: visualBody } = await generateSectionVisual(ctx, body.content!, { model, refine })
+      const { body: visualBody } = await generateSectionVisual(ctx, body.content!, { model, pack, refine })
       section = { ...body.content!, body: visualBody }
     } else {
-      const content = await generateSectionContent(ctx, { model, refine })
-      const { body: visualBody } = await generateSectionVisual(ctx, content, { model })
+      const content = await generateSectionContent(ctx, { model, pack, refine })
+      const { body: visualBody } = await generateSectionVisual(ctx, content, { model, pack })
       section = { ...content, body: visualBody }
     }
   } catch (e) {

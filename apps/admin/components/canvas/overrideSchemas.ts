@@ -15,23 +15,30 @@
  * lives (image layers keep their artistic default, not a YAML schema).
  */
 
-import { describeLayerSchema, listModulesForSlot } from '@vismay/viz-engine'
+import { describeLayerOption, describeLayerSchema, listModulesForSlot } from '@vismay/viz-engine'
+import type { PackLayerType } from '@vismay/story-pipeline'
 import { aiSlotConfig, type AiSlotKind } from './aiSlots'
+
+/** Vertical layer types a DomainPack adds on top of the registry (foreground
+ *  only). Type-only mirror of the story-pipeline pack shape — pass
+ *  `pack.extraLayerTypes` (server resolves it via `resolveStoryPack`). */
+export type VerticalLayerExtras = readonly PackLayerType[]
 
 const RAW =
   'Output ONLY valid YAML for this slot — no markdown code fences, no ' +
   'commentary, no surrounding keys.'
 
-/** "bigStat (Big stat), chart (Chart), …" — the layer types valid in a slot. */
-function layerMenu(slot: 'foreground' | 'background'): string {
-  return listModulesForSlot(slot)
-    .map((m) => `${m.type} (${m.label})`)
-    .join(', ')
+/** "bigStat (Big stat), chart (Chart), …" — the layer types valid in a slot.
+ *  Vertical extras extend the FOREGROUND menu only (packs offer no backdrops). */
+function layerMenu(slot: 'foreground' | 'background', extras: VerticalLayerExtras = []): string {
+  const core = listModulesForSlot(slot).map((m) => `${m.type} (${m.label})`)
+  const vertical = slot === 'foreground' ? extras.map((t) => `${t.type} (${t.label})`) : []
+  return [...core, ...vertical].join(', ')
 }
 
 /** Per-slot prompt builders. Functions so layer menus reflect the live registry. */
-const OVERRIDE_SCHEMAS: Partial<Record<AiSlotKind, () => string>> = {
-  foreground: () =>
+const OVERRIDE_SCHEMAS: Partial<Record<AiSlotKind, (extras: VerticalLayerExtras) => string>> = {
+  foreground: (extras) =>
     `You author a section foreground as YAML — the composable content layered ` +
     `over the section backdrop. It takes one of three shapes:\n` +
     `  1. a single layer mapping,\n` +
@@ -39,7 +46,7 @@ const OVERRIDE_SCHEMAS: Partial<Record<AiSlotKind, () => string>> = {
     `  3. a \`layout:\` + \`regions:\` mapping (regions maps a region name to a ` +
     `layer or list of layers).\n` +
     `Every layer is a mapping with a \`type:\` discriminant; author each with ` +
-    `that type's own fields. Available foreground layer types: ${layerMenu('foreground')}.\n\n` +
+    `that type's own fields. Available foreground layer types: ${layerMenu('foreground', extras)}.\n\n` +
     `Example shape (layout + regions):\n` +
     `layout: stat-left-chart-right\n` +
     `regions:\n` +
@@ -60,11 +67,11 @@ const OVERRIDE_SCHEMAS: Partial<Record<AiSlotKind, () => string>> = {
     `zoom: 5\n\n` +
     RAW,
 
-  region: () =>
+  region: (extras) =>
     `You author one foreground region's content as YAML: a single layer mapping ` +
     `or a list of layers. Each layer is a mapping with a \`type:\` discriminant; ` +
     `author each with that type's own fields. Available layer types: ` +
-    `${layerMenu('foreground')}.\n\n` +
+    `${layerMenu('foreground', extras)}.\n\n` +
     `Example shape:\n` +
     `- { type: bigStat, value: "$18.7B", label: "FY2025 revenue" }\n` +
     `- { type: bodyText, content: ["A short supporting caption."] }\n\n` +
@@ -213,15 +220,33 @@ function exportPagePrompt(kind: 'slides' | 'report'): string {
  * (the caller then falls back to the slot's generic `defaultSystem`). Layer
  * slots derive from the module's adminForm; override slots use the tables above.
  * Only text-modality slots get a YAML schema — image layers keep their default.
+ *
+ * `extras` is the story's vertical layer menu (`pack.extraLayerTypes`): the
+ * foreground/region menus list them, and a layer slot whose type matches an
+ * extra derives its prompt from the pack's zod mirror + `promptDoc` (vertical
+ * modules carry hand-written `parseConfig`s, so `describeLayerSchema` can't
+ * document them). Empty extras (the vizmaya default) is byte-identical to the
+ * pre-vertical output.
  */
 export function buildSlotSchemaPrompt(
   kind: AiSlotKind,
   layerType?: string,
+  extras: VerticalLayerExtras = [],
 ): string | null {
   const config = aiSlotConfig(kind, layerType)
   if (!config || config.modality !== 'text') return null
   if (kind === 'layer') {
-    return layerType ? describeLayerSchema(layerType) : null
+    if (!layerType) return null
+    const vertical = extras.find((t) => t.type === layerType)
+    if (vertical) {
+      return describeLayerOption({
+        type: vertical.type,
+        label: vertical.label,
+        schema: vertical.schema,
+        doc: vertical.promptDoc,
+      })
+    }
+    return describeLayerSchema(layerType)
   }
-  return OVERRIDE_SCHEMAS[kind]?.() ?? null
+  return OVERRIDE_SCHEMAS[kind]?.(extras) ?? null
 }

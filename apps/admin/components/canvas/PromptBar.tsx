@@ -66,7 +66,8 @@ interface Props {
  */
 function layerTypeFromYaml(text?: string): string | null {
   if (!text) return null
-  const m = text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9]*)/m)
+  // `:` and `-` admit vertical module types (e.g. `fs:match-card`).
+  const m = text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9:-]*)/m)
   return m && m[1] !== 'image' ? m[1] : null
 }
 
@@ -97,9 +98,13 @@ export default function PromptBar({
   const schemaPrompt = buildSlotSchemaPrompt(kind, effectiveLayerType)
 
   const [prompt, setPrompt] = useState('')
-  const [system, setSystem] = useState(
-    defaultSystemPrompt ?? schemaPrompt ?? config?.defaultSystem ?? '',
-  )
+  // The default the textarea shows. An UNEDITED system prompt is not sent —
+  // the server derives the same schema prompt itself (same functions, same
+  // inputs) and can additionally extend it with the story's vertical layer
+  // types, which the client registry can't resolve. Only an author edit
+  // becomes an override.
+  const systemDefault = defaultSystemPrompt ?? schemaPrompt ?? config?.defaultSystem ?? ''
+  const [system, setSystem] = useState(systemDefault)
   const [showSystem, setShowSystem] = useState(false)
   const [model, setModel] = useState(config?.models[0] ?? '')
   const [aspect, setAspect] = useState<AspectRatio>('1:1')
@@ -142,7 +147,10 @@ export default function PromptBar({
             parentIndex,
             subIndex,
             prompt: trimmed,
-            system: system.trim() || undefined,
+            system:
+              system.trim() && system.trim() !== systemDefault.trim()
+                ? system.trim()
+                : undefined,
             model,
             aspectRatio: isImage ? aspect : undefined,
             current: override?.current ?? currentValue,

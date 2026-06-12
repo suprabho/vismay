@@ -15,6 +15,7 @@ import { aiSlotConfig, type AiSlotKind } from '@/components/canvas/aiSlots'
 import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 import { buildSlotContext } from '@/lib/slotContext'
+import { resolveStoryPack } from '@/lib/storyPack'
 
 /**
  * Generate the value for one editable canvas slot from a prompt.
@@ -109,8 +110,14 @@ export async function POST(
   //   2. the schema-aware prompt for this slot (exact YAML shape),
   //   3. the slot's generic default (backstop for slots we can't yet derive).
   // buildSlotSchemaPrompt owns the modality guard, so image layers keep their
-  // artistic default rather than getting a YAML schema.
-  const schemaPrompt = buildSlotSchemaPrompt(body.kind, body.layerType)
+  // artistic default rather than getting a YAML schema. The story's vertical
+  // pack (best-effort) extends the layer vocabulary for vertical stories.
+  const pack = await resolveStoryPack(slug).catch(() => null)
+  const schemaPrompt = buildSlotSchemaPrompt(
+    body.kind,
+    body.layerType,
+    pack?.extraLayerTypes ?? [],
+  )
   const system =
     typeof body.system === 'string' && body.system.trim()
       ? body.system.trim().slice(0, MAX_SYSTEM_LENGTH)

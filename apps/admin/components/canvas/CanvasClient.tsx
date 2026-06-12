@@ -780,7 +780,8 @@ export default function CanvasClient({
       if (t && sl) {
         const layerType =
           t.kind === 'layer'
-            ? sl.text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9]*)/m)?.[1]
+            ? // `:` and `-` admit vertical module types (e.g. `fs:match-card`).
+              sl.text.match(/^type:\s*['"]?([A-Za-z][A-Za-z0-9:-]*)/m)?.[1]
             : undefined
         node = {
           label: sl.title,

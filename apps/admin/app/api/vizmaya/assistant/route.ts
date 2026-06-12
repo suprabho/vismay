@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { generateText } from '@vismay/ai-gateway'
 import { buildAssistantSystemPrompt } from '@/lib/assistantKnowledge'
+import { resolveStoryPack } from '@/lib/storyPack'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 
@@ -54,6 +55,7 @@ interface AssistantBody {
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i
+const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
 /** Title shown in the history list — derived from the first user message. */
 const TITLE_MAX = 80
 
@@ -135,11 +137,21 @@ export async function POST(req: Request) {
       .join('\n\n') +
     '\n\nAssistant:'
 
+  // Desk awareness: when the author is looking at a story, resolve its vertical
+  // pack so the reference also documents that desk's layer types (fs:*, f1:*).
+  // Best-effort — a resolution failure degrades to the canonical reference.
+  const ctxSlug = body.context?.section?.slug
+  const pack =
+    typeof ctxSlug === 'string' && SAFE_SLUG.test(ctxSlug)
+      ? await resolveStoryPack(ctxSlug).catch(() => null)
+      : null
+
+  const knowledge = buildAssistantSystemPrompt(pack)
   const system = contextBlock
-    ? `${buildAssistantSystemPrompt()}\n\nWhen the author says "this", "here", ` +
+    ? `${knowledge}\n\nWhen the author says "this", "here", ` +
       `"this layer/section", or similar, they mean the CURRENT CONTEXT block at ` +
       `the top of the conversation.`
-    : buildAssistantSystemPrompt()
+    : knowledge
 
   let answer: string
   let modelUsed: string

@@ -12,8 +12,12 @@ import {
   listModulesForSlot,
 } from '@vismay/viz-engine'
 import { aiSlotConfig, type AiSlotKind } from '@/components/canvas/aiSlots'
-import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
+import {
+  buildSlotSchemaPrompt,
+  type VerticalLayerExtras,
+} from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
+import { resolveStoryPack } from '@/lib/storyPack'
 
 /**
  * Repair a slot's YAML so it satisfies the schema — the ✨ "Fix with AI" path
@@ -54,16 +58,19 @@ function stripCodeFence(text: string): string {
   return (m ? m[1] : t).trim()
 }
 
-/** The valid vocabulary block for the slot — what the model is allowed to use. */
-function vocabularyPrompt(kind: AiSlotKind): string | null {
+/** The valid vocabulary block for the slot — what the model is allowed to use.
+ *  `extras` (the story's vertical pack layer types) keeps a vertical layer like
+ *  `fs:match-card` IN vocabulary, so a repair never strips it as unknown. */
+function vocabularyPrompt(kind: AiSlotKind, extras: VerticalLayerExtras = []): string | null {
   // Only foreground-shaped slots reference layouts / layer types.
   if (kind !== 'foreground' && kind !== 'region') return null
   const layouts = listForegroundLayouts()
     .map((l) => l.name)
     .join(', ')
-  const types = listModulesForSlot('foreground')
-    .map((m) => `${m.type} (${m.label})`)
-    .join(', ')
+  const types = [
+    ...listModulesForSlot('foreground').map((m) => `${m.type} (${m.label})`),
+    ...extras.map((t) => `${t.type} (${t.label})`),
+  ].join(', ')
   const lines: string[] = []
   if (kind === 'foreground') {
     lines.push(`Valid layout names (use one exactly, or omit \`layout:\`): ${layouts}.`)
@@ -142,8 +149,11 @@ export async function POST(
 
   // Ground the repair in the slot's schema + the live valid vocabulary, so the
   // model fixes within the real field/layout/type names rather than inventing.
-  const schemaPrompt = buildSlotSchemaPrompt(body.kind, body.layerType)
-  const vocabulary = vocabularyPrompt(body.kind)
+  // The story's vertical pack (best-effort) extends both with the desk's types.
+  const pack = await resolveStoryPack(slug).catch(() => null)
+  const extras = pack?.extraLayerTypes ?? []
+  const schemaPrompt = buildSlotSchemaPrompt(body.kind, body.layerType, extras)
+  const vocabulary = vocabularyPrompt(body.kind, extras)
   const system = [
     `You repair a fragment of YAML so it conforms to its schema. The fragment ` +
       `is the \`${config.label}\` slot of one section in a data-driven story and ` +

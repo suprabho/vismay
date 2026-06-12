@@ -15,6 +15,7 @@ import {
 import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
 import { getFeatureModel } from '@/lib/aiModelSettings'
 import { buildSlotContext } from '@/lib/slotContext'
+import { resolveStoryPack } from '@/lib/storyPack'
 
 /**
  * Transform a *fragment* the author selected inside an editor — the in-place
@@ -165,9 +166,12 @@ export async function POST(
   }
 
   // Ground the edit in the slot's schema when we know the slot, so the model
-  // edits within the real field vocabulary instead of inventing fields.
+  // edits within the real field vocabulary instead of inventing fields. The
+  // story's vertical pack (best-effort) extends that vocabulary with the
+  // desk's layer types.
+  const pack = body.kind ? await resolveStoryPack(slug).catch(() => null) : null
   const schemaPrompt = body.kind
-    ? buildSlotSchemaPrompt(body.kind, body.layerType)
+    ? buildSlotSchemaPrompt(body.kind, body.layerType, pack?.extraLayerTypes ?? [])
     : null
   const system = schemaPrompt
     ? `${systemPrompt(language)}\n\nThe fragment belongs to this slot. Keep your ` +

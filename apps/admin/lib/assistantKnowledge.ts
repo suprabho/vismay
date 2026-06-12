@@ -14,8 +14,12 @@
  * pack outgrows a comfortable token budget, switch the schema half to retrieval.
  */
 
-import { allRegisteredTypes, describeLayerSchema } from '@vismay/viz-engine'
-import { buildSlotSchemaPrompt } from '@/components/canvas/overrideSchemas'
+import { allRegisteredTypes, describeLayerOption, describeLayerSchema } from '@vismay/viz-engine'
+import type { DomainPack } from '@vismay/story-pipeline'
+import {
+  buildSlotSchemaPrompt,
+  type VerticalLayerExtras,
+} from '@/components/canvas/overrideSchemas'
 import type { AiSlotKind } from '@/components/canvas/aiSlots'
 
 const PLATFORM_OVERVIEW = `# Vizmaya platform overview
@@ -89,8 +93,11 @@ Rules:
 - You explain and advise; you do not perform actions on the story.
 - Format answers as GitHub-flavored markdown.`
 
-/** Exact slot/layer schemas, generated from the live registry + override schemas. */
-function schemaReference(): string {
+/** Exact slot/layer schemas, generated from the live registry + override schemas.
+ *  `extras` (a vertical pack's layer types) flows into the foreground/region
+ *  menus so vertical layer types count as documented; empty extras reproduces
+ *  the canonical (vizmaya) reference byte-identically. */
+function schemaReference(extras: VerticalLayerExtras = []): string {
   const layers = allRegisteredTypes()
     .map((t) => describeLayerSchema(t))
     .filter((s): s is string => Boolean(s))
@@ -108,7 +115,7 @@ function schemaReference(): string {
     'shareMap',
   ]
   const overrides = overrideKinds
-    .map((k) => buildSlotSchemaPrompt(k))
+    .map((k) => buildSlotSchemaPrompt(k, undefined, extras))
     .filter((s): s is string => Boolean(s))
 
   return [
@@ -120,15 +127,51 @@ function schemaReference(): string {
   ].join('\n')
 }
 
-/** Full system prompt for the assistant: instructions + overview + live schemas. */
-export function buildAssistantSystemPrompt(): string {
+/**
+ * The vertical-modules reference for a desk with extra layer types: per type,
+ * the same exact-shape doc the core layers get (derived from the pack's zod
+ * mirror — vertical modules have no registry schema), with the pack's
+ * `promptDoc` usage guidance and the deck regions it reads well in.
+ */
+function verticalReference(pack: DomainPack): string {
+  const docs = pack.extraLayerTypes
+    .map((t) => {
+      const doc =
+        describeLayerOption({ type: t.type, label: t.label, schema: t.schema, doc: t.promptDoc }) ??
+        `\`${t.type}\` (${t.label}) — ${t.promptDoc}`
+      const regions = t.regions.length
+        ? `\nReads well in these deck-layout regions: ${t.regions.join(', ')}.`
+        : ''
+      return doc + regions
+    })
+    .join('\n\n---\n\n')
+
   return [
+    `# Vertical layer types — the ${pack.name} desk`,
+    `This story belongs to the "${pack.id}" vertical. In ADDITION to the core layer`,
+    `types above, its section foregrounds may use these ${pack.name} layer types:`,
+    '',
+    docs,
+  ].join('\n')
+}
+
+/**
+ * Full system prompt for the assistant: instructions + overview + live schemas.
+ * Pass the story's resolved DomainPack so a vertical story's assistant also
+ * knows that desk's layer types; omitted / vizmaya packs (no extra layer types)
+ * produce the canonical prompt unchanged.
+ */
+export function buildAssistantSystemPrompt(pack?: DomainPack | null): string {
+  const extras = pack?.extraLayerTypes ?? []
+  const parts = [
     ASSISTANT_INSTRUCTIONS,
     '',
     '═══════════════ REFERENCE ═══════════════',
     '',
     PLATFORM_OVERVIEW,
     '',
-    schemaReference(),
-  ].join('\n')
+    schemaReference(extras),
+  ]
+  if (pack && extras.length > 0) parts.push('', verticalReference(pack))
+  return parts.join('\n')
 }
