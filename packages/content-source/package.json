@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./apps": "./src/apps.ts",
+    "./authors": "./src/authors.ts",
     "./composeState": "./src/composeState.ts",
     "./content": "./src/content.ts",
     "./contentAnchors": "./src/contentAnchors.ts",

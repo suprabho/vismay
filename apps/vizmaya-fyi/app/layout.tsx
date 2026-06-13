@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono, Fraunces } from 'next/font/google'
 import { GoogleAnalytics } from '@next/third-parties/google'
 import { Analytics } from '@vercel/analytics/next'
+import JsonLd from '@/components/JsonLd'
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/lib/jsonLd'
 import './globals.css'
 
 const inter = Inter({
@@ -72,6 +74,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${fraunces.variable} antialiased`}>
       <body>
+        <JsonLd data={[buildOrganizationJsonLd(), buildWebSiteJsonLd()]} />
         {children}
         <Analytics />
         <GoogleAnalytics gaId="G-F6HWF0B8G7" />

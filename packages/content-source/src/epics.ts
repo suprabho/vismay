@@ -18,18 +18,28 @@ export interface Epic {
   theme: Record<string, unknown>
   appSlug: string
   showOnHome: boolean
+  /** Evergreen pillar narrative (markdown). See migration 058. */
+  explainer: string | null
+  /** Key-takeaways bullets for the pillar SEO block. */
+  takeaways: string[]
+  keywords: string[]
+  datePublished: string | null
+  dateModified: string | null
 }
 
-export async function getEpic(slug: string): Promise<Epic | null> {
-  const sb = createServiceClient()
-  const { data, error } = await sb
-    .from('epics')
-    .select('slug, name, description, landing_component, theme, app_slug, show_on_home')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle()
-  if (error) throw new Error(`getEpic ${slug}: ${error.message}`)
-  if (!data) return null
+const EPIC_BASE_COLUMNS = 'slug, name, description, landing_component, theme, app_slug, show_on_home'
+const EPIC_PILLAR_COLUMNS = 'explainer, takeaways, keywords, date_published, date_modified'
+const EPIC_COLUMNS = `${EPIC_BASE_COLUMNS}, ${EPIC_PILLAR_COLUMNS}`
+
+// Postgres "undefined column" (42703). Lets epic reads degrade gracefully when
+// the code is deployed ahead of migration 058 — the pillar fields just read as
+// empty rather than 500-ing the existing epic landings.
+function isMissingColumnError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  return error.code === '42703' || /column .* does not exist/i.test(error.message ?? '')
+}
+
+function mapEpicRow(data: any): Epic {
   return {
     slug: data.slug,
     name: data.name,
@@ -38,28 +48,38 @@ export async function getEpic(slug: string): Promise<Epic | null> {
     theme: (data.theme as Record<string, unknown>) ?? {},
     appSlug: (data.app_slug as string | undefined) ?? 'vizmaya-fyi',
     showOnHome: (data.show_on_home as boolean | undefined) ?? true,
+    explainer: (data.explainer as string | null) ?? null,
+    takeaways: Array.isArray(data.takeaways) ? (data.takeaways as string[]) : [],
+    keywords: Array.isArray(data.keywords) ? (data.keywords as string[]) : [],
+    datePublished: (data.date_published as string | null) ?? null,
+    dateModified: (data.date_modified as string | null) ?? null,
   }
+}
+
+// Read one epic row, retrying with base columns if the pillar columns aren't
+// there yet (pre-migration-058 deploys).
+async function readEpicRow(slug: string, publishedOnly: boolean): Promise<Epic | null> {
+  const sb = createServiceClient()
+  const run = (cols: string) => {
+    let q = sb.from('epics').select(cols).eq('slug', slug)
+    if (publishedOnly) q = q.eq('status', 'published')
+    return q.maybeSingle()
+  }
+  let { data, error } = await run(EPIC_COLUMNS)
+  if (error && isMissingColumnError(error)) {
+    ;({ data, error } = await run(EPIC_BASE_COLUMNS))
+  }
+  if (error) throw new Error(`readEpicRow ${slug}: ${error.message}`)
+  return data ? mapEpicRow(data) : null
+}
+
+export async function getEpic(slug: string): Promise<Epic | null> {
+  return readEpicRow(slug, true)
 }
 
 // Admin read: returns the row even if it's not in the published status.
 export async function getEpicForAdmin(slug: string): Promise<Epic | null> {
-  const sb = createServiceClient()
-  const { data, error } = await sb
-    .from('epics')
-    .select('slug, name, description, landing_component, theme, app_slug, show_on_home')
-    .eq('slug', slug)
-    .maybeSingle()
-  if (error) throw new Error(`getEpicForAdmin ${slug}: ${error.message}`)
-  if (!data) return null
-  return {
-    slug: data.slug,
-    name: data.name,
-    description: data.description,
-    landingComponent: data.landing_component,
-    theme: (data.theme as Record<string, unknown>) ?? {},
-    appSlug: (data.app_slug as string | undefined) ?? 'vizmaya-fyi',
-    showOnHome: (data.show_on_home as boolean | undefined) ?? true,
-  }
+  return readEpicRow(slug, false)
 }
 
 export async function listEpics(): Promise<Pick<Epic, 'slug' | 'name' | 'appSlug'>[]> {
@@ -178,6 +198,28 @@ export async function getEpicStories(epicSlug: string): Promise<EpicStory[]> {
       title: r.story.title as string,
       position: r.position as number | null,
     }))
+}
+
+// The published epics a story belongs to — the upward edge of the topic
+// cluster, used to render the story → epic breadcrumb and related-stories rail.
+// Tolerates a missing Supabase env (returns []) so the fs-first story route and
+// dev builds without service credentials don't crash.
+export async function getEpicsForStory(
+  storySlug: string,
+): Promise<Pick<Epic, 'slug' | 'name'>[]> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return []
+  }
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('story_epics')
+    .select('epics!inner(slug, name, status)')
+    .eq('story_slug', storySlug)
+  if (error) throw new Error(`getEpicsForStory ${storySlug}: ${error.message}`)
+  return (data ?? [])
+    .map((r: any) => (Array.isArray(r.epics) ? r.epics[0] : r.epics))
+    .filter((e: any) => e && e.status === 'published')
+    .map((e: any) => ({ slug: e.slug as string, name: e.name as string }))
 }
 
 // Admin: every story plus whether it currently belongs to the given epic and

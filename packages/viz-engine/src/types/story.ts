@@ -78,6 +78,31 @@ export interface Frontmatter {
    * body. Any CSS colour string. Ignored when there's no `thumbnail`.
    */
   thumbnailTextColor?: string
+  // --- SEO / structured-data metadata (all optional, backwards-compatible) ---
+  /**
+   * Last meaningful edit, ISO-8601. Feeds JSON-LD `dateModified` and the
+   * sitemap's `lastModified`; both fall back to `date` when absent.
+   */
+  dateModified?: string
+  /**
+   * Schema.org article flavour. `'article'` → evergreen `Article` (default,
+   * safe for the back catalogue); `'news'` → timely `NewsArticle` for
+   * news-pegged pieces that should feed Google Discover / Top Stories.
+   */
+  articleType?: 'article' | 'news'
+  /**
+   * Author slugs into the Supabase `authors` registry. Resolves to structured
+   * `Person` entities (name + profile URL) for E-E-A-T. When absent, the
+   * `byline` string is used as a best-effort fallback author.
+   */
+  authors?: string[]
+  /** Topic keywords; feeds the JSON-LD `keywords` field. */
+  keywords?: string[]
+  /**
+   * Discover-tuned Open Graph title, optimised separately from the `<title>`
+   * tag. Falls back to `title` when unset.
+   */
+  ogTitle?: string
 }
 
 export type BlockType =

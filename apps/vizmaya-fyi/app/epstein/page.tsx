@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { createClient } from "@supabase/supabase-js";
 import EpsteinMap from "./EpsteinMap";
-import { getEpic } from "@vismay/content-source/epics";
+import { getEpic, getEpicStories } from "@vismay/content-source/epics";
 import { resolveEpsteinMapStyle, resolveEpsteinTheme } from "./theme";
+import EpicSeoBlock from "@/components/epic/EpicSeoBlock";
+import JsonLd from "@/components/JsonLd";
+import { buildEpicJsonLd, buildBreadcrumbJsonLd } from "@/lib/jsonLd";
 
 const title = "Epstein Flight Network — vizmaya";
 const description =
@@ -172,8 +175,47 @@ async function loadData() {
 }
 
 export default async function EpsteinPage() {
-  const [data, epic] = await Promise.all([loadData(), getEpic("epstein")]);
+  const [data, epic, stories] = await Promise.all([
+    loadData(),
+    getEpic("epstein"),
+    getEpicStories("epstein"),
+  ]);
   const theme = resolveEpsteinTheme(epic?.theme);
   const mapStyle = resolveEpsteinMapStyle(epic?.theme);
-  return <EpsteinMap {...data} theme={theme} mapStyle={mapStyle} />;
+
+  const epicJsonLd = epic
+    ? buildEpicJsonLd({
+        slug: epic.slug,
+        name: epic.name,
+        description: epic.description,
+        stories,
+        explainer: epic.explainer,
+        datePublished: epic.datePublished,
+        dateModified: epic.dateModified,
+      })
+    : null;
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Home", url: "/" },
+    { name: epic?.name ?? "Epstein Flight Network", url: "/epstein" },
+  ]);
+
+  return (
+    <>
+      <JsonLd
+        data={[
+          ...(epicJsonLd ? (Array.isArray(epicJsonLd) ? epicJsonLd : [epicJsonLd]) : []),
+          breadcrumbJsonLd,
+        ]}
+      />
+      <EpsteinMap {...data} theme={theme} mapStyle={mapStyle} />
+      {epic && (
+        <EpicSeoBlock
+          name={epic.name}
+          explainer={epic.explainer}
+          takeaways={epic.takeaways}
+          stories={stories}
+        />
+      )}
+    </>
+  );
 }
