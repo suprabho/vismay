@@ -246,6 +246,12 @@ export default async function StoryPage({ params }: RouteParams) {
             mapOverrides={mapOverrides}
             format={story.frontmatter.format ?? 'map'}
             logoPalettes={logoPalettes}
+            // vizmaya.fyi is the shared headless surface that renders every
+            // vertical's autoplay video. For a consumer-vertical story
+            // (footshorts, vizf1, …) hide the vizmaya brand mark in autoplay so
+            // it doesn't appear in that brand's reel. vizmaya's own stories
+            // (no `vertical`) keep it.
+            hideLogoInAutoplay={!!story.frontmatter.vertical}
           />
         </VerticalLoader>
       </VerticalCaptureFrame>
