@@ -12,6 +12,7 @@
 export * from './types'
 export {
   packForVertical,
+  configFormatForVertical,
   VIZMAYA_PACK,
   F1_PACK,
   FOOTSHORTS_PACK,

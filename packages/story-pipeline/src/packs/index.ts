@@ -23,3 +23,16 @@ export function packForVertical(vertical?: string | null): DomainPack {
       return VIZMAYA_PACK
   }
 }
+
+/**
+ * Which config serializer a story should use, keyed off its `vertical`.
+ *
+ * New verticals (anything with its own desk other than vizmaya) are
+ * JSON-native: the compose pipeline writes a structured `config.json` instead
+ * of hand-built inline YAML, and the canvas edits the parsed tree. vizmaya-fyi
+ * (the default, `null`/unknown vertical) stays on YAML — its existing stories
+ * and the line-based YAML canvas surgery are untouched.
+ */
+export function configFormatForVertical(vertical?: string | null): 'yaml' | 'json' {
+  return vertical ? 'json' : 'yaml'
+}

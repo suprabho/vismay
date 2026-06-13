@@ -23,8 +23,11 @@ export interface AppendSectionResult {
   id: string
 }
 
+export type ConfigFormat = 'yaml' | 'json'
+
 export declare function appendStorySection(
   markdown: string,
-  configYaml: string,
+  configText: string,
   section: NewSection,
+  format?: ConfigFormat,
 ): AppendSectionResult

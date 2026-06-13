@@ -1,5 +1,7 @@
 import { stringify as stringifyYaml } from 'yaml'
 import { buildYamlModel } from './yamlSections'
+import { parseJsonConfig, appendJsonSection, type JsonConfigSection } from './jsonSections'
+import type { ConfigFormat } from './contentSource'
 
 /**
  * Insert a brand-new section into a story's paired files (markdown + config.yaml).
@@ -122,19 +124,14 @@ export function appendSectionToConfig(
  */
 export function appendStorySection(
   markdown: string,
-  configYaml: string,
+  configText: string,
   section: NewSection,
+  format: ConfigFormat = 'yaml',
 ): AppendSectionResult {
   const heading = section.heading.trim()
   if (!heading) throw new Error('section heading is required')
 
-  const existing = buildYamlModel(configYaml)
-  if (existing.parseError) {
-    throw new Error(`cannot append section to invalid config YAML: ${existing.parseError}`)
-  }
-  const existingIds = existing.sections
-    .map((s) => s.id)
-    .filter((id): id is string => !!id)
+  const existingIds = collectExistingIds(configText, format)
   const id = makeSectionId(heading, existingIds)
 
   const subs = section.subsections?.filter((s) => s.heading.trim()) ?? []
@@ -167,9 +164,29 @@ export function appendStorySection(
     md = appendSectionToMarkdown(md, heading, section.paragraphs, section.kind === 'hero' ? 1 : 2)
   }
 
-  return {
-    markdown: md,
-    configYaml: appendSectionToConfig(configYaml, entry),
-    id,
+  // The config half is format-specific — YAML string surgery (preserve
+  // comments) vs JSON tree push — but the entry it appends is identical.
+  const configOut =
+    format === 'json'
+      ? appendJsonSection(configText, entry as JsonConfigSection)
+      : appendSectionToConfig(configText, entry)
+
+  return { markdown: md, configYaml: configOut, id }
+}
+
+/** The ids already taken in a config, so a new section's id can dedupe against
+ *  them — read through the format's own parser. */
+function collectExistingIds(configText: string, format: ConfigFormat): string[] {
+  if (format === 'json') {
+    const model = parseJsonConfig(configText)
+    if (model.parseError) {
+      throw new Error(`cannot append section to invalid config JSON: ${model.parseError}`)
+    }
+    return model.sections.map((s) => s.id).filter((id): id is string => !!id)
   }
+  const model = buildYamlModel(configText)
+  if (model.parseError) {
+    throw new Error(`cannot append section to invalid config YAML: ${model.parseError}`)
+  }
+  return model.sections.map((s) => s.id).filter((id): id is string => !!id)
 }

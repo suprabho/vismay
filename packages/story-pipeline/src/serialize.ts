@@ -4,7 +4,7 @@ import { appendStorySection } from '@vismay/content-source/storySection'
 import { buildChartData } from './chart'
 import { COVER_ANCHOR, completeCoverBody, coverImageLayer, isDeckCover } from './cover'
 import { defaultsFor } from './defaults'
-import type { GeneratedStory, StoryArtifacts } from './types'
+import type { ConfigFormat, GeneratedStory, StoryArtifacts } from './types'
 
 /**
  * Turn a generated story into the write-ready file set. Each section is folded
@@ -17,10 +17,19 @@ import type { GeneratedStory, StoryArtifacts } from './types'
  * and its full-bleed hero image is attached, pointing at the asset key the
  * compose image step uploads to.
  */
-export function serializeStory(story: GeneratedStory): StoryArtifacts {
+export function serializeStory(
+  story: GeneratedStory,
+  opts: { configFormat?: ConfigFormat } = {},
+): StoryArtifacts {
+  const configFormat = opts.configFormat ?? 'yaml'
   // Start from frontmatter + empty body, and a `defaults` block for the format.
+  // The config base is serialized in the target format; each section is then
+  // folded in through `appendStorySection`, which appends in the same format.
   let markdown = matter.stringify('', story.frontmatter)
-  let configYaml = stringifyYaml({ defaults: defaultsFor(story.format) }, { lineWidth: 0 })
+  let configYaml =
+    configFormat === 'json'
+      ? JSON.stringify({ defaults: defaultsFor(story.format) }, null, 2) + '\n'
+      : stringifyYaml({ defaults: defaultsFor(story.format) }, { lineWidth: 0 })
 
   let coverDone = false
   for (const section of story.sections) {
@@ -39,7 +48,7 @@ export function serializeStory(story: GeneratedStory): StoryArtifacts {
           })
         : section.body,
       subsections: section.subsections,
-    })
+    }, configFormat)
     markdown = res.markdown
     configYaml = res.configYaml
   }
@@ -53,6 +62,7 @@ export function serializeStory(story: GeneratedStory): StoryArtifacts {
     slug: story.slug,
     markdown,
     configYaml,
+    configFormat,
     charts,
     imagePrompts: story.imagePrompts,
   }
