@@ -4,6 +4,7 @@ import { listExtractedSourcesExcept } from '@vismay/content-source/storySources'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import { buildAssetRef, resolveAssetUrl } from '@vismay/viz-engine'
 import { ASSETS_BUCKET } from '@/lib/assetFiles'
+import { getLibraryGroups } from '@/lib/libraryProviders'
 
 /**
  * Compose "from library" picker source — the existing files already in the DB
@@ -50,7 +51,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug } = await params
 
-  const sources = await listExtractedSourcesExcept(slug)
+  const [sources, groups] = await Promise.all([
+    listExtractedSourcesExcept(slug),
+    getLibraryGroups(slug),
+  ])
 
   // Assets degrade to [] on any storage hiccup — the sources group is the
   // primary payload and shouldn't be held hostage to a bucket listing.
@@ -101,5 +105,5 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     assets = []
   }
 
-  return NextResponse.json({ ok: true, sources, assets })
+  return NextResponse.json({ ok: true, sources, assets, groups })
 }

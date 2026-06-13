@@ -11,7 +11,7 @@ import type {
   SourceListItem as LibrarySource,
 } from '@vismay/content-source/storySources'
 import { composeImageFilename } from '@vismay/story-pipeline/cover'
-import type { LibraryAsset } from './SourceLibraryModal'
+import type { LibraryAsset, LibraryGroup } from './SourceLibraryModal'
 import { canvasFrameId } from '../canvasOutputs'
 import type { ChartRequirementView } from './ChartCard'
 
@@ -198,16 +198,36 @@ export function useComposeFlow({
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
   }
-  // Pull the "from library" picker contents — prior extracted sources + doc
-  // assets. Not single-flight (`call`): the modal owns its own loading state.
-  async function loadLibrary(): Promise<{ sources: LibrarySource[]; assets: LibraryAsset[] }> {
+  // Attach a provider library item (published story, epic, …) — the server
+  // extracts it to text and snapshots it as a new source row.
+  async function addFromProvider(providerKey: string, itemId: string): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add from library', 'sources', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerKey, itemId }),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
+  // Pull the "from library" picker contents — prior extracted sources, doc
+  // assets, and provider groups (stories/epics). Not single-flight (`call`):
+  // the modal owns its own loading state.
+  async function loadLibrary(): Promise<{
+    sources: LibrarySource[]
+    assets: LibraryAsset[]
+    groups: LibraryGroup[]
+  }> {
     try {
       const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
-      if (!res.ok) return { sources: [], assets: [] }
-      const data = (await res.json()) as { sources?: LibrarySource[]; assets?: LibraryAsset[] }
-      return { sources: data.sources ?? [], assets: data.assets ?? [] }
+      if (!res.ok) return { sources: [], assets: [], groups: [] }
+      const data = (await res.json()) as {
+        sources?: LibrarySource[]
+        assets?: LibraryAsset[]
+        groups?: LibraryGroup[]
+      }
+      return { sources: data.sources ?? [], assets: data.assets ?? [], groups: data.groups ?? [] }
     } catch {
-      return { sources: [], assets: [] }
+      return { sources: [], assets: [], groups: [] }
     }
   }
   async function removeSource(id: string) {
@@ -446,6 +466,7 @@ export function useComposeFlow({
     addFile,
     addFromSource,
     addAsset,
+    addFromProvider,
     loadLibrary,
     removeSource,
     reextract,
