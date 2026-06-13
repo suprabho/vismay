@@ -31,6 +31,12 @@ update story_videos
 alter table story_videos
   drop constraint if exists story_videos_slug_aspect_preview_key;
 
+-- Idempotent: drop the new key first so re-running this migration (or applying
+-- it after a partial run) doesn't trip "constraint already exists". The columns
+-- above are added with `if not exists`, so the whole file is safe to re-run.
+alter table story_videos
+  drop constraint if exists story_videos_slug_aspect_range_key;
+
 alter table story_videos
   add constraint story_videos_slug_aspect_range_key
   unique (slug, aspect, range_start_ms, range_end_ms);

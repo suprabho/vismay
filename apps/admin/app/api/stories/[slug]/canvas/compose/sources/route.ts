@@ -19,6 +19,7 @@ import {
   dispatchSourceExtractJob,
 } from '@vismay/content-source/storySourceExtractDispatch'
 import { ASSETS_BUCKET, guessContentType } from '@/lib/assetFiles'
+import { extractLibraryItem } from '@/lib/libraryProviders'
 
 /**
  * Compose stage 1 — add and extract a source for a draft.
@@ -136,7 +137,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
 
   // ── Link / pasted text / library reference (JSON) ────────────────────────
-  let body: { url?: string; text?: string; fromSourceId?: string; assetKey?: string }
+  let body: {
+    url?: string
+    text?: string
+    fromSourceId?: string
+    assetKey?: string
+    providerKey?: string
+    itemId?: string
+  }
   try {
     body = (await req.json()) as typeof body
   } catch {
@@ -147,6 +155,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const text = typeof body.text === 'string' ? body.text.trim() : ''
   const fromSourceId = typeof body.fromSourceId === 'string' ? body.fromSourceId.trim() : ''
   const assetKey = typeof body.assetKey === 'string' ? body.assetKey.trim() : ''
+  const providerKey = typeof body.providerKey === 'string' ? body.providerKey.trim() : ''
+  const itemId = typeof body.itemId === 'string' ? body.itemId.trim() : ''
+
+  // ── From library: a provider item (published story, epic, …) ─────────────
+  // The provider extracts plain text; we snapshot it as a `text` row, so it
+  // flows into angles/outline like any pasted source.
+  if (providerKey && itemId) {
+    const extracted = await extractLibraryItem(providerKey, itemId)
+    if (!extracted) {
+      return NextResponse.json({ error: 'library item not available' }, { status: 400 })
+    }
+    const row = await insertStorySource({
+      storySlug: slug,
+      kind: 'text',
+      title: extracted.title,
+      byline: extracted.byline ?? null,
+      extractedText: extracted.text,
+      status: 'extracted',
+    })
+    return NextResponse.json({ ok: true, source: row })
+  }
 
   // ── From library: copy another draft's extracted source ──────────────────
   // Snapshot the already-extracted text into a fresh row for THIS draft. No
@@ -232,7 +261,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
 
   return NextResponse.json(
-    { error: 'provide a file, "url", "text", "fromSourceId", or "assetKey"' },
+    {
+      error:
+        'provide a file, "url", "text", "fromSourceId", "assetKey", or "providerKey"+"itemId"',
+    },
     { status: 400 },
   )
 }

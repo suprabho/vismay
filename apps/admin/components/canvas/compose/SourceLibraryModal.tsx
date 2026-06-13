@@ -1,7 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, LinkSimple, TextAa, MagnifyingGlass } from '@phosphor-icons/react'
+import {
+  FileText,
+  LinkSimple,
+  TextAa,
+  MagnifyingGlass,
+  BookOpen,
+  Stack,
+  Newspaper,
+  Lightning,
+  Scales,
+  MusicNotes,
+} from '@phosphor-icons/react'
 import type { SourceListItem as LibrarySource } from '@vismay/content-source/storySources'
 import { Chip, btnGhostCls, btnPrimaryCls } from './ui'
 
@@ -19,6 +30,31 @@ export interface LibraryAsset {
   updatedAt: string | null
 }
 
+/** One pickable item within a provider group (mirrors `libraryProviders`). */
+export interface LibraryItem {
+  id: string
+  title: string
+  subtitle?: string
+}
+
+/** A provider-driven group (published stories, epic explainers, …). */
+export interface LibraryGroup {
+  key: string
+  label: string
+  items: LibraryItem[]
+}
+
+/** Per-provider group icon; falls back to a generic stack. */
+const GROUP_ICON: Record<string, typeof FileText> = {
+  story: BookOpen,
+  epic: Stack,
+  'footshorts-news': Newspaper,
+  'vizf1-news': Newspaper,
+  'iea-news': Lightning,
+  epstein: Scales,
+  'coke-studio': MusicNotes,
+}
+
 const KIND_ICON = { file: FileText, link: LinkSimple, text: TextAa } as const
 
 /**
@@ -33,16 +69,30 @@ export function SourceLibraryModal({
   loadLibrary,
   onAddFromSource,
   onAddAsset,
+  onAddFromProvider,
+  onSearchDatasets,
+  onEnrich,
 }: {
   onClose: () => void
-  loadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[] }>
+  loadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
   onAddFromSource: (id: string) => Promise<boolean>
   onAddAsset: (key: string) => Promise<boolean>
+  onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
+  onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
+  onEnrich: (focus: string) => Promise<{ ok: boolean; message?: string }>
 }) {
   const [loading, setLoading] = useState(true)
   const [sources, setSources] = useState<LibrarySource[]>([])
   const [assets, setAssets] = useState<LibraryAsset[]>([])
+  const [groups, setGroups] = useState<LibraryGroup[]>([])
   const [query, setQuery] = useState('')
+  // Dataset search runs server-side, debounced on the query.
+  const [datasetGroups, setDatasetGroups] = useState<LibraryGroup[]>([])
+  const [searching, setSearching] = useState(false)
+  // AI dataset research (tool-using agent → a synthesised source).
+  const [enrichFocus, setEnrichFocus] = useState('')
+  const [enriching, setEnriching] = useState(false)
+  const [enrichNote, setEnrichNote] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null)
   // Per-item attach state, keyed by source id / asset key.
   const [adding, setAdding] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
@@ -54,6 +104,7 @@ export function SourceLibraryModal({
       if (cancelled) return
       setSources(data.sources)
       setAssets(data.assets)
+      setGroups(data.groups)
       setLoading(false)
     })()
     return () => {
@@ -67,6 +118,32 @@ export function SourceLibraryModal({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Debounced dataset search — fires once the query settles (>=2 chars), clears
+  // when emptied. All state lands in the timeout callback (never synchronously
+  // in the effect body); a stale-guard drops out-of-order responses.
+  useEffect(() => {
+    const q = query.trim()
+    let cancelled = false
+    const t = setTimeout(async () => {
+      if (q.length < 2) {
+        if (!cancelled) {
+          setDatasetGroups([])
+          setSearching(false)
+        }
+        return
+      }
+      setSearching(true)
+      const found = await onSearchDatasets(q)
+      if (cancelled) return
+      setDatasetGroups(found)
+      setSearching(false)
+    }, q.length < 2 ? 0 : 350)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [query, onSearchDatasets])
 
   const q = query.trim().toLowerCase()
   const matchedSources = useMemo(
@@ -84,6 +161,19 @@ export function SourceLibraryModal({
     () => (!q ? assets : assets.filter((a) => `${a.filename} ${a.storySlug}`.toLowerCase().includes(q))),
     [assets, q],
   )
+  // Filter each provider group's items, dropping groups left empty by the query.
+  const matchedGroups = useMemo(
+    () =>
+      groups
+        .map((g) => ({
+          ...g,
+          items: !q
+            ? g.items
+            : g.items.filter((it) => `${it.title} ${it.subtitle ?? ''}`.toLowerCase().includes(q)),
+        }))
+        .filter((g) => g.items.length > 0),
+    [groups, q],
+  )
 
   async function attach(key: string, run: () => Promise<boolean>) {
     if (adding.has(key) || added.has(key)) return
@@ -95,6 +185,19 @@ export function SourceLibraryModal({
       return next
     })
     if (ok) setAdded((s) => new Set(s).add(key))
+  }
+
+  async function runEnrich() {
+    if (enriching) return
+    setEnriching(true)
+    setEnrichNote(null)
+    const r = await onEnrich(enrichFocus.trim())
+    setEnriching(false)
+    setEnrichNote(
+      r.ok
+        ? { tone: 'ok', text: 'Added a dataset-research source — see the Sources list.' }
+        : { tone: 'warn', text: r.message ?? 'No dataset material found.' },
+    )
   }
 
   function AddButton({ k, run }: { k: string; run: () => Promise<boolean> }) {
@@ -111,7 +214,15 @@ export function SourceLibraryModal({
     )
   }
 
-  const empty = !loading && matchedSources.length === 0 && matchedAssets.length === 0
+  // Static (client-filtered) groups first, then on-demand dataset hits.
+  const renderGroups = [...matchedGroups, ...datasetGroups]
+
+  const empty =
+    !loading &&
+    !searching &&
+    matchedSources.length === 0 &&
+    matchedAssets.length === 0 &&
+    renderGroups.length === 0
 
   return (
     <div
@@ -145,9 +256,10 @@ export function SourceLibraryModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, file, story…"
+              placeholder="Search library, or type to query datasets…"
               className="min-w-0 flex-1 bg-transparent py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none"
             />
+            {searching && <span className="shrink-0 text-[10px] text-neutral-500">searching…</span>}
           </div>
         </div>
 
@@ -161,6 +273,43 @@ export function SourceLibraryModal({
                 : 'Nothing in the library yet — extracted sources from other drafts and document assets show up here.'}
             </p>
           )}
+
+          {renderGroups.map((g) => {
+            const GroupIcon = GROUP_ICON[g.key] ?? Stack
+            return (
+              <section key={g.key} className="space-y-1.5">
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
+                  {g.label}{' '}
+                  <span className="font-normal normal-case tracking-normal text-neutral-500">
+                    {g.items.length}
+                  </span>
+                </h3>
+                <ul className="space-y-1.5">
+                  {g.items.map((it) => (
+                    <li
+                      key={it.id}
+                      className="flex items-center gap-2 rounded-lg border border-white/10 bg-neutral-900/60 px-2.5 py-2"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/5 text-neutral-400">
+                        <GroupIcon size={14} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium text-neutral-100" title={it.title}>
+                          {it.title}
+                        </span>
+                        {it.subtitle && (
+                          <span className="block truncate text-[11px] text-neutral-500" title={it.subtitle}>
+                            {it.subtitle}
+                          </span>
+                        )}
+                      </span>
+                      <AddButton k={`${g.key}:${it.id}`} run={() => onAddFromProvider(g.key, it.id)} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
 
           {matchedSources.length > 0 && (
             <section className="space-y-1.5">
@@ -230,6 +379,32 @@ export function SourceLibraryModal({
                 ))}
               </ul>
             </section>
+          )}
+        </div>
+
+        {/* AI dataset research — the second consumer of the query layer. */}
+        <div className="space-y-1.5 border-t border-white/10 px-4 py-3">
+          <div className="flex items-center gap-1.5">
+            <input
+              value={enrichFocus}
+              onChange={(e) => setEnrichFocus(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !enriching && runEnrich()}
+              placeholder="Focus for AI dataset research (optional)…"
+              className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-violet-400/50"
+            />
+            <button
+              onClick={runEnrich}
+              disabled={enriching}
+              className="shrink-0 rounded-md bg-violet-500 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-400 disabled:opacity-40"
+              title="Let an AI agent search the datasets and attach a synthesised research brief"
+            >
+              {enriching ? 'Researching…' : '✨ AI research'}
+            </button>
+          </div>
+          {enrichNote && (
+            <p className={`text-[11px] ${enrichNote.tone === 'ok' ? 'text-emerald-300' : 'text-amber-300'}`}>
+              {enrichNote.text}
+            </p>
           )}
         </div>
       </div>

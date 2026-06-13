@@ -17,6 +17,9 @@ export {
   type GenerateTextOptions,
   type GenerateImageInput,
 } from './text'
+// Agentic tool helpers — re-exported so call sites define tools without taking a
+// direct dependency on the `ai` SDK (keeps that dependency centralised here).
+export { tool, type ToolSet } from 'ai'
 export { generateImage, type GenerateImageOptions, type ImageResult } from './image'
 export { definePrompt, type Prompt } from './prompt'
 export {

@@ -6,7 +6,7 @@ import type {
   SourceListItem as LibrarySource,
 } from '@vismay/content-source/storySources'
 import { SourceRow } from './SourceRow'
-import { SourceLibraryModal, type LibraryAsset } from './SourceLibraryModal'
+import { SourceLibraryModal, type LibraryAsset, type LibraryGroup } from './SourceLibraryModal'
 import { SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
 /**
@@ -26,7 +26,10 @@ export function SourcesStage({
   onAddFile,
   onAddFromSource,
   onAddAsset,
+  onAddFromProvider,
   onLoadLibrary,
+  onSearchDatasets,
+  onEnrich,
   onRemoveSource,
   onReextract,
   onGenAngles,
@@ -41,7 +44,10 @@ export function SourcesStage({
   onAddFile: (file: File) => Promise<boolean>
   onAddFromSource: (id: string) => Promise<boolean>
   onAddAsset: (key: string) => Promise<boolean>
-  onLoadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[] }>
+  onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
+  onLoadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
+  onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
+  onEnrich: (focus: string) => Promise<{ ok: boolean; message?: string }>
   onRemoveSource: (id: string) => void
   onReextract: (id: string) => void
   onGenAngles: () => void
@@ -153,6 +159,9 @@ export function SourcesStage({
           loadLibrary={onLoadLibrary}
           onAddFromSource={onAddFromSource}
           onAddAsset={onAddAsset}
+          onAddFromProvider={onAddFromProvider}
+          onSearchDatasets={onSearchDatasets}
+          onEnrich={onEnrich}
         />
       )}
       <SectionHeading

@@ -11,7 +11,7 @@ import type {
   SourceListItem as LibrarySource,
 } from '@vismay/content-source/storySources'
 import { composeImageFilename } from '@vismay/story-pipeline/cover'
-import type { LibraryAsset } from './SourceLibraryModal'
+import type { LibraryAsset, LibraryGroup } from './SourceLibraryModal'
 import { canvasFrameId } from '../canvasOutputs'
 import type { ChartRequirementView } from './ChartCard'
 
@@ -198,16 +198,66 @@ export function useComposeFlow({
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
   }
-  // Pull the "from library" picker contents — prior extracted sources + doc
-  // assets. Not single-flight (`call`): the modal owns its own loading state.
-  async function loadLibrary(): Promise<{ sources: LibrarySource[]; assets: LibraryAsset[] }> {
+  // Attach a provider library item (published story, epic, …) — the server
+  // extracts it to text and snapshots it as a new source row.
+  async function addFromProvider(providerKey: string, itemId: string): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add from library', 'sources', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ providerKey, itemId }),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
+  // AI dataset research — runs a tool-using agent over the same datasets and
+  // attaches a synthesised brief as a new source. Returns a result/message so
+  // the modal can report "added" vs "nothing found".
+  async function addEnrich(focus: string): Promise<{ ok: boolean; message?: string }> {
+    const data = await call<{ ok?: boolean; source?: StorySource; message?: string }>('enrich', 'enrich', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(focus ? { focus } : {}),
+    })
+    if (data?.source) {
+      setSources((s) => [...s, data.source!])
+      return { ok: true }
+    }
+    return { ok: false, message: data?.message ?? 'No dataset material found.' }
+  }
+  // Dynamic dataset search — the large corpora (IEA/Epstein/Coke Studio) are
+  // queried on demand rather than listed. Returns matching provider groups.
+  async function searchDatasets(query: string): Promise<LibraryGroup[]> {
+    try {
+      const res = await fetch(
+        `${base}/${slug}/canvas/compose/library/search?q=${encodeURIComponent(query)}`,
+        { cache: 'no-store' },
+      )
+      if (!res.ok) return []
+      const data = (await res.json()) as { groups?: LibraryGroup[] }
+      return data.groups ?? []
+    } catch {
+      return []
+    }
+  }
+  // Pull the "from library" picker contents — prior extracted sources, doc
+  // assets, and provider groups (stories/epics). Not single-flight (`call`):
+  // the modal owns its own loading state.
+  async function loadLibrary(): Promise<{
+    sources: LibrarySource[]
+    assets: LibraryAsset[]
+    groups: LibraryGroup[]
+  }> {
     try {
       const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
-      if (!res.ok) return { sources: [], assets: [] }
-      const data = (await res.json()) as { sources?: LibrarySource[]; assets?: LibraryAsset[] }
-      return { sources: data.sources ?? [], assets: data.assets ?? [] }
+      if (!res.ok) return { sources: [], assets: [], groups: [] }
+      const data = (await res.json()) as {
+        sources?: LibrarySource[]
+        assets?: LibraryAsset[]
+        groups?: LibraryGroup[]
+      }
+      return { sources: data.sources ?? [], assets: data.assets ?? [], groups: data.groups ?? [] }
     } catch {
-      return { sources: [], assets: [] }
+      return { sources: [], assets: [], groups: [] }
     }
   }
   async function removeSource(id: string) {
@@ -446,7 +496,10 @@ export function useComposeFlow({
     addFile,
     addFromSource,
     addAsset,
+    addFromProvider,
     loadLibrary,
+    searchDatasets,
+    addEnrich,
     removeSource,
     reextract,
     genAngles,
