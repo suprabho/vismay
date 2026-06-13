@@ -80,6 +80,15 @@ interface Props {
    * anchor; inject a framework link (e.g. `next/link`) for client-side nav.
    */
   LinkComponent?: ComponentType<HomeLinkProps>
+  /**
+   * Suppress the persistent brand logo while in `?autoplay=1` mode. Set for
+   * stories belonging to a consumer vertical (footshorts, vizf1, …): vizmaya.fyi
+   * is the shared headless render surface for every vertical's autoplay video,
+   * so the vizmaya brand mark would otherwise leak into another brand's reel.
+   * Direct (non-autoplay) reads still show it. Defaults to false (vizmaya's own
+   * stories, whose `vertical` is undefined, keep the logo in autoplay).
+   */
+  hideLogoInAutoplay?: boolean
 }
 
 /**
@@ -112,6 +121,7 @@ export default function StoryShell({
   logoPalettes,
   LogoComponent,
   LinkComponent = DefaultHomeLink,
+  hideLogoInAutoplay = false,
 }: Props) {
   const isDeckFormat = format === 'deck'
   const [activeUnit, setActiveUnit] = useState(0)
@@ -524,8 +534,11 @@ export default function StoryShell({
           knows the active section; gated on `logoPalettes` so headless
           consumers (canvas-frame) stay logo-free. Also hidden in chrome-less
           embed mode (`?embed=1`) so consumer-app embeds (footshorts, vizf1)
-          show only their own overlaid chrome, not vizmaya's brand. */}
-      {logoPalettes && LogoComponent && !isEmbed && (
+          show only their own overlaid chrome, not vizmaya's brand. Likewise
+          suppressed in autoplay for consumer-vertical stories
+          (`hideLogoInAutoplay`) — vizmaya.fyi renders every vertical's autoplay
+          video, so its brand mark must not leak into another brand's reel. */}
+      {logoPalettes && LogoComponent && !isEmbed && !(isAutoplay && hideLogoInAutoplay) && (
         <LinkComponent
           href="/"
           aria-label="Home"
