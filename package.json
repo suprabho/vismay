@@ -10,7 +10,9 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "mcp:dev": "tsx scripts/mcp-dev.mts",
+    "mcp:catalog": "PORT=3100 pnpm --filter @vismay/catalog dev"
   },
   "devDependencies": {
     "tsx": "^4.22.3",

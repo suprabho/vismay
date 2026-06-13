@@ -70,6 +70,19 @@ The metadata tools (`list_verticals` / `list_modules`) need none of these.
   must already have audio generated
   (`pnpm --filter vizmaya-fyi exec tsx scripts/generate-audio.ts <slug>`).
 
+## Quick start (dev)
+
+From the repo root, one command brings up the catalog (`:3100`) and the MCP
+Inspector wired to it, so you can call every tool interactively:
+
+```
+pnpm mcp:dev                  # catalog + MCP Inspector together
+WITH_VIZMAYA=1 pnpm mcp:dev   # also start vizmaya-fyi (:3000) for render_story_video
+```
+
+`Ctrl-C` stops everything. When your *agent* (not the Inspector) drives the MCP,
+you only need the catalog running — `pnpm mcp:catalog`.
+
 ## Run / register
 
 ```
