@@ -10,6 +10,7 @@ import {
   type VideoAspect,
   type VideoRange,
 } from '../storyVideo'
+import { buildSilentTimeline } from '../silentTimeline'
 
 /**
  * Hooks the host app supplies. The factory doesn't know how the app wants
@@ -23,6 +24,7 @@ export interface StoryVideoHandlerOptions {
     aspect: VideoAspect
     baseUrl: string
     range?: VideoRange
+    narration?: boolean
   }) => Promise<void>
   /** Local-dev fallback. If absent, requests fail with 500 when dispatch isn't configured. */
   render?: (args: {
@@ -32,6 +34,7 @@ export interface StoryVideoHandlerOptions {
     baseUrl: string
     force?: boolean
     range?: VideoRange
+    narration?: boolean
   }) => Promise<{ public_url: string; duration_ms: number | null; cached?: boolean }>
 }
 
@@ -53,12 +56,14 @@ function parseIntParam(v: string | null): number | undefined {
  *   [&force=1]                       bypass cache
  *   [&preview=1]                     legacy alias for startMs=0&endMs=20000
  *   [&startMs=N&endMs=N]             sub-range render
+ *   [&narration=0]                   silent render (no audio; paced by
+ *                                    <slug>.timing.yaml instead of TTS cues)
  *
  * Responses:
  *   200 { status: 'ready', public_url, cached, duration_ms }
  *   202 { status: 'rendering' }      dispatch fired (or already in flight)
  *   400 { error }                    bad slug, aspect, or range
- *   404 { error }                    no audio for slug
+ *   404 { error }                    no audio (narrated) / no units (silent)
  *   500 { error }                    render or dispatch failed
  */
 export function createStoryVideoHandler(opts: StoryVideoHandlerOptions) {
@@ -102,6 +107,7 @@ async function runStoryVideoGet(
   }
   const force = url.searchParams.get('force') === '1'
   const previewLegacy = url.searchParams.get('preview') === '1'
+  const narration = url.searchParams.get('narration') !== '0'
   const startMsParam = parseIntParam(url.searchParams.get('startMs'))
   const endMsParam = parseIntParam(url.searchParams.get('endMs'))
 
@@ -118,12 +124,23 @@ async function runStoryVideoGet(
     // is missing. Catch it so the client sees a real error message instead of
     // an opaque Next.js 500.
     supabase = createServiceClient()
-    const { chunks, cues } = await loadChunksAndCues(supabase, slug)
-    if (chunks.length === 0 || cues.length === 0) {
-      return NextResponse.json({ error: 'no audio for slug' }, { status: 404 })
+    if (narration) {
+      const { chunks, cues } = await loadChunksAndCues(supabase, slug)
+      if (chunks.length === 0 || cues.length === 0) {
+        return NextResponse.json({ error: 'no audio for slug' }, { status: 404 })
+      }
+      hash = computeAudioRevisionHash(chunks, cues)
+      totalMs = computeTimeline(chunks).totalMs
+    } else {
+      // Silent: pacing + cache key come from the synthesized timing timeline,
+      // not the audio tables. 404 only if the story resolves to zero units.
+      const silent = await buildSilentTimeline(slug)
+      if (silent.totalMs === 0) {
+        return NextResponse.json({ error: 'no units for slug' }, { status: 404 })
+      }
+      hash = silent.revisionHash
+      totalMs = silent.totalMs
     }
-    hash = computeAudioRevisionHash(chunks, cues)
-    totalMs = computeTimeline(chunks).totalMs
   } catch (err) {
     const message = err instanceof Error ? err.message : 'audio lookup failed'
     return NextResponse.json({ error: message }, { status: 500 })
@@ -158,7 +175,7 @@ async function runStoryVideoGet(
 
   // Cache hit / in-flight check
   if (!force) {
-    const row = await getCachedVideo(supabase, slug, aspect, range)
+    const row = await getCachedVideo(supabase, slug, aspect, range, narration)
     const state = classifyVideoState(row, hash)
     if (state.kind === 'ready') {
       return NextResponse.json({
@@ -185,8 +202,9 @@ async function runStoryVideoGet(
         audioRevisionHash: hash,
         range,
         totalMs,
+        narration,
       })
-      await opts.dispatch({ slug, aspect, baseUrl, range: dispatchRange })
+      await opts.dispatch({ slug, aspect, baseUrl, range: dispatchRange, narration })
       return NextResponse.json({ status: 'rendering' }, { status: 202 })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'dispatch failed'
@@ -213,6 +231,7 @@ async function runStoryVideoGet(
       baseUrl,
       force,
       range,
+      narration,
     })
     return NextResponse.json({ status: 'ready', ...result })
   } catch (err) {

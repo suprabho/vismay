@@ -34,11 +34,9 @@ import path from 'path'
 import crypto from 'crypto'
 import { spawn } from 'child_process'
 import type { ResolvedUnit } from '@vismay/viz-engine'
-import { getStoryContent } from './content'
-import { loadStoryConfig } from './storyConfig'
 import { getContentSource } from './contentSource'
 import { createServiceClient } from './supabase'
-import { resolveUnits } from './resolveUnits'
+import { resolveMobileUnits } from './resolveMobileUnits'
 import {
   defaultNarrationText,
   parseTtsConfig,
@@ -104,16 +102,8 @@ export async function listAudioStorySlugs(): Promise<string[]> {
 
 /* ─── Mobile units → narration ─────────────────────────────────────── */
 
-/**
- * Resolve a story's mobile units via the same `resolveUnits` the runtime player
- * uses. The flat index into this array is the `unit_index` written to
- * `story_audio_cues`, so the player can map currentTime → active unit.
- */
-async function resolveMobileUnits(slug: string): Promise<ResolvedUnit[]> {
-  const { sections } = await getStoryContent(slug, { allowDraft: true })
-  const config = await loadStoryConfig(slug)
-  return resolveUnits(slug, sections, config).mobileUnits
-}
+// `resolveMobileUnits` is shared with the silent-video timeline (see
+// ./resolveMobileUnits) so both pipelines resolve `unit_index` identically.
 
 /** Units whose section id is in TTS_SKIP_IDS get no audio and no cue. */
 function unitSkipped(unit: ResolvedUnit): boolean {

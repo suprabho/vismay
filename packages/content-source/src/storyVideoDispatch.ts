@@ -31,6 +31,8 @@ export async function dispatchVideoRenderJob(args: {
   baseUrl: string
   /** Sub-range to render. Omit for a full render. */
   range?: VideoRange
+  /** `false` → silent (no-narration) render. Defaults to narrated. */
+  narration?: boolean
 }): Promise<void> {
   const token = process.env.GITHUB_DISPATCH_TOKEN
   const repo = process.env.GITHUB_DISPATCH_REPO
@@ -47,6 +49,8 @@ export async function dispatchVideoRenderJob(args: {
   // on the runner side; the script reads them via process.env / argv.
   const startMsInput = args.range ? String(args.range.startMs) : ''
   const endMsInput = args.range ? String(args.range.endMs) : ''
+  // Narrated is the default; only pass 'false' for an explicit silent render.
+  const narrationInput = args.narration === false ? 'false' : 'true'
 
   const res = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
@@ -66,6 +70,7 @@ export async function dispatchVideoRenderJob(args: {
           base_url: args.baseUrl,
           start_ms: startMsInput,
           end_ms: endMsInput,
+          narration: narrationInput,
         },
       }),
     }

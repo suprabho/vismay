@@ -7,10 +7,11 @@
  * Playwright + ffmpeg, uploads the MP4 to Supabase, and prints the public URL.
  * The resulting MP4 URL is the asset you hand to HeyGen.
  *
- * Prereqs (documented in the package README): the story must already have audio
- * generated, ffmpeg on PATH, Playwright Chromium, the vizmaya-fyi dev server
- * running at VIZMAYA_BASE_URL, and Supabase service creds in the env. Sub-range
- * (startMs/endMs) over the cumulative audio timeline = a section-level clip.
+ * Prereqs (documented in the package README): ffmpeg on PATH, Playwright
+ * Chromium, the vizmaya-fyi dev server running at VIZMAYA_BASE_URL, and Supabase
+ * service creds in the env. Narrated renders (the default) also require audio to
+ * have been generated for the story; silent renders (narration=false) don't.
+ * Sub-range (startMs/endMs) over the cumulative timeline = a section-level clip.
  */
 
 import { spawn } from 'node:child_process'
@@ -62,8 +63,9 @@ export function registerRenderStoryVideoTool(
       description:
         'Render a Vismay story (by slug) to an MP4 via the autoplay video pipeline and return ' +
         'its public URL. Optionally render a section-level clip with startMs/endMs over the ' +
-        'audio timeline. Requires audio already generated for the story. The returned MP4 URL ' +
-        'is the asset to feed to HeyGen.',
+        'timeline. With narration=true (default) the story must already have audio generated; ' +
+        'set narration=false for a silent video paced by the story\'s timing config (no audio ' +
+        'needed). The returned MP4 URL is the asset to feed to HeyGen.',
       inputSchema: {
         slug: z
           .string()
@@ -73,9 +75,15 @@ export function registerRenderStoryVideoTool(
         startMs: z.number().int().min(0).optional().describe('Clip start (ms).'),
         endMs: z.number().int().min(1).optional().describe('Clip end (ms); must exceed startMs.'),
         force: z.boolean().default(false).describe('Bypass the render cache.'),
+        narration: z
+          .boolean()
+          .default(true)
+          .describe(
+            'true (default) = narrated, requires audio. false = silent video paced by <slug>.timing.yaml.'
+          ),
       },
     },
-    async ({ slug, aspect, startMs, endMs, force }) => {
+    async ({ slug, aspect, startMs, endMs, force, narration }) => {
       // Fail fast with a clear message if creds are missing (the CLI also checks).
       requireSupabaseEnv()
 
@@ -95,6 +103,7 @@ export function registerRenderStoryVideoTool(
       if (force) args.push('--force')
       if (startMs !== undefined) args.push('--start-ms', String(startMs))
       if (endMs !== undefined) args.push('--end-ms', String(endMs))
+      if (narration === false) args.push('--no-narration')
 
       const env = { ...process.env, BASE_URL: config.vizmayaBaseUrl }
       const result = await run('pnpm', args, { cwd: config.repoRoot, env })
@@ -134,7 +143,7 @@ export function registerRenderStoryVideoTool(
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ public_url: url, aspect, cached, range }, null, 2),
+            text: JSON.stringify({ public_url: url, aspect, narration, cached, range }, null, 2),
           },
         ],
       }
