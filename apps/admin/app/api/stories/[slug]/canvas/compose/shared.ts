@@ -7,6 +7,7 @@ import {
   type DomainPack,
   type SourceDoc,
 } from '@vismay/story-pipeline'
+import { createServiceClient } from '@vismay/content-source/supabase'
 import { buildYamlModel, replaceSection } from '@vismay/content-source/yamlSections'
 import { jsonSectionAnchor, replaceJsonSectionBody } from '@vismay/content-source/jsonSections'
 import {
@@ -47,6 +48,45 @@ export async function resolveStoryPack(slug: string): Promise<DomainPack> {
     // fall through to the default desk
   }
   return packForVertical(null)
+}
+
+/**
+ * Pre-resolve the data a pack's `hydrate` step needs (the pipeline does no I/O).
+ *
+ * For the F1 desk: a `code`/`driver_id → headshot_url` map from `vizf1_drivers`
+ * (same shared Supabase project), so generated standings render driver photos.
+ * Keyed by BOTH the 3-letter code and the slug because the model's `driverId`
+ * (from the display name) need not match OpenF1's `slug(first_last)`. Team
+ * colours are static (handled inside the pack), so only photos need a lookup.
+ *
+ * Best-effort: any failure (no rows, query error, env) returns undefined and
+ * the table falls back to the team-coloured monogram chip — never blocks compose.
+ */
+export async function resolveHydrationDeps(
+  pack: DomainPack,
+): Promise<Record<string, unknown> | undefined> {
+  if (pack.id !== 'f1') return undefined
+  try {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('vizf1_drivers')
+      .select('driver_id, code, headshot_url')
+      .not('headshot_url', 'is', null)
+    if (error || !data) return undefined
+    const headshots: Record<string, string> = {}
+    for (const d of data as Array<{
+      driver_id: string
+      code: string | null
+      headshot_url: string | null
+    }>) {
+      if (!d.headshot_url) continue
+      if (d.code) headshots[d.code.toUpperCase()] = d.headshot_url
+      headshots[d.driver_id] = d.headshot_url
+    }
+    return Object.keys(headshots).length > 0 ? { f1DriverHeadshots: headshots } : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /** Resolve a text-model alias from request input, then a stored fallback. */

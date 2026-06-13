@@ -2,6 +2,33 @@ import { z } from 'zod'
 import type { DomainPack, PackLayerType } from './types'
 
 /**
+ * Constructor accent colours, keyed by the snake_case `constructorId` the model
+ * emits (plus a few name variants OpenF1 / editors have used). Mirrors the
+ * @vizf1/brand palette but is inlined so this generic pipeline package never
+ * takes a dependency on a vertical. `driverStandings.hydrate` stamps these onto
+ * every row so the table is never colourless — the model never sees a hex.
+ */
+const CONSTRUCTOR_COLORS: Record<string, string> = {
+  red_bull: '#3671C6',
+  red_bull_racing: '#3671C6',
+  ferrari: '#E8002D',
+  mercedes: '#27F4D2',
+  mclaren: '#FF8000',
+  aston_martin: '#229971',
+  alpine: '#0093CC',
+  williams: '#64C4FF',
+  rb: '#6692FF',
+  racing_bulls: '#6692FF',
+  kick_sauber: '#52E252',
+  sauber: '#52E252',
+  haas: '#B6BABD',
+  haas_f1_team: '#B6BABD',
+}
+
+/** snake_case slug: lowercase alphanumerics joined by single underscores. */
+const SNAKE_SLUG = /^[a-z0-9]+(_[a-z0-9]+)*$/
+
+/**
  * The VizF1 desk — Formula 1 race weekends, championship arithmetic, and the
  * engineering story under the lap times.
  *
@@ -11,9 +38,12 @@ import type { DomainPack, PackLayerType } from './types'
  *                           grands-prix palette supplies flags/accents, so the
  *                           schema deliberately omits accent/flagUrl/
  *                           backgroundImage/dateLabel.
- *   - f1:driver-standings — championship table from a sourced standings list;
- *                           constructorColor/headshotUrl are hydration-supplied
- *                           and omitted (the component falls back cleanly).
+ *   - f1:driver-standings — championship table from a sourced standings list.
+ *                           The model emits driverCode + snake_case ids; the
+ *                           pack's `hydrate` stamps constructorColor from those
+ *                           ids (static palette, no I/O). headshotUrl stays
+ *                           app-supplied (DB-keyed) — absent it, the component
+ *                           falls back to the team-coloured monogram chip.
  *
  * Skipped f1 modules, and why:
  *   - f1:position-chart — needs lap-by-lap position series; prose sources never
@@ -65,9 +95,20 @@ const driverStandingRowSchema = z.object({
   position: z.number().int().describe('Championship position, 1-based.'),
   driverId: z
     .string()
+    .regex(SNAKE_SLUG)
     .describe('snake_case slug of the driver name, e.g. "max_verstappen".'),
+  driverCode: z
+    .string()
+    .regex(/^[A-Z]{3}$/)
+    .describe('Official 3-letter driver code, uppercase — e.g. "VER", "HAM", "LEC".'),
   driverName: z.string().describe('Driver display name, e.g. "Max Verstappen".'),
-  constructorId: z.string().describe('snake_case slug of the team, e.g. "red_bull".'),
+  constructorId: z
+    .string()
+    .regex(SNAKE_SLUG)
+    .describe(
+      'Canonical snake_case team slug — one of: red_bull, ferrari, mercedes, mclaren, ' +
+        'aston_martin, alpine, williams, rb, kick_sauber, haas.',
+    ),
   constructorName: z.string().describe('Team display name, e.g. "Red Bull".'),
   points: z.number().describe('Championship points, from the sources.'),
   wins: z.number().int().describe('Season wins, from the sources.'),
@@ -80,8 +121,10 @@ const driverStandings: PackLayerType = {
   promptDoc:
     'Use when the sources carry a drivers\' championship table. Emit one row per driver ' +
     'in standings order, every points/wins figure from the sources — cap at the top 10 ' +
-    'unless the story needs the full grid. Team colors and headshots are hydrated by the ' +
-    'app; ids are snake_case slugs of the names.',
+    'unless the story needs the full grid. Give each row the official 3-letter driverCode ' +
+    '(VER, HAM, LEC) and canonical snake_case ids — constructorId from {red_bull, ferrari, ' +
+    'mercedes, mclaren, aston_martin, alpine, williams, rb, kick_sauber, haas}. NEVER emit ' +
+    'team colours or headshot URLs: the app hydrates those from the ids you provide.',
   schema: z.object({
     type: z.literal('f1:driver-standings'),
     rows: z
@@ -90,6 +133,34 @@ const driverStandings: PackLayerType = {
       .max(10)
       .describe('Standings rows in position order — every figure source-grounded.'),
   }),
+  hydrate: (layer, deps) => {
+    // Pre-resolved by the caller (admin compose) from vizf1_drivers — keyed by
+    // BOTH 3-letter code and driver_id, since the model's driverId (from the
+    // display name) need not match OpenF1's slug(first_last).
+    const headshots = (deps?.f1DriverHeadshots ?? null) as Record<string, string> | null
+    const rows = Array.isArray(layer.rows) ? layer.rows : []
+    return {
+      ...layer,
+      rows: rows.map((row) => {
+        if (!row || typeof row !== 'object') return row
+        const r = { ...(row as Record<string, unknown>) }
+        // Team colour — static palette; never clobber an explicit value.
+        if (r.constructorColor == null) {
+          const cid = typeof r.constructorId === 'string' ? r.constructorId : ''
+          const color = CONSTRUCTOR_COLORS[cid]
+          if (color) r.constructorColor = color
+        }
+        // Headshot — DB-supplied; prefer the canonical code, fall back to id.
+        if (r.headshotUrl == null && headshots) {
+          const code = typeof r.driverCode === 'string' ? r.driverCode.toUpperCase() : ''
+          const id = typeof r.driverId === 'string' ? r.driverId : ''
+          const url = headshots[code] ?? headshots[id]
+          if (url) r.headshotUrl = url
+        }
+        return r
+      }),
+    }
+  },
 }
 
 export const F1_PACK: DomainPack = {

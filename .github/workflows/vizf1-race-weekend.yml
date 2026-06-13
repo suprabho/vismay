@@ -59,6 +59,16 @@ jobs:
           VIZF1_YEAR: ${{ inputs.year }}
         run: pnpm ingest:sessions:ci
 
+      # Safety net: the session ingest already writes headshot_url + primary_color,
+      # but OpenF1 occasionally omits them for a session. This fill-only pass tops
+      # up any driver/constructor rows still missing those columns so standings
+      # always render photos + team colours.
+      - name: Backfill driver/constructor metadata
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm backfill:driver-meta:ci
+
       - name: Derive circuit outlines
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

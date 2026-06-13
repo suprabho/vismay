@@ -26,6 +26,7 @@ import { readComposeState } from '@vismay/content-source/composeState'
 import {
   resolveModel,
   resolveStoryPack,
+  resolveHydrationDeps,
   sourcesToDocs,
   replaceMarkdownProse,
   readMarkdownProse,
@@ -85,6 +86,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const docs = sourcesToDocs(await listStorySources(slug))
   const model = resolveModel(body.model, state.model)
   const pack = await resolveStoryPack(slug)
+  // Pre-fetch any vertical data the pack hydrates onto generated layers (e.g. f1
+  // driver headshots from the DB) — only the VISUAL pass consumes it, so skip
+  // the lookup on content-only calls.
+  const hydrationDeps = phase === 'content' ? undefined : await resolveHydrationDeps(pack)
   const feedback = typeof body.feedback === 'string' ? body.feedback.trim() : ''
 
   // Rebuild the rich outline context the section generators expect.
@@ -202,7 +207,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           ? { heading: entry.heading, paragraphs: result.paragraphs, kind: result.kind ?? entry.kind }
           : { heading: entry.heading, paragraphs: readMarkdownProse(markdown, anchor), kind: entry.kind }
       const refine = feedback && phase === 'visual' ? { feedback, previous: { heading: entry.heading } } : undefined
-      const visual = await generateSectionVisual(ctx, contentForVisual, { model, pack, refine })
+      const visual = await generateSectionVisual(ctx, contentForVisual, { model, pack, refine, hydrationDeps })
       let visualBody = visual.body
       // DECK cover: complete the editorial cover surface and attach the hero
       // image — its `assets://` ref points at the key the compose image step

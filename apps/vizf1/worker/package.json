@@ -9,6 +9,8 @@
     "ingest:sessions:ci": "tsx src/ingestSessions.ts",
     "ingest:circuits": "tsx --env-file=.env src/ingestCircuits.ts",
     "ingest:circuits:ci": "tsx src/ingestCircuits.ts",
+    "backfill:driver-meta": "tsx --env-file=.env src/backfillDriverMeta.ts",
+    "backfill:driver-meta:ci": "tsx src/backfillDriverMeta.ts",
     "build:story-segments": "tsx --env-file=.env src/buildStorySegments.ts",
     "build:story-segments:ci": "tsx src/buildStorySegments.ts",
     "capture:replay": "tsx src/captureReplayFixture.ts",

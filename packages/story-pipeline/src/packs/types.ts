@@ -22,6 +22,19 @@ export interface PackLayerType {
   /** The deck-layout regions this layer reads well in (advisory — shown in the
    *  prompt; the renderer does not enforce `accepts`). */
   regions: readonly string[]
+  /**
+   * Deterministic post-generation enrichment. The model is told to OMIT
+   * app-supplied fields (team colours, driver photos); this stamps them back
+   * from the ids it DID emit, before the body is serialised — so a generated
+   * story is never colourless. Pure + synchronous (no I/O): static values come
+   * from inline palettes, and anything needing a data lookup (e.g. driver
+   * headshots) is pre-resolved by the caller and passed in `deps`. Receives and
+   * returns the raw layer object; return it unchanged when nothing applies.
+   */
+  hydrate?: (
+    layer: Record<string, unknown>,
+    deps?: Record<string, unknown>,
+  ) => Record<string, unknown>
 }
 
 /**
