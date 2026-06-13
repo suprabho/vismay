@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   MatchRow,
@@ -9,11 +9,19 @@ import {
   buildBracket,
   isBracketDrawn,
   groupFixturesByRound,
-  isLeagueCompetition,
 } from '@vismay/footshorts-viz/web';
 import { useEntity } from '@/lib/useEntity';
 import { useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
 import { useStandings, groupStandings } from '@/lib/useStandings';
+
+type Tab = 'recent' | 'standings' | 'schedule' | 'glory';
+
+const TAB_LABEL: Record<Tab, string> = {
+  recent: 'Recent',
+  standings: 'Standings',
+  schedule: 'Schedule',
+  glory: 'Road to Glory',
+};
 
 function Spinner() {
   return (
@@ -23,12 +31,9 @@ function Spinner() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function SubHeading({ children }: { children: React.ReactNode }) {
   return (
-    <section className="mt-6">
-      <h2 className="mb-3 text-base font-semibold text-text">{title}</h2>
-      {children}
-    </section>
+    <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{children}</h3>
   );
 }
 
@@ -52,33 +57,77 @@ function FixtureList({
   );
 }
 
+function TabBar({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: Tab[];
+  active: Tab;
+  onChange: (t: Tab) => void;
+}) {
+  return (
+    <div className="mt-5 flex gap-1 border-b border-border">
+      {tabs.map((t) => {
+        const isActive = t === active;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange(t)}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+              isActive
+                ? 'border-accent text-text'
+                : 'border-transparent text-muted hover:text-text'
+            }`}
+          >
+            {TAB_LABEL[t]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function LeaguePage() {
   const { slug } = useParams<{ slug: string }>();
+  const [tab, setTab] = useState<Tab>('recent');
 
   const league = useEntity('league', slug);
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
-  // Bracket only applies to cups/tournaments — skip the wide fetch for plain
-  // leagues (which never have knockout fixtures) by disabling the query there.
-  const isLeague = isLeagueCompetition(slug);
-  const bracketFixtures = useLeagueFixtures(isLeague ? undefined : slug, 'all', 200);
+  // Full schedule for every competition — feeds both the Schedule tab and the
+  // bracket. A complete domestic season is ~380 fixtures, so cap well above that.
+  const scheduleFixtures = useLeagueFixtures(slug, 'all', 500);
 
   const standingGroups = useMemo(
     () => (standings.data ? groupStandings(standings.data) : []),
     [standings.data],
   );
   const bracket = useMemo(
-    () => buildBracket(bracketFixtures.data ?? []),
-    [bracketFixtures.data],
+    () => buildBracket(scheduleFixtures.data ?? []),
+    [scheduleFixtures.data],
   );
-  // The bracket only reads as a tree once the draw is set; until then show the
-  // full schedule grouped by round so users can see who plays who and when.
   const bracketDrawn = isBracketDrawn(bracket);
   const scheduleRounds = useMemo(
-    () => groupFixturesByRound(bracketFixtures.data ?? []),
-    [bracketFixtures.data],
+    () => groupFixturesByRound(scheduleFixtures.data ?? []),
+    [scheduleFixtures.data],
   );
+
+  // Tabs surface only when their data exists. A competition with both a league
+  // phase and knockouts (World Cup, new-format UCL) shows Standings AND Road to
+  // Glory together. Recent is always available and is the default.
+  const availableTabs = useMemo<Tab[]>(
+    () => [
+      'recent',
+      ...(standingGroups.length > 0 ? (['standings'] as const) : []),
+      ...(scheduleRounds.length > 0 ? (['schedule'] as const) : []),
+      ...(bracket ? (['glory'] as const) : []),
+    ],
+    [standingGroups.length, scheduleRounds.length, bracket],
+  );
+  const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
 
   if (league.isLoading) return <Spinner />;
 
@@ -109,62 +158,55 @@ export default function LeaguePage() {
         </div>
       </header>
 
-      <Section title="Standings">
-        {standings.isLoading ? (
-          <Spinner />
-        ) : standingGroups.length > 0 ? (
-          <div className="space-y-5">
-            {standingGroups.map((group) => (
-              <div key={group.label || 'overall'}>
-                {group.label ? (
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
-                    {group.label}
-                  </h3>
-                ) : null}
-                <StandingsTable rows={group.rows} />
-              </div>
-            ))}
+      <TabBar tabs={availableTabs} active={activeTab} onChange={setTab} />
+
+      <div className="mt-6">
+        {activeTab === 'recent' ? (
+          <div className="space-y-6">
+            <section>
+              <SubHeading>Recent results</SubHeading>
+              <FixtureList
+                loading={pastFixtures.isLoading}
+                data={pastFixtures.data ?? []}
+                emptyText="No recent results."
+              />
+            </section>
+            <section>
+              <SubHeading>Upcoming</SubHeading>
+              <FixtureList
+                loading={upcomingFixtures.isLoading}
+                data={upcomingFixtures.data ?? []}
+                emptyText="No upcoming fixtures."
+              />
+            </section>
           </div>
-        ) : (
-          <p className="text-sm text-muted">No standings yet.</p>
-        )}
-      </Section>
+        ) : null}
 
-      {bracketDrawn ? (
-        <Section title="Knockout bracket">
-          <BracketTree bracket={bracket!} competitionSlug={slug} title={league.data.name} />
-        </Section>
-      ) : null}
+        {activeTab === 'standings' ? (
+          standings.isLoading ? (
+            <Spinner />
+          ) : standingGroups.length > 0 ? (
+            <div className="space-y-5">
+              {standingGroups.map((group) => (
+                <div key={group.label || 'overall'}>
+                  {group.label ? <SubHeading>{group.label}</SubHeading> : null}
+                  <StandingsTable rows={group.rows} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No standings yet.</p>
+          )
+        ) : null}
 
-      {isLeague ? (
-        <>
-          <Section title="Recent results">
-            <FixtureList
-              loading={pastFixtures.isLoading}
-              data={pastFixtures.data ?? []}
-              emptyText="No recent results."
-            />
-          </Section>
-
-          <Section title="Upcoming">
-            <FixtureList
-              loading={upcomingFixtures.isLoading}
-              data={upcomingFixtures.data ?? []}
-              emptyText="No upcoming fixtures."
-            />
-          </Section>
-        </>
-      ) : (
-        <Section title="Schedule">
-          {bracketFixtures.isLoading ? (
+        {activeTab === 'schedule' ? (
+          scheduleFixtures.isLoading ? (
             <Spinner />
           ) : scheduleRounds.length > 0 ? (
             <div className="space-y-5">
               {scheduleRounds.map((round) => (
                 <div key={round.key}>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
-                    {round.label}
-                  </h3>
+                  <SubHeading>{round.label}</SubHeading>
                   <div className="overflow-hidden rounded-xl border border-border bg-surface">
                     {round.fixtures.map((f) => (
                       <MatchRow key={f.id} fixture={f} />
@@ -175,9 +217,19 @@ export default function LeaguePage() {
             </div>
           ) : (
             <p className="text-sm text-muted">No fixtures scheduled yet.</p>
-          )}
-        </Section>
-      )}
+          )
+        ) : null}
+
+        {activeTab === 'glory' ? (
+          bracketDrawn ? (
+            <BracketTree bracket={bracket!} competitionSlug={slug} title={league.data.name} />
+          ) : (
+            <p className="text-sm text-muted">
+              Knockout draw not set yet — see the Schedule tab for upcoming rounds.
+            </p>
+          )
+        ) : null}
+      </div>
     </main>
   );
 }
