@@ -1,0 +1,74 @@
+name: Render HeyGen template video
+
+# Triggered by `dispatchHeygenRenderJob` (packages/content-source/
+# heygenTemplateDispatch.ts) when a server route wants a HeyGen template render
+# without blocking a serverless function on minutes of polling. Unlike
+# render-video.yml this needs no ffmpeg/Chromium — it's a single API call plus
+# polling — so the job is just Node + tsx. The video_url is printed in the run
+# logs (and is the asset you'd then persist or hand downstream).
+#
+# Required environment secret (HeyGen):
+#   HEYGEN_API_KEY  — HeyGen API key with template + video access
+
+on:
+  workflow_dispatch:
+    inputs:
+      template_id:
+        description: HeyGen template ID
+        required: true
+        type: string
+      variables:
+        description: JSON map of variable name -> filled variable
+        required: false
+        type: string
+        default: '{}'
+      title:
+        description: Dashboard title for the render
+        required: false
+        type: string
+        default: ''
+      dimension:
+        description: 'Output size as JSON, e.g. {"width":1080,"height":1920}. Blank = template default.'
+        required: false
+        type: string
+        default: ''
+      test:
+        description: Free watermarked preview render (no paid credits)
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # HEYGEN_API_KEY lives in the `Production` environment's secrets, alongside
+    # the other render workflows' creds.
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate
+        env:
+          HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
+          # JSON inputs travel via env to avoid shell-escaping braces in argv;
+          # the CLI reads HEYGEN_VARIABLES / HEYGEN_DIMENSION / HEYGEN_TITLE /
+          # HEYGEN_TEST as fallbacks for its flags.
+          HEYGEN_VARIABLES: ${{ inputs.variables }}
+          HEYGEN_DIMENSION: ${{ inputs.dimension }}
+          HEYGEN_TITLE: ${{ inputs.title }}
+          HEYGEN_TEST: ${{ inputs.test }}
+        run: pnpm exec tsx scripts/heygen-generate.ts "${{ inputs.template_id }}"
