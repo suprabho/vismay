@@ -64,7 +64,12 @@ export function DriverStandings({ rows }: Props) {
               />
               <span className="truncate text-text">{r.driverName}</span>
             </span>
-            <span className="truncate text-muted">{r.constructorName}</span>
+            <span
+              className="truncate text-muted"
+              style={r.constructorColor ? { color: r.constructorColor } : undefined}
+            >
+              {r.constructorName}
+            </span>
             <span className="text-center text-text">{r.wins}</span>
             <span className="text-center font-semibold text-text">{r.points}</span>
           </div>

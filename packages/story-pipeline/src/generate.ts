@@ -60,6 +60,9 @@ export interface GenerateOptions {
   format?: StoryFormat
   /** The vertical's editorial desk (voice + vertical layer menu). Defaults to vizmaya. */
   pack?: DomainPack
+  /** Pre-resolved data for pack `hydrate` steps (e.g. f1 driver headshots). See
+   *  {@link SectionGenOptions.hydrationDeps}. */
+  hydrationDeps?: Record<string, unknown>
 }
 
 export interface GenerateInput {
@@ -225,6 +228,13 @@ export interface SectionGenOptions {
   pack?: DomainPack
   /** Refine loop: feedback on a prior draft to revise instead of restart. */
   refine?: { feedback: string; previous: unknown }
+  /**
+   * Pre-resolved data for pack `hydrate` steps — the pipeline does no I/O. The
+   * caller fetches vertical data (e.g. f1 driver headshots from the DB) and
+   * passes it here; each pack hydrate fn reads what it needs by a well-known key
+   * (f1 reads `f1DriverHeadshots`).
+   */
+  hydrationDeps?: Record<string, unknown>
 }
 
 /**
@@ -254,6 +264,46 @@ export async function generateSectionContent(
     paragraphs: isMapHero ? completeMapHeroProse(result.paragraphs) : result.paragraphs,
     kind: result.kind,
   }
+}
+
+/**
+ * Apply each pack layer type's `hydrate` to matching layers in a finalized
+ * section body — stamping app-supplied fields (e.g. f1 constructor colours) the
+ * model was told to omit, back from the ids it emitted. Walks the normalized
+ * `foreground` shape: a single layer object, a flat array, or `{ regions }`.
+ */
+function hydratePackLayers(
+  body: Record<string, unknown>,
+  pack: DomainPack,
+  deps?: Record<string, unknown>,
+): Record<string, unknown> {
+  const hydrators = new Map(
+    pack.extraLayerTypes.filter((t) => t.hydrate).map((t) => [t.type, t.hydrate!] as const),
+  )
+  if (hydrators.size === 0 || !body.foreground) return body
+
+  const applyOne = (layer: unknown): unknown => {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) return layer
+    const type = (layer as { type?: unknown }).type
+    const h = typeof type === 'string' ? hydrators.get(type) : undefined
+    return h ? h(layer as Record<string, unknown>, deps) : layer
+  }
+
+  const fg = body.foreground
+  let next: unknown
+  if (Array.isArray(fg)) {
+    next = fg.map(applyOne)
+  } else if (fg && typeof fg === 'object' && 'regions' in fg) {
+    const src = (fg as { regions?: Record<string, unknown> }).regions ?? {}
+    const regions: Record<string, unknown> = {}
+    for (const [name, layers] of Object.entries(src)) {
+      regions[name] = Array.isArray(layers) ? layers.map(applyOne) : applyOne(layers)
+    }
+    next = { ...(fg as object), regions }
+  } else {
+    next = applyOne(fg)
+  }
+  return { ...body, foreground: next }
 }
 
 /**
@@ -315,6 +365,10 @@ export async function generateSectionVisual(
       })
     }
   }
+  // Pack hydration — stamp app-supplied fields the model was told to omit (f1
+  // constructor colours from the static palette; driver headshots from the
+  // caller-resolved DB map) onto matching vertical layers.
+  body = hydratePackLayers(body, pack, opts.hydrationDeps)
   return { body }
 }
 
@@ -440,6 +494,7 @@ export async function generateSection(
   const visual = await generateSectionVisual(ctx, content, {
     model: opts.model,
     pack: opts.pack,
+    hydrationDeps: opts.hydrationDeps,
     refine: args.refine
       ? { feedback: args.refine.feedback, previous: { body: args.refine.previous.body } }
       : undefined,

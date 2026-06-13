@@ -102,6 +102,7 @@ const SAMPLES: Record<string, Record<string, unknown>> = {
       {
         position: 1,
         driverId: 'max_verstappen',
+        driverCode: 'VER',
         driverName: 'Max Verstappen',
         constructorId: 'red_bull',
         constructorName: 'Red Bull',
@@ -174,6 +175,18 @@ check(
 )
 const fsBody = { body: { foreground: { layout: 'stat-left-chart-right', regions: [{ name: 'chart', layers: [SAMPLES['fs:standings-table']] }] } } }
 check('fs deck schema accepts fs:standings-table in a region', sectionVisualSchemaFor('deck', undefined, FOOTSHORTS_PACK).safeParse(fsBody).success)
+
+// ── 4b. pack hydration stamps app-supplied fields ───────────────────────────
+const dsType = F1_PACK.extraLayerTypes.find((t) => t.type === 'f1:driver-standings')!
+const dsSample = SAMPLES['f1:driver-standings']!
+const dsHydrated = dsType.hydrate
+  ? (dsType.hydrate(dsSample) as { rows: Array<{ constructorColor?: string }> })
+  : { rows: [] }
+check('f1 driver-standings hydrate stamps constructorColor', dsHydrated.rows[0]?.constructorColor === '#3671C6')
+check(
+  'hydrate does not mutate the input sample',
+  (dsSample.rows as Array<{ constructorColor?: string }>)[0]?.constructorColor === undefined,
+)
 
 // ── 5. lint isolation ───────────────────────────────────────────────────────
 const lintBody = { foreground: SAMPLES['f1:race-card'] as Record<string, unknown> }
