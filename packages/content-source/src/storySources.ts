@@ -68,6 +68,55 @@ function fromRow(row: any): StorySource {
   }
 }
 
+/**
+ * Lightweight metadata for the compose "from library" picker — every
+ * already-extracted source across all OTHER drafts, without the (potentially
+ * large) `extractedText` payload. The attach step re-reads the full text by id
+ * (`getStorySourceById`) when one is chosen.
+ */
+export interface SourceListItem {
+  id: string
+  storySlug: string
+  kind: SourceKind
+  filename: string | null
+  sourceUrl: string | null
+  mime: string | null
+  title: string | null
+  byline: string | null
+  createdAt: string
+}
+
+/**
+ * Extracted sources from every draft EXCEPT `slug` (you reuse other stories'
+ * research, not your own draft's rows), newest first. Metadata only — the text
+ * is fetched on attach so this stays cheap even with many drafts.
+ */
+export async function listExtractedSourcesExcept(
+  slug: string,
+  limit = 200,
+): Promise<SourceListItem[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('story_sources')
+    .select('id, story_slug, kind, filename, source_url, mime, title, byline, created_at')
+    .eq('status', 'extracted')
+    .neq('story_slug', slug)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(`listExtractedSourcesExcept ${slug}: ${error.message}`)
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    storySlug: row.story_slug,
+    kind: row.kind,
+    filename: row.filename ?? null,
+    sourceUrl: row.source_url ?? null,
+    mime: row.mime ?? null,
+    title: row.title ?? null,
+    byline: row.byline ?? null,
+    createdAt: row.created_at,
+  }))
+}
+
 export async function listStorySources(slug: string): Promise<StorySource[]> {
   const sb = createServiceClient()
   const { data, error } = await sb

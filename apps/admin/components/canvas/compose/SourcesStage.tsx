@@ -1,8 +1,12 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { StorySource } from '@vismay/content-source/storySources'
+import type {
+  StorySource,
+  SourceListItem as LibrarySource,
+} from '@vismay/content-source/storySources'
 import { SourceRow } from './SourceRow'
+import { SourceLibraryModal, type LibraryAsset } from './SourceLibraryModal'
 import { SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
 /**
@@ -20,6 +24,9 @@ export function SourcesStage({
   onAddUrl,
   onAddText,
   onAddFile,
+  onAddFromSource,
+  onAddAsset,
+  onLoadLibrary,
   onRemoveSource,
   onReextract,
   onGenAngles,
@@ -32,12 +39,16 @@ export function SourcesStage({
   onAddUrl: (url: string) => Promise<boolean>
   onAddText: (text: string) => Promise<boolean>
   onAddFile: (file: File) => Promise<boolean>
+  onAddFromSource: (id: string) => Promise<boolean>
+  onAddAsset: (key: string) => Promise<boolean>
+  onLoadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[] }>
   onRemoveSource: (id: string) => void
   onReextract: (id: string) => void
   onGenAngles: () => void
 }) {
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function addUrl() {
@@ -118,6 +129,9 @@ export function SourcesStage({
           className="min-w-0 text-xs text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2.5 file:py-1.5 file:text-xs file:text-neutral-200 file:transition-colors hover:file:bg-white/15"
         />
       </div>
+      <button onClick={() => setLibraryOpen(true)} disabled={!!busy} className={`w-full ${btnGhostCls}`}>
+        + From library
+      </button>
     </div>
   )
 
@@ -133,6 +147,14 @@ export function SourcesStage({
 
   return (
     <section className="space-y-3">
+      {libraryOpen && (
+        <SourceLibraryModal
+          onClose={() => setLibraryOpen(false)}
+          loadLibrary={onLoadLibrary}
+          onAddFromSource={onAddFromSource}
+          onAddAsset={onAddAsset}
+        />
+      )}
       <SectionHeading
         title="Sources"
         count={`${extracted} ready${pending > 0 ? ` · ${pending} extracting` : ''}`}

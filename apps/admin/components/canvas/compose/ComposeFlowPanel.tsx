@@ -119,6 +119,9 @@ export function ComposeFlow({
           onAddUrl={flow.addUrl}
           onAddText={flow.addText}
           onAddFile={flow.addFile}
+          onAddFromSource={flow.addFromSource}
+          onAddAsset={flow.addAsset}
+          onLoadLibrary={flow.loadLibrary}
           onRemoveSource={flow.removeSource}
           onReextract={flow.reextract}
           onGenAngles={() => flow.genAngles()}
