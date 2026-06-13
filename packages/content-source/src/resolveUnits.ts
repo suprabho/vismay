@@ -195,7 +195,27 @@ export function resolveUnits(
       // dek+byline) because the mobile DOM emits two snap sections for it.
       const mobileStart = mobileUnits.length
       const isHero = sectionKind === 'hero' || sectionKind === 'cover'
-      if (isHero) {
+      // Deck full-bleed covers render the title, dek, byline and eyebrow
+      // together in a SINGLE full-bleed slide (see MapStorySection's
+      // `hero-full-bleed` branch). The legacy two-unit split below would emit
+      // a redundant second `heroPart: 'dek'` unit that the full-bleed path
+      // can't paint (its `heading` is undefined), leaving a blank snap after
+      // the cover in portrait. So emit one unit that carries both the heading
+      // and the dek/byline paragraphs.
+      const isFullBleedCover = isHero && section.layout === 'hero-full-bleed'
+      if (isFullBleedCover) {
+        hasMobileOverrides = true
+        mobileUnits.push({
+          parentIndex,
+          subIndex: 0,
+          parentConfig: section,
+          heading,
+          subheading,
+          paragraphs: sliceParagraphs(allParagraphs, section.paragraphs),
+          heroPart: 'title',
+          sliceIndex: 0,
+        })
+      } else if (isHero) {
         hasMobileOverrides = true
         // Title-only half. Paragraphs are intentionally empty — the dek
         // lives on the second mobile unit so it gets its own scroll-snap.
