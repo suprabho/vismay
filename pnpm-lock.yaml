@@ -53,6 +53,9 @@ importers:
       '@vismay/kidzovo-viz':
         specifier: workspace:*
         version: link:../../verticals/kidzovo-viz
+      '@vismay/starship-viz':
+        specifier: workspace:*
+        version: link:../../verticals/starship-viz
       '@vismay/story-pipeline':
         specifier: workspace:*
         version: link:../../packages/story-pipeline
