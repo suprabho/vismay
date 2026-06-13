@@ -111,7 +111,19 @@ writes to. Apply before deploying any feature that calls `generateImage` /
 
 ## TTS narration overrides (per-unit)
 
-`scripts/generate-audio.ts` derives the spoken text for each mobile unit from heading + paragraphs. To override that text without editing the displayed markdown, save a `<slug>.tts.yaml` (also `stories.tts_yaml` after migration 012):
+The audio pipeline is vismay-level: the whole engine lives in
+[@vismay/content-source/storyAudioGenerate](../../packages/content-source/src/storyAudioGenerate.ts)
+(`generateStoryAudio`), and `scripts/generate-audio.ts` is now a thin CLI
+wrapper (load `.env`, parse argv, loop slugs). Because it resolves units through
+the shared `resolveUnits` + `defaultNarrationText` (the same code the runtime
+player and the admin Narration tab use), any vertical's DB story — footshorts,
+vizf1 — gets audio through one path with `CONTENT_SOURCE=db`; the cue
+`unit_index` stays aligned with the runtime by construction.
+
+`generateStoryAudio` derives the spoken text for each mobile unit from heading +
+paragraphs (stat sections speak the big number followed by its caption). To
+override that text without editing the displayed markdown, save a
+`<slug>.tts.yaml` (also `stories.tts_yaml` after migration 012):
 
 ```yaml
 units:
