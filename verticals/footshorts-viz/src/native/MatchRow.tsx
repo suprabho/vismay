@@ -61,19 +61,22 @@ const MONTH_SHORT = [
   'Dec',
 ];
 
-// Kept identical to web/MatchRow.tsx (UTC + fixed month names) so both
-// platforms show the same string, e.g. "Feb 16" / "Feb 16 14:30".
+// Kicks off in the *device's* local timezone so a 19:00 UTC match reads as the
+// user's wall-clock time. We use fixed month names (rather than toLocale*) to
+// keep the string format stable across locales — "Feb 16" / "Feb 16 14:30".
+// Native has no SSR, so the local getters are safe to call directly here; the
+// web sibling defers the same conversion until after hydration.
 function kickoffLabel(iso: string, status: FixtureRow['status']): string {
   const d = new Date(iso);
   if (status === 'finished') {
-    return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}`;
+    return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
   }
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()} ${hh}:${mm}`;
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()} ${hh}:${mm}`;
 }
 
 function TeamCell({
