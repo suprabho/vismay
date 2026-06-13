@@ -49,6 +49,11 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
+// Each successful concurrent section write bumps the story version, so a loser
+// needs at most one retry per other in-flight writer. The client caps in-flight
+// writes at MAX_CONCURRENT_SECTIONS (3); 5 leaves comfortable headroom.
+const SECTION_WRITE_RETRIES = 5
+
 interface StoredBrief {
   summary?: string
   keyFacts?: string[]
@@ -135,6 +140,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   let newMarkdown = markdown
   let newConfig = configYaml
+  // The disjoint slice edits this section's passes produce — re-applied to the
+  // freshly-read story at write time so a concurrent section write can't clobber
+  // them (see the CAS retry loop below). The local `newMarkdown`/`newConfig`
+  // copies are kept only for the VISUAL pass's prose reads + change detection.
+  const mdEdits: Array<{ anchor: string; paragraphs: string[] }> = []
+  let cfgBody: Record<string, unknown> | null = null
   // The markdown anchor the prose lives under — the config `text`, NOT the
   // outline heading: a deck cover anchors at `## Cover` while its entry keeps
   // the display title (which lives in the config `heading` field).
@@ -162,6 +173,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           // eslint-disable-next-line no-await-in-loop
           const c = await generateSubsectionContent(ctx, stub, sub, { model, pack })
           newMarkdown = replaceMarkdownProse(newMarkdown, sub.heading, c.paragraphs)
+          mdEdits.push({ anchor: sub.heading, paragraphs: c.paragraphs })
           subsOut.push(c)
         }
         result.subsections = subsOut
@@ -176,6 +188,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
             : undefined
         const content = await generateSectionContent(ctx, { model, pack, refine })
         newMarkdown = replaceMarkdownProse(newMarkdown, anchor, content.paragraphs)
+        mdEdits.push({ anchor, paragraphs: content.paragraphs })
         result.paragraphs = content.paragraphs
         result.kind = content.kind
       }
@@ -227,6 +240,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         visualBody = { ...visualBody, subsections: subEntries }
       }
       newConfig = replaceConfigBody(newConfig, entry.sectionId, visualBody)
+      cfgBody = visualBody
       result.body = visualBody
     }
   } catch (e) {
@@ -236,9 +250,45 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     )
   }
 
+  const hasMdEdit = mdEdits.length > 0 && newMarkdown !== markdown
+  const hasCfgEdit = cfgBody != null && newConfig !== configYaml
   try {
-    if (newMarkdown !== markdown) await src.writeMarkdown(slug, newMarkdown)
-    if (newConfig !== configYaml) await src.writeConfigYaml(slug, newConfig)
+    if (hasMdEdit || hasCfgEdit) {
+      // CAS retry: re-read the latest story, re-apply this section's disjoint
+      // slice(s) on top of it, and write only if no other section write landed
+      // in between (version unchanged). Without this, two section passes that
+      // both read the same snapshot would each write back the whole story and
+      // the later writer would silently drop the earlier one's section — the
+      // lost-update race that left some sections un-written.
+      let applied = false
+      for (let attempt = 0; attempt < SECTION_WRITE_RETRIES; attempt++) {
+        // eslint-disable-next-line no-await-in-loop
+        const fresh = await src.readStoryForEdit(slug)
+        if (!fresh) return NextResponse.json({ error: 'draft story files are missing' }, { status: 404 })
+        let md = fresh.markdown
+        for (const e of mdEdits) md = replaceMarkdownProse(md, e.anchor, e.paragraphs)
+        const cfg = cfgBody ? replaceConfigBody(fresh.configYaml ?? configYaml, entry.sectionId, cfgBody) : null
+        // eslint-disable-next-line no-await-in-loop
+        const ok = await src.casWriteStory(
+          slug,
+          {
+            ...(hasMdEdit ? { markdown: md } : {}),
+            ...(hasCfgEdit ? { configYaml: cfg } : {}),
+          },
+          fresh.version,
+        )
+        if (ok) {
+          applied = true
+          break
+        }
+      }
+      if (!applied) {
+        return NextResponse.json(
+          { error: 'section write kept losing a race with a concurrent write — please retry' },
+          { status: 409 },
+        )
+      }
+    }
   } catch (e) {
     return NextResponse.json(
       { error: `failed to write section: ${e instanceof Error ? e.message : String(e)}` },
