@@ -25,8 +25,10 @@ import {
   sampleGrid as teamFormGridSample,
 } from '@vismay/footshorts-viz/modules/team-form-strip/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
+import { sample as kzCharacterSample } from '@vismay/kidzovo-viz/modules/character/sample'
+import { sample as kzBubbleSample } from '@vismay/kidzovo-viz/modules/bubble/sample'
 
-export type CatalogCategory = 'Core' | 'F1' | 'Footshorts' | 'Starship'
+export type CatalogCategory = 'Core' | 'F1' | 'Footshorts' | 'Starship' | 'Kidzovo'
 
 export interface CatalogEntry {
   type: string
@@ -117,6 +119,14 @@ export const catalogModules: CatalogEntry[] = [
     previewNotice:
       'Starship preview requires the merged GLB at /models/starship.glb. See the vizmaya-fyi demo route for a live render.',
   },
+  {
+    type: 'kz:character',
+    category: 'Kidzovo',
+    sample: kzCharacterSample,
+    previewNotice:
+      'Character preview requires the owl .riv at /kidzovo-demo/owl.riv, served by the kidzovo host app. See apps/kidzovo/web for a live render.',
+  },
+  { type: 'kz:bubble', category: 'Kidzovo', sample: kzBubbleSample },
 ]
 
 export function findCatalogEntry(id: string): CatalogEntry | undefined {

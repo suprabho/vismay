@@ -1,5 +1,5 @@
 {
-  "name": "@vismay/catalog",
+  "name": "@kidzovo/web",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -10,16 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@rive-app/react-canvas": "^4.28.0",
+    "@vismay/content-source": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
-    "@vismay/f1-viz": "workspace:*",
-    "@vismay/footshorts-viz": "workspace:*",
-    "@vismay/starship-viz": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",
-    "@vismay/viz-admin": "workspace:*",
     "next": "16.2.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "yaml": "^2.8.3"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

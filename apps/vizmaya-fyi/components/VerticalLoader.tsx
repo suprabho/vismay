@@ -19,6 +19,9 @@ registerVerticalLoader('f1', () =>
 registerVerticalLoader('starship', () =>
   import('@vismay/starship-viz').then((m) => m.register())
 )
+registerVerticalLoader('kidzovo', () =>
+  import('@vismay/kidzovo-viz').then((m) => m.register())
+)
 
 export default function VerticalLoader(
   props: React.ComponentProps<typeof EngineVerticalLoader>

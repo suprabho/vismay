@@ -9,6 +9,9 @@ registerVerticalLoader('footshorts', () =>
 registerVerticalLoader('starship', () =>
   import('@vismay/starship-viz').then((m) => m.register()),
 )
+registerVerticalLoader('kidzovo', () =>
+  import('@vismay/kidzovo-viz').then((m) => m.register()),
+)
 
 export const metadata: Metadata = {
   title: 'Vismay catalog',
@@ -24,6 +27,7 @@ export default async function RootLayout({
     loadVertical('f1'),
     loadVertical('footshorts'),
     loadVertical('starship'),
+    loadVertical('kidzovo'),
   ])
   return (
     <html lang="en" className="dark">

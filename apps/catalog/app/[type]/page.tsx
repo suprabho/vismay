@@ -13,7 +13,7 @@ interface PageProps {
 }
 
 export default async function ModuleDetailPage({ params }: PageProps) {
-  await Promise.all([loadVertical('f1'), loadVertical('footshorts')])
+  await Promise.all([loadVertical('f1'), loadVertical('footshorts'), loadVertical('kidzovo')])
   const { type: encoded } = await params
   const routeId = decodeURIComponent(encoded)
   const entry = findCatalogEntry(routeId)

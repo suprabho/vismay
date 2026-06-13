@@ -19,9 +19,13 @@ registerVerticalLoader('f1', () =>
 registerVerticalLoader('footshorts', () =>
   import('@vismay/footshorts-viz').then((m) => m.register()),
 )
+registerVerticalLoader('kidzovo', () =>
+  import('@vismay/kidzovo-viz').then((m) => m.register()),
+)
 const verticalsReady = Promise.all([
   loadVertical('f1'),
   loadVertical('footshorts'),
+  loadVertical('kidzovo'),
 ])
 
 interface Props {
