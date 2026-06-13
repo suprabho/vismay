@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import type { ResolvedUnit, StoryConfig, ShareSectionOverride } from '@vismay/viz-engine'
+import type { ResolvedUnit, StoryConfig, ShareSectionOverride, ShareItemGroup } from '@vismay/viz-engine'
 import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
@@ -41,6 +41,8 @@ interface CardEntry {
   label: string
   /** For `variant === 'graph'`, which foreground subset to render (split decks). */
   graphScope?: 'stat' | 'chart'
+  /** For region-split graph cards (`shareGroups`): the item slice + heading. */
+  itemGroup?: ShareItemGroup
 }
 
 /**
@@ -115,8 +117,23 @@ function buildCardList(
     // with a visual (chart / image / 3D…), split them onto two cards — stat
     // first, then chart — instead of stacking both onto one. Hero/cover
     // sections never split (their title rides the image as an overlay).
+    // Region split: `shareGroups` slices the lead list (keyValue …) into one
+    // stat card per region (per-subsection override wins), then — if a visual
+    // layer is also present — a single chart card after.
+    const shareGroups =
+      shareOverride?.subsections?.[unit.subIndex]?.shareGroups ??
+      shareOverride?.shareGroups
+    const hasGroupSplit =
+      !isHeroLike && leadLayers.length > 0 && !!shareGroups && shareGroups.length > 0
     if (hasVizForeground) {
-      if (!isHeroLike && leadLayers.length > 0 && visualLayers.length > 0) {
+      if (hasGroupSplit) {
+        shareGroups!.forEach((group) => {
+          cards.push({ unit, variant: 'graph', label: 'stat', graphScope: 'stat', itemGroup: group })
+        })
+        if (visualLayers.length > 0) {
+          cards.push({ unit, variant: 'graph', label: 'graph', graphScope: 'chart' })
+        }
+      } else if (!isHeroLike && leadLayers.length > 0 && visualLayers.length > 0) {
         cards.push({ unit, variant: 'graph', label: 'stat', graphScope: 'stat' })
         cards.push({ unit, variant: 'graph', label: 'graph', graphScope: 'chart' })
       } else {
@@ -589,6 +606,8 @@ export default function ShareShell({
                       accessToken={accessToken}
                       variant={card.variant}
                       graphScope={card.graphScope ?? 'all'}
+                      itemSlice={card.itemGroup?.items}
+                      itemHeading={card.itemGroup?.heading}
                       shareOverride={sectionId ? draftOverrides[sectionId] : undefined}
                       palette={config.defaults.mapPalette}
                       fontstack={config.defaults.mapFontstack}

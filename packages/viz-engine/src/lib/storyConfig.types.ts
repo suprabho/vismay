@@ -529,6 +529,20 @@ export interface ShareChartOverride {
 export type ShareTextOverride = ShareChartOverride
 
 /**
+ * One "region" of a lead list layer (a `keyValue` list, etc.) split onto its
+ * own share card. The `items` slice indexes into the layer's `items[]` with
+ * the same half-open `[start, end]` (end exclusive) semantics as `paragraphs`
+ * — a bare number selects a single item. `heading` overrides the layer's own
+ * `title` on that card. See {@link ShareSectionOverride.shareGroups}.
+ */
+export interface ShareItemGroup {
+  /** Title shown above this region's items. Overrides the layer's `title`. */
+  heading?: string
+  /** Item slice from the layer's `items[]`: a number, or `[start, end]`. */
+  items: number | [number, number]
+}
+
+/**
  * Per-hero-card text overrides. Adds `dek` (the paragraph below the title)
  * so the hero card can carry its own supporting copy independent of the
  * map-title overlay or any other variant emitted from the same section.
@@ -604,6 +618,8 @@ export interface ShareSubsectionOverride {
   paragraphsOverride?: Array<string | string[]>
   /** Same `shareParagraphs` semantics as the parent override, scoped to this subsection. */
   shareParagraphs?: Array<number | [number, number]>
+  /** Same `shareGroups` semantics as the parent override, scoped to this subsection. */
+  shareGroups?: ShareItemGroup[]
   /** Override the heading shown on this subsection's cards. */
   heading?: string
   /** Override the subheading (stat label / map-title sublabel). */
@@ -677,6 +693,16 @@ export interface ShareSectionOverride {
    * the same `[start, end]` semantics as `paragraphs`.
    */
   shareParagraphs?: Array<number | [number, number]>
+  /**
+   * Split a single lead list layer (a `keyValue` list, etc.) into one share
+   * card per region — e.g. one card per group/conference/division. Each entry
+   * slices the layer's `items[]` and renders on its own card, titled by the
+   * entry's `heading` (falling back to the layer's own `title`). Mirrors
+   * `shareParagraphs`, but for structured list items rather than prose. When a
+   * section also has a visual layer (chart/image), the chart card is emitted
+   * once after the region cards. Ignored on hero/cover sections.
+   */
+  shareGroups?: ShareItemGroup[]
   /**
    * Literal replacement paragraphs for this section's share card(s).
    * Same semantics as `ShareSubsectionOverride.paragraphsOverride`.

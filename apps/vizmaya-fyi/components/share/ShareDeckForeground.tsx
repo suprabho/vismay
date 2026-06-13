@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import {
   ForegroundLayoutSlot,
   resolveSlots,
-  FOREGROUND_VISUAL_TYPES as VISUAL_TYPES,
+  isForegroundVisualType as isVisual,
   FOREGROUND_PROSE_TYPES as PROSE_TYPES,
 } from '@vismay/viz-engine'
 import type {
@@ -41,6 +41,24 @@ import type { AspectRatio } from './AspectRatioToggle'
 // `VISUAL_TYPES` (chart-like modules with no intrinsic block height) and
 // `PROSE_TYPES` (text/bodyText) are imported from viz-engine so this renderer
 // and the share-card builders classify layers identically.
+
+/** Slice a lead list layer's `items[]` to one region and optionally retitle it,
+ *  so a single `keyValue` (etc.) can render as one share card per region. Layers
+ *  without an `items` array (charts, images, bigStat…) pass through untouched. */
+function sliceItemsLayer(
+  layer: VizLayer,
+  slice: number | [number, number],
+  heading?: string
+): VizLayer {
+  const items = (layer as { items?: unknown }).items
+  if (!Array.isArray(items)) return layer
+  const [start, end] = typeof slice === 'number' ? [slice, slice + 1] : slice
+  return {
+    ...(layer as VizLayer & { items: unknown[]; title?: string }),
+    items: items.slice(start, end),
+    ...(heading !== undefined ? { title: heading } : {}),
+  } as VizLayer
+}
 
 /** Strip authored `position`/`size` so the layer fills its region (inset:0)
  *  instead of honoring the deck slide's `width:50%`/`position:right`/`62vh`. */
@@ -88,6 +106,13 @@ interface Props {
    * `'all'` (default) keeps the legacy combined behavior.
    */
   layerScope?: 'all' | 'stat' | 'chart'
+  /**
+   * Region split (`shareGroups`): the slice of the lead list layer's `items[]`
+   * to render on this card — a number, or `[start, end]`. Other layers are
+   * untouched. `itemHeading` overrides the layer's `title` on this card.
+   */
+  itemSlice?: number | [number, number]
+  itemHeading?: string
 }
 
 interface BuiltForeground {
@@ -107,6 +132,8 @@ export default function ShareDeckForeground({
   chartHeading,
   chartSubheading,
   layerScope = 'all',
+  itemSlice,
+  itemHeading,
 }: Props) {
   const { parentConfig } = unit
   const rawKind = parentConfig.kind ?? 'text'
@@ -123,8 +150,12 @@ export default function ShareDeckForeground({
         : Object.values(resolved.foreground.regions).flat()
     let layers = allLayers.filter((l) => !PROSE_TYPES.has(l.type))
     // Stat/chart split: narrow to just the lead callout or just the visual.
-    if (layerScope === 'stat') layers = layers.filter((l) => !VISUAL_TYPES.has(l.type))
-    else if (layerScope === 'chart') layers = layers.filter((l) => VISUAL_TYPES.has(l.type))
+    if (layerScope === 'stat') layers = layers.filter((l) => !isVisual(l.type))
+    else if (layerScope === 'chart') layers = layers.filter((l) => isVisual(l.type))
+    // Region split: keep only this region's slice of the lead list's items[].
+    if (itemSlice !== undefined) {
+      layers = layers.map((l) => sliceItemsLayer(l, itemSlice, itemHeading))
+    }
     if (layers.length === 0) return null
 
     // Hero/cover: keep the image's authored full-bleed sizing; it fills + crops.
@@ -138,8 +169,8 @@ export default function ShareDeckForeground({
       return { foreground: { kind: 'flat', layers: heroLayers }, isPortrait: false }
     }
 
-    const viz = layers.filter((l) => VISUAL_TYPES.has(l.type))
-    const lead = layers.filter((l) => !VISUAL_TYPES.has(l.type)) // bigStat, keyValue, quote…
+    const viz = layers.filter((l) => isVisual(l.type))
+    const lead = layers.filter((l) => !isVisual(l.type)) // bigStat, keyValue, quote…
 
     // Single visual layer → fill the card (strip authored 50%-width/position).
     if (layers.length === 1) {
@@ -159,7 +190,7 @@ export default function ShareDeckForeground({
       Math.round((cardHeight * visualBudget) / Math.max(1, viz.length))
     )
     const stacked = layers.map((l) =>
-      VISUAL_TYPES.has(l.type) ? withStackHeight(l, perVisual) : fillLayer(l)
+      isVisual(l.type) ? withStackHeight(l, perVisual) : fillLayer(l)
     )
     const fill = { position: 'absolute' as const, inset: 0 }
     const inlineDef: ForegroundLayoutDef = {
@@ -172,7 +203,7 @@ export default function ShareDeckForeground({
       foreground: { kind: 'regions', layout: 'share-card-stack', regions: { default: stacked }, inlineDef },
       isPortrait: true,
     }
-  }, [parentConfig, isHeroLike, isLandscape, cardHeight, layerScope, heroImageOffset])
+  }, [parentConfig, isHeroLike, isLandscape, cardHeight, layerScope, heroImageOffset, itemSlice, itemHeading])
 
   if (!built) return null
 

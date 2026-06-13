@@ -89,6 +89,13 @@ interface Props {
    * `'stat'` card followed by a `'chart'` card.
    */
   graphScope?: 'all' | 'stat' | 'chart'
+  /**
+   * For region-split graph cards (`shareGroups`): the slice of the lead list
+   * layer's `items[]` this card renders — a number, or `[start, end]`.
+   */
+  itemSlice?: number | [number, number]
+  /** Per-card heading for the region-split card; overrides the layer's title. */
+  itemHeading?: string
   /** Per-section overrides from share config */
   shareOverride?: ShareSectionOverride
   /** Story-wide map palette (forwarded to the share map background). */
@@ -129,7 +136,7 @@ export function extractHeroBits(paragraphs: string[]): { dek: string; byline: st
 }
 
 const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
-  { unit, index, ratio, slug, title, accessToken, variant = 'auto', graphScope = 'all', shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
+  { unit, index, ratio, slug, title, accessToken, variant = 'auto', graphScope = 'all', itemSlice, itemHeading, shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
   ref
 ) {
   const captureRef = useRef<HTMLDivElement>(null)
@@ -544,6 +551,8 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                 chartHeading={chartHeading}
                 chartSubheading={chartSubheading}
                 layerScope={graphScope}
+                itemSlice={itemSlice}
+                itemHeading={itemHeading}
               />
             ) : kind === 'hero' && heroHeading ? (
               <ShareHeroCard title={heroHeading} dek={heroDek} ratio={ratio} />

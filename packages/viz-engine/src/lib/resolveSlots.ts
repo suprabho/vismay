@@ -168,17 +168,42 @@ export function resolveSlotsFlat(section: StorySectionConfig): ResolvedLayersFla
 }
 
 /**
- * Foreground layer-type classification, shared by the live stack renderer and
- * the share-card builders so they agree on what counts as a chart-like
- * "visual" layer vs. a self-sizing "lead" callout vs. prose copy.
+ * Foreground layer-type classification for the SHARE-CARD builders — it decides
+ * which layers become a "stat" card vs. a "chart" card. (The live deck stack
+ * sizes layers via `ForegroundVizSlot`'s separate `STACK_VISUAL_TYPES`; the two
+ * sets serve different jobs and intentionally diverge — e.g. a `table` self-
+ * sizes in the live stack but is the section's *graphic* on a share card.)
  *
- *   • `visual` — modules with no intrinsic block height that fill / stack as
- *     the card's graphic (chart, image, 3D viewer, embed, map…). Mirrors
- *     `ForegroundVizSlot`'s `STACK_VISUAL_TYPES`.
  *   • `prose`  — copy layers (`text` / `bodyText`) carried by the separate
  *     text card; dropped from the visual / graph cards.
- *   • `lead`   — everything else (`bigStat`, `keyValue`, `quote`…): self-sizing
- *     callouts that pair with a visual on the deck slide.
+ *   • `lead`   — the small set of self-sizing text callouts (`bigStat`,
+ *     `keyValue`, `quote`) that pair with a graphic on the deck slide.
+ *   • `visual` — EVERYTHING ELSE: the section's graphic (chart, image, table,
+ *     video, map, 3D viewer, and every vertical module — `fs:*`, `f1:*`, …).
+ *     Classified by exclusion so a new vertical graphic defaults to "visual"
+ *     (its own chart card) without having to be enumerated here.
+ */
+export const FOREGROUND_PROSE_TYPES: ReadonlySet<string> = new Set(['text', 'bodyText'])
+
+/** Self-sizing text callouts — the only foreground types that are NOT graphics. */
+export const FOREGROUND_LEAD_TYPES: ReadonlySet<string> = new Set([
+  'bigStat',
+  'keyValue',
+  'quote',
+])
+
+/**
+ * A foreground layer is a "visual" (the section's graphic, eligible for its own
+ * chart share card) when it is neither prose nor a self-sizing lead callout.
+ */
+export function isForegroundVisualType(type: string): boolean {
+  return !FOREGROUND_PROSE_TYPES.has(type) && !FOREGROUND_LEAD_TYPES.has(type)
+}
+
+/**
+ * Back-compat alias: the explicit core graphic types. Prefer
+ * {@link isForegroundVisualType} — it also covers `table`, `video`, and every
+ * vertical module by exclusion, which a static set cannot.
  */
 export const FOREGROUND_VISUAL_TYPES: ReadonlySet<string> = new Set([
   'chart',
@@ -188,13 +213,12 @@ export const FOREGROUND_VISUAL_TYPES: ReadonlySet<string> = new Set([
   'map',
   'embed',
   'rive',
+  'video',
   'starship:viewer',
 ])
 
-export const FOREGROUND_PROSE_TYPES: ReadonlySet<string> = new Set(['text', 'bodyText'])
-
 export interface ClassifiedForegroundLayers {
-  /** Self-sizing callouts: `bigStat`, `keyValue`, `quote`… */
+  /** Self-sizing callouts: `bigStat`, `keyValue`, `quote`. */
   lead: VizLayer[]
   /** Chart-like graphics that fill or stack as the card's visual. */
   visual: VizLayer[]
@@ -208,8 +232,8 @@ export function classifyForegroundLayers(layers: VizLayer[]): ClassifiedForegrou
   const prose: VizLayer[] = []
   for (const l of layers) {
     if (FOREGROUND_PROSE_TYPES.has(l.type)) prose.push(l)
-    else if (FOREGROUND_VISUAL_TYPES.has(l.type)) visual.push(l)
-    else lead.push(l)
+    else if (FOREGROUND_LEAD_TYPES.has(l.type)) lead.push(l)
+    else visual.push(l)
   }
   return { lead, visual, prose }
 }
