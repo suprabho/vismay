@@ -1,27 +1,20 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent as ReactTouchEvent } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
-import AuraBackground from '@/components/AuraBackground'
-import type { Theme } from '@vismay/viz-engine'
+import {
+  StoryBentoGrid,
+  StoryGridStyles,
+  StoryGridFonts,
+  cardThemeStyle,
+  epicCardTheme,
+  type StoryCardData,
+  type StoryGridItem,
+} from '@vismay/ui'
 
-export interface HomeStory {
-  slug: string
-  title: string
-  subtitle: string
-  date: string
-  byline: string
-  aura?: string
-  theme?: Theme
-  /** Optional editorial topic — drives the card pill and rail filter chips. */
-  topic?: string
-  /** Optional cover image URL shown as the card thumbnail background. */
-  thumbnail?: string
-  /** Optional text colour for the card when a thumbnail is shown — overrides
-   *  `--bn-text` so the title/READ stay legible over the cover image. */
-  thumbnailTextColor?: string
-}
+/** The home grid renders the shared `StoryCardData` shape. */
+export type HomeStory = StoryCardData
 
 export interface HomeEpic {
   slug: string
@@ -37,86 +30,6 @@ const STUDIO = {
   kicker: 'Vizmaya Labs',
   statement: 'We turn complex data into stories impossible to ignore.',
   deck: 'A two-person data-journalism studio. The map does the argument, the prose does the meaning — and we refuse to let the distance between what is true and what is understood be someone else’s problem.',
-}
-
-/* Each story card renders in its own theme — a dark base with an accent glow,
-   and the theme's own typefaces. */
-interface CardTheme {
-  bg: string
-  text: string
-  muted: string
-  accent: string
-  serif?: string
-  sans?: string
-  mono?: string
-}
-
-function withFallback(name: string | undefined, kind: 'serif' | 'sans' | 'mono'): string | undefined {
-  if (!name) return undefined
-  if (kind === 'serif') return `${name}, Georgia, serif`
-  if (kind === 'sans') return `${name}, -apple-system, 'Segoe UI', Helvetica, sans-serif`
-  return `${name}, 'Courier New', monospace`
-}
-
-/* Stories carry a full viz-engine Theme (colors + fonts). */
-function storyCardTheme(theme: Theme): CardTheme {
-  return {
-    bg: theme.colors.background,
-    text: theme.colors.text,
-    muted: theme.colors.muted,
-    accent: theme.colors.accent,
-    serif: withFallback(theme.fonts.serif, 'serif'),
-    sans: withFallback(theme.fonts.sans, 'sans'),
-    mono: withFallback(theme.fonts.mono, 'mono'),
-  }
-}
-
-/* Brand tricolor, cycled across epics whose theme has no accent of its own. */
-const EPIC_ACCENTS = ['#0BBFAB', '#E84D7A', '#2B4ACF']
-
-/* Epic themes are a loose, often-sparse jsonb (`ink`/`surface`/`accent`/
-   `bone`/`fonts`); fall back to the brand tricolor + a dark base when absent.
-   Epstein's theme uses `ember` (not `accent`) as its primary accent key, so
-   we check that too before reaching for the EPIC_ACCENTS fallback. */
-function epicCardTheme(raw: Record<string, unknown> | undefined, index: number): CardTheme {
-  const t = (raw ?? {}) as {
-    ink?: string
-    surface?: string
-    bone?: string
-    muted?: string
-    accent?: string
-    ember?: string  // Epstein primary accent
-    fonts?: { serif?: string; sans?: string; mono?: string }
-  }
-  const fonts = t.fonts ?? {}
-  return {
-    bg: t.ink || t.surface || '#0C0C10',
-    text: t.bone || '#FFFFFF',
-    muted: t.muted || 'rgba(255,255,255,.7)',
-    accent: t.accent || t.ember || EPIC_ACCENTS[index % EPIC_ACCENTS.length],
-    serif: withFallback(fonts.serif, 'serif'),
-    sans: withFallback(fonts.sans, 'sans'),
-    mono: withFallback(fonts.mono, 'mono'),
-  }
-}
-
-/* Inline CSS custom properties + dark gradient base for a themed card. */
-function cardThemeStyle(ct: CardTheme, textColor?: string): CSSProperties {
-  const text = textColor ?? ct.text
-  return {
-    ['--bn-bg']: ct.bg,
-    ['--bn-text']: text,
-    ['--bn-muted']: ct.muted,
-    ['--bn-accent']: ct.accent,
-    ...(ct.serif ? { ['--bn-serif']: ct.serif } : {}),
-    ...(ct.sans ? { ['--bn-sans']: ct.sans } : {}),
-    ...(ct.mono ? { ['--bn-mono']: ct.mono } : {}),
-    background: ct.bg,
-    backgroundImage:
-      `radial-gradient(120% 90% at 85% 8%, ${ct.accent}55 0%, ${ct.accent}14 34%, transparent 62%),` +
-      `radial-gradient(90% 80% at 8% 100%, ${ct.accent}30 0%, transparent 55%)`,
-    color: text,
-  } as CSSProperties
 }
 
 const css = `
@@ -177,72 +90,8 @@ const css = `
 .vz .idx-filter-m{display:none}  /* desktop/tablet use the in-rail filter; shown only on phones */
 .vz .idx-feed-head{display:none}  /* mobile-only feed header (statement + chips); desktop uses the rail */
 
-/* carousel of bento pages */
-.vz .carousel{display:flex;flex-direction:column;gap:18px;height:clamp(460px,calc(100vh - 200px),700px)}
-.vz .carousel-vp{flex:1;overflow:hidden;min-height:0}
-.vz .carousel-track{display:flex;height:100%;transition:transform .55s cubic-bezier(.22,1,.36,1)}
-.vz .carousel-slide{flex:0 0 auto;height:100%}
-.vz .bento-slide{height:100%;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:1.08fr 1fr;gap:var(--gap)}
-.vz .bento-slide .bcard.big{grid-column:span 3}
-.vz .bento-slide .bcard.sm{grid-column:span 2}
-/* 4-card first page: an asymmetric bento. A wide+tall hero (1) beside a
-   narrow+tall card (2), then a wide+short (3) beside a narrow+short (4).
-   The top row runs ~2× the bottom; left column ~2× the right. */
-.vz .bento-slide.four{grid-template-rows:2fr 1fr}
-.vz .bento-slide.four .bcard:nth-child(1){grid-column:span 4}
-.vz .bento-slide.four .bcard:nth-child(2){grid-column:span 2}
-.vz .bento-slide.four .bcard:nth-child(3){grid-column:span 4}
-.vz .bento-slide.four .bcard:nth-child(4){grid-column:span 2}
-
-/* bento card — every card is themed: a dark base + accent glow (set inline
-   from the story/epic theme), rendered in that theme's own typefaces.
-   The --bn-* custom properties are supplied per card; site fonts/ink are the
-   fallback so an un-themed card still renders. */
-.vz .bcard{position:relative;display:flex;flex-direction:column;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;isolation:isolate;min-height:0}
-.vz .bcard.big{padding:22px 24px}
-.vz .bcard.sm{padding:15px 17px}
-.vz .bcard > *{position:relative;z-index:1}
-.vz .bcard:hover{transform:translateY(-3px);box-shadow:0 18px 42px -20px rgba(0,0,0,.55);opacity:1}
-.vz .bcard.themed{border-color:color-mix(in srgb,var(--bn-text,#fff) 12%,transparent)}
-.vz .bcard-rule{position:absolute;top:0;left:0;right:0;height:3px;background:var(--bn-accent,var(--accent));z-index:3}
-.vz .bcard-k{display:flex;align-items:center;gap:9px;font-family:var(--bn-mono,var(--m));font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:color-mix(in srgb,var(--bn-text,var(--muted)) 65%,transparent);margin-bottom:10px}
-.vz .bcard.epic .bcard-k{display:block;white-space:nowrap;margin-top:3px;color:var(--bn-accent,var(--accent))}
-.vz .bcard-n{color:var(--bn-accent,var(--accent));font-weight:600}
-.vz .bcard-topic{padding:2px 7px;border:1px solid color-mix(in srgb,var(--bn-text,#000) 25%,transparent);border-radius:999px;font-size:8.5px;letter-spacing:1.1px}
-.vz .bcard-date{margin-left:auto;opacity:.7}
-.vz .bcard-h{font-family:var(--bn-serif,var(--e));font-style:italic;font-weight:400;color:var(--bn-text,var(--ink));line-height:1.14;text-wrap:pretty;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical}
-.vz .bcard.big .bcard-h{font-size:26px;-webkit-line-clamp:3;margin-bottom:8px}
-.vz .bcard.sm .bcard-h{font-size:19px;-webkit-line-clamp:3}
-.vz .bcard-p{font-family:var(--bn-sans,var(--b));font-size:13px;line-height:1.55;color:color-mix(in srgb,var(--bn-text,var(--muted)) 80%,transparent);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.vz .bcard-a{margin-top:12px;font-family:var(--bn-mono,var(--m));font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--bn-accent,var(--accent));opacity:.65}
-.vz .bcard:hover .bcard-a{opacity:1}
-.vz .bcard-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-family:var(--bn-mono,var(--m));font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase}
-.vz .bcard-meta{color:color-mix(in srgb,var(--bn-text,var(--muted)) 70%,transparent)}
-.vz .bcard.epic .bcard-a{font-weight:600;opacity:1}
-
-/* live aura layered over the themed base for the stories that have one */
-.vz .bcard .bn-aura{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
-.vz .bcard .bn-aura iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}
-.vz .bcard .bn-aura::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bn-bg,#000) 50%,transparent) 0%,transparent 38%),linear-gradient(to top,color-mix(in srgb,var(--bn-bg,#000) 72%,transparent) 0%,color-mix(in srgb,var(--bn-bg,#000) 24%,transparent) 55%,transparent 100%)}
-
-/* static cover image when no aura is set — shown at full strength with no card
-   overlay; the story's own thumbnail carries the look (and text legibility). */
-.vz .bcard .bn-thumb{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
-.vz .bcard .bn-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-
-/* carousel controls */
-.vz .carousel-ctrl{display:flex;justify-content:space-between;align-items:center;gap:16px}
-.vz .carousel-dots{display:flex;gap:7px}
-.vz .cdot{width:7px;height:7px;border-radius:999px;border:none;background:rgba(12,12,16,.18);padding:0;transition:all .3s}
-.vz .cdot.on{background:var(--accent);transform:scale(1.25)}
-.vz .carousel-nav{display:flex;align-items:center;gap:14px}
-.vz .carousel-all{font-family:var(--m);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line2);padding-bottom:2px}
-.vz .carousel-all:hover{color:var(--accent);border-color:var(--accent);opacity:1}
-.vz .carr{width:34px;height:34px;border-radius:999px;border:1px solid var(--line2);background:transparent;font-size:16px;line-height:1;color:var(--ink);display:flex;align-items:center;justify-content:center;transition:all .25s}
-.vz .carr:hover:not(:disabled){background:var(--ink);color:var(--cream);border-color:var(--ink)}
-.vz .carr:disabled{opacity:.3;cursor:default}
-.vz .carousel-count{font-family:var(--m);font-size:11px;letter-spacing:1px;color:var(--muted);min-width:56px;text-align:center}
-.vz .carousel-count i{font-style:normal;opacity:.5;margin:0 2px}
+/* The bento carousel + themed cards live in the shared @vismay/ui grid
+   (scoped under .vzg, which the root .vz.vzg also carries). */
 
 /* ── EPICS ROW (below the header) ────────────────── */
 .vz .epics-section{max-width:1240px;margin:0 auto;padding:20px clamp(20px,5vw,56px) 64px;border-top:1px solid var(--line)}
@@ -295,30 +144,8 @@ const css = `
   .vz .idx-rail{position:static}
 }
 @media(max-width:820px){
-  /* Phone: keep the bento carousel PAGINATED — a horizontal pager you swipe
-     through (dots below; the inline width/transform drive paging). Each page
-     reflows the 6-col bento into 2 columns: big cards span the full width on
-     top, small cards sit two-up beneath. Height is content-driven so every
-     page is as tall as its cards. */
-  .vz .carousel{height:auto;gap:14px}
-  .vz .carousel-vp{flex:none;overflow:hidden}
-  .vz .carousel-track{height:auto}
-  .vz .carousel-slide{height:auto;min-width:0}   /* respect the inline page width, don't grow to content */
-  .vz .bento-slide{height:auto;grid-template-columns:repeat(2,1fr);grid-template-rows:none;grid-auto-rows:minmax(120px,auto);gap:10px}
-  .vz .bento-slide .bcard{min-width:0}
-  .vz .bento-slide .bcard.big{grid-column:span 2}
-  .vz .bento-slide .bcard.sm{grid-column:span 1}
-  /* 4-card page on mobile: full-width hero (1), two squares side by side (2,3),
-     then a full-width card (4). Reset the desktop .four row template to auto. */
-  .vz .bento-slide.four{grid-template-rows:none}
-  .vz .bento-slide.four .bcard:nth-child(1){grid-column:span 2}
-  .vz .bento-slide.four .bcard:nth-child(2){grid-column:span 1}
-  .vz .bento-slide.four .bcard:nth-child(3){grid-column:span 1}
-  .vz .bento-slide.four .bcard:nth-child(4){grid-column:span 2}
-  /* swipe replaces the tiny arrows — keep the dots and the archive link */
-  .vz .carr,.vz .carousel-count{display:none}
-  /* controls (dots + archive link) sit ABOVE the cards on mobile */
-  .vz .carousel-ctrl{order:-1;justify-content:space-between;margin:0}
+  /* The carousel's own mobile reflow (2-col bento, swipe, controls-above)
+     lives in the shared .vzg grid CSS. */
   .vz .vznav-link{display:none}
 
   /* ── mobile stack order: carousel → feed header (statement + chips) → stats → text ──
@@ -345,7 +172,6 @@ const css = `
   .vz .idx-filter-m .idx-chip{flex:none}
 }
 @media(max-width:520px){
-  .vz .bcard.big .bcard-h{font-size:23px}
   .vz .region{padding-top:88px}
 }
 `
@@ -362,54 +188,6 @@ function PenroseMark({ size = 20, dark = false }: { size?: number; dark?: boolea
       <circle cx="28" cy="122" r="15" fill="#E84D7A" />
       <circle cx="122" cy="122" r="15" fill="#2B4ACF" />
     </svg>
-  )
-}
-
-const fmtMonth = (d: string) =>
-  new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-
-const DEFAULT_CARD_THEME: CardTheme = {
-  bg: '#0C0C10',
-  text: '#FFFFFF',
-  muted: 'rgba(255,255,255,.7)',
-  accent: '#0BBFAB',
-}
-
-/* A carousel item is a story plus its index in the full list. */
-type CarouselItem = { data: HomeStory; n: number }
-
-function StoryCard({ item, big }: { item: CarouselItem; big: boolean }) {
-  const s = item.data
-  const ct = s.theme ? storyCardTheme(s.theme) : DEFAULT_CARD_THEME
-  const hasAura = Boolean(s.aura)
-  const hasThumb = !hasAura && Boolean(s.thumbnail)
-  // A cover thumbnail carries its own look; an optional per-story text colour
-  // keeps the card's title/READ legible over it without recolouring the body.
-  const textColor = hasThumb ? s.thumbnailTextColor : undefined
-  return (
-    <Link
-      className={`bcard story themed ${big ? 'big' : 'sm'}`}
-      href={`/story/${s.slug}`}
-      style={cardThemeStyle(ct, textColor)}
-    >
-      {hasAura && s.aura && <AuraBackground slug={s.aura} />}
-      {hasThumb && s.thumbnail && (
-        <div className="bn-thumb" aria-hidden>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={s.thumbnail} alt="" loading="lazy" />
-        </div>
-      )}
-      <div className="bcard-top">
-        <div className="bcard-k">
-          <span className="bcard-n">{String(item.n + 1).padStart(2, '0')}</span>
-          {s.topic && <span className="bcard-topic">{s.topic}</span>}
-          <span className="bcard-date">{fmtMonth(s.date)}</span>
-        </div>
-        <h3 className="bcard-h">{s.title}</h3>
-        {big && <p className="bcard-p">{s.subtitle}</p>}
-      </div>
-      <div className="bcard-a">Read →</div>
-    </Link>
   )
 }
 
@@ -476,25 +254,13 @@ export default function HomeClient({
     return stories.filter((s) => s.topic === filter)
   }, [filter, stories])
 
-  // The carousel is stories-only. The first page is a 4-card asymmetric bento
-  // (a hero + three secondary cards — see the .four CSS); the rest run 5
-  // (2 big top, 3 small beneath).
-  const items: CarouselItem[] = useMemo(
+  // The carousel is stories-only. Cards keep their number badge from the full
+  // list (so a filtered view still reads "07", etc.). The shared StoryBentoGrid
+  // paginates them (4-card asymmetric first page, then 5s).
+  const items: StoryGridItem[] = useMemo(
     () => visibleStories.map((s) => ({ data: s, n: stories.indexOf(s) })),
     [visibleStories, stories]
   )
-
-  const slides = useMemo(() => {
-    const out: CarouselItem[][] = []
-    if (items.length) {
-      out.push(items.slice(0, 4))
-      for (let i = 4; i < items.length; i += 5) out.push(items.slice(i, i + 5))
-    }
-    if (!out.length) out.push([])
-    return out
-  }, [items])
-
-  const total = slides.length
 
   // Reset to the first page whenever the filter repaginates the carousel —
   // adjusted during render (not in an effect) per React's guidance.
@@ -503,7 +269,6 @@ export default function HomeClient({
     setPageFilter(filter)
     setPage(0)
   }
-  const cur = Math.min(page, total - 1)
 
   // Nav background on scroll + gentle reveal for the lower editorial sections.
   useEffect(() => {
@@ -611,27 +376,10 @@ export default function HomeClient({
     }
   }, [])
 
-  const go = (d: number) => setPage((p) => Math.min(total - 1, Math.max(0, p + d)))
   const archiveLabel = `All ${stories.length} →`
 
-  // Touch-swipe paging for the mobile carousel — only acts on a clearly
-  // horizontal flick so it never hijacks the page's vertical scroll.
-  const touchStart = useRef<{ x: number; y: number } | null>(null)
-  const onTouchStart = (e: ReactTouchEvent) => {
-    const t = e.touches[0]
-    touchStart.current = { x: t.clientX, y: t.clientY }
-  }
-  const onTouchEnd = (e: ReactTouchEvent) => {
-    if (!touchStart.current) return
-    const t = e.changedTouches[0]
-    const dx = t.clientX - touchStart.current.x
-    const dy = t.clientY - touchStart.current.y
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) go(dx < 0 ? 1 : -1)
-    touchStart.current = null
-  }
-
   return (
-    <div className="vz">
+    <div className="vz vzg">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       <link
@@ -639,10 +387,9 @@ export default function HomeClient({
         rel="stylesheet"
       />
       {/* per-card theme typefaces (each story/epic renders in its own fonts) */}
-      {fontUrls.map((u) => (
-        <link key={u} href={u} rel="stylesheet" />
-      ))}
+      <StoryGridFonts fontUrls={fontUrls} />
       <style dangerouslySetInnerHTML={{ __html: css }} />
+      <StoryGridStyles />
 
       <nav className="vznav" id="vznav">
         <button
@@ -693,42 +440,15 @@ export default function HomeClient({
           </aside>
 
           <div className="idx-feed">
-            <div className="carousel">
-              <div className="carousel-vp" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-                <div
-                  className="carousel-track"
-                  style={{ width: `${total * 100}%`, transform: `translateX(-${cur * (100 / total)}%)` }}
-                >
-                  {slides.map((sl, si) => (
-                    <div className="carousel-slide" key={si} style={{ width: `${100 / total}%` }}>
-                      <div className={'bento-slide' + (sl.length === 4 ? ' four' : '')}>
-                        {sl.map((it, idx) => (
-                          <StoryCard key={it.data.slug} item={it} big={sl.length === 4 ? idx === 0 : idx < 2} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="carousel-ctrl">
-                <div className="carousel-dots">
-                  {slides.map((_, si) => (
-                    <button
-                      key={si}
-                      className={'cdot' + (si === cur ? ' on' : '')}
-                      onClick={() => setPage(si)}
-                      aria-label={`Page ${si + 1}`}
-                    />
-                  ))}
-                </div>
-                <div className="carousel-nav">
-                  <Link className="carousel-all" href="/stories">{archiveLabel}</Link>
-                  <button className="carr" onClick={() => go(-1)} disabled={cur === 0} aria-label="Previous">‹</button>
-                  <span className="carousel-count">{String(cur + 1).padStart(2, '0')} <i>/</i> {String(total).padStart(2, '0')}</span>
-                  <button className="carr" onClick={() => go(1)} disabled={cur === total - 1} aria-label="Next">›</button>
-                </div>
-              </div>
-            </div>
+            <StoryBentoGrid
+              items={items}
+              hrefBase="/story/"
+              linkComponent={Link}
+              page={page}
+              onPageChange={setPage}
+              archiveHref="/stories"
+              archiveLabel={archiveLabel}
+            />
 
             {/* Mobile-only feed header — the studio statement, then the swipeable
                 topic chips, sitting directly below the (shorter) bento carousel.

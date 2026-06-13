@@ -1,9 +1,9 @@
-import StoriesListClient from '@/components/section/StoriesListClient'
+import StoriesManager from '@/components/section/StoriesManager'
 
-// Vizmaya's Stories tab is scoped to the vizmaya-fyi app, like every other app
-// section: the list filters to vizmaya-fyi, uploads are tagged to it, and moving
-// a story to another app drops it from this list. Unassigned drafts and other
-// apps' stories live on the home dashboard and their own app sections.
+// Vizmaya's Stories tab is scoped to the vizmaya-fyi app. The manager splits it
+// into Home (a drag-orderable replica of the live bento grid), Drafts, and
+// Archive. Uploads are tagged to vizmaya-fyi and moving a story to another app
+// drops it from this list.
 export default function AdminHome() {
-  return <StoriesListClient appSlug="vizmaya-fyi" basePath="/vizmaya" />
+  return <StoriesManager appSlug="vizmaya-fyi" basePath="/vizmaya" />
 }
