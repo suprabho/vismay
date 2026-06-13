@@ -2,9 +2,10 @@
 
 /* Tailwind v4 only auto-scans the app's own source tree. Viz modules from the
    vertical packages live outside that tree and use arbitrary classes
-   (grid-cols-[…], text-[10px], min-w-[72px], …) the JIT needs to see. */
-@source "../../../verticals/footshorts-viz/src/**/*.{ts,tsx}";
-@source "../../../verticals/f1-viz/src/**/*.{ts,tsx}";
+   (grid-cols-[…], text-[10px], min-w-[72px], …) the JIT needs to see. The
+   per-vertical @source list is generated from the registry (`pnpm gen:sources`);
+   see globals.generated.css. */
+@import "./globals.generated.css";
 
 @theme {
   --color-bg: #0b0d12;

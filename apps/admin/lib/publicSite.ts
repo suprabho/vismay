@@ -7,6 +7,13 @@
  * client-side) and falls back to the canonical production hostname. Local dev
  * against a Next port works by setting the env in `.env.local`.
  */
+// Import the pure `/data` subpath (NOT the `@vismay/verticals` barrel) on
+// purpose: publicSite is imported by the admin node middleware, and the barrel
+// re-exports `registerAllVerticals`, which pulls in the viz-engine barrel
+// (deck.gl / mapbox / echarts). `/data` is route metadata + lazy import thunks
+// only, so this stays lean.
+import { VERTICALS } from '@vismay/verticals/data'
+
 function normalize(url: string): string {
   return url.replace(/\/$/, '')
 }
@@ -99,22 +106,33 @@ interface AppPublicRoutes {
   epicPath: ((slug: string) => string) | null
 }
 
+// Base brand. vizmaya.fyi is NOT a vertical (it's the headless render surface
+// itself), so its routing lives here rather than in the registry: stories at
+// /story/<slug>, epics own a top-level slug.
 const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
   'vizmaya-fyi': {
     baseUrl: vizmayaPublicUrl,
     storyPath: (slug) => `/story/${slug}`,
     epicPath: (slug) => `/${slug}`,
   },
-  vizf1: {
-    baseUrl: vizf1PublicUrl,
-    storyPath: (slug) => `/editorial/${slug}`,
-    epicPath: null,
-  },
-  footshorts: {
-    baseUrl: footshortsPublicUrl,
-    storyPath: (slug) => `/editorial/${slug}`,
-    epicPath: (slug) => `/editorial/epic/${slug}`,
-  },
+}
+
+// Per-vertical consumer routing comes from the registry (the single source of
+// truth — see packages/viz-engine/src/verticalRegistry.ts). Only the path
+// *shapes* live there; the base URL stays an app-routing concern resolved here
+// (env-overridable hostname), keyed by the consumer app slug.
+const VERTICAL_APP_BASE_URLS: Record<string, string> = {
+  footshorts: footshortsPublicUrl,
+  vizf1: vizf1PublicUrl,
+}
+for (const v of VERTICALS) {
+  const routes = v.publicRoutes
+  if (!routes) continue
+  APP_PUBLIC_ROUTES[routes.appSlug] = {
+    baseUrl: VERTICAL_APP_BASE_URLS[routes.appSlug] ?? vizmayaPublicUrl,
+    storyPath: routes.storyPath ?? null,
+    epicPath: routes.epicPath ?? null,
+  }
 }
 
 /** Public URL for a story in the given consumer app, or null if the app

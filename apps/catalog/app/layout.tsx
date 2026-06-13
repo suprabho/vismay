@@ -1,17 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { loadVertical, registerVerticalLoader } from '@vismay/viz-engine'
+import { loadVertical } from '@vismay/viz-engine'
+import { registerAllVerticals, VERTICALS } from '@vismay/verticals'
 
-registerVerticalLoader('f1', () => import('@vismay/f1-viz').then((m) => m.register()))
-registerVerticalLoader('footshorts', () =>
-  import('@vismay/footshorts-viz').then((m) => m.register()),
-)
-registerVerticalLoader('starship', () =>
-  import('@vismay/starship-viz').then((m) => m.register()),
-)
-registerVerticalLoader('kidzovo', () =>
-  import('@vismay/kidzovo-viz').then((m) => m.register()),
-)
+// Every vertical from the shared registry — see verticalRegistry.ts.
+registerAllVerticals()
 
 export const metadata: Metadata = {
   title: 'Vismay catalog',
@@ -23,12 +16,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  await Promise.all([
-    loadVertical('f1'),
-    loadVertical('footshorts'),
-    loadVertical('starship'),
-    loadVertical('kidzovo'),
-  ])
+  await Promise.all(VERTICALS.map((v) => loadVertical(v.slug)))
   return (
     <html lang="en" className="dark">
       <body className="bg-bg text-text antialiased min-h-screen">{children}</body>

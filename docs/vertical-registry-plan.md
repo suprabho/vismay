@@ -1,5 +1,7 @@
 # Vertical registry — implementation plan (option A)
 
+**Status: IMPLEMENTED** (all phases). The registry landed as a **dedicated `packages/verticals` (`@vismay/verticals`)** — the "(or a new packages/verticals)" option below — *not* inside `viz-engine`. Reason discovered during build: each `@vismay/<x>-viz` depends on `viz-engine`, so putting the `loadBundle` thunks in the engine forms a build-graph cycle and the packages aren't even resolvable from inside it under pnpm. The new package sits above the viz packages (`verticals → <x>-viz → viz-engine`, a DAG). Verified: `admin` + `vizmaya-fyi` + `catalog` typecheck clean, `catalog` + `admin` (incl. middleware) build clean, `pnpm gen:sources --check` clean. The catalog scope was wider than first written — see §2.
+
 **Goal:** kill the registration-drift bug class ([vertical-registration-drift.md](vertical-registration-drift.md)) by giving every vertical-aware site one source of truth, with **no behavior change**.
 **Scope:** mechanical consolidation. *Not* the engine extraction (that's option C in [roadmap-june-2026.md](roadmap-june-2026.md)).
 **Effort:** ~4–7h.

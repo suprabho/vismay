@@ -1,23 +1,17 @@
 'use client'
 
-import {
-  VerticalLoader as EngineVerticalLoader,
-  registerVerticalLoader,
-} from '@vismay/viz-engine'
+import { VerticalLoader as EngineVerticalLoader } from '@vismay/viz-engine'
+import { registerAllVerticals } from '@vismay/verticals'
 
-// Same vertical bundle registrations as vizmaya-fyi/components/VerticalLoader.
-// Module-level side effects — pulling this file in is what guarantees
-// loadVertical sees the loaders by the time a footshorts/f1 story tries to
-// resolve a vertical-specific viz type from the registry.
-registerVerticalLoader('footshorts', () =>
-  import('@vismay/footshorts-viz').then((m) => m.register())
-)
-registerVerticalLoader('f1', () =>
-  import('@vismay/f1-viz').then((m) => m.register())
-)
-registerVerticalLoader('kidzovo', () =>
-  import('@vismay/kidzovo-viz').then((m) => m.register())
-)
+// Same shared registry as vizmaya-fyi/components/VerticalLoader. Module-level
+// side effect — pulling this file in is what guarantees loadVertical sees the
+// loaders by the time a vertical story tries to resolve a vertical-specific
+// viz type from the registry.
+//
+// Source of truth: packages/viz-engine/src/verticalRegistry.ts. Using the
+// shared helper is what fixed the `starship` drift (it was previously missing
+// from this list); a new vertical is now registered everywhere from one edit.
+registerAllVerticals()
 
 export default function VerticalLoader(
   props: React.ComponentProps<typeof EngineVerticalLoader>

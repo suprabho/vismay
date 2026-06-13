@@ -1,19 +1,21 @@
 @import "tailwindcss";
 
+/* vizmaya-fyi is the shared *headless render surface* for every vertical's
+   story (autoplay / share / slides / report / canvas-frame iframes the admin
+   canvas mounts). Those verticals' viz modules use package-only arbitrary
+   classes (e.g. f1 driver-standings' grid-cols-[28px_1fr_60px_40px_40px]) that
+   Tailwind v4 won't see unless we scan their source — otherwise the class is
+   purged and the grid collapses to one column. The per-vertical @source list
+   is generated from the registry (`pnpm gen:sources`); see globals.generated.css.
+   Kept adjacent to the tailwindcss import so the @import precedes the @source
+   below it (CSS requires @import before other rules). */
+@import "./globals.generated.css";
+
 /* The story reader shell + blocks were extracted into @vismay/story-reader.
    Tailwind v4 auto-detects sources under the app tree but not reliably across
    workspace packages, so scan the reader's source explicitly — otherwise its
    utility classes (e.g. the snap container, logo chrome) silently drop. */
 @source "../../../packages/story-reader/src";
-
-/* vizmaya-fyi is the shared *headless render surface* for every vertical's
-   story (autoplay / share / slides / report / canvas-frame iframes the admin
-   canvas mounts). Those verticals' viz modules use package-only arbitrary
-   classes (e.g. f1 driver-standings' grid-cols-[28px_1fr_60px_40px_40px]) that
-   Tailwind v4 won't see unless we scan their source here — otherwise the class
-   is purged and the grid collapses to one column. Mirror admin/catalog. */
-@source "../../../verticals/footshorts-viz/src/**/*.{ts,tsx}";
-@source "../../../verticals/f1-viz/src/**/*.{ts,tsx}";
 
 @theme inline {
   --color-background: var(--color-bg, #0a0e14);
