@@ -12,7 +12,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "mcp:dev": "tsx scripts/mcp-dev.mts",
-    "mcp:catalog": "PORT=3100 pnpm --filter @vismay/catalog dev"
+    "mcp:catalog": "PORT=3100 pnpm --filter @vismay/catalog dev",
+    "gen:sources": "tsx scripts/gen-tailwind-sources.mts"
   },
   "devDependencies": {
     "tsx": "^4.22.3",

@@ -25,28 +25,21 @@
 // the fact that `@vismay/footshorts-viz` / `@vismay/f1-viz` are server-safe
 // at first import but resolve client modules in their tree, which would
 // blow up if pulled into the client bundle anyway.
-import {
-  loadVertical,
-  listModulesForSlot,
-  registerVerticalLoader,
-} from '@vismay/viz-engine'
+import { loadVertical, listModulesForSlot } from '@vismay/viz-engine'
+import { registerAllVerticals } from '@vismay/verticals'
 
 // Module-evaluation-time side effect: wire up the same loaders the client
-// uses, so server-side code paths can call loadVertical('footshorts') etc.
-// `registerVerticalLoader` is idempotent — calling it a second time just
-// replaces the loader entry, no error.
+// uses (from the shared registry), so server-side code paths can call
+// loadVertical('footshorts') etc. `registerAllVerticals` is idempotent —
+// re-registering a vertical just replaces its loader entry, no error.
+//
+// Source of truth: packages/viz-engine/src/verticalRegistry.ts. This used to
+// be a hand-copied list that drifted from the client loaders (the `starship`
+// gap); it now picks up every vertical from one edit.
 let registered = false
 function ensureLoadersRegistered(): void {
   if (registered) return
-  registerVerticalLoader('footshorts', () =>
-    import('@vismay/footshorts-viz').then((m) => m.register())
-  )
-  registerVerticalLoader('f1', () =>
-    import('@vismay/f1-viz').then((m) => m.register())
-  )
-  registerVerticalLoader('kidzovo', () =>
-    import('@vismay/kidzovo-viz').then((m) => m.register())
-  )
+  registerAllVerticals()
   registered = true
 }
 

@@ -53,12 +53,18 @@ importers:
       '@vismay/kidzovo-viz':
         specifier: workspace:*
         version: link:../../verticals/kidzovo-viz
+      '@vismay/starship-viz':
+        specifier: workspace:*
+        version: link:../../verticals/starship-viz
       '@vismay/story-pipeline':
         specifier: workspace:*
         version: link:../../packages/story-pipeline
       '@vismay/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@vismay/verticals':
+        specifier: workspace:*
+        version: link:../../packages/verticals
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -153,6 +159,9 @@ importers:
       '@vismay/starship-viz':
         specifier: workspace:*
         version: link:../../verticals/starship-viz
+      '@vismay/verticals':
+        specifier: workspace:*
+        version: link:../../packages/verticals
       '@vismay/viz-admin':
         specifier: workspace:*
         version: link:../../packages/viz-admin
@@ -712,6 +721,9 @@ importers:
       '@vismay/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@vismay/verticals':
+        specifier: workspace:*
+        version: link:../../packages/verticals
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -1121,6 +1133,28 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/verticals:
+    dependencies:
+      '@vismay/f1-viz':
+        specifier: workspace:*
+        version: link:../../verticals/f1-viz
+      '@vismay/footshorts-viz':
+        specifier: workspace:*
+        version: link:../../verticals/footshorts-viz
+      '@vismay/kidzovo-viz':
+        specifier: workspace:*
+        version: link:../../verticals/kidzovo-viz
+      '@vismay/starship-viz':
+        specifier: workspace:*
+        version: link:../../verticals/starship-viz
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../viz-engine
+    devDependencies:
       typescript:
         specifier: ^5
         version: 5.9.3

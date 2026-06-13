@@ -15,6 +15,7 @@
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/starship-viz": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",
+    "@vismay/verticals": "workspace:*",
     "@vismay/viz-admin": "workspace:*",
     "next": "16.2.2",
     "react": "19.2.4",

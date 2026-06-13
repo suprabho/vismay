@@ -16,24 +16,15 @@ import {
   allRegisteredTypes,
   getVizModule,
   loadVertical,
-  registerVerticalLoader,
 } from '@vismay/viz-engine'
+import { registerAllVerticals, VERTICALS } from '@vismay/verticals'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
 export const dynamic = 'force-dynamic'
 
-// Route handlers don't run the root layout, so boot verticals here too. All
-// calls are idempotent.
-registerVerticalLoader('f1', () => import('@vismay/f1-viz').then((m) => m.register()))
-registerVerticalLoader('footshorts', () =>
-  import('@vismay/footshorts-viz').then((m) => m.register()),
-)
-registerVerticalLoader('starship', () =>
-  import('@vismay/starship-viz').then((m) => m.register()),
-)
-registerVerticalLoader('kidzovo', () => import('@vismay/kidzovo-viz').then((m) => m.register()))
-
-const VERTICALS = ['f1', 'footshorts', 'starship', 'kidzovo'] as const
+// Route handlers don't run the root layout, so boot verticals here too (from
+// the shared registry — see verticalRegistry.ts). All calls are idempotent.
+registerAllVerticals()
 
 function deriveVertical(type: string): string {
   if (type.startsWith('f1:')) return 'f1'
@@ -79,7 +70,7 @@ function serialize(type: string) {
 }
 
 export async function GET() {
-  await Promise.all(VERTICALS.map((slug) => loadVertical(slug)))
+  await Promise.all(VERTICALS.map((v) => loadVertical(v.slug)))
   const modules = allRegisteredTypes()
     .map(serialize)
     .filter((m): m is NonNullable<typeof m> => m !== null)

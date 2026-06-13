@@ -4,29 +4,18 @@ import { lazy, Suspense, use, useMemo, type ComponentType } from 'react'
 import {
   getVizModule,
   loadVertical,
-  registerVerticalLoader,
   type VizRenderProps,
   type VizPersistentRenderProps,
 } from '@vismay/viz-engine'
+import { registerAllVerticals, VERTICALS } from '@vismay/verticals'
 import ErrorBoundary from './ErrorBoundary'
 
-// Client-side vertical boot. Idempotent — loadVertical caches the load
-// promise per slug, and registerVerticalLoader just overwrites the entry
-// (the loader function is the same closure each module-eval).
-registerVerticalLoader('f1', () =>
-  import('@vismay/f1-viz').then((m) => m.register()),
-)
-registerVerticalLoader('footshorts', () =>
-  import('@vismay/footshorts-viz').then((m) => m.register()),
-)
-registerVerticalLoader('kidzovo', () =>
-  import('@vismay/kidzovo-viz').then((m) => m.register()),
-)
-const verticalsReady = Promise.all([
-  loadVertical('f1'),
-  loadVertical('footshorts'),
-  loadVertical('kidzovo'),
-])
+// Client-side vertical boot from the shared registry (see verticalRegistry.ts).
+// Idempotent — loadVertical caches the load promise per slug, and
+// registerAllVerticals just overwrites the (identical) loader closures.
+// Using the registry fixes the prior drift here (starship was missing).
+registerAllVerticals()
+const verticalsReady = Promise.all(VERTICALS.map((v) => loadVertical(v.slug)))
 
 interface Props {
   type: string

@@ -4,30 +4,19 @@ import { lazy, Suspense, use, useMemo, type ComponentType } from 'react'
 import {
   getVizModule,
   loadVertical,
-  registerVerticalLoader,
   useStoryReadiness,
   type VizRenderProps,
   type VizPersistentRenderProps,
 } from '@vismay/viz-engine'
+import { registerAllVerticals, VERTICALS } from '@vismay/verticals'
 import ErrorBoundary from './ErrorBoundary'
 
-// Client-side vertical boot (same idempotent pattern as VizModulePreview). The
-// server layout also boots these, but the registry is per-bundle so the client
-// needs its own registration. Includes all four verticals.
-registerVerticalLoader('f1', () => import('@vismay/f1-viz').then((m) => m.register()))
-registerVerticalLoader('footshorts', () =>
-  import('@vismay/footshorts-viz').then((m) => m.register()),
-)
-registerVerticalLoader('starship', () =>
-  import('@vismay/starship-viz').then((m) => m.register()),
-)
-registerVerticalLoader('kidzovo', () => import('@vismay/kidzovo-viz').then((m) => m.register()))
-const verticalsReady = Promise.all([
-  loadVertical('f1'),
-  loadVertical('footshorts'),
-  loadVertical('starship'),
-  loadVertical('kidzovo'),
-])
+// Client-side vertical boot from the shared registry (same idempotent pattern
+// as VizModulePreview; see verticalRegistry.ts). The server layout also boots
+// these, but the registry is per-bundle so the client needs its own
+// registration. Covers every vertical from one source.
+registerAllVerticals()
+const verticalsReady = Promise.all(VERTICALS.map((v) => loadVertical(v.slug)))
 
 interface Props {
   type: string
