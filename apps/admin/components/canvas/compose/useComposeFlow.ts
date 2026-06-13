@@ -209,6 +209,21 @@ export function useComposeFlow({
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
   }
+  // AI dataset research — runs a tool-using agent over the same datasets and
+  // attaches a synthesised brief as a new source. Returns a result/message so
+  // the modal can report "added" vs "nothing found".
+  async function addEnrich(focus: string): Promise<{ ok: boolean; message?: string }> {
+    const data = await call<{ ok?: boolean; source?: StorySource; message?: string }>('enrich', 'enrich', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(focus ? { focus } : {}),
+    })
+    if (data?.source) {
+      setSources((s) => [...s, data.source!])
+      return { ok: true }
+    }
+    return { ok: false, message: data?.message ?? 'No dataset material found.' }
+  }
   // Dynamic dataset search — the large corpora (IEA/Epstein/Coke Studio) are
   // queried on demand rather than listed. Returns matching provider groups.
   async function searchDatasets(query: string): Promise<LibraryGroup[]> {
@@ -484,6 +499,7 @@ export function useComposeFlow({
     addFromProvider,
     loadLibrary,
     searchDatasets,
+    addEnrich,
     removeSource,
     reextract,
     genAngles,

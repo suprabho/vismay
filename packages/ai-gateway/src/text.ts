@@ -1,7 +1,9 @@
 import {
   generateText as aiGenerateText,
   generateObject as aiGenerateObject,
+  stepCountIs,
   type ModelMessage,
+  type ToolSet,
 } from 'ai'
 import type { z } from 'zod'
 import { getGatewayClient } from './client'
@@ -30,6 +32,14 @@ export interface GenerateTextOptions<S extends z.ZodType | undefined = undefined
   schema?: S
   temperature?: number
   maxOutputTokens?: number
+  /**
+   * Agentic tools the model may call (text mode only — not compatible with
+   * `schema`). Define with the re-exported `tool()` helper. When set, the call
+   * runs a multi-step loop (model → tool → model …) up to `maxSteps`.
+   */
+  tools?: ToolSet
+  /** Max agentic steps when `tools` is set (default 1 = single tool round). */
+  maxSteps?: number
   /** Forwarded to the gateway as headers — useful for tagging spend by feature. */
   metadata?: Record<string, string>
 }
@@ -111,6 +121,7 @@ export async function generateText<S extends z.ZodType | undefined = undefined>(
       temperature: opts.temperature,
       maxOutputTokens: opts.maxOutputTokens,
       headers: opts.metadata,
+      ...(opts.tools ? { tools: opts.tools, stopWhen: stepCountIs(opts.maxSteps ?? 1) } : {}),
     }),
   )
   return {

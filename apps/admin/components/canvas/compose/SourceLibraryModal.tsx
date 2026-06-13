@@ -71,6 +71,7 @@ export function SourceLibraryModal({
   onAddAsset,
   onAddFromProvider,
   onSearchDatasets,
+  onEnrich,
 }: {
   onClose: () => void
   loadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
@@ -78,6 +79,7 @@ export function SourceLibraryModal({
   onAddAsset: (key: string) => Promise<boolean>
   onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
   onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
+  onEnrich: (focus: string) => Promise<{ ok: boolean; message?: string }>
 }) {
   const [loading, setLoading] = useState(true)
   const [sources, setSources] = useState<LibrarySource[]>([])
@@ -87,6 +89,10 @@ export function SourceLibraryModal({
   // Dataset search runs server-side, debounced on the query.
   const [datasetGroups, setDatasetGroups] = useState<LibraryGroup[]>([])
   const [searching, setSearching] = useState(false)
+  // AI dataset research (tool-using agent → a synthesised source).
+  const [enrichFocus, setEnrichFocus] = useState('')
+  const [enriching, setEnriching] = useState(false)
+  const [enrichNote, setEnrichNote] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null)
   // Per-item attach state, keyed by source id / asset key.
   const [adding, setAdding] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
@@ -179,6 +185,19 @@ export function SourceLibraryModal({
       return next
     })
     if (ok) setAdded((s) => new Set(s).add(key))
+  }
+
+  async function runEnrich() {
+    if (enriching) return
+    setEnriching(true)
+    setEnrichNote(null)
+    const r = await onEnrich(enrichFocus.trim())
+    setEnriching(false)
+    setEnrichNote(
+      r.ok
+        ? { tone: 'ok', text: 'Added a dataset-research source — see the Sources list.' }
+        : { tone: 'warn', text: r.message ?? 'No dataset material found.' },
+    )
   }
 
   function AddButton({ k, run }: { k: string; run: () => Promise<boolean> }) {
@@ -360,6 +379,32 @@ export function SourceLibraryModal({
                 ))}
               </ul>
             </section>
+          )}
+        </div>
+
+        {/* AI dataset research — the second consumer of the query layer. */}
+        <div className="space-y-1.5 border-t border-white/10 px-4 py-3">
+          <div className="flex items-center gap-1.5">
+            <input
+              value={enrichFocus}
+              onChange={(e) => setEnrichFocus(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !enriching && runEnrich()}
+              placeholder="Focus for AI dataset research (optional)…"
+              className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-violet-400/50"
+            />
+            <button
+              onClick={runEnrich}
+              disabled={enriching}
+              className="shrink-0 rounded-md bg-violet-500 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-400 disabled:opacity-40"
+              title="Let an AI agent search the datasets and attach a synthesised research brief"
+            >
+              {enriching ? 'Researching…' : '✨ AI research'}
+            </button>
+          </div>
+          {enrichNote && (
+            <p className={`text-[11px] ${enrichNote.tone === 'ok' ? 'text-emerald-300' : 'text-amber-300'}`}>
+              {enrichNote.text}
+            </p>
           )}
         </div>
       </div>
