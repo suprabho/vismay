@@ -33,6 +33,8 @@
     "./storyConfig": "./src/storyConfig.ts",
     "./storySection": "./src/storySection.ts",
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
+    "./footshortsData": "./src/footshortsData.ts",
+    "./footshortsBlocks": "./src/footshortsBlocks.ts",
     "./storyDemoConfig": "./src/storyDemoConfig.ts",
     "./storyPdf": "./src/storyPdf.ts",
     "./storyPdfDispatch": "./src/storyPdfDispatch.ts",

@@ -86,6 +86,7 @@ import {
   type SlotPath,
 } from './canvasSlotEditing'
 import { appendStorySection } from '@vismay/content-source/storySection'
+import { FootballDataModal, type FootballSection } from './FootballDataModal'
 import AssistantLauncher from '@/components/AssistantLauncher'
 import {
   registerAssistantContextProvider,
@@ -687,6 +688,18 @@ export default function CanvasClient({
     kind: string
     body: Record<string, unknown>
   } | null>(null)
+  // 🏟️ "Add football data" picker — footshorts-only (gated on the fs: modules
+  // being in this vertical's registry). Pulls real standings/match/bracket data
+  // from the DB and appends it as a section, no hand-authoring.
+  const isFootshorts = useMemo(
+    () =>
+      moduleTypes.foreground.includes('fs:standings-table') ||
+      moduleTypes.foreground.includes('fs:match-card') ||
+      moduleTypes.foreground.includes('fs:bracket'),
+    [moduleTypes],
+  )
+  const [footballOpen, setFootballOpen] = useState(false)
+  const [footballBusy, setFootballBusy] = useState(false)
   // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
   const [evalOpen, setEvalOpen] = useState(false)
   // ✨ Research & outline (compose) drawer. The panel stays mounted while this
@@ -3360,34 +3373,46 @@ export default function CanvasClient({
     [genBrief, genBusy, slug, format]
   )
 
-  // Apply the approved preview: append to the story (markdown + config via
-  // appendStorySection), save both, bump the nonce, and jump to the new section.
+  // Append one section to the live story (markdown + config), save both, bump
+  // the nonce, and jump to it. Shared by the AI section preview and the football
+  // data picker. Config surgery is format-aware: a JSON-native story (footshorts/
+  // f1) must use the JSON serializer — YAML surgery on a JSON config corrupts it.
+  const applySection = useCallback(
+    async (section: { heading: string; paragraphs: string[]; kind: string; body: Record<string, unknown> }) => {
+      const cfg = configYamlRef.current ?? ''
+      let format: 'yaml' | 'json' = 'yaml'
+      if (cfg.trim().startsWith('{')) {
+        try {
+          JSON.parse(cfg)
+          format = 'json'
+        } catch {
+          format = 'yaml'
+        }
+      }
+      const next = appendStorySection(markdownRef.current ?? '', cfg, section, format)
+      // The appended section lands at the end → its index is the old count.
+      const newIndex = sectionViewsRef.current.length
+      await saveMarkdown(slug, next.markdown)
+      await saveConfigYaml(slug, next.configYaml)
+      setSources((prev) => ({ ...prev, markdown: next.markdown, configYaml: next.configYaml }))
+      setDataNonce((n) => n + 1)
+      setActiveSectionIndex(newIndex)
+    },
+    [slug],
+  )
+
+  // Apply the approved preview: append it and reset the generate-section panel.
   const handleApplySection = useCallback(async () => {
     if (!genResult || genBusy) return
     setGenBusy(true)
     setGenError(null)
     try {
-      const next = appendStorySection(
-        markdownRef.current ?? '',
-        configYamlRef.current ?? '',
-        {
-          heading: genResult.heading,
-          paragraphs: genResult.paragraphs,
-          kind: genResult.kind,
-          body: genResult.body,
-        }
-      )
-      // The appended section lands at the end → its index is the old count.
-      const newIndex = sectionViewsRef.current.length
-      await saveMarkdown(slug, next.markdown)
-      await saveConfigYaml(slug, next.configYaml)
-      setSources((prev) => ({
-        ...prev,
-        markdown: next.markdown,
-        configYaml: next.configYaml,
-      }))
-      setDataNonce((n) => n + 1)
-      setActiveSectionIndex(newIndex)
+      await applySection({
+        heading: genResult.heading,
+        paragraphs: genResult.paragraphs,
+        kind: genResult.kind,
+        body: genResult.body,
+      })
       setGenSectionOpen(false)
       setGenBrief('')
       setGenResult(null)
@@ -3398,7 +3423,24 @@ export default function CanvasClient({
     } finally {
       setGenBusy(false)
     }
-  }, [genResult, genBusy, slug])
+  }, [genResult, genBusy, applySection])
+
+  // Append a real-data section picked from the football data modal.
+  const handleApplyFootballSection = useCallback(
+    async (section: FootballSection) => {
+      setFootballBusy(true)
+      try {
+        await applySection(section)
+        setFootballOpen(false)
+      } catch (e) {
+        // Surface through the same banner the generate-section flow uses.
+        setGenError(e instanceof Error ? e.message : 'Could not add football data.')
+      } finally {
+        setFootballBusy(false)
+      }
+    },
+    [applySection],
+  )
 
   /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
   // After a successful slot save we:
@@ -4015,6 +4057,31 @@ export default function CanvasClient({
         >
           + ✨ Section
         </button>
+        {isFootshorts && (
+          <button
+            onClick={() => {
+              setGenError(null)
+              setGenSectionOpen(false)
+              setEvalOpen(false)
+              setFootballOpen(true)
+            }}
+            title="Add a real standings table, match card, or bracket from footshorts data"
+            style={{
+              pointerEvents: 'auto',
+              marginLeft: 12,
+              background: 'transparent',
+              color: '#5fd38a',
+              border: '1px solid #2a8f55',
+              borderRadius: 5,
+              padding: '3px 9px',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            + 🏟️ Football data
+          </button>
+        )}
         {sectionUnits.length > 0 && (
           <button
             onClick={() => {
@@ -4069,6 +4136,13 @@ export default function CanvasClient({
           open={composeOpen}
           onClose={() => setComposeOpen(false)}
           frameSrcById={signedSrcById}
+        />
+      )}
+      {footballOpen && (
+        <FootballDataModal
+          onApply={handleApplyFootballSection}
+          onClose={() => setFootballOpen(false)}
+          busy={footballBusy}
         />
       )}
       {evalOpen && sectionUnits[activeSectionIndex] && (
