@@ -1,7 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, LinkSimple, TextAa, MagnifyingGlass, BookOpen, Stack } from '@phosphor-icons/react'
+import {
+  FileText,
+  LinkSimple,
+  TextAa,
+  MagnifyingGlass,
+  BookOpen,
+  Stack,
+  Newspaper,
+} from '@phosphor-icons/react'
 import type { SourceListItem as LibrarySource } from '@vismay/content-source/storySources'
 import { Chip, btnGhostCls, btnPrimaryCls } from './ui'
 
@@ -34,7 +42,12 @@ export interface LibraryGroup {
 }
 
 /** Per-provider group icon; falls back to a generic stack. */
-const GROUP_ICON: Record<string, typeof FileText> = { story: BookOpen, epic: Stack }
+const GROUP_ICON: Record<string, typeof FileText> = {
+  story: BookOpen,
+  epic: Stack,
+  'footshorts-news': Newspaper,
+  'vizf1-news': Newspaper,
+}
 
 const KIND_ICON = { file: FileText, link: LinkSimple, text: TextAa } as const
 

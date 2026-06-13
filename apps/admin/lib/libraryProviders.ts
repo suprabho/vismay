@@ -131,7 +131,67 @@ const epicsProvider: LibraryProvider = {
   },
 }
 
-const PROVIDERS: LibraryProvider[] = [storiesProvider, epicsProvider]
+/**
+ * Vertical news tables (`articles`, `vizf1_articles`) share a shape — RSS items
+ * with a short model-written `summary`. One factory serves both; each is
+ * app-scoped so footshorts/f1 news only appears when composing for that app.
+ * Only `summarized` rows (those with usable text) are offered.
+ */
+function newsProvider(opts: { key: string; label: string; table: string; app: string }): LibraryProvider {
+  return {
+    key: opts.key,
+    label: opts.label,
+    apps: [opts.app],
+    async list() {
+      const sb = createServiceClient()
+      const { data, error } = await sb
+        .from(opts.table)
+        .select('id, headline, publisher, summary, published_at')
+        .eq('status', 'summarized')
+        .order('published_at', { ascending: false })
+        .limit(200)
+      if (error) throw new Error(error.message)
+      const rows = (data ?? []) as Array<{
+        id: string
+        headline: string | null
+        publisher: string | null
+        summary: string | null
+      }>
+      return rows
+        .filter((r) => (r.summary ?? '').trim().length > 0)
+        .map((r) => ({ id: r.id, title: r.headline ?? 'Untitled', subtitle: r.publisher ?? undefined }))
+    },
+    async extract(id) {
+      const sb = createServiceClient()
+      const { data } = await sb
+        .from(opts.table)
+        .select('headline, publisher, summary, original_snippet, url')
+        .eq('id', id)
+        .maybeSingle()
+      const row = data as {
+        headline: string | null
+        publisher: string | null
+        summary: string | null
+        original_snippet: string | null
+        url: string | null
+      } | null
+      if (!row) return null
+      const text = [row.headline, row.summary ?? row.original_snippet, row.url ? `Source: ${row.url}` : null]
+        .filter(Boolean)
+        .join('\n\n')
+        .trim()
+      if (!text) return null
+      return { title: row.headline ?? 'Untitled', byline: row.publisher ?? undefined, text }
+    },
+  }
+}
+
+const PROVIDERS: LibraryProvider[] = [
+  storiesProvider,
+  epicsProvider,
+  newsProvider({ key: 'footshorts-news', label: 'Football news', table: 'articles', app: 'footshorts' }),
+  newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
+]
 
 const byKey = new Map(PROVIDERS.map((p) => [p.key, p]))
 
