@@ -6,6 +6,7 @@ import { isAuthed } from '@/lib/adminAuth'
 import { authedOrAction } from '@/lib/authedOrAction'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { loadStoryConfig } from '@vismay/content-source/storyConfig'
+import { parseJsonConfig, stringifyJsonConfig } from '@vismay/content-source/jsonSections'
 import { getApp } from '@vismay/content-source/apps'
 
 const SAFE_SLUG = /^[a-zA-Z0-9_-]+$/
@@ -98,7 +99,28 @@ export async function PUT(
   const src = getContentSource()
   try {
     if (typeof body.markdown === 'string') await src.writeMarkdown(slug, body.markdown)
-    if (body.config_yaml !== undefined) await src.writeConfigYaml(slug, body.config_yaml)
+    if (body.config_yaml !== undefined) {
+      // The canvas always sends `config_yaml` (its YAML surgery serializes
+      // there), but a JSON-native story (footshorts/f1) keeps its config in
+      // the `config.json` artifact — which `readConfig` reads in preference to
+      // the YAML one. Writing YAML here would land in an artifact nothing
+      // reads, so the edit would silently vanish on the next load. Persist to
+      // whichever artifact the story actually uses, converting YAML→JSON when
+      // needed (JSON ⊂ YAML, so the parse round-trips). A null payload means
+      // "delete the config" and is honoured per-format by writeConfig.
+      const fmt = await src.getConfigFormat(slug)
+      if (fmt === 'json' && body.config_yaml != null) {
+        // Re-serialise through the canonical JSON serialiser so a canvas
+        // write is byte-consistent with a generated config (2-space indent,
+        // trailing newline, normalised key order). parseYaml handles the
+        // canvas's YAML payload; JSON ⊂ YAML so an already-JSON body parses too.
+        const obj = parseYaml(body.config_yaml) as Record<string, unknown>
+        const json = stringifyJsonConfig(parseJsonConfig(JSON.stringify(obj ?? {})))
+        await src.writeConfig(slug, json, 'json')
+      } else {
+        await src.writeConfig(slug, body.config_yaml, fmt)
+      }
+    }
     if (body.share_yaml !== undefined) await src.writeShareYaml(slug, body.share_yaml)
     if (
       body.status !== undefined ||
