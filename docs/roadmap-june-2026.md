@@ -37,6 +37,19 @@ Early-week progress shifts the plan:
 
 ---
 
+## Update — Jun 13, 2026
+
+A standings-grid rendering bug surfaced a structural debt: **`vizmaya-fyi` is doing double duty** — it's the vizmaya.fyi consumer brand *and* the universal headless render surface every vertical iframes into (consumer `/editorial/<slug>` routes are facades; the admin canvas signs all preview iframes against `vizmayaPublicUrl`). The per-vertical wiring that makes that work is hand-copied across ≥4 uncoordinated sites and silently drifts — confirmed by an f1/footshorts Tailwind `@source` gap (collapsed the standings grid, fixed in PR #219) and a `starship` loader missing from both admin sites. Full writeup: [vertical-registration-drift.md](vertical-registration-drift.md).
+
+Splits into two responses:
+
+- **A — vertical registry (debt paydown, cheap).** One declarative source of truth every site consumes; `@source` lists generated from it. Retires the drift bug *class* with no behavior change (~4–7h). Plan: [vertical-registry-plan.md](vertical-registry-plan.md). Fits opportunistically in W3/W4 buffer; **not** on the convergence critical path.
+- **⑧ / C — extract the render engine (north star, NOT June).** Pull the vertical-agnostic render surface (StoryShell, autoplay/capture, PDF/video/audio dispatch) into its own app/package so `vizmaya.fyi` becomes just *one* consumer of it — resolving the dual-identity coupling that makes "vizf1 depends on *vizmaya*" feel wrong. Overlaps the engine reframe in [generalized-content-engine.md](generalized-content-engine.md) and the render-surface migration docs ([render-templates.md](render-templates.md), [fly-compute-migration.md](fly-compute-migration.md), [gcp-render-migration.md](gcp-render-migration.md)). **Parked → July+**; do it once the dual identity actually constrains (e.g. vizmaya.fyi wants engine-divergent behavior, or a 5th+ vertical lands). Avoid the tempting-but-wrong inverse — rendering each vertical natively in its own app duplicates the whole capture pipeline N times.
+
+**Capacity:** neither competes with the W4 ⑤→④ convergence payoff. A is buffer-funded debt paydown; ⑧ is explicitly post-June.
+
+---
+
 ## Three findings that reframe the plan
 
 - **① "Auth to viz-admin" actually targets `apps/admin`.** `packages/viz-admin` is a *component library* with no auth boundary — the real auth lives in `apps/admin/lib/adminAuth.ts` (HMAC cookie). `@supabase/supabase-js` is already wired in `packages/content-source` and vizmaya-fyi, so the gap is a users table (migration 055) + a session-store swap, not a from-scratch integration.
