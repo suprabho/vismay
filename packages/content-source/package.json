@@ -24,6 +24,7 @@
     "./socialPostPlans": "./src/socialPostPlans.ts",
     "./socialPostText": "./src/socialPostText.ts",
     "./storyAudioDispatch": "./src/storyAudioDispatch.ts",
+    "./storyAudioGenerate": "./src/storyAudioGenerate.ts",
     "./storyConfig": "./src/storyConfig.ts",
     "./storySection": "./src/storySection.ts",
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",

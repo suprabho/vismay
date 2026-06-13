@@ -90,11 +90,14 @@ export function findTtsOverride(
  * string that would be sent to Gemini if no override is set.
  *
  * Hero: dek + byline (no heading — the title half is silent / display-only).
- * Stat: paragraphs joined verbatim.
+ * Stat: the big number (paragraphs) followed by its caption (`subheading`,
+ *   which `resolveUnits` extracts from the `*italic*` paragraph) — both spoken,
+ *   since the number is meaningless to a listener without the caption framing it.
  * Other: heading (if present) + paragraphs with markdown bold/italic stripped.
  */
 export function defaultNarrationText(unit: {
   heading?: string
+  subheading?: string
   paragraphs: string[]
   parentConfig: { kind?: string }
   heroPart?: 'title' | 'dek'
@@ -127,7 +130,16 @@ export function defaultNarrationText(unit: {
     if (dek) parts.push(dek)
     if (byline) parts.push(byline)
   } else if (kind === 'stat') {
-    parts.push(unit.paragraphs.join(' '))
+    const body = unit.paragraphs.join(' ').trim()
+    if (body) parts.push(body)
+    // `subheading` is the caption resolveUnits pulled out of the *italic*
+    // paragraph; strip any residual inline emphasis so Gemini doesn't read
+    // asterisks aloud.
+    const caption = unit.subheading
+      ?.replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .trim()
+    if (caption) parts.push(caption)
   } else {
     const cleaned = unit.paragraphs.map((p) =>
       p.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1')

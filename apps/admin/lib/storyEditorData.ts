@@ -166,6 +166,7 @@ export async function loadStoryEditorData(slug: string): Promise<StoryEditorData
           label: `${kindLabel} · ${headlineSnippet.slice(0, 80)}`,
           defaultScript: defaultNarrationText({
             heading: u.heading,
+            subheading: u.subheading,
             paragraphs: u.paragraphs,
             parentConfig: { kind: u.parentConfig.kind },
             heroPart: u.heroPart,
