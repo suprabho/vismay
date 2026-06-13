@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { FixtureRow } from '../types';
 import { Crest } from '../data/Crest';
@@ -60,19 +61,35 @@ const MONTH_SHORT = [
   'Dec',
 ];
 
-function kickoffLabel(iso: string, status: FixtureRow['status']): string {
+// Renders the kickoff time in the viewer's *local* timezone once `local` is
+// true, falling back to UTC otherwise. We keep fixed month names (rather than
+// toLocaleDateString, which produced "26 May" vs "May 26" server/client splits)
+// so only the numeric values shift between zones. The server — and the very
+// first client render — pass local=false so the markup matches and hydration
+// stays clean; the component flips to local=true right after mount (see
+// useHasMounted) to show the user's wall-clock time.
+function kickoffLabel(iso: string, status: FixtureRow['status'], local: boolean): string {
   const d = new Date(iso);
+  const month = local ? d.getMonth() : d.getUTCMonth();
+  const date = local ? d.getDate() : d.getUTCDate();
   if (status === 'finished') {
-    // Locale-independent — toLocaleDateString(undefined, ...) produced
-    // server/client mismatches ("26 May" vs "May 26") that broke hydration.
-    return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}`;
+    return `${MONTH_SHORT[month]} ${date}`;
   }
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCDate()} ${hh}:${mm}`;
+  const hh = String(local ? d.getHours() : d.getUTCHours()).padStart(2, '0');
+  const mm = String(local ? d.getMinutes() : d.getUTCMinutes()).padStart(2, '0');
+  return `${MONTH_SHORT[month]} ${date} ${hh}:${mm}`;
+}
+
+// False on the server and during the first client render, then true. Lets the
+// kickoff time hydrate as UTC (matching the server HTML) before swapping to the
+// device's local timezone, avoiding a hydration mismatch.
+function useHasMounted(): boolean {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
 }
 
 function TeamCell({
@@ -131,6 +148,7 @@ function TeamCell({
 
 export function MatchRow({ fixture, variant = 'compact' }: Props) {
   const sizes = SIZES[variant];
+  const local = useHasMounted();
   const homeName = fixture.home?.name ?? fixture.home_team_name ?? 'TBD';
   const awayName = fixture.away?.name ?? fixture.away_team_name ?? 'TBD';
   const isFinished = fixture.status === 'finished';
@@ -151,7 +169,7 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
       <div className={`flex ${sizes.scoreColMin} flex-col items-center`}>
         <span className={isFinished ? sizes.scoreTextFinished : sizes.scoreText}>{scoreText}</span>
         <span className={`mt-0.5 ${sizes.dateText} text-text/50`}>
-          {kickoffLabel(fixture.kickoff_at, fixture.status)}
+          {kickoffLabel(fixture.kickoff_at, fixture.status, local)}
         </span>
       </div>
       <TeamCell
