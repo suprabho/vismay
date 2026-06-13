@@ -36,13 +36,6 @@ const AdminIcon = (
   </svg>
 );
 
-const RecapIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
-    <path d="M7 4h10a2 2 0 0 1 2 2v14l-3-2-2 2-2-2-2 2-3-2V6a2 2 0 0 1 2-2z" strokeLinejoin="round" />
-    <path d="M9 9h6M9 13h6" strokeLinecap="round" />
-  </svg>
-);
-
 const NAV: NavItem[] = [
   {
     href: '/feed',
@@ -66,13 +59,7 @@ const NAV: NavItem[] = [
     href: '/admin',
     label: 'Pipeline',
     icon: AdminIcon,
-    match: (p) => p === '/admin',
-  },
-  {
-    href: '/admin/recap',
-    label: 'Recaps',
-    icon: RecapIcon,
-    match: (p) => p.startsWith('/admin/recap'),
+    match: (p) => p.startsWith('/admin'),
   },
 ];
 
