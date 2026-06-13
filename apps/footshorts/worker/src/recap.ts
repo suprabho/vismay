@@ -117,6 +117,7 @@ type Article = {
   summary: string | null;
   publisher: string;
   url: string;
+  image_url: string | null;
   published_at: string;
   is_cluster_lead: boolean;
 };
@@ -212,7 +213,7 @@ async function loadDayArticles(date: string): Promise<Article[]> {
   const { lo, hi } = dayWindow(date);
   const { data, error } = await supabase
     .from('articles')
-    .select('id, headline, summary, publisher, url, published_at, is_cluster_lead')
+    .select('id, headline, summary, publisher, url, image_url, published_at, is_cluster_lead')
     .eq('status', 'summarized')
     .gte('published_at', lo)
     .lt('published_at', hi)
@@ -407,10 +408,15 @@ function statsLine(s: { home?: FixtureStat; away?: FixtureStat }): string | null
   return parts.length ? parts.join(' · ') + ' _(home/away)_' : null;
 }
 
+/** Leading thumbnail token (markdown image) for an article, or '' if it has no image. */
+function articleThumb(a: Article): string {
+  return a.image_url ? `![](${a.image_url}) ` : '';
+}
+
 function articleBullet(a: Article): string {
   const lead = a.is_cluster_lead ? '★ ' : '';
   const summary = a.summary ? ` — ${a.summary}` : '';
-  return `  - ${lead}[${a.headline}](${a.url}) · _${a.publisher}_${summary}`;
+  return `  - ${articleThumb(a)}${lead}[${a.headline}](${a.url}) · _${a.publisher}_${summary}`;
 }
 
 function assembleMarkdown(
@@ -488,7 +494,7 @@ function assembleMarkdown(
     for (const a of unmatched) {
       const lead = a.is_cluster_lead ? '★ ' : '';
       const summary = a.summary ? ` — ${a.summary}` : '';
-      out.push(`- ${lead}[${a.headline}](${a.url}) · _${a.publisher}_${summary}`);
+      out.push(`- ${articleThumb(a)}${lead}[${a.headline}](${a.url}) · _${a.publisher}_${summary}`);
     }
     out.push('');
   }
