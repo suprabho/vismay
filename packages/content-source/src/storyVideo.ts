@@ -117,33 +117,74 @@ export interface CachedVideo {
 export async function getFullVideo(
   supabase: SupabaseClient,
   slug: string,
-  aspect: VideoAspect
+  aspect: VideoAspect,
+  narration = true
 ): Promise<CachedVideo | null> {
   const { chunks } = await loadChunksAndCues(supabase, slug)
   if (chunks.length === 0) return null
   const { totalMs } = computeTimeline(chunks)
-  return getCachedVideo(supabase, slug, aspect, { startMs: 0, endMs: totalMs })
+  return getCachedVideo(supabase, slug, aspect, { startMs: 0, endMs: totalMs }, narration)
 }
 
 export async function getCachedVideo(
   supabase: SupabaseClient,
   slug: string,
   aspect: VideoAspect,
-  range: VideoRange
+  range: VideoRange,
+  narration = true
 ): Promise<CachedVideo | null> {
-  const { data, error } = await supabase
-    .from('story_videos')
-    .select('public_url, audio_revision_hash, duration_ms, dispatched_at')
-    .eq('slug', slug)
-    .eq('aspect', aspect)
-    .eq('range_start_ms', range.startMs)
-    .eq('range_end_ms', range.endMs)
-    .maybeSingle()
+  const base = () =>
+    supabase
+      .from('story_videos')
+      .select('public_url, audio_revision_hash, duration_ms, dispatched_at')
+      .eq('slug', slug)
+      .eq('aspect', aspect)
+      .eq('range_start_ms', range.startMs)
+      .eq('range_end_ms', range.endMs)
+
+  let { data, error } = await base().eq('narration', narration).maybeSingle()
+
+  // Pre-060: no `narration` column. Narrated rows are the only ones that ever
+  // existed, so the narrated lookup falls back to the unfiltered query while a
+  // silent lookup must report a miss (matching a narrated row would serve the
+  // wrong MP4).
+  if (error?.message?.includes('narration')) {
+    if (!narration) return null
+    ;({ data, error } = await base().maybeSingle())
+  }
+
   if (error) {
     console.error(`[storyVideo] cache lookup failed: ${error.message}`)
     return null
   }
   return (data as CachedVideo | null) ?? null
+}
+
+/**
+ * Upsert a `story_videos` row, tolerating pre-060 deployments where the
+ * `narration` column (and the widened unique key) don't yet exist. Post-060
+ * the conflict target includes `narration` so a silent and a narrated render
+ * of the same window are distinct rows; pre-060 it strips `narration` and
+ * falls back to the legacy `(slug, aspect, range_start_ms, range_end_ms)` key.
+ */
+export async function upsertStoryVideoRow(
+  supabase: SupabaseClient,
+  row: Record<string, unknown> & { narration?: boolean }
+): Promise<{ error: { message: string } | null }> {
+  const res = await supabase
+    .from('story_videos')
+    .upsert(row, {
+      onConflict: 'slug,aspect,range_start_ms,range_end_ms,narration',
+    })
+  if (res.error?.message?.includes('narration')) {
+    const { narration: _omit, ...legacy } = row
+    return supabase
+      .from('story_videos')
+      .upsert(legacy, {
+        onConflict: 'slug,aspect,range_start_ms,range_end_ms',
+      })
+  }
+  return res
 }
 
 /**
@@ -227,18 +268,22 @@ export function classifyVideoState(
 /**
  * Storage path for a render. Full renders use the legacy `<slug>/<aspect>.mp4`
  * shape so existing public URLs stay readable; sub-range renders get a
- * `__<startMs>-<endMs>` suffix.
+ * `__<startMs>-<endMs>` suffix. Silent (no-narration) renders get a `.silent`
+ * suffix so they never overwrite the narrated object — a silent full render and
+ * a narrated full render otherwise resolve to the same `<slug>/<aspect>.mp4`.
  */
 export function videoStoragePath(
   slug: string,
   aspect: VideoAspect,
   range: VideoRange,
-  totalMs: number
+  totalMs: number,
+  narration = true
 ): string {
   const aspectKey = aspect === '9:16' ? '9x16' : '16x9'
+  const silent = narration ? '' : '.silent'
   const isFull = range.startMs === 0 && range.endMs === totalMs
-  if (isFull) return `${slug}/${aspectKey}.mp4`
-  return `${slug}/${aspectKey}__${range.startMs}-${range.endMs}.mp4`
+  if (isFull) return `${slug}/${aspectKey}${silent}.mp4`
+  return `${slug}/${aspectKey}__${range.startMs}-${range.endMs}${silent}.mp4`
 }
 
 /**
@@ -255,22 +300,28 @@ export async function markDispatched(
     audioRevisionHash: string
     range: VideoRange
     totalMs: number
+    narration?: boolean
   }
 ): Promise<void> {
-  const storagePath = videoStoragePath(args.slug, args.aspect, args.range, args.totalMs)
-  const { error } = await supabase.from('story_videos').upsert(
-    {
-      slug: args.slug,
-      aspect: args.aspect,
-      range_start_ms: args.range.startMs,
-      range_end_ms: args.range.endMs,
-      storage_path: storagePath,
-      public_url: '',
-      audio_revision_hash: args.audioRevisionHash,
-      duration_ms: null,
-      dispatched_at: new Date().toISOString(),
-    },
-    { onConflict: 'slug,aspect,range_start_ms,range_end_ms' }
+  const narration = args.narration !== false
+  const storagePath = videoStoragePath(
+    args.slug,
+    args.aspect,
+    args.range,
+    args.totalMs,
+    narration
   )
+  const { error } = await upsertStoryVideoRow(supabase, {
+    slug: args.slug,
+    aspect: args.aspect,
+    range_start_ms: args.range.startMs,
+    range_end_ms: args.range.endMs,
+    narration,
+    storage_path: storagePath,
+    public_url: '',
+    audio_revision_hash: args.audioRevisionHash,
+    duration_ms: null,
+    dispatched_at: new Date().toISOString(),
+  })
   if (error) throw new Error(`mark dispatched: ${error.message}`)
 }

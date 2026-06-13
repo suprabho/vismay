@@ -25,10 +25,12 @@ import {
   computeTimeline,
   getCachedVideo,
   loadChunksAndCues,
+  upsertStoryVideoRow,
   videoStoragePath,
   type VideoAspect,
   type VideoRange,
 } from '@vismay/content-source/storyVideo'
+import { buildSilentTimeline } from '@vismay/content-source/silentTimeline'
 
 interface CueRow {
   unit_index: number
@@ -474,30 +476,23 @@ async function walkAndRecord(args: {
 
 async function muxToMp4(
   videoPath: string,
-  audioPath: string,
+  audioPath: string | null,
   outPath: string,
   outputSize: { width: number; height: number }
 ): Promise<void> {
   // libx264 needs even dimensions; lanczos for sharp text on upscale; yuv420p
   // for max compatibility with social platforms / QuickTime.
   const vfFilter = `scale=${outputSize.width}:${outputSize.height}:flags=lanczos,format=yuv420p`
-  await runFfmpeg(
-    [
-      '-y',
-      '-i', videoPath,
-      '-i', audioPath,
-      '-c:v', 'libx264',
-      '-preset', 'medium',
-      '-crf', '20',
-      '-vf', vfFilter,
-      '-c:a', 'aac',
-      '-b:a', '160k',
-      '-shortest',
-      '-movflags', '+faststart',
-      outPath,
-    ],
-    'mux'
-  )
+  const args = ['-y', '-i', videoPath]
+  // Silent renders (audioPath === null) carry no audio input: `-an` drops any
+  // stream and we skip `-shortest` (no second stream to bound against — the
+  // trimmed WebM already runs exactly the target duration).
+  if (audioPath) args.push('-i', audioPath)
+  args.push('-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-vf', vfFilter)
+  if (audioPath) args.push('-c:a', 'aac', '-b:a', '160k', '-shortest')
+  else args.push('-an')
+  args.push('-movflags', '+faststart', outPath)
+  await runFfmpeg(args, 'mux')
 }
 
 /* ─── Upload ────────────────────────────────────────────────────────── */
@@ -510,9 +505,16 @@ async function uploadAndRecord(args: {
   totalAudioMs: number
   audioRevisionHash: string
   durationMs: number
+  narration: boolean
   mp4Buffer: Buffer
 }): Promise<string> {
-  const storagePath = videoStoragePath(args.slug, args.aspect, args.range, args.totalAudioMs)
+  const storagePath = videoStoragePath(
+    args.slug,
+    args.aspect,
+    args.range,
+    args.totalAudioMs,
+    args.narration
+  )
 
   const { error: uploadErr } = await args.supabase.storage
     .from(VIDEO_BUCKET)
@@ -525,23 +527,21 @@ async function uploadAndRecord(args: {
   const { data } = args.supabase.storage.from(VIDEO_BUCKET).getPublicUrl(storagePath)
   const publicUrl = data.publicUrl
 
-  const { error: dbErr } = await args.supabase.from('story_videos').upsert(
-    {
-      slug: args.slug,
-      aspect: args.aspect,
-      range_start_ms: args.range.startMs,
-      range_end_ms: args.range.endMs,
-      storage_path: storagePath,
-      public_url: publicUrl,
-      audio_revision_hash: args.audioRevisionHash,
-      duration_ms: args.durationMs,
-      // Clear the in-flight stub timestamp set by markDispatched(). The
-      // classifyVideoState() check would prefer `public_url` regardless,
-      // but nulling this keeps the row's state unambiguous in DB readers.
-      dispatched_at: null,
-    },
-    { onConflict: 'slug,aspect,range_start_ms,range_end_ms' }
-  )
+  const { error: dbErr } = await upsertStoryVideoRow(args.supabase, {
+    slug: args.slug,
+    aspect: args.aspect,
+    range_start_ms: args.range.startMs,
+    range_end_ms: args.range.endMs,
+    narration: args.narration,
+    storage_path: storagePath,
+    public_url: publicUrl,
+    audio_revision_hash: args.audioRevisionHash,
+    duration_ms: args.durationMs,
+    // Clear the in-flight stub timestamp set by markDispatched(). The
+    // classifyVideoState() check would prefer `public_url` regardless,
+    // but nulling this keeps the row's state unambiguous in DB readers.
+    dispatched_at: null,
+  })
   if (dbErr) throw new Error(`db upsert: ${dbErr.message}`)
 
   return publicUrl
@@ -567,24 +567,57 @@ export async function renderStoryVideo(args: {
    * loading the chunks.
    */
   range?: VideoRange
+  /**
+   * When `false`, render a silent video with no narration: pacing comes from
+   * the per-unit dwell times in `<slug>.timing.yaml` (a synthesized timeline)
+   * instead of the TTS audio cues, and the MP4 carries no audio track.
+   * Defaults to `true` (the narrated pipeline).
+   */
+  narration?: boolean
   log?: (msg: string) => void
 }): Promise<RenderResult> {
   const log = args.log ?? (() => {})
+  const narration = args.narration !== false
 
-  const { chunks, cues } = await loadChunksAndCues(args.supabase, args.slug)
-  if (chunks.length === 0 || cues.length === 0) {
-    throw new Error(
-      `no audio chunks/cues for ${args.slug} — generate audio first via npx tsx scripts/generate-audio.ts`
-    )
-  }
+  // Two timeline sources share the same `{ chunks, cues, totalMs, hash }`
+  // shape downstream: narrated reads the TTS audio tables, silent synthesizes
+  // a timeline from per-unit dwell config. `chunks` only feeds the walk's
+  // pacing (durations) for the silent path — its `public_url` is unused.
+  const { chunks, cues, totalAudioMs, audioRevisionHash } = narration
+    ? await (async () => {
+        const loaded = await loadChunksAndCues(args.supabase, args.slug)
+        if (loaded.chunks.length === 0 || loaded.cues.length === 0) {
+          throw new Error(
+            `no audio chunks/cues for ${args.slug} — generate audio first via npx tsx scripts/generate-audio.ts`
+          )
+        }
+        return {
+          chunks: loaded.chunks,
+          cues: loaded.cues,
+          totalAudioMs: computeTimeline(loaded.chunks).totalMs,
+          audioRevisionHash: computeAudioRevisionHash(loaded.chunks, loaded.cues),
+        }
+      })()
+    : await (async () => {
+        const silent = await buildSilentTimeline(args.slug)
+        if (silent.totalMs === 0) {
+          throw new Error(
+            `no mobile units for ${args.slug} — nothing to render a silent video from`
+          )
+        }
+        return {
+          chunks: silent.chunks,
+          cues: silent.cues,
+          totalAudioMs: silent.totalMs,
+          audioRevisionHash: silent.revisionHash,
+        }
+      })()
 
-  const audioRevisionHash = computeAudioRevisionHash(chunks, cues)
-  const { totalMs: totalAudioMs } = computeTimeline(chunks)
   const range: VideoRange = args.range ?? { startMs: 0, endMs: totalAudioMs }
   const isSubRange = !(range.startMs === 0 && range.endMs === totalAudioMs)
 
   if (!args.force) {
-    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect, range)
+    const existing = await getCachedVideo(args.supabase, args.slug, args.aspect, range, narration)
     if (existing && existing.audio_revision_hash === audioRevisionHash) {
       log(`cached (hash match) → ${existing.public_url}`)
       return {
@@ -601,8 +634,16 @@ export async function renderStoryVideo(args: {
   log(`workdir: ${workDir}`)
 
   try {
-    log(`downloading + concatenating ${chunks.length} audio chunk(s)`)
-    const combinedAudioPath = await buildCombinedAudio(chunks, workDir)
+    // Silent renders skip audio entirely — no chunks to download, no track to
+    // mux. `combinedAudioPath` stays null and threads through to a video-only
+    // mux below.
+    let combinedAudioPath: string | null = null
+    if (narration) {
+      log(`downloading + concatenating ${chunks.length} audio chunk(s)`)
+      combinedAudioPath = await buildCombinedAudio(chunks, workDir)
+    } else {
+      log(`silent render — pacing from timing config (no audio)`)
+    }
 
     const cfg = RENDER_CONFIG[args.aspect]
     const rangeLabel = isSubRange
@@ -625,8 +666,9 @@ export async function renderStoryVideo(args: {
     // window before mux so the MP4's audio is the synced TTS for exactly
     // [startMs, endMs]. `-shortest` would chop one stream or the other to
     // match anyway, but an explicit crop avoids surprise silence padding.
+    // Silent renders have no audio to crop — muxAudioPath stays null.
     let muxAudioPath = combinedAudioPath
-    if (isSubRange) {
+    if (isSubRange && combinedAudioPath) {
       muxAudioPath = path.join(workDir, 'audio-range.wav')
       await runFfmpeg(
         [
@@ -641,7 +683,9 @@ export async function renderStoryVideo(args: {
       )
     }
 
-    log(`muxing video + audio (${(durationMs / 1000).toFixed(1)}s)`)
+    log(
+      `muxing ${narration ? 'video + audio' : 'video (silent)'} (${(durationMs / 1000).toFixed(1)}s)`
+    )
     const outPath = path.join(workDir, 'out.mp4')
     await muxToMp4(videoPath, muxAudioPath, outPath, cfg.output)
 
@@ -655,6 +699,7 @@ export async function renderStoryVideo(args: {
       totalAudioMs,
       audioRevisionHash,
       durationMs,
+      narration,
       mp4Buffer,
     })
 

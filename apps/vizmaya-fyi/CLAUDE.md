@@ -40,6 +40,15 @@ Readers: `lib/content.ts`, `lib/storyConfig.ts`. Rendering: SSG via `generateSta
 
 Vercel default runtime can't host the sync path — Playwright needs a real Chromium and ffmpeg has to be on PATH, neither of which the serverless runtime provides. The dispatch path works around this without standing up a dedicated worker. If volume grows to where Actions minutes are a concern, the `renderStoryVideo` function is the seam for moving to Fly.io / Railway / a Node service — only the dispatch wiring would change.
 
+### Silent (no-narration) video
+
+A narrated render paces the headless walk off the TTS audio cues (`cue.end_ms - cue.start_ms`). Pass `narration=false` to render a **silent** video instead — no audio track, and the per-unit dwell time comes from a config file rather than audio:
+
+- **Surfaces:** `?narration=0` on the API route · `--no-narration` on `scripts/generate-video.ts` · `narration: false` on the `render_story_video` MCP tool · the `narration` input on `render-video.yml`. All default to narrated.
+- **Pacing config:** `content/stories/<slug>.timing.yaml` (also `stories.timing_yaml` after migration 060). `defaultMs` sets the fallback dwell; per-unit `ms` overrides key on the same `(parentIndex, subIndex, sliceIndex)` identity as `<slug>.tts.yaml`. Parser: [packages/content-source/src/storyTiming.ts](../../packages/content-source/src/storyTiming.ts). With no file, every unit holds `DEFAULT_UNIT_MS` (5s). Unlike narration, **every** mobile unit gets a cue (methodology included).
+- **Coexistence:** silent and narrated renders are distinct rows (`story_videos.narration`, migration 060 widens the unique key) and distinct objects (`<slug>/<aspect>.silent.mp4`), so a story can have both. The silent timeline is synthesized in-memory ([silentTimeline.ts](../../packages/content-source/src/silentTimeline.ts)) — nothing is written to the audio tables.
+- **Deploy requirement:** apply migration `060_silent_video.sql` (adds `stories.timing_yaml` + `story_videos.narration`). Reads degrade gracefully if the code ships first.
+
 ## Story PDF render (report + slides)
 
 `/api/story-pdf/[slug]?format=report|slides` produces a downloadable PDF. Same dispatch-or-sync split as the video pipeline; cheaper because the render needs only Chromium (no ffmpeg, no audio).

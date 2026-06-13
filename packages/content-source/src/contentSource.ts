@@ -59,6 +59,8 @@ export interface ContentSource {
   readShareYaml(slug: string): Promise<string | null>
   readReportYaml(slug: string): Promise<string | null>
   readTtsYaml(slug: string): Promise<string | null>
+  /** Per-unit dwell times for silent (no-narration) video — see storyTiming. */
+  readTimingYaml(slug: string): Promise<string | null>
   readMapYaml(slug: string): Promise<string | null>
   readChart(slug: string, chartId: string): Promise<unknown | null>
 
@@ -217,6 +219,9 @@ const fsSource: ContentSource = {
   async readTtsYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.tts.yaml`))
   },
+  async readTimingYaml(slug) {
+    return fsReadIfExists(path.join(STORIES_DIR, `${slug}.timing.yaml`))
+  },
   async readMapYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.map.yaml`))
   },
@@ -321,7 +326,7 @@ const fsSource: ContentSource = {
   async deleteStory(slug) {
     // Remove every per-story file + the charts directory. Best-effort per
     // path — a missing sidecar (e.g. no .map.yaml) isn't an error.
-    for (const suffix of ['.md', '.config.yaml', '.config.json', '.share.yaml', '.report.yaml', '.tts.yaml', '.map.yaml']) {
+    for (const suffix of ['.md', '.config.yaml', '.config.json', '.share.yaml', '.report.yaml', '.tts.yaml', '.timing.yaml', '.map.yaml']) {
       const p = path.join(STORIES_DIR, `${slug}${suffix}`)
       if (fs.existsSync(p)) fs.unlinkSync(p)
     }
@@ -466,6 +471,19 @@ const dbSource: ContentSource = {
     if (error?.message?.includes('tts_yaml')) return null
     if (error) throw new Error(`readTtsYaml ${slug}: ${error.message}`)
     return (data as { tts_yaml?: string | null } | null)?.tts_yaml ?? null
+  },
+  async readTimingYaml(slug) {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('stories')
+      .select('timing_yaml')
+      .eq('slug', slug)
+      .maybeSingle()
+    // Pre-060 deployments don't have the timing_yaml column; treat as null
+    // rather than failing — the silent path falls through to default dwell.
+    if (error?.message?.includes('timing_yaml')) return null
+    if (error) throw new Error(`readTimingYaml ${slug}: ${error.message}`)
+    return (data as { timing_yaml?: string | null } | null)?.timing_yaml ?? null
   },
   async readMapYaml(slug) {
     const sb = createServiceClient()

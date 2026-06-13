@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: ''
+      narration:
+        description: 'false = silent render (no audio; paced by <slug>.timing.yaml).'
+        required: false
+        type: string
+        default: 'true'
 
 jobs:
   render:
@@ -101,4 +106,5 @@ jobs:
             "${{ inputs.aspect }}" \
             --force \
             ${{ inputs.start_ms != '' && format('--start-ms {0}', inputs.start_ms) || '' }} \
-            ${{ inputs.end_ms != '' && format('--end-ms {0}', inputs.end_ms) || '' }}
+            ${{ inputs.end_ms != '' && format('--end-ms {0}', inputs.end_ms) || '' }} \
+            ${{ inputs.narration == 'false' && '--no-narration' || '' }}

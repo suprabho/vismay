@@ -14,6 +14,7 @@
  *   npx tsx scripts/generate-video.ts <slug> 16:9
  *   npx tsx scripts/generate-video.ts <slug> 9:16 --force                       # ignore cache
  *   npx tsx scripts/generate-video.ts <slug> 9:16 --start-ms 5000 --end-ms 18000 # sub-range render
+ *   npx tsx scripts/generate-video.ts <slug> 9:16 --no-narration                # silent (paced by <slug>.timing.yaml)
  *   PORT=3001 npx tsx scripts/generate-video.ts <slug> 9:16                     # custom dev port
  */
 
@@ -60,6 +61,8 @@ function readFlagValue(args: string[], flag: string): string | undefined {
 async function main() {
   const args = process.argv.slice(2)
   const force = args.includes('--force')
+  // `--no-narration` → silent render: no audio, paced by <slug>.timing.yaml.
+  const narration = !args.includes('--no-narration')
   // Legacy: `--preview` is a shorthand for `--end-ms 20000`.
   const preview = args.includes('--preview')
   const startMsArg = readFlagValue(args, '--start-ms')
@@ -80,7 +83,7 @@ async function main() {
   }
 
   if (positional.length < 2) {
-    console.error('Usage: npx tsx scripts/generate-video.ts <slug> <9:16|16:9> [--force] [--preview] [--start-ms N] [--end-ms N]')
+    console.error('Usage: npx tsx scripts/generate-video.ts <slug> <9:16|16:9> [--force] [--preview] [--no-narration] [--start-ms N] [--end-ms N]')
     process.exit(1)
   }
   const [slug, aspectArg] = positional
@@ -111,8 +114,9 @@ async function main() {
   const baseUrl =
     process.env.BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
 
-  const label = range ? ` · range ${range.startMs}–${range.endMs}ms` : ''
-  console.log(`\n━━━ ${slug} · ${aspect}${label} ━━━`)
+  const rangeLabel = range ? ` · range ${range.startMs}–${range.endMs}ms` : ''
+  const narrationLabel = narration ? '' : ' · silent'
+  console.log(`\n━━━ ${slug} · ${aspect}${rangeLabel}${narrationLabel} ━━━`)
   console.log(`  baseUrl: ${baseUrl}`)
 
   const result = await renderStoryVideo({
@@ -122,6 +126,7 @@ async function main() {
     baseUrl,
     force,
     range,
+    narration,
     log: (msg) => console.log(`  ${msg}`),
   })
 
