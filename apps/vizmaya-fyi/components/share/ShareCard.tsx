@@ -218,6 +218,10 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
     shareSubOverride?.hero?.heading ?? shareOverride?.hero?.heading ?? heading
   const heroDek =
     shareSubOverride?.hero?.dek ?? shareOverride?.hero?.dek ?? extractHeroBits(paragraphs).dek
+  // CSS object-position override for the cover/hero image's crop on this card.
+  // Undefined falls through to the image layer's own `focus`, then center.
+  const heroImageOffset =
+    shareSubOverride?.hero?.imageOffset ?? shareOverride?.hero?.imageOffset
   // Map-title overlay's dek can be overridden independently; falls back to
   // `hero.dek` so a single `hero.dek` setting still controls both surfaces.
   const mapTitleDek =
@@ -536,6 +540,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                 heroEyebrow={parentConfig.eyebrow}
                 heroHeading={heroHeading}
                 heroDek={heroDek}
+                heroImageOffset={heroImageOffset}
                 chartHeading={chartHeading}
                 chartSubheading={chartSubheading}
                 layerScope={graphScope}
