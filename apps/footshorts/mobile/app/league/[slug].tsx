@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useEntity } from '@/lib/useEntity';
 import { useStandings, groupStandings } from '@/lib/useStandings';
 import { useLeagueFixtures } from '@/lib/useFixtures';
@@ -13,42 +13,62 @@ import {
   buildBracket,
   isBracketDrawn,
   groupFixturesByRound,
-  isLeagueCompetition,
 } from '@vismay/footshorts-viz/native';
 
 // Mirror web's max-w-2xl readable column so the league hub sits in a
 // centered 640px frame on tablets/landscape and bleeds-to-edge on phones.
 const MAX_CONTENT_WIDTH = 640;
 
+type Tab = 'recent' | 'standings' | 'schedule' | 'glory';
+
+const TAB_LABEL: Record<Tab, string> = {
+  recent: 'Recent',
+  standings: 'Standings',
+  schedule: 'Schedule',
+  glory: 'Road to Glory',
+};
+
 export default function LeagueScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [tab, setTab] = useState<Tab>('recent');
 
   const league = useEntity('league', slug);
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
-  // Bracket only applies to cups/tournaments — skip the wide fetch for plain
-  // leagues (which never have knockout fixtures) by disabling the query there.
-  const isLeague = isLeagueCompetition(slug);
-  const bracketFixtures = useLeagueFixtures(isLeague ? undefined : slug, 'all', 200);
+  // Full schedule for every competition — feeds both the Schedule tab and the
+  // bracket. A complete domestic season is ~380 fixtures, so cap well above that.
+  const scheduleFixtures = useLeagueFixtures(slug, 'all', 500);
 
   const standingGroups = useMemo(
     () => (standings.data ? groupStandings(standings.data) : []),
     [standings.data],
   );
   const bracket = useMemo(
-    () => buildBracket(bracketFixtures.data ?? []),
-    [bracketFixtures.data],
+    () => buildBracket(scheduleFixtures.data ?? []),
+    [scheduleFixtures.data],
   );
-  // The bracket only reads as a tree once the draw is set; until then show the
-  // full schedule grouped by round so users can see who plays who and when.
   const bracketDrawn = isBracketDrawn(bracket);
   const scheduleRounds = useMemo(
-    () => groupFixturesByRound(bracketFixtures.data ?? []),
-    [bracketFixtures.data],
+    () => groupFixturesByRound(scheduleFixtures.data ?? []),
+    [scheduleFixtures.data],
   );
+
+  // Tabs surface only when their data exists. A competition with both a league
+  // phase and knockouts (World Cup, new-format UCL) shows Standings AND Road to
+  // Glory together. Recent is always available and is the default.
+  const availableTabs = useMemo<Tab[]>(
+    () => [
+      'recent',
+      ...(standingGroups.length > 0 ? (['standings'] as const) : []),
+      ...(scheduleRounds.length > 0 ? (['schedule'] as const) : []),
+      ...(bracket ? (['glory'] as const) : []),
+    ],
+    [standingGroups.length, scheduleRounds.length, bracket],
+  );
+  const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
 
   if (league.isLoading) {
     return (
@@ -96,68 +116,55 @@ export default function LeagueScreen() {
           </View>
         </View>
 
-        <Section title="Standings">
-          {standings.isLoading ? (
-            <ActivityIndicator color="#00D26A" />
-          ) : standingGroups.length > 0 ? (
-            <View style={{ gap: 20 }}>
-              {standingGroups.map((group) => (
-                <View key={group.label || 'overall'}>
-                  {group.label ? (
-                    <Text
-                      className="text-muted text-[11px] font-bold uppercase mb-2"
-                      style={{ letterSpacing: 1.2 }}
-                    >
-                      {group.label}
-                    </Text>
-                  ) : null}
-                  <StandingsTable rows={group.rows} />
-                </View>
-              ))}
+        <TabBar tabs={availableTabs} active={activeTab} onChange={setTab} />
+
+        <View className="px-5 mt-6">
+          {activeTab === 'recent' ? (
+            <View style={{ gap: 24 }}>
+              <View>
+                <SubHeading>Recent results</SubHeading>
+                <FixtureList
+                  loading={pastFixtures.isLoading}
+                  data={pastFixtures.data ?? []}
+                  emptyText="No recent results."
+                />
+              </View>
+              <View>
+                <SubHeading>Upcoming</SubHeading>
+                <FixtureList
+                  loading={upcomingFixtures.isLoading}
+                  data={upcomingFixtures.data ?? []}
+                  emptyText="No upcoming fixtures."
+                />
+              </View>
             </View>
-          ) : (
-            <EmptyNote text="No standings yet." />
-          )}
-        </Section>
+          ) : null}
 
-        {bracketDrawn ? (
-          <Section title="Knockout bracket">
-            <Bracket bracket={bracket!} />
-          </Section>
-        ) : null}
+          {activeTab === 'standings' ? (
+            standings.isLoading ? (
+              <ActivityIndicator color="#00D26A" />
+            ) : standingGroups.length > 0 ? (
+              <View style={{ gap: 20 }}>
+                {standingGroups.map((group) => (
+                  <View key={group.label || 'overall'}>
+                    {group.label ? <SubHeading>{group.label}</SubHeading> : null}
+                    <StandingsTable rows={group.rows} />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <EmptyNote text="No standings yet." />
+            )
+          ) : null}
 
-        {isLeague ? (
-          <>
-            <Section title="Recent results">
-              <FixtureList
-                loading={pastFixtures.isLoading}
-                data={pastFixtures.data ?? []}
-                emptyText="No recent results."
-              />
-            </Section>
-
-            <Section title="Upcoming">
-              <FixtureList
-                loading={upcomingFixtures.isLoading}
-                data={upcomingFixtures.data ?? []}
-                emptyText="No upcoming fixtures."
-              />
-            </Section>
-          </>
-        ) : (
-          <Section title="Schedule">
-            {bracketFixtures.isLoading ? (
+          {activeTab === 'schedule' ? (
+            scheduleFixtures.isLoading ? (
               <ActivityIndicator color="#00D26A" />
             ) : scheduleRounds.length > 0 ? (
               <View style={{ gap: 20 }}>
                 {scheduleRounds.map((round) => (
                   <View key={round.key}>
-                    <Text
-                      className="text-muted text-[11px] font-bold uppercase mb-2"
-                      style={{ letterSpacing: 1.2 }}
-                    >
-                      {round.label}
-                    </Text>
+                    <SubHeading>{round.label}</SubHeading>
                     <View className="rounded-xl overflow-hidden border border-border bg-surface">
                       {round.fixtures.map((f) => (
                         <MatchRow key={f.id} fixture={f} />
@@ -168,20 +175,62 @@ export default function LeagueScreen() {
               </View>
             ) : (
               <EmptyNote text="No fixtures scheduled yet." />
-            )}
-          </Section>
-        )}
+            )
+          ) : null}
+
+          {activeTab === 'glory' ? (
+            bracketDrawn ? (
+              <Bracket bracket={bracket!} />
+            ) : (
+              <EmptyNote text="Knockout draw not set yet — see the Schedule tab for upcoming rounds." />
+            )
+          ) : null}
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function TabBar({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: Tab[];
+  active: Tab;
+  onChange: (t: Tab) => void;
+}) {
   return (
-    <View className="px-5 mt-6">
-      <Text className="text-text text-base font-semibold mb-2">{title}</Text>
-      {children}
+    <View className="px-5 flex-row border-b border-border" style={{ gap: 4 }}>
+      {tabs.map((t) => {
+        const isActive = t === active;
+        return (
+          <Pressable
+            key={t}
+            onPress={() => onChange(t)}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              marginBottom: -1,
+              borderBottomWidth: 2,
+              borderBottomColor: isActive ? '#00D26A' : 'transparent',
+            }}
+          >
+            <Text className={isActive ? 'text-text text-sm font-semibold' : 'text-muted text-sm font-semibold'}>
+              {TAB_LABEL[t]}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
+  );
+}
+
+function SubHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <Text className="text-muted text-[11px] font-bold uppercase mb-2" style={{ letterSpacing: 1.2 }}>
+      {children}
+    </Text>
   );
 }
 
