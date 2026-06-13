@@ -537,6 +537,14 @@ export interface ShareHeroOverride {
   heading?: string
   subheading?: string
   dek?: string
+  /**
+   * CSS `object-position` for the full-bleed cover/hero image on this card,
+   * e.g. `'top'`, `'right'`, `'30% 50%'`. The deck slide and the share card
+   * crop the same image to different aspect ratios, so the subject that's
+   * centered on the slide can sit off-frame on a portrait card — set this to
+   * shift the crop. Falls back to the image layer's own `focus`, then center.
+   */
+  imageOffset?: string
 }
 
 /**

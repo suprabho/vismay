@@ -12,6 +12,8 @@ const HEADER = `# Sample share.yaml for this story.
 #   chart.{heading,subheading}     chart-card text
 #   mapTitle.{heading,subheading,dek}  map-title overlay text (dek: hero only)
 #   hero.{heading,subheading,dek}  standalone hero-card text
+#   hero.imageOffset               CSS object-position to re-frame the cover
+#                                  image crop on this card (e.g. right, 30% 50%)
 #   stat.description               stat-card description
 #   hide                           true → hide the section on share entirely
 #   hidePretext                    true → hide the body PretextBlock (text cards)

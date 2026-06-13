@@ -76,6 +76,9 @@ interface Props {
   heroEyebrow?: string
   heroHeading?: string
   heroDek?: string
+  /** CSS `object-position` override for the hero/cover image's crop on this
+   *  card. Overrides the image layer's authored `focus`; unset → layer default. */
+  heroImageOffset?: string
   chartHeading?: string
   chartSubheading?: string
   /**
@@ -100,6 +103,7 @@ export default function ShareDeckForeground({
   heroEyebrow,
   heroHeading,
   heroDek,
+  heroImageOffset,
   chartHeading,
   chartSubheading,
   layerScope = 'all',
@@ -124,8 +128,14 @@ export default function ShareDeckForeground({
     if (layers.length === 0) return null
 
     // Hero/cover: keep the image's authored full-bleed sizing; it fills + crops.
+    // A per-card `heroImageOffset` overrides each image layer's `focus`
+    // (CSS object-position) so the subject can be re-framed for the card's
+    // aspect ratio without touching the deck slide.
     if (isHeroLike) {
-      return { foreground: { kind: 'flat', layers }, isPortrait: false }
+      const heroLayers = heroImageOffset
+        ? layers.map((l) => (l.type === 'image' ? { ...l, focus: heroImageOffset } : l))
+        : layers
+      return { foreground: { kind: 'flat', layers: heroLayers }, isPortrait: false }
     }
 
     const viz = layers.filter((l) => VISUAL_TYPES.has(l.type))
@@ -162,7 +172,7 @@ export default function ShareDeckForeground({
       foreground: { kind: 'regions', layout: 'share-card-stack', regions: { default: stacked }, inlineDef },
       isPortrait: true,
     }
-  }, [parentConfig, isHeroLike, isLandscape, cardHeight, layerScope])
+  }, [parentConfig, isHeroLike, isLandscape, cardHeight, layerScope, heroImageOffset])
 
   if (!built) return null
 

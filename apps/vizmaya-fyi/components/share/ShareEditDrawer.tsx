@@ -200,6 +200,12 @@ export default function ShareEditDrawer({ selected, overrides, onChange, onClose
       ? readSlot((s) => (s as ShareSectionOverride).hero?.dek) ?? ''
       : readSlot((s) => (s as ShareSectionOverride).mapTitle?.dek) ?? ''
   const dekPlaceholder = showDek ? extractHeroBits(unit.paragraphs).dek : ''
+  // The cover/hero image crop offset (CSS object-position) only renders on the
+  // standalone hero card, whose full-bleed image this re-frames.
+  const showImageOffset = isHero
+  const imageOffset = showImageOffset
+    ? readSlot((s) => (s as ShareSectionOverride).hero?.imageOffset) ?? ''
+    : ''
   // Stat description: only renders on stat-kind auto cards. Lives in its own
   // `stat` slot so it doesn't collide with the section-level paragraphs that
   // feed other variants in the same section.
@@ -431,19 +437,27 @@ export default function ShareEditDrawer({ selected, overrides, onChange, onClose
   // Write a heading/subheading/dek patch to whichever slot this card edits.
   // For nested slots (chart/mapTitle/hero) we prune the slot itself when all
   // its fields go empty, so the yaml stays tidy.
-  const writeText = (field: 'heading' | 'subheading' | 'dek', value: string | undefined) => {
+  const writeText = (
+    field: 'heading' | 'subheading' | 'dek' | 'imageOffset',
+    value: string | undefined,
+  ) => {
     if (slot === 'top') {
-      if (field === 'dek') return // dek only exists on hero / mapTitle slots
+      // dek / imageOffset only exist on the nested hero / mapTitle slots
+      if (field === 'dek' || field === 'imageOffset') return
       if (useSubsection) writeSub({ [field]: value })
       else writeSection({ [field]: value })
       return
     }
     type NestedSlot = ShareTextOverride | ShareHeroOverride
     const slotKey = slot // 'chart' | 'mapTitle' | 'hero'
-    // chart slot has no `dek`; hero + mapTitle do.
+    // chart slot has no `dek`; hero + mapTitle do. `imageOffset` is hero-only.
     const slotHasDek = slot === 'hero' || slot === 'mapTitle'
+    const slotHasImageOffset = slot === 'hero'
     const isEmptyNested = (s: NestedSlot): boolean =>
-      s.heading == null && s.subheading == null && (!slotHasDek || (s as ShareHeroOverride).dek == null)
+      s.heading == null &&
+      s.subheading == null &&
+      (!slotHasDek || (s as ShareHeroOverride).dek == null) &&
+      (!slotHasImageOffset || (s as ShareHeroOverride).imageOffset == null)
     if (useSubsection) {
       const current = (sub?.[slotKey] ?? {}) as NestedSlot
       const nextNested = { ...current, [field]: value } as NestedSlot
@@ -520,6 +534,28 @@ export default function ShareEditDrawer({ selected, overrides, onChange, onClose
                 resize: 'vertical',
               }}
             />
+          </div>
+        )}
+
+        {showImageOffset && (
+          <div>
+            <Label>Image crop offset (CSS object-position)</Label>
+            <input
+              type="text"
+              value={imageOffset}
+              placeholder="center / top / right / 30% 50%"
+              onChange={(e) => writeText('imageOffset', e.target.value || undefined)}
+              className="w-full rounded-md px-3 py-2 text-sm"
+              style={{
+                background: 'var(--color-surface)',
+                color: 'var(--color-text)',
+                border: '1px solid var(--color-border, transparent)',
+              }}
+            />
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-muted)' }}>
+              Shifts the cover image crop for this card — e.g. <code>right</code> or{' '}
+              <code>30% 50%</code> to keep the subject in frame.
+            </p>
           </div>
         )}
 
