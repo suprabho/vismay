@@ -28,6 +28,7 @@ export function SourcesStage({
   onAddAsset,
   onAddFromProvider,
   onLoadLibrary,
+  onSearchDatasets,
   onRemoveSource,
   onReextract,
   onGenAngles,
@@ -44,6 +45,7 @@ export function SourcesStage({
   onAddAsset: (key: string) => Promise<boolean>
   onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
   onLoadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
+  onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
   onRemoveSource: (id: string) => void
   onReextract: (id: string) => void
   onGenAngles: () => void
@@ -156,6 +158,7 @@ export function SourcesStage({
           onAddFromSource={onAddFromSource}
           onAddAsset={onAddAsset}
           onAddFromProvider={onAddFromProvider}
+          onSearchDatasets={onSearchDatasets}
         />
       )}
       <SectionHeading

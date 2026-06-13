@@ -209,6 +209,21 @@ export function useComposeFlow({
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
   }
+  // Dynamic dataset search — the large corpora (IEA/Epstein/Coke Studio) are
+  // queried on demand rather than listed. Returns matching provider groups.
+  async function searchDatasets(query: string): Promise<LibraryGroup[]> {
+    try {
+      const res = await fetch(
+        `${base}/${slug}/canvas/compose/library/search?q=${encodeURIComponent(query)}`,
+        { cache: 'no-store' },
+      )
+      if (!res.ok) return []
+      const data = (await res.json()) as { groups?: LibraryGroup[] }
+      return data.groups ?? []
+    } catch {
+      return []
+    }
+  }
   // Pull the "from library" picker contents — prior extracted sources, doc
   // assets, and provider groups (stories/epics). Not single-flight (`call`):
   // the modal owns its own loading state.
@@ -468,6 +483,7 @@ export function useComposeFlow({
     addAsset,
     addFromProvider,
     loadLibrary,
+    searchDatasets,
     removeSource,
     reextract,
     genAngles,

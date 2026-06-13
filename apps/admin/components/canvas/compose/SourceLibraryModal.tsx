@@ -9,6 +9,9 @@ import {
   BookOpen,
   Stack,
   Newspaper,
+  Lightning,
+  Scales,
+  MusicNotes,
 } from '@phosphor-icons/react'
 import type { SourceListItem as LibrarySource } from '@vismay/content-source/storySources'
 import { Chip, btnGhostCls, btnPrimaryCls } from './ui'
@@ -47,6 +50,9 @@ const GROUP_ICON: Record<string, typeof FileText> = {
   epic: Stack,
   'footshorts-news': Newspaper,
   'vizf1-news': Newspaper,
+  'iea-news': Lightning,
+  epstein: Scales,
+  'coke-studio': MusicNotes,
 }
 
 const KIND_ICON = { file: FileText, link: LinkSimple, text: TextAa } as const
@@ -64,18 +70,23 @@ export function SourceLibraryModal({
   onAddFromSource,
   onAddAsset,
   onAddFromProvider,
+  onSearchDatasets,
 }: {
   onClose: () => void
   loadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
   onAddFromSource: (id: string) => Promise<boolean>
   onAddAsset: (key: string) => Promise<boolean>
   onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
+  onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
 }) {
   const [loading, setLoading] = useState(true)
   const [sources, setSources] = useState<LibrarySource[]>([])
   const [assets, setAssets] = useState<LibraryAsset[]>([])
   const [groups, setGroups] = useState<LibraryGroup[]>([])
   const [query, setQuery] = useState('')
+  // Dataset search runs server-side, debounced on the query.
+  const [datasetGroups, setDatasetGroups] = useState<LibraryGroup[]>([])
+  const [searching, setSearching] = useState(false)
   // Per-item attach state, keyed by source id / asset key.
   const [adding, setAdding] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
@@ -101,6 +112,32 @@ export function SourceLibraryModal({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Debounced dataset search — fires once the query settles (>=2 chars), clears
+  // when emptied. All state lands in the timeout callback (never synchronously
+  // in the effect body); a stale-guard drops out-of-order responses.
+  useEffect(() => {
+    const q = query.trim()
+    let cancelled = false
+    const t = setTimeout(async () => {
+      if (q.length < 2) {
+        if (!cancelled) {
+          setDatasetGroups([])
+          setSearching(false)
+        }
+        return
+      }
+      setSearching(true)
+      const found = await onSearchDatasets(q)
+      if (cancelled) return
+      setDatasetGroups(found)
+      setSearching(false)
+    }, q.length < 2 ? 0 : 350)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [query, onSearchDatasets])
 
   const q = query.trim().toLowerCase()
   const matchedSources = useMemo(
@@ -158,8 +195,15 @@ export function SourceLibraryModal({
     )
   }
 
+  // Static (client-filtered) groups first, then on-demand dataset hits.
+  const renderGroups = [...matchedGroups, ...datasetGroups]
+
   const empty =
-    !loading && matchedSources.length === 0 && matchedAssets.length === 0 && matchedGroups.length === 0
+    !loading &&
+    !searching &&
+    matchedSources.length === 0 &&
+    matchedAssets.length === 0 &&
+    renderGroups.length === 0
 
   return (
     <div
@@ -193,9 +237,10 @@ export function SourceLibraryModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, file, story…"
+              placeholder="Search library, or type to query datasets…"
               className="min-w-0 flex-1 bg-transparent py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none"
             />
+            {searching && <span className="shrink-0 text-[10px] text-neutral-500">searching…</span>}
           </div>
         </div>
 
@@ -210,7 +255,7 @@ export function SourceLibraryModal({
             </p>
           )}
 
-          {matchedGroups.map((g) => {
+          {renderGroups.map((g) => {
             const GroupIcon = GROUP_ICON[g.key] ?? Stack
             return (
               <section key={g.key} className="space-y-1.5">

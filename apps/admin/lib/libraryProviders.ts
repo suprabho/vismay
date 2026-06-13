@@ -44,13 +44,33 @@ interface ListCtx {
   excludeSlug: string
 }
 
+interface SearchCtx extends ListCtx {
+  /** The user's (sanitised) query — never empty when `search` is invoked. */
+  query: string
+  /** Max hits to return. */
+  limit: number
+}
+
+/**
+ * A provider is `list`-based (bounded set surfaced up front — stories, epics,
+ * news), `search`-based (large corpus queried on demand — the datasets), or
+ * both. `extract` resolves a chosen item's text regardless of how it surfaced.
+ */
 interface LibraryProvider {
   key: string
   label: string
   /** Which app_slugs this provider serves; omit to serve every app. */
   apps?: string[]
-  list(ctx: ListCtx): Promise<LibraryItem[]>
+  list?(ctx: ListCtx): Promise<LibraryItem[]>
+  search?(ctx: SearchCtx): Promise<LibraryItem[]>
   extract(id: string): Promise<LibraryExtract | null>
+}
+
+/** Strip characters that would break a PostgREST `.or(...)` filter, then wrap as
+ *  an ilike pattern. Keeps user queries from injecting filter syntax. */
+function ilikePattern(query: string): string {
+  const safe = query.replace(/[%,()*\\:]/g, ' ').replace(/\s+/g, ' ').trim()
+  return `%${safe}%`
 }
 
 // ── Providers ───────────────────────────────────────────────────────────────
@@ -186,11 +206,210 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
   }
 }
 
+// ── Search-only dataset providers ────────────────────────────────────────────
+// Large corpora that can't be listed wholesale — surfaced only when the user
+// queries. Keyword (ilike) match over a couple of text columns each. All are
+// vizmaya-fyi epic datasets, so app-scoped accordingly.
+
+/** Cap on how much document body a single dataset item contributes. */
+const MAX_DOC_TEXT = 16_000
+
+const ieaNewsProvider: LibraryProvider = {
+  key: 'iea-news',
+  label: 'IEA energy news',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('iea_news')
+      .select('id, title, summary, published_at')
+      .or(`title.ilike.${pat},summary.ilike.${pat}`)
+      .order('published_at', { ascending: false })
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{ id: number; title: string | null; summary: string | null }>
+    return rows.map((r) => ({
+      id: String(r.id),
+      title: r.title ?? 'Untitled',
+      subtitle: r.summary?.slice(0, 120) ?? undefined,
+    }))
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('iea_news')
+      .select('title, summary, topics, country_codes, source_url')
+      .eq('id', Number(id))
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      summary: string | null
+      topics: string[] | null
+      country_codes: string[] | null
+      source_url: string | null
+    } | null
+    if (!row) return null
+    const meta = [
+      row.topics?.length ? `Topics: ${row.topics.join(', ')}` : null,
+      row.country_codes?.length ? `Countries: ${row.country_codes.join(', ')}` : null,
+      row.source_url ? `Source: ${row.source_url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const text = [row.title, row.summary, meta].filter(Boolean).join('\n\n').trim()
+    if (!text) return null
+    return { title: row.title ?? 'IEA news', byline: 'IEA energy news', text }
+  },
+}
+
+const epsteinProvider: LibraryProvider = {
+  key: 'epstein',
+  label: 'Epstein documents',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('epstein_documents')
+      .select('id, filename, source, page_count')
+      .or(`filename.ilike.${pat},raw_text.ilike.${pat}`)
+      .not('raw_text', 'is', null)
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      id: string
+      filename: string | null
+      source: string | null
+      page_count: number | null
+    }>
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.filename ?? 'Untitled document',
+      subtitle: [r.source, r.page_count ? `${r.page_count}p` : null].filter(Boolean).join(' · ') || undefined,
+    }))
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('epstein_documents')
+      .select('filename, source, source_url, raw_text')
+      .eq('id', id)
+      .maybeSingle()
+    const row = data as {
+      filename: string | null
+      source: string | null
+      source_url: string | null
+      raw_text: string | null
+    } | null
+    if (!row?.raw_text) return null
+    const body =
+      row.raw_text.length > MAX_DOC_TEXT ? `${row.raw_text.slice(0, MAX_DOC_TEXT)}\n\n…[truncated]` : row.raw_text
+    const head = [row.filename, row.source_url ? `Source: ${row.source_url}` : null].filter(Boolean).join('\n')
+    return {
+      title: row.filename ?? 'Epstein document',
+      byline: row.source ? `Epstein corpus · ${row.source}` : 'Epstein corpus',
+      text: [head, body].filter(Boolean).join('\n\n').trim(),
+    }
+  },
+}
+
+const cokeStudioProvider: LibraryProvider = {
+  key: 'coke-studio',
+  label: 'Coke Studio songs',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('coke_studio_songs')
+      .select('song_id, title, artists, season, notes')
+      .or(`title.ilike.${pat},artists.ilike.${pat},notes.ilike.${pat}`)
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      song_id: string
+      title: string | null
+      artists: string | null
+      season: number | null
+    }>
+    return rows.map((r) => ({
+      id: r.song_id,
+      title: r.title ?? r.song_id,
+      subtitle: [r.artists, r.season ? `S${r.season}` : null].filter(Boolean).join(' · ') || undefined,
+    }))
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('coke_studio_songs')
+      .select('title, title_native, artists, lyricists, composers, season, episode, notes, youtube_url')
+      .eq('song_id', id)
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      title_native: string | null
+      artists: string | null
+      lyricists: string | null
+      composers: string | null
+      season: number | null
+      episode: number | null
+      notes: string | null
+      youtube_url: string | null
+    } | null
+    if (!row) return null
+    // Fair-use place-mention snippets are public; raw lyrics live in a separate
+    // service-role-only table and are intentionally NOT pulled in here.
+    const { data: mentions } = await sb
+      .from('coke_studio_place_mentions')
+      .select('place_canonical, lyric_context, lyric_translation')
+      .eq('song_id', id)
+      .limit(20)
+    const mentionRows = (mentions ?? []) as Array<{
+      place_canonical: string | null
+      lyric_context: string | null
+      lyric_translation: string | null
+    }>
+    const meta = [
+      row.artists ? `Artists: ${row.artists}` : null,
+      row.lyricists ? `Lyricists: ${row.lyricists}` : null,
+      row.composers ? `Composers: ${row.composers}` : null,
+      row.season ? `Season ${row.season}${row.episode ? `, episode ${row.episode}` : ''}` : null,
+      row.youtube_url ? `Video: ${row.youtube_url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const places = mentionRows
+      .filter((m) => (m.lyric_context ?? '').trim())
+      .map(
+        (m) =>
+          `- ${m.place_canonical ?? 'place'}: “${m.lyric_context}”${
+            m.lyric_translation ? ` (${m.lyric_translation})` : ''
+          }`,
+      )
+      .join('\n')
+    const text = [
+      row.title_native ? `${row.title} (${row.title_native})` : row.title,
+      meta,
+      row.notes?.trim() ? `Notes: ${row.notes.trim()}` : null,
+      places ? `Place mentions:\n${places}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    if (!text) return null
+    return { title: row.title ?? 'Coke Studio song', byline: 'Coke Studio', text }
+  },
+}
+
 const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
   newsProvider({ key: 'footshorts-news', label: 'Football news', table: 'articles', app: 'footshorts' }),
   newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
+  ieaNewsProvider,
+  epsteinProvider,
+  cokeStudioProvider,
 ]
 
 const byKey = new Map(PROVIDERS.map((p) => [p.key, p]))
@@ -215,11 +434,42 @@ export async function getDraftApp(slug: string): Promise<string | null> {
  */
 export async function getLibraryGroups(slug: string): Promise<LibraryGroup[]> {
   const appSlug = await getDraftApp(slug)
-  const applicable = PROVIDERS.filter((p) => !p.apps || (appSlug != null && p.apps.includes(appSlug)))
+  const applicable = PROVIDERS.filter(
+    (p) => p.list && (!p.apps || (appSlug != null && p.apps.includes(appSlug))),
+  )
   const groups = await Promise.all(
     applicable.map(async (p) => {
       try {
-        const items = await p.list({ appSlug, excludeSlug: slug })
+        const items = await p.list!({ appSlug, excludeSlug: slug })
+        return items.length ? { key: p.key, label: p.label, items } : null
+      } catch {
+        return null
+      }
+    }),
+  )
+  return groups.filter((g): g is LibraryGroup => g != null)
+}
+
+/** Max hits returned per dataset for a single query. */
+const SEARCH_LIMIT = 25
+
+/**
+ * Run every applicable SEARCH-based provider (the large datasets) against a
+ * query and return their non-empty groups. Short queries return nothing — the
+ * picker only hits the DB once there's something to match. Each provider is
+ * isolated; one that throws is dropped.
+ */
+export async function searchLibrary(slug: string, rawQuery: string): Promise<LibraryGroup[]> {
+  const query = rawQuery.trim()
+  if (query.length < 2) return []
+  const appSlug = await getDraftApp(slug)
+  const applicable = PROVIDERS.filter(
+    (p) => p.search && (!p.apps || (appSlug != null && p.apps.includes(appSlug))),
+  )
+  const groups = await Promise.all(
+    applicable.map(async (p) => {
+      try {
+        const items = await p.search!({ appSlug, excludeSlug: slug, query, limit: SEARCH_LIMIT })
         return items.length ? { key: p.key, label: p.label, items } : null
       } catch {
         return null
