@@ -37,6 +37,24 @@ export interface ContentSource {
   readMapYaml(slug: string): Promise<string | null>
   readChart(slug: string, chartId: string): Promise<unknown | null>
 
+  /** Read the markdown + config edit surface together with an opaque `version`
+   *  token. The compose section route uses this with `casWriteStory` to merge a
+   *  single section's slice without clobbering a concurrently-written section
+   *  (both passes read the whole story, edit disjoint slices, and write it back —
+   *  a classic lost update without compare-and-set). */
+  readStoryForEdit(
+    slug: string,
+  ): Promise<{ markdown: string; configYaml: string | null; version: string } | null>
+  /** Compare-and-set write of markdown and/or config. Applies only if the
+   *  story's version still equals `expectedVersion`; returns false on a version
+   *  conflict so the caller can re-read fresh and re-apply its slice. Only the
+   *  provided fields are written (omit one to leave it untouched). */
+  casWriteStory(
+    slug: string,
+    next: { markdown?: string; configYaml?: string | null },
+    expectedVersion: string,
+  ): Promise<boolean>
+
   /** Write methods for the admin editor. Callers are responsible for auth. */
   writeMarkdown(slug: string, raw: string): Promise<void>
   writeConfigYaml(slug: string, raw: string | null): Promise<void>
@@ -66,6 +84,17 @@ const STORIES_DIR =
 
 function fsReadIfExists(filePath: string): string | null {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null
+}
+
+/** Opaque CAS token for a story's edit surface — the mtimes of its markdown and
+ *  config files. Any write to either bumps it, so a stale token signals that a
+ *  concurrent section write landed in between. */
+function fsStoryVersion(slug: string): string {
+  const mtime = (file: string): number => {
+    const p = path.join(STORIES_DIR, file)
+    return fs.existsSync(p) ? fs.statSync(p).mtimeMs : 0
+  }
+  return `${mtime(`${slug}.md`)}:${mtime(`${slug}.config.yaml`)}`
 }
 
 // Mirror of the `apps` rows seeded by migrations/039_content_apps.sql. Used in
@@ -148,6 +177,31 @@ const fsSource: ContentSource = {
     } catch {
       return null
     }
+  },
+  async readStoryForEdit(slug) {
+    const markdown = fsReadIfExists(path.join(STORIES_DIR, `${slug}.md`))
+    if (markdown == null) return null
+    const configYaml = fsReadIfExists(path.join(STORIES_DIR, `${slug}.config.yaml`))
+    return { markdown, configYaml, version: fsStoryVersion(slug) }
+  },
+  async casWriteStory(slug, next, expectedVersion) {
+    // Single-process Node: with no `await` between the version check and the
+    // synchronous writes, no other request can interleave — the read-compare-
+    // write below is atomic. (Version = the two files' mtimes, see fsStoryVersion.)
+    if (fsStoryVersion(slug) !== expectedVersion) return false
+    fs.mkdirSync(STORIES_DIR, { recursive: true })
+    if (next.markdown !== undefined) {
+      fs.writeFileSync(path.join(STORIES_DIR, `${slug}.md`), next.markdown, 'utf8')
+    }
+    if (next.configYaml !== undefined) {
+      const p = path.join(STORIES_DIR, `${slug}.config.yaml`)
+      if (next.configYaml == null) {
+        if (fs.existsSync(p)) fs.unlinkSync(p)
+      } else {
+        fs.writeFileSync(p, next.configYaml, 'utf8')
+      }
+    }
+    return true
   },
   async writeMarkdown(slug, raw) {
     fs.mkdirSync(STORIES_DIR, { recursive: true })
@@ -354,6 +408,50 @@ const dbSource: ContentSource = {
       .maybeSingle()
     if (error) throw new Error(`readChart ${slug}/${chartId}: ${error.message}`)
     return data?.data ?? null
+  },
+  async readStoryForEdit(slug) {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('stories')
+      .select('markdown, config_yaml, updated_at')
+      .eq('slug', slug)
+      .maybeSingle()
+    if (error) throw new Error(`readStoryForEdit ${slug}: ${error.message}`)
+    if (!data || data.markdown == null) return null
+    return {
+      markdown: data.markdown as string,
+      configYaml: (data.config_yaml as string | null) ?? null,
+      // updated_at is the CAS token; casWriteStory filters on its exact value.
+      version: String(data.updated_at),
+    }
+  },
+  async casWriteStory(slug, next, expectedVersion) {
+    const sb = createServiceClient()
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (next.markdown !== undefined) {
+      // Keep the denormalized title/status/listed/aura columns in sync, same as
+      // writeMarkdown — the section route only edits body prose, but a slug whose
+      // frontmatter changed must not silently drift.
+      const { default: matter } = await import('gray-matter')
+      const { data } = matter(next.markdown)
+      const status = ((data.status as string | undefined) ?? 'published') as StoryStatus
+      update.markdown = next.markdown
+      update.title = (data.title as string | undefined) ?? slug
+      update.status = status
+      update.listed = data.listed !== false
+      update.aura = (data.aura as string | undefined)?.trim() || null
+      update.published_at = status === 'published' ? new Date().toISOString() : null
+    }
+    if (next.configYaml !== undefined) update.config_yaml = next.configYaml
+    const { data, error } = await sb
+      .from('stories')
+      .update(update)
+      .eq('slug', slug)
+      .eq('updated_at', expectedVersion)
+      .select('slug')
+    if (error) throw new Error(`casWriteStory ${slug}: ${error.message}`)
+    // No row matched → the version moved on (a concurrent write landed first).
+    return (data?.length ?? 0) > 0
   },
   async writeMarkdown(slug, raw) {
     // Parse frontmatter so the denormalized title/status/listed/aura columns
