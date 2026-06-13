@@ -18,6 +18,8 @@
     "./epics": "./src/epics.ts",
     "./frontmatter": "./src/frontmatter.ts",
     "./getFontImports": "./src/getFontImports.ts",
+    "./heygenTemplate": "./src/heygenTemplate.ts",
+    "./heygenTemplateDispatch": "./src/heygenTemplateDispatch.ts",
     "./resolveUnits": "./src/resolveUnits.ts",
     "./shareCardList": "./src/shareCardList.ts",
     "./socialEngagement": "./src/socialEngagement.ts",

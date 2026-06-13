@@ -39,6 +39,18 @@ export function loadConfig(): VismayMcpConfig {
   }
 }
 
+/** Throws a descriptive error if the HeyGen API key is missing. */
+export function requireHeygenEnv(): { apiKey: string } {
+  const apiKey = env('HEYGEN_API_KEY')
+  if (!apiKey) {
+    throw new Error(
+      'The HeyGen tools need HEYGEN_API_KEY in the MCP server env ' +
+        '(set it in your MCP client config).',
+    )
+  }
+  return { apiKey }
+}
+
 /** Throws a descriptive error if a required Supabase var is missing. */
 export function requireSupabaseEnv(): { url: string; serviceKey: string } {
   const url = env('NEXT_PUBLIC_SUPABASE_URL')
