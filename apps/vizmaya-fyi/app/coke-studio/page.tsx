@@ -6,6 +6,9 @@ import {
 } from '@/lib/coke-studio/data'
 import CokeStudioLanding from './CokeStudioLanding'
 import { resolveCokeStudioMapStyle, resolveCokeStudioTheme } from './theme'
+import EpicSeoBlock from '@/components/epic/EpicSeoBlock'
+import JsonLd from '@/components/JsonLd'
+import { buildEpicJsonLd, buildBreadcrumbJsonLd } from '@/lib/jsonLd'
 
 export const revalidate = 0
 
@@ -67,16 +70,46 @@ export default async function CokeStudioPage({
     bearing: num(sp.bearing),
   }
 
+  const isEmbed = bool(sp.embed)
+
+  const epicJsonLd = buildEpicJsonLd({
+    slug: epic.slug,
+    name: epic.name,
+    description: epic.description,
+    stories,
+    explainer: epic.explainer,
+    datePublished: epic.datePublished,
+    dateModified: epic.dateModified,
+  })
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Home', url: '/' },
+    { name: epic.name, url: `/${epic.slug}` },
+  ])
+
   return (
-    <CokeStudioLanding
-      epic={epic}
-      places={places}
-      stories={stories}
-      stats={stats}
-      theme={theme}
-      mapStyle={mapStyle}
-      embed={bool(sp.embed)}
-      initialView={initialView}
-    />
+    <>
+      {/* Skip structured data + pillar block in iframe embeds. */}
+      {!isEmbed && (
+        <JsonLd data={[...(Array.isArray(epicJsonLd) ? epicJsonLd : [epicJsonLd]), breadcrumbJsonLd]} />
+      )}
+      <CokeStudioLanding
+        epic={epic}
+        places={places}
+        stories={stories}
+        stats={stats}
+        theme={theme}
+        mapStyle={mapStyle}
+        embed={isEmbed}
+        initialView={initialView}
+      />
+      {!isEmbed && (
+        <EpicSeoBlock
+          name={epic.name}
+          explainer={epic.explainer}
+          takeaways={epic.takeaways}
+          stories={stories}
+        />
+      )}
+    </>
   )
 }

@@ -8,6 +8,9 @@ import {
 } from '@vismay/content-source/epics'
 import EnergyProfileLanding from './EnergyProfileLanding'
 import { resolveEnergyProfileMapStyle, resolveEnergyProfileTheme } from './theme'
+import EpicSeoBlock from '@/components/epic/EpicSeoBlock'
+import JsonLd from '@/components/JsonLd'
+import { buildEpicJsonLd, buildBreadcrumbJsonLd } from '@/lib/jsonLd'
 
 export const revalidate = 0
 
@@ -38,15 +41,38 @@ export default async function EnergyProfilePage() {
   const theme = resolveEnergyProfileTheme(epic.theme)
   const mapStyle = resolveEnergyProfileMapStyle(epic.theme)
 
+  const epicJsonLd = buildEpicJsonLd({
+    slug: epic.slug,
+    name: epic.name,
+    description: epic.description,
+    stories,
+    explainer: epic.explainer,
+    datePublished: epic.datePublished,
+    dateModified: epic.dateModified,
+  })
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Home', url: '/' },
+    { name: epic.name, url: `/${epic.slug}` },
+  ])
+
   return (
-    <EnergyProfileLanding
-      epic={epic}
-      countries={countries}
-      news={news}
-      stories={stories}
-      theme={theme}
-      mapStyle={mapStyle}
-      dominantSources={dominantSources}
-    />
+    <>
+      <JsonLd data={[...(Array.isArray(epicJsonLd) ? epicJsonLd : [epicJsonLd]), breadcrumbJsonLd]} />
+      <EnergyProfileLanding
+        epic={epic}
+        countries={countries}
+        news={news}
+        stories={stories}
+        theme={theme}
+        mapStyle={mapStyle}
+        dominantSources={dominantSources}
+      />
+      <EpicSeoBlock
+        name={epic.name}
+        explainer={epic.explainer}
+        takeaways={epic.takeaways}
+        stories={stories}
+      />
+    </>
   )
 }

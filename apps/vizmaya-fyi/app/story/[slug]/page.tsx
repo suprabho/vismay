@@ -3,6 +3,8 @@ export const revalidate = 60
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
+import { getEpicsForStory, getEpicStories } from '@vismay/content-source/epics'
+import { getAuthorsForStory } from '@vismay/content-source/authors'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
 import { hydrateFootshortsConfig } from '@vismay/content-source/hydrateFootshortsConfig'
 import { getContentSource } from '@vismay/content-source/contentSource'
@@ -15,6 +17,9 @@ import StoryShell from '@/components/story/StoryShell'
 import StoryBackgroundSlot, { StoryBackgroundOverlay } from '@/components/story/StoryBackgroundSlot'
 import VerticalLoader from '@/components/VerticalLoader'
 import VerticalCaptureFrame from '@/components/story/VerticalCaptureFrame'
+import StoryClusterLinks from '@/components/story/StoryClusterLinks'
+import JsonLd from '@/components/JsonLd'
+import { buildArticleJsonLd, buildBreadcrumbJsonLd, SITE_URL } from '@/lib/jsonLd'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
@@ -35,18 +40,36 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
     const title = `${frontmatter.title} — ${frontmatter.subtitle}`
     const url = `/story/${slug}`
 
+    // Resolve structured authors from the registry for E-E-A-T (name + profile
+    // URL). Falls back to the free-text byline when none are referenced or the
+    // registry is unavailable. Never block metadata on this.
+    let authors: { name: string; url?: string }[] = [{ name: frontmatter.byline }]
+    try {
+      const resolved = await getAuthorsForStory(frontmatter.authors ?? [])
+      if (resolved.length > 0) {
+        authors = resolved.map((a) => ({
+          name: a.name,
+          url: a.profileUrl ? `${SITE_URL}${a.profileUrl.startsWith('/') ? '' : '/'}${a.profileUrl}` : undefined,
+        }))
+      }
+    } catch {
+      // Registry unavailable — keep the byline fallback.
+    }
+
     return {
       title,
       description: frontmatter.subtitle,
-      authors: [{ name: frontmatter.byline }],
+      authors,
       openGraph: {
         type: 'article',
-        title: frontmatter.title,
+        title: frontmatter.ogTitle ?? frontmatter.title,
         description: frontmatter.subtitle,
         url,
         siteName: 'vizmaya',
         locale: 'en_US',
         publishedTime: frontmatter.date,
+        modifiedTime: frontmatter.dateModified ?? frontmatter.date,
+        authors: authors.map((a) => a.name),
       },
       twitter: {
         card: 'summary_large_image',
@@ -93,6 +116,52 @@ export default async function StoryPage({ params }: RouteParams) {
     notFound()
   }
 
+
+  // Topic-cluster + author data for structured data and internal links. All
+  // Supabase-backed and best-effort: a missing/empty result is a no-op, so the
+  // fs-first story still renders without service credentials.
+  const fm = story.frontmatter
+  let clusterEpics: { slug: string; name: string }[] = []
+  let relatedStories: { slug: string; title: string }[] = []
+  let storyAuthors: { slug: string; name: string; profileUrl?: string | null; sameAs?: string[] }[] = []
+  try {
+    clusterEpics = await getEpicsForStory(slug)
+    if (clusterEpics.length > 0) {
+      const sibling = await Promise.all(clusterEpics.map((e) => getEpicStories(e.slug)))
+      const seen = new Set<string>([slug])
+      for (const list of sibling) {
+        for (const s of list) {
+          if (seen.has(s.slug)) continue
+          seen.add(s.slug)
+          relatedStories.push({ slug: s.slug, title: s.title })
+        }
+      }
+    }
+  } catch {
+    clusterEpics = []
+    relatedStories = []
+  }
+  try {
+    storyAuthors = await getAuthorsForStory(fm.authors ?? [])
+  } catch {
+    storyAuthors = []
+  }
+
+  const articleJsonLd = buildArticleJsonLd({
+    frontmatter: fm,
+    slug,
+    authors: storyAuthors.map((a) => ({
+      slug: a.slug,
+      name: a.name,
+      profileUrl: a.profileUrl,
+      sameAs: a.sameAs,
+    })),
+  })
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: 'Home', url: '/' },
+    ...(clusterEpics[0] ? [{ name: clusterEpics[0].name, url: `/${clusterEpics[0].slug}` }] : []),
+    { name: fm.title, url: `/story/${slug}` },
+  ])
 
   const mapOverrides = parseMapOverrides(mapYaml)
 
@@ -145,6 +214,7 @@ export default async function StoryPage({ params }: RouteParams) {
 
   return (
     <ThemeProvider theme={story.frontmatter.theme}>
+      <JsonLd data={[articleJsonLd, breadcrumbJsonLd]} />
       {fontImportUrl && (
         <>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -179,6 +249,7 @@ export default async function StoryPage({ params }: RouteParams) {
           />
         </VerticalLoader>
       </VerticalCaptureFrame>
+      <StoryClusterLinks epics={clusterEpics} related={relatedStories} />
     </ThemeProvider>
   )
 }
