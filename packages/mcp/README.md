@@ -2,7 +2,10 @@
 
 An MCP (Model Context Protocol) server that exposes the Vismay viz-engine and
 its **verticals** as tools, so an orchestrator agent can render Vismay
-visualizations and combine them with other MCP services — notably **HeyGen**.
+visualizations and combine them with other MCP video services — e.g. **HeyGen**
+(talking avatars) and **Higgsfield** (cinematic image-to-video). Vismay is the
+visual *source*; those services are *animators/presenters* the agent drives. See
+[Adding more video providers](#adding-more-video-providers-higgsfield-) below.
 
 ## Why this exists (HeyGen + Vismay)
 
@@ -33,6 +36,39 @@ avatar video; it does not composite an arbitrary Vismay image/video as a
 background/overlay. True overlay needs HeyGen's full REST API *or* a final local
 `ffmpeg` overlay step. A future `composite_avatar_over_viz` tool here could close
 that gap (the video pipeline already shells `ffmpeg`).
+
+## Adding more video providers (Higgsfield, …)
+
+This server is **provider-agnostic**. It doesn't call any video service itself —
+it just exposes Vismay's visuals. To add a provider, register *its* MCP connector
+in your agent alongside Vismay; the agent bridges the two. **No changes to this
+package are needed.** The same pattern that works for HeyGen works for any
+MCP-server video provider.
+
+### Higgsfield
+
+Higgsfield runs a hosted MCP at `https://mcp.higgsfield.ai` (OAuth, no API key —
+same one-click onboarding as HeyGen). Its tools include `generate_image`,
+`generate_video` (text- **and** image-to-video across 30+ models incl. Sora, Veo,
+Kling), `create_character`, `get_generation_status`, and a local-file upload tool
+that returns a hosted URL.
+
+Its flagship mode is **image-to-video**, which is a direct fit for
+`render_module_image` — turn a still viz into a cinematic motion clip:
+
+1. Vismay `render_module_image { type, config, transparent: true }` → viz PNG.
+2. Higgsfield upload tool → hosted `image_url` for that PNG.
+3. Higgsfield `generate_video { model_id, image_url, prompt: "slow push-in, cinematic" }`.
+4. Poll `get_generation_status`, download the output URL.
+
+HeyGen gives you a *talking presenter*; Higgsfield gives you *cinematic motion on
+the viz itself*. They're complementary and use the same agent-as-bus flow.
+
+> **Handoff note:** Higgsfield's `generate_video` needs a public `image_url`.
+> Higgsfield's own upload tool covers this today (step 2). The planned
+> `returnAs:'url'` option on `render_module_image` — upload the PNG to a Supabase
+> public bucket and return the URL — would collapse steps 1–2 into one for any
+> image-to-video provider.
 
 ## Tools
 
@@ -69,6 +105,19 @@ The metadata tools (`list_verticals` / `list_modules`) need none of these.
   `ffmpeg` on PATH, Playwright Chromium, Supabase service creds, and the story
   must already have audio generated
   (`pnpm --filter vizmaya-fyi exec tsx scripts/generate-audio.ts <slug>`).
+
+## Quick start (dev)
+
+From the repo root, one command brings up the catalog (`:3100`) and the MCP
+Inspector wired to it, so you can call every tool interactively:
+
+```
+pnpm mcp:dev                  # catalog + MCP Inspector together
+WITH_VIZMAYA=1 pnpm mcp:dev   # also start vizmaya-fyi (:3000) for render_story_video
+```
+
+`Ctrl-C` stops everything. When your *agent* (not the Inspector) drives the MCP,
+you only need the catalog running — `pnpm mcp:catalog`.
 
 ## Run / register
 
