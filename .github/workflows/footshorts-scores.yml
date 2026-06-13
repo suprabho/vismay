@@ -8,6 +8,7 @@ name: Footshorts - scores refresh
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 #   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshorts-only)
+#   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
 
 on:
   schedule:
@@ -51,3 +52,23 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
         run: pnpm scores:ci
+
+      # Generate the daily recap brief once scores are fresh. recap.ts self-gates:
+      # it only writes when every fixture kicking off today (UTC) has finished, so
+      # this no-ops on the midday run and produces the recap on the run after the
+      # last game of the day. Defaults to today (UTC); upsert makes re-runs safe.
+      - name: Generate daily recap (all competitions)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm recap:ci
+
+      # World Cup–only recap. Self-gates the same way and no-ops on days with no
+      # WC fixtures, so this harmlessly stops producing rows once the tournament ends.
+      - name: Generate daily recap (World Cup)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm recap:ci -- --scope=world-cup
