@@ -5,6 +5,7 @@ import matter from 'gray-matter'
 import { isAuthed } from '@/lib/adminAuth'
 import { authedOrAction } from '@/lib/authedOrAction'
 import { getContentSource } from '@vismay/content-source/contentSource'
+import { parseJsonConfig, stringifyJsonConfig } from '@vismay/content-source/jsonSections'
 import { loadStoryConfig } from '@vismay/content-source/storyConfig'
 import { getApp } from '@vismay/content-source/apps'
 
@@ -98,7 +99,24 @@ export async function PUT(
   const src = getContentSource()
   try {
     if (typeof body.markdown === 'string') await src.writeMarkdown(slug, body.markdown)
-    if (body.config_yaml !== undefined) await src.writeConfigYaml(slug, body.config_yaml)
+    if (body.config_yaml !== undefined) {
+      // The canvas serializes config edits to YAML text and PUTs them as
+      // `config_yaml` regardless of the story's actual format. For a JSON-native
+      // story (new verticals) that text must land in `config_json` — the column
+      // the renderer reads — or the edit writes to a dead column and "vanishes
+      // on reload". Route by the story's format: normalize the YAML payload to a
+      // JSON config and write JSON; otherwise write YAML unchanged.
+      const fmt = await src.getConfigFormat(slug)
+      if (body.config_yaml === null) {
+        await src.writeConfig(slug, null, fmt)
+      } else if (fmt === 'json') {
+        const obj = parseYaml(body.config_yaml)
+        const json = stringifyJsonConfig(parseJsonConfig(JSON.stringify(obj)))
+        await src.writeConfig(slug, json, 'json')
+      } else {
+        await src.writeConfigYaml(slug, body.config_yaml)
+      }
+    }
     if (body.share_yaml !== undefined) await src.writeShareYaml(slug, body.share_yaml)
     if (
       body.status !== undefined ||
