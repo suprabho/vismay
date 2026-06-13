@@ -709,6 +709,9 @@ importers:
       '@vismay/story-reader':
         specifier: workspace:*
         version: link:../../packages/story-reader
+      '@vismay/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -1099,6 +1102,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.103.0
         version: 2.105.4
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../viz-engine
       react:
         specifier: ^19.0.0
         version: 19.2.4
