@@ -10,6 +10,7 @@
 import type {
   ResolvedUnit,
   ShareSectionOverride,
+  ShareItemGroup,
 } from '@vismay/viz-engine'
 import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 
@@ -27,9 +28,20 @@ export interface ShareCardEntry {
    * combined graph card and for non-graph variants.
    */
   graphScope?: 'stat' | 'chart'
+  /**
+   * For region-split graph cards (via `shareGroups`): which slice of the lead
+   * list layer's `items[]` this card renders, plus the per-card heading.
+   * Omitted on non-split cards.
+   */
+  itemGroup?: ShareItemGroup
   label: string
   /** A short human description for the picker UI. */
   preview: string
+}
+
+function groupPreview(group: ShareItemGroup, unit: ResolvedUnit): string {
+  const base = group.heading || unit.heading || unit.parentConfig.heading || ''
+  return `Stat · ${base}`.trim()
 }
 
 function sliceShareParagraphs(all: string[], spec: number | [number, number]): string[] {
@@ -73,6 +85,12 @@ export function buildShareCardList(
     )
     const hasVizForeground = leadLayers.length + visualLayers.length > 0
     const shareOverride = sectionId ? overrides?.[sectionId] : undefined
+    // Region split: one stat card per `shareGroups` entry (per-subsection wins).
+    const shareGroups =
+      shareOverride?.subsections?.[unit.subIndex]?.shareGroups ??
+      shareOverride?.shareGroups
+    const hasGroupSplit =
+      !isHeroLike && leadLayers.length > 0 && !!shareGroups && shareGroups.length > 0
 
     const subsectionConfig = unit.parentConfig.subsections?.[unit.subIndex]
     const hasSubsectionMap = !!subsectionConfig?.map
@@ -91,7 +109,36 @@ export function buildShareCardList(
     }
 
     if (hasVizForeground) {
-      if (!isHeroLike && leadLayers.length > 0 && visualLayers.length > 0) {
+      if (hasGroupSplit) {
+        // One stat card per region (slice of the lead list's items[]), then —
+        // if the section also has a visual layer — a single chart card after.
+        shareGroups!.forEach((group, sliceIdx) => {
+          cards.push({
+            id: `${unit.parentIndex}-${unit.subIndex}-${sliceIdx}-graph`,
+            parentIndex: unit.parentIndex,
+            subIndex: unit.subIndex,
+            sliceIndex: sliceIdx,
+            variant: 'graph',
+            graphScope: 'stat',
+            itemGroup: group,
+            label: 'stat',
+            preview: groupPreview(group, unit),
+          })
+        })
+        if (visualLayers.length > 0) {
+          const chartSlice = shareGroups!.length
+          cards.push({
+            id: `${unit.parentIndex}-${unit.subIndex}-${chartSlice}-graph`,
+            parentIndex: unit.parentIndex,
+            subIndex: unit.subIndex,
+            sliceIndex: chartSlice,
+            variant: 'graph',
+            graphScope: 'chart',
+            label: 'graph',
+            preview: previewFor(unit, 'graph'),
+          })
+        }
+      } else if (!isHeroLike && leadLayers.length > 0 && visualLayers.length > 0) {
         // Split: stat card (sliceIndex 0) then chart card (sliceIndex 1). The
         // sliceIndex mirrors ShareShell's per-variant slice counter so the
         // ids line up with window.__shareCards__ at capture time.
