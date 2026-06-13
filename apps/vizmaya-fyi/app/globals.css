@@ -6,6 +6,15 @@
    utility classes (e.g. the snap container, logo chrome) silently drop. */
 @source "../../../packages/story-reader/src";
 
+/* vizmaya-fyi is the shared *headless render surface* for every vertical's
+   story (autoplay / share / slides / report / canvas-frame iframes the admin
+   canvas mounts). Those verticals' viz modules use package-only arbitrary
+   classes (e.g. f1 driver-standings' grid-cols-[28px_1fr_60px_40px_40px]) that
+   Tailwind v4 won't see unless we scan their source here — otherwise the class
+   is purged and the grid collapses to one column. Mirror admin/catalog. */
+@source "../../../verticals/footshorts-viz/src/**/*.{ts,tsx}";
+@source "../../../verticals/f1-viz/src/**/*.{ts,tsx}";
+
 @theme inline {
   --color-background: var(--color-bg, #0a0e14);
   --color-foreground: var(--color-text, #e0ddd5);
