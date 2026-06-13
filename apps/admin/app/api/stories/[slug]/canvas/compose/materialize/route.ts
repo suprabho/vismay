@@ -42,13 +42,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
   }
 
   const src = getContentSource()
-  const [markdown, configYaml] = await Promise.all([
+  const [markdown, cfgRead] = await Promise.all([
     src.readMarkdown(slug),
-    src.readConfigYaml(slug),
+    src.readConfig(slug),
   ])
-  if (markdown == null || configYaml == null) {
+  if (markdown == null || cfgRead == null) {
     return NextResponse.json({ error: 'draft story files are missing' }, { status: 404 })
   }
+  const configYaml = cfgRead.text
+  const configFormat = cfgRead.format
 
   // Choose the base to append onto:
   //  • attached (compose started on an existing story) → keep the story whole,
@@ -68,8 +70,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
   } else {
     const fmMatch = markdown.match(/^---\n([\s\S]*?)\n---\n?/)
     md = fmMatch ? `---\n${fmMatch[1]}\n---\n` : ''
+    // parseYaml reads the existing defaults for either format (JSON ⊂ YAML);
+    // the base is then re-serialised in the story's own config format.
     const cfgObj = (parseYaml(configYaml) ?? {}) as { defaults?: unknown }
-    cfg = yamlStringify({ defaults: cfgObj.defaults ?? {} })
+    const defaults = cfgObj.defaults ?? {}
+    cfg =
+      configFormat === 'json'
+        ? JSON.stringify({ defaults }, null, 2) + '\n'
+        : yamlStringify({ defaults })
   }
 
   // Map placeholders anchor to the outline's planned geo when present, so a
@@ -110,7 +118,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
           ...(s.geo?.zoom != null ? { zoom: s.geo.zoom } : {}),
         },
       })),
-    })
+    }, configFormat)
     md = r.markdown
     cfg = r.configYaml
     const idx = nextOutline.findIndex((e) => e.id === entry.id)
@@ -119,7 +127,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
 
   try {
     await src.writeMarkdown(slug, md)
-    await src.writeConfigYaml(slug, cfg)
+    await src.writeConfig(slug, cfg, configFormat)
   } catch (e) {
     return NextResponse.json(
       { error: `failed to write sections: ${e instanceof Error ? e.message : String(e)}` },

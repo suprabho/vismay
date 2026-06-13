@@ -41,14 +41,19 @@ export async function hasStoryConfig(slug: string): Promise<boolean> {
  * Throws if the file is missing, malformed, or missing required fields.
  */
 export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
-  const file = await getContentSource().readConfigYaml(slug)
-  if (file == null) {
+  const cfg = await getContentSource().readConfig(slug)
+  if (cfg == null) {
     throw new Error(`Story config for ${slug} is missing`)
   }
-  const raw = parseYaml(file) as Partial<StoryConfig> | null
+  // JSON-native stories (new verticals) parse via JSON.parse; legacy YAML via
+  // yaml.parse. Both produce the same plain object the validator runs against —
+  // JSON is a subset of YAML, so this branch is for a clearer parse error only.
+  const raw = (
+    cfg.format === 'json' ? JSON.parse(cfg.text) : parseYaml(cfg.text)
+  ) as Partial<StoryConfig> | null
 
   if (!raw || typeof raw !== 'object') {
-    throw new Error(`Story config ${slug}.config.yaml is empty or invalid YAML`)
+    throw new Error(`Story config for ${slug} is empty or invalid ${cfg.format.toUpperCase()}`)
   }
   if (!Array.isArray(raw.sections) || raw.sections.length === 0) {
     throw new Error(`Story config ${slug}.config.yaml has no sections`)

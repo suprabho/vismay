@@ -281,13 +281,20 @@ export interface ValidationIssue {
   message: string
 }
 
+/** Serialization format of a story's section config — YAML (legacy / vizmaya)
+ *  or JSON (new verticals). Mirrors `@vismay/content-source`'s `ConfigFormat`. */
+export type ConfigFormat = 'yaml' | 'json'
+
 /** The serialized, write-ready story files. */
 export interface StoryArtifacts {
   slug: string
   /** `<slug>.md` — frontmatter + `## heading` prose. */
   markdown: string
-  /** `<slug>.config.yaml` — defaults + sections. */
+  /** The config document text — `<slug>.config.yaml` (YAML) or, for JSON-native
+   *  verticals, `<slug>.config.json` (see `configFormat`). */
   configYaml: string
+  /** Which artifact `configYaml` belongs in. */
+  configFormat: ConfigFormat
   /** `<slug>/charts/<id>.json` files. */
   charts: Array<{ id: string; json: string }>
   imagePrompts: ImagePrompt[]

@@ -18,6 +18,22 @@ import { listStorySources, removeSourceFile } from './storySources'
 
 export type StoryStatus = 'draft' | 'published' | 'archived'
 
+/**
+ * Serialization format of a story's section config.
+ *
+ *  • `'yaml'` — the legacy `<slug>.config.yaml` / `config_yaml` column. Every
+ *    vizmaya-fyi story uses this.
+ *  • `'json'` — the `<slug>.config.json` / `config_json` column. New verticals
+ *    (f1, footshorts) are JSON-native: the compose pipeline writes a structured
+ *    object rather than hand-built YAML, and the canvas edits the parsed tree.
+ *
+ * The discriminator is simply *which artifact exists*: a story has at most one.
+ * Because JSON is a subset of YAML, every existing `parseYaml`-based reader keeps
+ * working when handed JSON text — so only writers and the line-based canvas
+ * surgery need to branch on format.
+ */
+export type ConfigFormat = 'yaml' | 'json'
+
 export interface StoryMeta {
   slug: string
   status: StoryStatus
@@ -30,7 +46,16 @@ export interface ContentSource {
   /** All story slugs plus the minimum metadata needed to filter draft/listed. */
   listStories(): Promise<StoryMeta[]>
   readMarkdown(slug: string): Promise<string | null>
+  /** Read the section config TEXT regardless of format — JSON artifact wins
+   *  when present, else YAML. Returns whatever string is stored; callers that
+   *  only `parseYaml` it need no change (JSON ⊂ YAML). */
   readConfigYaml(slug: string): Promise<string | null>
+  /** Read the section config text together with its format, for the writers
+   *  and the canvas surgery that must know which serializer to use. */
+  readConfig(slug: string): Promise<{ text: string; format: ConfigFormat } | null>
+  /** Which serializer a story uses — `'json'` iff a JSON config artifact
+   *  exists for the slug, else `'yaml'` (the default for legacy stories). */
+  getConfigFormat(slug: string): Promise<ConfigFormat>
   readShareYaml(slug: string): Promise<string | null>
   readReportYaml(slug: string): Promise<string | null>
   readTtsYaml(slug: string): Promise<string | null>
@@ -44,20 +69,30 @@ export interface ContentSource {
    *  a classic lost update without compare-and-set). */
   readStoryForEdit(
     slug: string,
-  ): Promise<{ markdown: string; configYaml: string | null; version: string } | null>
+  ): Promise<{
+    markdown: string
+    /** The config text (JSON for JSON-native stories — see `configFormat`). */
+    configYaml: string | null
+    configFormat: ConfigFormat
+    version: string
+  } | null>
   /** Compare-and-set write of markdown and/or config. Applies only if the
    *  story's version still equals `expectedVersion`; returns false on a version
    *  conflict so the caller can re-read fresh and re-apply its slice. Only the
-   *  provided fields are written (omit one to leave it untouched). */
+   *  provided fields are written (omit one to leave it untouched). `configYaml`
+   *  carries the config text; `configFormat` (default `'yaml'`) selects which
+   *  artifact it lands in. */
   casWriteStory(
     slug: string,
-    next: { markdown?: string; configYaml?: string | null },
+    next: { markdown?: string; configYaml?: string | null; configFormat?: ConfigFormat },
     expectedVersion: string,
   ): Promise<boolean>
 
   /** Write methods for the admin editor. Callers are responsible for auth. */
   writeMarkdown(slug: string, raw: string): Promise<void>
   writeConfigYaml(slug: string, raw: string | null): Promise<void>
+  /** Write the section config to the artifact for `format` (JSON or YAML). */
+  writeConfig(slug: string, raw: string | null, format: ConfigFormat): Promise<void>
   writeShareYaml(slug: string, raw: string | null): Promise<void>
   writeReportYaml(slug: string, raw: string | null): Promise<void>
   writeTtsYaml(slug: string, raw: string | null): Promise<void>
@@ -94,7 +129,17 @@ function fsStoryVersion(slug: string): string {
     const p = path.join(STORIES_DIR, file)
     return fs.existsSync(p) ? fs.statSync(p).mtimeMs : 0
   }
-  return `${mtime(`${slug}.md`)}:${mtime(`${slug}.config.yaml`)}`
+  return `${mtime(`${slug}.md`)}:${mtime(`${slug}.config.yaml`)}:${mtime(`${slug}.config.json`)}`
+}
+
+/** Read a story's section config from disk: the JSON artifact wins when present
+ *  (a story is JSON-native or YAML, never both), else the YAML one. */
+function fsReadConfig(slug: string): { text: string; format: ConfigFormat } | null {
+  const j = fsReadIfExists(path.join(STORIES_DIR, `${slug}.config.json`))
+  if (j != null) return { text: j, format: 'json' }
+  const y = fsReadIfExists(path.join(STORIES_DIR, `${slug}.config.yaml`))
+  if (y != null) return { text: y, format: 'yaml' }
+  return null
 }
 
 // Mirror of the `apps` rows seeded by migrations/039_content_apps.sql. Used in
@@ -155,7 +200,13 @@ const fsSource: ContentSource = {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.md`))
   },
   async readConfigYaml(slug) {
-    return fsReadIfExists(path.join(STORIES_DIR, `${slug}.config.yaml`))
+    return fsReadConfig(slug)?.text ?? null
+  },
+  async readConfig(slug) {
+    return fsReadConfig(slug)
+  },
+  async getConfigFormat(slug) {
+    return fs.existsSync(path.join(STORIES_DIR, `${slug}.config.json`)) ? 'json' : 'yaml'
   },
   async readShareYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.share.yaml`))
@@ -181,20 +232,26 @@ const fsSource: ContentSource = {
   async readStoryForEdit(slug) {
     const markdown = fsReadIfExists(path.join(STORIES_DIR, `${slug}.md`))
     if (markdown == null) return null
-    const configYaml = fsReadIfExists(path.join(STORIES_DIR, `${slug}.config.yaml`))
-    return { markdown, configYaml, version: fsStoryVersion(slug) }
+    const cfg = fsReadConfig(slug)
+    return {
+      markdown,
+      configYaml: cfg?.text ?? null,
+      configFormat: cfg?.format ?? 'yaml',
+      version: fsStoryVersion(slug),
+    }
   },
   async casWriteStory(slug, next, expectedVersion) {
     // Single-process Node: with no `await` between the version check and the
     // synchronous writes, no other request can interleave — the read-compare-
-    // write below is atomic. (Version = the two files' mtimes, see fsStoryVersion.)
+    // write below is atomic. (Version = the config files' mtimes, see fsStoryVersion.)
     if (fsStoryVersion(slug) !== expectedVersion) return false
     fs.mkdirSync(STORIES_DIR, { recursive: true })
     if (next.markdown !== undefined) {
       fs.writeFileSync(path.join(STORIES_DIR, `${slug}.md`), next.markdown, 'utf8')
     }
     if (next.configYaml !== undefined) {
-      const p = path.join(STORIES_DIR, `${slug}.config.yaml`)
+      const ext = (next.configFormat ?? 'yaml') === 'json' ? 'config.json' : 'config.yaml'
+      const p = path.join(STORIES_DIR, `${slug}.${ext}`)
       if (next.configYaml == null) {
         if (fs.existsSync(p)) fs.unlinkSync(p)
       } else {
@@ -208,11 +265,16 @@ const fsSource: ContentSource = {
     fs.writeFileSync(path.join(STORIES_DIR, `${slug}.md`), raw, 'utf8')
   },
   async writeConfigYaml(slug, raw) {
-    const p = path.join(STORIES_DIR, `${slug}.config.yaml`)
+    return fsSource.writeConfig(slug, raw, 'yaml')
+  },
+  async writeConfig(slug, raw, format) {
+    const ext = format === 'json' ? 'config.json' : 'config.yaml'
+    const p = path.join(STORIES_DIR, `${slug}.${ext}`)
     if (raw == null) {
       if (fs.existsSync(p)) fs.unlinkSync(p)
       return
     }
+    fs.mkdirSync(STORIES_DIR, { recursive: true })
     fs.writeFileSync(p, raw, 'utf8')
   },
   async writeShareYaml(slug, raw) {
@@ -259,7 +321,7 @@ const fsSource: ContentSource = {
   async deleteStory(slug) {
     // Remove every per-story file + the charts directory. Best-effort per
     // path — a missing sidecar (e.g. no .map.yaml) isn't an error.
-    for (const suffix of ['.md', '.config.yaml', '.share.yaml', '.report.yaml', '.tts.yaml', '.map.yaml']) {
+    for (const suffix of ['.md', '.config.yaml', '.config.json', '.share.yaml', '.report.yaml', '.tts.yaml', '.map.yaml']) {
       const p = path.join(STORIES_DIR, `${slug}${suffix}`)
       if (fs.existsSync(p)) fs.unlinkSync(p)
     }
@@ -339,14 +401,35 @@ const dbSource: ContentSource = {
     return data?.markdown ?? null
   },
   async readConfigYaml(slug) {
+    return (await dbSource.readConfig(slug))?.text ?? null
+  },
+  async readConfig(slug) {
     const sb = createServiceClient()
-    const { data, error } = await sb
+    let { data, error } = await sb
       .from('stories')
-      .select('config_yaml')
+      .select('config_yaml, config_json')
       .eq('slug', slug)
       .maybeSingle()
-    if (error) throw new Error(`readConfigYaml ${slug}: ${error.message}`)
-    return data?.config_yaml ?? null
+    // Pre-config_json deployments lack the column; fall back to YAML-only.
+    if (error?.message?.includes('config_json')) {
+      const fb = await sb
+        .from('stories')
+        .select('config_yaml')
+        .eq('slug', slug)
+        .maybeSingle()
+      data = fb.data as any
+      error = fb.error
+    }
+    if (error) throw new Error(`readConfig ${slug}: ${error.message}`)
+    if (!data) return null
+    const j = (data as { config_json?: string | null }).config_json ?? null
+    if (j != null) return { text: j, format: 'json' }
+    const y = (data as { config_yaml?: string | null }).config_yaml ?? null
+    if (y != null) return { text: y, format: 'yaml' }
+    return null
+  },
+  async getConfigFormat(slug) {
+    return (await dbSource.readConfig(slug))?.format ?? 'yaml'
   },
   async readShareYaml(slug) {
     const sb = createServiceClient()
@@ -411,16 +494,28 @@ const dbSource: ContentSource = {
   },
   async readStoryForEdit(slug) {
     const sb = createServiceClient()
-    const { data, error } = await sb
+    let { data, error } = await sb
       .from('stories')
-      .select('markdown, config_yaml, updated_at')
+      .select('markdown, config_yaml, config_json, updated_at')
       .eq('slug', slug)
       .maybeSingle()
+    if (error?.message?.includes('config_json')) {
+      const fb = await sb
+        .from('stories')
+        .select('markdown, config_yaml, updated_at')
+        .eq('slug', slug)
+        .maybeSingle()
+      data = fb.data as any
+      error = fb.error
+    }
     if (error) throw new Error(`readStoryForEdit ${slug}: ${error.message}`)
     if (!data || data.markdown == null) return null
+    const j = (data as { config_json?: string | null }).config_json ?? null
+    const y = (data as { config_yaml?: string | null }).config_yaml ?? null
     return {
       markdown: data.markdown as string,
-      configYaml: (data.config_yaml as string | null) ?? null,
+      configYaml: j ?? y ?? null,
+      configFormat: j != null ? 'json' : 'yaml',
       // updated_at is the CAS token; casWriteStory filters on its exact value.
       version: String(data.updated_at),
     }
@@ -442,7 +537,10 @@ const dbSource: ContentSource = {
       update.aura = (data.aura as string | undefined)?.trim() || null
       update.published_at = status === 'published' ? new Date().toISOString() : null
     }
-    if (next.configYaml !== undefined) update.config_yaml = next.configYaml
+    if (next.configYaml !== undefined) {
+      const col = (next.configFormat ?? 'yaml') === 'json' ? 'config_json' : 'config_yaml'
+      update[col] = next.configYaml
+    }
     const { data, error } = await sb
       .from('stories')
       .update(update)
@@ -479,12 +577,16 @@ const dbSource: ContentSource = {
     if (error) throw new Error(`writeMarkdown ${slug}: ${error.message}`)
   },
   async writeConfigYaml(slug, raw) {
+    return dbSource.writeConfig(slug, raw, 'yaml')
+  },
+  async writeConfig(slug, raw, format) {
     const sb = createServiceClient()
+    const col = format === 'json' ? 'config_json' : 'config_yaml'
     const { error } = await sb
       .from('stories')
-      .update({ config_yaml: raw, updated_at: new Date().toISOString() })
+      .update({ [col]: raw, updated_at: new Date().toISOString() })
       .eq('slug', slug)
-    if (error) throw new Error(`writeConfigYaml ${slug}: ${error.message}`)
+    if (error) throw new Error(`writeConfig ${slug} (${format}): ${error.message}`)
   },
   async writeShareYaml(slug, raw) {
     const sb = createServiceClient()

@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server'
 import { stringify as yamlStringify } from 'yaml'
 import { isAuthed } from '@/lib/adminAuth'
-import { getContentSource, verticalForApp } from '@vismay/content-source/contentSource'
+import {
+  getContentSource,
+  verticalForApp,
+  type ConfigFormat,
+} from '@vismay/content-source/contentSource'
 import { writeComposeState } from '@vismay/content-source/composeState'
-import { slugify, defaultsFor, DEFAULT_THEME, type StoryFormat } from '@vismay/story-pipeline'
+import {
+  slugify,
+  defaultsFor,
+  DEFAULT_THEME,
+  configFormatForVertical,
+  type StoryFormat,
+} from '@vismay/story-pipeline'
 
 /**
  * Route 0 — create a compose draft and open it in the canvas.
@@ -29,12 +39,14 @@ function seedStory(
   title: string,
   format: StoryFormat,
   appSlug: string,
-): { markdown: string; configYaml: string } {
+): { markdown: string; configYaml: string; configFormat: ConfigFormat } {
   const today = new Date().toISOString().slice(0, 10)
   // footshorts/vizf1 drafts must declare their `vertical` or the app's viz
   // bundle (`fs:` / `f1:` module types) never registers in the canvas/reader.
   // vizmaya-fyi maps to null — its drafts seed no vertical key (core registry).
   const vertical = verticalForApp(appSlug)
+  // New verticals are JSON-native; vizmaya-fyi (null vertical) stays on YAML.
+  const configFormat = configFormatForVertical(vertical)
   const frontmatter = {
     title,
     subtitle: '',
@@ -56,9 +68,13 @@ function seedStory(
     format === 'map'
       ? { text: 'Draft', map: { center: [0, 0], zoom: 1 } }
       : { text: 'Draft', foreground: [] as unknown[] }
-  const configYaml = yamlStringify({ defaults: defaultsFor(format), sections: [section] })
+  const configObj = { defaults: defaultsFor(format), sections: [section] }
+  const configYaml =
+    configFormat === 'json'
+      ? JSON.stringify(configObj, null, 2) + '\n'
+      : yamlStringify(configObj)
 
-  return { markdown, configYaml }
+  return { markdown, configYaml, configFormat }
 }
 
 export async function POST(req: Request) {
@@ -96,10 +112,10 @@ export async function POST(req: Request) {
     )
   }
 
-  const { markdown, configYaml } = seedStory(title, format, appSlug)
+  const { markdown, configYaml, configFormat } = seedStory(title, format, appSlug)
   try {
     await src.writeMarkdown(slug, markdown) // creates the row (db upsert)
-    await src.writeConfigYaml(slug, configYaml)
+    await src.writeConfig(slug, configYaml, configFormat)
     await src.updateMetadata(slug, { appSlug })
     await writeComposeState(slug, { phase: 'sources', format, angles: [], outline: [] })
   } catch (e) {

@@ -8,7 +8,12 @@ import {
   type SourceDoc,
 } from '@vismay/story-pipeline'
 import { buildYamlModel, replaceSection } from '@vismay/content-source/yamlSections'
-import { getContentSource, verticalForApp } from '@vismay/content-source/contentSource'
+import { jsonSectionAnchor, replaceJsonSectionBody } from '@vismay/content-source/jsonSections'
+import {
+  getContentSource,
+  verticalForApp,
+  type ConfigFormat,
+} from '@vismay/content-source/contentSource'
 import type { StorySource } from '@vismay/content-source/storySources'
 
 /** Shared helpers for the canvas compose routes (sources / angles / outline / section). */
@@ -114,20 +119,29 @@ export function readMarkdownProse(markdown: string, heading: string): string[] {
  *  `text` field. Falls back to null when the entry has none (subsections
  *  parent) or the id is unknown. Needed because a deck cover anchors at
  *  `## Cover` while its outline entry keeps the display title as `heading`. */
-export function sectionAnchor(configYaml: string, sectionId: string): string | null {
-  const model = buildYamlModel(configYaml)
+export function sectionAnchor(
+  configText: string,
+  sectionId: string,
+  format: ConfigFormat = 'yaml',
+): string | null {
+  if (format === 'json') return jsonSectionAnchor(configText, sectionId)
+  const model = buildYamlModel(configText)
   if (model.parseError) return null
   const s = model.sections.find((x) => x.id === sectionId)
   return s?.text ?? null
 }
 
 /** Replace a section's visual `body` in the config, keyed by id, preserving its
- *  id/text/kind (VISUAL pass writes config.yaml). */
+ *  id/text/kind (VISUAL pass writes the config). JSON-native stories edit the
+ *  parsed tree; YAML stories splice the raw string to keep comments. */
 export function replaceConfigBody(
-  configYaml: string,
+  configText: string,
   sectionId: string,
   body: Record<string, unknown>,
+  format: ConfigFormat = 'yaml',
 ): string {
+  if (format === 'json') return replaceJsonSectionBody(configText, sectionId, body)
+  const configYaml = configText
   const model = buildYamlModel(configYaml)
   if (model.parseError) throw new Error(`invalid config YAML: ${model.parseError}`)
   const index = model.sections.findIndex((s) => s.id === sectionId)

@@ -133,10 +133,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
 
   const src = getContentSource()
-  const [markdown, configYaml] = await Promise.all([src.readMarkdown(slug), src.readConfigYaml(slug)])
-  if (markdown == null || configYaml == null) {
+  const [markdown, cfg] = await Promise.all([src.readMarkdown(slug), src.readConfig(slug)])
+  if (markdown == null || cfg == null) {
     return NextResponse.json({ error: 'draft story files are missing' }, { status: 404 })
   }
+  const configYaml = cfg.text
+  const configFormat = cfg.format
 
   let newMarkdown = markdown
   let newConfig = configYaml
@@ -149,7 +151,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   // The markdown anchor the prose lives under — the config `text`, NOT the
   // outline heading: a deck cover anchors at `## Cover` while its entry keeps
   // the display title (which lives in the config `heading` field).
-  const anchor = sectionAnchor(configYaml, entry.sectionId) ?? entry.heading
+  const anchor = sectionAnchor(configYaml, entry.sectionId, configFormat) ?? entry.heading
   const result: {
     heading: string
     paragraphs?: string[]
@@ -239,7 +241,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         }
         visualBody = { ...visualBody, subsections: subEntries }
       }
-      newConfig = replaceConfigBody(newConfig, entry.sectionId, visualBody)
+      newConfig = replaceConfigBody(newConfig, entry.sectionId, visualBody, configFormat)
       cfgBody = visualBody
       result.body = visualBody
     }
@@ -267,13 +269,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
         if (!fresh) return NextResponse.json({ error: 'draft story files are missing' }, { status: 404 })
         let md = fresh.markdown
         for (const e of mdEdits) md = replaceMarkdownProse(md, e.anchor, e.paragraphs)
-        const cfg = cfgBody ? replaceConfigBody(fresh.configYaml ?? configYaml, entry.sectionId, cfgBody) : null
+        const cfg = cfgBody
+          ? replaceConfigBody(fresh.configYaml ?? configYaml, entry.sectionId, cfgBody, fresh.configFormat)
+          : null
         // eslint-disable-next-line no-await-in-loop
         const ok = await src.casWriteStory(
           slug,
           {
             ...(hasMdEdit ? { markdown: md } : {}),
-            ...(hasCfgEdit ? { configYaml: cfg } : {}),
+            ...(hasCfgEdit ? { configYaml: cfg, configFormat: fresh.configFormat } : {}),
           },
           fresh.version,
         )
