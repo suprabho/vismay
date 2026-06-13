@@ -144,7 +144,13 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
     )
   }
 
-  const homeItems: StoryGridItem[] = homeListed.map((s, i) => ({ data: s, n: i }))
+  // The search box lives in the shared header, so every tab — including Home —
+  // has to honour it. Drag-to-reorder indexes into the full `homeListed`, so we
+  // only allow dragging when no query is active (a filtered grid's indices don't
+  // line up with the persisted order).
+  const homeShown = homeListed.filter(matchesQuery)
+  const notOnHomeShown = notOnHome.filter(matchesQuery)
+  const homeItems: StoryGridItem[] = homeShown.map((s, i) => ({ data: s, n: i }))
 
   const renderHomeCard = (item: StoryGridItem, ctx: RenderCardContext) => {
     const s = item.data as Story
@@ -154,15 +160,19 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
         data={s}
         n={item.n}
         big={ctx.big}
-        className={`group cursor-grab${dragIndex === ctx.index ? ' opacity-40' : ''}`}
-        draggable
-        onDragStart={() => setDragIndex(ctx.index)}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault()
-          reorderHome(ctx.index)
-        }}
-        onDragEnd={() => setDragIndex(null)}
+        className={`group${q === '' ? ' cursor-grab' : ''}${dragIndex === ctx.index ? ' opacity-40' : ''}`}
+        draggable={q === ''}
+        onDragStart={q === '' ? () => setDragIndex(ctx.index) : undefined}
+        onDragOver={q === '' ? (e) => e.preventDefault() : undefined}
+        onDrop={
+          q === ''
+            ? (e) => {
+                e.preventDefault()
+                reorderHome(ctx.index)
+              }
+            : undefined
+        }
+        onDragEnd={q === '' ? () => setDragIndex(null) : undefined}
       >
         <div className="absolute inset-0 z-[2] flex flex-col justify-between p-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/45">
           <div className="flex justify-end">
@@ -256,7 +266,9 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
             </p>
             {homeItems.length === 0 ? (
               <div className="text-sm text-neutral-500 py-8 text-center">
-                No stories on the home grid yet. Publish a story and add it to home from a section below.
+                {q
+                  ? `No home stories match “${query.trim()}”.`
+                  : 'No stories on the home grid yet. Publish a story and add it to home from a section below.'}
               </div>
             ) : (
               <StoryBentoGrid mode="stacked" items={homeItems} renderCard={renderHomeCard} />
@@ -266,11 +278,13 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
               <h2 className="text-xs uppercase tracking-wider text-neutral-500 mb-3">
                 Published · not on home ({notOnHome.length})
               </h2>
-              {notOnHome.length === 0 ? (
-                <p className="text-sm text-neutral-600">Every published story is on the home grid.</p>
+              {notOnHomeShown.length === 0 ? (
+                <p className="text-sm text-neutral-600">
+                  {q ? `No matches in “${query.trim()}”.` : 'Every published story is on the home grid.'}
+                </p>
               ) : (
                 <ul className="divide-y divide-white/5 border border-white/5 rounded-lg overflow-hidden">
-                  {notOnHome.map((s) => (
+                  {notOnHomeShown.map((s) => (
                     <StoryRow
                       key={s.slug}
                       story={s}
