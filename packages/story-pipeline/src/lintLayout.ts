@@ -111,6 +111,17 @@ function lintForeground(fg: unknown, section: string): LayoutLintIssue[] {
 /** A vertical-namespaced layer type, e.g. `f1:race-card`. */
 const VERTICAL_TYPE_RE = /^\w+:/
 
+/** The footshorts standings module — the ONLY sanctioned way to render a league
+ *  table. Hardened both in the prompt (FOOTSHORTS_PACK guidance) and here. */
+const FS_STANDINGS_TYPE = 'fs:standings-table'
+
+/** A heading that signals a standings / league-table beat. Tight on purpose —
+ *  bare "table" is too broad, so we only match the standings phrasings. */
+const STANDINGS_HEADING_RE = /\b(standings|league\s+table|relegation\s+zone|top\s+of\s+the\s+table)\b/i
+
+/** Visuals a model might wrongly reach for to draw a league table. */
+const STANDINGS_IMPOSTOR_TYPES = new Set(['chart', 'keyValue', 'table', 'bigStat', 'imageGrid'])
+
 /** Every layer `type` in a normalised foreground value (flat list, single
  *  layer mapping, or `{ layout?, regions }`). */
 function collectForegroundTypes(fg: unknown): string[] {
@@ -150,7 +161,8 @@ export function lintSectionBody(
 ): LayoutLintIssue[] {
   const issues = lintForeground(body.foreground, section)
   const allowed = new Set(opts.extraTypes ?? [])
-  for (const t of collectForegroundTypes(body.foreground)) {
+  const types = collectForegroundTypes(body.foreground)
+  for (const t of types) {
     if (VERTICAL_TYPE_RE.test(t) && !allowed.has(t)) {
       issues.push({
         section,
@@ -158,6 +170,25 @@ export function lintSectionBody(
         message: `vertical layer type '${t}' is not offered to this story's desk — use a core layer or a type from its menu`,
       })
     }
+  }
+  // Footshorts standings hardening: a standings/league-table beat MUST render as
+  // fs:standings-table. Only fires when this desk OFFERS the module (footshorts),
+  // the heading signals a standings beat, and the section drew the table as some
+  // other visual (chart/keyValue/bigStat/table) instead — i.e. the model
+  // ignored the prompt's "ONLY fs:standings-table" rule. The corrective retry in
+  // generateSectionVisual then forces it onto fs:standings-table.
+  if (
+    allowed.has(FS_STANDINGS_TYPE) &&
+    STANDINGS_HEADING_RE.test(section) &&
+    !types.includes(FS_STANDINGS_TYPE) &&
+    types.some((t) => STANDINGS_IMPOSTOR_TYPES.has(t))
+  ) {
+    const impostors = types.filter((t) => STANDINGS_IMPOSTOR_TYPES.has(t))
+    issues.push({
+      section,
+      severity: 'drop',
+      message: `standings beat renders as ${impostors.join(' · ')} — footshorts standings MUST use ${FS_STANDINGS_TYPE} (emit the table AS rows), never a chart/keyValue/table`,
+    })
   }
   return issues
 }

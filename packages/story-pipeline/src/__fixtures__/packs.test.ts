@@ -195,6 +195,27 @@ check('lint passes with the desk menu', lintSectionBody(lintBody, 'S', { extraTy
 const regionLint = { foreground: { layout: 'stat-left-chart-right', regions: { chart: [SAMPLES['fs:match-card']] } } }
 check('lint flags foreign types inside regions', lintSectionBody(regionLint, 'S').some((i) => i.message.includes('fs:match-card')))
 
+// fs:standings-table hardening — a standings beat MUST render as fs:standings-table.
+const fsExtra = FOOTSHORTS_PACK.extraLayerTypes.map((t) => t.type)
+const standingsAsChart = { foreground: { layout: 'stat-left-chart-right', regions: { chart: [{ type: 'chart', chartId: 'x' }] } } }
+check(
+  'lint flags a standings beat drawn as a chart',
+  lintSectionBody(standingsAsChart, 'The Premier League standings', { extraTypes: fsExtra }).some((i) => i.message.includes('fs:standings-table')),
+)
+const standingsCorrect = { foreground: { layout: 'stat-left-chart-right', regions: { chart: [SAMPLES['fs:standings-table']] } } }
+check(
+  'lint passes when the standings beat uses fs:standings-table',
+  !lintSectionBody(standingsCorrect, 'The Premier League standings', { extraTypes: fsExtra }).some((i) => i.message.includes('MUST use fs:standings-table')),
+)
+check(
+  'standings rule is scoped to the footshorts desk (no false fire elsewhere)',
+  !lintSectionBody(standingsAsChart, 'The Premier League standings').some((i) => i.message.includes('fs:standings-table')),
+)
+check(
+  'standings rule ignores non-standings headings',
+  !lintSectionBody(standingsAsChart, 'Goals per matchday', { extraTypes: fsExtra }).some((i) => i.message.includes('fs:standings-table')),
+)
+
 // ── 6. anti-drift: zod samples parse through the REAL module parseConfig ────
 const MODULE_PATHS: Record<string, string> = {
   'f1:race-card': 'f1-viz/src/modules/race-card',
