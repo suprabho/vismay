@@ -96,10 +96,12 @@ const standingsTable: PackLayerType = {
   label: 'a league table (position / team / P W D L / GD / Pts)',
   regions: ['chart', 'default'],
   promptDoc:
-    'Use when the sources carry a league table. Emit one row per team in table order, every ' +
-    'count from the sources — a focused slice (top 6, relegation zone) beats a full 20-row ' +
-    'dump unless the story is the whole table. Crests are supplied by the app; ids are ' +
-    'kebab-case slugs of the team names.',
+    'The ONLY way to show standings or a league table. Whenever a beat shows league ' +
+    'positions or a table, it MUST be fs:standings-table — never a chart, keyValue, ' +
+    'bigStat list, or generic table for that. Emit the standings AS rows: one row per team ' +
+    'in table order, every count from the sources — a focused slice (top 6, relegation ' +
+    'zone) beats a full 20-row dump unless the story is the whole table. Crests are ' +
+    'supplied by the app; ids are kebab-case slugs of the team names.',
   schema: z.object({
     type: z.literal('fs:standings-table'),
     rows: z
@@ -170,7 +172,8 @@ export const FOOTSHORTS_PACK: DomainPack = {
   outlineGuidance:
     'PLAN THE FOOTSHORTS MODULES (deck stories): when the sources carry a fixture or result, ' +
     'that beat\'s "visual" should FEATURE fs:match-card — name the type explicitly; a league ' +
-    'table wants fs:standings-table; one team\'s recent run wants fs:team-form-strip. These ' +
+    'table or standings beat MUST use fs:standings-table (the ONLY way to show standings — ' +
+    'never a chart/keyValue/table); one team\'s recent run wants fs:team-form-strip. These ' +
     'REPLACE a generic chart/keyValue for fixture, table, and form beats — plan charts only ' +
     'for trends (goals per matchday, points progression), never as table furniture. A typical ' +
     'football story features at least one of these modules when the sources support it.',
@@ -180,8 +183,10 @@ export const FOOTSHORTS_PACK: DomainPack = {
     'precise stat beats three vague ones.',
   visualGuidance:
     'Prefer the Footshorts modules where they fit the beat: a fixture or result wants ' +
-    'fs:match-card; a league-table beat wants fs:standings-table; a team\'s recent run ' +
-    'wants fs:team-form-strip. Use core layers (bigStat, chart, quote) for everything else.',
+    'fs:match-card; a team\'s recent run wants fs:team-form-strip. STANDINGS RULE: any ' +
+    'league-table or standings beat MUST render as fs:standings-table with the table AS ' +
+    'rows — never show standings as a chart, keyValue, bigStat list, or generic table. Use ' +
+    'core layers (bigStat, chart, quote) for everything else.',
   bylineExample: 'By the Footshorts desk',
   extraLayerTypes: [matchCard, standingsTable, teamFormStrip],
 }
