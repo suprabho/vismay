@@ -6,8 +6,12 @@ import type {
   ComposePhase,
   ComposeState,
 } from '@vismay/content-source/composeState'
-import type { StorySource } from '@vismay/content-source/storySources'
+import type {
+  StorySource,
+  SourceListItem as LibrarySource,
+} from '@vismay/content-source/storySources'
 import { composeImageFilename } from '@vismay/story-pipeline/cover'
+import type { LibraryAsset } from './SourceLibraryModal'
 import { canvasFrameId } from '../canvasOutputs'
 import type { ChartRequirementView } from './ChartCard'
 
@@ -171,6 +175,40 @@ export function useComposeFlow({
     })
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
+  }
+  // Attach an existing extracted source from another draft — the server copies
+  // its text into a fresh row for this draft (snapshot, no live link).
+  async function addFromSource(id: string): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add from library', 'sources', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fromSourceId: id }),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
+  // Attach a document asset from the story-assets bucket — extracted server-side
+  // into a new source row (PDFs may land `pending` and settle via polling).
+  async function addAsset(key: string): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add asset', 'sources', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ assetKey: key }),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
+  // Pull the "from library" picker contents — prior extracted sources + doc
+  // assets. Not single-flight (`call`): the modal owns its own loading state.
+  async function loadLibrary(): Promise<{ sources: LibrarySource[]; assets: LibraryAsset[] }> {
+    try {
+      const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
+      if (!res.ok) return { sources: [], assets: [] }
+      const data = (await res.json()) as { sources?: LibrarySource[]; assets?: LibraryAsset[] }
+      return { sources: data.sources ?? [], assets: data.assets ?? [] }
+    } catch {
+      return { sources: [], assets: [] }
+    }
   }
   async function removeSource(id: string) {
     const data = await call<{ ok: boolean }>('remove', `sources?id=${encodeURIComponent(id)}`, {
@@ -406,6 +444,9 @@ export function useComposeFlow({
     addUrl,
     addText,
     addFile,
+    addFromSource,
+    addAsset,
+    loadLibrary,
     removeSource,
     reextract,
     genAngles,
