@@ -3,19 +3,20 @@
 /**
  * Tiny markdown renderer scoped to the shape recap.ts emits:
  * h1/h2/h3, paragraphs, italic meta lines, and (optionally nested) bullet lists
- * with **bold**, *italic*, and [links](url). Not a general-purpose parser — it
- * deliberately handles only what the recap generator produces, so we don't pull
- * in a markdown dependency for one admin view.
+ * with **bold**, *italic*, [links](url), and ![](url) story thumbnails. Not a
+ * general-purpose parser — it deliberately handles only what the recap generator
+ * produces, so we don't pull in a markdown dependency for one admin view.
  */
 
 import { Fragment, type ReactNode } from 'react';
 
-// Inline: **bold**, *italic*, [text](url). Processed in that order.
+// Inline: ![](url) image, **bold**, *italic*, [text](url). Processed in that order.
 function renderInline(text: string, keyBase: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  // Split on the inline tokens while keeping the delimiters. Links are listed so a
-  // link starting with `[` wins over any `_`/`*` inside its URL (leftmost match).
-  const re = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
+  // Split on the inline tokens while keeping the delimiters. The image token is
+  // listed first so `![](url)` wins over the plain link token at the same `[`, and
+  // links beat any `_`/`*` inside their URL (leftmost match).
+  const re = /(!\[[^\]]*\]\([^)]+\)|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let i = 0;
@@ -23,8 +24,20 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const tok = m[0];
     const key = `${keyBase}-${i++}`;
+    const imgMatch = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(tok);
     const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok);
-    if (linkMatch) {
+    if (imgMatch) {
+      nodes.push(
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={key}
+          src={imgMatch[2]}
+          alt={imgMatch[1]}
+          loading="lazy"
+          className="mr-2 inline-block h-9 w-14 rounded border border-border object-cover align-middle"
+        />,
+      );
+    } else if (linkMatch) {
       nodes.push(
         <a
           key={key}
