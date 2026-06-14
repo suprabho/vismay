@@ -10,6 +10,8 @@ import {
   darkenHex,
   getCompetitionPalette,
 } from '@vismay/footshorts-viz/web';
+import { useTheme } from '@footshorts/brand/web';
+import { themes, type ThemeName } from '@footshorts/brand';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
@@ -238,67 +240,64 @@ export default function Index() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-bg text-text">
+    <main className="relative min-h-screen overflow-hidden bg-bg font-sans text-text">
       <BackgroundGlow />
 
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo />
-          <span className="text-lg font-bold tracking-tight">
-            Short<span className="text-accent">Foot</span>
-          </span>
+        <Link href="/" className="flex items-center gap-3">
+          <Logo size={36} />
+          <Wordmark className="text-2xl" />
         </Link>
-        <nav className="hidden items-center gap-7 text-sm text-muted sm:flex">
+        <nav className="hidden items-center gap-7 text-sm font-medium text-muted sm:flex">
           <a href="#features" className="hover:text-text">Features</a>
           <a href="#coverage" className="hover:text-text">Coverage</a>
+          <a href="#themes" className="hover:text-text">Themes</a>
         </nav>
-        <Link
-          href="/login"
-          className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg hover:opacity-90"
-        >
-          Log in
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeSwitcher />
+          <Link
+            href="/login"
+            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97]"
+          >
+            Log in
+          </Link>
+        </div>
       </header>
 
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-12 pt-20 sm:pt-28">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/60 px-3 py-1 text-xs font-medium uppercase tracking-wider text-muted backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            Football, distilled
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/60 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-brand backdrop-blur">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            Matchday · Live now
           </span>
-          <h1 className="mt-6 font-display text-5xl font-normal leading-[1.05] tracking-[-0.015em] sm:text-6xl md:text-7xl">
-            Your football
+          <h1 className="mt-6 font-display text-5xl font-normal leading-[1.04] tracking-tight sm:text-6xl md:text-7xl">
+            Football, but only the
             <br />
-            <span className="text-accent">in short.</span>
+            <em className="not-italic text-brand">good bits.</em>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-base text-muted sm:text-lg">
-            Every team, every league, every headline you care about — fixtures,
-            form, and AI-summarized news in one calm feed.
+            Every goal, skill and last-gasp winner — fixtures, form, and
+            AI-summarized headlines for the clubs you actually follow, in one
+            calm feed.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/login"
-              className="inline-flex w-full items-center justify-center rounded-lg bg-accent px-6 py-3 text-base font-semibold text-bg hover:opacity-90 sm:w-auto"
+              className="inline-flex w-full items-center justify-center rounded-lg bg-brand px-6 py-3 text-base font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97] sm:w-auto"
             >
               Log in to continue
             </Link>
             <Link
               href="/login"
-              className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface px-6 py-3 text-base font-medium text-text hover:border-muted sm:w-auto"
+              className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface px-6 py-3 text-base font-medium text-text transition hover:border-muted sm:w-auto"
             >
               Create an account
             </Link>
           </div>
-          <Link
-            href="/feed"
-            className="mt-4 inline-flex items-center justify-center text-sm font-medium text-muted hover:text-text"
-          >
-            or browse stories without an account →
-          </Link>
         </div>
 
         <div className="relative mx-auto mt-16 max-w-6xl">
-          <div className="absolute inset-x-10 -bottom-6 h-24 rounded-full bg-accent/20 blur-3xl" />
+          <div className="absolute inset-x-10 -bottom-6 h-24 rounded-full bg-brand/20 blur-3xl" />
           <div className="relative">
             <PreviewLabel icon="schedule">Matches &amp; results</PreviewLabel>
             <HeroMatchTiles />
@@ -311,10 +310,10 @@ export default function Index() {
         className="relative z-10 mx-auto max-w-6xl px-6 py-24 sm:py-32"
       >
         <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-medium uppercase tracking-wider text-accent">
-            Features
+          <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
+            Why footshorts
           </span>
-          <h2 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">
             More than just a feed.
           </h2>
           <p className="mt-4 text-muted">
@@ -355,10 +354,10 @@ export default function Index() {
       <section id="coverage" className="relative z-10 border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="text-xs font-medium uppercase tracking-wider text-accent">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
               Coverage
             </span>
-            <h2 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
+            <h2 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">
               Every league you watch.
             </h2>
             <p className="mt-4 text-muted">
@@ -370,19 +369,56 @@ export default function Index() {
         </div>
       </section>
 
+      <section
+        id="themes"
+        className="relative z-10 border-t border-border bg-surface/30"
+      >
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
+              Make it yours
+            </span>
+            <h2 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">
+              Three looks, named for the game.
+            </h2>
+            <p className="mt-4 text-muted">
+              Switch the whole app between Classic, Pitch and Terrace — same
+              feed, your mood. Tap one to preview it right here.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-4 sm:grid-cols-3">
+            {THEME_OPTIONS.map((option) => (
+              <ThemeCard key={option.name} option={option} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="relative z-10 mx-auto max-w-4xl px-6 py-24">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-surface/60 px-8 py-16 text-center backdrop-blur sm:px-16">
-          <div className="absolute inset-x-0 -top-20 mx-auto h-40 w-40 rounded-full bg-accent/30 blur-3xl" />
-          <h2 className="relative font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
-            Football scheduling, simplified.
+        <div className="relative overflow-hidden rounded-[28px] border border-border bg-surface/60 px-8 py-16 text-center backdrop-blur sm:px-16">
+          {/* Signature triangular grid wash — faint brand watermark. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-60"
+            style={{
+              backgroundImage: 'url(/brand/grid-texture.svg)',
+              backgroundSize: '120px',
+            }}
+          />
+          <div className="absolute inset-x-0 -top-20 mx-auto h-40 w-40 rounded-full bg-brand/30 blur-3xl" />
+          <div className="relative flex justify-center">
+            <Logo size={64} />
+          </div>
+          <h2 className="relative mt-6 font-display text-3xl font-normal tracking-tight sm:text-4xl">
+            Get the good bits.
           </h2>
           <p className="relative mt-4 text-muted">
-            Sign in to start following your clubs.
+            Free to watch. Sign in to start following your clubs.
           </p>
           <div className="relative mt-8 flex justify-center">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-lg bg-accent px-6 py-3 text-base font-semibold text-bg hover:opacity-90"
+              className="inline-flex items-center justify-center rounded-lg bg-brand px-6 py-3 text-base font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97]"
             >
               Log in to Footshorts
             </Link>
@@ -394,14 +430,13 @@ export default function Index() {
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-4">
             <div>
-              <div className="flex items-center gap-2">
-                <Logo />
-                <span className="text-base font-bold tracking-tight">
-                  Short<span className="text-accent">Foot</span>
-                </span>
+              <div className="flex items-center gap-2.5">
+                <Logo size={30} />
+                <Wordmark className="text-lg" />
               </div>
               <p className="mt-3 text-sm text-muted">
-                Football, distilled. Every match, every headline — in short.
+                Football, but only the good bits. The short-form home of the
+                game.
               </p>
             </div>
             <FooterColumn
@@ -409,6 +444,7 @@ export default function Index() {
               links={[
                 { label: 'Features', href: '#features' },
                 { label: 'Coverage', href: '#coverage' },
+                { label: 'Themes', href: '#themes' },
               ]}
             />
             <FooterColumn
@@ -427,8 +463,8 @@ export default function Index() {
             />
           </div>
           <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted sm:flex-row sm:items-center">
-            <span>© Footshorts</span>
-            <span>Made for fans.</span>
+            <span>© 2026 Footshorts</span>
+            <span>Made for the terraces.</span>
           </div>
         </div>
       </footer>
@@ -441,42 +477,181 @@ export default function Index() {
 function BackgroundGlow() {
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-      {/* Signature triangular grid texture — faint brand watermark. */}
-      <svg aria-hidden className="absolute inset-0 h-full w-full opacity-[0.14]">
-        <defs>
-          <pattern
-            id="fs-grid"
-            width="34"
-            height="29.45"
-            patternUnits="userSpaceOnUse"
-            patternTransform="translate(6 6)"
-          >
-            <path
-              d="M 0 29.45 L 17 0 L 34 29.45 M 17 0 L 17 29.45 M -17 29.45 L 0 0 M 34 0 L 51 29.45"
-              fill="none"
-              stroke="#C2410C"
-              strokeWidth="1.2"
-            />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#fs-grid)" />
-      </svg>
-      <div className="absolute left-1/2 top-[-20%] h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" />
-      <div className="absolute left-[10%] top-[30%] h-[20rem] w-[20rem] rounded-full bg-accent/5 blur-3xl" />
+      {/* Signature triangular grid — faint brand watermark across the page. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.12]"
+        style={{
+          backgroundImage: 'url(/brand/grid-texture.svg)',
+          backgroundSize: '118px 204px',
+          backgroundRepeat: 'repeat',
+          maskImage:
+            'radial-gradient(120% 80% at 50% 0%, black 35%, transparent 80%)',
+          WebkitMaskImage:
+            'radial-gradient(120% 80% at 50% 0%, black 35%, transparent 80%)',
+        }}
+      />
+      <div className="absolute left-1/2 top-[-20%] h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-brand/10 blur-3xl" />
+      <div className="absolute left-[10%] top-[30%] h-[20rem] w-[20rem] rounded-full bg-brand/[0.06] blur-3xl" />
     </div>
   );
 }
 
-function Logo() {
+// The real footshorts mark — coral app-icon squircle with the F-frame and the
+// dimensional S-ball. Shipped as an SVG asset; never redrawn by hand.
+function Logo({ size = 32 }: { size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/brand/logo-icon.svg"
-      alt="Footshorts"
-      width={32}
-      height={32}
-      className="h-8 w-8"
+      alt=""
+      aria-hidden
+      width={size}
+      height={size}
+      className="rounded-[24%]"
+      style={{ width: size, height: size }}
     />
+  );
+}
+
+// The wordmark, one word, set in the display face.
+function Wordmark({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`font-display font-normal tracking-tight ${className}`}
+    >
+      Footshorts
+    </span>
+  );
+}
+
+/* ---------- theming ---------- */
+
+// The product's three real themes, surfaced as a "make it yours" feature.
+// Names/descriptions mirror the in-app theme set; colours are read straight
+// from the brand package so previews stay true to the in-app scheme.
+const THEME_OPTIONS: { name: ThemeName; label: string; desc: string }[] = [
+  {
+    name: 'classic',
+    label: 'Classic',
+    desc: 'Neutral near-black. Just you and the football.',
+  },
+  {
+    name: 'pitch',
+    label: 'Pitch',
+    desc: 'Deep green-black, floodlit. Built for the night game.',
+  },
+  {
+    name: 'terrace',
+    label: 'Terrace',
+    desc: 'Warm cream, daylight. The stands on a sunny away day.',
+  },
+];
+
+// Compact header control — re-themes the whole surface live via the shared
+// ThemeProvider (the same switch the app uses), so the swatch colours are the
+// genuine theme tokens.
+function ThemeSwitcher() {
+  const { themeName, setTheme } = useTheme();
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Theme"
+      className="hidden items-center gap-1 rounded-full border border-border bg-surface/60 p-1 backdrop-blur sm:flex"
+    >
+      {THEME_OPTIONS.map((option) => {
+        const c = themes[option.name].colors;
+        const active = themeName === option.name;
+        return (
+          <button
+            key={option.name}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={option.label}
+            title={option.label}
+            onClick={() => setTheme(option.name)}
+            className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
+              active ? 'ring-2 ring-brand' : 'opacity-70 hover:opacity-100'
+            }`}
+          >
+            <span
+              className="relative h-4 w-4 overflow-hidden rounded-full border border-white/20"
+              style={{ background: c.bg }}
+            >
+              <span
+                className="absolute bottom-0 right-0 h-2 w-2 rounded-full"
+                style={{ background: c.accent }}
+              />
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// A clickable preview card rendered in its own theme's colours (independent of
+// the active page theme), so all three looks are visible at once.
+function ThemeCard({
+  option,
+}: {
+  option: (typeof THEME_OPTIONS)[number];
+}) {
+  const { themeName, setTheme } = useTheme();
+  const c = themes[option.name].colors;
+  const active = themeName === option.name;
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(option.name)}
+      aria-pressed={active}
+      className="group flex min-h-[210px] flex-col justify-between rounded-[20px] border p-6 text-left transition duration-200 hover:-translate-y-0.5"
+      style={{
+        background: c.bg,
+        color: c.text,
+        borderColor: active ? c.brand : c.border,
+        boxShadow: active ? `0 0 0 2px ${c.brand}` : undefined,
+      }}
+    >
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="font-display text-2xl leading-none">
+            {option.label}
+          </span>
+          <span
+            className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
+            style={{
+              background: active ? c.brand : 'transparent',
+              color: active ? c.brandText : c.muted,
+              border: active ? 'none' : `1px solid ${c.border}`,
+            }}
+          >
+            {active ? 'Active' : 'Preview'}
+          </span>
+        </div>
+        <p className="mt-2 text-sm" style={{ color: c.muted }}>
+          {option.desc}
+        </p>
+      </div>
+      <div className="mt-6 flex gap-2.5">
+        {(
+          [
+            ['Surface', c.surface],
+            ['Brand', c.brand],
+            ['Accent', c.accent],
+            ['Border', c.border],
+          ] as const
+        ).map(([label, col]) => (
+          <span
+            key={label}
+            title={label}
+            className="h-8 w-8 rounded-lg border"
+            style={{ background: col, borderColor: c.border }}
+          />
+        ))}
+      </div>
+    </button>
   );
 }
 
@@ -500,10 +675,10 @@ function FeatureRow({
       }`}
     >
       <div>
-        <span className="text-xs font-medium uppercase tracking-wider text-accent">
+        <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
           {label}
         </span>
-        <h3 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
+        <h3 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">
           {title}
         </h3>
         <p className="mt-4 text-base text-muted sm:text-lg">{body}</p>
@@ -598,8 +773,8 @@ function PreviewLabel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/15 text-accent">
+    <div className="mb-3 flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/15 text-brand">
         {icon === 'schedule' ? (
           <svg viewBox="0 0 16 16" className="h-3 w-3" fill="currentColor" aria-hidden>
             <path d="M5 1.5v1H3.5A1.5 1.5 0 0 0 2 4v9.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V4a1.5 1.5 0 0 0-1.5-1.5H11v-1a.5.5 0 0 0-1 0v1H6v-1a.5.5 0 0 0-1 0Zm-2 4H13v8H3v-8Z" />
@@ -697,7 +872,7 @@ function WatchlistPreview() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     i < 2
-                      ? 'bg-accent text-bg'
+                      ? 'bg-brand text-brand-text'
                       : 'border border-border text-muted'
                   }`}
                 >
@@ -820,7 +995,7 @@ function BriefsCardStack() {
             <path d="M10.5 3 6 8l4.5 5 1-1L8 8l3.5-4-1-1Z" />
           </svg>
         </button>
-        <span className="min-w-[3rem] text-center text-xs font-medium tabular-nums text-muted">
+        <span className="min-w-[3rem] text-center font-mono text-xs font-medium tabular-nums text-muted">
           {index + 1} / {total}
         </span>
         <button

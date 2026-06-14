@@ -9,6 +9,9 @@ export const terrace: Theme = {
     border: '#E5DFD3',
     text: '#1B1A17',
     muted: '#6B675E',
+    // Canonical brand orange-red (red-600) on warm cream paper.
+    brand: '#C2410C',
+    brandText: '#FFFFFF',
     accent: '#C2410C',
     accentText: '#FFFFFF',
   },

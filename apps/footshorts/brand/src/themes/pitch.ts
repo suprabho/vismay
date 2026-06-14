@@ -9,6 +9,9 @@ export const pitch: Theme = {
     border: '#1B3A26',
     text: '#ECFDF1',
     muted: '#7FA48C',
+    // Brand orange-red against deep pitch-green. Lifted (red-400) for contrast.
+    brand: '#F26A3C',
+    brandText: '#FFFFFF',
     accent: '#34D399',
     accentText: '#06140C',
   },

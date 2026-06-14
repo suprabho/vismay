@@ -4,6 +4,11 @@ export type ColorTokens = {
   border: string;
   text: string;
   muted: string;
+  // Primary brand colour (footshorts orange-red). Drives primary actions,
+  // links and active states. Green `accent` is reserved as the rarer
+  // "live"/electric pop — see the design-system colour guidance.
+  brand: string;
+  brandText: string;
   accent: string;
   accentText: string;
 };
