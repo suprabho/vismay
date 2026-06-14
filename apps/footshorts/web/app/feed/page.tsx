@@ -1,16 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { FeedCard } from '@/components/FeedCard';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
 import { StoryRings } from '@/components/StoryRings';
 import { EditorialMagazine } from '@/components/EditorialMagazine';
 import { useAuth } from '@/lib/AuthProvider';
+import { useAuthModal } from '@/lib/AuthModalProvider';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useSeenArticles } from '@/lib/useSeenArticles';
 
 type Tab = 'forYou' | 'discover' | 'editorial';
+
+const TABS: Tab[] = ['forYou', 'discover', 'editorial'];
+const isTab = (v: string | null): v is Tab => !!v && (TABS as string[]).includes(v);
+
+// Tabs that require a signed-in user; Discover is public.
+const GATED_TABS: Tab[] = ['forYou', 'editorial'];
 
 const FEED_HEIGHT = 'h-[calc(100dvh-148px)] md:h-[calc(100dvh-104px)]';
 
@@ -152,22 +160,50 @@ function DiscoverStack() {
   );
 }
 
-export default function FeedPage() {
-  const [tab, setTab] = useState<Tab>('forYou');
+function FeedPageInner() {
   const { session } = useAuth();
+  const { requireAuth } = useAuthModal();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  // The active tab is derived, not synced via effects: a tab the user picked
+  // wins; otherwise an explicit `?tab=` (e.g. returning from OAuth, or carried
+  // back after a modal sign-in) wins; otherwise logged-out visitors default to
+  // Discover (the public tab) and signed-in users to For You.
+  const [picked, setPicked] = useState<Tab | null>(isTab(tabParam) ? tabParam : null);
+  const tab: Tab = picked ?? (isTab(tabParam) ? tabParam : session ? 'forYou' : 'discover');
+
+  function handleTab(next: Tab) {
+    if (GATED_TABS.includes(next) && !session) {
+      requireAuth(`/feed?tab=${next}`);
+      return;
+    }
+    setPicked(next);
+  }
+
   const letter = (session?.user?.email ?? '?').charAt(0).toUpperCase();
 
   return (
     <main className="mx-auto max-w-2xl px-4">
       <div className="sticky top-0 z-10 -mx-4 flex items-center justify-center bg-bg/80 px-4 py-1 backdrop-blur">
-        <PillTabs active={tab} onChange={setTab} />
-        <Link
-          href="/profile"
-          className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-text hover:border-muted md:hidden"
-          aria-label="Profile"
-        >
-          {letter}
-        </Link>
+        <PillTabs active={tab} onChange={handleTab} />
+        {session ? (
+          <Link
+            href="/profile"
+            className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-text hover:border-muted md:hidden"
+            aria-label="Profile"
+          >
+            {letter}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => requireAuth('/profile')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text hover:border-muted md:hidden"
+          >
+            Sign in
+          </button>
+        )}
       </div>
       {tab === 'forYou' && (
         <>
@@ -185,5 +221,13 @@ export default function FeedPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense fallback={null}>
+      <FeedPageInner />
+    </Suspense>
   );
 }

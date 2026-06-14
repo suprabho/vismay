@@ -591,3 +591,181 @@ export async function searchFootshortsEntities(opts: {
   if (error) throw error
   return (data ?? []) as FootshortsEntityResult[]
 }
+
+// ---------------------------------------------------------------------------
+// Pipeline stats (admin "Pipeline" tab)
+// ---------------------------------------------------------------------------
+
+export interface PublisherStat {
+  publisher: string
+  total: number
+  summarized: number
+  failed: number
+  withImage: number
+  withTags: number
+}
+
+export interface PipelineDayPoint {
+  day: string
+  count: number
+}
+
+export interface PipelineTopEntity {
+  entity_id: string
+  name: string
+  type: 'league' | 'team' | 'player'
+  article_count: number
+  crest_url: string | null
+}
+
+export interface PipelineStats {
+  articles: {
+    total: number
+    summarized: number
+    failed: number
+    pending: number
+    withImage: number
+    withTags: number
+  }
+  entities: {
+    leagues: number
+    teams: number
+    players: number
+  }
+  freshness: {
+    latestIngestedAt: string | null
+    minutesSinceLatest: number | null
+  }
+  byPublisher: PublisherStat[]
+  byDay: PipelineDayPoint[]
+  topEntities: PipelineTopEntity[]
+}
+
+function dayKey(iso: string): string {
+  return iso.slice(0, 10)
+}
+
+/**
+ * Ingest-pipeline health for the admin Pipeline tab: article counts by status,
+ * freshness, per-publisher quality, 14-day ingest volume, and the most-tagged
+ * entities. Reads the same `articles` / `entities` / `article_entities` tables
+ * the footshorts feed uses. SERVER-ONLY (service-role client).
+ */
+export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
+  const supabase = createServiceClient()
+  const [articlesRes, entitiesRes, articleEntitiesRes] = await Promise.all([
+    supabase
+      .from('articles')
+      .select('id, publisher, status, image_url, ingested_at')
+      .order('ingested_at', { ascending: false }),
+    supabase.from('entities').select('id, name, type, crest_url'),
+    supabase.from('article_entities').select('article_id, entity_id'),
+  ])
+
+  if (articlesRes.error) throw articlesRes.error
+  if (entitiesRes.error) throw entitiesRes.error
+  if (articleEntitiesRes.error) throw articleEntitiesRes.error
+
+  type ArticleRow = {
+    id: string
+    publisher: string
+    status: string
+    image_url: string | null
+    ingested_at: string
+  }
+  type EntityRow = {
+    id: string
+    name: string
+    type: string
+    crest_url: string | null
+  }
+
+  const articles = (articlesRes.data ?? []) as ArticleRow[]
+  const entities = (entitiesRes.data ?? []) as EntityRow[]
+  const articleEntities = (articleEntitiesRes.data ?? []) as Array<{
+    article_id: string
+    entity_id: string
+  }>
+
+  const taggedArticleIds = new Set(articleEntities.map((r) => r.article_id))
+
+  const totals = { total: articles.length, summarized: 0, failed: 0, pending: 0, withImage: 0, withTags: 0 }
+  for (const a of articles) {
+    if (a.status === 'summarized') totals.summarized++
+    else if (a.status === 'failed') totals.failed++
+    else if (a.status === 'pending') totals.pending++
+    if (a.image_url) totals.withImage++
+    if (taggedArticleIds.has(a.id)) totals.withTags++
+  }
+
+  const ent = { leagues: 0, teams: 0, players: 0 }
+  for (const e of entities) {
+    if (e.type === 'league') ent.leagues++
+    else if (e.type === 'team') ent.teams++
+    else if (e.type === 'player') ent.players++
+  }
+
+  const latest = articles[0]?.ingested_at ?? null
+  const minutesSinceLatest = latest
+    ? Math.floor((Date.now() - new Date(latest).getTime()) / 60_000)
+    : null
+
+  const pubMap = new Map<string, PublisherStat>()
+  for (const a of articles) {
+    let s = pubMap.get(a.publisher)
+    if (!s) {
+      s = { publisher: a.publisher, total: 0, summarized: 0, failed: 0, withImage: 0, withTags: 0 }
+      pubMap.set(a.publisher, s)
+    }
+    s.total++
+    if (a.status === 'summarized') s.summarized++
+    if (a.status === 'failed') s.failed++
+    if (a.image_url) s.withImage++
+    if (taggedArticleIds.has(a.id)) s.withTags++
+  }
+  const byPublisher = Array.from(pubMap.values()).sort((a, b) => b.total - a.total)
+
+  const dayMap = new Map<string, number>()
+  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000
+  for (const a of articles) {
+    const t = new Date(a.ingested_at).getTime()
+    if (t < cutoff) continue
+    dayMap.set(dayKey(a.ingested_at), (dayMap.get(dayKey(a.ingested_at)) ?? 0) + 1)
+  }
+  const byDay: PipelineDayPoint[] = []
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+    const k = d.toISOString().slice(0, 10)
+    byDay.push({ day: k, count: dayMap.get(k) ?? 0 })
+  }
+
+  const entById = new Map(entities.map((e) => [e.id, e]))
+  const entityCount = new Map<string, number>()
+  for (const r of articleEntities) {
+    entityCount.set(r.entity_id, (entityCount.get(r.entity_id) ?? 0) + 1)
+  }
+  const topEntities: PipelineTopEntity[] = Array.from(entityCount.entries())
+    .map(([id, count]) => {
+      const e = entById.get(id)
+      if (!e) return null
+      return {
+        entity_id: id,
+        name: e.name,
+        type: e.type as PipelineTopEntity['type'],
+        crest_url: e.crest_url,
+        article_count: count,
+      }
+    })
+    .filter((x): x is PipelineTopEntity => x !== null)
+    .sort((a, b) => b.article_count - a.article_count)
+    .slice(0, 12)
+
+  return {
+    articles: totals,
+    entities: ent,
+    freshness: { latestIngestedAt: latest, minutesSinceLatest },
+    byPublisher,
+    byDay,
+    topEntities,
+  }
+}

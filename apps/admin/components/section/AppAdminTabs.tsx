@@ -12,8 +12,10 @@ export function AppAdminTabs({ appSlug }: Props) {
     { href: `/${appSlug}/compose`, label: 'Compose' },
     { href: `/${appSlug}/epics`, label: 'Epics' },
   ]
-  // Match-day recaps + the on-brand share-card creator are footshorts-only.
+  // Ingest pipeline stats + match-day recaps + the on-brand share-card creator
+  // are footshorts-only.
   if (appSlug === 'footshorts') {
+    tabs.push({ href: `/${appSlug}/pipeline`, label: 'Pipeline' })
     tabs.push({ href: `/${appSlug}/recaps`, label: 'Recaps' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
   }
