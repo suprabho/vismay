@@ -92,6 +92,20 @@ export type CardContent =
   | { type: 'news-article'; item: NewsItem }
   | { type: 'ai-image'; dataUrl: string; caption: string }
 
+/** A draggable badge placed on the card — a team crest, competition logo, or
+ *  country flag. Position is the badge CENTER as a % of the card; width is a %
+ *  of the card width. */
+export interface Overlay {
+  id: string
+  url: string
+  label: string
+  /** badge kind, for the picker only */
+  kind: 'crest' | 'logo' | 'flag'
+  xPct: number
+  yPct: number
+  widthPct: number
+}
+
 /** Frame-level styling shared by every card. */
 export interface CardFrameConfig {
   themeName: ThemeName

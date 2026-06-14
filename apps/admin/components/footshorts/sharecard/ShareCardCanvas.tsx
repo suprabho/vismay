@@ -18,6 +18,7 @@ import {
   type CardContent,
   type CardFrameConfig,
   type MatchStyle,
+  type Overlay,
 } from './types'
 
 /** Route a remote image through the same-origin proxy so html-to-image can
@@ -260,9 +261,36 @@ function CardBody({ content }: { content: CardContent }) {
   }
 }
 
+/** Badge overlays placed on the card (crests / logos / flags). Display-only and
+ *  proxied for capture; drag/resize is handled by the editor over the preview. */
+function OverlayLayer({ overlays }: { overlays: Overlay[] }) {
+  if (overlays.length === 0) return null
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30">
+      {overlays.map((o) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={o.id}
+          src={proxiedImage(o.url)}
+          alt=""
+          className="absolute object-contain"
+          style={{
+            left: `${o.xPct}%`,
+            top: `${o.yPct}%`,
+            width: `${o.widthPct}%`,
+            transform: 'translate(-50%, -50%)',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 interface Props {
   content: CardContent
   frame: CardFrameConfig
+  overlays?: Overlay[]
 }
 
 /**
@@ -273,7 +301,7 @@ interface Props {
  * header/footer chrome.
  */
 export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareCardCanvas(
-  { content, frame },
+  { content, frame, overlays },
   ref,
 ) {
   const out = OUTPUT_SIZE[frame.ratio]
@@ -316,6 +344,7 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
           <Footer handle={frame.handle} />
         </>
       )}
+      <OverlayLayer overlays={overlays ?? []} />
     </div>
   )
 })
