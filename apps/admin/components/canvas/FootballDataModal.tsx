@@ -357,7 +357,7 @@ export function FootballDataModal({
                 : 'cursor-not-allowed bg-white/10 text-neutral-500'
             }`}
           >
-            {busy ? 'Adding…' : 'Add section'}
+            {busy ? 'Adding…' : 'Add to section'}
           </button>
         </div>
       </div>
