@@ -22,9 +22,9 @@ theme:
     red: "#e2117a"
     line: "#26306a"
   fonts:
-    serif: "Forum"
-    sans: "Manrope"
-    mono: "Space Mono"
+    serif: "Merriweather"
+    sans: "Inter"
+    mono: "JetBrains Mono"
 ---
 
 # Paris: Road to Budapest

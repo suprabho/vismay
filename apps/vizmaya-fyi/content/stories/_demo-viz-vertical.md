@@ -20,9 +20,9 @@ theme:
     red: "#c25b48"
     line: "#2c303a"
   fonts:
-    serif: "Forum"
-    sans: "Manrope"
-    mono: "Space Mono"
+    serif: "Merriweather"
+    sans: "Inter"
+    mono: "JetBrains Mono"
 ---
 
 # Footshorts vertical demo

@@ -7,6 +7,7 @@ import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { signActionToken } from '@vismay/admin-core/actionToken'
 import type { ResolvedUnit } from '@vismay/viz-engine'
 import { themedLogoDataUrl } from '@/lib/themeLogo'
+import { applyShareBrandFonts } from '@/lib/shareBrandFonts'
 import { buildShareSampleYaml } from '@/lib/shareSampleYaml'
 import { adminBaseUrl } from '@/lib/adminBaseUrl'
 import ThemeProvider from '@/components/story/ThemeProvider'
@@ -58,8 +59,13 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
     loadShareConfig(slug),
     getContentSource().readShareYaml(slug),
   ])
-  const fontImportUrl = getFontImportUrl(story.frontmatter.theme.fonts)
-  const logo = await themedLogoDataUrl(shareConfig?.logo, story.frontmatter.theme)
+  // Share cards adopt the vertical's brand type families (footshorts → Forum /
+  // Manrope / Space Mono) while keeping the story's own colours. Driven off the
+  // vertical so it covers every footshorts story, including DB-backed ones whose
+  // `theme.fonts` aren't edited by hand.
+  const shareTheme = applyShareBrandFonts(story.frontmatter.theme, story.frontmatter.vertical)
+  const fontImportUrl = getFontImportUrl(shareTheme.fonts)
+  const logo = await themedLogoDataUrl(shareConfig?.logo, shareTheme)
   const sampleYaml = buildShareSampleYaml(units)
 
   // Cross-TLD save credential. The page itself was reached via a signed
@@ -72,7 +78,7 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
   })
 
   return (
-    <ThemeProvider theme={story.frontmatter.theme}>
+    <ThemeProvider theme={shareTheme}>
       {fontImportUrl && (
         <>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
