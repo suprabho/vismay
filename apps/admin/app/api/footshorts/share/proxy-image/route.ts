@@ -28,19 +28,34 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Mimic a real browser: several image CDNs (incl. crests.football-data.org)
+    // reset the connection or 403 on a non-browser User-Agent, which is why the
+    // <img> loads when the browser fetches it directly but failed through the
+    // proxy. The Referer (the image's own origin) clears most hotlink checks.
     const upstream = await fetch(parsed.toString(), {
-      headers: { 'user-agent': 'footshorts-share-card/1.0' },
+      redirect: 'follow',
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        referer: `${parsed.origin}/`,
+      },
     })
-    if (!upstream.ok || !upstream.body) {
-      return new Response('upstream error', { status: 502 })
+    if (!upstream.ok) {
+      return new Response(`upstream ${upstream.status}`, { status: 502 })
     }
     const contentType = upstream.headers.get('content-type') ?? 'image/jpeg'
     if (!contentType.startsWith('image/')) {
       return new Response('not an image', { status: 415 })
     }
-    return new Response(upstream.body, {
+    // Buffer rather than stream the body straight through — robust across
+    // runtimes and lets us set an exact Content-Length.
+    const bytes = Buffer.from(await upstream.arrayBuffer())
+    return new Response(bytes, {
       headers: {
         'content-type': contentType,
+        'content-length': String(bytes.byteLength),
         'cache-control': 'private, max-age=3600',
       },
     })

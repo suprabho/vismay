@@ -26,6 +26,20 @@ function proxiedImage(url: string): string {
   return `/api/footshorts/share/proxy-image?url=${encodeURIComponent(url)}`
 }
 
+function proxyCrest(url: string | null | undefined): string | null {
+  return url ? proxiedImage(url) : (url ?? null)
+}
+
+/** Clone a fixture with its crest URLs proxied — the viz components (MatchTile /
+ *  TeamFormStrip) read `crest_url` directly, so capture taints without this. */
+function withProxiedFixtureCrests(f: FixtureRow): FixtureRow {
+  return {
+    ...f,
+    home: f.home ? { ...f.home, crest_url: proxyCrest(f.home.crest_url) } : f.home,
+    away: f.away ? { ...f.away, crest_url: proxyCrest(f.away.crest_url) } : f.away,
+  }
+}
+
 /** Deterministic UTC kickoff label (no locale dependence) — "Sat · 17:30". */
 function kickoffLabel(iso: string): string {
   const d = new Date(iso)
@@ -113,7 +127,7 @@ function MatchBody({ content }: { content: Extract<CardContent, { type: 'match' 
       <div className="flex h-full min-h-0 flex-col justify-center gap-4 px-4">
         {caption}
         <div className="w-full">
-          <MatchTile fixture={content.fixture} />
+          <MatchTile fixture={withProxiedFixtureCrests(content.fixture)} />
         </div>
       </div>
     )
@@ -137,7 +151,11 @@ function StandingsBody({ content }: { content: Extract<CardContent, { type: 'sta
         {content.competitionName} · {content.season}
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <StandingsTable rows={content.rows} />
+        <StandingsTable
+          rows={content.rows.map((r) =>
+            r.team ? { ...r, team: { ...r.team, crest_url: proxyCrest(r.team.crest_url) } } : r,
+          )}
+        />
       </div>
     </div>
   )
@@ -147,7 +165,7 @@ function FormBody({ content }: { content: Extract<CardContent, { type: 'form' }>
   return (
     <div className="flex h-full min-h-0 flex-col justify-center px-4">
       <TeamFormStrip
-        fixtures={content.fixtures}
+        fixtures={content.fixtures.map(withProxiedFixtureCrests)}
         teamId={content.teamSlug}
         label={`${content.teamName} · last 5`}
         layout="grid"
