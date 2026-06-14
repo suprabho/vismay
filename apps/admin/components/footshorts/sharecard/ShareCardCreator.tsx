@@ -87,6 +87,7 @@ export function ShareCardCreator({
   const [matchStyle, setMatchStyle] = useState<MatchStyle>('tile')
   const [pickedTeamSlug, setPickedTeamSlug] = useState<string>('')
   const [pickedNewsId, setPickedNewsId] = useState<string>('')
+  const [newsSearch, setNewsSearch] = useState<string>('') // article picker filter
 
   // ── AI state ──────────────────────────────────────────────────────────────
   const [aiSubject, setAiSubject] = useState<string>('')
@@ -97,6 +98,8 @@ export function ShareCardCreator({
   const [aiRefImage, setAiRefImage] = useState<string>('') // reference image data URL
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [aiRefPickerOpen, setAiRefPickerOpen] = useState(false) // pick a news thumbnail as reference
+  const [aiRefBusy, setAiRefBusy] = useState(false)
 
   // ── badge / flag overlays ───────────────────────────────────────────────────
   const [overlays, setOverlays] = useState<Overlay[]>([])
@@ -148,9 +151,10 @@ export function ShareCardCreator({
     }
   }, [selectedComp, needsStandings, needsFixtures])
 
-  // Fetch recent news once it's needed.
+  // Fetch recent news when a news card needs it, or when the AI reference picker
+  // (which pulls thumbnails from the same feed) is opened.
   useEffect(() => {
-    if (!needsNews || news !== null) return
+    if ((!needsNews && !aiRefPickerOpen) || news !== null) return
     let alive = true
     setLoading(true)
     setError(null)
@@ -169,7 +173,24 @@ export function ShareCardCreator({
     return () => {
       alive = false
     }
-  }, [needsNews, news])
+  }, [needsNews, aiRefPickerOpen, news])
+
+  // Articles filtered by the picker search box (and, for the image card, those
+  // that actually have a thumbnail).
+  const filteredNews = useMemo(() => {
+    const q = newsSearch.trim().toLowerCase()
+    let list = news ?? []
+    if (cardType === 'news-image') list = list.filter((n) => n.image_url)
+    if (q) list = list.filter((n) => n.headline.toLowerCase().includes(q))
+    return list
+  }, [news, newsSearch, cardType])
+
+  // News articles that have a thumbnail — the source for the AI reference picker.
+  const newsWithImage = useMemo(() => {
+    const q = newsSearch.trim().toLowerCase()
+    const list = (news ?? []).filter((n) => n.image_url)
+    return q ? list.filter((n) => n.headline.toLowerCase().includes(q)) : list
+  }, [news, newsSearch])
 
   // Teams available for the form picker, derived from the loaded fixtures.
   const teamOptions = useMemo(() => {
@@ -321,6 +342,31 @@ export function ShareCardCreator({
     reader.onload = () => setAiRefImage(typeof reader.result === 'string' ? reader.result : '')
     reader.onerror = () => setAiError('Could not read that image.')
     reader.readAsDataURL(file)
+  }, [])
+
+  // Use a remote image (a news thumbnail) as the AI reference. Fetch it through
+  // the same-origin proxy and inline it as a data URL so it flows through the
+  // same path as an uploaded file.
+  const pickReferenceFromUrl = useCallback(async (url: string) => {
+    setAiRefBusy(true)
+    setAiError(null)
+    try {
+      const res = await fetch(`/api/footshorts/share/proxy-image?url=${encodeURIComponent(url)}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+        reader.onerror = () => reject(new Error('read failed'))
+        reader.readAsDataURL(blob)
+      })
+      setAiRefImage(dataUrl)
+      setAiRefPickerOpen(false)
+    } catch {
+      setAiError('Could not load that thumbnail as a reference.')
+    } finally {
+      setAiRefBusy(false)
+    }
   }, [])
 
   // ── badge / flag overlay handlers ───────────────────────────────────────────
@@ -527,9 +573,15 @@ export function ShareCardCreator({
         {needsNews && news && (
           <label className={labelCls}>
             Article
+            <input
+              value={newsSearch}
+              onChange={(e) => setNewsSearch(e.target.value)}
+              placeholder="Search articles…"
+              className="mt-1 mb-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
+            />
             <select value={pickedNewsId} onChange={(e) => setPickedNewsId(e.target.value)} className={selectCls}>
-              <option value="">Select an article…</option>
-              {(cardType === 'news-image' ? news.filter((n) => n.image_url) : news).map((n) => (
+              <option value="">{`Select an article… (${filteredNews.length})`}</option>
+              {filteredNews.map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.headline.slice(0, 70)}
                 </option>
@@ -596,12 +648,49 @@ export function ShareCardCreator({
                   </button>
                 </div>
               ) : (
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => onPickReference(e.target.files?.[0] ?? null)}
-                  className="mt-1.5 block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
-                />
+                <div className="mt-1.5 space-y-1.5">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => onPickReference(e.target.files?.[0] ?? null)}
+                    className="block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
+                  />
+                  <button
+                    onClick={() => setAiRefPickerOpen((v) => !v)}
+                    className="text-[11px] text-sky-300 hover:text-sky-200"
+                  >
+                    {aiRefPickerOpen ? '× Close news thumbnails' : '+ Use a news thumbnail'}
+                  </button>
+                  {aiRefPickerOpen && (
+                    <div>
+                      <input
+                        value={newsSearch}
+                        onChange={(e) => setNewsSearch(e.target.value)}
+                        placeholder="Search news…"
+                        className="mb-1.5 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                      />
+                      {news === null ? (
+                        <p className="text-[11px] text-neutral-500">Loading…</p>
+                      ) : (
+                        <div className="grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto">
+                          {newsWithImage.slice(0, 30).map((n) => (
+                            <button
+                              key={n.id}
+                              onClick={() => void pickReferenceFromUrl(n.image_url!)}
+                              disabled={aiRefBusy}
+                              title={n.headline}
+                              className="aspect-square overflow-hidden rounded-md border border-white/10 hover:border-white/30 disabled:opacity-50"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {aiRefBusy && <p className="mt-1 text-[11px] text-neutral-500">Loading thumbnail…</p>}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <input
