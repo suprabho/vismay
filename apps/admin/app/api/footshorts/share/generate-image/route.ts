@@ -47,6 +47,15 @@ interface GenerateBody {
   ratio?: string
   model?: ShareImageModel
   paletteHexes?: string[]
+  /** Optional reference image as a `data:image/...;base64,...` URL. */
+  referenceImage?: string
+}
+
+/** Parse a base64 image data URL into the gateway's reference-image shape. */
+function parseDataUrl(s: string): { data: string; mimeType: string } | null {
+  const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/.exec(s.trim())
+  if (!m) return null
+  return { mimeType: m[1], data: m[2] }
 }
 
 export async function POST(req: Request) {
@@ -74,18 +83,33 @@ export async function POST(req: Request) {
   }
 
   const aspectRatio = ASPECT_MAP[body.ratio ?? '1:1'] ?? '1:1'
-  const model = MODELS[body.model ?? 'image.default'] ?? 'image.default'
   const prompt = buildShareImagePrompt({
     style,
     subject,
     paletteHexes: Array.isArray(body.paletteHexes) ? body.paletteHexes.slice(0, 4) : [],
   })
 
+  // A reference image only works on the multimodal LLM path, so force the
+  // default (Gemini image) model when one is attached regardless of the picker.
+  let referenceImages: Array<{ data: string; mimeType: string }> | undefined
+  if (body.referenceImage) {
+    const ref = parseDataUrl(body.referenceImage)
+    if (!ref) {
+      return NextResponse.json(
+        { error: 'invalid "referenceImage" — expected a base64 image data URL' },
+        { status: 400 },
+      )
+    }
+    referenceImages = [ref]
+  }
+  const model = referenceImages ? 'image.default' : MODELS[body.model ?? 'image.default'] ?? 'image.default'
+
   try {
     const out = await generateImage({
       model,
       prompt,
       aspectRatio,
+      referenceImages,
       metadata: { feature: 'footshorts-share-card', style: style.id },
     })
     const base64 = Buffer.from(out.bytes).toString('base64')

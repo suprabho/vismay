@@ -78,6 +78,7 @@ export function ShareCardCreator({
   const [aiModel, setAiModel] = useState<ShareImageModel>('image.default')
   const [aiCaption, setAiCaption] = useState<string>('')
   const [aiDataUrl, setAiDataUrl] = useState<string>('')
+  const [aiRefImage, setAiRefImage] = useState<string>('') // reference image data URL
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
 
@@ -261,7 +262,14 @@ export function ShareCardCreator({
       const res = await fetch('/api/footshorts/share/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ styleId: aiStyleId, subject, ratio, model: aiModel, paletteHexes }),
+        body: JSON.stringify({
+          styleId: aiStyleId,
+          subject,
+          ratio,
+          model: aiModel,
+          paletteHexes,
+          ...(aiRefImage ? { referenceImage: aiRefImage } : {}),
+        }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
       if (!res.ok || !body.ok || !body.dataUrl) throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -271,7 +279,22 @@ export function ShareCardCreator({
     } finally {
       setAiBusy(false)
     }
-  }, [aiSubject, aiStyleId, aiModel, ratio, themeName, accentHex])
+  }, [aiSubject, aiStyleId, aiModel, ratio, themeName, accentHex, aiRefImage])
+
+  const onPickReference = useCallback((file: File | null) => {
+    if (!file) {
+      setAiRefImage('')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setAiError('Reference must be an image.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setAiRefImage(typeof reader.result === 'string' ? reader.result : '')
+    reader.onerror = () => setAiError('Could not read that image.')
+    reader.readAsDataURL(file)
+  }, [])
 
   const labelCls = 'block text-[11px] font-medium text-neutral-400'
   const selectCls =
@@ -443,6 +466,32 @@ export function ShareCardCreator({
                 <option value="image.seedream">Seedream (cheap)</option>
               </select>
             </label>
+            {/* Reference image (image-to-image, default model only) */}
+            <div>
+              <span className={labelCls}>Reference image (optional)</span>
+              {aiRefImage ? (
+                <div className="mt-1.5 flex items-center gap-2 rounded-md border border-white/10 bg-neutral-950 p-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={aiRefImage} alt="" className="h-12 w-12 rounded object-cover" />
+                  <span className="flex-1 text-[11px] text-neutral-400">
+                    Guides the generation. Uses the default model.
+                  </span>
+                  <button
+                    onClick={() => setAiRefImage('')}
+                    className="rounded px-1.5 py-1 text-[11px] text-neutral-400 hover:bg-white/10 hover:text-white"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onPickReference(e.target.files?.[0] ?? null)}
+                  className="mt-1.5 block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
+                />
+              )}
+            </div>
             <input
               value={aiCaption}
               onChange={(e) => setAiCaption(e.target.value)}

@@ -1,9 +1,11 @@
 import {
   experimental_generateImage as aiGenerateImage,
   generateText as aiGenerateText,
+  type ModelMessage,
 } from 'ai'
 import { getGatewayClient } from './client'
 import { isLLMImageModel, resolveModel, type ImageModelAlias } from './models'
+import type { GenerateImageInput } from './text'
 
 export type ImageAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
 
@@ -18,6 +20,13 @@ export interface GenerateImageOptions {
    * prompt hint instead. Default 1:1.
    */
   aspectRatio?: ImageAspectRatio
+  /**
+   * Optional reference / conditioning images (base64 + mime). Only the
+   * multimodal LLM path (Gemini "image" models) consumes these — the model
+   * edits/extends from them. Supplying references to a true image model
+   * (Imagen / Flux / Seedream) throws, since that path can't take them.
+   */
+  referenceImages?: GenerateImageInput[]
   /** Forwarded to the gateway as headers — useful for tagging spend by feature. */
   metadata?: Record<string, string>
   /** Seed for reproducibility, where the provider supports it. */
@@ -60,6 +69,12 @@ async function generateImageViaImageModel(
   modelId: string,
   opts: GenerateImageOptions,
 ): Promise<ImageResult> {
+  if (opts.referenceImages?.length) {
+    throw new Error(
+      `reference images are only supported on multimodal LLM image models ` +
+        `(e.g. image.default / gemini-*-image); "${modelId}" can't take them`,
+    )
+  }
   const gateway = getGatewayClient()
   const model = gateway.imageModel(modelId)
   const res = await aiGenerateImage({
@@ -92,9 +107,29 @@ async function generateImageViaLLM(
   const aspectHint = ASPECT_DESCRIPTIONS[aspect] ?? `${aspect} aspect ratio`
   const prompt = `Generate a ${aspectHint} image. ${opts.prompt}`
 
+  // With reference images, send a multimodal user message (text + one image
+  // part each) so Gemini conditions the output on them. Without, a bare prompt.
+  const refs = opts.referenceImages ?? []
+  const input: { prompt: string } | { messages: ModelMessage[] } = refs.length
+    ? {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              ...refs.map((img) => ({
+                type: 'image' as const,
+                image: `data:${img.mimeType};base64,${img.data}`,
+              })),
+            ],
+          },
+        ],
+      }
+    : { prompt }
+
   const res = await aiGenerateText({
     model,
-    prompt,
+    ...input,
     headers: opts.metadata,
     providerOptions: {
       // The gateway forwards providerOptions.<provider> to the upstream
