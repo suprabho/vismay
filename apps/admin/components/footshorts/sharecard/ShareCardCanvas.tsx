@@ -17,6 +17,8 @@ import {
   RENDER_SCALE,
   type CardContent,
   type CardFrameConfig,
+  type LogoSize,
+  type LogoVariant,
   type MatchStyle,
   type Overlay,
 } from './types'
@@ -91,17 +93,61 @@ function hexToChannels(hex: string): string | null {
   return `${(n >> 16) & 0xff} ${(n >> 8) & 0xff} ${n & 0xff}`
 }
 
-const FOOTSHORTS_MARK = 'FOOTSHORTS'
+const LOGO_PX: Record<LogoSize, number> = { sm: 22, md: 30, lg: 42 }
 
-function Header({ eyebrow }: { eyebrow?: string | null }) {
+/** Color treatment for the brand mark (square fill / ball / wordmark). */
+function logoColors(variant: LogoVariant): { square: string; ball: string; word: string } {
+  switch (variant) {
+    case 'light':
+      return { square: 'rgba(255,255,255,0.18)', ball: '#FFFFFF', word: '#FFFFFF' }
+    case 'dark':
+      return { square: 'rgba(0,0,0,0.12)', ball: '#0B0B0F', word: '#0B0B0F' }
+    case 'mark':
+      return { square: 'transparent', ball: 'var(--sf-color-accent)', word: 'var(--sf-color-text)' }
+    case 'accent':
+    default:
+      return { square: 'var(--sf-color-accent)', ball: 'var(--sf-color-bg)', word: 'var(--sf-color-text)' }
+  }
+}
+
+/** The real footshorts brand mark (the ball badge from the web landing page)
+ *  plus the wordmark — sized + recolored per the frame config. */
+function BrandMark({ size, variant }: { size: LogoSize; variant: LogoVariant }) {
+  const px = LOGO_PX[size]
+  const c = logoColors(variant)
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className="flex items-center justify-center"
+        style={{ width: px, height: px, borderRadius: px * 0.28, background: c.square, color: c.ball }}
+      >
+        <svg viewBox="0 0 16 16" style={{ width: px * 0.56, height: px * 0.56 }} fill="currentColor">
+          <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 2 1.5 1.5L8 6.5 6.5 5 8 3.5Zm-3 3L6.5 8 5 9.5 3.5 8 5 6.5Zm6 0L12.5 8 11 9.5 9.5 8 11 6.5ZM8 9.5l1.5 1.5L8 12.5 6.5 11 8 9.5Z" />
+        </svg>
+      </span>
+      <span className="font-bold tracking-tight" style={{ color: c.word, fontSize: px * 0.46 }}>
+        Footshorts
+      </span>
+    </span>
+  )
+}
+
+function Header({
+  eyebrow,
+  logoSize,
+  logoVariant,
+}: {
+  eyebrow?: string | null
+  logoSize: LogoSize
+  logoVariant: LogoVariant
+}) {
   return (
     <div className="flex shrink-0 items-center justify-between px-5 pt-5">
       <span className="truncate text-[13px] font-bold uppercase tracking-[1.6px] text-muted">
         {eyebrow ?? ' '}
       </span>
-      <span className="text-[13px] font-extrabold uppercase tracking-[2px] text-accent">
-        {FOOTSHORTS_MARK}
-      </span>
+      <BrandMark size={logoSize} variant={logoVariant} />
     </div>
   )
 }
@@ -195,17 +241,17 @@ function NewsImageBody({ content }: { content: Extract<CardContent, { type: 'new
  * Caption shown at the bottom of a bleed card — sits ABOVE the footer (rendered
  * in the same gradient group) so the headline never collides with the branding.
  */
-function BleedCaption({ content }: { content: CardContent }) {
+function BleedCaption({ content, color }: { content: CardContent; color: string }) {
   if (content.type === 'news-image') {
     const { item } = content
     return (
       <div className="px-4 pb-1 pt-3">
         {item.publisher ? (
-          <div className="mb-1 text-[12px] font-bold uppercase tracking-wide" style={{ color: '#fff', opacity: 0.7 }}>
+          <div className="mb-1 text-[12px] font-bold uppercase tracking-wide" style={{ color, opacity: 0.7 }}>
             {item.publisher}
           </div>
         ) : null}
-        <div className="text-[19px] font-bold leading-tight" style={{ color: '#fff' }}>
+        <div className="text-[19px] font-bold leading-tight" style={{ color }}>
           {item.headline}
         </div>
       </div>
@@ -214,7 +260,7 @@ function BleedCaption({ content }: { content: CardContent }) {
   if (content.type === 'ai-image' && content.caption) {
     return (
       <div className="px-4 pb-1 pt-3">
-        <div className="text-[20px] font-bold leading-tight" style={{ color: '#fff' }}>
+        <div className="text-[20px] font-bold leading-tight" style={{ color }}>
           {content.caption}
         </div>
       </div>
@@ -334,18 +380,22 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
             <CardBody content={content} />
           </div>
           <div className="relative z-10 flex h-full flex-col justify-between">
-            <Header eyebrow={frame.eyebrow} />
+            <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
             {/* Caption + footer share one gradient so the headline sits above
                 the branding instead of colliding with it. */}
-            <div style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))' }}>
-              <BleedCaption content={content} />
+            <div
+              style={{
+                background: `linear-gradient(to top, rgba(0,0,0,${frame.gradientStrength}), rgba(0,0,0,0))`,
+              }}
+            >
+              <BleedCaption content={content} color={frame.captionColor} />
               <Footer handle={frame.handle} />
             </div>
           </div>
         </>
       ) : (
         <>
-          <Header eyebrow={frame.eyebrow} />
+          <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
           <div className="min-h-0 flex-1 py-2">
             <CardBody content={content} />
           </div>

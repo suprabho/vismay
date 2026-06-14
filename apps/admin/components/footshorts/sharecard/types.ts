@@ -106,6 +106,23 @@ export interface Overlay {
   widthPct: number
 }
 
+export type LogoSize = 'sm' | 'md' | 'lg'
+/** Brand-mark color treatments: filled accent badge, white (for photos), dark
+ *  (for light cards), or just the accent-colored ball with no badge. */
+export type LogoVariant = 'accent' | 'light' | 'dark' | 'mark'
+
+export const LOGO_SIZES: Array<{ id: LogoSize; label: string }> = [
+  { id: 'sm', label: 'Small' },
+  { id: 'md', label: 'Medium' },
+  { id: 'lg', label: 'Large' },
+]
+export const LOGO_VARIANTS: Array<{ id: LogoVariant; label: string }> = [
+  { id: 'accent', label: 'Accent' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'mark', label: 'Mark only' },
+]
+
 /** Frame-level styling shared by every card. */
 export interface CardFrameConfig {
   themeName: ThemeName
@@ -116,4 +133,10 @@ export interface CardFrameConfig {
   eyebrow?: string | null
   /** Handle shown in the footer. */
   handle: string
+  /** Brand-mark size + color treatment. */
+  logoSize: LogoSize
+  logoVariant: LogoVariant
+  /** Bleed-card caption: text color + bottom-gradient strength (0–1). */
+  captionColor: string
+  gradientStrength: number
 }

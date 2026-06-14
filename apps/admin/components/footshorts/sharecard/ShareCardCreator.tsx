@@ -9,12 +9,16 @@ import { useCapture } from './useCapture'
 import {
   ASPECT_RATIOS,
   CARD_TYPES,
+  LOGO_SIZES,
+  LOGO_VARIANTS,
   MATCH_STYLES,
   OUTPUT_SIZE,
   RENDER_SCALE,
   type AspectRatio,
   type CardContent,
   type CardType,
+  type LogoSize,
+  type LogoVariant,
   type MatchStyle,
   type NewsItem,
   type Overlay,
@@ -66,6 +70,12 @@ export function ShareCardCreator({
   const [ratio, setRatio] = useState<AspectRatio>('1:1')
   const [accentHex, setAccentHex] = useState<string>('')
   const [handle, setHandle] = useState<string>('@footshorts')
+  const [logoSize, setLogoSize] = useState<LogoSize>('md')
+  const [logoVariant, setLogoVariant] = useState<LogoVariant>('accent')
+  const [captionColor, setCaptionColor] = useState<string>('#FFFFFF')
+  const [gradientStrength, setGradientStrength] = useState<number>(0.85)
+  const [eyebrowOverride, setEyebrowOverride] = useState<string>('')
+  const [showEyebrow, setShowEyebrow] = useState<boolean>(true)
 
   const competitions = initialCompetitions
   const [compKey, setCompKey] = useState<string>(
@@ -262,12 +272,14 @@ export function ShareCardCreator({
   ])
 
   const eyebrow = useMemo(() => {
+    if (!showEyebrow) return null
+    if (eyebrowOverride.trim()) return eyebrowOverride.trim()
     if (cardType === 'news-image' || cardType === 'news-article') {
       const item = news?.find((n) => n.id === pickedNewsId)
       return item?.publisher ?? 'News'
     }
     return selectedComp?.name ?? null
-  }, [cardType, news, pickedNewsId, selectedComp])
+  }, [showEyebrow, eyebrowOverride, cardType, news, pickedNewsId, selectedComp])
 
   // ── capture / preview ───────────────────────────────────────────────────────
   const captureRef = useRef<HTMLDivElement>(null)
@@ -763,6 +775,86 @@ export function ShareCardCreator({
           </label>
         </div>
 
+        {/* Logo size + variant */}
+        <div className="grid grid-cols-2 gap-3">
+          <label className={labelCls}>
+            Logo size
+            <select
+              value={logoSize}
+              onChange={(e) => setLogoSize(e.target.value as LogoSize)}
+              className={selectCls}
+            >
+              {LOGO_SIZES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={labelCls}>
+            Logo style
+            <select
+              value={logoVariant}
+              onChange={(e) => setLogoVariant(e.target.value as LogoVariant)}
+              className={selectCls}
+            >
+              {LOGO_VARIANTS.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {/* Eyebrow (competition / publisher label) override + toggle */}
+        <div>
+          <div className="flex items-center justify-between">
+            <span className={labelCls}>Label (top-left)</span>
+            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+              <input
+                type="checkbox"
+                checked={showEyebrow}
+                onChange={(e) => setShowEyebrow(e.target.checked)}
+              />
+              Show
+            </label>
+          </div>
+          <input
+            value={eyebrowOverride}
+            onChange={(e) => setEyebrowOverride(e.target.value)}
+            disabled={!showEyebrow}
+            placeholder="Auto (competition / publisher) — type to override"
+            className="mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30 disabled:opacity-40"
+          />
+        </div>
+
+        {/* Caption styling — only meaningful on image-led (bleed) cards */}
+        {(cardType === 'news-image' || cardType === 'ai-image') && (
+          <div className="grid grid-cols-2 items-end gap-3">
+            <label className={labelCls}>
+              Gradient {Math.round(gradientStrength * 100)}%
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(gradientStrength * 100)}
+                onChange={(e) => setGradientStrength(Number(e.target.value) / 100)}
+                className="mt-2 w-full"
+              />
+            </label>
+            <label className={labelCls}>
+              Caption color
+              <input
+                type="color"
+                value={captionColor}
+                onChange={(e) => setCaptionColor(e.target.value)}
+                className="mt-1 h-8 w-full rounded-md border border-white/10 bg-neutral-900"
+              />
+            </label>
+          </div>
+        )}
+
         <hr className="border-white/10" />
 
         {/* Badges & flags — fetch and place crests / logos / flags on the card */}
@@ -906,7 +998,17 @@ export function ShareCardCreator({
               <ShareCardCanvas
                 ref={captureRef}
                 content={content}
-                frame={{ themeName, ratio, accentHex: accentHex || null, eyebrow, handle }}
+                frame={{
+                  themeName,
+                  ratio,
+                  accentHex: accentHex || null,
+                  eyebrow,
+                  handle,
+                  logoSize,
+                  logoVariant,
+                  captionColor,
+                  gradientStrength,
+                }}
                 overlays={overlays}
               />
             </div>
