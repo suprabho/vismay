@@ -1,0 +1,22 @@
+<svg width="196" height="258" viewBox="0 0 196 258" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <defs>
+    <linearGradient id="sA" gradientUnits="userSpaceOnUse" x1="182" y1="130" x2="166" y2="14">
+      <stop offset="0" stop-color="#FCA386"></stop><stop offset="1" stop-color="#FCA386" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sB" gradientUnits="userSpaceOnUse" x1="151" y1="151" x2="54" y2="48">
+      <stop offset="0" stop-color="#FCA386"></stop><stop offset="1" stop-color="#FCA386" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sC" gradientUnits="userSpaceOnUse" x1="142" y1="179" x2="18" y2="165">
+      <stop offset="0" stop-color="#FCA386"></stop><stop offset="1" stop-color="#FCA386" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="sD" gradientUnits="userSpaceOnUse" x1="142" y1="211" x2="14" y2="238">
+      <stop offset="0" stop-color="#FCA386"></stop><stop offset="1" stop-color="#FCA386" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+  <g stroke-width="15" stroke-linecap="round">
+    <path d="M 182 130 L 166 14" stroke="url(#sA)"></path>
+    <path d="M 151 151 L 54 48" stroke="url(#sB)"></path>
+    <path d="M 142 179 L 18 165" stroke="url(#sC)"></path>
+    <path d="M 142 211 L 14 238" stroke="url(#sD)"></path>
+  </g>
+</svg>

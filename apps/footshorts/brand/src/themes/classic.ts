@@ -9,6 +9,10 @@ export const classic: Theme = {
     border: '#24242E',
     text: '#F4F4F5',
     muted: '#8E8E99',
+    // Brand orange-red, lifted to red-400 so it pops on near-black (the design
+    // system's dark-theme --brand). Green stays the rare live/electric accent.
+    brand: '#F26A3C',
+    brandText: '#FFFFFF',
     accent: '#00D26A',
     accentText: '#0B0B0F',
   },
