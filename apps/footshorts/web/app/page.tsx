@@ -289,6 +289,12 @@ export default function Index() {
               Create an account
             </Link>
           </div>
+          <Link
+            href="/feed"
+            className="mt-4 inline-flex items-center justify-center text-sm font-medium text-muted hover:text-text"
+          >
+            or browse stories without an account →
+          </Link>
         </div>
 
         <div className="relative mx-auto mt-16 max-w-6xl">
