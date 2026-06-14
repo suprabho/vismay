@@ -26,3 +26,8 @@ export {
 } from './grid/theme'
 export type { CardTheme } from './grid/theme'
 export type { StoryCardData, StoryGridItem, Theme } from './grid/types'
+
+/* Daily-recap markdown renderer + embedded fs: viz mount (shared by admin + footshorts/web). */
+export { RecapMarkdown } from './recap/RecapMarkdown'
+export { RecapVizBlock } from './recap/RecapVizBlock'
+export type { RecapVizBlockProps } from './recap/RecapVizBlock'
