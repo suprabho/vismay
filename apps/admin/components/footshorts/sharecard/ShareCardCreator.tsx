@@ -523,13 +523,13 @@ export function ShareCardCreator({
           </label>
         )}
 
-        {/* News picker */}
+        {/* News picker — the image card only lists articles that have a thumbnail. */}
         {needsNews && news && (
           <label className={labelCls}>
             Article
             <select value={pickedNewsId} onChange={(e) => setPickedNewsId(e.target.value)} className={selectCls}>
               <option value="">Select an article…</option>
-              {news.map((n) => (
+              {(cardType === 'news-image' ? news.filter((n) => n.image_url) : news).map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.headline.slice(0, 70)}
                 </option>

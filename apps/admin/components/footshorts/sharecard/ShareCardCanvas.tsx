@@ -179,22 +179,27 @@ function FormBody({ content }: { content: Extract<CardContent, { type: 'form' }>
 
 function NewsImageBody({ content }: { content: Extract<CardContent, { type: 'news-image' }> }) {
   const { item } = content
-  return (
-    <div className="relative h-full min-h-0 overflow-hidden">
-      {item.image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={proxiedImage(item.image_url)}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-surface" />
-      )}
-      <div
-        className="absolute inset-x-0 bottom-0 p-4"
-        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))' }}
-      >
+  return item.image_url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={proxiedImage(item.image_url)}
+      alt=""
+      className="absolute inset-0 h-full w-full object-cover"
+    />
+  ) : (
+    <div className="absolute inset-0 bg-surface" />
+  )
+}
+
+/**
+ * Caption shown at the bottom of a bleed card — sits ABOVE the footer (rendered
+ * in the same gradient group) so the headline never collides with the branding.
+ */
+function BleedCaption({ content }: { content: CardContent }) {
+  if (content.type === 'news-image') {
+    const { item } = content
+    return (
+      <div className="px-4 pb-1 pt-3">
         {item.publisher ? (
           <div className="mb-1 text-[12px] font-bold uppercase tracking-wide" style={{ color: '#fff', opacity: 0.7 }}>
             {item.publisher}
@@ -204,8 +209,18 @@ function NewsImageBody({ content }: { content: Extract<CardContent, { type: 'new
           {item.headline}
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+  if (content.type === 'ai-image' && content.caption) {
+    return (
+      <div className="px-4 pb-1 pt-3">
+        <div className="text-[20px] font-bold leading-tight" style={{ color: '#fff' }}>
+          {content.caption}
+        </div>
+      </div>
+    )
+  }
+  return null
 }
 
 function NewsArticleBody({ content }: { content: Extract<CardContent, { type: 'news-article' }> }) {
@@ -227,20 +242,8 @@ function NewsArticleBody({ content }: { content: Extract<CardContent, { type: 'n
 
 function AiImageBody({ content }: { content: Extract<CardContent, { type: 'ai-image' }> }) {
   return (
-    <div className="relative h-full min-h-0 overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={content.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-      {content.caption ? (
-        <div
-          className="absolute inset-x-0 bottom-0 p-4"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0))' }}
-        >
-          <div className="text-[20px] font-bold leading-tight" style={{ color: '#fff' }}>
-            {content.caption}
-          </div>
-        </div>
-      ) : null}
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={content.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
   )
 }
 
@@ -332,7 +335,12 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
           </div>
           <div className="relative z-10 flex h-full flex-col justify-between">
             <Header eyebrow={frame.eyebrow} />
-            <Footer handle={frame.handle} />
+            {/* Caption + footer share one gradient so the headline sits above
+                the branding instead of colliding with it. */}
+            <div style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))' }}>
+              <BleedCaption content={content} />
+              <Footer handle={frame.handle} />
+            </div>
           </div>
         </>
       ) : (
