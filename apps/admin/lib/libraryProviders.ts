@@ -206,6 +206,68 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
   }
 }
 
+/**
+ * Footshorts daily match-day recaps (`daily_recaps`) — one ready-to-read
+ * markdown brief per (date, scope), written by the recap worker. Lives in the
+ * same project as `stories`/`articles`, so the admin service client reaches it.
+ * App-scoped to footshorts; the markdown column is the research text verbatim.
+ *
+ * The table's primary key is composite (recap_date, scope), so an item id packs
+ * both as `<recap_date>/<scope>` — neither an ISO date nor a competition slug
+ * contains a slash, so a single split on the first `/` round-trips cleanly.
+ */
+const recapsProvider: LibraryProvider = {
+  key: 'footshorts-recap',
+  label: 'Match-day recaps',
+  apps: ['footshorts'],
+  async list() {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('daily_recaps')
+      .select('recap_date, scope, fixture_count, article_count')
+      .order('recap_date', { ascending: false })
+      .order('scope', { ascending: true })
+      .limit(100)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      recap_date: string
+      scope: string | null
+      fixture_count: number | null
+      article_count: number | null
+    }>
+    return rows.map((r) => {
+      const scope = r.scope ?? 'all'
+      const counts = [
+        r.fixture_count ? `${r.fixture_count} fixtures` : null,
+        r.article_count ? `${r.article_count} stories` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      return {
+        id: `${r.recap_date}/${scope}`,
+        title: `${r.recap_date} · ${scope === 'all' ? 'All competitions' : scope}`,
+        subtitle: counts || undefined,
+      }
+    })
+  },
+  async extract(id) {
+    const slash = id.indexOf('/')
+    const recapDate = slash === -1 ? id : id.slice(0, slash)
+    const scope = slash === -1 ? 'all' : id.slice(slash + 1)
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('daily_recaps')
+      .select('markdown')
+      .eq('recap_date', recapDate)
+      .eq('scope', scope)
+      .maybeSingle()
+    const text = (data?.markdown ?? '').trim()
+    if (!text) return null
+    const label = scope === 'all' ? 'All competitions' : scope
+    return { title: `Recap · ${recapDate} · ${label}`, byline: `Match-day recap · ${label}`, text }
+  },
+}
+
 // ── Search-only dataset providers ────────────────────────────────────────────
 // Large corpora that can't be listed wholesale — surfaced only when the user
 // queries. Keyword (ilike) match over a couple of text columns each. All are
@@ -406,6 +468,7 @@ const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
   newsProvider({ key: 'footshorts-news', label: 'Football news', table: 'articles', app: 'footshorts' }),
+  recapsProvider,
   newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
   ieaNewsProvider,
   epsteinProvider,

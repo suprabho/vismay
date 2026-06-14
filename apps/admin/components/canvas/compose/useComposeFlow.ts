@@ -278,17 +278,25 @@ export function useComposeFlow({
   }
 
   // ── Angles ─────────────────────────────────────────────────────────────
-  async function genAngles(feedback?: string): Promise<boolean> {
+  async function genAngles(feedback?: string, focus?: 'recap'): Promise<boolean> {
     const data = await call<{ angles: ComposeState['angles'] }>('angles', 'angles', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(feedback ? { feedback, previous: st.angles } : {}),
+      body: JSON.stringify({
+        ...(feedback ? { feedback, previous: st.angles } : {}),
+        ...(focus ? { focus } : {}),
+      }),
     })
     if (data?.angles) {
       setSt((s) => ({ ...s, phase: 'angles', angles: data.angles }))
       setTab('angles')
     }
     return !!data?.angles
+  }
+  // "Create recap": the recap sources are already attached from the library
+  // (recap-only picker); this just runs angle generation with the recap steer.
+  async function createRecap(): Promise<boolean> {
+    return genAngles(undefined, 'recap')
   }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
@@ -503,6 +511,7 @@ export function useComposeFlow({
     removeSource,
     reextract,
     genAngles,
+    createRecap,
     pickAngle,
     genOutline,
     cycleStatus,

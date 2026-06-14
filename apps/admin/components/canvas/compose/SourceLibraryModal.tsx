@@ -9,6 +9,7 @@ import {
   BookOpen,
   Stack,
   Newspaper,
+  Trophy,
   Lightning,
   Scales,
   MusicNotes,
@@ -49,6 +50,7 @@ const GROUP_ICON: Record<string, typeof FileText> = {
   story: BookOpen,
   epic: Stack,
   'footshorts-news': Newspaper,
+  'footshorts-recap': Trophy,
   'vizf1-news': Newspaper,
   'iea-news': Lightning,
   epstein: Scales,
@@ -64,6 +66,10 @@ const KIND_ICON = { file: FileText, link: LinkSimple, text: TextAa } as const
  * a per-row Add → Added state; the modal stays open so several can be pulled in
  * one visit.
  */
+/** Provider key for footshorts match-day recaps — the only group surfaced in
+ *  recap mode, and the one the "Create recap" flow attaches from. */
+const RECAP_PROVIDER_KEY = 'footshorts-recap'
+
 export function SourceLibraryModal({
   onClose,
   loadLibrary,
@@ -72,6 +78,8 @@ export function SourceLibraryModal({
   onAddFromProvider,
   onSearchDatasets,
   onEnrich,
+  recapMode = false,
+  onCreateRecap,
 }: {
   onClose: () => void
   loadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
@@ -80,6 +88,11 @@ export function SourceLibraryModal({
   onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
   onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
   onEnrich: (focus: string) => Promise<{ ok: boolean; message?: string }>
+  /** "Create recap" mode: show ONLY match-day recaps and swap the AI-research
+   *  footer for a "Generate recap angles" advance. */
+  recapMode?: boolean
+  /** Runs recap-focused angle generation; the modal closes on success. */
+  onCreateRecap?: () => Promise<boolean>
 }) {
   const [loading, setLoading] = useState(true)
   const [sources, setSources] = useState<LibrarySource[]>([])
@@ -96,6 +109,8 @@ export function SourceLibraryModal({
   // Per-item attach state, keyed by source id / asset key.
   const [adding, setAdding] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
+  // Recap mode: whether a recap-angle generation is in flight.
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -123,6 +138,8 @@ export function SourceLibraryModal({
   // when emptied. All state lands in the timeout callback (never synchronously
   // in the effect body); a stale-guard drops out-of-order responses.
   useEffect(() => {
+    // Recap mode only offers the (list-based) recaps group — no dataset search.
+    if (recapMode) return
     const q = query.trim()
     let cancelled = false
     const t = setTimeout(async () => {
@@ -143,7 +160,7 @@ export function SourceLibraryModal({
       cancelled = true
       clearTimeout(t)
     }
-  }, [query, onSearchDatasets])
+  }, [query, onSearchDatasets, recapMode])
 
   const q = query.trim().toLowerCase()
   const matchedSources = useMemo(
@@ -187,6 +204,20 @@ export function SourceLibraryModal({
     if (ok) setAdded((s) => new Set(s).add(key))
   }
 
+  // Recap items attached so far (added keys are `${group.key}:${item.id}`).
+  const recapAddedCount = useMemo(
+    () => [...added].filter((k) => k.startsWith(`${RECAP_PROVIDER_KEY}:`)).length,
+    [added],
+  )
+
+  async function runCreateRecap() {
+    if (!onCreateRecap || creating || recapAddedCount === 0) return
+    setCreating(true)
+    const ok = await onCreateRecap()
+    setCreating(false)
+    if (ok) onClose()
+  }
+
   async function runEnrich() {
     if (enriching) return
     setEnriching(true)
@@ -214,14 +245,17 @@ export function SourceLibraryModal({
     )
   }
 
-  // Static (client-filtered) groups first, then on-demand dataset hits.
-  const renderGroups = [...matchedGroups, ...datasetGroups]
+  // Static (client-filtered) groups first, then on-demand dataset hits. In
+  // recap mode only the recaps group is offered — sources/assets/datasets are
+  // hidden so the picker stays a clean "choose a recap" surface.
+  const renderGroups = recapMode
+    ? matchedGroups.filter((g) => g.key === RECAP_PROVIDER_KEY)
+    : [...matchedGroups, ...datasetGroups]
 
   const empty =
     !loading &&
     !searching &&
-    matchedSources.length === 0 &&
-    matchedAssets.length === 0 &&
+    (recapMode || (matchedSources.length === 0 && matchedAssets.length === 0)) &&
     renderGroups.length === 0
 
   return (
@@ -235,9 +269,13 @@ export function SourceLibraryModal({
       >
         <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold tracking-tight">Add from library</h2>
+            <h2 className="text-sm font-semibold tracking-tight">
+              {recapMode ? 'Create recap' : 'Add from library'}
+            </h2>
             <p className="truncate text-[11px] text-neutral-500">
-              Reuse research from other drafts and document assets already in the DB
+              {recapMode
+                ? 'Pick a match-day recap, then generate recap-focused angles'
+                : 'Reuse research from other drafts and document assets already in the DB'}
             </p>
           </div>
           <button
@@ -256,7 +294,7 @@ export function SourceLibraryModal({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search library, or type to query datasets…"
+              placeholder={recapMode ? 'Search recaps by date or competition…' : 'Search library, or type to query datasets…'}
               className="min-w-0 flex-1 bg-transparent py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none"
             />
             {searching && <span className="shrink-0 text-[10px] text-neutral-500">searching…</span>}
@@ -268,9 +306,13 @@ export function SourceLibraryModal({
 
           {empty && (
             <p className="rounded-lg border border-dashed border-white/10 px-3 py-8 text-center text-xs text-neutral-600">
-              {query
-                ? 'No library items match your search.'
-                : 'Nothing in the library yet — extracted sources from other drafts and document assets show up here.'}
+              {recapMode
+                ? query
+                  ? 'No recaps match your search.'
+                  : 'No match-day recaps available yet — they appear once the recap worker has generated them.'
+                : query
+                  ? 'No library items match your search.'
+                  : 'Nothing in the library yet — extracted sources from other drafts and document assets show up here.'}
             </p>
           )}
 
@@ -311,7 +353,7 @@ export function SourceLibraryModal({
             )
           })}
 
-          {matchedSources.length > 0 && (
+          {!recapMode && matchedSources.length > 0 && (
             <section className="space-y-1.5">
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
                 Research sources{' '}
@@ -350,7 +392,7 @@ export function SourceLibraryModal({
             </section>
           )}
 
-          {matchedAssets.length > 0 && (
+          {!recapMode && matchedAssets.length > 0 && (
             <section className="space-y-1.5">
               <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
                 Document assets{' '}
@@ -382,31 +424,49 @@ export function SourceLibraryModal({
           )}
         </div>
 
-        {/* AI dataset research — the second consumer of the query layer. */}
-        <div className="space-y-1.5 border-t border-white/10 px-4 py-3">
-          <div className="flex items-center gap-1.5">
-            <input
-              value={enrichFocus}
-              onChange={(e) => setEnrichFocus(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !enriching && runEnrich()}
-              placeholder="Focus for AI dataset research (optional)…"
-              className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-violet-400/50"
-            />
+        {recapMode ? (
+          /* Recap mode — advance straight to recap-focused angle generation. */
+          <div className="space-y-1.5 border-t border-white/10 px-4 py-3">
             <button
-              onClick={runEnrich}
-              disabled={enriching}
-              className="shrink-0 rounded-md bg-violet-500 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-400 disabled:opacity-40"
-              title="Let an AI agent search the datasets and attach a synthesised research brief"
+              onClick={runCreateRecap}
+              disabled={creating || recapAddedCount === 0}
+              className={`w-full py-2 ${btnPrimaryCls}`}
+              title="Generate angles framed as a match-day recap from the added recaps"
             >
-              {enriching ? 'Researching…' : '✨ AI research'}
+              {creating
+                ? 'Generating recap angles…'
+                : recapAddedCount === 0
+                  ? 'Add a recap to continue'
+                  : `Generate recap angles → (${recapAddedCount})`}
             </button>
           </div>
-          {enrichNote && (
-            <p className={`text-[11px] ${enrichNote.tone === 'ok' ? 'text-emerald-300' : 'text-amber-300'}`}>
-              {enrichNote.text}
-            </p>
-          )}
-        </div>
+        ) : (
+          /* AI dataset research — the second consumer of the query layer. */
+          <div className="space-y-1.5 border-t border-white/10 px-4 py-3">
+            <div className="flex items-center gap-1.5">
+              <input
+                value={enrichFocus}
+                onChange={(e) => setEnrichFocus(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !enriching && runEnrich()}
+                placeholder="Focus for AI dataset research (optional)…"
+                className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-xs text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-violet-400/50"
+              />
+              <button
+                onClick={runEnrich}
+                disabled={enriching}
+                className="shrink-0 rounded-md bg-violet-500 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-400 disabled:opacity-40"
+                title="Let an AI agent search the datasets and attach a synthesised research brief"
+              >
+                {enriching ? 'Researching…' : '✨ AI research'}
+              </button>
+            </div>
+            {enrichNote && (
+              <p className={`text-[11px] ${enrichNote.tone === 'ok' ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {enrichNote.text}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

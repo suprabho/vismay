@@ -419,6 +419,7 @@ export default function EditorClient({
             {initial.composeState ? (
               <ComposeFlow
                 slug={slug}
+                appSlug={appSlug}
                 initialState={initial.composeState}
                 initialSources={initial.composeSources}
                 layout="wide"
