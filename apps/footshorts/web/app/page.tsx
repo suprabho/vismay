@@ -435,6 +435,26 @@ export default function Index() {
 function BackgroundGlow() {
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      {/* Signature triangular grid texture — faint brand watermark. */}
+      <svg aria-hidden className="absolute inset-0 h-full w-full opacity-[0.14]">
+        <defs>
+          <pattern
+            id="fs-grid"
+            width="34"
+            height="29.45"
+            patternUnits="userSpaceOnUse"
+            patternTransform="translate(6 6)"
+          >
+            <path
+              d="M 0 29.45 L 17 0 L 34 29.45 M 17 0 L 17 29.45 M -17 29.45 L 0 0 M 34 0 L 51 29.45"
+              fill="none"
+              stroke="#C2410C"
+              strokeWidth="1.2"
+            />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#fs-grid)" />
+      </svg>
       <div className="absolute left-1/2 top-[-20%] h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" />
       <div className="absolute left-[10%] top-[30%] h-[20rem] w-[20rem] rounded-full bg-accent/5 blur-3xl" />
     </div>
@@ -443,14 +463,14 @@ function BackgroundGlow() {
 
 function Logo() {
   return (
-    <span
-      aria-hidden
-      className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-bg"
-    >
-      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor">
-        <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 2 1.5 1.5L8 6.5 6.5 5 8 3.5Zm-3 3L6.5 8 5 9.5 3.5 8 5 6.5Zm6 0L12.5 8 11 9.5 9.5 8 11 6.5ZM8 9.5l1.5 1.5L8 12.5 6.5 11 8 9.5Z" />
-      </svg>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/brand/logo-icon.svg"
+      alt="Footshorts"
+      width={32}
+      height={32}
+      className="h-8 w-8"
+    />
   );
 }
 

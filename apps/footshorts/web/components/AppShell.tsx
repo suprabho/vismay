@@ -84,7 +84,9 @@ function Sidebar() {
 
   return (
     <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-60 md:flex-col md:border-r md:border-border md:bg-bg lg:w-64">
-      <Link href="/feed" className="flex h-16 items-center px-6 text-xl font-bold text-text">
+      <Link href="/feed" className="flex h-16 items-center gap-2 px-6 text-xl font-bold text-text">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/logo-icon.svg" alt="" width={28} height={28} className="h-7 w-7" />
         Footshorts
       </Link>
       <nav className="flex flex-1 flex-col gap-1 px-3">
