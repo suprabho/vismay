@@ -24,9 +24,10 @@ export const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '4:3': { w: 1440, h: 1080 },
 }
 
-/** Shrink factor from output px → on-screen render px (keeps text proportions
- *  natural; html-to-image scales back up via pixelRatio). */
-export const RENDER_SCALE = 0.361
+/** Shrink factor from output px → on-screen render px. Lower = the fixed-px card
+ *  content (text, crests, the viz components) occupies a larger share of the
+ *  card and is scaled up more on export, i.e. bigger type. */
+export const RENDER_SCALE = 0.3
 
 export type CardType =
   | 'match'
@@ -65,9 +66,20 @@ export interface NewsItem {
   entities: NewsEntityRef[]
 }
 
+/** Match rendering style: the colorful `fs:match-tile`, or one of the editorial
+ *  `fs:match-card` layouts. */
+export type MatchStyle = 'tile' | 'card-horizontal' | 'card-portrait' | 'card-score'
+
+export const MATCH_STYLES: Array<{ id: MatchStyle; label: string }> = [
+  { id: 'tile', label: 'Tile' },
+  { id: 'card-horizontal', label: 'Card · Horizontal' },
+  { id: 'card-portrait', label: 'Card · Portrait' },
+  { id: 'card-score', label: 'Card · Score' },
+]
+
 /** What the canvas renders — a discriminated union by card type. */
 export type CardContent =
-  | { type: 'match'; fixture: FixtureRow; competitionName: string }
+  | { type: 'match'; fixture: FixtureRow; competitionName: string; style: MatchStyle }
   | {
       type: 'standings'
       rows: StandingRow[]

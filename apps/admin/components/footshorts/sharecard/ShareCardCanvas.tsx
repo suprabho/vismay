@@ -2,14 +2,69 @@
 
 import { forwardRef } from 'react'
 import type { CSSProperties } from 'react'
-import { MatchTile, StandingsTable, TeamFormStrip } from '@vismay/footshorts-viz/web'
+import {
+  MatchCard,
+  MatchTile,
+  StandingsTable,
+  TeamFormStrip,
+  type MatchCardConfig,
+  type MatchCardLayout,
+} from '@vismay/footshorts-viz/web'
+import type { FixtureRow } from '@vismay/footshorts-viz/types'
 import { themes, themeToVars } from '@footshorts/brand'
-import { OUTPUT_SIZE, RENDER_SCALE, type CardContent, type CardFrameConfig } from './types'
+import {
+  OUTPUT_SIZE,
+  RENDER_SCALE,
+  type CardContent,
+  type CardFrameConfig,
+  type MatchStyle,
+} from './types'
 
 /** Route a remote image through the same-origin proxy so html-to-image can
  *  rasterize it without a cross-origin taint. */
 function proxiedImage(url: string): string {
   return `/api/footshorts/share/proxy-image?url=${encodeURIComponent(url)}`
+}
+
+/** Deterministic UTC kickoff label (no locale dependence) — "Sat · 17:30". */
+function kickoffLabel(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]
+  const hh = String(d.getUTCHours()).padStart(2, '0')
+  const mm = String(d.getUTCMinutes()).padStart(2, '0')
+  return `${day} · ${hh}:${mm}`
+}
+
+const CARD_LAYOUT: Record<Exclude<MatchStyle, 'tile'>, MatchCardLayout> = {
+  'card-horizontal': 'horizontal',
+  'card-portrait': 'portrait',
+  'card-score': 'score',
+}
+
+/** Build an `fs:match-card` config from a fixture, carrying real crests (proxied
+ *  for clean capture) and brand colors so the editorial card themes itself. */
+function fixtureToMatchCardConfig(
+  fixture: FixtureRow,
+  layout: MatchCardLayout,
+  competition: string,
+): MatchCardConfig {
+  const finished =
+    fixture.status === 'finished' && fixture.home_score != null && fixture.away_score != null
+  return {
+    type: 'fs:match-card',
+    layout,
+    home: fixture.home?.name ?? fixture.home_team_name ?? 'TBD',
+    away: fixture.away?.name ?? fixture.away_team_name ?? 'TBD',
+    score: finished ? `${fixture.home_score}–${fixture.away_score}` : undefined,
+    kickoff: finished ? 'FT' : kickoffLabel(fixture.kickoff_at),
+    competition,
+    competitionSlug: fixture.competition_slug,
+    homeColor: fixture.home?.primary_color ?? undefined,
+    awayColor: fixture.away?.primary_color ?? undefined,
+    homeCrestUrl: fixture.home?.crest_url ? proxiedImage(fixture.home.crest_url) : undefined,
+    awayCrestUrl: fixture.away?.crest_url ? proxiedImage(fixture.away.crest_url) : undefined,
+  }
 }
 
 /** "#RRGGBB" / "#RGB" → "R G B" channels for the `--sf-color-*` runtime vars. */
@@ -25,11 +80,11 @@ const FOOTSHORTS_MARK = 'FOOTSHORTS'
 
 function Header({ eyebrow }: { eyebrow?: string | null }) {
   return (
-    <div className="flex shrink-0 items-center justify-between px-4 pt-4">
-      <span className="truncate text-[10px] font-bold uppercase tracking-[1.6px] text-muted">
+    <div className="flex shrink-0 items-center justify-between px-5 pt-5">
+      <span className="truncate text-[13px] font-bold uppercase tracking-[1.6px] text-muted">
         {eyebrow ?? ' '}
       </span>
-      <span className="text-[10px] font-extrabold uppercase tracking-[2px] text-accent">
+      <span className="text-[13px] font-extrabold uppercase tracking-[2px] text-accent">
         {FOOTSHORTS_MARK}
       </span>
     </div>
@@ -38,9 +93,9 @@ function Header({ eyebrow }: { eyebrow?: string | null }) {
 
 function Footer({ handle }: { handle: string }) {
   return (
-    <div className="flex shrink-0 items-center justify-between px-4 pb-4 pt-2">
-      <span className="text-[10px] font-medium text-muted">{handle}</span>
-      <span className="h-1 w-8 rounded-full bg-accent" />
+    <div className="flex shrink-0 items-center justify-between px-5 pb-5 pt-2">
+      <span className="text-[12px] font-medium text-muted">{handle}</span>
+      <span className="h-1.5 w-10 rounded-full bg-accent" />
     </div>
   )
 }
@@ -48,14 +103,29 @@ function Footer({ handle }: { handle: string }) {
 // ── card bodies ───────────────────────────────────────────────────────────────
 
 function MatchBody({ content }: { content: Extract<CardContent, { type: 'match' }> }) {
+  const caption = (
+    <div className="text-center text-[15px] font-semibold uppercase tracking-wide text-muted">
+      {content.competitionName}
+    </div>
+  )
+  if (content.style === 'tile') {
+    return (
+      <div className="flex h-full min-h-0 flex-col justify-center gap-4 px-4">
+        {caption}
+        <div className="w-full">
+          <MatchTile fixture={content.fixture} />
+        </div>
+      </div>
+    )
+  }
+  const config = fixtureToMatchCardConfig(
+    content.fixture,
+    CARD_LAYOUT[content.style],
+    content.competitionName,
+  )
   return (
-    <div className="flex h-full min-h-0 flex-col justify-center gap-3 px-4">
-      <div className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted">
-        {content.competitionName}
-      </div>
-      <div className="w-full">
-        <MatchTile fixture={content.fixture} />
-      </div>
+    <div className="flex h-full min-h-0 items-center justify-center px-3 py-2">
+      <MatchCard config={config} />
     </div>
   )
 }
@@ -63,7 +133,7 @@ function MatchBody({ content }: { content: Extract<CardContent, { type: 'match' 
 function StandingsBody({ content }: { content: Extract<CardContent, { type: 'standings' }> }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 px-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+      <div className="text-[14px] font-semibold uppercase tracking-wide text-muted">
         {content.competitionName} · {content.season}
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -107,11 +177,11 @@ function NewsImageBody({ content }: { content: Extract<CardContent, { type: 'new
         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))' }}
       >
         {item.publisher ? (
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-wide" style={{ color: '#fff', opacity: 0.7 }}>
+          <div className="mb-1 text-[12px] font-bold uppercase tracking-wide" style={{ color: '#fff', opacity: 0.7 }}>
             {item.publisher}
           </div>
         ) : null}
-        <div className="text-[15px] font-bold leading-tight" style={{ color: '#fff' }}>
+        <div className="text-[19px] font-bold leading-tight" style={{ color: '#fff' }}>
           {item.headline}
         </div>
       </div>
@@ -124,13 +194,13 @@ function NewsArticleBody({ content }: { content: Extract<CardContent, { type: 'n
   return (
     <div className="flex h-full min-h-0 flex-col justify-center gap-3 px-5">
       {item.publisher ? (
-        <div className="text-[10px] font-bold uppercase tracking-[1.4px] text-accent">
+        <div className="text-[13px] font-bold uppercase tracking-[1.4px] text-accent">
           {item.publisher}
         </div>
       ) : null}
-      <div className="text-[20px] font-extrabold leading-[1.15] text-text">{item.headline}</div>
+      <div className="text-[26px] font-extrabold leading-[1.15] text-text">{item.headline}</div>
       {item.summary ? (
-        <p className="line-clamp-6 text-[12px] leading-relaxed text-muted">{item.summary}</p>
+        <p className="line-clamp-6 text-[15px] leading-relaxed text-muted">{item.summary}</p>
       ) : null}
     </div>
   )
@@ -146,7 +216,7 @@ function AiImageBody({ content }: { content: Extract<CardContent, { type: 'ai-im
           className="absolute inset-x-0 bottom-0 p-4"
           style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0))' }}
         >
-          <div className="text-[16px] font-bold leading-tight" style={{ color: '#fff' }}>
+          <div className="text-[20px] font-bold leading-tight" style={{ color: '#fff' }}>
             {content.caption}
           </div>
         </div>

@@ -1,5 +1,7 @@
 export { MatchRow } from './MatchRow'
 export { MatchTile } from './MatchTile'
+export { MatchCard } from './MatchCard'
+export type { MatchCardConfig, MatchCardLayout } from '../modules/match-card'
 export { StandingsTable } from './StandingsTable'
 export { EntityChip } from './EntityChip'
 export { Bracket, TieCard } from './Bracket'

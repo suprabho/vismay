@@ -9,11 +9,13 @@ import { useCapture } from './useCapture'
 import {
   ASPECT_RATIOS,
   CARD_TYPES,
+  MATCH_STYLES,
   OUTPUT_SIZE,
   RENDER_SCALE,
   type AspectRatio,
   type CardContent,
   type CardType,
+  type MatchStyle,
   type NewsItem,
 } from './types'
 import { SHARE_IMAGE_STYLES, type ShareImageModel } from '@/lib/footshortsShareStyles'
@@ -66,6 +68,7 @@ export function ShareCardCreator({
   const [error, setError] = useState<string | null>(null)
 
   const [pickedFixtureId, setPickedFixtureId] = useState<string>('')
+  const [matchStyle, setMatchStyle] = useState<MatchStyle>('tile')
   const [pickedTeamSlug, setPickedTeamSlug] = useState<string>('')
   const [pickedNewsId, setPickedNewsId] = useState<string>('')
 
@@ -158,7 +161,7 @@ export function ShareCardCreator({
     if (cardType === 'match') {
       const fixture = fixtures?.find((f) => f.id === pickedFixtureId)
       if (!fixture) return null
-      return { type: 'match', fixture, competitionName: compName }
+      return { type: 'match', fixture, competitionName: compName, style: matchStyle }
     }
     if (cardType === 'standings') {
       if (!standings || standings.length === 0) return null
@@ -199,6 +202,7 @@ export function ShareCardCreator({
     standings,
     news,
     pickedFixtureId,
+    matchStyle,
     pickedTeamSlug,
     pickedNewsId,
     selectedComp,
@@ -343,6 +347,24 @@ export function ShareCardCreator({
                   </option>
                 )
               })}
+            </select>
+          </label>
+        )}
+
+        {/* Match: tile vs editorial card layout */}
+        {cardType === 'match' && (
+          <label className={labelCls}>
+            Style
+            <select
+              value={matchStyle}
+              onChange={(e) => setMatchStyle(e.target.value as MatchStyle)}
+              className={selectCls}
+            >
+              {MATCH_STYLES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
             </select>
           </label>
         )}
