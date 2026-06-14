@@ -1,3 +1,8 @@
+/* footshorts webfonts — Forum (editorial display headlines), Space Grotesk
+   (UI/body), Space Mono (scores/timers/handles). See design-system
+   guidelines/type-display.html. */
+@import url('https://fonts.googleapis.com/css2?family=Forum&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

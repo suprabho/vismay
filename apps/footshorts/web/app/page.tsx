@@ -266,7 +266,7 @@ export default function Index() {
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             Football, distilled
           </span>
-          <h1 className="mt-6 text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
+          <h1 className="mt-6 font-display text-5xl font-normal leading-[1.05] tracking-[-0.015em] sm:text-6xl md:text-7xl">
             Your football
             <br />
             <span className="text-accent">in short.</span>
@@ -308,7 +308,7 @@ export default function Index() {
           <span className="text-xs font-medium uppercase tracking-wider text-accent">
             Features
           </span>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
             More than just a feed.
           </h2>
           <p className="mt-4 text-muted">
@@ -352,7 +352,7 @@ export default function Index() {
             <span className="text-xs font-medium uppercase tracking-wider text-accent">
               Coverage
             </span>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
               Every league you watch.
             </h2>
             <p className="mt-4 text-muted">
@@ -367,7 +367,7 @@ export default function Index() {
       <section className="relative z-10 mx-auto max-w-4xl px-6 py-24">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-surface/60 px-8 py-16 text-center backdrop-blur sm:px-16">
           <div className="absolute inset-x-0 -top-20 mx-auto h-40 w-40 rounded-full bg-accent/30 blur-3xl" />
-          <h2 className="relative text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="relative font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
             Football scheduling, simplified.
           </h2>
           <p className="relative mt-4 text-muted">
@@ -435,6 +435,26 @@ export default function Index() {
 function BackgroundGlow() {
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      {/* Signature triangular grid texture — faint brand watermark. */}
+      <svg aria-hidden className="absolute inset-0 h-full w-full opacity-[0.14]">
+        <defs>
+          <pattern
+            id="fs-grid"
+            width="34"
+            height="29.45"
+            patternUnits="userSpaceOnUse"
+            patternTransform="translate(6 6)"
+          >
+            <path
+              d="M 0 29.45 L 17 0 L 34 29.45 M 17 0 L 17 29.45 M -17 29.45 L 0 0 M 34 0 L 51 29.45"
+              fill="none"
+              stroke="#C2410C"
+              strokeWidth="1.2"
+            />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#fs-grid)" />
+      </svg>
       <div className="absolute left-1/2 top-[-20%] h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" />
       <div className="absolute left-[10%] top-[30%] h-[20rem] w-[20rem] rounded-full bg-accent/5 blur-3xl" />
     </div>
@@ -443,14 +463,14 @@ function BackgroundGlow() {
 
 function Logo() {
   return (
-    <span
-      aria-hidden
-      className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-bg"
-    >
-      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor">
-        <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 2 1.5 1.5L8 6.5 6.5 5 8 3.5Zm-3 3L6.5 8 5 9.5 3.5 8 5 6.5Zm6 0L12.5 8 11 9.5 9.5 8 11 6.5ZM8 9.5l1.5 1.5L8 12.5 6.5 11 8 9.5Z" />
-      </svg>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/brand/logo-icon.svg"
+      alt="Footshorts"
+      width={32}
+      height={32}
+      className="h-8 w-8"
+    />
   );
 }
 
@@ -477,7 +497,7 @@ function FeatureRow({
         <span className="text-xs font-medium uppercase tracking-wider text-accent">
           {label}
         </span>
-        <h3 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h3 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
           {title}
         </h3>
         <p className="mt-4 text-base text-muted sm:text-lg">{body}</p>
