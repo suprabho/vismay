@@ -49,14 +49,6 @@ export default function ProfilePage() {
         <span className="text-sm text-muted">{follows?.length ?? 0} →</span>
       </Link>
 
-      <Link
-        href="/admin"
-        className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3 hover:border-muted"
-      >
-        <span className="font-medium text-text">Pipeline stats</span>
-        <span className="text-sm text-muted">→</span>
-      </Link>
-
       <div className="mb-3 rounded-lg border border-border bg-surface px-4 py-3">
         <p className="mb-2 text-sm font-medium text-text">Theme</p>
         <div className="flex gap-2">
