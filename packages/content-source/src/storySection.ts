@@ -1,6 +1,11 @@
-import { stringify as stringifyYaml } from 'yaml'
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { buildYamlModel } from './yamlSections'
-import { parseJsonConfig, appendJsonSection, type JsonConfigSection } from './jsonSections'
+import {
+  parseJsonConfig,
+  appendJsonSection,
+  stringifyJsonConfig,
+  type JsonConfigSection,
+} from './jsonSections'
 import type { ConfigFormat } from './contentSource'
 
 /**
@@ -172,6 +177,98 @@ export function appendStorySection(
       : appendSectionToConfig(configText, entry)
 
   return { markdown: md, configYaml: configOut, id }
+}
+
+/**
+ * Append one or more foreground layers into an EXISTING section's `foreground`,
+ * keyed by the section's array index. This is the "node-level" counterpart to
+ * `appendStorySection`: instead of tacking a whole new section onto the end of
+ * the story, it drops a layer (e.g. a real `fs:standings-table` block picked
+ * from the football data modal) into the section the user is already editing.
+ *
+ * The layers carry their own absolute `style` (free-layout positioning), so the
+ * only valid host is a flat `foreground` ARRAY. We therefore:
+ *   - create the array (and stamp `layout: free`) when the section has none,
+ *   - push onto an existing array,
+ *   - coerce a lone bare-object foreground into a two-item array,
+ *   - and REFUSE a `{ regions: … }` foreground (deck layout has no flat slot for
+ *     a self-positioned layer) — the caller falls back to a new section.
+ *
+ * Format-aware like `appendStorySection`: a JSON-native config (footshorts/f1)
+ * round-trips through the JSON model; YAML round-trips through parse/stringify
+ * (text-level comments are lost, same tradeoff `replaceLayer` already accepts).
+ */
+export type AppendLayerResult =
+  | { ok: true; configText: string }
+  | { ok: false; reason: 'no-section' | 'regions-layout' | 'no-layers' }
+
+export function appendSectionForegroundLayers(
+  configText: string,
+  sectionIndex: number,
+  layers: Array<Record<string, unknown>>,
+  format: ConfigFormat = 'yaml',
+): AppendLayerResult {
+  if (!layers.length) return { ok: false, reason: 'no-layers' }
+
+  if (format === 'json') {
+    const model = parseJsonConfig(configText)
+    if (model.parseError) {
+      throw new Error(`cannot edit invalid config JSON: ${model.parseError}`)
+    }
+    const section = model.sections[sectionIndex]
+    if (!section || typeof section !== 'object') return { ok: false, reason: 'no-section' }
+    if (!pushForegroundLayers(section as Record<string, unknown>, layers)) {
+      return { ok: false, reason: 'regions-layout' }
+    }
+    return { ok: true, configText: stringifyJsonConfig(model) }
+  }
+
+  let doc: unknown
+  try {
+    doc = parseYaml(configText || '')
+  } catch (e) {
+    throw new Error(`cannot edit invalid config YAML: ${e instanceof Error ? e.message : String(e)}`)
+  }
+  if (!doc || typeof doc !== 'object' || !Array.isArray((doc as { sections?: unknown }).sections)) {
+    return { ok: false, reason: 'no-section' }
+  }
+  const sections = (doc as { sections: unknown[] }).sections
+  const section = sections[sectionIndex]
+  if (!section || typeof section !== 'object') return { ok: false, reason: 'no-section' }
+  if (!pushForegroundLayers(section as Record<string, unknown>, layers)) {
+    return { ok: false, reason: 'regions-layout' }
+  }
+  return { ok: true, configText: stringifyYaml(doc, { lineWidth: 0 }) }
+}
+
+/**
+ * Mutate `section.foreground` to include `layers`. Returns false (no mutation)
+ * when the existing foreground is a `{ regions: … }` object — a deck layout
+ * has no flat slot for a self-positioned layer.
+ */
+function pushForegroundLayers(
+  section: Record<string, unknown>,
+  layers: Array<Record<string, unknown>>,
+): boolean {
+  const fg = section.foreground
+  if (fg == null) {
+    section.foreground = [...layers]
+    // A self-positioned layer needs free layout; only stamp it when the
+    // section hasn't already declared one (don't clobber an explicit layout).
+    if (section.layout == null) section.layout = 'free'
+    return true
+  }
+  if (Array.isArray(fg)) {
+    section.foreground = [...fg, ...layers]
+    return true
+  }
+  if (typeof fg === 'object') {
+    if ('regions' in (fg as Record<string, unknown>)) return false
+    // A lone bare layer object — fold it into an array alongside the new ones.
+    section.foreground = [fg, ...layers]
+    return true
+  }
+  return false
 }
 
 /** The ids already taken in a config, so a new section's id can dedupe against

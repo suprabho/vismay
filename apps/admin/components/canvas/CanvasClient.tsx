@@ -85,7 +85,10 @@ import {
   writeDefaultsMapStyle,
   type SlotPath,
 } from './canvasSlotEditing'
-import { appendStorySection } from '@vismay/content-source/storySection'
+import {
+  appendStorySection,
+  appendSectionForegroundLayers,
+} from '@vismay/content-source/storySection'
 import { FootballDataModal, type FootballSection } from './FootballDataModal'
 import AssistantLauncher from '@/components/AssistantLauncher'
 import {
@@ -3425,12 +3428,51 @@ export default function CanvasClient({
     }
   }, [genResult, genBusy, applySection])
 
-  // Append a real-data section picked from the football data modal.
+  // Add a real-data block picked from the football data modal. Preferred path:
+  // drop it as a NODE (a new foreground layer) into the section the user is
+  // currently on — so it lands where they're working, not tacked onto the end.
+  // Only when the active section can't host a free-positioned layer (a deck's
+  // `regions` foreground, or no section at all) do we fall back to appending a
+  // whole new section.
   const handleApplyFootballSection = useCallback(
     async (section: FootballSection) => {
       setFootballBusy(true)
       try {
-        await applySection(section)
+        const unit = sectionUnitsRef.current[stateRef.current.activeSectionIndex]
+        // The modal always builds a single-block `body.foreground` array — those
+        // blocks are the layers we drop into the current section.
+        const layers = Array.isArray(section.body.foreground)
+          ? (section.body.foreground as Array<Record<string, unknown>>)
+          : []
+
+        const cfg = configYamlRef.current ?? ''
+        let format: 'yaml' | 'json' = 'yaml'
+        if (cfg.trim().startsWith('{')) {
+          try {
+            JSON.parse(cfg)
+            format = 'json'
+          } catch {
+            format = 'yaml'
+          }
+        }
+
+        const inserted =
+          unit && layers.length
+            ? appendSectionForegroundLayers(cfg, unit.parentIndex, layers, format)
+            : ({ ok: false, reason: 'no-section' } as const)
+
+        if (inserted.ok) {
+          // Same path the slot-edit handlers use: patch sources + bump the
+          // nonce. We're already on this section, so its frame + node graph
+          // rebuild in place — no pagination, no new section at the end.
+          await saveConfigYaml(slug, inserted.configText)
+          setSources((prev) => ({ ...prev, configYaml: inserted.configText }))
+          setDataNonce((n) => n + 1)
+        } else {
+          // No hostable section (deck regions / empty story) — keep the data by
+          // appending it as its own section.
+          await applySection(section)
+        }
         setFootballOpen(false)
       } catch (e) {
         // Surface through the same banner the generate-section flow uses.
@@ -3439,7 +3481,7 @@ export default function CanvasClient({
         setFootballBusy(false)
       }
     },
-    [applySection],
+    [applySection, slug],
   )
 
   /* ─── Slot-edit save handlers (map / image / theme) ─────────── */
