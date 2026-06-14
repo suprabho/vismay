@@ -460,3 +460,97 @@ export async function fetchFixtures(q: FixtureQuery): Promise<FixtureRowInput[]>
   }
   return readFixturesFromDb(supabase, q)
 }
+
+// ── news ──────────────────────────────────────────────────────────────────────
+
+/** A football-tagged entity attached to an article (team or league). */
+export interface NewsEntityRef {
+  id: string
+  type: 'team' | 'league'
+  slug: string
+  name: string
+  crest_url: string | null
+  primary_color: string | null
+}
+
+/** One summarised news article, shaped for the share-card picker. Mirrors the
+ *  feed select in `apps/footshorts/web/lib/useFeed.ts` but server-side. */
+export interface FootshortsNewsItem {
+  id: string
+  headline: string
+  summary: string | null
+  image_url: string | null
+  publisher: string | null
+  url: string | null
+  published_at: string
+  entities: NewsEntityRef[]
+}
+
+export interface NewsQuery {
+  /** Filter to articles tagged with this team/league entity slug. */
+  entitySlug?: string
+  /** Max articles to return after filtering (default 30). */
+  limit?: number
+}
+
+interface ArticleDbRow {
+  id: string
+  headline: string
+  summary: string | null
+  image_url: string | null
+  publisher: string | null
+  url: string | null
+  published_at: string
+  cluster_id: string | null
+  article_entities:
+    | Array<{ confidence: number | null; entity: NewsEntityRef | null }>
+    | null
+}
+
+/**
+ * Recent summarised news articles for the share-card creator. Reads the same
+ * `articles` table the footshorts web feed uses (cluster-lead filter so we get
+ * one row per story), joined to its tagged team/league entities. Optionally
+ * narrowed to a single entity slug. SERVER-ONLY (service-role client).
+ */
+export async function fetchFootshortsNews(q: NewsQuery = {}): Promise<FootshortsNewsItem[]> {
+  const limit = Math.min(Math.max(q.limit ?? 30, 1), 60)
+  const supabase = createServiceClient()
+  // Over-fetch when filtering by entity so the in-memory narrow still returns a
+  // useful page (the entity tag lives on the joined table, not the article row).
+  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 200) : limit
+  const { data, error } = await supabase
+    .from('articles')
+    .select(
+      `id, headline, summary, image_url, publisher, url, published_at, cluster_id,
+       article_entities(confidence, entity:entities(id, type, slug, name, crest_url, primary_color))`,
+    )
+    .eq('status', 'summarized')
+    .or('is_cluster_lead.eq.true,cluster_id.is.null')
+    .order('published_at', { ascending: false })
+    .limit(fetchLimit)
+  if (error) throw error
+
+  const items: FootshortsNewsItem[] = ((data ?? []) as unknown as ArticleDbRow[]).map((r) => {
+    const entities = (r.article_entities ?? [])
+      .map((ae) => ae.entity)
+      .filter(
+        (e): e is NewsEntityRef => !!e && (e.type === 'team' || e.type === 'league'),
+      )
+    return {
+      id: r.id,
+      headline: r.headline,
+      summary: r.summary,
+      image_url: r.image_url,
+      publisher: r.publisher,
+      url: r.url,
+      published_at: r.published_at,
+      entities,
+    }
+  })
+
+  const filtered = q.entitySlug
+    ? items.filter((it) => it.entities.some((e) => e.slug === q.entitySlug))
+    : items
+  return filtered.slice(0, limit)
+}

@@ -9,6 +9,25 @@
    globals.generated.css. */
 @import "./globals.generated.css";
 
+/* Footshorts brand color tokens. The footshorts-viz web components (StandingsTable,
+   MatchTile, TeamFormStrip, …) style themselves with named brand utilities
+   (`bg-surface`, `text-text`, `border-border`, `bg-accent`, …) that resolve to
+   `--sf-color-*` runtime variables. Admin's Tailwind doesn't otherwise know those
+   color names, so the classes would emit nothing and the cards would render
+   unstyled. `@theme inline` registers them as references to the runtime vars —
+   they stay INERT (no `--sf-color-*` set ⇒ no color) everywhere in admin until a
+   wrapper provides the theme via `themeToVars()` (the Share-cards card surface
+   does exactly that), so this is safe to define globally. */
+@theme inline {
+  --color-bg: rgb(var(--sf-color-bg));
+  --color-surface: rgb(var(--sf-color-surface));
+  --color-border: rgb(var(--sf-color-border));
+  --color-text: rgb(var(--sf-color-text));
+  --color-muted: rgb(var(--sf-color-muted));
+  --color-accent: rgb(var(--sf-color-accent));
+  --color-accent-text: rgb(var(--sf-color-accent-text));
+}
+
 html {
   font-size: 16px;
 }

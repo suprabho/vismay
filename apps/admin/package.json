@@ -11,6 +11,7 @@
     "create-admin-user": "tsx --env-file=.env scripts/createAdminUser.ts"
   },
   "dependencies": {
+    "@footshorts/brand": "workspace:*",
     "@google/genai": "^1.50.1",
     "@monaco-editor/react": "^4.7.0",
     "@phosphor-icons/react": "^2.1.10",
@@ -28,6 +29,7 @@
     "@vismay/verticals": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "gray-matter": "^4.0.3",
+    "html-to-image": "^1.11.13",
     "mapbox-gl": "^3.21.0",
     "monaco-editor": "^0.55.1",
     "next": "16.2.2",
