@@ -248,7 +248,7 @@ export default function ShareDeckForeground({
               )}
               {heroHeading && (
                 <h2
-                  className="font-serif font-bold"
+                  className="share-display font-serif font-bold"
                   style={{ fontSize: '25px', lineHeight: 1.12, color: 'var(--color-text)' }}
                 >
                   {heroHeading}

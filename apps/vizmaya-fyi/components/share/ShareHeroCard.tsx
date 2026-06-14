@@ -16,7 +16,7 @@ export default function ShareHeroCard({ title, dek }: Props) {
       <FitScale>
         <div className="flex flex-col">
           <h1
-            className="font-serif font-bold leading-[1.2] text-[28px]"
+            className="share-display font-serif font-bold leading-[1.2] text-[28px]"
             style={{ color: 'white' }}
           >
             {title}

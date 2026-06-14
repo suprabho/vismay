@@ -87,6 +87,7 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
           units={hasShareOverrides ? shareUnits : units}
           config={config}
           title={story.frontmatter.title}
+          vertical={story.frontmatter.vertical}
           accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
           shareOverrides={shareConfig?.sections ?? null}
           shareYamlText={shareYamlText ?? ''}

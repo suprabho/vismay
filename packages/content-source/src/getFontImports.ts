@@ -8,6 +8,8 @@ const KNOWN_WEIGHTS: Record<string, number[]> = {
   'Inter': [400, 500, 600, 700],
   'JetBrains Mono': [400, 500, 600, 700],
   'IBM Plex Mono': [400, 600],
+  'Manrope': [400, 500, 600, 700, 800],
+  'Forum': [400], // single-weight display serif — Google Fonts ships only 400
   'Space Mono': [400, 700],
   'Instrument Serif': [400, 600],
 }

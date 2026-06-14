@@ -20,9 +20,9 @@ theme:
     red: "#c25a3a"
     line: "#1e3050"
   fonts:
-    serif: "Merriweather"
-    sans: "Inter"
-    mono: "JetBrains Mono"
+    serif: "Forum"
+    sans: "Manrope"
+    mono: "Space Mono"
 ---
 
 # Welcome home, Xabi
