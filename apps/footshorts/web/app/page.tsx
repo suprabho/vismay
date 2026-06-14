@@ -10,6 +10,8 @@ import {
   darkenHex,
   getCompetitionPalette,
 } from '@vismay/footshorts-viz/web';
+import { useTheme } from '@footshorts/brand/web';
+import { themes, type ThemeName } from '@footshorts/brand';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
@@ -260,13 +262,17 @@ export default function Index() {
         <nav className="hidden items-center gap-7 text-sm font-medium text-muted sm:flex">
           <a href="#features" className="hover:text-text">Features</a>
           <a href="#coverage" className="hover:text-text">Coverage</a>
+          <a href="#themes" className="hover:text-text">Themes</a>
         </nav>
-        <Link
-          href="/login"
-          className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97]"
-        >
-          Log in
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeSwitcher />
+          <Link
+            href="/login"
+            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97]"
+          >
+            Log in
+          </Link>
+        </div>
       </header>
 
       <section className="relative z-10 mx-auto max-w-6xl px-6 pb-12 pt-20 sm:pt-28">
@@ -374,6 +380,31 @@ export default function Index() {
         </div>
       </section>
 
+      <section
+        id="themes"
+        className="relative z-10 border-t border-border bg-surface/30"
+      >
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">
+              Make it yours
+            </span>
+            <h2 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">
+              Three looks, named for the game.
+            </h2>
+            <p className="mt-4 text-muted">
+              Switch the whole app between Classic, Pitch and Terrace — same
+              feed, your mood. Tap one to preview it right here.
+            </p>
+          </div>
+          <div className="mt-12 grid gap-4 sm:grid-cols-3">
+            {THEME_OPTIONS.map((option) => (
+              <ThemeCard key={option.name} option={option} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="relative z-10 mx-auto max-w-4xl px-6 py-24">
         <div className="relative overflow-hidden rounded-[28px] border border-border bg-surface/60 px-8 py-16 text-center backdrop-blur sm:px-16">
           {/* Signature triangular grid wash — faint brand watermark. */}
@@ -424,6 +455,7 @@ export default function Index() {
               links={[
                 { label: 'Features', href: '#features' },
                 { label: 'Coverage', href: '#coverage' },
+                { label: 'Themes', href: '#themes' },
               ]}
             />
             <FooterColumn
@@ -501,6 +533,136 @@ function Wordmark({ className = '' }: { className?: string }) {
     >
       Footshorts
     </span>
+  );
+}
+
+/* ---------- theming ---------- */
+
+// The product's three real themes, surfaced as a "make it yours" feature.
+// Names/descriptions mirror the in-app theme set; colours are read straight
+// from the brand package so previews stay true to the in-app scheme.
+const THEME_OPTIONS: { name: ThemeName; label: string; desc: string }[] = [
+  {
+    name: 'classic',
+    label: 'Classic',
+    desc: 'Neutral near-black. Just you and the football.',
+  },
+  {
+    name: 'pitch',
+    label: 'Pitch',
+    desc: 'Deep green-black, floodlit. Built for the night game.',
+  },
+  {
+    name: 'terrace',
+    label: 'Terrace',
+    desc: 'Warm cream, daylight. The stands on a sunny away day.',
+  },
+];
+
+// Compact header control — re-themes the whole surface live via the shared
+// ThemeProvider (the same switch the app uses), so the swatch colours are the
+// genuine theme tokens.
+function ThemeSwitcher() {
+  const { themeName, setTheme } = useTheme();
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Theme"
+      className="hidden items-center gap-1 rounded-full border border-border bg-surface/60 p-1 backdrop-blur sm:flex"
+    >
+      {THEME_OPTIONS.map((option) => {
+        const c = themes[option.name].colors;
+        const active = themeName === option.name;
+        return (
+          <button
+            key={option.name}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={option.label}
+            title={option.label}
+            onClick={() => setTheme(option.name)}
+            className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
+              active ? 'ring-2 ring-brand' : 'opacity-70 hover:opacity-100'
+            }`}
+          >
+            <span
+              className="relative h-4 w-4 overflow-hidden rounded-full border border-white/20"
+              style={{ background: c.bg }}
+            >
+              <span
+                className="absolute bottom-0 right-0 h-2 w-2 rounded-full"
+                style={{ background: c.accent }}
+              />
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// A clickable preview card rendered in its own theme's colours (independent of
+// the active page theme), so all three looks are visible at once.
+function ThemeCard({
+  option,
+}: {
+  option: (typeof THEME_OPTIONS)[number];
+}) {
+  const { themeName, setTheme } = useTheme();
+  const c = themes[option.name].colors;
+  const active = themeName === option.name;
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(option.name)}
+      aria-pressed={active}
+      className="group flex min-h-[210px] flex-col justify-between rounded-[20px] border p-6 text-left transition duration-200 hover:-translate-y-0.5"
+      style={{
+        background: c.bg,
+        color: c.text,
+        borderColor: active ? c.brand : c.border,
+        boxShadow: active ? `0 0 0 2px ${c.brand}` : undefined,
+      }}
+    >
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="font-display text-2xl leading-none">
+            {option.label}
+          </span>
+          <span
+            className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
+            style={{
+              background: active ? c.brand : 'transparent',
+              color: active ? c.brandText : c.muted,
+              border: active ? 'none' : `1px solid ${c.border}`,
+            }}
+          >
+            {active ? 'Active' : 'Preview'}
+          </span>
+        </div>
+        <p className="mt-2 text-sm" style={{ color: c.muted }}>
+          {option.desc}
+        </p>
+      </div>
+      <div className="mt-6 flex gap-2.5">
+        {(
+          [
+            ['Surface', c.surface],
+            ['Brand', c.brand],
+            ['Accent', c.accent],
+            ['Border', c.border],
+          ] as const
+        ).map(([label, col]) => (
+          <span
+            key={label}
+            title={label}
+            className="h-8 w-8 rounded-lg border"
+            style={{ background: col, borderColor: c.border }}
+          />
+        ))}
+      </div>
+    </button>
   );
 }
 
