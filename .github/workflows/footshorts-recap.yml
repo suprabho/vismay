@@ -1,0 +1,90 @@
+name: Footshorts - daily recap
+
+# Generates a match-day editorial recap (worker/src/recap.ts) and upserts it into
+# the footshorts Supabase `daily_recaps` table. The cross-competition + World Cup
+# recaps run automatically off the scores refresh (see footshorts-scores.yml); this
+# workflow is the manual entry point for AD-HOC recaps filtered by competition
+# and/or team — e.g. "just Real Madrid's game on 2026-06-14".
+#
+# recap.ts self-gates: it only writes once every fixture kicking off on the target
+# UTC day (within the filter) has finished. Use `force` to override. Upsert makes
+# re-runs safe.
+#
+# Required repo secrets (in `Production` — shared project-wide):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Recap date (YYYY-MM-DD, UTC). Blank = today.'
+        required: false
+        type: string
+        default: ''
+      competition:
+        description: "Competition slug to filter on (e.g. premier-league, la-liga). 'all' = every competition."
+        required: false
+        type: string
+        default: 'all'
+      team:
+        description: 'Team slug to filter on (e.g. real-madrid). Blank = no team filter.'
+        required: false
+        type: string
+        default: ''
+      force:
+        description: 'Generate even if some matches are still pending (skip the end-of-day gate).'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  # Keyed by the filter combination so independent recaps don't cancel each other.
+  group: footshorts-recap-${{ inputs.competition }}-${{ inputs.team }}
+  cancel-in-progress: false
+
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/footshorts/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Generate recap
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_COMPETITION: ${{ inputs.competition }}
+          INPUT_TEAM: ${{ inputs.team }}
+          INPUT_FORCE: ${{ inputs.force }}
+        run: |
+          ARGS=()
+          [ -n "$INPUT_DATE" ] && ARGS+=("$INPUT_DATE")
+          [ -n "$INPUT_COMPETITION" ] && [ "$INPUT_COMPETITION" != "all" ] && ARGS+=("--scope=$INPUT_COMPETITION")
+          [ -n "$INPUT_TEAM" ] && ARGS+=("--team=$INPUT_TEAM")
+          [ "$INPUT_FORCE" = "true" ] && ARGS+=("--force")
+          echo "recap args: ${ARGS[*]}"
+          pnpm recap:ci -- "${ARGS[@]}"
