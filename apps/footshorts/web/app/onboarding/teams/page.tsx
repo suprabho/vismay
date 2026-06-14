@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
-import { EntityChip } from '@vismay/footshorts-viz/web';
+import { EntityCard } from '@vismay/footshorts-viz/web';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useTeams } from '@/lib/useEntities';
@@ -115,12 +115,13 @@ function OnboardingTeamsInner() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-6">
-        <div className="flex flex-wrap">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {filtered.map((t) => (
-            <EntityChip
+            <EntityCard
               key={t.id}
               name={t.name}
               crestUrl={t.crest_url}
+              country={t.country}
               selected={picked.has(t.id)}
               onClick={() => toggle(t.id)}
             />
