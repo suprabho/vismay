@@ -34,6 +34,8 @@ import { useComposeFlow, type ComposeStage } from './useComposeFlow'
 
 interface ComposeFlowProps {
   slug: string
+  /** The draft's app slug — gates the footshorts-only "Create recap" affordance. */
+  appSlug?: string | null
   initialState: ComposeState
   initialSources: StorySource[]
   /**
@@ -60,6 +62,7 @@ interface ComposeFlowProps {
 
 export function ComposeFlow({
   slug,
+  appSlug,
   initialState,
   initialSources,
   active,
@@ -116,6 +119,7 @@ export function ComposeFlow({
           extracted={flow.extracted}
           pending={flow.pending}
           wide={wide}
+          appSlug={appSlug}
           onAddUrl={flow.addUrl}
           onAddText={flow.addText}
           onAddFile={flow.addFile}
@@ -128,6 +132,7 @@ export function ComposeFlow({
           onRemoveSource={flow.removeSource}
           onReextract={flow.reextract}
           onGenAngles={() => flow.genAngles()}
+          onCreateRecap={flow.createRecap}
         />
       </div>
 
@@ -192,6 +197,8 @@ export function ComposeFlow({
 
 interface PanelProps {
   slug: string
+  /** The draft's app slug — forwarded to gate the "Create recap" button. */
+  appSlug?: string | null
   initialState: ComposeState
   initialSources: StorySource[]
   /** Controlled visibility. The drawer stays mounted while this toggles so the
@@ -210,6 +217,7 @@ interface PanelProps {
  */
 export function ComposeFlowPanel({
   slug,
+  appSlug,
   initialState,
   initialSources,
   open,
@@ -237,6 +245,7 @@ export function ComposeFlowPanel({
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <ComposeFlow
           slug={slug}
+          appSlug={appSlug}
           initialState={initialState}
           initialSources={initialSources}
           active={open}

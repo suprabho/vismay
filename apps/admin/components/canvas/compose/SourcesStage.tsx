@@ -21,6 +21,7 @@ export function SourcesStage({
   extracted,
   pending,
   wide,
+  appSlug,
   onAddUrl,
   onAddText,
   onAddFile,
@@ -33,12 +34,15 @@ export function SourcesStage({
   onRemoveSource,
   onReextract,
   onGenAngles,
+  onCreateRecap,
 }: {
   sources: StorySource[]
   busy: string | null
   extracted: number
   pending: number
   wide?: boolean
+  /** The draft's app — gates the footshorts-only "Create recap" button. */
+  appSlug?: string | null
   onAddUrl: (url: string) => Promise<boolean>
   onAddText: (text: string) => Promise<boolean>
   onAddFile: (file: File) => Promise<boolean>
@@ -51,11 +55,15 @@ export function SourcesStage({
   onRemoveSource: (id: string) => void
   onReextract: (id: string) => void
   onGenAngles: () => void
+  onCreateRecap: () => Promise<boolean>
 }) {
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
   const [libraryOpen, setLibraryOpen] = useState(false)
+  // "Create recap" opens the SAME library modal in recap-only mode.
+  const [recapOpen, setRecapOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const showRecap = appSlug === 'footshorts'
 
   async function addUrl() {
     if (!url.trim()) return
@@ -138,6 +146,16 @@ export function SourcesStage({
       <button onClick={() => setLibraryOpen(true)} disabled={!!busy} className={`w-full ${btnGhostCls}`}>
         + From library
       </button>
+      {showRecap && (
+        <button
+          onClick={() => setRecapOpen(true)}
+          disabled={!!busy}
+          className={`w-full ${btnGhostCls}`}
+          title="Pull a match-day recap from the library and generate recap-focused angles"
+        >
+          🏆 Create recap
+        </button>
+      )}
     </div>
   )
 
@@ -162,6 +180,19 @@ export function SourcesStage({
           onAddFromProvider={onAddFromProvider}
           onSearchDatasets={onSearchDatasets}
           onEnrich={onEnrich}
+        />
+      )}
+      {recapOpen && (
+        <SourceLibraryModal
+          recapMode
+          onClose={() => setRecapOpen(false)}
+          loadLibrary={onLoadLibrary}
+          onAddFromSource={onAddFromSource}
+          onAddAsset={onAddAsset}
+          onAddFromProvider={onAddFromProvider}
+          onSearchDatasets={onSearchDatasets}
+          onEnrich={onEnrich}
+          onCreateRecap={onCreateRecap}
         />
       )}
       <SectionHeading

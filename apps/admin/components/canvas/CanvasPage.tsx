@@ -134,6 +134,7 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
       format={story.frontmatter.format === 'deck' ? 'deck' : 'map'}
       composeState={composeState}
       composeSources={composeSources}
+      appSlug={typeof story.frontmatter.vertical === 'string' ? story.frontmatter.vertical : null}
     />
   )
 }

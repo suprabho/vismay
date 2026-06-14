@@ -145,6 +145,8 @@ interface Props {
   composeState?: ComposeState | null
   /** Sources already attached to the compose draft (hydrates the drawer). */
   composeSources?: StorySource[]
+  /** The story's vertical/app — gates the footshorts-only "Create recap" flow. */
+  appSlug?: string | null
 }
 
 /**
@@ -508,6 +510,7 @@ export default function CanvasClient({
   format = 'map',
   composeState = null,
   composeSources = [],
+  appSlug = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Sources live in state so save handlers can patch them locally,
@@ -4173,6 +4176,7 @@ export default function CanvasClient({
       {composeState && (
         <ComposeFlowPanel
           slug={slug}
+          appSlug={appSlug}
           initialState={composeState}
           initialSources={composeSources}
           open={composeOpen}

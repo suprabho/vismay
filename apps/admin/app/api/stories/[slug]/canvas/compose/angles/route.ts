@@ -21,7 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug } = await params
 
-  let body: { model?: string; feedback?: string; previous?: unknown } = {}
+  let body: { model?: string; feedback?: string; previous?: unknown; focus?: string } = {}
   try {
     body = (await req.json()) as typeof body
   } catch {
@@ -39,11 +39,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const model = resolveModel(body.model, state.model)
   const feedback = typeof body.feedback === 'string' ? body.feedback.trim() : ''
   const refine = feedback && body.previous ? { feedback, previous: body.previous } : undefined
+  // "Create recap" launches angle generation with a match-day-recap steer.
+  const focus = body.focus === 'recap' ? 'recap' : undefined
 
   const pack = await resolveStoryPack(slug)
   let result
   try {
-    result = await generateAngles(docs, { model, refine, pack })
+    result = await generateAngles(docs, { model, refine, pack, focus })
   } catch (e) {
     return NextResponse.json(
       { error: `angle generation failed: ${e instanceof Error ? e.message : String(e)}` },
@@ -66,7 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   try {
     const supabase = createServiceClient()
-    const params2 = { feature: 'compose-angles', refined: Boolean(feedback) }
+    const params2 = { feature: 'compose-angles', refined: Boolean(feedback), focus: focus ?? null }
     await recordGeneration(supabase, {
       kind: 'text',
       storySlug: slug,
