@@ -85,6 +85,8 @@ type Fixture = {
   competition_slug: string;
   season: string;
   matchday: number | null;
+  stage: string | null;
+  phase: string | null;
   home_team_id: string | null;
   away_team_id: string | null;
   home_team_name: string | null;
@@ -96,6 +98,25 @@ type Fixture = {
   home_ht_score: number | null;
   away_ht_score: number | null;
   venue: string | null;
+};
+
+// Row shape from the `standings` table (see worker/src/fixtures.ts syncStandings).
+type StandingDbRow = {
+  competition_slug: string;
+  season: string;
+  team_id: string;
+  group_label: string | null;
+  phase: string | null;
+  position: number;
+  played: number;
+  won: number;
+  draw: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  points: number;
+  form: string | null;
 };
 
 type FixtureStat = {
@@ -155,7 +176,7 @@ async function loadFixtures(date: string, scope: string): Promise<Fixture[]> {
   let q = supabase
     .from('fixtures')
     .select(
-      'id, competition_slug, season, matchday, home_team_id, away_team_id, home_team_name, away_team_name, kickoff_at, status, home_score, away_score, home_ht_score, away_ht_score, venue',
+      'id, competition_slug, season, matchday, stage, phase, home_team_id, away_team_id, home_team_name, away_team_name, kickoff_at, status, home_score, away_score, home_ht_score, away_ht_score, venue',
     )
     .gte('kickoff_at', lo)
     .lt('kickoff_at', hi)
@@ -242,6 +263,37 @@ async function loadArticleTeamLinks(
     map.set(r.article_id, set);
   }
   return map;
+}
+
+/** Current league table for a competition+season (skips group-stage tables). */
+async function loadStandings(compSlug: string, season: string): Promise<StandingDbRow[]> {
+  const { data, error } = await supabase
+    .from('standings')
+    .select(
+      'competition_slug, season, team_id, group_label, phase, position, played, won, draw, lost, goals_for, goals_against, goal_difference, points, form',
+    )
+    .eq('competition_slug', compSlug)
+    .eq('season', season)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  // Only the single league table — group-stage cup tables (phase 'group') don't
+  // map onto the fs:standings-table module's single-table shape.
+  return ((data ?? []) as StandingDbRow[]).filter((r) => r.phase !== 'group');
+}
+
+/** Every knockout fixture for a competition+season, for building a bracket. */
+async function loadKnockoutFixtures(compSlug: string, season: string): Promise<Fixture[]> {
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select(
+      'id, competition_slug, season, matchday, stage, phase, home_team_id, away_team_id, home_team_name, away_team_name, kickoff_at, status, home_score, away_score, home_ht_score, away_ht_score, venue',
+    )
+    .eq('competition_slug', compSlug)
+    .eq('season', season)
+    .eq('phase', 'knockout')
+    .order('kickoff_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Fixture[];
 }
 
 // ---------------------------------------------------------------------------
@@ -419,6 +471,112 @@ function articleBullet(a: Article): string {
   return `  - ${articleThumb(a)}${lead}[${a.headline}](${a.url}) · _${a.publisher}_${summary}`;
 }
 
+// ---------------------------------------------------------------------------
+// fs: viz directives (see @vismay/viz-engine recapFences)
+//
+// Each is a fenced block whose info-string is the module type and whose body is
+// the module's foreground config as JSON. The recap viewer (@vismay/ui
+// RecapMarkdown) mounts these live, and story-gen ingests them as foreground
+// layers. We AUGMENT the existing prose with these — the text recap stays
+// readable on its own.
+// ---------------------------------------------------------------------------
+
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Emit one ```fs:<type> JSON fence. */
+function fsFence(type: string, config: Record<string, unknown>): string {
+  return ['```' + type, JSON.stringify(config), '```'].join('\n');
+}
+
+/** Build a {id,slug,name,crest_url} team ref the fs: modules expect. */
+function teamRef(id: string | null, fallbackName: string | null, entities: Map<string, EntityLite>) {
+  const e = id ? entities.get(id) : undefined;
+  const name = e?.name ?? fallbackName ?? 'Unknown';
+  return {
+    id: id ?? slugify(name),
+    slug: e?.slug ?? slugify(name),
+    name,
+    crest_url: null,
+  };
+}
+
+/** Reshape a DB fixture into the FixtureRow shape fs:match-* / fs:bracket take. */
+function fixtureRow(f: Fixture, entities: Map<string, EntityLite>): Record<string, unknown> {
+  return {
+    id: f.id,
+    competition_slug: f.competition_slug,
+    season: f.season,
+    matchday: f.matchday,
+    stage: f.stage,
+    phase: f.phase,
+    kickoff_at: f.kickoff_at,
+    status: f.status,
+    home_score: f.home_score,
+    away_score: f.away_score,
+    home_team_name: f.home_team_name,
+    away_team_name: f.away_team_name,
+    home: teamRef(f.home_team_id, f.home_team_name, entities),
+    away: teamRef(f.away_team_id, f.away_team_name, entities),
+  };
+}
+
+function matchCardFence(m: MatchView, comp: CompetitionView): string {
+  const f = m.fixture;
+  const score = f.home_score != null && f.away_score != null ? `${f.home_score}–${f.away_score}` : undefined;
+  const competition = f.matchday != null ? `${comp.name} · matchday ${f.matchday}` : comp.name;
+  const config: Record<string, unknown> = {
+    layout: 'score',
+    home: m.home,
+    away: m.away,
+    competition,
+    competitionSlug: comp.slug,
+    kickoff: kickoffHm(f.kickoff_at),
+  };
+  if (score) config.score = score;
+  return fsFence('fs:match-card', config);
+}
+
+function standingsTableFence(rows: StandingDbRow[], entities: Map<string, EntityLite>): string | null {
+  if (rows.length === 0) return null;
+  const modelRows = rows.map((r) => ({
+    competition_slug: r.competition_slug,
+    season: r.season,
+    team_id: r.team_id,
+    position: r.position,
+    played: r.played,
+    won: r.won,
+    draw: r.draw,
+    lost: r.lost,
+    goals_for: r.goals_for,
+    goals_against: r.goals_against,
+    goal_difference: r.goal_difference,
+    points: r.points,
+    form: r.form,
+    team: teamRef(r.team_id, null, entities),
+  }));
+  return fsFence('fs:standings-table', { rows: modelRows });
+}
+
+function bracketFence(
+  fixtures: Fixture[],
+  entities: Map<string, EntityLite>,
+  comp: CompetitionView,
+): string | null {
+  if (fixtures.length === 0) return null;
+  return fsFence('fs:bracket', {
+    layout: 'list',
+    competitionSlug: comp.slug,
+    title: comp.name,
+    fixtures: fixtures.map((f) => fixtureRow(f, entities)),
+  });
+}
+
 function assembleMarkdown(
   date: string,
   scope: string,
@@ -427,6 +585,9 @@ function assembleMarkdown(
   unmatched: Article[],
   fixtureCount: number,
   articleCount: number,
+  entities: Map<string, EntityLite>,
+  standingsByComp: Map<string, StandingDbRow[]>,
+  knockoutByComp: Map<string, Fixture[]>,
 ): string {
   const narrByIdx = new Map<number, string>();
   if (narrative) for (const n of narrative.matchNarratives) narrByIdx.set(n.idx, n.narrative);
@@ -468,6 +629,10 @@ function assembleMarkdown(
       out.push(`*${meta.join(' · ')}*`);
       out.push('');
 
+      // Augment the prose with a live match card (keeps the text below).
+      out.push(matchCardFence(m, c));
+      out.push('');
+
       const narr = narrByIdx.get(m.idx);
       if (narr) {
         out.push(narr);
@@ -482,6 +647,23 @@ function assembleMarkdown(
         out.push('- **Stories:**');
         for (const a of m.articles) out.push(articleBullet(a));
       }
+      out.push('');
+    }
+
+    // Competition-level visuals: the current league table, and — for knockout
+    // competitions with ties in play — the bracket.
+    const standings = standingsTableFence(standingsByComp.get(c.slug) ?? [], entities);
+    if (standings) {
+      out.push('### Table');
+      out.push('');
+      out.push(standings);
+      out.push('');
+    }
+    const bracket = bracketFence(knockoutByComp.get(c.slug) ?? [], entities, c);
+    if (bracket) {
+      out.push('### Bracket');
+      out.push('');
+      out.push(bracket);
       out.push('');
     }
   }
@@ -591,6 +773,40 @@ async function main() {
   const unmatched = dayArticles.filter((a) => !matchedArticleIds.has(a.id));
   const articleCount = dayArticles.length;
 
+  // Competition-level viz data for the fs: directives: the current league table
+  // for each competition, and the full bracket for any competition that had a
+  // knockout tie today. Season comes from the comp's fixtures (one per comp/day).
+  const isKnockout = (f: Fixture) =>
+    f.phase === 'knockout' ||
+    (f.stage != null && /(FINAL|SEMI|QUARTER|ROUND_OF|LAST_|PLAY_OFF)/i.test(f.stage));
+
+  const standingsByComp = new Map<string, StandingDbRow[]>();
+  const knockoutByComp = new Map<string, Fixture[]>();
+  for (const c of comps) {
+    const season = c.matches[0]!.fixture.season;
+    standingsByComp.set(c.slug, await loadStandings(c.slug, season));
+    if (c.matches.some((m) => isKnockout(m.fixture))) {
+      knockoutByComp.set(c.slug, await loadKnockoutFixtures(c.slug, season));
+    }
+  }
+
+  // Enrich the entity map with teams that appear only in the table / bracket
+  // (standings include every team in the league, not just today's players) so
+  // their fs: team refs resolve a proper slug + name.
+  const extraTeamIds = new Set<string>();
+  for (const rows of standingsByComp.values()) for (const r of rows) extraTeamIds.add(r.team_id);
+  for (const fx of knockoutByComp.values()) {
+    for (const f of fx) {
+      if (f.home_team_id) extraTeamIds.add(f.home_team_id);
+      if (f.away_team_id) extraTeamIds.add(f.away_team_id);
+    }
+  }
+  const missing = Array.from(extraTeamIds).filter((id) => !entities.has(id));
+  if (missing.length) {
+    const more = await loadEntities(missing);
+    for (const [id, e] of more) entities.set(id, e);
+  }
+
   // Hybrid: Gemini narrative over the structured day.
   const narrative = await generateNarrative(args.date, comps);
 
@@ -602,6 +818,9 @@ async function main() {
     unmatched,
     finished.length,
     articleCount,
+    entities,
+    standingsByComp,
+    knockoutByComp,
   );
 
   if (args.out) {

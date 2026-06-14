@@ -21,6 +21,12 @@ export {
 } from './packs'
 export { ingestSources, extract, extractBuffer, extractText, extractPdfVision } from './ingest'
 export type { IngestInput, InputFile, InputText, ExtractedSource, VisionPdfOptions } from './ingest'
+export {
+  graftRecapForeground,
+  graftSectionBody,
+  collectRecapDirectives,
+  type GraftRecapResult,
+} from './ingest/recapForeground'
 export { research, type ResearchOptions } from './research'
 export { generateAngles } from './angles'
 export {

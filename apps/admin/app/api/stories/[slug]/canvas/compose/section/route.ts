@@ -17,6 +17,8 @@ import {
   completeCoverBody,
   coverImageLayer,
   isDeckCover,
+  collectRecapDirectives,
+  graftSectionBody,
   type StoryFormat,
   type ComposeAnswers,
 } from '@vismay/story-pipeline'
@@ -228,6 +230,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           { model, pack },
         )
         visualBody = injectRegions(visualBody, regions)
+      }
+      // Footshorts recap ingestion: when a source is a daily recap, it carries
+      // real `fs:` configs (actual fixtures, the live table, the bracket). Swap
+      // the model's guessed config on any fs: layer it placed for the recap's
+      // real one, matched to this section by team/competition overlap. No-op for
+      // non-footshorts stories or sources without `fs:` fences.
+      const recapDirectives = collectRecapDirectives(docs)
+      if (recapDirectives.length > 0) {
+        const sectionText = [
+          entry.heading,
+          ...(contentForVisual.paragraphs ?? []),
+        ].join('\n')
+        graftSectionBody(visualBody, recapDirectives, sectionText)
       }
       if (hasSubs) {
         // Per-beat camera dives: center/zoom from the planned geo, tilt + focal
