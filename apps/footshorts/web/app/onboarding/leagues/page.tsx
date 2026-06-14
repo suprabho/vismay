@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { EntityChip } from '@vismay/footshorts-viz/web';
+import { EntityCard } from '@vismay/footshorts-viz/web';
 import { useLeagues } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 
@@ -84,12 +84,13 @@ function OnboardingLeaguesInner() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-6">
-        <div className="flex flex-wrap">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {leagues?.map((l) => (
-            <EntityChip
+            <EntityCard
               key={l.id}
               name={l.name}
               crestUrl={l.crest_url}
+              country={l.country}
               selected={picked.has(l.id)}
               onClick={() => toggle(l.id)}
             />

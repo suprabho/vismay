@@ -33,9 +33,9 @@ export const pitch: Theme = {
   },
   typography: {
     fontFamily: {
-      sans: '"Inter", system-ui, sans-serif',
-      display: '"Inter", system-ui, sans-serif',
-      mono: 'ui-monospace, "SF Mono", Menlo, monospace',
+      sans: '"Space Grotesk", system-ui, -apple-system, sans-serif',
+      display: '"Forum", Georgia, "Times New Roman", serif',
+      mono: '"Space Mono", ui-monospace, "SF Mono", Menlo, monospace',
     },
     fontSize: {
       xs: ['12px', '18px'],

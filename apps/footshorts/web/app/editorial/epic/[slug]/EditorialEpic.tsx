@@ -103,7 +103,7 @@ export default function EditorialEpic({ slug }: { slug: string }) {
               style={{ background: gradientFor(data.slug) }}
             >
               <div className="text-[0.7rem] uppercase tracking-[0.18em] opacity-80">Epic</div>
-              <h1 className="mt-2 font-serif text-3xl leading-tight md:text-4xl">{data.name}</h1>
+              <h1 className="mt-2 font-display text-3xl leading-tight tracking-[-0.015em] md:text-4xl">{data.name}</h1>
               {data.description && (
                 <p className="mt-3 max-w-prose text-sm leading-relaxed opacity-90">
                   {data.description}

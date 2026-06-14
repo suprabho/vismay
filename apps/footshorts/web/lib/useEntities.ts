@@ -13,6 +13,7 @@ export type Entity = {
   team_slug: string | null;
   crest_url: string | null;
   primary_color: string | null;
+  popularity: number;
 };
 
 export function useLeagues() {
@@ -21,7 +22,7 @@ export function useLeagues() {
     queryFn: async (): Promise<Entity[]> => {
       const { data, error } = await supabase
         .from('entities')
-        .select('id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color')
+        .select('id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color, popularity')
         .eq('type', 'league')
         .order('name');
       if (error) throw error;
@@ -31,11 +32,16 @@ export function useLeagues() {
   });
 }
 
+// Per-league cap applied during onboarding: only the top `TOP_TEAMS_PER_LEAGUE`
+// teams (by curated `popularity`) of each picked competition are surfaced.
+const TOP_TEAMS_PER_LEAGUE = 5;
+
 // Returns teams participating in any of the given competitions, joined via
 // the `competition_teams` view. The Entity's `league_slug` is overridden to
 // the matched competition slug (highest-priority by caller order), so the
 // onboarding UI groups each team under a slug the user actually picked —
-// not the stale "primary league" stored on entities.
+// not the stale "primary league" stored on entities. Each competition is then
+// trimmed to its top 5 teams by curated popularity (ties broken by name).
 export function useTeams(leagueSlugs: string[] | null) {
   return useQuery({
     queryKey: ['entities', 'teams', leagueSlugs?.slice().sort()],
@@ -47,7 +53,7 @@ export function useTeams(leagueSlugs: string[] | null) {
       const { data, error } = await supabase
         .from('competition_teams')
         .select(
-          'id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color, competition_slug'
+          'id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color, popularity, competition_slug'
         )
         .in('competition_slug', slugs)
         .order('name');
@@ -67,7 +73,22 @@ export function useTeams(leagueSlugs: string[] | null) {
           byTeam.set(row.id, { ...entity, league_slug: matched });
         }
       }
-      return Array.from(byTeam.values()).sort((a, b) => a.name.localeCompare(b.name));
+      // Trim each competition to its top N teams by popularity (desc), then
+      // name. Grouping is by the overridden league_slug so a team picked under
+      // one competition isn't double-counted against another's quota.
+      const byLeague = new Map<string, Entity[]>();
+      for (const entity of byTeam.values()) {
+        const key = entity.league_slug ?? '';
+        const list = byLeague.get(key) ?? [];
+        list.push(entity);
+        byLeague.set(key, list);
+      }
+      const top: Entity[] = [];
+      for (const list of byLeague.values()) {
+        list.sort((a, b) => b.popularity - a.popularity || a.name.localeCompare(b.name));
+        top.push(...list.slice(0, TOP_TEAMS_PER_LEAGUE));
+      }
+      return top.sort((a, b) => a.name.localeCompare(b.name));
     },
     staleTime: 10 * 60 * 1000,
   });

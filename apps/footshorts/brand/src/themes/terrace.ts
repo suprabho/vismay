@@ -33,9 +33,9 @@ export const terrace: Theme = {
   },
   typography: {
     fontFamily: {
-      sans: '"IBM Plex Sans", Georgia, serif',
-      display: '"Playfair Display", Georgia, serif',
-      mono: '"IBM Plex Mono", ui-monospace, monospace',
+      sans: '"Space Grotesk", system-ui, -apple-system, sans-serif',
+      display: '"Forum", Georgia, "Times New Roman", serif',
+      mono: '"Space Mono", ui-monospace, "SF Mono", Menlo, monospace',
     },
     fontSize: {
       xs: ['12px', '16px'],

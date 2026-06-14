@@ -240,18 +240,7 @@ export default function Index() {
   }
 
   return (
-    <main
-      className="relative min-h-screen overflow-hidden bg-bg font-sans text-text"
-      // Map the brand families onto the theme's font tokens for this marketing
-      // surface: Forum for display, Space Grotesk for body, Space Mono for stats.
-      style={
-        {
-          '--sf-font-display': 'var(--font-forum)',
-          '--sf-font-sans': 'var(--font-space-grotesk)',
-          '--sf-font-mono': 'var(--font-space-mono)',
-        } as React.CSSProperties
-      }
-    >
+    <main className="relative min-h-screen overflow-hidden bg-bg font-sans text-text">
       <BackgroundGlow />
 
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
