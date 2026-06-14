@@ -10,6 +10,7 @@ import { themedLogoDataUrl } from '@/lib/themeLogo'
 import { buildShareSampleYaml } from '@/lib/shareSampleYaml'
 import { adminBaseUrl } from '@/lib/adminBaseUrl'
 import ThemeProvider from '@/components/story/ThemeProvider'
+import VerticalLoader from '@/components/VerticalLoader'
 import ShareShell from '@/components/share/ShareShell'
 
 function filterBySection(units: ResolvedUnit[], sectionId: string): ResolvedUnit[] {
@@ -80,20 +81,22 @@ export default async function SharePage({ params, searchParams }: RouteParams) {
         </>
       )}
       <style>{`.mapboxgl-ctrl-bottom-left .mapboxgl-ctrl{margin:0 0 4px 4px}.mapboxgl-ctrl-logo{transform:scale(0.45);transform-origin:bottom left}.mapboxgl-ctrl-bottom-right .mapboxgl-ctrl{margin:0 4px 4px 0}`}</style>
-      <ShareShell
-        slug={slug}
-        units={hasShareOverrides ? shareUnits : units}
-        config={config}
-        title={story.frontmatter.title}
-        accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
-        shareOverrides={shareConfig?.sections ?? null}
-        shareYamlText={shareYamlText ?? ''}
-        sampleYaml={sampleYaml}
-        logo={logo}
-        initialRatio={initialRatio}
-        adminBaseUrl={adminBaseUrl()}
-        editStoryContentToken={editStoryContentToken}
-      />
+      <VerticalLoader vertical={story.frontmatter.vertical}>
+        <ShareShell
+          slug={slug}
+          units={hasShareOverrides ? shareUnits : units}
+          config={config}
+          title={story.frontmatter.title}
+          accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+          shareOverrides={shareConfig?.sections ?? null}
+          shareYamlText={shareYamlText ?? ''}
+          sampleYaml={sampleYaml}
+          logo={logo}
+          initialRatio={initialRatio}
+          adminBaseUrl={adminBaseUrl()}
+          editStoryContentToken={editStoryContentToken}
+        />
+      </VerticalLoader>
     </ThemeProvider>
   )
 }

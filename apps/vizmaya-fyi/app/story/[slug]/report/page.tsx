@@ -22,6 +22,7 @@ import {
   parseReportConfig,
 } from '@/lib/storyReportConfig'
 import ThemeProvider from '@/components/story/ThemeProvider'
+import VerticalLoader from '@/components/VerticalLoader'
 import ReportShell from '@/components/pdf/ReportShell'
 
 interface RouteParams {
@@ -90,18 +91,20 @@ export default async function StoryReportPage({ params, searchParams }: RoutePar
           <link href={fontImportUrl} rel="stylesheet" />
         </>
       )}
-      <ReportShell
-        slug={slug}
-        title={story.frontmatter.title}
-        units={reportUnits}
-        config={configWithDefaults}
-        format={story.frontmatter.format ?? 'map'}
-        aura={story.frontmatter.aura}
-        accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
-        logo={logo}
-        print={print}
-        embed={embed}
-      />
+      <VerticalLoader vertical={story.frontmatter.vertical}>
+        <ReportShell
+          slug={slug}
+          title={story.frontmatter.title}
+          units={reportUnits}
+          config={configWithDefaults}
+          format={story.frontmatter.format ?? 'map'}
+          aura={story.frontmatter.aura}
+          accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+          logo={logo}
+          print={print}
+          embed={embed}
+        />
+      </VerticalLoader>
     </ThemeProvider>
   )
 }
