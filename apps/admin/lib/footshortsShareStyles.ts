@@ -52,6 +52,13 @@ export const SHARE_IMAGE_STYLES: ShareImageStyle[] = [
     promptPrefix:
       'A clean minimal flat-design illustration, bold geometric shapes, generous negative space, modern vector look, restrained palette, crisp and contemporary',
   },
+  {
+    id: 'creative-caricature',
+    label: 'Creative Caricature',
+    hint: 'Playful exaggerated cartoon caricature',
+    promptPrefix:
+      'A playful hand-drawn caricature, exaggerated features and expressive proportions, bold ink outlines, vibrant cel-shaded color, witty and characterful sports-cartoon style',
+  },
 ]
 
 export function findShareImageStyle(id: string): ShareImageStyle | undefined {
