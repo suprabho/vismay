@@ -52,7 +52,7 @@ export function FixturesBlock({
     return <TileStrip fixtures={fixtures} competitionCrest={competitionCrest} />;
   }
   return (
-    <div className="rounded-lg border border-white/20 bg-white/10">
+    <div className="rounded-lg border border-[color:var(--ink-faint)] bg-[color:var(--ink-faint)]">
       {fixtures.map((f) => (
         <MatchRow key={f.id} fixture={f} />
       ))}
