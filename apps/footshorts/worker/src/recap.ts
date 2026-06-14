@@ -21,9 +21,18 @@
  *   npm run recap                         # today (UTC), scope=all
  *   npm run recap -- 2026-06-14           # explicit date
  *   npm run recap -- 2026-06-14 --scope=premier-league
+ *   npm run recap -- 2026-06-14 --team=real-madrid          # only this team's match(es)
+ *   npm run recap -- 2026-06-14 --scope=la-liga --team=real-madrid
  *   npm run recap -- 2026-06-14 --force   # generate even if matches are still pending
  *   npm run recap -- 2026-06-14 --out=recap.md   # also write the markdown to a local file
  *   npm run recap -- 2026-06-14 --dry     # build + print, don't write to Supabase
+ *
+ * Filters:
+ *   --scope=<competition_slug> restricts to one competition (default 'all').
+ *   --team=<team_slug>         restricts to fixtures the team played (home or away).
+ * The two compose. The (recap_date, scope) storage key stays unique per filter
+ * combination: a team filter is stored under `team:<slug>` (scope 'all') or
+ * `<competition>:team:<slug>`.
  */
 
 import { writeFileSync } from 'node:fs';
@@ -50,6 +59,7 @@ const TERMINAL_STATUSES = new Set(['finished', 'postponed', 'cancelled']);
 type Args = {
   date: string; // YYYY-MM-DD (UTC)
   scope: string; // 'all' | competition_slug
+  team: string | null; // team_slug | null
   force: boolean;
   dry: boolean;
   out: string | null;
@@ -58,6 +68,7 @@ type Args = {
 function parseArgs(argv: string[]): Args {
   let date: string | null = null;
   let scope = 'all';
+  let team: string | null = null;
   let force = false;
   let dry = false;
   let out: string | null = null;
@@ -67,13 +78,14 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--force') force = true;
     else if (a === '--dry') dry = true;
     else if (a.startsWith('--scope=')) scope = a.slice('--scope='.length);
+    else if (a.startsWith('--team=')) team = a.slice('--team='.length) || null;
     else if (a.startsWith('--out=')) out = a.slice('--out='.length);
     else if (a === '--out') out = 'recap.md';
     else console.warn(`[recap] ignoring unknown arg: ${a}`);
   }
 
   if (!date) date = new Date().toISOString().slice(0, 10);
-  return { date, scope, force, dry, out };
+  return { date, scope, team, force, dry, out };
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +183,7 @@ function kickoffHm(iso: string): string {
 // Data loading
 // ---------------------------------------------------------------------------
 
-async function loadFixtures(date: string, scope: string): Promise<Fixture[]> {
+async function loadFixtures(date: string, scope: string, teamId: string | null): Promise<Fixture[]> {
   const { lo, hi } = dayWindow(date);
   let q = supabase
     .from('fixtures')
@@ -183,10 +195,24 @@ async function loadFixtures(date: string, scope: string): Promise<Fixture[]> {
     .order('competition_slug', { ascending: true })
     .order('kickoff_at', { ascending: true });
   if (scope !== 'all') q = q.eq('competition_slug', scope);
+  // Team filter: the side it played on (home or away).
+  if (teamId) q = q.or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
 
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as Fixture[];
+}
+
+/** Resolve a team slug to its entity (id/slug/name), or null if no such team. */
+async function loadTeamBySlug(slug: string): Promise<EntityLite | null> {
+  const { data, error } = await supabase
+    .from('entities')
+    .select('id, type, slug, name')
+    .eq('type', 'team')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as EntityLite) ?? null;
 }
 
 async function loadEntities(ids: string[]): Promise<Map<string, EntityLite>> {
@@ -579,7 +605,7 @@ function bracketFence(
 
 function assembleMarkdown(
   date: string,
-  scope: string,
+  scopeLabel: string,
   comps: CompetitionView[],
   narrative: Narrative | null,
   unmatched: Article[],
@@ -593,7 +619,6 @@ function assembleMarkdown(
   if (narrative) for (const n of narrative.matchNarratives) narrByIdx.set(n.idx, n.narrative);
 
   const out: string[] = [];
-  const scopeLabel = scope === 'all' ? 'All competitions' : titleize(scope);
 
   out.push(`# Match-day recap — ${date}`);
   out.push('');
@@ -694,11 +719,38 @@ async function main() {
   }
 
   const args = parseArgs(process.argv.slice(2));
-  console.log(`[recap] date=${args.date} scope=${args.scope}${args.force ? ' (force)' : ''}${args.dry ? ' (dry)' : ''}`);
 
-  const fixtures = await loadFixtures(args.date, args.scope);
+  // Resolve the optional team filter up front so we can fail loudly on a bad slug
+  // rather than silently recapping the whole day.
+  const team = args.team ? await loadTeamBySlug(args.team) : null;
+  if (args.team && !team) {
+    console.log(`[recap] no team entity found for slug "${args.team}"; nothing to recap.`);
+    return;
+  }
+  const teamId = team?.id ?? null;
+
+  // Labels + storage key. The (recap_date, scope) primary key must stay unique
+  // per filter combination, so a team filter gets its own namespaced scope.
+  const compLabel = args.scope === 'all' ? 'All competitions' : titleize(args.scope);
+  const scopeLabel = team
+    ? args.scope === 'all'
+      ? team.name
+      : `${team.name} · ${compLabel}`
+    : compLabel;
+  const storageScope = team
+    ? args.scope === 'all'
+      ? `team:${team.slug}`
+      : `${args.scope}:team:${team.slug}`
+    : args.scope;
+
+  console.log(
+    `[recap] date=${args.date} scope=${storageScope}${args.force ? ' (force)' : ''}${args.dry ? ' (dry)' : ''}`,
+  );
+
+  const fixtures = await loadFixtures(args.date, args.scope, teamId);
   if (fixtures.length === 0) {
-    console.log(`[recap] no fixtures with a kickoff on ${args.date}${args.scope !== 'all' ? ` in ${args.scope}` : ''}; nothing to recap.`);
+    const where = [args.scope !== 'all' ? ` in ${args.scope}` : '', team ? ` for ${team.name}` : ''].join('');
+    console.log(`[recap] no fixtures with a kickoff on ${args.date}${where}; nothing to recap.`);
     return;
   }
 
@@ -770,8 +822,10 @@ async function main() {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const unmatched = dayArticles.filter((a) => !matchedArticleIds.has(a.id));
-  const articleCount = dayArticles.length;
+  // For a team-scoped recap, the day's other football news is noise — keep the
+  // brief to the team's match(es) and the stories tied to them.
+  const unmatched = team ? [] : dayArticles.filter((a) => !matchedArticleIds.has(a.id));
+  const articleCount = team ? matchedArticleIds.size : dayArticles.length;
 
   // Competition-level viz data for the fs: directives: the current league table
   // for each competition, and the full bracket for any competition that had a
@@ -812,7 +866,7 @@ async function main() {
 
   const markdown = assembleMarkdown(
     args.date,
-    args.scope,
+    scopeLabel,
     comps,
     narrative,
     unmatched,
@@ -837,7 +891,7 @@ async function main() {
   const { error } = await supabase.from('daily_recaps').upsert(
     {
       recap_date: args.date,
-      scope: args.scope,
+      scope: storageScope,
       markdown,
       model: narrative ? GEMINI_MODEL : null,
       fixture_count: finished.length,
@@ -849,7 +903,7 @@ async function main() {
   if (error) throw error;
 
   console.log(
-    `[recap] stored daily_recaps[${args.date}/${args.scope}]: ${finished.length} matches, ${articleCount} stories, ` +
+    `[recap] stored daily_recaps[${args.date}/${storageScope}]: ${finished.length} matches, ${articleCount} stories, ` +
       `narrative=${narrative ? 'yes' : 'no'}.`,
   );
 }
