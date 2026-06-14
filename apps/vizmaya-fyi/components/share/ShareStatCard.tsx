@@ -21,7 +21,7 @@ export default function ShareStatCard({ value, subheading, description, color: c
       <FitScale>
         <div className="flex flex-col items-center text-center">
           <div
-            className="font-[family-name:var(--font-serif)] text-[50px] font-bold leading-none mb-[20px]"
+            className="share-display font-[family-name:var(--font-serif)] text-[50px] font-bold leading-none mb-[20px]"
             style={{ color }}
           >
             {value}

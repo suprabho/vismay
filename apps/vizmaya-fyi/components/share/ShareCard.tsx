@@ -79,6 +79,8 @@ interface Props {
   ratio: AspectRatio
   slug: string
   title: string
+  /** Story vertical (e.g. `footshorts`) — scopes brand chrome on the card. */
+  vertical?: string
   accessToken: string
   /** Card variant — 'auto' picks by section kind, 'map-title' forces map + title overlay */
   variant?: CardVariant
@@ -136,7 +138,7 @@ export function extractHeroBits(paragraphs: string[]): { dek: string; byline: st
 }
 
 const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
-  { unit, index, ratio, slug, title, accessToken, variant = 'auto', graphScope = 'all', itemSlice, itemHeading, shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
+  { unit, index, ratio, slug, title, vertical, accessToken, variant = 'auto', graphScope = 'all', itemSlice, itemHeading, shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
   ref
 ) {
   const captureRef = useRef<HTMLDivElement>(null)
@@ -475,7 +477,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                     }}
                   >
                     <h2
-                      className="font-serif font-bold leading-[1.2] text-[20px]"
+                      className="share-display font-serif font-bold leading-[1.2] text-[20px]"
                       style={{ color: 'var(--color-text)' }}
                     >
                       {mapTitleHeading ?? title}
@@ -508,7 +510,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
                     }}
                   >
                     <h2
-                      className="font-serif font-bold leading-[1.2] text-[20px]"
+                      className="share-display font-serif font-bold leading-[1.2] text-[20px]"
                       style={{ color: 'var(--color-text)' }}
                     >
                       {mapTitleHeading ?? title}
@@ -570,7 +572,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
           </div>
 
           {/* Branding header */}
-          <BrandingHeader title={title} logo={logo} />
+          <BrandingHeader title={title} logo={logo} vertical={vertical} />
         </div>
 
       {/* Download button overlay — hidden during capture and in edit mode */}

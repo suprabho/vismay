@@ -17,6 +17,8 @@ interface Props {
   units: ResolvedUnit[]
   config: StoryConfig
   title: string
+  /** Story vertical (e.g. `footshorts`) — scopes brand chrome on the cards. */
+  vertical?: string
   accessToken: string
   shareOverrides: Record<string, ShareSectionOverride> | null
   /** Raw on-disk share.yaml text (or '' when none). Source of truth for YAML view. */
@@ -211,6 +213,7 @@ export default function ShareShell({
   units,
   config,
   title,
+  vertical,
   accessToken,
   shareOverrides,
   shareYamlText,
@@ -441,6 +444,7 @@ export default function ShareShell({
   return (
     <div
       className="min-h-screen"
+      data-vertical={vertical}
       style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}
     >
       {/* Header */}
@@ -603,6 +607,7 @@ export default function ShareShell({
                       ratio={ratio}
                       slug={slug}
                       title={title}
+                      vertical={vertical}
                       accessToken={accessToken}
                       variant={card.variant}
                       graphScope={card.graphScope ?? 'all'}

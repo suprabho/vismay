@@ -37,6 +37,17 @@
   color: #fff;
 }
 
+/* footshorts share cards — editorial headlines follow the brand
+   type-display guideline: the display serif (Playfair Display, set in the
+   story theme) is tracked tight (−0.015em) with tight leading. Scoped to the
+   footshorts vertical so other verticals keep their own display treatment.
+   The `.share-display` class marks the hero title, big stat value, and
+   map-title heading on share cards. */
+[data-vertical="footshorts"] .share-display {
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
 .hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
