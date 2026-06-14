@@ -555,6 +555,43 @@ export async function fetchFootshortsNews(q: NewsQuery = {}): Promise<Footshorts
   return filtered.slice(0, limit)
 }
 
+// ── entity badge search (crest / logo overlays) ───────────────────────────────
+
+/** A team crest or competition logo, for the share-card overlay picker. */
+export interface FootshortsEntityResult {
+  id: string
+  type: 'team' | 'league'
+  slug: string
+  name: string
+  crest_url: string | null
+}
+
+/**
+ * Search teams / competitions by name for the share-card badge picker. Only
+ * rows with a crest/logo are returned (a badge with no image is useless here).
+ * SERVER-ONLY (service-role client).
+ */
+export async function searchFootshortsEntities(opts: {
+  q?: string
+  type?: 'team' | 'league'
+  limit?: number
+}): Promise<FootshortsEntityResult[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 30, 1), 60)
+  const supabase = createServiceClient()
+  let query = supabase
+    .from('entities')
+    .select('id, type, slug, name, crest_url')
+    .in('type', opts.type ? [opts.type] : ['team', 'league'])
+    .not('crest_url', 'is', null)
+    .order('name', { ascending: true })
+    .limit(limit)
+  const q = opts.q?.trim()
+  if (q) query = query.ilike('name', `%${q}%`)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []) as FootshortsEntityResult[]
+}
+
 // ---------------------------------------------------------------------------
 // Pipeline stats (admin "Pipeline" tab)
 // ---------------------------------------------------------------------------
