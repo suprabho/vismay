@@ -31,7 +31,7 @@ export const pitch: Theme = {
   typography: {
     fontFamily: {
       sans: '"Inter", system-ui, sans-serif',
-      display: '"Inter", system-ui, sans-serif',
+      display: '"Forum", Georgia, "Times New Roman", serif',
       mono: 'ui-monospace, "SF Mono", Menlo, monospace',
     },
     fontSize: {

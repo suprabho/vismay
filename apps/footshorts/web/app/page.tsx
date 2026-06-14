@@ -266,7 +266,7 @@ export default function Index() {
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             Football, distilled
           </span>
-          <h1 className="mt-6 text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
+          <h1 className="mt-6 font-display text-5xl font-normal leading-[1.05] tracking-[-0.015em] sm:text-6xl md:text-7xl">
             Your football
             <br />
             <span className="text-accent">in short.</span>
@@ -308,7 +308,7 @@ export default function Index() {
           <span className="text-xs font-medium uppercase tracking-wider text-accent">
             Features
           </span>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
             More than just a feed.
           </h2>
           <p className="mt-4 text-muted">
@@ -352,7 +352,7 @@ export default function Index() {
             <span className="text-xs font-medium uppercase tracking-wider text-accent">
               Coverage
             </span>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
               Every league you watch.
             </h2>
             <p className="mt-4 text-muted">
@@ -367,7 +367,7 @@ export default function Index() {
       <section className="relative z-10 mx-auto max-w-4xl px-6 py-24">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-surface/60 px-8 py-16 text-center backdrop-blur sm:px-16">
           <div className="absolute inset-x-0 -top-20 mx-auto h-40 w-40 rounded-full bg-accent/30 blur-3xl" />
-          <h2 className="relative text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="relative font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
             Football scheduling, simplified.
           </h2>
           <p className="relative mt-4 text-muted">
@@ -477,7 +477,7 @@ function FeatureRow({
         <span className="text-xs font-medium uppercase tracking-wider text-accent">
           {label}
         </span>
-        <h3 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h3 className="mt-3 font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl">
           {title}
         </h3>
         <p className="mt-4 text-base text-muted sm:text-lg">{body}</p>

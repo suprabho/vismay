@@ -1,3 +1,8 @@
+/* footshorts webfonts — Forum (editorial display headlines), IBM Plex Sans
+   (UI/body), IBM Plex Mono (scores/timers/handles). See design-system
+   tokens/fonts.css + guidelines/type-display.html. */
+@import url('https://fonts.googleapis.com/css2?family=Forum&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

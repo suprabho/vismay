@@ -31,7 +31,7 @@ export const classic: Theme = {
   typography: {
     fontFamily: {
       sans: 'System, -apple-system, "Segoe UI", Roboto, sans-serif',
-      display: 'System, -apple-system, "Segoe UI", Roboto, sans-serif',
+      display: '"Forum", Georgia, "Times New Roman", serif',
       mono: 'ui-monospace, "SF Mono", Menlo, monospace',
     },
     fontSize: {
