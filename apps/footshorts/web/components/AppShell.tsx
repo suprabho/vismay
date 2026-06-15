@@ -33,6 +33,14 @@ const ProfileIcon = (
   </svg>
 );
 
+const AboutIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5" strokeLinecap="round" />
+    <circle cx="12" cy="7.75" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 const NAV: NavItem[] = [
   {
     href: '/feed',
@@ -53,6 +61,12 @@ const NAV: NavItem[] = [
     icon: ProfileIcon,
     requiresAuth: true,
     match: (p) => p.startsWith('/profile'),
+  },
+  {
+    href: '/about-us',
+    label: 'About us',
+    icon: AboutIcon,
+    match: (p) => p.startsWith('/about-us'),
   },
 ];
 
