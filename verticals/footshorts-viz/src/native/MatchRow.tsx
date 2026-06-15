@@ -132,6 +132,7 @@ function TeamCell({
 }
 
 export function MatchRow({ fixture, variant = 'compact' }: Props) {
+  const router = useRouter();
   const sizes = SIZES[variant];
   const homeName = fixture.home?.name ?? fixture.home_team_name ?? 'TBD';
   const awayName = fixture.away?.name ?? fixture.away_team_name ?? 'TBD';
@@ -150,15 +151,20 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
         align={variant === 'expanded' ? 'stack' : 'left'}
         sizes={sizes}
       />
-      <View
+      {/* Score column taps through to the match detail page (timeline +
+          scorers). The team cells already route to /team/{slug}, so the centre
+          column is the natural affordance for the match itself — mirrors web. */}
+      <Pressable
+        onPress={() => router.push(`/match/${fixture.id}`)}
         className={`items-center ${sizes.scoreColPad}`}
         style={{ minWidth: sizes.scoreColMin }}
+        hitSlop={4}
       >
         <Text className={isFinished ? sizes.scoreTextFinished : sizes.scoreText}>{scoreText}</Text>
         <Text className={`mt-0.5 ${sizes.dateText} text-text/50`}>
           {kickoffLabel(fixture.kickoff_at, fixture.status)}
         </Text>
-      </View>
+      </Pressable>
       <TeamCell
         name={awayName}
         crest={fixture.away?.crest_url ?? null}

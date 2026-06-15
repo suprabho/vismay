@@ -166,12 +166,18 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
         align={variant === 'expanded' ? 'stack' : 'left'}
         sizes={sizes}
       />
-      <div className={`flex ${sizes.scoreColMin} flex-col items-center`}>
+      {/* Score column links to the match detail page (timeline + scorers). The
+          team cells already link to /team/[slug], so the centre column is the
+          natural affordance for the match itself. */}
+      <Link
+        href={`/match/${fixture.id}`}
+        className={`flex ${sizes.scoreColMin} flex-col items-center transition-opacity hover:opacity-80`}
+      >
         <span className={isFinished ? sizes.scoreTextFinished : sizes.scoreText}>{scoreText}</span>
         <span className={`mt-0.5 ${sizes.dateText} text-text/50`}>
           {kickoffLabel(fixture.kickoff_at, fixture.status, local)}
         </span>
-      </div>
+      </Link>
       <TeamCell
         name={awayName}
         crest={fixture.away?.crest_url ?? null}

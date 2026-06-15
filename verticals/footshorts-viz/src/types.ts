@@ -43,6 +43,29 @@ export type FixtureRow = {
   away: FixtureTeamRef
 }
 
+/**
+ * One in-match event from the `fixture_events` table (populated by the events
+ * worker from API-Football). Goals carry the scorer in `player_name` and the
+ * assister in `assist_name`; cards/subs reuse the same shape. `side` places the
+ * event on the home/away half of a timeline even when the team isn't a tracked
+ * entity (`team_id` null).
+ */
+export type FixtureEventType = 'goal' | 'card' | 'subst' | 'var'
+
+export type FixtureEvent = {
+  id: string
+  fixture_id: string
+  team_id: string | null
+  side: 'home' | 'away' | null
+  minute: number
+  extra_minute: number | null
+  type: FixtureEventType
+  // e.g. "Normal Goal" | "Own Goal" | "Penalty" | "Yellow Card" | "Red Card"
+  detail: string | null
+  player_name: string | null
+  assist_name: string | null
+}
+
 export type StandingTeamRef = {
   id: string
   slug: string

@@ -8,6 +8,7 @@ name: Footshorts - scores refresh
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 #   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshorts-only)
+#   API_FOOTBALL_TOKEN           - API-Football key, for per-match goal events
 #   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
 
 on:
@@ -52,6 +53,19 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
         run: pnpm scores:ci
+
+      # Hydrate per-match goal events (scorers + minutes) from API-Football for
+      # fixtures that just finished. Idempotent (skips fixtures that already have
+      # events) and self-limited to ~90 API calls/run to stay under the free-tier
+      # 100/day cap, so it's safe on every run. Soft-fails: if API-Football is
+      # down or quota-exhausted it must not block the recap below.
+      - name: Sync match events
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          API_FOOTBALL_TOKEN: ${{ secrets.API_FOOTBALL_TOKEN }}
+        run: pnpm events:ci
 
       # Generate the daily recap brief once scores are fresh. recap.ts self-gates:
       # it only writes when every fixture kicking off today (UTC) has finished, so
