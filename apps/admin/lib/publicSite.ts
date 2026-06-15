@@ -12,7 +12,11 @@
 // re-exports `registerAllVerticals`, which pulls in the viz-engine barrel
 // (deck.gl / mapbox / echarts). `/data` is route metadata + lazy import thunks
 // only, so this stays lean.
-import { VERTICALS } from '@vismay/verticals/data'
+import {
+  APPS,
+  appSlugForVertical,
+  resolveAppUrls,
+} from '@vismay/verticals/data'
 
 function normalize(url: string): string {
   return url.replace(/\/$/, '')
@@ -106,33 +110,39 @@ interface AppPublicRoutes {
   epicPath: ((slug: string) => string) | null
 }
 
-// Base brand. vizmaya.fyi is NOT a vertical (it's the headless render surface
-// itself), so its routing lives here rather than in the registry: stories at
-// /story/<slug>, epics own a top-level slug.
-const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
-  'vizmaya-fyi': {
-    baseUrl: vizmayaPublicUrl,
-    storyPath: (slug) => `/story/${slug}`,
-    epicPath: (slug) => `/${slug}`,
-  },
-}
-
-// Per-vertical consumer routing comes from the registry (the single source of
-// truth — see packages/viz-engine/src/verticalRegistry.ts). Only the path
-// *shapes* live there; the base URL stays an app-routing concern resolved here
-// (env-overridable hostname), keyed by the consumer app slug.
-const VERTICAL_APP_BASE_URLS: Record<string, string> = {
+// Consumer base URLs keyed by app slug. These stay as static `NEXT_PUBLIC_*`
+// reads (above) rather than resolved through the registry's `resolveAppUrls`,
+// because publicSite is imported client-side (e.g. EditorClient) and Next only
+// inlines a *statically* referenced `process.env.NEXT_PUBLIC_*`. The registry
+// mirrors these as `{ env, default }` metadata for server callers.
+const CONSUMER_BASE_URLS: Record<string, string> = {
+  'vizmaya-fyi': vizmayaPublicUrl,
   footshorts: footshortsPublicUrl,
   vizf1: vizf1PublicUrl,
 }
-for (const v of VERTICALS) {
-  const routes = v.publicRoutes
-  if (!routes) continue
-  APP_PUBLIC_ROUTES[routes.appSlug] = {
-    baseUrl: VERTICAL_APP_BASE_URLS[routes.appSlug] ?? vizmayaPublicUrl,
-    storyPath: routes.storyPath ?? null,
-    epicPath: routes.epicPath ?? null,
+
+// Path shapes now come from the app registry (`APPS[].routing`) — the single
+// source of truth. Only the base URL stays an app-routing concern resolved here
+// (the client-safe static consts above), keyed by the consumer app slug.
+const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {}
+for (const app of APPS) {
+  APP_PUBLIC_ROUTES[app.slug] = {
+    baseUrl: CONSUMER_BASE_URLS[app.slug] ?? vizmayaPublicUrl,
+    storyPath: app.routing.storyPath ?? null,
+    epicPath: app.routing.epicPath ?? null,
   }
+}
+
+/**
+ * Render-surface origin for the app that owns a story's `vertical`. **Server-
+ * only** (URL signing / CI dispatch). Today every app resolves to vizmaya.fyi
+ * (the one headless render surface every vertical iframes into); the render-
+ * engine extraction flips them to the neutral `apps/render` service one app/
+ * surface at a time via each app's `RENDER_SURFACE_URL_*` override. Replaces
+ * the hard-coded `vizmayaPublicUrl` base that canvas/screenshot signing used.
+ */
+export function renderSurfaceUrlForVertical(vertical?: string | null): string {
+  return resolveAppUrls(appSlugForVertical(vertical)).renderSurfaceUrl
 }
 
 /** Public URL for a story in the given consumer app, or null if the app
