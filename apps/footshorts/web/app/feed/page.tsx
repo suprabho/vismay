@@ -186,6 +186,14 @@ function FeedPageInner() {
   return (
     <main className="mx-auto max-w-2xl px-4">
       <div className="sticky top-0 z-10 -mx-4 flex items-center justify-center bg-bg/80 px-4 py-1 backdrop-blur">
+        <Link
+          href="/feed"
+          className="absolute left-4 top-1/2 -translate-y-1/2 md:hidden"
+          aria-label="Footshorts"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-icon.svg" alt="" width={32} height={32} className="h-8 w-8 rounded-[24%]" />
+        </Link>
         <PillTabs active={tab} onChange={handleTab} />
         {session ? (
           <Link
