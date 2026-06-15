@@ -12,6 +12,7 @@ import {
 import { useTheme } from '@footshorts/brand/web';
 import { themes, type ThemeName } from '@footshorts/brand';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/AuthProvider';
 import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
 import type { FixtureRow } from '@/lib/useFixtures';
 
@@ -215,6 +216,15 @@ function useLandingFixtures(limit = 4) {
 /* ---------- page ---------- */
 
 export default function AboutUs() {
+  // Persist auth state on the marketing page: a returning, signed-in visitor
+  // shouldn't be asked to log in again. We surface a "Go to the app" CTA that
+  // routes to the same destination the root redirector uses — onboarding if
+  // they haven't finished it, the feed otherwise.
+  const { session, profile, loading } = useAuth();
+  const isAuthed = !loading && !!session;
+  const appHref =
+    session && profile && !profile.onboarded_at ? '/onboarding/leagues' : '/feed';
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-bg font-sans text-text">
       <BackgroundGlow />
@@ -232,10 +242,10 @@ export default function AboutUs() {
         <div className="flex items-center gap-3">
           <ThemeSwitcher />
           <Link
-            href="/login"
+            href={isAuthed ? appHref : '/login'}
             className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97]"
           >
-            Log in
+            {isAuthed ? 'Go to the app' : 'Log in'}
           </Link>
         </div>
       </header>
@@ -258,17 +268,19 @@ export default function AboutUs() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              href="/login"
+              href={isAuthed ? appHref : '/login'}
               className="inline-flex w-full items-center justify-center rounded-lg bg-brand px-6 py-3 text-base font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97] sm:w-auto"
             >
-              Log in to continue
+              {isAuthed ? 'Go to the app' : 'Log in to continue'}
             </Link>
-            <Link
-              href="/login"
-              className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface px-6 py-3 text-base font-medium text-text transition hover:border-muted sm:w-auto"
-            >
-              Create an account
-            </Link>
+            {!isAuthed ? (
+              <Link
+                href="/login"
+                className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface px-6 py-3 text-base font-medium text-text transition hover:border-muted sm:w-auto"
+              >
+                Create an account
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -389,14 +401,16 @@ export default function AboutUs() {
             Get the good bits.
           </h2>
           <p className="relative mt-4 text-muted">
-            Free to watch. Sign in to start following your clubs.
+            {isAuthed
+              ? 'Pick up where you left off — your clubs are waiting.'
+              : 'Free to watch. Sign in to start following your clubs.'}
           </p>
           <div className="relative mt-8 flex justify-center">
             <Link
-              href="/login"
+              href={isAuthed ? appHref : '/login'}
               className="inline-flex items-center justify-center rounded-lg bg-brand px-6 py-3 text-base font-semibold text-brand-text shadow-[0_12px_30px_-10px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:scale-[0.97]"
             >
-              Log in to Footshorts
+              {isAuthed ? 'Go to the app' : 'Log in to Footshorts'}
             </Link>
           </div>
         </div>
