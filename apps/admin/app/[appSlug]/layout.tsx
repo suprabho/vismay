@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed, isConfigured } from '@/lib/adminAuth'
 import { getApp } from '@vismay/content-source/apps'
+import { isHeygenConfigured } from '@vismay/content-source/heygenTemplate'
 import { AppAdminTabs } from '@/components/section/AppAdminTabs'
 
 export const dynamic = 'force-dynamic'
@@ -39,7 +40,7 @@ export default async function AppSectionLayout({
           <span className="text-neutral-500 text-xs uppercase tracking-wider">
             {app.name}
           </span>
-          <AppAdminTabs appSlug={appSlug} />
+          <AppAdminTabs appSlug={appSlug} heygenEnabled={isHeygenConfigured()} />
         </div>
       )}
       {children}

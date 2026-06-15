@@ -18,6 +18,7 @@
     "./epics": "./src/epics.ts",
     "./frontmatter": "./src/frontmatter.ts",
     "./getFontImports": "./src/getFontImports.ts",
+    "./heygenRenders": "./src/heygenRenders.ts",
     "./heygenTemplate": "./src/heygenTemplate.ts",
     "./heygenTemplateDispatch": "./src/heygenTemplateDispatch.ts",
     "./recapDispatch": "./src/recapDispatch.ts",
