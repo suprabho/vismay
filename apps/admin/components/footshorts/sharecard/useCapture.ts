@@ -37,6 +37,11 @@ export function useCapture(
         height,
         pixelRatio,
         backgroundColor: backgroundColor ?? '#0B0B0F',
+        // Bypass html-to-image's process-lifetime URL cache. Its cache key strips
+        // the query string, so every proxied crest (/api/.../proxy-image?url=...)
+        // collides on the same key — the second capture after switching matches
+        // would otherwise re-serve the previous match's flags/logos.
+        cacheBust: true,
         // Skip any element flagged as capture-only UI (none today; kept for parity).
         filter: (el) =>
           !(el instanceof HTMLElement && el.dataset.shareUi === 'true'),
