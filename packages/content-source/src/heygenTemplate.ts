@@ -36,6 +36,11 @@ export interface HeygenClientOptions {
   baseUrl?: string
 }
 
+/** True when a HeyGen API key is present — gate UI/routes on this. */
+export function isHeygenConfigured(): boolean {
+  return Boolean(process.env.HEYGEN_API_KEY && process.env.HEYGEN_API_KEY.trim())
+}
+
 function resolveKey(options: HeygenClientOptions): string {
   const key = options.apiKey ?? process.env.HEYGEN_API_KEY
   if (!key || !key.trim()) {
