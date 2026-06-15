@@ -88,7 +88,7 @@ export function FeedCard({
       ref={ref}
       className="flex h-full flex-col overflow-hidden rounded-t-3xl border border-b-0 border-border bg-surface"
     >
-      <div className="shrink-0 grow-0 basis-[30%] overflow-hidden bg-bg">
+      <div className="grow basis-[30%] overflow-hidden bg-bg">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="" className="h-full w-full object-cover" />
@@ -97,8 +97,8 @@ export function FeedCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 bg-bg p-2 md:p-6 justify-between">
-        <div className="flex flex-1 flex-col">
+      <div className="flex shrink-0 flex-col gap-3 bg-bg p-2 md:p-6">
+        <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-text">
               {publisher}
@@ -113,7 +113,7 @@ export function FeedCard({
             <p className="text-sm italic text-muted">Summary unavailable.</p>
           )}
           {tags.length > 0 ? (
-            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {visibleTags.map((e) => (
                 <span
                   key={e.id}
@@ -149,7 +149,7 @@ export function FeedCard({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-auto pt-4 self-start text-sm font-medium text-accent hover:underline"
+          className="pt-2 self-start text-sm font-medium text-accent hover:underline"
         >
           Read at source →
         </a>
