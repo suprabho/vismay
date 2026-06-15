@@ -65,6 +65,7 @@ interface ShareCardSnapshot {
   showEyebrow: boolean
   compKey: string
   pickedFixtureId: string
+  pickedGroup: string
   matchStyle: MatchStyle
   pickedTeamSlug: string
   pickedNewsId: string
@@ -132,6 +133,7 @@ export function ShareCardCreator({
   const [error, setError] = useState<string | null>(null)
 
   const [pickedFixtureId, setPickedFixtureId] = useState<string>('')
+  const [pickedGroup, setPickedGroup] = useState<string>('') // standings group_label, for group-stage cups
   const [matchStyle, setMatchStyle] = useState<MatchStyle>('tile')
   const [pickedTeamSlug, setPickedTeamSlug] = useState<string>('')
   const [pickedNewsId, setPickedNewsId] = useState<string>('')
@@ -166,7 +168,7 @@ export function ShareCardCreator({
   const [saveError, setSaveError] = useState<string | null>(null)
   // Picks to restore once a competition's fixtures finish loading (set when a
   // saved card is loaded, so the fetch effect doesn't clear them to '').
-  const pendingPicksRef = useRef<{ compKey: string; fixtureId: string; teamSlug: string } | null>(null)
+  const pendingPicksRef = useRef<{ compKey: string; fixtureId: string; teamSlug: string; group: string } | null>(null)
 
   const needsStandings = cardType === 'standings'
   const needsFixtures = cardType === 'match' || cardType === 'form'
@@ -185,7 +187,24 @@ export function ShareCardCreator({
           const res = await fetch(`/api/footshorts/data/standings?${qs}`)
           const body = (await res.json().catch(() => ({}))) as { ok?: boolean; rows?: StandingRow[]; error?: string }
           if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
-          if (alive) setStandings(body.rows ?? [])
+          if (alive) {
+            const rows = body.rows ?? []
+            setStandings(rows)
+            // Group-stage cups (World Cup, Euros) carry a group_label per row.
+            // Default to the first group, or restore the saved group when this
+            // load came from loading a saved card for this competition.
+            const groups = Array.from(
+              new Set(rows.map((r) => r.group_label).filter((g): g is string => !!g)),
+            ).sort((a, b) => a.localeCompare(b))
+            const pending = pendingPicksRef.current
+            const compKey = `${selectedComp.slug}::${selectedComp.season}`
+            const restored =
+              pending && pending.compKey === compKey && groups.includes(pending.group)
+                ? pending.group
+                : ''
+            setPickedGroup(restored || groups[0] || '')
+            if (pending && pending.compKey === compKey) pendingPicksRef.current = null
+          }
         } else {
           const res = await fetch(`/api/footshorts/data/fixtures?${qs}`)
           const body = (await res.json().catch(() => ({}))) as { ok?: boolean; rows?: FixtureRow[]; error?: string }
@@ -270,6 +289,14 @@ export function ShareCardCreator({
     )
   }, [fixtures])
 
+  // Distinct group labels for group-stage competitions (World Cup, Euros…).
+  // Empty for plain league tables, which carry no group_label.
+  const standingGroups = useMemo(() => {
+    const labels = new Set<string>()
+    for (const r of standings ?? []) if (r.group_label) labels.add(r.group_label)
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
+  }, [standings])
+
   // ── build the card content from the current selection ───────────────────────
   const content: CardContent | null = useMemo(() => {
     const compName = selectedComp?.name ?? ''
@@ -280,11 +307,19 @@ export function ShareCardCreator({
     }
     if (cardType === 'standings') {
       if (!standings || standings.length === 0) return null
+      // Group-stage cups carry a group_label per row — a single card shows one
+      // group's table. League tables have no groups, so render the whole list.
+      const hasGroups = standingGroups.length > 0
+      const rows = hasGroups
+        ? standings.filter((r) => (r.group_label ?? '') === pickedGroup)
+        : standings
+      if (rows.length === 0) return null
       return {
         type: 'standings',
-        rows: standings.slice(0, maxStandingsRows(ratio)),
+        rows: rows.slice(0, maxStandingsRows(ratio)),
         competitionName: compName,
         season: selectedComp?.season ?? '',
+        groupLabel: hasGroups ? pickedGroup : null,
       }
     }
     if (cardType === 'form') {
@@ -320,6 +355,8 @@ export function ShareCardCreator({
     matchStyle,
     pickedTeamSlug,
     pickedNewsId,
+    pickedGroup,
+    standingGroups,
     selectedComp,
     ratio,
     teamOptions,
@@ -398,6 +435,7 @@ export function ShareCardCreator({
       showEyebrow,
       compKey,
       pickedFixtureId,
+      pickedGroup,
       matchStyle,
       pickedTeamSlug,
       pickedNewsId,
@@ -410,7 +448,7 @@ export function ShareCardCreator({
     }),
     [
       cardType, themeName, ratio, accentHex, handle, logoSize, logoVariant, captionColor,
-      gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, matchStyle,
+      gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, pickedGroup, matchStyle,
       pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject, aiStyleId, aiModel, overlays,
     ],
   )
@@ -447,6 +485,7 @@ export function ShareCardCreator({
       compKey: snap.compKey,
       fixtureId: snap.pickedFixtureId,
       teamSlug: snap.pickedTeamSlug,
+      group: snap.pickedGroup ?? '',
     }
     setCardType(snap.cardType)
     setThemeName(snap.themeName)
@@ -678,6 +717,24 @@ export function ShareCardCreator({
               {competitions.map((c) => (
                 <option key={`${c.slug}::${c.season}`} value={`${c.slug}::${c.season}`}>
                   {c.name} · {c.season}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {/* Group picker — only for group-stage cups (World Cup, Euros…). */}
+        {cardType === 'standings' && standingGroups.length > 0 && (
+          <label className={labelCls}>
+            Group
+            <select
+              value={pickedGroup}
+              onChange={(e) => setPickedGroup(e.target.value)}
+              className={selectCls}
+            >
+              {standingGroups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
                 </option>
               ))}
             </select>
