@@ -42,11 +42,11 @@ export interface MatchCardConfig {
   competitionSlug?: string
   /** Optional accent color override (hex). Defaults to the theme's accent. */
   accent?: string
-  /** Box fill of the score-layout card. Any CSS color/gradient; defaults to a dark translucent wash. */
+  /** Box fill of the score-layout card. Any CSS color/gradient; defaults to a light warm panel (`#FBF7EF`). */
   cardColor?: string
   /** Border color of the score-layout card. Defaults to the accent. */
   borderColor?: string
-  /** Team-name / date text color on the score-layout card. Pair with a light `cardColor`. */
+  /** Team-name / date text color on the score-layout card. Defaults to deep navy (`#1D2A4A`); pair a light value with a dark `cardColor`. */
   textColor?: string
   /** Hex override for the home team's brand color. Bundled palette is the default. */
   homeColor?: string
