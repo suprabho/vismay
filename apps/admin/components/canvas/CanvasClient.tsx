@@ -4049,6 +4049,25 @@ export default function CanvasClient({
           pointerEvents: 'none',
         }}
       >
+        <a
+          href={appSlug ? `/${appSlug}/${slug}` : `/vizmaya/${slug}`}
+          title="Back to the story editor"
+          style={{
+            pointerEvents: 'auto',
+            marginRight: 12,
+            background: 'transparent',
+            color: '#bbb',
+            border: '1px solid #3a3a3a',
+            borderRadius: 5,
+            padding: '3px 9px',
+            fontSize: 11,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textDecoration: 'none',
+          }}
+        >
+          ⌂ Home
+        </a>
         <strong style={{ fontSize: 13 }}>{slug}</strong>
         <span style={{ marginLeft: 12, color: '#888' }}>
           {sectionViews.length} sections · ← / → to paginate
