@@ -219,11 +219,13 @@ export default function AboutUs() {
   // Persist auth state on the marketing page: a returning, signed-in visitor
   // shouldn't be asked to log in again. We surface a "Go to the app" CTA that
   // routes to the same destination the root redirector uses — onboarding if
-  // they haven't finished it, the feed otherwise.
+  // they haven't finished it, the Discover feed otherwise.
   const { session, profile, loading } = useAuth();
   const isAuthed = !loading && !!session;
   const appHref =
-    session && profile && !profile.onboarded_at ? '/onboarding/leagues' : '/feed';
+    session && profile && !profile.onboarded_at
+      ? '/onboarding/leagues'
+      : '/feed?tab=discover';
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-bg font-sans text-text">
