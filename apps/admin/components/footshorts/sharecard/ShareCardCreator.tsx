@@ -46,6 +46,44 @@ interface FlagOption {
   name: string
 }
 
+/** A serializable snapshot of every creator control — enough to reconstruct a
+ *  card in the editor. Data cards reference fixtures/news by id and re-fetch on
+ *  load; AI cards embed the generated image as a data URL. Stored as the `config`
+ *  JSON of a `footshorts_share_cards` row. */
+interface ShareCardSnapshot {
+  version: 1
+  cardType: CardType
+  themeName: ThemeName
+  ratio: AspectRatio
+  accentHex: string
+  handle: string
+  logoSize: LogoSize
+  logoVariant: LogoVariant
+  captionColor: string
+  gradientStrength: number
+  eyebrowOverride: string
+  showEyebrow: boolean
+  compKey: string
+  pickedFixtureId: string
+  matchStyle: MatchStyle
+  pickedTeamSlug: string
+  pickedNewsId: string
+  aiCaption: string
+  aiDataUrl: string
+  aiSubject: string
+  aiStyleId: string
+  aiModel: ShareImageModel
+  overlays: Overlay[]
+}
+
+interface SavedCard {
+  id: string
+  name: string
+  cardType: string
+  config: ShareCardSnapshot
+  createdAt: string
+}
+
 const DEFAULT_OVERLAY_WIDTH = 18 // % of card width
 
 const THEME_NAMES: ThemeName[] = ['classic', 'pitch', 'terrace']
@@ -122,6 +160,14 @@ export function ShareCardCreator({
   const [flagQuery, setFlagQuery] = useState('')
   const overlaySeq = useRef(0)
 
+  // ── saved cards ─────────────────────────────────────────────────────────────
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([])
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  // Picks to restore once a competition's fixtures finish loading (set when a
+  // saved card is loaded, so the fetch effect doesn't clear them to '').
+  const pendingPicksRef = useRef<{ compKey: string; fixtureId: string; teamSlug: string } | null>(null)
+
   const needsStandings = cardType === 'standings'
   const needsFixtures = cardType === 'match' || cardType === 'form'
   const needsNews = cardType === 'news-image' || cardType === 'news-article'
@@ -146,8 +192,18 @@ export function ShareCardCreator({
           if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
           if (alive) {
             setFixtures(body.rows ?? [])
-            setPickedFixtureId('')
-            setPickedTeamSlug('')
+            // Restore the saved picks if this load was triggered by loading a
+            // saved card for this competition; otherwise clear the stale picks.
+            const pending = pendingPicksRef.current
+            const compKey = `${selectedComp.slug}::${selectedComp.season}`
+            if (pending && pending.compKey === compKey) {
+              setPickedFixtureId(pending.fixtureId)
+              setPickedTeamSlug(pending.teamSlug)
+            } else {
+              setPickedFixtureId('')
+              setPickedTeamSlug('')
+            }
+            pendingPicksRef.current = null
           }
         }
       } catch (e) {
@@ -307,6 +363,125 @@ export function ShareCardCreator({
       setDownloading(false)
     }
   }, [content, download, cardType, ratio])
+
+  // ── save / load to the card library ─────────────────────────────────────────
+  // Load the saved-card list once on mount.
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      try {
+        const res = await fetch('/api/footshorts/share/cards')
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; cards?: SavedCard[] }
+        if (alive && body.ok) setSavedCards(body.cards ?? [])
+      } catch {
+        /* non-fatal — the library just stays empty */
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const buildSnapshot = useCallback(
+    (): ShareCardSnapshot => ({
+      version: 1,
+      cardType,
+      themeName,
+      ratio,
+      accentHex,
+      handle,
+      logoSize,
+      logoVariant,
+      captionColor,
+      gradientStrength,
+      eyebrowOverride,
+      showEyebrow,
+      compKey,
+      pickedFixtureId,
+      matchStyle,
+      pickedTeamSlug,
+      pickedNewsId,
+      aiCaption,
+      aiDataUrl,
+      aiSubject,
+      aiStyleId,
+      aiModel,
+      overlays,
+    }),
+    [
+      cardType, themeName, ratio, accentHex, handle, logoSize, logoVariant, captionColor,
+      gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, matchStyle,
+      pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject, aiStyleId, aiModel, overlays,
+    ],
+  )
+
+  const handleSave = useCallback(async () => {
+    if (!content) return
+    const fallback = `${CARD_TYPES.find((t) => t.id === cardType)?.label ?? cardType}${
+      selectedComp ? ` · ${selectedComp.name}` : ''
+    }`
+    const name = window.prompt('Name this card', fallback)?.trim()
+    if (!name) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const res = await fetch('/api/footshorts/share/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, cardType, config: buildSnapshot() }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
+      if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
+      setSavedCards((prev) => [body.card!, ...prev])
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }, [content, cardType, selectedComp, buildSnapshot])
+
+  // Restore every control from a saved snapshot. Data-card picks (fixture/team)
+  // are stashed so the competition fetch effect restores rather than clears them.
+  const applySnapshot = useCallback((snap: ShareCardSnapshot) => {
+    pendingPicksRef.current = {
+      compKey: snap.compKey,
+      fixtureId: snap.pickedFixtureId,
+      teamSlug: snap.pickedTeamSlug,
+    }
+    setCardType(snap.cardType)
+    setThemeName(snap.themeName)
+    setRatio(snap.ratio)
+    setAccentHex(snap.accentHex)
+    setHandle(snap.handle)
+    setLogoSize(snap.logoSize)
+    setLogoVariant(snap.logoVariant)
+    setCaptionColor(snap.captionColor)
+    setGradientStrength(snap.gradientStrength)
+    setEyebrowOverride(snap.eyebrowOverride)
+    setShowEyebrow(snap.showEyebrow)
+    setCompKey(snap.compKey)
+    setPickedFixtureId(snap.pickedFixtureId)
+    setMatchStyle(snap.matchStyle)
+    setPickedTeamSlug(snap.pickedTeamSlug)
+    setPickedNewsId(snap.pickedNewsId)
+    setAiCaption(snap.aiCaption)
+    setAiDataUrl(snap.aiDataUrl)
+    setAiSubject(snap.aiSubject)
+    setAiStyleId(snap.aiStyleId)
+    setAiModel(snap.aiModel)
+    setOverlays(snap.overlays.map((o) => ({ ...o, id: `ov-${overlaySeq.current++}` })))
+    setSelectedOverlayId(null)
+    setSaveError(null)
+  }, [])
+
+  const handleDeleteSaved = useCallback(async (id: string) => {
+    setSavedCards((prev) => prev.filter((c) => c.id !== id))
+    try {
+      await fetch(`/api/footshorts/share/cards/${id}`, { method: 'DELETE' })
+    } catch {
+      /* optimistic — the row reappears on next reload if the delete failed */
+    }
+  }, [])
 
   // ── AI generation ─────────────────────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
@@ -975,13 +1150,54 @@ export function ShareCardCreator({
           )}
         </div>
 
-        <button
-          onClick={() => void handleDownload()}
-          disabled={!content || downloading}
-          className="w-full rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {downloading ? 'Rendering…' : 'Download PNG'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => void handleDownload()}
+            disabled={!content || downloading}
+            className="flex-1 rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {downloading ? 'Rendering…' : 'Download PNG'}
+          </button>
+          <button
+            onClick={() => void handleSave()}
+            disabled={!content || saving}
+            className="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+        {saveError && <p className="text-[11px] text-red-400">{saveError}</p>}
+
+        {/* Saved cards — reload a snapshot back into the editor, or delete it. */}
+        {savedCards.length > 0 && (
+          <div>
+            <span className={labelCls}>Saved cards</span>
+            <div className="mt-1.5 space-y-1.5">
+              {savedCards.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-2 rounded-md border border-white/10 p-1.5"
+                >
+                  <button
+                    onClick={() => applySnapshot(c.config)}
+                    title="Load into editor"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
+                  >
+                    {c.name}
+                    <span className="ml-1 text-neutral-500">· {c.cardType}</span>
+                  </button>
+                  <button
+                    onClick={() => void handleDeleteSaved(c.id)}
+                    className="rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                    aria-label="Delete saved card"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Preview ──────────────────────────────────────────────────────── */}
