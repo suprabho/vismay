@@ -10,7 +10,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { readComposeState } from '@vismay/content-source/composeState'
 import { listStorySources } from '@vismay/content-source/storySources'
-import { vizmayaPublicUrl } from '@/lib/publicSite'
+import { renderSurfaceUrlForVertical } from '@/lib/publicSite'
 import CanvasClient from '@/components/canvas/CanvasClient'
 import {
   canvasFrameId,
@@ -79,23 +79,31 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
   // The HMAC secret stays server-side; only the resulting URLs cross to
   // the client.
   //
-  // Every vertical's story renders through vizmaya-fyi (`vizmayaPublicUrl`,
-  // lib/publicSite) — it's the one headless render surface footshorts/vizf1
-  // already iframe into. So signing against it is correct for all verticals,
-  // not a vizmaya-only coupling.
+  // Every vertical's story renders through a headless render surface, resolved
+  // per the story's owning app (`renderSurfaceUrlForVertical`, lib/publicSite).
+  // Today that's vizmaya-fyi for every app (the one surface footshorts/vizf1
+  // iframe into); the render-engine extraction flips apps to the neutral
+  // apps/render service one at a time via RENDER_SURFACE_URL_*. The canvas-frame
+  // id and the output specs sign separately so a surface can be repointed on its
+  // own without splitting this route.
+  const vertical =
+    typeof story.frontmatter.vertical === 'string'
+      ? story.frontmatter.vertical
+      : undefined
+  const renderBaseUrl = renderSurfaceUrlForVertical(vertical)
   const sectionUnits = units.filter((u) => u.subIndex === 0)
   const SIGN_TTL_SECONDS = 24 * 60 * 60
   const signedSrcById: Record<string, string> = {}
   for (const u of sectionUnits) {
     const sectionId = u.parentConfig.id ?? `section-${u.parentIndex}`
     signedSrcById[canvasFrameId(sectionId)] = signOutputUrl({
-      baseUrl: vizmayaPublicUrl,
+      baseUrl: renderBaseUrl,
       path: `/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
       ttlSeconds: SIGN_TTL_SECONDS,
     })
     for (const spec of outputSpecsForUnit(u, slug)) {
       signedSrcById[spec.id] = signOutputUrl({
-        baseUrl: vizmayaPublicUrl,
+        baseUrl: renderBaseUrl,
         path: spec.path,
         ttlSeconds: SIGN_TTL_SECONDS,
         query: spec.query,
@@ -107,11 +115,7 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
   // so the vertical's modules can be loaded via dynamic import without
   // bloating the client bundle; the canvas only receives the resulting
   // string arrays. Failures fall back to core types.
-  const moduleTypes = await getModuleTypesForVertical(
-    typeof story.frontmatter.vertical === 'string'
-      ? story.frontmatter.vertical
-      : undefined
-  )
+  const moduleTypes = await getModuleTypesForVertical(vertical)
 
   // Compose scaffold (migration 056) — present only while a draft is being
   // composed. Best-effort: a missing column / fs-only dev just yields null and
