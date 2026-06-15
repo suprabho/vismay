@@ -91,6 +91,11 @@ const THEME_NAMES: ThemeName[] = ['classic', 'pitch', 'terrace']
 const PREVIEW_MAX_W = 360
 const PREVIEW_MAX_H = 540
 
+// Article picker paging: start with one page, grow by a page each "Load more",
+// up to the server-side cap in fetchFootshortsNews.
+const NEWS_LIMIT_STEP = 40
+const NEWS_LIMIT_MAX = 200
+
 /** Rows that fit a ratio without clipping the standings table. */
 function maxStandingsRows(ratio: AspectRatio): number {
   if (ratio === '9:16') return 14
@@ -138,6 +143,12 @@ export function ShareCardCreator({
   const [pickedTeamSlug, setPickedTeamSlug] = useState<string>('')
   const [pickedNewsId, setPickedNewsId] = useState<string>('')
   const [newsSearch, setNewsSearch] = useState<string>('') // article picker filter
+  // How many recent articles the picker pulls. Bumped by the "Load more" control
+  // so a deeper back-catalogue is available on demand rather than a fixed page.
+  const [newsLimit, setNewsLimit] = useState<number>(NEWS_LIMIT_STEP)
+  // Last limit we actually fetched, so the effect re-fetches when it grows
+  // without clobbering the list on unrelated re-renders.
+  const fetchedNewsLimitRef = useRef<number | null>(null)
 
   // ── AI state ──────────────────────────────────────────────────────────────
   const [aiSubject, setAiSubject] = useState<string>('')
@@ -239,16 +250,21 @@ export function ShareCardCreator({
   // Fetch recent news when a news card needs it, or when the AI reference picker
   // (which pulls thumbnails from the same feed) is opened.
   useEffect(() => {
-    if ((!needsNews && !aiRefPickerOpen) || news !== null) return
+    if (!needsNews && !aiRefPickerOpen) return
+    // Already have this page (or a deeper one) — nothing to fetch.
+    if (fetchedNewsLimitRef.current !== null && fetchedNewsLimitRef.current >= newsLimit) return
     let alive = true
     setLoading(true)
     setError(null)
     void (async () => {
       try {
-        const res = await fetch('/api/footshorts/data/news?limit=40')
+        const res = await fetch(`/api/footshorts/data/news?limit=${newsLimit}`)
         const body = (await res.json().catch(() => ({}))) as { ok?: boolean; items?: NewsItem[]; error?: string }
         if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
-        if (alive) setNews(body.items ?? [])
+        if (alive) {
+          setNews(body.items ?? [])
+          fetchedNewsLimitRef.current = newsLimit
+        }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : 'Failed to load news')
       } finally {
@@ -258,7 +274,7 @@ export function ShareCardCreator({
     return () => {
       alive = false
     }
-  }, [needsNews, aiRefPickerOpen, news])
+  }, [needsNews, aiRefPickerOpen, newsLimit])
 
   // Articles filtered by the picker search box (and, for the image card, those
   // that actually have a thumbnail).
@@ -831,6 +847,18 @@ export function ShareCardCreator({
                 </option>
               ))}
             </select>
+            {/* Pull a deeper page on demand. Shown only while the last fetch came
+                back full (so more may exist) and we're under the server cap. */}
+            {news.length >= newsLimit && newsLimit < NEWS_LIMIT_MAX && (
+              <button
+                type="button"
+                onClick={() => setNewsLimit((n) => Math.min(n + NEWS_LIMIT_STEP, NEWS_LIMIT_MAX))}
+                disabled={loading}
+                className="mt-1.5 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-300 hover:border-white/30 hover:text-neutral-100 disabled:opacity-50"
+              >
+                {loading ? 'Loading…' : `Load more articles (showing ${news.length})`}
+              </button>
+            )}
           </label>
         )}
 

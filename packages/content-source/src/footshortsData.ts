@@ -514,11 +514,11 @@ interface ArticleDbRow {
  * narrowed to a single entity slug. SERVER-ONLY (service-role client).
  */
 export async function fetchFootshortsNews(q: NewsQuery = {}): Promise<FootshortsNewsItem[]> {
-  const limit = Math.min(Math.max(q.limit ?? 30, 1), 60)
+  const limit = Math.min(Math.max(q.limit ?? 30, 1), 200)
   const supabase = createServiceClient()
   // Over-fetch when filtering by entity so the in-memory narrow still returns a
   // useful page (the entity tag lives on the joined table, not the article row).
-  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 200) : limit
+  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 400) : limit
   const { data, error } = await supabase
     .from('articles')
     .select(
