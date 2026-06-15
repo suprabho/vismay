@@ -192,7 +192,7 @@ function StandingsBody({ content }: { content: Extract<CardContent, { type: 'sta
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 px-3">
       <div className="text-[14px] font-semibold uppercase tracking-wide text-muted">
-        {content.competitionName} · {content.season}
+        {content.competitionName} · {content.groupLabel || content.season}
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <StandingsTable

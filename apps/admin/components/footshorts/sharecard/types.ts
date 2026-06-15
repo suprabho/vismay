@@ -85,6 +85,8 @@ export type CardContent =
       rows: StandingRow[]
       competitionName: string
       season: string
+      /** Set for group-stage competitions (e.g. "Group A"); null for league tables. */
+      groupLabel?: string | null
       highlightSlug?: string | null
     }
   | { type: 'form'; fixtures: FixtureRow[]; teamSlug: string; teamName: string }
