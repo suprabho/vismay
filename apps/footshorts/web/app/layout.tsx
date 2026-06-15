@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/lib/ThemeProvider';
 import { AuthProvider } from '@/lib/AuthProvider';
 import { AuthModalProvider } from '@/lib/AuthModalProvider';
 import { QueryProvider } from '@/lib/QueryProvider';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'Footshorts',
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
