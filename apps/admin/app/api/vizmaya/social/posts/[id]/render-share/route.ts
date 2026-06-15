@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
 import { signOutputUrl } from '@vismay/admin-core/signedUrl'
-import { vizmayaPublicUrl } from '@/lib/publicSite'
+import { renderSurfaceUrl } from '@/lib/publicSite'
 import { getPost } from '@vismay/content-source/socialPostPlans'
 import { computeContentRevisionHash } from '@vismay/content-source/storyPdf'
 import { getContentSource } from '@vismay/content-source/contentSource'
@@ -71,10 +71,11 @@ export async function POST(
     )
   }
 
-  // Render against the public vizmaya.fyi origin — the /story/<slug>/share
-  // route is gated by signed-URL middleware on the consumer TLD, not by
-  // anything on admin's host. Admin signs each ratio URL just below.
-  const baseUrl = vizmayaPublicUrl
+  // Render against the share surface — the /story/<slug>/share route is gated
+  // by signed-URL middleware on the render origin, not by anything on admin's
+  // host. Admin signs each ratio URL just below. Follows the `share` flip
+  // (RENDER_SURFACE_URL_SHARE), vizmaya.fyi default.
+  const baseUrl = renderSurfaceUrl('share')
   const supabase = createServiceClient()
 
   if (isShareDispatchConfigured()) {
