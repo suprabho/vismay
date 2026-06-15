@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import { EntityCard } from '@vismay/footshorts-viz/web';
+import { BackButton } from '@/components/BackButton';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useTeams } from '@/lib/useEntities';
@@ -101,6 +102,7 @@ function OnboardingTeamsInner() {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="px-6 pt-8">
+        <BackButton className="mb-4" />
         <h1 className="mb-1 text-3xl font-bold text-text">Pick your teams</h1>
         <p className="mb-4 text-sm text-muted">
           Choose at least {MIN_TEAMS}. ({picked.size} selected)

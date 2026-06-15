@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { EntityCard } from '@vismay/footshorts-viz/web';
+import { BackButton } from '@/components/BackButton';
 import { useLeagues } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 
@@ -77,6 +78,7 @@ function OnboardingLeaguesInner() {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="px-6 pt-8">
+        {edit ? <BackButton className="mb-4" /> : null}
         <h1 className="mb-1 text-3xl font-bold text-text">Pick your leagues</h1>
         <p className="mb-6 text-sm text-muted">
           Choose at least {MIN_LEAGUES}. ({picked.size} selected)
