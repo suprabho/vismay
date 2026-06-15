@@ -10,7 +10,8 @@ import { useAuth } from '@/lib/AuthProvider';
  *
  * - Logged-out visitors → /feed, which defaults to the public Discover tab.
  * - Signed-in, not-yet-onboarded → /onboarding/leagues.
- * - Signed-in, onboarded → /feed (their personalized For You).
+ * - Signed-in, onboarded → /feed?tab=discover (Discover is the default landing
+ *   for everyone; For You is one tap away).
  */
 export default function Index() {
   const { session, profile, loading } = useAuth();
@@ -22,7 +23,7 @@ export default function Index() {
       router.replace('/onboarding/leagues');
       return;
     }
-    router.replace('/feed');
+    router.replace('/feed?tab=discover');
   }, [loading, session, profile, router]);
 
   return (
