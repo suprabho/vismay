@@ -14,8 +14,10 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
   const f = resolveFixture(config)
   const accent = config.accent ?? f.competitionColor ?? 'var(--color-accent)'
   const borderColor = config.borderColor ?? accent
-  const cardColor = config.cardColor ?? 'rgba(0,0,0,0.18)'
-  const textColor = config.textColor ?? 'var(--color-text, #fff)'
+  // Defaults are tuned for a light surface (e.g. the share-card sheet); pass
+  // cardColor/textColor for a dark surface.
+  const cardColor = config.cardColor ?? '#FBF7EF'
+  const textColor = config.textColor ?? '#1D2A4A'
   const { main: scoreMain, note: scoreNote } = splitScoreNote(f.score)
 
   const wrap: CSSProperties = {
@@ -24,8 +26,6 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'rgb(var(--color-panel-rgb, 18 18 24) / 0.45)',
-    backdropFilter: 'blur(6px)',
     padding: '1rem',
   }
   const card: CSSProperties = {
@@ -93,8 +93,8 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
     fontFamily: 'var(--font-mono)',
     fontSize: '10px',
     letterSpacing: '0.18em',
-    color: config.textColor ?? 'rgba(255,255,255,0.6)',
-    opacity: config.textColor ? 0.65 : 1,
+    color: textColor,
+    opacity: 0.65,
   }
 
   return (

@@ -12,6 +12,7 @@ import {
 } from '@vismay/footshorts-viz/web'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
 import { themes, themeToVars } from '@footshorts/brand'
+import { FootshortsLogo } from './FootshortsLogo'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
@@ -95,40 +96,36 @@ function hexToChannels(hex: string): string | null {
 
 const LOGO_PX: Record<LogoSize, number> = { sm: 22, md: 30, lg: 42 }
 
-/** Color treatment for the brand mark (square fill / ball / wordmark). */
-function logoColors(variant: LogoVariant): { square: string; ball: string; word: string } {
+/** Wordmark color treatment for the brand mark. The badge itself keeps its real
+ *  brand colors; only the "Footshorts" wordmark recolors per variant. */
+function wordmarkColor(variant: LogoVariant): string {
   switch (variant) {
     case 'light':
-      return { square: 'rgba(255,255,255,0.18)', ball: '#FFFFFF', word: '#FFFFFF' }
+      return '#FFFFFF'
     case 'dark':
-      return { square: 'rgba(0,0,0,0.12)', ball: '#0B0B0F', word: '#0B0B0F' }
+      return '#0B0B0F'
     case 'mark':
-      return { square: 'transparent', ball: 'var(--sf-color-accent)', word: 'var(--sf-color-text)' }
     case 'accent':
     default:
-      return { square: 'var(--sf-color-accent)', ball: 'var(--sf-color-bg)', word: 'var(--sf-color-text)' }
+      return 'var(--sf-color-text)'
   }
 }
 
-/** The real footshorts brand mark (the ball badge from the web landing page)
- *  plus the wordmark — sized + recolored per the frame config. */
+/** The real Footshorts brand mark (the coral badge + green ball) plus the
+ *  wordmark — sized per the frame config; wordmark recolored per variant. */
 function BrandMark({ size, variant }: { size: LogoSize; variant: LogoVariant }) {
   const px = LOGO_PX[size]
-  const c = logoColors(variant)
   return (
     <span className="flex items-center gap-1.5">
-      <span
-        aria-hidden
-        className="flex items-center justify-center"
-        style={{ width: px, height: px, borderRadius: px * 0.28, background: c.square, color: c.ball }}
-      >
-        <svg viewBox="0 0 16 16" style={{ width: px * 0.56, height: px * 0.56 }} fill="currentColor">
-          <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 2 1.5 1.5L8 6.5 6.5 5 8 3.5Zm-3 3L6.5 8 5 9.5 3.5 8 5 6.5Zm6 0L12.5 8 11 9.5 9.5 8 11 6.5ZM8 9.5l1.5 1.5L8 12.5 6.5 11 8 9.5Z" />
-        </svg>
-      </span>
-      <span className="font-bold tracking-tight" style={{ color: c.word, fontSize: px * 0.46 }}>
-        Footshorts
-      </span>
+      <FootshortsLogo size={px} knockout={variant === 'light'} />
+      {variant !== 'mark' && (
+        <span
+          className="font-bold tracking-tight"
+          style={{ color: wordmarkColor(variant), fontSize: px * 0.46 }}
+        >
+          Footshorts
+        </span>
+      )}
     </span>
   )
 }

@@ -118,7 +118,7 @@ export default function PortraitLayout({ config }: { config: MatchCardConfig }) 
       <div style={card}>
         <div style={topRow}>
           <span>{f.competitionTag || 'MATCH'}</span>
-          <span>{config.score && !f.scorePlaceholder ? config.score : 'Upcoming'}</span>
+          <span>{config.kickoff ?? (f.scorePlaceholder ? '—' : f.score)}</span>
         </div>
         <div style={teamPair}>
           <div style={teamCol}>
@@ -132,7 +132,7 @@ export default function PortraitLayout({ config }: { config: MatchCardConfig }) 
         </div>
         <div style={kickoffStack}>
           {config.dateLabel && <span style={dateLine}>{config.dateLabel}</span>}
-          <span style={kickoffBig}>{config.kickoff ?? (f.scorePlaceholder ? '—' : f.score)}</span>
+          <span style={kickoffBig}>{config.score && !f.scorePlaceholder ? config.score : 'Upcoming'}</span>
         </div>
         {config.watchOn && <span style={watchPill}>▶ Watch on {config.watchOn}</span>}
         {f.competitionName && <div style={compFoot}>{f.competitionName}</div>}
