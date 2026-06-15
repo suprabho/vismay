@@ -12,7 +12,7 @@ import {
   getReportMapOverride,
   getReportPins,
   isReportMapHidden,
-} from '@/lib/storyReportConfig'
+} from '../lib/storyReportConfig'
 
 // A4 @ 96 dpi: 210mm × 297mm → 794 × 1123 px. Mirrors the `format: 'A4'`
 // passed to Playwright's `page.pdf()` so the preview matches print exactly.

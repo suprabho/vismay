@@ -1,7 +1,7 @@
 'use client'
 
 import type { StatColor } from '@vismay/viz-engine'
-import { statColorVar } from '@/components/story/ThemeProvider'
+import { statColorVar } from '../story/ThemeProvider'
 import FitScale from './FitScale'
 import type { AspectRatio } from './AspectRatioToggle'
 
