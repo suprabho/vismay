@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { EntityChip } from '@vismay/footshorts-viz/web';
+import { BackButton } from '@/components/BackButton';
 import { useFollows, useFollowMutation } from '@/lib/useFollows';
 
 export default function FollowingPage() {
@@ -24,6 +25,7 @@ export default function FollowingPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-6">
+      <BackButton className="mb-4" />
       <h1 className="mb-6 text-2xl font-bold text-text">Following</h1>
 
       <Link

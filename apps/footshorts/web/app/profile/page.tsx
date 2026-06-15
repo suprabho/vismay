@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useTheme } from '@footshorts/brand/web';
 import type { ThemeName } from '@footshorts/brand';
+import { BackButton } from '@/components/BackButton';
 import { useAuth } from '@/lib/AuthProvider';
 import { useFollows } from '@/lib/useFollows';
 
@@ -17,27 +17,11 @@ export default function ProfilePage() {
   const { session, signOut } = useAuth();
   const { data: follows } = useFollows();
   const { themeName, setTheme } = useTheme();
-  const router = useRouter();
   const email = session?.user?.email;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
-      <button
-        type="button"
-        onClick={() => router.back()}
-        aria-label="Go back"
-        className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-text hover:border-muted md:hidden"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          className="h-5 w-5"
-        >
-          <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      <BackButton className="mb-4" />
       <h1 className="mb-1 text-2xl font-bold text-text">Profile</h1>
       <p className="mb-8 text-sm text-muted">{email ?? 'Not signed in'}</p>
 
