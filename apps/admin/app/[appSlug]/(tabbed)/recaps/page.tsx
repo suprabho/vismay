@@ -8,8 +8,9 @@ import { CopyMarkdownButton } from '@/components/section/CopyMarkdownButton'
 export const dynamic = 'force-dynamic'
 
 type RecapMeta = {
-  recap_date: string
+  id: string
   scope: string
+  window_hours: number
   model: string | null
   fixture_count: number
   article_count: number
@@ -28,35 +29,32 @@ function scopeLabel(scope: string): string {
 
 interface Props {
   params: Promise<{ appSlug: string }>
-  searchParams: Promise<{ date?: string; scope?: string }>
+  searchParams: Promise<{ id?: string }>
 }
 
 export default async function AppRecapsPage({ params, searchParams }: Props) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/recaps`)
-  const { date, scope } = await searchParams
+  const { id } = await searchParams
 
   const supabase = await createServerSupabase()
 
   const { data: listData, error: listError } = await supabase
     .from('daily_recaps')
-    .select('recap_date, scope, model, fixture_count, article_count, generated_at')
-    .order('recap_date', { ascending: false })
-    .order('scope', { ascending: true })
+    .select('id, scope, window_hours, model, fixture_count, article_count, generated_at')
+    .order('generated_at', { ascending: false })
 
   const list = (listData ?? []) as RecapMeta[]
 
-  // Default to the newest recap when none is selected via the query string.
-  const selDate = date ?? list[0]?.recap_date ?? null
-  const selScope = scope ?? list[0]?.scope ?? null
+  // Default to the newest snapshot when none is selected via the query string.
+  const selId = id ?? list[0]?.id ?? null
 
   let recap: Recap | null = null
-  if (selDate && selScope) {
+  if (selId) {
     const { data } = await supabase
       .from('daily_recaps')
-      .select('recap_date, scope, model, fixture_count, article_count, generated_at, markdown')
-      .eq('recap_date', selDate)
-      .eq('scope', selScope)
+      .select('id, scope, window_hours, model, fixture_count, article_count, generated_at, markdown')
+      .eq('id', selId)
       .maybeSingle()
     recap = (data ?? null) as Recap | null
   }
@@ -66,7 +64,7 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
       <div className="shrink-0 px-4 py-5 border-b border-white/5">
         <h1 className="text-lg font-semibold">Recaps</h1>
         <p className="text-sm text-neutral-400 mt-0.5">
-          Daily match-day briefs · {list.length} total
+          Rolling match recaps · {list.length} total
         </p>
       </div>
 
@@ -78,18 +76,18 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
         <div className="px-4 py-10 text-sm text-neutral-500 text-center">
           No recaps yet. Generate one with{' '}
           <code className="font-mono text-neutral-400">pnpm recap</code> in the footshorts
-          worker — it runs automatically after the day&apos;s last game via the scores workflow.
+          worker — it runs automatically off the scores workflow and covers the last 24 hours.
         </div>
       ) : (
         <div className="flex-1 min-h-0 grid grid-cols-[260px_1fr]">
           {/* List */}
           <div className="min-h-0 overflow-y-auto border-r border-white/5 p-3 space-y-2">
             {list.map((r) => {
-              const active = r.recap_date === selDate && r.scope === selScope
+              const active = r.id === selId
               return (
                 <Link
-                  key={`${r.recap_date}::${r.scope}`}
-                  href={`/${appSlug}/recaps?date=${r.recap_date}&scope=${r.scope}`}
+                  key={r.id}
+                  href={`/${appSlug}/recaps?id=${r.id}`}
                   className={`block rounded-lg border px-3 py-2.5 transition-colors ${
                     active
                       ? 'border-sky-500/60 bg-white/[0.04]'
@@ -97,13 +95,15 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-white">{r.recap_date}</span>
+                    <span className="text-sm font-semibold text-white">
+                      {new Date(r.generated_at).toLocaleString()}
+                    </span>
                     <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-400">
                       {scopeLabel(r.scope)}
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-neutral-500">
-                    {r.fixture_count} match{r.fixture_count === 1 ? '' : 'es'} ·{' '}
+                    Last {r.window_hours}h · {r.fixture_count} match{r.fixture_count === 1 ? '' : 'es'} ·{' '}
                     {r.article_count} stor{r.article_count === 1 ? 'y' : 'ies'}
                     {r.model ? '' : ' · no narrative'}
                   </div>
@@ -118,8 +118,8 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
               <article className="mx-auto max-w-3xl">
                 <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/10 pb-3">
                   <span className="text-xs text-neutral-500">
-                    {recap.model ? `Narrative: ${recap.model}` : 'Deterministic only'} · generated{' '}
-                    {new Date(recap.generated_at).toLocaleString()}
+                    {recap.model ? `Narrative: ${recap.model}` : 'Deterministic only'} · last{' '}
+                    {recap.window_hours}h · generated {new Date(recap.generated_at).toLocaleString()}
                   </span>
                   <CopyMarkdownButton markdown={recap.markdown} />
                 </div>

@@ -1,14 +1,14 @@
 name: Footshorts - daily recap
 
-# Generates a match-day editorial recap (worker/src/recap.ts) and upserts it into
-# the footshorts Supabase `daily_recaps` table. The cross-competition + World Cup
-# recaps run automatically off the scores refresh (see footshorts-scores.yml); this
-# workflow is the manual entry point for AD-HOC recaps filtered by competition
-# and/or team — e.g. "just Real Madrid's game on 2026-06-14".
+# Generates a rolling "last X hours" editorial recap (worker/src/recap.ts) and
+# inserts a snapshot into the footshorts Supabase `daily_recaps` table. The
+# cross-competition + World Cup recaps run automatically off the scores refresh
+# (see footshorts-scores.yml); this workflow is the manual entry point for AD-HOC
+# recaps filtered by competition and/or team — e.g. "just Real Madrid's last 12h".
 #
-# recap.ts self-gates: it only writes once every fixture kicking off on the target
-# UTC day (within the filter) has finished. Use `force` to override. Upsert makes
-# re-runs safe.
+# recap.ts covers a trailing window ending now (default 24h) and includes only
+# fixtures that have finished within it; it no-ops if none have. Each run inserts a
+# new snapshot row, so re-runs add to the timeline rather than overwriting.
 #
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
@@ -18,8 +18,8 @@ name: Footshorts - daily recap
 on:
   workflow_dispatch:
     inputs:
-      date:
-        description: 'Recap date (YYYY-MM-DD, UTC). Blank = today.'
+      hours:
+        description: 'Window length in hours (trailing window ending now). Blank = 24.'
         required: false
         type: string
         default: ''
@@ -33,11 +33,6 @@ on:
         required: false
         type: string
         default: ''
-      force:
-        description: 'Generate even if some matches are still pending (skip the end-of-day gate).'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   # Keyed by the filter combination so independent recaps don't cancel each other.
@@ -76,15 +71,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
-          INPUT_DATE: ${{ inputs.date }}
+          INPUT_HOURS: ${{ inputs.hours }}
           INPUT_COMPETITION: ${{ inputs.competition }}
           INPUT_TEAM: ${{ inputs.team }}
-          INPUT_FORCE: ${{ inputs.force }}
         run: |
           ARGS=()
-          [ -n "$INPUT_DATE" ] && ARGS+=("$INPUT_DATE")
+          [ -n "$INPUT_HOURS" ] && ARGS+=("--hours=$INPUT_HOURS")
           [ -n "$INPUT_COMPETITION" ] && [ "$INPUT_COMPETITION" != "all" ] && ARGS+=("--scope=$INPUT_COMPETITION")
           [ -n "$INPUT_TEAM" ] && ARGS+=("--team=$INPUT_TEAM")
-          [ "$INPUT_FORCE" = "true" ] && ARGS+=("--force")
           echo "recap args: ${ARGS[*]}"
           pnpm recap:ci -- "${ARGS[@]}"

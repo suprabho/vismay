@@ -67,20 +67,20 @@ jobs:
           API_FOOTBALL_TOKEN: ${{ secrets.API_FOOTBALL_TOKEN }}
         run: pnpm events:ci
 
-      # Generate the daily recap brief once scores are fresh. recap.ts self-gates:
-      # it only writes when every fixture kicking off today (UTC) has finished, so
-      # this no-ops on the midday run and produces the recap on the run after the
-      # last game of the day. Defaults to today (UTC); upsert makes re-runs safe.
-      - name: Generate daily recap (all competitions)
+      # Generate the recap brief once scores are fresh. recap.ts covers a rolling
+      # window ending now (default 24h) and includes only fixtures that have
+      # finished within it, no-opping if none have. Each run inserts a new snapshot,
+      # so the twice-daily cron yields a recap timeline.
+      - name: Generate recap (all competitions)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: pnpm recap:ci
 
-      # World Cup–only recap. Self-gates the same way and no-ops on days with no
-      # WC fixtures, so this harmlessly stops producing rows once the tournament ends.
-      - name: Generate daily recap (World Cup)
+      # World Cup–only recap. Same rolling window; no-ops when no WC fixtures
+      # finished in the window, so it harmlessly stops once the tournament ends.
+      - name: Generate recap (World Cup)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
