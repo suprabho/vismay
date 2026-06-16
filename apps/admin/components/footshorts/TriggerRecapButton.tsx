@@ -3,9 +3,9 @@
 /**
  * Header action for the Recaps tab: fires footshorts-recap.yml via
  * /api/footshorts/trigger-recap. Click reveals a small filter panel (the same
- * inputs the workflow_dispatch exposes); blank date + 'all' competition is the
- * common "recap today, everything" case. Feedback is an inline status line,
- * matching the admin app's toast-free convention.
+ * inputs the workflow_dispatch exposes); blank hours + 'all' competition is the
+ * common "recap the last 24h, everything" case. Feedback is an inline status
+ * line, matching the admin app's toast-free convention.
  */
 
 import { useCallback, useState } from 'react'
@@ -17,10 +17,9 @@ export function TriggerRecapButton() {
   const [running, setRunning] = useState(false)
   const [status, setStatus] = useState<Status>({ type: 'idle' })
 
-  const [date, setDate] = useState('')
+  const [hours, setHours] = useState('')
   const [competition, setCompetition] = useState('')
   const [team, setTeam] = useState('')
-  const [force, setForce] = useState(false)
 
   const run = useCallback(async () => {
     setRunning(true)
@@ -30,10 +29,9 @@ export function TriggerRecapButton() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date: date.trim() || undefined,
+          hours: hours.trim() || undefined,
           competition: competition.trim() || undefined,
           team: team.trim() || undefined,
-          force,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -54,7 +52,7 @@ export function TriggerRecapButton() {
     } finally {
       setRunning(false)
     }
-  }, [date, competition, team, force])
+  }, [hours, competition, team])
 
   return (
     <div className="relative">
@@ -70,14 +68,16 @@ export function TriggerRecapButton() {
         <div className="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-white/10 bg-neutral-950 p-3 shadow-xl">
           <div className="space-y-2.5">
             <label className="block">
-              <span className="text-[11px] uppercase tracking-wide text-neutral-500">Date</span>
+              <span className="text-[11px] uppercase tracking-wide text-neutral-500">Hours</span>
               <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="mt-1 w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none focus:border-sky-500/60"
+                type="number"
+                min="1"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+                placeholder="24"
+                className="mt-1 w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-sky-500/60"
               />
-              <span className="mt-0.5 block text-[10px] text-neutral-600">Blank = today (UTC)</span>
+              <span className="mt-0.5 block text-[10px] text-neutral-600">trailing window ending now · blank = 24</span>
             </label>
 
             <label className="block">
@@ -102,16 +102,6 @@ export function TriggerRecapButton() {
                 className="mt-1 w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-sky-500/60"
               />
               <span className="mt-0.5 block text-[10px] text-neutral-600">slug, e.g. real-madrid · blank = no filter</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-xs text-neutral-300">
-              <input
-                type="checkbox"
-                checked={force}
-                onChange={(e) => setForce(e.target.checked)}
-                className="accent-sky-500"
-              />
-              Force (skip end-of-day gate)
             </label>
 
             <button
