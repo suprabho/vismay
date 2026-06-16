@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
   ReactNode,
@@ -48,12 +49,38 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function syncWithBackend(firebaseUser: User): Promise<AuthUser> {
+  const idToken = await firebaseUser.getIdToken();
+  const res = await fetch(`${BACKEND_URL}/api/auth/sync`, {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) throw new Error(`Sync failed (${res.status})`);
+  const data = await res.json();
+  return {
+    firebaseUser,
+    idToken,
+    role:        data.role,
+    mongoId:     data.id,
+    displayName: data.displayName ?? firebaseUser.displayName ?? '',
+    email:       data.email       ?? firebaseUser.email       ?? '',
+    photoURL:    data.photoURL    ?? firebaseUser.photoURL,
+  };
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser]           = useState<AuthUser | null>(null);
   const [loading, setLoading]     = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Tracks whether a user is already authenticated so token-refresh
+  // sync failures don't silently log the user out.
+  const activeUserRef = useRef<AuthUser | null>(null);
+  useEffect(() => { activeUserRef.current = user; }, [user]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -64,31 +91,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const idToken = await firebaseUser.getIdToken();
-
-        // Sync with backend — provisions the MongoDB user on first login,
-        // returns role on subsequent visits.
-        const res = await fetch(`${BACKEND_URL}/api/auth/sync`, {
-          method:  'POST',
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-
-        if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
-
-        const data = await res.json();
-
-        setUser({
-          firebaseUser,
-          idToken,
-          role:        data.role,
-          mongoId:     data.id,
-          displayName: data.displayName ?? firebaseUser.displayName ?? '',
-          email:       data.email       ?? firebaseUser.email       ?? '',
-          photoURL:    data.photoURL    ?? firebaseUser.photoURL,
-        });
+        const synced = await syncWithBackend(firebaseUser);
+        setUser(synced);
+        setAuthError(null);
       } catch (err) {
         console.error('[AuthContext] sync error:', err);
-        setUser(null);
+        if (activeUserRef.current) {
+          // Token-refresh scenario: keep the session alive, just update the
+          // firebase user reference so future getIdToken() calls work.
+          setUser(prev => prev ? { ...prev, firebaseUser } : null);
+        } else {
+          // Fresh login or returning visitor: surface the error.
+          setAuthError(
+            err instanceof Error
+              ? `Sign-in failed: ${err.message}`
+              : 'Failed to connect to server. Please try again.'
+          );
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -123,7 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthError(null);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+      // updateProfile does NOT re-trigger onAuthStateChanged, and the first
+      // onAuthStateChanged fires before updateProfile completes (empty displayName).
+      // So after updating the profile we force a fresh sync to persist displayName.
       await updateProfile(cred.user, { displayName });
+      const synced = await syncWithBackend(cred.user);
+      setUser(synced);
+      setAuthError(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Sign-up failed';
       setAuthError(msg);

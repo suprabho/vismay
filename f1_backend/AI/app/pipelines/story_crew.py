@@ -147,11 +147,11 @@ def _sanitize_content_blocks(blocks: list[dict]) -> list[dict]:
             continue
 
         btype = block.get("type")
-        if btype not in ("paragraph", "heading", "quote", "stat", "graph_embed"):
+        if btype not in ("paragraph", "heading", "quote", "stat", "graph_embed", "telemetry_clip"):
             btype = "paragraph"
             block = {**block, "type": btype}
 
-        if btype == "graph_embed":
+        if btype in ("graph_embed", "telemetry_clip"):
             cleaned.append(block)
             continue
         
@@ -753,7 +753,33 @@ def run_story_crew(
     # Run the deterministic LangGraph pipeline to generate and embed charts
     from app.pipelines.story_graph_pipeline import run_story_graph_pipeline
     _update_run_log(story_run_id, f"story_crew[{label}]: Running LangGraph chart embedding pipeline")
-    content_blocks = run_story_graph_pipeline(session_key, story_id, scope, angle_spec, content_blocks)
+    lap_window = _lap_window_from_angle(angle_spec, default=None)
+    content_blocks = run_story_graph_pipeline(session_key, story_id, scope, angle_spec, content_blocks, lap_window=lap_window)
+
+    # Angle-aware telemetry clip injection — adds a `telemetry_clip` reference
+    # block the Frontend's TelemetryClipPlayer resolves to animated track +
+    # speed/throttle/brake traces. Reference-only: actual telemetry is fetched
+    # at render time from the Backend clip resolver
+    # (GET /api/telemetry/sessions/:sessionKey/clip). Best-effort: any failure
+    # is logged but never blocks the story patch.
+    try:
+        from app.pipelines.telemetry_clip import select_telemetry_clip_block, insert_clip_block
+        clip_block = select_telemetry_clip_block(
+            session_key, scope, angle_spec=angle_spec, angle_entities=angle_entities,
+        )
+        if clip_block:
+            content_blocks = insert_clip_block(content_blocks, clip_block)
+            meta = clip_block.get("meta", {})
+            _update_run_log(
+                story_run_id,
+                f"story_crew[{label}]: telemetry_clip → laps {meta.get('lapFrom')}–{meta.get('lapTo')} "
+                f"drivers={meta.get('driverNumbers')} mode={meta.get('mode')}"
+            )
+        else:
+            _update_run_log(story_run_id, f"story_crew[{label}]: telemetry_clip skipped (no resolvable window/drivers)")
+    except Exception as e:
+        logger.warning("telemetry_clip injection failed for %s: %s", label, e)
+        _update_run_log(story_run_id, f"story_crew[{label}]: telemetry_clip injection error — {e}")
 
     # Lightweight grounding check on cited lap numbers (driver/team crews skip the
     # fact-checker entirely). Non-destructive: flags out-of-range citations.

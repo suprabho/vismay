@@ -17,7 +17,7 @@ interface MagazinePageProps {
   key?: string;
 }
 
-export function MagazinePage({ onPageChange, onStoryClick }: MagazinePageProps) {
+export function MagazinePage({ onPageChange: _onPageChange, onStoryClick }: MagazinePageProps) {
   const { getIdToken } = useAuth();
   const [stories, setStories] = useState<Story[]>([]);
   const [latestSession, setLatestSession] = useState<{ sessionName?: string; circuitName?: string } | null>(null);
@@ -37,7 +37,7 @@ export function MagazinePage({ onPageChange, onStoryClick }: MagazinePageProps) 
       } catch { /* silent */ }
     }
     load();
-  }, []);
+  }, [getIdToken]);
 
   const statIcons: Record<string, LucideIcon> = {
     'trending-up': TrendingUp,

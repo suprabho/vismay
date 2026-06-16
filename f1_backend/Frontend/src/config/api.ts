@@ -270,6 +270,7 @@ export interface CarPositionFrames {
   t:      number[];
   x:      number[];
   y:      number[];
+  z?:     number[]; // elevation (1/10 m); present only on elevation-enriched sessions
   lap:    number[];
   status: number[];
 }
@@ -297,7 +298,7 @@ export interface CircuitGeometry {
     x: number; y: number;
     angle: number; distance: number;
   }[];
-  outline: { x: number[]; y: number[] };
+  outline: { x: number[]; y: number[]; z?: number[] };
   bounds:  { minX: number; maxX: number; minY: number; maxY: number } | null;
   sectorBoundaries?: { index1: number; index2: number } | null;
 }
@@ -345,6 +346,65 @@ export interface SectorBests {
   sessionPurple: { s1: PurpleSector | null; s2: PurpleSector | null; s3: PurpleSector | null };
 }
 
+// ── Telemetry Clip Resolver (story-page animated player) ─────────────────────
+
+export interface TelemetryClipDriver {
+  driverNumber: number;
+  abbreviation: string;
+  fullName:     string;
+  teamName:     string;
+  teamColour:   string;
+}
+
+export interface TelemetryClipLap {
+  driverNumber: number;
+  lap:          number;
+  lapTimeSec:   number | null;
+  sectors:      Array<number | null>;
+  compound:     string;
+  stintLap:     number;
+}
+
+export interface TelemetryClipTrack {
+  driverNumber: number;
+  sampleRateHz: number;
+  frameCount:   number;
+  t0Ms:         number;
+  tEndMs:       number;
+  frames:       CarPositionFrames;
+}
+
+export interface TelemetryClipTrace {
+  driverNumber: number;
+  lap:          number;
+  frameCount:   number;
+  sampleRateHz: number;
+  sessionTime:  number[];
+  distance:     number[];
+  speed?:       number[];
+  throttle?:    number[];
+  brake?:       number[];
+  drs?:         number[];
+  nGear?:       number[];
+  rpm?:         number[];
+}
+
+export interface TelemetryClipPayload {
+  sessionKey:   string;
+  circuitKey:   string;
+  circuitName:  string;
+  year:         number;
+  lapFrom:      number;
+  lapTo:        number;
+  channels:     string[];
+  drivers:      TelemetryClipDriver[];
+  circuit:      CircuitGeometry | null;
+  lapsByDriver: Record<number, TelemetryClipLap[]>;
+  sectorBests:  Record<number, DriverSectorBest>;
+  tracks:       TelemetryClipTrack[];
+  telemetry:    TelemetryClipTrace[];
+}
+
 export function telemetryApi(getToken?: TokenFactory) {
   return {
     sessions: () =>
@@ -382,13 +442,19 @@ export function telemetryApi(getToken?: TokenFactory) {
     listPositions: (sessionKey: string) =>
       apiFetch<{ sessionKey: string; drivers: Array<{
         driverNumber: number; sampleRateHz: number; frameCount: number;
-        t0Ms: number; tEndMs: number; circuitKey: string;
+        t0Ms: number; tEndMs: number; circuitKey: string; updatedAt?: string;
       }> }>(`/api/telemetry/sessions/${sessionKey}/positions`, getToken),
 
-    driverPositions: (sessionKey: string, driverNumber: number, opts?: { lapFrom?: number; lapTo?: number }) => {
+    driverPositions: (
+      sessionKey: string,
+      driverNumber: number,
+      opts?: { lapFrom?: number; lapTo?: number; version?: string | number },
+    ) => {
       const params = new URLSearchParams();
       if (opts?.lapFrom != null) params.set('lapFrom', String(opts.lapFrom));
       if (opts?.lapTo   != null) params.set('lapTo',   String(opts.lapTo));
+      // Cache-bust the immutable track response after a z-backfill re-run.
+      if (opts?.version != null) params.set('v', String(opts.version));
       const qs = params.toString();
       return apiFetch<CarPositionTrack>(
         `/api/telemetry/sessions/${sessionKey}/positions/${driverNumber}${qs ? `?${qs}` : ''}`,
@@ -424,5 +490,20 @@ export function telemetryApi(getToken?: TokenFactory) {
         `/api/admin/sessions/${sessionKey}/summary`,
         getToken,
       ),
+
+    clip: (sessionKey: string, params: { drivers: number[] | string; lapFrom: number; lapTo: number; channels?: string[] | string; hz?: number }) => {
+      const qs = new URLSearchParams();
+      qs.set('drivers', Array.isArray(params.drivers) ? params.drivers.join(',') : params.drivers);
+      qs.set('lapFrom', String(params.lapFrom));
+      qs.set('lapTo',   String(params.lapTo));
+      if (params.channels) {
+        qs.set('channels', Array.isArray(params.channels) ? params.channels.join(',') : params.channels);
+      }
+      if (params.hz) qs.set('hz', String(params.hz));
+      return apiFetch<TelemetryClipPayload>(
+        `/api/telemetry/sessions/${sessionKey}/clip?${qs.toString()}`,
+        getToken,
+      );
+    },
   };
 }

@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, Zap, Trash2,
 } from 'lucide-react';
 import { API, statusColor, StatusIcon, pipelineLabel, fmt, shortId, fmtDuration, TelemetryBadge } from './shared';
+import { useToast } from '../ui';
 import type { StoryRun, RunStatus, RunPipeline, TelemetrySession } from './types';
 
 // ── Trigger Modal ─────────────────────────────────────────────────────────────
@@ -321,6 +322,7 @@ export function RunsPanel({ getToken }: { getToken: TokenFactory }) {
   const [statusFilter, setStatus] = useState<RunStatus | ''>('');
   const [loading, setLoading]     = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const { toast } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -369,8 +371,8 @@ export function RunsPanel({ getToken }: { getToken: TokenFactory }) {
         throw new Error('Failed to delete run');
       }
       await load();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to delete run', 'error');
     }
   }
 

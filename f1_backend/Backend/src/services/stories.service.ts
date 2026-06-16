@@ -19,7 +19,7 @@ export interface ListStoriesOptions {
  * Paginated list of stories. Defaults to published status.
  * Full content is excluded in list view for payload efficiency.
  */
-export async function listStories(opts: ListStoriesOptions) {
+export async function listStories(opts: ListStoriesOptions): Promise<any> {
   const {
     category, status, tag, search,
     sessionKey, scopeKind, driverNumber, teamId, parentStoryId,
@@ -61,6 +61,19 @@ export async function getStoryBySlug(slug: string) {
 }
 
 export async function createStory(data: Record<string, unknown>) {
+  if (data.slug) {
+    const slug = data.slug as string;
+    const exists = await Story.exists({ slug });
+    if (exists) {
+      let count = 1;
+      let newSlug = `${slug}-${count}`;
+      while (await Story.exists({ slug: newSlug })) {
+        count++;
+        newSlug = `${slug}-${count}`;
+      }
+      data.slug = newSlug;
+    }
+  }
   return Story.create(data);
 }
 

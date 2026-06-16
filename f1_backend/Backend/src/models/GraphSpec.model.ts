@@ -57,6 +57,8 @@ export interface IGraphSpec extends Document {
     strokeWidth: number;
     fill:        string;
   }>;
+  lapFrom:       number | null;
+  lapTo:         number | null;
   generatedByAI: boolean;
   aiRunId:       mongoose.Types.ObjectId | null;
   createdAt:     Date;
@@ -134,6 +136,8 @@ const GraphSpecSchema = new Schema<IGraphSpec>(
         _id:         false,
       },
     ],
+    lapFrom:       { type: Number, default: null },
+    lapTo:         { type: Number, default: null },
     generatedByAI: { type: Boolean, default: false },
     aiRunId:       { type: Schema.Types.ObjectId, ref: 'StoryRun', default: null },
   },

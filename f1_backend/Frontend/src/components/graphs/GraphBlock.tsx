@@ -40,7 +40,7 @@ export function GraphBlock({ spec, caption, className = '' }: GraphBlockProps) {
       <div className="w-full">
         {isEmpty && (
           <div className="flex items-center justify-center h-24 font-mono text-[10px] text-neutral-400 uppercase tracking-widest">
-            No data available
+            {spec.generatedByAI ? 'Graph data is being processed' : 'No data available'}
           </div>
         )}
         {!isEmpty && (spec.type === 'line' || spec.type === 'area' || spec.type === 'sparkline') &&

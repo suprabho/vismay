@@ -144,14 +144,10 @@ export const getSessionLaps = asyncHandler(async (req: Request, res: Response) =
 // ── Ingest Session ────────────────────────────────────────────────────────────
 
 export const ingestSession = asyncHandler(async (req: Request, res: Response) => {
+  // Body validated + coerced by IngestSessionSchema (telemetry.routes.ts)
   const { year, gpName, sessionType } = req.body as {
-    year?: number; gpName?: string; sessionType?: string;
+    year: number; gpName: string; sessionType: string;
   };
-
-  if (!year || !gpName || !sessionType) {
-    res.status(400).json({ message: 'year, gpName, and sessionType are required' });
-    return;
-  }
 
   const slug = String(gpName).toLowerCase().replace(/[\s-]+/g, '_');
   const sessionKey = `${year}_${slug}_${sessionType}`;
@@ -305,7 +301,9 @@ export const retryPositions = asyncHandler(async (req: Request, res: Response) =
 export const listSessionPositions = asyncHandler(async (req: Request, res: Response) => {
   const { sessionKey } = req.params;
   const drivers = await CarPosition.find({ sessionKey })
-    .select('driverNumber sampleRateHz frameCount t0Ms tEndMs circuitKey')
+    // updatedAt lets the client cache-bust the immutable per-driver track URL after
+    // a z-backfill re-run (see getDriverPositions Cache-Control).
+    .select('driverNumber sampleRateHz frameCount t0Ms tEndMs circuitKey updatedAt')
     .sort({ driverNumber: 1 })
     .lean();
   res.json({ sessionKey, drivers });
@@ -357,17 +355,19 @@ export const getDriverPositions = asyncHandler(async (req: Request, res: Respons
   }
 
   if (lapFrom != null || lapTo != null) {
-    const { t, x, y, lap, status } = doc.frames;
+    const { t, x, y, z, lap, status } = doc.frames;
     const ft: number[] = [];
     const fx: number[] = [];
     const fy: number[] = [];
     const fl: number[] = [];
     const fs: number[] = [];
+    const fz: number[] | null = z ? [] : null; // preserve elevation when present
     for (let i = 0; i < t.length; i++) {
       const lapNum = lap[i];
       if (lapFrom != null && lapNum < lapFrom) continue;
       if (lapTo   != null && lapNum > lapTo)   continue;
       ft.push(t[i]); fx.push(x[i]); fy.push(y[i]); fl.push(lapNum); fs.push(status[i]);
+      if (fz && z) fz.push(z[i]);
     }
     res.json({
       sessionKey:   doc.sessionKey,
@@ -377,7 +377,7 @@ export const getDriverPositions = asyncHandler(async (req: Request, res: Respons
       frameCount:   ft.length,
       t0Ms:         ft[0] ?? 0,
       tEndMs:       ft[ft.length - 1] ?? 0,
-      frames:       { t: ft, x: fx, y: fy, lap: fl, status: fs },
+      frames:       { t: ft, x: fx, y: fy, lap: fl, status: fs, ...(fz ? { z: fz } : {}) },
     });
     return;
   }
@@ -390,7 +390,7 @@ export const getDriverPositions = asyncHandler(async (req: Request, res: Respons
 export const getSessionAggregates = asyncHandler(async (req: Request, res: Response) => {
   const { sessionKey } = req.params;
   const session = await TelemetrySession.findOne({ sessionKey })
-    .select('sessionKey lapTelemetryAggregates')
+    .select('sessionKey telemetryStatus lapTelemetryAggregates')
     .lean();
   if (!session) {
     res.status(404).json({ message: 'Session not found' });
@@ -401,7 +401,11 @@ export const getSessionAggregates = asyncHandler(async (req: Request, res: Respo
     const dn = Number(req.query.driver);
     aggregates = aggregates.filter(a => a.driverNumber === dn);
   }
-  res.json({ sessionKey: session.sessionKey, aggregates });
+  res.json({
+    sessionKey: session.sessionKey,
+    ready: (session as { telemetryStatus?: string }).telemetryStatus === 'done',
+    aggregates,
+  });
 });
 
 // ── Sector Bests ──────────────────────────────────────────────────────────────
@@ -621,6 +625,285 @@ export const getSessionSummary = asyncHandler(async (req: Request, res: Response
     },
   });
 });
+
+// ── Story Telemetry Clip Resolver ─────────────────────────────────────────────
+//
+// Single endpoint that bundles everything a story-page TelemetryClipPlayer needs
+// for an angle-scoped lap window: circuit geometry, the relevant drivers' meta,
+// per-lap timing, sector bests, downsampled car_positions tracks, and
+// downsampled raw_lap_telemetry traces. Bundling avoids 5+ sequential fetches.
+//
+// Query params:
+//   drivers=1,44     (required, 1–3 drivers)
+//   lapFrom=12       (required, inclusive)
+//   lapTo=14         (required, inclusive)
+//   channels=speed,throttle,brake,drs,nGear,rpm  (optional, default: speed,throttle,brake)
+//   hz=15            (optional, target sample rate for raw telemetry, default 15, max 30)
+
+const VALID_CLIP_CHANNELS = new Set(['speed', 'throttle', 'brake', 'drs', 'nGear', 'rpm']);
+
+interface ClipFrames {
+  t:      number[];
+  x:      number[];
+  y:      number[];
+  lap:    number[];
+  status: number[];
+}
+
+interface RawTelemetryFrame {
+  sessionKey:   string;
+  driverNumber: number;
+  lap:          number;
+  frameCount:   number;
+  sessionTime?: number[];
+  speed?:       number[];
+  throttle?:    number[];
+  brake?:       number[];
+  drs?:         number[];
+  nGear?:       number[];
+  rpm?:         number[];
+  distance?:    number[];
+}
+
+function downsampleByStride<T>(arr: T[] | undefined, stride: number): T[] {
+  if (!arr || arr.length === 0) return [];
+  if (stride <= 1) return arr.slice();
+  const out: T[] = [];
+  for (let i = 0; i < arr.length; i += stride) out.push(arr[i]);
+  // Always keep the last frame so animation ends cleanly.
+  if (out[out.length - 1] !== arr[arr.length - 1]) out.push(arr[arr.length - 1]);
+  return out;
+}
+
+export const getTelemetryClip = asyncHandler(async (req: Request, res: Response) => {
+  const { sessionKey } = req.params;
+
+  const driversRaw = String(req.query.drivers ?? '').trim();
+  const lapFrom    = Number(req.query.lapFrom);
+  const lapTo      = Number(req.query.lapTo);
+  if (!driversRaw || !Number.isFinite(lapFrom) || !Number.isFinite(lapTo) || lapTo < lapFrom) {
+    res.status(400).json({ message: 'drivers, lapFrom and lapTo (lapTo >= lapFrom) are required' });
+    return;
+  }
+
+  const driverNumbers = driversRaw
+    .split(',')
+    .map(s => Number(s.trim()))
+    .filter(n => Number.isFinite(n) && n > 0)
+    .slice(0, 3); // cap at 3 — UI only animates a few cars at once
+
+  if (driverNumbers.length === 0) {
+    res.status(400).json({ message: 'drivers must contain at least one numeric driver number' });
+    return;
+  }
+
+  const channels = String(req.query.channels ?? 'speed,throttle,brake')
+    .split(',')
+    .map(s => s.trim())
+    .filter(c => VALID_CLIP_CHANNELS.has(c));
+
+  const targetHzRaw = Number(req.query.hz);
+  const targetHz = Number.isFinite(targetHzRaw)
+    ? Math.min(30, Math.max(1, targetHzRaw))
+    : 15;
+
+  // ── Session header + driver roster ──────────────────────────────────────────
+  const session = await TelemetrySession.findOne({ sessionKey })
+    .select('sessionKey circuitKey circuitName year drivers positionsStatus')
+    .lean();
+  if (!session) {
+    res.status(404).json({ message: 'Session not found' });
+    return;
+  }
+
+  const focalDrivers = (session.drivers ?? [])
+    .filter(d => driverNumbers.includes(d.driverNumber))
+    .map(d => ({
+      driverNumber: d.driverNumber,
+      abbreviation: d.abbreviation,
+      fullName:     d.fullName,
+      teamName:     d.teamName,
+      teamColour:   d.teamColour,
+    }));
+
+  // ── Circuit geometry (optional — clip still renders without it) ─────────────
+  const circuit = session.circuitKey
+    ? await Circuit.findOne({ circuitKey: session.circuitKey, year: session.year })
+        .sort({ year: -1 })
+        .lean()
+    : null;
+
+  // ── Per-driver: processedLaps in range + sector bests inline ────────────────
+  const lapDoc = await TelemetrySession.findOne({ sessionKey })
+    .select('processedLaps')
+    .lean();
+  const lapsByDriver: Record<number, IProcessedLapBrief[]> = {};
+  for (const dn of driverNumbers) lapsByDriver[dn] = [];
+  for (const lap of lapDoc?.processedLaps ?? []) {
+    if (!driverNumbers.includes(lap.driverNumber)) continue;
+    if (lap.lap < lapFrom || lap.lap > lapTo) continue;
+    lapsByDriver[lap.driverNumber].push({
+      driverNumber: lap.driverNumber,
+      lap:          lap.lap,
+      lapTimeSec:   lap.lapTimeSec ?? null,
+      sectors:      lap.sectors ?? [],
+      compound:     lap.compound,
+      stintLap:     lap.stintLap,
+    });
+  }
+
+  // ── Car positions (X/Y over time), downsampled and clipped to lap window ────
+  const carDocs = await CarPosition.find({
+    sessionKey,
+    driverNumber: { $in: driverNumbers },
+  }).lean();
+
+  // The position sampleRateHz from ingest is fixed at ~4 Hz already (see
+  // _enrich_positions), so we keep them as-is — further downsampling produces a
+  // jittery animation.
+  const tracks = carDocs.map(doc => {
+    const { t, x, y, lap, status } = doc.frames as ClipFrames;
+    const ft: number[] = [];
+    const fx: number[] = [];
+    const fy: number[] = [];
+    const fl: number[] = [];
+    const fs: number[] = [];
+    for (let i = 0; i < t.length; i++) {
+      const lapNum = lap[i];
+      if (lapNum < lapFrom || lapNum > lapTo) continue;
+      ft.push(t[i]); fx.push(x[i]); fy.push(y[i]); fl.push(lapNum); fs.push(status[i]);
+    }
+    return {
+      driverNumber: doc.driverNumber,
+      sampleRateHz: doc.sampleRateHz,
+      frameCount:   ft.length,
+      t0Ms:         ft[0] ?? 0,
+      tEndMs:       ft[ft.length - 1] ?? 0,
+      frames:       { t: ft, x: fx, y: fy, lap: fl, status: fs },
+    };
+  });
+
+  // If no position tracks were found and positions aren't done enriching,
+  // return early with 202 so the frontend can show a meaningful message.
+  const posStatus = (session as { positionsStatus?: string }).positionsStatus;
+  if (tracks.length === 0 && focalDrivers.length > 0 && posStatus !== 'done') {
+    res.status(202).json({
+      status:          'positions_not_ready',
+      positionsStatus: posStatus ?? 'unknown',
+      message:         'Car position data is still being processed. Retry shortly.',
+    });
+    return;
+  }
+
+  // ── Raw per-lap telemetry traces (speed/throttle/brake/…) ───────────────────
+  const rawColl = mongoose.connection.db?.collection<RawTelemetryFrame>('raw_lap_telemetry');
+  const telemetry: Array<{
+    driverNumber: number;
+    lap:          number;
+    frameCount:   number;
+    sampleRateHz: number;
+    sessionTime:  number[];
+    distance:     number[];
+  } & Record<string, unknown>> = [];
+
+  if (rawColl) {
+    const rawDocs = await rawColl
+      .find({
+        sessionKey,
+        driverNumber: { $in: driverNumbers },
+        lap:          { $gte: lapFrom, $lte: lapTo },
+      })
+      .toArray();
+
+    for (const doc of rawDocs) {
+      const native = doc.sessionTime?.length ?? 0;
+      if (native === 0) continue;
+
+      // Pick a stride so we land near targetHz. raw_lap_telemetry from Fast-F1
+      // is typically ~100 Hz per lap, so a stride of ~7 yields ~15 Hz.
+      const durationSec = native > 1
+        ? Math.max(0.001, ((doc.sessionTime ?? [])[native - 1] - (doc.sessionTime ?? [])[0]))
+        : 1;
+      const nativeHz = native / durationSec;
+      const stride = Math.max(1, Math.round(nativeHz / targetHz));
+
+      const entry: any = {
+        driverNumber: doc.driverNumber,
+        lap:          doc.lap,
+        frameCount:   0,
+        sampleRateHz: targetHz,
+        sessionTime:  downsampleByStride(doc.sessionTime, stride),
+        distance:     downsampleByStride(doc.distance, stride),
+      };
+      for (const ch of channels) {
+        entry[ch] = downsampleByStride(doc[ch as keyof RawTelemetryFrame] as number[] | undefined, stride);
+      }
+      entry.frameCount = entry.sessionTime.length;
+      telemetry.push(entry);
+    }
+  }
+
+  // ── Sector bests for the lap window (purple / driver PB highlighting) ───────
+  const sbDriverBests: Record<number, { s1: number; s2: number; s3: number; s1Lap: number; s2Lap: number; s3Lap: number }> = {};
+  for (const dn of driverNumbers) {
+    sbDriverBests[dn] = { s1: 0, s2: 0, s3: 0, s1Lap: 0, s2Lap: 0, s3Lap: 0 };
+    let s1 = Infinity, s2 = Infinity, s3 = Infinity;
+    let s1Lap = 0, s2Lap = 0, s3Lap = 0;
+    for (const lap of lapsByDriver[dn]) {
+      const sectors = lap.sectors ?? [];
+      const a = sectors[0] ?? 0;
+      const b = sectors[1] ?? 0;
+      const c = sectors[2] ?? 0;
+      if (a > 0 && a < s1) { s1 = a; s1Lap = lap.lap; }
+      if (b > 0 && b < s2) { s2 = b; s2Lap = lap.lap; }
+      if (c > 0 && c < s3) { s3 = c; s3Lap = lap.lap; }
+    }
+    sbDriverBests[dn] = {
+      s1: Number.isFinite(s1) ? s1 : 0,
+      s2: Number.isFinite(s2) ? s2 : 0,
+      s3: Number.isFinite(s3) ? s3 : 0,
+      s1Lap, s2Lap, s3Lap,
+    };
+  }
+
+  res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+
+  res.json({
+    sessionKey,
+    circuitKey:  session.circuitKey,
+    circuitName: session.circuitName,
+    year:        session.year,
+    lapFrom,
+    lapTo,
+    channels,
+    drivers:     focalDrivers,
+    circuit:     circuit
+      ? {
+          circuitKey:       circuit.circuitKey,
+          circuitName:      circuit.circuitName,
+          country:          (circuit as { country?: string }).country ?? '',
+          rotationDeg:      circuit.rotationDeg,
+          corners:          circuit.corners ?? [],
+          outline:          circuit.outline,
+          bounds:           circuit.bounds,
+          sectorBoundaries: (circuit as { sectorBoundaries?: { index1: number; index2: number } | null }).sectorBoundaries ?? null,
+        }
+      : null,
+    lapsByDriver,
+    sectorBests: sbDriverBests,
+    tracks,
+    telemetry,
+  });
+});
+
+interface IProcessedLapBrief {
+  driverNumber: number;
+  lap:          number;
+  lapTimeSec:   number | null;
+  sectors:      Array<number | null>;
+  compound:     string;
+  stintLap:     number;
+}
 
 // ── Circuit ───────────────────────────────────────────────────────────────────
 

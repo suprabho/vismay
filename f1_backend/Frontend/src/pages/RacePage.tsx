@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Activity, History, AlertCircle, Loader2 } from 'lucide-react';
+import { Activity, History, AlertCircle, Flag, Box, Video } from 'lucide-react';
 
+import { Spinner, EmptyState, ErrorBoundary, useToast } from '../components/ui';
 import { SessionPicker } from '../components/race/SessionPicker';
 import { TrackViewport } from '../components/race/TrackViewport';
 import { DriverToggleList } from '../components/race/DriverToggleList';
@@ -18,6 +19,9 @@ import { useRaceData } from '../hooks/useRaceData';
 import { computeLiveStandings, findFrameIndex, timeAtLapStart } from '../utils/trackProjection';
 import { telemetryApi, type ProcessedLap } from '../config/api';
 
+// Lazy so three.js (~250 KB gz) only loads when the user opens the 3D view.
+const TrackViewport3D = lazy(() => import('../components/race/three/TrackViewport3D'));
+
 export type StandingsSortMode = 'championship' | 'live';
 
 interface RacePageProps {
@@ -27,6 +31,9 @@ interface RacePageProps {
 export function RacePage({ onStoryClick }: RacePageProps = {}) {
   const [sessionKey,   setSessionKey]    = useState<string | null>(null);
   const [activeSidebar, setActiveSidebar] = useState<'signals' | 'history'>('signals');
+  const [viewMode,      setViewMode]      = useState<'2d' | '3d'>('2d');
+  const [chaseCam,      setChaseCam]      = useState(false);
+  const { toast } = useToast();
 
   const race = useRaceData(sessionKey);
 
@@ -237,9 +244,8 @@ export function RacePage({ onStoryClick }: RacePageProps = {}) {
           <div className="flex-1 flex min-h-0">
             <div className="flex-1 flex flex-col p-5 min-w-0 relative">
               {race.loading && (
-                <div className="flex-1 flex items-center justify-center gap-2 text-neutral-400">
-                  <Loader2 size={16} className="animate-spin" />
-                  <span className="font-mono text-xs">Loading positions…</span>
+                <div className="flex-1 flex items-center justify-center">
+                  <Spinner size={16} label="Loading positions…" />
                 </div>
               )}
 
@@ -251,26 +257,88 @@ export function RacePage({ onStoryClick }: RacePageProps = {}) {
               )}
 
               {!race.loading && !race.error && !sessionKey && (
-                <div className="flex-1 flex items-center justify-center text-neutral-400 font-mono text-xs">
-                  Pick a session above to load track data.
+                <div className="flex-1 flex items-center justify-center">
+                  <EmptyState icon={Flag} message="Pick a session above to load track data." />
                 </div>
               )}
 
               {!race.loading && !race.error && sessionKey && race.tracks.size > 0 && (
                 <>
-                  <TrackViewport
-                    circuit={race.circuit}
-                    drivers={race.session?.drivers ?? []}
-                    tracks={race.tracks}
-                    visibleDrivers={visibleDrivers}
-                    focusedDriver={focusedDriver}
-                    focusedLaps={focusedLaps}
-                    sectorBests={race.sectorBests}
-                    currentLap={currentLap}
-                    aggregates={race.aggregates}
-                    currentTimeRef={currentTimeRef}
-                    redrawSignal={redrawSignal}
-                  />
+                  {/* 2D / 3D view toggle */}
+                  <div className="absolute top-7 right-7 z-10 flex items-center gap-2">
+                    {viewMode === '3d' && (
+                      <button
+                        onClick={() => setChaseCam(c => !c)}
+                        disabled={focusedDriver == null}
+                        title={focusedDriver == null ? 'Focus a driver to enable chase cam' : 'Toggle chase camera'}
+                        className={`flex items-center gap-1 px-2 py-1 font-mono text-[9px] uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                          chaseCam
+                            ? 'bg-f1-red text-white border-f1-red'
+                            : 'bg-white/80 text-neutral-600 border-neutral-300 hover:border-neutral-500'
+                        }`}
+                      >
+                        <Video size={11} /> Chase
+                      </button>
+                    )}
+                    <div className="flex border border-neutral-300 bg-white/80 overflow-hidden">
+                      {(['2d', '3d'] as const).map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => setViewMode(mode)}
+                          className={`flex items-center gap-1 px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest transition-colors ${
+                            viewMode === mode
+                              ? 'bg-neutral-900 text-white'
+                              : 'text-neutral-500 hover:text-neutral-900'
+                          }`}
+                        >
+                          {mode === '3d' && <Box size={11} />}
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {viewMode === '2d' ? (
+                    <TrackViewport
+                      circuit={race.circuit}
+                      drivers={race.session?.drivers ?? []}
+                      tracks={race.tracks}
+                      visibleDrivers={visibleDrivers}
+                      focusedDriver={focusedDriver}
+                      focusedLaps={focusedLaps}
+                      sectorBests={race.sectorBests}
+                      currentLap={currentLap}
+                      aggregates={race.aggregates}
+                      currentTimeRef={currentTimeRef}
+                      redrawSignal={redrawSignal}
+                    />
+                  ) : (
+                    <ErrorBoundary
+                      onError={() => { setViewMode('2d'); toast('3D view failed to render — reverted to 2D.', 'error'); }}
+                      fallback={() => <div className="flex-1 w-full h-full min-h-0" />}
+                    >
+                      <Suspense
+                        fallback={
+                          <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center border border-neutral-800 bg-neutral-950">
+                            <Spinner size={16} label="Loading 3D view…" />
+                          </div>
+                        }
+                      >
+                        <TrackViewport3D
+                          circuit={race.circuit}
+                          drivers={race.session?.drivers ?? []}
+                          tracks={race.tracks}
+                          visibleDrivers={visibleDrivers}
+                          focusedDriver={focusedDriver}
+                          focusedLaps={focusedLaps}
+                          sectorBests={race.sectorBests}
+                          currentLap={currentLap}
+                          currentTimeRef={currentTimeRef}
+                          chaseCam={chaseCam}
+                        />
+                      </Suspense>
+                    </ErrorBoundary>
+                  )}
                   {focusedDriverObj && (
                     <FocusedDriverCard
                       driver={focusedDriverObj}

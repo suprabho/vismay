@@ -110,6 +110,7 @@ export function findFrameIndex(t: number[], target: number): number {
 export interface InterpolatedFrame {
   x:      number;
   y:      number;
+  z?:     number; // elevation; undefined on 2D-only (pre-elevation) tracks
   lap:    number;
   status: number;
   ok:     boolean;
@@ -118,15 +119,18 @@ export interface InterpolatedFrame {
 /**
  * Linearly interpolate a driver's position at an arbitrary time. Returns ok=false
  * when target lies outside the driver's track window (e.g. they DNF'd early).
+ * z is interpolated only when the track carries elevation; the 2D view ignores it.
  */
 export function interpolateFrame(track: CarPositionTrack, targetMs: number): InterpolatedFrame {
   const { frames } = track;
+  const z = frames.z;
   const idx = findFrameIndex(frames.t, targetMs);
   if (idx < 0 || idx >= frames.t.length - 1) {
     if (idx < 0) return { x: 0, y: 0, lap: 0, status: 0, ok: false };
     return {
       x:      frames.x[idx],
       y:      frames.y[idx],
+      z:      z ? z[idx] : undefined,
       lap:    frames.lap[idx],
       status: frames.status[idx],
       ok:     true,
@@ -139,6 +143,7 @@ export function interpolateFrame(track: CarPositionTrack, targetMs: number): Int
   return {
     x:      frames.x[idx] + (frames.x[idx + 1] - frames.x[idx]) * u,
     y:      frames.y[idx] + (frames.y[idx + 1] - frames.y[idx]) * u,
+    z:      z ? z[idx] + (z[idx + 1] - z[idx]) * u : undefined,
     lap:    frames.lap[idx],
     status: frames.status[idx],
     ok:     true,

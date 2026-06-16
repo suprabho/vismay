@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const ContentBlockSchema = z.object({
-  type:    z.enum(['paragraph', 'heading', 'quote', 'stat', 'graph_embed']),
+  type:    z.enum(['paragraph', 'heading', 'quote', 'stat', 'graph_embed', 'telemetry_clip']),
   text:    z.string().optional(),
   graphId: z.string().optional(),
   meta:    z.record(z.unknown()).optional(),

@@ -65,7 +65,7 @@ export function StoriesPage({ onStoryClick }: StoriesPageProps) {
       }
     }
     load();
-  }, [scopeFilter, secondaryFilter, isAdmin]);
+  }, [scopeFilter, secondaryFilter, isAdmin, getIdToken]);
 
   // Build secondary chooser options from the loaded set
   const secondaryOptions = useMemo(() => {

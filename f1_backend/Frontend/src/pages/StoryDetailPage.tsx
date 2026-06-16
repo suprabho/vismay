@@ -60,7 +60,7 @@ export function StoryDetailPage({ storyId }: StoryDetailPageProps) {
     }
 
     load();
-  }, [storyId]);
+  }, [storyId, getIdToken]);
 
   if (loading) {
     return (

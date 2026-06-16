@@ -7,6 +7,7 @@ import {
 import { StoryRenderer } from '../StoryRenderer';
 import { AngleReview } from './AngleReview';
 import { API, pollAngleStory } from './shared';
+import { useToast } from '../ui';
 import { storiesApi, graphsApi, anglesApi, type AnalysisAngle, type AngleScopeKind, type AngleStatus } from '../../config/api';
 import type { Story, StoryContentBlock, GraphSpec } from '../../types';
 import type { TelemetrySession } from './types';
@@ -184,6 +185,8 @@ function StoryEditor({
       setGraphs([...byStory, ...extra.filter((g): g is GraphSpec => !!g)]);
     })();
     return () => { cancelled = true; };
+    // gApi is recreated per render; story.content changes must not re-trigger graph resolution
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story.id]);
 
   function moveBlock(idx: number, dir: -1 | 1) {
@@ -477,6 +480,9 @@ function AnglesBrowser({ getToken, onOpenStoryId }: AnglesBrowserProps) {
   const [angles, setAngles]             = useState<AnalysisAngle[]>([]);
   const [loading, setLoading]           = useState(false);
   const [generatingAngleId, setGeneratingAngleId] = useState<string | null>(null);
+  const [selectedAngles, setSelectedAngles] = useState<Set<string>>(new Set());
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const { toast } = useToast();
 
   // Load available telemetry sessions for the session-filter dropdown
   useEffect(() => {
@@ -522,7 +528,7 @@ function AnglesBrowser({ getToken, onOpenStoryId }: AnglesBrowserProps) {
 
   async function handleGenerateAngle(angle: AnalysisAngle) {
     if (!angle.sessionKey) {
-      alert('Angle has no sessionKey; cannot generate.');
+      toast('Angle has no sessionKey; cannot generate.', 'error');
       return;
     }
     setGeneratingAngleId(angle.id);
@@ -547,11 +553,56 @@ function AnglesBrowser({ getToken, onOpenStoryId }: AnglesBrowserProps) {
       const storyId = await pollAngleStory(getToken, newRun._id, angle.id);
       await fetchAngles();
       if (storyId) onOpenStoryId(storyId);
-      else alert('Story generation timed out. Check the Runs panel.');
+      else toast('Story generation timed out. Check the Runs panel.', 'info');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Story generation failed');
+      toast(err instanceof Error ? err.message : 'Story generation failed', 'error');
     } finally {
       setGeneratingAngleId(null);
+    }
+  }
+
+  async function handleBulkGenerate() {
+    setBulkGenerating(true);
+    try {
+      const t = await getToken();
+      const selectedAngleObjs = angles.filter(a => selectedAngles.has(a.id));
+
+      const results = await Promise.allSettled(
+        selectedAngleObjs.map(async (angle) => {
+          if (!angle.sessionKey) throw new Error(`Angle ${angle.id} has no sessionKey`);
+          const res = await fetch(`${API}/api/admin/runs`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${t ?? ''}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionKey: angle.sessionKey,
+              pipeline: 'crew_story',
+              scopes: [angle.scopeKind],
+              stage: 'stories',
+              angleId: angle.id,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.message ?? 'Server error');
+          }
+          return res.json();
+        })
+      );
+
+      const succeeded = results.filter(r => r.status === 'fulfilled');
+      const failed = results.filter(r => r.status === 'rejected');
+
+      if (failed.length > 0) {
+        toast(`Dispatched ${succeeded.length} runs. ${failed.length} failed.`, 'error');
+      } else {
+        toast(`Dispatched ${succeeded.length} story generations. Check the Runs panel for progress.`, 'success');
+      }
+      setSelectedAngles(new Set());
+      await fetchAngles();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Bulk generation failed', 'error');
+    } finally {
+      setBulkGenerating(false);
     }
   }
 
@@ -641,7 +692,20 @@ function AnglesBrowser({ getToken, onOpenStoryId }: AnglesBrowserProps) {
           angles={angles}
           loading={loading}
           showStatus
-          hideSelection
+          selected={selectedAngles}
+          onToggle={(id) => {
+            setSelectedAngles(prev => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id); else next.add(id);
+              return next;
+            });
+          }}
+          onSetAll={(select) => {
+            if (select) setSelectedAngles(new Set(angles.map(a => a.id)));
+            else setSelectedAngles(new Set());
+          }}
+          onGenerate={handleBulkGenerate}
+          generating={bulkGenerating}
           onGenerateAngle={handleGenerateAngle}
           generatingAngleId={generatingAngleId}
           emptyMessage="No saved angles match these filters."
@@ -666,6 +730,7 @@ export function StoriesPanel({ getToken, openStoryId, onOpenStoryConsumed }: { g
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const pollRef                     = useRef<number | null>(null);
+  const { toast } = useToast();
 
   const [newTitle, setNewTitle]       = useState('');
   const [newCategory, setNewCategory] = useState(CATEGORIES[0]);
@@ -689,6 +754,8 @@ export function StoriesPanel({ getToken, openStoryId, onOpenStoryConsumed }: { g
       setTotal(merged.length);
     } catch { /* silent */ }
     setLoading(false);
+    // stApi is recreated per render but derives solely from getToken
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getToken]);
 
   const loadArchived = useCallback(async () => {
@@ -698,6 +765,8 @@ export function StoriesPanel({ getToken, openStoryId, onOpenStoryConsumed }: { g
       setArchivedStories(res.stories ?? []);
     } catch { /* silent */ }
     setArchivedLoading(false);
+    // stApi is recreated per render but derives solely from getToken
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getToken]);
 
   useEffect(() => { load(); }, [load]);
@@ -743,7 +812,7 @@ export function StoriesPanel({ getToken, openStoryId, onOpenStoryConsumed }: { g
       const res = await stApi.list({ limit: 50, status: 'draft' }) as { stories: Story[] };
       const found = (res.stories ?? []).find(s => s.id === storyId);
       if (found) await openStory(found);
-      else alert('Story generated but not found in drafts list.');
+      else toast('Story generated but not found in drafts list.', 'error');
     } catch { /* silent */ }
   }
 

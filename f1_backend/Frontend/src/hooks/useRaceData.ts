@@ -120,7 +120,8 @@ export function useRaceData(sessionKey: string | null): RaceDataState {
         const trackEntries = await Promise.all(
           posList.drivers.map(async d => {
             try {
-              const track = await api.driverPositions(sessionKey, d.driverNumber);
+              // version = updatedAt busts the immutable cache after a z-backfill re-run
+              const track = await api.driverPositions(sessionKey, d.driverNumber, { version: d.updatedAt });
               return [d.driverNumber, track] as const;
             } catch (err) {
               console.warn(`[race] failed to load positions for #${d.driverNumber}`, err);

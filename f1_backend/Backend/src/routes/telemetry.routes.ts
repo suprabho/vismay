@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.middleware';
+import { validate } from '../middleware/validate.middleware';
+import { IngestSessionSchema } from '../schemas/zod/telemetry.schema';
 import {
   listSessions,
   getSession,
@@ -14,6 +16,7 @@ import {
   getCircuit,
   getSessionAggregates,
   getSectorBests,
+  getTelemetryClip,
 } from '../controllers/telemetry.controller';
 
 const router = Router();
@@ -47,6 +50,15 @@ router.get('/sessions/:sessionKey/aggregates', getSessionAggregates);
 /** GET /api/telemetry/sessions/:sessionKey/sector-bests — per-driver + session purple sector bests */
 router.get('/sessions/:sessionKey/sector-bests', getSectorBests);
 
+/**
+ * GET /api/telemetry/sessions/:sessionKey/clip
+ * One-shot resolver for the StoryDetailPage TelemetryClipPlayer.
+ * Bundles circuit + per-driver laps + downsampled positions + raw telemetry traces
+ * for a focal lap window so the player only needs one fetch.
+ * Query: drivers=1,44&lapFrom=12&lapTo=14&channels=speed,throttle,brake&hz=15
+ */
+router.get('/sessions/:sessionKey/clip', getTelemetryClip);
+
 /** GET /api/telemetry/circuits/:circuitKey?year= — circuit geometry (corners + outline) */
 router.get('/circuits/:circuitKey', getCircuit);
 
@@ -57,7 +69,7 @@ router.get('/circuits/:circuitKey', getCircuit);
  * Triggers Fast-F1 ingestion via AI Worker.
  * Body: { year, gpName, sessionType }
  */
-router.post('/ingest', requireAuth, requireRole('admin'), ingestSession);
+router.post('/ingest', requireAuth, requireRole('admin'), validate(IngestSessionSchema), ingestSession);
 
 /** POST /api/telemetry/sessions/:sessionKey/retry — re-run Phase 2 telemetry enrichment */
 router.post('/sessions/:sessionKey/retry', requireAuth, requireRole('admin'), retryEnrichment);

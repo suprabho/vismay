@@ -7,6 +7,7 @@ import {
 import { PipelineDAG } from './PipelineDAG';
 import { GraphSimulator } from './GraphSimulator';
 import { API, statusColor, StatusIcon, PRIORITY_COLOR } from './shared';
+import { useToast } from '../ui';
 import type { StoryRun, TelemetrySession, RunPipeline } from './types';
 import type { GraphSpec, Signal } from '../../types';
 import { signalsApi, graphsApi, anglesApi, type AnalysisAngle } from '../../config/api';
@@ -283,6 +284,8 @@ function RunMonitor({ run: initialRun, getToken, onDone }: RunMonitorProps) {
       intervalRef.current = setInterval(poll, 3000);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    // Mount-only: polling starts once per run card; poll() itself handles status changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -517,6 +520,7 @@ export function WorkflowPanel({ getToken }: { getToken: TokenFactory }) {
   const [selected, setSelected]     = useState<Set<string>>(new Set());
   const [generating, setGenerating] = useState(false);
   const launchParams = useRef<{ sessionKey: string; pipeline: RunPipeline; scopes: ScopeOpt[] } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     setSlLoading(true);
@@ -553,7 +557,7 @@ export function WorkflowPanel({ getToken }: { getToken: TokenFactory }) {
       });
       setActiveRun(run);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Launch failed');
+      toast(err instanceof Error ? err.message : 'Launch failed', 'error');
     } finally {
       setLaunching(false);
     }
@@ -622,7 +626,7 @@ export function WorkflowPanel({ getToken }: { getToken: TokenFactory }) {
       });
       setActiveRun(run);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Story generation failed');
+      toast(err instanceof Error ? err.message : 'Story generation failed', 'error');
     } finally {
       setGenerating(false);
     }

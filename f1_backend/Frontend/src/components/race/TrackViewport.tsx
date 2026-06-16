@@ -4,7 +4,8 @@ import type {
 } from '../../config/api';
 import type { RaceDriver, AggregatesByDriverLap } from '../../hooks/useRaceData';
 import { buildProjector, interpolateFrame } from '../../utils/trackProjection';
-import { SectorOutline, type SectorColor } from './SectorOutline';
+import { classifySectors } from '../../utils/sectorClassification';
+import { SectorOutline } from './SectorOutline';
 
 interface Props {
   circuit:        CircuitGeometry | null;
@@ -29,38 +30,6 @@ interface CircleHandles {
   circle:    SVGCircleElement | null;
   label:     SVGTextElement   | null;
   speedText: SVGTextElement   | null;
-}
-
-const APPROX_EQ = (a: number, b: number) => Math.abs(a - b) < 0.001;
-
-function classifySectors(
-  focusedDriver:  number | null,
-  focusedLaps:    ProcessedLap[],
-  currentLap:     number,
-  sectorBests:    SectorBests | null,
-): [SectorColor, SectorColor, SectorColor] {
-  if (focusedDriver == null || !sectorBests) return ['neutral', 'neutral', 'neutral'];
-  const lap = focusedLaps.find(l => l.lap === currentLap);
-  if (!lap) return ['neutral', 'neutral', 'neutral'];
-  const dBest  = sectorBests.driverBests[focusedDriver];
-  const purple = sectorBests.sessionPurple;
-  const out: SectorColor[] = ['neutral', 'neutral', 'neutral'];
-  const sectorKeys: Array<'s1' | 's2' | 's3'> = ['s1', 's2', 's3'];
-
-  for (let i = 0; i < 3; i++) {
-    const t = lap.sectors[i] ?? 0;
-    if (t <= 0) continue;
-    const key  = sectorKeys[i];
-    const purp = purple[key];
-    if (purp && APPROX_EQ(t, purp.time) && purp.driverNumber === focusedDriver) {
-      out[i] = 'purple';
-      continue;
-    }
-    if (dBest && APPROX_EQ(t, dBest[key])) {
-      out[i] = 'pb';
-    }
-  }
-  return out as [SectorColor, SectorColor, SectorColor];
 }
 
 export function TrackViewport({
@@ -136,17 +105,17 @@ export function TrackViewport({
 
   if (!circuit) {
     return (
-      <div className="w-full h-[460px] flex items-center justify-center border border-dashed border-neutral-300 bg-neutral-50">
+      <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center border border-dashed border-neutral-300 bg-neutral-50">
         <span className="font-mono text-xs text-neutral-400">No circuit geometry available</span>
       </div>
     );
   }
 
   return (
-    <div className="relative border border-neutral-200 bg-neutral-50">
+    <div className="relative border border-neutral-200 bg-neutral-50 flex-1 w-full h-full min-h-0">
       <svg
         viewBox={`0 0 ${VIEWPORT_W} ${VIEWPORT_H}`}
-        className="w-full h-[460px]"
+        className="w-full h-full"
         preserveAspectRatio="xMidYMid meet"
       >
         <SectorOutline

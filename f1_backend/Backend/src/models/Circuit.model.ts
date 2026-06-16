@@ -17,7 +17,7 @@ export interface ICircuit extends Document {
   country:     string;
   rotationDeg: number;
   corners:     ICircuitCorner[];
-  outline:     { x: number[]; y: number[] };
+  outline:     { x: number[]; y: number[]; z?: number[] };
   bounds:      { minX: number; maxX: number; minY: number; maxY: number } | null;
   sectorBoundaries: { index1: number; index2: number } | null;
   createdAt:   Date;
@@ -46,6 +46,8 @@ const CircuitSchema = new Schema<ICircuit>(
     outline: {
       x: { type: [Number], default: [] },
       y: { type: [Number], default: [] },
+      // elevation polyline; undefined on pre-elevation circuit revisions
+      z: { type: [Number], default: undefined },
     },
     bounds: {
       type: {

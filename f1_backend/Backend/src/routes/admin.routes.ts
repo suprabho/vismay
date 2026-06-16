@@ -113,10 +113,21 @@ router.post(
       requestedScopes.unshift('session');
     }
 
-    const session = await TelemetrySession.findOne({ sessionKey }).select('_id').lean();
+    const session = await TelemetrySession.findOne({ sessionKey })
+      .select('_id telemetryStatus')
+      .lean();
     if (!session) {
       res.status(404).json({
         message: `Session ${sessionKey} not ingested. Ingest it first via /api/telemetry/ingest.`,
+      });
+      return;
+    }
+
+    const forceRun = req.query.force === 'true';
+    if (!forceRun && (session as { telemetryStatus?: string }).telemetryStatus !== 'done') {
+      const status = (session as { telemetryStatus?: string }).telemetryStatus ?? 'unknown';
+      res.status(409).json({
+        message: `Telemetry enrichment incomplete (status: ${status}). Wait for enrichment or retry from Admin. Pass ?force=true to override.`,
       });
       return;
     }

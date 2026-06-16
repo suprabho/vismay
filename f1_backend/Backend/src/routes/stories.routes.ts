@@ -84,11 +84,7 @@ router.delete('/:id', requireAuth, requireRole('admin'), archiveStory);
 
 // ── AI generation (Phase 4) ───────────────────────────────────────────────────
 
-/** POST /api/stories/:id/generate — dispatch story generation */
-router.post(
-  '/:id/generate',
-  requireAuth, requireRole('editor', 'admin'),
-  asyncHandler(async (req: Request, res: Response) => {
+const generateStoryHandler = asyncHandler(async (req: Request, res: Response) => {
     const story = await Story.findById(req.params.id).lean();
     if (!story) {
       res.status(404).json({ message: 'Story not found' });
@@ -107,6 +103,7 @@ router.post(
 
     const runId = (run._id as unknown as { toString(): string }).toString();
 
+    let delegatedToWorker = false;
     if (env.AI_WORKER_URL && effectiveSession) {
       // Full pipeline via AI worker (LangGraph → CrewAI)
       try {
@@ -116,33 +113,54 @@ router.post(
           story_run_id:  runId,
           context,
         }, { headers: { 'X-Worker-Secret': env.AI_WORKER_SECRET }, timeout: 5000 });
+        delegatedToWorker = true;
       } catch {
         await storyRunService.appendLog(runId, 'AI worker unreachable — falling back to direct generation');
       }
     }
 
     // Fallback: generate directly via LLM if no session or worker unavailable
-    const runStatus = await storyRunService.getRun(runId);
-    if (!runStatus || runStatus.status === 'queued') {
-      await storyRunService.updateStatus(runId, 'running');
-      try {
-        let blocks;
-        if (env.LLM_PROVIDER === 'ollama') {
-          blocks = await generateStoryDraftOllama(story.title, context, story.category);
-        } else {
-          blocks = await generateStoryDraft(story.title, context, story.category);
+    if (!delegatedToWorker) {
+      const runStatus = await storyRunService.getRun(runId);
+      if (!runStatus || runStatus.status === 'queued') {
+        await storyRunService.updateStatus(runId, 'running');
+        try {
+          let blocks;
+          if (env.LLM_PROVIDER === 'ollama') {
+            blocks = await generateStoryDraftOllama(story.title, context, story.category);
+          } else {
+            blocks = await generateStoryDraft(story.title, context, story.category);
+          }
+          await Story.findByIdAndUpdate(req.params.id, {
+            $set: { content: blocks, aiGenerated: true },
+          });
+          await storyRunService.updateStatus(runId, 'done');
+        } catch (err) {
+          await storyRunService.updateStatus(runId, 'failed', String(err));
         }
-        await Story.findByIdAndUpdate(req.params.id, {
-          $set: { content: blocks, aiGenerated: true },
-        });
-        await storyRunService.updateStatus(runId, 'done');
-      } catch (err) {
-        await storyRunService.updateStatus(runId, 'failed', String(err));
       }
     }
 
     res.status(202).json({ runId, status: 'queued' });
-  })
+});
+
+/** POST /api/stories/:id/generate — dispatch story generation */
+router.post(
+  '/:id/generate',
+  requireAuth, requireRole('editor', 'admin'),
+  generateStoryHandler
+);
+
+/** POST /api/stories/:id/retry — explicitly retry story generation (alias to generate) */
+router.post(
+  '/:id/retry',
+  requireAuth, requireRole('editor', 'admin'),
+  asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    // Optionally clear existing content before retry
+    await Story.findByIdAndUpdate(req.params.id, { $set: { content: [], aiGenerated: false } });
+    next();
+  }),
+  generateStoryHandler
 );
 
 /** GET /api/stories/:id/run-status — poll job status */

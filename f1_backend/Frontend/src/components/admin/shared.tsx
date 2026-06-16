@@ -1,17 +1,20 @@
 import { useCallback, useState } from 'react';
 import { Clock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { telemetryApi } from '../../config/api';
+import { Badge } from '../ui';
+import {
+  PRIORITY_COLOR_MAP,
+  runStatusColor,
+  telemetryStatusColor,
+} from '../ui/colors';
 import type { RunStatus, RunPipeline, TelemetryStatus } from './types';
 
 type TokenFactory = () => Promise<string | null>;
 
 export const API = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
-export const PRIORITY_COLOR: Record<string, string> = {
-  high: 'text-red-400 border-red-700 bg-red-950/30',
-  med:  'text-amber-400 border-amber-700 bg-amber-950/30',
-  low:  'text-neutral-400 border-neutral-700 bg-neutral-800/40',
-};
+// Admin panels are dark-themed; delegate to the centralized map in ui/colors.ts.
+export const PRIORITY_COLOR: Record<string, string> = PRIORITY_COLOR_MAP.dark;
 
 export async function pollAngleStory(
   getToken: TokenFactory,
@@ -42,12 +45,7 @@ export async function pollAngleStory(
 }
 
 export function statusColor(status: RunStatus) {
-  switch (status) {
-    case 'queued':  return 'text-neutral-400 bg-neutral-100 border-neutral-200';
-    case 'running': return 'text-amber-600 bg-amber-50 border-amber-200';
-    case 'done':    return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-    case 'failed':  return 'text-red-600 bg-red-50 border-red-200';
-  }
+  return runStatusColor(status, 'light');
 }
 
 export function StatusIcon({ status }: { status: RunStatus }) {
@@ -90,20 +88,15 @@ export function fmtDuration(ms: number | null | undefined) {
 }
 
 export function telemetryBadgeColor(s: TelemetryStatus) {
-  switch (s) {
-    case 'pending':    return 'text-neutral-500 bg-neutral-100 border-neutral-200';
-    case 'processing': return 'text-amber-600 bg-amber-50 border-amber-200';
-    case 'done':       return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-    case 'failed':     return 'text-red-600 bg-red-50 border-red-200';
-  }
+  return telemetryStatusColor(s, 'light');
 }
 
 export function TelemetryBadge({ status }: { status: TelemetryStatus }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 border font-mono text-[9px] uppercase tracking-wider ${telemetryBadgeColor(status)}`}>
+    <Badge tone={telemetryBadgeColor(status)}>
       {status === 'processing' && <Loader2 size={9} className="animate-spin" />}
       {status}
-    </span>
+    </Badge>
   );
 }
 

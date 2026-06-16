@@ -9,7 +9,7 @@ import { Circle, AlertTriangle, Zap as ZapIcon, Loader2 } from 'lucide-react';
 import { signalsApi } from '../config/api';
 import { Signal } from '../types';
 
-export function SignalsPage({ key }: { key?: string }) {
+export function SignalsPage() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');

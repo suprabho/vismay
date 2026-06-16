@@ -1,5 +1,6 @@
-import { StoryContentBlock } from '../types';
+import { StoryContentBlock, TelemetryClipMeta } from '../types';
 import { GraphBlock } from './graphs/GraphBlock';
+import { TelemetryClipPlayer } from './telemetry/TelemetryClipPlayer';
 
 interface StoryRendererProps {
   blocks: StoryContentBlock[];
@@ -66,6 +67,29 @@ export function StoryRenderer({ blocks }: StoryRendererProps) {
                 caption={block.meta?.caption as string | undefined}
               />
             ) : null;
+
+          case 'telemetry_clip': {
+            // The block's `meta` is `Record<string, unknown>` in the base
+            // StoryContentBlock — narrow it to TelemetryClipMeta and skip the
+            // block entirely if the AI worker emitted something malformed.
+            const meta = block.meta as Partial<TelemetryClipMeta> | undefined;
+            if (
+              !meta
+              || typeof meta.sessionKey !== 'string'
+              || !Number.isFinite(meta.lapFrom)
+              || !Number.isFinite(meta.lapTo)
+              || !Array.isArray(meta.driverNumbers)
+              || meta.driverNumbers.length === 0
+            ) {
+              return null;
+            }
+            return (
+              <TelemetryClipPlayer
+                key={i}
+                meta={meta as TelemetryClipMeta}
+              />
+            );
+          }
 
           default:
             return null;

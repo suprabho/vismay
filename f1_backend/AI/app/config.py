@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # Angle discovery — max angles proposed per driver/team scope, and a global
     # ceiling across all scopes so a 20-car grid can't propose 80 angles.
     ANGLES_PER_SCOPE: int = 4
-    MAX_TOTAL_ANGLES: int = 24
+    MAX_TOTAL_ANGLES: int = 150
 
     # LLM-in-LangGraph: enrich + rank signals and curate graphs. Independently
     # toggleable; when off (or provider 'none') the graph keeps its heuristic output.

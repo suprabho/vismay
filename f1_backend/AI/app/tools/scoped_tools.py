@@ -707,6 +707,8 @@ def build_scoped_tools(
             "title": f"Custom {channel.title()} Trace - Lap {lap_i}",
             "sessionKey": session_key,
             "scopeKind": "story_custom",
+            "lapFrom": lap_i,
+            "lapTo": lap_i,
             "xAxis": {"key": "distance", "label": "Distance (m)", "unit": "m"},
             "yAxis": {"key": channel, "label": label, "unit": unit},
             "series": series,

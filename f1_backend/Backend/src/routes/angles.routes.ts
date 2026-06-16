@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireAuthOrWorker, requireRole } from '../middleware/auth.middleware';
+import { requireAuthOrWorker, requireRole } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
   CreateAnglesSchema,

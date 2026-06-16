@@ -4,6 +4,7 @@ export interface ICarPositionFrames {
   t:      number[];
   x:      number[];
   y:      number[];
+  z?:     number[]; // elevation (Fast-F1 1/10 m); absent on pre-elevation (2D-only) docs
   lap:    number[];
   status: number[];
 }
@@ -34,6 +35,8 @@ const CarPositionSchema = new Schema<ICarPosition>(
       t:      { type: [Number], default: [] },
       x:      { type: [Number], default: [] },
       y:      { type: [Number], default: [] },
+      // undefined (not []) so old 2D-only docs stay distinguishable from elevated ones
+      z:      { type: [Number], default: undefined },
       lap:    { type: [Number], default: [] },
       status: { type: [Number], default: [] },
     },

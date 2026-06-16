@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type StoryStatus = 'draft' | 'published' | 'archived';
-export type BlockType   = 'paragraph' | 'heading' | 'quote' | 'stat' | 'graph_embed';
+export type BlockType   = 'paragraph' | 'heading' | 'quote' | 'stat' | 'graph_embed' | 'telemetry_clip';
 export type StoryScopeKind = 'session' | 'driver' | 'team';
 
 export interface IContentBlock {
@@ -56,7 +56,7 @@ export interface IStory extends Document {
 
 const ContentBlockSchema = new Schema<IContentBlock>(
   {
-    type:    { type: String, enum: ['paragraph', 'heading', 'quote', 'stat', 'graph_embed'], required: true },
+    type:    { type: String, enum: ['paragraph', 'heading', 'quote', 'stat', 'graph_embed', 'telemetry_clip'], required: true },
     text:    { type: String },
     graphId: { type: Schema.Types.ObjectId, ref: 'GraphSpec' },
     meta:    { type: Schema.Types.Mixed },

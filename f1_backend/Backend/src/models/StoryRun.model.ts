@@ -35,7 +35,7 @@ export interface IStoryRun extends Document {
 const StoryRunSchema = new Schema<IStoryRun>(
   {
     storyId:     { type: Schema.Types.ObjectId, ref: 'Story',   default: null },
-    sessionKey:  { type: String, required: true },
+    sessionKey:  { type: String, default: '' },
     pipeline:    { type: String, enum: ['langraph_telemetry', 'crew_story', 'full'], required: true },
     stage:       { type: String, enum: ['angles', 'stories'], default: null },
     scopesRequested: {

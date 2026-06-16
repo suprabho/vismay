@@ -8,6 +8,7 @@ import { AnimatePresence } from 'motion/react';
 import { Page } from './types';
 import { Header } from './components/Header';
 import { MobileNav } from './components/MobileNav';
+import { ErrorBoundary } from './components/ui';
 import { MagazinePage } from './pages/MagazinePage';
 import { RacePage } from './pages/RacePage';
 import { SignalsPage } from './pages/SignalsPage';
@@ -115,7 +116,8 @@ export default function App() {
 
       <main className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {renderPage()}
+          {/* Keyed by page so navigating away clears any caught render error. */}
+          <ErrorBoundary key={currentPage}>{renderPage()}</ErrorBoundary>
         </AnimatePresence>
       </main>
 

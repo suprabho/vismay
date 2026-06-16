@@ -17,7 +17,7 @@ import json
 import logging
 from typing import TypedDict, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
 
@@ -45,7 +45,8 @@ class GraphInstruction(BaseModel):
         description="Index of the content block (0-indexed) after which the graph should be embedded.",
         validation_alias=AliasChoices(
             "after_block_index", "afterBlockIndex", "insert_after_block",
-            "insertAfterBlock", "insert_after_block_index", "block_index",
+            "insertAfterBlock", "insert_after_block_index", "block_index", "paragraph_index",
+            "text_paragraph", "textParagraph", "after_paragraph", "afterParagraph",
         ),
     )
     caption: str = Field(
@@ -73,6 +74,7 @@ class GraphInstruction(BaseModel):
         description="MongoDB _id of an existing graph_spec to reuse.",
         validation_alias=AliasChoices(
             "existing_graph_id", "existingGraphId", "graph_id", "graphId",
+            "existing_session_graph_id", "existingSessionGraphId",
         ),
     )
 
@@ -101,12 +103,74 @@ class GraphNeedsOutput(BaseModel):
         validation_alias=AliasChoices("instructions", "graphs", "items"),
     )
 
+    @field_validator("instructions", mode="before")
+    @classmethod
+    def _filter_invalid_items(cls, v):
+        """Drop bare integers / non-dicts that slip past _coerce_list.
+        This is a second line of defence for LangChain versions that bypass
+        the model_validator in certain structured-output code paths."""
+        if isinstance(v, list):
+            return [item for item in v if isinstance(item, dict)]
+        return [] if v is None else v
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_list(cls, data):
+        # Keys LLMs have been observed to use for the parent paragraph index
+        # and for the nested per-paragraph list of graphics. Tolerated so a
+        # nested shape like {"text_paragraph": N, "graphics": [...]} flattens
+        # into individual GraphInstruction items.
+        _PARENT_IDX_KEYS = ("after_block_index", "paragraph_index", "text_paragraph", "block_index", "after_paragraph")
+        _NESTED_LIST_KEYS = ("embedding_instructions", "graphics", "graphs", "charts")
+        # Block-index keys a child may already carry — if present, don't override.
+        _CHILD_IDX_KEYS = ("after_block_index", "block_index", "paragraph_index", "text_paragraph", "after_paragraph")
+
+        def _parent_idx(item):
+            for k in _PARENT_IDX_KEYS:
+                if item.get(k) is not None:
+                    return item[k]
+            return None
+
+        def _nested_list(item):
+            for k in _NESTED_LIST_KEYS:
+                v = item.get(k)
+                if isinstance(v, list):
+                    return v
+            return None
+
+        def _flatten(items):
+            out = []
+            for item in items:
+                nested = _nested_list(item) if isinstance(item, dict) else None
+                if nested is not None:
+                    p_idx = _parent_idx(item)
+                    for sub in nested:
+                        if isinstance(sub, dict):
+                            if p_idx is not None and not any(k in sub for k in _CHILD_IDX_KEYS):
+                                sub["after_block_index"] = p_idx
+                            out.append(sub)
+                else:
+                    if isinstance(item, dict):
+                        out.append(item)
+            return out
+
+        if isinstance(data, list):
+            return {"instructions": _flatten(data)}
+        
+        if isinstance(data, dict):
+            for k in ["instructions", "graphs", "items"]:
+                if k in data and isinstance(data[k], list):
+                    data[k] = _flatten(data[k])
+                    break
+        return data
+
 
 class StoryGraphState(TypedDict):
     session_key: str
     story_id: str
     scope: dict
     angle_spec: dict
+    lap_window: Optional[tuple[int, int]]
     content_blocks: list[dict]
     graph_instructions: list[dict]
     available_graphs: list[dict]
@@ -279,11 +343,26 @@ def load_available_graphs(state: StoryGraphState) -> StoryGraphState:
     session_key = state["session_key"]
     scope = state.get("scope") or {}
     query = _scope_query(session_key, scope)
+
+    # Filter out empty graphs and prefer graphs overlapping the lap window.
+    query["dataPoints.0"] = {"$exists": True}
+    lap_window = state.get("lap_window")
+    if lap_window:
+        lo, hi = lap_window
+        query["$and"] = query.get("$and", []) + [{
+            "$or": [
+                {"lapFrom": None},
+                {"lapFrom": {"$exists": False}},
+                {"lapFrom": {"$lte": hi}, "lapTo": {"$gte": lo}},
+            ]
+        }]
+
     available: list[dict] = []
     try:
         cursor = db_client.graph_specs().find(
             query,
-            {"_id": 1, "title": 1, "type": 1, "scopeKind": 1, "driverNumber": 1, "teamId": 1},
+            {"_id": 1, "title": 1, "type": 1, "scopeKind": 1, "driverNumber": 1, "teamId": 1,
+             "lapFrom": 1, "lapTo": 1},
         )
         for doc in cursor:
             available.append({
@@ -293,6 +372,8 @@ def load_available_graphs(state: StoryGraphState) -> StoryGraphState:
                 "scopeKind": doc.get("scopeKind", "") or "",
                 "driverNumber": doc.get("driverNumber"),
                 "teamId": doc.get("teamId"),
+                "lapFrom": doc.get("lapFrom"),
+                "lapTo": doc.get("lapTo"),
             })
     except Exception as e:
         logger.warning(f"load_available_graphs: query failed for {session_key}: {e}")
@@ -315,7 +396,10 @@ def analyze_story_needs(state: StoryGraphState) -> StoryGraphState:
     scope_kind = (state.get("scope") or {}).get("kind", "session")
     ranked = sorted(available, key=lambda g: _rank_available(g, scope_kind))
     candidate_listing = [
-        {"id": g["id"], "type": g["type"], "title": g["title"], "scope": g["scopeKind"]}
+        {
+            "id": g["id"], "type": g["type"], "title": g["title"], "scope": g["scopeKind"],
+            **({"lapFrom": g["lapFrom"], "lapTo": g["lapTo"]} if g.get("lapFrom") is not None else {}),
+        }
         for g in ranked[:25]  # cap
     ]
 
@@ -348,6 +432,15 @@ def analyze_story_needs(state: StoryGraphState) -> StoryGraphState:
         "6. Never invent a graph_id — only ids that appear verbatim in AVAILABLE_GRAPHS are valid.\n"
         "7. Return ONLY the structured object the schema requires. No prose, no code fences."
     )
+
+    lap_window = state.get("lap_window")
+    if lap_window:
+        system_prompt += (
+            f"\n8. ANGLE_LAP_WINDOW: laps {lap_window[0]}–{lap_window[1]}. "
+            "Prefer graphs scoped to this range. Avoid full-session graphs unless "
+            "the story is session-scoped."
+        )
+
     user_prompt = (
         "ANGLE_FOCUS: {angle_focus}\n\n"
         "AVAILABLE_GRAPHS (JSON):\n{candidates}\n\n"
@@ -530,6 +623,7 @@ def run_story_graph_pipeline(
     scope: dict,
     angle_spec: dict,
     content_blocks: list,
+    lap_window: Optional[tuple[int, int]] = None,
 ) -> list:
     pipeline = build_story_graph_pipeline()
     state: StoryGraphState = {
@@ -537,6 +631,7 @@ def run_story_graph_pipeline(
         "story_id": story_id,
         "scope": scope or {},
         "angle_spec": angle_spec or {},
+        "lap_window": lap_window,
         "content_blocks": content_blocks,
         "graph_instructions": [],
         "available_graphs": [],

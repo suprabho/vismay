@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -44,14 +45,17 @@ _SESSION_NAME_TO_ABBR: dict[str, str] = {
 }
 
 
+def _slugify(name: str) -> str:
+    # Must mirror Backend telemetry.controller.ts: .replace(/[\s-]+/g, '_')
+    return re.sub(r"[\s-]+", "_", name.lower())
+
+
 def _make_session_key(year: int, gp_name: str, session_type: str) -> str:
-    slug = gp_name.lower().replace(" ", "_").replace("-", "_")
-    return f"{year}_{slug}_{session_type}"
+    return f"{year}_{_slugify(gp_name)}_{session_type}"
 
 
 def _make_meeting_key(year: int, gp_name: str) -> str:
-    slug = gp_name.lower().replace(" ", "_").replace("-", "_")
-    return f"{year}_{slug}"
+    return f"{year}_{_slugify(gp_name)}"
 
 
 def _td_to_seconds(td) -> float | None:
@@ -535,7 +539,7 @@ def _upsert_raw_lap_telemetry(session_key: str, session) -> int:
         try:
             # interpolate_edges=True fills lap-boundary gaps; documented Fast-F1 fix
             # for missing values at lap start/end.
-            tel = lap.get_telemetry(interpolate_edges=True)
+            tel = lap.get_telemetry()
             if tel is None or tel.empty:
                 continue
             tel = tel.add_distance()
@@ -622,7 +626,7 @@ _POS_SAMPLE_PERIOD_MS = int(1000 / _POS_SAMPLE_RATE_HZ)
 
 
 def _circuit_key(gp_name: str) -> str:
-    return gp_name.lower().replace(" ", "_").replace("-", "_")
+    return _slugify(gp_name)
 
 
 def _nearest_time_index(times: list[float], target: float) -> int | None:
@@ -673,6 +677,7 @@ def _upsert_circuit(session, year: int, gp_name: str) -> str:
     # Track outline: sample fastest lap pos_data to get a closed polyline
     outline_x: list[float] = []
     outline_y: list[float] = []
+    outline_z: list[float] = []  # elevation (Fast-F1 1/10 m) — optional, drives the 3D ribbon
     outline_t: list[float] = []  # SessionTime (sec) at each sample — used for sector boundaries
     sector_boundaries: dict | None = None
     s1_end = s2_end = None
@@ -683,6 +688,7 @@ def _upsert_circuit(session, year: int, gp_name: str) -> str:
             # Sample every 10th point for the outline; keeps doc small (~200-400 points)
             step = max(1, len(pos) // 400)
             has_st = "SessionTime" in pos.columns
+            has_z  = "Z" in pos.columns
             for i in range(0, len(pos), step):
                 x = pos["X"].iloc[i]
                 y = pos["Y"].iloc[i]
@@ -690,6 +696,9 @@ def _upsert_circuit(session, year: int, gp_name: str) -> str:
                     continue
                 outline_x.append(float(x))
                 outline_y.append(float(y))
+                if has_z:
+                    z = pos["Z"].iloc[i]
+                    outline_z.append(float(z) if pd.notna(z) else float("nan"))
                 if has_st:
                     st = _td_to_seconds(pos["SessionTime"].iloc[i])
                     outline_t.append(st if st is not None else float("nan"))
@@ -706,6 +715,19 @@ def _upsert_circuit(session, year: int, gp_name: str) -> str:
                         sector_boundaries = {"index1": idx1, "index2": idx2}
     except Exception as exc:
         logger.debug("track outline extract failed for %s: %s", circuit_key, exc)
+
+    # Smooth GPS elevation (raw Z is noisy by several metres) with a small centered
+    # rolling mean — the 3D race-view ribbon is built from this outline. Drop z
+    # entirely if the source had no usable Z column (older/2D sessions stay flat).
+    if outline_z and any(pd.notna(v) for v in outline_z):
+        smoothed = pd.Series(outline_z).rolling(window=7, center=True, min_periods=1).mean()
+        outline_z = [round(float(v), 1) if pd.notna(v) else 0.0 for v in smoothed]
+    else:
+        outline_z = []
+
+    outline_doc: dict = {"x": outline_x, "y": outline_y}
+    if outline_z:
+        outline_doc["z"] = outline_z
 
     bounds = None
     if outline_x and outline_y:
@@ -724,7 +746,7 @@ def _upsert_circuit(session, year: int, gp_name: str) -> str:
             "country":          str(session.event.get("Country", "")),
             "rotationDeg":      rotation_deg,
             "corners":          corners,
-            "outline":          {"x": outline_x, "y": outline_y},
+            "outline":          outline_doc,
             "bounds":           bounds,
             "sectorBoundaries": sector_boundaries,
             "updatedAt":        datetime.now(tz=timezone.utc),
@@ -732,8 +754,8 @@ def _upsert_circuit(session, year: int, gp_name: str) -> str:
         upsert=True,
     )
     logger.info(
-        "Circuit upserted: %s/%s (%d corners, %d outline pts, sectorBoundaries=%s)",
-        circuit_key, year, len(corners), len(outline_x), sector_boundaries,
+        "Circuit upserted: %s/%s (%d corners, %d outline pts, z=%s, sectorBoundaries=%s)",
+        circuit_key, year, len(corners), len(outline_x), bool(outline_z), sector_boundaries,
     )
     return circuit_key
 
@@ -746,17 +768,22 @@ def _enrich_positions(session_key: str, year: int, gp_name: str, session_type: s
     """
     logger.info("Phase 3 start: position enrichment for %s", session_key)
 
-    # Skip if positions are already complete in MongoDB. The retry endpoint resets
-    # positionsStatus to "pending" before calling this function, so a forced retry
-    # is never blocked here.
+    # Skip only if positions are already complete *and include elevation*. The
+    # skip is keyed on z presence (not just doc count) so the retry-positions
+    # endpoint doubles as the z-backfill path: existing 2D-only sessions are
+    # re-processed once to gain elevation, then converge on subsequent runs.
     circuit_key_check = _circuit_key(gp_name)
     existing_drivers = db_client.car_positions().count_documents({"sessionKey": session_key})
     circuit_doc      = db_client.circuits().find_one(
-        {"circuitKey": circuit_key_check, "year": year}, projection={"_id": 1}
+        {"circuitKey": circuit_key_check, "year": year}, projection={"outline.z": 1}
     )
-    if existing_drivers > 0 and circuit_doc is not None:
+    circuit_has_z    = bool(circuit_doc and circuit_doc.get("outline", {}).get("z"))
+    positions_have_z = db_client.car_positions().count_documents(
+        {"sessionKey": session_key, "frames.z.0": {"$exists": True}}
+    ) > 0
+    if existing_drivers > 0 and circuit_doc is not None and circuit_has_z and positions_have_z:
         logger.info(
-            "Phase 3 skip for %s: %d driver positions + circuit already in MongoDB",
+            "Phase 3 skip for %s: %d driver positions (with z) + circuit already in MongoDB",
             session_key, existing_drivers,
         )
         db_client.telemetry_sessions().update_one(
@@ -798,6 +825,7 @@ def _enrich_positions(session_key: str, year: int, gp_name: str, session_type: s
                 frames_t:   list[int]   = []
                 frames_x:   list[float] = []
                 frames_y:   list[float] = []
+                frames_z:   list[float] = []  # elevation; client smooths per-frame Z
                 frames_lap: list[int]   = []
                 frames_status: list[int] = []
 
@@ -826,6 +854,7 @@ def _enrich_positions(session_key: str, year: int, gp_name: str, session_type: s
                             x = p.get("X"); y = p.get("Y")
                             if pd.isnull(x) or pd.isnull(y):
                                 continue
+                            z = p.get("Z")
 
                             status_raw = str(p.get("Status", "OnTrack"))
                             # Encode: 0=OnTrack, 1=OffTrack, 2=InPit
@@ -838,6 +867,7 @@ def _enrich_positions(session_key: str, year: int, gp_name: str, session_type: s
                             frames_t.append(t_ms)
                             frames_x.append(round(float(x), 1))
                             frames_y.append(round(float(y), 1))
+                            frames_z.append(round(float(z), 1) if pd.notna(z) else 0.0)
                             frames_lap.append(lap_num)
                             frames_status.append(status_code)
                             last_sample_ms = t_ms
@@ -862,6 +892,7 @@ def _enrich_positions(session_key: str, year: int, gp_name: str, session_type: s
                             "t":      frames_t,
                             "x":      frames_x,
                             "y":      frames_y,
+                            "z":      frames_z,
                             "lap":    frames_lap,
                             "status": frames_status,
                         },

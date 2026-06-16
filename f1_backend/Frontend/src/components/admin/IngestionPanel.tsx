@@ -104,7 +104,7 @@ export function IngestionPanel({ getToken }: { getToken: TokenFactory }) {
   }, [schedule]);
 
   const selectedGp = gpOptions.find(g => g.meta.gpName === gpName);
-  const sessionOptions = selectedGp?.sessions ?? [];
+  const sessionOptions = useMemo(() => selectedGp?.sessions ?? [], [selectedGp]);
 
   // Auto-pick first GP when schedule loads / year changes
   useEffect(() => {

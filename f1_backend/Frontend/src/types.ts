@@ -103,8 +103,22 @@ export interface GraphSpec {
 
 // ── Story Framework ─────────────────────────────────────────────────────────
 
+export type TelemetryChannel = 'speed' | 'throttle' | 'brake' | 'drs' | 'nGear' | 'rpm';
+
+export interface TelemetryClipMeta {
+  sessionKey:         string;
+  circuitKey?:        string;
+  lapFrom:            number;
+  lapTo:              number;
+  driverNumbers:      number[];
+  focalDriverNumber?: number | null;
+  channels?:          TelemetryChannel[];
+  mode?:              'fastest_lap' | 'lap_window' | 'stint';
+  caption?:           string;
+}
+
 export interface StoryContentBlock {
-  type: 'paragraph' | 'heading' | 'quote' | 'stat' | 'graph_embed';
+  type: 'paragraph' | 'heading' | 'quote' | 'stat' | 'graph_embed' | 'telemetry_clip';
   text?: string;
   graphId?: string;
   graphSpec?: GraphSpec;

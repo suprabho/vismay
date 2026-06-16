@@ -43,6 +43,7 @@ class TelemetryState(TypedDict, total=False):
     context: str
     session_data: dict
     laps_df: Optional[pd.DataFrame]
+    lap_window: Optional[tuple[int, int]]  # (lo, hi) inclusive; None = full session
     events: list[dict]
     signals: Annotated[list[dict], operator.add]
     projections: dict
@@ -58,6 +59,28 @@ class TelemetryState(TypedDict, total=False):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _get_lap_bounds(state: "TelemetryState") -> tuple[int, int]:
+    """Return (lo, hi) lap window from state. Falls back to full range."""
+    win = state.get("lap_window")
+    if win and len(win) == 2:
+        return (int(win[0]), int(win[1]))
+    return (0, 10_000)
+
+
+def _filter_df_by_window(df: pd.DataFrame, lo: int, hi: int) -> pd.DataFrame:
+    """Filter a laps DataFrame by lap window if it has a 'lap' column."""
+    if df is not None and not df.empty and "lap" in df.columns and hi < 10_000:
+        return df[(df["lap"] >= lo) & (df["lap"] <= hi)]
+    return df
+
+
+def _lap_range_tags(lo: int, hi: int) -> dict:
+    """Return lapFrom/lapTo dict for tagging graph specs. Omits if full session."""
+    if hi >= 10_000:
+        return {}
+    return {"lapFrom": lo, "lapTo": hi}
+
 
 def _parse_lap_time(t: Any) -> float:
     """Convert '1:21.432' or float seconds to float seconds."""
@@ -609,6 +632,8 @@ def generate_graph_specs(state: TelemetryState) -> TelemetryState:
     specs: list[dict] = []
     proj = state["projections"]
     df = state.get("laps_df")
+    lo, hi = _get_lap_bounds(state)
+    tags = _lap_range_tags(lo, hi)
 
     # Projection chart per driver
     for drv_str, p in proj.items():
@@ -637,15 +662,17 @@ def generate_graph_specs(state: TelemetryState) -> TelemetryState:
                 "confidenceBand": True,
             },
             "generatedByAI": True,
+            **tags,
         })
 
     # Multi-line comparison chart (all drivers)
-    if df is not None and not df.empty and "driverNumber" in df.columns:
-        drivers = df["driverNumber"].unique()[:5]  # cap at 5 for readability
+    cmp_df = _filter_df_by_window(df, lo, hi) if df is not None else df
+    if cmp_df is not None and not cmp_df.empty and "driverNumber" in cmp_df.columns:
+        drivers = cmp_df["driverNumber"].unique()[:5]  # cap at 5 for readability
         palette = ["#E10600", "#1E3A5F", "#FF8700", "#00D2BE", "#7B3F00"]
         comparison_data: dict[float, dict] = {}
         for i, drv in enumerate(drivers):
-            grp = df[(df["driverNumber"] == drv) & df["isRepresentative"]].sort_values("lap") if "lap" in df.columns else df[df["driverNumber"] == drv]
+            grp = cmp_df[(cmp_df["driverNumber"] == drv) & cmp_df["isRepresentative"]].sort_values("lap") if "lap" in cmp_df.columns else cmp_df[cmp_df["driverNumber"] == drv]
             for _, row in grp.iterrows():
                 lap_key = float(row.get("lap", 0))
                 if lap_key not in comparison_data:
@@ -665,6 +692,7 @@ def generate_graph_specs(state: TelemetryState) -> TelemetryState:
             ],
             "dataPoints": sorted(comparison_data.values(), key=lambda x: x["lap"]),
             "generatedByAI": True,
+            **tags,
         })
 
     _update_run_status(state["story_run_id"], "running", f"generate_graph_specs: {len(specs)} specs")
@@ -769,8 +797,14 @@ def generate_driver_lap_traces(state: TelemetryState) -> TelemetryState:
     df = state.get("laps_df")
     sk = state["session_key"]
     specs = []
+    lo, hi = _get_lap_bounds(state)
+    tags = _lap_range_tags(lo, hi)
 
     if df is None or df.empty or "driverNumber" not in df.columns:
+        return {"graph_specs": specs}
+
+    df = _filter_df_by_window(df, lo, hi)
+    if df.empty:
         return {"graph_specs": specs}
 
     drivers_meta = {
@@ -824,6 +858,7 @@ def generate_driver_lap_traces(state: TelemetryState) -> TelemetryState:
                 ],
                 "dataPoints": data_points,
                 "generatedByAI": True,
+                **tags,
             })
             added += 1
         except Exception as e:
@@ -839,9 +874,19 @@ def generate_driver_stint_degradation(state: TelemetryState) -> TelemetryState:
     sk = state["session_key"]
     specs = []
     stints = (state.get("session_data") or {}).get("stints") or []
+    lo, hi = _get_lap_bounds(state)
+    tags = _lap_range_tags(lo, hi)
 
     if df is None or df.empty or not stints or "driverNumber" not in df.columns:
         return {"graph_specs": specs}
+
+    df = _filter_df_by_window(df, lo, hi)
+    if df.empty:
+        return {"graph_specs": specs}
+
+    # Filter stints to those overlapping the lap window
+    if hi < 10_000:
+        stints = [s for s in stints if (s.get("endLap") or 0) >= lo and (s.get("startLap") or 0) <= hi]
 
     stints_by_driver: dict[int, list[dict]] = {}
     for st in stints:
@@ -898,6 +943,7 @@ def generate_driver_stint_degradation(state: TelemetryState) -> TelemetryState:
                 "series": series,
                 "dataPoints": [data_by_stintlap[k] for k in sorted(data_by_stintlap)],
                 "generatedByAI": True,
+                **tags,
             })
             added += 1
         except Exception as e:
@@ -1204,10 +1250,16 @@ def generate_driver_degradation_overlay(state: TelemetryState) -> TelemetryState
     sk = state["session_key"]
     specs = []
     sd = state.get("session_data") or {}
+    lo, hi = _get_lap_bounds(state)
+    tags = _lap_range_tags(lo, hi)
 
     if df is None or df.empty:
         return {"graph_specs": specs}
     if not {"driverNumber", "lap", "lapTimeSec"}.issubset(df.columns):
+        return {"graph_specs": specs}
+
+    df = _filter_df_by_window(df, lo, hi)
+    if df.empty:
         return {"graph_specs": specs}
 
     drivers_meta = {
@@ -1256,6 +1308,7 @@ def generate_driver_degradation_overlay(state: TelemetryState) -> TelemetryState
                 ],
                 "dataPoints": data_points,
                 "generatedByAI": True,
+                **tags,
             })
             added += 1
         except Exception as e:
@@ -1358,10 +1411,16 @@ def generate_driver_position_progression(state: TelemetryState) -> TelemetryStat
     sk = state["session_key"]
     specs = []
     sd = state.get("session_data") or {}
+    lo, hi = _get_lap_bounds(state)
+    tags = _lap_range_tags(lo, hi)
 
     if df is None or df.empty:
         return {"graph_specs": specs}
     if not {"driverNumber", "lap", "lapTimeSec"}.issubset(df.columns):
+        return {"graph_specs": specs}
+
+    df = _filter_df_by_window(df, lo, hi)
+    if df.empty:
         return {"graph_specs": specs}
 
     drivers_meta = {
@@ -1421,6 +1480,7 @@ def generate_driver_position_progression(state: TelemetryState) -> TelemetryStat
                 "series": series,
                 "dataPoints": data_points,
                 "generatedByAI": True,
+                **tags,
             })
             added += 1
         except Exception as e:
