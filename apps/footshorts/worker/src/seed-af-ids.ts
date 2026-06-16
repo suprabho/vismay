@@ -20,8 +20,17 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const AF_BASE = 'https://v3.football.api-sports.io';
+// API-Football is sold via two channels with different hosts/headers and
+// non-interchangeable keys. Default to the direct API-Sports host; set
+// API_FOOTBALL_HOST=rapidapi to use a key issued through RapidAPI instead.
 const AF_TOKEN = process.env.API_FOOTBALL_TOKEN!;
+const AF_VIA_RAPIDAPI = (process.env.API_FOOTBALL_HOST ?? 'direct').toLowerCase() === 'rapidapi';
+const AF_BASE = AF_VIA_RAPIDAPI
+  ? 'https://api-football-v1.p.rapidapi.com/v3'
+  : 'https://v3.football.api-sports.io';
+const AF_HEADERS: Record<string, string> = AF_VIA_RAPIDAPI
+  ? { 'x-rapidapi-key': AF_TOKEN, 'x-rapidapi-host': 'api-football-v1.p.rapidapi.com' }
+  : { 'x-apisports-key': AF_TOKEN };
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -76,9 +85,7 @@ function commonName(name: string): string {
 type AfResponse<T> = { response: T[]; errors?: unknown };
 
 async function afFetch<T>(path: string): Promise<T[]> {
-  const res = await fetch(`${AF_BASE}${path}`, {
-    headers: { 'x-apisports-key': AF_TOKEN },
-  });
+  const res = await fetch(`${AF_BASE}${path}`, { headers: AF_HEADERS });
   if (!res.ok) {
     throw new Error(`api-football ${path} failed: ${res.status} ${res.statusText}`);
   }
