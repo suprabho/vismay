@@ -207,33 +207,31 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
 }
 
 /**
- * Footshorts daily match-day recaps (`daily_recaps`) — one ready-to-read
- * markdown brief per (date, scope), written by the recap worker. Lives in the
- * same project as `stories`/`articles`, so the admin service client reaches it.
- * App-scoped to footshorts; the markdown column is the research text verbatim.
- *
- * The table's primary key is composite (recap_date, scope), so an item id packs
- * both as `<recap_date>/<scope>` — neither an ISO date nor a competition slug
- * contains a slash, so a single split on the first `/` round-trips cleanly.
+ * Footshorts rolling match recaps (`daily_recaps`) — one ready-to-read markdown
+ * brief per snapshot (a trailing "last X hours" window per scope), written by the
+ * recap worker. Lives in the same project as `stories`/`articles`, so the admin
+ * service client reaches it. App-scoped to footshorts; the markdown column is the
+ * research text verbatim. Items are keyed by the row's surrogate `id`.
  */
 const recapsProvider: LibraryProvider = {
   key: 'footshorts-recap',
-  label: 'Match-day recaps',
+  label: 'Match recaps',
   apps: ['footshorts'],
   async list() {
     const sb = createServiceClient()
     const { data, error } = await sb
       .from('daily_recaps')
-      .select('recap_date, scope, fixture_count, article_count')
-      .order('recap_date', { ascending: false })
-      .order('scope', { ascending: true })
+      .select('id, scope, window_hours, fixture_count, article_count, generated_at')
+      .order('generated_at', { ascending: false })
       .limit(100)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
-      recap_date: string
+      id: string
       scope: string | null
+      window_hours: number | null
       fixture_count: number | null
       article_count: number | null
+      generated_at: string
     }>
     return rows.map((r) => {
       const scope = r.scope ?? 'all'
@@ -243,28 +241,29 @@ const recapsProvider: LibraryProvider = {
       ]
         .filter(Boolean)
         .join(' · ')
+      const window = r.window_hours ? `last ${r.window_hours}h` : 'recap'
+      const when = new Date(r.generated_at).toISOString().slice(0, 16).replace('T', ' ')
       return {
-        id: `${r.recap_date}/${scope}`,
-        title: `${r.recap_date} · ${scope === 'all' ? 'All competitions' : scope}`,
+        id: r.id,
+        title: `${when} · ${scope === 'all' ? 'All competitions' : scope} (${window})`,
         subtitle: counts || undefined,
       }
     })
   },
   async extract(id) {
-    const slash = id.indexOf('/')
-    const recapDate = slash === -1 ? id : id.slice(0, slash)
-    const scope = slash === -1 ? 'all' : id.slice(slash + 1)
     const sb = createServiceClient()
     const { data } = await sb
       .from('daily_recaps')
-      .select('markdown')
-      .eq('recap_date', recapDate)
-      .eq('scope', scope)
+      .select('markdown, scope, window_hours, generated_at')
+      .eq('id', id)
       .maybeSingle()
     const text = (data?.markdown ?? '').trim()
     if (!text) return null
+    const scope = data?.scope ?? 'all'
     const label = scope === 'all' ? 'All competitions' : scope
-    return { title: `Recap · ${recapDate} · ${label}`, byline: `Match-day recap · ${label}`, text }
+    const window = data?.window_hours ? `last ${data.window_hours}h` : 'recap'
+    const when = data?.generated_at ? new Date(data.generated_at).toISOString().slice(0, 16).replace('T', ' ') : ''
+    return { title: `Recap · ${when} · ${label}`, byline: `Match recap · ${label} · ${window}`, text }
   },
 }
 
