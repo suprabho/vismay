@@ -1,38 +1,38 @@
 /**
- * Daily match-day recap generator.
+ * Rolling "last X hours" recap generator.
  *
- * For a target date, this builds `recap.md` — an editorial brief for the story-gen
- * pipeline — by combining two things we already collect:
+ * For a trailing time window ending "now" (default 24h), this builds `recap.md` —
+ * an editorial brief for the story-gen pipeline — by combining two things we
+ * already collect:
  *   1. Match results + per-side stats from the `fixtures` / `fixture_stats` tables
  *      (kept fresh by scores.ts / fixtures.ts).
- *   2. Scraped, Gemini-summarized stories from `articles` published that day,
+ *   2. Scraped, Gemini-summarized stories from `articles` published in the window,
  *      matched to the matches via shared team entities.
  *
  * Output is HYBRID: deterministic results/stats tables + a Gemini-written narrative
- * (a day overview plus one short paragraph per match). The markdown is upserted into
- * the `daily_recaps` table keyed by (recap_date, scope).
+ * (an overview plus one short paragraph per match). Each run INSERTS a new snapshot
+ * row into the `daily_recaps` table (surrogate `id` key), so the admin keeps a
+ * timeline of recaps rather than one-per-day.
  *
- * Gating ("after the last game of that date"): we only generate once EVERY fixture
- * with a kickoff on the target UTC day has a terminal status (finished / postponed /
- * cancelled). If any are still scheduled or live, we no-op — unless --force is passed.
- * Re-running after the day completes is idempotent (upsert).
+ * Gating: we only include fixtures in the window that have actually finished, and
+ * no-op if none have. (Unfinished/live fixtures in the window are simply skipped —
+ * there's no "wait for the day to end" hold, since a rolling window never "ends".)
  *
  * Usage:
- *   npm run recap                         # today (UTC), scope=all
- *   npm run recap -- 2026-06-14           # explicit date
- *   npm run recap -- 2026-06-14 --scope=premier-league
- *   npm run recap -- 2026-06-14 --team=real-madrid          # only this team's match(es)
- *   npm run recap -- 2026-06-14 --scope=la-liga --team=real-madrid
- *   npm run recap -- 2026-06-14 --force   # generate even if matches are still pending
- *   npm run recap -- 2026-06-14 --out=recap.md   # also write the markdown to a local file
- *   npm run recap -- 2026-06-14 --dry     # build + print, don't write to Supabase
+ *   npm run recap                         # last 24h, scope=all
+ *   npm run recap -- --hours=12           # last 12h
+ *   npm run recap -- --hours=48 --scope=premier-league
+ *   npm run recap -- --team=real-madrid          # only this team's match(es)
+ *   npm run recap -- --hours=12 --scope=la-liga --team=real-madrid
+ *   npm run recap -- --out=recap.md       # also write the markdown to a local file
+ *   npm run recap -- --dry                # build + print, don't write to Supabase
  *
  * Filters:
+ *   --hours=<N>                window length in hours (default 24).
  *   --scope=<competition_slug> restricts to one competition (default 'all').
  *   --team=<team_slug>         restricts to fixtures the team played (home or away).
- * The two compose. The (recap_date, scope) storage key stays unique per filter
- * combination: a team filter is stored under `team:<slug>` (scope 'all') or
- * `<competition>:team:<slug>`.
+ * The two filters compose. The stored `scope` namespaces a team filter as
+ * `team:<slug>` (scope 'all') or `<competition>:team:<slug>`.
  */
 
 import { writeFileSync } from 'node:fs';
@@ -48,35 +48,34 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-// Statuses that mean "this match is done for the day" — i.e. it won't change again
-// in a way that should hold up the recap.
-const TERMINAL_STATUSES = new Set(['finished', 'postponed', 'cancelled']);
-
 // ---------------------------------------------------------------------------
 // CLI args
 // ---------------------------------------------------------------------------
 
 type Args = {
-  date: string; // YYYY-MM-DD (UTC)
+  hours: number; // trailing window length in hours
   scope: string; // 'all' | competition_slug
   team: string | null; // team_slug | null
-  force: boolean;
   dry: boolean;
   out: string | null;
 };
 
+const DEFAULT_HOURS = 24;
+
 function parseArgs(argv: string[]): Args {
-  let date: string | null = null;
+  let hours = DEFAULT_HOURS;
   let scope = 'all';
   let team: string | null = null;
-  let force = false;
   let dry = false;
   let out: string | null = null;
 
   for (const a of argv) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(a)) date = a;
-    else if (a === '--force') force = true;
-    else if (a === '--dry') dry = true;
+    if (a.startsWith('--hours=') || /^\d+$/.test(a)) {
+      const raw = a.startsWith('--hours=') ? a.slice('--hours='.length) : a;
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) hours = n;
+      else console.warn(`[recap] ignoring invalid --hours value: ${raw}`);
+    } else if (a === '--dry') dry = true;
     else if (a.startsWith('--scope=')) scope = a.slice('--scope='.length);
     else if (a.startsWith('--team=')) team = a.slice('--team='.length) || null;
     else if (a.startsWith('--out=')) out = a.slice('--out='.length);
@@ -84,8 +83,7 @@ function parseArgs(argv: string[]): Args {
     else console.warn(`[recap] ignoring unknown arg: ${a}`);
   }
 
-  if (!date) date = new Date().toISOString().slice(0, 10);
-  return { date, scope, team, force, dry, out };
+  return { hours, scope, team, dry, out };
 }
 
 // ---------------------------------------------------------------------------
@@ -161,10 +159,12 @@ type EntityLite = { id: string; type: string; slug: string; name: string };
 // Helpers
 // ---------------------------------------------------------------------------
 
-function dayWindow(date: string): { lo: string; hi: string } {
-  const lo = new Date(`${date}T00:00:00.000Z`);
-  const hi = new Date(lo.getTime() + 24 * 60 * 60 * 1000);
-  return { lo: lo.toISOString(), hi: hi.toISOString() };
+type TimeWindow = { lo: string; hi: string };
+
+/** Trailing window of `hours` ending at `now` (both ISO, UTC). */
+function hoursWindow(hours: number, now: Date): TimeWindow {
+  const lo = new Date(now.getTime() - hours * 60 * 60 * 1000);
+  return { lo: lo.toISOString(), hi: now.toISOString() };
 }
 
 function titleize(slug: string): string {
@@ -183,8 +183,8 @@ function kickoffHm(iso: string): string {
 // Data loading
 // ---------------------------------------------------------------------------
 
-async function loadFixtures(date: string, scope: string, teamId: string | null): Promise<Fixture[]> {
-  const { lo, hi } = dayWindow(date);
+async function loadFixtures(timeWindow: TimeWindow, scope: string, teamId: string | null): Promise<Fixture[]> {
+  const { lo, hi } = timeWindow;
   let q = supabase
     .from('fixtures')
     .select(
@@ -256,8 +256,8 @@ async function loadStats(fixtureIds: string[]): Promise<Map<string, { home?: Fix
   return map;
 }
 
-async function loadDayArticles(date: string): Promise<Article[]> {
-  const { lo, hi } = dayWindow(date);
+async function loadWindowArticles(timeWindow: TimeWindow): Promise<Article[]> {
+  const { lo, hi } = timeWindow;
   const { data, error } = await supabase
     .from('articles')
     .select('id, headline, summary, publisher, url, image_url, published_at, is_cluster_lead')
@@ -388,12 +388,12 @@ const NARRATIVE_SCHEMA = {
 
 const NARRATIVE_SYSTEM = `You are a football sports-desk editor writing an internal brief.
 The brief feeds a downstream story-generation pipeline, so be factual and concise — no opinion, no hype, no invented facts.
-You will receive a day's finished matches (scores, half-time scores, venues, and per-side stats where available) and the stories scraped that day, matched to each match.
+You will receive the finished matches from a recent time window (scores, half-time scores, venues, and per-side stats where available) and the stories scraped in that window, matched to each match.
 Ground every claim in the data provided. If stats or stories are missing for a match, recap only what the score tells you. Never fabricate goalscorers, minutes, or quotes.`;
 
-function buildNarrativeInput(date: string, comps: CompetitionView[]): unknown {
+function buildNarrativeInput(windowLabel: string, comps: CompetitionView[]): unknown {
   return {
-    date,
+    window: windowLabel,
     competitions: comps.map((c) => ({
       competition: c.name,
       matches: c.matches.map((m) => {
@@ -429,7 +429,7 @@ function buildNarrativeInput(date: string, comps: CompetitionView[]): unknown {
   };
 }
 
-async function generateNarrative(date: string, comps: CompetitionView[]): Promise<Narrative | null> {
+async function generateNarrative(windowLabel: string, comps: CompetitionView[]): Promise<Narrative | null> {
   if (!GEMINI_API_KEY) {
     console.warn('[recap] GEMINI_API_KEY not set — emitting deterministic-only recap (no narrative).');
     return null;
@@ -446,7 +446,7 @@ async function generateNarrative(date: string, comps: CompetitionView[]): Promis
     },
   });
 
-  const input = buildNarrativeInput(date, comps);
+  const input = buildNarrativeInput(windowLabel, comps);
   const prompt = `Write the recap brief for the matches below.\n\n${JSON.stringify(input, null, 2)}`;
 
   try {
@@ -604,7 +604,7 @@ function bracketFence(
 }
 
 function assembleMarkdown(
-  date: string,
+  windowLabel: string,
   scopeLabel: string,
   comps: CompetitionView[],
   narrative: Narrative | null,
@@ -620,7 +620,7 @@ function assembleMarkdown(
 
   const out: string[] = [];
 
-  out.push(`# Match-day recap — ${date}`);
+  out.push(`# Match recap — ${windowLabel}`);
   out.push('');
   out.push(
     `_Editorial brief for story-gen · ${scopeLabel} · ${fixtureCount} match${fixtureCount === 1 ? '' : 'es'}, ${articleCount} stor${articleCount === 1 ? 'y' : 'ies'}._`,
@@ -694,7 +694,7 @@ function assembleMarkdown(
   }
 
   if (unmatched.length) {
-    out.push(`## Other stories from ${date}`);
+    out.push(`## Other stories from ${windowLabel}`);
     out.push('');
     out.push('_Football news published today not tied to a finished match above._');
     out.push('');
@@ -721,7 +721,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   // Resolve the optional team filter up front so we can fail loudly on a bad slug
-  // rather than silently recapping the whole day.
+  // rather than silently recapping the whole window.
   const team = args.team ? await loadTeamBySlug(args.team) : null;
   if (args.team && !team) {
     console.log(`[recap] no team entity found for slug "${args.team}"; nothing to recap.`);
@@ -729,8 +729,14 @@ async function main() {
   }
   const teamId = team?.id ?? null;
 
-  // Labels + storage key. The (recap_date, scope) primary key must stay unique
-  // per filter combination, so a team filter gets its own namespaced scope.
+  // Trailing window ending now. All loaders share this single `now` so fixtures
+  // and articles are bounded by the same instant.
+  const now = new Date();
+  const timeWindow = hoursWindow(args.hours, now);
+  const windowLabel = `last ${args.hours}h`;
+
+  // Labels + stored scope. A team filter gets its own namespaced scope so it's
+  // distinguishable in the timeline.
   const compLabel = args.scope === 'all' ? 'All competitions' : titleize(args.scope);
   const scopeLabel = team
     ? args.scope === 'all'
@@ -743,30 +749,20 @@ async function main() {
       : `${args.scope}:team:${team.slug}`
     : args.scope;
 
-  console.log(
-    `[recap] date=${args.date} scope=${storageScope}${args.force ? ' (force)' : ''}${args.dry ? ' (dry)' : ''}`,
-  );
+  console.log(`[recap] window=${windowLabel} scope=${storageScope}${args.dry ? ' (dry)' : ''}`);
 
-  const fixtures = await loadFixtures(args.date, args.scope, teamId);
+  const fixtures = await loadFixtures(timeWindow, args.scope, teamId);
   if (fixtures.length === 0) {
     const where = [args.scope !== 'all' ? ` in ${args.scope}` : '', team ? ` for ${team.name}` : ''].join('');
-    console.log(`[recap] no fixtures with a kickoff on ${args.date}${where}; nothing to recap.`);
+    console.log(`[recap] no fixtures with a kickoff in the ${windowLabel}${where}; nothing to recap.`);
     return;
   }
 
-  // Gating: the day must be done.
-  const pending = fixtures.filter((f) => !TERMINAL_STATUSES.has(f.status));
-  if (pending.length > 0 && !args.force) {
-    console.log(
-      `[recap] ${pending.length}/${fixtures.length} fixtures still pending (e.g. ${pending[0]!.status}) — the day isn't over. ` +
-        `Skipping. Re-run after the last game finishes, or pass --force.`,
-    );
-    return;
-  }
-
+  // Gating: include only fixtures that have actually finished within the window.
+  // Live/scheduled ones are simply skipped (a rolling window never "ends").
   const finished = fixtures.filter((f) => f.status === 'finished');
   if (finished.length === 0) {
-    console.log(`[recap] day is over but no fixtures finished (all postponed/cancelled); nothing to recap.`);
+    console.log(`[recap] no finished fixtures in the ${windowLabel}; nothing to recap.`);
     return;
   }
 
@@ -779,9 +775,9 @@ async function main() {
   const leagueNames = await loadLeagueNames(compSlugs);
   const stats = await loadStats(finished.map((f) => f.id));
 
-  // Articles for the day + their team links.
-  const dayArticles = await loadDayArticles(args.date);
-  const articleLinks = await loadArticleTeamLinks(dayArticles.map((a) => a.id), teamIds);
+  // Articles published in the window + their team links.
+  const windowArticles = await loadWindowArticles(timeWindow);
+  const articleLinks = await loadArticleTeamLinks(windowArticles.map((a) => a.id), teamIds);
 
   // Build match views with stable indices, attaching matched stories.
   let idx = 0;
@@ -793,7 +789,7 @@ async function main() {
     const away = teamName(f.away_team_id, f.away_team_name, entities);
     const sideIds = new Set([f.home_team_id, f.away_team_id].filter((x): x is string => !!x));
 
-    const matched = dayArticles.filter((a) => {
+    const matched = windowArticles.filter((a) => {
       const linked = articleLinks.get(a.id);
       if (!linked) return false;
       for (const id of linked) if (sideIds.has(id)) return true;
@@ -822,14 +818,14 @@ async function main() {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // For a team-scoped recap, the day's other football news is noise — keep the
+  // For a team-scoped recap, the window's other football news is noise — keep the
   // brief to the team's match(es) and the stories tied to them.
-  const unmatched = team ? [] : dayArticles.filter((a) => !matchedArticleIds.has(a.id));
-  const articleCount = team ? matchedArticleIds.size : dayArticles.length;
+  const unmatched = team ? [] : windowArticles.filter((a) => !matchedArticleIds.has(a.id));
+  const articleCount = team ? matchedArticleIds.size : windowArticles.length;
 
   // Competition-level viz data for the fs: directives: the current league table
   // for each competition, and the full bracket for any competition that had a
-  // knockout tie today. Season comes from the comp's fixtures (one per comp/day).
+  // knockout tie in the window. Season comes from the comp's fixtures.
   const isKnockout = (f: Fixture) =>
     f.phase === 'knockout' ||
     (f.stage != null && /(FINAL|SEMI|QUARTER|ROUND_OF|LAST_|PLAY_OFF)/i.test(f.stage));
@@ -845,7 +841,7 @@ async function main() {
   }
 
   // Enrich the entity map with teams that appear only in the table / bracket
-  // (standings include every team in the league, not just today's players) so
+  // (standings include every team in the league, not just the window's players) so
   // their fs: team refs resolve a proper slug + name.
   const extraTeamIds = new Set<string>();
   for (const rows of standingsByComp.values()) for (const r of rows) extraTeamIds.add(r.team_id);
@@ -861,11 +857,11 @@ async function main() {
     for (const [id, e] of more) entities.set(id, e);
   }
 
-  // Hybrid: Gemini narrative over the structured day.
-  const narrative = await generateNarrative(args.date, comps);
+  // Hybrid: Gemini narrative over the structured window.
+  const narrative = await generateNarrative(windowLabel, comps);
 
   const markdown = assembleMarkdown(
-    args.date,
+    windowLabel,
     scopeLabel,
     comps,
     narrative,
@@ -888,22 +884,22 @@ async function main() {
     return;
   }
 
-  const { error } = await supabase.from('daily_recaps').upsert(
-    {
-      recap_date: args.date,
-      scope: storageScope,
-      markdown,
-      model: narrative ? GEMINI_MODEL : null,
-      fixture_count: finished.length,
-      article_count: articleCount,
-      generated_at: new Date().toISOString(),
-    },
-    { onConflict: 'recap_date,scope' },
-  );
+  // Each run is a fresh snapshot in the timeline — insert, don't upsert.
+  const { error } = await supabase.from('daily_recaps').insert({
+    scope: storageScope,
+    window_hours: args.hours,
+    window_start: timeWindow.lo,
+    window_end: timeWindow.hi,
+    markdown,
+    model: narrative ? GEMINI_MODEL : null,
+    fixture_count: finished.length,
+    article_count: articleCount,
+    generated_at: timeWindow.hi,
+  });
   if (error) throw error;
 
   console.log(
-    `[recap] stored daily_recaps[${args.date}/${storageScope}]: ${finished.length} matches, ${articleCount} stories, ` +
+    `[recap] stored daily_recaps[${windowLabel}/${storageScope}]: ${finished.length} matches, ${articleCount} stories, ` +
       `narrative=${narrative ? 'yes' : 'no'}.`,
   );
 }

@@ -1,11 +1,11 @@
 /**
- * Dispatch a daily-recap job to GitHub Actions.
+ * Dispatch a recap job to GitHub Actions.
  *
  * Mirrors storyAudioDispatch.ts. The recap generator (`worker/src/recap.ts`)
- * needs Supabase + Gemini and self-gates on end-of-day, so it lives behind the
- * `footshorts-recap.yml` workflow rather than running inline in a serverless
- * function. This is the manual entry point used by the admin Recaps tab for
- * ad-hoc / forced re-runs filtered by competition and/or team.
+ * needs Supabase + Gemini, so it lives behind the `footshorts-recap.yml`
+ * workflow rather than running inline in a serverless function. This is the
+ * manual entry point used by the admin Recaps tab for ad-hoc runs over a
+ * trailing "last X hours" window, filtered by competition and/or team.
  *
  * Required env (server only):
  *   GITHUB_DISPATCH_TOKEN  fine-grained PAT with `workflow` write on the repo
@@ -20,14 +20,12 @@ export function isRecapDispatchConfigured(): boolean {
 }
 
 export async function dispatchRecapJob(args: {
-  /** Recap date (YYYY-MM-DD, UTC). Omit for today. */
-  date?: string
+  /** Trailing window length in hours. Omit for the default (24). */
+  hours?: number
   /** Competition slug to filter on. Omit / 'all' = every competition. */
   competition?: string
   /** Team slug to filter on. Omit for no team filter. */
   team?: string
-  /** Generate even if some matches are still pending (skip the end-of-day gate). */
-  force?: boolean
 }): Promise<void> {
   const token = process.env.GITHUB_DISPATCH_TOKEN
   const repo = process.env.GITHUB_DISPATCH_REPO
@@ -53,10 +51,9 @@ export async function dispatchRecapJob(args: {
       body: JSON.stringify({
         ref,
         inputs: {
-          date: args.date ?? '',
+          hours: args.hours != null ? String(args.hours) : '',
           competition: args.competition || 'all',
           team: args.team ?? '',
-          force: args.force ? 'true' : 'false',
         },
       }),
     }
