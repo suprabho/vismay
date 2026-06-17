@@ -695,8 +695,9 @@ export default function CanvasClient({
     body: Record<string, unknown>
   } | null>(null)
   // 🏟️ "Add football data" picker — footshorts-only (gated on the fs: modules
-  // being in this vertical's registry). Pulls real standings/match/bracket data
-  // from the DB and appends it as a section, no hand-authoring.
+  // being in this vertical's registry). Pulls real standings (per group),
+  // matches, timelines, fixtures, form and brackets from the DB and drops them
+  // in as fs:* foreground layers, no hand-authoring.
   const isFootshorts = useMemo(
     () =>
       moduleTypes.foreground.includes('fs:standings-table') ||
@@ -706,6 +707,10 @@ export default function CanvasClient({
   )
   const [footballOpen, setFootballOpen] = useState(false)
   const [footballBusy, setFootballBusy] = useState(false)
+  // Surfaced INSIDE the football modal — a save/insert failure here would
+  // otherwise route to `genError`, which only renders in the (closed)
+  // generate-section panel, so the operator saw "nothing happened".
+  const [footballError, setFootballError] = useState<string | null>(null)
   // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
   const [evalOpen, setEvalOpen] = useState(false)
   // ✨ Research & outline (compose) drawer. The panel stays mounted while this
@@ -3440,6 +3445,7 @@ export default function CanvasClient({
   const handleApplyFootballSection = useCallback(
     async (section: FootballSection) => {
       setFootballBusy(true)
+      setFootballError(null)
       try {
         const unit = sectionUnitsRef.current[stateRef.current.activeSectionIndex]
         // The modal always builds a single-block `body.foreground` array — those
@@ -3478,8 +3484,10 @@ export default function CanvasClient({
         }
         setFootballOpen(false)
       } catch (e) {
-        // Surface through the same banner the generate-section flow uses.
-        setGenError(e instanceof Error ? e.message : 'Could not add football data.')
+        // Keep the modal open and show the failure IN it — routing to `genError`
+        // (the generate-section panel) would hide it behind the closed panel and
+        // read as "nothing happened" when a save is rejected.
+        setFootballError(e instanceof Error ? e.message : 'Could not add football data.')
       } finally {
         setFootballBusy(false)
       }
@@ -4206,8 +4214,12 @@ export default function CanvasClient({
       {footballOpen && (
         <FootballDataModal
           onApply={handleApplyFootballSection}
-          onClose={() => setFootballOpen(false)}
+          onClose={() => {
+            setFootballOpen(false)
+            setFootballError(null)
+          }}
           busy={footballBusy}
+          applyError={footballError}
         />
       )}
       {evalOpen && sectionUnits[activeSectionIndex] && (

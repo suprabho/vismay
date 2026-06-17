@@ -119,6 +119,11 @@ export interface MatchCardBlock {
   kickoff?: string
   competition?: string
   competitionSlug?: string
+  /** Team brand colors — the editorial card themes its gradient/score from
+   *  these. Carried from the entity's `primary_color` when present so the card
+   *  isn't rendered un-themed. */
+  homeColor?: string
+  awayColor?: string
 }
 
 export interface MatchCardOptions {
@@ -196,6 +201,8 @@ export function buildMatchCardBlock(
   } else {
     block.kickoff = kickoffLabel(fixture.kickoff_at)
   }
+  if (fixture.home?.primary_color) block.homeColor = fixture.home.primary_color
+  if (fixture.away?.primary_color) block.awayColor = fixture.away.primary_color
   return block
 }
 
@@ -234,5 +241,125 @@ export function buildBracketBlock(
   if (fixtures[0]?.competition_slug) block.competitionSlug = fixtures[0].competition_slug
   if (opts.highlightTeamId) block.highlightTeamId = opts.highlightTeamId
   if (opts.title) block.title = opts.title
+  return block
+}
+
+// ── fs:match-tile ───────────────────────────────────────────────────────────
+
+export interface MatchTileBlock {
+  type: 'fs:match-tile'
+  fixture: FixtureRowInput
+  competitionCrest?: string
+}
+
+/** Wrap one fixture as an `fs:match-tile` — the colorful, team-themed tile. The
+ *  module reads the fixture's team `primary_color`s for its gradient, so pass a
+ *  fixture whose `home`/`away` refs carry colors for the best result. */
+export function buildMatchTileBlock(
+  fixture: FixtureRowInput,
+  opts: { competitionCrest?: string | null } = {},
+): MatchTileBlock {
+  const block: MatchTileBlock = { type: 'fs:match-tile', fixture }
+  if (opts.competitionCrest) block.competitionCrest = opts.competitionCrest
+  return block
+}
+
+// ── fs:match-row ────────────────────────────────────────────────────────────
+
+export type MatchRowVariant = 'compact' | 'expanded'
+
+export interface MatchRowBlock {
+  type: 'fs:match-row'
+  variant: MatchRowVariant
+  fixture: FixtureRowInput
+}
+
+/** Wrap one fixture as an `fs:match-row` — a single scoreboard row. `compact`
+ *  (default) is the dense list row; `expanded` is the chunkier knockout-tie row. */
+export function buildMatchRowBlock(
+  fixture: FixtureRowInput,
+  opts: { variant?: MatchRowVariant } = {},
+): MatchRowBlock {
+  return { type: 'fs:match-row', variant: opts.variant ?? 'compact', fixture }
+}
+
+// ── fs:match-timeline ───────────────────────────────────────────────────────
+
+export type EventTypeFilter = 'all' | 'goal' | 'card' | 'subst'
+
+/** One in-match event, structurally identical to `@vismay/footshorts-viz`'s
+ *  `FixtureEvent` and the `fixture_events` row read by `fetchFixtureEvents`. */
+export interface FixtureEventInput {
+  id: string
+  fixture_id: string
+  team_id: string | null
+  side: 'home' | 'away' | null
+  minute: number
+  extra_minute: number | null
+  type: 'goal' | 'card' | 'subst' | 'var'
+  detail: string | null
+  player_name: string | null
+  assist_name: string | null
+}
+
+export interface MatchTimelineBlock {
+  type: 'fs:match-timeline'
+  events: FixtureEventInput[]
+  filter?: EventTypeFilter
+  emptyText?: string
+}
+
+/** Wrap a fixture's events as an `fs:match-timeline` foreground layer. Events
+ *  are embedded inline (like `fs:standings-table`'s rows); `filter` narrows to
+ *  one event type at render time. */
+export function buildMatchTimelineBlock(
+  events: FixtureEventInput[],
+  opts: { filter?: EventTypeFilter; emptyText?: string } = {},
+): MatchTimelineBlock {
+  const block: MatchTimelineBlock = { type: 'fs:match-timeline', events }
+  if (opts.filter) block.filter = opts.filter
+  if (opts.emptyText) block.emptyText = opts.emptyText
+  return block
+}
+
+// ── fs:team-form-strip ──────────────────────────────────────────────────────
+
+export type TeamFormLayout = 'strip' | 'grid'
+
+export interface TeamFormStripBlock {
+  type: 'fs:team-form-strip'
+  fixtures: FixtureRowInput[]
+  teamId: string
+  label?: string
+  layout: TeamFormLayout
+  columns?: number
+  rows?: number
+  cardWidth?: number
+}
+
+/** Wrap a team's recent fixtures as an `fs:team-form-strip`. `teamId` is the
+ *  entity SLUG whose perspective the W/D/L badges read from; `fixtures` are
+ *  oldest → newest. Defaults to a single-row grid of 5 (the "last 5" strip). */
+export function buildTeamFormStripBlock(
+  fixtures: FixtureRowInput[],
+  teamId: string,
+  opts: {
+    label?: string
+    layout?: TeamFormLayout
+    columns?: number
+    rows?: number
+    cardWidth?: number
+  } = {},
+): TeamFormStripBlock {
+  const block: TeamFormStripBlock = {
+    type: 'fs:team-form-strip',
+    fixtures,
+    teamId,
+    layout: opts.layout ?? 'grid',
+  }
+  if (opts.label) block.label = opts.label
+  if (opts.columns !== undefined) block.columns = opts.columns
+  if (opts.rows !== undefined) block.rows = opts.rows
+  if (opts.cardWidth !== undefined) block.cardWidth = opts.cardWidth
   return block
 }
