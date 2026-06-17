@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { MatchRow, MatchTimeline, getCompetitionDisplayName } from '@vismay/footshorts-viz/web';
 import { useFixtureDetail } from '@/lib/useFixtureDetail';
 
@@ -30,6 +30,7 @@ function kickoffLine(iso: string): string {
 
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { data, isLoading, isError } = useFixtureDetail(id);
 
   if (isLoading) return <Spinner />;
@@ -56,6 +57,13 @@ export default function MatchPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-6">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="mb-4 text-sm text-accent transition-opacity hover:opacity-80"
+      >
+        ← Back
+      </button>
       <header className="mb-4">
         <Link href={`/league/${fixture.competition_slug}`} className="text-xs text-accent">
           {competition}

@@ -79,6 +79,7 @@ const args = process.argv.slice(2);
 const PROBE = args.includes('--probe');
 const DUMP = args.includes('--dump');
 const DRY = args.includes('--dry');
+const SEASON = args.includes('--season');
 const daysArg = args.find((a) => a.startsWith('--days='));
 const LOOKBACK_DAYS = daysArg ? Number(daysArg.slice('--days='.length)) : 14;
 
@@ -166,6 +167,15 @@ function extractEvents(s: SrSchedule): SrSportEvent[] {
   }
   return [];
 }
+
+// Competitions list — used to discover the FIFA World Cup competition urn.
+type SrCompetition = { id: string; name: string; gender?: string };
+type SrCompetitionsResponse = { competitions?: SrCompetition[] };
+
+// Competition seasons — used to discover the 2026 season urn at runtime
+// (the numeric id is not a stable constant; we read it from `year`/`name`).
+type SrSeason = { id: string; name?: string; year?: string };
+type SrSeasonsResponse = { seasons?: SrSeason[] };
 
 type SrTimelineEvent = {
   type: string;
@@ -336,8 +346,77 @@ async function syncEvents(
   return rows.length;
 }
 
+/**
+ * Independent coverage test (separate code path from Daily Schedules):
+ *   1. /competitions.json            -> FIFA World Cup competition urn (men).
+ *   2. /competitions/{urn}/seasons   -> the 2026 season urn (read live).
+ *   3. /seasons/{urn}/schedules      -> EVERY match of the season in one call.
+ *
+ * The Season Schedule feed has no date dimension, so it can't be hit by the
+ * daily feed's 200-event page cap or by UTC date-drift. If the 6 "missing"
+ * matches list here, the data exists on the trial key and the daily-schedule
+ * aggregation was the bug; if they're absent here too, it's a real coverage gap.
+ * Lists the authoritative full WC match set, then exits — writes nothing.
+ */
+async function runSeasonProbe(): Promise<void> {
+  // 1. FIFA World Cup (men). competition:16 is the documented men's WC urn; we
+  //    confirm against the live list and fall back to a name/gender match.
+  const comps = await srFetch<SrCompetitionsResponse>('/competitions.json');
+  const competitions = comps.competitions ?? [];
+  const wc =
+    competitions.find((c) => c.id === 'sr:competition:16') ??
+    competitions.find(
+      (c) => /world cup/i.test(c.name) && (c.gender ?? 'men').toLowerCase() === 'men',
+    );
+  if (!wc) {
+    console.error('[events:sr --season] FIFA World Cup competition not found in /competitions.json');
+    return;
+  }
+  console.log(`[events:sr --season] competition: ${wc.id} (${wc.name})`);
+  await sleep(SR_GAP_MS);
+
+  // 2. Resolve the 2026 season urn at runtime (numeric id isn't a constant).
+  const seasonsRes = await srFetch<SrSeasonsResponse>(
+    `/competitions/${wc.id}/seasons.json`,
+  );
+  const seasons = seasonsRes.seasons ?? [];
+  const season =
+    seasons.find((s) => s.year === '2026') ??
+    seasons.find((s) => /2026/.test(s.name ?? ''));
+  if (!season) {
+    console.error(
+      `[events:sr --season] no 2026 season for ${wc.id}. Seasons seen: ${
+        seasons.map((s) => `${s.id} ${s.name ?? ''}`).join(' | ') || 'none'
+      }`,
+    );
+    return;
+  }
+  console.log(`[events:sr --season] season: ${season.id} (${season.name ?? season.year ?? '?'})`);
+  await sleep(SR_GAP_MS);
+
+  // 3. Full season schedule — one un-paginated call (limit default 1000 >> 104).
+  const sched = await srFetch<SrSchedule>(`/seasons/${season.id}/schedules.json`);
+  const events = extractEvents(sched).sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+  console.log(`\nSeason schedule for ${season.id} — ${events.length} matches:`);
+  for (const e of events) {
+    const pair = e.competitors?.map((c) => c.name).join(' v ') ?? '?';
+    console.log(`  ${e.start_time}  ${pair}`);
+  }
+  console.log(
+    `\n[events:sr --season] done. ${events.length} matches from /seasons/${season.id}/schedules.json (${srCalls} Sportradar calls).`,
+  );
+}
+
 async function main() {
   if (!SR_KEY) throw new Error('SPORTRADAR_API_KEY required');
+
+  // Independent coverage test — Season Schedule path only, no Supabase needed.
+  if (SEASON) {
+    await runSeasonProbe();
+    return;
+  }
+
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required');
   }
