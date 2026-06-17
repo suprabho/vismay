@@ -4,6 +4,7 @@ import { forwardRef } from 'react'
 import type { CSSProperties } from 'react'
 import {
   MatchCard,
+  MatchRow,
   MatchTile,
   StandingsTable,
   TeamFormStrip,
@@ -188,6 +189,21 @@ function MatchBody({ content }: { content: Extract<CardContent, { type: 'match' 
   )
 }
 
+function FixturesBody({ content }: { content: Extract<CardContent, { type: 'fixtures' }> }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2 px-3">
+      <div className="text-[14px] font-semibold uppercase tracking-wide text-muted">
+        {content.competitionName}
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {content.fixtures.map((f) => (
+          <MatchRow key={f.id} fixture={withProxiedFixtureCrests(f)} variant={content.variant} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function StandingsBody({ content }: { content: Extract<CardContent, { type: 'standings' }> }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 px-3">
@@ -294,6 +310,8 @@ function CardBody({ content }: { content: CardContent }) {
   switch (content.type) {
     case 'match':
       return <MatchBody content={content} />
+    case 'fixtures':
+      return <FixturesBody content={content} />
     case 'standings':
       return <StandingsBody content={content} />
     case 'form':
