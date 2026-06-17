@@ -354,44 +354,38 @@ async function main() {
   const names = await loadTeamNames(teamIds);
   console.log(`[events:sr] ${candidates.length} candidate WC fixtures (access=${SR_ACCESS}, lookback=${LOOKBACK_DAYS}d)`);
 
-  const days = Array.from(new Set(candidates.map((c) => ymd(c.kickoff_at))));
-
-  // Diagnostic: print one day's raw schedule shape + the team-name strings
-  // Sportradar uses, then exit. Use this to confirm the response shape and to
-  // build the name alias map for teams that don't normalize-match.
+  // Diagnostic: scan a WIDE continuous window (min..max candidate day ±2) and
+  // list every World Cup match the feed carries with its date, next to our
+  // fixtures. This distinguishes "missing from the trial" (absent everywhere)
+  // from "date drift" (present on a shifted day) — then exit.
   if (DUMP) {
-    const raw = await srFetch<SrSchedule>(`/schedules/${days[0]}/schedules.json`);
-    const evs = extractEvents(raw);
-    console.log(`top-level keys: ${Object.keys(raw).join(', ')}; extracted ${evs.length} events for ${days[0]}`);
+    const times = candidates.map((c) => new Date(c.kickoff_at).getTime());
+    const lo = Math.min(...times) - 2 * 24 * 60 * 60 * 1000;
+    const hi = Math.max(...times) + 2 * 24 * 60 * 60 * 1000;
+    const span: string[] = [];
+    for (let t = lo; t <= hi; t += 24 * 60 * 60 * 1000) span.push(ymd(new Date(t).toISOString()));
 
-    const comps = Array.from(
-      new Set(evs.map((e) => e.sport_event_context?.competition?.name).filter(Boolean)),
-    ).sort();
-    console.log(`\ncompetitions present (${comps.length}):\n  ${comps.join('\n  ')}`);
+    const pool: SrSportEvent[] = [];
+    for (const day of span) {
+      if (srCalls >= MAX_SR_CALLS) break;
+      try {
+        const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedules.json`);
+        pool.push(...extractEvents(sched).filter(isWorldCup));
+      } catch (e) {
+        console.error(`  [schedule ${day}] failed: ${(e as Error).message}`);
+      }
+      await sleep(SR_GAP_MS);
+    }
 
-    // Does the feed contain the teams we're trying to match on this date?
-    const wanted = new Set(
-      candidates
-        .filter((c) => ymd(c.kickoff_at) === days[0])
-        .flatMap((c) => [
-          normalizeName(fixtureName(c, 'home', names)),
-          normalizeName(fixtureName(c, 'away', names)),
-        ]),
-    );
-    const hits = evs.filter((e) => e.competitors?.some((c) => wanted.has(normalizeName(c.name))));
-    console.log(`\nevents matching our ${days[0]} teams: ${hits.length}`);
-    console.log(
-      JSON.stringify(
-        hits.map((e) => ({
-          id: e.id,
-          start_time: e.start_time,
-          competition: e.sport_event_context?.competition?.name,
-          competitors: e.competitors?.map((c) => `${c.qualifier}: ${c.name}`),
-        })),
-        null,
-        2,
-      ),
-    );
+    const sorted = pool.slice().sort((a, b) => a.start_time.localeCompare(b.start_time));
+    console.log(`\nWorld Cup matches in feed across ${span[0]}..${span[span.length - 1]} (${sorted.length}):`);
+    for (const e of sorted) {
+      console.log(`  ${e.start_time}  ${e.competitors?.map((c) => c.name).join(' v ') ?? '?'}`);
+    }
+    console.log(`\nOur ${candidates.length} candidate fixtures:`);
+    for (const c of candidates) {
+      console.log(`  ${c.kickoff_at}  ${fixtureName(c, 'home', names)} vs ${fixtureName(c, 'away', names)}`);
+    }
     return;
   }
 
