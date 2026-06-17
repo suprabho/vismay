@@ -219,6 +219,14 @@ function goalDetail(method?: string): string {
   return 'Normal Goal';
 }
 
+// Sportradar renders names "Last, First" (e.g. "Jimenez, Raul"). Flip to the
+// natural "First Last" the timeline displays.
+function formatPlayer(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const i = name.indexOf(', ');
+  return i === -1 ? name : `${name.slice(i + 2)} ${name.slice(0, i)}`.trim();
+}
+
 /**
  * Sportradar's event.competitor is 'home'/'away' relative to ITS sport_event.
  * Map that to our home/away side by which SR competitor name matches our home
@@ -271,7 +279,8 @@ async function syncEvents(
         player_name = e.players?.find((p) => p.type === 'substituted_out')?.name ?? null;
         assist_name = e.players?.find((p) => p.type === 'substituted_in')?.name ?? null;
       } else {
-        player_name = e.player?.name ?? null;
+        // cards: the booked player is players[0] (no `type`), not a `player` field
+        player_name = e.players?.[0]?.name ?? e.player?.name ?? null;
         detail = cardDetail(e.type);
       }
 
@@ -283,8 +292,8 @@ async function syncEvents(
         extra_minute: e.stoppage_time ?? null,
         type,
         detail,
-        player_name,
-        assist_name,
+        player_name: formatPlayer(player_name),
+        assist_name: formatPlayer(assist_name),
         updated_at: new Date().toISOString(),
       };
     });
