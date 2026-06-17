@@ -11,6 +11,7 @@ export { stageLabel, stageRank, isKnockoutStage } from '../stageLabel'
 export {
   getCompetitionDisplayName,
   getCompetitionPalette,
+  resolveCompetitionColor,
   darkenHex,
   isLeagueCompetition,
   competitionFollowLabel,

@@ -222,7 +222,12 @@ export default function LeaguePage() {
 
         {activeTab === 'glory' ? (
           bracketDrawn ? (
-            <BracketTree bracket={bracket!} competitionSlug={slug} title={league.data.name} />
+            <BracketTree
+              bracket={bracket!}
+              competitionSlug={slug}
+              competitionColor={league.data.primary_color ?? undefined}
+              title={league.data.name}
+            />
           ) : (
             <p className="text-sm text-muted">
               Knockout draw not set yet — see the Schedule tab for upcoming rounds.

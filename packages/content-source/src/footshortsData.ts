@@ -592,6 +592,84 @@ export async function searchFootshortsEntities(opts: {
   return (data ?? []) as FootshortsEntityResult[]
 }
 
+// ── asset studio (preview + set entity primary color) ─────────────────────────
+
+/** Strict `#RRGGBB` (no shorthand) — what `entities.primary_color` stores. */
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
+
+/** True for a valid `#RRGGBB` hex string. Exported so API routes validate the
+ *  same way the writer below does. */
+export function isPrimaryColorHex(value: unknown): value is string {
+  return typeof value === 'string' && HEX_RE.test(value.trim())
+}
+
+/**
+ * A team / competition entity for the asset studio. Like
+ * `FootshortsEntityResult` but carries the current `primary_color` (the value
+ * the studio edits) and does NOT require a crest — colorless entities are
+ * exactly the ones an editor wants to find and theme.
+ */
+export interface AssetEntity {
+  id: string
+  type: 'team' | 'league'
+  slug: string
+  name: string
+  country: string | null
+  crest_url: string | null
+  primary_color: string | null
+}
+
+/**
+ * Search teams / competitions by name for the asset-studio picker. Unlike the
+ * share-card badge search this returns entities WITHOUT a crest too (you still
+ * want to set a brand color for them) and includes the current `primary_color`.
+ * SERVER-ONLY (service-role client).
+ */
+export async function searchAssetEntities(opts: {
+  q?: string
+  type?: 'team' | 'league'
+  limit?: number
+}): Promise<AssetEntity[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100)
+  const supabase = createServiceClient()
+  let query = supabase
+    .from('entities')
+    .select('id, type, slug, name, country, crest_url, primary_color')
+    .in('type', opts.type ? [opts.type] : ['team', 'league'])
+    .order('name', { ascending: true })
+    .limit(limit)
+  const q = opts.q?.trim()
+  if (q) query = query.ilike('name', `%${q}%`)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []) as AssetEntity[]
+}
+
+/**
+ * Set (or clear) an entity's primary brand color. Pass a `#RRGGBB` hex to set
+ * it, or `null` to clear back to "no override". Returns the updated row.
+ * Throws on an invalid hex or a missing entity. SERVER-ONLY.
+ */
+export async function updateEntityPrimaryColor(
+  id: string,
+  primaryColor: string | null,
+): Promise<AssetEntity> {
+  if (primaryColor !== null && !isPrimaryColorHex(primaryColor)) {
+    throw new Error(`invalid primary_color: expected #RRGGBB, got ${String(primaryColor)}`)
+  }
+  const value = primaryColor === null ? null : primaryColor.trim().toUpperCase()
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entities')
+    .update({ primary_color: value })
+    .eq('id', id)
+    .select('id, type, slug, name, country, crest_url, primary_color')
+    .single()
+  if (error) throw error
+  if (!data) throw new Error(`entity not found: ${id}`)
+  return data as AssetEntity
+}
+
 // ---------------------------------------------------------------------------
 // Pipeline stats (admin "Pipeline" tab)
 // ---------------------------------------------------------------------------

@@ -18,9 +18,15 @@ interface Props {
   crestUrl?: string
   className?: string
   style?: CSSProperties
+  /** Override the monogram badge's primary fill (defaults to the bundled palette
+   *  color). Lets callers — e.g. the asset studio — preview a brand color for a
+   *  team that isn't in the bundled palette. Ignored once a crest image loads. */
+  color?: string
+  /** Override the monogram badge's secondary (stroke + text) color. */
+  secondary?: string
 }
 
-export function Crest({ team, size = 48, crestUrl, className, style }: Props) {
+export function Crest({ team, size = 48, crestUrl, className, style, color, secondary }: Props) {
   const entry = findTeam(team)
   const resolvedUrl = crestUrl ?? entry?.crest
   const [imgFailed, setImgFailed] = useState(false)
@@ -40,13 +46,14 @@ export function Crest({ team, size = 48, crestUrl, className, style }: Props) {
     )
   }
 
-  const color = entry?.color ?? '#404040'
-  const secondary = entry?.secondary ?? '#FFFFFF'
+  const fill = color ?? entry?.color ?? '#404040'
+  const stroke = secondary ?? entry?.secondary ?? '#FFFFFF'
   const monogram = entry?.monogram ?? team.slice(0, 3).toUpperCase()
   const fontSize = Math.round(size * 0.32)
-  // Key the gradient id off the team identity (not the monogram) so two clubs
-  // that share a monogram don't collide on a single shared <defs> id.
-  const gradId = `crest-bg-${slugify(entry?.name ?? team)}`
+  // Key the gradient id off the team identity *and* the fill so two clubs that
+  // share a monogram — or the same club previewed in two colors (asset studio)
+  // — don't collide on a single shared <defs> id.
+  const gradId = `crest-bg-${slugify(entry?.name ?? team)}-${fill.replace(/[^a-z0-9]/gi, '')}`
   return (
     <svg
       width={size}
@@ -59,18 +66,18 @@ export function Crest({ team, size = 48, crestUrl, className, style }: Props) {
     >
       <defs>
         <radialGradient id={gradId} cx="35%" cy="30%" r="80%">
-          <stop offset="0%" stopColor={color} stopOpacity="1" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.85" />
+          <stop offset="0%" stopColor={fill} stopOpacity="1" />
+          <stop offset="100%" stopColor={fill} stopOpacity="0.85" />
         </radialGradient>
       </defs>
-      <circle cx="32" cy="32" r="30" fill={`url(#${gradId})`} stroke={secondary} strokeWidth="1.5" />
-      <path d="M2 32 a30 30 0 0 0 60 0" fill={secondary} fillOpacity="0.18" />
+      <circle cx="32" cy="32" r="30" fill={`url(#${gradId})`} stroke={stroke} strokeWidth="1.5" />
+      <path d="M2 32 a30 30 0 0 0 60 0" fill={stroke} fillOpacity="0.18" />
       <text
         x="32"
         y="32"
         textAnchor="middle"
         dominantBaseline="central"
-        fill={secondary}
+        fill={stroke}
         fontFamily="var(--font-mono, ui-monospace, SFMono-Regular, monospace)"
         fontSize={fontSize}
         fontWeight="700"

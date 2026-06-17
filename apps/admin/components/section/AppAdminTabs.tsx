@@ -18,6 +18,7 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/pipeline`, label: 'Pipeline' })
     tabs.push({ href: `/${appSlug}/recaps`, label: 'Recaps' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
+    tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
   }
   return <Tabs tabs={tabs} />
 }
