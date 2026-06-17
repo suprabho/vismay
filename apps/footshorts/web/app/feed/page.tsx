@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { FeedCard } from '@/components/FeedCard';
 import { ShareCardFeedItem } from '@/components/ShareCardFeedItem';
-import { FollowedShareCards } from '@/components/FollowedShareCards';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
 import { StoryRings } from '@/components/StoryRings';
 import { EditorialMagazine } from '@/components/EditorialMagazine';
@@ -256,7 +255,6 @@ function FeedPageInner() {
       {tab === 'forYou' && (
         <>
           <StoryRings />
-          <FollowedShareCards />
           <ForYouMatchFeed />
         </>
       )}
