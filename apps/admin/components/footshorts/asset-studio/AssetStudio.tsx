@@ -37,7 +37,7 @@ export function AssetStudio({ initialEntities }: { initialEntities: AssetEntity[
   const [color, setColor] = useState<string>(initialEntities[0]?.primary_color ?? FALLBACK_COLOR)
   const [hexText, setHexText] = useState<string>(color)
 
-  const [themesShown, setThemesShown] = useState<Set<ThemeName>>(new Set(THEME_NAMES))
+  const [activeTheme, setActiveTheme] = useState<ThemeName>('classic')
 
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
@@ -133,8 +133,6 @@ export function AssetStudio({ initialEntities }: { initialEntities: AssetEntity[
       color,
     )
   }, [selected, color])
-
-  const orderedThemes = THEME_NAMES.filter((t) => themesShown.has(t))
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
@@ -294,48 +292,37 @@ export function AssetStudio({ initialEntities }: { initialEntities: AssetEntity[
               </p>
             )}
 
-            {/* theme toggles */}
+            {/* theme switcher */}
             <div className="mt-4 flex items-center gap-2">
-              <span className="text-xs text-neutral-500">Themes:</span>
-              {THEME_NAMES.map((t) => {
-                const on = themesShown.has(t)
-                return (
+              <span className="text-xs text-neutral-500">Theme:</span>
+              <div className="inline-flex rounded-lg border border-white/10 p-0.5 text-xs">
+                {THEME_NAMES.map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() =>
-                      setThemesShown((prev) => {
-                        const next = new Set(prev)
-                        if (next.has(t)) {
-                          if (next.size > 1) next.delete(t)
-                        } else next.add(t)
-                        return next
-                      })
-                    }
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                      on
-                        ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                        : 'border-white/15 text-neutral-400 hover:text-neutral-200'
+                    onClick={() => setActiveTheme(t)}
+                    aria-pressed={activeTheme === t}
+                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                      activeTheme === t
+                        ? 'bg-white/10 text-neutral-100'
+                        : 'text-neutral-400 hover:text-neutral-200'
                     }`}
                   >
                     {THEME_LABELS[t]}
                   </button>
-                )
-              })}
+                ))}
+              </div>
             </div>
 
-            {/* previews */}
+            {/* preview */}
             {previewData ? (
-              <div className="mt-4 space-y-6">
-                {orderedThemes.map((t) => (
-                  <AssetStudioPreview
-                    key={t}
-                    data={previewData}
-                    themeName={t}
-                    accent={color}
-                    label={THEME_LABELS[t]}
-                  />
-                ))}
+              <div className="mt-4">
+                <AssetStudioPreview
+                  data={previewData}
+                  themeName={activeTheme}
+                  accent={color}
+                  label={THEME_LABELS[activeTheme]}
+                />
               </div>
             ) : null}
           </>
