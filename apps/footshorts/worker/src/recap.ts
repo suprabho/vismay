@@ -2,11 +2,13 @@
  * Rolling "last X hours" recap generator.
  *
  * For a trailing time window ending "now" (default 24h), this builds `recap.md` —
- * an editorial brief for the story-gen pipeline — by combining two things we
+ * an editorial brief for the story-gen pipeline — by combining three things we
  * already collect:
  *   1. Match results + per-side stats from the `fixtures` / `fixture_stats` tables
  *      (kept fresh by scores.ts / fixtures.ts).
- *   2. Scraped, Gemini-summarized stories from `articles` published in the window,
+ *   2. In-match events (goals/cards/subs) from `fixture_events` (kept fresh by
+ *      events.ts), surfaced as a per-match fs:match-timeline and goals line.
+ *   3. Scraped, Gemini-summarized stories from `articles` published in the window,
  *      matched to the matches via shared team entities.
  *
  * Output is HYBRID: deterministic results/stats tables + a Gemini-written narrative
@@ -142,6 +144,21 @@ type FixtureStat = {
   offsides: number | null;
 };
 
+// One in-match event from `fixture_events` (goals/cards/subs), kept fresh by the
+// events worker from API-Football. Same shape the fs:match-timeline module takes.
+type FixtureEvent = {
+  id: string;
+  fixture_id: string;
+  team_id: string | null;
+  side: 'home' | 'away' | null;
+  minute: number;
+  extra_minute: number | null;
+  type: 'goal' | 'card' | 'subst' | 'var';
+  detail: string | null; // "Normal Goal" | "Own Goal" | "Penalty" | "Yellow Card" | "Red Card" | ...
+  player_name: string | null;
+  assist_name: string | null;
+};
+
 type Article = {
   id: string;
   headline: string;
@@ -256,6 +273,25 @@ async function loadStats(fixtureIds: string[]): Promise<Map<string, { home?: Fix
   return map;
 }
 
+/** fixture_id -> its in-match events (goals/cards/subs), ordered by minute. */
+async function loadFixtureEvents(fixtureIds: string[]): Promise<Map<string, FixtureEvent[]>> {
+  const map = new Map<string, FixtureEvent[]>();
+  if (fixtureIds.length === 0) return map;
+  const { data, error } = await supabase
+    .from('fixture_events')
+    .select('id, fixture_id, team_id, side, minute, extra_minute, type, detail, player_name, assist_name')
+    .in('fixture_id', fixtureIds)
+    .order('fixture_id', { ascending: true })
+    .order('minute', { ascending: true });
+  if (error) throw error;
+  for (const e of (data ?? []) as FixtureEvent[]) {
+    const arr = map.get(e.fixture_id) ?? [];
+    arr.push(e);
+    map.set(e.fixture_id, arr);
+  }
+  return map;
+}
+
 async function loadWindowArticles(timeWindow: TimeWindow): Promise<Article[]> {
   const { lo, hi } = timeWindow;
   const { data, error } = await supabase
@@ -332,6 +368,7 @@ type MatchView = {
   home: string;
   away: string;
   stats: { home?: FixtureStat; away?: FixtureStat };
+  events: FixtureEvent[];
   articles: Article[];
 };
 
@@ -376,7 +413,7 @@ const NARRATIVE_SCHEMA = {
           narrative: {
             type: SchemaType.STRING,
             description:
-              '2–3 sentence factual recap of this match: the result, how it unfolded (use the score, half-time score and stats provided), and any angle the linked stories surface. Do not invent goalscorers or events not present in the inputs.',
+              '2–3 sentence factual recap of this match: the result, how it unfolded (use the score, half-time score, stats and the goals/red cards provided), and any angle the linked stories surface. Do not invent goalscorers or events not present in the inputs.',
           },
         },
         required: ['idx', 'narrative'],
@@ -388,8 +425,8 @@ const NARRATIVE_SCHEMA = {
 
 const NARRATIVE_SYSTEM = `You are a football sports-desk editor writing an internal brief.
 The brief feeds a downstream story-generation pipeline, so be factual and concise — no opinion, no hype, no invented facts.
-You will receive the finished matches from a recent time window (scores, half-time scores, venues, and per-side stats where available) and the stories scraped in that window, matched to each match.
-Ground every claim in the data provided. If stats or stories are missing for a match, recap only what the score tells you. Never fabricate goalscorers, minutes, or quotes.`;
+You will receive the finished matches from a recent time window (scores, half-time scores, venues, per-side stats, and the goals and red cards with scorer and minute where available) and the stories scraped in that window, matched to each match.
+Ground every claim in the data provided. Name goalscorers and minutes only when they appear in a match's events; if events, stats, or stories are missing, recap only what the score tells you. Never fabricate goalscorers, minutes, or quotes.`;
 
 function buildNarrativeInput(windowLabel: string, comps: CompetitionView[]): unknown {
   return {
@@ -418,6 +455,18 @@ function buildNarrativeInput(windowLabel: string, comps: CompetitionView[]): unk
               ? `${s.home?.yellow_cards ?? 0}Y/${s.home?.red_cards ?? 0}R – ${s.away?.yellow_cards ?? 0}Y/${s.away?.red_cards ?? 0}R`
               : null,
           },
+          // Goals + sendings-off only — the narrative-worthy events. Side resolves
+          // to a team name so the model can attribute each one without guessing.
+          events: m.events
+            .filter((e) => e.type === 'goal' || (e.type === 'card' && e.detail === 'Red Card'))
+            .map((e) => ({
+              minute: e.extra_minute != null ? `${e.minute}+${e.extra_minute}` : `${e.minute}`,
+              team: e.side === 'home' ? m.home : e.side === 'away' ? m.away : null,
+              type: e.type === 'goal' ? 'goal' : 'red_card',
+              detail: e.detail,
+              player: e.player_name,
+              assist: e.assist_name,
+            })),
           stories: m.articles.slice(0, 6).map((a) => ({
             headline: a.headline,
             summary: a.summary,
@@ -484,6 +533,20 @@ function statsLine(s: { home?: FixtureStat; away?: FixtureStat }): string | null
   pair('Yellow', h?.yellow_cards, a?.yellow_cards);
   pair('Red', h?.red_cards, a?.red_cards);
   return parts.length ? parts.join(' · ') + ' _(home/away)_' : null;
+}
+
+/** Deterministic goals line ("Saka 23', Haaland 45+2' (pen)"), or null if no goals
+ *  were recorded — keeps the text recap readable without rendering the timeline. */
+function goalsLine(events: FixtureEvent[]): string | null {
+  const goals = events.filter((e) => e.type === 'goal');
+  if (goals.length === 0) return null;
+  return goals
+    .map((e) => {
+      const min = e.extra_minute != null ? `${e.minute}+${e.extra_minute}'` : `${e.minute}'`;
+      const tag = e.detail === 'Own Goal' ? ' (OG)' : e.detail === 'Penalty' ? ' (pen)' : '';
+      return `${e.player_name ?? 'Unknown'} ${min}${tag}`;
+    })
+    .join(', ');
 }
 
 /** Leading thumbnail token (markdown image) for an article, or '' if it has no image. */
@@ -566,6 +629,12 @@ function matchCardFence(m: MatchView, comp: CompetitionView): string {
   };
   if (score) config.score = score;
   return fsFence('fs:match-card', config);
+}
+
+/** Live match-event timeline (goals/cards/subs). Null when no events were recorded. */
+function matchTimelineFence(events: FixtureEvent[]): string | null {
+  if (events.length === 0) return null;
+  return fsFence('fs:match-timeline', { events, filter: 'all' });
 }
 
 function standingsTableFence(rows: StandingDbRow[], entities: Map<string, EntityLite>): string | null {
@@ -658,12 +727,23 @@ function assembleMarkdown(
       out.push(matchCardFence(m, c));
       out.push('');
 
+      // And the in-match event timeline (goals/cards/subs), when we have events.
+      const timeline = matchTimelineFence(m.events);
+      if (timeline) {
+        out.push(timeline);
+        out.push('');
+      }
+
       const narr = narrByIdx.get(m.idx);
       if (narr) {
         out.push(narr);
         out.push('');
       }
 
+      const gl = goalsLine(m.events);
+      if (gl) {
+        out.push(`- **Goals:** ${gl}`);
+      }
       const sl = statsLine(m.stats);
       if (sl) {
         out.push(`- **Stats:** ${sl}`);
@@ -774,6 +854,7 @@ async function main() {
   const compSlugs = Array.from(new Set(finished.map((f) => f.competition_slug)));
   const leagueNames = await loadLeagueNames(compSlugs);
   const stats = await loadStats(finished.map((f) => f.id));
+  const eventsByFixture = await loadFixtureEvents(finished.map((f) => f.id));
 
   // Articles published in the window + their team links.
   const windowArticles = await loadWindowArticles(timeWindow);
@@ -803,6 +884,7 @@ async function main() {
       home,
       away,
       stats: stats.get(f.id) ?? {},
+      events: eventsByFixture.get(f.id) ?? [],
       articles: matched,
     };
     const arr = byComp.get(f.competition_slug) ?? [];
