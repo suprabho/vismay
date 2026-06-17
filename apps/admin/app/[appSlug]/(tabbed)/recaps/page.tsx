@@ -4,6 +4,7 @@ import { isAuthed } from '@/lib/adminAuth'
 import { createServerSupabase } from '@/lib/supabaseServer'
 import { RecapMarkdown } from '@/components/section/RecapMarkdown'
 import { CopyMarkdownButton } from '@/components/section/CopyMarkdownButton'
+import { TriggerRecapButton } from '@/components/footshorts/TriggerRecapButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,11 +62,14 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <div className="shrink-0 px-4 py-5 border-b border-white/5">
-        <h1 className="text-lg font-semibold">Recaps</h1>
-        <p className="text-sm text-neutral-400 mt-0.5">
-          Rolling match recaps · {list.length} total
-        </p>
+      <div className="shrink-0 px-4 py-5 border-b border-white/5 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold">Recaps</h1>
+          <p className="text-sm text-neutral-400 mt-0.5">
+            Rolling match recaps · {list.length} total
+          </p>
+        </div>
+        <TriggerRecapButton />
       </div>
 
       {listError ? (
