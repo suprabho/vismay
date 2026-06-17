@@ -19,17 +19,17 @@ function initialsOf(name: string): string {
 
 export function StoryRings() {
   const { data: groups } = useFollowedStories();
-  const { seen } = useSeenArticles();
+  const { isStorySeen } = useSeenArticles();
 
   const ordered = useMemo(() => {
     if (!groups) return [];
     const withIdx = groups.map((g, originalIndex) => ({
       g,
       originalIndex,
-      allSeen: g.items.every((it) => seen.has(it.article_id)),
+      allSeen: g.items.every((it) => isStorySeen(it)),
     }));
     return [...withIdx.filter((x) => !x.allSeen), ...withIdx.filter((x) => x.allSeen)];
-  }, [groups, seen]);
+  }, [groups, isStorySeen]);
 
   if (ordered.length === 0) return null;
 

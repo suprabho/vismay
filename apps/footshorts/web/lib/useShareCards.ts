@@ -2,8 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
-import { useAuth } from './AuthProvider';
-import type { Entity } from './useEntities';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
 
 /**
@@ -26,8 +24,6 @@ const ENTITY_EMBED =
 const CARD_COLS = 'id, name, image_url, ratio, published_at, status';
 
 const DISCOVER_WINDOW_MS = 24 * 60 * 60 * 1000;
-const FOLLOWED_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_PER_ENTITY = 10;
 
 type DiscoverRow = {
   id: string;
@@ -92,65 +88,6 @@ export function useDiscoverShareCards() {
         .filter((x): x is ShareCardItem => !!x);
     },
     staleTime: 60 * 1000,
-  });
-}
-
-export type ShareCardGroup = { entity: Entity; items: ShareCardItem[] };
-
-/** Cards tagged with entities the signed-in user follows, grouped per entity. */
-export function useFollowedShareCards() {
-  const { session } = useAuth();
-  const userId = session?.user.id ?? null;
-
-  return useQuery({
-    queryKey: ['shareCards', 'followed', userId],
-    enabled: !!userId,
-    queryFn: async (): Promise<ShareCardGroup[]> => {
-      const { data: follows, error: fErr } = await supabase
-        .from('follows')
-        .select(
-          'entity_id, created_at, entity:entities(id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color)',
-        )
-        .order('created_at', { ascending: false });
-      if (fErr) throw fErr;
-
-      const followRows =
-        (follows as unknown as Array<{ entity_id: string; entity: Entity }>) ?? [];
-      if (followRows.length === 0) return [];
-
-      const entityIds = followRows.map((f) => f.entity_id);
-      const since = new Date(Date.now() - FOLLOWED_WINDOW_MS).toISOString();
-
-      const { data: rows, error } = await supabase
-        .from('footshorts_share_card_entities')
-        .select(`entity_id, card:footshorts_share_cards!inner(${CARD_COLS})`)
-        .in('entity_id', entityIds)
-        .eq('card.status', 'published')
-        .gte('card.published_at', since)
-        .order('published_at', { ascending: false, foreignTable: 'card' })
-        .limit(300);
-      if (error) throw error;
-
-      const grouped = new Map<string, { items: ShareCardItem[]; seen: Set<string> }>();
-      for (const row of (rows as unknown as Array<{ entity_id: string; card: CardEmbed | null }>) ??
-        []) {
-        const item = cardEmbedToItem(row.card);
-        if (!item) continue;
-        let g = grouped.get(row.entity_id);
-        if (!g) {
-          g = { items: [], seen: new Set() };
-          grouped.set(row.entity_id, g);
-        }
-        if (g.seen.has(item.id)) continue;
-        g.seen.add(item.id);
-        if (g.items.length >= MAX_PER_ENTITY) continue;
-        g.items.push(item);
-      }
-
-      return followRows
-        .map((f) => ({ entity: f.entity, items: grouped.get(f.entity_id)?.items ?? [] }))
-        .filter((g) => g.items.length > 0);
-    },
   });
 }
 

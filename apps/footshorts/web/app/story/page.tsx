@@ -2,7 +2,11 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFollowedStories, type StoryGroup } from '@/lib/useFollowedStories';
+import {
+  useFollowedStories,
+  storyItemKey,
+  type StoryGroup,
+} from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
 
 const STORY_DURATION_MS = 6000;
@@ -21,7 +25,15 @@ function StoryViewer() {
   const router = useRouter();
   const params = useSearchParams();
   const { data: groups, isLoading } = useFollowedStories();
-  const { seen, markSeen } = useSeenArticles();
+  const { seen, seenCards, markStorySeen } = useSeenArticles();
+
+  // Namespaced seen keys (article:<id> / card:<id>) so the two id spaces don't collide.
+  const seenKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const id of seen) s.add(`article:${id}`);
+    for (const id of seenCards) s.add(`card:${id}`);
+    return s;
+  }, [seen, seenCards]);
 
   const startParam = params.get('start');
   const initial = Math.max(0, Math.min(Number(startParam) || 0, (groups?.length ?? 1) - 1));
@@ -42,7 +54,7 @@ function StoryViewer() {
     const snap = snapshotRef.current;
     for (let i = from + 1; i < g.items.length; i++) {
       const it = g.items[i];
-      if (it && !snap.has(it.article_id)) return i;
+      if (it && !snap.has(storyItemKey(it))) return i;
     }
     return -1;
   };
@@ -51,7 +63,7 @@ function StoryViewer() {
     const snap = snapshotRef.current;
     for (let i = from - 1; i >= 0; i--) {
       const it = g.items[i];
-      if (it && !snap.has(it.article_id)) return i;
+      if (it && !snap.has(storyItemKey(it))) return i;
     }
     return -1;
   };
@@ -96,16 +108,16 @@ function StoryViewer() {
     if (!g) return;
     if (snapshotEntityRef.current === entityIdx) return;
     snapshotEntityRef.current = entityIdx;
-    const snap = new Set(seen);
-    const first = g.items.findIndex((it) => !snap.has(it.article_id));
+    const snap = new Set(seenKeys);
+    const first = g.items.findIndex((it) => !snap.has(storyItemKey(it)));
     snapshotRef.current = first < 0 ? new Set() : snap;
     setStoryIdx(first >= 0 ? first : 0);
-  }, [entityIdx, groups, seen]);
+  }, [entityIdx, groups, seenKeys]);
 
   // Mark current story seen
   useEffect(() => {
-    if (story) markSeen(story.article_id);
-  }, [story, markSeen]);
+    if (story) markStorySeen(story);
+  }, [story, markStorySeen]);
 
   // ESC to close, arrow keys to navigate
   useEffect(() => {
@@ -150,15 +162,42 @@ function StoryViewer() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-black">
-      {story.image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={story.image_url}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : null}
-      <div className="absolute inset-0 bg-black/30" />
+      {story.kind === 'card' ? (
+        <>
+          {/* Blurred fill behind the contained card so portrait PNGs don't letterbox to bare black. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={story.image_url}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
+          />
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={story.image_url}
+              alt={story.name}
+              className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {story.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={story.image_url}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : null}
+          <div className="absolute inset-0 bg-black/30" />
+        </>
+      )}
+
+      {/* Top scrim keeps the header legible over any slide. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-32 bg-gradient-to-b from-black/60 to-transparent" />
 
       <button
         type="button"
@@ -213,23 +252,25 @@ function StoryViewer() {
         </div>
       </div>
 
-      <div className="relative z-20 mt-auto m-2 overflow-hidden rounded-xl bg-surface/70 px-4 pb-10 pt-8 backdrop-blur">
-        <span className="mb-3 inline-block rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-text">
-          {story.publisher}
-        </span>
-        <h1 className="mb-3 text-2xl font-bold leading-tight text-text">{story.headline}</h1>
-        {story.summary ? (
-          <p className="line-clamp-6 text-[15px] leading-[22px] text-text/90">{story.summary}</p>
-        ) : null}
-        <a
-          href={story.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-block text-sm font-medium text-accent hover:underline"
-        >
-          Read at source →
-        </a>
-      </div>
+      {story.kind === 'article' ? (
+        <div className="relative z-20 mt-auto m-2 overflow-hidden rounded-xl bg-surface/70 px-4 pb-10 pt-8 backdrop-blur">
+          <span className="mb-3 inline-block rounded-full border border-border bg-surface/80 px-3 py-1 text-xs font-medium text-text">
+            {story.publisher}
+          </span>
+          <h1 className="mb-3 text-2xl font-bold leading-tight text-text">{story.headline}</h1>
+          {story.summary ? (
+            <p className="line-clamp-6 text-[15px] leading-[22px] text-text/90">{story.summary}</p>
+          ) : null}
+          <a
+            href={story.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-block text-sm font-medium text-accent hover:underline"
+          >
+            Read at source →
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }
