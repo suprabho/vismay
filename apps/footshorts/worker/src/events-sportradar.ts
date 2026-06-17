@@ -10,8 +10,11 @@
  *
  * Flow (no id seed — we match by name, unlike events.ts's API-Football bridge):
  *   1. Find finished WC fixtures in the window that have no events yet.
- *   2. For each distinct kickoff day, pull Sportradar's Daily Schedule and match
- *      its sport_events to our fixtures by normalized team name + kickoff window.
+ *   2. Pull the full WC season schedule in ONE call (competition -> 2026 season
+ *      -> /seasons/{urn}/schedules) and match our fixtures to its sport_events by
+ *      normalized team name. We use the season feed, NOT the per-day schedule —
+ *      the daily feed truncates busy days on the trial and silently dropped ~6
+ *      matches; the season feed is the complete, authoritative list.
  *   3. For each matched fixture, pull the Sport Event Timeline and upsert its
  *      score_change / card / substitution events.
  *
@@ -20,6 +23,7 @@
  * Usage:
  *   npm run events:sr                  # hydrate finished WC fixtures
  *   npm run events:sr -- --days=30     # widen the lookback (default 14)
+ *   npm run events:sr -- --season      # list the full WC season schedule + exit
  *   npm run events:sr -- --probe       # dump the first matched raw timeline + exit
  *   npm run events:sr -- --dry         # match + parse, don't write
  */
@@ -77,7 +81,6 @@ function normalizeName(s: string): string {
 
 const args = process.argv.slice(2);
 const PROBE = args.includes('--probe');
-const DUMP = args.includes('--dump');
 const DRY = args.includes('--dry');
 const SEASON = args.includes('--season');
 const daysArg = args.find((a) => a.startsWith('--days='));
@@ -196,13 +199,10 @@ const NAME_ALIASES: Record<string, string> = {
   turkey: 'turkiye',
   capeverdeislands: 'capeverde',
   iran: 'iriran',
+  bosniaherzegovina: 'bosniaandherzegovina',
 };
 function aliasName(n: string): string {
   return NAME_ALIASES[n] ?? n;
-}
-
-function isWorldCup(e: SrSportEvent): boolean {
-  return /world cup/i.test(e.sport_event_context?.competition?.name ?? '');
 }
 
 /**
@@ -347,20 +347,14 @@ async function syncEvents(
 }
 
 /**
- * Independent coverage test (separate code path from Daily Schedules):
- *   1. /competitions.json            -> FIFA World Cup competition urn (men).
- *   2. /competitions/{urn}/seasons   -> the 2026 season urn (read live).
- *   3. /seasons/{urn}/schedules      -> EVERY match of the season in one call.
- *
- * The Season Schedule feed has no date dimension, so it can't be hit by the
- * daily feed's 200-event page cap or by UTC date-drift. If the 6 "missing"
- * matches list here, the data exists on the trial key and the daily-schedule
- * aggregation was the bug; if they're absent here too, it's a real coverage gap.
- * Lists the authoritative full WC match set, then exits — writes nothing.
+ * Resolve the FIFA World Cup 2026 season urn, the anchor for the full match list:
+ *   1. /competitions.json            -> men's WC urn (sr:competition:16, with a
+ *                                       name/gender fallback).
+ *   2. /competitions/{urn}/seasons   -> the 2026 season (year/name match; the
+ *                                       numeric id isn't a stable constant).
+ * Returns null (and logs) if either step fails. Costs 2 Sportradar calls.
  */
-async function runSeasonProbe(): Promise<void> {
-  // 1. FIFA World Cup (men). competition:16 is the documented men's WC urn; we
-  //    confirm against the live list and fall back to a name/gender match.
+async function resolveWcSeason(logPrefix: string): Promise<{ id: string; name: string } | null> {
   const comps = await srFetch<SrCompetitionsResponse>('/competitions.json');
   const competitions = comps.competitions ?? [];
   const wc =
@@ -369,43 +363,44 @@ async function runSeasonProbe(): Promise<void> {
       (c) => /world cup/i.test(c.name) && (c.gender ?? 'men').toLowerCase() === 'men',
     );
   if (!wc) {
-    console.error('[events:sr --season] FIFA World Cup competition not found in /competitions.json');
-    return;
+    console.error(`${logPrefix} FIFA World Cup competition not found in /competitions.json`);
+    return null;
   }
-  console.log(`[events:sr --season] competition: ${wc.id} (${wc.name})`);
   await sleep(SR_GAP_MS);
-
-  // 2. Resolve the 2026 season urn at runtime (numeric id isn't a constant).
-  const seasonsRes = await srFetch<SrSeasonsResponse>(
-    `/competitions/${wc.id}/seasons.json`,
-  );
+  const seasonsRes = await srFetch<SrSeasonsResponse>(`/competitions/${wc.id}/seasons.json`);
   const seasons = seasonsRes.seasons ?? [];
   const season =
-    seasons.find((s) => s.year === '2026') ??
-    seasons.find((s) => /2026/.test(s.name ?? ''));
+    seasons.find((s) => s.year === '2026') ?? seasons.find((s) => /2026/.test(s.name ?? ''));
   if (!season) {
     console.error(
-      `[events:sr --season] no 2026 season for ${wc.id}. Seasons seen: ${
+      `${logPrefix} no 2026 season for ${wc.id}. Seasons seen: ${
         seasons.map((s) => `${s.id} ${s.name ?? ''}`).join(' | ') || 'none'
       }`,
     );
-    return;
+    return null;
   }
-  console.log(`[events:sr --season] season: ${season.id} (${season.name ?? season.year ?? '?'})`);
+  return { id: season.id, name: season.name ?? season.year ?? '2026' };
+}
+
+/**
+ * Diagnostic: list the authoritative full WC season schedule (one un-paginated
+ * call, limit default 1000 >> 104 matches), then exit — writes nothing. This is
+ * the same feed the real run now uses; --season just prints it.
+ */
+async function runSeasonProbe(): Promise<void> {
+  const season = await resolveWcSeason('[events:sr --season]');
+  if (!season) return;
+  console.log(`[events:sr --season] season: ${season.id} (${season.name})`);
   await sleep(SR_GAP_MS);
 
-  // 3. Full season schedule — one un-paginated call (limit default 1000 >> 104).
   const sched = await srFetch<SrSchedule>(`/seasons/${season.id}/schedules.json`);
   const events = extractEvents(sched).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   console.log(`\nSeason schedule for ${season.id} — ${events.length} matches:`);
   for (const e of events) {
-    const pair = e.competitors?.map((c) => c.name).join(' v ') ?? '?';
-    console.log(`  ${e.start_time}  ${pair}`);
+    console.log(`  ${e.start_time}  ${e.competitors?.map((c) => c.name).join(' v ') ?? '?'}`);
   }
-  console.log(
-    `\n[events:sr --season] done. ${events.length} matches from /seasons/${season.id}/schedules.json (${srCalls} Sportradar calls).`,
-  );
+  console.log(`\n[events:sr --season] done. ${events.length} matches (${srCalls} Sportradar calls).`);
 }
 
 async function main() {
@@ -433,62 +428,15 @@ async function main() {
   const names = await loadTeamNames(teamIds);
   console.log(`[events:sr] ${candidates.length} candidate WC fixtures (access=${SR_ACCESS}, lookback=${LOOKBACK_DAYS}d)`);
 
-  // Diagnostic: scan a WIDE continuous window (min..max candidate day ±2) and
-  // list every World Cup match the feed carries with its date, next to our
-  // fixtures. This distinguishes "missing from the trial" (absent everywhere)
-  // from "date drift" (present on a shifted day) — then exit.
-  if (DUMP) {
-    const times = candidates.map((c) => new Date(c.kickoff_at).getTime());
-    const lo = Math.min(...times) - 2 * 24 * 60 * 60 * 1000;
-    const hi = Math.max(...times) + 2 * 24 * 60 * 60 * 1000;
-    const span: string[] = [];
-    for (let t = lo; t <= hi; t += 24 * 60 * 60 * 1000) span.push(ymd(new Date(t).toISOString()));
-
-    const pool: SrSportEvent[] = [];
-    for (const day of span) {
-      if (srCalls >= MAX_SR_CALLS) break;
-      try {
-        const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedules.json`);
-        pool.push(...extractEvents(sched).filter(isWorldCup));
-      } catch (e) {
-        console.error(`  [schedule ${day}] failed: ${(e as Error).message}`);
-      }
-      await sleep(SR_GAP_MS);
-    }
-
-    const sorted = pool.slice().sort((a, b) => a.start_time.localeCompare(b.start_time));
-    console.log(`\nWorld Cup matches in feed across ${span[0]}..${span[span.length - 1]} (${sorted.length}):`);
-    for (const e of sorted) {
-      console.log(`  ${e.start_time}  ${e.competitors?.map((c) => c.name).join(' v ') ?? '?'}`);
-    }
-    console.log(`\nOur ${candidates.length} candidate fixtures:`);
-    for (const c of candidates) {
-      console.log(`  ${c.kickoff_at}  ${fixtureName(c, 'home', names)} vs ${fixtureName(c, 'away', names)}`);
-    }
-    return;
-  }
-
-  // Pull each candidate day ±1 (to absorb UTC date drift) and pool every World
-  // Cup sport_event. Matching is by team-pair against this pool, not per-day.
-  const fetchDays = new Set<string>();
-  for (const c of candidates) {
-    const base = new Date(c.kickoff_at).getTime();
-    for (const off of [-1, 0, 1]) {
-      fetchDays.add(ymd(new Date(base + off * 24 * 60 * 60 * 1000).toISOString()));
-    }
-  }
-  const wcEvents: SrSportEvent[] = [];
-  for (const day of fetchDays) {
-    if (srCalls >= MAX_SR_CALLS) break;
-    try {
-      const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedules.json`);
-      wcEvents.push(...extractEvents(sched).filter(isWorldCup));
-    } catch (e) {
-      console.error(`  [schedule ${day}] failed: ${(e as Error).message}`);
-    }
-    await sleep(SR_GAP_MS);
-  }
-  console.log(`[events:sr] pooled ${wcEvents.length} World Cup sport_events across ${fetchDays.size} days`);
+  // Pull the full WC season schedule in ONE call — the authoritative, complete
+  // match list. We deliberately do NOT use the per-day schedule feed: it
+  // truncates busy days on the trial, which silently dropped ~6 matches.
+  const season = await resolveWcSeason('[events:sr]');
+  if (!season) return;
+  await sleep(SR_GAP_MS);
+  const sched = await srFetch<SrSchedule>(`/seasons/${season.id}/schedules.json`);
+  const wcEvents = extractEvents(sched);
+  console.log(`[events:sr] season ${season.id} (${season.name}): ${wcEvents.length} WC matches`);
 
   let hydrated = 0;
   let totalEvents = 0;
