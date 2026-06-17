@@ -52,6 +52,13 @@ interface Props {
    *  context for that section. */
   aiParentIndex?: number
   aiSubIndex?: number
+  /** Footshorts (fs:*) story. When true, the panel hides the AI generate
+   *  (`PromptBar`) + "✨ Ask AI" (`SelectionAiOverlay`) surfaces and offers a
+   *  "+ Football data" button instead (requires `onAddFootballData`). */
+  isFootshorts?: boolean
+  /** Opens the football-data picker — the footshorts replacement for the AI
+   *  generate/ask surfaces. */
+  onAddFootballData?: () => void
 }
 
 /**
@@ -74,6 +81,8 @@ export default function EditorPanel({
   aiLayerType,
   aiParentIndex,
   aiSubIndex,
+  isFootshorts,
+  onAddFootballData,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping
   // through React state on every keystroke. Initialised from the slice;
@@ -307,25 +316,60 @@ export default function EditorPanel({
         </div>
       )}
 
-      {slug && aiKind && (
-        <div
-          style={{
-            padding: '10px 12px',
-            borderBottom: '1px solid #2a2a2a',
-          }}
-        >
-          {/* Generated value lands in the draft; the user reviews it in Monaco
-              and the existing Save flow persists it through mergeSlice. */}
-          <PromptBar
-            slug={slug}
-            kind={aiKind}
-            layerType={aiLayerType}
-            parentIndex={aiParentIndex}
-            subIndex={aiSubIndex}
-            currentValue={draft}
-            onApply={(v) => setDraft(v)}
-          />
-        </div>
+      {isFootshorts ? (
+        // Footshorts (fs:*) stories don't generate layers with AI — they pull
+        // real data. The AI generate panel is replaced by the football-data
+        // picker, which drops real fs:* layers into the current section.
+        onAddFootballData && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderBottom: '1px solid #2a2a2a',
+            }}
+          >
+            <button
+              type="button"
+              onClick={onAddFootballData}
+              title="Add a real standings table, match card, timeline, or bracket from footshorts data"
+              style={{
+                width: '100%',
+                background: 'transparent',
+                color: '#5fd38a',
+                border: '1px solid #2a8f55',
+                borderRadius: 6,
+                padding: '8px 12px',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              + 🏟️ Football data
+            </button>
+          </div>
+        )
+      ) : (
+        slug &&
+        aiKind && (
+          <div
+            style={{
+              padding: '10px 12px',
+              borderBottom: '1px solid #2a2a2a',
+            }}
+          >
+            {/* Generated value lands in the draft; the user reviews it in Monaco
+                and the existing Save flow persists it through mergeSlice. */}
+            <PromptBar
+              slug={slug}
+              kind={aiKind}
+              layerType={aiLayerType}
+              parentIndex={aiParentIndex}
+              subIndex={aiSubIndex}
+              currentValue={draft}
+              onApply={(v) => setDraft(v)}
+            />
+          </div>
+        )
       )}
 
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
@@ -360,7 +404,9 @@ export default function EditorPanel({
             </div>
           }
         />
-        {monacoEditor && (
+        {/* "✨ Ask AI" is hidden for footshorts (fs:*) stories — they author
+            from real data, not AI. */}
+        {monacoEditor && !isFootshorts && (
           <SelectionAiOverlay
             editor={monacoEditor}
             language={selectionLanguage(slice.language)}

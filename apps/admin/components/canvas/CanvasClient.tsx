@@ -711,6 +711,29 @@ export default function CanvasClient({
   // otherwise route to `genError`, which only renders in the (closed)
   // generate-section panel, so the operator saw "nothing happened".
   const [footballError, setFootballError] = useState<string | null>(null)
+  // Single entry point for the football-data picker. In footshorts stories
+  // this is what the on-node "🏟️ Data" chips and the editor/inspector panels'
+  // "+ Football data" buttons all call — it replaces the AI generate/ask
+  // surfaces for the fs:* vertical. We close the slide-over editor + slot
+  // inspector first: both sit at z-100 and the picker is z-60, so leaving one
+  // open would render the picker behind it ("nothing happened").
+  const openFootball = useCallback(() => {
+    setEditorTarget(null)
+    setSaveError(null)
+    setSlotTarget(null)
+    setSlotError(null)
+    setGenError(null)
+    setGenSectionOpen(false)
+    setEvalOpen(false)
+    setFootballError(null)
+    setFootballOpen(true)
+  }, [])
+  // Captured by the build effect's closures (the node-chip handlers), which only
+  // run once per data version — the ref keeps them pointed at the latest opener.
+  const openFootballRef = useRef(openFootball)
+  useEffect(() => {
+    openFootballRef.current = openFootball
+  }, [openFootball])
   // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
   const [evalOpen, setEvalOpen] = useState(false)
   // ✨ Research & outline (compose) drawer. The panel stays mounted while this
@@ -1564,10 +1587,13 @@ export default function CanvasClient({
                     onClick={onGenerate}
                     onPointerDown={stop}
                     onMouseDown={stop}
-                    title="Generate with AI"
-                    style={{ color: '#b07cd8', cursor: 'pointer' }}
+                    title={isFootshorts ? 'Add football data' : 'Generate with AI'}
+                    style={{
+                      color: isFootshorts ? '#5fd38a' : '#b07cd8',
+                      cursor: 'pointer',
+                    }}
                   >
-                    ✨ AI
+                    {isFootshorts ? '🏟️ Data' : '✨ AI'}
                   </span>
                 )}
                 {editable && <span style={{ color: '#3a5da0' }}>EDIT</span>}
@@ -1828,14 +1854,14 @@ export default function CanvasClient({
                 onClick={onGenerate}
                 onPointerDown={stop}
                 onMouseDown={stop}
-                title="Generate with AI"
+                title={isFootshorts ? 'Add football data' : 'Generate with AI'}
                 style={{
-                  color: '#b07cd8',
+                  color: isFootshorts ? '#5fd38a' : '#b07cd8',
                   letterSpacing: '0.14em',
                   cursor: 'pointer',
                 }}
               >
-                ✨ AI
+                {isFootshorts ? '🏟️ Data' : '✨ AI'}
               </span>
             )}
             {editable && !data.warning && (
@@ -2041,11 +2067,18 @@ export default function CanvasClient({
       // Sibling of makeEditClick that opens the standalone ✨ PromptBar
       // (promptOnly) for the slot instead of the full YAML editor. Shares the
       // same target shape, so the generated value persists through handleSave.
+      //
+      // Footshorts (fs:*) stories don't author layers with AI — they pull real
+      // data — so every on-node generate chip routes to the football-data picker
+      // instead. The chip is relabelled "🏟️ Data" in the node views to match.
       function makeGenerateClick(
         kind: EditableKind,
         regionKey?: string,
         slotPath?: SlotPath
       ): () => void {
+        if (isFootshorts) {
+          return () => openFootballRef.current()
+        }
         return () => {
           const idx = stateRef.current.activeSectionIndex
           const targetUnit = sectionUnitsRef.current[idx]
@@ -2375,7 +2408,9 @@ export default function CanvasClient({
           // ✨ Generate on layer leaves, but only those that edit through the
           // YAML editor (map layers + types with no adminForm) — those persist
           // via handleSave. Image + adminForm-form layers use separate editors
-          // (image modal / SlotInspector) and keep their in-panel AI for now.
+          // (image modal / SlotInspector) and keep their in-panel AI — except
+          // footshorts, where SlotInspector swaps it for "+ Football data" and
+          // this chip (via makeGenerateClick) opens the football picker too.
           if (d.slot && d.slot.kind === 'layer' && d.slot.layerType !== 'image') {
             const slot = d.slot
             const usesYamlEditor =
@@ -4129,31 +4164,9 @@ export default function CanvasClient({
         >
           + ✨ Section
         </button>
-        {isFootshorts && (
-          <button
-            onClick={() => {
-              setGenError(null)
-              setGenSectionOpen(false)
-              setEvalOpen(false)
-              setFootballOpen(true)
-            }}
-            title="Add a real standings table, match card, or bracket from footshorts data"
-            style={{
-              pointerEvents: 'auto',
-              marginLeft: 12,
-              background: 'transparent',
-              color: '#5fd38a',
-              border: '1px solid #2a8f55',
-              borderRadius: 5,
-              padding: '3px 9px',
-              fontSize: 11,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            + 🏟️ Football data
-          </button>
-        )}
+        {/* Football data has no global header button — for footshorts (fs:*)
+            stories it's reached in-context: the on-node "🏟️ Data" chips and the
+            editor panel's "+ Football data" button both call `openFootball`. */}
         {sectionUnits.length > 0 && (
           <button
             onClick={() => {
@@ -4568,9 +4581,13 @@ export default function CanvasClient({
           // Every EditorPanel-backed slot gets the AI prompt input. The slot's
           // EditableKind is a subset of AiSlotKind, so it maps 1:1; aiSlots.ts
           // supplies the modality, model subset, and default system prompt.
+          // EXCEPT footshorts (fs:*) stories: the panel hides the AI generate +
+          // ask surfaces and offers "+ Football data" instead (see below).
           aiKind={editorTarget?.kind}
           aiParentIndex={editorTarget?.unit.parentIndex}
           aiSubIndex={editorTarget?.unit.subIndex}
+          isFootshorts={isFootshorts}
+          onAddFootballData={openFootball}
         />
       )}
       {/* On-node ✨ Generate (Feature 1): a standalone PromptBar for the slot,
@@ -4724,6 +4741,8 @@ export default function CanvasClient({
           unitKey={`${slotTarget.unit.parentIndex}.${slotTarget.unit.subIndex ?? 0}`}
           parentIndex={slotTarget.unit.parentIndex}
           subIndex={slotTarget.unit.subIndex}
+          isFootshorts={isFootshorts}
+          onAddFootballData={openFootball}
           saving={slotSaving}
           error={slotError}
           onApply={(next) => handleSlotFormApply(next, slotTarget)}
