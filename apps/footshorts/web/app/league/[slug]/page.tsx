@@ -10,6 +10,7 @@ import {
   isBracketDrawn,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/web';
+import { EntityShareCards } from '@/components/EntityShareCards';
 import { useEntity } from '@/lib/useEntity';
 import { useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
 import { useStandings, groupStandings } from '@/lib/useStandings';
@@ -157,6 +158,8 @@ export default function LeaguePage() {
           ) : null}
         </div>
       </header>
+
+      <EntityShareCards entityId={league.data.id} />
 
       <TabBar tabs={availableTabs} active={activeTab} onChange={setTab} />
 

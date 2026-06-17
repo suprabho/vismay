@@ -84,11 +84,24 @@ interface ShareCardSnapshot {
   overlays: Overlay[]
 }
 
+interface SavedCardEntityTag {
+  id: string
+  type: 'league' | 'team' | 'player'
+  slug: string
+  name: string
+  crestUrl: string | null
+}
+
 interface SavedCard {
   id: string
   name: string
   cardType: string
   config: ShareCardSnapshot
+  status?: 'draft' | 'published'
+  imageUrl?: string | null
+  ratio?: string | null
+  publishedAt?: string | null
+  entities?: SavedCardEntityTag[]
   createdAt: string
 }
 
@@ -204,6 +217,24 @@ export function ShareCardCreator({
   const [savedCards, setSavedCards] = useState<SavedCard[]>([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // The card row currently being edited (set when a saved card is loaded, or
+  // after a save/ship). Lets Save/Ship update that row in place rather than
+  // forking a new one each time. Cleared when the card type changes (= new card).
+  const [currentCardId, setCurrentCardId] = useState<string | null>(null)
+  const [currentCardName, setCurrentCardName] = useState<string>('')
+
+  // ── publish-to-product tags ─────────────────────────────────────────────────
+  // Entity tags (teams / leagues) a shipped card is filed under, so the consumer
+  // app can surface it on the feed, in For You, and on those entity pages.
+  const [tags, setTags] = useState<EntityResult[]>([])
+  const [tagQuery, setTagQuery] = useState('')
+  const [tagResults, setTagResults] = useState<EntityResult[]>([])
+  const [tagLoading, setTagLoading] = useState(false)
+  const [shipping, setShipping] = useState(false)
+  const [shipError, setShipError] = useState<string | null>(null)
+  // Tags to restore when a saved card is loaded — checked by the re-seed effect
+  // so loading a card keeps its saved tags instead of resetting to suggestions.
+  const pendingTagsRef = useRef<EntityResult[] | null>(null)
   // Picks to restore once a competition's fixtures finish loading (set when a
   // saved card is loaded, so the fetch effect doesn't clear them to '').
   const pendingPicksRef = useRef<{
@@ -496,6 +527,54 @@ export function ShareCardCreator({
     return selectedComp?.name ?? null
   }, [showEyebrow, eyebrowOverride, cardType, news, pickedNewsId, selectedComp])
 
+  // Entity tags suggested by the current card content — the teams in a match,
+  // the team of a form grid, the competition of a table, the entities a news
+  // item is about. Pre-fills the publish tags; the user can edit before shipping.
+  const suggestedTags = useMemo<EntityResult[]>(() => {
+    const out: EntityResult[] = []
+    const push = (t: EntityResult | null) => {
+      if (t && t.slug && !out.some((o) => o.type === t.type && o.slug === t.slug)) out.push(t)
+    }
+    const leagueTag: EntityResult | null = selectedComp
+      ? { id: '', type: 'league', slug: selectedComp.slug, name: selectedComp.name, crest_url: null }
+      : null
+    if (!content) return out
+    if (content.type === 'match') {
+      const f = content.fixture
+      if (f.home) push({ id: f.home.id, type: 'team', slug: f.home.slug, name: f.home.name, crest_url: f.home.crest_url })
+      if (f.away) push({ id: f.away.id, type: 'team', slug: f.away.slug, name: f.away.name, crest_url: f.away.crest_url })
+      push(leagueTag)
+    } else if (content.type === 'form') {
+      push({ id: '', type: 'team', slug: content.teamSlug, name: content.teamName, crest_url: null })
+      push(leagueTag)
+    } else if (content.type === 'standings') {
+      push(leagueTag)
+    } else if (content.type === 'news-image' || content.type === 'news-article') {
+      for (const e of content.item.entities) {
+        if (e.type === 'team' || e.type === 'league') {
+          push({ id: e.id, type: e.type, slug: e.slug, name: e.name, crest_url: e.crest_url })
+        }
+      }
+    }
+    return out
+  }, [content, selectedComp])
+
+  // Re-seed the publish tags whenever the card's *content* changes (a new
+  // fixture/team/article/competition), not on style tweaks. Loading a saved card
+  // restores its own tags via pendingTagsRef instead.
+  const contentKey = `${cardType}|${compKey}|${pickedFixtureId}|${pickedTeamSlug}|${pickedNewsId}|${pickedGroup}|${aiDataUrl ? 'ai' : ''}`
+  useEffect(() => {
+    if (pendingTagsRef.current) {
+      setTags(pendingTagsRef.current)
+      pendingTagsRef.current = null
+    } else {
+      setTags(suggestedTags)
+    }
+    // Keyed on contentKey only: re-seed on content change, persist manual edits
+    // across unrelated re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentKey])
+
   // ── capture / preview ───────────────────────────────────────────────────────
   const captureRef = useRef<HTMLDivElement>(null)
   const out = OUTPUT_SIZE[ratio]
@@ -503,7 +582,7 @@ export function ShareCardCreator({
   const renderH = Math.round(out.h * RENDER_SCALE)
   const pixelRatio = out.w / renderW
   const bgHex = themes[themeName].colors.bg
-  const { download } = useCapture(captureRef, {
+  const { capture, download } = useCapture(captureRef, {
     width: renderW,
     height: renderH,
     pixelRatio,
@@ -597,6 +676,8 @@ export function ShareCardCreator({
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
       if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
       setSavedCards((prev) => [body.card!, ...prev])
+      setCurrentCardId(body.card.id)
+      setCurrentCardName(body.card.name)
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Save failed')
     } finally {
@@ -645,10 +726,127 @@ export function ShareCardCreator({
 
   const handleDeleteSaved = useCallback(async (id: string) => {
     setSavedCards((prev) => prev.filter((c) => c.id !== id))
+    setCurrentCardId((cur) => (cur === id ? null : cur))
     try {
       await fetch(`/api/footshorts/share/cards/${id}`, { method: 'DELETE' })
     } catch {
       /* optimistic — the row reappears on next reload if the delete failed */
+    }
+  }, [])
+
+  // Load a saved card back into the editor — restoring its snapshot AND its tags,
+  // and pinning it as the current card so Save/Ship update it in place.
+  const loadCard = useCallback(
+    (card: SavedCard) => {
+      const restored: EntityResult[] = (card.entities ?? [])
+        .filter((e) => e.type === 'team' || e.type === 'league')
+        .map((e) => ({
+          id: e.id,
+          type: e.type as 'team' | 'league',
+          slug: e.slug,
+          name: e.name,
+          crest_url: e.crestUrl,
+        }))
+      // Set now (covers loading a card whose content matches the current one, so
+      // the re-seed effect won't fire) AND stash for the effect (covers the
+      // common case where applySnapshot changes the content key).
+      setTags(restored)
+      pendingTagsRef.current = restored
+      applySnapshot(card.config)
+      setCurrentCardId(card.id)
+      setCurrentCardName(card.name)
+    },
+    [applySnapshot],
+  )
+
+  // Switching card type starts a fresh card (so Save/Ship don't overwrite the
+  // one that happened to be loaded).
+  const selectCardType = useCallback((t: CardType) => {
+    setCardType(t)
+    setCurrentCardId(null)
+    setCurrentCardName('')
+  }, [])
+
+  // ── publish-to-product tag handlers ─────────────────────────────────────────
+  const searchTags = useCallback(async () => {
+    setTagLoading(true)
+    try {
+      const res = await fetch(
+        `/api/footshorts/data/entities?q=${encodeURIComponent(tagQuery.trim())}&limit=20`,
+      )
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; items?: EntityResult[] }
+      setTagResults(body.items ?? [])
+    } catch {
+      setTagResults([])
+    } finally {
+      setTagLoading(false)
+    }
+  }, [tagQuery])
+
+  const addTag = useCallback((t: EntityResult) => {
+    setTags((prev) =>
+      prev.some((p) => p.type === t.type && p.slug === t.slug) ? prev : [...prev, t],
+    )
+  }, [])
+
+  const removeTag = useCallback((type: string, slug: string) => {
+    setTags((prev) => prev.filter((p) => !(p.type === type && p.slug === slug)))
+  }, [])
+
+  // Ship the card into the consumer product: render the PNG, then publish + tag.
+  const handleShip = useCallback(async () => {
+    if (!content) return
+    const fallback =
+      currentCardName ||
+      `${CARD_TYPES.find((t) => t.id === cardType)?.label ?? cardType}${
+        selectedComp ? ` · ${selectedComp.name}` : ''
+      }`
+    const name = window.prompt('Name this card (shown in the product)', fallback)?.trim()
+    if (!name) return
+    setShipping(true)
+    setShipError(null)
+    try {
+      const dataUrl = await capture()
+      if (!dataUrl) throw new Error('Could not render the card image.')
+      const res = await fetch('/api/footshorts/share/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentCardId ?? undefined,
+          name,
+          cardType,
+          config: buildSnapshot(),
+          ratio,
+          imageDataUrl: dataUrl,
+          entities: tags.map((t) => ({ type: t.type, slug: t.slug })),
+        }),
+      })
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean
+        card?: SavedCard
+        error?: string
+      }
+      if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
+      const card = body.card
+      setCurrentCardId(card.id)
+      setCurrentCardName(card.name)
+      setSavedCards((prev) => [card, ...prev.filter((c) => c.id !== card.id)])
+    } catch (e) {
+      setShipError(e instanceof Error ? e.message : 'Ship failed')
+    } finally {
+      setShipping(false)
+    }
+  }, [content, currentCardId, currentCardName, cardType, selectedComp, ratio, tags, buildSnapshot, capture])
+
+  const handleUnship = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/footshorts/share/cards/${id}/unpublish`, { method: 'POST' })
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard }
+      if (res.ok && body.ok && body.card) {
+        setSavedCards((prev) => prev.map((c) => (c.id === id ? body.card! : c)))
+      }
+    } catch {
+      /* non-fatal — reflected on next reload */
     }
   }, [])
 
@@ -835,7 +1033,7 @@ export function ShareCardCreator({
             {CARD_TYPES.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setCardType(t.id)}
+                onClick={() => selectCardType(t.id)}
                 className={`rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
                   cardType === t.id
                     ? 'border-white/30 bg-white/10 text-neutral-100'
@@ -1471,6 +1669,90 @@ export function ShareCardCreator({
         </div>
         {saveError && <p className="text-[11px] text-red-400">{saveError}</p>}
 
+        <hr className="border-white/10" />
+
+        {/* Publish to product — tag with entities, then ship the rendered PNG
+            into the footshorts app (feed, For You, and the tagged team /
+            competition pages). */}
+        <div>
+          <span className={labelCls}>Publish to product</span>
+
+          {/* Selected tags */}
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {tags.length === 0 ? (
+              <span className="text-[11px] text-neutral-500">
+                No tags — add teams or competitions so the card surfaces in the app.
+              </span>
+            ) : (
+              tags.map((t) => (
+                <span
+                  key={`${t.type}:${t.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-neutral-900 py-1 pl-1.5 pr-1 text-[11px] text-neutral-200"
+                >
+                  {t.crest_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.crest_url} alt="" className="h-3.5 w-3.5 object-contain" />
+                  ) : null}
+                  {t.name}
+                  <button
+                    onClick={() => removeTag(t.type, t.slug)}
+                    className="rounded px-1 text-neutral-400 hover:bg-white/10 hover:text-white"
+                    aria-label={`Remove ${t.name}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+
+          {/* Tag search */}
+          <div className="mt-2 flex gap-1.5">
+            <input
+              value={tagQuery}
+              onChange={(e) => setTagQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void searchTags()}
+              placeholder="Add a team or competition…"
+              className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
+            />
+            <button
+              onClick={() => void searchTags()}
+              className="rounded-md bg-white/10 px-2.5 py-1.5 text-xs text-neutral-100 hover:bg-white/20"
+            >
+              {tagLoading ? '…' : 'Find'}
+            </button>
+          </div>
+          {tagResults.length > 0 && (
+            <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto">
+              {tagResults.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => addTag(r)}
+                  className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-neutral-900 p-1.5 text-left hover:border-white/30"
+                >
+                  {r.crest_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.crest_url} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                  ) : (
+                    <span className="h-5 w-5 shrink-0" />
+                  )}
+                  <span className="flex-1 truncate text-[11px] text-neutral-200">{r.name}</span>
+                  <span className="text-[10px] text-neutral-500">{r.type}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => void handleShip()}
+            disabled={!content || shipping}
+            className="mt-2.5 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {shipping ? 'Shipping…' : currentCardId ? 'Re-ship to product' : 'Ship to product'}
+          </button>
+          {shipError && <p className="mt-1 text-[11px] text-red-400">{shipError}</p>}
+        </div>
+
         {/* Saved cards — reload a snapshot back into the editor, or delete it. */}
         {savedCards.length > 0 && (
           <div>
@@ -1479,19 +1761,42 @@ export function ShareCardCreator({
               {savedCards.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-center gap-2 rounded-md border border-white/10 p-1.5"
+                  className={`flex items-center gap-2 rounded-md border p-1.5 ${
+                    currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-white/10'
+                  }`}
                 >
                   <button
-                    onClick={() => applySnapshot(c.config)}
+                    onClick={() => loadCard(c)}
                     title="Load into editor"
                     className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
                   >
                     {c.name}
                     <span className="ml-1 text-neutral-500">· {c.cardType}</span>
                   </button>
+                  {c.status === 'published' ? (
+                    <>
+                      <span
+                        className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300"
+                        title={
+                          c.publishedAt
+                            ? `Shipped ${new Date(c.publishedAt).toLocaleString()}`
+                            : 'Live in the product'
+                        }
+                      >
+                        ● Live
+                      </span>
+                      <button
+                        onClick={() => void handleUnship(c.id)}
+                        className="shrink-0 rounded px-1.5 text-[10px] text-neutral-400 hover:bg-white/10 hover:text-white"
+                        title="Remove from the product"
+                      >
+                        Unship
+                      </button>
+                    </>
+                  ) : null}
                   <button
                     onClick={() => void handleDeleteSaved(c.id)}
-                    className="rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                    className="shrink-0 rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
                     aria-label="Delete saved card"
                   >
                     ×

@@ -2,15 +2,23 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { FeedCard } from '@/components/FeedCard';
+import { ShareCardFeedItem } from '@/components/ShareCardFeedItem';
+import { FollowedShareCards } from '@/components/FollowedShareCards';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
 import { StoryRings } from '@/components/StoryRings';
 import { EditorialMagazine } from '@/components/EditorialMagazine';
 import { useAuth } from '@/lib/AuthProvider';
 import { useAuthModal } from '@/lib/AuthModalProvider';
 import { useDiscoverFeed } from '@/lib/useFeed';
+import { useDiscoverShareCards, type ShareCardItem } from '@/lib/useShareCards';
 import { useSeenArticles } from '@/lib/useSeenArticles';
+import type { FeedCard as FeedCardType } from '@footshorts/shared/schemas';
+
+type DiscoverRow =
+  | { kind: 'article'; published_at: string; article: FeedCardType }
+  | { kind: 'card'; published_at: string; card: ShareCardItem };
 
 type Tab = 'forYou' | 'discover' | 'editorial';
 
@@ -51,6 +59,7 @@ function PillTabs({ active, onChange }: { active: Tab; onChange: (t: Tab) => voi
 
 function DiscoverStack() {
   const discover = useDiscoverFeed();
+  const shareCards = useDiscoverShareCards();
   const { markSeen } = useSeenArticles();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -75,18 +84,37 @@ function DiscoverStack() {
     return () => observer.disconnect();
   }, [discover]);
 
-  const items = discover.data?.pages.flatMap((p) => p.items) ?? [];
+  const articles = useMemo(
+    () => discover.data?.pages.flatMap((p) => p.items) ?? [],
+    [discover.data]
+  );
+
+  // Interleave shipped cards with articles, newest-first. Cards are a small,
+  // recent set (last 24h) so they naturally sort near the top; articles drive
+  // pagination as the user scrolls deeper.
+  const rows = useMemo<DiscoverRow[]>(() => {
+    const merged: DiscoverRow[] = [
+      ...articles.map((a) => ({ kind: 'article' as const, published_at: a.published_at, article: a })),
+      ...(shareCards.data ?? []).map((c) => ({
+        kind: 'card' as const,
+        published_at: c.published_at,
+        card: c,
+      })),
+    ];
+    merged.sort((x, y) => y.published_at.localeCompare(x.published_at));
+    return merged;
+  }, [articles, shareCards.data]);
 
   useEffect(() => {
     if (
-      items.length === 0 &&
+      articles.length === 0 &&
       discover.hasNextPage &&
       !discover.isFetchingNextPage &&
       !discover.isLoading
     ) {
       discover.fetchNextPage();
     }
-  }, [items.length, discover]);
+  }, [articles.length, discover]);
 
   if (discover.isLoading) {
     return (
@@ -107,7 +135,7 @@ function DiscoverStack() {
     );
   }
 
-  if (items.length === 0 && !discover.hasNextPage) {
+  if (rows.length === 0 && !discover.hasNextPage) {
     return (
       <div
         className={`${FEED_HEIGHT} flex flex-col items-center justify-center px-4 text-center`}
@@ -118,7 +146,7 @@ function DiscoverStack() {
     );
   }
 
-  if (items.length === 0) {
+  if (rows.length === 0) {
     return (
       <div className={`${FEED_HEIGHT} flex items-center justify-center`}>
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
@@ -131,23 +159,35 @@ function DiscoverStack() {
       className={`${FEED_HEIGHT} snap-y snap-mandatory overflow-y-auto overscroll-contain`}
       style={{ scrollbarWidth: 'none' }}
     >
-      {items.map((item) => (
-        <div key={item.article_id} className={`${FEED_HEIGHT} snap-start`}>
-          <div className="h-full">
-            <FeedCard
-              articleId={item.article_id}
-              headline={item.headline}
-              summary={item.summary}
-              imageUrl={item.image_url}
-              publisher={item.publisher}
-              url={item.url}
-              publishedAt={item.published_at}
-              entities={item.entities}
-              onSeen={markSeen}
-            />
+      {rows.map((row) =>
+        row.kind === 'article' ? (
+          <div key={`a:${row.article.article_id}`} className={`${FEED_HEIGHT} snap-start`}>
+            <div className="h-full">
+              <FeedCard
+                articleId={row.article.article_id}
+                headline={row.article.headline}
+                summary={row.article.summary}
+                imageUrl={row.article.image_url}
+                publisher={row.article.publisher}
+                url={row.article.url}
+                publishedAt={row.article.published_at}
+                entities={row.article.entities}
+                onSeen={markSeen}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        ) : (
+          <div key={`c:${row.card.id}`} className={`${FEED_HEIGHT} snap-start`}>
+            <div className="h-full">
+              <ShareCardFeedItem
+                imageUrl={row.card.image_url}
+                name={row.card.name}
+                entities={row.card.entities}
+              />
+            </div>
+          </div>
+        )
+      )}
 
       <div ref={sentinelRef} style={{ height: 1 }} />
 
@@ -216,6 +256,7 @@ function FeedPageInner() {
       {tab === 'forYou' && (
         <>
           <StoryRings />
+          <FollowedShareCards />
           <ForYouMatchFeed />
         </>
       )}
