@@ -45,9 +45,10 @@ const SR_GAP_MS = 1500;
 // Hard ceiling on Sportradar calls per run so a bad loop can't drain the
 // 1,000-request trial allowance. A full WC group-stage backfill is well under this.
 const MAX_SR_CALLS = 150;
-// ±6h around the provider kickoff absorbs clock drift without colliding with
-// another fixture between the same teams (same tolerance as events.ts).
-const KICKOFF_WINDOW_MS = 6 * 60 * 60 * 1000;
+// We match WC fixtures by team-pair (unique in the tournament), so the time
+// check is only a loose sanity guard against an unrelated rematch in a later
+// stage weeks away — 48h is plenty.
+const MATCH_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -177,10 +178,18 @@ type SrTimelineEvent = {
 };
 type SrTimeline = { timeline?: SrTimelineEvent[] };
 
-/** Match one of our fixtures to a Sportradar sport_event on that day. */
+function isWorldCup(e: SrSportEvent): boolean {
+  return /world cup/i.test(e.sport_event_context?.competition?.name ?? '');
+}
+
+/**
+ * Match a fixture to a Sportradar WC sport_event by team-pair (order-independent),
+ * picking the closest kickoff if more than one shares the pairing. No tight time
+ * gate — group-stage pairings are unique, so the name set identifies the match.
+ */
 function matchSportEvent(
   f: FixtureRow,
-  events: SrSportEvent[],
+  wc: SrSportEvent[],
   names: Map<string, string>,
 ): SrSportEvent | null {
   const home = normalizeName(fixtureName(f, 'home', names));
@@ -188,15 +197,18 @@ function matchSportEvent(
   if (!home || !away) return null;
   const t = new Date(f.kickoff_at).getTime();
 
-  return (
-    events.find((se) => {
-      const comps = se.competitors ?? [];
-      const set = new Set(comps.map((c) => normalizeName(c.name)));
-      const sameTeams = set.has(home) && set.has(away);
-      const close = Math.abs(new Date(se.start_time).getTime() - t) <= KICKOFF_WINDOW_MS;
-      return sameTeams && close;
-    }) ?? null
-  );
+  const cands = wc.filter((se) => {
+    const set = new Set((se.competitors ?? []).map((c) => normalizeName(c.name)));
+    return set.has(home) && set.has(away);
+  });
+  if (cands.length === 0) return null;
+
+  const best = cands.sort(
+    (a, b) =>
+      Math.abs(new Date(a.start_time).getTime() - t) -
+      Math.abs(new Date(b.start_time).getTime() - t),
+  )[0]!;
+  return Math.abs(new Date(best.start_time).getTime() - t) <= MATCH_WINDOW_MS ? best : null;
 }
 
 const RENDERED = new Set(['score_change', 'yellow_card', 'red_card', 'yellow_red_card', 'substitution']);
@@ -370,18 +382,27 @@ async function main() {
     return;
   }
 
-  // Pull one Daily Schedule per distinct kickoff day and index its sport_events.
-  const scheduleByDay = new Map<string, SrSportEvent[]>();
-  for (const day of days) {
+  // Pull each candidate day ±1 (to absorb UTC date drift) and pool every World
+  // Cup sport_event. Matching is by team-pair against this pool, not per-day.
+  const fetchDays = new Set<string>();
+  for (const c of candidates) {
+    const base = new Date(c.kickoff_at).getTime();
+    for (const off of [-1, 0, 1]) {
+      fetchDays.add(ymd(new Date(base + off * 24 * 60 * 60 * 1000).toISOString()));
+    }
+  }
+  const wcEvents: SrSportEvent[] = [];
+  for (const day of fetchDays) {
     if (srCalls >= MAX_SR_CALLS) break;
     try {
       const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedules.json`);
-      scheduleByDay.set(day, extractEvents(sched));
+      wcEvents.push(...extractEvents(sched).filter(isWorldCup));
     } catch (e) {
       console.error(`  [schedule ${day}] failed: ${(e as Error).message}`);
     }
     await sleep(SR_GAP_MS);
   }
+  console.log(`[events:sr] pooled ${wcEvents.length} World Cup sport_events across ${fetchDays.size} days`);
 
   let hydrated = 0;
   let totalEvents = 0;
@@ -391,10 +412,21 @@ async function main() {
       console.log(`[events:sr] trial budget guard hit (${srCalls} calls) — remaining fixtures deferred to next run.`);
       break;
     }
-    const se = matchSportEvent(f, scheduleByDay.get(ymd(f.kickoff_at)) ?? [], names);
+    const se = matchSportEvent(f, wcEvents, names);
     if (!se) {
       unmatched++;
-      console.log(`  [${f.id}] no Sportradar match for ${fixtureName(f, 'home', names)} vs ${fixtureName(f, 'away', names)} on ${ymd(f.kickoff_at)}`);
+      // Show the WC fixtures within ~18h so we can read Sportradar's exact team
+      // names and add aliases for the ones that don't normalize-match.
+      const near = wcEvents
+        .filter(
+          (e) =>
+            Math.abs(new Date(e.start_time).getTime() - new Date(f.kickoff_at).getTime()) <=
+            18 * 60 * 60 * 1000,
+        )
+        .map((e) => e.competitors?.map((c) => c.name).join(' v '));
+      console.log(
+        `  [${f.id}] no SR match: ${fixtureName(f, 'home', names)} vs ${fixtureName(f, 'away', names)} (${ymd(f.kickoff_at)}). Nearby WC: ${near.join(' | ') || 'none'}`,
+      );
       continue;
     }
     try {
