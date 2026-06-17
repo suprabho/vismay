@@ -14,10 +14,12 @@ import {
 } from '@vismay/footshorts-viz/web'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
 import { themes, themeToVars } from '@footshorts/brand'
+import { AuraBackground } from '@vismay/ui'
 import { FootshortsLogo } from './FootshortsLogo'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
+  type CardBackground,
   type CardContent,
   type CardFrameConfig,
   type LogoSize,
@@ -380,6 +382,49 @@ function CardBody({ content }: { content: CardContent }) {
   }
 }
 
+/** Decorative backdrop behind a data card's content. A news thumbnail (proxied
+ *  for clean capture) or AI image rasterizes into the export; an aura embeds the
+ *  animated iframe for the live preview only — like every aura in this repo it
+ *  never makes it into the captured PNG. A scrim keeps the content legible. */
+function CardBackgroundLayer({
+  background,
+  scrim,
+}: {
+  background: CardBackground
+  scrim: number
+}) {
+  return (
+    <div className="absolute inset-0 z-0" aria-hidden>
+      {background.type === 'news' ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={proxiedImage(background.url)}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : background.type === 'ai' ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={background.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : background.type === 'aura' ? (
+        <>
+          <AuraBackground slug={background.slug} />
+          {/* Fill the .bn-aura wrapper the embed emits so the iframe covers the card. */}
+          <style>{`
+            .bn-aura { position: absolute; inset: 0; overflow: hidden; }
+            .bn-aura iframe {
+              position: absolute; inset: 0; width: 100%; height: 100%;
+              border: 0; display: block; background: transparent;
+            }
+          `}</style>
+        </>
+      ) : null}
+      {scrim > 0 && (
+        <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${scrim})` }} />
+      )}
+    </div>
+  )
+}
+
 /** Badge overlays placed on the card (crests / logos / flags). Display-only and
  *  proxied for capture; drag/resize is handled by the editor over the preview. */
 function OverlayLayer({ overlays }: { overlays: Overlay[] }) {
@@ -442,6 +487,12 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
   // eats the photo.
   const bleed = content.type === 'news-image' || content.type === 'ai-image'
 
+  // Optional decorative backdrop behind a data card's content. Bleed cards
+  // already are an image, so they ignore it.
+  const background =
+    !bleed && frame.background && frame.background.type !== 'none' ? frame.background : null
+  const backgroundScrim = frame.backgroundScrim ?? 0.5
+
   return (
     <div ref={ref} className="relative flex flex-col overflow-hidden bg-bg text-text" style={style}>
       {bleed ? (
@@ -465,11 +516,14 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
         </>
       ) : (
         <>
-          <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
-          <div className="min-h-0 flex-1 py-2">
-            <CardBody content={content} />
+          {background && <CardBackgroundLayer background={background} scrim={backgroundScrim} />}
+          <div className="relative z-10 flex h-full min-h-0 flex-col">
+            <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
+            <div className="min-h-0 flex-1 py-2">
+              <CardBody content={content} />
+            </div>
+            <Footer handle={frame.handle} />
           </div>
-          <Footer handle={frame.handle} />
         </>
       )}
       <OverlayLayer overlays={overlays ?? []} />
