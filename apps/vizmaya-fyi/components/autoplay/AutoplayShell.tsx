@@ -15,6 +15,7 @@ import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
 import AutoplayMapEditor from './AutoplayMapEditor'
 import TunePanel from './AutoplayTunePanel'
+import { trackAutoplayStarted, trackAutoplayVideoDownloaded } from '@/lib/analytics'
 
 /* ─── DB row shapes ────────────────────────────────────────────────── */
 
@@ -531,8 +532,9 @@ export default function AutoplayShell({
       return
     }
     setIsPlaying(true)
+    trackAutoplayStarted(slug, { aspect: ratio })
     playFromCue(cue)
-  }, [isPlaying, stopPlayback, firstCueForVisible, activeUnit, playFromCue])
+  }, [isPlaying, stopPlayback, firstCueForVisible, activeUnit, playFromCue, slug, ratio])
 
   const handlePrev = useCallback(() => {
     stopPlayback()
@@ -663,6 +665,7 @@ export default function AutoplayShell({
     if (downloadingVideo) return
     try {
       const { public_url } = await pollVideo({ slug, aspect: ratio })
+      trackAutoplayVideoDownloaded(slug, { aspect: ratio })
       // Cross-origin storage URL — `download` attr is mostly ignored by
       // browsers in that case, so just open in a new tab. Users can save
       // from the browser's media viewer.

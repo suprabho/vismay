@@ -43,6 +43,7 @@
     "@vismay/f1-viz": "workspace:*",
     "@vismay/starship-viz": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",
+    "@amplitude/analytics-browser": "^2.44.1",
     "@react-three/fiber": "^9.1.0",
     "@react-three/drei": "^10.0.0",
     "three": "^0.171.0",
