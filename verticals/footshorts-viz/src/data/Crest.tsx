@@ -32,17 +32,35 @@ export function Crest({ team, size = 48, crestUrl, className, style, color, seco
   const [imgFailed, setImgFailed] = useState(false)
 
   if (resolvedUrl && !imgFailed) {
+    // Wrap the flag/crest in a fixed square box. Flags ship at their native
+    // aspect ratio (3:2, near-square, etc.) and Tailwind's preflight forces
+    // `img { height: auto }`, which overrides the `height` attribute — so an
+    // un-boxed crest renders at a different height per team and breaks column
+    // alignment. The box sizes (inline styles beat preflight) and the image
+    // `contain`s inside it, keeping the whole flag visible and centered.
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={resolvedUrl}
-        alt={entry?.name ?? team}
-        width={size}
-        height={size}
+      <span
         className={className}
-        style={{ objectFit: 'contain', ...style }}
-        onError={() => setImgFailed(true)}
-      />
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: size,
+          height: size,
+          flexShrink: 0,
+          ...style,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={resolvedUrl}
+          alt={entry?.name ?? team}
+          width={size}
+          height={size}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          onError={() => setImgFailed(true)}
+        />
+      </span>
     )
   }
 
