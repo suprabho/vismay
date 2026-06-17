@@ -59,6 +59,13 @@ interface Props {
    *  the AI prompt so the layer generation is grounded in the live story. */
   parentIndex?: number
   subIndex?: number
+  /** Footshorts (fs:*) story. When true, the inspector hides the AI layer
+   *  generator (`PromptBar`) and offers "+ Football data" instead — footshorts
+   *  layers are populated from real data, not AI. */
+  isFootshorts?: boolean
+  /** Opens the football-data picker — the footshorts replacement for the AI
+   *  layer generator. */
+  onAddFootballData?: () => void
   saving: boolean
   error: string | null
   onApply: (next: Record<string, unknown>) => void
@@ -183,6 +190,8 @@ export default function SlotInspector({
   unitKey,
   parentIndex,
   subIndex,
+  isFootshorts,
+  onAddFootballData,
   saving,
   error,
   onApply,
@@ -388,23 +397,51 @@ export default function SlotInspector({
         {/* CONTENT — VizConfigForm with dark CSS vars scoped locally so its
             theme-token colors render legibly on the canvas surface. */}
         <Section title="Content">
-          {/* AI generation for this layer. The model emits the layer fields as
-              YAML; we flatten them onto the form values (merge, so untouched
-              fields survive) for review before Save. */}
-          <div style={{ marginBottom: 12 }}>
-            <PromptBar
-              slug={slug}
-              kind="layer"
-              layerType={layerType}
-              parentIndex={parentIndex}
-              subIndex={subIndex}
-              currentValue={yamlStringify(unflattenContent(content), { lineWidth: 80 })}
-              onApply={(yaml) => {
-                const fields = parseLayerFields(yaml, schemaKeys)
-                if (fields) setContent((c) => ({ ...c, ...fields }))
-              }}
-            />
-          </div>
+          {/* Footshorts (fs:*) layers are populated from real data, not AI:
+              the layer generator is replaced by the football-data picker. */}
+          {isFootshorts ? (
+            onAddFootballData && (
+              <div style={{ marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={onAddFootballData}
+                  title="Add a real standings table, match card, timeline, or bracket from footshorts data"
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    color: '#5fd38a',
+                    border: '1px solid #2a8f55',
+                    borderRadius: 6,
+                    padding: '8px 12px',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  + 🏟️ Football data
+                </button>
+              </div>
+            )
+          ) : (
+            /* AI generation for this layer. The model emits the layer fields as
+               YAML; we flatten them onto the form values (merge, so untouched
+               fields survive) for review before Save. */
+            <div style={{ marginBottom: 12 }}>
+              <PromptBar
+                slug={slug}
+                kind="layer"
+                layerType={layerType}
+                parentIndex={parentIndex}
+                subIndex={subIndex}
+                currentValue={yamlStringify(unflattenContent(content), { lineWidth: 80 })}
+                onApply={(yaml) => {
+                  const fields = parseLayerFields(yaml, schemaKeys)
+                  if (fields) setContent((c) => ({ ...c, ...fields }))
+                }}
+              />
+            </div>
+          )}
           {hasForm ? (
             <div
               style={
