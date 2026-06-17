@@ -11,6 +11,7 @@ import {
   CARD_TYPES,
   LOGO_SIZES,
   LOGO_VARIANTS,
+  MATCH_ROW_VARIANTS,
   MATCH_STYLES,
   OUTPUT_SIZE,
   RENDER_SCALE,
@@ -19,6 +20,7 @@ import {
   type CardType,
   type LogoSize,
   type LogoVariant,
+  type MatchRowVariant,
   type MatchStyle,
   type NewsItem,
   type Overlay,
@@ -65,11 +67,13 @@ interface ShareCardSnapshot {
   showEyebrow: boolean
   compKey: string
   pickedFixtureId: string
+  pickedFixtureIds: string[]
   pickedGroup: string
   matchStyle: MatchStyle
   /** Event-type filter for the match-timeline card. Events themselves aren't
    *  snapshotted — re-fetched from pickedFixtureId on load. */
   pickedEventFilter?: EventTypeFilter
+  matchRowVariant: MatchRowVariant
   pickedTeamSlug: string
   pickedNewsId: string
   aiCaption: string
@@ -107,6 +111,17 @@ function maxStandingsRows(ratio: AspectRatio): number {
   return 7 // 5:4, 4:3 landscape
 }
 
+// Approx render-px height of one MatchRow per density (padding + crest/score).
+const FIXTURE_ROW_PX: Record<MatchRowVariant, number> = { compact: 44, expanded: 104 }
+
+/** Match rows that fit a ratio without overflowing the card body. Derived from
+ *  the card's render height (output × RENDER_SCALE) minus the header/footer
+ *  chrome, divided by the per-row height for the chosen density. */
+function maxFixtureRows(ratio: AspectRatio, variant: MatchRowVariant): number {
+  const bodyPx = OUTPUT_SIZE[ratio].h * RENDER_SCALE - 100 // header + footer + caption
+  return Math.max(1, Math.floor(bodyPx / FIXTURE_ROW_PX[variant]))
+}
+
 export function ShareCardCreator({
   initialCompetitions,
 }: {
@@ -141,8 +156,12 @@ export function ShareCardCreator({
   const [error, setError] = useState<string | null>(null)
 
   const [pickedFixtureId, setPickedFixtureId] = useState<string>('')
+  // Multi-select for the Fixtures (match-row list) card. Toggle order is kept but
+  // the card renders in the fixtures' natural (kickoff) order; see `content`.
+  const [pickedFixtureIds, setPickedFixtureIds] = useState<string[]>([])
   const [pickedGroup, setPickedGroup] = useState<string>('') // standings group_label, for group-stage cups
   const [matchStyle, setMatchStyle] = useState<MatchStyle>('tile')
+  const [matchRowVariant, setMatchRowVariant] = useState<MatchRowVariant>('compact')
   // Match-timeline card: events for the picked fixture (re-fetched, not snapshotted)
   // + the render-time event filter.
   const [events, setEvents] = useState<FixtureEvent[] | null>(null)
@@ -187,10 +206,20 @@ export function ShareCardCreator({
   const [saveError, setSaveError] = useState<string | null>(null)
   // Picks to restore once a competition's fixtures finish loading (set when a
   // saved card is loaded, so the fetch effect doesn't clear them to '').
-  const pendingPicksRef = useRef<{ compKey: string; fixtureId: string; teamSlug: string; group: string } | null>(null)
+  const pendingPicksRef = useRef<{
+    compKey: string
+    fixtureId: string
+    fixtureIds: string[]
+    teamSlug: string
+    group: string
+  } | null>(null)
 
   const needsStandings = cardType === 'standings'
-  const needsFixtures = cardType === 'match' || cardType === 'form' || cardType === 'match-timeline'
+  const needsFixtures =
+    cardType === 'match' ||
+    cardType === 'form' ||
+    cardType === 'match-timeline' ||
+    cardType === 'fixtures'
   const needsNews = cardType === 'news-image' || cardType === 'news-article'
 
   // Fetch competition-scoped data when the type/competition changes.
@@ -236,9 +265,11 @@ export function ShareCardCreator({
             const compKey = `${selectedComp.slug}::${selectedComp.season}`
             if (pending && pending.compKey === compKey) {
               setPickedFixtureId(pending.fixtureId)
+              setPickedFixtureIds(pending.fixtureIds)
               setPickedTeamSlug(pending.teamSlug)
             } else {
               setPickedFixtureId('')
+              setPickedFixtureIds([])
               setPickedTeamSlug('')
             }
             pendingPicksRef.current = null
@@ -379,6 +410,19 @@ export function ShareCardCreator({
       if (visible.length === 0) return null
       return { type: 'match-timeline', events, competitionName: compName, filter: eventFilter }
     }
+    if (cardType === 'fixtures') {
+      if (!fixtures || pickedFixtureIds.length === 0) return null
+      // Render in the fixtures' natural (kickoff) order, not pick order, and cap
+      // to what fits the current ratio/density.
+      const picked = fixtures.filter((f) => pickedFixtureIds.includes(f.id))
+      if (picked.length === 0) return null
+      return {
+        type: 'fixtures',
+        fixtures: picked.slice(0, maxFixtureRows(ratio, matchRowVariant)),
+        competitionName: compName,
+        variant: matchRowVariant,
+      }
+    }
     if (cardType === 'standings') {
       if (!standings || standings.length === 0) return null
       // Group-stage cups carry a group_label per row — a single card shows one
@@ -428,7 +472,9 @@ export function ShareCardCreator({
     events,
     eventFilter,
     pickedFixtureId,
+    pickedFixtureIds,
     matchStyle,
+    matchRowVariant,
     pickedTeamSlug,
     pickedNewsId,
     pickedGroup,
@@ -511,8 +557,10 @@ export function ShareCardCreator({
       showEyebrow,
       compKey,
       pickedFixtureId,
+      pickedFixtureIds,
       pickedGroup,
       matchStyle,
+      matchRowVariant,
       pickedEventFilter: eventFilter,
       pickedTeamSlug,
       pickedNewsId,
@@ -525,8 +573,9 @@ export function ShareCardCreator({
     }),
     [
       cardType, themeName, ratio, accentHex, handle, logoSize, logoVariant, captionColor,
-      gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, pickedGroup, matchStyle,
-      eventFilter, pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject, aiStyleId, aiModel, overlays,
+      gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, pickedFixtureIds, pickedGroup,
+      matchStyle, matchRowVariant, eventFilter, pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject,
+      aiStyleId, aiModel, overlays,
     ],
   )
 
@@ -561,6 +610,7 @@ export function ShareCardCreator({
     pendingPicksRef.current = {
       compKey: snap.compKey,
       fixtureId: snap.pickedFixtureId,
+      fixtureIds: snap.pickedFixtureIds ?? [],
       teamSlug: snap.pickedTeamSlug,
       group: snap.pickedGroup ?? '',
     }
@@ -577,7 +627,9 @@ export function ShareCardCreator({
     setShowEyebrow(snap.showEyebrow)
     setCompKey(snap.compKey)
     setPickedFixtureId(snap.pickedFixtureId)
+    setPickedFixtureIds(snap.pickedFixtureIds ?? [])
     setMatchStyle(snap.matchStyle)
+    setMatchRowVariant(snap.matchRowVariant ?? 'compact')
     setEventFilter(snap.pickedEventFilter ?? 'all')
     setPickedTeamSlug(snap.pickedTeamSlug)
     setPickedNewsId(snap.pickedNewsId)
@@ -758,6 +810,16 @@ export function ShareCardCreator({
     [onDragMove, onDragEnd],
   )
 
+  // ── Fixtures (match-row list) selection ─────────────────────────────────────
+  const toggleFixture = useCallback((id: string) => {
+    setPickedFixtureIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }, [])
+  const selectAllFixtures = useCallback(() => {
+    setPickedFixtureIds((fixtures ?? []).map((f) => f.id))
+  }, [fixtures])
+
+  const fixtureRowCap = maxFixtureRows(ratio, matchRowVariant)
+
   const labelCls = 'block text-[11px] font-medium text-neutral-400'
   const selectCls =
     'mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30'
@@ -892,6 +954,78 @@ export function ShareCardCreator({
               <span className="text-[11px] text-neutral-500">No events for this fixture.</span>
             ) : null}
           </label>
+        )}
+
+        {/* Fixtures: multi-select list + row density */}
+        {cardType === 'fixtures' && fixtures && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className={labelCls}>Fixtures ({pickedFixtureIds.length})</span>
+              <div className="flex gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={selectAllFixtures}
+                  className="text-sky-300 hover:text-sky-200"
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPickedFixtureIds([])}
+                  className="text-neutral-400 hover:text-neutral-200"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="max-h-60 space-y-0.5 overflow-y-auto rounded-md border border-white/10 bg-neutral-900 p-1.5">
+              {fixtures.length === 0 && (
+                <p className="px-1 py-2 text-[11px] text-neutral-500">No fixtures.</p>
+              )}
+              {fixtures.map((f) => {
+                const home = f.home?.name ?? f.home_team_name ?? 'TBD'
+                const away = f.away?.name ?? f.away_team_name ?? 'TBD'
+                const score =
+                  f.status === 'finished' && f.home_score != null
+                    ? ` (${f.home_score}–${f.away_score})`
+                    : ''
+                const checked = pickedFixtureIds.includes(f.id)
+                return (
+                  <label
+                    key={f.id}
+                    className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
+                      checked ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
+                    }`}
+                  >
+                    <input type="checkbox" checked={checked} onChange={() => toggleFixture(f.id)} />
+                    <span className="min-w-0 flex-1 truncate">
+                      {home} vs {away}
+                      {score}
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+            {pickedFixtureIds.length > fixtureRowCap && (
+              <p className="text-[11px] text-amber-400/90">
+                Only the first {fixtureRowCap} fit this format; the rest are hidden.
+              </p>
+            )}
+            <label className={labelCls}>
+              Density
+              <select
+                value={matchRowVariant}
+                onChange={(e) => setMatchRowVariant(e.target.value as MatchRowVariant)}
+                className={selectCls}
+              >
+                {MATCH_ROW_VARIANTS.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         )}
 
         {/* Form: team picker */}

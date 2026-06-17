@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
 import { useAuthModal } from '@/lib/AuthModalProvider';
+import { AddToHomeBanner } from '@/components/AddToHomeBanner';
 
 type NavItem = {
   href: string;
@@ -146,6 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="md:pl-60 lg:pl-64">
       <Sidebar />
       {children}
+      <AddToHomeBanner />
     </div>
   );
 }
