@@ -31,6 +31,7 @@ export const RENDER_SCALE = 0.3
 
 export type CardType =
   | 'match'
+  | 'fixtures'
   | 'standings'
   | 'form'
   | 'news-image'
@@ -39,6 +40,7 @@ export type CardType =
 
 export const CARD_TYPES: Array<{ id: CardType; label: string }> = [
   { id: 'match', label: 'Match' },
+  { id: 'fixtures', label: 'Fixtures' },
   { id: 'standings', label: 'Standings' },
   { id: 'form', label: 'Form grid' },
   { id: 'news-image', label: 'News image' },
@@ -77,9 +79,24 @@ export const MATCH_STYLES: Array<{ id: MatchStyle; label: string }> = [
   { id: 'card-score', label: 'Card · Score' },
 ]
 
+/** Row density for the multi-fixture `fs:match-row` list — maps to MatchRow's
+ *  `variant`. Compact fits more matches; expanded is a chunkier scoreboard row. */
+export type MatchRowVariant = 'compact' | 'expanded'
+
+export const MATCH_ROW_VARIANTS: Array<{ id: MatchRowVariant; label: string }> = [
+  { id: 'compact', label: 'Compact' },
+  { id: 'expanded', label: 'Expanded' },
+]
+
 /** What the canvas renders — a discriminated union by card type. */
 export type CardContent =
   | { type: 'match'; fixture: FixtureRow; competitionName: string; style: MatchStyle }
+  | {
+      type: 'fixtures'
+      fixtures: FixtureRow[]
+      competitionName: string
+      variant: MatchRowVariant
+    }
   | {
       type: 'standings'
       rows: StandingRow[]
