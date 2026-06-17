@@ -76,6 +76,7 @@ function normalizeName(s: string): string {
 
 const args = process.argv.slice(2);
 const PROBE = args.includes('--probe');
+const DUMP = args.includes('--dump');
 const DRY = args.includes('--dry');
 const daysArg = args.find((a) => a.startsWith('--days='));
 const LOOKBACK_DAYS = daysArg ? Number(daysArg.slice('--days='.length)) : 14;
@@ -148,7 +149,21 @@ type SrSportEvent = {
   start_time: string;
   competitors?: SrCompetitor[];
 };
-type SrSchedule = { sport_events?: SrSportEvent[] };
+// The Daily Schedules endpoint has shipped in two shapes across versions: a flat
+// `sport_events: [...]` and a wrapped `schedules: [{ sport_event: {...} }]`.
+// Accept both so we don't depend on which the trial serves.
+type SrSchedule = {
+  sport_events?: SrSportEvent[];
+  schedules?: { sport_event?: SrSportEvent }[];
+};
+
+function extractEvents(s: SrSchedule): SrSportEvent[] {
+  if (s.sport_events?.length) return s.sport_events;
+  if (s.schedules?.length) {
+    return s.schedules.map((e) => e.sport_event).filter((x): x is SrSportEvent => !!x);
+  }
+  return [];
+}
 
 type SrTimelineEvent = {
   type: string;
@@ -304,14 +319,37 @@ async function main() {
   const names = await loadTeamNames(teamIds);
   console.log(`[events:sr] ${candidates.length} candidate WC fixtures (access=${SR_ACCESS}, lookback=${LOOKBACK_DAYS}d)`);
 
+  const days = Array.from(new Set(candidates.map((c) => ymd(c.kickoff_at))));
+
+  // Diagnostic: print one day's raw schedule shape + the team-name strings
+  // Sportradar uses, then exit. Use this to confirm the response shape and to
+  // build the name alias map for teams that don't normalize-match.
+  if (DUMP) {
+    const raw = await srFetch<SrSchedule>(`/schedules/${days[0]}/schedules.json`);
+    console.log(`top-level keys: ${Object.keys(raw).join(', ')}`);
+    const evs = extractEvents(raw);
+    console.log(`extracted sport_events: ${evs.length}`);
+    console.log(
+      JSON.stringify(
+        evs.slice(0, 8).map((e) => ({
+          id: e.id,
+          start_time: e.start_time,
+          competitors: e.competitors?.map((c) => `${c.qualifier}: ${c.name}`),
+        })),
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
   // Pull one Daily Schedule per distinct kickoff day and index its sport_events.
   const scheduleByDay = new Map<string, SrSportEvent[]>();
-  const days = Array.from(new Set(candidates.map((c) => ymd(c.kickoff_at))));
   for (const day of days) {
     if (srCalls >= MAX_SR_CALLS) break;
     try {
       const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedules.json`);
-      scheduleByDay.set(day, sched.sport_events ?? []);
+      scheduleByDay.set(day, extractEvents(sched));
     } catch (e) {
       console.error(`  [schedule ${day}] failed: ${(e as Error).message}`);
     }
