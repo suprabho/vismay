@@ -148,6 +148,7 @@ type SrSportEvent = {
   id: string;
   start_time: string;
   competitors?: SrCompetitor[];
+  sport_event_context?: { competition?: { id?: string; name?: string } };
 };
 // The Daily Schedules endpoint has shipped in two shapes across versions: a flat
 // `sport_events: [...]` and a wrapped `schedules: [{ sport_event: {...} }]`.
@@ -326,14 +327,31 @@ async function main() {
   // build the name alias map for teams that don't normalize-match.
   if (DUMP) {
     const raw = await srFetch<SrSchedule>(`/schedules/${days[0]}/schedules.json`);
-    console.log(`top-level keys: ${Object.keys(raw).join(', ')}`);
     const evs = extractEvents(raw);
-    console.log(`extracted sport_events: ${evs.length}`);
+    console.log(`top-level keys: ${Object.keys(raw).join(', ')}; extracted ${evs.length} events for ${days[0]}`);
+
+    const comps = Array.from(
+      new Set(evs.map((e) => e.sport_event_context?.competition?.name).filter(Boolean)),
+    ).sort();
+    console.log(`\ncompetitions present (${comps.length}):\n  ${comps.join('\n  ')}`);
+
+    // Does the feed contain the teams we're trying to match on this date?
+    const wanted = new Set(
+      candidates
+        .filter((c) => ymd(c.kickoff_at) === days[0])
+        .flatMap((c) => [
+          normalizeName(fixtureName(c, 'home', names)),
+          normalizeName(fixtureName(c, 'away', names)),
+        ]),
+    );
+    const hits = evs.filter((e) => e.competitors?.some((c) => wanted.has(normalizeName(c.name))));
+    console.log(`\nevents matching our ${days[0]} teams: ${hits.length}`);
     console.log(
       JSON.stringify(
-        evs.slice(0, 8).map((e) => ({
+        hits.map((e) => ({
           id: e.id,
           start_time: e.start_time,
+          competition: e.sport_event_context?.competition?.name,
           competitors: e.competitors?.map((c) => `${c.qualifier}: ${c.name}`),
         })),
         null,
