@@ -39,6 +39,16 @@ function kickoffLine(iso: string): string {
   return `${d.toISOString().slice(0, 10)} · ${d.toISOString().slice(11, 16)} UTC`;
 }
 
+// Filter-aware empty copy: "No goals in this match" reads better than the generic
+// "No event data" when the match has events but none of the filtered type.
+function timelineEmptyText(isFinished: boolean, filter: EventTypeFilter): string {
+  if (!isFinished) return 'Events appear once the match is finished.';
+  if (filter === 'goal') return 'No goals in this match.';
+  if (filter === 'card') return 'No cards in this match.';
+  if (filter === 'subst') return 'No substitutions in this match.';
+  return 'No event data for this match yet.';
+}
+
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -109,11 +119,7 @@ export default function MatchPage() {
           <MatchTimeline
             events={events}
             filter={filter}
-            emptyText={
-              isFinished
-                ? 'No event data for this match yet.'
-                : 'Events appear once the match is finished.'
-            }
+            emptyText={timelineEmptyText(isFinished, filter)}
           />
         </div>
       </Section>

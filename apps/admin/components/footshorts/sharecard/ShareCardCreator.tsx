@@ -253,6 +253,9 @@ export function ShareCardCreator({
       return
     }
     let alive = true
+    // Drop the previous fixture's events immediately so the content gate can't
+    // build a card from stale events while the new fetch is in flight.
+    setEvents(null)
     setEventsLoading(true)
     void (async () => {
       try {
@@ -351,6 +354,13 @@ export function ShareCardCreator({
     }
     if (cardType === 'match-timeline') {
       if (!events || events.length === 0) return null
+      // Mirror MatchTimeline's render predicate so a filter that hides everything
+      // yields a null card (Download/Save disabled) rather than an empty export.
+      const RENDERED = new Set(['goal', 'card', 'subst'])
+      const visible = events.filter(
+        (e) => RENDERED.has(e.type) && (eventFilter === 'all' || e.type === eventFilter),
+      )
+      if (visible.length === 0) return null
       return { type: 'match-timeline', events, competitionName: compName, filter: eventFilter }
     }
     if (cardType === 'standings') {

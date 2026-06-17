@@ -25,6 +25,15 @@ function kickoffLine(iso: string): string {
   return `${d.toISOString().slice(0, 10)} · ${d.toISOString().slice(11, 16)} UTC`;
 }
 
+// Filter-aware empty copy (mirrors the web match page).
+function timelineEmptyText(isFinished: boolean, filter: EventTypeFilter): string {
+  if (!isFinished) return 'Events appear once the match is finished.';
+  if (filter === 'goal') return 'No goals in this match.';
+  if (filter === 'card') return 'No cards in this match.';
+  if (filter === 'subst') return 'No substitutions in this match.';
+  return 'No event data for this match yet.';
+}
+
 export default function MatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -111,11 +120,7 @@ export default function MatchScreen() {
             <MatchTimeline
               events={events}
               filter={filter}
-              emptyText={
-                isFinished
-                  ? 'No event data for this match yet.'
-                  : 'Events appear once the match is finished.'
-              }
+              emptyText={timelineEmptyText(isFinished, filter)}
             />
           </View>
         </View>
