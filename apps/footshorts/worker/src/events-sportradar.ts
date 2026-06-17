@@ -310,7 +310,7 @@ async function main() {
   for (const day of days) {
     if (srCalls >= MAX_SR_CALLS) break;
     try {
-      const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedule.json`);
+      const sched = await srFetch<SrSchedule>(`/schedules/${day}/schedules.json`);
       scheduleByDay.set(day, sched.sport_events ?? []);
     } catch (e) {
       console.error(`  [schedule ${day}] failed: ${(e as Error).message}`);
