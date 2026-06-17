@@ -461,6 +461,38 @@ export async function fetchFixtures(q: FixtureQuery): Promise<FixtureRowInput[]>
   return readFixturesFromDb(supabase, q)
 }
 
+// ── match events ────────────────────────────────────────────────────────────
+
+/** One in-match event from `fixture_events` (goal/card/subst + minute).
+ *  Structurally matches @vismay/footshorts-viz `FixtureEvent`. SERVER-ONLY. */
+export interface FixtureEventRow {
+  id: string
+  fixture_id: string
+  team_id: string | null
+  side: 'home' | 'away' | null
+  minute: number
+  extra_minute: number | null
+  type: 'goal' | 'card' | 'subst' | 'var'
+  detail: string | null
+  player_name: string | null
+  assist_name: string | null
+}
+
+/** All events for one fixture, ordered by minute. Mirrors the web
+ *  useFixtureDetail select, server-side (service-role client). */
+export async function fetchFixtureEvents(fixtureId: string): Promise<FixtureEventRow[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('fixture_events')
+    .select(
+      'id, fixture_id, team_id, side, minute, extra_minute, type, detail, player_name, assist_name',
+    )
+    .eq('fixture_id', fixtureId)
+    .order('minute', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as FixtureEventRow[]
+}
+
 // ── news ──────────────────────────────────────────────────────────────────────
 
 /** A football-tagged entity attached to an article (team or league). */

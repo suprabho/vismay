@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 import {
   MatchCard,
   MatchTile,
+  MatchTimeline,
   StandingsTable,
   TeamFormStrip,
   type MatchCardConfig,
@@ -205,6 +206,25 @@ function StandingsBody({ content }: { content: Extract<CardContent, { type: 'sta
   )
 }
 
+function MatchTimelineBody({
+  content,
+}: {
+  content: Extract<CardContent, { type: 'match-timeline' }>
+}) {
+  // Events render as text + glyphs (no remote crests), so no crest proxying is
+  // needed for clean html-to-image capture.
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2 px-4">
+      <div className="text-[14px] font-semibold uppercase tracking-wide text-muted">
+        {content.competitionName}
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <MatchTimeline events={content.events} filter={content.filter} />
+      </div>
+    </div>
+  )
+}
+
 function FormBody({ content }: { content: Extract<CardContent, { type: 'form' }> }) {
   return (
     <div className="flex h-full min-h-0 flex-col justify-center px-4">
@@ -294,6 +314,8 @@ function CardBody({ content }: { content: CardContent }) {
   switch (content.type) {
     case 'match':
       return <MatchBody content={content} />
+    case 'match-timeline':
+      return <MatchTimelineBody content={content} />
     case 'standings':
       return <StandingsBody content={content} />
     case 'form':

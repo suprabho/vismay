@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import type { FixtureRow, StandingRow } from '@vismay/footshorts-viz/types'
+import type { FixtureRow, StandingRow, FixtureEvent, EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { themes } from '@footshorts/brand'
 import type { ThemeName } from '@footshorts/brand'
 import { ShareCardCanvas } from './ShareCardCanvas'
@@ -67,6 +67,9 @@ interface ShareCardSnapshot {
   pickedFixtureId: string
   pickedGroup: string
   matchStyle: MatchStyle
+  /** Event-type filter for the match-timeline card. Events themselves aren't
+   *  snapshotted — re-fetched from pickedFixtureId on load. */
+  pickedEventFilter?: EventTypeFilter
   pickedTeamSlug: string
   pickedNewsId: string
   aiCaption: string
@@ -135,6 +138,11 @@ export function ShareCardCreator({
   const [pickedFixtureId, setPickedFixtureId] = useState<string>('')
   const [pickedGroup, setPickedGroup] = useState<string>('') // standings group_label, for group-stage cups
   const [matchStyle, setMatchStyle] = useState<MatchStyle>('tile')
+  // Match-timeline card: events for the picked fixture (re-fetched, not snapshotted)
+  // + the render-time event filter.
+  const [events, setEvents] = useState<FixtureEvent[] | null>(null)
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventFilter, setEventFilter] = useState<EventTypeFilter>('all')
   const [pickedTeamSlug, setPickedTeamSlug] = useState<string>('')
   const [pickedNewsId, setPickedNewsId] = useState<string>('')
   const [newsSearch, setNewsSearch] = useState<string>('') // article picker filter
@@ -171,7 +179,7 @@ export function ShareCardCreator({
   const pendingPicksRef = useRef<{ compKey: string; fixtureId: string; teamSlug: string; group: string } | null>(null)
 
   const needsStandings = cardType === 'standings'
-  const needsFixtures = cardType === 'match' || cardType === 'form'
+  const needsFixtures = cardType === 'match' || cardType === 'form' || cardType === 'match-timeline'
   const needsNews = cardType === 'news-image' || cardType === 'news-article'
 
   // Fetch competition-scoped data when the type/competition changes.
@@ -235,6 +243,42 @@ export function ShareCardCreator({
       alive = false
     }
   }, [selectedComp, needsStandings, needsFixtures])
+
+  // Match-timeline card: fetch the picked fixture's events. Kept separate from the
+  // competition fetch above because it keys off the fixture, not the competition —
+  // the studio had no events data path before this card type.
+  useEffect(() => {
+    if (cardType !== 'match-timeline' || !pickedFixtureId) {
+      setEvents(null)
+      return
+    }
+    let alive = true
+    setEventsLoading(true)
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/footshorts/data/events?fixtureId=${encodeURIComponent(pickedFixtureId)}`,
+        )
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean
+          rows?: FixtureEvent[]
+          error?: string
+        }
+        if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+        if (alive) setEvents(body.rows ?? [])
+      } catch (e) {
+        if (alive) {
+          setEvents([])
+          setError(e instanceof Error ? e.message : 'Failed to load events')
+        }
+      } finally {
+        if (alive) setEventsLoading(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [cardType, pickedFixtureId])
 
   // Fetch recent news when a news card needs it, or when the AI reference picker
   // (which pulls thumbnails from the same feed) is opened.
@@ -305,6 +349,10 @@ export function ShareCardCreator({
       if (!fixture) return null
       return { type: 'match', fixture, competitionName: compName, style: matchStyle }
     }
+    if (cardType === 'match-timeline') {
+      if (!events || events.length === 0) return null
+      return { type: 'match-timeline', events, competitionName: compName, filter: eventFilter }
+    }
     if (cardType === 'standings') {
       if (!standings || standings.length === 0) return null
       // Group-stage cups carry a group_label per row — a single card shows one
@@ -351,6 +399,8 @@ export function ShareCardCreator({
     fixtures,
     standings,
     news,
+    events,
+    eventFilter,
     pickedFixtureId,
     matchStyle,
     pickedTeamSlug,
@@ -437,6 +487,7 @@ export function ShareCardCreator({
       pickedFixtureId,
       pickedGroup,
       matchStyle,
+      pickedEventFilter: eventFilter,
       pickedTeamSlug,
       pickedNewsId,
       aiCaption,
@@ -449,7 +500,7 @@ export function ShareCardCreator({
     [
       cardType, themeName, ratio, accentHex, handle, logoSize, logoVariant, captionColor,
       gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, pickedGroup, matchStyle,
-      pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject, aiStyleId, aiModel, overlays,
+      eventFilter, pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject, aiStyleId, aiModel, overlays,
     ],
   )
 
@@ -501,6 +552,7 @@ export function ShareCardCreator({
     setCompKey(snap.compKey)
     setPickedFixtureId(snap.pickedFixtureId)
     setMatchStyle(snap.matchStyle)
+    setEventFilter(snap.pickedEventFilter ?? 'all')
     setPickedTeamSlug(snap.pickedTeamSlug)
     setPickedNewsId(snap.pickedNewsId)
     setAiCaption(snap.aiCaption)
@@ -748,8 +800,8 @@ export function ShareCardCreator({
         )}
         {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
 
-        {/* Match: fixture picker */}
-        {cardType === 'match' && fixtures && (
+        {/* Match / match-timeline: fixture picker */}
+        {(cardType === 'match' || cardType === 'match-timeline') && fixtures && (
           <label className={labelCls}>
             Fixture
             <select
@@ -791,6 +843,28 @@ export function ShareCardCreator({
                 </option>
               ))}
             </select>
+          </label>
+        )}
+
+        {/* Match timeline: event-type filter */}
+        {cardType === 'match-timeline' && (
+          <label className={labelCls}>
+            Event filter
+            <select
+              value={eventFilter}
+              onChange={(e) => setEventFilter(e.target.value as EventTypeFilter)}
+              className={selectCls}
+            >
+              <option value="all">All events</option>
+              <option value="goal">Goals only</option>
+              <option value="card">Cards only</option>
+              <option value="subst">Substitutions only</option>
+            </select>
+            {eventsLoading ? (
+              <span className="text-[11px] text-neutral-500">Loading events…</span>
+            ) : events && events.length === 0 ? (
+              <span className="text-[11px] text-neutral-500">No events for this fixture.</span>
+            ) : null}
           </label>
         )}
 

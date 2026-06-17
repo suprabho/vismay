@@ -1,4 +1,4 @@
-import type { FixtureRow, StandingRow } from '@vismay/footshorts-viz/types'
+import type { FixtureRow, StandingRow, FixtureEvent, EventTypeFilter } from '@vismay/footshorts-viz/types'
 import type { ThemeName } from '@footshorts/brand'
 
 /** Output aspect ratios the creator supports (display label : intrinsic ratio). */
@@ -31,6 +31,7 @@ export const RENDER_SCALE = 0.3
 
 export type CardType =
   | 'match'
+  | 'match-timeline'
   | 'standings'
   | 'form'
   | 'news-image'
@@ -39,6 +40,7 @@ export type CardType =
 
 export const CARD_TYPES: Array<{ id: CardType; label: string }> = [
   { id: 'match', label: 'Match' },
+  { id: 'match-timeline', label: 'Match timeline' },
   { id: 'standings', label: 'Standings' },
   { id: 'form', label: 'Form grid' },
   { id: 'news-image', label: 'News image' },
@@ -80,6 +82,12 @@ export const MATCH_STYLES: Array<{ id: MatchStyle; label: string }> = [
 /** What the canvas renders — a discriminated union by card type. */
 export type CardContent =
   | { type: 'match'; fixture: FixtureRow; competitionName: string; style: MatchStyle }
+  | {
+      type: 'match-timeline'
+      events: FixtureEvent[]
+      competitionName: string
+      filter: EventTypeFilter
+    }
   | {
       type: 'standings'
       rows: StandingRow[]
