@@ -72,9 +72,11 @@ function EventDetail({ event, align }: { event: FixtureEvent; align: 'left' | 'r
 }
 
 /**
- * Chronological match timeline: home-side events on the left, away-side on the
- * right, the minute down the middle. Mirrors the home/away split MatchRow uses
- * and styles with the same brand tokens (text/muted/accent/border).
+ * Chronological match timeline: the event glyph (goal/card/sub) runs down the
+ * exact center, the player on one side and the minute on the other. Home-side
+ * events read name → glyph → minute; away-side events mirror to minute → glyph →
+ * name, so the home/away split survives while every glyph lands dead-center.
+ * Styled with the same brand tokens (text/muted/accent/border) as MatchRow.
  */
 export function MatchTimeline({ events, emptyText = 'No match events recorded.', filter = 'all' }: Props) {
   const rendered = events
@@ -102,22 +104,20 @@ export function MatchTimeline({ events, emptyText = 'No match events recorded.',
           >
             <div className="flex flex-1 items-center justify-end gap-2">
               {onLeft ? (
-                <>
-                  <EventDetail event={e} align="right" />
-                  <EventGlyph event={e} />
-                </>
-              ) : null}
+                <EventDetail event={e} align="right" />
+              ) : (
+                <span className="text-xs tabular-nums text-muted">{minuteLabel(e)}</span>
+              )}
             </div>
-            <span className="w-12 shrink-0 text-center text-xs tabular-nums text-muted">
-              {minuteLabel(e)}
+            <span className="flex w-6 shrink-0 items-center justify-center">
+              <EventGlyph event={e} />
             </span>
             <div className="flex flex-1 items-center gap-2">
-              {!onLeft ? (
-                <>
-                  <EventGlyph event={e} />
-                  <EventDetail event={e} align="left" />
-                </>
-              ) : null}
+              {onLeft ? (
+                <span className="text-xs tabular-nums text-muted">{minuteLabel(e)}</span>
+              ) : (
+                <EventDetail event={e} align="left" />
+              )}
             </div>
           </li>
         )
