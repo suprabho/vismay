@@ -20,6 +20,7 @@ import {
   EMOJI_PALETTE,
   GRAPH_SCOPES,
 } from './constants'
+import { FLAG_COUNTRIES, flagImageUrl, flagThumbUrl } from './flags'
 import type {
   AspectRatio,
   CardVariant,
@@ -93,6 +94,9 @@ export function ShareCardCreator({
   const [overlays, setOverlays] = useState<Overlay[]>([])
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
   const overlaySeq = useRef(0)
+
+  // ── flag picker ─────────────────────────────────────────────────────────
+  const [flagQuery, setFlagQuery] = useState<string>('')
 
   // ── assets / AI / library ───────────────────────────────────────────────
   const [assets, setAssets] = useState<AssetEntry[]>([])
@@ -242,6 +246,15 @@ export function ShareCardCreator({
     return { heading: h || undefined, subheading: s || undefined }
   }, [headingOverride, subheadingOverride])
 
+  // Flags filtered by the search box (matches country name or code).
+  const filteredFlags = useMemo(() => {
+    const q = flagQuery.trim().toLowerCase()
+    if (!q) return FLAG_COUNTRIES
+    return FLAG_COUNTRIES.filter(
+      (f) => f.name.toLowerCase().includes(q) || f.code.includes(q),
+    )
+  }, [flagQuery])
+
   // ── overlay handlers ────────────────────────────────────────────────────
   const addImageOverlay = useCallback((url: string, label: string) => {
     const id = `ov-${overlaySeq.current++}`
@@ -260,6 +273,12 @@ export function ShareCardCreator({
     ])
     setSelectedOverlayId(id)
   }, [])
+
+  // Flags are placed as ordinary image overlays (remote URL → proxied on render).
+  const addFlagOverlay = useCallback(
+    (code: string, name: string) => addImageOverlay(flagImageUrl(code), name),
+    [addImageOverlay],
+  )
 
   const removeOverlay = useCallback((id: string) => {
     setOverlays((prev) => prev.filter((o) => o.id !== id))
@@ -559,6 +578,35 @@ export function ShareCardCreator({
                 {e}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Flags */}
+        <div>
+          <span className={labelCls}>Flags</span>
+          <input
+            value={flagQuery}
+            onChange={(e) => setFlagQuery(e.target.value)}
+            placeholder="Search a country…"
+            className={inputCls}
+          />
+          <div className="mt-1.5 grid max-h-44 grid-cols-6 gap-1.5 overflow-y-auto">
+            {filteredFlags.map((f) => (
+              <button
+                key={f.code}
+                onClick={() => addFlagOverlay(f.code, f.name)}
+                title={f.name}
+                className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-sm border border-white/10 bg-neutral-900 hover:border-white/30"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={flagThumbUrl(f.code)} alt={f.name} className="h-full w-full object-cover" />
+              </button>
+            ))}
+            {filteredFlags.length === 0 && (
+              <p className="col-span-6 py-2 text-center text-[11px] text-neutral-600">
+                No country matches “{flagQuery}”.
+              </p>
+            )}
           </div>
         </div>
 
