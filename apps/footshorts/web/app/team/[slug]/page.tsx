@@ -85,12 +85,27 @@ export default function TeamPage() {
     );
   }
 
+  const glowColor = team.data.primary_color ?? 'rgb(var(--sf-color-brand))';
+
   return (
-    <main className="mx-auto max-w-2xl px-5 py-6">
+    <main className="relative isolate mx-auto max-w-2xl overflow-hidden px-5 py-6">
+      {/* Soft primary-color glow bleeding down from the top of the page. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48 blur-3xl"
+        style={{
+          background: `radial-gradient(60% 100% at 50% 0%, ${glowColor} 0%, transparent 75%)`,
+          opacity: 0.35,
+        }}
+      />
       <header className="flex items-center gap-3">
         {team.data.crest_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={team.data.crest_url} alt="" className="h-13 w-13 object-contain" />
+          <img
+            src={team.data.crest_url}
+            alt=""
+            className="h-[52px] w-[52px] shrink-0 object-contain"
+          />
         ) : null}
         <div>
           <h1 className="text-2xl font-bold text-text">{team.data.name}</h1>
