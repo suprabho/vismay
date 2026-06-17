@@ -1,12 +1,23 @@
+import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MatchRow, MatchTimeline, getCompetitionDisplayName } from '@vismay/footshorts-viz/native';
+import type { EventTypeFilter } from '@vismay/footshorts-viz/native';
 import { useFixtureDetail } from '@/lib/useFixtureDetail';
 
 // Match web's `max-w-2xl` so the match page sits in a readable column on wider
 // devices and bleeds to edge on phones (same constant as team/[slug]).
 const MAX_CONTENT_WIDTH = 640;
+
+// Timeline filter tabs (value → label). Values mirror FixtureEventType; 'subst'
+// is the type value even though the tab reads "Subs".
+const FILTER_TABS: ReadonlyArray<[EventTypeFilter, string]> = [
+  ['all', 'All'],
+  ['goal', 'Goals'],
+  ['card', 'Cards'],
+  ['subst', 'Subs'],
+];
 
 function kickoffLine(iso: string): string {
   const d = new Date(iso);
@@ -18,6 +29,7 @@ export default function MatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [filter, setFilter] = useState<EventTypeFilter>('all');
 
   const { data, isLoading, isError } = useFixtureDetail(id);
 
@@ -80,9 +92,25 @@ export default function MatchScreen() {
 
         <View className="px-5 mt-6">
           <Text className="text-text text-base font-semibold mb-2">Timeline</Text>
+          <View className="flex-row mb-3" style={{ gap: 8 }}>
+            {FILTER_TABS.map(([value, label]) => {
+              const active = filter === value;
+              return (
+                <Pressable
+                  key={value}
+                  onPress={() => setFilter(value)}
+                  hitSlop={4}
+                  className={`rounded-md px-3 py-1 ${active ? 'bg-accent' : 'border border-border'}`}
+                >
+                  <Text className={`text-xs ${active ? 'text-surface' : 'text-text'}`}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <View className="rounded-xl border border-border bg-surface px-4 py-1">
             <MatchTimeline
               events={events}
+              filter={filter}
               emptyText={
                 isFinished
                   ? 'No event data for this match yet.'

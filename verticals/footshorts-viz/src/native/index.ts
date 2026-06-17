@@ -1,6 +1,7 @@
 export { MatchRow } from './MatchRow'
 export type { MatchRowVariant } from './MatchRow'
 export { MatchTimeline } from './MatchTimeline'
+export type { EventTypeFilter } from '../types'
 export { MatchTile } from './MatchTile'
 export { StandingsTable } from './StandingsTable'
 export { EntityChip } from './EntityChip'

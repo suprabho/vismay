@@ -1,9 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { MatchRow, MatchTimeline, getCompetitionDisplayName } from '@vismay/footshorts-viz/web';
+import type { EventTypeFilter } from '@vismay/footshorts-viz/web';
 import { useFixtureDetail } from '@/lib/useFixtureDetail';
+
+// Timeline filter tabs (value → label). Values mirror FixtureEventType; 'subst'
+// is the type value even though the tab reads "Subs".
+const FILTER_TABS: ReadonlyArray<[EventTypeFilter, string]> = [
+  ['all', 'All'],
+  ['goal', 'Goals'],
+  ['card', 'Cards'],
+  ['subst', 'Subs'],
+];
 
 function Spinner() {
   return (
@@ -31,6 +42,7 @@ function kickoffLine(iso: string): string {
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const [filter, setFilter] = useState<EventTypeFilter>('all');
   const { data, isLoading, isError } = useFixtureDetail(id);
 
   if (isLoading) return <Spinner />;
@@ -77,9 +89,26 @@ export default function MatchPage() {
       </div>
 
       <Section title="Timeline">
+        <div className="mb-3 flex gap-2">
+          {FILTER_TABS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                filter === value
+                  ? 'bg-accent text-surface'
+                  : 'border border-border text-text hover:bg-border'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="rounded-xl border border-border bg-surface px-4 py-2">
           <MatchTimeline
             events={events}
+            filter={filter}
             emptyText={
               isFinished
                 ? 'No event data for this match yet.'

@@ -66,6 +66,14 @@ export type FixtureEvent = {
   assist_name: string | null
 }
 
+/**
+ * Event-type narrowing for the timeline. 'all' shows goals + cards + subs;
+ * otherwise restrict to one FixtureEventType. (`'var'` is never rendered, so it
+ * isn't an option.) Used by MatchTimeline's `filter` prop, the match-page tabs,
+ * and the fs:match-timeline module config.
+ */
+export type EventTypeFilter = 'all' | 'goal' | 'card' | 'subst'
+
 export type StandingTeamRef = {
   id: string
   slug: string

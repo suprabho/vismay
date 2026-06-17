@@ -1,10 +1,12 @@
 import { Text, View } from 'react-native';
-import type { FixtureEvent } from '../types';
+import type { FixtureEvent, EventTypeFilter } from '../types';
 
 type Props = {
   events: FixtureEvent[];
   /** Empty-state copy shown when there are no events to render. */
   emptyText?: string;
+  /** Narrow to one event type; 'all' (default) shows goals + cards + subs. */
+  filter?: EventTypeFilter;
 };
 
 // Mirrors web/MatchTimeline.tsx: goals are the headline, cards/subs add texture,
@@ -84,9 +86,9 @@ function EventDetail({ event, align }: { event: FixtureEvent; align: 'left' | 'r
  * right, the minute down the middle. Mirrors web/MatchTimeline.tsx and the
  * home/away split MatchRow uses, styled with the same brand tokens.
  */
-export function MatchTimeline({ events, emptyText = 'No match events recorded.' }: Props) {
+export function MatchTimeline({ events, emptyText = 'No match events recorded.', filter = 'all' }: Props) {
   const rendered = events
-    .filter((e) => RENDERED_TYPES.has(e.type))
+    .filter((e) => RENDERED_TYPES.has(e.type) && (filter === 'all' || e.type === filter))
     .slice()
     .sort((a, b) => {
       const am = a.minute + (a.extra_minute ?? 0) / 100;
