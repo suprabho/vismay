@@ -19,6 +19,7 @@ export async function register(): Promise<void> {
     { default: matchCardModule },
     { default: matchRowModule },
     { default: matchTileModule },
+    { default: matchTimelineModule },
     { default: standingsTableModule },
     { default: bracketModule },
     { default: tacticsBoardModule },
@@ -28,6 +29,7 @@ export async function register(): Promise<void> {
     import('./modules/match-card'),
     import('./modules/match-row'),
     import('./modules/match-tile'),
+    import('./modules/match-timeline'),
     import('./modules/standings-table'),
     import('./modules/bracket'),
     import('./modules/tactics-board'),
@@ -37,6 +39,7 @@ export async function register(): Promise<void> {
   registerVizModule(matchCardModule)
   registerVizModule(matchRowModule)
   registerVizModule(matchTileModule)
+  registerVizModule(matchTimelineModule)
   registerVizModule(standingsTableModule)
   registerVizModule(bracketModule)
   registerVizModule(tacticsBoardModule)

@@ -12,6 +12,7 @@ import { sample as raceReplaySample } from '@vismay/f1-viz/modules/race-replay/s
 import { sample as matchCardSample } from '@vismay/footshorts-viz/modules/match-card/sample'
 import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-row/sample'
 import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
+import { sample as matchTimelineSample } from '@vismay/footshorts-viz/modules/match-timeline/sample'
 import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
 import { sample as standingsOverMatchdaysSample } from '@vismay/footshorts-viz/modules/standings-over-matchdays/sample'
 import {
@@ -82,6 +83,7 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'fs:match-card', category: 'Footshorts', sample: matchCardSample },
   { type: 'fs:match-row', category: 'Footshorts', sample: matchRowSample },
   { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },
+  { type: 'fs:match-timeline', category: 'Footshorts', sample: matchTimelineSample },
   { type: 'fs:standings-table', category: 'Footshorts', sample: standingsTableSample },
   {
     type: 'fs:standings-over-matchdays',
