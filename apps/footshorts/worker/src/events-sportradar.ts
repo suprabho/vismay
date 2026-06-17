@@ -178,6 +178,19 @@ type SrTimelineEvent = {
 };
 type SrTimeline = { timeline?: SrTimelineEvent[] };
 
+// Nations our entities name differently from Sportradar. Keyed by normalized
+// (lowercase, no spaces/accents) OUR name → normalized Sportradar name.
+const NAME_ALIASES: Record<string, string> = {
+  southkorea: 'korearepublic',
+  unitedstates: 'usa',
+  turkey: 'turkiye',
+  capeverdeislands: 'capeverde',
+  iran: 'iriran',
+};
+function aliasName(n: string): string {
+  return NAME_ALIASES[n] ?? n;
+}
+
 function isWorldCup(e: SrSportEvent): boolean {
   return /world cup/i.test(e.sport_event_context?.competition?.name ?? '');
 }
@@ -192,8 +205,8 @@ function matchSportEvent(
   wc: SrSportEvent[],
   names: Map<string, string>,
 ): SrSportEvent | null {
-  const home = normalizeName(fixtureName(f, 'home', names));
-  const away = normalizeName(fixtureName(f, 'away', names));
+  const home = aliasName(normalizeName(fixtureName(f, 'home', names)));
+  const away = aliasName(normalizeName(fixtureName(f, 'away', names)));
   if (!home || !away) return null;
   const t = new Date(f.kickoff_at).getTime();
 
@@ -249,7 +262,7 @@ function srSideToOurs(
   f: FixtureRow,
   names: Map<string, string>,
 ): { home: 'home' | 'away'; away: 'home' | 'away' } {
-  const ourHome = normalizeName(fixtureName(f, 'home', names));
+  const ourHome = aliasName(normalizeName(fixtureName(f, 'home', names)));
   const srHome = se.competitors?.find((c) => c.qualifier === 'home');
   const srHomeIsOurHome = srHome ? normalizeName(srHome.name) === ourHome : true;
   return srHomeIsOurHome
@@ -433,7 +446,7 @@ async function main() {
       const n = await syncEvents(f, se, names);
       totalEvents += n;
       hydrated++;
-      if (!PROBE) console.log(`  [${f.id}] +${n} events`);
+      if (!PROBE && !DRY) console.log(`  [${f.id}] +${n} events`);
     } catch (e) {
       console.error(`  [${f.id}] timeline failed: ${(e as Error).message}`);
     }
