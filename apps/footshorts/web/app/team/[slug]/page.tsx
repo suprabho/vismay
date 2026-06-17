@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { MatchRow } from '@vismay/footshorts-viz/web';
+import { EntityShareCards } from '@/components/EntityShareCards';
 import { useEntity, usePlayersInTeam } from '@/lib/useEntity';
 import { useTeamFixtures, type FixtureRow } from '@/lib/useFixtures';
 import { useTeamStanding } from '@/lib/useStandings';
@@ -118,6 +119,8 @@ export default function TeamPage() {
           ) : null}
         </div>
       ) : null}
+
+      <EntityShareCards entityId={teamId} />
 
       <Section title="Upcoming">
         <FixtureList
