@@ -431,6 +431,10 @@ export function ShareCardCreator({
       return { type: 'match', fixture, competitionName: compName, style: matchStyle }
     }
     if (cardType === 'match-timeline') {
+      // The timeline always rides above a match-type card, so it needs the
+      // fixture too — bail if we can't resolve it (same gating as the match card).
+      const fixture = fixtures?.find((f) => f.id === pickedFixtureId)
+      if (!fixture) return null
       if (!events || events.length === 0) return null
       // Mirror MatchTimeline's render predicate so a filter that hides everything
       // yields a null card (Download/Save disabled) rather than an empty export.
@@ -439,7 +443,14 @@ export function ShareCardCreator({
         (e) => RENDERED.has(e.type) && (eventFilter === 'all' || e.type === eventFilter),
       )
       if (visible.length === 0) return null
-      return { type: 'match-timeline', events, competitionName: compName, filter: eventFilter }
+      return {
+        type: 'match-timeline',
+        fixture,
+        style: matchStyle,
+        events,
+        competitionName: compName,
+        filter: eventFilter,
+      }
     }
     if (cardType === 'fixtures') {
       if (!fixtures || pickedFixtureIds.length === 0) return null
@@ -539,7 +550,7 @@ export function ShareCardCreator({
       ? { id: '', type: 'league', slug: selectedComp.slug, name: selectedComp.name, crest_url: null }
       : null
     if (!content) return out
-    if (content.type === 'match') {
+    if (content.type === 'match' || content.type === 'match-timeline') {
       const f = content.fixture
       if (f.home) push({ id: f.home.id, type: 'team', slug: f.home.slug, name: f.home.name, crest_url: f.home.crest_url })
       if (f.away) push({ id: f.away.id, type: 'team', slug: f.away.slug, name: f.away.name, crest_url: f.away.crest_url })
@@ -1114,8 +1125,9 @@ export function ShareCardCreator({
           </label>
         )}
 
-        {/* Match: tile vs editorial card layout */}
-        {cardType === 'match' && (
+        {/* Match / match-timeline: the heading match-type card's layout (tile vs
+            editorial card) — the timeline rides below whichever is picked. */}
+        {(cardType === 'match' || cardType === 'match-timeline') && (
           <label className={labelCls}>
             Style
             <select
