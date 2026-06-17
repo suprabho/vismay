@@ -119,6 +119,25 @@ export type CardContent =
   | { type: 'news-article'; item: NewsItem }
   | { type: 'ai-image'; dataUrl: string; caption: string }
 
+/** A decorative backdrop painted behind a data card's content (match,
+ *  standings, fixtures, form, timeline, news-article). Bleed cards
+ *  (news-image / ai-image) ignore it — their image already IS the card.
+ *  `aura` embeds the animated `aura.promad.design` iframe: it shows in the
+ *  live preview but, like every aura in this repo, is NOT rasterized into the
+ *  exported PNG (html-to-image can't capture cross-origin iframes). News and
+ *  AI image backgrounds capture cleanly. */
+export type CardBackground =
+  | { type: 'none' }
+  | { type: 'news'; url: string; label?: string }
+  | { type: 'ai'; dataUrl: string }
+  | { type: 'aura'; slug: string }
+
+export const BACKGROUND_KINDS: Array<{ id: Exclude<CardBackground['type'], 'none'>; label: string }> = [
+  { id: 'news', label: 'News image' },
+  { id: 'ai', label: 'AI image' },
+  { id: 'aura', label: 'Aura' },
+]
+
 /** A draggable badge placed on the card — a team crest, competition logo, or
  *  country flag. Position is the badge CENTER as a % of the card; width is a %
  *  of the card width. */
@@ -166,4 +185,8 @@ export interface CardFrameConfig {
   /** Bleed-card caption: text color + bottom-gradient strength (0–1). */
   captionColor: string
   gradientStrength: number
+  /** Decorative backdrop behind data-card content. Ignored by bleed cards. */
+  background?: CardBackground
+  /** Dark scrim over the background for content legibility (0–1). */
+  backgroundScrim?: number
 }

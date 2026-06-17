@@ -8,6 +8,7 @@ import { ShareCardCanvas } from './ShareCardCanvas'
 import { useCapture } from './useCapture'
 import {
   ASPECT_RATIOS,
+  BACKGROUND_KINDS,
   CARD_TYPES,
   LOGO_SIZES,
   LOGO_VARIANTS,
@@ -16,6 +17,7 @@ import {
   OUTPUT_SIZE,
   RENDER_SCALE,
   type AspectRatio,
+  type CardBackground,
   type CardContent,
   type CardType,
   type LogoSize,
@@ -81,6 +83,9 @@ interface ShareCardSnapshot {
   aiSubject: string
   aiStyleId: string
   aiModel: ShareImageModel
+  /** Decorative backdrop behind data-card content (news / AI / aura). */
+  background?: CardBackground
+  backgroundScrim?: number
   overlays: Overlay[]
 }
 
@@ -202,6 +207,18 @@ export function ShareCardCreator({
   const [aiRefPickerOpen, setAiRefPickerOpen] = useState(false) // pick a news thumbnail as reference
   const [aiRefBusy, setAiRefBusy] = useState(false)
 
+  // ── card background ─────────────────────────────────────────────────────────
+  // A decorative backdrop painted behind data-card content: a news thumbnail, an
+  // AI-generated image, or an animated aura embed. `background` is the source of
+  // truth the canvas reads; `bgTab` only picks which picker is shown.
+  const [background, setBackground] = useState<CardBackground>({ type: 'none' })
+  const [backgroundScrim, setBackgroundScrim] = useState<number>(0.5)
+  const [bgTab, setBgTab] = useState<'news' | 'ai' | 'aura'>('news')
+  const [bgAiSubject, setBgAiSubject] = useState<string>('')
+  const [bgAuraSlug, setBgAuraSlug] = useState<string>('')
+  const [bgBusy, setBgBusy] = useState(false)
+  const [bgError, setBgError] = useState<string | null>(null)
+
   // ── badge / flag overlays ───────────────────────────────────────────────────
   const [overlays, setOverlays] = useState<Overlay[]>([])
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
@@ -252,6 +269,10 @@ export function ShareCardCreator({
     cardType === 'match-timeline' ||
     cardType === 'fixtures'
   const needsNews = cardType === 'news-image' || cardType === 'news-article'
+  // Backgrounds apply to data cards only — bleed cards already are an image.
+  const bgEnabled = cardType !== 'news-image' && cardType !== 'ai-image'
+  // The background News picker pulls from the same news feed as the article cards.
+  const wantBgNews = bgEnabled && bgTab === 'news'
 
   // Fetch competition-scoped data when the type/competition changes.
   useEffect(() => {
@@ -356,10 +377,11 @@ export function ShareCardCreator({
     }
   }, [cardType, pickedFixtureId])
 
-  // Fetch recent news when a news card needs it, or when the AI reference picker
-  // (which pulls thumbnails from the same feed) is opened.
+  // Fetch recent news when a news card needs it, when the AI reference picker is
+  // open, or when the background News picker is active — all pull thumbnails from
+  // the same feed.
   useEffect(() => {
-    if (!needsNews && !aiRefPickerOpen) return
+    if (!needsNews && !aiRefPickerOpen && !wantBgNews) return
     // Already have this page (or a deeper one) — nothing to fetch.
     if (fetchedNewsLimitRef.current !== null && fetchedNewsLimitRef.current >= newsLimit) return
     let alive = true
@@ -383,7 +405,7 @@ export function ShareCardCreator({
     return () => {
       alive = false
     }
-  }, [needsNews, aiRefPickerOpen, newsLimit])
+  }, [needsNews, aiRefPickerOpen, wantBgNews, newsLimit])
 
   // Articles filtered by the picker search box (and, for the image card, those
   // that actually have a thumbnail).
@@ -648,13 +670,15 @@ export function ShareCardCreator({
       aiSubject,
       aiStyleId,
       aiModel,
+      background,
+      backgroundScrim,
       overlays,
     }),
     [
       cardType, themeName, ratio, accentHex, handle, logoSize, logoVariant, captionColor,
       gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, pickedFixtureIds, pickedGroup,
       matchStyle, matchRowVariant, eventFilter, pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject,
-      aiStyleId, aiModel, overlays,
+      aiStyleId, aiModel, background, backgroundScrim, overlays,
     ],
   )
 
@@ -719,6 +743,11 @@ export function ShareCardCreator({
     setAiSubject(snap.aiSubject)
     setAiStyleId(snap.aiStyleId)
     setAiModel(snap.aiModel)
+    const bg = snap.background ?? { type: 'none' }
+    setBackground(bg)
+    setBackgroundScrim(snap.backgroundScrim ?? 0.5)
+    if (bg.type === 'aura') setBgAuraSlug(bg.slug)
+    if (bg.type !== 'none') setBgTab(bg.type)
     setOverlays(snap.overlays.map((o) => ({ ...o, id: `ov-${overlaySeq.current++}` })))
     setSelectedOverlayId(null)
     setSaveError(null)
@@ -922,6 +951,34 @@ export function ShareCardCreator({
       setAiRefBusy(false)
     }
   }, [])
+
+  // Generate an AI image to use as the card background. Same endpoint as the AI
+  // card, reusing the chosen style/model/palette; the result is stored as the
+  // background rather than the card content.
+  const handleGenerateBg = useCallback(async () => {
+    const subject = bgAiSubject.trim()
+    if (!subject) {
+      setBgError('Describe the background.')
+      return
+    }
+    setBgBusy(true)
+    setBgError(null)
+    try {
+      const paletteHexes = [themes[themeName].colors.accent, accentHex].filter(Boolean)
+      const res = await fetch('/api/footshorts/share/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ styleId: aiStyleId, subject, ratio, model: aiModel, paletteHexes }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
+      if (!res.ok || !body.ok || !body.dataUrl) throw new Error(body.error ?? `HTTP ${res.status}`)
+      setBackground({ type: 'ai', dataUrl: body.dataUrl })
+    } catch (e) {
+      setBgError(e instanceof Error ? e.message : 'Generation failed')
+    } finally {
+      setBgBusy(false)
+    }
+  }, [bgAiSubject, aiStyleId, aiModel, ratio, themeName, accentHex])
 
   // ── badge / flag overlay handlers ───────────────────────────────────────────
   const searchBadges = useCallback(async () => {
@@ -1531,6 +1588,150 @@ export function ShareCardCreator({
           </div>
         )}
 
+        {/* Background — paint a news image, AI image, or aura behind a data
+            card's content. Hidden for bleed cards, which already are an image. */}
+        {bgEnabled && (
+          <>
+            <hr className="border-white/10" />
+            <div>
+              <div className="flex items-center justify-between">
+                <span className={labelCls}>Background</span>
+                {background.type !== 'none' && (
+                  <button
+                    onClick={() => setBackground({ type: 'none' })}
+                    className="text-[11px] text-neutral-400 hover:text-neutral-200"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Source tabs */}
+              <div className="mt-1.5 flex overflow-hidden rounded-md border border-white/10">
+                {BACKGROUND_KINDS.map((k) => (
+                  <button
+                    key={k.id}
+                    onClick={() => setBgTab(k.id)}
+                    className={`flex-1 px-2 py-1.5 text-[11px] ${
+                      bgTab === k.id ? 'bg-white/15 text-white' : 'text-neutral-400 hover:text-neutral-200'
+                    }`}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* News thumbnails */}
+              {bgTab === 'news' && (
+                <div className="mt-2">
+                  <input
+                    value={newsSearch}
+                    onChange={(e) => setNewsSearch(e.target.value)}
+                    placeholder="Search news…"
+                    className="mb-1.5 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                  />
+                  {news === null ? (
+                    <p className="text-[11px] text-neutral-500">Loading…</p>
+                  ) : (
+                    <div className="grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto">
+                      {newsWithImage.slice(0, 30).map((n) => {
+                        const selected = background.type === 'news' && background.url === n.image_url
+                        return (
+                          <button
+                            key={n.id}
+                            onClick={() =>
+                              setBackground({ type: 'news', url: n.image_url!, label: n.headline })
+                            }
+                            title={n.headline}
+                            className={`aspect-square overflow-hidden rounded-md border ${
+                              selected
+                                ? 'border-sky-400/80 ring-1 ring-sky-400/60'
+                                : 'border-white/10 hover:border-white/30'
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* AI generator */}
+              {bgTab === 'ai' && (
+                <div className="mt-2 space-y-2">
+                  <textarea
+                    value={bgAiSubject}
+                    onChange={(e) => setBgAiSubject(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. a moody floodlit stadium, deep greens"
+                    className="w-full resize-vertical rounded border border-white/10 bg-neutral-950 p-2 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                  />
+                  <label className={labelCls}>
+                    Style
+                    <select
+                      value={aiStyleId}
+                      onChange={(e) => setAiStyleId(e.target.value)}
+                      className={selectCls}
+                    >
+                      {SHARE_IMAGE_STYLES.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    onClick={() => void handleGenerateBg()}
+                    disabled={bgBusy || !bgAiSubject.trim()}
+                    className="w-full rounded-md bg-white px-3 py-1.5 text-xs font-medium text-neutral-950 disabled:opacity-40"
+                  >
+                    {bgBusy ? 'Generating…' : background.type === 'ai' ? 'Regenerate' : 'Generate'}
+                  </button>
+                </div>
+              )}
+
+              {/* Aura slug */}
+              {bgTab === 'aura' && (
+                <div className="mt-2 space-y-1.5">
+                  <input
+                    value={bgAuraSlug}
+                    onChange={(e) => {
+                      const slug = e.target.value
+                      setBgAuraSlug(slug)
+                      setBackground(slug.trim() ? { type: 'aura', slug: slug.trim() } : { type: 'none' })
+                    }}
+                    placeholder="aura.promad.design slug — e.g. nebula"
+                    className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                  />
+                  <p className="text-[11px] text-amber-400/90">
+                    Auras animate in the preview but aren’t baked into the exported PNG.
+                  </p>
+                </div>
+              )}
+
+              {bgError && <p className="mt-1 text-[11px] text-red-400">{bgError}</p>}
+
+              {/* Scrim — darken the backdrop so card content stays legible. */}
+              {background.type !== 'none' && (
+                <label className={`${labelCls} mt-2 block`}>
+                  Scrim {Math.round(backgroundScrim * 100)}%
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round(backgroundScrim * 100)}
+                    onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
+                    className="mt-2 w-full"
+                  />
+                </label>
+              )}
+            </div>
+          </>
+        )}
+
         <hr className="border-white/10" />
 
         {/* Badges & flags — fetch and place crests / logos / flags on the card */}
@@ -1832,6 +2033,8 @@ export function ShareCardCreator({
                   logoVariant,
                   captionColor,
                   gradientStrength,
+                  background,
+                  backgroundScrim,
                 }}
                 overlays={overlays}
               />
