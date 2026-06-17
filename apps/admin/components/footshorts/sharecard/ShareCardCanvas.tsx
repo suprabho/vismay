@@ -162,30 +162,46 @@ function Footer({ handle }: { handle: string }) {
 
 // ── card bodies ───────────────────────────────────────────────────────────────
 
+/** A fixture rendered as one of the match-type cards — the colorful `tile` or an
+ *  editorial `MatchCard` layout. Shared by the Match body and the timeline
+ *  header. `tile` self-sizes (h-32) and needs a width wrapper; the editorial
+ *  layouts fill their host's height, so they need a definite-height parent. */
+function MatchStyleCard({
+  fixture,
+  style,
+  competitionName,
+}: {
+  fixture: FixtureRow
+  style: MatchStyle
+  competitionName: string
+}) {
+  if (style === 'tile') {
+    return <MatchTile fixture={withProxiedFixtureCrests(fixture)} />
+  }
+  const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName)
+  return <MatchCard config={config} />
+}
+
 function MatchBody({ content }: { content: Extract<CardContent, { type: 'match' }> }) {
-  const caption = (
-    <div className="text-center text-[15px] font-semibold uppercase tracking-wide text-muted">
-      {content.competitionName}
-    </div>
-  )
   if (content.style === 'tile') {
     return (
       <div className="flex h-full min-h-0 flex-col justify-center gap-4 px-4">
-        {caption}
+        <div className="text-center text-[15px] font-semibold uppercase tracking-wide text-muted">
+          {content.competitionName}
+        </div>
         <div className="w-full">
-          <MatchTile fixture={withProxiedFixtureCrests(content.fixture)} />
+          <MatchStyleCard fixture={content.fixture} style="tile" competitionName={content.competitionName} />
         </div>
       </div>
     )
   }
-  const config = fixtureToMatchCardConfig(
-    content.fixture,
-    CARD_LAYOUT[content.style],
-    content.competitionName,
-  )
   return (
     <div className="flex h-full min-h-0 items-center justify-center px-3 py-2">
-      <MatchCard config={config} />
+      <MatchStyleCard
+        fixture={content.fixture}
+        style={content.style}
+        competitionName={content.competitionName}
+      />
     </div>
   )
 }
@@ -227,14 +243,31 @@ function MatchTimelineBody({
 }: {
   content: Extract<CardContent, { type: 'match-timeline' }>
 }) {
-  // Events render as text + glyphs (no remote crests), so no crest proxying is
-  // needed for clean html-to-image capture.
+  // The timeline always leads with a match-type card (any style except the
+  // fixtures "line") so the recap names the match it belongs to — its crests
+  // need proxying for clean capture, handled inside MatchStyleCard. The events
+  // below render as text + glyphs (no proxying) in the default split layout.
+  // The header gets a definite-height region so the editorial card layouts,
+  // which fill their host, have something to fill; `tile` self-sizes, so it's
+  // wrapped to full width and vertically centered.
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 px-4">
-      <div className="text-[14px] font-semibold uppercase tracking-wide text-muted">
-        {content.competitionName}
-      </div>
-      <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-2 px-4 py-1">
+      {content.style === 'tile' ? (
+        <div className="flex min-h-0 flex-[2] items-center">
+          <div className="w-full">
+            <MatchStyleCard fixture={content.fixture} style="tile" competitionName={content.competitionName} />
+          </div>
+        </div>
+      ) : (
+        <div className="min-h-0 flex-[2]">
+          <MatchStyleCard
+            fixture={content.fixture}
+            style={content.style}
+            competitionName={content.competitionName}
+          />
+        </div>
+      )}
+      <div className="min-h-0 flex-[3] overflow-hidden">
         <MatchTimeline events={content.events} filter={content.filter} />
       </div>
     </div>

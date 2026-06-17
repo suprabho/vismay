@@ -95,6 +95,12 @@ export type CardContent =
   | { type: 'match'; fixture: FixtureRow; competitionName: string; style: MatchStyle }
   | {
       type: 'match-timeline'
+      /** The fixture the events belong to — rendered as a match-type card above
+       *  the timeline so the card always names the match it recaps. */
+      fixture: FixtureRow
+      /** Which match-type card heads the timeline (any style except the row
+       *  "line" used by the fixtures list). */
+      style: MatchStyle
       events: FixtureEvent[]
       competitionName: string
       filter: EventTypeFilter
