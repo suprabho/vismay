@@ -10,18 +10,24 @@ import type { MatchCardConfig } from '@vismay/footshorts-viz/web'
 
 /**
  * Sample data for the asset studio, parameterised by the picked entity and its
- * working color. Everything is fictional except the picked entity so the brand
- * color reads clearly against neutral opponents — no DB fixtures required.
+ * working color. A team and a competition use the color in fundamentally
+ * different ways, so they produce different preview shapes:
  *
- * `entity.kind` switches the framing: a `team` is the home side carrying the
- * color, a `league` drives the competition accent (the wrapper sets
- * `--sf-color-accent`) and tints the showcase tile.
+ *  - a TEAM is a participant — the color is its identity (badge, tile gradient,
+ *    card wash, standings lane, form).
+ *  - a LEAGUE is the frame — the color never appears as a home/away side; it
+ *    tints the league tile, the bracket emblem, match-card competition accents
+ *    and feed placeholders.
+ *
+ * Everything is fictional except the picked entity so the brand color reads
+ * clearly against neutral opponents — no DB fixtures required.
  */
 
 export interface PreviewEntity {
   kind: 'team' | 'league'
   slug: string
   name: string
+  country: string | null
   crestUrl: string | null
 }
 
@@ -31,7 +37,7 @@ const OPP_B = { id: 'asset-opp-b', name: 'Rivermouth', color: '#4A4035' }
 const OPP_C = { id: 'asset-opp-c', name: 'Castleford', color: '#2F3A3A' }
 
 const SEASON = '2025'
-const COMP_SLUG = 'asset-preview' // intentionally NOT a bundled slug → accent falls through to the theme var
+const COMP_SLUG = 'asset-preview' // intentionally NOT a bundled slug → accent falls through to the theme/picked var
 
 /** A fixture team ref. `slug` is null so preview rows/cards never link to a
  *  (non-existent) `/team/:slug` route in admin. */
@@ -77,7 +83,34 @@ function fixture(opts: {
   }
 }
 
-export interface PreviewData {
+/** Two-leg knockout bracket between neutral sides (the competition's bracket). */
+function neutralBracket(): Bracket | null {
+  return buildBracket([
+    fixture({
+      id: 'sf',
+      home: teamRef(OPP_A.id, OPP_A.name, { color: OPP_A.color }),
+      away: teamRef(OPP_C.id, OPP_C.name, { color: OPP_C.color }),
+      homeScore: 2,
+      awayScore: 1,
+      stage: 'SEMI_FINALS',
+      kickoff: '2026-05-01T19:00:00Z',
+    }),
+    fixture({
+      id: 'final',
+      home: teamRef(OPP_A.id, OPP_A.name, { color: OPP_A.color }),
+      away: teamRef(OPP_B.id, OPP_B.name, { color: OPP_B.color }),
+      homeScore: 3,
+      awayScore: 1,
+      stage: 'FINAL',
+      kickoff: '2026-05-31T19:00:00Z',
+    }),
+  ])
+}
+
+// ── team preview ──────────────────────────────────────────────────────────────
+
+export interface TeamPreviewData {
+  kind: 'team'
   matchCardScore: MatchCardConfig
   matchCardHorizontal: MatchCardConfig
   tileFixture: FixtureRow
@@ -92,63 +125,31 @@ export interface PreviewData {
   teamId: string
 }
 
-export function buildPreviewData(entity: PreviewEntity, color: string): PreviewData {
-  const isLeague = entity.kind === 'league'
-
-  // In league mode the picked color is the competition accent (set on the
-  // wrapper as --sf-color-accent), and the showcase teams carry it so the tile
-  // still reads in-brand. In team mode the picked entity is the home side.
-  const subjectColor = color
-  const subjectName = entity.name
-  const subjectCrest = entity.crestUrl
+function buildTeam(entity: PreviewEntity, color: string): TeamPreviewData {
   const subjectId = entity.slug || 'asset-subject'
-
-  const home = teamRef(subjectId, subjectName, { crestUrl: subjectCrest, color: subjectColor })
+  const home = teamRef(subjectId, entity.name, { crestUrl: entity.crestUrl, color })
   const awayA = teamRef(OPP_A.id, OPP_A.name, { color: OPP_A.color })
   const awayB = teamRef(OPP_B.id, OPP_B.name, { color: OPP_B.color })
   const awayC = teamRef(OPP_C.id, OPP_C.name, { color: OPP_C.color })
 
-  const compLabel = isLeague ? entity.name : 'League · Matchday 32'
-
   const matchCardCommon: Omit<MatchCardConfig, 'type' | 'layout'> = {
-    home: subjectName,
+    home: entity.name,
     away: OPP_A.name,
     score: '2 – 1',
     kickoff: 'FT',
-    competition: compLabel,
+    competition: 'League · Matchday 32',
     competitionSlug: COMP_SLUG,
-    homeColor: isLeague ? OPP_C.color : subjectColor,
-    awayColor: isLeague ? OPP_A.color : OPP_A.color,
-    homeCrestUrl: isLeague ? undefined : subjectCrest ?? undefined,
-    // In league mode the accent IS the picked color; in team mode let it inherit
-    // the theme accent so the team colors carry the card.
-    accent: isLeague ? subjectColor : undefined,
+    homeColor: color,
+    awayColor: OPP_A.color,
+    homeCrestUrl: entity.crestUrl ?? undefined,
   }
 
-  const tileHome = isLeague
-    ? teamRef(subjectId, subjectName, { crestUrl: subjectCrest, color: subjectColor })
-    : home
-
   return {
+    kind: 'team',
     matchCardScore: { type: 'fs:match-card', layout: 'score', ...matchCardCommon },
     matchCardHorizontal: { type: 'fs:match-card', layout: 'horizontal', ...matchCardCommon },
-
-    tileFixture: fixture({
-      id: 'asset-tile',
-      home: tileHome,
-      away: awayA,
-      homeScore: 2,
-      awayScore: 1,
-    }),
-
-    rowFixture: fixture({
-      id: 'asset-row',
-      home,
-      away: awayB,
-      homeScore: 3,
-      awayScore: 0,
-    }),
-
+    tileFixture: fixture({ id: 'asset-tile', home, away: awayA, homeScore: 2, awayScore: 1 }),
+    rowFixture: fixture({ id: 'asset-row', home, away: awayB, homeScore: 3, awayScore: 0 }),
     formFixtures: [
       fixture({ id: 'f1', home, away: awayA, homeScore: 2, awayScore: 1 }),
       fixture({ id: 'f2', home: awayB, away: home, homeScore: 0, awayScore: 0 }),
@@ -156,17 +157,15 @@ export function buildPreviewData(entity: PreviewEntity, color: string): PreviewD
       fixture({ id: 'f4', home: awayA, away: home, homeScore: 1, awayScore: 3 }),
       fixture({ id: 'f5', home, away: awayB, homeScore: 4, awayScore: 0 }),
     ],
-
-    standingsRows: standingsRows(subjectName, subjectCrest),
-
+    standingsRows: standingsRows(entity.name, entity.crestUrl),
     chart: {
-      competitionLabel: compLabel,
+      competitionLabel: 'League · 2025/26',
       lanes: [
         {
           team_id: subjectId,
-          team_name: subjectName,
-          team_code: subjectName.slice(0, 3).toUpperCase(),
-          color: subjectColor,
+          team_name: entity.name,
+          team_code: entity.name.slice(0, 3).toUpperCase(),
+          color,
           highlight: true,
           lineWidth: 3.5,
           points: [
@@ -179,37 +178,10 @@ export function buildPreviewData(entity: PreviewEntity, color: string): PreviewD
             { matchday: 36, position: 1 },
           ],
         },
-        {
-          team_id: OPP_A.id,
-          team_name: OPP_A.name,
-          color: OPP_A.color,
-          points: [
-            { matchday: 30, position: 1 },
-            { matchday: 31, position: 1 },
-            { matchday: 32, position: 2 },
-            { matchday: 33, position: 2 },
-            { matchday: 34, position: 1 },
-            { matchday: 35, position: 1 },
-            { matchday: 36, position: 2 },
-          ],
-        },
-        {
-          team_id: OPP_B.id,
-          team_name: OPP_B.name,
-          color: OPP_B.color,
-          points: [
-            { matchday: 30, position: 3 },
-            { matchday: 31, position: 3 },
-            { matchday: 32, position: 3 },
-            { matchday: 33, position: 4 },
-            { matchday: 34, position: 4 },
-            { matchday: 35, position: 3 },
-            { matchday: 36, position: 3 },
-          ],
-        },
+        { team_id: OPP_A.id, team_name: OPP_A.name, color: OPP_A.color, points: ladder([1, 1, 2, 2, 1, 1, 2]) },
+        { team_id: OPP_B.id, team_name: OPP_B.name, color: OPP_B.color, points: ladder([3, 3, 3, 4, 4, 3, 3]) },
       ],
     },
-
     bracket: buildBracket([
       fixture({
         id: 'sf',
@@ -230,10 +202,64 @@ export function buildPreviewData(entity: PreviewEntity, color: string): PreviewD
         kickoff: '2026-05-31T19:00:00Z',
       }),
     ]),
-
-    badge: { team: subjectName, color: subjectColor },
+    badge: { team: entity.name, color },
     teamId: subjectId,
   }
+}
+
+// ── league preview ────────────────────────────────────────────────────────────
+
+export interface LeaguePreviewData {
+  kind: 'league'
+  name: string
+  country: string | null
+  crestUrl: string | null
+  color: string
+  /** Editorial card framed by the competition accent (teams keep own colors). */
+  matchCard: MatchCardConfig
+  /** Knockout bracket whose emblem badge takes the competition color. */
+  bracket: Bracket | null
+  /** Sample headline for the feed-placeholder gradient. */
+  feedHeadline: string
+}
+
+function buildLeague(entity: PreviewEntity, color: string): LeaguePreviewData {
+  return {
+    kind: 'league',
+    name: entity.name,
+    country: entity.country,
+    crestUrl: entity.crestUrl,
+    color,
+    matchCard: {
+      type: 'fs:match-card',
+      layout: 'score',
+      home: OPP_A.name,
+      away: OPP_B.name,
+      score: '2 – 1',
+      kickoff: 'FT',
+      competition: entity.name,
+      competitionSlug: COMP_SLUG,
+      // Competition color drives the accent (competition name + score text);
+      // the two sides keep their own (neutral) colors.
+      accent: color,
+      homeColor: OPP_A.color,
+      awayColor: OPP_B.color,
+    },
+    bracket: neutralBracket(),
+    feedHeadline: `${entity.name}: the title race goes to the final day`,
+  }
+}
+
+export type PreviewData = TeamPreviewData | LeaguePreviewData
+
+export function buildPreviewData(entity: PreviewEntity, color: string): PreviewData {
+  return entity.kind === 'league' ? buildLeague(entity, color) : buildTeam(entity, color)
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function ladder(positions: number[]): TeamLane['points'] {
+  return positions.map((position, i) => ({ matchday: 30 + i, position }))
 }
 
 function standingsRows(name: string, crestUrl: string | null): StandingRow[] {
@@ -251,7 +277,7 @@ function standingsRows(name: string, crestUrl: string | null): StandingRow[] {
     position,
     played: 38,
     won,
-    draw: points - won * 3 >= 0 ? points - won * 3 : 0,
+    draw: Math.max(0, points - won * 3),
     lost: 38 - won - Math.max(0, points - won * 3),
     goals_for: 70 + (6 - position) * 5,
     goals_against: 25 + position * 3,

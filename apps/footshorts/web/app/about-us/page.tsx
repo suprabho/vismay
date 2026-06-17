@@ -7,7 +7,7 @@ import {
   MatchRow,
   MatchTile,
   darkenHex,
-  getCompetitionPalette,
+  resolveCompetitionColor,
 } from '@vismay/footshorts-viz/web';
 import { useTheme } from '@footshorts/brand/web';
 import { themes, type ThemeName } from '@footshorts/brand';
@@ -1171,7 +1171,7 @@ function CoverageGrid() {
 }
 
 function LeagueTile({ league }: { league: LandingEntity }) {
-  const base = getCompetitionPalette(league.slug);
+  const base = resolveCompetitionColor(league.slug, league.primary_color);
   const background = base
     ? `linear-gradient(135deg, ${base} 0%, ${darkenHex(base, 0.4)} 100%)`
     : 'rgb(var(--sf-color-surface))';

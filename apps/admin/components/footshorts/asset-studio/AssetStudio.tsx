@@ -13,6 +13,7 @@ export interface AssetEntity {
   type: 'team' | 'league'
   slug: string
   name: string
+  country: string | null
   crest_url: string | null
   primary_color: string | null
 }
@@ -129,7 +130,13 @@ export function AssetStudio({ initialEntities }: { initialEntities: AssetEntity[
   const previewData = useMemo(() => {
     if (!selected) return null
     return buildPreviewData(
-      { kind: selected.type, slug: selected.slug, name: selected.name, crestUrl: selected.crest_url },
+      {
+        kind: selected.type,
+        slug: selected.slug,
+        name: selected.name,
+        country: selected.country,
+        crestUrl: selected.crest_url,
+      },
       color,
     )
   }, [selected, color])

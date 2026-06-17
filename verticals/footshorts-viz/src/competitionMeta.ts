@@ -96,6 +96,22 @@ export function getCompetitionPalette(slug: string | null | undefined): string |
 }
 
 /**
+ * Brand color for a competition, preferring a per-entity override (the league's
+ * `entities.primary_color`, set in the asset studio) over the bundled
+ * `COMPETITION_PALETTE`. Pass the league entity's `primary_color` as `override`
+ * wherever it's in hand so an edited color lands on the live league tile,
+ * bracket emblem, and feed placeholders; falls back to the bundled palette (and
+ * then `undefined`) when there's no override or it isn't a valid `#RRGGBB`.
+ */
+export function resolveCompetitionColor(
+  slug: string | null | undefined,
+  override?: string | null,
+): string | undefined {
+  if (override && /^#[0-9a-fA-F]{6}$/.test(override)) return override
+  return getCompetitionPalette(slug)
+}
+
+/**
  * Returns a darker variant of a #RRGGBB hex by the given fractional amount
  * (0..1). Used for two-stop competition gradients on league/match tiles. If
  * the input isn't a valid hex, returns it unchanged.

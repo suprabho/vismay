@@ -614,6 +614,7 @@ export interface AssetEntity {
   type: 'team' | 'league'
   slug: string
   name: string
+  country: string | null
   crest_url: string | null
   primary_color: string | null
 }
@@ -633,7 +634,7 @@ export async function searchAssetEntities(opts: {
   const supabase = createServiceClient()
   let query = supabase
     .from('entities')
-    .select('id, type, slug, name, crest_url, primary_color')
+    .select('id, type, slug, name, country, crest_url, primary_color')
     .in('type', opts.type ? [opts.type] : ['team', 'league'])
     .order('name', { ascending: true })
     .limit(limit)
@@ -662,7 +663,7 @@ export async function updateEntityPrimaryColor(
     .from('entities')
     .update({ primary_color: value })
     .eq('id', id)
-    .select('id, type, slug, name, crest_url, primary_color')
+    .select('id, type, slug, name, country, crest_url, primary_color')
     .single()
   if (error) throw error
   if (!data) throw new Error(`entity not found: ${id}`)

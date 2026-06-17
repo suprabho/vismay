@@ -5,7 +5,7 @@ import type { Bracket as BracketModel, BracketRound, BracketTie, FixtureTeamRef 
 import { stageLabel } from '../stageLabel'
 import { Crest } from '../data/Crest'
 import { findTeam } from '../data/teams'
-import { getCompetitionDisplayName, getCompetitionPalette } from '../competitionMeta'
+import { getCompetitionDisplayName, resolveCompetitionColor } from '../competitionMeta'
 
 /**
  * Tournament bracket (web only — see modules/bracket/Component.tsx).
@@ -32,6 +32,9 @@ type Props = {
   highlightTeamId?: string
   title?: string
   competitionSlug?: string
+  /** Competition brand color override (the league's `entities.primary_color`).
+   *  Falls back to the bundled palette by slug when omitted. */
+  competitionColor?: string
   /** 'auto' (default) picks vertical on narrow viewports; otherwise forced. */
   orientation?: BracketOrientation
 }
@@ -171,9 +174,15 @@ function TieCell({
 // Horizontal: the classic mirrored tournament tree.
 // ---------------------------------------------------------------------------
 
-function HorizontalTree({ bracket, highlightTeamId, title, competitionSlug }: Omit<Props, 'orientation'>) {
+function HorizontalTree({
+  bracket,
+  highlightTeamId,
+  title,
+  competitionSlug,
+  competitionColor,
+}: Omit<Props, 'orientation'>) {
   const slug = competitionSlug ?? bracket.competition_slug
-  const emblemColor = getCompetitionPalette(slug) ?? '#0E1E5B'
+  const emblemColor = resolveCompetitionColor(slug, competitionColor) ?? '#0E1E5B'
   const compName = getCompetitionDisplayName(slug)
 
   // Identify the final (explicit FINAL stage, else a trailing single-tie round).
@@ -413,9 +422,15 @@ function HorizontalTree({ bracket, highlightTeamId, title, competitionSlug }: Om
 
 type VHalf = 'top' | 'bottom'
 
-function VerticalTree({ bracket, highlightTeamId, title, competitionSlug }: Omit<Props, 'orientation'>) {
+function VerticalTree({
+  bracket,
+  highlightTeamId,
+  title,
+  competitionSlug,
+  competitionColor,
+}: Omit<Props, 'orientation'>) {
   const slug = competitionSlug ?? bracket.competition_slug
-  const emblemColor = getCompetitionPalette(slug) ?? '#0E1E5B'
+  const emblemColor = resolveCompetitionColor(slug, competitionColor) ?? '#0E1E5B'
   const compName = getCompetitionDisplayName(slug)
 
   const involves = (tie: BracketTie | undefined) => !!tie && tieInvolves(tie, highlightTeamId)
