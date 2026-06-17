@@ -11,6 +11,7 @@
     "create-admin-user": "tsx --env-file=.env scripts/createAdminUser.ts"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.4",
     "@footshorts/brand": "workspace:*",
     "@google/genai": "^1.50.1",
     "@monaco-editor/react": "^4.7.0",

@@ -36,6 +36,7 @@
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
     "./footshortsData": "./src/footshortsData.ts",
     "./footshortsShareCards": "./src/footshortsShareCards.ts",
+    "./vizmayaShareCards": "./src/vizmayaShareCards.ts",
     "./footshortsBlocks": "./src/footshortsBlocks.ts",
     "./storyDemoConfig": "./src/storyDemoConfig.ts",
     "./storyPdf": "./src/storyPdf.ts",

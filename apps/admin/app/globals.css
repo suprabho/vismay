@@ -26,6 +26,13 @@
   --color-muted: rgb(var(--sf-color-muted));
   --color-accent: rgb(var(--sf-color-accent));
   --color-accent-text: rgb(var(--sf-color-accent-text));
+  /* Vizmaya share-card bodies use the Tailwind `font-serif` / `font-mono`
+     utilities and expect them to follow the story theme. Map them to the
+     runtime vars the canvas ThemeProvider sets; they fall back to a sensible
+     stack everywhere else (no ThemeProvider ⇒ var unset ⇒ fallback). */
+  --font-sans: var(--font-sans, 'Inter', -apple-system, 'Segoe UI', Helvetica, sans-serif);
+  --font-serif: var(--font-serif, 'Georgia', 'Times New Roman', serif);
+  --font-mono: var(--font-mono, 'Courier New', Consolas, monospace);
 }
 
 html {
