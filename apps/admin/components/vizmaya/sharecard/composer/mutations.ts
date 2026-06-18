@@ -2,7 +2,6 @@ import type {
   BackgroundLayer,
   CardComposition,
   ElementLayer,
-  HeroLayer,
   TextBlock,
   Transform,
 } from '../layers/types'
@@ -10,7 +9,6 @@ import type {
 /** What the inspector is currently editing. */
 export type Selection =
   | { kind: 'background' }
-  | { kind: 'hero' }
   | { kind: 'element'; id: string }
   | { kind: 'text'; which: 'heading' | 'subheading' }
   | { kind: 'annotation'; id: string }
@@ -23,15 +21,6 @@ export function uid(prefix: string): string {
 
 export function setBackground(c: CardComposition, background: BackgroundLayer): CardComposition {
   return { ...c, background }
-}
-
-export function setHero(c: CardComposition, hero: HeroLayer | undefined): CardComposition {
-  return { ...c, hero }
-}
-
-export function patchHero(c: CardComposition, patch: Partial<HeroLayer>): CardComposition {
-  if (!c.hero) return c
-  return { ...c, hero: { ...c.hero, ...patch } as HeroLayer }
 }
 
 export function patchBackground(c: CardComposition, patch: Partial<BackgroundLayer>): CardComposition {

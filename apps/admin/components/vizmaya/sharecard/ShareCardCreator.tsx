@@ -13,15 +13,15 @@ import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/canvas/ThemeProvider'
 import VerticalLoader from '@/components/canvas/VerticalLoader'
 import MapPickerModal from '@/components/vizmaya/MapPickerModal'
-import { FrameCorners, Image as ImageIcon, Palette, Shapes, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { FrameCorners, Image as ImageIcon, Palette, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
-import { seedTemplate, detectSupport } from './layers/seedTemplate'
-import type { CardComposition, HeroLayer, MapSpec, TemplateKind, Transform } from './layers/types'
-import { DEFAULT_HERO_BOX } from './layers/types'
+import { seedTemplate, detectSupport, SEED_GRAPHIC_ID } from './layers/seedTemplate'
+import type { CardComposition, MapSpec, TemplateKind, Transform } from './layers/types'
 import {
   applyV1Overrides,
   composeBaseType,
+  normalizeComposition,
   snapshotVersion,
   templateKindFromV1,
 } from './layers/migrate'
@@ -79,13 +79,12 @@ const TEMPLATES: Array<{ id: TemplateKind; label: string }> = [
 
 const CONTAINED_FOCUS = { top: 0, left: 0, width: 1, height: 1 }
 
-type EditorTab = 'setup' | 'theme' | 'background' | 'hero' | 'elements' | 'text'
+type EditorTab = 'setup' | 'theme' | 'background' | 'elements' | 'text'
 const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
   { id: 'setup', label: 'Canvas & story', Icon: FrameCorners },
   { id: 'theme', label: 'Theme', Icon: Palette },
   { id: 'background', label: 'Background', Icon: ImageIcon },
-  { id: 'hero', label: 'Hero graphic', Icon: Shapes },
-  { id: 'elements', label: 'Foreground elements', Icon: Stack },
+  { id: 'elements', label: 'Foreground · graphics & elements', Icon: Stack },
   { id: 'text', label: 'Text', Icon: TextT },
 ]
 
@@ -126,7 +125,6 @@ const blankComposition = (): CardComposition => ({
   // through, so picking a theme/preset recolors the whole canvas. The user can
   // still drop in a solid/gradient/image/map fill from the Background tab.
   background: { kind: 'none' },
-  hero: undefined,
   elements: [],
   text: { annotations: [] },
   branding: { visible: true },
@@ -194,8 +192,9 @@ export function ShareCardCreator({
       try {
         if (snapshotVersion(snap) === 2) {
           // v2 carries the full composition — no unit needed (works for blank cards).
+          // `normalizeComposition` folds any legacy single hero into an element.
           const v2 = snap as VizmayaShareCardSnapshotV2
-          setComposition(v2.composition)
+          setComposition(normalizeComposition(v2.composition))
           setTemplateKind(v2.templateKind)
         } else {
           const v1 = snap as Extract<AnyShareCardSnapshot, { version: 1 }>
@@ -353,7 +352,16 @@ export function ShareCardCreator({
       setTemplateKind(kind)
       setComposition((prev) => {
         const seed = seedTemplate(kind, unit, story, ratio)
-        return prev ? { ...seed, elements: prev.elements, branding: prev.branding, theme: prev.theme } : seed
+        // Re-seed the section graphic (stable id) but keep the user's own
+        // added elements + branding, and any per-card theme override.
+        return prev
+          ? {
+              ...seed,
+              elements: [...seed.elements, ...prev.elements.filter((e) => e.id !== SEED_GRAPHIC_ID)],
+              branding: prev.branding,
+              theme: prev.theme,
+            }
+          : seed
       })
     },
     [units, story, ratio],
@@ -366,7 +374,16 @@ export function ShareCardCreator({
       if (!selectedUnit || !story) return
       setComposition((prev) => {
         const seed = seedTemplate(kind, selectedUnit, story, ratio)
-        return prev ? { ...seed, elements: prev.elements, branding: prev.branding, theme: prev.theme } : seed
+        // Re-seed the section graphic (stable id) but keep the user's own
+        // added elements + branding, and any per-card theme override.
+        return prev
+          ? {
+              ...seed,
+              elements: [...seed.elements, ...prev.elements.filter((e) => e.id !== SEED_GRAPHIC_ID)],
+              branding: prev.branding,
+              theme: prev.theme,
+            }
+          : seed
       })
     },
     [selectedUnit, story, ratio],
@@ -390,7 +407,6 @@ export function ShareCardCreator({
     (sel: Selection): MapSpec | null => {
       if (!composition) return null
       if (sel.kind === 'background' && composition.background.kind === 'map') return composition.background
-      if (sel.kind === 'hero' && composition.hero?.kind === 'map') return composition.hero
       if (sel.kind === 'element') {
         const el = composition.elements.find((e) => e.id === sel.id)
         if (el?.kind === 'map') return el
@@ -418,9 +434,6 @@ export function ShareCardCreator({
         if (!prev) return prev
         if (sel.kind === 'background' && prev.background.kind === 'map') {
           return { ...prev, background: { ...prev.background, camera: { ...prev.background.camera, [ratio]: view } } }
-        }
-        if (sel.kind === 'hero' && prev.hero?.kind === 'map') {
-          return { ...prev, hero: { ...prev.hero, camera: { ...prev.hero.camera, [ratio]: view } } }
         }
         if (sel.kind === 'element') {
           return {
@@ -468,7 +481,6 @@ export function ShareCardCreator({
     setActiveTab(t)
     // Keep the canvas selection in step with the tab so the right editor shows.
     if (t === 'background') setSelection({ kind: 'background' })
-    else if (t === 'hero') setSelection({ kind: 'hero' })
     else setSelection(null)
   }, [])
 
@@ -496,10 +508,6 @@ export function ShareCardCreator({
         return patchSelectedText(prev, sel, { transform: { ...cur.transform, xPct, yPct } })
       }
       if (sel.kind === 'element') return patchElementTransform(prev, sel.id, { xPct, yPct })
-      if (sel.kind === 'hero' && prev.hero) {
-        const cur = prev.hero.box ?? DEFAULT_HERO_BOX
-        return { ...prev, hero: { ...prev.hero, box: { ...cur, xPct, yPct } } as HeroLayer }
-      }
       return prev
     })
   }, [])
@@ -515,11 +523,9 @@ export function ShareCardCreator({
           ? 'elements'
           : sel.kind === 'text' || sel.kind === 'annotation'
             ? 'text'
-            : sel.kind === 'hero'
-              ? 'hero'
-              : sel.kind === 'background'
-                ? 'background'
-                : null
+            : sel.kind === 'background'
+              ? 'background'
+              : null
       if (tabFor) setActiveTab(tabFor)
       dragRef.current = sel
       const move = (ev: PointerEvent) => {
@@ -552,24 +558,22 @@ export function ShareCardCreator({
     if (!composition) return []
     const out: Draggable[] = []
     const c = composition
-    // Hero first so text/element hit-boxes stack above it (stay clickable).
-    if (c.hero) {
-      const b = c.hero.box ?? DEFAULT_HERO_BOX
-      out.push({
-        key: 'hero',
-        sel: { kind: 'hero' },
-        t: { xPct: b.xPct, yPct: b.yPct, widthPct: b.widthPct, scale: 1, rotation: 0, opacity: 1 },
-        heightPx: (b.heightPct / 100) * renderH,
-      })
-    }
     if (c.text.heading?.visible)
       out.push({ key: 'heading', sel: { kind: 'text', which: 'heading' }, t: c.text.heading.transform, heightPx: c.text.heading.style.fontSizePx * c.text.heading.style.lineHeight * 1.8 })
     if (c.text.subheading?.visible)
       out.push({ key: 'subheading', sel: { kind: 'text', which: 'subheading' }, t: c.text.subheading.transform, heightPx: c.text.subheading.style.fontSizePx * c.text.subheading.style.lineHeight * 1.8 })
     for (const a of c.text.annotations)
       if (a.visible) out.push({ key: a.id, sel: { kind: 'annotation', id: a.id }, t: a.transform, heightPx: a.style.fontSizePx * a.style.lineHeight * 2.2 })
+    // Graphic elements (chart/map/box-image) carry a heightPct → give the hit-box
+    // a matching height; decorations stay square.
     for (const el of c.elements)
-      if (el.visible) out.push({ key: el.id, sel: { kind: 'element', id: el.id }, t: el.transform })
+      if (el.visible)
+        out.push({
+          key: el.id,
+          sel: { kind: 'element', id: el.id },
+          t: el.transform,
+          heightPx: el.transform.heightPct != null ? (el.transform.heightPct / 100) * renderH : undefined,
+        })
     return out
   }, [composition, renderH])
 
@@ -683,6 +687,9 @@ export function ShareCardCreator({
     return spec?.appearance.mapStyle ?? story?.defaults.mapStyle
   })()
   const mapEditIsBackground = mapEditSel?.kind === 'background'
+
+  // Seed for a "+ Chart" graphic: the current section's story chart id (if any).
+  const defaultChartId = useMemo(() => detectSupport(selectedUnit).chartId ?? '', [selectedUnit])
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -864,26 +871,20 @@ export function ShareCardCreator({
           {composition && inspectorStory && activeTab === 'background' && (
             <Inspector composition={composition} selection={{ kind: 'background' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
           )}
-          {composition && inspectorStory && activeTab === 'hero' && (
-            <Inspector composition={composition} selection={{ kind: 'hero' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
-          )}
 
-          {composition && activeTab === 'elements' && (
-            <>
-              <LayerPanel
-                composition={composition}
-                onChange={setComposition}
-                selection={selection}
-                setSelection={setSelection}
-                story={{ slug: story!.slug, theme: story!.theme, assets }}
-                sections={['elements']}
-              />
-              {selection?.kind === 'element' && inspectorStory && (
-                <div className="border-t border-white/10 pt-3">
-                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
-                </div>
-              )}
-            </>
+          {composition && inspectorStory && activeTab === 'elements' && (
+            <LayerPanel
+              composition={composition}
+              onChange={setComposition}
+              selection={selection}
+              setSelection={setSelection}
+              story={{ slug: story!.slug, theme: story!.theme, assets }}
+              sections={['elements']}
+              inspectorStory={inspectorStory}
+              ratio={ratio}
+              onEditMap={onEditMap}
+              defaultChartId={defaultChartId}
+            />
           )}
 
           {composition && activeTab === 'text' && (
