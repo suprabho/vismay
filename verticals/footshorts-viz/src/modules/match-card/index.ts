@@ -1,12 +1,28 @@
 import type { VizModule, AdminFormField } from '@vismay/viz-engine'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
+import { parsePositiveInt, parsePositiveNumber } from '../shared/grid'
 
 /**
  * `fs:match-card` — editorial fixture card with multiple layout variants.
  *
  * Variants — compact / horizontal / portrait / score — all draw from the
- * same config. Team crests, brand colors, and competition tags come from
- * the bundled palette in `../../data/teams.ts` and `competitions.ts`;
- * authors override per-card via the optional URL / hex fields below.
+ * same single-fixture config (`home`/`away` + score/kickoff/competition). The
+ * `grid` variant instead tiles several fixtures from `cards[]` as compact cards
+ * in a `columns`-wide matrix (like `fs:team-form-strip`'s grid).
+ *
+ * Team crests, brand colors, and competition tags come from the bundled palette
+ * in `../../data/teams.ts` and `competitions.ts`; authors override per-card via
+ * the optional URL / hex fields below.
+ *
+ * Every variant also accepts the shared image-background fields
+ * (`backgroundImage` / `backgroundFit` / `backgroundDim` / `backgroundBlur`) —
+ * see `../shared/background`. Note `horizontal`/`portrait` keep their existing
+ * hero treatment (the image is blended into the card gradient); `compact` /
+ * `score` / `grid` paint it as a backdrop behind the content.
  *
  * Story YAML:
  *
@@ -20,14 +36,43 @@ import type { VizModule, AdminFormField } from '@vismay/viz-engine'
  *       competition: "Premier League · matchday 35"
  *       competitionSlug: prem  # picks the watermark tag; falls back to slugified competition
  *       homeColor: "#EF0107"   # YAML override; bundled palette otherwise
- *       backgroundImage: "https://…"  # horizontal/portrait only; gradient otherwise
+ *       backgroundImage: "https://…"  # hero on horizontal/portrait; backdrop otherwise
+ *
+ *   # grid variant — tile several fixtures:
+ *     - type: fs:match-card
+ *       layout: grid
+ *       columns: 2             # cards per row (default 2)
+ *       rows: 2                # optional — caps to rows × columns
+ *       cards:
+ *         - { home: Arsenal, away: Chelsea, score: "2 – 1", competition: "Prem" }
+ *         - { home: Liverpool, away: "Man City", score: "1 – 1" }
  */
 
-export type MatchCardLayout = 'compact' | 'horizontal' | 'portrait' | 'score'
+export type MatchCardLayout = 'compact' | 'horizontal' | 'portrait' | 'score' | 'grid'
 
-const LAYOUTS: readonly MatchCardLayout[] = ['compact', 'horizontal', 'portrait', 'score']
+const LAYOUTS: readonly MatchCardLayout[] = [
+  'compact',
+  'horizontal',
+  'portrait',
+  'score',
+  'grid',
+]
 
-export interface MatchCardConfig {
+/** One fixture in the `grid` variant — the per-card subset of the single-card fields. */
+export interface MatchCardItem {
+  home: string
+  away: string
+  score?: string
+  kickoff?: string
+  competition?: string
+  competitionSlug?: string
+  homeColor?: string
+  awayColor?: string
+  homeCrestUrl?: string
+  awayCrestUrl?: string
+}
+
+export interface MatchCardConfig extends FsBackgroundConfig {
   type: 'fs:match-card'
   layout: MatchCardLayout
   home: string
@@ -61,6 +106,14 @@ export interface MatchCardConfig {
   watchOn?: string
   /** Date label shown on the portrait layout, e.g. "Thursday, Jun 5". */
   dateLabel?: string
+  /** Grid variant — fixtures tiled as compact cards (author order). */
+  cards?: MatchCardItem[]
+  /** Grid only — cards per row. Defaults to 2. */
+  columns?: number
+  /** Grid only — caps visible cards to `rows × columns` (first ones kept). */
+  rows?: number
+  /** Grid only — uniform fixed card width in px. */
+  cardWidth?: number
 }
 
 function asString(v: unknown): string | undefined {
@@ -77,11 +130,65 @@ function parseLayout(raw: unknown, label: string): MatchCardLayout {
   return raw as MatchCardLayout
 }
 
+function parseCards(raw: unknown, label: string): MatchCardItem[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new Error(`${label}: fs:match-card grid layout requires a non-empty 'cards' array`)
+  }
+  return raw.map((c, i) => {
+    if (!c || typeof c !== 'object') {
+      throw new Error(`${label}: fs:match-card cards[${i}] must be an object`)
+    }
+    const r = c as Record<string, unknown>
+    if (typeof r.home !== 'string' || r.home.length === 0) {
+      throw new Error(`${label}: fs:match-card cards[${i}] requires 'home'`)
+    }
+    if (typeof r.away !== 'string' || r.away.length === 0) {
+      throw new Error(`${label}: fs:match-card cards[${i}] requires 'away'`)
+    }
+    return {
+      home: r.home,
+      away: r.away,
+      score: asString(r.score),
+      kickoff: asString(r.kickoff),
+      competition: asString(r.competition),
+      competitionSlug: asString(r.competitionSlug),
+      homeColor: asString(r.homeColor),
+      awayColor: asString(r.awayColor),
+      homeCrestUrl: asString(r.homeCrestUrl),
+      awayCrestUrl: asString(r.awayCrestUrl),
+    }
+  })
+}
+
 function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchCardConfig {
   if (!raw || typeof raw !== 'object') {
     throw new Error(`${ctx.label}: fs:match-card layer must be an object`)
   }
   const r = raw as Record<string, unknown>
+  const layout = parseLayout(r.layout, ctx.label)
+
+  if (layout === 'grid') {
+    const cards = parseCards(r.cards, ctx.label)
+    const columns = parsePositiveInt(r.columns, 'columns', ctx.label)
+    const rows = parsePositiveInt(r.rows, 'rows', ctx.label)
+    const cardWidth = parsePositiveNumber(r.cardWidth, 'cardWidth', ctx.label)
+    return {
+      type: 'fs:match-card',
+      layout,
+      // Top-level home/away are unused in grid mode, but the type keeps them
+      // required (the four single-card layouts read them directly), so mirror
+      // the first card to stay consistent.
+      home: cards[0]!.home,
+      away: cards[0]!.away,
+      cards,
+      ...(columns !== undefined ? { columns } : {}),
+      ...(rows !== undefined ? { rows } : {}),
+      ...(cardWidth !== undefined ? { cardWidth } : {}),
+      accent: asString(r.accent),
+      ...parseFsBackground(r),
+    }
+  }
+
   if (typeof r.home !== 'string' || r.home.length === 0) {
     throw new Error(`${ctx.label}: fs:match-card requires 'home' (team name or slug)`)
   }
@@ -90,7 +197,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchC
   }
   return {
     type: 'fs:match-card',
-    layout: parseLayout(r.layout, ctx.label),
+    layout,
     home: r.home,
     away: r.away,
     score: asString(r.score),
@@ -108,6 +215,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchC
     backgroundImage: asString(r.backgroundImage),
     watchOn: asString(r.watchOn),
     dateLabel: asString(r.dateLabel),
+    ...parseFsBackground(r),
   }
 }
 
@@ -129,13 +237,19 @@ function adminForm(): AdminFormField[] {
     { kind: 'text', key: 'awayColor', label: 'Away color override (hex)' },
     { kind: 'text', key: 'homeCrestUrl', label: 'Home crest URL' },
     { kind: 'text', key: 'awayCrestUrl', label: 'Away crest URL' },
-    { kind: 'text', key: 'backgroundImage', label: 'Hero background image URL' },
+    // `backgroundImage` is supplied by fsBackgroundFields() below (it doubles as
+    // the hero image on horizontal/portrait), so it isn't listed separately here.
     { kind: 'text', key: 'watchOn', label: 'Watch-on line (portrait layout)' },
     { kind: 'text', key: 'dateLabel', label: 'Date label (portrait layout)' },
     { kind: 'text', key: 'accent', label: 'Accent color override (hex)' },
     { kind: 'text', key: 'cardColor', label: 'Card box color (score layout)' },
     { kind: 'text', key: 'borderColor', label: 'Card border color (score layout)' },
     { kind: 'text', key: 'textColor', label: 'Card text color (score layout)' },
+    { kind: 'json', key: 'cards', label: 'Cards (grid layout)' },
+    { kind: 'number', key: 'columns', label: 'Columns (grid only)', min: 1, step: 1 },
+    { kind: 'number', key: 'rows', label: 'Rows (grid only — caps to rows × columns)', min: 1, step: 1 },
+    { kind: 'number', key: 'cardWidth', label: 'Card width in px (grid; uniform)', min: 1, step: 1 },
+    ...fsBackgroundFields(),
   ]
 }
 
@@ -147,8 +261,15 @@ const matchCardModule: VizModule<MatchCardConfig> = {
   adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
-  stableIdentity: (config) =>
-    `fs:match-card:${config.layout}:${config.home}::${config.away}::${config.score ?? ''}`,
+  stableIdentity: (config) => {
+    if (config.layout === 'grid') {
+      const ids = (config.cards ?? [])
+        .map((c) => `${c.home}>${c.away}:${c.score ?? ''}`)
+        .join('|')
+      return `fs:match-card:grid:${config.columns ?? ''}x${config.rows ?? ''}:${config.cardWidth ?? ''}:${ids}:${config.backgroundImage ?? ''}`
+    }
+    return `fs:match-card:${config.layout}:${config.home}::${config.away}::${config.score ?? ''}:${config.backgroundImage ?? ''}`
+  },
 }
 
 export default matchCardModule

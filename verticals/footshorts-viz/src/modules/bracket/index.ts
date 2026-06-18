@@ -1,5 +1,10 @@
-import type { VizModule } from '@vismay/viz-engine'
+import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { FixtureRow } from '../../types'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:bracket` — Foreground viz module wrapping the Bracket component.
@@ -28,7 +33,7 @@ import type { FixtureRow } from '../../types'
  *           ...
  */
 
-export interface BracketConfig {
+export interface BracketConfig extends FsBackgroundConfig {
   type: 'fs:bracket'
   fixtures: FixtureRow[]
   /**
@@ -84,7 +89,26 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Bracke
     highlightTeamId,
     title,
     competitionSlug,
+    ...parseFsBackground(raw),
   }
+}
+
+const BRACKET_LAYOUTS = ['list', 'tree', 'tree-vertical', 'tree-horizontal'] as const
+
+function adminForm(): AdminFormField[] {
+  return [
+    { kind: 'json', key: 'fixtures', label: 'Knockout fixtures' },
+    {
+      kind: 'select',
+      key: 'layout',
+      label: 'Layout',
+      options: BRACKET_LAYOUTS.map((l) => ({ value: l, label: l })),
+    },
+    { kind: 'text', key: 'highlightTeamId', label: 'Highlight team id (tree)' },
+    { kind: 'text', key: 'title', label: 'Centre emblem caption' },
+    { kind: 'text', key: 'competitionSlug', label: 'Competition slug' },
+    ...fsBackgroundFields(),
+  ]
 }
 
 const bracketModule: VizModule<BracketConfig> = {
@@ -92,11 +116,12 @@ const bracketModule: VizModule<BracketConfig> = {
   label: 'Footshorts — bracket',
   slots: ['foreground'],
   parseConfig,
+  adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (config) => {
     const first = config.fixtures[0]!
-    return `fs:bracket:${first.competition_slug}:${first.season}:${config.fixtures.length}:${config.layout ?? 'list'}`
+    return `fs:bracket:${first.competition_slug}:${first.season}:${config.fixtures.length}:${config.layout ?? 'list'}:${config.backgroundImage ?? ''}`
   },
 }
 

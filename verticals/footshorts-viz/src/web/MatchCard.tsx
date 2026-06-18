@@ -5,6 +5,7 @@ import CompactLayout from '../modules/match-card/layouts/Compact'
 import HorizontalLayout from '../modules/match-card/layouts/Horizontal'
 import PortraitLayout from '../modules/match-card/layouts/Portrait'
 import ScoreLayout from '../modules/match-card/layouts/Score'
+import GridLayout from '../modules/match-card/layouts/Grid'
 
 /**
  * `fs:match-card` as a plain web component — the layout switch from the viz
@@ -21,6 +22,8 @@ export function MatchCard({ config }: { config: MatchCardConfig }) {
       return <HorizontalLayout config={config} />
     case 'portrait':
       return <PortraitLayout config={config} />
+    case 'grid':
+      return <GridLayout config={config} />
     case 'score':
     default:
       return <ScoreLayout config={config} />
