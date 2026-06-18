@@ -1,4 +1,18 @@
+import type { StoryFocusArea } from '@vismay/viz-engine'
 import type { AspectRatio, CardVariant, GraphScope } from './types'
+
+/**
+ * Per-aspect-ratio focus area for the share-card map. Shared between the live
+ * card map (`ShareMapBg`) and the composer's map-edit overlay so the picker
+ * frames the camera against the exact rectangle the card renders into.
+ * Mapbox `padding` shifts the geographic center into this fractional rectangle.
+ */
+export const SHARE_FOCUS_AREA: Record<AspectRatio, StoryFocusArea> = {
+  '1:1': { top: 0.2, left: 0, width: 1.0, height: 0.4 },
+  '4:5': { top: 0.22, left: 0, width: 1.0, height: 0.4 },
+  '3:4': { top: 0.25, left: 0, width: 1.0, height: 0.4 },
+  '4:3': { top: 0.1, left: 0.28, width: 0.7, height: 0.4 },
+}
 
 /** Output aspect ratios the composer supports (matches ShareCard RENDER/OUTPUT). */
 export const ASPECT_RATIOS: Array<{ id: AspectRatio; label: string }> = [

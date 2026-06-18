@@ -1,31 +1,36 @@
 'use client'
 
-// Ported from apps/vizmaya-fyi/components/share/ShareCard.tsx, extended with an
-// `overlays` prop (emoji / image stickers) rendered INSIDE the capture node so
-// they're part of the exported PNG. RENDER_SIZE / OUTPUT_SIZE are exported for
-// the composer's preview scaling.
+// Layered share-card renderer. A card is a named-slot composition (background /
+// hero / elements / text / branding). Everything renders inside `captureRef`;
+// the composer's drag/selection chrome lives OUTSIDE this node (or is tagged
+// `data-share-ui` so the toPng filter strips it). RENDER_SIZE / OUTPUT_SIZE are
+// exported for the composer's preview scaling.
 
-import { useRef, useCallback, useMemo, useState, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { toPng } from 'html-to-image'
-import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility, VizLayer, MapRegionLayer, HeatmapLayer } from '@vismay/viz-engine'
-import type { MapTextLabel } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import type {
+  ResolvedUnit,
+  MapPinConfig,
+  MapPalette,
+  VizLayer,
+  MapRegionLayer,
+  HeatmapLayer,
+  MapTextLabel,
+  MapView,
+  StoryFocusArea,
+} from '@vismay/viz-engine'
+import { resolveSlotsFlat, ChartDataOverrideProvider } from '@vismay/viz-engine'
+import { AuraBackground } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
-import type { Overlay } from './types'
-import ShareTextCard from './ShareTextCard'
-import ShareStatCard from './ShareStatCard'
-import ShareHeroCard from './ShareHeroCard'
+import type { CardComposition, MapSpec } from './layers/types'
+import { ElementView, TextView, transformWrapperStyle } from './layers/LayerView'
+import { proxiedOverlaySrc } from './OverlayLayer'
 import ShareDeckForeground from './ShareDeckForeground'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
-import OverlayLayer from './OverlayLayer'
 
-/**
- * Shape of a `type: 'map'` layer as returned by `resolveSlotsFlat`. Mirrors
- * `parentConfig.map` so the legacy and new (`background: [{type:'map'}]`)
- * syntaxes feed the same share-mode map cascade below.
- */
+/** Shape of a `type: 'map'` layer from `resolveSlotsFlat`. */
 type ResolvedMapLayer = {
   type: 'map'
   center?: [number, number]
@@ -38,10 +43,8 @@ type ResolvedMapLayer = {
   textLabels?: MapTextLabel[]
 }
 
-/**
- * DOM render size — matches mobile proportions so text looks natural.
- * The exported image is scaled up via pixelRatio to hit the target output.
- */
+/** DOM render size — mobile-ish proportions so text looks natural; the export
+ *  is scaled up via pixelRatio to hit OUTPUT_SIZE. */
 const BASE = 390
 
 export const RENDER_SIZE: Record<AspectRatio, { w: number; h: number }> = {
@@ -58,12 +61,8 @@ export const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '4:3': { w: 1440, h: 1080 },
 }
 
-/**
- * Default zoom-out applied on top of the story's configured zoom when a card
- * doesn't ship its own per-ratio override. Share cards are much smaller than
- * the interactive viewport, so pulling the camera back a bit keeps the
- * subject from cropping into the title overlay.
- */
+/** Default zoom-out applied to the story's configured zoom when a map slot has
+ *  no explicit per-ratio camera — the small card crops less of the subject. */
 const SHARE_ZOOM_DELTA: Record<AspectRatio, number> = {
   '1:1': -0.5,
   '4:5': -0.3,
@@ -71,52 +70,45 @@ const SHARE_ZOOM_DELTA: Record<AspectRatio, number> = {
   '4:3': -0.5,
 }
 
-export type CardVariant = 'auto' | 'map-title' | 'graph'
+/** Contained maps (hero / free-object) fill their box with the geo center at
+ *  the box center — no overlay-reserved padding. */
+const CONTAINED_FOCUS: StoryFocusArea = { top: 0, left: 0, width: 1, height: 1 }
+
+const MAP_READY_TIMEOUT_MS = 6000
+const CHART_READY_TIMEOUT_MS = 3000
+const IMG_READY_TIMEOUT_MS = 4000
 
 interface Props {
+  composition: CardComposition
   unit: ResolvedUnit
-  index: number
   ratio: AspectRatio
   slug: string
   title: string
-  /** Story vertical (e.g. `footshorts`) — scopes brand chrome on the card. */
   vertical?: string
   accessToken: string
-  /** Card variant — 'auto' picks by section kind, 'map-title' forces map + title overlay */
-  variant?: CardVariant
-  /** For `variant === 'graph'`, which subset of the foreground to render. */
-  graphScope?: 'all' | 'stat' | 'chart'
-  /** Per-section overrides from share config */
-  shareOverride?: ShareSectionOverride
-  /** Story-wide map palette (forwarded to the share map background). */
+  /** Story-wide map defaults (per-slot appearance overrides win). */
   palette?: MapPalette
-  /** Story-wide Mapbox fontstack. */
   fontstack?: string[]
-  /** Story `defaults.highlightCountry` — ISO alpha-2 (e.g. "KR"). */
   highlightCountry?: string
-  /** Story `defaults.highlightColor`. */
   highlightColor?: string
-  /** Story `defaults.mapOpacity`. */
-  mapOpacity?: number
-  /** Story `defaults.mapStyle` — Mapbox style URL pulled from the per-story config. */
   mapStyle?: string
-  /** Story `defaults.pinColor`. */
+  mapOpacity?: number
   defaultPinColor?: string
-  /** Story `defaults.pinRadius`. */
   defaultPinRadius?: number
-  /** Optional per-story logo path shown in the branding header. */
   logo?: string
-  /** Draggable emoji / image overlays placed on top of the card. */
-  overlays?: Overlay[]
-  /** When true, hide the per-card hover Download button (the composer drives it). */
+  /** Hide the hover Download button (the composer drives capture). */
   disableDownload?: boolean
 }
 
 export interface ShareCardHandle {
   capture: () => Promise<string | null>
+  /** Effective camera for a map slot at the active ratio — the slot's per-ratio
+   *  override, else the story's resolved camera + the share zoom-delta. Seeds
+   *  the composer's map-edit overlay. Null when the section has no map. */
+  getMapView: (spec: MapSpec) => MapView | null
 }
 
-/** Extract hero dek and byline from paragraphs (matches MapStorySection logic). */
+/** Extract hero dek/byline from paragraphs (kept for callers/back-compat). */
 export function extractHeroBits(paragraphs: string[]): { dek: string; byline: string } {
   const dek =
     paragraphs.find((p) => /^\*[^*]/.test(p))?.replace(/^\*+|\*+$/g, '').trim() ?? ''
@@ -125,383 +117,436 @@ export function extractHeroBits(paragraphs: string[]): { dek: string; byline: st
   return { dek, byline }
 }
 
-const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
-  { unit, index, ratio, slug, title, vertical, accessToken, variant = 'auto', graphScope = 'all', shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, overlays, disableDownload = false },
-  ref
+interface Gate {
+  p: Promise<void>
+  resolve: () => void
+  done: boolean
+}
+function makeGate(): Gate {
+  let resolve!: () => void
+  const p = new Promise<void>((r) => {
+    resolve = r
+  })
+  return { p, resolve, done: false }
+}
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+function raf(): Promise<void> {
+  return new Promise((r) => requestAnimationFrame(() => r()))
+}
+
+const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
+  {
+    composition,
+    unit,
+    ratio,
+    slug,
+    title,
+    vertical,
+    accessToken,
+    palette,
+    fontstack,
+    highlightCountry,
+    highlightColor,
+    mapStyle,
+    mapOpacity,
+    defaultPinColor,
+    defaultPinRadius,
+    logo,
+    disableDownload = false,
+  },
+  ref,
 ) {
   const captureRef = useRef<HTMLDivElement>(null)
-  const mapReadyRef = useRef(false)
-  const mapReadyResolvers = useRef<Array<() => void>>([])
-  const [, setMapReadyTick] = useState(0)
-  const handleMapReady = useCallback(() => {
-    mapReadyRef.current = true
-    for (const r of mapReadyResolvers.current) r()
-    mapReadyResolvers.current = []
-    setMapReadyTick((t) => t + 1)
-  }, [])
-  const waitForMap = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        if (mapReadyRef.current) resolve()
-        else mapReadyResolvers.current.push(resolve)
-      }),
-    []
-  )
   const { w, h } = RENDER_SIZE[ratio]
   const output = OUTPUT_SIZE[ratio]
   const pixelRatio = output.w / w
-  const { parentConfig, paragraphs } = unit
-  const resolvedSlots = useMemo(() => resolveSlotsFlat(parentConfig), [parentConfig])
+
+  // ── resolved map data from the story unit ────────────────────────────────
+  const resolvedSlots = useMemo(() => resolveSlotsFlat(unit.parentConfig), [unit.parentConfig])
   const resolvedMap = useMemo<ResolvedMapLayer | undefined>(
     () => resolvedSlots.background.find((l): l is VizLayer & ResolvedMapLayer => l.type === 'map'),
-    [resolvedSlots]
+    [resolvedSlots],
   )
-  const vizForegroundLayers = useMemo(
-    () =>
-      resolvedSlots.foreground.filter(
-        (l) => l.type !== 'text' && l.type !== 'bodyText'
-      ),
-    [resolvedSlots]
-  )
-  const shareSubOverride = shareOverride?.subsections?.[unit.subIndex]
-  const heading =
-    shareSubOverride?.heading ?? shareOverride?.heading ?? unit.heading
-  const subheading =
-    shareSubOverride?.subheading ?? shareOverride?.subheading ?? unit.subheading
-  const kind = parentConfig.kind ?? 'text'
-  const hasVizForeground = vizForegroundLayers.length > 0
-  const isMapTitle = variant === 'map-title'
-  const isGraph = variant === 'graph'
-  // Only show map bg on hero cards and map-title variant
-  const showMap = !!resolvedMap?.center && (kind === 'hero' || isMapTitle)
-
-  const layers: ShareLayerVisibility = {
-    pins: shareSubOverride?.layers?.pins ?? shareOverride?.layers?.pins,
-    regions: shareSubOverride?.layers?.regions ?? shareOverride?.layers?.regions,
-    heatmap: shareSubOverride?.layers?.heatmap ?? shareOverride?.layers?.heatmap,
-  }
-
-  const chartHeading = shareSubOverride?.chart?.heading ?? shareOverride?.chart?.heading
-  const chartSubheading = shareSubOverride?.chart?.subheading ?? shareOverride?.chart?.subheading
-
-  const mapTitleHeading =
-    shareSubOverride?.mapTitle?.heading ?? shareOverride?.mapTitle?.heading ?? heading
-  const mapTitleSubheading =
-    shareSubOverride?.mapTitle?.subheading ?? shareOverride?.mapTitle?.subheading ?? subheading
-  const heroHeading =
-    shareSubOverride?.hero?.heading ?? shareOverride?.hero?.heading ?? heading
-  const heroDek =
-    shareSubOverride?.hero?.dek ?? shareOverride?.hero?.dek ?? extractHeroBits(paragraphs).dek
-  const heroImageOffset =
-    shareSubOverride?.hero?.imageOffset ?? shareOverride?.hero?.imageOffset
-  const mapTitleDek =
-    shareSubOverride?.mapTitle?.dek ?? shareOverride?.mapTitle?.dek ?? heroDek
-  const statDescription =
-    shareSubOverride?.stat?.description ?? shareOverride?.stat?.description ?? paragraphs.join(' ')
-
-  const hidePretext = shareSubOverride?.hidePretext ?? shareOverride?.hidePretext ?? false
-
-  const subsectionMap = parentConfig.subsections?.[unit.subIndex]?.map
-  const subRatio = shareSubOverride?.map?.ratios?.[ratio]
-  const secRatio = shareOverride?.map?.ratios?.[ratio]
-  const mapCenter =
-    subRatio?.center ?? shareSubOverride?.map?.center ?? secRatio?.center ?? shareOverride?.map?.center ?? subsectionMap?.center ?? resolvedMap?.center
-  const ratioZoomOverride = subRatio?.zoom ?? secRatio?.zoom
-  const baseZoom =
-    shareSubOverride?.map?.zoom ?? shareOverride?.map?.zoom ?? subsectionMap?.zoom ?? resolvedMap?.zoom
-  const mapZoom =
-    ratioZoomOverride !== undefined
-      ? ratioZoomOverride
-      : baseZoom !== undefined
-        ? baseZoom + SHARE_ZOOM_DELTA[ratio]
-        : undefined
-  const mapPitch =
-    subRatio?.pitch ?? shareSubOverride?.map?.pitch ?? secRatio?.pitch ?? shareOverride?.map?.pitch ?? subsectionMap?.pitch ?? resolvedMap?.pitch
-  const mapBearing =
-    subRatio?.bearing ?? shareSubOverride?.map?.bearing ?? secRatio?.bearing ?? shareOverride?.map?.bearing ?? subsectionMap?.bearing ?? resolvedMap?.bearing
-  const resolvedRegions =
-    shareSubOverride?.map?.regions ?? shareOverride?.map?.regions ?? subsectionMap?.regions ?? resolvedMap?.regions
-  const resolvedHeatmap =
-    shareSubOverride?.map?.heatmap ?? shareOverride?.map?.heatmap ?? subsectionMap?.heatmap ?? resolvedMap?.heatmap
-  const labelCodesOverride =
-    shareSubOverride?.regionLabelCodes ?? shareOverride?.regionLabelCodes
-  const patchedRegions = useMemo(() => {
-    if (!resolvedRegions) return resolvedRegions
-    if (!labelCodesOverride) return resolvedRegions
-    return {
-      ...resolvedRegions,
-      labels: { ...(resolvedRegions.labels ?? {}), codes: labelCodesOverride },
+  const resolvedPins = useMemo<MapPinConfig[]>(() => {
+    const pins: MapPinConfig[] = []
+    if (resolvedMap?.pins) pins.push(...resolvedMap.pins)
+    for (const sub of unit.parentConfig.subsections ?? []) {
+      if (sub.map?.pins) pins.push(...sub.map.pins)
     }
-  }, [resolvedRegions, labelCodesOverride])
-  const mapRegions = layers.regions === false ? undefined : patchedRegions
-  const mapHeatmap = layers.heatmap === false ? undefined : resolvedHeatmap
-
-  const textLabels = useMemo<MapTextLabel[] | undefined>(() => {
-    if (shareSubOverride?.map?.textLabels) return shareSubOverride.map.textLabels
-    if (shareOverride?.map?.textLabels) return shareOverride.map.textLabels
-    if (subsectionMap?.textLabels) return subsectionMap.textLabels
-    return resolvedMap?.textLabels
-  }, [resolvedMap, shareOverride, shareSubOverride, subsectionMap])
-
-  const allPins = useMemo<MapPinConfig[]>(() => {
-    if (layers.pins === false) return []
-    const base: MapPinConfig[] = (() => {
-      if (shareSubOverride?.map?.pins) return shareSubOverride.map.pins
-      if (shareOverride?.map?.pins) return shareOverride.map.pins
-      if (subsectionMap?.pins) return subsectionMap.pins
-      const pins: MapPinConfig[] = []
-      if (resolvedMap?.pins) pins.push(...resolvedMap.pins)
-      if (parentConfig.subsections) {
-        for (const sub of parentConfig.subsections) {
-          if (sub.map?.pins) pins.push(...sub.map.pins)
-        }
-      }
-      const seen = new Set<string>()
-      return pins.filter((p) => {
-        const key = `${p.coordinates[0]},${p.coordinates[1]}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
-    })()
-    const overridesByLabel: Record<string, MapPinOverride> = {
-      ...(shareOverride?.pinOverrides ?? {}),
-      ...(shareSubOverride?.pinOverrides ?? {}),
-    }
-    if (Object.keys(overridesByLabel).length === 0) return base
-    return base.flatMap((p) => {
-      const patch = p.label ? overridesByLabel[p.label] : undefined
-      if (patch?.hidden) return []
-      return [patch ? { ...p, ...patch } : p]
+    const seen = new Set<string>()
+    return pins.filter((p) => {
+      const key = `${p.coordinates[0]},${p.coordinates[1]}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
     })
-  }, [parentConfig, resolvedMap, shareOverride, shareSubOverride, subsectionMap, layers.pins])
+  }, [unit.parentConfig, resolvedMap])
 
+  const effectiveCamera = useCallback(
+    (spec: MapSpec): MapView | null => {
+      const r = spec.camera[ratio]
+      if (r) return r
+      if (!resolvedMap?.center) return null
+      return {
+        center: resolvedMap.center,
+        zoom: (resolvedMap.zoom ?? 2) + SHARE_ZOOM_DELTA[ratio],
+        pitch: resolvedMap.pitch ?? 9,
+        bearing: resolvedMap.bearing ?? 0,
+      }
+    },
+    [ratio, resolvedMap],
+  )
+
+  // ── map placements (the same set drives rendering + the capture gate) ─────
+  const mapPlacements = useMemo<Array<{ id: string; spec: MapSpec }>>(() => {
+    const out: Array<{ id: string; spec: MapSpec }> = []
+    if (composition.background.kind === 'map') out.push({ id: 'map:bg', spec: composition.background })
+    if (composition.hero?.kind === 'map') out.push({ id: 'map:hero', spec: composition.hero })
+    for (const el of composition.elements) if (el.kind === 'map' && el.visible) out.push({ id: `map:el:${el.id}`, spec: el })
+    return out
+  }, [composition])
+  const mapIds = useMemo(() => mapPlacements.map((p) => p.id), [mapPlacements])
+  const hasChart = composition.hero?.kind === 'chart' && !!composition.hero.chartId
+
+  // ── capture readiness gates (per-map + chart) ────────────────────────────
+  // Gates are one-shot promises resolved by onReady/finished. They MUST be
+  // re-armed whenever the map/chart inputs that trigger a re-paint change —
+  // otherwise a second capture after an edit resolves instantly against a
+  // stale gate and rasterizes the old frame. The signatures below cover only
+  // the inputs that actually re-fire onReady/finished (camera/layers/style/pin
+  // for maps; chartId/data for charts), so opacity-only tweaks don't strand a
+  // gate waiting for an event that never comes.
+  const mapGates = useRef<Map<string, Gate>>(new Map())
+  const gateFor = useCallback((id: string): Gate => {
+    let g = mapGates.current.get(id)
+    if (!g) {
+      g = makeGate()
+      mapGates.current.set(id, g)
+    }
+    return g
+  }, [])
+  const handleMapReady = useCallback(
+    (id: string) => {
+      const g = gateFor(id)
+      if (!g.done) {
+        g.done = true
+        g.resolve()
+      }
+    },
+    [gateFor],
+  )
+  const chartGate = useRef<Gate>(makeGate())
+  const handleChartReady = useCallback(() => {
+    if (!chartGate.current.done) {
+      chartGate.current.done = true
+      chartGate.current.resolve()
+    }
+  }, [])
+
+  const mapSig = useMemo(
+    () =>
+      JSON.stringify(
+        mapPlacements.map((p) => ({
+          id: p.id,
+          cam: p.spec.camera[ratio] ?? null,
+          layers: p.spec.layers,
+          style: p.spec.appearance.mapStyle ?? null,
+          pc: p.spec.appearance.pinColor ?? null,
+          pr: p.spec.appearance.pinRadius ?? null,
+        })),
+      ),
+    [mapPlacements, ratio],
+  )
+  // Re-arm every current map gate when the map inputs change.
+  useEffect(() => {
+    for (const id of mapIds) mapGates.current.set(id, makeGate())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapSig])
+
+  const chartSig =
+    composition.hero?.kind === 'chart'
+      ? `${composition.hero.chartId}:${JSON.stringify(composition.hero.dataOverride ?? null)}`
+      : ''
+  useEffect(() => {
+    chartGate.current = makeGate()
+  }, [chartSig])
+
+  // Mirror into refs so `capture` reads current values without re-binding.
+  const mapIdsRef = useRef(mapIds)
+  mapIdsRef.current = mapIds
+  const hasChartRef = useRef(hasChart)
+  hasChartRef.current = hasChart
+
+  // ── map render helper (shared by all three roles) ────────────────────────
+  const renderMap = useCallback(
+    (id: string, spec: MapSpec, contained: boolean) => {
+      const cam = effectiveCamera(spec)
+      if (!cam) return null
+      const pins = spec.layers.pins ? resolvedPins : []
+      const regions = spec.layers.regions ? resolvedMap?.regions : undefined
+      const heatmap = spec.layers.heatmap ? resolvedMap?.heatmap : undefined
+      return (
+        <>
+          <ShareMapBg
+            ratio={ratio}
+            center={cam.center}
+            zoom={cam.zoom}
+            pitch={cam.pitch}
+            bearing={cam.bearing}
+            style={spec.appearance.mapStyle ?? mapStyle}
+            accessToken={accessToken}
+            pins={pins}
+            regions={regions}
+            heatmap={heatmap}
+            textLabels={resolvedMap?.textLabels}
+            onReady={() => handleMapReady(id)}
+            palette={palette}
+            fontstack={fontstack}
+            highlightCountry={highlightCountry}
+            highlightColor={highlightColor}
+            defaultOpacity={spec.appearance.mapOpacity ?? mapOpacity}
+            defaultPinColor={spec.appearance.pinColor ?? defaultPinColor}
+            defaultPinRadius={spec.appearance.pinRadius ?? defaultPinRadius}
+            pixelRatio={pixelRatio}
+            focusArea={contained ? CONTAINED_FOCUS : undefined}
+          />
+          {!contained && <MapLegend regions={regions} pins={pins} />}
+        </>
+      )
+    },
+    [
+      ratio,
+      effectiveCamera,
+      resolvedPins,
+      resolvedMap,
+      mapStyle,
+      accessToken,
+      palette,
+      fontstack,
+      highlightCountry,
+      highlightColor,
+      mapOpacity,
+      defaultPinColor,
+      defaultPinRadius,
+      pixelRatio,
+      handleMapReady,
+    ],
+  )
+
+  // ── capture ───────────────────────────────────────────────────────────────
   const capture = useCallback(async (): Promise<string | null> => {
     const node = captureRef.current
     if (!node) return null
     try {
       await document.fonts.ready
 
-      // Wait for the Mapbox GL map to finish loading + go idle. Without this,
-      // toPng rasterizes an empty canvas or a map without regions drawn.
-      if (showMap) {
+      const ids = mapIdsRef.current
+      if (ids.length) {
         node.scrollIntoView({ block: 'center', behavior: 'auto' })
-        await waitForMap()
-        await new Promise<void>((r) => requestAnimationFrame(() => r()))
+        // Wait for EVERY map instance to idle (each registers its own gate);
+        // a per-map timeout keeps a dead map from hanging capture forever.
+        await Promise.all(ids.map((id) => Promise.race([gateFor(id).p, delay(MAP_READY_TIMEOUT_MS)])))
+        await raf()
       }
 
-      // Wait for every <img> (overlay assets, generated images, hero photos)
-      // to finish loading before snapshotting.
+      if (hasChartRef.current) {
+        // ECharts paints async; ShareDeckForeground forwards the `finished`
+        // signal through noteLayerReady → handleChartReady.
+        await Promise.race([chartGate.current.p, delay(CHART_READY_TIMEOUT_MS)])
+        await raf()
+      }
+
+      // Decode every <img> (posters, overlays, generated/hero photos). An
+      // already-completed image (even a broken one: complete + naturalWidth 0)
+      // must NOT wait on a load/error event that already fired — otherwise the
+      // gate never settles. Pending images race a timeout backstop.
       const imgs = Array.from(node.querySelectorAll('img'))
       await Promise.all(
         imgs.map((img) => {
-          if (img.complete && img.naturalWidth > 0) {
-            return img.decode().catch(() => undefined)
-          }
-          return new Promise<void>((resolve) => {
-            img.addEventListener('load', () => resolve(), { once: true })
-            img.addEventListener('error', () => resolve(), { once: true })
-          })
-        })
+          if (img.complete) return img.naturalWidth > 0 ? img.decode().catch(() => undefined) : Promise.resolve()
+          return Promise.race([
+            new Promise<void>((resolve) => {
+              img.addEventListener('load', () => resolve(), { once: true })
+              img.addEventListener('error', () => resolve(), { once: true })
+            }),
+            delay(IMG_READY_TIMEOUT_MS),
+          ])
+        }),
       )
 
-      const dataUrl = await toPng(node, {
+      // Final settle: two frames + a short delay so the Mapbox WebGL buffer and
+      // any non-gated paint (opacity) are final before html-to-image samples.
+      await raf()
+      await raf()
+      await delay(50)
+
+      return await toPng(node, {
         width: w,
         height: h,
         pixelRatio,
         backgroundColor: getComputedStyle(node).getPropertyValue('--color-bg').trim() || '#0a0e14',
-        filter: (el) => {
-          if (el instanceof HTMLElement && el.dataset.shareUi === 'true') return false
-          return true
-        },
-        // Key the html-to-image cache on the FULL url (query string included) so
-        // multiple proxied overlays (proxy-image?url=...) don't collide on one
-        // cache key and re-serve the first-fetched image for all of them.
+        // Strip composer chrome AND the live aura iframe (cross-origin, can't
+        // rasterize — the poster <img> underneath carries the background).
+        filter: (el) => !(el instanceof HTMLElement && el.dataset.shareUi === 'true'),
         includeQueryParams: true,
         cacheBust: true,
       })
-      return dataUrl
     } catch (err) {
       console.error('Share card capture failed:', err)
       return null
     }
-  }, [w, h, pixelRatio, showMap, waitForMap])
+  }, [w, h, pixelRatio, gateFor])
 
-  useImperativeHandle(ref, () => ({ capture }), [capture])
+  const getMapView = useCallback((spec: MapSpec) => effectiveCamera(spec), [effectiveCamera])
+
+  useImperativeHandle(ref, () => ({ capture, getMapView }), [capture, getMapView])
 
   const handleDownload = useCallback(async () => {
     const dataUrl = await capture()
     if (!dataUrl) return
     const link = document.createElement('a')
-    link.download = `${slug}-${index + 1}-${ratio.replace(':', 'x')}.png`
+    link.download = `${slug || 'vizmaya'}-${ratio.replace(':', 'x')}.png`
     link.href = dataUrl
     link.click()
-  }, [capture, slug, index, ratio])
+  }, [capture, slug, ratio])
+
+  // ── background ────────────────────────────────────────────────────────────
+  const bg = composition.background
+  const background = (() => {
+    switch (bg.kind) {
+      case 'solid':
+        return <div className="absolute inset-0" style={{ background: bg.color }} />
+      case 'gradient':
+        return (
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                bg.gtype === 'radial'
+                  ? `radial-gradient(circle at 50% 40%, ${bg.from}, ${bg.to})`
+                  : `linear-gradient(${bg.angle ?? 180}deg, ${bg.from}, ${bg.to})`,
+            }}
+          />
+        )
+      case 'image':
+        // eslint-disable-next-line @next/next/no-img-element
+        return (
+          <img
+            src={proxiedOverlaySrc(bg.src)}
+            alt=""
+            className="absolute inset-0 h-full w-full"
+            style={{ objectFit: bg.objectFit }}
+          />
+        )
+      case 'aura':
+        return (
+          <>
+            {bg.posterSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={proxiedOverlaySrc(bg.posterSrc)}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            )}
+            {/* Live preview only — cross-origin iframe is stripped from capture. */}
+            <div data-share-ui="true" className="absolute inset-0">
+              <AuraBackground slug={bg.slug} />
+              <style>{`.bn-aura{position:absolute;inset:0;overflow:hidden}.bn-aura iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent}`}</style>
+            </div>
+          </>
+        )
+      case 'map':
+        return <div className="absolute inset-0">{renderMap('map:bg', bg, false)}</div>
+      case 'none':
+      default:
+        return null
+    }
+  })()
+
+  // ── hero ────────────────────────────────────────────────────────────────
+  const hero = (() => {
+    const hl = composition.hero
+    if (!hl) return null
+    if (hl.kind === 'map') {
+      return <div className="absolute inset-0 z-10">{renderMap('map:hero', hl, true)}</div>
+    }
+    const overrides = hl.dataOverride !== undefined ? { [hl.chartId]: hl.dataOverride } : {}
+    return (
+      <div className="absolute inset-0 z-10">
+        <ChartDataOverrideProvider value={overrides}>
+          <ShareDeckForeground
+            slug={slug}
+            unit={unit}
+            ratio={ratio}
+            cardHeight={h}
+            chartHeading={hl.heading}
+            chartSubheading={hl.subheading}
+            layerScope="chart"
+            noteLayerReady={handleChartReady}
+          />
+        </ChartDataOverrideProvider>
+      </div>
+    )
+  })()
 
   return (
     <div className="relative group" style={{ width: w, height: h }}>
       <div
         ref={captureRef}
         className="relative overflow-hidden rounded-lg"
-        style={{
-          width: w,
-          height: h,
-          background: 'var(--color-bg)',
-          fontSize: 20,
-        }}
+        style={{ width: w, height: h, background: 'var(--color-bg)', fontSize: 20 }}
       >
-        {/* Map background layer — only on hero and map-title cards */}
-        {showMap && (
-          <>
-            <ShareMapBg
-              ratio={ratio}
-              center={mapCenter!}
-              zoom={mapZoom!}
-              pitch={mapPitch}
-              bearing={mapBearing}
-              style={mapStyle}
-              accessToken={accessToken}
-              pins={allPins}
-              regions={mapRegions}
-              heatmap={mapHeatmap}
-              textLabels={textLabels}
-              onReady={handleMapReady}
-              palette={palette}
-              fontstack={fontstack}
-              highlightCountry={highlightCountry}
-              highlightColor={highlightColor}
-              defaultOpacity={mapOpacity}
-              defaultPinColor={defaultPinColor}
-              defaultPinRadius={defaultPinRadius}
-              pixelRatio={pixelRatio}
-            />
-            <MapLegend
-              regions={mapRegions}
-              pins={allPins}
-              leftColumn={isMapTitle && ratio === '4:3'}
-            />
-          </>
+        {/* background (z0) */}
+        {background}
+
+        {/* hero (z10) */}
+        {hero}
+
+        {/* branding (z15) */}
+        {composition.branding.visible && (
+          <div className="absolute inset-0 z-[15]">
+            <BrandingHeader title={title} logo={logo} vertical={vertical} />
+          </div>
         )}
 
-        {/* Content layer */}
-        <div className="relative z-10 h-full flex flex-col">
-          {isMapTitle ? (
-            ratio === '4:3' ? (
-              <div className="flex justify-start h-full p-[10px] pt-[15px]">
-                <div
-                  className="rounded-lg p-[10px] backdrop-blur-sm w-1/3 self-start"
-                  style={{
-                    background: 'rgb(var(--color-panel-rgb) / 0.2)',
-                    border: '0.5px solid var(--color-line)',
-                  }}
-                >
-                  <h2
-                    className="share-display font-serif font-bold leading-[1.2] text-[20px]"
-                    style={{ color: 'var(--color-text)' }}
+        {/* text + elements (z20+) — DOM order = stacking; later paints on top */}
+        <div className="absolute inset-0 z-20">
+          {composition.text.heading && <TextView block={composition.text.heading} cardWidth={w} />}
+          {composition.text.subheading && <TextView block={composition.text.subheading} cardWidth={w} />}
+          {composition.elements.map((el) =>
+            el.kind === 'map' ? (
+              el.visible ? (
+                <div key={el.id} style={transformWrapperStyle(el.transform, { sizeByWidth: true })}>
+                  <div
+                    style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: 8 }}
                   >
-                    {mapTitleHeading ?? title}
-                  </h2>
-                  {mapTitleSubheading && (
-                    <p
-                      className="text-[15px] leading-[1.4] mt-[5px]"
-                      style={{ color: 'var(--color-muted)' }}
-                    >
-                      {mapTitleSubheading}
-                    </p>
-                  )}
-                  {kind === 'hero' && mapTitleDek && (
-                    <p
-                      className="text-[16px] leading-[1.4] mt-[5px]"
-                      style={{ color: 'var(--color-muted)' }}
-                    >
-                      {mapTitleDek}
-                    </p>
-                  )}
+                    {renderMap(`map:el:${el.id}`, el, true)}
+                  </div>
                 </div>
-              </div>
+              ) : null
             ) : (
-              <div className="flex flex-col justify-start h-full p-[10px] pt-[15px]">
-                <div
-                  className="rounded-lg p-[10px] backdrop-blur-sm"
-                  style={{
-                    background: 'rgb(var(--color-panel-rgb) / 0.2)',
-                    border: '0.5px solid var(--color-line)',
-                  }}
-                >
-                  <h2
-                    className="share-display font-serif font-bold leading-[1.2] text-[20px]"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {mapTitleHeading ?? title}
-                  </h2>
-                  {mapTitleSubheading && (
-                    <p
-                      className="text-[15px] leading-[1.4] mt-[5px]"
-                      style={{ color: 'var(--color-muted)' }}
-                    >
-                      {mapTitleSubheading}
-                    </p>
-                  )}
-                  {kind === 'hero' && mapTitleDek && (
-                    <p
-                      className="text-[16px] leading-[1.4] mt-[5px]"
-                      style={{ color: 'var(--color-muted)' }}
-                    >
-                      {mapTitleDek}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-          ) : isGraph && hasVizForeground ? (
-            <ShareDeckForeground
-              slug={slug}
-              unit={unit}
-              ratio={ratio}
-              cardHeight={h}
-              heroEyebrow={parentConfig.eyebrow}
-              heroHeading={heroHeading}
-              heroDek={heroDek}
-              heroImageOffset={heroImageOffset}
-              chartHeading={chartHeading}
-              chartSubheading={chartSubheading}
-              layerScope={graphScope}
-            />
-          ) : kind === 'hero' && heroHeading ? (
-            <ShareHeroCard title={heroHeading} dek={heroDek} ratio={ratio} />
-          ) : kind === 'stat' && heading ? (
-            <ShareStatCard
-              value={heading}
-              subheading={subheading}
-              description={statDescription}
-              color={parentConfig.color}
-              ratio={ratio}
-            />
-          ) : (
-            <ShareTextCard heading={heading} subheading={subheading} paragraphs={paragraphs} hidePretext={hidePretext} ratio={ratio} />
+              <ElementView key={el.id} element={el} cardWidth={w} />
+            ),
           )}
+          {composition.text.annotations.map((a) => (
+            <TextView key={a.id} block={a} cardWidth={w} />
+          ))}
         </div>
-
-        {/* Branding header */}
-        <BrandingHeader title={title} logo={logo} vertical={vertical} />
-
-        {/* Emoji / image overlays — part of the captured PNG */}
-        <OverlayLayer overlays={overlays ?? []} cardWidth={w} />
       </div>
 
       {!disableDownload && (
         <button
           data-share-ui="true"
           onClick={handleDownload}
-          className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           style={{ background: 'rgba(0,0,0,0.4)' }}
         >
           <div
             className="rounded-lg px-4 py-2 font-[family-name:var(--font-mono)] text-[0.75rem] uppercase tracking-wider"
-            style={{
-              background: 'var(--color-accent)',
-              color: 'var(--color-bg)',
-            }}
+            style={{ background: 'var(--color-accent)', color: 'var(--color-bg)' }}
           >
             Download PNG
           </div>

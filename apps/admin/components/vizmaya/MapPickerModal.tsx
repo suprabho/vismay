@@ -53,11 +53,34 @@ export interface PickerFrame {
 }
 
 interface Props {
-  sectionRaw: string
+  /**
+   * Section YAML, read/written in the default (YAML) mode. Optional because
+   * the view mode (see {@link onApplyView}) edits a bare camera object and
+   * never touches YAML.
+   */
+  sectionRaw?: string
   sectionLabel: string
   style?: string
-  onApply: (nextRaw: string) => void
+  onApply?: (nextRaw: string) => void
   onClose: () => void
+  /**
+   * View mode. When provided, the modal bypasses YAML entirely: it seeds the
+   * camera from {@link initialView}, hides the desktop/mobile target toggle and
+   * the style-URL row, and Apply returns the edited camera here instead of
+   * splicing YAML. Used by surfaces with no story config to patch (e.g. the
+   * share-card composer, where the camera lands in a per-card override).
+   */
+  onApplyView?: (view: MapView) => void
+  /** Initial camera for view mode. Falls back to a world view when omitted. */
+  initialView?: MapView
+  /**
+   * Override the focal area used for Mapbox `padding`, applied to BOTH
+   * orientations. Lets a caller frame the camera against a non-story focal
+   * rectangle (e.g. the share card's per-ratio focus area) so the picker
+   * preview matches that surface's render. Takes precedence over the `frame`
+   * zero-padding behaviour and the default story focus areas.
+   */
+  focusArea?: StoryFocusArea
   /** Hide the desktop/mobile target toggle and force the desktop target.
    *  Use for surfaces (e.g. the report builder) that don't render a mobile
    *  story view and only need the single landscape camera. */
@@ -87,15 +110,29 @@ export default function MapPickerModal({
   hideMobileTarget = false,
   frame,
   onMapStyleChange,
+  onApplyView,
+  initialView,
+  focusArea,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
 
+  // View mode edits a bare camera; YAML mode reads/writes section YAML. The
+  // YAML-specific chrome (mobile target, style URL, "no map block" hint) is
+  // suppressed in view mode.
+  const viewMode = !!onApplyView
+
   const initialDesktop = useMemo(
-    () => extractMapView(sectionRaw) ?? fallbackView(),
-    [sectionRaw]
+    () =>
+      viewMode
+        ? initialView ?? fallbackView()
+        : extractMapView(sectionRaw ?? '') ?? fallbackView(),
+    [viewMode, initialView, sectionRaw]
   )
-  const initialMobile = useMemo(() => extractMobileMapView(sectionRaw), [sectionRaw])
+  const initialMobile = useMemo(
+    () => (viewMode ? null : extractMobileMapView(sectionRaw ?? '')),
+    [viewMode, sectionRaw]
+  )
   const hadMobileOverride = initialMobile !== null
 
   const [target, setTarget] = useState<Target>('desktop')
@@ -103,7 +140,7 @@ export default function MapPickerModal({
   const [mobileView, setMobileView] = useState<MapView>(initialMobile ?? initialDesktop)
   const [desktopDirty, setDesktopDirty] = useState(false)
   const [mobileDirty, setMobileDirty] = useState(false)
-  const [noMapBlock] = useState(() => extractMapView(sectionRaw) === null)
+  const [noMapBlock] = useState(() => !viewMode && extractMapView(sectionRaw ?? '') === null)
 
   // Local map-style state — drives both the live mapbox canvas (via setStyle)
   // and the controlled input shown in the header. Initialised from the parent
@@ -193,10 +230,15 @@ export default function MapPickerModal({
       const c = containerRef.current
       if (!m || !c) return
       m.resize()
-      // When a frame reference is set the map fills the frame entirely (no
-      // focal subarea), so padding is 0 — the camera frames against the same
-      // dimensions the user sees in the rendered PDF page.
-      if (frame) {
+      if (focusArea) {
+        // Caller-supplied focal rectangle (e.g. the share card's per-ratio
+        // focus area), applied to both orientations so the picker preview
+        // matches that surface's render exactly.
+        m.setPadding(computeStoryFocusPadding(c, focusArea, focusArea))
+      } else if (frame) {
+        // When a frame reference is set the map fills the frame entirely (no
+        // focal subarea), so padding is 0 — the camera frames against the same
+        // dimensions the user sees in the rendered PDF page.
         m.setPadding({ top: 0, bottom: 0, left: 0, right: 0 })
       } else {
         m.setPadding(
@@ -309,19 +351,23 @@ export default function MapPickerModal({
   }
 
   function apply() {
-    let next = sectionRaw
+    if (viewMode) {
+      onApplyView?.(desktopView)
+      return
+    }
+    let next = sectionRaw ?? ''
     if (extractMapView(next) === null) next = ensureMapBlock(next)
     if (desktopDirty) next = applyMapView(next, desktopView)
     if (mobileDirty) next = applyMobileMapView(next, mobileView)
-    onApply(next)
+    onApply?.(next)
   }
 
   function clearMobile() {
-    let next = sectionRaw
+    let next = sectionRaw ?? ''
     if (extractMapView(next) === null) next = ensureMapBlock(next)
     if (desktopDirty) next = applyMapView(next, desktopView)
     next = removeMobileMapView(next)
-    onApply(next)
+    onApply?.(next)
   }
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -364,6 +410,8 @@ export default function MapPickerModal({
         </button>
       </header>
 
+      {!viewMode && (
+      <>
       <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-white/10 bg-black/30">
         {hideMobileTarget ? <span /> : <TargetToggle target={target} onChange={switchTarget} />}
         {!hideMobileTarget && showClearMobile && (
@@ -435,6 +483,8 @@ export default function MapPickerModal({
           </span>
         )}
       </div>
+      </>
+      )}
 
       <div className="relative flex-1 min-h-0 bg-neutral-950 flex items-center justify-center p-4">
         {token ? (
@@ -465,7 +515,14 @@ export default function MapPickerModal({
                 instead of sizing, and the container collapses to 0×0. Use
                 explicit width/height like MapboxBackground does. */}
             <div ref={containerRef} className="w-full h-full" />
-            {frame ? (
+            {focusArea ? (
+              // Caller-supplied focal rectangle (share-card view mode): trace
+              // the output frame AND mark where map content is anchored.
+              <>
+                {frame && <FrameOverlay frame={frame} />}
+                <FocusAreaOverlay area={focusArea} />
+              </>
+            ) : frame ? (
               <FrameOverlay frame={frame} />
             ) : (
               <FocusAreaOverlay

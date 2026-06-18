@@ -84,6 +84,12 @@ interface Props {
   /** Region split (`shareGroups`): the slice of the lead list layer's `items[]`. */
   itemSlice?: number | [number, number]
   itemHeading?: string
+  /**
+   * Capture-readiness callback. Forwarded to `ForegroundLayoutSlot` so a chart's
+   * deterministic paint signal (StoryEChart `finished`) reaches the card's
+   * capture gate — without this the gate never waits for the chart to paint.
+   */
+  noteLayerReady?: (key: string) => void
 }
 
 interface BuiltForeground {
@@ -105,6 +111,7 @@ export default function ShareDeckForeground({
   layerScope = 'all',
   itemSlice,
   itemHeading,
+  noteLayerReady,
 }: Props) {
   const { parentConfig } = unit
   const rawKind = parentConfig.kind ?? 'text'
@@ -179,6 +186,7 @@ export default function ShareDeckForeground({
       activeStep={unit.subIndex}
       mode="capture"
       isPortrait={built.isPortrait}
+      noteLayerReady={noteLayerReady}
     />
   )
 
