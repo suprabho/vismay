@@ -366,6 +366,18 @@ export function ShareCardCreator({
   }, [])
   const previewScale = Math.max(0.1, Math.min(previewBox.w / renderW, previewBox.h / renderH))
 
+  // ── saved-cards dropdown (top bar) ────────────────────────────────────────
+  const [savedOpen, setSavedOpen] = useState(false)
+  const savedRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!savedOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (savedRef.current && !savedRef.current.contains(e.target as Node)) setSavedOpen(false)
+    }
+    window.addEventListener('pointerdown', onDown)
+    return () => window.removeEventListener('pointerdown', onDown)
+  }, [savedOpen])
+
   // ── drag layers on the preview ──────────────────────────────────────────
   const interactionRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<Selection | null>(null)
@@ -555,8 +567,73 @@ export function ShareCardCreator({
   const mapEditIsBackground = mapEditSel?.kind === 'background'
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 lg:flex-row">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       {fontImportUrl && <link href={fontImportUrl} rel="stylesheet" />}
+
+      {/* ── Top bar: title · saved cards · actions ─────────────────────────── */}
+      <div className="flex shrink-0 items-center gap-3">
+        <h1 className="text-lg font-semibold text-neutral-100">Share cards</h1>
+
+        <div ref={savedRef} className="relative">
+          <button
+            onClick={() => setSavedOpen((o) => !o)}
+            disabled={savedCards.length === 0}
+            className="flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-neutral-200 transition-colors hover:bg-white/10 disabled:opacity-40"
+          >
+            Saved cards{savedCards.length > 0 ? ` · ${savedCards.length}` : ''}
+            <span className="text-neutral-500">▾</span>
+          </button>
+          {savedOpen && savedCards.length > 0 && (
+            <div className="absolute left-0 top-full z-50 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg border border-white/10 bg-neutral-900 p-1.5 shadow-xl">
+              {savedCards.map((c) => (
+                <div
+                  key={c.id}
+                  className={`flex items-center gap-2 rounded-md border p-1.5 ${currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-transparent hover:bg-white/5'}`}
+                >
+                  <button
+                    onClick={() => {
+                      loadCard(c)
+                      setSavedOpen(false)
+                    }}
+                    title="Load into editor"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
+                  >
+                    {c.name}
+                    <span className="ml-1 text-neutral-500">· {c.baseType}</span>
+                  </button>
+                  <button
+                    onClick={() => void handleDeleteSaved(c.id)}
+                    className="shrink-0 rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                    aria-label="Delete saved card"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1" />
+
+        <button
+          onClick={() => void handleDownload()}
+          disabled={!composition || downloading}
+          className="rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {downloading ? 'Rendering…' : 'Download PNG'}
+        </button>
+        <button
+          onClick={() => void handleSave()}
+          disabled={!composition || saving}
+          className="rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+
+      {/* ── 3-pane row ─────────────────────────────────────────────────────── */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
 
       {/* ── Left: story/section pickers + layer panel ──────────────────────── */}
       <div className="w-full shrink-0 space-y-4 lg:h-full lg:w-72 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
@@ -624,47 +701,6 @@ export function ShareCardCreator({
             setSelection={setSelection}
             story={{ slug: story!.slug, theme: story!.theme, assets }}
           />
-        )}
-
-        <hr className="border-white/10" />
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => void handleDownload()}
-            disabled={!composition || downloading}
-            className="flex-1 rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {downloading ? 'Rendering…' : 'Download PNG'}
-          </button>
-          <button
-            onClick={() => void handleSave()}
-            disabled={!composition || saving}
-            className="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-
-        {savedCards.length > 0 && (
-          <div>
-            <span className={labelCls}>Saved cards</span>
-            <div className="mt-1.5 space-y-1.5">
-              {savedCards.map((c) => (
-                <div
-                  key={c.id}
-                  className={`flex items-center gap-2 rounded-md border p-1.5 ${currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-white/10'}`}
-                >
-                  <button onClick={() => loadCard(c)} title="Load into editor" className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white">
-                    {c.name}
-                    <span className="ml-1 text-neutral-500">· {c.baseType}</span>
-                  </button>
-                  <button onClick={() => void handleDeleteSaved(c.id)} className="shrink-0 rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white" aria-label="Delete saved card">
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
         )}
       </div>
 
@@ -749,6 +785,7 @@ export function ShareCardCreator({
         ) : (
           <p className="text-[11px] text-neutral-600">Load a story to begin.</p>
         )}
+      </div>
       </div>
 
       {/* ── Map edit overlay ───────────────────────────────────────────────── */}

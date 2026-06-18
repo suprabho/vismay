@@ -26,16 +26,11 @@ export default async function ShareCardsPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden text-neutral-100">
-      <div className="shrink-0 px-4 pt-3 pb-2">
-        <h1 className="text-lg font-semibold">Share cards</h1>
-      </div>
-      <div className="min-h-0 flex-1 px-4 pb-4">
-        <ShareCardCreator
-          stories={stories}
-          accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
-        />
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 text-neutral-100">
+      <ShareCardCreator
+        stories={stories}
+        accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+      />
     </div>
   )
 }
