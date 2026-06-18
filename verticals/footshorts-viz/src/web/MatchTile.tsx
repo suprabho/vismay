@@ -5,6 +5,7 @@ import {
   getCompetitionDisplayName,
   getCompetitionPalette,
 } from '../competitionMeta';
+import { Crest } from '../data/Crest';
 
 type Props = {
   fixture: FixtureRow;
@@ -90,8 +91,16 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
         </div>
 
         <div className="mt-2 flex-1 space-y-1.5 overflow-hidden">
-          <TeamRow name={homeName} crest={home?.crest_url ?? null} />
-          <TeamRow name={awayName} crest={away?.crest_url ?? null} />
+          <TeamRow
+            teamKey={home?.slug ?? home?.id ?? homeName}
+            name={homeName}
+            crestUrl={home?.crest_url ?? undefined}
+          />
+          <TeamRow
+            teamKey={away?.slug ?? away?.id ?? awayName}
+            name={awayName}
+            crestUrl={away?.crest_url ?? undefined}
+          />
         </div>
 
         <div className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/80">
@@ -103,19 +112,21 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
 }
 
 function TeamRow({
+  teamKey,
   name,
-  crest,
+  crestUrl,
 }: {
+  /** Slug/name used to resolve the bundled crest when no explicit URL is given. */
+  teamKey: string;
   name: string;
-  crest: string | null;
+  crestUrl?: string;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/85">
-        {crest ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={crest} alt="" className="h-4 w-4 object-contain" />
-        ) : null}
+      {/* White chip hosts the crest; Crest resolves the bundled flag/badge and
+          falls back to a monogram, so a missing crest_url is never a blank circle. */}
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/85">
+        <Crest team={teamKey} crestUrl={crestUrl} size={20} />
       </span>
       <span className="truncate text-sm font-semibold">{name}</span>
     </div>
