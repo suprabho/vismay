@@ -6,7 +6,7 @@
 // `data-share-ui` so the toPng filter strips it). RENDER_SIZE / OUTPUT_SIZE are
 // exported for the composer's preview scaling.
 
-import { useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle, type CSSProperties } from 'react'
+import { useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { toPng } from 'html-to-image'
 import type {
   ResolvedUnit,
@@ -23,11 +23,10 @@ import type {
 import { resolveSlotsFlat, ChartDataOverrideProvider, ForegroundLayoutSlot } from '@vismay/viz-engine'
 import { AuraBackground } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
-import type { CardComposition, MapSpec } from './layers/types'
-import { DEFAULT_HERO_BOX } from './layers/types'
+import type { CardComposition, ElementLayer, MapSpec } from './layers/types'
+import { DEFAULT_GRAPHIC_HEIGHT_PCT } from './layers/types'
 import { ElementView, TextView, transformWrapperStyle } from './layers/LayerView'
 import { proxiedOverlaySrc } from './OverlayLayer'
-import ShareDeckForeground from './ShareDeckForeground'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
@@ -214,36 +213,46 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     [ratio, resolvedMap],
   )
 
-  // ── map placements (the same set drives rendering + the capture gate) ─────
+  // ── async render placements (drive both rendering and the capture gate) ───
+  // Maps (background + each visible map element) and charts (each visible chart
+  // element with a source) paint asynchronously, so each registers a readiness
+  // gate keyed by a stable id.
   const mapPlacements = useMemo<Array<{ id: string; spec: MapSpec }>>(() => {
     const out: Array<{ id: string; spec: MapSpec }> = []
     if (composition.background.kind === 'map') out.push({ id: 'map:bg', spec: composition.background })
-    if (composition.hero?.kind === 'map') out.push({ id: 'map:hero', spec: composition.hero })
     for (const el of composition.elements) if (el.kind === 'map' && el.visible) out.push({ id: `map:el:${el.id}`, spec: el })
     return out
   }, [composition])
+  const chartPlacements = useMemo<Array<{ id: string; el: Extract<ElementLayer, { kind: 'chart' }> }>>(() => {
+    const out: Array<{ id: string; el: Extract<ElementLayer, { kind: 'chart' }> }> = []
+    for (const el of composition.elements) {
+      if (el.kind === 'chart' && el.visible && (!!el.chartId || el.dataOverride !== undefined)) {
+        out.push({ id: `chart:el:${el.id}`, el })
+      }
+    }
+    return out
+  }, [composition])
   const mapIds = useMemo(() => mapPlacements.map((p) => p.id), [mapPlacements])
-  const hasChart =
-    composition.hero?.kind === 'chart' && (!!composition.hero.chartId || composition.hero.dataOverride !== undefined)
+  const chartIds = useMemo(() => chartPlacements.map((p) => p.id), [chartPlacements])
 
-  // ── capture readiness gates (per-map + chart) ────────────────────────────
+  // ── capture readiness gates (one per map + chart, keyed by id) ────────────
   // Gates are one-shot promises resolved by onReady/finished. They MUST be
-  // re-armed whenever the map/chart inputs that trigger a re-paint change —
-  // otherwise a second capture after an edit resolves instantly against a
-  // stale gate and rasterizes the old frame. The signatures below cover only
-  // the inputs that actually re-fire onReady/finished (camera/layers/style/pin
-  // for maps; chartId/data for charts), so opacity-only tweaks don't strand a
-  // gate waiting for an event that never comes.
-  const mapGates = useRef<Map<string, Gate>>(new Map())
+  // re-armed whenever the inputs that trigger a re-paint change — otherwise a
+  // second capture after an edit resolves instantly against a stale gate and
+  // rasterizes the old frame. The signatures below cover only the inputs that
+  // actually re-fire onReady/finished (camera/layers/style/pin for maps;
+  // chartId/data for charts), so opacity-only tweaks don't strand a gate
+  // waiting for an event that never comes.
+  const gates = useRef<Map<string, Gate>>(new Map())
   const gateFor = useCallback((id: string): Gate => {
-    let g = mapGates.current.get(id)
+    let g = gates.current.get(id)
     if (!g) {
       g = makeGate()
-      mapGates.current.set(id, g)
+      gates.current.set(id, g)
     }
     return g
   }, [])
-  const handleMapReady = useCallback(
+  const handleReady = useCallback(
     (id: string) => {
       const g = gateFor(id)
       if (!g.done) {
@@ -253,13 +262,6 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     },
     [gateFor],
   )
-  const chartGate = useRef<Gate>(makeGate())
-  const handleChartReady = useCallback(() => {
-    if (!chartGate.current.done) {
-      chartGate.current.done = true
-      chartGate.current.resolve()
-    }
-  }, [])
 
   const mapSig = useMemo(
     () =>
@@ -278,23 +280,25 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
   )
   // Re-arm every current map gate when the map inputs change.
   useEffect(() => {
-    for (const id of mapIds) mapGates.current.set(id, makeGate())
+    for (const id of mapIds) gates.current.set(id, makeGate())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapSig])
 
-  const chartSig =
-    composition.hero?.kind === 'chart'
-      ? `${composition.hero.chartId}:${JSON.stringify(composition.hero.dataOverride ?? null)}`
-      : ''
+  const chartSig = useMemo(
+    () => JSON.stringify(chartPlacements.map((p) => ({ id: p.id, chartId: p.el.chartId, data: p.el.dataOverride ?? null }))),
+    [chartPlacements],
+  )
+  // Re-arm every current chart gate when the chart inputs change.
   useEffect(() => {
-    chartGate.current = makeGate()
+    for (const id of chartIds) gates.current.set(id, makeGate())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartSig])
 
   // Mirror into refs so `capture` reads current values without re-binding.
   const mapIdsRef = useRef(mapIds)
   mapIdsRef.current = mapIds
-  const hasChartRef = useRef(hasChart)
-  hasChartRef.current = hasChart
+  const chartIdsRef = useRef(chartIds)
+  chartIdsRef.current = chartIds
 
   // ── map render helper (shared by all three roles) ────────────────────────
   const renderMap = useCallback(
@@ -320,7 +324,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
             regions={regions}
             heatmap={heatmap}
             textLabels={textLabels}
-            onReady={() => handleMapReady(id)}
+            onReady={() => handleReady(id)}
             palette={palette}
             fontstack={fontstack}
             highlightCountry={highlightCountry}
@@ -350,7 +354,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
       defaultPinColor,
       defaultPinRadius,
       pixelRatio,
-      handleMapReady,
+      handleReady,
     ],
   )
 
@@ -361,19 +365,20 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     try {
       await document.fonts.ready
 
-      const ids = mapIdsRef.current
-      if (ids.length) {
+      const mapWaitIds = mapIdsRef.current
+      if (mapWaitIds.length) {
         node.scrollIntoView({ block: 'center', behavior: 'auto' })
         // Wait for EVERY map instance to idle (each registers its own gate);
         // a per-map timeout keeps a dead map from hanging capture forever.
-        await Promise.all(ids.map((id) => Promise.race([gateFor(id).p, delay(MAP_READY_TIMEOUT_MS)])))
+        await Promise.all(mapWaitIds.map((id) => Promise.race([gateFor(id).p, delay(MAP_READY_TIMEOUT_MS)])))
         await raf()
       }
 
-      if (hasChartRef.current) {
-        // ECharts paints async; ShareDeckForeground forwards the `finished`
-        // signal through noteLayerReady → handleChartReady.
-        await Promise.race([chartGate.current.p, delay(CHART_READY_TIMEOUT_MS)])
+      const chartWaitIds = chartIdsRef.current
+      if (chartWaitIds.length) {
+        // ECharts paints async; each chart forwards its `finished` signal through
+        // noteLayerReady → handleReady. Wait for all, each racing a timeout.
+        await Promise.all(chartWaitIds.map((id) => Promise.race([gateFor(id).p, delay(CHART_READY_TIMEOUT_MS)])))
         await raf()
       }
 
@@ -485,91 +490,54 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     }
   })()
 
-  // ── hero ────────────────────────────────────────────────────────────────
-  const hero = (() => {
-    const hl = composition.hero
-    if (!hl) return null
-    const box = hl.box ?? DEFAULT_HERO_BOX
-    const boxStyle: CSSProperties = {
-      position: 'absolute',
-      left: `${box.xPct}%`,
-      top: `${box.yPct}%`,
-      width: `${box.widthPct}%`,
-      height: `${box.heightPct}%`,
-      transform: `translate(-50%, -50%) rotate(${box.rotation}deg) scale(${box.scale})`,
-      transformOrigin: 'center center',
-      opacity: box.opacity,
-      zIndex: 10,
-    }
-    if (hl.kind === 'map') {
-      return <div style={boxStyle}>{renderMap('map:hero', hl, true)}</div>
-    }
-    // Custom (from-scratch) chart: no story chartId, defined purely by the
-    // edited JSON. Render a standalone chart via the foreground machinery (so
-    // it's still capture-gated) keyed by the synthetic id.
-    if (!hl.chartId && hl.dataOverride !== undefined) {
-      const foreground: ResolvedForeground = {
-        kind: 'flat',
-        layers: [{ type: 'chart', id: CUSTOM_CHART_ID } as VizLayer],
-      }
-      return (
-        <div style={boxStyle}>
-          <ChartDataOverrideProvider value={{ [CUSTOM_CHART_ID]: hl.dataOverride }}>
-            <div className="flex h-full w-full flex-col p-[14px] pb-[20px]">
-              {(hl.heading || hl.subheading) && (
-                <div className="mb-1 shrink-0">
-                  {hl.heading && (
-                    <h4 className="text-center font-serif text-[20px] font-bold leading-[1.2]" style={{ color: 'var(--color-accent)' }}>
-                      {hl.heading}
-                    </h4>
-                  )}
-                  {hl.subheading && (
-                    <p className="text-center text-[15px] leading-[1.4]" style={{ color: 'var(--color-muted)' }}>
-                      {hl.subheading}
-                    </p>
-                  )}
-                </div>
-              )}
-              <div className="relative min-h-0 flex-1">
-                <div className="absolute inset-0 overflow-hidden">
-                  <ForegroundLayoutSlot
-                    slug={slug || 'custom'}
-                    foreground={foreground}
-                    unit={unit}
-                    activeStep={0}
-                    mode="capture"
-                    noteLayerReady={handleChartReady}
-                  />
-                </div>
+  // ── chart element (standalone, capture-gated, box-sized by its transform) ──
+  // Each chart renders independently so several can coexist: a STORY chart
+  // fetches /api/chart-data/<slug>/<chartId>; a from-scratch chart is keyed by a
+  // synthetic id and driven purely by its dataOverride. Both flow through the
+  // foreground machinery (so they stay capture-gated). Headings render above.
+  const renderChartElement = (el: Extract<ElementLayer, { kind: 'chart' }>) => {
+    if (!el.visible || (!el.chartId && el.dataOverride === undefined)) return null
+    const effId = el.chartId || `${CUSTOM_CHART_ID}:${el.id}`
+    const foreground: ResolvedForeground = { kind: 'flat', layers: [{ type: 'chart', id: effId } as VizLayer] }
+    const overrides = el.dataOverride !== undefined ? { [effId]: el.dataOverride } : {}
+    // A chart always needs a definite box height to paint into (its inner flex
+    // column is h-full); guarantee one even if the transform somehow lacks it.
+    const t = el.transform.heightPct != null ? el.transform : { ...el.transform, heightPct: DEFAULT_GRAPHIC_HEIGHT_PCT }
+    return (
+      <div key={el.id} style={transformWrapperStyle(t, { sizeByWidth: true })}>
+        <ChartDataOverrideProvider value={overrides}>
+          <div className="flex h-full w-full flex-col p-[14px] pb-[20px]">
+            {(el.heading || el.subheading) && (
+              <div className="mb-1 shrink-0">
+                {el.heading && (
+                  <h4 className="text-center font-serif text-[20px] font-bold leading-[1.2]" style={{ color: 'var(--color-accent)' }}>
+                    {el.heading}
+                  </h4>
+                )}
+                {el.subheading && (
+                  <p className="text-center text-[15px] leading-[1.4]" style={{ color: 'var(--color-muted)' }}>
+                    {el.subheading}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="relative min-h-0 flex-1">
+              <div className="absolute inset-0 overflow-hidden">
+                <ForegroundLayoutSlot
+                  slug={slug || 'custom'}
+                  foreground={foreground}
+                  unit={unit}
+                  activeStep={0}
+                  mode="capture"
+                  noteLayerReady={() => handleReady(`chart:el:${el.id}`)}
+                />
               </div>
             </div>
-          </ChartDataOverrideProvider>
-        </div>
-      )
-    }
-
-    // Story chart: render the section's chart via the deck foreground; a
-    // dataOverride (if any) patches that chart by id. Stack math is sized to
-    // the box height so resizing re-renders the chart crisply within it.
-    const boxHeightPx = (box.heightPct / 100) * h
-    const overrides = hl.dataOverride !== undefined && hl.chartId ? { [hl.chartId]: hl.dataOverride } : {}
-    return (
-      <div style={boxStyle}>
-        <ChartDataOverrideProvider value={overrides}>
-          <ShareDeckForeground
-            slug={slug}
-            unit={unit}
-            ratio={ratio}
-            cardHeight={boxHeightPx}
-            chartHeading={hl.heading}
-            chartSubheading={hl.subheading}
-            layerScope="chart"
-            noteLayerReady={handleChartReady}
-          />
+          </div>
         </ChartDataOverrideProvider>
       </div>
     )
-  })()
+  }
 
   return (
     <div className="relative group" style={{ width: w, height: h }}>
@@ -581,9 +549,6 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
         {/* background (z0) */}
         {background}
 
-        {/* hero (z10) */}
-        {hero}
-
         {/* branding (z15) */}
         {composition.branding.visible && (
           <div className="absolute inset-0 z-[15]">
@@ -591,25 +556,38 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
           </div>
         )}
 
-        {/* text + elements (z20+) — DOM order = stacking; later paints on top */}
+        {/* text + foreground graphics/elements (z20+) — DOM order = stacking;
+            later paints on top. Graphics (chart/map/box-image) and decorations
+            (emoji/icon/flag) share the one reorderable `elements` list. */}
         <div className="absolute inset-0 z-20">
           {composition.text.heading && <TextView block={composition.text.heading} cardWidth={w} />}
           {composition.text.subheading && <TextView block={composition.text.subheading} cardWidth={w} />}
-          {composition.elements.map((el) =>
-            el.kind === 'map' ? (
-              el.visible ? (
+          {composition.elements.map((el) => {
+            if (!el.visible) return null
+            if (el.kind === 'chart') return renderChartElement(el)
+            if (el.kind === 'map') {
+              // Box-sized maps (heightPct set) fill their W×H; legacy/new square
+              // maps keep a 1:1 box.
+              const boxed = el.transform.heightPct != null
+              return (
                 <div key={el.id} style={transformWrapperStyle(el.transform, { sizeByWidth: true })}>
                   <div
-                    style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: 8 }}
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: boxed ? '100%' : undefined,
+                      aspectRatio: boxed ? undefined : '1 / 1',
+                      overflow: 'hidden',
+                      borderRadius: 8,
+                    }}
                   >
                     {renderMap(`map:el:${el.id}`, el, true)}
                   </div>
                 </div>
-              ) : null
-            ) : (
-              <ElementView key={el.id} element={el} cardWidth={w} />
-            ),
-          )}
+              )
+            }
+            return <ElementView key={el.id} element={el} cardWidth={w} />
+          })}
           {composition.text.annotations.map((a) => (
             <TextView key={a.id} block={a} cardWidth={w} />
           ))}

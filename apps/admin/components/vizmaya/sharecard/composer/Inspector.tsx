@@ -7,21 +7,16 @@ import type {
   BackgroundLayer,
   CardComposition,
   FontFamily,
-  HeroBox,
-  HeroLayer,
-  ImageSource,
   MapSpec,
   TextBlock,
 } from '../layers/types'
-import { DEFAULT_HERO_BOX, DEFAULT_TEXT_PANEL, emptyMapSpec } from '../layers/types'
+import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TEXT_PANEL, emptyMapSpec, isBoxSized } from '../layers/types'
 import {
   patchBackground,
   patchElementTransform,
-  patchHero,
   patchSelectedText,
   getSelectedText,
   setBackground,
-  setHero,
   updateElement,
   type Selection,
 } from './mutations'
@@ -62,8 +57,6 @@ export function Inspector({ composition, selection, onChange, story, ratio, onEd
   switch (selection.kind) {
     case 'background':
       return <BackgroundInspector composition={composition} onChange={onChange} story={story} onEditMap={onEditMap} />
-    case 'hero':
-      return <HeroInspector composition={composition} onChange={onChange} story={story} onEditMap={onEditMap} />
     case 'element':
       return <ElementInspector composition={composition} id={selection.id} onChange={onChange} story={story} ratio={ratio} onEditMap={onEditMap} />
     case 'text':
@@ -169,26 +162,6 @@ function MapControls({
           />
         </div>
       </details>
-    </div>
-  )
-}
-
-/** Size + position controls for the hero graphic's box (chart or map). */
-function HeroBoxControls({ box, onChange }: { box: HeroBox; onChange: (patch: Partial<HeroBox>) => void }) {
-  return (
-    <div className="space-y-2 rounded-md border border-white/10 bg-neutral-950/40 p-2.5">
-      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Size &amp; position</span>
-      <div className="grid grid-cols-2 gap-2">
-        <NumberSlider label="X" value={Math.round(box.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
-        <NumberSlider label="Y" value={Math.round(box.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <NumberSlider label="Width" value={Math.round(box.widthPct)} min={10} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
-        <NumberSlider label="Height" value={Math.round(box.heightPct)} min={10} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
-      </div>
-      <NumberSlider label="Scale" value={box.scale} min={0.05} max={2} step={0.05} onChange={(v) => onChange({ scale: v })} format={(v) => `${v.toFixed(2)}×`} />
-      <NumberSlider label="Rotate" value={Math.round(box.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
-      <NumberSlider label="Opacity" value={box.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
     </div>
   )
 }
@@ -325,95 +298,6 @@ function BackgroundInspector({
   )
 }
 
-function HeroInspector({
-  composition,
-  onChange,
-  story,
-  onEditMap,
-}: {
-  composition: CardComposition
-  onChange: (n: CardComposition) => void
-  story: Props['story']
-  onEditMap: Props['onEditMap']
-}) {
-  const hero = composition.hero
-  const [chartOpen, setChartOpen] = useState(false)
-
-  const switchKind = (kind: 'none' | 'chart' | 'map') => {
-    if (kind === 'none') return onChange(setHero(composition, undefined))
-    if (kind === 'map') return onChange(setHero(composition, { kind: 'map', ...emptyMapSpec() }))
-    // chart — needs a chartId; keep existing if any, else blank (panel shows hint)
-    const existing = hero?.kind === 'chart' ? hero.chartId : ''
-    onChange(setHero(composition, { kind: 'chart', chartId: existing }))
-  }
-
-  return (
-    <div className="space-y-3">
-      <Field label="Hero graphic">
-        <select value={hero?.kind ?? 'none'} onChange={(e) => switchKind(e.target.value as 'none' | 'chart' | 'map')} className={selectCls}>
-          <option value="none">None</option>
-          <option value="chart">Chart</option>
-          <option value="map">Map</option>
-        </select>
-      </Field>
-
-      {hero && (
-        <HeroBoxControls
-          box={hero.box ?? DEFAULT_HERO_BOX}
-          onChange={(p) => onChange(patchHero(composition, { box: { ...(hero.box ?? DEFAULT_HERO_BOX), ...p } }))}
-        />
-      )}
-
-      {hero?.kind === 'map' && (
-        <MapControls
-          spec={hero}
-          defaults={story.defaults}
-          onPatch={(patch) => onChange(patchHero(composition, patch))}
-          onEditCamera={() => onEditMap({ kind: 'hero' })}
-        />
-      )}
-
-      {hero?.kind === 'chart' && (
-        <div className="space-y-2">
-          {hero.chartId ? (
-            <p className="text-[10px] text-neutral-500">
-              Chart: <span className="font-mono text-neutral-300">{hero.chartId}</span>
-            </p>
-          ) : (
-            <p className="text-[10px] text-neutral-500">Custom chart — define it with JSON below.</p>
-          )}
-          <Field label="Chart heading">
-            <input value={hero.heading ?? ''} onChange={(e) => onChange(patchHero(composition, { heading: e.target.value || undefined }))} className={inputCls} />
-          </Field>
-          <Field label="Chart subheading">
-            <input value={hero.subheading ?? ''} onChange={(e) => onChange(patchHero(composition, { subheading: e.target.value || undefined }))} className={inputCls} />
-          </Field>
-          <button onClick={() => setChartOpen(true)} className="w-full rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-100 hover:bg-white/10">
-            {hero.dataOverride !== undefined ? 'Edit chart JSON' : hero.chartId ? 'Edit chart JSON' : 'Add chart JSON'}
-          </button>
-          {hero.dataOverride !== undefined && (
-            <button
-              onClick={() => onChange(patchHero(composition, { dataOverride: undefined }))}
-              className="text-[11px] text-neutral-400 hover:text-white"
-            >
-              {hero.chartId ? 'Clear JSON override (use story data)' : 'Remove chart JSON'}
-            </button>
-          )}
-          {chartOpen && (
-            <ChartJsonDrawer
-              slug={story.slug}
-              chartId={hero.chartId || ''}
-              initial={hero.dataOverride}
-              onApply={(data) => onChange(patchHero(composition, { dataOverride: data }))}
-              onClose={() => setChartOpen(false)}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function ElementInspector({
   composition,
   id,
@@ -429,15 +313,78 @@ function ElementInspector({
   ratio: AspectRatio
   onEditMap: Props['onEditMap']
 }) {
+  const [chartOpen, setChartOpen] = useState(false)
   const el = composition.elements.find((e) => e.id === id)
   if (!el) return null
 
+  // Box-fit toggle for map / image graphics (a `heightPct` boxes them W×H; its
+  // absence reverts to a square map / intrinsic-ratio image).
+  const fillBoxToggle = (
+    <label className="flex items-center gap-2 text-[12px] text-neutral-200">
+      <input
+        type="checkbox"
+        checked={el.transform.heightPct != null}
+        onChange={(e) =>
+          onChange(
+            patchElementTransform(composition, id, {
+              heightPct: e.target.checked ? el.transform.heightPct ?? DEFAULT_GRAPHIC_HEIGHT_PCT : undefined,
+            }),
+          )
+        }
+        className="accent-sky-400"
+      />
+      Fill box (set height)
+    </label>
+  )
+
   const transform = (
-    <TransformControls transform={el.transform} onChange={(patch) => onChange(patchElementTransform(composition, id, patch))} />
+    <TransformControls
+      transform={el.transform}
+      showHeight={isBoxSized(el)}
+      onChange={(patch) => onChange(patchElementTransform(composition, id, patch))}
+    />
   )
 
   return (
     <div className="space-y-3">
+      {el.kind === 'chart' && (
+        <div className="space-y-2">
+          {el.chartId ? (
+            <p className="text-[10px] text-neutral-500">
+              Chart: <span className="font-mono text-neutral-300">{el.chartId}</span>
+            </p>
+          ) : (
+            <p className="text-[10px] text-neutral-500">Custom chart — define it with JSON below.</p>
+          )}
+          <Field label="Chart heading">
+            <input value={el.heading ?? ''} onChange={(e) => onChange(updateElement(composition, id, { heading: e.target.value || undefined }))} className={inputCls} />
+          </Field>
+          <Field label="Chart subheading">
+            <input value={el.subheading ?? ''} onChange={(e) => onChange(updateElement(composition, id, { subheading: e.target.value || undefined }))} className={inputCls} />
+          </Field>
+          <button onClick={() => setChartOpen(true)} className="w-full rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-100 hover:bg-white/10">
+            {el.dataOverride !== undefined ? 'Edit chart JSON' : el.chartId ? 'Edit chart JSON' : 'Add chart JSON'}
+          </button>
+          {el.dataOverride !== undefined && (
+            <button
+              onClick={() => onChange(updateElement(composition, id, { dataOverride: undefined }))}
+              className="text-[11px] text-neutral-400 hover:text-white"
+            >
+              {el.chartId ? 'Clear JSON override (use story data)' : 'Remove chart JSON'}
+            </button>
+          )}
+          {chartOpen && (
+            <ChartJsonDrawer
+              slug={story.slug}
+              chartId={el.chartId || ''}
+              initial={el.dataOverride}
+              onApply={(data) => onChange(updateElement(composition, id, { dataOverride: data }))}
+              onClose={() => setChartOpen(false)}
+            />
+          )}
+        </div>
+      )}
+
       {el.kind === 'emoji' && (
         <div>
           <span className={labelCls}>Emoji · <span className="text-neutral-300">{el.glyph}</span></span>
@@ -527,11 +474,15 @@ function ElementInspector({
             </select>
           </Field>
           <ImagePicker assets={story.assets} theme={story.theme} ratio={ratio} onPick={(src, source) => onChange(updateElement(composition, id, { src, source }))} />
+          {fillBoxToggle}
         </div>
       )}
 
       {el.kind === 'map' && (
-        <MapControls spec={el} defaults={story.defaults} onPatch={(patch) => onChange(updateElement(composition, id, patch))} onEditCamera={() => onEditMap({ kind: 'element', id })} />
+        <div className="space-y-2">
+          <MapControls spec={el} defaults={story.defaults} onPatch={(patch) => onChange(updateElement(composition, id, patch))} onEditCamera={() => onEditMap({ kind: 'element', id })} />
+          {fillBoxToggle}
+        </div>
       )}
 
       {transform}

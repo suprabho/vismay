@@ -2,12 +2,14 @@ import type { AnyShareCardSnapshot, BaseType, VizmayaShareCardSnapshot } from '.
 import type {
   CardComposition,
   ElementLayer,
+  HeroBox,
+  HeroLayer,
   MapSpec,
   TemplateKind,
   TextBlock,
   Transform,
 } from './types'
-import { DEFAULT_TRANSFORM } from './types'
+import { DEFAULT_HERO_BOX, DEFAULT_TRANSFORM } from './types'
 
 /**
  * v1 → v2 migration. v1 stored a `variant` + caption/map/overlay overrides; v2
@@ -150,17 +152,22 @@ export function applyV1Overrides(
     next.text.annotations.push(migratedTextBlock(`mig-text-${i}`, text, next.text.heading))
   })
 
-  // Chart hero headings.
-  if (next.hero?.kind === 'chart') {
-    if (v1.chartHeading?.trim()) next.hero.heading = v1.chartHeading.trim()
-    if (v1.chartSubheading?.trim()) next.hero.subheading = v1.chartSubheading.trim()
-  }
-
-  // Map overrides → whichever slot holds the map.
-  if (next.background.kind === 'map') {
+  // Graphic-element overrides (the seed places the chart / map as an element).
+  const bgIsMap = next.background.kind === 'map'
+  next.elements = next.elements.map((e) => {
+    if (e.kind === 'chart') {
+      return {
+        ...e,
+        heading: v1.chartHeading?.trim() || e.heading,
+        subheading: v1.chartSubheading?.trim() || e.subheading,
+      }
+    }
+    // Map overrides land on the background map if present, else the map element.
+    if (e.kind === 'map' && !bgIsMap) return { ...e, ...patchMapSpec(e, v1) }
+    return e
+  })
+  if (bgIsMap && next.background.kind === 'map') {
     next.background = { kind: 'map', ...patchMapSpec(next.background, v1) }
-  } else if (next.hero?.kind === 'map') {
-    next.hero = { kind: 'map', ...patchMapSpec(next.hero, v1) }
   }
 
   // Overlays → elements.
@@ -171,10 +178,64 @@ export function applyV1Overrides(
   return next
 }
 
+// ── legacy hero → graphic element ────────────────────────────────────────────
+let heroSeq = 0
+function boxToTransform(box: HeroBox): Transform {
+  return {
+    xPct: box.xPct,
+    yPct: box.yPct,
+    widthPct: box.widthPct,
+    heightPct: box.heightPct,
+    scale: box.scale,
+    rotation: box.rotation,
+    opacity: box.opacity,
+  }
+}
+
+/** Convert a legacy single-slot hero (chart / map) into a graphic element so it
+ *  joins the unified, reorderable `elements` list. The hero's box maps onto the
+ *  element transform's width×height. */
+export function heroToElement(hero: HeroLayer): ElementLayer {
+  const transform = boxToTransform(hero.box ?? DEFAULT_HERO_BOX)
+  const base = { id: `hero-${heroSeq++}`, visible: true, locked: false, transform }
+  if (hero.kind === 'chart') {
+    return {
+      ...base,
+      kind: 'chart',
+      name: 'Chart',
+      chartId: hero.chartId,
+      dataOverride: hero.dataOverride,
+      heading: hero.heading,
+      subheading: hero.subheading,
+    }
+  }
+  // Map hero: carry the MapSpec fields across (the box already became transform).
+  return {
+    ...base,
+    kind: 'map',
+    name: 'Map',
+    camera: hero.camera,
+    layers: hero.layers,
+    appearance: hero.appearance,
+    data: hero.data,
+  }
+}
+
+/** Fold a legacy `hero` slot into `elements`, leaving newer compositions (no
+ *  hero) untouched. Run on every loaded snapshot so the renderer / composer only
+ *  ever see graphics as elements. Prepended so the converted hero sits at the
+ *  bottom of the element stack — closest to its old beneath-everything role. */
+export function normalizeComposition(c: CardComposition): CardComposition {
+  if (!c.hero) return c
+  return { ...c, hero: undefined, elements: [heroToElement(c.hero), ...c.elements] }
+}
+
 /** Derived list-label discriminator. Recomputable; never used for correctness. */
 export function composeBaseType(composition: CardComposition): BaseType {
   if (composition.background.kind === 'map') return 'map'
-  if (composition.hero?.kind === 'chart') return 'data'
-  if (composition.hero?.kind === 'map' || composition.background.kind === 'aura') return 'map-caption'
+  if (composition.elements.some((e) => e.kind === 'chart')) return 'data'
+  if (composition.elements.some((e) => e.kind === 'map') || composition.background.kind === 'aura') {
+    return 'map-caption'
+  }
   return 'data'
 }
