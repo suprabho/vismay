@@ -4,17 +4,28 @@ import { useMemo, useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 import { FLAG_COUNTRIES, flagImageUrl, flagThumbUrl } from '../flags'
-import type { CardComposition, ElementLayer, TextBlock, Transform } from '../layers/types'
+import type { CardComposition, ElementGroup, ElementLayer, TextBlock, Transform } from '../layers/types'
 import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TRANSFORM, emptyMapSpec } from '../layers/types'
 import {
   addAnnotation,
   addElement,
+  duplicateElement,
+  duplicateGroup,
+  groupElements,
+  groupName,
+  listBlocks,
   moveElement,
+  moveGroup,
   removeAnnotation,
   removeElement,
+  removeGroup,
+  renameGroup,
+  setGroupCollapsed,
+  setGroupVisible,
   setHeading,
   setSubheading,
   uid,
+  ungroupGroup,
   updateElement,
   type Selection,
 } from './mutations'
@@ -50,6 +61,12 @@ interface Props {
   onEditMap?: (s: Selection) => void
   /** Story chart id used to seed a "+ Chart" graphic (blank → custom chart). */
   defaultChartId?: string
+  /** Fill the parent's height and scroll only the element list (the Foreground
+   *  header + add buttons stay pinned). Set by the elements tab. */
+  fillHeight?: boolean
+  /** Ungrouped element ids ticked for grouping (shared with the canvas). */
+  multiSel?: string[]
+  setMultiSel?: (ids: string[]) => void
 }
 
 type AddMode = null | 'emoji' | 'flag' | 'icon' | 'image'
@@ -87,6 +104,9 @@ export function LayerPanel({
   ratio,
   onEditMap,
   defaultChartId,
+  fillHeight,
+  multiSel = [],
+  setMultiSel,
 }: Props) {
   const [addMode, setAddMode] = useState<AddMode>(null)
   const show = (s: LayerSection) => !sections || sections.includes(s)
@@ -107,8 +127,59 @@ export function LayerPanel({
     setAddMode(null)
   }
 
+  // ── element inline-inspector slot (shared by grouped + ungrouped rows) ──────
+  const inspectorFor = (el: ElementLayer) =>
+    inspectorStory && ratio && onEditMap ? (
+      <div className="border-t border-white/10 p-2">
+        <Inspector
+          composition={composition}
+          selection={{ kind: 'element', id: el.id }}
+          onChange={onChange}
+          story={inspectorStory}
+          ratio={ratio}
+          onEditMap={onEditMap}
+        />
+      </div>
+    ) : null
+
+  // ── multi-select (ungrouped only) ───────────────────────────────────────────
+  const toggleSel = (id: string) =>
+    setMultiSel?.(multiSel.includes(id) ? multiSel.filter((x) => x !== id) : [...multiSel, id])
+
+  // Stale ids (e.g. a tick that survived a card load) are filtered out so the
+  // count + Group button never lie about what will actually group.
+  const validMultiSel = useMemo(
+    () => multiSel.filter((id) => composition.elements.some((e) => e.id === id && !e.groupId)),
+    [multiSel, composition],
+  )
+
+  const onGroupSelected = () => {
+    const { composition: next, groupId } = groupElements(composition, validMultiSel)
+    if (!groupId) return
+    onChange(next)
+    setMultiSel?.([])
+    setSelection({ kind: 'group', id: groupId })
+  }
+
+  const blocks = useMemo(() => listBlocks(composition), [composition])
+
+  const removeElAndSel = (id: string) => {
+    const next = removeElement(composition, id)
+    if (isSel(selection, { kind: 'element', id })) setSelection(null)
+    // Clear a dangling group selection if this delete emptied (and pruned) it.
+    else if (selection?.kind === 'group' && !(next.groups ?? []).some((g) => g.id === selection.id)) setSelection(null)
+    onChange(next)
+    if (multiSel.includes(id)) setMultiSel?.(multiSel.filter((x) => x !== id))
+  }
+
+  const duplicateEl = (id: string) => {
+    const { composition: next, newId } = duplicateElement(composition, id)
+    onChange(next)
+    if (newId) setSelection({ kind: 'element', id: newId })
+  }
+
   return (
-    <div className="space-y-4">
+    <div className={fillHeight ? 'flex h-full min-h-0 flex-col gap-4' : 'space-y-4'}>
       {/* Background */}
       {show('background') && (
         <Section title="Background">
@@ -179,104 +250,179 @@ export function LayerPanel({
       </Section>
       )}
 
-      {/* Foreground (graphics + decorations) — reorderable, collapsible cards */}
+      {/* Foreground (graphics + decorations) — add buttons pinned at top, list
+          below scrolls; groups render as blocks with their members nested. */}
       {show('elements') && (
-      <Section title="Foreground">
-        {composition.elements.length === 0 && <p className="text-[11px] text-neutral-600">No graphics or elements yet.</p>}
-        {composition.elements.map((el, i) => {
-          const expanded = isSel(selection, { kind: 'element', id: el.id })
-          return (
-            <div key={el.id} className={`overflow-hidden rounded-md border ${expanded ? 'border-sky-400/70' : 'border-white/10'}`}>
-              <div className={`flex items-center gap-1.5 px-2 py-1.5 text-[12px] ${expanded ? 'bg-white/5' : ''}`}>
-                <button
-                  onClick={() => onChange(updateElement(composition, el.id, { visible: !el.visible }))}
-                  className="text-neutral-400 hover:text-white"
-                  title={el.visible ? 'Hide' : 'Show'}
-                >
-                  {el.visible ? '👁' : '🚫'}
-                </button>
-                <button
-                  className="flex min-w-0 flex-1 items-center gap-1 truncate text-left text-neutral-200"
-                  onClick={() => setSelection(expanded ? null : { kind: 'element', id: el.id })}
-                >
-                  <span className="text-neutral-500">{expanded ? '▾' : '▸'}</span>
-                  <span className="truncate">{elementLabel(el)}</span>
-                </button>
-                <IconBtn label="Up" disabled={i === 0} onClick={() => onChange(moveElement(composition, el.id, -1))}>↑</IconBtn>
-                <IconBtn label="Down" disabled={i === composition.elements.length - 1} onClick={() => onChange(moveElement(composition, el.id, 1))}>↓</IconBtn>
-                <IconBtn
-                  label="Delete"
-                  onClick={() => {
-                    if (expanded) setSelection(null)
-                    onChange(removeElement(composition, el.id))
-                  }}
-                >
-                  ×
-                </IconBtn>
-              </div>
-              {expanded && inspectorStory && ratio && onEditMap && (
-                <div className="border-t border-white/10 p-2">
-                  <Inspector
-                    composition={composition}
-                    selection={{ kind: 'element', id: el.id }}
-                    onChange={onChange}
-                    story={inspectorStory}
-                    ratio={ratio}
-                    onEditMap={onEditMap}
-                  />
-                </div>
-              )}
-            </div>
-          )
-        })}
+        <div className={fillHeight ? 'flex min-h-0 flex-1 flex-col gap-1.5' : 'space-y-1.5'}>
+          <span className={`${labelCls} block shrink-0`}>Foreground</span>
 
-        {/* Graphics first, then decorations. */}
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            onClick={() => addEl({ kind: 'chart', chartId: defaultChartId ?? '' }, 'Chart')}
-            className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
-          >
-            + Chart
-          </button>
-          <button
-            onClick={() => addEl({ kind: 'map', ...emptyMapSpec() }, 'Map')}
-            className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
-          >
-            + Map
-          </button>
-          {(['image', 'emoji', 'icon', 'flag'] as const).map((m) => (
+          {/* Add buttons — graphics first, then decorations. */}
+          <div className="flex shrink-0 flex-wrap gap-1.5">
             <button
-              key={m}
-              onClick={() => setAddMode(addMode === m ? null : m)}
-              className={`rounded-md border px-2 py-1 text-[11px] capitalize ${addMode === m ? 'border-sky-400/70 bg-white/5 text-white' : 'border-white/15 text-neutral-300'} hover:bg-white/10`}
+              onClick={() => addEl({ kind: 'chart', chartId: defaultChartId ?? '' }, 'Chart')}
+              className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
             >
-              + {m}
+              + Chart
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => addEl({ kind: 'map', ...emptyMapSpec() }, 'Map')}
+              className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
+            >
+              + Map
+            </button>
+            {(['image', 'emoji', 'icon', 'flag'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setAddMode(addMode === m ? null : m)}
+                className={`rounded-md border px-2 py-1 text-[11px] capitalize ${addMode === m ? 'border-sky-400/70 bg-white/5 text-white' : 'border-white/15 text-neutral-300'} hover:bg-white/10`}
+              >
+                + {m}
+              </button>
+            ))}
+          </div>
 
-        {addMode === 'emoji' && (
-          <div className="rounded-md border border-white/10 bg-neutral-950/50 p-1">
-            <EmojiPicker onPick={(g) => addEl({ kind: 'emoji', glyph: g }, g)} />
+          {/* Active add-picker, pinned under the buttons. */}
+          {addMode === 'emoji' && (
+            <div className="max-h-[45vh] shrink-0 overflow-y-auto rounded-md border border-white/10 bg-neutral-950/50 p-1">
+              <EmojiPicker onPick={(g) => addEl({ kind: 'emoji', glyph: g }, g)} />
+            </div>
+          )}
+          {addMode === 'flag' && <FlagAdd onAdd={(code, name) => addEl({ kind: 'flag', code, src: flagImageUrl(code) }, name)} />}
+          {addMode === 'icon' && (
+            <div className="shrink-0 rounded-md border border-white/10 bg-neutral-950/50 p-2">
+              <IconPicker onPick={(name) => addEl({ kind: 'icon', name, weight: 'bold', color: story.theme.colors.accent }, name)} />
+            </div>
+          )}
+          {addMode === 'image' && (
+            <div className="shrink-0 rounded-md border border-white/10 bg-neutral-950/50 p-2">
+              <ImagePicker
+                assets={story.assets}
+                theme={story.theme}
+                ratio={'1:1' as AspectRatio}
+                onPick={(src, source) => addEl({ kind: 'image', src, source, objectFit: 'contain' }, 'Image')}
+              />
+            </div>
+          )}
+
+          {/* Multi-select action bar (shows when ≥1 ungrouped item is ticked). */}
+          {validMultiSel.length > 0 && setMultiSel && (
+            <div className="flex shrink-0 items-center gap-2 rounded-md border border-sky-400/40 bg-sky-400/5 px-2 py-1.5 text-[11px]">
+              <span className="text-neutral-300">{validMultiSel.length} selected</span>
+              <button
+                disabled={validMultiSel.length < 2}
+                onClick={onGroupSelected}
+                className="rounded border border-white/15 px-2 py-0.5 text-neutral-100 hover:bg-white/10 disabled:opacity-40"
+              >
+                Group {validMultiSel.length} items
+              </button>
+              <button onClick={() => setMultiSel([])} className="ml-auto text-neutral-400 hover:text-white">
+                Clear
+              </button>
+            </div>
+          )}
+
+          {/* Scrollable element list. */}
+          <div className={fillHeight ? 'min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-0.5' : 'max-h-[55vh] space-y-1.5 overflow-y-auto pr-0.5'}>
+            {composition.elements.length === 0 && (
+              <p className="text-[11px] text-neutral-600">No graphics or elements yet.</p>
+            )}
+
+            {blocks.map((block, bi) => {
+              const canBlockUp = bi > 0
+              const canBlockDown = bi < blocks.length - 1
+              if (!block.group) {
+                const el = block.elements[0]
+                if (!el) return null
+                return (
+                  <ElementRow
+                    key={el.id}
+                    el={el}
+                    expanded={isSel(selection, { kind: 'element', id: el.id })}
+                    checked={multiSel.includes(el.id)}
+                    showCheckbox={!!setMultiSel}
+                    canUp={canBlockUp}
+                    canDown={canBlockDown}
+                    onToggleCheck={() => toggleSel(el.id)}
+                    onToggleVisible={() => onChange(updateElement(composition, el.id, { visible: !el.visible }))}
+                    onSelect={() => setSelection(isSel(selection, { kind: 'element', id: el.id }) ? null : { kind: 'element', id: el.id })}
+                    onDuplicate={() => duplicateEl(el.id)}
+                    onMoveUp={() => onChange(moveElement(composition, el.id, -1))}
+                    onMoveDown={() => onChange(moveElement(composition, el.id, 1))}
+                    onDelete={() => removeElAndSel(el.id)}
+                    inspector={isSel(selection, { kind: 'element', id: el.id }) ? inspectorFor(el) : null}
+                  />
+                )
+              }
+
+              const group = block.group
+              const gid = group.id
+              const selectedGroup = isSel(selection, { kind: 'group', id: gid })
+              const allVisible = block.elements.every((e) => e.visible)
+              return (
+                <div key={gid} className={`rounded-md border ${selectedGroup ? 'border-sky-400/70 bg-sky-400/5' : 'border-white/15 bg-white/[0.02]'}`}>
+                  <GroupHeader
+                    group={group}
+                    count={block.elements.length}
+                    allVisible={allVisible}
+                    canUp={canBlockUp}
+                    canDown={canBlockDown}
+                    onSelect={() => setSelection(selectedGroup ? null : { kind: 'group', id: gid })}
+                    onToggleCollapsed={() => onChange(setGroupCollapsed(composition, gid, !group.collapsed))}
+                    onToggleVisible={() => onChange(setGroupVisible(composition, gid, !allVisible))}
+                    onRename={() => {
+                      const name = window.prompt('Rename group', group.name)?.trim()
+                      if (name) onChange(renameGroup(composition, gid, name))
+                    }}
+                    onDuplicate={() => {
+                      const { composition: next, groupId } = duplicateGroup(composition, gid)
+                      onChange(next)
+                      if (groupId) setSelection({ kind: 'group', id: groupId })
+                    }}
+                    onUngroup={() => {
+                      if (selectedGroup) setSelection(null)
+                      onChange(ungroupGroup(composition, gid))
+                    }}
+                    onDelete={() => {
+                      if (selectedGroup) setSelection(null)
+                      onChange(removeGroup(composition, gid))
+                    }}
+                    onMoveUp={() => onChange(moveGroup(composition, gid, -1))}
+                    onMoveDown={() => onChange(moveGroup(composition, gid, 1))}
+                  />
+                  {selectedGroup && (
+                    <p className="px-2 pb-1.5 text-[10px] text-neutral-500">
+                      Drag the box on the canvas to move · corner to resize · top handle to rotate.
+                    </p>
+                  )}
+                  {!group.collapsed && (
+                    <div className="space-y-1 border-t border-white/10 p-1.5">
+                      {block.elements.map((el, mi) => (
+                        <ElementRow
+                          key={el.id}
+                          el={el}
+                          grouped
+                          expanded={isSel(selection, { kind: 'element', id: el.id })}
+                          checked={false}
+                          showCheckbox={false}
+                          canUp={mi > 0}
+                          canDown={mi < block.elements.length - 1}
+                          onToggleCheck={() => {}}
+                          onToggleVisible={() => onChange(updateElement(composition, el.id, { visible: !el.visible }))}
+                          onSelect={() => setSelection(isSel(selection, { kind: 'element', id: el.id }) ? null : { kind: 'element', id: el.id })}
+                          onDuplicate={() => duplicateEl(el.id)}
+                          onMoveUp={() => onChange(moveElement(composition, el.id, -1))}
+                          onMoveDown={() => onChange(moveElement(composition, el.id, 1))}
+                          onDelete={() => removeElAndSel(el.id)}
+                          inspector={isSel(selection, { kind: 'element', id: el.id }) ? inspectorFor(el) : null}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        )}
-        {addMode === 'flag' && <FlagAdd onAdd={(code, name) => addEl({ kind: 'flag', code, src: flagImageUrl(code) }, name)} />}
-        {addMode === 'icon' && (
-          <div className="rounded-md border border-white/10 bg-neutral-950/50 p-2">
-            <IconPicker onPick={(name) => addEl({ kind: 'icon', name, weight: 'bold', color: story.theme.colors.accent }, name)} />
-          </div>
-        )}
-        {addMode === 'image' && (
-          <div className="rounded-md border border-white/10 bg-neutral-950/50 p-2">
-            <ImagePicker
-              assets={story.assets}
-              theme={story.theme}
-              ratio={'1:1' as AspectRatio}
-              onPick={(src, source) => addEl({ kind: 'image', src, source, objectFit: 'contain' }, 'Image')}
-            />
-          </div>
-        )}
-      </Section>
+        </div>
       )}
 
       {/* Branding */}
@@ -308,6 +454,126 @@ function elementLabel(el: ElementLayer): string {
   }
 }
 
+function ElementRow({
+  el,
+  grouped,
+  expanded,
+  checked,
+  showCheckbox,
+  canUp,
+  canDown,
+  onToggleCheck,
+  onToggleVisible,
+  onSelect,
+  onDuplicate,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+  inspector,
+}: {
+  el: ElementLayer
+  grouped?: boolean
+  expanded: boolean
+  checked: boolean
+  showCheckbox: boolean
+  canUp: boolean
+  canDown: boolean
+  onToggleCheck: () => void
+  onToggleVisible: () => void
+  onSelect: () => void
+  onDuplicate: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onDelete: () => void
+  inspector: React.ReactNode
+}) {
+  return (
+    <div className={`overflow-hidden rounded-md border ${expanded ? 'border-sky-400/70' : grouped ? 'border-white/5' : 'border-white/10'}`}>
+      <div className={`flex items-center gap-1.5 px-2 py-1.5 text-[12px] ${expanded ? 'bg-white/5' : ''}`}>
+        {showCheckbox && (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onToggleCheck}
+            title="Select for grouping"
+            className="accent-sky-400"
+          />
+        )}
+        <button onClick={onToggleVisible} className="text-neutral-400 hover:text-white" title={el.visible ? 'Hide' : 'Show'}>
+          {el.visible ? '👁' : '🚫'}
+        </button>
+        <button className="flex min-w-0 flex-1 items-center gap-1 truncate text-left text-neutral-200" onClick={onSelect}>
+          <span className="text-neutral-500">{expanded ? '▾' : '▸'}</span>
+          <span className="truncate">{elementLabel(el)}</span>
+        </button>
+        <IconBtn label="Duplicate" onClick={onDuplicate}>⧉</IconBtn>
+        <IconBtn label="Up" disabled={!canUp} onClick={onMoveUp}>↑</IconBtn>
+        <IconBtn label="Down" disabled={!canDown} onClick={onMoveDown}>↓</IconBtn>
+        <IconBtn label="Delete" onClick={onDelete}>×</IconBtn>
+      </div>
+      {expanded && inspector}
+    </div>
+  )
+}
+
+function GroupHeader({
+  group,
+  count,
+  allVisible,
+  canUp,
+  canDown,
+  onSelect,
+  onToggleCollapsed,
+  onToggleVisible,
+  onRename,
+  onDuplicate,
+  onUngroup,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+}: {
+  group: ElementGroup
+  count: number
+  allVisible: boolean
+  canUp: boolean
+  canDown: boolean
+  onSelect: () => void
+  onToggleCollapsed: () => void
+  onToggleVisible: () => void
+  onRename: () => void
+  onDuplicate: () => void
+  onUngroup: () => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+}) {
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1.5 text-[12px]">
+      <IconBtn label={group.collapsed ? 'Expand' : 'Collapse'} onClick={onToggleCollapsed}>
+        {group.collapsed ? '▸' : '▾'}
+      </IconBtn>
+      <button onClick={onToggleVisible} className="text-neutral-400 hover:text-white" title={allVisible ? 'Hide all' : 'Show all'}>
+        {allVisible ? '👁' : '🚫'}
+      </button>
+      <button
+        className="flex min-w-0 flex-1 items-center gap-1 truncate text-left text-neutral-100"
+        onClick={onSelect}
+        onDoubleClick={onRename}
+        title="Select group (double-click to rename)"
+      >
+        <span className="text-neutral-500">▣</span>
+        <span className="truncate font-medium">{groupName(group)}</span>
+        <span className="shrink-0 text-neutral-500">· {count}</span>
+      </button>
+      <IconBtn label="Duplicate group" onClick={onDuplicate}>⧉</IconBtn>
+      <IconBtn label="Ungroup" onClick={onUngroup}>⤢</IconBtn>
+      <IconBtn label="Move group up" disabled={!canUp} onClick={onMoveUp}>↑</IconBtn>
+      <IconBtn label="Move group down" disabled={!canDown} onClick={onMoveDown}>↓</IconBtn>
+      <IconBtn label="Delete group" onClick={onDelete}>×</IconBtn>
+    </div>
+  )
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -323,6 +589,7 @@ function IconBtn({ children, onClick, label, disabled }: { children: React.React
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
+      title={label}
       className="rounded px-1 text-neutral-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
     >
       {children}
@@ -370,7 +637,7 @@ function FlagAdd({ onAdd }: { onAdd: (code: string, name: string) => void }) {
     return FLAG_COUNTRIES.filter((f) => f.name.toLowerCase().includes(s) || f.code.includes(s))
   }, [q])
   return (
-    <div className="rounded-md border border-white/10 bg-neutral-950/50 p-2">
+    <div className="shrink-0 rounded-md border border-white/10 bg-neutral-950/50 p-2">
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}

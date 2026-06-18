@@ -34,6 +34,7 @@ import {
   patchSelectedText,
   type Selection,
 } from './composer/mutations'
+import { groupBBox, type GroupBBox, moveGroupBy, rotateGroupAround, scaleGroupAround } from './composer/groupTransform'
 import type { AnyShareCardSnapshot, SavedCard, VizmayaShareCardSnapshotV2 } from './types'
 import type { AspectRatio } from './AspectRatioToggle'
 
@@ -155,6 +156,12 @@ export function ShareCardCreator({
   const [templateKind, setTemplateKind] = useState<TemplateKind>('map-caption')
   const [composition, setComposition] = useState<CardComposition | null>(null)
   const [selection, setSelection] = useState<Selection | null>(null)
+  // Ungrouped element ids ticked (panel checkbox or canvas shift/⌘-click) to form
+  // a new group. Cleared on group / tab switch.
+  const [multiSel, setMultiSel] = useState<string[]>([])
+  // While rotating a group, the live AABB (over orbiting centers) wobbles; freeze
+  // the overlay to the gesture's start box so the dashed frame + handle stay put.
+  const [frozenGroupBox, setFrozenGroupBox] = useState<GroupBBox | null>(null)
 
   const [assets, setAssets] = useState<AssetEntry[]>([])
   const [savedCards, setSavedCards] = useState<SavedCard[]>([])
@@ -203,6 +210,7 @@ export function ShareCardCreator({
           setTemplateKind(kind)
         }
         setSelection(null)
+        setMultiSel([])
       } catch (e) {
         setError(e instanceof Error ? `Couldn't load card: ${e.message}` : "Couldn't load this card (older format).")
       }
@@ -353,11 +361,12 @@ export function ShareCardCreator({
       setComposition((prev) => {
         const seed = seedTemplate(kind, unit, story, ratio)
         // Re-seed the section graphic (stable id) but keep the user's own
-        // added elements + branding, and any per-card theme override.
+        // added elements + branding + groups, and any per-card theme override.
         return prev
           ? {
               ...seed,
               elements: [...seed.elements, ...prev.elements.filter((e) => e.id !== SEED_GRAPHIC_ID)],
+              groups: prev.groups,
               branding: prev.branding,
               theme: prev.theme,
             }
@@ -375,11 +384,12 @@ export function ShareCardCreator({
       setComposition((prev) => {
         const seed = seedTemplate(kind, selectedUnit, story, ratio)
         // Re-seed the section graphic (stable id) but keep the user's own
-        // added elements + branding, and any per-card theme override.
+        // added elements + branding + groups, and any per-card theme override.
         return prev
           ? {
               ...seed,
               elements: [...seed.elements, ...prev.elements.filter((e) => e.id !== SEED_GRAPHIC_ID)],
+              groups: prev.groups,
               branding: prev.branding,
               theme: prev.theme,
             }
@@ -479,6 +489,7 @@ export function ShareCardCreator({
   const [activeTab, setActiveTab] = useState<EditorTab>('setup')
   const selectTab = useCallback((t: EditorTab) => {
     setActiveTab(t)
+    setMultiSel([])
     // Keep the canvas selection in step with the tab so the right editor shows.
     if (t === 'background') setSelection({ kind: 'background' })
     else setSelection(null)
@@ -547,12 +558,135 @@ export function ShareCardCreator({
     [moveLayer],
   )
 
+  // ── group transforms (move / resize / rotate as a unit) ───────────────────
+  // Each handler captures the composition at pointer-down and recomputes the
+  // whole group from that start snapshot on every move, so there's no drift.
+  const toggleMultiSel = useCallback((id: string) => {
+    setMultiSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }, [])
+
+  const startGroupMove = useCallback(
+    (gid: string, e: ReactPointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const start = composition
+      const rect = interactionRef.current?.getBoundingClientRect()
+      if (!start || !rect) return
+      const sx = e.clientX
+      const sy = e.clientY
+      const move = (ev: PointerEvent) => {
+        const dxPct = ((ev.clientX - sx) / rect.width) * 100
+        const dyPct = ((ev.clientY - sy) / rect.height) * 100
+        setComposition(moveGroupBy(start, gid, dxPct, dyPct))
+      }
+      const end = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', end)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', end)
+    },
+    [composition],
+  )
+
+  const startGroupScale = useCallback(
+    (gid: string, corner: number, e: ReactPointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const start = composition
+      const rect = interactionRef.current?.getBoundingClientRect()
+      if (!start || !rect) return
+      const bb = groupBBox(start.elements, gid, renderW, renderH)
+      if (!bb) return
+      // Corner order: 0 TL, 1 TR, 2 BR, 3 BL. Drag a corner, the opposite stays put.
+      const corners = [
+        { x: bb.left, y: bb.top },
+        { x: bb.right, y: bb.top },
+        { x: bb.right, y: bb.bottom },
+        { x: bb.left, y: bb.bottom },
+      ]
+      const pivot = corners[(corner + 2) % 4]
+      const handle = corners[corner]
+      const toPx = (p: { x: number; y: number }) => ({
+        x: rect.left + (p.x / 100) * rect.width,
+        y: rect.top + (p.y / 100) * rect.height,
+      })
+      const pivotPx = toPx(pivot)
+      const handlePx = toPx(handle)
+      const startLen = Math.hypot(handlePx.x - pivotPx.x, handlePx.y - pivotPx.y) || 1
+      const move = (ev: PointerEvent) => {
+        const k = Math.hypot(ev.clientX - pivotPx.x, ev.clientY - pivotPx.y) / startLen
+        setComposition(scaleGroupAround(start, gid, k, pivot.x, pivot.y, renderW, renderH))
+      }
+      const end = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', end)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', end)
+    },
+    [composition, renderW, renderH],
+  )
+
+  const startGroupRotate = useCallback(
+    (gid: string, e: ReactPointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const start = composition
+      const rect = interactionRef.current?.getBoundingClientRect()
+      if (!start || !rect) return
+      const bb = groupBBox(start.elements, gid, renderW, renderH)
+      if (!bb) return
+      const center = { x: rect.left + (bb.cx / 100) * rect.width, y: rect.top + (bb.cy / 100) * rect.height }
+      const a0 = Math.atan2(e.clientY - center.y, e.clientX - center.x)
+      setFrozenGroupBox(bb)
+      const move = (ev: PointerEvent) => {
+        const a1 = Math.atan2(ev.clientY - center.y, ev.clientX - center.x)
+        const deg = ((a1 - a0) * 180) / Math.PI
+        setComposition(rotateGroupAround(start, gid, deg, bb.cx, bb.cy, renderW, renderH))
+      }
+      const end = () => {
+        setFrozenGroupBox(null)
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', end)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', end)
+    },
+    [composition, renderW, renderH],
+  )
+
+  // Pointer-down on an element hit-box: shift/⌘ ticks ungrouped items for
+  // grouping; a plain click on a grouped element selects + drags the whole group;
+  // otherwise it's a single-element drag (incl. an already-selected member).
+  const onElementPointerDown = useCallback(
+    (e: ReactPointerEvent, elId: string, groupId: string | undefined) => {
+      if (e.shiftKey || e.metaKey || e.ctrlKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!groupId) toggleMultiSel(elId)
+        return
+      }
+      const alreadySingle = selection?.kind === 'element' && selection.id === elId
+      if (groupId && !alreadySingle) {
+        setSelection({ kind: 'group', id: groupId })
+        setActiveTab('elements')
+        startGroupMove(groupId, e)
+        return
+      }
+      onLayerPointerDown(e, { kind: 'element', id: elId })
+    },
+    [selection, toggleMultiSel, startGroupMove, onLayerPointerDown],
+  )
+
   // Build the draggable hit targets from the composition.
   interface Draggable {
     key: string
     sel: Selection
     t: Transform
     heightPx?: number
+    elId?: string
+    groupId?: string
   }
   const draggables = useMemo<Draggable[]>(() => {
     if (!composition) return []
@@ -573,9 +707,19 @@ export function ShareCardCreator({
           sel: { kind: 'element', id: el.id },
           t: el.transform,
           heightPx: el.transform.heightPct != null ? (el.transform.heightPct / 100) * renderH : undefined,
+          elId: el.id,
+          groupId: el.groupId,
         })
     return out
   }, [composition, renderH])
+
+  // Live bounding box for the selected group's transform handles. During a rotate
+  // gesture the live AABB wobbles, so prefer the frozen start box while it's set.
+  const liveGroupBox = useMemo(
+    () => (composition && selection?.kind === 'group' ? groupBBox(composition.elements, selection.id, renderW, renderH) : null),
+    [composition, selection, renderW, renderH],
+  )
+  const groupBox = frozenGroupBox ?? liveGroupBox
 
   // ── capture / download ────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {
@@ -884,6 +1028,9 @@ export function ShareCardCreator({
               ratio={ratio}
               onEditMap={onEditMap}
               defaultChartId={defaultChartId}
+              fillHeight
+              multiSel={multiSel}
+              setMultiSel={setMultiSel}
             />
           )}
 
@@ -947,10 +1094,21 @@ export function ShareCardCreator({
               {draggables.map((d) => {
                 const active =
                   !!selection && JSON.stringify(selection) === JSON.stringify(d.sel)
+                const inGroupSel = selection?.kind === 'group' && !!d.groupId && d.groupId === selection.id
+                const ticked = !!d.elId && multiSel.includes(d.elId)
+                const ring = active
+                  ? 'ring-2 ring-sky-400/90'
+                  : ticked
+                    ? 'ring-2 ring-sky-400/60'
+                    : inGroupSel
+                      ? 'ring-1 ring-sky-400/50'
+                      : 'ring-1 ring-transparent hover:ring-white/30'
                 return (
                   <div
                     key={d.key}
-                    onPointerDown={(e) => onLayerPointerDown(e, d.sel)}
+                    onPointerDown={(e) =>
+                      d.elId ? onElementPointerDown(e, d.elId, d.groupId) : onLayerPointerDown(e, d.sel)
+                    }
                     className="absolute cursor-move"
                     style={{
                       // % is relative to the interaction box (already the card's
@@ -964,10 +1122,51 @@ export function ShareCardCreator({
                       transform: 'translate(-50%, -50%)',
                     }}
                   >
-                    <div className={`h-full w-full rounded ${active ? 'ring-2 ring-sky-400/90' : 'ring-1 ring-transparent hover:ring-white/30'}`} />
+                    <div className={`h-full w-full rounded ${ring}`} />
                   </div>
                 )
               })}
+
+              {/* Group transform box — drag body to move, corners to resize,
+                  top handle to rotate. Sits above the member hit-boxes. */}
+              {groupBox && selection?.kind === 'group' && (
+                <div
+                  className="absolute"
+                  style={{
+                    left: `${groupBox.left}%`,
+                    top: `${groupBox.top}%`,
+                    width: `${groupBox.w}%`,
+                    height: `${(groupBox.h / 100) * renderH * previewScale}px`,
+                  }}
+                >
+                  {/* draggable body */}
+                  <div
+                    onPointerDown={(e) => startGroupMove(selection.id, e)}
+                    className="absolute inset-0 cursor-move rounded border border-dashed border-sky-400/80 bg-sky-400/5"
+                  />
+                  {/* corner resize handles (0 TL,1 TR,2 BR,3 BL) */}
+                  {[
+                    { c: 0, pos: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize' },
+                    { c: 1, pos: 'right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize' },
+                    { c: 2, pos: 'right-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize' },
+                    { c: 3, pos: 'left-0 bottom-0 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize' },
+                  ].map(({ c, pos }) => (
+                    <div
+                      key={c}
+                      onPointerDown={(e) => startGroupScale(selection.id, c, e)}
+                      className={`absolute h-2.5 w-2.5 rounded-sm border border-sky-400 bg-neutral-900 ${pos}`}
+                    />
+                  ))}
+                  {/* rotate handle above the top edge */}
+                  <div
+                    onPointerDown={(e) => startGroupRotate(selection.id, e)}
+                    className="absolute left-1/2 h-3 w-3 -translate-x-1/2 cursor-grab rounded-full border border-sky-400 bg-neutral-900"
+                    style={{ top: -22 }}
+                    title="Rotate group"
+                  />
+                  <div className="absolute left-1/2 h-[14px] w-px -translate-x-1/2 bg-sky-400/70" style={{ top: -14 }} />
+                </div>
+              )}
             </div>
           </div>
         ) : (
