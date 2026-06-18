@@ -8,7 +8,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import type { ResolvedUnit, Theme, MapPalette, MapView } from '@vismay/viz-engine'
+import type { ResolvedUnit, Theme, MapPalette, MapView, StorySectionConfig } from '@vismay/viz-engine'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/canvas/ThemeProvider'
 import VerticalLoader from '@/components/canvas/VerticalLoader'
@@ -87,6 +87,46 @@ const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
   { id: 'text', label: 'Text', Icon: TextT },
 ]
 
+/** Neutral editorial theme used when composing from scratch (no story). System
+ *  font stacks so no font import is needed. */
+const DEFAULT_THEME: Theme = {
+  colors: {
+    background: '#f4efe6',
+    text: '#1a1a1a',
+    accent: '#d85a30',
+    accent2: '#3a6ea5',
+    teal: '#3a9e8c',
+    surface: '#e7dfd0',
+    muted: '#6b6b6b',
+    positive: '#3a9e8c',
+    amber: '#e0a93a',
+    red: '#c0392b',
+  },
+  fonts: {
+    serif: 'Georgia',
+    sans: '-apple-system, "Segoe UI", Helvetica',
+    mono: 'ui-monospace, Menlo',
+  },
+}
+
+/** A placeholder unit for blank-canvas mode — no map/chart data, no copy. */
+const BLANK_UNIT: ResolvedUnit = {
+  parentIndex: 0,
+  subIndex: 0,
+  parentConfig: { kind: 'text' } as StorySectionConfig,
+  heading: undefined,
+  subheading: undefined,
+  paragraphs: [],
+}
+
+const blankComposition = (): CardComposition => ({
+  background: { kind: 'solid', color: DEFAULT_THEME.colors.background },
+  hero: undefined,
+  elements: [],
+  text: { annotations: [] },
+  branding: { visible: true },
+})
+
 function defaultTemplate(unit: ResolvedUnit): TemplateKind {
   const s = detectSupport(unit)
   if (s.hasMap) return 'map-caption'
@@ -101,7 +141,8 @@ export function ShareCardCreator({
   stories: StoryOption[]
   accessToken: string
 }) {
-  const [slug, setSlug] = useState<string>(stories[0]?.slug ?? '')
+  // Default to a blank canvas (slug ''); the user can attach a story after.
+  const [slug, setSlug] = useState<string>('')
   const [story, setStory] = useState<StoryData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -126,11 +167,15 @@ export function ShareCardCreator({
   // A saved card to apply once its story + unit resolve.
   const pendingLoadRef = useRef<{ snapshot: AnyShareCardSnapshot } | null>(null)
   const pendingUnitRef = useRef<{ parentIndex: number; subIndex: number } | null>(null)
+  // When attaching a story to a from-scratch card, preserve the composition
+  // (load the story's theme + sections without re-seeding a template).
+  const attachKeepRef = useRef(false)
 
   const cardRef = useRef<ShareCardHandle>(null)
 
   const units = useMemo(() => story?.units ?? [], [story])
-  const selectedUnit = units[unitIdx] ?? null
+  // Always have a unit (blank canvas uses a placeholder) so the card renders.
+  const selectedUnit = units[unitIdx] ?? BLANK_UNIT
 
   // Resolve a loaded snapshot (v1 migrated, v2 direct) against a story+unit.
   const applyLoadedSnapshot = useCallback(
@@ -140,10 +185,10 @@ export function ShareCardCreator({
       )
       const resolvedIdx = idx >= 0 ? idx : 0
       setUnitIdx(resolvedIdx)
-      const unit = storyData.units[resolvedIdx]
-      if (!unit) return
+      const unit = storyData.units[resolvedIdx] ?? BLANK_UNIT
       try {
         if (snapshotVersion(snap) === 2) {
+          // v2 carries the full composition — no unit needed (works for blank cards).
           const v2 = snap as VizmayaShareCardSnapshotV2
           setComposition(v2.composition)
           setTemplateKind(v2.templateKind)
@@ -164,7 +209,24 @@ export function ShareCardCreator({
   // ── load the selected story ───────────────────────────────────────────────
   useEffect(() => {
     if (!slug) {
-      setStory(null)
+      // Blank canvas: synthesize a story with the default theme + no units.
+      const blank: StoryData = { slug: '', title: 'Untitled', vertical: null, theme: DEFAULT_THEME, defaults: {}, units: [] }
+      setStory(blank)
+      setUnitIdx(0)
+      setError(null)
+      setLoading(false)
+      const load = pendingLoadRef.current
+      if (load) {
+        // A saved card composed from scratch (no story) reopening.
+        applyLoadedSnapshot(blank, load.snapshot, ratio)
+      } else if (!attachKeepRef.current) {
+        setComposition(blankComposition())
+        setTemplateKind('title-text')
+        setSelection(null)
+      }
+      pendingLoadRef.current = null
+      pendingUnitRef.current = null
+      attachKeepRef.current = false
       return
     }
     let alive = true
@@ -182,6 +244,11 @@ export function ShareCardCreator({
         const load = pendingLoadRef.current
         if (load) {
           applyLoadedSnapshot(body, load.snapshot, ratio)
+        } else if (attachKeepRef.current) {
+          // Attaching this story to a from-scratch card — adopt its theme +
+          // sections but keep the user's existing composition.
+          setUnitIdx(0)
+          setSelection(null)
         } else {
           const pendingUnit = pendingUnitRef.current
           const idx = pendingUnit
@@ -199,6 +266,7 @@ export function ShareCardCreator({
         }
         pendingLoadRef.current = null
         pendingUnitRef.current = null
+        attachKeepRef.current = false
       } catch (e) {
         if (alive) {
           setStory(null)
@@ -259,7 +327,8 @@ export function ShareCardCreator({
     }
   }, [])
 
-  const fontImportUrl = useMemo(() => (story ? getFontImportUrl(story.theme.fonts) : null), [story])
+  // Only import web fonts for a real story; blank canvas uses system fonts.
+  const fontImportUrl = useMemo(() => (story && slug ? getFontImportUrl(story.theme.fonts) : null), [story, slug])
 
   // ── reset path: section / template change re-seed section-bound slots,
   //    preserving user-added elements + branding (single policy). ──────────────
@@ -292,12 +361,18 @@ export function ShareCardCreator({
     [selectedUnit, story, ratio],
   )
 
-  const pickStory = useCallback((nextSlug: string) => {
-    setCurrentCardId(null)
-    pendingLoadRef.current = null
-    pendingUnitRef.current = null
-    setSlug(nextSlug)
-  }, [])
+  const pickStory = useCallback(
+    (nextSlug: string) => {
+      setCurrentCardId(null)
+      pendingLoadRef.current = null
+      pendingUnitRef.current = null
+      // Attaching a story to a from-scratch card (blank → story) keeps the
+      // current layers; switching between stories re-seeds a template.
+      attachKeepRef.current = slug === '' && nextSlug !== ''
+      setSlug(nextSlug)
+    },
+    [slug],
+  )
 
   // ── map edit overlay ────────────────────────────────────────────────────
   const mapSpecForSelection = useCallback(
@@ -698,9 +773,9 @@ export function ShareCardCreator({
           {activeTab === 'setup' && (
             <>
               <label className={labelCls}>
-                Story
+                Story {slug === '' ? '· composing from scratch' : '· attached'}
                 <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
-                  {stories.length === 0 && <option value="">No stories</option>}
+                  <option value="">Blank canvas (no story)</option>
                   {stories.map((s) => (
                     <option key={s.slug} value={s.slug}>
                       {s.title || s.slug}
@@ -708,6 +783,12 @@ export function ShareCardCreator({
                   ))}
                 </select>
               </label>
+              {slug === '' && (
+                <p className="text-[10px] text-neutral-600">
+                  Build with backgrounds, text, images, icons &amp; flags. Attach a story above to pull in
+                  its theme, map &amp; chart.
+                </p>
+              )}
               {units.length > 0 && (
                 <label className={labelCls}>
                   Section
