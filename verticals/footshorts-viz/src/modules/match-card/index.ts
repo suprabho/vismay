@@ -11,8 +11,9 @@ import { parsePositiveInt, parsePositiveNumber } from '../shared/grid'
  *
  * Variants — compact / horizontal / portrait / score — all draw from the
  * same single-fixture config (`home`/`away` + score/kickoff/competition). The
- * `grid` variant instead tiles several fixtures from `cards[]` as compact cards
- * in a `columns`-wide matrix (like `fs:team-form-strip`'s grid).
+ * `grid` variant instead tiles several fixtures from `cards[]` as score cards
+ * (the same editorial card as the `score` layout) in a `columns`-wide matrix
+ * (like `fs:team-form-strip`'s grid).
  *
  * Team crests, brand colors, and competition tags come from the bundled palette
  * in `../../data/teams.ts` and `competitions.ts`; authors override per-card via
@@ -184,7 +185,12 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchC
       ...(columns !== undefined ? { columns } : {}),
       ...(rows !== undefined ? { rows } : {}),
       ...(cardWidth !== undefined ? { cardWidth } : {}),
+      // Editorial theming applied uniformly to every tile (each card also picks
+      // up its own competition accent when these are omitted).
       accent: asString(r.accent),
+      cardColor: asString(r.cardColor),
+      borderColor: asString(r.borderColor),
+      textColor: asString(r.textColor),
       ...parseFsBackground(r),
     }
   }
