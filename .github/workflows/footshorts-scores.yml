@@ -9,6 +9,7 @@ name: Footshorts - scores refresh
 #   SUPABASE_SERVICE_ROLE_KEY
 #   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshorts-only)
 #   API_FOOTBALL_TOKEN           - API-Football key, for per-match goal events
+#   SPORTRADAR_API_KEY           - Sportradar key, for World Cup match timelines
 #   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
 
 on:
@@ -69,6 +70,25 @@ jobs:
           # the API_FOOTBALL_TOKEN secret was issued on. Unset → direct.
           API_FOOTBALL_HOST: ${{ vars.API_FOOTBALL_HOST }}
         run: pnpm events:ci
+
+      # Hydrate World Cup match timelines (goals/cards/subs) from Sportradar into
+      # the same fixture_events table. The API-Football sync above is keyed by a
+      # seeded api_football_id bridge the WC fixtures don't have, so WC timelines
+      # come from Sportradar instead — matched by team name. WC-only and self-
+      # limited to 150 calls/run to stay inside the trial budget; idempotent (skips
+      # fixtures that already have events). Must run BEFORE the recaps so the World
+      # Cup recap's fs:match-timeline blocks have events. Soft-fails so a trial-key
+      # lapse can't block the recap below, and no-ops once the tournament ends.
+      - name: Sync World Cup match events (Sportradar)
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SPORTRADAR_API_KEY: ${{ secrets.SPORTRADAR_API_KEY }}
+          # 'trial' (default, api.sportradar.com trial tier) or 'production' — match
+          # the tier the SPORTRADAR_API_KEY secret was issued on. Unset → trial.
+          SPORTRADAR_ACCESS_LEVEL: ${{ vars.SPORTRADAR_ACCESS_LEVEL }}
+        run: pnpm events:sr:ci
 
       # Generate the recap brief once scores are fresh. recap.ts covers a rolling
       # window ending now (default 24h) and includes only fixtures that have
