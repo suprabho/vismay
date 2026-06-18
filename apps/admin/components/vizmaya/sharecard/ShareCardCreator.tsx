@@ -13,7 +13,7 @@ import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/canvas/ThemeProvider'
 import VerticalLoader from '@/components/canvas/VerticalLoader'
 import MapPickerModal from '@/components/vizmaya/MapPickerModal'
-import { FrameCorners, Image as ImageIcon, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { FrameCorners, Image as ImageIcon, Palette, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
 import { seedTemplate, detectSupport, SEED_GRAPHIC_ID } from './layers/seedTemplate'
@@ -27,6 +27,7 @@ import {
 } from './layers/migrate'
 import { LayerPanel } from './composer/LayerPanel'
 import { Inspector } from './composer/Inspector'
+import { ThemePanel } from './composer/ThemePanel'
 import {
   getSelectedText,
   patchElementTransform,
@@ -78,9 +79,10 @@ const TEMPLATES: Array<{ id: TemplateKind; label: string }> = [
 
 const CONTAINED_FOCUS = { top: 0, left: 0, width: 1, height: 1 }
 
-type EditorTab = 'setup' | 'background' | 'elements' | 'text'
+type EditorTab = 'setup' | 'theme' | 'background' | 'elements' | 'text'
 const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
   { id: 'setup', label: 'Canvas & story', Icon: FrameCorners },
+  { id: 'theme', label: 'Theme', Icon: Palette },
   { id: 'background', label: 'Background', Icon: ImageIcon },
   { id: 'elements', label: 'Foreground · graphics & elements', Icon: Stack },
   { id: 'text', label: 'Text', Icon: TextT },
@@ -119,7 +121,10 @@ const BLANK_UNIT: ResolvedUnit = {
 }
 
 const blankComposition = (): CardComposition => ({
-  background: { kind: 'solid', color: DEFAULT_THEME.colors.background },
+  // No explicit fill — the card's base `--color-bg` (from the theme) shows
+  // through, so picking a theme/preset recolors the whole canvas. The user can
+  // still drop in a solid/gradient/image/map fill from the Background tab.
+  background: { kind: 'none' },
   elements: [],
   text: { annotations: [] },
   branding: { visible: true },
@@ -326,8 +331,14 @@ export function ShareCardCreator({
     }
   }, [])
 
-  // Only import web fonts for a real story; blank canvas uses system fonts.
-  const fontImportUrl = useMemo(() => (story && slug ? getFontImportUrl(story.theme.fonts) : null), [story, slug])
+  // The theme the card actually renders with: a per-card override (set in the
+  // Theme panel) wins, else the attached story's theme, else the default
+  // editorial theme for a blank canvas.
+  const effectiveTheme = composition?.theme ?? story?.theme ?? DEFAULT_THEME
+
+  // Import web fonts for whatever the effective theme uses; system stacks
+  // resolve to null (no request). Covers story fonts AND from-scratch overrides.
+  const fontImportUrl = useMemo(() => getFontImportUrl(effectiveTheme.fonts), [effectiveTheme])
 
   // ── reset path: section / template change re-seed section-bound slots,
   //    preserving user-added elements + branding (single policy). ──────────────
@@ -342,12 +353,13 @@ export function ShareCardCreator({
       setComposition((prev) => {
         const seed = seedTemplate(kind, unit, story, ratio)
         // Re-seed the section graphic (stable id) but keep the user's own
-        // added elements + branding.
+        // added elements + branding, and any per-card theme override.
         return prev
           ? {
               ...seed,
               elements: [...seed.elements, ...prev.elements.filter((e) => e.id !== SEED_GRAPHIC_ID)],
               branding: prev.branding,
+              theme: prev.theme,
             }
           : seed
       })
@@ -363,12 +375,13 @@ export function ShareCardCreator({
       setComposition((prev) => {
         const seed = seedTemplate(kind, selectedUnit, story, ratio)
         // Re-seed the section graphic (stable id) but keep the user's own
-        // added elements + branding.
+        // added elements + branding, and any per-card theme override.
         return prev
           ? {
               ...seed,
               elements: [...seed.elements, ...prev.elements.filter((e) => e.id !== SEED_GRAPHIC_ID)],
               branding: prev.branding,
+              theme: prev.theme,
             }
           : seed
       })
@@ -843,6 +856,18 @@ export function ShareCardCreator({
             </>
           )}
 
+          {composition && activeTab === 'theme' && (
+            <ThemePanel
+              theme={effectiveTheme}
+              isOverride={!!composition.theme}
+              storyAttached={slug !== ''}
+              onChange={(next) => setComposition({ ...composition, theme: next })}
+              // Drop the override so the card falls back to the story / default
+              // theme (undefined is omitted by JSON.stringify when saved).
+              onReset={() => setComposition({ ...composition, theme: undefined })}
+            />
+          )}
+
           {composition && inspectorStory && activeTab === 'background' && (
             <Inspector composition={composition} selection={{ kind: 'background' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
           )}
@@ -892,7 +917,7 @@ export function ShareCardCreator({
         {story && selectedUnit && composition ? (
           <div className="relative" style={{ width: renderW * previewScale, height: renderH * previewScale }}>
             <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left', width: renderW, height: renderH }}>
-              <ThemeProvider theme={story.theme}>
+              <ThemeProvider theme={effectiveTheme}>
                 <VerticalLoader vertical={story.vertical ?? undefined}>
                   <ShareCard
                     ref={cardRef}
