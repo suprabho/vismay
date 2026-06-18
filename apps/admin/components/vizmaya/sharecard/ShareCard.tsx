@@ -24,7 +24,7 @@ import { resolveSlotsFlat, ChartDataOverrideProvider, ForegroundLayoutSlot } fro
 import { AuraBackground } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
 import type { CardComposition, ElementLayer, MapSpec } from './layers/types'
-import { DEFAULT_GRAPHIC_HEIGHT_PCT } from './layers/types'
+import { DEFAULT_GRAPHIC_HEIGHT_PCT, bareChartId } from './layers/types'
 import { ElementView, TextView, transformWrapperStyle } from './layers/LayerView'
 import { proxiedOverlaySrc } from './OverlayLayer'
 import ShareMapBg from './ShareMapBg'
@@ -497,7 +497,10 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
   // foreground machinery (so they stay capture-gated). Headings render above.
   const renderChartElement = (el: Extract<ElementLayer, { kind: 'chart' }>) => {
     if (!el.visible || (!el.chartId && el.dataOverride === undefined)) return null
-    const effId = el.chartId || `${CUSTOM_CHART_ID}:${el.id}`
+    // Normalize the legacy `data:` ref prefix: ChartPanel strips it before the
+    // fetch and GenericChart keys its override lookup by the bare id, so effId —
+    // used as BOTH the foreground layer id and the override-map key — must be bare.
+    const effId = el.chartId ? bareChartId(el.chartId) : `${CUSTOM_CHART_ID}:${el.id}`
     const foreground: ResolvedForeground = { kind: 'flat', layers: [{ type: 'chart', id: effId } as VizLayer] }
     const overrides = el.dataOverride !== undefined ? { [effId]: el.dataOverride } : {}
     // A chart always needs a definite box height to paint into (its inner flex
@@ -534,6 +537,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
               </div>
             </div>
           </div>
+
         </ChartDataOverrideProvider>
       </div>
     )

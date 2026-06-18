@@ -141,6 +141,19 @@ export type HeroLayer =
     }
   | ({ kind: 'map'; box?: HeroBox } & MapSpec)
 
+/**
+ * Strip the legacy `data:` ref prefix from a chart id. `HeroLayer.chartId`
+ * mirrors the section's foreground ref, which on older stories is written as
+ * `data:<id>`. Any consumer that uses it as a bare chart-data id must normalize
+ * first — matching what `ChartPanel` strips before fetching
+ * `/api/chart-data/<slug>/<id>` and the key `ChartDataOverrideProvider` expects
+ * (the id `GenericChart` sees, prefix already gone). A bare id is returned
+ * unchanged.
+ */
+export function bareChartId(chartId: string): string {
+  return chartId.startsWith('data:') ? chartId.slice('data:'.length) : chartId
+}
+
 // ── Foreground elements (many) ──────────────────────────────────────────────
 export type FontFamily = 'serif' | 'sans' | 'mono'
 
