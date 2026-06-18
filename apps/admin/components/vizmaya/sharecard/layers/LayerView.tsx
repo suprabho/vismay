@@ -88,25 +88,57 @@ export function ElementView({
   )
 }
 
+/** Expand a 3/6-digit hex to "r, g, b" channels; null if not hex. */
+function hexChannels(hex: string): string | null {
+  const h = hex.trim().replace(/^#/, '')
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+  if (!/^[0-9a-f]{6}$/i.test(full)) return null
+  const n = parseInt(full, 16)
+  return `${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}`
+}
+function rgba(hex: string, opacity: number): string {
+  const ch = hexChannels(hex)
+  return ch ? `rgba(${ch}, ${opacity})` : hex
+}
+
 export function TextView({ block, cardWidth: _cardWidth }: { block: TextBlock; cardWidth: number }) {
   if (!block.visible || !block.text.trim()) return null
   const s = block.style
+  const p = block.panel
+  const text = (
+    <div
+      style={{
+        color: s.color,
+        fontFamily: FONT_VAR[s.fontFamily],
+        fontWeight: s.fontWeight,
+        fontSize: s.fontSizePx,
+        lineHeight: s.lineHeight,
+        textAlign: s.align,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+      }}
+    >
+      {block.text}
+    </div>
+  )
   return (
     <div style={transformWrapperStyle(block.transform, { sizeByWidth: true })}>
-      <div
-        style={{
-          color: s.color,
-          fontFamily: FONT_VAR[s.fontFamily],
-          fontWeight: s.fontWeight,
-          fontSize: s.fontSizePx,
-          lineHeight: s.lineHeight,
-          textAlign: s.align,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        }}
-      >
-        {block.text}
-      </div>
+      {p?.enabled ? (
+        <div
+          style={{
+            padding: p.paddingPx,
+            borderRadius: p.radiusPx,
+            background: rgba(p.bg, p.bgOpacity),
+            backdropFilter: p.blurPx > 0 ? `blur(${p.blurPx}px)` : undefined,
+            WebkitBackdropFilter: p.blurPx > 0 ? `blur(${p.blurPx}px)` : undefined,
+            border: p.borderWidthPx > 0 ? `${p.borderWidthPx}px solid ${p.borderColor}` : undefined,
+          }}
+        >
+          {text}
+        </div>
+      ) : (
+        text
+      )}
     </div>
   )
 }

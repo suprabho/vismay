@@ -14,7 +14,7 @@ import type {
   MapSpec,
   TextBlock,
 } from '../layers/types'
-import { DEFAULT_HERO_BOX, emptyMapSpec } from '../layers/types'
+import { DEFAULT_HERO_BOX, DEFAULT_TEXT_PANEL, emptyMapSpec } from '../layers/types'
 import {
   patchBackground,
   patchElementTransform,
@@ -504,6 +504,8 @@ function TextInspector({
   const patch = (p: Partial<TextBlock>) => onChange(patchSelectedText(composition, selection, p))
   const patchStyle = (s: Partial<TextBlock['style']>) => patch({ style: { ...block.style, ...s } })
   const patchTransform = (t: Partial<TextBlock['transform']>) => patch({ transform: { ...block.transform, ...t } })
+  const panel = block.panel ?? { ...DEFAULT_TEXT_PANEL, enabled: false }
+  const patchPanel = (pp: Partial<typeof panel>) => patch({ panel: { ...panel, ...pp } })
 
   return (
     <div className="space-y-3">
@@ -543,6 +545,27 @@ function TextInspector({
         <NumberSlider label="Line height" value={block.style.lineHeight} min={0.9} max={2} step={0.05} onChange={(v) => patchStyle({ lineHeight: v })} format={(v) => v.toFixed(2)} />
       </div>
       <TransformControls transform={block.transform} onChange={patchTransform} />
+
+      <details className="rounded-md border border-white/10 bg-neutral-950/40 px-2.5 py-2">
+        <summary className="cursor-pointer select-none text-[11px] text-neutral-400">Box style (panel)</summary>
+        <div className="mt-2 space-y-2">
+          <label className="flex items-center gap-2 text-[11px] text-neutral-300">
+            <input type="checkbox" checked={panel.enabled} onChange={(e) => patchPanel({ enabled: e.target.checked })} className="accent-sky-400" />
+            Background panel
+          </label>
+          {panel.enabled && (
+            <>
+              <ColorField label="Background" value={panel.bg} onChange={(hex) => patchPanel({ bg: hex })} swatches={themeSwatches(theme)} />
+              <NumberSlider label="Background opacity" value={panel.bgOpacity} min={0} max={1} step={0.05} onChange={(v) => patchPanel({ bgOpacity: v })} format={(v) => v.toFixed(2)} />
+              <NumberSlider label="Blur" value={panel.blurPx} min={0} max={24} step={1} onChange={(v) => patchPanel({ blurPx: v })} format={(v) => `${v}px`} />
+              <NumberSlider label="Padding" value={panel.paddingPx} min={0} max={48} step={1} onChange={(v) => patchPanel({ paddingPx: v })} format={(v) => `${v}px`} />
+              <NumberSlider label="Corner radius" value={panel.radiusPx} min={0} max={40} step={1} onChange={(v) => patchPanel({ radiusPx: v })} format={(v) => `${v}px`} />
+              <NumberSlider label="Border width" value={panel.borderWidthPx} min={0} max={8} step={0.5} onChange={(v) => patchPanel({ borderWidthPx: v })} format={(v) => `${v}px`} />
+              <ColorField label="Border color" value={panel.borderColor} onChange={(hex) => patchPanel({ borderColor: hex })} swatches={themeSwatches(theme)} />
+            </>
+          )}
+        </div>
+      </details>
     </div>
   )
 }

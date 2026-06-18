@@ -156,12 +156,38 @@ export interface TextStyle {
   lineHeight: number
 }
 
+/** Optional panel chrome behind a text block (annotation boxes etc.). Colors
+ *  are concrete hex; the background is rendered as rgba(bg, bgOpacity). */
+export interface TextPanel {
+  enabled: boolean
+  paddingPx: number
+  radiusPx: number
+  bg: string
+  bgOpacity: number
+  blurPx: number
+  borderWidthPx: number
+  borderColor: string
+}
+
+export const DEFAULT_TEXT_PANEL: TextPanel = {
+  enabled: true,
+  paddingPx: 12,
+  radiusPx: 10,
+  bg: '#ffffff',
+  bgOpacity: 0.7,
+  blurPx: 6,
+  borderWidthPx: 0,
+  borderColor: '#ffffff',
+}
+
 export interface TextBlock {
   id: string
   text: string
   visible: boolean
   transform: Transform
   style: TextStyle
+  /** Optional background panel (padding / radius / bg+opacity / blur / border). */
+  panel?: TextPanel
 }
 
 export interface TextSlots {
