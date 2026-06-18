@@ -81,6 +81,30 @@ export type BackgroundLayer =
   | { kind: 'gradient'; gtype: 'linear' | 'radial'; from: string; to: string; angle?: number } // concrete hex stops
 
 // ── Foreground hero graphic (0–1) ───────────────────────────────────────────
+/** Placement box for the hero graphic, relative to the card. Lets the chart /
+ *  map be sized + moved out from under the title (resizing width/height
+ *  re-renders the chart crisply; scale is a CSS multiplier on top). Optional
+ *  for back-compat — absent means fill the card. */
+export interface HeroBox {
+  xPct: number
+  yPct: number
+  widthPct: number
+  heightPct: number
+  scale: number
+  rotation: number
+  opacity: number
+}
+
+export const DEFAULT_HERO_BOX: HeroBox = {
+  xPct: 50,
+  yPct: 50,
+  widthPct: 100,
+  heightPct: 100,
+  scale: 1,
+  rotation: 0,
+  opacity: 1,
+}
+
 export type HeroLayer =
   | {
       kind: 'chart'
@@ -90,8 +114,9 @@ export type HeroLayer =
       dataOverride?: unknown
       heading?: string
       subheading?: string
+      box?: HeroBox
     }
-  | ({ kind: 'map' } & MapSpec)
+  | ({ kind: 'map'; box?: HeroBox } & MapSpec)
 
 // ── Foreground elements (many) ──────────────────────────────────────────────
 export type FontFamily = 'serif' | 'sans' | 'mono'

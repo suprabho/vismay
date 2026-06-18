@@ -16,7 +16,8 @@ import MapPickerModal from '@/components/vizmaya/MapPickerModal'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
 import { seedTemplate, detectSupport } from './layers/seedTemplate'
-import type { CardComposition, MapSpec, TemplateKind, Transform } from './layers/types'
+import type { CardComposition, HeroLayer, MapSpec, TemplateKind, Transform } from './layers/types'
+import { DEFAULT_HERO_BOX } from './layers/types'
 import {
   applyV1Overrides,
   composeBaseType,
@@ -363,6 +364,10 @@ export function ShareCardCreator({
         return patchSelectedText(prev, sel, { transform: { ...cur.transform, xPct, yPct } })
       }
       if (sel.kind === 'element') return patchElementTransform(prev, sel.id, { xPct, yPct })
+      if (sel.kind === 'hero' && prev.hero) {
+        const cur = prev.hero.box ?? DEFAULT_HERO_BOX
+        return { ...prev, hero: { ...prev.hero, box: { ...cur, xPct, yPct } } as HeroLayer }
+      }
       return prev
     })
   }, [])
@@ -403,6 +408,16 @@ export function ShareCardCreator({
     if (!composition) return []
     const out: Draggable[] = []
     const c = composition
+    // Hero first so text/element hit-boxes stack above it (stay clickable).
+    if (c.hero) {
+      const b = c.hero.box ?? DEFAULT_HERO_BOX
+      out.push({
+        key: 'hero',
+        sel: { kind: 'hero' },
+        t: { xPct: b.xPct, yPct: b.yPct, widthPct: b.widthPct, scale: 1, rotation: 0, opacity: 1 },
+        heightPx: (b.heightPct / 100) * renderH,
+      })
+    }
     if (c.text.heading?.visible)
       out.push({ key: 'heading', sel: { kind: 'text', which: 'heading' }, t: c.text.heading.transform, heightPx: c.text.heading.style.fontSizePx * c.text.heading.style.lineHeight * 1.8 })
     if (c.text.subheading?.visible)
@@ -412,7 +427,7 @@ export function ShareCardCreator({
     for (const el of c.elements)
       if (el.visible) out.push({ key: el.id, sel: { kind: 'element', id: el.id }, t: el.transform })
     return out
-  }, [composition])
+  }, [composition, renderH])
 
   // ── capture / download ────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {

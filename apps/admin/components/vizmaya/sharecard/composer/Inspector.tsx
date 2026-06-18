@@ -8,12 +8,13 @@ import type {
   BackgroundLayer,
   CardComposition,
   FontFamily,
+  HeroBox,
   HeroLayer,
   ImageSource,
   MapSpec,
   TextBlock,
 } from '../layers/types'
-import { emptyMapSpec } from '../layers/types'
+import { DEFAULT_HERO_BOX, emptyMapSpec } from '../layers/types'
 import {
   patchBackground,
   patchElementTransform,
@@ -152,6 +153,26 @@ function MapControls({
           />
         </div>
       </details>
+    </div>
+  )
+}
+
+/** Size + position controls for the hero graphic's box (chart or map). */
+function HeroBoxControls({ box, onChange }: { box: HeroBox; onChange: (patch: Partial<HeroBox>) => void }) {
+  return (
+    <div className="space-y-2 rounded-md border border-white/10 bg-neutral-950/40 p-2.5">
+      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Size &amp; position</span>
+      <div className="grid grid-cols-2 gap-2">
+        <NumberSlider label="X" value={Math.round(box.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
+        <NumberSlider label="Y" value={Math.round(box.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <NumberSlider label="Width" value={Math.round(box.widthPct)} min={10} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
+        <NumberSlider label="Height" value={Math.round(box.heightPct)} min={10} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
+      </div>
+      <NumberSlider label="Scale" value={box.scale} min={0.2} max={2} step={0.05} onChange={(v) => onChange({ scale: v })} format={(v) => `${v.toFixed(2)}×`} />
+      <NumberSlider label="Rotate" value={Math.round(box.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
+      <NumberSlider label="Opacity" value={box.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
     </div>
   )
 }
@@ -319,6 +340,13 @@ function HeroInspector({
           <option value="map">Map</option>
         </select>
       </Field>
+
+      {hero && (
+        <HeroBoxControls
+          box={hero.box ?? DEFAULT_HERO_BOX}
+          onChange={(p) => onChange(patchHero(composition, { box: { ...(hero.box ?? DEFAULT_HERO_BOX), ...p } }))}
+        />
+      )}
 
       {hero?.kind === 'map' && (
         <MapControls

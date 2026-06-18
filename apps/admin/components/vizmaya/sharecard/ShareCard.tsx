@@ -6,7 +6,7 @@
 // `data-share-ui` so the toPng filter strips it). RENDER_SIZE / OUTPUT_SIZE are
 // exported for the composer's preview scaling.
 
-import { useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle, type CSSProperties } from 'react'
 import { toPng } from 'html-to-image'
 import type {
   ResolvedUnit,
@@ -23,6 +23,7 @@ import { resolveSlotsFlat, ChartDataOverrideProvider } from '@vismay/viz-engine'
 import { AuraBackground } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
 import type { CardComposition, MapSpec } from './layers/types'
+import { DEFAULT_HERO_BOX } from './layers/types'
 import { ElementView, TextView, transformWrapperStyle } from './layers/LayerView'
 import { proxiedOverlaySrc } from './OverlayLayer'
 import ShareDeckForeground from './ShareDeckForeground'
@@ -470,18 +471,33 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
   const hero = (() => {
     const hl = composition.hero
     if (!hl) return null
-    if (hl.kind === 'map') {
-      return <div className="absolute inset-0 z-10">{renderMap('map:hero', hl, true)}</div>
+    const box = hl.box ?? DEFAULT_HERO_BOX
+    const boxStyle: CSSProperties = {
+      position: 'absolute',
+      left: `${box.xPct}%`,
+      top: `${box.yPct}%`,
+      width: `${box.widthPct}%`,
+      height: `${box.heightPct}%`,
+      transform: `translate(-50%, -50%) rotate(${box.rotation}deg) scale(${box.scale})`,
+      transformOrigin: 'center center',
+      opacity: box.opacity,
+      zIndex: 10,
     }
+    if (hl.kind === 'map') {
+      return <div style={boxStyle}>{renderMap('map:hero', hl, true)}</div>
+    }
+    // Size the chart's internal stack math to the box height (not the card),
+    // so resizing the box re-renders the chart crisply within it.
+    const boxHeightPx = (box.heightPct / 100) * h
     const overrides = hl.dataOverride !== undefined ? { [hl.chartId]: hl.dataOverride } : {}
     return (
-      <div className="absolute inset-0 z-10">
+      <div style={boxStyle}>
         <ChartDataOverrideProvider value={overrides}>
           <ShareDeckForeground
             slug={slug}
             unit={unit}
             ratio={ratio}
-            cardHeight={h}
+            cardHeight={boxHeightPx}
             chartHeading={hl.heading}
             chartSubheading={hl.subheading}
             layerScope="chart"

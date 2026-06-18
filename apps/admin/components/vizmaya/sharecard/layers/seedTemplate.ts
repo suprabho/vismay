@@ -104,12 +104,15 @@ export function seedTemplate(
   }
 
   if (kind === 'data') {
+    // Sit the hero below the top heading so its legend/title doesn't collide
+    // with the card heading. The user can resize/move it from the inspector.
+    const heroBox = { xPct: 50, yPct: 57, widthPct: 98, heightPct: 82, scale: 1, rotation: 0, opacity: 1 }
     return {
       background: { kind: 'none' },
       hero: support.chartId
-        ? { kind: 'chart', chartId: support.chartId, heading: undefined, subheading: undefined }
+        ? { kind: 'chart', chartId: support.chartId, heading: undefined, subheading: undefined, box: heroBox }
         : support.hasMap
-          ? { kind: 'map', ...emptyMapSpec() }
+          ? { kind: 'map', ...emptyMapSpec(), box: heroBox }
           : undefined,
       elements: [],
       text: {
