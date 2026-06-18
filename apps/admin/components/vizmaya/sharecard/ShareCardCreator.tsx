@@ -8,30 +8,34 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import type { ResolvedUnit, Theme, MapPalette } from '@vismay/viz-engine'
-import { resolveSlotsFlat } from '@vismay/viz-engine'
+import type { ResolvedUnit, Theme, MapPalette, MapView, StorySectionConfig } from '@vismay/viz-engine'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/canvas/ThemeProvider'
 import VerticalLoader from '@/components/canvas/VerticalLoader'
-import ShareCard, { RENDER_SIZE, type ShareCardHandle } from './ShareCard'
+import MapPickerModal from '@/components/vizmaya/MapPickerModal'
+import { FrameCorners, Image as ImageIcon, Shapes, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
+import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
+import { seedTemplate, detectSupport } from './layers/seedTemplate'
+import type { CardComposition, HeroLayer, MapSpec, TemplateKind, Transform } from './layers/types'
+import { DEFAULT_HERO_BOX } from './layers/types'
 import {
-  ASPECT_RATIOS,
-  CARD_VARIANTS,
-  EMOJI_PALETTE,
-  GRAPH_SCOPES,
-} from './constants'
-import { FLAG_COUNTRIES, flagImageUrl, flagThumbUrl } from './flags'
-import type {
-  AspectRatio,
-  CardVariant,
-  GraphScope,
-  Overlay,
-  SavedCard,
-  VizmayaShareCardSnapshot,
-} from './types'
+  applyV1Overrides,
+  composeBaseType,
+  snapshotVersion,
+  templateKindFromV1,
+} from './layers/migrate'
+import { LayerPanel } from './composer/LayerPanel'
+import { Inspector } from './composer/Inspector'
+import {
+  getSelectedText,
+  patchElementTransform,
+  patchSelectedText,
+  type Selection,
+} from './composer/mutations'
+import type { AnyShareCardSnapshot, SavedCard, VizmayaShareCardSnapshotV2 } from './types'
+import type { AspectRatio } from './AspectRatioToggle'
 
-/** Story-config map defaults the card map needs. Structural subset of
- *  StoryDefaults so we don't couple to its full type. */
 interface MapDefaults {
   mapStyle?: string
   mapOpacity?: number
@@ -57,16 +61,77 @@ interface StoryOption {
   title: string
 }
 
-const PREVIEW_MAX_W = 380
-const PREVIEW_MAX_H = 560
-
-const DEFAULT_IMAGE_WIDTH = 32 // % of card width
-const DEFAULT_EMOJI_WIDTH = 14 // % of card width (drives glyph px)
-
 interface AssetEntry {
   url: string
   filename: string
   contentType: string | null
+}
+
+const PREVIEW_MAX_W = 380
+const PREVIEW_MAX_H = 560
+
+const TEMPLATES: Array<{ id: TemplateKind; label: string }> = [
+  { id: 'map-caption', label: 'Map + caption' },
+  { id: 'data', label: 'Story data' },
+  { id: 'title-text', label: 'Title / text' },
+]
+
+const CONTAINED_FOCUS = { top: 0, left: 0, width: 1, height: 1 }
+
+type EditorTab = 'setup' | 'background' | 'hero' | 'elements' | 'text'
+const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
+  { id: 'setup', label: 'Canvas & story', Icon: FrameCorners },
+  { id: 'background', label: 'Background', Icon: ImageIcon },
+  { id: 'hero', label: 'Hero graphic', Icon: Shapes },
+  { id: 'elements', label: 'Foreground elements', Icon: Stack },
+  { id: 'text', label: 'Text', Icon: TextT },
+]
+
+/** Neutral editorial theme used when composing from scratch (no story). System
+ *  font stacks so no font import is needed. */
+const DEFAULT_THEME: Theme = {
+  colors: {
+    background: '#f4efe6',
+    text: '#1a1a1a',
+    accent: '#d85a30',
+    accent2: '#3a6ea5',
+    teal: '#3a9e8c',
+    surface: '#e7dfd0',
+    muted: '#6b6b6b',
+    positive: '#3a9e8c',
+    amber: '#e0a93a',
+    red: '#c0392b',
+  },
+  fonts: {
+    serif: 'Georgia',
+    sans: '-apple-system, "Segoe UI", Helvetica',
+    mono: 'ui-monospace, Menlo',
+  },
+}
+
+/** A placeholder unit for blank-canvas mode — no map/chart data, no copy. */
+const BLANK_UNIT: ResolvedUnit = {
+  parentIndex: 0,
+  subIndex: 0,
+  parentConfig: { kind: 'text' } as StorySectionConfig,
+  heading: undefined,
+  subheading: undefined,
+  paragraphs: [],
+}
+
+const blankComposition = (): CardComposition => ({
+  background: { kind: 'solid', color: DEFAULT_THEME.colors.background },
+  hero: undefined,
+  elements: [],
+  text: { annotations: [] },
+  branding: { visible: true },
+})
+
+function defaultTemplate(unit: ResolvedUnit): TemplateKind {
+  const s = detectSupport(unit)
+  if (s.hasMap) return 'map-caption'
+  if (s.chartId) return 'data'
+  return 'title-text'
 }
 
 export function ShareCardCreator({
@@ -76,48 +141,92 @@ export function ShareCardCreator({
   stories: StoryOption[]
   accessToken: string
 }) {
-  // ── story selection + load ──────────────────────────────────────────────
-  const [slug, setSlug] = useState<string>(stories[0]?.slug ?? '')
+  // Default to a blank canvas (slug ''); the user can attach a story after.
+  const [slug, setSlug] = useState<string>('')
   const [story, setStory] = useState<StoryData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ── card controls ───────────────────────────────────────────────────────
   const [ratio, setRatio] = useState<AspectRatio>('4:5')
-  const [variant, setVariant] = useState<CardVariant>('map-title')
-  const [graphScope, setGraphScope] = useState<GraphScope>('all')
   const [unitIdx, setUnitIdx] = useState<number>(0)
-  const [headingOverride, setHeadingOverride] = useState<string>('')
-  const [subheadingOverride, setSubheadingOverride] = useState<string>('')
+  const [templateKind, setTemplateKind] = useState<TemplateKind>('map-caption')
+  const [composition, setComposition] = useState<CardComposition | null>(null)
+  const [selection, setSelection] = useState<Selection | null>(null)
 
-  // ── overlays ────────────────────────────────────────────────────────────
-  const [overlays, setOverlays] = useState<Overlay[]>([])
-  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
-  const overlaySeq = useRef(0)
-
-  // ── flag picker ─────────────────────────────────────────────────────────
-  const [flagQuery, setFlagQuery] = useState<string>('')
-
-  // ── assets / AI / library ───────────────────────────────────────────────
   const [assets, setAssets] = useState<AssetEntry[]>([])
-  const [aiSubject, setAiSubject] = useState<string>('')
-  const [aiStyle, setAiStyle] = useState<string>('')
-  const [aiBusy, setAiBusy] = useState(false)
-  const [aiError, setAiError] = useState<string | null>(null)
   const [savedCards, setSavedCards] = useState<SavedCard[]>([])
   const [saving, setSaving] = useState(false)
   const [currentCardId, setCurrentCardId] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
 
-  // Unit to restore once a story finishes loading (set when loading a saved card).
+  // Map-edit overlay state.
+  const [mapEditOpen, setMapEditOpen] = useState(false)
+  const [mapEditSel, setMapEditSel] = useState<Selection | null>(null)
+  const [mapEditSeed, setMapEditSeed] = useState<MapView | null>(null)
+
+  // A saved card to apply once its story + unit resolve.
+  const pendingLoadRef = useRef<{ snapshot: AnyShareCardSnapshot } | null>(null)
   const pendingUnitRef = useRef<{ parentIndex: number; subIndex: number } | null>(null)
+  // When attaching a story to a from-scratch card, preserve the composition
+  // (load the story's theme + sections without re-seeding a template).
+  const attachKeepRef = useRef(false)
 
   const cardRef = useRef<ShareCardHandle>(null)
 
-  // ── load the selected story's content ───────────────────────────────────
+  const units = useMemo(() => story?.units ?? [], [story])
+  // Always have a unit (blank canvas uses a placeholder) so the card renders.
+  const selectedUnit = units[unitIdx] ?? BLANK_UNIT
+
+  // Resolve a loaded snapshot (v1 migrated, v2 direct) against a story+unit.
+  const applyLoadedSnapshot = useCallback(
+    (storyData: StoryData, snap: AnyShareCardSnapshot, useRatio: AspectRatio) => {
+      const idx = storyData.units.findIndex(
+        (u) => u.parentIndex === snap.parentIndex && u.subIndex === snap.subIndex,
+      )
+      const resolvedIdx = idx >= 0 ? idx : 0
+      setUnitIdx(resolvedIdx)
+      const unit = storyData.units[resolvedIdx] ?? BLANK_UNIT
+      try {
+        if (snapshotVersion(snap) === 2) {
+          // v2 carries the full composition — no unit needed (works for blank cards).
+          const v2 = snap as VizmayaShareCardSnapshotV2
+          setComposition(v2.composition)
+          setTemplateKind(v2.templateKind)
+        } else {
+          const v1 = snap as Extract<AnyShareCardSnapshot, { version: 1 }>
+          const kind = templateKindFromV1(v1)
+          setComposition(applyV1Overrides(seedTemplate(kind, unit, storyData, useRatio), v1))
+          setTemplateKind(kind)
+        }
+        setSelection(null)
+      } catch (e) {
+        setError(e instanceof Error ? `Couldn't load card: ${e.message}` : "Couldn't load this card (older format).")
+      }
+    },
+    [],
+  )
+
+  // ── load the selected story ───────────────────────────────────────────────
   useEffect(() => {
     if (!slug) {
-      setStory(null)
+      // Blank canvas: synthesize a story with the default theme + no units.
+      const blank: StoryData = { slug: '', title: 'Untitled', vertical: null, theme: DEFAULT_THEME, defaults: {}, units: [] }
+      setStory(blank)
+      setUnitIdx(0)
+      setError(null)
+      setLoading(false)
+      const load = pendingLoadRef.current
+      if (load) {
+        // A saved card composed from scratch (no story) reopening.
+        applyLoadedSnapshot(blank, load.snapshot, ratio)
+      } else if (!attachKeepRef.current) {
+        setComposition(blankComposition())
+        setTemplateKind('title-text')
+        setSelection(null)
+      }
+      pendingLoadRef.current = null
+      pendingUnitRef.current = null
+      attachKeepRef.current = false
       return
     }
     let alive = true
@@ -126,27 +235,42 @@ export function ShareCardCreator({
     void (async () => {
       try {
         const res = await fetch(`/api/vizmaya/share-cards/stories/${encodeURIComponent(slug)}`)
-        const body = (await res.json().catch(() => ({}))) as
-          | (StoryData & { ok?: boolean })
-          | { error?: string }
+        const body = (await res.json().catch(() => ({}))) as (StoryData & { ok?: boolean }) | { error?: string }
         if (!res.ok || !('ok' in body) || !body.ok) {
           throw new Error(('error' in body && body.error) || `HTTP ${res.status}`)
         }
         if (!alive) return
         setStory(body)
-        // Restore the saved unit pick, or default to the first unit.
-        const pending = pendingUnitRef.current
-        const idx =
-          pending != null
-            ? body.units.findIndex(
-                (u) => u.parentIndex === pending.parentIndex && u.subIndex === pending.subIndex,
-              )
+        const load = pendingLoadRef.current
+        if (load) {
+          applyLoadedSnapshot(body, load.snapshot, ratio)
+        } else if (attachKeepRef.current) {
+          // Attaching this story to a from-scratch card — adopt its theme +
+          // sections but keep the user's existing composition.
+          setUnitIdx(0)
+          setSelection(null)
+        } else {
+          const pendingUnit = pendingUnitRef.current
+          const idx = pendingUnit
+            ? body.units.findIndex((u) => u.parentIndex === pendingUnit.parentIndex && u.subIndex === pendingUnit.subIndex)
             : 0
-        setUnitIdx(idx >= 0 ? idx : 0)
+          const resolvedIdx = idx >= 0 ? idx : 0
+          setUnitIdx(resolvedIdx)
+          const unit = body.units[resolvedIdx]
+          if (unit) {
+            const kind = defaultTemplate(unit)
+            setTemplateKind(kind)
+            setComposition(seedTemplate(kind, unit, body, ratio))
+            setSelection(null)
+          }
+        }
+        pendingLoadRef.current = null
         pendingUnitRef.current = null
+        attachKeepRef.current = false
       } catch (e) {
         if (alive) {
           setStory(null)
+          setComposition(null)
           setError(e instanceof Error ? e.message : 'Failed to load story')
         }
       } finally {
@@ -156,9 +280,10 @@ export function ShareCardCreator({
     return () => {
       alive = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
-  // ── load the story's image assets (for the asset picker) ────────────────
+  // ── story image assets ──────────────────────────────────────────────────
   useEffect(() => {
     if (!slug) {
       setAssets([])
@@ -185,7 +310,7 @@ export function ShareCardCreator({
     }
   }, [slug])
 
-  // ── load the saved-card library once ────────────────────────────────────
+  // ── saved-card library ────────────────────────────────────────────────────
   useEffect(() => {
     let alive = true
     void (async () => {
@@ -202,163 +327,242 @@ export function ShareCardCreator({
     }
   }, [])
 
-  const units = useMemo(() => story?.units ?? [], [story])
-  const selectedUnit = units[unitIdx] ?? null
+  // Only import web fonts for a real story; blank canvas uses system fonts.
+  const fontImportUrl = useMemo(() => (story && slug ? getFontImportUrl(story.theme.fonts) : null), [story, slug])
 
-  // What the currently selected section actually supports — used to enable the
-  // right card-style options and to auto-pick a sensible default.
-  const support = useMemo(() => {
-    if (!selectedUnit) return { hasMap: false, hasViz: false }
-    const slots = resolveSlotsFlat(selectedUnit.parentConfig)
-    const hasMap = slots.background.some(
-      (l) => l.type === 'map' && Array.isArray((l as { center?: unknown }).center),
-    )
-    const hasViz = slots.foreground.some((l) => l.type !== 'text' && l.type !== 'bodyText')
-    return { hasMap, hasViz }
-  }, [selectedUnit])
-
-  // Keep the chosen variant valid for the selected section.
-  useEffect(() => {
-    if (variant === 'map-title' && !support.hasMap) {
-      setVariant(support.hasViz ? 'graph' : 'auto')
-    } else if (variant === 'graph' && !support.hasViz) {
-      setVariant(support.hasMap ? 'map-title' : 'auto')
-    }
-  }, [support, variant])
-
-  const baseType = variant === 'map-title' ? 'map-caption' : 'data'
-
-  // ── preview sizing ──────────────────────────────────────────────────────
-  const { w: renderW, h: renderH } = RENDER_SIZE[ratio]
-  const previewScale = Math.min(PREVIEW_MAX_W / renderW, PREVIEW_MAX_H / renderH, 1)
-
-  const fontImportUrl = useMemo(
-    () => (story ? getFontImportUrl(story.theme.fonts) : null),
-    [story],
-  )
-
-  // Minimal share override carrying only the caption text edits; empty fields
-  // fall through to the unit's own heading/subheading.
-  const shareOverride = useMemo(() => {
-    const h = headingOverride.trim()
-    const s = subheadingOverride.trim()
-    if (!h && !s) return undefined
-    return { heading: h || undefined, subheading: s || undefined }
-  }, [headingOverride, subheadingOverride])
-
-  // Flags filtered by the search box (matches country name or code).
-  const filteredFlags = useMemo(() => {
-    const q = flagQuery.trim().toLowerCase()
-    if (!q) return FLAG_COUNTRIES
-    return FLAG_COUNTRIES.filter(
-      (f) => f.name.toLowerCase().includes(q) || f.code.includes(q),
-    )
-  }, [flagQuery])
-
-  // ── overlay handlers ────────────────────────────────────────────────────
-  const addImageOverlay = useCallback((url: string, label: string) => {
-    const id = `ov-${overlaySeq.current++}`
-    setOverlays((prev) => [
-      ...prev,
-      { id, kind: 'image', url, label, xPct: 50, yPct: 50, widthPct: DEFAULT_IMAGE_WIDTH },
-    ])
-    setSelectedOverlayId(id)
-  }, [])
-
-  const addEmojiOverlay = useCallback((emoji: string) => {
-    const id = `ov-${overlaySeq.current++}`
-    setOverlays((prev) => [
-      ...prev,
-      { id, kind: 'emoji', text: emoji, label: emoji, xPct: 50, yPct: 50, widthPct: DEFAULT_EMOJI_WIDTH },
-    ])
-    setSelectedOverlayId(id)
-  }, [])
-
-  // Flags are placed as ordinary image overlays (remote URL → proxied on render).
-  const addFlagOverlay = useCallback(
-    (code: string, name: string) => addImageOverlay(flagImageUrl(code), name),
-    [addImageOverlay],
-  )
-
-  const removeOverlay = useCallback((id: string) => {
-    setOverlays((prev) => prev.filter((o) => o.id !== id))
-    setSelectedOverlayId((cur) => (cur === id ? null : cur))
-  }, [])
-
-  const setOverlayWidth = useCallback((id: string, widthPct: number) => {
-    setOverlays((prev) => prev.map((o) => (o.id === id ? { ...o, widthPct } : o)))
-  }, [])
-
-  const onPickUpload = useCallback(
-    (file: File | null) => {
-      if (!file) return
-      if (!file.type.startsWith('image/')) return
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result === 'string') addImageOverlay(reader.result, file.name)
-      }
-      reader.readAsDataURL(file)
-    },
-    [addImageOverlay],
-  )
-
-  const handleGenerate = useCallback(async () => {
-    const subject = aiSubject.trim()
-    if (!subject) {
-      setAiError('Describe what to generate.')
-      return
-    }
-    setAiBusy(true)
-    setAiError(null)
-    try {
-      const paletteHexes = story
-        ? [story.theme.colors.accent, story.theme.colors.accent2].filter(Boolean)
-        : []
-      const res = await fetch('/api/vizmaya/share-cards/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, ratio, paletteHexes, stylePrefix: aiStyle.trim() || undefined }),
+  // ── reset path: section / template change re-seed section-bound slots,
+  //    preserving user-added elements + branding (single policy). ──────────────
+  const pickUnit = useCallback(
+    (idx: number) => {
+      setUnitIdx(idx)
+      setSelection(null)
+      const unit = units[idx]
+      if (!unit || !story) return
+      const kind = defaultTemplate(unit)
+      setTemplateKind(kind)
+      setComposition((prev) => {
+        const seed = seedTemplate(kind, unit, story, ratio)
+        return prev ? { ...seed, elements: prev.elements, branding: prev.branding } : seed
       })
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
-      if (!res.ok || !body.ok || !body.dataUrl) throw new Error(body.error ?? `HTTP ${res.status}`)
-      addImageOverlay(body.dataUrl, subject.slice(0, 40))
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'Generation failed')
-    } finally {
-      setAiBusy(false)
-    }
-  }, [aiSubject, aiStyle, ratio, story, addImageOverlay])
+    },
+    [units, story, ratio],
+  )
 
-  // ── drag overlays over the preview ──────────────────────────────────────
-  // The move/end handlers are created per drag so `end` can unregister itself
-  // and `move` without a self-referencing top-level callback.
+  const pickTemplate = useCallback(
+    (kind: TemplateKind) => {
+      setTemplateKind(kind)
+      setSelection(null)
+      if (!selectedUnit || !story) return
+      setComposition((prev) => {
+        const seed = seedTemplate(kind, selectedUnit, story, ratio)
+        return prev ? { ...seed, elements: prev.elements, branding: prev.branding } : seed
+      })
+    },
+    [selectedUnit, story, ratio],
+  )
+
+  const pickStory = useCallback(
+    (nextSlug: string) => {
+      setCurrentCardId(null)
+      pendingLoadRef.current = null
+      pendingUnitRef.current = null
+      // Attaching a story to a from-scratch card (blank → story) keeps the
+      // current layers; switching between stories re-seeds a template.
+      attachKeepRef.current = slug === '' && nextSlug !== ''
+      setSlug(nextSlug)
+    },
+    [slug],
+  )
+
+  // ── map edit overlay ────────────────────────────────────────────────────
+  const mapSpecForSelection = useCallback(
+    (sel: Selection): MapSpec | null => {
+      if (!composition) return null
+      if (sel.kind === 'background' && composition.background.kind === 'map') return composition.background
+      if (sel.kind === 'hero' && composition.hero?.kind === 'map') return composition.hero
+      if (sel.kind === 'element') {
+        const el = composition.elements.find((e) => e.id === sel.id)
+        if (el?.kind === 'map') return el
+      }
+      return null
+    },
+    [composition],
+  )
+
+  const onEditMap = useCallback(
+    (sel: Selection) => {
+      const spec = mapSpecForSelection(sel)
+      setMapEditSel(sel)
+      setMapEditSeed(spec ? cardRef.current?.getMapView(spec) ?? null : null)
+      setMapEditOpen(true)
+    },
+    [mapSpecForSelection],
+  )
+
+  const applyMapView = useCallback(
+    (view: MapView) => {
+      const sel = mapEditSel
+      if (!sel) return
+      setComposition((prev) => {
+        if (!prev) return prev
+        if (sel.kind === 'background' && prev.background.kind === 'map') {
+          return { ...prev, background: { ...prev.background, camera: { ...prev.background.camera, [ratio]: view } } }
+        }
+        if (sel.kind === 'hero' && prev.hero?.kind === 'map') {
+          return { ...prev, hero: { ...prev.hero, camera: { ...prev.hero.camera, [ratio]: view } } }
+        }
+        if (sel.kind === 'element') {
+          return {
+            ...prev,
+            elements: prev.elements.map((e) =>
+              e.id === sel.id && e.kind === 'map' ? { ...e, camera: { ...e.camera, [ratio]: view } } : e,
+            ),
+          }
+        }
+        return prev
+      })
+      setMapEditOpen(false)
+    },
+    [mapEditSel, ratio],
+  )
+
+  // Close the map-edit overlay if its target slot/element disappears (e.g. the
+  // element was deleted or the slot's kind changed while the modal was open) —
+  // otherwise applyMapView would silently no-op and lose the edit.
+  useEffect(() => {
+    if (mapEditOpen && mapEditSel && !mapSpecForSelection(mapEditSel)) setMapEditOpen(false)
+  }, [mapEditOpen, mapEditSel, mapSpecForSelection])
+
+  // ── preview sizing ────────────────────────────────────────────────────────
+  // The canvas fills the available center column (measured), so it grows to the
+  // viewport height instead of a fixed 380×560 box.
+  const { w: renderW, h: renderH } = RENDER_SIZE[ratio]
+  const previewBoxRef = useRef<HTMLDivElement>(null)
+  const [previewBox, setPreviewBox] = useState<{ w: number; h: number }>({ w: PREVIEW_MAX_W, h: PREVIEW_MAX_H })
+  useEffect(() => {
+    const el = previewBoxRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect
+      if (r && r.width > 0 && r.height > 0) setPreviewBox({ w: r.width, h: r.height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const previewScale = Math.max(0.1, Math.min(previewBox.w / renderW, previewBox.h / renderH))
+
+  // ── left icon-rail tabs ───────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<EditorTab>('setup')
+  const selectTab = useCallback((t: EditorTab) => {
+    setActiveTab(t)
+    // Keep the canvas selection in step with the tab so the right editor shows.
+    if (t === 'background') setSelection({ kind: 'background' })
+    else if (t === 'hero') setSelection({ kind: 'hero' })
+    else setSelection(null)
+  }, [])
+
+  // ── saved-cards dropdown (top bar) ────────────────────────────────────────
+  const [savedOpen, setSavedOpen] = useState(false)
+  const savedRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!savedOpen) return
+    const onDown = (e: PointerEvent) => {
+      if (savedRef.current && !savedRef.current.contains(e.target as Node)) setSavedOpen(false)
+    }
+    window.addEventListener('pointerdown', onDown)
+    return () => window.removeEventListener('pointerdown', onDown)
+  }, [savedOpen])
+
+  // ── drag layers on the preview ──────────────────────────────────────────
   const interactionRef = useRef<HTMLDivElement>(null)
-  const dragIdRef = useRef<string | null>(null)
-  const onOverlayPointerDown = useCallback(
-    (e: ReactPointerEvent, id: string) => {
+  const dragRef = useRef<Selection | null>(null)
+  const moveLayer = useCallback((sel: Selection, xPct: number, yPct: number) => {
+    setComposition((prev) => {
+      if (!prev) return prev
+      if (sel.kind === 'text' || sel.kind === 'annotation') {
+        const cur = getSelectedText(prev, sel)
+        if (!cur) return prev
+        return patchSelectedText(prev, sel, { transform: { ...cur.transform, xPct, yPct } })
+      }
+      if (sel.kind === 'element') return patchElementTransform(prev, sel.id, { xPct, yPct })
+      if (sel.kind === 'hero' && prev.hero) {
+        const cur = prev.hero.box ?? DEFAULT_HERO_BOX
+        return { ...prev, hero: { ...prev.hero, box: { ...cur, xPct, yPct } } as HeroLayer }
+      }
+      return prev
+    })
+  }, [])
+
+  const onLayerPointerDown = useCallback(
+    (e: ReactPointerEvent, sel: Selection) => {
       e.preventDefault()
-      setSelectedOverlayId(id)
-      dragIdRef.current = id
+      e.stopPropagation()
+      setSelection(sel)
+      // Open the matching tab so the editor for the clicked layer is visible.
+      const tabFor: EditorTab | null =
+        sel.kind === 'element'
+          ? 'elements'
+          : sel.kind === 'text' || sel.kind === 'annotation'
+            ? 'text'
+            : sel.kind === 'hero'
+              ? 'hero'
+              : sel.kind === 'background'
+                ? 'background'
+                : null
+      if (tabFor) setActiveTab(tabFor)
+      dragRef.current = sel
       const move = (ev: PointerEvent) => {
         const el = interactionRef.current
-        if (!dragIdRef.current || !el) return
+        if (!dragRef.current || !el) return
         const rect = el.getBoundingClientRect()
         const xPct = Math.min(100, Math.max(0, ((ev.clientX - rect.left) / rect.width) * 100))
         const yPct = Math.min(100, Math.max(0, ((ev.clientY - rect.top) / rect.height) * 100))
-        setOverlays((prev) => prev.map((o) => (o.id === id ? { ...o, xPct, yPct } : o)))
+        moveLayer(dragRef.current, xPct, yPct)
       }
       const end = () => {
-        dragIdRef.current = null
+        dragRef.current = null
         window.removeEventListener('pointermove', move)
         window.removeEventListener('pointerup', end)
       }
       window.addEventListener('pointermove', move)
       window.addEventListener('pointerup', end)
     },
-    [],
+    [moveLayer],
   )
 
-  // ── capture / download ──────────────────────────────────────────────────
+  // Build the draggable hit targets from the composition.
+  interface Draggable {
+    key: string
+    sel: Selection
+    t: Transform
+    heightPx?: number
+  }
+  const draggables = useMemo<Draggable[]>(() => {
+    if (!composition) return []
+    const out: Draggable[] = []
+    const c = composition
+    // Hero first so text/element hit-boxes stack above it (stay clickable).
+    if (c.hero) {
+      const b = c.hero.box ?? DEFAULT_HERO_BOX
+      out.push({
+        key: 'hero',
+        sel: { kind: 'hero' },
+        t: { xPct: b.xPct, yPct: b.yPct, widthPct: b.widthPct, scale: 1, rotation: 0, opacity: 1 },
+        heightPx: (b.heightPct / 100) * renderH,
+      })
+    }
+    if (c.text.heading?.visible)
+      out.push({ key: 'heading', sel: { kind: 'text', which: 'heading' }, t: c.text.heading.transform, heightPx: c.text.heading.style.fontSizePx * c.text.heading.style.lineHeight * 1.8 })
+    if (c.text.subheading?.visible)
+      out.push({ key: 'subheading', sel: { kind: 'text', which: 'subheading' }, t: c.text.subheading.transform, heightPx: c.text.subheading.style.fontSizePx * c.text.subheading.style.lineHeight * 1.8 })
+    for (const a of c.text.annotations)
+      if (a.visible) out.push({ key: a.id, sel: { kind: 'annotation', id: a.id }, t: a.transform, heightPx: a.style.fontSizePx * a.style.lineHeight * 2.2 })
+    for (const el of c.elements)
+      if (el.visible) out.push({ key: el.id, sel: { kind: 'element', id: el.id }, t: el.transform })
+    return out
+  }, [composition, renderH])
+
+  // ── capture / download ────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {
     if (!cardRef.current) return
     setDownloading(true)
@@ -374,23 +578,25 @@ export function ShareCardCreator({
     }
   }, [slug, ratio])
 
-  // ── save / load / delete ────────────────────────────────────────────────
-  const buildSnapshot = useCallback((): VizmayaShareCardSnapshot => ({
-    version: 1,
-    storySlug: slug || null,
-    ratio,
-    variant,
-    graphScope,
-    parentIndex: selectedUnit?.parentIndex ?? 0,
-    subIndex: selectedUnit?.subIndex ?? 0,
-    headingOverride,
-    subheadingOverride,
-    overlays,
-  }), [slug, ratio, variant, graphScope, selectedUnit, headingOverride, subheadingOverride, overlays])
+  // ── save / load / delete ──────────────────────────────────────────────────
+  const buildSnapshot = useCallback((): VizmayaShareCardSnapshotV2 | null => {
+    if (!composition || !selectedUnit) return null
+    return {
+      version: 2,
+      storySlug: slug || null,
+      ratio,
+      parentIndex: selectedUnit.parentIndex,
+      subIndex: selectedUnit.subIndex,
+      templateKind,
+      composition,
+    }
+  }, [composition, slug, ratio, selectedUnit, templateKind])
 
   const handleSave = useCallback(async () => {
-    if (!story || !selectedUnit) return
-    const fallback = `${story.title} · ${CARD_VARIANTS.find((v) => v.id === variant)?.label ?? variant}`
+    if (!story || !selectedUnit || !composition) return
+    const snapshot = buildSnapshot()
+    if (!snapshot) return
+    const fallback = `${story.title} · ${TEMPLATES.find((t) => t.id === templateKind)?.label ?? templateKind}`
     const name = window.prompt('Name this card', fallback)?.trim()
     if (!name) return
     setSaving(true)
@@ -398,7 +604,7 @@ export function ShareCardCreator({
       const res = await fetch('/api/vizmaya/share-cards/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, storySlug: slug, baseType, ratio, config: buildSnapshot() }),
+        body: JSON.stringify({ name, storySlug: slug, baseType: composeBaseType(composition), ratio, config: snapshot }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
       if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -409,30 +615,27 @@ export function ShareCardCreator({
     } finally {
       setSaving(false)
     }
-  }, [story, selectedUnit, variant, slug, baseType, ratio, buildSnapshot])
+  }, [story, selectedUnit, composition, buildSnapshot, templateKind, slug, ratio])
 
-  const loadCard = useCallback((card: SavedCard) => {
-    const snap = card.config
-    setRatio(snap.ratio)
-    setVariant(snap.variant)
-    setGraphScope(snap.graphScope)
-    setHeadingOverride(snap.headingOverride ?? '')
-    setSubheadingOverride(snap.subheadingOverride ?? '')
-    setOverlays((snap.overlays ?? []).map((o) => ({ ...o, id: `ov-${overlaySeq.current++}` })))
-    setSelectedOverlayId(null)
-    setCurrentCardId(card.id)
-    pendingUnitRef.current = { parentIndex: snap.parentIndex, subIndex: snap.subIndex }
-    if (snap.storySlug && snap.storySlug !== slug) {
-      setSlug(snap.storySlug)
-    } else if (story) {
-      // Same story already loaded — resolve the unit now.
-      const idx = units.findIndex(
-        (u) => u.parentIndex === snap.parentIndex && u.subIndex === snap.subIndex,
-      )
-      if (idx >= 0) setUnitIdx(idx)
-      pendingUnitRef.current = null
-    }
-  }, [slug, story, units])
+  const loadCard = useCallback(
+    (card: SavedCard) => {
+      const snap = card.config
+      setCurrentCardId(card.id)
+      setError(null)
+      setRatio(snap.ratio as AspectRatio)
+      if (story && story.slug === snap.storySlug) {
+        // Same story already loaded — apply now.
+        applyLoadedSnapshot(story, snap, snap.ratio as AspectRatio)
+      } else {
+        // Different story, OR the same story still loading — stage the snapshot
+        // for the load effect to consume once the story+unit resolve.
+        pendingLoadRef.current = { snapshot: snap }
+        pendingUnitRef.current = { parentIndex: snap.parentIndex, subIndex: snap.subIndex }
+        if (snap.storySlug && snap.storySlug !== slug) setSlug(snap.storySlug)
+      }
+    },
+    [slug, story, applyLoadedSnapshot],
+  )
 
   const handleDeleteSaved = useCallback(async (id: string) => {
     setSavedCards((prev) => prev.filter((c) => c.id !== id))
@@ -448,295 +651,57 @@ export function ShareCardCreator({
   const labelCls = 'block text-[11px] font-medium text-neutral-400'
   const selectCls =
     'mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30'
-  const inputCls =
-    'mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30'
 
-  const availableVariants = CARD_VARIANTS.filter((v) =>
-    v.id === 'map-title' ? support.hasMap : v.id === 'graph' ? support.hasViz : true,
-  )
+  const inspectorStory = story
+    ? {
+        slug: story.slug,
+        theme: story.theme,
+        assets,
+        defaults: {
+          mapStyle: story.defaults.mapStyle,
+          mapOpacity: story.defaults.mapOpacity,
+          pinColor: story.defaults.pinColor,
+          pinRadius: story.defaults.pinRadius,
+        },
+      }
+    : null
+
+  const mapEditStyle = (() => {
+    if (!mapEditSel) return story?.defaults.mapStyle
+    const spec = mapSpecForSelection(mapEditSel)
+    return spec?.appearance.mapStyle ?? story?.defaults.mapStyle
+  })()
+  const mapEditIsBackground = mapEditSel?.kind === 'background'
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       {fontImportUrl && <link href={fontImportUrl} rel="stylesheet" />}
 
-      {/* ── Controls ─────────────────────────────────────────────────────── */}
-      <div className="w-full shrink-0 space-y-4 lg:w-80">
-        {/* Story */}
-        <label className={labelCls}>
-          Story
-          <select value={slug} onChange={(e) => setSlug(e.target.value)} className={selectCls}>
-            {stories.length === 0 && <option value="">No stories</option>}
-            {stories.map((s) => (
-              <option key={s.slug} value={s.slug}>
-                {s.title || s.slug}
-              </option>
-            ))}
-          </select>
-        </label>
+      {/* ── Top bar: title · saved cards · actions ─────────────────────────── */}
+      <div className="flex shrink-0 items-center gap-3">
+        <h1 className="text-lg font-semibold text-neutral-100">Share cards</h1>
 
-        {error && (
-          <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
-            {error}
-          </p>
-        )}
-        {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
-
-        {/* Section */}
-        {units.length > 0 && (
-          <label className={labelCls}>
-            Section
-            <select
-              value={unitIdx}
-              onChange={(e) => setUnitIdx(Number(e.target.value))}
-              className={selectCls}
-            >
-              {units.map((u, i) => (
-                <option key={`${u.parentIndex}-${u.subIndex}`} value={i}>
-                  {u.heading?.slice(0, 60) || `Section ${u.parentIndex + 1}`}
-                  {u.subIndex > 0 ? ` · step ${u.subIndex}` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {/* Card style + ratio */}
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelCls}>
-            Card style
-            <select
-              value={variant}
-              onChange={(e) => setVariant(e.target.value as CardVariant)}
-              className={selectCls}
-            >
-              {availableVariants.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={labelCls}>
-            Format
-            <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
-              {ASPECT_RATIOS.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        {/* Data scope */}
-        {variant === 'graph' && (
-          <label className={labelCls}>
-            Data shown
-            <select
-              value={graphScope}
-              onChange={(e) => setGraphScope(e.target.value as GraphScope)}
-              className={selectCls}
-            >
-              {GRAPH_SCOPES.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {/* Caption overrides */}
-        <div>
-          <span className={labelCls}>Caption (optional)</span>
-          <input
-            value={headingOverride}
-            onChange={(e) => setHeadingOverride(e.target.value)}
-            placeholder="Heading — blank uses the section heading"
-            className={inputCls}
-          />
-          <input
-            value={subheadingOverride}
-            onChange={(e) => setSubheadingOverride(e.target.value)}
-            placeholder="Subheading"
-            className={inputCls}
-          />
-        </div>
-
-        <hr className="border-white/10" />
-
-        {/* Emojis */}
-        <div>
-          <span className={labelCls}>Emojis</span>
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {EMOJI_PALETTE.map((e) => (
-              <button
-                key={e}
-                onClick={() => addEmojiOverlay(e)}
-                className="rounded-md border border-white/10 bg-neutral-900 px-1.5 py-1 text-base hover:border-white/30"
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Flags */}
-        <div>
-          <span className={labelCls}>Flags</span>
-          <input
-            value={flagQuery}
-            onChange={(e) => setFlagQuery(e.target.value)}
-            placeholder="Search a country…"
-            className={inputCls}
-          />
-          <div className="mt-1.5 grid max-h-44 grid-cols-6 gap-1.5 overflow-y-auto">
-            {filteredFlags.map((f) => (
-              <button
-                key={f.code}
-                onClick={() => addFlagOverlay(f.code, f.name)}
-                title={f.name}
-                className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-sm border border-white/10 bg-neutral-900 hover:border-white/30"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={flagThumbUrl(f.code)} alt={f.name} className="h-full w-full object-cover" />
-              </button>
-            ))}
-            {filteredFlags.length === 0 && (
-              <p className="col-span-6 py-2 text-center text-[11px] text-neutral-600">
-                No country matches “{flagQuery}”.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Upload + Generate */}
-        <div>
-          <span className={labelCls}>Add image</span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => onPickUpload(e.target.files?.[0] ?? null)}
-            className="mt-1.5 block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
-          />
-          <div className="mt-2 space-y-1.5 rounded-lg border border-white/10 bg-neutral-950/60 p-2.5">
-            <textarea
-              value={aiSubject}
-              onChange={(e) => setAiSubject(e.target.value)}
-              rows={2}
-              placeholder="Generate an image — describe it…"
-              className="w-full resize-vertical rounded border border-white/10 bg-neutral-950 p-2 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-            />
-            <input
-              value={aiStyle}
-              onChange={(e) => setAiStyle(e.target.value)}
-              placeholder="Style (optional) — e.g. editorial photo"
-              className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-            />
-            <button
-              onClick={() => void handleGenerate()}
-              disabled={aiBusy || !aiSubject.trim()}
-              className="w-full rounded-md bg-white px-3 py-1.5 text-xs font-medium text-neutral-950 disabled:opacity-40"
-            >
-              {aiBusy ? 'Generating…' : 'Generate & place'}
-            </button>
-            {aiError && <p className="text-[11px] text-red-400">{aiError}</p>}
-          </div>
-        </div>
-
-        {/* Story assets */}
-        {assets.length > 0 && (
-          <div>
-            <span className={labelCls}>Story assets</span>
-            <div className="mt-1.5 grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto">
-              {assets.map((a) => (
-                <button
-                  key={a.url}
-                  onClick={() => addImageOverlay(a.url, a.filename)}
-                  title={a.filename}
-                  className="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-white/10 bg-neutral-900 hover:border-white/30"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={a.url} alt="" className="max-h-full max-w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Placed overlays */}
-        {overlays.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[11px] text-neutral-500">Placed · drag on the card to move</span>
-            {overlays.map((o) => (
-              <div
-                key={o.id}
-                onClick={() => setSelectedOverlayId(o.id)}
-                className={`flex items-center gap-2 rounded-md border p-1.5 ${
-                  selectedOverlayId === o.id ? 'border-sky-400/70 bg-white/5' : 'border-white/10'
-                }`}
-              >
-                {o.kind === 'emoji' ? (
-                  <span className="w-6 text-center text-base">{o.text}</span>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={o.url} alt="" className="h-6 w-6 shrink-0 object-contain" />
-                )}
-                <span className="flex-1 truncate text-[11px] text-neutral-300">{o.label}</span>
-                <input
-                  type="range"
-                  min={4}
-                  max={90}
-                  value={o.widthPct}
-                  onChange={(e) => setOverlayWidth(o.id, Number(e.target.value))}
-                  className="w-20"
-                  title="Size"
-                />
-                <button
-                  onClick={() => removeOverlay(o.id)}
-                  className="rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
-                  aria-label="Remove"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <hr className="border-white/10" />
-
-        <div className="flex gap-2">
+        <div ref={savedRef} className="relative">
           <button
-            onClick={() => void handleDownload()}
-            disabled={!selectedUnit || downloading}
-            className="flex-1 rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => setSavedOpen((o) => !o)}
+            disabled={savedCards.length === 0}
+            className="flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-neutral-200 transition-colors hover:bg-white/10 disabled:opacity-40"
           >
-            {downloading ? 'Rendering…' : 'Download PNG'}
+            Saved cards{savedCards.length > 0 ? ` · ${savedCards.length}` : ''}
+            <span className="text-neutral-500">▾</span>
           </button>
-          <button
-            onClick={() => void handleSave()}
-            disabled={!selectedUnit || saving}
-            className="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-
-        {/* Saved cards */}
-        {savedCards.length > 0 && (
-          <div>
-            <span className={labelCls}>Saved cards</span>
-            <div className="mt-1.5 space-y-1.5">
+          {savedOpen && savedCards.length > 0 && (
+            <div className="absolute left-0 top-full z-50 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg border border-white/10 bg-neutral-900 p-1.5 shadow-xl">
               {savedCards.map((c) => (
                 <div
                   key={c.id}
-                  className={`flex items-center gap-2 rounded-md border p-1.5 ${
-                    currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-white/10'
-                  }`}
+                  className={`flex items-center gap-2 rounded-md border p-1.5 ${currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-transparent hover:bg-white/5'}`}
                 >
                   <button
-                    onClick={() => loadCard(c)}
+                    onClick={() => {
+                      loadCard(c)
+                      setSavedOpen(false)
+                    }}
                     title="Load into editor"
                     className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
                   >
@@ -753,38 +718,200 @@ export function ShareCardCreator({
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <div className="flex-1" />
+
+        <button
+          onClick={() => void handleDownload()}
+          disabled={!composition || downloading}
+          className="rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {downloading ? 'Rendering…' : 'Download PNG'}
+        </button>
+        <button
+          onClick={() => void handleSave()}
+          disabled={!composition || saving}
+          className="rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
-      {/* ── Preview ──────────────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 items-start justify-center rounded-xl border border-white/10 bg-neutral-950/40 p-6">
-        {story && selectedUnit ? (
+      {/* ── 3-pane row ─────────────────────────────────────────────────────── */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+
+      {/* ── Left: icon rail + active-category panel ──────────────────────────── */}
+      <div className="flex w-full shrink-0 gap-2 lg:h-full lg:min-h-0 lg:w-80">
+        {/* icon rail */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              title={label}
+              onClick={() => selectTab(id)}
+              className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                activeTab === id
+                  ? 'border-sky-400/60 bg-white/10 text-white'
+                  : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+              }`}
+            >
+              <Icon size={18} weight={activeTab === id ? 'fill' : 'regular'} />
+            </button>
+          ))}
+        </div>
+
+        {/* active-category panel */}
+        <div className="min-w-0 flex-1 space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+          {error && (
+            <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">{error}</p>
+          )}
+          {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
+
+          {activeTab === 'setup' && (
+            <>
+              <label className={labelCls}>
+                Story {slug === '' ? '· composing from scratch' : '· attached'}
+                <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
+                  <option value="">Blank canvas (no story)</option>
+                  {stories.map((s) => (
+                    <option key={s.slug} value={s.slug}>
+                      {s.title || s.slug}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {slug === '' && (
+                <p className="text-[10px] text-neutral-600">
+                  Build with backgrounds, text, images, icons &amp; flags. Attach a story above to pull in
+                  its theme, map &amp; chart.
+                </p>
+              )}
+              {units.length > 0 && (
+                <label className={labelCls}>
+                  Section
+                  <select value={unitIdx} onChange={(e) => pickUnit(Number(e.target.value))} className={selectCls}>
+                    {units.map((u, i) => (
+                      <option key={`${u.parentIndex}-${u.subIndex}`} value={i}>
+                        {u.heading?.slice(0, 50) || `Section ${u.parentIndex + 1}`}
+                        {u.subIndex > 0 ? ` · step ${u.subIndex}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <label className={labelCls}>
+                  Template
+                  <select value={templateKind} onChange={(e) => pickTemplate(e.target.value as TemplateKind)} className={selectCls}>
+                    {TEMPLATES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={labelCls}>
+                  Format
+                  <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
+                    {ASPECT_RATIOS.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {composition && (
+                <label className="flex items-center gap-2 text-[12px] text-neutral-200">
+                  <input
+                    type="checkbox"
+                    checked={composition.branding.visible}
+                    onChange={(e) => setComposition({ ...composition, branding: { ...composition.branding, visible: e.target.checked } })}
+                    className="accent-sky-400"
+                  />
+                  Show branding footer
+                </label>
+              )}
+            </>
+          )}
+
+          {composition && inspectorStory && activeTab === 'background' && (
+            <Inspector composition={composition} selection={{ kind: 'background' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+          )}
+          {composition && inspectorStory && activeTab === 'hero' && (
+            <Inspector composition={composition} selection={{ kind: 'hero' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+          )}
+
+          {composition && activeTab === 'elements' && (
+            <>
+              <LayerPanel
+                composition={composition}
+                onChange={setComposition}
+                selection={selection}
+                setSelection={setSelection}
+                story={{ slug: story!.slug, theme: story!.theme, assets }}
+                sections={['elements']}
+              />
+              {selection?.kind === 'element' && inspectorStory && (
+                <div className="border-t border-white/10 pt-3">
+                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+                </div>
+              )}
+            </>
+          )}
+
+          {composition && activeTab === 'text' && (
+            <>
+              <LayerPanel
+                composition={composition}
+                onChange={setComposition}
+                selection={selection}
+                setSelection={setSelection}
+                story={{ slug: story!.slug, theme: story!.theme, assets }}
+                sections={['text']}
+              />
+              {(selection?.kind === 'text' || selection?.kind === 'annotation') && inspectorStory && (
+                <div className="border-t border-white/10 pt-3">
+                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+                </div>
+              )}
+            </>
+          )}
+
+          {!composition && !loading && <p className="text-[11px] text-neutral-600">Pick a story to start.</p>}
+        </div>
+      </div>
+
+      {/* ── Center: preview + drag overlay ─────────────────────────────────── */}
+      <div
+        ref={previewBoxRef}
+        className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950/40 p-4 lg:h-full"
+      >
+        {story && selectedUnit && composition ? (
           <div className="relative" style={{ width: renderW * previewScale, height: renderH * previewScale }}>
             <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left', width: renderW, height: renderH }}>
               <ThemeProvider theme={story.theme}>
                 <VerticalLoader vertical={story.vertical ?? undefined}>
                   <ShareCard
                     ref={cardRef}
+                    composition={composition}
                     unit={selectedUnit}
-                    index={unitIdx}
                     ratio={ratio}
                     slug={story.slug}
                     title={story.title}
                     vertical={story.vertical ?? undefined}
                     accessToken={accessToken}
-                    variant={variant}
-                    graphScope={graphScope}
-                    shareOverride={shareOverride}
                     palette={story.defaults.mapPalette}
                     fontstack={story.defaults.mapFontstack}
                     highlightCountry={story.defaults.highlightCountry}
                     highlightColor={story.defaults.highlightColor}
-                    mapOpacity={story.defaults.mapOpacity}
                     mapStyle={story.defaults.mapStyle}
+                    mapOpacity={story.defaults.mapOpacity}
                     defaultPinColor={story.defaults.pinColor}
                     defaultPinRadius={story.defaults.pinRadius}
-                    overlays={overlays}
                     disableDownload
                   />
                 </VerticalLoader>
@@ -792,38 +919,55 @@ export function ShareCardCreator({
             </div>
 
             {/* Drag layer over the card (not part of the captured node). */}
-            <div ref={interactionRef} className="absolute inset-0">
-              {overlays.map((o) => (
-                <div
-                  key={o.id}
-                  onPointerDown={(e) => onOverlayPointerDown(e, o.id)}
-                  className="absolute cursor-move"
-                  style={{
-                    left: `${o.xPct}%`,
-                    top: `${o.yPct}%`,
-                    width: o.kind === 'image' ? `${o.widthPct}%` : 28,
-                    aspectRatio: '1 / 1',
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
+            <div ref={interactionRef} className="absolute inset-0" onPointerDown={() => setSelection(null)}>
+              {draggables.map((d) => {
+                const active =
+                  !!selection && JSON.stringify(selection) === JSON.stringify(d.sel)
+                return (
                   <div
-                    className={
-                      'h-full w-full rounded ' +
-                      (selectedOverlayId === o.id
-                        ? 'ring-2 ring-sky-400/90'
-                        : 'ring-1 ring-transparent hover:ring-white/30')
-                    }
-                  />
-                </div>
-              ))}
+                    key={d.key}
+                    onPointerDown={(e) => onLayerPointerDown(e, d.sel)}
+                    className="absolute cursor-move"
+                    style={{
+                      // % is relative to the interaction box (already the card's
+                      // on-screen size), so it's scale-independent. Pixel height
+                      // is in card-render coords, so it scales by previewScale.
+                      left: `${d.t.xPct}%`,
+                      top: `${d.t.yPct}%`,
+                      width: `${d.t.widthPct}%`,
+                      height: d.heightPx ? d.heightPx * previewScale : undefined,
+                      aspectRatio: d.heightPx ? undefined : '1 / 1',
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    <div className={`h-full w-full rounded ${active ? 'ring-2 ring-sky-400/90' : 'ring-1 ring-transparent hover:ring-white/30'}`} />
+                  </div>
+                )
+              })}
             </div>
           </div>
         ) : (
-          <p className="py-20 text-center text-xs text-neutral-600">
-            {loading ? 'Loading story…' : 'Pick a story and section to preview a card.'}
-          </p>
+          <p className="py-20 text-center text-xs text-neutral-600">{loading ? 'Loading story…' : 'Pick a story and section to start.'}</p>
         )}
       </div>
+      </div>
+
+      {/* ── Map edit overlay ───────────────────────────────────────────────── */}
+      {mapEditOpen && story && (
+        <MapPickerModal
+          sectionLabel={`${selectedUnit?.heading?.slice(0, 50) || story.title} · ${ratio}`}
+          style={mapEditStyle}
+          initialView={mapEditSeed ?? undefined}
+          focusArea={mapEditIsBackground ? SHARE_FOCUS_AREA[ratio] : CONTAINED_FOCUS}
+          frame={
+            mapEditSel?.kind === 'element'
+              ? { width: 1080, height: 1080, label: `Map element · ${ratio}` }
+              : { width: OUTPUT_SIZE[ratio].w, height: OUTPUT_SIZE[ratio].h, label: `Share card · ${ratio}` }
+          }
+          onApplyView={applyMapView}
+          onClose={() => setMapEditOpen(false)}
+        />
+      )}
     </div>
   )
 }

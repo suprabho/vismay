@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { EChartsOption } from 'echarts'
 import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
+import { useChartDataOverride } from '../lib/chartDataOverride'
 import StoryEChart from './StoryEChart'
 
 /**
@@ -87,6 +88,7 @@ function readThemeVars(el: HTMLElement | null): Record<string, string> {
 export default function GenericChart({ slug, id, activeStep }: Props) {
   const colors = useChartColors()
   const mobile = useIsMobile()
+  const override = useChartDataOverride(id)
   const [data, setData] = useState<ChartData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -102,6 +104,14 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
   useEffect(() => {
     let cancelled = false
     setError(null)
+    // A per-card override (admin share-card composer) replaces the fetch — the
+    // edited chart JSON renders without touching the story's stored chart-data.
+    if (override !== undefined) {
+      setData(override as ChartData)
+      return () => {
+        cancelled = true
+      }
+    }
     setData(null)
     fetch(`/api/chart-data/${slug}/${id}`)
       .then((r) => {
@@ -117,7 +127,7 @@ export default function GenericChart({ slug, id, activeStep }: Props) {
     return () => {
       cancelled = true
     }
-  }, [slug, id])
+  }, [slug, id, override])
 
   if (error) {
     return (
