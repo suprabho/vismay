@@ -436,9 +436,20 @@ function ElementInspector({
       )}
 
       {el.kind === 'flag' && (
-        <p className="text-[11px] text-neutral-500">
-          Flag · <span className="uppercase text-neutral-300">{el.code}</span>
-        </p>
+        <div className="space-y-2">
+          <p className="text-[11px] text-neutral-500">
+            Flag · <span className="uppercase text-neutral-300">{el.code}</span>
+          </p>
+          <label className="flex items-center gap-2 text-[12px] text-neutral-200">
+            <input
+              type="checkbox"
+              checked={!!el.circle}
+              onChange={(e) => onChange(updateElement(composition, id, { circle: e.target.checked }))}
+              className="accent-sky-400"
+            />
+            Clip to circle
+          </label>
+        </div>
       )}
 
       {el.kind === 'icon' && (

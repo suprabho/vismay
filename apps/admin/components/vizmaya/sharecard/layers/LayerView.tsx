@@ -62,12 +62,19 @@ export function ElementView({
           {element.glyph}
         </span>
       ) : element.kind === 'flag' ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={proxiedOverlaySrc(element.src)}
-          alt=""
-          style={{ display: 'block', width: '100%', objectFit: 'contain', filter: DROP_SHADOW }}
-        />
+        element.circle ? (
+          <div style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: '50%', overflow: 'hidden', filter: DROP_SHADOW }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={proxiedOverlaySrc(element.src)} alt="" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={proxiedOverlaySrc(element.src)}
+            alt=""
+            style={{ display: 'block', width: '100%', objectFit: 'contain', filter: DROP_SHADOW }}
+          />
+        )
       ) : element.kind === 'icon' ? (
         <PhosphorIcon
           name={element.name}
