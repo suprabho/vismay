@@ -16,11 +16,17 @@ import type { AspectRatio } from '../AspectRatioToggle'
 
 /** Transform for a freely-placed element / annotation. Position is the layer
  *  CENTER as a % of the card; `widthPct` is the box width as a % of card width
- *  (emoji/icon glyph size derives from it). All values are resolution-free. */
+ *  (emoji/icon glyph size derives from it). All values are resolution-free.
+ *
+ *  `heightPct` is set only on GRAPHIC elements (chart / map / box-fit image) —
+ *  they need an explicit box height to render into (charts especially). When it
+ *  is absent the layer self-sizes: emoji/icon hug their glyph, an aspect image
+ *  keeps its intrinsic ratio, a map falls back to a square. */
 export interface Transform {
   xPct: number
   yPct: number
   widthPct: number
+  heightPct?: number
   scale: number
   rotation: number
   opacity: number
@@ -167,12 +173,40 @@ export type ElementLayer = ElementBase &
     | { kind: 'flag'; code: string; src: string; circle?: boolean; widthPx?: number; heightPx?: number }
     | { kind: 'icon'; name: string; weight: PhosphorWeight; color: string }
     | { kind: 'image'; src: string; source: ImageSource; objectFit: 'cover' | 'contain' }
+    | {
+        kind: 'chart'
+        /** Story chart id (resolved via `/api/chart-data/<slug>/<id>`). Empty for
+         *  a from-scratch chart defined purely by `dataOverride`. */
+        chartId: string
+        /** Per-card chart-data override (full chart-data JSON), edited via Monaco.
+         *  When set it replaces the story fetch (and IS the data for a custom chart). */
+        dataOverride?: unknown
+        heading?: string
+        subheading?: string
+      }
     | ({ kind: 'map' } & MapSpec)
   )
 
 export type PhosphorWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
 
 export type ElementKind = ElementLayer['kind']
+
+/** Graphic ("hero-class") element kinds — the big foreground visuals that the
+ *  composer groups together and offers a width×height box for. */
+export const GRAPHIC_ELEMENT_KINDS = ['chart', 'map', 'image'] as const
+
+/** Default box height (% of card) for a newly added graphic element. */
+export const DEFAULT_GRAPHIC_HEIGHT_PCT = 55
+
+/** Whether an element is currently sized by an explicit width×height box. A
+ *  chart always is (it needs a height to paint into); a map / image is box-fit
+ *  only when it carries a `heightPct`, otherwise it self-sizes (square map /
+ *  intrinsic-ratio image). */
+export function isBoxSized(el: ElementLayer): boolean {
+  if (el.kind === 'chart') return true
+  if (el.kind === 'map' || el.kind === 'image') return el.transform.heightPct != null
+  return false
+}
 
 // ── Text ────────────────────────────────────────────────────────────────────
 export interface TextStyle {
@@ -234,6 +268,13 @@ export interface BrandingSlot {
 // ── The whole card ──────────────────────────────────────────────────────────
 export interface CardComposition {
   background: BackgroundLayer
+  /**
+   * @deprecated The single hero graphic was promoted to multiple `chart` / `map`
+   * graphic ELEMENTS in `elements` (reorderable + collapsible). New compositions
+   * never set this; `normalizeComposition` folds any legacy hero from an old
+   * saved card into an element on load. `HeroLayer` / `HeroBox` are retained only
+   * as migration inputs.
+   */
   hero?: HeroLayer
   elements: ElementLayer[]
   text: TextSlots

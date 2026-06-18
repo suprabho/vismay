@@ -32,7 +32,7 @@ export function transformWrapperStyle(
     opts.widthPx != null
       ? { width: opts.widthPx, height: opts.heightPx ?? opts.widthPx }
       : opts.sizeByWidth
-        ? { width: `${t.widthPct}%` }
+        ? { width: `${t.widthPct}%`, ...(t.heightPct != null ? { height: `${t.heightPct}%` } : {}) }
         : {}
   return {
     position: 'absolute',
@@ -55,8 +55,9 @@ export function ElementView({
   cardWidth: number
 }) {
   if (!element.visible) return null
-  // Map elements are rendered by LayeredShareCard (Mapbox + ready-gate).
-  if (element.kind === 'map') return null
+  // Maps + charts are rendered by LayeredShareCard (Mapbox / chart ready-gate);
+  // ElementView only handles the self-contained decorations + box images.
+  if (element.kind === 'map' || element.kind === 'chart') return null
 
   // Flags get an explicit pixel box when widthPx is set; otherwise flags +
   // images size by widthPct. (A flag PNG is ~1280px intrinsic, so without an
@@ -68,6 +69,9 @@ export function ElementView({
       ? { widthPx: flagWPx, heightPx: flagHPx ?? flagWPx }
       : { sizeByWidth: element.kind === 'image' || element.kind === 'flag' }
   const glyphPx = (element.transform.widthPct / 100) * cardWidth
+  // A box-fit ("hero") image carries a heightPct → fill the wrapper's W×H box;
+  // without one it keeps its intrinsic ratio (width only).
+  const boxImage = element.kind === 'image' && element.transform.heightPct != null
 
   return (
     <div style={transformWrapperStyle(element.transform, wrapperOpts)}>
@@ -110,7 +114,7 @@ export function ElementView({
         <img
           src={proxiedOverlaySrc(element.src)}
           alt=""
-          style={{ display: 'block', width: '100%', objectFit: element.objectFit, filter: DROP_SHADOW }}
+          style={{ display: 'block', width: '100%', height: boxImage ? '100%' : undefined, objectFit: element.objectFit, filter: DROP_SHADOW }}
         />
       )}
     </div>
