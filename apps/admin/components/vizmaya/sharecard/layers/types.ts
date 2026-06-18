@@ -1,4 +1,4 @@
-import type { MapView } from '@vismay/viz-engine'
+import type { MapView, MapPinConfig, MapRegionLayer, HeatmapLayer, MapTextLabel } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 
 /**
@@ -35,6 +35,20 @@ export const DEFAULT_TRANSFORM: Transform = {
   opacity: 1,
 }
 
+/** Authored map content (parsed from the map-YAML editor). When present it
+ *  takes precedence over the story unit's resolved map — this is what powers a
+ *  from-scratch map and per-card data overrides. Mirrors a story `map:` block. */
+export interface MapData {
+  center?: [number, number]
+  zoom?: number
+  pitch?: number
+  bearing?: number
+  pins?: MapPinConfig[]
+  regions?: MapRegionLayer
+  heatmap?: HeatmapLayer
+  textLabels?: MapTextLabel[]
+}
+
 /** Per-card map overrides shared by every map ROLE (background / hero / object).
  *  Camera is per-ratio because framing differs per aspect. Everything else
  *  falls through to the story's `defaults.*` when unset. */
@@ -49,6 +63,9 @@ export interface MapSpec {
     pinColor?: string
     pinRadius?: number
   }
+  /** Authored map content (pins/regions/heatmap/labels + camera defaults),
+   *  edited as YAML. Overrides the story unit's resolved map when set. */
+  data?: MapData
 }
 
 export function emptyMapSpec(): MapSpec {

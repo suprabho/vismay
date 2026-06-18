@@ -194,6 +194,15 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     (spec: MapSpec): MapView | null => {
       const r = spec.camera[ratio]
       if (r) return r
+      // Authored map YAML carries its own camera (used as-is, no zoom-delta).
+      if (spec.data?.center) {
+        return {
+          center: spec.data.center,
+          zoom: spec.data.zoom ?? 2,
+          pitch: spec.data.pitch ?? 9,
+          bearing: spec.data.bearing ?? 0,
+        }
+      }
       if (!resolvedMap?.center) return null
       return {
         center: resolvedMap.center,
@@ -262,6 +271,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
           style: p.spec.appearance.mapStyle ?? null,
           pc: p.spec.appearance.pinColor ?? null,
           pr: p.spec.appearance.pinRadius ?? null,
+          data: p.spec.data ?? null,
         })),
       ),
     [mapPlacements, ratio],
@@ -291,9 +301,11 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     (id: string, spec: MapSpec, contained: boolean) => {
       const cam = effectiveCamera(spec)
       if (!cam) return null
-      const pins = spec.layers.pins ? resolvedPins : []
-      const regions = spec.layers.regions ? resolvedMap?.regions : undefined
-      const heatmap = spec.layers.heatmap ? resolvedMap?.heatmap : undefined
+      // Authored map YAML (spec.data) wins over the story unit's resolved map.
+      const pins = spec.layers.pins ? spec.data?.pins ?? resolvedPins : []
+      const regions = spec.layers.regions ? spec.data?.regions ?? resolvedMap?.regions : undefined
+      const heatmap = spec.layers.heatmap ? spec.data?.heatmap ?? resolvedMap?.heatmap : undefined
+      const textLabels = spec.data?.textLabels ?? resolvedMap?.textLabels
       return (
         <>
           <ShareMapBg
@@ -307,7 +319,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
             pins={pins}
             regions={regions}
             heatmap={heatmap}
-            textLabels={resolvedMap?.textLabels}
+            textLabels={textLabels}
             onReady={() => handleMapReady(id)}
             palette={palette}
             fontstack={fontstack}

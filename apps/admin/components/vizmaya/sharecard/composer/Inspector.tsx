@@ -30,6 +30,7 @@ import { ImagePicker, type AssetEntry } from './ImagePicker'
 import { IconPicker } from './IconPicker'
 import { EmojiPicker } from './EmojiPicker'
 import { ChartJsonDrawer } from './ChartJsonDrawer'
+import { MapYamlDrawer } from './MapYamlDrawer'
 
 export interface MapDefaults {
   mapStyle?: string
@@ -96,6 +97,7 @@ function MapControls({
   onEditCamera: () => void
 }) {
   const a = spec.appearance
+  const [yamlOpen, setYamlOpen] = useState(false)
   return (
     <div className="space-y-2">
       <button
@@ -104,6 +106,20 @@ function MapControls({
       >
         Edit camera (drag &amp; zoom)
       </button>
+      <button
+        onClick={() => setYamlOpen(true)}
+        className="w-full rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-100 hover:bg-white/10"
+      >
+        {spec.data ? 'Edit map data (YAML)' : 'Add map data (YAML)'}
+      </button>
+      {spec.data && (
+        <button onClick={() => onPatch({ data: undefined })} className="text-[11px] text-neutral-400 hover:text-white">
+          Clear map data
+        </button>
+      )}
+      {yamlOpen && (
+        <MapYamlDrawer initial={spec.data} onApply={(data) => onPatch({ data })} onClose={() => setYamlOpen(false)} />
+      )}
       <div className="flex flex-wrap gap-x-3 gap-y-1">
         {(['pins', 'regions', 'heatmap'] as const).map((k) => (
           <label key={k} className="flex items-center gap-1.5 text-[11px] capitalize text-neutral-300">
