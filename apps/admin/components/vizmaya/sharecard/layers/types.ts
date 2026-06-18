@@ -165,6 +165,11 @@ export interface ElementBase {
   transform: Transform
   /** Set on elements produced by a lossy v1→v2 migration so the UI can warn. */
   migratedFromV1?: boolean
+  /** Membership in a foreground GROUP (see `CardComposition.groups`). Members of
+   *  the same group are kept CONTIGUOUS in `elements` (group time + block-aware
+   *  reorders maintain this) so the panel can render them as one block and their
+   *  z-order stays coherent. Absent = ungrouped. The renderer ignores this. */
+  groupId?: string
 }
 
 export type ElementLayer = ElementBase &
@@ -190,6 +195,18 @@ export type ElementLayer = ElementBase &
 export type PhosphorWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
 
 export type ElementKind = ElementLayer['kind']
+
+/** A named foreground group. Membership lives on the elements (`groupId`); this
+ *  registry just carries the group's label + collapse state, ordered for the
+ *  panel. A group is purely an EDITOR concept — it lets the user move / resize /
+ *  rotate its members as one unit (each member's own `transform` is rewritten,
+ *  so the flat renderer needs no awareness of groups). */
+export interface ElementGroup {
+  id: string
+  name: string
+  /** Panel-only: members hidden under a collapsed header. */
+  collapsed?: boolean
+}
 
 /** Graphic ("hero-class") element kinds — the big foreground visuals that the
  *  composer groups together and offers a width×height box for. */
@@ -284,6 +301,11 @@ export interface CardComposition {
    */
   hero?: HeroLayer
   elements: ElementLayer[]
+  /** Foreground groups (membership is on each element's `groupId`). Optional /
+   *  additive: cards saved before grouping existed simply have no groups, and a
+   *  stale registry entry with no remaining members is harmless (the panel skips
+   *  empty groups). */
+  groups?: ElementGroup[]
   text: TextSlots
   branding: BrandingSlot
 }

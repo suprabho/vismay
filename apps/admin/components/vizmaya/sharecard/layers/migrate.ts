@@ -10,6 +10,7 @@ import type {
   Transform,
 } from './types'
 import { DEFAULT_HERO_BOX, DEFAULT_TRANSFORM } from './types'
+import { normalizeGroupContiguity } from '../composer/mutations'
 
 /**
  * v1 → v2 migration. v1 stored a `variant` + caption/map/overlay overrides; v2
@@ -226,8 +227,9 @@ export function heroToElement(hero: HeroLayer): ElementLayer {
  *  ever see graphics as elements. Prepended so the converted hero sits at the
  *  bottom of the element stack — closest to its old beneath-everything role. */
 export function normalizeComposition(c: CardComposition): CardComposition {
-  if (!c.hero) return c
-  return { ...c, hero: undefined, elements: [heroToElement(c.hero), ...c.elements] }
+  const folded = c.hero ? { ...c, hero: undefined, elements: [heroToElement(c.hero), ...c.elements] } : c
+  // Keep group members contiguous so the composer renders one header per group.
+  return normalizeGroupContiguity(folded)
 }
 
 /** Derived list-label discriminator. Recomputable; never used for correctness. */
