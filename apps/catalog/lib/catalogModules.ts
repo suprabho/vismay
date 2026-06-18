@@ -13,7 +13,10 @@ import {
   sample as matchCardSample,
   sampleGrid as matchCardGridSample,
 } from '@vismay/footshorts-viz/modules/match-card/sample'
-import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-row/sample'
+import {
+  sample as matchRowSample,
+  sampleStack as matchRowStackSample,
+} from '@vismay/footshorts-viz/modules/match-row/sample'
 import {
   sample as matchTileSample,
   sampleGrid as matchTileGridSample,
@@ -95,6 +98,13 @@ export const catalogModules: CatalogEntry[] = [
     sample: matchCardGridSample,
   },
   { type: 'fs:match-row', category: 'Footshorts', sample: matchRowSample },
+  {
+    type: 'fs:match-row',
+    id: 'fs:match-row@stack',
+    label: 'Footshorts — match row (stack)',
+    category: 'Footshorts',
+    sample: matchRowStackSample,
+  },
   { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },
   {
     type: 'fs:match-tile',

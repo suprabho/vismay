@@ -6,11 +6,19 @@ import type { MatchCardConfig } from '../index'
 import { resolveFixture, splitScoreNote } from './shared'
 
 /**
- * Score-forward layout — refined version of the original card. Editorial
- * panel on a blurred neutral surface, big score line, crests flanking the
- * team names, accent border. No background image.
+ * Bare score card — the editorial panel itself: competition line, crests
+ * flanking the team names, big centered score, accent border. `ScoreLayout`
+ * centers a single one in the viz cell; the `grid` layout tiles several so every
+ * tile is the same card as the standalone `score` layout.
  */
-export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
+export function ScoreCard({
+  config,
+  width,
+}: {
+  config: MatchCardConfig
+  /** Card width. Omitted = standalone (min 300px); the grid passes `100%` to fill its cell. */
+  width?: number | string
+}) {
   const f = resolveFixture(config)
   const accent = config.accent ?? f.competitionColor ?? 'var(--color-accent)'
   const borderColor = config.borderColor ?? accent
@@ -20,15 +28,8 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
   const textColor = config.textColor ?? '#1D2A4A'
   const { main: scoreMain, note: scoreNote } = splitScoreNote(f.score)
 
-  const wrap: CSSProperties = {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '1rem',
-  }
   const card: CSSProperties = {
+    width,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -37,7 +38,10 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
     border: `1px solid ${borderColor}`,
     borderRadius: '12px',
     color: textColor,
-    minWidth: '300px',
+    // Grid tiles pass an explicit width and must shrink with their column; only
+    // the standalone card claims a minimum width.
+    minWidth: width !== undefined ? 0 : '300px',
+    boxSizing: 'border-box',
     textAlign: 'center',
     background: cardColor,
   }
@@ -98,25 +102,43 @@ export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
   }
 
   return (
-    <div style={wrap}>
-      <div style={card}>
-        {f.competitionName && <div style={competition}>{f.competitionName}</div>}
-        <div style={teams}>
-          <div style={teamCol}>
-            <Crest team={config.home} size={44} crestUrl={config.homeCrestUrl} />
-            <span style={teamName}>{f.homeName}</span>
-          </div>
-          <div style={scoreCol}>
-            <span style={score}>{scoreMain}</span>
-            {scoreNote && <span style={scoreSub}>{scoreNote}</span>}
-          </div>
-          <div style={teamCol}>
-            <Crest team={config.away} size={44} crestUrl={config.awayCrestUrl} />
-            <span style={teamName}>{f.awayName}</span>
-          </div>
+    <div style={card}>
+      {f.competitionName && <div style={competition}>{f.competitionName}</div>}
+      <div style={teams}>
+        <div style={teamCol}>
+          <Crest team={config.home} size={44} crestUrl={config.homeCrestUrl} />
+          <span style={teamName}>{f.homeName}</span>
         </div>
-        {config.kickoff && <div style={kickoff}>{config.kickoff}</div>}
+        <div style={scoreCol}>
+          <span style={score}>{scoreMain}</span>
+          {scoreNote && <span style={scoreSub}>{scoreNote}</span>}
+        </div>
+        <div style={teamCol}>
+          <Crest team={config.away} size={44} crestUrl={config.awayCrestUrl} />
+          <span style={teamName}>{f.awayName}</span>
+        </div>
       </div>
+      {config.kickoff && <div style={kickoff}>{config.kickoff}</div>}
+    </div>
+  )
+}
+
+/**
+ * Score-forward layout — refined version of the original card. Centers a single
+ * editorial score card in the viz cell. No background image.
+ */
+export default function ScoreLayout({ config }: { config: MatchCardConfig }) {
+  const wrap: CSSProperties = {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '1rem',
+  }
+  return (
+    <div style={wrap}>
+      <ScoreCard config={config} />
     </div>
   )
 }

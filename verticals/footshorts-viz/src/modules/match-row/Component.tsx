@@ -19,6 +19,10 @@ export default function MatchRowVizComponent({
     return () => cancelAnimationFrame(h)
   }, [noteReady])
 
+  // Stack mode renders several rows in one column; single mode is a one-element
+  // stack. MatchRow draws the dividing border (`last:border-b-0` clears the tail).
+  const rows = config.fixtures ?? (config.fixture ? [config.fixture] : [])
+
   return (
     <FsFrame {...pickFsBackground(config)}>
       <div
@@ -32,7 +36,9 @@ export default function MatchRowVizComponent({
         }}
       >
         <div style={{ width: '100%', maxWidth: '480px' }}>
-          <MatchRow fixture={config.fixture} variant={config.variant} />
+          {rows.map((fixture, i) => (
+            <MatchRow key={fixture.id || `row-${i}`} fixture={fixture} variant={config.variant} />
+          ))}
         </div>
       </div>
     </FsFrame>
