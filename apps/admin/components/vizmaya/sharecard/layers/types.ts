@@ -134,7 +134,7 @@ export interface ElementBase {
 export type ElementLayer = ElementBase &
   (
     | { kind: 'emoji'; glyph: string }
-    | { kind: 'flag'; code: string; src: string; circle?: boolean }
+    | { kind: 'flag'; code: string; src: string; circle?: boolean; widthPx?: number; heightPx?: number }
     | { kind: 'icon'; name: string; weight: PhosphorWeight; color: string }
     | { kind: 'image'; src: string; source: ImageSource; objectFit: 'cover' | 'contain' }
     | ({ kind: 'map' } & MapSpec)

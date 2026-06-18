@@ -26,13 +26,19 @@ const FONT_VAR: Record<FontFamily, string> = {
  *  pivots about the center in both preview and the captured clone. */
 export function transformWrapperStyle(
   t: Transform,
-  opts: { sizeByWidth: boolean },
+  opts: { sizeByWidth?: boolean; widthPx?: number; heightPx?: number },
 ): CSSProperties {
+  const size =
+    opts.widthPx != null
+      ? { width: opts.widthPx, height: opts.heightPx ?? opts.widthPx }
+      : opts.sizeByWidth
+        ? { width: `${t.widthPct}%` }
+        : {}
   return {
     position: 'absolute',
     left: `${t.xPct}%`,
     top: `${t.yPct}%`,
-    ...(opts.sizeByWidth ? { width: `${t.widthPct}%` } : {}),
+    ...size,
     transform: `translate(-50%, -50%) rotate(${t.rotation}deg) scale(${t.scale})`,
     transformOrigin: 'center center',
     opacity: t.opacity,
@@ -52,17 +58,33 @@ export function ElementView({
   // Map elements are rendered by LayeredShareCard (Mapbox + ready-gate).
   if (element.kind === 'map') return null
 
-  const sizeByWidth = element.kind === 'image'
+  // Flags get an explicit pixel box when widthPx is set; otherwise flags +
+  // images size by widthPct. (A flag PNG is ~1280px intrinsic, so without an
+  // explicit width it would render huge and `scale` couldn't tame it.)
+  const flagWPx = element.kind === 'flag' ? element.widthPx : undefined
+  const flagHPx = element.kind === 'flag' ? element.heightPx : undefined
+  const wrapperOpts =
+    flagWPx != null
+      ? { widthPx: flagWPx, heightPx: flagHPx ?? flagWPx }
+      : { sizeByWidth: element.kind === 'image' || element.kind === 'flag' }
   const glyphPx = (element.transform.widthPct / 100) * cardWidth
 
   return (
-    <div style={transformWrapperStyle(element.transform, { sizeByWidth })}>
+    <div style={transformWrapperStyle(element.transform, wrapperOpts)}>
       {element.kind === 'emoji' ? (
         <span style={{ display: 'block', fontSize: glyphPx, lineHeight: 1, filter: DROP_SHADOW }}>
           {element.glyph}
         </span>
       ) : element.kind === 'flag' ? (
-        element.circle ? (
+        flagWPx != null ? (
+          // explicit pixel box — fill it; clip to a circle/ellipse if requested
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={proxiedOverlaySrc(element.src)}
+            alt=""
+            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', borderRadius: element.circle ? '50%' : undefined, filter: DROP_SHADOW }}
+          />
+        ) : element.circle ? (
           <div style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: '50%', overflow: 'hidden', filter: DROP_SHADOW }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={proxiedOverlaySrc(element.src)} alt="" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />

@@ -449,6 +449,44 @@ function ElementInspector({
             />
             Clip to circle
           </label>
+          <label className="flex items-center gap-2 text-[12px] text-neutral-200">
+            <input
+              type="checkbox"
+              checked={el.widthPx != null}
+              onChange={(e) =>
+                onChange(
+                  updateElement(composition, id, e.target.checked ? { widthPx: 64, heightPx: 44 } : { widthPx: undefined, heightPx: undefined }),
+                )
+              }
+              className="accent-sky-400"
+            />
+            Custom size (px)
+          </label>
+          {el.widthPx != null && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Width (px)">
+                  <input
+                    type="number"
+                    min={1}
+                    value={el.widthPx}
+                    onChange={(e) => onChange(updateElement(composition, id, { widthPx: Math.max(1, Math.round(Number(e.target.value) || 0)) }))}
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="Height (px)">
+                  <input
+                    type="number"
+                    min={1}
+                    value={el.heightPx ?? el.widthPx}
+                    onChange={(e) => onChange(updateElement(composition, id, { heightPx: Math.max(1, Math.round(Number(e.target.value) || 0)) }))}
+                    className={inputCls}
+                  />
+                </Field>
+              </div>
+              <p className="text-[10px] text-neutral-600">Pixels are relative to the card; the export scales them with the format.</p>
+            </>
+          )}
         </div>
       )}
 
