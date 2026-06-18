@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
-import { EMOJI_PALETTE } from '../constants'
 import { FLAG_COUNTRIES, flagImageUrl, flagThumbUrl } from '../flags'
 import type { CardComposition, ElementLayer, TextBlock } from '../layers/types'
 import { DEFAULT_TRANSFORM, emptyMapSpec } from '../layers/types'
@@ -21,6 +20,7 @@ import {
 } from './mutations'
 import { ImagePicker, type AssetEntry } from './ImagePicker'
 import { IconPicker } from './IconPicker'
+import { EmojiPicker } from './EmojiPicker'
 import { labelCls } from './controls'
 
 interface Props {
@@ -192,12 +192,8 @@ export function LayerPanel({ composition, onChange, selection, setSelection, sto
         </div>
 
         {addMode === 'emoji' && (
-          <div className="flex flex-wrap gap-1 rounded-md border border-white/10 bg-neutral-950/50 p-2">
-            {EMOJI_PALETTE.map((g) => (
-              <button key={g} onClick={() => addEl({ kind: 'emoji', glyph: g }, g)} className="rounded-md border border-white/10 bg-neutral-900 px-1.5 py-1 text-base hover:border-white/30">
-                {g}
-              </button>
-            ))}
+          <div className="rounded-md border border-white/10 bg-neutral-950/50 p-1">
+            <EmojiPicker onPick={(g) => addEl({ kind: 'emoji', glyph: g }, g)} />
           </div>
         )}
         {addMode === 'flag' && <FlagAdd onAdd={(code, name) => addEl({ kind: 'flag', code, src: flagImageUrl(code) }, name)} />}

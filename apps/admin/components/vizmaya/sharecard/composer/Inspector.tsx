@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
-import { EMOJI_PALETTE } from '../constants'
 import type {
   BackgroundLayer,
   CardComposition,
@@ -29,6 +28,7 @@ import {
 import { ColorField, Field, NumberSlider, TransformControls, inputCls, labelCls, selectCls } from './controls'
 import { ImagePicker, type AssetEntry } from './ImagePicker'
 import { IconPicker } from './IconPicker'
+import { EmojiPicker } from './EmojiPicker'
 import { ChartJsonDrawer } from './ChartJsonDrawer'
 
 export interface MapDefaults {
@@ -428,17 +428,9 @@ function ElementInspector({
     <div className="space-y-3">
       {el.kind === 'emoji' && (
         <div>
-          <span className={labelCls}>Emoji</span>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {EMOJI_PALETTE.map((g) => (
-              <button
-                key={g}
-                onClick={() => onChange(updateElement(composition, id, { glyph: g }))}
-                className={`rounded-md border px-1.5 py-1 text-base ${el.glyph === g ? 'border-sky-400' : 'border-white/10'} bg-neutral-900 hover:border-white/30`}
-              >
-                {g}
-              </button>
-            ))}
+          <span className={labelCls}>Emoji · <span className="text-neutral-300">{el.glyph}</span></span>
+          <div className="mt-1 rounded-md border border-white/10 bg-neutral-950/50 p-1">
+            <EmojiPicker onPick={(g) => onChange(updateElement(composition, id, { glyph: g }))} />
           </div>
         </div>
       )}
