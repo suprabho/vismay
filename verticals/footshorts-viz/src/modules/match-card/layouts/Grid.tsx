@@ -57,8 +57,12 @@ function itemConfig(item: MatchCardItem, grid: MatchCardConfig): MatchCardConfig
     awayColor: item.awayColor,
     homeCrestUrl: item.homeCrestUrl,
     awayCrestUrl: item.awayCrestUrl,
-    // Inherit the grid's editorial theming so every tile matches.
-    accent: grid.accent,
+    // Inherit the grid's editorial theming so every tile matches. When the grid
+    // sets no uniform accent, a per-card `homeColor` becomes that tile's accent
+    // (border + score + competition line), so cards stay visually distinct even
+    // when they share a competition. Falls back to the competition color in
+    // ScoreCard when neither is set.
+    accent: grid.accent ?? item.homeColor,
     cardColor: grid.cardColor,
     borderColor: grid.borderColor,
     textColor: grid.textColor,
