@@ -1,4 +1,4 @@
-import type { MapView, MapPinConfig, MapRegionLayer, HeatmapLayer, MapTextLabel } from '@vismay/viz-engine'
+import type { MapView, MapPinConfig, MapRegionLayer, HeatmapLayer, MapTextLabel, Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 
 /**
@@ -220,6 +220,13 @@ export interface BrandingSlot {
 
 // ── The whole card ──────────────────────────────────────────────────────────
 export interface CardComposition {
+  /** Per-card theme override (palette + fonts). When set it overrides the
+   *  attached story's theme — or, on a blank canvas, the default editorial
+   *  theme. Drives the ThemeProvider CSS vars the renderer reads (`--color-*`,
+   *  `--font-*`), so text/accents/chart colors + the base `--color-bg` all
+   *  follow it. Absent on cards saved before the theme panel existed, which
+   *  cleanly fall back to the story/default theme. */
+  theme?: Theme
   background: BackgroundLayer
   hero?: HeroLayer
   elements: ElementLayer[]
