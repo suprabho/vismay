@@ -3,6 +3,7 @@ import type { ResolvedUnit, Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 import type {
   CardComposition,
+  ElementLayer,
   FontFamily,
   TemplateKind,
   TextBlock,
@@ -31,6 +32,11 @@ let seedSeq = 0
 function uid(prefix: string): string {
   return `${prefix}-${seedSeq++}`
 }
+
+/** Stable id for the section-derived graphic (chart / map) the `data` template
+ *  seeds. Stable so re-seeding a different section/template REPLACES it while the
+ *  user's own added elements are preserved (see ShareCardCreator's re-seed). */
+export const SEED_GRAPHIC_ID = 'seed-graphic'
 
 function textBlock(
   text: string,
@@ -88,7 +94,6 @@ export function seedTemplate(
   if (kind === 'map-caption') {
     return {
       background: support.hasMap ? { kind: 'map', ...emptyMapSpec() } : { kind: 'solid', color: c.surface },
-      hero: undefined,
       elements: [],
       text: {
         heading: heading
@@ -104,17 +109,27 @@ export function seedTemplate(
   }
 
   if (kind === 'data') {
-    // Sit the hero below the top heading so its legend/title doesn't collide
-    // with the card heading. The user can resize/move it from the inspector.
-    const heroBox = { xPct: 50, yPct: 57, widthPct: 98, heightPct: 82, scale: 1, rotation: 0, opacity: 1 }
+    // The graphic renders in the foreground (z20) band, OVER the heading — sit it
+    // below the top heading and trim its height so the two don't collide. The
+    // user can resize/move/reorder it from the inspector.
+    const graphicTransform: Transform = {
+      xPct: 50,
+      yPct: 58,
+      widthPct: 96,
+      heightPct: 76,
+      scale: 1,
+      rotation: 0,
+      opacity: 1,
+    }
+    const graphicBase = { id: SEED_GRAPHIC_ID, visible: true, locked: false, transform: graphicTransform }
+    const graphic: ElementLayer | null = support.chartId
+      ? { ...graphicBase, kind: 'chart', name: 'Chart', chartId: support.chartId }
+      : support.hasMap
+        ? { ...graphicBase, kind: 'map', name: 'Map', ...emptyMapSpec() }
+        : null
     return {
       background: { kind: 'none' },
-      hero: support.chartId
-        ? { kind: 'chart', chartId: support.chartId, heading: undefined, subheading: undefined, box: heroBox }
-        : support.hasMap
-          ? { kind: 'map', ...emptyMapSpec(), box: heroBox }
-          : undefined,
-      elements: [],
+      elements: graphic ? [graphic] : [],
       text: {
         heading: heading
           ? textBlock(heading, { xPct: 50, yPct: 9, widthPct: 90 }, { color: c.text, fontFamily: serif, fontWeight: 700, fontSizePx: 22, align: 'center' }, c.text)
@@ -129,7 +144,6 @@ export function seedTemplate(
   // title-text
   return {
     background: { kind: 'solid', color: c.background },
-    hero: undefined,
     elements: [],
     text: {
       heading: heading
