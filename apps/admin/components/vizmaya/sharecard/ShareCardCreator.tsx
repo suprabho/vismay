@@ -349,8 +349,22 @@ export function ShareCardCreator({
   }, [mapEditOpen, mapEditSel, mapSpecForSelection])
 
   // ── preview sizing ────────────────────────────────────────────────────────
+  // The canvas fills the available center column (measured), so it grows to the
+  // viewport height instead of a fixed 380×560 box.
   const { w: renderW, h: renderH } = RENDER_SIZE[ratio]
-  const previewScale = Math.min(PREVIEW_MAX_W / renderW, PREVIEW_MAX_H / renderH, 1)
+  const previewBoxRef = useRef<HTMLDivElement>(null)
+  const [previewBox, setPreviewBox] = useState<{ w: number; h: number }>({ w: PREVIEW_MAX_W, h: PREVIEW_MAX_H })
+  useEffect(() => {
+    const el = previewBoxRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect
+      if (r && r.width > 0 && r.height > 0) setPreviewBox({ w: r.width, h: r.height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const previewScale = Math.max(0.1, Math.min(previewBox.w / renderW, previewBox.h / renderH))
 
   // ── drag layers on the preview ──────────────────────────────────────────
   const interactionRef = useRef<HTMLDivElement>(null)
@@ -541,11 +555,11 @@ export function ShareCardCreator({
   const mapEditIsBackground = mapEditSel?.kind === 'background'
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row">
+    <div className="flex h-full min-h-0 flex-col gap-4 lg:flex-row">
       {fontImportUrl && <link href={fontImportUrl} rel="stylesheet" />}
 
       {/* ── Left: story/section pickers + layer panel ──────────────────────── */}
-      <div className="w-full shrink-0 space-y-4 lg:w-72">
+      <div className="w-full shrink-0 space-y-4 lg:h-full lg:w-72 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
         <label className={labelCls}>
           Story
           <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
@@ -655,7 +669,10 @@ export function ShareCardCreator({
       </div>
 
       {/* ── Center: preview + drag overlay ─────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 items-start justify-center rounded-xl border border-white/10 bg-neutral-950/40 p-6">
+      <div
+        ref={previewBoxRef}
+        className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950/40 p-4 lg:h-full"
+      >
         {story && selectedUnit && composition ? (
           <div className="relative" style={{ width: renderW * previewScale, height: renderH * previewScale }}>
             <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left', width: renderW, height: renderH }}>
@@ -718,7 +735,7 @@ export function ShareCardCreator({
       </div>
 
       {/* ── Right: inspector ───────────────────────────────────────────────── */}
-      <div className="w-full shrink-0 space-y-3 lg:w-72">
+      <div className="w-full shrink-0 space-y-3 lg:h-full lg:w-72 lg:min-h-0 lg:overflow-y-auto lg:pl-1">
         <span className={labelCls}>Inspector</span>
         {composition && inspectorStory ? (
           <Inspector
