@@ -5,11 +5,27 @@ import { createPortal } from 'react-dom'
 import CodeEditor from '../../CodeEditor'
 
 /**
- * Per-card chart-data editor. Seeds from the card's existing override, else from
- * the story's stored chart-data (`GET /api/chart-data/<slug>/<id>`). On Apply it
- * hands the parsed JSON up; the composer stores it on the hero layer's
- * `dataOverride` — the story's chart-data is never mutated.
+ * Per-card chart-data editor. Seeds from the card's existing override, else
+ * from the story's stored chart-data (`GET /api/chart-data/<slug>/<id>`) when a
+ * `chartId` is given, else an empty scaffold for a from-scratch custom chart.
+ * On Apply it hands the parsed JSON up; the composer stores it on the hero
+ * layer's `dataOverride` — the story's chart-data is never mutated.
+ *
+ * Shape: `{ steps: [{ option: <ECharts option> }] }`. Color tokens like
+ * "$accent" / "$muted" resolve to the active theme at render.
  */
+const EMPTY_CHART_SCAFFOLD = `{
+  "steps": [
+    {
+      "option": {
+        "xAxis": { "type": "category", "data": ["A", "B", "C"] },
+        "yAxis": { "type": "value" },
+        "series": [{ "type": "bar", "data": [4, 7, 3], "itemStyle": { "color": "$accent" } }]
+      }
+    }
+  ]
+}`
+
 export function ChartJsonDrawer({
   slug,
   chartId,
@@ -46,7 +62,10 @@ export function ChartJsonDrawer({
       setValue(JSON.stringify(initial, null, 2))
       return
     }
-    seedFromStory()
+    // A story chart fetches its current data; a from-scratch chart (no chartId)
+    // opens an empty scaffold to author from.
+    if (chartId) seedFromStory()
+    else setValue(EMPTY_CHART_SCAFFOLD)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -100,14 +119,14 @@ export function ChartJsonDrawer({
         </button>
         <div className="min-w-0 flex-1">
           <div className="text-xs uppercase tracking-wider text-neutral-500">Edit chart JSON</div>
-          <div className="truncate text-sm">{chartId}</div>
+          <div className="truncate text-sm">{chartId || 'Custom chart'}</div>
         </div>
         <button
           type="button"
-          onClick={seedFromStory}
+          onClick={() => (chartId ? seedFromStory() : setValue(EMPTY_CHART_SCAFFOLD))}
           className="rounded-md border border-white/15 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/10"
         >
-          Reset to story data
+          {chartId ? 'Reset to story data' : 'Reset to template'}
         </button>
         <button
           type="button"

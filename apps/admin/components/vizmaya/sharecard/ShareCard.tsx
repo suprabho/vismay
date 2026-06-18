@@ -18,8 +18,9 @@ import type {
   MapTextLabel,
   MapView,
   StoryFocusArea,
+  ResolvedForeground,
 } from '@vismay/viz-engine'
-import { resolveSlotsFlat, ChartDataOverrideProvider } from '@vismay/viz-engine'
+import { resolveSlotsFlat, ChartDataOverrideProvider, ForegroundLayoutSlot } from '@vismay/viz-engine'
 import { AuraBackground } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
 import type { CardComposition, MapSpec } from './layers/types'
@@ -74,6 +75,10 @@ const SHARE_ZOOM_DELTA: Record<AspectRatio, number> = {
 /** Contained maps (hero / free-object) fill their box with the geo center at
  *  the box center — no overlay-reserved padding. */
 const CONTAINED_FOCUS: StoryFocusArea = { top: 0, left: 0, width: 1, height: 1 }
+
+/** Synthetic chart id for a from-scratch (JSON-only) chart that isn't backed
+ *  by a story chart. The dataOverride is keyed by this id. */
+const CUSTOM_CHART_ID = 'sharecard-custom'
 
 const MAP_READY_TIMEOUT_MS = 6000
 const CHART_READY_TIMEOUT_MS = 3000
@@ -209,7 +214,8 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     return out
   }, [composition])
   const mapIds = useMemo(() => mapPlacements.map((p) => p.id), [mapPlacements])
-  const hasChart = composition.hero?.kind === 'chart' && !!composition.hero.chartId
+  const hasChart =
+    composition.hero?.kind === 'chart' && (!!composition.hero.chartId || composition.hero.dataOverride !== undefined)
 
   // ── capture readiness gates (per-map + chart) ────────────────────────────
   // Gates are one-shot promises resolved by onReady/finished. They MUST be
@@ -486,10 +492,55 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     if (hl.kind === 'map') {
       return <div style={boxStyle}>{renderMap('map:hero', hl, true)}</div>
     }
-    // Size the chart's internal stack math to the box height (not the card),
-    // so resizing the box re-renders the chart crisply within it.
+    // Custom (from-scratch) chart: no story chartId, defined purely by the
+    // edited JSON. Render a standalone chart via the foreground machinery (so
+    // it's still capture-gated) keyed by the synthetic id.
+    if (!hl.chartId && hl.dataOverride !== undefined) {
+      const foreground: ResolvedForeground = {
+        kind: 'flat',
+        layers: [{ type: 'chart', id: CUSTOM_CHART_ID } as VizLayer],
+      }
+      return (
+        <div style={boxStyle}>
+          <ChartDataOverrideProvider value={{ [CUSTOM_CHART_ID]: hl.dataOverride }}>
+            <div className="flex h-full w-full flex-col p-[14px] pb-[20px]">
+              {(hl.heading || hl.subheading) && (
+                <div className="mb-1 shrink-0">
+                  {hl.heading && (
+                    <h4 className="text-center font-serif text-[20px] font-bold leading-[1.2]" style={{ color: 'var(--color-accent)' }}>
+                      {hl.heading}
+                    </h4>
+                  )}
+                  {hl.subheading && (
+                    <p className="text-center text-[15px] leading-[1.4]" style={{ color: 'var(--color-muted)' }}>
+                      {hl.subheading}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="relative min-h-0 flex-1">
+                <div className="absolute inset-0 overflow-hidden">
+                  <ForegroundLayoutSlot
+                    slug={slug || 'custom'}
+                    foreground={foreground}
+                    unit={unit}
+                    activeStep={0}
+                    mode="capture"
+                    noteLayerReady={handleChartReady}
+                  />
+                </div>
+              </div>
+            </div>
+          </ChartDataOverrideProvider>
+        </div>
+      )
+    }
+
+    // Story chart: render the section's chart via the deck foreground; a
+    // dataOverride (if any) patches that chart by id. Stack math is sized to
+    // the box height so resizing re-renders the chart crisply within it.
     const boxHeightPx = (box.heightPct / 100) * h
-    const overrides = hl.dataOverride !== undefined ? { [hl.chartId]: hl.dataOverride } : {}
+    const overrides = hl.dataOverride !== undefined && hl.chartId ? { [hl.chartId]: hl.dataOverride } : {}
     return (
       <div style={boxStyle}>
         <ChartDataOverrideProvider value={overrides}>

@@ -364,9 +364,7 @@ function HeroInspector({
               Chart: <span className="font-mono text-neutral-300">{hero.chartId}</span>
             </p>
           ) : (
-            <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[10px] text-amber-200">
-              This section has no chart to show.
-            </p>
+            <p className="text-[10px] text-neutral-500">Custom chart — define it with JSON below.</p>
           )}
           <Field label="Chart heading">
             <input value={hero.heading ?? ''} onChange={(e) => onChange(patchHero(composition, { heading: e.target.value || undefined }))} className={inputCls} />
@@ -374,23 +372,21 @@ function HeroInspector({
           <Field label="Chart subheading">
             <input value={hero.subheading ?? ''} onChange={(e) => onChange(patchHero(composition, { subheading: e.target.value || undefined }))} className={inputCls} />
           </Field>
-          {hero.chartId && (
-            <button onClick={() => setChartOpen(true)} className="w-full rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-100 hover:bg-white/10">
-              Edit chart JSON
-            </button>
-          )}
+          <button onClick={() => setChartOpen(true)} className="w-full rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-100 hover:bg-white/10">
+            {hero.dataOverride !== undefined ? 'Edit chart JSON' : hero.chartId ? 'Edit chart JSON' : 'Add chart JSON'}
+          </button>
           {hero.dataOverride !== undefined && (
             <button
               onClick={() => onChange(patchHero(composition, { dataOverride: undefined }))}
               className="text-[11px] text-neutral-400 hover:text-white"
             >
-              Clear JSON override (use story data)
+              {hero.chartId ? 'Clear JSON override (use story data)' : 'Remove chart JSON'}
             </button>
           )}
-          {chartOpen && hero.chartId && (
+          {chartOpen && (
             <ChartJsonDrawer
               slug={story.slug}
-              chartId={hero.chartId}
+              chartId={hero.chartId || ''}
               initial={hero.dataOverride}
               onApply={(data) => onChange(patchHero(composition, { dataOverride: data }))}
               onClose={() => setChartOpen(false)}
