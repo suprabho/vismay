@@ -170,7 +170,7 @@ function HeroBoxControls({ box, onChange }: { box: HeroBox; onChange: (patch: Pa
         <NumberSlider label="Width" value={Math.round(box.widthPct)} min={10} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
         <NumberSlider label="Height" value={Math.round(box.heightPct)} min={10} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
       </div>
-      <NumberSlider label="Scale" value={box.scale} min={0.2} max={2} step={0.05} onChange={(v) => onChange({ scale: v })} format={(v) => `${v.toFixed(2)}×`} />
+      <NumberSlider label="Scale" value={box.scale} min={0.05} max={2} step={0.05} onChange={(v) => onChange({ scale: v })} format={(v) => `${v.toFixed(2)}×`} />
       <NumberSlider label="Rotate" value={Math.round(box.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
       <NumberSlider label="Opacity" value={box.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
     </div>

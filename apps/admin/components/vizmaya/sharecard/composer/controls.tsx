@@ -130,7 +130,7 @@ export function TransformControls({
         <NumberSlider label="Y" value={Math.round(transform.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
       </div>
       <NumberSlider label="Size" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
-      <NumberSlider label="Scale" value={transform.scale} min={0.2} max={3} step={0.05} onChange={(v) => onChange({ scale: v })} format={(v) => `${v.toFixed(2)}×`} />
+      <NumberSlider label="Scale" value={transform.scale} min={0.05} max={3} step={0.05} onChange={(v) => onChange({ scale: v })} format={(v) => `${v.toFixed(2)}×`} />
       <NumberSlider label="Rotate" value={Math.round(transform.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
       <NumberSlider label="Opacity" value={transform.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
     </div>
