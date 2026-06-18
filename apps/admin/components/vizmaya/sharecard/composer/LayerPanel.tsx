@@ -23,12 +23,17 @@ import { IconPicker } from './IconPicker'
 import { EmojiPicker } from './EmojiPicker'
 import { labelCls } from './controls'
 
+export type LayerSection = 'background' | 'hero' | 'text' | 'elements' | 'branding'
+
 interface Props {
   composition: CardComposition
   onChange: (next: CardComposition) => void
   selection: Selection | null
   setSelection: (s: Selection | null) => void
   story: { slug: string; theme: Theme; assets: AssetEntry[] }
+  /** Which slot sections to render. Defaults to all (the icon-rail tabs pass a
+   *  single section). */
+  sections?: LayerSection[]
 }
 
 type AddMode = null | 'emoji' | 'flag' | 'icon' | 'image'
@@ -50,8 +55,9 @@ const isSel = (a: Selection | null, b: Selection) => !!a && JSON.stringify(a) ==
 const rowCls = (active: boolean) =>
   `flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-[12px] ${active ? 'border-sky-400/70 bg-white/5' : 'border-white/10'}`
 
-export function LayerPanel({ composition, onChange, selection, setSelection, story }: Props) {
+export function LayerPanel({ composition, onChange, selection, setSelection, story, sections }: Props) {
   const [addMode, setAddMode] = useState<AddMode>(null)
+  const show = (s: LayerSection) => !sections || sections.includes(s)
 
   const newText = (): TextBlock => ({
     id: uid('txt'),
@@ -72,20 +78,25 @@ export function LayerPanel({ composition, onChange, selection, setSelection, sto
   return (
     <div className="space-y-4">
       {/* Background */}
-      <Section title="Background">
-        <button className={`w-full ${rowCls(isSel(selection, { kind: 'background' }))}`} onClick={() => setSelection({ kind: 'background' })}>
-          <span className="flex-1 text-left capitalize text-neutral-200">{composition.background.kind}</span>
-        </button>
-      </Section>
+      {show('background') && (
+        <Section title="Background">
+          <button className={`w-full ${rowCls(isSel(selection, { kind: 'background' }))}`} onClick={() => setSelection({ kind: 'background' })}>
+            <span className="flex-1 text-left capitalize text-neutral-200">{composition.background.kind}</span>
+          </button>
+        </Section>
+      )}
 
       {/* Hero graphic */}
-      <Section title="Hero graphic">
-        <button className={`w-full ${rowCls(isSel(selection, { kind: 'hero' }))}`} onClick={() => setSelection({ kind: 'hero' })}>
-          <span className="flex-1 text-left capitalize text-neutral-200">{composition.hero?.kind ?? 'none'}</span>
-        </button>
-      </Section>
+      {show('hero') && (
+        <Section title="Hero graphic">
+          <button className={`w-full ${rowCls(isSel(selection, { kind: 'hero' }))}`} onClick={() => setSelection({ kind: 'hero' })}>
+            <span className="flex-1 text-left capitalize text-neutral-200">{composition.hero?.kind ?? 'none'}</span>
+          </button>
+        </Section>
+      )}
 
       {/* Text */}
+      {show('text') && (
       <Section title="Text">
         <TextRow
           label="Heading"
@@ -143,8 +154,10 @@ export function LayerPanel({ composition, onChange, selection, setSelection, sto
           + Annotation box
         </button>
       </Section>
+      )}
 
       {/* Elements */}
+      {show('elements') && (
       <Section title="Elements">
         {composition.elements.length === 0 && <p className="text-[11px] text-neutral-600">No elements yet.</p>}
         {composition.elements.map((el, i) => (
@@ -213,13 +226,16 @@ export function LayerPanel({ composition, onChange, selection, setSelection, sto
           </div>
         )}
       </Section>
+      )}
 
       {/* Branding */}
-      <Section title="Branding">
-        <button className={`w-full ${rowCls(isSel(selection, { kind: 'branding' }))}`} onClick={() => setSelection({ kind: 'branding' })}>
-          <span className="flex-1 text-left text-neutral-200">Footer {composition.branding.visible ? '· on' : '· off'}</span>
-        </button>
-      </Section>
+      {show('branding') && (
+        <Section title="Branding">
+          <button className={`w-full ${rowCls(isSel(selection, { kind: 'branding' }))}`} onClick={() => setSelection({ kind: 'branding' })}>
+            <span className="flex-1 text-left text-neutral-200">Footer {composition.branding.visible ? '· on' : '· off'}</span>
+          </button>
+        </Section>
+      )}
     </div>
   )
 }

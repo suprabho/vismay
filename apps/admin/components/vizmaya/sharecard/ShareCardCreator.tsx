@@ -13,6 +13,7 @@ import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import ThemeProvider from '@/components/canvas/ThemeProvider'
 import VerticalLoader from '@/components/canvas/VerticalLoader'
 import MapPickerModal from '@/components/vizmaya/MapPickerModal'
+import { FrameCorners, Image as ImageIcon, Shapes, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
 import { seedTemplate, detectSupport } from './layers/seedTemplate'
@@ -76,6 +77,15 @@ const TEMPLATES: Array<{ id: TemplateKind; label: string }> = [
 ]
 
 const CONTAINED_FOCUS = { top: 0, left: 0, width: 1, height: 1 }
+
+type EditorTab = 'setup' | 'background' | 'hero' | 'elements' | 'text'
+const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
+  { id: 'setup', label: 'Canvas & story', Icon: FrameCorners },
+  { id: 'background', label: 'Background', Icon: ImageIcon },
+  { id: 'hero', label: 'Hero graphic', Icon: Shapes },
+  { id: 'elements', label: 'Foreground elements', Icon: Stack },
+  { id: 'text', label: 'Text', Icon: TextT },
+]
 
 function defaultTemplate(unit: ResolvedUnit): TemplateKind {
   const s = detectSupport(unit)
@@ -366,6 +376,16 @@ export function ShareCardCreator({
   }, [])
   const previewScale = Math.max(0.1, Math.min(previewBox.w / renderW, previewBox.h / renderH))
 
+  // ── left icon-rail tabs ───────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<EditorTab>('setup')
+  const selectTab = useCallback((t: EditorTab) => {
+    setActiveTab(t)
+    // Keep the canvas selection in step with the tab so the right editor shows.
+    if (t === 'background') setSelection({ kind: 'background' })
+    else if (t === 'hero') setSelection({ kind: 'hero' })
+    else setSelection(null)
+  }, [])
+
   // ── saved-cards dropdown (top bar) ────────────────────────────────────────
   const [savedOpen, setSavedOpen] = useState(false)
   const savedRef = useRef<HTMLDivElement>(null)
@@ -403,6 +423,18 @@ export function ShareCardCreator({
       e.preventDefault()
       e.stopPropagation()
       setSelection(sel)
+      // Open the matching tab so the editor for the clicked layer is visible.
+      const tabFor: EditorTab | null =
+        sel.kind === 'element'
+          ? 'elements'
+          : sel.kind === 'text' || sel.kind === 'annotation'
+            ? 'text'
+            : sel.kind === 'hero'
+              ? 'hero'
+              : sel.kind === 'background'
+                ? 'background'
+                : null
+      if (tabFor) setActiveTab(tabFor)
       dragRef.current = sel
       const move = (ev: PointerEvent) => {
         const el = interactionRef.current
@@ -635,73 +667,141 @@ export function ShareCardCreator({
       {/* ── 3-pane row ─────────────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
 
-      {/* ── Left: story/section pickers + layer panel ──────────────────────── */}
-      <div className="w-full shrink-0 space-y-4 lg:h-full lg:w-72 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-        <label className={labelCls}>
-          Story
-          <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
-            {stories.length === 0 && <option value="">No stories</option>}
-            {stories.map((s) => (
-              <option key={s.slug} value={s.slug}>
-                {s.title || s.slug}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {error && (
-          <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">{error}</p>
-        )}
-        {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
-
-        {units.length > 0 && (
-          <label className={labelCls}>
-            Section
-            <select value={unitIdx} onChange={(e) => pickUnit(Number(e.target.value))} className={selectCls}>
-              {units.map((u, i) => (
-                <option key={`${u.parentIndex}-${u.subIndex}`} value={i}>
-                  {u.heading?.slice(0, 50) || `Section ${u.parentIndex + 1}`}
-                  {u.subIndex > 0 ? ` · step ${u.subIndex}` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelCls}>
-            Template
-            <select value={templateKind} onChange={(e) => pickTemplate(e.target.value as TemplateKind)} className={selectCls}>
-              {TEMPLATES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={labelCls}>
-            Format
-            <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
-              {ASPECT_RATIOS.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
+      {/* ── Left: icon rail + active-category panel ──────────────────────────── */}
+      <div className="flex w-full shrink-0 gap-2 lg:h-full lg:min-h-0 lg:w-80">
+        {/* icon rail */}
+        <div className="flex shrink-0 flex-col gap-1.5">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              title={label}
+              onClick={() => selectTab(id)}
+              className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                activeTab === id
+                  ? 'border-sky-400/60 bg-white/10 text-white'
+                  : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+              }`}
+            >
+              <Icon size={18} weight={activeTab === id ? 'fill' : 'regular'} />
+            </button>
+          ))}
         </div>
 
-        <hr className="border-white/10" />
+        {/* active-category panel */}
+        <div className="min-w-0 flex-1 space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+          {error && (
+            <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">{error}</p>
+          )}
+          {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
 
-        {composition && (
-          <LayerPanel
-            composition={composition}
-            onChange={setComposition}
-            selection={selection}
-            setSelection={setSelection}
-            story={{ slug: story!.slug, theme: story!.theme, assets }}
-          />
-        )}
+          {activeTab === 'setup' && (
+            <>
+              <label className={labelCls}>
+                Story
+                <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
+                  {stories.length === 0 && <option value="">No stories</option>}
+                  {stories.map((s) => (
+                    <option key={s.slug} value={s.slug}>
+                      {s.title || s.slug}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {units.length > 0 && (
+                <label className={labelCls}>
+                  Section
+                  <select value={unitIdx} onChange={(e) => pickUnit(Number(e.target.value))} className={selectCls}>
+                    {units.map((u, i) => (
+                      <option key={`${u.parentIndex}-${u.subIndex}`} value={i}>
+                        {u.heading?.slice(0, 50) || `Section ${u.parentIndex + 1}`}
+                        {u.subIndex > 0 ? ` · step ${u.subIndex}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <label className={labelCls}>
+                  Template
+                  <select value={templateKind} onChange={(e) => pickTemplate(e.target.value as TemplateKind)} className={selectCls}>
+                    {TEMPLATES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={labelCls}>
+                  Format
+                  <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
+                    {ASPECT_RATIOS.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {composition && (
+                <label className="flex items-center gap-2 text-[12px] text-neutral-200">
+                  <input
+                    type="checkbox"
+                    checked={composition.branding.visible}
+                    onChange={(e) => setComposition({ ...composition, branding: { ...composition.branding, visible: e.target.checked } })}
+                    className="accent-sky-400"
+                  />
+                  Show branding footer
+                </label>
+              )}
+            </>
+          )}
+
+          {composition && inspectorStory && activeTab === 'background' && (
+            <Inspector composition={composition} selection={{ kind: 'background' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+          )}
+          {composition && inspectorStory && activeTab === 'hero' && (
+            <Inspector composition={composition} selection={{ kind: 'hero' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+          )}
+
+          {composition && activeTab === 'elements' && (
+            <>
+              <LayerPanel
+                composition={composition}
+                onChange={setComposition}
+                selection={selection}
+                setSelection={setSelection}
+                story={{ slug: story!.slug, theme: story!.theme, assets }}
+                sections={['elements']}
+              />
+              {selection?.kind === 'element' && inspectorStory && (
+                <div className="border-t border-white/10 pt-3">
+                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+                </div>
+              )}
+            </>
+          )}
+
+          {composition && activeTab === 'text' && (
+            <>
+              <LayerPanel
+                composition={composition}
+                onChange={setComposition}
+                selection={selection}
+                setSelection={setSelection}
+                story={{ slug: story!.slug, theme: story!.theme, assets }}
+                sections={['text']}
+              />
+              {(selection?.kind === 'text' || selection?.kind === 'annotation') && inspectorStory && (
+                <div className="border-t border-white/10 pt-3">
+                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+                </div>
+              )}
+            </>
+          )}
+
+          {!composition && !loading && <p className="text-[11px] text-neutral-600">Pick a story to start.</p>}
+        </div>
       </div>
 
       {/* ── Center: preview + drag overlay ─────────────────────────────────── */}
@@ -767,23 +867,6 @@ export function ShareCardCreator({
           </div>
         ) : (
           <p className="py-20 text-center text-xs text-neutral-600">{loading ? 'Loading story…' : 'Pick a story and section to start.'}</p>
-        )}
-      </div>
-
-      {/* ── Right: inspector ───────────────────────────────────────────────── */}
-      <div className="w-full shrink-0 space-y-3 lg:h-full lg:w-72 lg:min-h-0 lg:overflow-y-auto lg:pl-1">
-        <span className={labelCls}>Inspector</span>
-        {composition && inspectorStory ? (
-          <Inspector
-            composition={composition}
-            selection={selection}
-            onChange={setComposition}
-            story={inspectorStory}
-            ratio={ratio}
-            onEditMap={onEditMap}
-          />
-        ) : (
-          <p className="text-[11px] text-neutral-600">Load a story to begin.</p>
         )}
       </div>
       </div>
