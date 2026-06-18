@@ -1,5 +1,10 @@
 import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { Annotation, Frame, Phase, PlayerSnapshot, Team } from './types'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:tactics-board` — interactive, data-driven SVG tactics board.
@@ -39,7 +44,7 @@ import type { Annotation, Frame, Phase, PlayerSnapshot, Team } from './types'
  *           - { type: zone, polygon: [[35,35],[55,35],[55,65],[35,65]], label: "Overload", at: 1.5, duration: 2.5 }
  */
 
-export interface TacticsBoardConfig {
+export interface TacticsBoardConfig extends FsBackgroundConfig {
   type: 'fs:tactics-board'
   phase: Phase
   /** Headline for the phase, shown beside the formation chip. */
@@ -207,6 +212,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Tactic
     pitchColor: str(r.pitchColor),
     stripeColor: str(r.stripeColor),
     loop: typeof r.loop === 'boolean' ? r.loop : undefined,
+    ...parseFsBackground(r),
   }
 }
 
@@ -221,6 +227,7 @@ function adminForm(): AdminFormField[] {
     { kind: 'text', key: 'accent', label: 'Pass / zone accent (hex)' },
     { kind: 'text', key: 'pitchColor', label: 'Pitch color (hex)' },
     { kind: 'boolean', key: 'loop', label: 'Loop the animation' },
+    ...fsBackgroundFields(),
   ]
 }
 
@@ -233,7 +240,8 @@ const tacticsBoardModule: VizModule<TacticsBoardConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
   defaultStyle: { pointerEvents: 'auto' },
-  stableIdentity: (config) => `fs:tactics-board:${config.phase.phaseId}`,
+  stableIdentity: (config) =>
+    `fs:tactics-board:${config.phase.phaseId}:${config.backgroundImage ?? ''}`,
 }
 
 export default tacticsBoardModule

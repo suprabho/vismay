@@ -1,5 +1,10 @@
-import type { VizModule } from '@vismay/viz-engine'
+import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { StandingRow } from '../../types'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:standings-table` — Foreground viz module wrapping StandingsTable.
@@ -16,7 +21,7 @@ import type { StandingRow } from '../../types'
  *         - { position: 2, team_id: 'liverpool', ... }
  */
 
-export interface StandingsTableConfig {
+export interface StandingsTableConfig extends FsBackgroundConfig {
   type: 'fs:standings-table'
   rows: StandingRow[]
 }
@@ -32,7 +37,18 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): Standi
   if (r.rows.length === 0) {
     throw new Error(`${ctx.label}: fs:standings-table 'rows' must not be empty`)
   }
-  return { type: 'fs:standings-table', rows: r.rows as unknown as StandingRow[] }
+  return {
+    type: 'fs:standings-table',
+    rows: r.rows as unknown as StandingRow[],
+    ...parseFsBackground(r),
+  }
+}
+
+function adminForm(): AdminFormField[] {
+  return [
+    { kind: 'json', key: 'rows', label: 'Standings rows' },
+    ...fsBackgroundFields(),
+  ]
 }
 
 const standingsTableModule: VizModule<StandingsTableConfig> = {
@@ -40,11 +56,12 @@ const standingsTableModule: VizModule<StandingsTableConfig> = {
   label: 'Footshorts — standings table',
   slots: ['foreground'],
   parseConfig,
+  adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (config) => {
     const first = config.rows[0]?.team_id ?? '?'
-    return `fs:standings-table:${config.rows.length}::${first}`
+    return `fs:standings-table:${config.rows.length}::${first}:${config.backgroundImage ?? ''}`
   },
 }
 

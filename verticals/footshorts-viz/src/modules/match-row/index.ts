@@ -1,5 +1,10 @@
 import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { FixtureRow } from '../../types'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:match-row` — Foreground viz module wrapping the MatchRow component.
@@ -33,7 +38,7 @@ export type MatchRowVariant = 'compact' | 'expanded'
 
 const VARIANTS: readonly MatchRowVariant[] = ['compact', 'expanded']
 
-export interface MatchRowConfig {
+export interface MatchRowConfig extends FsBackgroundConfig {
   type: 'fs:match-row'
   variant: MatchRowVariant
   fixture: FixtureRow
@@ -67,6 +72,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchR
     type: 'fs:match-row',
     variant: parseVariant(raw.variant, ctx.label),
     fixture: raw.fixture as unknown as FixtureRow,
+    ...parseFsBackground(raw),
   }
 }
 
@@ -78,6 +84,7 @@ function adminForm(): AdminFormField[] {
       label: 'Variant',
       options: VARIANTS.map((v) => ({ value: v, label: v })),
     },
+    ...fsBackgroundFields(),
   ]
 }
 
@@ -90,7 +97,7 @@ const matchRowModule: VizModule<MatchRowConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (config) =>
-    `fs:match-row:${config.variant}:${config.fixture.id}`,
+    `fs:match-row:${config.variant}:${config.fixture.id}:${config.backgroundImage ?? ''}`,
 }
 
 export default matchRowModule

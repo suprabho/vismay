@@ -1,5 +1,10 @@
 import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { FixtureEvent, EventTypeFilter } from '../../types'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:match-timeline` — Foreground viz module wrapping MatchTimeline.
@@ -25,7 +30,7 @@ import type { FixtureEvent, EventTypeFilter } from '../../types'
 
 const FILTERS: readonly EventTypeFilter[] = ['all', 'goal', 'card', 'subst']
 
-export interface MatchTimelineConfig {
+export interface MatchTimelineConfig extends FsBackgroundConfig {
   type: 'fs:match-timeline'
   /** All events for the match (goals, cards, subs). Filtering/sorting is at render time. */
   events: FixtureEvent[]
@@ -59,6 +64,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchT
     events: r.events as unknown as FixtureEvent[],
     filter: parseFilter(r.filter, ctx.label),
     emptyText: typeof r.emptyText === 'string' ? r.emptyText : undefined,
+    ...parseFsBackground(r),
   }
 }
 
@@ -76,6 +82,7 @@ function adminForm(): AdminFormField[] {
       ],
     },
     { kind: 'text', key: 'emptyText', label: 'Empty-state copy (optional)' },
+    ...fsBackgroundFields(),
   ]
 }
 
@@ -87,7 +94,8 @@ const matchTimelineModule: VizModule<MatchTimelineConfig> = {
   adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
-  stableIdentity: (config) => `fs:match-timeline:${config.events.length}:${config.filter ?? 'all'}`,
+  stableIdentity: (config) =>
+    `fs:match-timeline:${config.events.length}:${config.filter ?? 'all'}:${config.backgroundImage ?? ''}`,
 }
 
 export default matchTimelineModule

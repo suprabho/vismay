@@ -9,9 +9,15 @@ import { sample as raceCardSample } from '@vismay/f1-viz/modules/race-card/sampl
 import { sample as driverStandingsSample } from '@vismay/f1-viz/modules/driver-standings/sample'
 import { sample as positionChartSample } from '@vismay/f1-viz/modules/position-chart/sample'
 import { sample as raceReplaySample } from '@vismay/f1-viz/modules/race-replay/sample'
-import { sample as matchCardSample } from '@vismay/footshorts-viz/modules/match-card/sample'
+import {
+  sample as matchCardSample,
+  sampleGrid as matchCardGridSample,
+} from '@vismay/footshorts-viz/modules/match-card/sample'
 import { sample as matchRowSample } from '@vismay/footshorts-viz/modules/match-row/sample'
-import { sample as matchTileSample } from '@vismay/footshorts-viz/modules/match-tile/sample'
+import {
+  sample as matchTileSample,
+  sampleGrid as matchTileGridSample,
+} from '@vismay/footshorts-viz/modules/match-tile/sample'
 import { sample as matchTimelineSample } from '@vismay/footshorts-viz/modules/match-timeline/sample'
 import { sample as standingsTableSample } from '@vismay/footshorts-viz/modules/standings-table/sample'
 import { sample as standingsOverMatchdaysSample } from '@vismay/footshorts-viz/modules/standings-over-matchdays/sample'
@@ -81,8 +87,22 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'f1:position-chart', category: 'F1', sample: positionChartSample },
   { type: 'f1:race-replay', category: 'F1', sample: raceReplaySample },
   { type: 'fs:match-card', category: 'Footshorts', sample: matchCardSample },
+  {
+    type: 'fs:match-card',
+    id: 'fs:match-card@grid',
+    label: 'Footshorts — match card (grid)',
+    category: 'Footshorts',
+    sample: matchCardGridSample,
+  },
   { type: 'fs:match-row', category: 'Footshorts', sample: matchRowSample },
   { type: 'fs:match-tile', category: 'Footshorts', sample: matchTileSample },
+  {
+    type: 'fs:match-tile',
+    id: 'fs:match-tile@grid',
+    label: 'Footshorts — match tile (grid)',
+    category: 'Footshorts',
+    sample: matchTileGridSample,
+  },
   { type: 'fs:match-timeline', category: 'Footshorts', sample: matchTimelineSample },
   { type: 'fs:standings-table', category: 'Footshorts', sample: standingsTableSample },
   {
