@@ -9,6 +9,7 @@ import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
 import ShareEditDrawer, { type SelectedCard } from './ShareEditDrawer'
+import { trackShareCardsDownloadedAll } from '@/lib/analytics'
 
 type EditView = 'visual' | 'yaml'
 
@@ -434,6 +435,7 @@ export default function ShareShell({
       }
       const blob = await zip.generateAsync({ type: 'blob' })
       saveAs(blob, `${slug}-share-${ratio.replace(':', 'x')}.zip`)
+      trackShareCardsDownloadedAll(slug, { count: cards.length, ratio })
     } catch (err) {
       console.error('Bulk download failed:', err)
     } finally {

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import VizmayaLogo from '@/components/VizmayaLogo'
+import { trackTopicFiltered } from '@/lib/analytics'
 import {
   StoryBentoGrid,
   StoryGridStyles,
@@ -237,6 +238,12 @@ export default function HomeClient({
   const [filter, setFilter] = useState('All')
   const [page, setPage] = useState(0)
 
+  // Topic chip selection — set the filter and record which topic drew interest.
+  const selectTopic = useCallback((topic: string) => {
+    setFilter(topic)
+    trackTopicFiltered(topic)
+  }, [])
+
   const embedWrapperRef = useRef<HTMLElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const sectionCountRef = useRef(10) // updated when story posts viz-story-ready
@@ -433,7 +440,7 @@ export default function HomeClient({
             </div>
             <div className="idx-filter">
               {chips.map((c) => (
-                <button key={c} className={'idx-chip' + (filter === c ? ' on' : '')} onClick={() => setFilter(c)}>{c}</button>
+                <button key={c} className={'idx-chip' + (filter === c ? ' on' : '')} onClick={() => selectTopic(c)}>{c}</button>
               ))}
             </div>
             <a className="idx-about" href="#contact">More about the studio →</a>
@@ -457,7 +464,7 @@ export default function HomeClient({
               <h1 className="idx-h1">{STUDIO.statement}</h1>
               <div className="idx-filter idx-filter-m">
                 {chips.map((c) => (
-                  <button key={c} className={'idx-chip' + (filter === c ? ' on' : '')} onClick={() => setFilter(c)}>{c}</button>
+                  <button key={c} className={'idx-chip' + (filter === c ? ' on' : '')} onClick={() => selectTopic(c)}>{c}</button>
                 ))}
               </div>
             </div>

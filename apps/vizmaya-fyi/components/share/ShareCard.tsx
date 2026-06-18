@@ -13,6 +13,7 @@ import ShareDeckForeground from './ShareDeckForeground'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
+import { trackShareCardDownloaded } from '@/lib/analytics'
 
 /**
  * Shape of a `type: 'map'` layer as returned by `resolveSlotsFlat`. Mirrors
@@ -409,7 +410,8 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
     link.download = `${slug}-${index + 1}-${ratio.replace(':', 'x')}.png`
     link.href = dataUrl
     link.click()
-  }, [capture, slug, index, ratio])
+    trackShareCardDownloaded(slug, { variant, ratio, index: index + 1 })
+  }, [capture, slug, index, ratio, variant])
 
   return (
     <div className="relative group" style={{ width: w, height: h }}>

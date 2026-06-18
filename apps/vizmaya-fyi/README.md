@@ -89,6 +89,8 @@ npm run build
 | `GITHUB_DISPATCH_REPO` | Prod | `owner/repo` for the dispatch target |
 | `GITHUB_DISPATCH_REF` | No | Branch the workflow runs from (defaults to `main`) |
 | `NEXT_PUBLIC_GA_ID` | No | Google Analytics |
+| `NEXT_PUBLIC_AMPLITUDE_API_KEY` | No | Amplitude analytics; events are disabled (no-op) when unset |
+| `NEXT_PUBLIC_AMPLITUDE_SERVER_ZONE` | No | Amplitude data residency: `US` (default) or `EU` |
 
 ---
 
