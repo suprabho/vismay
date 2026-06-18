@@ -24,7 +24,7 @@ import { resolveSlotsFlat, ChartDataOverrideProvider, ForegroundLayoutSlot } fro
 import { AuraBackground } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
 import type { CardComposition, MapSpec } from './layers/types'
-import { DEFAULT_HERO_BOX } from './layers/types'
+import { DEFAULT_HERO_BOX, bareChartId } from './layers/types'
 import { ElementView, TextView, transformWrapperStyle } from './layers/LayerView'
 import { proxiedOverlaySrc } from './OverlayLayer'
 import ShareDeckForeground from './ShareDeckForeground'
@@ -552,7 +552,10 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
     // dataOverride (if any) patches that chart by id. Stack math is sized to
     // the box height so resizing re-renders the chart crisply within it.
     const boxHeightPx = (box.heightPct / 100) * h
-    const overrides = hl.dataOverride !== undefined && hl.chartId ? { [hl.chartId]: hl.dataOverride } : {}
+    // Key the override by the id `GenericChart` actually receives — `ChartPanel`
+    // strips any `data:` prefix before mounting it, so the provider must use the
+    // bare id or a legacy `data:`-prefixed story chart never picks up the edit.
+    const overrides = hl.dataOverride !== undefined && hl.chartId ? { [bareChartId(hl.chartId)]: hl.dataOverride } : {}
     return (
       <div style={boxStyle}>
         <ChartDataOverrideProvider value={overrides}>

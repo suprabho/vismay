@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import CodeEditor from '../../CodeEditor'
+import { bareChartId } from '../layers/types'
 
 /**
  * Per-card chart-data editor. Seeds from the card's existing override, else
@@ -47,7 +48,7 @@ export function ChartJsonDrawer({
   const seedFromStory = () => {
     setLoading(true)
     setLoadError(null)
-    fetch(`/api/chart-data/${encodeURIComponent(slug)}/${encodeURIComponent(chartId)}`)
+    fetch(`/api/chart-data/${encodeURIComponent(slug)}/${encodeURIComponent(bareChartId(chartId))}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json()
