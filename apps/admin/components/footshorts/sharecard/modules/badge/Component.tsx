@@ -6,10 +6,9 @@ import { proxiedImage } from '../shared'
 import type { FsCardBadgeConfig } from '../types'
 
 /**
- * `fscard:badge` — a crest / logo / flag floated over the card. An `overlay`
- * module: the composer renders it absolutely at the card level (not in the stack
- * flow), and it positions itself from its config (center x/y + width as % of the
- * card). Reproduces the old draggable Overlay, now as a layer.
+ * `fscard:badge` — a crest / logo / flag, now a free-positioned layer: the
+ * composer places + sizes it via the layer transform, so the module just fills
+ * its box. Reproduces the old draggable Overlay as a layer.
  */
 export default function BadgeCardComponent({ config, noteReady }: VizRenderProps<FsCardBadgeConfig>) {
   useEffect(() => {
@@ -24,14 +23,8 @@ export default function BadgeCardComponent({ config, noteReady }: VizRenderProps
     <img
       src={proxiedImage(config.url)}
       alt=""
-      className="absolute object-contain"
-      style={{
-        left: `${config.xPct}%`,
-        top: `${config.yPct}%`,
-        width: `${config.widthPct}%`,
-        transform: 'translate(-50%, -50%)',
-        filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
-      }}
+      className="h-full w-full object-contain"
+      style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))' }}
     />
   )
 }

@@ -39,12 +39,22 @@ article**, **AI image**, **Badge / flag**.
 - Fill the picks (see §3) → the **preview** updates.
 - **Download PNG** → the exported image matches the preview (crests not blank).
 
-### 2. Multi-layer stack
-- Add **Match** + **Standings** (same competition) → both **stack** in the preview
-  (top half / bottom half).
-- **Reorder** with ↑ / ↓; **hide/show** with ◉ / ○; **remove** with ✕.
-- Hidden layers disappear from the preview; order in the list = top→bottom on the card.
-- Download → the stacked card exports correctly.
+### 2. Multi-layer, free-positioned
+The composer is **free-positioned** (not a vertical stack): every layer is a box you
+place anywhere on the card.
+- Add **Match** + **Standings** → two boxes on the card; **drag** either box on the
+  preview to move it; they can overlap.
+- Select a layer → the right panel shows a **Transform** section (X / Y / **Size** /
+  **Rotate** / **Opacity** sliders) above its content fields. Adjust Size/Rotate/Opacity.
+- **z-order** via ↑ / ↓ in the Layers list (later layers draw on top); **hide/show**
+  with ◉ / ○; **remove** with ✕.
+- Download → the exported card matches the placed/rotated/scaled layers.
+
+### 2b. Free transform (the drag interaction)
+- Click a layer box on the preview → it highlights (sky ring) and selects in the list.
+- **Drag** it → moves (X/Y). The selection ring is **not** in the exported PNG.
+- Fine-tune via the **Transform** panel sliders (Size = width %, Rotate = degrees,
+  Opacity = 0–1). Badges/crests are square boxes; data cards have an explicit height.
 
 ### 3. Per-layer data pickers (right config panel)
 - **Competition** picker → choose a competition. (Fixtures/standings then load.)
@@ -56,11 +66,11 @@ article**, **AI image**, **Badge / flag**.
 - **News image / article:** **Article** picker with search.
 - Two layers can target **different competitions** — each loads its own data.
 
-### 4. Badges / flags (overlay layer)
+### 4. Badges / flags
 - Add a **Badge / flag** layer → config panel has a **Badge** picker (Crests tab =
-  team/league search; Flags tab = country search) + **X / Y / Size** number fields.
-- Pick a crest or flag → it floats over the card; adjust X/Y/Size (% of card) to move/resize.
-- Badges render **on top** of the stack (and over the header/footer), and export.
+  team/league search; Flags tab = country search).
+- Pick a crest or flag → it appears as a small square; **drag** to position, and use the
+  **Transform** panel for Size / Rotate / Opacity. Exports correctly.
 
 ### 5. News / AI captions
 - **News image** layer → photo fills the body **with the publisher + headline** captioned
@@ -107,8 +117,8 @@ article**, **AI image**, **Badge / flag**.
 
 ## Known limitations (intentional, not bugs)
 - **Aura backgrounds** never rasterize into the PNG (cross-origin iframe) — preview only.
-- **Badge position** is set via X/Y/Size number fields, **not drag** yet.
-- Stacked layers **split the card body equally** — no per-layer height/weight control yet.
+- On-canvas interaction is **drag-to-move only**; **resize / rotate / opacity** are via the
+  **Transform panel sliders** (no corner/rotate handles on the canvas yet).
 - **Background** supports **aura + AI** only; the old **news-thumbnail** background is not
   restored (use a News-image *layer* instead).
 - The old `ShareCardCanvas.tsx` is now **dead code** (to be deleted in cleanup); the live

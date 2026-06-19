@@ -1,11 +1,11 @@
 import type { VizLayer } from '@vismay/viz-engine'
+import type { TransformLike } from './transform'
 
 /**
  * A layer as the composer shell manipulates it: the engine `VizLayer` (module
  * `type` + config + optional `style`) plus the editor-only bookkeeping every
- * surface needs. Geometry for `stack` / `regions` modes lives in `layer.style`;
- * `free` mode (m4) mirrors a richer transform there on commit via the host's
- * geometry adapter.
+ * surface needs. In `free` arrangement each layer carries a `transform` (center
+ * position + size + rotation + opacity); `stack` / `regions` ignore it.
  */
 export interface ComposerLayer {
   /** Stable editor id — distinct from the layer's module `type`. */
@@ -17,6 +17,8 @@ export interface ComposerLayer {
   locked?: boolean
   /** `regions` mode only — which layout region this layer is slotted into. */
   region?: string
+  /** `free` mode — the layer's position / size / rotation / opacity. */
+  transform?: TransformLike
 }
 
 /** What the config panel is currently editing. */

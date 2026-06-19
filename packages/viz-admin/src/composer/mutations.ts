@@ -1,5 +1,6 @@
 import type { VizLayer } from '@vismay/viz-engine'
 import type { ComposerLayer, ComposerState } from './types'
+import { DEFAULT_TRANSFORM, type TransformLike } from './transform'
 
 /**
  * Pure, immutable operations over `ComposerState`. The shell calls these in
@@ -104,4 +105,19 @@ export function setLayerRegion(
 
 export function setBackground(state: ComposerState, background: VizLayer | null): ComposerState {
   return { ...state, background }
+}
+
+/** Merge a partial transform into a layer (free mode), seeding from the default
+ *  when the layer has none yet. */
+export function patchLayerTransform(
+  state: ComposerState,
+  id: string,
+  patch: Partial<TransformLike>,
+): ComposerState {
+  return {
+    ...state,
+    layers: state.layers.map((l) =>
+      l.id === id ? { ...l, transform: { ...(l.transform ?? DEFAULT_TRANSFORM), ...patch } } : l,
+    ),
+  }
 }

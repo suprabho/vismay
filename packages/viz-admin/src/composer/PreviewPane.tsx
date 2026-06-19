@@ -3,8 +3,10 @@
 import type { ReactNode, Ref } from 'react'
 import { getVizModule } from '@vismay/viz-engine'
 import type { ComposerHost } from './ComposerHost'
-import type { ComposerState } from './types'
+import type { ComposerSelection, ComposerState } from './types'
 import { LayerView } from './LayerView'
+import { FreeTransformLayer } from './FreeTransformLayer'
+import { DEFAULT_TRANSFORM, transformWrapperStyle, type TransformLike } from './transform'
 
 /**
  * Builds the foreground body (the visible layers, arranged per the host's
@@ -17,27 +19,47 @@ export function PreviewPane<TCtx>({
   state,
   ctx,
   captureRef,
+  selection,
+  onSelect,
+  onTransform,
 }: {
   host: ComposerHost<TCtx>
   state: ComposerState
   ctx: TCtx
   captureRef?: Ref<HTMLDivElement>
+  /** free-mode interaction (drag to move); omitted in other arrangements. */
+  selection?: ComposerSelection
+  onSelect?: (sel: ComposerSelection) => void
+  onTransform?: (id: string, patch: Partial<TransformLike>) => void
 }) {
-  // `overlay`-placement layers (badges) float over the whole card — the host
-  // renders those at card level via `renderFrame`, so they're excluded from the
-  // in-flow stack here.
-  const visible = state.layers.filter(
-    (l) => l.visible && getVizModule(l.layer.type)?.placement !== 'overlay',
-  )
+  const visibleAll = state.layers.filter((l) => l.visible)
 
   let body: ReactNode
-  if (host.arrangement === 'stack') {
-    // Vertical stack: each layer takes an equal slice (a positioned wrapper so a
-    // bleed layer's `absolute inset-0` stays inside its slot). Per-layer weight
-    // is a later refinement.
+  if (host.arrangement === 'free') {
+    // Free mode: every layer is absolutely positioned by its own transform
+    // (center % + size + rotation + opacity). Data layers carry an explicit
+    // height box; self-sized layers omit it.
+    body = (
+      <>
+        {visibleAll.map((l) => (
+          <div key={l.id} style={transformWrapperStyle(l.transform ?? DEFAULT_TRANSFORM, { sizeByWidth: true })}>
+            <div className="relative h-full w-full overflow-hidden">
+              <LayerView layer={l.layer} />
+            </div>
+          </div>
+        ))}
+      </>
+    )
+  } else if (host.arrangement === 'stack') {
+    // Vertical stack: each layer takes an equal slice. `overlay`-placement layers
+    // (badges) float over the card — the host renders those via renderFrame, so
+    // they're excluded from the in-flow stack.
+    const stackLayers = visibleAll.filter(
+      (l) => getVizModule(l.layer.type)?.placement !== 'overlay',
+    )
     body = (
       <div className="flex h-full min-h-0 flex-col">
-        {visible.map((l) => (
+        {stackLayers.map((l) => (
           <div key={l.id} className="relative min-h-0 flex-1">
             <LayerView layer={l.layer} />
           </div>
@@ -45,9 +67,27 @@ export function PreviewPane<TCtx>({
       </div>
     )
   } else {
-    // regions / free arrangement render flat for now (m3 / m4 specialise these).
-    body = visible.map((l) => <LayerView key={l.id} layer={l.layer} />)
+    // regions arrangement renders flat for now (m3 specialises this).
+    body = visibleAll.map((l) => <LayerView key={l.id} layer={l.layer} />)
   }
 
-  return <>{host.renderFrame({ state, ctx, body, captureRef })}</>
+  const frame = host.renderFrame({ state, ctx, body, captureRef })
+
+  if (host.arrangement === 'free' && onSelect && onTransform) {
+    return (
+      <div className="flex justify-center">
+        <div className="relative inline-block">
+          {frame}
+          <FreeTransformLayer
+            layers={visibleAll}
+            selection={selection ?? null}
+            onSelect={onSelect}
+            onTransform={(id, patch) => onTransform(id, patch)}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return <div className="flex justify-center">{frame}</div>
 }

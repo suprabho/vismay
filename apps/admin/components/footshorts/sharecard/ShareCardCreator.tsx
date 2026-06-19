@@ -9,6 +9,7 @@ import {
   type ComposerLayer,
   type ComposerSelection,
   type ComposerState,
+  type TransformLike,
 } from '@vismay/viz-admin'
 import { themes, type ThemeName } from '@footshorts/brand'
 import { useCapture } from './useCapture'
@@ -112,6 +113,15 @@ function layerOf(layer: VizLayer, name: string): ComposerLayer {
   return { id: composerUid('layer'), layer, name, visible: true }
 }
 
+/** A reasonable free-mode transform for a migrated layer (it used to fill the
+ *  card body): image cards bleed full-card; data cards get a large centered box. */
+function migratedTransform(type: string, _ratio: AspectRatio): TransformLike {
+  if (type === 'fscard:news-image' || type === 'fscard:ai-image') {
+    return { xPct: 50, yPct: 50, widthPct: 100, heightPct: 100, scale: 1, rotation: 0, opacity: 1 }
+  }
+  return { xPct: 50, yPct: 50, widthPct: 92, heightPct: 72, scale: 1, rotation: 0, opacity: 1 }
+}
+
 /** Map the legacy single card type + picks (and any badges) onto layers. */
 function v1ToForeground(s: ShareCardSnapshotV1): ComposerLayer[] {
   const compKey = s.compKey
@@ -144,12 +154,24 @@ function v1ToForeground(s: ShareCardSnapshotV1): ComposerLayer[] {
     default:
       main = []
   }
-  const badges = (s.overlays ?? []).map((o) =>
-    layerOf(
+  const ratio = s.ratio
+  const ar = OUTPUT_SIZE[ratio].w / OUTPUT_SIZE[ratio].h
+  main = main.map((l) => ({ ...l, transform: migratedTransform(l.layer.type, ratio) }))
+  const badges = (s.overlays ?? []).map((o) => ({
+    ...layerOf(
       { type: 'fscard:badge', url: o.url, kind: o.kind, label: o.label, xPct: o.xPct, yPct: o.yPct, widthPct: o.widthPct },
       o.label || 'Badge',
     ),
-  )
+    transform: {
+      xPct: o.xPct,
+      yPct: o.yPct,
+      widthPct: o.widthPct,
+      heightPct: o.widthPct * ar,
+      scale: 1,
+      rotation: 0,
+      opacity: 1,
+    },
+  }))
   return [...main, ...badges]
 }
 

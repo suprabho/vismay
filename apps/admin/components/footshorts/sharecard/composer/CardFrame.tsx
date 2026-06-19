@@ -146,12 +146,16 @@ export const CardFrame = forwardRef<
   const scrim = frame.backgroundScrim ?? 0.5
 
   return (
-    <div ref={ref} className="relative flex flex-col overflow-hidden bg-bg text-text" style={style}>
+    <div ref={ref} className="relative overflow-hidden bg-bg text-text" style={style}>
       {background && <CardBackgroundLayer background={background} scrim={scrim} />}
       <FootshortsDataProvider value={data}>
-        <div className="relative z-10 flex h-full min-h-0 flex-col">
+        {/* Free-positioned layer canvas — each layer absolutely placed by its transform. */}
+        <div className="absolute inset-0 z-10">{children}</div>
+        {/* Brand chrome sits above the layers so the eyebrow + handle stay visible. */}
+        <div className="absolute inset-x-0 top-0 z-20">
           <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
-          <div className="min-h-0 flex-1 py-2">{children}</div>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 z-20">
           <Footer handle={frame.handle} />
         </div>
       </FootshortsDataProvider>

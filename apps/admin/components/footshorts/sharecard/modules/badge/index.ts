@@ -20,12 +20,8 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): FsCard
 }
 
 function adminForm(): AdminFormField[] {
-  return [
-    { kind: 'picker', key: 'url', label: 'Badge', pickerId: 'footshorts:badge', required: true },
-    { kind: 'number', key: 'xPct', label: 'X position (%)', min: 0, max: 100, step: 1 },
-    { kind: 'number', key: 'yPct', label: 'Y position (%)', min: 0, max: 100, step: 1 },
-    { kind: 'number', key: 'widthPct', label: 'Size (% width)', min: 2, max: 100, step: 1 },
-  ]
+  // Position / size / rotation are edited via the free-mode Transform panel.
+  return [{ kind: 'picker', key: 'url', label: 'Badge', pickerId: 'footshorts:badge', required: true }]
 }
 
 const badgeCardModule: VizModule<FsCardBadgeConfig> = {

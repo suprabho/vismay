@@ -7,6 +7,7 @@ import type { ComposerSelection, ComposerState } from './types'
 import {
   addLayer,
   moveLayer,
+  patchLayerTransform,
   removeLayer,
   setBackground,
   setLayerConfig,
@@ -76,13 +77,22 @@ export function LayerComposer<TCtx>({
         onRemove={handleRemove}
         onToggleVisible={(id) => onChange(toggleLayerVisible(state, id))}
       />
-      <PreviewPane host={host} state={state} ctx={ctx} captureRef={captureRef} />
+      <PreviewPane
+        host={host}
+        state={state}
+        ctx={ctx}
+        captureRef={captureRef}
+        selection={selection}
+        onSelect={onSelect}
+        onTransform={(id, patch) => onChange(patchLayerTransform(state, id, patch))}
+      />
       <ConfigPanel
         host={host}
         state={state}
         selection={selection}
         ctx={ctx}
         onLayerConfigChange={handleLayerConfig}
+        onLayerTransformChange={(id, patch) => onChange(patchLayerTransform(state, id, patch))}
         onBackgroundChange={(bg) => onChange(setBackground(state, bg))}
       />
     </div>
