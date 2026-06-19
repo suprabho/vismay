@@ -7,6 +7,15 @@ export { extract, extractBuffer, extractText, type ExtractedSource } from './ext
 // unbounded on long PDFs) — used by the compose extraction worker, never inside
 // `ingestSources` (which is synchronous).
 export { extractPdfVision, type VisionPdfOptions } from './visionPdf'
+// Local LiteParse extraction + the "is this thin enough to escalate to vision?"
+// assessment. The compose upload route uses these to try a fast, free, local
+// markdown extraction before falling back to the async Claude vision worker.
+export {
+  extractPdfLite,
+  assessLiteExtraction,
+  type LiteExtractionResult,
+  type LiteExtractionAssessment,
+} from './litePdf'
 
 /**
  * A browser-like User-Agent + Accept. Many sites 403 a bare server fetch (no

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { ingestSources } from '@vismay/story-pipeline'
+import { ingestSources, extractPdfLite } from '@vismay/story-pipeline'
 import {
   listStorySources,
   getStorySourceById,
@@ -70,6 +70,54 @@ async function createFileSource(
     const error = `upload failed: ${e instanceof Error ? e.message : String(e)}`
     await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
     return { ...row, status: 'failed', error }
+  }
+
+  // PDFs: try LiteParse first — local, fast (~ms/page), free, and it keeps
+  // headings/tables as markdown. Only the THIN results (scanned/graphical PDFs
+  // with no usable text layer) escalate to the async Claude vision worker. This
+  // is the hybrid split: most PDFs never touch a model or a GitHub runner.
+  // Kill-switch: set COMPOSE_PDF_LITEPARSE=0 to skip LiteParse entirely and fall
+  // back to the prior dispatch-or-sync behavior without a code change.
+  if (isPdf && process.env.COMPOSE_PDF_LITEPARSE !== '0') {
+    try {
+      const { source, assessment } = await extractPdfLite(buffer, { label: filename })
+      if (!assessment.shouldEscalate && source.body.trim()) {
+        const patch = {
+          title: source.title,
+          byline: source.byline ?? null,
+          extractedText: source.body,
+          status: 'extracted' as const,
+        }
+        await updateStorySource(row.id, patch)
+        return { ...row, storagePath, ...patch }
+      }
+      // Thin extraction → hand off to the vision worker when it's configured.
+      if (isSourceExtractDispatchConfigured()) {
+        try {
+          await dispatchSourceExtractJob({ sourceId: row.id, slug })
+          return { ...row, storagePath, status: 'pending' }
+        } catch (e) {
+          const error = `extraction dispatch failed: ${e instanceof Error ? e.message : String(e)}`
+          await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+          return { ...row, storagePath, status: 'failed', error }
+        }
+      }
+      // No worker available (local dev): keep LiteParse's best effort if it got
+      // anything; otherwise fall through to the pdf-parse text path below.
+      if (source.body.trim()) {
+        const patch = {
+          title: source.title,
+          byline: source.byline ?? null,
+          extractedText: source.body,
+          status: 'extracted' as const,
+        }
+        await updateStorySource(row.id, patch)
+        return { ...row, storagePath, ...patch }
+      }
+    } catch {
+      // LiteParse native binding unavailable / parse error — fall through to the
+      // existing dispatch-or-sync logic so PDFs still extract.
+    }
   }
 
   if (isPdf && isSourceExtractDispatchConfigured()) {

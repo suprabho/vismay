@@ -19,8 +19,24 @@ export {
   type DomainPack,
   type PackLayerType,
 } from './packs'
-export { ingestSources, extract, extractBuffer, extractText, extractPdfVision } from './ingest'
-export type { IngestInput, InputFile, InputText, ExtractedSource, VisionPdfOptions } from './ingest'
+export {
+  ingestSources,
+  extract,
+  extractBuffer,
+  extractText,
+  extractPdfVision,
+  extractPdfLite,
+  assessLiteExtraction,
+} from './ingest'
+export type {
+  IngestInput,
+  InputFile,
+  InputText,
+  ExtractedSource,
+  VisionPdfOptions,
+  LiteExtractionResult,
+  LiteExtractionAssessment,
+} from './ingest'
 export {
   graftRecapForeground,
   graftSectionBody,

@@ -146,7 +146,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -528,7 +528,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -1034,6 +1034,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.95.2
         version: 0.95.2(zod@3.25.76)
+      '@llamaindex/liteparse':
+        specifier: ^2.1.1
+        version: 2.1.1
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
@@ -2941,6 +2944,11 @@ packages:
 
   '@lit/reactive-element@2.1.2':
     resolution: {integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==}
+
+  '@llamaindex/liteparse@2.1.1':
+    resolution: {integrity: sha512-+L97Ix5nTD33R0ZIIzE49U5VxlxRuVzlAyg+ixjfKSZJrz93pT/X9o+qG9yagd86ESAAD3WHzZ5J6RYZ6o9KJQ==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   '@loaders.gl/3d-tiles@4.4.2':
     resolution: {integrity: sha512-rf2R7x/+t41hQpaQ3iKofooE6unZ0+sGlYUXBo7lYFEnoMmalzrOI6jCs+CV96TALMPQcpfPa566XWF74XkaBQ==}
@@ -11655,6 +11663,10 @@ snapshots:
   '@lit/reactive-element@2.1.2':
     dependencies:
       '@lit-labs/ssr-dom-shim': 1.6.0
+
+  '@llamaindex/liteparse@2.1.1':
+    dependencies:
+      commander: 12.1.0
 
   '@loaders.gl/3d-tiles@4.4.2(@loaders.gl/core@4.4.2)':
     dependencies:
