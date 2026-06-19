@@ -6,7 +6,7 @@ import type { ComposerHost } from './ComposerHost'
 import type { ComposerSelection, ComposerState } from './types'
 import { LayerView } from './LayerView'
 import { FreeTransformLayer } from './FreeTransformLayer'
-import { DEFAULT_TRANSFORM, transformWrapperStyle, type TransformLike } from './transform'
+import { DEFAULT_TRANSFORM, transformWrapperStyle } from './transform'
 
 /**
  * Builds the foreground body (the visible layers, arranged per the host's
@@ -20,17 +20,22 @@ export function PreviewPane<TCtx>({
   ctx,
   captureRef,
   selection,
+  multiSel,
   onSelect,
-  onTransform,
+  onToggleMulti,
+  onChange,
 }: {
   host: ComposerHost<TCtx>
   state: ComposerState
   ctx: TCtx
   captureRef?: Ref<HTMLDivElement>
-  /** free-mode interaction (drag to move); omitted in other arrangements. */
+  /** free-mode interaction (select / move / resize / rotate / group); omitted in
+   *  other arrangements. */
   selection?: ComposerSelection
+  multiSel?: string[]
   onSelect?: (sel: ComposerSelection) => void
-  onTransform?: (id: string, patch: Partial<TransformLike>) => void
+  onToggleMulti?: (id: string) => void
+  onChange?: (next: ComposerState) => void
 }) {
   const visibleAll = state.layers.filter((l) => l.visible)
 
@@ -73,16 +78,18 @@ export function PreviewPane<TCtx>({
 
   const frame = host.renderFrame({ state, ctx, body, captureRef })
 
-  if (host.arrangement === 'free' && onSelect && onTransform) {
+  if (host.arrangement === 'free' && onSelect && onChange) {
     return (
       <div className="flex justify-center">
         <div className="relative inline-block">
           {frame}
           <FreeTransformLayer
-            layers={visibleAll}
+            state={state}
             selection={selection ?? null}
+            multiSel={multiSel ?? []}
             onSelect={onSelect}
-            onTransform={(id, patch) => onTransform(id, patch)}
+            onToggleMulti={onToggleMulti ?? (() => {})}
+            onChange={onChange}
           />
         </div>
       </div>

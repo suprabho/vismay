@@ -19,11 +19,25 @@ export interface ComposerLayer {
   region?: string
   /** `free` mode — the layer's position / size / rotation / opacity. */
   transform?: TransformLike
+  /** Membership in a free-mode GROUP (see `ComposerState.groups`). Group members
+   *  are kept CONTIGUOUS in `layers` so the panel renders them as one block and
+   *  z-order stays coherent. Absent = ungrouped. Editor-only — renderers ignore it. */
+  groupId?: string
+}
+
+/** A named free-mode group. Membership lives on each layer's `groupId`; this
+ *  registry just carries the label + collapse state. Editor-only. */
+export interface LayerGroup {
+  id: string
+  name: string
+  /** Panel-only: members hidden under a collapsed header. */
+  collapsed?: boolean
 }
 
 /** What the config panel is currently editing. */
 export type ComposerSelection =
   | { kind: 'layer'; id: string }
+  | { kind: 'group'; id: string }
   | { kind: 'background' }
   | null
 
@@ -35,6 +49,8 @@ export interface ComposerState {
   background: VizLayer | null
   /** Active layout name in `regions` mode; ignored otherwise. */
   layout?: string
+  /** Free-mode groups (membership is on each layer's `groupId`). */
+  groups?: LayerGroup[]
 }
 
 /**

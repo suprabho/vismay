@@ -29,6 +29,32 @@ export const DEFAULT_TRANSFORM: TransformLike = {
 /** Default box height (% of card) for a box-sized graphic / data card. */
 export const DEFAULT_GRAPHIC_HEIGHT_PCT = 55
 
+const clampSize = (n: number) => Math.min(100, Math.max(1, n))
+
+/**
+ * Scale a single transform by factor `k` about a pivot (card %). Centers move
+ * toward/away from the pivot and the box scales by `k`. Ported from vizmaya's
+ * `scaleGroupAround` — for a single element the px conversion cancels per axis,
+ * so this works in % space directly. (`k` itself comes from a screen-px distance
+ * ratio at the call site, so non-square cards are already accounted for.)
+ */
+export function scaleTransformAround(
+  t: TransformLike,
+  k: number,
+  pivotXPct: number,
+  pivotYPct: number,
+): TransformLike {
+  const kk = Math.min(12, Math.max(0.05, k))
+  const next: TransformLike = {
+    ...t,
+    xPct: pivotXPct + (t.xPct - pivotXPct) * kk,
+    yPct: pivotYPct + (t.yPct - pivotYPct) * kk,
+    widthPct: clampSize(t.widthPct * kk),
+  }
+  if (t.heightPct != null) next.heightPct = clampSize(t.heightPct * kk)
+  return next
+}
+
 /**
  * CSS that positions a layer by its transform: center pivot, percent units, with
  * `translate(-50%,-50%) rotate() scale()` about the element center. When

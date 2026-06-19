@@ -1,18 +1,10 @@
 'use client'
 
-import { useMemo, type Ref } from 'react'
+import { useMemo, useState, type Ref } from 'react'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
 import type { ComposerHost } from './ComposerHost'
 import type { ComposerSelection, ComposerState } from './types'
-import {
-  addLayer,
-  moveLayer,
-  patchLayerTransform,
-  removeLayer,
-  setBackground,
-  setLayerConfig,
-  toggleLayerVisible,
-} from './mutations'
+import { addLayer, patchLayerTransform, setBackground, setLayerConfig } from './mutations'
 import { LayerListPanel } from './LayerListPanel'
 import { ConfigPanel } from './ConfigPanel'
 import { PreviewPane } from './PreviewPane'
@@ -31,10 +23,9 @@ export interface LayerComposerProps<TCtx> {
 }
 
 /**
- * The surface-agnostic composer: a layer list (add/select/reorder/remove), a
- * live preview, and a per-layer config panel — driven entirely by `ComposerState`
- * + a `ComposerHost`. Domain specifics (which modules, the frame, backgrounds,
- * persistence) live behind the host.
+ * The surface-agnostic composer: a layer list (add / select / reorder / group),
+ * a live preview (drag / resize / rotate / group transform in free mode), and a
+ * per-layer config panel — driven by `ComposerState` + a `ComposerHost`.
  */
 export function LayerComposer<TCtx>({
   host,
@@ -45,6 +36,8 @@ export function LayerComposer<TCtx>({
   ctx,
   captureRef,
 }: LayerComposerProps<TCtx>) {
+  const [multiSel, setMultiSel] = useState<string[]>([])
+
   // Module types offered in the add menu: the host's allowlist ∩ the foreground slot.
   const addTypes = useMemo(() => {
     const allowed = new Set(host.allowedModuleTypes(ctx))
@@ -58,24 +51,23 @@ export function LayerComposer<TCtx>({
     onChange(addLayer(state, layer))
     onSelect({ kind: 'layer', id: layer.id })
   }
-  const handleRemove = (id: string) => {
-    onChange(removeLayer(state, id))
-    if (selection?.kind === 'layer' && selection.id === id) onSelect(null)
-  }
+  const onToggleMulti = (id: string) =>
+    setMultiSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   const handleLayerConfig = (id: string, layer: VizLayer) => onChange(setLayerConfig(state, id, layer))
 
   return (
-    <div className="grid grid-cols-[220px_minmax(0,1fr)_260px] gap-4">
+    <div className="grid grid-cols-[230px_minmax(0,1fr)_260px] gap-4">
       <LayerListPanel
-        layers={state.layers}
+        state={state}
         selection={selection}
+        multiSel={multiSel}
         addTypes={addTypes}
         hasBackground={host.backgroundOptions(ctx).length > 0}
-        onAdd={handleAdd}
+        onChange={onChange}
         onSelect={onSelect}
-        onMove={(id, dir) => onChange(moveLayer(state, id, dir))}
-        onRemove={handleRemove}
-        onToggleVisible={(id) => onChange(toggleLayerVisible(state, id))}
+        onToggleMulti={onToggleMulti}
+        onClearMulti={() => setMultiSel([])}
+        onAdd={handleAdd}
       />
       <PreviewPane
         host={host}
@@ -83,8 +75,10 @@ export function LayerComposer<TCtx>({
         ctx={ctx}
         captureRef={captureRef}
         selection={selection}
+        multiSel={multiSel}
         onSelect={onSelect}
-        onTransform={(id, patch) => onChange(patchLayerTransform(state, id, patch))}
+        onToggleMulti={onToggleMulti}
+        onChange={onChange}
       />
       <ConfigPanel
         host={host}
