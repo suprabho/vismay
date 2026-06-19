@@ -25,7 +25,7 @@ function adminForm(): AdminFormField[] {
 
 const aiImageCardModule: VizModule<FsCardAiImageConfig> = {
   type: 'fscard:ai-image',
-  label: 'Share card — AI image',
+  label: 'AI image',
   slots: ['foreground'],
   parseConfig,
   adminForm,

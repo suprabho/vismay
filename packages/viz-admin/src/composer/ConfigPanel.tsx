@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { getVizModule, type VizLayer } from '@vismay/viz-engine'
 import VizConfigForm from '../VizConfigForm'
 import { TransformControls } from '../controls'
@@ -36,26 +37,32 @@ export function ConfigPanel<TCtx>({
     if (!layer || !mod) return <Empty />
     const transform = layer.transform ?? DEFAULT_TRANSFORM
     return (
-      <div className="flex flex-col gap-3">
-        <span className={labelCls}>{mod.label}</span>
+      <div className="flex flex-col">
+        <div className="border-b border-white/10 px-1 pb-2 text-[11px] font-semibold text-neutral-200">
+          {mod.label}
+        </div>
         {host.arrangement === 'free' && (
-          <TransformControls
-            transform={transform}
-            onChange={(p) => onLayerTransformChange(layer.id, p)}
-            showHeight={transform.heightPct != null}
-          />
+          <Section title="Transform">
+            <TransformControls
+              transform={transform}
+              onChange={(p) => onLayerTransformChange(layer.id, p)}
+              showHeight={transform.heightPct != null}
+            />
+          </Section>
         )}
-        <VizConfigForm
-          module={mod}
-          value={layer.layer as unknown as Record<string, FormValue>}
-          onChange={(next) =>
-            onLayerConfigChange(layer.id, {
-              ...(next as Record<string, unknown>),
-              type: layer.layer.type,
-            } as VizLayer)
-          }
-          ctx={ctx}
-        />
+        <Section title="Content" last>
+          <VizConfigForm
+            module={mod}
+            value={layer.layer as unknown as Record<string, FormValue>}
+            onChange={(next) =>
+              onLayerConfigChange(layer.id, {
+                ...(next as Record<string, unknown>),
+                type: layer.layer.type,
+              } as VizLayer)
+            }
+            ctx={ctx}
+          />
+        </Section>
       </div>
     )
   }
@@ -87,6 +94,16 @@ export function ConfigPanel<TCtx>({
   return <Empty />
 }
 
+/** A titled, divider-separated section — Figma-style dense panel grouping. */
+function Section({ title, children, last }: { title: string; children: ReactNode; last?: boolean }) {
+  return (
+    <section className={`px-1 py-2.5 ${last ? '' : 'border-b border-white/10'}`}>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{title}</p>
+      {children}
+    </section>
+  )
+}
+
 function Empty() {
-  return <p className="text-[11px] text-neutral-600">Select a layer to edit its content.</p>
+  return <p className="px-1 py-2 text-[11px] text-neutral-600">Select a layer to edit its content.</p>
 }

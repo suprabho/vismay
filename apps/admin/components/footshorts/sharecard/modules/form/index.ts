@@ -24,7 +24,7 @@ function adminForm(): AdminFormField[] {
 
 const formCardModule: VizModule<FsCardFormConfig> = {
   type: 'fscard:form',
-  label: 'Share card — form grid',
+  label: 'Form grid',
   slots: ['foreground'],
   parseConfig,
   adminForm,

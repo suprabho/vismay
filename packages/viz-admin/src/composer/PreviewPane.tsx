@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode, Ref } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react'
 import { getVizModule } from '@vismay/viz-engine'
 import type { ComposerHost } from './ComposerHost'
 import type { ComposerSelection, ComposerState } from './types'
@@ -37,6 +37,18 @@ export function PreviewPane<TCtx>({
   onToggleMulti?: (id: string) => void
   onChange?: (next: ComposerState) => void
 }) {
+  const fitRef = useRef<HTMLDivElement>(null)
+  const [box, setBox] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    const el = fitRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      setBox({ w: entry.contentRect.width, h: entry.contentRect.height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const visibleAll = state.layers.filter((l) => l.visible)
 
   let body: ReactNode
@@ -79,10 +91,14 @@ export function PreviewPane<TCtx>({
   const frame = host.renderFrame({ state, ctx, body, captureRef })
 
   if (host.arrangement === 'free' && onSelect && onChange) {
+    // Scale the natural-size card to fill the measured preview area.
+    const cardSz = host.cardSize?.(ctx) ?? { w: 360, h: 360 }
+    const fit = box.w > 0 && box.h > 0 ? Math.min(box.w / cardSz.w, box.h / cardSz.h) : 1
+    const scale = Math.max(0.1, Math.min(fit, 4))
     return (
-      <div className="flex justify-center">
-        <div className="relative inline-block">
-          {frame}
+      <div ref={fitRef} className="flex h-full w-full items-center justify-center overflow-hidden">
+        <div className="relative" style={{ width: cardSz.w * scale, height: cardSz.h * scale }}>
+          <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>{frame}</div>
           <FreeTransformLayer
             state={state}
             selection={selection ?? null}

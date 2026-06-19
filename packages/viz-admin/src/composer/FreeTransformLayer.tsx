@@ -136,7 +136,8 @@ export function FreeTransformLayer({
     const l = state.layers.find((x) => x.id === target.id)
     if (!l) return null
     const t = l.transform ?? DEFAULT_TRANSFORM
-    return { cx: t.xPct, cy: t.yPct, w: t.widthPct, h: t.heightPct ?? t.widthPct }
+    // Effective (scaled) box, so the handles wrap the uniformly-scaled element.
+    return { cx: t.xPct, cy: t.yPct, w: t.widthPct * t.scale, h: (t.heightPct ?? t.widthPct) * t.scale }
   }
 
   const startMove = (e: ReactPointerEvent, target: Target, startT: TransformLike) => {
@@ -221,8 +222,8 @@ export function FreeTransformLayer({
       {/* per-layer select/move boxes */}
       {state.layers.filter((l) => l.visible).map((l) => {
         const t = l.transform ?? DEFAULT_TRANSFORM
-        const w = t.widthPct
-        const h = t.heightPct ?? t.widthPct
+        const w = t.widthPct * t.scale
+        const h = (t.heightPct ?? t.widthPct) * t.scale
         const selectedLayer = selection?.kind === 'layer' && selection.id === l.id
         const inMulti = multiSel.includes(l.id)
         const boxStyle: CSSProperties = {

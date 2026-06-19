@@ -20,7 +20,7 @@ function adminForm(): AdminFormField[] {
 
 const newsArticleCardModule: VizModule<FsCardNewsArticleConfig> = {
   type: 'fscard:news-article',
-  label: 'Share card — news article',
+  label: 'News article',
   slots: ['foreground'],
   parseConfig,
   adminForm,

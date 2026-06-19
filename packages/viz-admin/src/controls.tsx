@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { DEFAULT_GRAPHIC_HEIGHT_PCT, type TransformLike } from './composer/transform'
 
 /**
@@ -119,10 +119,93 @@ export function ColorField({
   )
 }
 
-/** Position / size / rotation / opacity for a freely-placed layer. Position is
- *  drag-on-canvas primarily; sliders here cover fine control + keyboard a11y.
- *  `showHeight` adds a Height slider for box-sized graphics (the "Size" slider
- *  then reads "Width"). */
+/**
+ * A Figma-style scrubbable number field: drag the label left/right to scrub the
+ * value, or type into the input. Compact + dense — replaces a bare range slider.
+ */
+export function ScrubField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  format,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+  format?: (v: number) => string
+}) {
+  const [text, setText] = useState<string | null>(null)
+  const start = useRef<{ x: number; v: number } | null>(null)
+
+  const clampRound = useCallback(
+    (n: number) => {
+      const c = Math.min(max, Math.max(min, n))
+      return Math.round(Math.round(c / step) * step * 1e6) / 1e6
+    },
+    [max, min, step],
+  )
+  const onMove = useCallback(
+    (e: PointerEvent) => {
+      const s = start.current
+      if (!s) return
+      onChange(clampRound(s.v + (e.clientX - s.x) * ((max - min) / 220)))
+    },
+    [clampRound, max, min, onChange],
+  )
+  const onUp = useCallback(() => {
+    start.current = null
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+  }, [onMove])
+  const startScrub = useCallback(
+    (e: ReactPointerEvent) => {
+      e.preventDefault()
+      start.current = { x: e.clientX, v: value }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+    },
+    [onMove, onUp, value],
+  )
+  const commit = () => {
+    if (text == null) return
+    const n = parseFloat(text)
+    if (Number.isFinite(n)) onChange(clampRound(n))
+    setText(null)
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded-md border border-white/10 bg-neutral-900 px-1.5 py-1 focus-within:border-white/30">
+      <span
+        onPointerDown={startScrub}
+        title={`${label} — drag to scrub`}
+        className="cursor-ew-resize select-none text-[10px] font-semibold uppercase text-neutral-500 hover:text-sky-400"
+      >
+        {label}
+      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={text ?? (format ? format(value) : String(value))}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+        className="w-full min-w-0 bg-transparent text-right text-xs text-neutral-100 outline-none"
+      />
+    </div>
+  )
+}
+
+/** Position / size / rotation / opacity for a freely-placed layer, as a compact
+ *  grid of scrubbable fields (drag the label to scrub, or type). `showHeight`
+ *  adds a Height field for box-sized graphics. */
 export function TransformControls({
   transform,
   onChange,
@@ -133,22 +216,17 @@ export function TransformControls({
   showHeight?: boolean
 }) {
   return (
-    <div className="space-y-2 rounded-md border border-white/10 bg-neutral-950/40 p-2.5">
-      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Transform</span>
-      <div className="grid grid-cols-2 gap-2">
-        <NumberSlider label="X" value={Math.round(transform.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
-        <NumberSlider label="Y" value={Math.round(transform.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
-      </div>
+    <div className="grid grid-cols-2 gap-1.5">
+      <ScrubField label="X" value={Math.round(transform.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
+      <ScrubField label="Y" value={Math.round(transform.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
+      <ScrubField label="W" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
       {showHeight ? (
-        <div className="grid grid-cols-2 gap-2">
-          <NumberSlider label="Width" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
-          <NumberSlider label="Height" value={Math.round(transform.heightPct ?? DEFAULT_GRAPHIC_HEIGHT_PCT)} min={4} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
-        </div>
+        <ScrubField label="H" value={Math.round(transform.heightPct ?? DEFAULT_GRAPHIC_HEIGHT_PCT)} min={4} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
       ) : (
-        <NumberSlider label="Size" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
+        <div />
       )}
-      <NumberSlider label="Rotate" value={Math.round(transform.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
-      <NumberSlider label="Opacity" value={transform.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
+      <ScrubField label="Rotate" value={Math.round(transform.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
+      <ScrubField label="Opacity" value={transform.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
     </div>
   )
 }

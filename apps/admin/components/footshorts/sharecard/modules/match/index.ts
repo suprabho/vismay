@@ -41,7 +41,7 @@ function adminForm(): AdminFormField[] {
 
 const matchCardModule: VizModule<FsCardMatchConfig> = {
   type: 'fscard:match',
-  label: 'Share card — match',
+  label: 'Match',
   slots: ['foreground'],
   parseConfig,
   adminForm,

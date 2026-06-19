@@ -33,6 +33,10 @@ export interface ComposerHost<TCtx = unknown> {
    *  config + name + style/region). */
   makeLayer: (type: string, ctx: TCtx) => ComposerLayer
 
+  /** Natural (unscaled) px size of the rendered card, so the shell can scale the
+   *  preview to fit the available space. Omit to render at intrinsic size. */
+  cardSize?: (ctx: TCtx) => { w: number; h: number }
+
   /** Options for the background picker in the config panel. */
   backgroundOptions: (ctx: TCtx) => BackgroundOption[]
 

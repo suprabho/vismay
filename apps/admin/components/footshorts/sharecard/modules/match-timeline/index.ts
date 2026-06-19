@@ -57,7 +57,7 @@ function adminForm(): AdminFormField[] {
 
 const matchTimelineCardModule: VizModule<FsCardMatchTimelineConfig> = {
   type: 'fscard:match-timeline',
-  label: 'Share card — match timeline',
+  label: 'Match timeline',
   slots: ['foreground'],
   parseConfig,
   adminForm,

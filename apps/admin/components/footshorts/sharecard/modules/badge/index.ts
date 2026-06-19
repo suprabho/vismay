@@ -26,7 +26,7 @@ function adminForm(): AdminFormField[] {
 
 const badgeCardModule: VizModule<FsCardBadgeConfig> = {
   type: 'fscard:badge',
-  label: 'Share card — badge',
+  label: 'Badge / flag',
   slots: ['foreground'],
   placement: 'overlay',
   parseConfig,

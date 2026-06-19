@@ -9,8 +9,6 @@ import { DEFAULT_TRANSFORM, type TransformLike } from './transform'
  * non-square card doesn't distort circles.
  */
 
-const clampSize = (n: number) => Math.min(100, Math.max(1, n))
-
 function tOf(l: ComposerLayer): TransformLike {
   return l.transform ?? DEFAULT_TRANSFORM
 }
@@ -105,14 +103,15 @@ export function scaleGroupAround(
     const cy = (t.yPct / 100) * renderH
     const nx = px + (cx - px) * kk
     const ny = py + (cy - py) * kk
-    const next: TransformLike = {
-      ...t,
-      xPct: (nx / renderW) * 100,
-      yPct: (ny / renderH) * 100,
-      widthPct: clampSize(t.widthPct * kk),
+    return {
+      ...l,
+      transform: {
+        ...t,
+        xPct: (nx / renderW) * 100,
+        yPct: (ny / renderH) * 100,
+        scale: Math.min(20, Math.max(0.05, t.scale * kk)),
+      },
     }
-    if (t.heightPct != null) next.heightPct = clampSize(t.heightPct * kk)
-    return { ...l, transform: next }
   })
 }
 

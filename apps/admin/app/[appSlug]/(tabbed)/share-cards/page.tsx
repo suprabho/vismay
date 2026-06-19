@@ -33,10 +33,8 @@ export default async function ShareCardsPage({ params }: Props) {
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-4 py-6 text-neutral-100">
-        <ShareCardCreator initialCompetitions={competitions} />
-      </div>
+    <div className="min-h-0 flex-1 overflow-hidden text-neutral-100">
+      <ShareCardCreator initialCompetitions={competitions} />
     </div>
   )
 }

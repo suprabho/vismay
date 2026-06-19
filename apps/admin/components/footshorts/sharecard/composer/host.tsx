@@ -6,9 +6,9 @@ import { OUTPUT_SIZE, RENDER_SCALE, type AspectRatio } from '../types'
 import { CardFrame } from './CardFrame'
 import { compKeyOf, type FootshortsComposerCtx } from './ctx'
 
-/** Scales the natural-size card frame down/up to fit the preview column. The
- *  capture ref stays on the un-transformed CardFrame, so the CSS scale only
- *  affects display (html-to-image captures at the frame's intrinsic size). */
+/** Renders the card at its natural (unscaled) size; the shell's PreviewPane
+ *  measures the available space and scales this to fit. The capture ref is on the
+ *  un-transformed CardFrame so html-to-image captures at the intrinsic size. */
 function FootshortsPreviewFrame({
   ctx,
   body,
@@ -18,21 +18,16 @@ function FootshortsPreviewFrame({
   body: ReactNode
   captureRef?: Ref<HTMLDivElement>
 }) {
-  const out = OUTPUT_SIZE[ctx.frame.ratio]
-  const renderW = Math.round(out.w * RENDER_SCALE)
-  const renderH = Math.round(out.h * RENDER_SCALE)
-  const scale = Math.min(360 / renderW, 520 / renderH, 1.4)
-  // No centering wrapper: the shell's PreviewPane shrink-wraps this sized box and
-  // lays the free-transform interaction overlay exactly over it.
   return (
-    <div style={{ width: renderW * scale, height: renderH * scale }}>
-      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-        <CardFrame ref={captureRef} frame={ctx.frame} data={ctx.data}>
-          {body}
-        </CardFrame>
-      </div>
-    </div>
+    <CardFrame ref={captureRef} frame={ctx.frame} data={ctx.data}>
+      {body}
+    </CardFrame>
   )
+}
+
+function cardSizeFor(ratio: AspectRatio): { w: number; h: number } {
+  const out = OUTPUT_SIZE[ratio]
+  return { w: Math.round(out.w * RENDER_SCALE), h: Math.round(out.h * RENDER_SCALE) }
 }
 
 /** Default placement for a freshly added layer: data cards get a large centered
@@ -107,6 +102,7 @@ export const footshortsHost: ComposerHost<FootshortsComposerCtx> = {
     transform: defaultTransform(type, ctx.frame.ratio),
   }),
   backgroundOptions: () => [],
+  cardSize: (ctx) => cardSizeFor(ctx.frame.ratio),
   renderFrame: ({ ctx, body, captureRef }) => (
     <FootshortsPreviewFrame ctx={ctx} body={body} captureRef={captureRef} />
   ),

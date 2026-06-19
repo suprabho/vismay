@@ -35,7 +35,7 @@ function adminForm(): AdminFormField[] {
 
 const fixturesCardModule: VizModule<FsCardFixturesConfig> = {
   type: 'fscard:fixtures',
-  label: 'Share card — fixtures',
+  label: 'Fixtures',
   slots: ['foreground'],
   parseConfig,
   adminForm,

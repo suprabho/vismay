@@ -626,7 +626,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
       <div className="flex min-h-0 flex-1 gap-4">
         {/* left: icon rail + active panel */}
-        <div className="flex w-80 shrink-0 gap-2">
+        <div className="flex w-96 shrink-0 gap-2">
           <div className="flex shrink-0 flex-col gap-1.5">
             {TABS.map(({ id, label, Icon }) => (
               <button
@@ -642,34 +642,23 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           </div>
           <div className="min-w-0 flex-1 space-y-4 overflow-y-auto pr-1">
             {activeTab === 'layers' && (
-              <>
-                <LayerListPanel
-                  state={composer}
-                  selection={selection}
-                  multiSel={multiSel}
-                  addTypes={addTypes}
-                  hasBackground={false}
-                  onChange={onChange}
-                  onSelect={setSelection}
-                  onToggleMulti={onToggleMulti}
-                  onClearMulti={() => setMultiSel([])}
-                  onAdd={handleAddLayer}
-                />
-                <ConfigPanel
-                  host={footshortsHost}
-                  state={composer}
-                  selection={selection}
-                  ctx={ctx}
-                  onLayerConfigChange={handleLayerConfig}
-                  onLayerTransformChange={handleLayerTransform}
-                  onBackgroundChange={() => undefined}
-                />
-              </>
+              <LayerListPanel
+                state={composer}
+                selection={selection}
+                multiSel={multiSel}
+                addTypes={addTypes}
+                hasBackground={false}
+                onChange={onChange}
+                onSelect={setSelection}
+                onToggleMulti={onToggleMulti}
+                onClearMulti={() => setMultiSel([])}
+                onAdd={handleAddLayer}
+              />
             )}
             {activeTab === 'setup' && (
               <div className="space-y-4">
       {/* card-level frame controls */}
-      <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 p-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 p-3">
         <label className={labelCls}>
           Theme
           <select className={selectCls} value={themeName} onChange={(e) => setThemeName(e.target.value as ThemeName)}>
@@ -858,7 +847,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           </div>
         </div>
         {/* center: live preview (drag / resize / rotate / group) */}
-        <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto rounded-lg border border-white/5 bg-neutral-950/40 p-4">
+        <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-neutral-950/40 p-4">
           <PreviewPane
             host={footshortsHost}
             state={composer}
@@ -869,6 +858,18 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             onSelect={setSelection}
             onToggleMulti={onToggleMulti}
             onChange={onChange}
+          />
+        </div>
+        {/* right: selected-layer properties */}
+        <div className="w-80 shrink-0 space-y-3 overflow-y-auto pl-1">
+          <ConfigPanel
+            host={footshortsHost}
+            state={composer}
+            selection={selection}
+            ctx={ctx}
+            onLayerConfigChange={handleLayerConfig}
+            onLayerTransformChange={handleLayerTransform}
+            onBackgroundChange={() => undefined}
           />
         </div>
       </div>

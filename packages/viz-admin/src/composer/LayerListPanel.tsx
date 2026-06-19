@@ -1,7 +1,7 @@
 'use client'
 
+import { getVizModule } from '@vismay/viz-engine'
 import type { ComposerLayer, ComposerSelection, ComposerState } from './types'
-import { AddLayerPicker } from './AddLayerPicker'
 import { labelCls, rowCls } from './styles'
 import { removeLayer, toggleLayerVisible } from './mutations'
 import {
@@ -57,10 +57,22 @@ export function LayerListPanel({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className={labelCls}>Layers</span>
-        <AddLayerPicker types={addTypes} onAdd={onAdd} />
-      </div>
+      {/* add buttons pinned at the top — click to add a card / element */}
+      {addTypes.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {addTypes.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => onAdd(t)}
+              className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
+            >
+              + {getVizModule(t)?.label ?? t}
+            </button>
+          ))}
+        </div>
+      )}
+      <span className={labelCls}>Layers</span>
 
       {validMulti.length >= 2 && (
         <div className="flex items-center gap-2 rounded-md border border-sky-400/40 bg-sky-400/5 px-2 py-1.5 text-[11px]">

@@ -37,7 +37,7 @@ function adminForm(): AdminFormField[] {
 
 const standingsCardModule: VizModule<FsCardStandingsConfig> = {
   type: 'fscard:standings',
-  label: 'Share card — standings',
+  label: 'Standings',
   slots: ['foreground'],
   parseConfig,
   adminForm,
