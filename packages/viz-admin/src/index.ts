@@ -1,1 +1,8 @@
 export { default as AdminFormFields } from './AdminFormFields'
+export { default as VizConfigForm } from './VizConfigForm'
+export * from './pickers/registry'
+export * from './composer/types'
+export * from './composer/mutations'
+export * from './composer/ComposerHost'
+export * from './composer/LayerView'
+export * from './composer/LayerComposer'

@@ -13,9 +13,12 @@ import {
   type MatchCardLayout,
 } from '@vismay/footshorts-viz/web'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
+import type { VizLayer } from '@vismay/viz-engine'
 import { themes, themeToVars } from '@footshorts/brand'
 import { AuraBackground } from '@vismay/ui'
 import { FootshortsLogo } from './FootshortsLogo'
+import { FootshortsDataProvider, type FootshortsCardData } from './modules/dataContext'
+import { FsCardLayerView } from './modules/render'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
@@ -455,6 +458,12 @@ interface Props {
   content: CardContent
   frame: CardFrameConfig
   overlays?: Overlay[]
+  /** The current card as a single `fscard:*` foreground layer (picks). The body
+   *  renders through the viz-engine registry from this; `content` is retained
+   *  for the frame chrome (bleed detection + caption). */
+  layer?: VizLayer | null
+  /** Live data the layer's module resolves its picks against (injected). */
+  data?: FootshortsCardData
 }
 
 /**
@@ -465,7 +474,7 @@ interface Props {
  * header/footer chrome.
  */
 export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareCardCanvas(
-  { content, frame, overlays },
+  { content, frame, overlays, layer, data },
   ref,
 ) {
   const out = OUTPUT_SIZE[frame.ratio]
@@ -493,12 +502,22 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
     !bleed && frame.background && frame.background.type !== 'none' ? frame.background : null
   const backgroundScrim = frame.backgroundScrim ?? 0.5
 
+  // The card body renders through the viz-engine registry from the layer's picks,
+  // resolved against the injected data. `content` still drives the frame chrome
+  // (bleed layout + caption). Falls back to nothing if no layer was supplied.
+  const body =
+    layer && data ? (
+      <FootshortsDataProvider value={data}>
+        <FsCardLayerView layer={layer} />
+      </FootshortsDataProvider>
+    ) : null
+
   return (
     <div ref={ref} className="relative flex flex-col overflow-hidden bg-bg text-text" style={style}>
       {bleed ? (
         <>
           <div className="absolute inset-0">
-            <CardBody content={content} />
+            {body}
           </div>
           <div className="relative z-10 flex h-full flex-col justify-between">
             <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
@@ -520,7 +539,7 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
           <div className="relative z-10 flex h-full min-h-0 flex-col">
             <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
             <div className="min-h-0 flex-1 py-2">
-              <CardBody content={content} />
+              {body}
             </div>
             <Footer handle={frame.handle} />
           </div>
