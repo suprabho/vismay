@@ -2,13 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
-import type { VizLayer } from '@vismay/viz-engine'
+import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
+import { FrameCorners, Image as ImageIcon, PaperPlaneTilt, Stack, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
-  LayerComposer,
+  LayerListPanel,
+  ConfigPanel,
+  PreviewPane,
+  addLayer,
+  setLayerConfig,
+  patchLayerTransform,
+  normalizeGroupContiguity,
   composerUid,
   type ComposerLayer,
   type ComposerSelection,
   type ComposerState,
+  type LayerGroup,
   type TransformLike,
 } from '@vismay/viz-admin'
 import { themes, type ThemeName } from '@footshorts/brand'
@@ -105,6 +113,7 @@ interface ShareCardSnapshotV2 {
   background?: CardBackground
   backgroundScrim?: number
   foreground: ComposerLayer[]
+  groups?: LayerGroup[]
 }
 
 type AnySnapshot = ShareCardSnapshotV1 | ShareCardSnapshotV2
@@ -185,12 +194,29 @@ const actionBtn =
 
 const THEME_NAMES = Object.keys(themes) as ThemeName[]
 
+type EditorTab = 'layers' | 'setup' | 'background' | 'publish'
+const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
+  { id: 'layers', label: 'Layers', Icon: Stack },
+  { id: 'setup', label: 'Card setup', Icon: FrameCorners },
+  { id: 'background', label: 'Background', Icon: ImageIcon },
+  { id: 'publish', label: 'Publish', Icon: PaperPlaneTilt },
+]
+const railBtn = (active: boolean) =>
+  `flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+    active
+      ? 'border-sky-400/60 bg-white/10 text-white'
+      : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+  }`
+
 export function ShareCardCreator({ initialCompetitions }: { initialCompetitions: CompetitionOption[] }) {
   const competitions = initialCompetitions
 
   // composer state (the card == an ordered stack of fscard:* layers)
-  const [layers, setLayers] = useState<ComposerLayer[]>([])
+  const [composer, setComposer] = useState<ComposerState>({ layers: [], background: null })
+  const layers = composer.layers
   const [selection, setSelection] = useState<ComposerSelection>(null)
+  const [multiSel, setMultiSel] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState<'layers' | 'setup' | 'background' | 'publish'>('layers')
 
   // card-level frame controls
   const [themeName, setThemeName] = useState<ThemeName>(THEME_NAMES[0] ?? 'classic')
@@ -263,12 +289,39 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     [themeName, ratio, accentHex, eyebrow, handle, logoSize, logoVariant, background],
   )
 
-  const composerState: ComposerState = useMemo(() => ({ layers, background: null }), [layers])
   const ctx: FootshortsComposerCtx = useMemo(
     () => ({ competitions, data, frame }),
     [competitions, data, frame],
   )
-  const onChange = useCallback((next: ComposerState) => setLayers(next.layers), [])
+  const onChange = useCallback((next: ComposerState) => setComposer(next), [])
+  const onToggleMulti = useCallback(
+    (id: string) => setMultiSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
+    [],
+  )
+
+  // Add-layer types offered (the footshorts foreground modules).
+  const addTypes = useMemo(() => {
+    const allowed = new Set(footshortsHost.allowedModuleTypes(ctx))
+    return listModulesForSlot('foreground')
+      .map((m) => m.type)
+      .filter((t) => allowed.has(t))
+  }, [ctx])
+  const handleAddLayer = useCallback(
+    (type: string) => {
+      const layer = footshortsHost.makeLayer(type, ctx)
+      setComposer((c) => addLayer(c, layer))
+      setSelection({ kind: 'layer', id: layer.id })
+    },
+    [ctx],
+  )
+  const handleLayerConfig = useCallback(
+    (id: string, layer: VizLayer) => setComposer((c) => setLayerConfig(c, id, layer)),
+    [],
+  )
+  const handleLayerTransform = useCallback(
+    (id: string, patch: Partial<TransformLike>) => setComposer((c) => patchLayerTransform(c, id, patch)),
+    [],
+  )
 
   // capture / export
   const captureRef = useRef<HTMLDivElement>(null)
@@ -420,9 +473,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       showEyebrow,
       background,
       backgroundScrim,
-      foreground: layers,
+      foreground: composer.layers,
+      groups: composer.groups,
     }),
-    [themeName, ratio, accentHex, handle, logoSize, logoVariant, eyebrowOverride, showEyebrow, background, layers],
+    [themeName, ratio, accentHex, handle, logoSize, logoVariant, eyebrowOverride, showEyebrow, background, composer],
   )
 
   const applySnapshot = useCallback((snap: AnySnapshot) => {
@@ -438,7 +492,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setBackground(bg)
     setBackgroundScrim(snap.backgroundScrim ?? 0.5)
     if (bg.type === 'aura') setAuraSlug(bg.slug)
-    setLayers(snap.version === 2 ? (snap.foreground ?? []) : v1ToForeground(snap))
+    setComposer(
+      normalizeGroupContiguity({
+        layers: snap.version === 2 ? (snap.foreground ?? []) : v1ToForeground(snap),
+        background: null,
+        groups: snap.version === 2 ? snap.groups : undefined,
+      }),
+    )
+    setMultiSel([])
     setSelection(null)
     setSaveError(null)
   }, [])
@@ -539,12 +600,12 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   }, [hasLayers, currentCardName, representativeType, buildSnapshot, capture, currentCardId, ratio, tags])
 
   return (
-    <div className="flex flex-col gap-5 p-5 text-neutral-200">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
+      <div className="flex shrink-0 items-center justify-between">
         <div>
           <h1 className="text-sm font-semibold text-neutral-100">Share card composer</h1>
           <p className="text-[11px] text-neutral-500">
-            Stack foreground layers — match, standings, form, news… — on one card.
+            Free-position layers — match, standings, news, badges — on one card.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -560,19 +621,53 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         </div>
       </div>
       {(saveError || shipError) && (
-        <p className="text-[11px] text-red-400">{saveError ?? shipError}</p>
+        <p className="shrink-0 text-[11px] text-red-400">{saveError ?? shipError}</p>
       )}
 
-      <LayerComposer
-        host={footshortsHost}
-        state={composerState}
-        onChange={onChange}
-        selection={selection}
-        onSelect={setSelection}
-        ctx={ctx}
-        captureRef={captureRef}
-      />
-
+      <div className="flex min-h-0 flex-1 gap-4">
+        {/* left: icon rail + active panel */}
+        <div className="flex w-80 shrink-0 gap-2">
+          <div className="flex shrink-0 flex-col gap-1.5">
+            {TABS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                title={label}
+                onClick={() => setActiveTab(id)}
+                className={railBtn(activeTab === id)}
+              >
+                <Icon size={18} weight={activeTab === id ? 'fill' : 'regular'} />
+              </button>
+            ))}
+          </div>
+          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto pr-1">
+            {activeTab === 'layers' && (
+              <>
+                <LayerListPanel
+                  state={composer}
+                  selection={selection}
+                  multiSel={multiSel}
+                  addTypes={addTypes}
+                  hasBackground={false}
+                  onChange={onChange}
+                  onSelect={setSelection}
+                  onToggleMulti={onToggleMulti}
+                  onClearMulti={() => setMultiSel([])}
+                  onAdd={handleAddLayer}
+                />
+                <ConfigPanel
+                  host={footshortsHost}
+                  state={composer}
+                  selection={selection}
+                  ctx={ctx}
+                  onLayerConfigChange={handleLayerConfig}
+                  onLayerTransformChange={handleLayerTransform}
+                  onBackgroundChange={() => undefined}
+                />
+              </>
+            )}
+            {activeTab === 'setup' && (
+              <div className="space-y-4">
       {/* card-level frame controls */}
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 p-3 sm:grid-cols-4">
         <label className={labelCls}>
@@ -632,7 +727,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           Show eyebrow
         </label>
       </div>
-
+              </div>
+            )}
+            {activeTab === 'background' && (
+              <div className="space-y-4">
       {/* card background (behind the layer stack) */}
       <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
         <div className="flex items-center justify-between">
@@ -682,7 +780,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           </label>
         )}
       </div>
-
+              </div>
+            )}
+            {activeTab === 'publish' && (
+              <div className="space-y-4">
       {/* publish tags */}
       <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
         <span className={labelCls}>Publish tags</span>
@@ -752,6 +853,25 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           </div>
         </div>
       )}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* center: live preview (drag / resize / rotate / group) */}
+        <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto rounded-lg border border-white/5 bg-neutral-950/40 p-4">
+          <PreviewPane
+            host={footshortsHost}
+            state={composer}
+            ctx={ctx}
+            captureRef={captureRef}
+            selection={selection}
+            multiSel={multiSel}
+            onSelect={setSelection}
+            onToggleMulti={onToggleMulti}
+            onChange={onChange}
+          />
+        </div>
+      </div>
     </div>
   )
 }
