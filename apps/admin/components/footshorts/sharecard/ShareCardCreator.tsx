@@ -1,9 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import type { FixtureRow, StandingRow, FixtureEvent, EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { themes } from '@footshorts/brand'
 import type { ThemeName } from '@footshorts/brand'
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import { FrameCorners, Palette, Image as ImageIcon, Stack, TextT, PaperPlaneTilt, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { ShareCardCanvas } from './ShareCardCanvas'
 import { useCapture } from './useCapture'
 import {
@@ -16,8 +25,10 @@ import {
   MATCH_STYLES,
   OUTPUT_SIZE,
   RENDER_SCALE,
+  resolveTheme,
   type AspectRatio,
   type CardBackground,
+  type CardThemeOverride,
   type CardContent,
   type CardType,
   type LogoSize,
@@ -26,8 +37,23 @@ import {
   type MatchStyle,
   type NewsItem,
   type Overlay,
+  type OverlayGroup,
 } from './types'
+import { ThemePanel } from './composer/ThemePanel'
+import { OverlayPanel } from './composer/OverlayPanel'
+import { normalizeGroupContiguity, type OverlayDoc, type Selection } from './composer/overlayMutations'
+import { groupBBox, moveGroupBy, scaleGroupAround, rotateGroupAround, type GroupBBox } from './composer/groupTransform'
 import { SHARE_IMAGE_STYLES, type ShareImageModel } from '@/lib/footshortsShareStyles'
+
+type FsTab = 'setup' | 'theme' | 'background' | 'foreground' | 'text' | 'publish'
+const TABS: Array<{ id: FsTab; label: string; Icon: PhosphorIcon }> = [
+  { id: 'setup', label: 'Data & format', Icon: FrameCorners },
+  { id: 'theme', label: 'Theme', Icon: Palette },
+  { id: 'background', label: 'Background', Icon: ImageIcon },
+  { id: 'foreground', label: 'Foreground · badges, images, emoji & icons', Icon: Stack },
+  { id: 'text', label: 'Text & labels', Icon: TextT },
+  { id: 'publish', label: 'Save & publish', Icon: PaperPlaneTilt },
+]
 
 interface CompetitionOption {
   slug: string
@@ -43,11 +69,6 @@ interface EntityResult {
   slug: string
   name: string
   crest_url: string | null
-}
-
-interface FlagOption {
-  code: string
-  name: string
 }
 
 /** A serializable snapshot of every creator control — enough to reconstruct a
@@ -87,6 +108,12 @@ interface ShareCardSnapshot {
   background?: CardBackground
   backgroundScrim?: number
   overlays: Overlay[]
+  /** Foreground groups (membership is on each overlay's `groupId`). Optional —
+   *  cards saved before grouping existed simply have none. */
+  overlayGroups?: OverlayGroup[]
+  /** Per-card theme override (presets + colors + fonts). Absent = use `themeName`
+   *  (+ legacy `accentHex`). */
+  themeOverride?: CardThemeOverride
 }
 
 interface SavedCardEntityTag {
@@ -110,11 +137,15 @@ interface SavedCard {
   createdAt: string
 }
 
-const DEFAULT_OVERLAY_WIDTH = 18 // % of card width
-
-const THEME_NAMES: ThemeName[] = ['classic', 'pitch', 'terrace']
 const PREVIEW_MAX_W = 360
 const PREVIEW_MAX_H = 540
+
+/** First family name from a CSS font stack, quotes stripped — the font importer
+ *  wants a bare family (e.g. `"Space Grotesk", system-ui` → `Space Grotesk`). */
+function firstFamily(stack: string): string {
+  const first = stack.split(',')[0]?.trim() ?? ''
+  return first.replace(/^["']|["']$/g, '')
+}
 
 // Article picker paging: start with one page, grow by a page each "Load more",
 // up to the server-side cap in fetchFootshortsNews.
@@ -219,16 +250,16 @@ export function ShareCardCreator({
   const [bgBusy, setBgBusy] = useState(false)
   const [bgError, setBgError] = useState<string | null>(null)
 
-  // ── badge / flag overlays ───────────────────────────────────────────────────
+  // ── foreground overlays + grouping ──────────────────────────────────────────
   const [overlays, setOverlays] = useState<Overlay[]>([])
-  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
-  const [badgeTab, setBadgeTab] = useState<'badges' | 'flags'>('badges')
-  const [badgeQuery, setBadgeQuery] = useState('')
-  const [badgeResults, setBadgeResults] = useState<EntityResult[]>([])
-  const [badgeLoading, setBadgeLoading] = useState(false)
-  const [flagList, setFlagList] = useState<FlagOption[] | null>(null)
-  const [flagQuery, setFlagQuery] = useState('')
-  const overlaySeq = useRef(0)
+  const [overlayGroups, setOverlayGroups] = useState<OverlayGroup[]>([])
+  const [selection, setSelection] = useState<Selection | null>(null)
+  const [multiSel, setMultiSel] = useState<string[]>([])
+  const [frozenGroupBox, setFrozenGroupBox] = useState<GroupBBox | null>(null)
+
+  // ── per-card theme override + active editor tab ─────────────────────────────
+  const [themeOverride, setThemeOverride] = useState<CardThemeOverride | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<FsTab>('setup')
 
   // ── saved cards ─────────────────────────────────────────────────────────────
   const [savedCards, setSavedCards] = useState<SavedCard[]>([])
@@ -614,7 +645,11 @@ export function ShareCardCreator({
   const renderW = Math.round(out.w * RENDER_SCALE)
   const renderH = Math.round(out.h * RENDER_SCALE)
   const pixelRatio = out.w / renderW
-  const bgHex = themes[themeName].colors.bg
+
+  // Effective theme = the named preset merged with any per-card override. Drives
+  // the canvas + capture background, and the font import below.
+  const effectiveTheme = useMemo(() => resolveTheme(themeOverride, themeName), [themeOverride, themeName])
+  const bgHex = effectiveTheme.colors.bg
   const { capture, download } = useCapture(captureRef, {
     width: renderW,
     height: renderH,
@@ -622,7 +657,44 @@ export function ShareCardCreator({
     backgroundColor: bgHex,
   })
 
-  const previewScale = Math.min(PREVIEW_MAX_W / renderW, PREVIEW_MAX_H / renderH, 1)
+  // Load the theme's font families so the brand/custom fonts actually render in
+  // the preview AND bake into the PNG (admin's <head> only ships Inter). Map the
+  // footshorts `display` slot onto the importer's serif slot; pass bare families.
+  const fontImportUrl = useMemo(
+    () =>
+      getFontImportUrl({
+        sans: firstFamily(effectiveTheme.typography.fontFamily.sans),
+        serif: firstFamily(effectiveTheme.typography.fontFamily.display),
+        mono: firstFamily(effectiveTheme.typography.fontFamily.mono),
+      }),
+    [effectiveTheme],
+  )
+  useEffect(() => {
+    if (!fontImportUrl) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = fontImportUrl
+    document.head.appendChild(link)
+    return () => {
+      document.head.removeChild(link)
+    }
+  }, [fontImportUrl])
+
+  // Measure the canvas pane so the card fills the available height (the shell is
+  // full-height; this replaces the old fixed max-width/height preview).
+  const previewBoxRef = useRef<HTMLDivElement>(null)
+  const [previewBox, setPreviewBox] = useState<{ w: number; h: number }>({ w: PREVIEW_MAX_W, h: PREVIEW_MAX_H })
+  useEffect(() => {
+    const el = previewBoxRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      setPreviewBox({ w: Math.max(80, el.clientWidth - 32), h: Math.max(80, el.clientHeight - 32) })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const previewScale = Math.max(0.05, Math.min(previewBox.w / renderW, previewBox.h / renderH, 2))
 
   const [downloading, setDownloading] = useState(false)
   const handleDownload = useCallback(async () => {
@@ -684,12 +756,14 @@ export function ShareCardCreator({
       background,
       backgroundScrim,
       overlays,
+      overlayGroups,
+      themeOverride,
     }),
     [
       cardType, themeName, ratio, accentHex, handle, logoSize, logoVariant, captionColor,
       gradientStrength, eyebrowOverride, showEyebrow, compKey, pickedFixtureId, pickedFixtureIds, pickedGroup,
       matchStyle, matchRowVariant, eventFilter, pickedTeamSlug, pickedNewsId, aiCaption, aiDataUrl, aiSubject,
-      aiStyleId, aiModel, background, backgroundScrim, overlays,
+      aiStyleId, aiModel, background, backgroundScrim, overlays, overlayGroups, themeOverride,
     ],
   )
 
@@ -759,8 +833,20 @@ export function ShareCardCreator({
     setBackgroundScrim(snap.backgroundScrim ?? 0.5)
     if (bg.type === 'aura') setBgAuraSlug(bg.slug)
     if (bg.type !== 'none') setBgTab(bg.type)
-    setOverlays(snap.overlays.map((o) => ({ ...o, id: `ov-${overlaySeq.current++}` })))
-    setSelectedOverlayId(null)
+    // Restore overlays + groups WITHOUT re-IDing (re-IDing would orphan saved
+    // `groupId` references). New overlays use time-based `uid('ov')`, so there's
+    // no collision with the saved `ov-*` ids. Normalize so older / hand-edited
+    // cards render one contiguous block per group and drop empty groups.
+    const doc = normalizeGroupContiguity({
+      overlays: snap.overlays ?? [],
+      groups: snap.overlayGroups ?? [],
+    })
+    setOverlays(doc.overlays)
+    setOverlayGroups(doc.groups)
+    // Legacy cards (no override) keep using themeName + accentHex.
+    setThemeOverride(snap.themeOverride)
+    setSelection(null)
+    setMultiSel([])
     setSaveError(null)
   }, [])
 
@@ -991,64 +1077,19 @@ export function ShareCardCreator({
     }
   }, [bgAiSubject, aiStyleId, aiModel, ratio, themeName, accentHex])
 
-  // ── badge / flag overlay handlers ───────────────────────────────────────────
-  const searchBadges = useCallback(async () => {
-    setBadgeLoading(true)
-    try {
-      const res = await fetch(`/api/footshorts/data/entities?q=${encodeURIComponent(badgeQuery.trim())}&limit=40`)
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; items?: EntityResult[] }
-      setBadgeResults(body.items ?? [])
-    } catch {
-      setBadgeResults([])
-    } finally {
-      setBadgeLoading(false)
-    }
-  }, [badgeQuery])
-
-  // Load the flag list lazily the first time the Flags tab is opened.
-  useEffect(() => {
-    if (badgeTab !== 'flags' || flagList !== null) return
-    let alive = true
-    void (async () => {
-      try {
-        const res = await fetch('/api/footshorts/data/flags')
-        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; items?: FlagOption[] }
-        if (alive) setFlagList(body.items ?? [])
-      } catch {
-        if (alive) setFlagList([])
-      }
-    })()
-    return () => {
-      alive = false
-    }
-  }, [badgeTab, flagList])
-
-  const filteredFlags = useMemo(() => {
-    const q = flagQuery.trim().toLowerCase()
-    const list = flagList ?? []
-    return (q ? list.filter((f) => f.name.toLowerCase().includes(q)) : list).slice(0, 60)
-  }, [flagList, flagQuery])
-
-  const addOverlay = useCallback((url: string, label: string, kind: Overlay['kind']) => {
-    const id = `ov-${overlaySeq.current++}`
-    setOverlays((prev) => [
-      ...prev,
-      { id, url, label, kind, xPct: 50, yPct: 50, widthPct: DEFAULT_OVERLAY_WIDTH },
-    ])
-    setSelectedOverlayId(id)
+  // ── foreground overlays: doc, single-drag + group transforms ────────────────
+  const overlayDoc = useMemo<OverlayDoc>(() => ({ overlays, groups: overlayGroups }), [overlays, overlayGroups])
+  const applyDoc = useCallback((next: OverlayDoc) => {
+    setOverlays(next.overlays)
+    setOverlayGroups(next.groups)
   }, [])
 
-  const removeOverlay = useCallback((id: string) => {
-    setOverlays((prev) => prev.filter((o) => o.id !== id))
-    setSelectedOverlayId((cur) => (cur === id ? null : cur))
+  const toggleMultiSel = useCallback((id: string) => {
+    setMultiSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }, [])
 
-  const setOverlayWidth = useCallback((id: string, widthPct: number) => {
-    setOverlays((prev) => prev.map((o) => (o.id === id ? { ...o, widthPct } : o)))
-  }, [])
-
-  // Drag an overlay over the preview. The interaction layer matches the card
-  // box, so pointer position maps straight to card percentages.
+  // Drag a single (ungrouped) overlay over the preview. The interaction layer
+  // matches the card box, so pointer position maps straight to card percentages.
   const interactionRef = useRef<HTMLDivElement>(null)
   const dragIdRef = useRef<string | null>(null)
   const onDragMove = useCallback((e: PointerEvent) => {
@@ -1065,16 +1106,123 @@ export function ShareCardCreator({
     window.removeEventListener('pointermove', onDragMove)
     window.removeEventListener('pointerup', onDragEnd)
   }, [onDragMove])
-  const onOverlayPointerDown = useCallback(
-    (e: ReactPointerEvent, id: string) => {
+
+  // Group "transform together": each gesture snapshots the doc at pointer-down
+  // and recomputes from that start every move (pure math → no drift).
+  const startGroupMove = useCallback(
+    (gid: string, e: ReactPointerEvent) => {
       e.preventDefault()
-      setSelectedOverlayId(id)
-      dragIdRef.current = id
+      e.stopPropagation()
+      const start: OverlayDoc = { overlays, groups: overlayGroups }
+      const rect = interactionRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const x0 = e.clientX
+      const y0 = e.clientY
+      const move = (ev: PointerEvent) => {
+        const dxPct = ((ev.clientX - x0) / rect.width) * 100
+        const dyPct = ((ev.clientY - y0) / rect.height) * 100
+        applyDoc(moveGroupBy(start, gid, dxPct, dyPct))
+      }
+      const end = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', end)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', end)
+    },
+    [overlays, overlayGroups, applyDoc],
+  )
+
+  const startGroupScale = useCallback(
+    (gid: string, corner: number, e: ReactPointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const start: OverlayDoc = { overlays, groups: overlayGroups }
+      const rect = interactionRef.current?.getBoundingClientRect()
+      const bb = groupBBox(start.overlays, gid, renderW, renderH)
+      if (!rect || !bb) return
+      // Anchor the OPPOSITE corner as the scale pivot (card %).
+      const pivot = [
+        { x: bb.right, y: bb.bottom }, // 0 TL → BR
+        { x: bb.left, y: bb.bottom }, // 1 TR → BL
+        { x: bb.left, y: bb.top }, // 2 BR → TL
+        { x: bb.right, y: bb.top }, // 3 BL → TR
+      ][corner]!
+      const pivotPx = { x: rect.left + (pivot.x / 100) * rect.width, y: rect.top + (pivot.y / 100) * rect.height }
+      const d0 = Math.hypot(e.clientX - pivotPx.x, e.clientY - pivotPx.y) || 1
+      const move = (ev: PointerEvent) => {
+        const d1 = Math.hypot(ev.clientX - pivotPx.x, ev.clientY - pivotPx.y)
+        applyDoc(scaleGroupAround(start, gid, Math.max(0.05, d1 / d0), pivot.x, pivot.y, renderW, renderH))
+      }
+      const end = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', end)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', end)
+    },
+    [overlays, overlayGroups, applyDoc, renderW, renderH],
+  )
+
+  const startGroupRotate = useCallback(
+    (gid: string, e: ReactPointerEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const start: OverlayDoc = { overlays, groups: overlayGroups }
+      const rect = interactionRef.current?.getBoundingClientRect()
+      const bb = groupBBox(start.overlays, gid, renderW, renderH)
+      if (!rect || !bb) return
+      const center = { x: rect.left + (bb.cx / 100) * rect.width, y: rect.top + (bb.cy / 100) * rect.height }
+      const a0 = Math.atan2(e.clientY - center.y, e.clientX - center.x)
+      setFrozenGroupBox(bb) // freeze the AABB during the gesture so it doesn't wobble
+      const move = (ev: PointerEvent) => {
+        const a1 = Math.atan2(ev.clientY - center.y, ev.clientX - center.x)
+        applyDoc(rotateGroupAround(start, gid, ((a1 - a0) * 180) / Math.PI, bb.cx, bb.cy, renderW, renderH))
+      }
+      const end = () => {
+        setFrozenGroupBox(null)
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', end)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', end)
+    },
+    [overlays, overlayGroups, applyDoc, renderW, renderH],
+  )
+
+  // Pointer-down on an overlay's canvas hit-box: shift/⌘ ticks it for grouping;
+  // a grouped overlay selects + drags the whole group; otherwise single drag.
+  const onOverlayPointerDown = useCallback(
+    (e: ReactPointerEvent, o: Overlay) => {
+      if (e.shiftKey || e.metaKey || e.ctrlKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!o.groupId) toggleMultiSel(o.id)
+        return
+      }
+      if (o.groupId) {
+        setSelection({ kind: 'group', id: o.groupId })
+        setActiveTab('foreground')
+        startGroupMove(o.groupId, e)
+        return
+      }
+      // Stop the bubble so the canvas's "click empty → deselect" handler doesn't
+      // immediately clear the selection we just set.
+      e.preventDefault()
+      e.stopPropagation()
+      setSelection({ kind: 'overlay', id: o.id })
+      dragIdRef.current = o.id
       window.addEventListener('pointermove', onDragMove)
       window.addEventListener('pointerup', onDragEnd)
     },
-    [onDragMove, onDragEnd],
+    [toggleMultiSel, startGroupMove, onDragMove, onDragEnd],
   )
+
+  // The selected group's bounding box (frozen mid-rotate so the overlay holds).
+  const groupBox = useMemo<GroupBBox | null>(() => {
+    if (selection?.kind !== 'group') return null
+    return frozenGroupBox ?? groupBBox(overlays, selection.id, renderW, renderH)
+  }, [selection, frozenGroupBox, overlays, renderW, renderH])
 
   // ── Fixtures (match-row list) selection ─────────────────────────────────────
   const toggleFixture = useCallback((id: string) => {
@@ -1089,998 +1237,862 @@ export function ShareCardCreator({
   const labelCls = 'block text-[11px] font-medium text-neutral-400'
   const selectCls =
     'mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30'
+  const inputCls =
+    'mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30'
+
+  const frame = {
+    themeName,
+    themeOverride,
+    ratio,
+    accentHex: accentHex || null,
+    eyebrow,
+    handle,
+    logoSize,
+    logoVariant,
+    captionColor,
+    gradientStrength,
+    background,
+    backgroundScrim,
+  }
+  const paletteHexes = [effectiveTheme.colors.accent, effectiveTheme.colors.brand, accentHex].filter(Boolean)
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row">
-      {/* ── Controls ─────────────────────────────────────────────────────── */}
-      <div className="w-full shrink-0 space-y-4 lg:w-80">
-        {/* Card type */}
-        <div>
-          <span className={labelCls}>Card type</span>
-          <div className="mt-1.5 grid grid-cols-3 gap-1.5">
-            {CARD_TYPES.map((t) => (
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {/* ── Top action bar ───────────────────────────────────────────────── */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <button
+          onClick={() => void handleDownload()}
+          disabled={!content || downloading}
+          className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {downloading ? 'Rendering…' : 'Download PNG'}
+        </button>
+        <button
+          onClick={() => void handleSave()}
+          disabled={!content || saving}
+          className="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        {currentCardName && (
+          <span className="truncate text-[11px] text-neutral-500">Editing: {currentCardName}</span>
+        )}
+        {saveError && <span className="text-[11px] text-red-400">{saveError}</span>}
+      </div>
+
+      {/* ── 3-pane row ───────────────────────────────────────────────────── */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+        {/* Left: icon rail + active-category panel */}
+        <div className="flex w-full shrink-0 gap-2 lg:h-full lg:min-h-0 lg:w-80">
+          <div className="flex shrink-0 flex-col gap-1.5">
+            {TABS.map(({ id, label, Icon }) => (
               <button
-                key={t.id}
-                onClick={() => selectCardType(t.id)}
-                className={`rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
-                  cardType === t.id
-                    ? 'border-white/30 bg-white/10 text-neutral-100'
-                    : 'border-white/10 text-neutral-400 hover:bg-white/5'
+                key={id}
+                type="button"
+                title={label}
+                onClick={() => {
+                  setActiveTab(id)
+                  setMultiSel([])
+                }}
+                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+                  activeTab === id
+                    ? 'border-sky-400/60 bg-white/10 text-white'
+                    : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
                 }`}
               >
-                {t.label}
+                <Icon size={18} weight={activeTab === id ? 'fill' : 'regular'} />
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Competition (data cards) */}
-        {(needsStandings || needsFixtures) && (
-          <label className={labelCls}>
-            Competition
-            <select value={compKey} onChange={(e) => setCompKey(e.target.value)} className={selectCls}>
-              {competitions.length === 0 && <option value="">No ingested data</option>}
-              {competitions.map((c) => (
-                <option key={`${c.slug}::${c.season}`} value={`${c.slug}::${c.season}`}>
-                  {c.name} · {c.season}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+          <div className="min-h-[380px] min-w-0 flex-1 lg:h-full lg:min-h-0">
+            {activeTab === 'foreground' ? (
+              <OverlayPanel
+                doc={overlayDoc}
+                onChange={applyDoc}
+                selection={selection}
+                setSelection={setSelection}
+                multiSel={multiSel}
+                setMultiSel={setMultiSel}
+                ratio={ratio}
+                paletteHexes={paletteHexes}
+                news={news}
+                iconColor={effectiveTheme.colors.accent}
+              />
+            ) : (
+              <div className="space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+                {error && (
+                  <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
+                    {error}
+                  </p>
+                )}
+                {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
 
-        {/* Group picker — only for group-stage cups (World Cup, Euros…). */}
-        {cardType === 'standings' && standingGroups.length > 0 && (
-          <label className={labelCls}>
-            Group
-            <select
-              value={pickedGroup}
-              onChange={(e) => setPickedGroup(e.target.value)}
-              className={selectCls}
-            >
-              {standingGroups.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {error && (
-          <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
-            {error}
-          </p>
-        )}
-        {loading && <p className="text-[11px] text-neutral-500">Loading…</p>}
-
-        {/* Match / match-timeline: fixture picker */}
-        {(cardType === 'match' || cardType === 'match-timeline') && fixtures && (
-          <label className={labelCls}>
-            Fixture
-            <select
-              value={pickedFixtureId}
-              onChange={(e) => setPickedFixtureId(e.target.value)}
-              className={selectCls}
-            >
-              <option value="">Select a fixture…</option>
-              {fixtures.map((f) => {
-                const home = f.home?.name ?? f.home_team_name ?? 'TBD'
-                const away = f.away?.name ?? f.away_team_name ?? 'TBD'
-                const score =
-                  f.status === 'finished' && f.home_score != null
-                    ? ` (${f.home_score}–${f.away_score})`
-                    : ''
-                return (
-                  <option key={f.id} value={f.id}>
-                    {home} vs {away}
-                    {score}
-                  </option>
-                )
-              })}
-            </select>
-          </label>
-        )}
-
-        {/* Match / match-timeline: the heading match-type card's layout (tile vs
-            editorial card) — the timeline rides below whichever is picked. */}
-        {(cardType === 'match' || cardType === 'match-timeline') && (
-          <label className={labelCls}>
-            Style
-            <select
-              value={matchStyle}
-              onChange={(e) => setMatchStyle(e.target.value as MatchStyle)}
-              className={selectCls}
-            >
-              {MATCH_STYLES.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {/* Match timeline: event-type filter */}
-        {cardType === 'match-timeline' && (
-          <label className={labelCls}>
-            Event filter
-            <select
-              value={eventFilter}
-              onChange={(e) => setEventFilter(e.target.value as EventTypeFilter)}
-              className={selectCls}
-            >
-              <option value="all">All events</option>
-              <option value="goal">Goals only</option>
-              <option value="card">Cards only</option>
-              <option value="subst">Substitutions only</option>
-            </select>
-            {eventsLoading ? (
-              <span className="text-[11px] text-neutral-500">Loading events…</span>
-            ) : events && events.length === 0 ? (
-              <span className="text-[11px] text-neutral-500">No events for this fixture.</span>
-            ) : null}
-          </label>
-        )}
-
-        {/* Fixtures: multi-select list + row density */}
-        {cardType === 'fixtures' && fixtures && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className={labelCls}>Fixtures ({pickedFixtureIds.length})</span>
-              <div className="flex gap-2 text-[11px]">
-                <button
-                  type="button"
-                  onClick={selectAllFixtures}
-                  className="text-sky-300 hover:text-sky-200"
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPickedFixtureIds([])}
-                  className="text-neutral-400 hover:text-neutral-200"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-            <div className="max-h-60 space-y-0.5 overflow-y-auto rounded-md border border-white/10 bg-neutral-900 p-1.5">
-              {fixtures.length === 0 && (
-                <p className="px-1 py-2 text-[11px] text-neutral-500">No fixtures.</p>
-              )}
-              {fixtures.map((f) => {
-                const home = f.home?.name ?? f.home_team_name ?? 'TBD'
-                const away = f.away?.name ?? f.away_team_name ?? 'TBD'
-                const score =
-                  f.status === 'finished' && f.home_score != null
-                    ? ` (${f.home_score}–${f.away_score})`
-                    : ''
-                const checked = pickedFixtureIds.includes(f.id)
-                return (
-                  <label
-                    key={f.id}
-                    className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
-                      checked ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
-                    }`}
-                  >
-                    <input type="checkbox" checked={checked} onChange={() => toggleFixture(f.id)} />
-                    <span className="min-w-0 flex-1 truncate">
-                      {home} vs {away}
-                      {score}
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
-            {pickedFixtureIds.length > fixtureRowCap && (
-              <p className="text-[11px] text-amber-400/90">
-                Only the first {fixtureRowCap} fit this format; the rest are hidden.
-              </p>
-            )}
-            <label className={labelCls}>
-              Density
-              <select
-                value={matchRowVariant}
-                onChange={(e) => setMatchRowVariant(e.target.value as MatchRowVariant)}
-                className={selectCls}
-              >
-                {MATCH_ROW_VARIANTS.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
-
-        {/* Form: team picker */}
-        {cardType === 'form' && (
-          <label className={labelCls}>
-            Team
-            <select
-              value={pickedTeamSlug}
-              onChange={(e) => setPickedTeamSlug(e.target.value)}
-              className={selectCls}
-            >
-              <option value="">Select a team…</option>
-              {teamOptions.map((t) => (
-                <option key={t.slug} value={t.slug}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {/* News picker — the image card only lists articles that have a thumbnail. */}
-        {needsNews && news && (
-          <label className={labelCls}>
-            Article
-            <input
-              value={newsSearch}
-              onChange={(e) => setNewsSearch(e.target.value)}
-              placeholder="Search articles…"
-              className="mt-1 mb-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
-            />
-            <select value={pickedNewsId} onChange={(e) => setPickedNewsId(e.target.value)} className={selectCls}>
-              <option value="">{`Select an article… (${filteredNews.length})`}</option>
-              {filteredNews.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.headline.slice(0, 70)}
-                </option>
-              ))}
-            </select>
-            {/* Pull a deeper page on demand. Shown only while the last fetch came
-                back full (so more may exist) and we're under the server cap. */}
-            {news.length >= newsLimit && newsLimit < NEWS_LIMIT_MAX && (
-              <button
-                type="button"
-                onClick={() => setNewsLimit((n) => Math.min(n + NEWS_LIMIT_STEP, NEWS_LIMIT_MAX))}
-                disabled={loading}
-                className="mt-1.5 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-300 hover:border-white/30 hover:text-neutral-100 disabled:opacity-50"
-              >
-                {loading ? 'Loading…' : `Load more articles (showing ${news.length})`}
-              </button>
-            )}
-          </label>
-        )}
-
-        {/* AI controls */}
-        {cardType === 'ai-image' && (
-          <div className="space-y-2.5 rounded-lg border border-white/10 bg-neutral-950/60 p-3">
-            <textarea
-              value={aiSubject}
-              onChange={(e) => setAiSubject(e.target.value)}
-              rows={3}
-              placeholder="e.g. a lone striker celebrating under floodlights"
-              className="w-full resize-vertical rounded border border-white/10 bg-neutral-950 p-2 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-            />
-            <div>
-              <span className={labelCls}>Style</span>
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                {SHARE_IMAGE_STYLES.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setAiStyleId(s.id)}
-                    title={s.hint}
-                    className={`rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
-                      aiStyleId === s.id
-                        ? 'border-white/30 bg-white/10 text-neutral-100'
-                        : 'border-white/10 text-neutral-400 hover:bg-white/5'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className={labelCls}>
-              Model
-              <select
-                value={aiModel}
-                onChange={(e) => setAiModel(e.target.value as ShareImageModel)}
-                className={selectCls}
-              >
-                <option value="image.default">Default (Gemini 3 Pro Image)</option>
-                <option value="image.seedream">Seedream (cheap)</option>
-              </select>
-            </label>
-            {/* Reference image (image-to-image, default model only) */}
-            <div>
-              <span className={labelCls}>Reference image (optional)</span>
-              {aiRefImage ? (
-                <div className="mt-1.5 flex items-center gap-2 rounded-md border border-white/10 bg-neutral-950 p-1.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={aiRefImage} alt="" className="h-12 w-12 rounded object-cover" />
-                  <span className="flex-1 text-[11px] text-neutral-400">
-                    Guides the generation. Uses the default model.
-                  </span>
-                  <button
-                    onClick={() => setAiRefImage('')}
-                    className="rounded px-1.5 py-1 text-[11px] text-neutral-400 hover:bg-white/10 hover:text-white"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-1.5 space-y-1.5">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => onPickReference(e.target.files?.[0] ?? null)}
-                    className="block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
-                  />
-                  <button
-                    onClick={() => setAiRefPickerOpen((v) => !v)}
-                    className="text-[11px] text-sky-300 hover:text-sky-200"
-                  >
-                    {aiRefPickerOpen ? '× Close news thumbnails' : '+ Use a news thumbnail'}
-                  </button>
-                  {aiRefPickerOpen && (
+                {/* ── Setup: data & format ── */}
+                {activeTab === 'setup' && (
+                  <>
                     <div>
-                      <input
-                        value={newsSearch}
-                        onChange={(e) => setNewsSearch(e.target.value)}
-                        placeholder="Search news…"
-                        className="mb-1.5 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-                      />
-                      {news === null ? (
-                        <p className="text-[11px] text-neutral-500">Loading…</p>
-                      ) : (
-                        <div className="grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto">
-                          {newsWithImage.slice(0, 30).map((n) => (
-                            <button
-                              key={n.id}
-                              onClick={() => void pickReferenceFromUrl(n.image_url!)}
-                              disabled={aiRefBusy}
-                              title={n.headline}
-                              className="aspect-square overflow-hidden rounded-md border border-white/10 hover:border-white/30 disabled:opacity-50"
-                            >
+                      <span className={labelCls}>Card type</span>
+                      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                        {CARD_TYPES.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => selectCardType(t.id)}
+                            className={`rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
+                              cardType === t.id
+                                ? 'border-white/30 bg-white/10 text-neutral-100'
+                                : 'border-white/10 text-neutral-400 hover:bg-white/5'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {(needsStandings || needsFixtures) && (
+                      <label className={labelCls}>
+                        Competition
+                        <select value={compKey} onChange={(e) => setCompKey(e.target.value)} className={selectCls}>
+                          {competitions.length === 0 && <option value="">No ingested data</option>}
+                          {competitions.map((c) => (
+                            <option key={`${c.slug}::${c.season}`} value={`${c.slug}::${c.season}`}>
+                              {c.name} · {c.season}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+
+                    {cardType === 'standings' && standingGroups.length > 0 && (
+                      <label className={labelCls}>
+                        Group
+                        <select value={pickedGroup} onChange={(e) => setPickedGroup(e.target.value)} className={selectCls}>
+                          {standingGroups.map((g) => (
+                            <option key={g} value={g}>
+                              {g}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+
+                    {(cardType === 'match' || cardType === 'match-timeline') && fixtures && (
+                      <label className={labelCls}>
+                        Fixture
+                        <select value={pickedFixtureId} onChange={(e) => setPickedFixtureId(e.target.value)} className={selectCls}>
+                          <option value="">Select a fixture…</option>
+                          {fixtures.map((f) => {
+                            const home = f.home?.name ?? f.home_team_name ?? 'TBD'
+                            const away = f.away?.name ?? f.away_team_name ?? 'TBD'
+                            const score =
+                              f.status === 'finished' && f.home_score != null ? ` (${f.home_score}–${f.away_score})` : ''
+                            return (
+                              <option key={f.id} value={f.id}>
+                                {home} vs {away}
+                                {score}
+                              </option>
+                            )
+                          })}
+                        </select>
+                      </label>
+                    )}
+
+                    {(cardType === 'match' || cardType === 'match-timeline') && (
+                      <label className={labelCls}>
+                        Style
+                        <select value={matchStyle} onChange={(e) => setMatchStyle(e.target.value as MatchStyle)} className={selectCls}>
+                          {MATCH_STYLES.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+
+                    {cardType === 'match-timeline' && (
+                      <label className={labelCls}>
+                        Event filter
+                        <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value as EventTypeFilter)} className={selectCls}>
+                          <option value="all">All events</option>
+                          <option value="goal">Goals only</option>
+                          <option value="card">Cards only</option>
+                          <option value="subst">Substitutions only</option>
+                        </select>
+                        {eventsLoading ? (
+                          <span className="text-[11px] text-neutral-500">Loading events…</span>
+                        ) : events && events.length === 0 ? (
+                          <span className="text-[11px] text-neutral-500">No events for this fixture.</span>
+                        ) : null}
+                      </label>
+                    )}
+
+                    {cardType === 'fixtures' && fixtures && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={labelCls}>Fixtures ({pickedFixtureIds.length})</span>
+                          <div className="flex gap-2 text-[11px]">
+                            <button type="button" onClick={selectAllFixtures} className="text-sky-300 hover:text-sky-200">
+                              All
+                            </button>
+                            <button type="button" onClick={() => setPickedFixtureIds([])} className="text-neutral-400 hover:text-neutral-200">
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-60 space-y-0.5 overflow-y-auto rounded-md border border-white/10 bg-neutral-900 p-1.5">
+                          {fixtures.length === 0 && <p className="px-1 py-2 text-[11px] text-neutral-500">No fixtures.</p>}
+                          {fixtures.map((f) => {
+                            const home = f.home?.name ?? f.home_team_name ?? 'TBD'
+                            const away = f.away?.name ?? f.away_team_name ?? 'TBD'
+                            const score =
+                              f.status === 'finished' && f.home_score != null ? ` (${f.home_score}–${f.away_score})` : ''
+                            const checked = pickedFixtureIds.includes(f.id)
+                            return (
+                              <label
+                                key={f.id}
+                                className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
+                                  checked ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
+                                }`}
+                              >
+                                <input type="checkbox" checked={checked} onChange={() => toggleFixture(f.id)} />
+                                <span className="min-w-0 flex-1 truncate">
+                                  {home} vs {away}
+                                  {score}
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                        {pickedFixtureIds.length > fixtureRowCap && (
+                          <p className="text-[11px] text-amber-400/90">
+                            Only the first {fixtureRowCap} fit this format; the rest are hidden.
+                          </p>
+                        )}
+                        <label className={labelCls}>
+                          Density
+                          <select value={matchRowVariant} onChange={(e) => setMatchRowVariant(e.target.value as MatchRowVariant)} className={selectCls}>
+                            {MATCH_ROW_VARIANTS.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    )}
+
+                    {cardType === 'form' && (
+                      <label className={labelCls}>
+                        Team
+                        <select value={pickedTeamSlug} onChange={(e) => setPickedTeamSlug(e.target.value)} className={selectCls}>
+                          <option value="">Select a team…</option>
+                          {teamOptions.map((t) => (
+                            <option key={t.slug} value={t.slug}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+
+                    {needsNews && news && (
+                      <label className={labelCls}>
+                        Article
+                        <input
+                          value={newsSearch}
+                          onChange={(e) => setNewsSearch(e.target.value)}
+                          placeholder="Search articles…"
+                          className="mt-1 mb-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
+                        />
+                        <select value={pickedNewsId} onChange={(e) => setPickedNewsId(e.target.value)} className={selectCls}>
+                          <option value="">{`Select an article… (${filteredNews.length})`}</option>
+                          {filteredNews.map((n) => (
+                            <option key={n.id} value={n.id}>
+                              {n.headline.slice(0, 70)}
+                            </option>
+                          ))}
+                        </select>
+                        {news.length >= newsLimit && newsLimit < NEWS_LIMIT_MAX && (
+                          <button
+                            type="button"
+                            onClick={() => setNewsLimit((n) => Math.min(n + NEWS_LIMIT_STEP, NEWS_LIMIT_MAX))}
+                            disabled={loading}
+                            className="mt-1.5 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-300 hover:border-white/30 hover:text-neutral-100 disabled:opacity-50"
+                          >
+                            {loading ? 'Loading…' : `Load more articles (showing ${news.length})`}
+                          </button>
+                        )}
+                      </label>
+                    )}
+
+                    {cardType === 'ai-image' && (
+                      <div className="space-y-2.5 rounded-lg border border-white/10 bg-neutral-950/60 p-3">
+                        <textarea
+                          value={aiSubject}
+                          onChange={(e) => setAiSubject(e.target.value)}
+                          rows={3}
+                          placeholder="e.g. a lone striker celebrating under floodlights"
+                          className="w-full resize-vertical rounded border border-white/10 bg-neutral-950 p-2 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                        />
+                        <div>
+                          <span className={labelCls}>Style</span>
+                          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                            {SHARE_IMAGE_STYLES.map((s) => (
+                              <button
+                                key={s.id}
+                                onClick={() => setAiStyleId(s.id)}
+                                title={s.hint}
+                                className={`rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
+                                  aiStyleId === s.id
+                                    ? 'border-white/30 bg-white/10 text-neutral-100'
+                                    : 'border-white/10 text-neutral-400 hover:bg-white/5'
+                                }`}
+                              >
+                                {s.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <label className={labelCls}>
+                          Model
+                          <select value={aiModel} onChange={(e) => setAiModel(e.target.value as ShareImageModel)} className={selectCls}>
+                            <option value="image.default">Default (Gemini 3 Pro Image)</option>
+                            <option value="image.seedream">Seedream (cheap)</option>
+                          </select>
+                        </label>
+                        <div>
+                          <span className={labelCls}>Reference image (optional)</span>
+                          {aiRefImage ? (
+                            <div className="mt-1.5 flex items-center gap-2 rounded-md border border-white/10 bg-neutral-950 p-1.5">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                              <img src={aiRefImage} alt="" className="h-12 w-12 rounded object-cover" />
+                              <span className="flex-1 text-[11px] text-neutral-400">Guides the generation. Uses the default model.</span>
+                              <button onClick={() => setAiRefImage('')} className="rounded px-1.5 py-1 text-[11px] text-neutral-400 hover:bg-white/10 hover:text-white">
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="mt-1.5 space-y-1.5">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => onPickReference(e.target.files?.[0] ?? null)}
+                                className="block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
+                              />
+                              <button onClick={() => setAiRefPickerOpen((v) => !v)} className="text-[11px] text-sky-300 hover:text-sky-200">
+                                {aiRefPickerOpen ? '× Close news thumbnails' : '+ Use a news thumbnail'}
+                              </button>
+                              {aiRefPickerOpen && (
+                                <div>
+                                  <input
+                                    value={newsSearch}
+                                    onChange={(e) => setNewsSearch(e.target.value)}
+                                    placeholder="Search news…"
+                                    className="mb-1.5 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                                  />
+                                  {news === null ? (
+                                    <p className="text-[11px] text-neutral-500">Loading…</p>
+                                  ) : (
+                                    <div className="grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto">
+                                      {newsWithImage.slice(0, 30).map((n) => (
+                                        <button
+                                          key={n.id}
+                                          onClick={() => void pickReferenceFromUrl(n.image_url!)}
+                                          disabled={aiRefBusy}
+                                          title={n.headline}
+                                          className="aspect-square overflow-hidden rounded-md border border-white/10 hover:border-white/30 disabled:opacity-50"
+                                        >
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {aiRefBusy && <p className="mt-1 text-[11px] text-neutral-500">Loading thumbnail…</p>}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          value={aiCaption}
+                          onChange={(e) => setAiCaption(e.target.value)}
+                          placeholder="Caption (optional)"
+                          className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                        />
+                        <button
+                          onClick={() => void handleGenerate()}
+                          disabled={aiBusy || !aiSubject.trim()}
+                          className="w-full rounded-md bg-white px-3 py-1.5 text-xs font-medium text-neutral-950 disabled:opacity-40"
+                        >
+                          {aiBusy ? 'Generating…' : aiDataUrl ? 'Regenerate' : 'Generate'}
+                        </button>
+                        {aiError && <p className="text-[11px] text-red-400">{aiError}</p>}
+                      </div>
+                    )}
+
+                    <hr className="border-white/10" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className={labelCls}>
+                        Format
+                        <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
+                          {ASPECT_RATIOS.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className={labelCls}>
+                        Logo size
+                        <select value={logoSize} onChange={(e) => setLogoSize(e.target.value as LogoSize)} className={selectCls}>
+                          {LOGO_SIZES.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label className={labelCls}>
+                      Logo style
+                      <select value={logoVariant} onChange={(e) => setLogoVariant(e.target.value as LogoVariant)} className={selectCls}>
+                        {LOGO_VARIANTS.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                )}
+
+                {/* ── Theme ── */}
+                {activeTab === 'theme' && (
+                  <>
+                    <ThemePanel
+                      theme={effectiveTheme}
+                      themeName={themeName}
+                      override={themeOverride}
+                      onPickPreset={(name) => {
+                        setThemeName(name)
+                        setThemeOverride(undefined)
+                      }}
+                      onChange={setThemeOverride}
+                      onReset={() => setThemeOverride(undefined)}
+                    />
+                    <label className={labelCls}>
+                      Accent quick-tint (hex)
+                      <input
+                        value={accentHex}
+                        onChange={(e) => setAccentHex(e.target.value)}
+                        placeholder="#00D26A"
+                        className={inputCls}
+                      />
+                      <span className="mt-1 block text-[10px] text-neutral-600">
+                        Legacy shortcut — overridden by a custom theme accent above.
+                      </span>
+                    </label>
+                  </>
+                )}
+
+                {/* ── Background ── */}
+                {activeTab === 'background' &&
+                  (bgEnabled ? (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className={labelCls}>Background</span>
+                        {background.type !== 'none' && (
+                          <button onClick={() => setBackground({ type: 'none' })} className="text-[11px] text-neutral-400 hover:text-neutral-200">
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-1.5 flex overflow-hidden rounded-md border border-white/10">
+                        {BACKGROUND_KINDS.map((k) => (
+                          <button
+                            key={k.id}
+                            onClick={() => setBgTab(k.id)}
+                            className={`flex-1 px-2 py-1.5 text-[11px] ${
+                              bgTab === k.id ? 'bg-white/15 text-white' : 'text-neutral-400 hover:text-neutral-200'
+                            }`}
+                          >
+                            {k.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {bgTab === 'news' && (
+                        <div className="mt-2">
+                          <input
+                            value={newsSearch}
+                            onChange={(e) => setNewsSearch(e.target.value)}
+                            placeholder="Search news…"
+                            className="mb-1.5 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                          />
+                          {news === null ? (
+                            <p className="text-[11px] text-neutral-500">Loading…</p>
+                          ) : (
+                            <div className="grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto">
+                              {newsWithImage.slice(0, 30).map((n) => {
+                                const selected = background.type === 'news' && background.url === n.image_url
+                                return (
+                                  <button
+                                    key={n.id}
+                                    onClick={() => setBackground({ type: 'news', url: n.image_url!, label: n.headline })}
+                                    title={n.headline}
+                                    className={`aspect-square overflow-hidden rounded-md border ${
+                                      selected ? 'border-sky-400/80 ring-1 ring-sky-400/60' : 'border-white/10 hover:border-white/30'
+                                    }`}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {bgTab === 'ai' && (
+                        <div className="mt-2 space-y-2">
+                          <textarea
+                            value={bgAiSubject}
+                            onChange={(e) => setBgAiSubject(e.target.value)}
+                            rows={2}
+                            placeholder="e.g. a moody floodlit stadium, deep greens"
+                            className="w-full resize-vertical rounded border border-white/10 bg-neutral-950 p-2 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                          />
+                          <label className={labelCls}>
+                            Style
+                            <select value={aiStyleId} onChange={(e) => setAiStyleId(e.target.value)} className={selectCls}>
+                              {SHARE_IMAGE_STYLES.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            onClick={() => void handleGenerateBg()}
+                            disabled={bgBusy || !bgAiSubject.trim()}
+                            className="w-full rounded-md bg-white px-3 py-1.5 text-xs font-medium text-neutral-950 disabled:opacity-40"
+                          >
+                            {bgBusy ? 'Generating…' : background.type === 'ai' ? 'Regenerate' : 'Generate'}
+                          </button>
+                        </div>
+                      )}
+
+                      {bgTab === 'aura' && (
+                        <div className="mt-2 space-y-1.5">
+                          <input
+                            value={bgAuraSlug}
+                            onChange={(e) => {
+                              const slug = e.target.value
+                              setBgAuraSlug(slug)
+                              setBackground(slug.trim() ? { type: 'aura', slug: slug.trim() } : { type: 'none' })
+                            }}
+                            placeholder="aura.promad.design slug — e.g. nebula"
+                            className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
+                          />
+                          <p className="text-[11px] text-amber-400/90">Auras animate in the preview but aren’t baked into the exported PNG.</p>
+                        </div>
+                      )}
+
+                      {bgError && <p className="mt-1 text-[11px] text-red-400">{bgError}</p>}
+
+                      {background.type !== 'none' && (
+                        <label className={`${labelCls} mt-2 block`}>
+                          Scrim {Math.round(backgroundScrim * 100)}%
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={Math.round(backgroundScrim * 100)}
+                            onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
+                            className="mt-2 w-full"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-neutral-500">
+                      This card is image-led — its image already fills the frame, so there’s no separate background.
+                    </p>
+                  ))}
+
+                {/* ── Text & labels ── */}
+                {activeTab === 'text' && (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className={labelCls}>Label (top-left)</span>
+                        <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+                          <input type="checkbox" checked={showEyebrow} onChange={(e) => setShowEyebrow(e.target.checked)} />
+                          Show
+                        </label>
+                      </div>
+                      <input
+                        value={eyebrowOverride}
+                        onChange={(e) => setEyebrowOverride(e.target.value)}
+                        disabled={!showEyebrow}
+                        placeholder="Auto (competition / publisher) — type to override"
+                        className="mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30 disabled:opacity-40"
+                      />
+                    </div>
+                    <label className={labelCls}>
+                      Handle (footer)
+                      <input value={handle} onChange={(e) => setHandle(e.target.value)} className={inputCls} />
+                    </label>
+                    {(cardType === 'news-image' || cardType === 'ai-image') && (
+                      <div className="grid grid-cols-2 items-end gap-3">
+                        <label className={labelCls}>
+                          Gradient {Math.round(gradientStrength * 100)}%
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={Math.round(gradientStrength * 100)}
+                            onChange={(e) => setGradientStrength(Number(e.target.value) / 100)}
+                            className="mt-2 w-full"
+                          />
+                        </label>
+                        <label className={labelCls}>
+                          Caption color
+                          <input
+                            type="color"
+                            value={captionColor}
+                            onChange={(e) => setCaptionColor(e.target.value)}
+                            className="mt-1 h-8 w-full rounded-md border border-white/10 bg-neutral-900"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ── Save & publish ── */}
+                {activeTab === 'publish' && (
+                  <>
+                    <div>
+                      <span className={labelCls}>Publish to product</span>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {tags.length === 0 ? (
+                          <span className="text-[11px] text-neutral-500">
+                            No tags — add teams or competitions so the card surfaces in the app.
+                          </span>
+                        ) : (
+                          tags.map((t) => (
+                            <span
+                              key={`${t.type}:${t.slug}`}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-neutral-900 py-1 pl-1.5 pr-1 text-[11px] text-neutral-200"
+                            >
+                              {t.crest_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={t.crest_url} alt="" className="h-3.5 w-3.5 object-contain" />
+                              ) : null}
+                              {t.name}
+                              <button
+                                onClick={() => removeTag(t.type, t.slug)}
+                                className="rounded px-1 text-neutral-400 hover:bg-white/10 hover:text-white"
+                                aria-label={`Remove ${t.name}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                      <div className="mt-2 flex gap-1.5">
+                        <input
+                          value={tagQuery}
+                          onChange={(e) => setTagQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && void searchTags()}
+                          placeholder="Add a team or competition…"
+                          className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
+                        />
+                        <button onClick={() => void searchTags()} className="rounded-md bg-white/10 px-2.5 py-1.5 text-xs text-neutral-100 hover:bg-white/20">
+                          {tagLoading ? '…' : 'Find'}
+                        </button>
+                      </div>
+                      {tagResults.length > 0 && (
+                        <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto">
+                          {tagResults.map((r) => (
+                            <button
+                              key={r.id}
+                              onClick={() => addTag(r)}
+                              className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-neutral-900 p-1.5 text-left hover:border-white/30"
+                            >
+                              {r.crest_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={r.crest_url} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                              ) : (
+                                <span className="h-5 w-5 shrink-0" />
+                              )}
+                              <span className="flex-1 truncate text-[11px] text-neutral-200">{r.name}</span>
+                              <span className="text-[10px] text-neutral-500">{r.type}</span>
                             </button>
                           ))}
                         </div>
                       )}
-                      {aiRefBusy && <p className="mt-1 text-[11px] text-neutral-500">Loading thumbnail…</p>}
+                      <button
+                        onClick={() => void handleShip()}
+                        disabled={!content || shipping}
+                        className="mt-2.5 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {shipping ? 'Shipping…' : currentCardId ? 'Re-ship to product' : 'Ship to product'}
+                      </button>
+                      {shipError && <p className="mt-1 text-[11px] text-red-400">{shipError}</p>}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <input
-              value={aiCaption}
-              onChange={(e) => setAiCaption(e.target.value)}
-              placeholder="Caption (optional)"
-              className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-            />
-            <button
-              onClick={() => void handleGenerate()}
-              disabled={aiBusy || !aiSubject.trim()}
-              className="w-full rounded-md bg-white px-3 py-1.5 text-xs font-medium text-neutral-950 disabled:opacity-40"
-            >
-              {aiBusy ? 'Generating…' : aiDataUrl ? 'Regenerate' : 'Generate'}
-            </button>
-            {aiError && <p className="text-[11px] text-red-400">{aiError}</p>}
-          </div>
-        )}
 
-        <hr className="border-white/10" />
-
-        {/* Theme + ratio + accent */}
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelCls}>
-            Theme
-            <select
-              value={themeName}
-              onChange={(e) => setThemeName(e.target.value as ThemeName)}
-              className={selectCls}
-            >
-              {THEME_NAMES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={labelCls}>
-            Format
-            <select
-              value={ratio}
-              onChange={(e) => setRatio(e.target.value as AspectRatio)}
-              className={selectCls}
-            >
-              {ASPECT_RATIOS.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelCls}>
-            Accent (hex)
-            <input
-              value={accentHex}
-              onChange={(e) => setAccentHex(e.target.value)}
-              placeholder="#00D26A"
-              className="mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
-            />
-          </label>
-          <label className={labelCls}>
-            Handle
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              className="mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
-            />
-          </label>
-        </div>
-
-        {/* Logo size + variant */}
-        <div className="grid grid-cols-2 gap-3">
-          <label className={labelCls}>
-            Logo size
-            <select
-              value={logoSize}
-              onChange={(e) => setLogoSize(e.target.value as LogoSize)}
-              className={selectCls}
-            >
-              {LOGO_SIZES.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={labelCls}>
-            Logo style
-            <select
-              value={logoVariant}
-              onChange={(e) => setLogoVariant(e.target.value as LogoVariant)}
-              className={selectCls}
-            >
-              {LOGO_VARIANTS.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        {/* Eyebrow (competition / publisher label) override + toggle */}
-        <div>
-          <div className="flex items-center justify-between">
-            <span className={labelCls}>Label (top-left)</span>
-            <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-              <input
-                type="checkbox"
-                checked={showEyebrow}
-                onChange={(e) => setShowEyebrow(e.target.checked)}
-              />
-              Show
-            </label>
-          </div>
-          <input
-            value={eyebrowOverride}
-            onChange={(e) => setEyebrowOverride(e.target.value)}
-            disabled={!showEyebrow}
-            placeholder="Auto (competition / publisher) — type to override"
-            className="mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30 disabled:opacity-40"
-          />
-        </div>
-
-        {/* Caption styling — only meaningful on image-led (bleed) cards */}
-        {(cardType === 'news-image' || cardType === 'ai-image') && (
-          <div className="grid grid-cols-2 items-end gap-3">
-            <label className={labelCls}>
-              Gradient {Math.round(gradientStrength * 100)}%
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(gradientStrength * 100)}
-                onChange={(e) => setGradientStrength(Number(e.target.value) / 100)}
-                className="mt-2 w-full"
-              />
-            </label>
-            <label className={labelCls}>
-              Caption color
-              <input
-                type="color"
-                value={captionColor}
-                onChange={(e) => setCaptionColor(e.target.value)}
-                className="mt-1 h-8 w-full rounded-md border border-white/10 bg-neutral-900"
-              />
-            </label>
-          </div>
-        )}
-
-        {/* Background — paint a news image, AI image, or aura behind a data
-            card's content. Hidden for bleed cards, which already are an image. */}
-        {bgEnabled && (
-          <>
-            <hr className="border-white/10" />
-            <div>
-              <div className="flex items-center justify-between">
-                <span className={labelCls}>Background</span>
-                {background.type !== 'none' && (
-                  <button
-                    onClick={() => setBackground({ type: 'none' })}
-                    className="text-[11px] text-neutral-400 hover:text-neutral-200"
-                  >
-                    Clear
-                  </button>
+                    {savedCards.length > 0 && (
+                      <div>
+                        <span className={labelCls}>Saved cards</span>
+                        <div className="mt-1.5 space-y-1.5">
+                          {savedCards.map((c) => (
+                            <div
+                              key={c.id}
+                              className={`flex items-center gap-2 rounded-md border p-1.5 ${
+                                currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-white/10'
+                              }`}
+                            >
+                              <button
+                                onClick={() => loadCard(c)}
+                                title="Load into editor"
+                                className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
+                              >
+                                {c.name}
+                                <span className="ml-1 text-neutral-500">· {c.cardType}</span>
+                              </button>
+                              {c.status === 'published' ? (
+                                <>
+                                  <span
+                                    className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300"
+                                    title={c.publishedAt ? `Shipped ${new Date(c.publishedAt).toLocaleString()}` : 'Live in the product'}
+                                  >
+                                    ● Live
+                                  </span>
+                                  <button
+                                    onClick={() => void handleUnship(c.id)}
+                                    className="shrink-0 rounded px-1.5 text-[10px] text-neutral-400 hover:bg-white/10 hover:text-white"
+                                    title="Remove from the product"
+                                  >
+                                    Unship
+                                  </button>
+                                </>
+                              ) : null}
+                              <button
+                                onClick={() => void handleDeleteSaved(c.id)}
+                                className="shrink-0 rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                                aria-label="Delete saved card"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-
-              {/* Source tabs */}
-              <div className="mt-1.5 flex overflow-hidden rounded-md border border-white/10">
-                {BACKGROUND_KINDS.map((k) => (
-                  <button
-                    key={k.id}
-                    onClick={() => setBgTab(k.id)}
-                    className={`flex-1 px-2 py-1.5 text-[11px] ${
-                      bgTab === k.id ? 'bg-white/15 text-white' : 'text-neutral-400 hover:text-neutral-200'
-                    }`}
-                  >
-                    {k.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* News thumbnails */}
-              {bgTab === 'news' && (
-                <div className="mt-2">
-                  <input
-                    value={newsSearch}
-                    onChange={(e) => setNewsSearch(e.target.value)}
-                    placeholder="Search news…"
-                    className="mb-1.5 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-                  />
-                  {news === null ? (
-                    <p className="text-[11px] text-neutral-500">Loading…</p>
-                  ) : (
-                    <div className="grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto">
-                      {newsWithImage.slice(0, 30).map((n) => {
-                        const selected = background.type === 'news' && background.url === n.image_url
-                        return (
-                          <button
-                            key={n.id}
-                            onClick={() =>
-                              setBackground({ type: 'news', url: n.image_url!, label: n.headline })
-                            }
-                            title={n.headline}
-                            className={`aspect-square overflow-hidden rounded-md border ${
-                              selected
-                                ? 'border-sky-400/80 ring-1 ring-sky-400/60'
-                                : 'border-white/10 hover:border-white/30'
-                            }`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* AI generator */}
-              {bgTab === 'ai' && (
-                <div className="mt-2 space-y-2">
-                  <textarea
-                    value={bgAiSubject}
-                    onChange={(e) => setBgAiSubject(e.target.value)}
-                    rows={2}
-                    placeholder="e.g. a moody floodlit stadium, deep greens"
-                    className="w-full resize-vertical rounded border border-white/10 bg-neutral-950 p-2 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-                  />
-                  <label className={labelCls}>
-                    Style
-                    <select
-                      value={aiStyleId}
-                      onChange={(e) => setAiStyleId(e.target.value)}
-                      className={selectCls}
-                    >
-                      {SHARE_IMAGE_STYLES.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    onClick={() => void handleGenerateBg()}
-                    disabled={bgBusy || !bgAiSubject.trim()}
-                    className="w-full rounded-md bg-white px-3 py-1.5 text-xs font-medium text-neutral-950 disabled:opacity-40"
-                  >
-                    {bgBusy ? 'Generating…' : background.type === 'ai' ? 'Regenerate' : 'Generate'}
-                  </button>
-                </div>
-              )}
-
-              {/* Aura slug */}
-              {bgTab === 'aura' && (
-                <div className="mt-2 space-y-1.5">
-                  <input
-                    value={bgAuraSlug}
-                    onChange={(e) => {
-                      const slug = e.target.value
-                      setBgAuraSlug(slug)
-                      setBackground(slug.trim() ? { type: 'aura', slug: slug.trim() } : { type: 'none' })
-                    }}
-                    placeholder="aura.promad.design slug — e.g. nebula"
-                    className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
-                  />
-                  <p className="text-[11px] text-amber-400/90">
-                    Auras animate in the preview but aren’t baked into the exported PNG.
-                  </p>
-                </div>
-              )}
-
-              {bgError && <p className="mt-1 text-[11px] text-red-400">{bgError}</p>}
-
-              {/* Scrim — darken the backdrop so card content stays legible. */}
-              {background.type !== 'none' && (
-                <label className={`${labelCls} mt-2 block`}>
-                  Scrim {Math.round(backgroundScrim * 100)}%
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={Math.round(backgroundScrim * 100)}
-                    onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
-                    className="mt-2 w-full"
-                  />
-                </label>
-              )}
-            </div>
-          </>
-        )}
-
-        <hr className="border-white/10" />
-
-        {/* Badges & flags — fetch and place crests / logos / flags on the card */}
-        <div>
-          <span className={labelCls}>Badges &amp; flags</span>
-          <div className="mt-1.5 flex overflow-hidden rounded-md border border-white/10">
-            {(['badges', 'flags'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setBadgeTab(t)}
-                className={`flex-1 px-2 py-1.5 text-[11px] ${
-                  badgeTab === t ? 'bg-white/15 text-white' : 'text-neutral-400 hover:text-neutral-200'
-                }`}
-              >
-                {t === 'badges' ? 'Crests / Logos' : 'Flags'}
-              </button>
-            ))}
-          </div>
-
-          {badgeTab === 'badges' ? (
-            <>
-              <div className="mt-2 flex gap-1.5">
-                <input
-                  value={badgeQuery}
-                  onChange={(e) => setBadgeQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && void searchBadges()}
-                  placeholder="Search team or competition…"
-                  className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
-                />
-                <button
-                  onClick={() => void searchBadges()}
-                  className="rounded-md bg-white/10 px-2.5 py-1.5 text-xs text-neutral-100 hover:bg-white/20"
-                >
-                  {badgeLoading ? '…' : 'Find'}
-                </button>
-              </div>
-              {badgeResults.length > 0 && (
-                <div className="mt-2 grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto">
-                  {badgeResults.map((r) =>
-                    r.crest_url ? (
-                      <button
-                        key={r.id}
-                        onClick={() =>
-                          addOverlay(r.crest_url!, r.name, r.type === 'league' ? 'logo' : 'crest')
-                        }
-                        title={r.name}
-                        className="flex aspect-square items-center justify-center rounded-md border border-white/10 bg-neutral-900 p-1.5 hover:border-white/30"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={r.crest_url} alt={r.name} className="max-h-full max-w-full object-contain" />
-                      </button>
-                    ) : null,
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <input
-                value={flagQuery}
-                onChange={(e) => setFlagQuery(e.target.value)}
-                placeholder={flagList === null ? 'Loading countries…' : 'Search country…'}
-                className="mt-2 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
-              />
-              <div className="mt-2 grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto">
-                {filteredFlags.map((f) => {
-                  const url = `https://flagcdn.com/w320/${f.code}.png`
-                  return (
-                    <button
-                      key={f.code}
-                      onClick={() => addOverlay(url, f.name, 'flag')}
-                      title={f.name}
-                      className="flex aspect-square items-center justify-center rounded-md border border-white/10 bg-neutral-900 p-1 hover:border-white/30"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={f.name} className="max-h-full max-w-full rounded-sm object-contain" />
-                    </button>
-                  )
-                })}
-              </div>
-            </>
-          )}
-
-          {/* Placed badges */}
-          {overlays.length > 0 && (
-            <div className="mt-3 space-y-1.5">
-              <span className="text-[11px] text-neutral-500">Placed · drag on the card to move</span>
-              {overlays.map((o) => (
-                <div
-                  key={o.id}
-                  onClick={() => setSelectedOverlayId(o.id)}
-                  className={`flex items-center gap-2 rounded-md border p-1.5 ${
-                    selectedOverlayId === o.id ? 'border-sky-400/70 bg-white/5' : 'border-white/10'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={o.url} alt="" className="h-6 w-6 shrink-0 object-contain" />
-                  <span className="flex-1 truncate text-[11px] text-neutral-300">{o.label}</span>
-                  <input
-                    type="range"
-                    min={6}
-                    max={55}
-                    value={o.widthPct}
-                    onChange={(e) => setOverlayWidth(o.id, Number(e.target.value))}
-                    className="w-20"
-                    title="Size"
-                  />
-                  <button
-                    onClick={() => removeOverlay(o.id)}
-                    className="rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
-                    aria-label="Remove"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => void handleDownload()}
-            disabled={!content || downloading}
-            className="flex-1 rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {downloading ? 'Rendering…' : 'Download PNG'}
-          </button>
-          <button
-            onClick={() => void handleSave()}
-            disabled={!content || saving}
-            className="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-        {saveError && <p className="text-[11px] text-red-400">{saveError}</p>}
-
-        <hr className="border-white/10" />
-
-        {/* Publish to product — tag with entities, then ship the rendered PNG
-            into the footshorts app (feed, For You, and the tagged team /
-            competition pages). */}
-        <div>
-          <span className={labelCls}>Publish to product</span>
-
-          {/* Selected tags */}
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {tags.length === 0 ? (
-              <span className="text-[11px] text-neutral-500">
-                No tags — add teams or competitions so the card surfaces in the app.
-              </span>
-            ) : (
-              tags.map((t) => (
-                <span
-                  key={`${t.type}:${t.slug}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-neutral-900 py-1 pl-1.5 pr-1 text-[11px] text-neutral-200"
-                >
-                  {t.crest_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={t.crest_url} alt="" className="h-3.5 w-3.5 object-contain" />
-                  ) : null}
-                  {t.name}
-                  <button
-                    onClick={() => removeTag(t.type, t.slug)}
-                    className="rounded px-1 text-neutral-400 hover:bg-white/10 hover:text-white"
-                    aria-label={`Remove ${t.name}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))
             )}
           </div>
-
-          {/* Tag search */}
-          <div className="mt-2 flex gap-1.5">
-            <input
-              value={tagQuery}
-              onChange={(e) => setTagQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void searchTags()}
-              placeholder="Add a team or competition…"
-              className="min-w-0 flex-1 rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30"
-            />
-            <button
-              onClick={() => void searchTags()}
-              className="rounded-md bg-white/10 px-2.5 py-1.5 text-xs text-neutral-100 hover:bg-white/20"
-            >
-              {tagLoading ? '…' : 'Find'}
-            </button>
-          </div>
-          {tagResults.length > 0 && (
-            <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto">
-              {tagResults.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => addTag(r)}
-                  className="flex w-full items-center gap-2 rounded-md border border-white/10 bg-neutral-900 p-1.5 text-left hover:border-white/30"
-                >
-                  {r.crest_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.crest_url} alt="" className="h-5 w-5 shrink-0 object-contain" />
-                  ) : (
-                    <span className="h-5 w-5 shrink-0" />
-                  )}
-                  <span className="flex-1 truncate text-[11px] text-neutral-200">{r.name}</span>
-                  <span className="text-[10px] text-neutral-500">{r.type}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => void handleShip()}
-            disabled={!content || shipping}
-            className="mt-2.5 w-full rounded-md bg-sky-500 px-3 py-2 text-sm font-semibold text-neutral-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {shipping ? 'Shipping…' : currentCardId ? 'Re-ship to product' : 'Ship to product'}
-          </button>
-          {shipError && <p className="mt-1 text-[11px] text-red-400">{shipError}</p>}
         </div>
 
-        {/* Saved cards — reload a snapshot back into the editor, or delete it. */}
-        {savedCards.length > 0 && (
-          <div>
-            <span className={labelCls}>Saved cards</span>
-            <div className="mt-1.5 space-y-1.5">
-              {savedCards.map((c) => (
-                <div
-                  key={c.id}
-                  className={`flex items-center gap-2 rounded-md border p-1.5 ${
-                    currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-white/10'
-                  }`}
-                >
-                  <button
-                    onClick={() => loadCard(c)}
-                    title="Load into editor"
-                    className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
-                  >
-                    {c.name}
-                    <span className="ml-1 text-neutral-500">· {c.cardType}</span>
-                  </button>
-                  {c.status === 'published' ? (
-                    <>
-                      <span
-                        className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300"
-                        title={
-                          c.publishedAt
-                            ? `Shipped ${new Date(c.publishedAt).toLocaleString()}`
-                            : 'Live in the product'
-                        }
-                      >
-                        ● Live
-                      </span>
-                      <button
-                        onClick={() => void handleUnship(c.id)}
-                        className="shrink-0 rounded px-1.5 text-[10px] text-neutral-400 hover:bg-white/10 hover:text-white"
-                        title="Remove from the product"
-                      >
-                        Unship
-                      </button>
-                    </>
-                  ) : null}
-                  <button
-                    onClick={() => void handleDeleteSaved(c.id)}
-                    className="shrink-0 rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
-                    aria-label="Delete saved card"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+        {/* Center: preview + drag overlay */}
+        <div
+          ref={previewBoxRef}
+          className="flex min-h-[360px] min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950/40 p-4 lg:h-full"
+        >
+          {content ? (
+            <div className="relative" style={{ width: renderW * previewScale, height: renderH * previewScale }}>
+              <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left', width: renderW, height: renderH }}>
+                <ShareCardCanvas ref={captureRef} content={content} frame={frame} overlays={overlayDoc.overlays} />
+              </div>
 
-      {/* ── Preview ──────────────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 items-start justify-center rounded-xl border border-white/10 bg-neutral-950/40 p-6">
-        {content ? (
-          <div
-            className="relative"
-            style={{
-              width: renderW * previewScale,
-              height: renderH * previewScale,
-            }}
-          >
-            <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
-              <ShareCardCanvas
-                ref={captureRef}
-                content={content}
-                frame={{
-                  themeName,
-                  ratio,
-                  accentHex: accentHex || null,
-                  eyebrow,
-                  handle,
-                  logoSize,
-                  logoVariant,
-                  captionColor,
-                  gradientStrength,
-                  background,
-                  backgroundScrim,
-                }}
-                overlays={overlays}
-              />
-            </div>
-            {/* Drag layer over the card (not part of the captured node). */}
-            <div ref={interactionRef} className="pointer-events-none absolute inset-0">
-              {overlays.map((o) => (
-                <div
-                  key={o.id}
-                  onPointerDown={(e) => onOverlayPointerDown(e, o.id)}
-                  className="pointer-events-auto absolute cursor-move"
-                  style={{
-                    left: `${o.xPct}%`,
-                    top: `${o.yPct}%`,
-                    width: `${o.widthPct}%`,
-                    aspectRatio: '1 / 1',
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
+              {/* Drag layer over the card (not part of the captured node). */}
+              <div ref={interactionRef} className="absolute inset-0" onPointerDown={() => setSelection(null)}>
+                {overlayDoc.overlays.map((o) => {
+                  if (o.visible === false) return null
+                  const active = selection?.kind === 'overlay' && selection.id === o.id
+                  const inGroupSel = selection?.kind === 'group' && !!o.groupId && o.groupId === selection.id
+                  const ticked = multiSel.includes(o.id)
+                  const ring = active
+                    ? 'ring-2 ring-sky-400/90'
+                    : ticked
+                      ? 'ring-2 ring-sky-400/60'
+                      : inGroupSel
+                        ? 'ring-1 ring-sky-400/50'
+                        : 'ring-1 ring-transparent hover:ring-white/30'
+                  return (
+                    <div
+                      key={o.id}
+                      onPointerDown={(e) => onOverlayPointerDown(e, o)}
+                      className="absolute cursor-move"
+                      style={{
+                        left: `${o.xPct}%`,
+                        top: `${o.yPct}%`,
+                        width: `${o.widthPct}%`,
+                        height: o.heightPct != null ? `${o.heightPct}%` : undefined,
+                        aspectRatio: o.heightPct != null ? undefined : '1 / 1',
+                        transform: `translate(-50%, -50%) rotate(${o.rotation ?? 0}deg) scale(${o.scale ?? 1})`,
+                        transformOrigin: 'center',
+                      }}
+                    >
+                      <div className={`h-full w-full rounded ${ring}`} />
+                    </div>
+                  )
+                })}
+
+                {/* Group transform box — drag body to move, corners to resize,
+                    top handle to rotate. */}
+                {groupBox && selection?.kind === 'group' && (
                   <div
-                    className={
-                      'h-full w-full rounded ' +
-                      (selectedOverlayId === o.id ? 'ring-2 ring-sky-400/90' : 'ring-1 ring-transparent hover:ring-white/30')
-                    }
-                  />
-                </div>
-              ))}
+                    className="absolute"
+                    style={{
+                      left: `${groupBox.left}%`,
+                      top: `${groupBox.top}%`,
+                      width: `${groupBox.w}%`,
+                      height: `${groupBox.h}%`,
+                    }}
+                  >
+                    <div
+                      onPointerDown={(e) => startGroupMove(selection.id, e)}
+                      className="absolute inset-0 cursor-move rounded border border-dashed border-sky-400/80 bg-sky-400/5"
+                    />
+                    {[
+                      { c: 0, pos: 'left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize' },
+                      { c: 1, pos: 'right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize' },
+                      { c: 2, pos: 'right-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize' },
+                      { c: 3, pos: 'left-0 bottom-0 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize' },
+                    ].map(({ c, pos }) => (
+                      <div
+                        key={c}
+                        onPointerDown={(e) => startGroupScale(selection.id, c, e)}
+                        className={`absolute h-2.5 w-2.5 rounded-sm border border-sky-400 bg-neutral-900 ${pos}`}
+                      />
+                    ))}
+                    <div
+                      onPointerDown={(e) => startGroupRotate(selection.id, e)}
+                      className="absolute left-1/2 h-3 w-3 -translate-x-1/2 cursor-grab rounded-full border border-sky-400 bg-neutral-900"
+                      style={{ top: -22 }}
+                      title="Rotate group"
+                    />
+                    <div className="absolute left-1/2 h-[14px] w-px -translate-x-1/2 bg-sky-400/70" style={{ top: -14 }} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="py-20 text-center text-xs text-neutral-600">
-            Pick a {CARD_TYPES.find((t) => t.id === cardType)?.label.toLowerCase()} to preview a card.
-          </p>
-        )}
+          ) : (
+            <p className="py-20 text-center text-xs text-neutral-600">
+              Pick a {CARD_TYPES.find((t) => t.id === cardType)?.label.toLowerCase()} to preview a card.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

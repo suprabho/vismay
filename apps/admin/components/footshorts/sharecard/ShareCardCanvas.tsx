@@ -1,7 +1,8 @@
 'use client'
 
 import { forwardRef } from 'react'
-import type { CSSProperties } from 'react'
+import type { ComponentType, CSSProperties } from 'react'
+import * as Phosphor from '@phosphor-icons/react'
 import {
   MatchCard,
   MatchRow,
@@ -13,12 +14,13 @@ import {
   type MatchCardLayout,
 } from '@vismay/footshorts-viz/web'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
-import { themes, themeToVars } from '@footshorts/brand'
+import { themeToVars } from '@footshorts/brand'
 import { AuraBackground } from '@vismay/ui'
 import { FootshortsLogo } from './FootshortsLogo'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
+  resolveTheme,
   type CardBackground,
   type CardContent,
   type CardFrameConfig,
@@ -26,6 +28,7 @@ import {
   type LogoVariant,
   type MatchStyle,
   type Overlay,
+  type PhosphorWeight,
 } from './types'
 
 /** Route a remote image through the same-origin proxy so html-to-image can
@@ -425,27 +428,74 @@ function CardBackgroundLayer({
   )
 }
 
-/** Badge overlays placed on the card (crests / logos / flags). Display-only and
- *  proxied for capture; drag/resize is handled by the editor over the preview. */
-function OverlayLayer({ overlays }: { overlays: Overlay[] }) {
+const PhosphorLib = Phosphor as unknown as Record<
+  string,
+  ComponentType<{ size?: number; weight?: PhosphorWeight; color?: string }> | undefined
+>
+
+const BADGE_SHADOW = 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))'
+
+/** One placed overlay. Position is the CENTER as a % of the card; `widthPct` is a
+ *  % of card width. `scale` / `rotation` / `opacity` compose into one transform
+ *  (center origin) so the baked PNG matches the editor handles. Remote image
+ *  sources are proxied for clean capture; data URLs pass through. */
+function OverlayItem({ o, renderW }: { o: Overlay; renderW: number }) {
+  if (o.visible === false) return null
+  const wrap: CSSProperties = {
+    left: `${o.xPct}%`,
+    top: `${o.yPct}%`,
+    width: `${o.widthPct}%`,
+    transform: `translate(-50%, -50%) rotate(${o.rotation ?? 0}deg) scale(${o.scale ?? 1})`,
+    transformOrigin: 'center',
+    opacity: o.opacity ?? 1,
+  }
+
+  if (o.kind === 'emoji') {
+    return (
+      <span className="absolute" style={{ ...wrap, fontSize: (o.widthPct / 100) * renderW, lineHeight: 1 }}>
+        {o.glyph}
+      </span>
+    )
+  }
+
+  if (o.kind === 'icon') {
+    const Cmp = o.iconName ? PhosphorLib[o.iconName] : undefined
+    return (
+      <span className="absolute flex items-center justify-center" style={{ ...wrap, filter: BADGE_SHADOW }}>
+        {Cmp ? (
+          <Cmp size={(o.widthPct / 100) * renderW} weight={o.iconWeight ?? 'bold'} color={o.iconColor ?? 'currentColor'} />
+        ) : null}
+      </span>
+    )
+  }
+
+  // crest / logo / flag / image
+  if (!o.url) return null
+  const src = o.url.startsWith('data:') ? o.url : proxiedImage(o.url)
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      className="absolute"
+      style={{
+        ...wrap,
+        height: o.heightPct != null ? `${o.heightPct}%` : undefined,
+        objectFit: o.objectFit ?? 'contain',
+        filter: o.kind === 'image' ? undefined : BADGE_SHADOW,
+      }}
+    />
+  )
+}
+
+/** Foreground overlays placed on the card (crests / logos / flags / images /
+ *  emoji / icons), painted in array order (= z-order) above the card body. */
+function OverlayLayer({ overlays, renderW }: { overlays: Overlay[]; renderW: number }) {
   if (overlays.length === 0) return null
   return (
     <div className="pointer-events-none absolute inset-0 z-30">
       {overlays.map((o) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={o.id}
-          src={proxiedImage(o.url)}
-          alt=""
-          className="absolute object-contain"
-          style={{
-            left: `${o.xPct}%`,
-            top: `${o.yPct}%`,
-            width: `${o.widthPct}%`,
-            transform: 'translate(-50%, -50%)',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
-          }}
-        />
+        <OverlayItem key={o.id} o={o} renderW={renderW} />
       ))}
     </div>
   )
@@ -472,9 +522,22 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
   const renderW = Math.round(out.w * RENDER_SCALE)
   const renderH = Math.round(out.h * RENDER_SCALE)
 
-  const vars = themeToVars(themes[frame.themeName]) as Record<string, string>
-  const accentChannels = frame.accentHex ? hexToChannels(frame.accentHex) : null
-  if (accentChannels) vars['--sf-color-accent'] = accentChannels
+  const theme = resolveTheme(frame.themeOverride, frame.themeName)
+  const vars = themeToVars(theme) as Record<string, string>
+  // Legacy single-token accent override — only when there's no full theme
+  // override (whose colors.accent already flows through themeToVars).
+  if (!frame.themeOverride) {
+    const accentChannels = frame.accentHex ? hexToChannels(frame.accentHex) : null
+    if (accentChannels) vars['--sf-color-accent'] = accentChannels
+  }
+  // The footshorts viz module bodies (match-card numerals etc.) read UN-prefixed
+  // `--font-*` vars, while `themeToVars` only emits `--sf-font-*`. Mirror them so
+  // the theme fonts — and any custom font override — reach the card body, not
+  // just the header/footer chrome.
+  vars['--font-sans'] = theme.typography.fontFamily.sans
+  vars['--font-serif'] = theme.typography.fontFamily.display
+  vars['--font-display'] = theme.typography.fontFamily.display
+  vars['--font-mono'] = theme.typography.fontFamily.mono
 
   const style: CSSProperties = {
     ...vars,
@@ -526,7 +589,7 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
           </div>
         </>
       )}
-      <OverlayLayer overlays={overlays ?? []} />
+      <OverlayLayer overlays={overlays ?? []} renderW={renderW} />
     </div>
   )
 })
