@@ -1,6 +1,7 @@
 import type { VizLayer } from '@vismay/viz-engine'
 import type { ComposerLayer, ComposerState } from './types'
 import { DEFAULT_TRANSFORM, type TransformLike } from './transform'
+import { DEFAULT_LAYER_BOX, type LayerBox } from './box'
 
 /**
  * Pure, immutable operations over `ComposerState`. The shell calls these in
@@ -118,6 +119,21 @@ export function patchLayerTransform(
     ...state,
     layers: state.layers.map((l) =>
       l.id === id ? { ...l, transform: { ...(l.transform ?? DEFAULT_TRANSFORM), ...patch } } : l,
+    ),
+  }
+}
+
+/** Merge a partial box style into a layer's background panel (free mode),
+ *  seeding from the default when the layer has none yet. */
+export function patchLayerBox(
+  state: ComposerState,
+  id: string,
+  patch: Partial<LayerBox>,
+): ComposerState {
+  return {
+    ...state,
+    layers: state.layers.map((l) =>
+      l.id === id ? { ...l, box: { ...(l.box ?? DEFAULT_LAYER_BOX), ...patch } } : l,
     ),
   }
 }

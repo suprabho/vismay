@@ -1,5 +1,6 @@
 import type { VizLayer } from '@vismay/viz-engine'
 import type { TransformLike } from './transform'
+import type { LayerBox } from './box'
 
 /**
  * A layer as the composer shell manipulates it: the engine `VizLayer` (module
@@ -19,6 +20,9 @@ export interface ComposerLayer {
   region?: string
   /** `free` mode — the layer's position / size / rotation / opacity. */
   transform?: TransformLike
+  /** `free` mode — optional styled panel (fill / border / roundness / blur /
+   *  shadow) drawn behind this layer's content. Absent = the layer renders bare. */
+  box?: LayerBox
   /** Membership in a free-mode GROUP (see `ComposerState.groups`). Group members
    *  are kept CONTIGUOUS in `layers` so the panel renders them as one block and
    *  z-order stays coherent. Absent = ungrouped. Editor-only — renderers ignore it. */

@@ -19,7 +19,6 @@ export interface FsCardMatchTimelineConfig {
   type: 'fscard:match-timeline'
   compKey: string
   fixtureId: string
-  matchStyle: MatchStyle
   eventFilter: EventTypeFilter
 }
 

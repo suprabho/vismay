@@ -3,10 +3,11 @@
 import type { ReactNode } from 'react'
 import { getVizModule, type VizLayer } from '@vismay/viz-engine'
 import VizConfigForm from '../VizConfigForm'
-import { TransformControls } from '../controls'
+import { ColorField, NumberSlider, TransformControls } from '../controls'
 import type { ComposerHost } from './ComposerHost'
 import type { ComposerSelection, ComposerState } from './types'
 import { DEFAULT_TRANSFORM, type TransformLike } from './transform'
+import { DEFAULT_LAYER_BOX, type LayerBox } from './box'
 import { btnCls, labelCls } from './styles'
 
 type FormValue = string | number | boolean | object | null | undefined
@@ -21,6 +22,7 @@ export function ConfigPanel<TCtx>({
   ctx,
   onLayerConfigChange,
   onLayerTransformChange,
+  onLayerBoxChange,
   onBackgroundChange,
 }: {
   host: ComposerHost<TCtx>
@@ -29,6 +31,7 @@ export function ConfigPanel<TCtx>({
   ctx: TCtx
   onLayerConfigChange: (id: string, layer: VizLayer) => void
   onLayerTransformChange: (id: string, patch: Partial<TransformLike>) => void
+  onLayerBoxChange: (id: string, patch: Partial<LayerBox>) => void
   onBackgroundChange: (bg: VizLayer | null) => void
 }) {
   if (selection?.kind === 'layer') {
@@ -48,6 +51,11 @@ export function ConfigPanel<TCtx>({
               onChange={(p) => onLayerTransformChange(layer.id, p)}
               showHeight={transform.heightPct != null}
             />
+          </Section>
+        )}
+        {host.arrangement === 'free' && (
+          <Section title="Background">
+            <LayerBoxControls box={layer.box} onChange={(p) => onLayerBoxChange(layer.id, p)} />
           </Section>
         )}
         <Section title="Content" last>
@@ -92,6 +100,53 @@ export function ConfigPanel<TCtx>({
   }
 
   return <Empty />
+}
+
+/** Box / border / roundness / fill-opacity / backdrop-blur / shadow for the
+ *  panel drawn behind a layer's content. Seeds from the default with the box
+ *  off, so toggling "Box behind layer" reveals the styling controls. */
+function LayerBoxControls({
+  box,
+  onChange,
+}: {
+  box: LayerBox | undefined
+  onChange: (patch: Partial<LayerBox>) => void
+}) {
+  const b = box ?? { ...DEFAULT_LAYER_BOX, enabled: false }
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-[11px] text-neutral-300">
+        <input
+          type="checkbox"
+          checked={b.enabled}
+          onChange={(e) => onChange({ enabled: e.target.checked })}
+          className="accent-sky-400"
+        />
+        Box behind layer
+      </label>
+      {b.enabled && (
+        <>
+          <ColorField label="Fill" value={b.fill} onChange={(hex) => onChange({ fill: hex })} />
+          <NumberSlider label="Fill opacity" value={b.fillOpacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ fillOpacity: v })} format={(v) => v.toFixed(2)} />
+          <NumberSlider label="Roundness" value={b.radiusPx} min={0} max={48} step={1} onChange={(v) => onChange({ radiusPx: v })} format={(v) => `${v}px`} />
+          <NumberSlider label="Border width" value={b.borderWidthPx} min={0} max={8} step={0.5} onChange={(v) => onChange({ borderWidthPx: v })} format={(v) => `${v}px`} />
+          {b.borderWidthPx > 0 && (
+            <ColorField label="Border color" value={b.borderColor} onChange={(hex) => onChange({ borderColor: hex })} />
+          )}
+          <NumberSlider label="Background blur" value={b.blurPx} min={0} max={24} step={1} onChange={(v) => onChange({ blurPx: v })} format={(v) => `${v}px`} />
+          <label className="flex items-center gap-2 text-[11px] text-neutral-300">
+            <input
+              type="checkbox"
+              checked={b.shadow}
+              onChange={(e) => onChange({ shadow: e.target.checked })}
+              className="accent-sky-400"
+            />
+            Drop shadow
+          </label>
+        </>
+      )}
+    </div>
+  )
 }
 
 /** A titled, divider-separated section — Figma-style dense panel grouping. */

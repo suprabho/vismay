@@ -74,7 +74,7 @@ function defaultConfig(type: string, ctx: FootshortsComposerCtx): Record<string,
     case 'fscard:match':
       return { type, compKey, fixtureId: '', matchStyle: 'tile' }
     case 'fscard:match-timeline':
-      return { type, compKey, fixtureId: '', matchStyle: 'tile', eventFilter: 'all' }
+      return { type, compKey, fixtureId: '', eventFilter: 'all' }
     case 'fscard:fixtures':
       return { type, compKey, fixtureIds: [], variant: 'compact' }
     case 'fscard:standings':

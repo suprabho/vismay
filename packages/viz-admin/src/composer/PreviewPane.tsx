@@ -7,6 +7,7 @@ import type { ComposerSelection, ComposerState } from './types'
 import { LayerView } from './LayerView'
 import { FreeTransformLayer } from './FreeTransformLayer'
 import { DEFAULT_TRANSFORM, transformWrapperStyle } from './transform'
+import { layerBoxStyle } from './box'
 
 /**
  * Builds the foreground body (the visible layers, arranged per the host's
@@ -60,7 +61,7 @@ export function PreviewPane<TCtx>({
       <>
         {visibleAll.map((l) => (
           <div key={l.id} style={transformWrapperStyle(l.transform ?? DEFAULT_TRANSFORM, { sizeByWidth: true })}>
-            <div className="relative h-full w-full overflow-hidden">
+            <div className="relative h-full w-full overflow-hidden" style={layerBoxStyle(l.box)}>
               <LayerView layer={l.layer} />
             </div>
           </div>

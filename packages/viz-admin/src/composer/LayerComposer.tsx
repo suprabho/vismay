@@ -4,7 +4,7 @@ import { useMemo, useState, type Ref } from 'react'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
 import type { ComposerHost } from './ComposerHost'
 import type { ComposerSelection, ComposerState } from './types'
-import { addLayer, patchLayerTransform, setBackground, setLayerConfig } from './mutations'
+import { addLayer, patchLayerBox, patchLayerTransform, setBackground, setLayerConfig } from './mutations'
 import { LayerListPanel } from './LayerListPanel'
 import { ConfigPanel } from './ConfigPanel'
 import { PreviewPane } from './PreviewPane'
@@ -87,6 +87,7 @@ export function LayerComposer<TCtx>({
         ctx={ctx}
         onLayerConfigChange={handleLayerConfig}
         onLayerTransformChange={(id, patch) => onChange(patchLayerTransform(state, id, patch))}
+        onLayerBoxChange={(id, patch) => onChange(patchLayerBox(state, id, patch))}
         onBackgroundChange={(bg) => onChange(setBackground(state, bg))}
       />
     </div>

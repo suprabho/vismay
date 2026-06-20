@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
-import { FrameCorners, Image as ImageIcon, PaperPlaneTilt, Stack, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Stack, Trash, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
   LayerListPanel,
   ConfigPanel,
@@ -11,15 +11,17 @@ import {
   addLayer,
   setLayerConfig,
   patchLayerTransform,
+  patchLayerBox,
   normalizeGroupContiguity,
   composerUid,
   type ComposerLayer,
   type ComposerSelection,
   type ComposerState,
+  type LayerBox,
   type LayerGroup,
   type TransformLike,
 } from '@vismay/viz-admin'
-import { themes, type ThemeName } from '@footshorts/brand'
+import { type ThemeName } from '@footshorts/brand'
 import { useCapture } from './useCapture'
 import {
   ASPECT_RATIOS,
@@ -145,7 +147,7 @@ function v1ToForeground(s: ShareCardSnapshotV1): ComposerLayer[] {
       main = [layerOf({ type: 'fscard:match', compKey, fixtureId: s.pickedFixtureId, matchStyle: s.matchStyle }, 'Match')]
       break
     case 'match-timeline':
-      main = [layerOf({ type: 'fscard:match-timeline', compKey, fixtureId: s.pickedFixtureId, matchStyle: s.matchStyle, eventFilter: s.pickedEventFilter ?? 'all' }, 'Match timeline')]
+      main = [layerOf({ type: 'fscard:match-timeline', compKey, fixtureId: s.pickedFixtureId, eventFilter: s.pickedEventFilter ?? 'all' }, 'Match timeline')]
       break
     case 'fixtures':
       main = [layerOf({ type: 'fscard:fixtures', compKey, fixtureIds: s.pickedFixtureIds ?? [], variant: s.matchRowVariant ?? 'compact' }, 'Fixtures')]
@@ -197,8 +199,6 @@ const inputCls = selectCls
 const actionBtn =
   'rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40'
 
-const THEME_NAMES = Object.keys(themes) as ThemeName[]
-
 type EditorTab = 'layers' | 'setup' | 'background' | 'publish'
 const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
   { id: 'layers', label: 'Layers', Icon: Stack },
@@ -207,10 +207,9 @@ const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
   { id: 'publish', label: 'Publish', Icon: PaperPlaneTilt },
 ]
 const railBtn = (active: boolean) =>
-  `flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
-    active
-      ? 'border-sky-400/60 bg-white/10 text-white'
-      : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+  `flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${active
+    ? 'border-sky-400/60 bg-white/10 text-white'
+    : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
   }`
 
 export function ShareCardCreator({ initialCompetitions }: { initialCompetitions: CompetitionOption[] }) {
@@ -224,14 +223,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [activeTab, setActiveTab] = useState<'layers' | 'setup' | 'background' | 'publish'>('layers')
 
   // card-level frame controls
-  const [themeName, setThemeName] = useState<ThemeName>(THEME_NAMES[0] ?? 'classic')
+  const [themeName, setThemeName] = useState<ThemeName>('terrace')
   // Per-card theme override (base preset + per-token colors + fonts).
   const [themeOverride, setThemeOverride] = useState<CardThemeOverride | undefined>(undefined)
-  const [ratio, setRatio] = useState<AspectRatio>('1:1')
+  const [ratio, setRatio] = useState<AspectRatio>('4:5')
   const [accentHex, setAccentHex] = useState('')
-  const [handle, setHandle] = useState('@footshorts')
+  const [handle, setHandle] = useState('@footshorts_app')
   const [logoSize, setLogoSize] = useState<LogoSize>('md')
-  const [logoVariant, setLogoVariant] = useState<LogoVariant>('accent')
+  const [logoVariant, setLogoVariant] = useState<LogoVariant>('mark')
   const [eyebrowOverride, setEyebrowOverride] = useState('')
   const [showEyebrow, setShowEyebrow] = useState(true)
   // Card-level decorative background (behind the layer stack): AI image or aura.
@@ -246,6 +245,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [savedCards, setSavedCards] = useState<SavedCard[]>([])
   const [currentCardId, setCurrentCardId] = useState<string | null>(null)
   const [currentCardName, setCurrentCardName] = useState('')
+  const [showSavedModal, setShowSavedModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [shipping, setShipping] = useState(false)
@@ -340,6 +340,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   )
   const handleLayerTransform = useCallback(
     (id: string, patch: Partial<TransformLike>) => setComposer((c) => patchLayerTransform(c, id, patch)),
+    [],
+  )
+  const handleLayerBox = useCallback(
+    (id: string, patch: Partial<LayerBox>) => setComposer((c) => patchLayerBox(c, id, patch)),
     [],
   )
 
@@ -536,10 +540,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     }
   }, [hasLayers, download, representativeType, ratio])
 
-  const handleSave = useCallback(async () => {
-    if (!hasLayers) return
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!hasLayers) return false
     const name = window.prompt('Name this card', currentCardName || 'Footshorts card')?.trim()
-    if (!name) return
+    if (!name) return false
     setSaving(true)
     setSaveError(null)
     try {
@@ -553,12 +557,57 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       setSavedCards((prev) => [body.card!, ...prev])
       setCurrentCardId(body.card.id)
       setCurrentCardName(body.card.name)
+      return true
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Save failed')
+      return false
     } finally {
       setSaving(false)
     }
   }, [hasLayers, currentCardName, representativeType, buildSnapshot])
+
+  // Reset the editor to a blank, unsaved card. Brand/frame settings (theme,
+  // ratio, handle, logo) carry over so the next card starts from the same studio
+  // setup; everything that identifies *this* card is cleared.
+  const resetCard = useCallback(() => {
+    setComposer({ layers: [], background: null })
+    setSelection(null)
+    setMultiSel([])
+    setBackground({ type: 'none' })
+    setBackgroundScrim(0.5)
+    setBgSubject('')
+    setAuraSlug('')
+    setBgError(null)
+    pendingTagsRef.current = null
+    setTags([])
+    setCurrentCardId(null)
+    setCurrentCardName('')
+    setSaveError(null)
+    setShipError(null)
+  }, [])
+
+  // Plus button: offer to save the current card's progress, then start fresh.
+  const handleNewCard = useCallback(async () => {
+    if (hasLayers) {
+      const save = window.confirm(
+        'Save the current card before starting a new one?\n\nOK = save first · Cancel = discard changes',
+      )
+      if (save && !(await handleSave())) return // save cancelled / failed → stay put
+    }
+    resetCard()
+  }, [hasLayers, handleSave, resetCard])
+
+  // Duplicate: keep all current content + frame, but detach from the saved record
+  // so the next Save creates a new card instead of overwriting the original.
+  const handleDuplicate = useCallback(() => {
+    if (!hasLayers) return
+    setCurrentCardId(null)
+    setCurrentCardName((n) => (n.trim() ? `${n.trim()} copy` : 'Footshorts card copy'))
+    setSelection(null)
+    setMultiSel([])
+    setSaveError(null)
+    setShipError(null)
+  }, [hasLayers])
 
   const loadCard = useCallback(
     (card: SavedCard) => {
@@ -629,14 +678,42 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         <div>
           <h1 className="text-sm font-semibold text-neutral-100">Share card composer</h1>
           <p className="text-[11px] text-neutral-500">
-            Free-position layers — match, standings, news, badges — on one card.
+            {currentCardName
+              ? `Editing “${currentCardName}”${currentCardId ? '' : ' · unsaved copy'}`
+              : 'Free-position layers — match, standings, news, badges — on one card.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            className={`${actionBtn} inline-flex items-center gap-1.5`}
+            title="New card"
+            onClick={() => void handleNewCard()}
+          >
+            <Plus size={14} weight="bold" />
+            New
+          </button>
+          <button
+            className={`${actionBtn} inline-flex items-center gap-1.5`}
+            title="Duplicate current card"
+            disabled={!hasLayers}
+            onClick={handleDuplicate}
+          >
+            <CopySimple size={14} />
+            Duplicate
+          </button>
+          <button
+            className={`${actionBtn} inline-flex items-center gap-1.5`}
+            title="Open a saved card"
+            onClick={() => setShowSavedModal(true)}
+          >
+            <FolderOpen size={14} />
+            Saved cards{savedCards.length ? ` (${savedCards.length})` : ''}
+          </button>
+          <div className="mx-1 h-5 w-px bg-white/10" />
           <button className={actionBtn} disabled={!hasLayers || downloading} onClick={handleDownload}>
             {downloading ? 'Rendering…' : 'Download PNG'}
           </button>
-          <button className={actionBtn} disabled={!hasLayers || saving} onClick={handleSave}>
+          <button className={actionBtn} disabled={!hasLayers || saving} onClick={() => void handleSave()}>
             {saving ? 'Saving…' : 'Save'}
           </button>
           <button className={actionBtn} disabled={!hasLayers || shipping} onClick={handleShip}>
@@ -681,195 +758,171 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             )}
             {activeTab === 'setup' && (
               <div className="space-y-4">
-      {/* theme: base preset + per-token colors + fonts */}
-      <div className="rounded-lg border border-white/10 p-3">
-        <ThemePanel
-          theme={resolvedTheme}
-          themeName={themeName}
-          override={themeOverride}
-          onPickPreset={(name) => {
-            setThemeName(name)
-            setThemeOverride(undefined)
-          }}
-          onChange={setThemeOverride}
-          onReset={() => setThemeOverride(undefined)}
-        />
-      </div>
-      {/* card-level frame controls */}
-      <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 p-3">
-        <label className={labelCls}>
-          Format
-          <select className={selectCls} value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)}>
-            {ASPECT_RATIOS.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={labelCls}>
-          Accent (hex)
-          <input className={inputCls} placeholder="#RRGGBB" value={accentHex} onChange={(e) => setAccentHex(e.target.value)} />
-        </label>
-        <label className={labelCls}>
-          Handle
-          <input className={inputCls} value={handle} onChange={(e) => setHandle(e.target.value)} />
-        </label>
-        <label className={labelCls}>
-          Logo size
-          <select className={selectCls} value={logoSize} onChange={(e) => setLogoSize(e.target.value as LogoSize)}>
-            {LOGO_SIZES.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={labelCls}>
-          Logo style
-          <select className={selectCls} value={logoVariant} onChange={(e) => setLogoVariant(e.target.value as LogoVariant)}>
-            {LOGO_VARIANTS.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={labelCls}>
-          Eyebrow override
-          <input className={inputCls} placeholder="(auto)" value={eyebrowOverride} onChange={(e) => setEyebrowOverride(e.target.value)} />
-        </label>
-        <label className="flex items-end gap-2 text-[11px] text-neutral-400">
-          <input type="checkbox" checked={showEyebrow} onChange={(e) => setShowEyebrow(e.target.checked)} />
-          Show eyebrow
-        </label>
-      </div>
+                {/* theme: base preset + per-token colors + fonts */}
+                <div className="rounded-lg border border-white/10 p-3">
+                  <ThemePanel
+                    theme={resolvedTheme}
+                    themeName={themeName}
+                    override={themeOverride}
+                    onPickPreset={(name) => {
+                      setThemeName(name)
+                      setThemeOverride(undefined)
+                    }}
+                    onChange={setThemeOverride}
+                    onReset={() => setThemeOverride(undefined)}
+                  />
+                </div>
+                {/* card-level frame controls */}
+                <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 p-3">
+                  <label className={labelCls}>
+                    Format
+                    <select className={selectCls} value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)}>
+                      {ASPECT_RATIOS.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={labelCls}>
+                    Accent (hex)
+                    <input className={inputCls} placeholder="#RRGGBB" value={accentHex} onChange={(e) => setAccentHex(e.target.value)} />
+                  </label>
+                  <label className={labelCls}>
+                    Handle
+                    <input className={inputCls} value={handle} onChange={(e) => setHandle(e.target.value)} />
+                  </label>
+                  <label className={labelCls}>
+                    Logo size
+                    <select className={selectCls} value={logoSize} onChange={(e) => setLogoSize(e.target.value as LogoSize)}>
+                      {LOGO_SIZES.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={labelCls}>
+                    Logo style
+                    <select className={selectCls} value={logoVariant} onChange={(e) => setLogoVariant(e.target.value as LogoVariant)}>
+                      {LOGO_VARIANTS.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={labelCls}>
+                    Eyebrow override
+                    <input className={inputCls} placeholder="(auto)" value={eyebrowOverride} onChange={(e) => setEyebrowOverride(e.target.value)} />
+                  </label>
+                  <label className="flex items-end gap-2 text-[11px] text-neutral-400">
+                    <input type="checkbox" checked={showEyebrow} onChange={(e) => setShowEyebrow(e.target.checked)} />
+                    Show eyebrow
+                  </label>
+                </div>
               </div>
             )}
             {activeTab === 'background' && (
               <div className="space-y-4">
-      {/* card background (behind the layer stack) */}
-      <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
-        <div className="flex items-center justify-between">
-          <span className={labelCls}>Background (behind layers)</span>
-          {background.type !== 'none' && (
-            <button className="text-[11px] text-neutral-400 underline" onClick={() => setBackground({ type: 'none' })}>
-              clear
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className={labelCls}>
-            Aura slug
-            <input
-              className={inputCls}
-              placeholder="(none)"
-              value={auraSlug}
-              onChange={(e) => {
-                const v = e.target.value
-                setAuraSlug(v)
-                setBackground(v.trim() ? { type: 'aura', slug: v.trim() } : { type: 'none' })
-              }}
-            />
-          </label>
-          <label className={labelCls}>
-            AI background
-            <div className="mt-1 flex gap-1">
-              <input className={inputCls} placeholder="describe…" value={bgSubject} onChange={(e) => setBgSubject(e.target.value)} />
-              <button className={actionBtn} disabled={bgBusy} onClick={() => void handleGenerateBg()}>
-                {bgBusy ? '…' : 'Gen'}
-              </button>
-            </div>
-          </label>
-        </div>
-        {bgError && <p className="text-[11px] text-red-400">{bgError}</p>}
-        {background.type !== 'none' && (
-          <label className={labelCls}>
-            {`Scrim ${Math.round(backgroundScrim * 100)}%`}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(backgroundScrim * 100)}
-              onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
-              className="mt-1 w-full"
-            />
-          </label>
-        )}
-      </div>
+                {/* card background (behind the layer stack) */}
+                <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className={labelCls}>Background (behind layers)</span>
+                    {background.type !== 'none' && (
+                      <button className="text-[11px] text-neutral-400 underline" onClick={() => setBackground({ type: 'none' })}>
+                        clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={labelCls}>
+                      Aura slug
+                      <input
+                        className={inputCls}
+                        placeholder="(none)"
+                        value={auraSlug}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setAuraSlug(v)
+                          setBackground(v.trim() ? { type: 'aura', slug: v.trim() } : { type: 'none' })
+                        }}
+                      />
+                    </label>
+                    <label className={labelCls}>
+                      AI background
+                      <div className="mt-1 flex gap-1">
+                        <input className={inputCls} placeholder="describe…" value={bgSubject} onChange={(e) => setBgSubject(e.target.value)} />
+                        <button className={actionBtn} disabled={bgBusy} onClick={() => void handleGenerateBg()}>
+                          {bgBusy ? '…' : 'Gen'}
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+                  {bgError && <p className="text-[11px] text-red-400">{bgError}</p>}
+                  {background.type !== 'none' && (
+                    <label className={labelCls}>
+                      {`Scrim ${Math.round(backgroundScrim * 100)}%`}
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={Math.round(backgroundScrim * 100)}
+                        onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
+                        className="mt-1 w-full"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             )}
             {activeTab === 'publish' && (
               <div className="space-y-4">
-      {/* publish tags */}
-      <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
-        <span className={labelCls}>Publish tags</span>
-        <div className="flex flex-wrap gap-1.5">
-          {tags.map((t) => (
-            <span
-              key={`${t.type}:${t.slug}`}
-              className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-neutral-200"
-            >
-              {t.name}
-              <button className="text-neutral-500 hover:text-red-400" onClick={() => removeTag(t.type, t.slug)}>
-                ×
-              </button>
-            </span>
-          ))}
-          {tags.length === 0 && (
-            <span className="text-[11px] text-neutral-600">No tags — search to add teams / leagues.</span>
-          )}
-        </div>
-        <div className="flex gap-1">
-          <input
-            className={inputCls}
-            placeholder="Search teams / leagues…"
-            value={tagQuery}
-            onChange={(e) => setTagQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void searchTags()}
-          />
-          <button className={actionBtn} onClick={() => void searchTags()}>
-            {tagLoading ? '…' : 'Search'}
-          </button>
-        </div>
-        {tagResults.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {tagResults.map((r) => (
-              <button
-                key={`${r.type}:${r.slug}`}
-                className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-white/5"
-                onClick={() => addTag(r)}
-              >
-                + {r.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* saved cards */}
-      {savedCards.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className={labelCls}>Saved cards</span>
-          <div className="flex flex-col gap-1">
-            {savedCards.map((c) => (
-              <div
-                key={c.id}
-                className={`flex items-center justify-between rounded-md px-2 py-1.5 text-[11px] ${
-                  currentCardId === c.id ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
-                }`}
-              >
-                <button className="flex-1 truncate text-left" onClick={() => loadCard(c)}>
-                  {c.name}
-                </button>
-                <button className="opacity-60 hover:text-red-400 hover:opacity-100" onClick={() => handleDeleteSaved(c.id)}>
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                {/* publish tags */}
+                <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
+                  <span className={labelCls}>Publish tags</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((t) => (
+                      <span
+                        key={`${t.type}:${t.slug}`}
+                        className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-neutral-200"
+                      >
+                        {t.name}
+                        <button className="text-neutral-500 hover:text-red-400" onClick={() => removeTag(t.type, t.slug)}>
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {tags.length === 0 && (
+                      <span className="text-[11px] text-neutral-600">No tags — search to add teams / leagues.</span>
+                    )}
+                  </div>
+                  <div className="flex gap-1">
+                    <input
+                      className={inputCls}
+                      placeholder="Search teams / leagues…"
+                      value={tagQuery}
+                      onChange={(e) => setTagQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && void searchTags()}
+                    />
+                    <button className={actionBtn} onClick={() => void searchTags()}>
+                      {tagLoading ? '…' : 'Search'}
+                    </button>
+                  </div>
+                  {tagResults.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {tagResults.map((r) => (
+                        <button
+                          key={`${r.type}:${r.slug}`}
+                          className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-white/5"
+                          onClick={() => addTag(r)}
+                        >
+                          + {r.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -897,10 +950,72 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             ctx={ctx}
             onLayerConfigChange={handleLayerConfig}
             onLayerTransformChange={handleLayerTransform}
+            onLayerBoxChange={handleLayerBox}
             onBackgroundChange={() => undefined}
           />
         </div>
       </div>
+
+      {showSavedModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setShowSavedModal(false)}
+        >
+          <div
+            className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-950 text-neutral-100 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold tracking-tight">Saved cards</h2>
+                <p className="truncate text-[11px] text-neutral-500">Open a saved card or remove it.</p>
+              </div>
+              <button
+                onClick={() => setShowSavedModal(false)}
+                className="shrink-0 rounded-md p-1.5 leading-none text-neutral-400 transition-colors hover:bg-white/10 hover:text-neutral-200"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              {savedCards.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-white/10 px-3 py-8 text-center text-xs text-neutral-600">
+                  No saved cards yet — build one and hit Save.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {savedCards.map((c) => (
+                    <div
+                      key={c.id}
+                      className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs ${currentCardId === c.id ? 'bg-white/10 text-neutral-100' : 'text-neutral-300 hover:bg-white/5'
+                        }`}
+                    >
+                      <button
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        onClick={() => {
+                          loadCard(c)
+                          setShowSavedModal(false)
+                        }}
+                      >
+                        <span className="truncate">{c.name}</span>
+                        {currentCardId === c.id && <span className="shrink-0 text-[10px] text-sky-400">current</span>}
+                      </button>
+                      <button
+                        className="shrink-0 rounded p-1 text-neutral-500 hover:bg-white/10 hover:text-red-400"
+                        title="Delete card"
+                        onClick={() => void handleDeleteSaved(c.id)}
+                      >
+                        <Trash size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
