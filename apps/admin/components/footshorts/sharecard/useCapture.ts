@@ -18,8 +18,18 @@ export function useCapture(
   const capture = useCallback(async (): Promise<string | null> => {
     const node = nodeRef.current
     if (!node) return null
+    const raf = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
+    const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
     try {
       await document.fonts.ready
+      // The card body renders through the viz-engine registry: each layer
+      // Suspense-loads its chunk and resolves its data asynchronously. Snapshotting
+      // too early rasterizes a half-built card (the m1 lazy-load race). Give React
+      // two frames + a short settle so chunks mount and data resolves, THEN collect
+      // images — so a layer added moments ago is captured whole.
+      await raf()
+      await raf()
+      await delay(180)
       const imgs = Array.from(node.querySelectorAll('img'))
       await Promise.all(
         imgs.map((img) => {

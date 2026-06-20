@@ -1,8 +1,7 @@
 'use client'
 
 import { forwardRef } from 'react'
-import type { ComponentType, CSSProperties } from 'react'
-import * as Phosphor from '@phosphor-icons/react'
+import type { CSSProperties } from 'react'
 import {
   MatchCard,
   MatchRow,
@@ -14,13 +13,15 @@ import {
   type MatchCardLayout,
 } from '@vismay/footshorts-viz/web'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
-import { themeToVars } from '@footshorts/brand'
+import type { VizLayer } from '@vismay/viz-engine'
+import { themes, themeToVars } from '@footshorts/brand'
 import { AuraBackground } from '@vismay/ui'
 import { FootshortsLogo } from './FootshortsLogo'
+import { FootshortsDataProvider, type FootshortsCardData } from './modules/dataContext'
+import { FsCardLayerView } from './modules/render'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
-  resolveTheme,
   type CardBackground,
   type CardContent,
   type CardFrameConfig,
@@ -28,7 +29,6 @@ import {
   type LogoVariant,
   type MatchStyle,
   type Overlay,
-  type PhosphorWeight,
 } from './types'
 
 /** Route a remote image through the same-origin proxy so html-to-image can
@@ -428,74 +428,29 @@ function CardBackgroundLayer({
   )
 }
 
-const PhosphorLib = Phosphor as unknown as Record<
-  string,
-  ComponentType<{ size?: number; weight?: PhosphorWeight; color?: string }> | undefined
->
-
-const BADGE_SHADOW = 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))'
-
-/** One placed overlay. Position is the CENTER as a % of the card; `widthPct` is a
- *  % of card width. `scale` / `rotation` / `opacity` compose into one transform
- *  (center origin) so the baked PNG matches the editor handles. Remote image
- *  sources are proxied for clean capture; data URLs pass through. */
-function OverlayItem({ o, renderW }: { o: Overlay; renderW: number }) {
-  if (o.visible === false) return null
-  const wrap: CSSProperties = {
-    left: `${o.xPct}%`,
-    top: `${o.yPct}%`,
-    width: `${o.widthPct}%`,
-    transform: `translate(-50%, -50%) rotate(${o.rotation ?? 0}deg) scale(${o.scale ?? 1})`,
-    transformOrigin: 'center',
-    opacity: o.opacity ?? 1,
-  }
-
-  if (o.kind === 'emoji') {
-    return (
-      <span className="absolute" style={{ ...wrap, fontSize: (o.widthPct / 100) * renderW, lineHeight: 1 }}>
-        {o.glyph}
-      </span>
-    )
-  }
-
-  if (o.kind === 'icon') {
-    const Cmp = o.iconName ? PhosphorLib[o.iconName] : undefined
-    return (
-      <span className="absolute flex items-center justify-center" style={{ ...wrap, filter: BADGE_SHADOW }}>
-        {Cmp ? (
-          <Cmp size={(o.widthPct / 100) * renderW} weight={o.iconWeight ?? 'bold'} color={o.iconColor ?? 'currentColor'} />
-        ) : null}
-      </span>
-    )
-  }
-
-  // crest / logo / flag / image
-  if (!o.url) return null
-  const src = o.url.startsWith('data:') ? o.url : proxiedImage(o.url)
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt=""
-      className="absolute"
-      style={{
-        ...wrap,
-        height: o.heightPct != null ? `${o.heightPct}%` : undefined,
-        objectFit: o.objectFit ?? 'contain',
-        filter: o.kind === 'image' ? undefined : BADGE_SHADOW,
-      }}
-    />
-  )
-}
-
-/** Foreground overlays placed on the card (crests / logos / flags / images /
- *  emoji / icons), painted in array order (= z-order) above the card body. */
-function OverlayLayer({ overlays, renderW }: { overlays: Overlay[]; renderW: number }) {
-  if (overlays.length === 0) return null
+/** Badge overlays placed on the card (crests / logos / flags). Display-only and
+ *  proxied for capture; drag/resize is handled by the editor over the preview. */
+function OverlayLayer({ overlays }: { overlays: Overlay[] }) {
+  // Image-backed overlays only — emoji / icon kinds carry no `url`.
+  const imageOverlays = overlays.filter((o): o is Overlay & { url: string } => Boolean(o.url))
+  if (imageOverlays.length === 0) return null
   return (
     <div className="pointer-events-none absolute inset-0 z-30">
-      {overlays.map((o) => (
-        <OverlayItem key={o.id} o={o} renderW={renderW} />
+      {imageOverlays.map((o) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={o.id}
+          src={proxiedImage(o.url)}
+          alt=""
+          className="absolute object-contain"
+          style={{
+            left: `${o.xPct}%`,
+            top: `${o.yPct}%`,
+            width: `${o.widthPct}%`,
+            transform: 'translate(-50%, -50%)',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          }}
+        />
       ))}
     </div>
   )
@@ -505,6 +460,12 @@ interface Props {
   content: CardContent
   frame: CardFrameConfig
   overlays?: Overlay[]
+  /** The current card as a single `fscard:*` foreground layer (picks). The body
+   *  renders through the viz-engine registry from this; `content` is retained
+   *  for the frame chrome (bleed detection + caption). */
+  layer?: VizLayer | null
+  /** Live data the layer's module resolves its picks against (injected). */
+  data?: FootshortsCardData
 }
 
 /**
@@ -515,29 +476,16 @@ interface Props {
  * header/footer chrome.
  */
 export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareCardCanvas(
-  { content, frame, overlays },
+  { content, frame, overlays, layer, data },
   ref,
 ) {
   const out = OUTPUT_SIZE[frame.ratio]
   const renderW = Math.round(out.w * RENDER_SCALE)
   const renderH = Math.round(out.h * RENDER_SCALE)
 
-  const theme = resolveTheme(frame.themeOverride, frame.themeName)
-  const vars = themeToVars(theme) as Record<string, string>
-  // Legacy single-token accent override — only when there's no full theme
-  // override (whose colors.accent already flows through themeToVars).
-  if (!frame.themeOverride) {
-    const accentChannels = frame.accentHex ? hexToChannels(frame.accentHex) : null
-    if (accentChannels) vars['--sf-color-accent'] = accentChannels
-  }
-  // The footshorts viz module bodies (match-card numerals etc.) read UN-prefixed
-  // `--font-*` vars, while `themeToVars` only emits `--sf-font-*`. Mirror them so
-  // the theme fonts — and any custom font override — reach the card body, not
-  // just the header/footer chrome.
-  vars['--font-sans'] = theme.typography.fontFamily.sans
-  vars['--font-serif'] = theme.typography.fontFamily.display
-  vars['--font-display'] = theme.typography.fontFamily.display
-  vars['--font-mono'] = theme.typography.fontFamily.mono
+  const vars = themeToVars(themes[frame.themeName]) as Record<string, string>
+  const accentChannels = frame.accentHex ? hexToChannels(frame.accentHex) : null
+  if (accentChannels) vars['--sf-color-accent'] = accentChannels
 
   const style: CSSProperties = {
     ...vars,
@@ -556,12 +504,22 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
     !bleed && frame.background && frame.background.type !== 'none' ? frame.background : null
   const backgroundScrim = frame.backgroundScrim ?? 0.5
 
+  // The card body renders through the viz-engine registry from the layer's picks,
+  // resolved against the injected data. `content` still drives the frame chrome
+  // (bleed layout + caption). Falls back to nothing if no layer was supplied.
+  const body =
+    layer && data ? (
+      <FootshortsDataProvider value={data}>
+        <FsCardLayerView layer={layer} />
+      </FootshortsDataProvider>
+    ) : null
+
   return (
     <div ref={ref} className="relative flex flex-col overflow-hidden bg-bg text-text" style={style}>
       {bleed ? (
         <>
           <div className="absolute inset-0">
-            <CardBody content={content} />
+            {body}
           </div>
           <div className="relative z-10 flex h-full flex-col justify-between">
             <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
@@ -583,13 +541,13 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
           <div className="relative z-10 flex h-full min-h-0 flex-col">
             <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
             <div className="min-h-0 flex-1 py-2">
-              <CardBody content={content} />
+              {body}
             </div>
             <Footer handle={frame.handle} />
           </div>
         </>
       )}
-      <OverlayLayer overlays={overlays ?? []} renderW={renderW} />
+      <OverlayLayer overlays={overlays ?? []} />
     </div>
   )
 })

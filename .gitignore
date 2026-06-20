@@ -11,3 +11,5 @@ brandz
 apps/vizmaya-fyi/public/content
 # Supabase CLI scratch
 supabase/.temp/
+# Abandoned render-surface extraction — build artifacts only, no source (see plan)
+apps/render/

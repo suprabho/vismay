@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
     '@vismay/starship-viz',
     '@vismay/verticals',
     '@vismay/ui',
+    '@vismay/viz-admin',
   ],
 }
 

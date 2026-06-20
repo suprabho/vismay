@@ -33,17 +33,8 @@ export default async function ShareCardsPage({ params }: Props) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-4 py-4 text-neutral-100">
-      <div className="shrink-0">
-        <h1 className="text-lg font-semibold">Share cards</h1>
-        <p className="mt-0.5 text-sm text-neutral-400">
-          Build an on-brand share card from real match data, standings, form, news, or an AI image —
-          then download a PNG in any social format.
-        </p>
-      </div>
-      <div className="mt-4 min-h-0 flex-1">
-        <ShareCardCreator initialCompetitions={competitions} />
-      </div>
+    <div className="min-h-0 flex-1 overflow-hidden text-neutral-100">
+      <ShareCardCreator initialCompetitions={competitions} />
     </div>
   )
 }
