@@ -1,5 +1,5 @@
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
-import type { MatchRowVariant, MatchStyle } from '../types'
+import type { MatchRowVariant, MatchStyle, PhosphorWeight } from '../types'
 
 /**
  * `fscard:*` layer configs — each carries the PICKS (which competition, which
@@ -71,6 +71,31 @@ export interface FsCardBadgeConfig {
   widthPct: number
 }
 
+/** A native emoji glyph placed as a free overlay layer; sized to fill its
+ *  transform box (so the composer's resize handles scale it). */
+export interface FsCardEmojiConfig {
+  type: 'fscard:emoji'
+  glyph: string
+}
+
+/** A Phosphor icon overlay — name + weight + color; fills its transform box. */
+export interface FsCardIconConfig {
+  type: 'fscard:icon'
+  iconName: string
+  iconWeight: PhosphorWeight
+  /** Hex (or `accent` / `text` / `currentColor`); blank falls back to the card text color. */
+  iconColor: string
+}
+
+/** A free image overlay (upload / AI-generated / news thumbnail). `src` is a data
+ *  URL (upload/generated) or a remote URL (news, proxied for capture). */
+export interface FsCardImageConfig {
+  type: 'fscard:image'
+  src: string
+  source?: 'upload' | 'generated' | 'news'
+  objectFit: 'contain' | 'cover'
+}
+
 export type FsCardConfig =
   | FsCardMatchConfig
   | FsCardMatchTimelineConfig
@@ -81,3 +106,6 @@ export type FsCardConfig =
   | FsCardNewsArticleConfig
   | FsCardAiImageConfig
   | FsCardBadgeConfig
+  | FsCardEmojiConfig
+  | FsCardIconConfig
+  | FsCardImageConfig

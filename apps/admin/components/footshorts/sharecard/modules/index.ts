@@ -8,6 +8,9 @@ import newsImageCardModule from './news-image'
 import newsArticleCardModule from './news-article'
 import aiImageCardModule from './ai-image'
 import badgeCardModule from './badge'
+import emojiCardModule from './emoji'
+import iconCardModule from './icon'
+import imageCardModule from './image'
 
 /**
  * Register the footshorts share-card module family (`fscard:*`) into the
@@ -31,4 +34,7 @@ export function registerFootshortsShareCardModules(): void {
   register(newsArticleCardModule)
   register(aiImageCardModule)
   register(badgeCardModule)
+  register(emojiCardModule)
+  register(iconCardModule)
+  register(imageCardModule)
 }

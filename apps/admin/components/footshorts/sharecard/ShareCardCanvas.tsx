@@ -431,10 +431,12 @@ function CardBackgroundLayer({
 /** Badge overlays placed on the card (crests / logos / flags). Display-only and
  *  proxied for capture; drag/resize is handled by the editor over the preview. */
 function OverlayLayer({ overlays }: { overlays: Overlay[] }) {
-  if (overlays.length === 0) return null
+  // Image-backed overlays only — emoji / icon kinds carry no `url`.
+  const imageOverlays = overlays.filter((o): o is Overlay & { url: string } => Boolean(o.url))
+  if (imageOverlays.length === 0) return null
   return (
     <div className="pointer-events-none absolute inset-0 z-30">
-      {overlays.map((o) => (
+      {imageOverlays.map((o) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={o.id}

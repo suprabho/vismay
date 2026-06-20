@@ -7,6 +7,9 @@ import { registerPickerEditor, type PickerEditorProps } from '@vismay/viz-admin'
 import { SHARE_IMAGE_STYLES } from '@/lib/footshortsShareStyles'
 import { proxiedImage } from '../modules/shared'
 import { compKeyOf, type FootshortsComposerCtx } from './ctx'
+import { EmojiPicker } from './EmojiPicker'
+import { IconPicker } from './IconPicker'
+import { ImagePicker } from './ImagePicker'
 
 interface EntityResult {
   id: string
@@ -388,6 +391,68 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
   )
 }
 
+/** `fscard:emoji.glyph` editor — the full Unicode emoji picker, storing the
+ *  native glyph (rendered as text on the card). */
+function EmojiFieldPicker({ value, onChange }: PickerEditorProps) {
+  const glyph = typeof value === 'string' ? value : ''
+  return (
+    <div className="mt-1 flex flex-col gap-2">
+      {glyph ? (
+        <div className="flex items-center gap-2">
+          <span className="text-2xl leading-none">{glyph}</span>
+          <button type="button" className="text-[11px] text-neutral-400 underline" onClick={() => onChange('')}>
+            change
+          </button>
+        </div>
+      ) : null}
+      <EmojiPicker onPick={(g) => onChange(g)} />
+    </div>
+  )
+}
+
+/** `fscard:icon.iconName` editor — the curated Phosphor grid; weight + color are
+ *  edited by the module's sibling form fields. */
+function IconFieldPicker({ value, onChange }: PickerEditorProps) {
+  const name = typeof value === 'string' ? value : ''
+  return (
+    <div className="mt-1">
+      {name ? <p className="mb-1.5 text-[11px] text-neutral-400">Selected: {name}</p> : null}
+      <IconPicker onPick={(n) => onChange(n)} />
+    </div>
+  )
+}
+
+/** `fscard:image.src` editor — upload / AI-generate / news-thumbnail picker,
+ *  reading ratio + news + palette from the composer ctx. */
+function ImageFieldPicker({ value, onChange, ctx }: PickerEditorProps) {
+  const c = asCtx(ctx)
+  const ratio = c?.frame.ratio ?? '1:1'
+  const news = c?.data.news ?? null
+  const palette = [
+    c?.frame ? themes[c.frame.themeName].colors.accent : '',
+    c?.frame.accentHex ?? '',
+  ].filter(Boolean) as string[]
+  const src = typeof value === 'string' ? value : ''
+  return (
+    <div className="mt-1 flex flex-col gap-2">
+      {src ? (
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src.startsWith('data:') ? src : proxiedImage(src)}
+            alt=""
+            className="h-12 w-12 rounded object-cover"
+          />
+          <button type="button" className="text-[11px] text-neutral-400 underline" onClick={() => onChange('')}>
+            clear
+          </button>
+        </div>
+      ) : null}
+      <ImagePicker ratio={ratio} paletteHexes={palette} news={news} onPick={(s) => onChange(s)} />
+    </div>
+  )
+}
+
 /** Register every footshorts picker editor by id. Idempotent (the registry just
  *  overwrites), so it's safe to call on each composer mount. */
 export function registerFootshortsPickers(): void {
@@ -399,4 +464,7 @@ export function registerFootshortsPickers(): void {
   registerPickerEditor('footshorts:news', NewsPicker)
   registerPickerEditor('footshorts:badge', BadgePicker)
   registerPickerEditor('footshorts:ai-image', AiImagePicker)
+  registerPickerEditor('footshorts:emoji', EmojiFieldPicker)
+  registerPickerEditor('footshorts:icon', IconFieldPicker)
+  registerPickerEditor('footshorts:image', ImageFieldPicker)
 }

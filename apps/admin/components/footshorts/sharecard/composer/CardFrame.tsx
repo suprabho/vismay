@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, type CSSProperties, type ReactNode } from 'react'
-import { themes, themeToVars } from '@footshorts/brand'
+import { themeToVars } from '@footshorts/brand'
 import { AuraBackground } from '@vismay/ui'
 import { LayerView, type ComposerLayer } from '@vismay/viz-admin'
 import { FootshortsLogo } from '../FootshortsLogo'
@@ -10,6 +10,7 @@ import { proxiedImage } from '../modules/shared'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
+  resolveTheme,
   type CardBackground,
   type CardFrameConfig,
   type LogoSize,
@@ -130,8 +131,13 @@ export const CardFrame = forwardRef<
   const renderW = Math.round(out.w * RENDER_SCALE)
   const renderH = Math.round(out.h * RENDER_SCALE)
 
-  const vars = themeToVars(themes[frame.themeName]) as Record<string, string>
-  const accentChannels = frame.accentHex ? hexToChannels(frame.accentHex) : null
+  // Resolve the base preset + any per-card override (colors + fonts) into a full
+  // theme, so `themeToVars` emits the override's `--sf-color-*` / `--sf-font-*`.
+  const theme = resolveTheme(frame.themeOverride, frame.themeName)
+  const vars = themeToVars(theme) as Record<string, string>
+  // Legacy accent hex still wins, but only when the override hasn't set accent.
+  const accentChannels =
+    frame.accentHex && !frame.themeOverride?.colors?.accent ? hexToChannels(frame.accentHex) : null
   if (accentChannels) vars['--sf-color-accent'] = accentChannels
 
   const style: CSSProperties = {

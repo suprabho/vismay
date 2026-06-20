@@ -27,19 +27,23 @@ import {
   LOGO_VARIANTS,
   OUTPUT_SIZE,
   RENDER_SCALE,
+  resolveTheme,
   type AspectRatio,
   type CardBackground,
   type CardType,
   type CardFrameConfig,
+  type CardThemeOverride,
   type LogoSize,
   type LogoVariant,
   type MatchRowVariant,
   type MatchStyle,
 } from './types'
+import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { SHARE_IMAGE_STYLES } from '@/lib/footshortsShareStyles'
 import { registerFootshortsShareCardModules } from './modules'
 import { footshortsHost } from './composer/host'
 import { registerFootshortsPickers } from './composer/pickers'
+import { ThemePanel } from './composer/ThemePanel'
 import { useFootshortsCardData } from './composer/useFootshortsCardData'
 import { compKeyOf, type CompetitionOption, type FootshortsComposerCtx } from './composer/ctx'
 
@@ -103,6 +107,7 @@ interface ShareCardSnapshotV1 {
 interface ShareCardSnapshotV2 {
   version: 2
   themeName: ThemeName
+  themeOverride?: CardThemeOverride
   ratio: AspectRatio
   accentHex: string
   handle: string
@@ -220,6 +225,8 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
   // card-level frame controls
   const [themeName, setThemeName] = useState<ThemeName>(THEME_NAMES[0] ?? 'classic')
+  // Per-card theme override (base preset + per-token colors + fonts).
+  const [themeOverride, setThemeOverride] = useState<CardThemeOverride | undefined>(undefined)
   const [ratio, setRatio] = useState<AspectRatio>('1:1')
   const [accentHex, setAccentHex] = useState('')
   const [handle, setHandle] = useState('@footshorts')
@@ -272,9 +279,22 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     return null
   }, [showEyebrow, eyebrowOverride, layers, data])
 
+  // Base preset + override → full theme, shared by the card frame, the capture
+  // background color, and the Google-Fonts import below.
+  const resolvedTheme = useMemo(() => resolveTheme(themeOverride, themeName), [themeOverride, themeName])
+  // Load the chosen font families (base or override) so both the live preview and
+  // the html-to-image capture render them. `getFontImportUrl` wants bare family
+  // names, so take the first family of each CSS stack (and map display→serif).
+  const fontImportUrl = useMemo(() => {
+    const ff = resolvedTheme.typography.fontFamily
+    const first = (stack: string) => stack.split(',')[0]?.trim().replace(/^["']|["']$/g, '') ?? ''
+    return getFontImportUrl({ sans: first(ff.sans), serif: first(ff.display), mono: first(ff.mono) })
+  }, [resolvedTheme])
+
   const frame: CardFrameConfig = useMemo(
     () => ({
       themeName,
+      themeOverride,
       ratio,
       accentHex: accentHex || null,
       eyebrow,
@@ -286,7 +306,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       background,
       backgroundScrim,
     }),
-    [themeName, ratio, accentHex, eyebrow, handle, logoSize, logoVariant, background],
+    [themeName, themeOverride, ratio, accentHex, eyebrow, handle, logoSize, logoVariant, background, backgroundScrim],
   )
 
   const ctx: FootshortsComposerCtx = useMemo(
@@ -329,7 +349,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const renderW = Math.round(out.w * RENDER_SCALE)
   const renderH = Math.round(out.h * RENDER_SCALE)
   const pixelRatio = out.w / renderW
-  const bgHex = themes[themeName].colors.bg
+  const bgHex = resolvedTheme.colors.bg
   const { capture, download } = useCapture(captureRef, {
     width: renderW,
     height: renderH,
@@ -427,7 +447,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setBgBusy(true)
     setBgError(null)
     try {
-      const paletteHexes = [themes[themeName].colors.accent, accentHex].filter(Boolean)
+      const paletteHexes = [resolvedTheme.colors.accent, accentHex].filter(Boolean)
       const res = await fetch('/api/footshorts/share/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -441,7 +461,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     } finally {
       setBgBusy(false)
     }
-  }, [bgSubject, themeName, accentHex, ratio])
+  }, [bgSubject, resolvedTheme, accentHex, ratio])
 
   // ── snapshot save / load ────────────────────────────────────────────────────
   useEffect(() => {
@@ -464,6 +484,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     (): ShareCardSnapshotV2 => ({
       version: 2,
       themeName,
+      themeOverride,
       ratio,
       accentHex,
       handle,
@@ -476,11 +497,12 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       foreground: composer.layers,
       groups: composer.groups,
     }),
-    [themeName, ratio, accentHex, handle, logoSize, logoVariant, eyebrowOverride, showEyebrow, background, composer],
+    [themeName, themeOverride, ratio, accentHex, handle, logoSize, logoVariant, eyebrowOverride, showEyebrow, background, backgroundScrim, composer],
   )
 
   const applySnapshot = useCallback((snap: AnySnapshot) => {
     setThemeName(snap.themeName)
+    setThemeOverride(snap.version === 2 ? snap.themeOverride : undefined)
     setRatio(snap.ratio)
     setAccentHex(snap.accentHex)
     setHandle(snap.handle)
@@ -601,6 +623,8 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
+      {/* Load the resolved theme's Google fonts for both preview + PNG capture. */}
+      {fontImportUrl && <link rel="stylesheet" href={fontImportUrl} />}
       <div className="flex shrink-0 items-center justify-between">
         <div>
           <h1 className="text-sm font-semibold text-neutral-100">Share card composer</h1>
@@ -657,18 +681,22 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             )}
             {activeTab === 'setup' && (
               <div className="space-y-4">
+      {/* theme: base preset + per-token colors + fonts */}
+      <div className="rounded-lg border border-white/10 p-3">
+        <ThemePanel
+          theme={resolvedTheme}
+          themeName={themeName}
+          override={themeOverride}
+          onPickPreset={(name) => {
+            setThemeName(name)
+            setThemeOverride(undefined)
+          }}
+          onChange={setThemeOverride}
+          onReset={() => setThemeOverride(undefined)}
+        />
+      </div>
       {/* card-level frame controls */}
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 p-3">
-        <label className={labelCls}>
-          Theme
-          <select className={selectCls} value={themeName} onChange={(e) => setThemeName(e.target.value as ThemeName)}>
-            {THEME_NAMES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className={labelCls}>
           Format
           <select className={selectCls} value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)}>
