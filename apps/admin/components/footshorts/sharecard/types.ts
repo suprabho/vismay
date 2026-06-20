@@ -129,15 +129,17 @@ export type CardContent =
 /** A decorative backdrop painted behind a data card's content (match,
  *  standings, fixtures, form, timeline, news-article). Bleed cards
  *  (news-image / ai-image) ignore it — their image already IS the card.
- *  `aura` embeds the animated `aura.promad.design` iframe: it shows in the
- *  live preview but, like every aura in this repo, is NOT rasterized into the
- *  exported PNG (html-to-image can't capture cross-origin iframes). News and
- *  AI image backgrounds capture cleanly. */
+ *  `aura` embeds the animated `aura.promad.design` iframe for the LIVE preview;
+ *  the cross-origin iframe can't be rasterized, so the optional `posterSrc` still
+ *  image (data URL upload/generation, or a proxied remote URL) is what lands in
+ *  the exported PNG — mirroring the vizmaya aura layer. Without a poster the
+ *  export falls back to the card background + scrim. News and AI image
+ *  backgrounds capture cleanly. */
 export type CardBackground =
   | { type: 'none' }
   | { type: 'news'; url: string; label?: string }
   | { type: 'ai'; dataUrl: string }
-  | { type: 'aura'; slug: string }
+  | { type: 'aura'; slug: string; posterSrc?: string }
   /** A generic image backdrop sourced from the Background tab's picker — a news
    *  thumbnail / upload / AI generation. `src` is a base64 data URL (upload or
    *  generated, captured directly) or a remote URL (a news image, proxied on

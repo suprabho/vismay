@@ -893,8 +893,8 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                     )}
                   </div>
 
-                  <p className="text-[11px] text-neutral-500">
-                    Animated aura embed — shows in the live preview only; it is not captured into the exported PNG.
+                  <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+                    Aura animates in the live preview only. Attach a poster image below — that’s what lands in the exported PNG.
                   </p>
 
                   <label className={labelCls}>
@@ -906,10 +906,39 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                       onChange={(e) => {
                         const v = e.target.value
                         setAuraSlug(v)
-                        setBackground(v.trim() ? { type: 'aura', slug: v.trim() } : { type: 'none' })
+                        setBackground(
+                          v.trim()
+                            ? {
+                                type: 'aura',
+                                slug: v.trim(),
+                                // Keep any poster already attached when only the slug changes.
+                                posterSrc: background.type === 'aura' ? background.posterSrc : undefined,
+                              }
+                            : { type: 'none' },
+                        )
                       }}
                     />
                   </label>
+
+                  {background.type === 'aura' && (
+                    <div className="flex flex-col gap-2">
+                      <span className={labelCls}>Poster image (for export)</span>
+                      {background.posterSrc && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={background.posterSrc.startsWith('data:') ? background.posterSrc : proxiedImage(background.posterSrc)}
+                          alt=""
+                          className="h-16 w-full rounded border border-white/10 object-cover"
+                        />
+                      )}
+                      <ImagePicker
+                        ratio={ratio}
+                        paletteHexes={bgPaletteHexes}
+                        news={data.news}
+                        onPick={(src) => setBackground({ type: 'aura', slug: background.slug, posterSrc: src })}
+                      />
+                    </div>
+                  )}
 
                   {scrimControl}
                 </div>

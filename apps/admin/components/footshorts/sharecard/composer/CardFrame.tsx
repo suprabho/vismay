@@ -105,11 +105,26 @@ function CardBackgroundLayer({ background, scrim }: { background: CardBackground
         <img src={background.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : background.type === 'aura' ? (
         <>
-          <AuraBackground slug={background.slug} />
-          <style>{`
-            .bn-aura { position: absolute; inset: 0; overflow: hidden; }
-            .bn-aura iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent; }
-          `}</style>
+          {/* The poster <img> is the only aura layer that rasterizes — it sits
+              underneath the live embed and carries the background into the PNG. */}
+          {background.posterSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={background.posterSrc.startsWith('data:') ? background.posterSrc : proxiedImage(background.posterSrc)}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          {/* Live preview only — the cross-origin iframe can't be rasterized, so
+              flag it data-share-ui and the capture filter strips it (the poster
+              above is what lands in the export). */}
+          <div data-share-ui="true" className="absolute inset-0">
+            <AuraBackground slug={background.slug} />
+            <style>{`
+              .bn-aura { position: absolute; inset: 0; overflow: hidden; }
+              .bn-aura iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: transparent; }
+            `}</style>
+          </div>
         </>
       ) : null}
       {scrim > 0 && <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${scrim})` }} />}

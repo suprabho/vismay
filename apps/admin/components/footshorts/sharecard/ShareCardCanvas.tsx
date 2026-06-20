@@ -410,15 +410,27 @@ function CardBackgroundLayer({
         <img src={background.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : background.type === 'aura' ? (
         <>
-          <AuraBackground slug={background.slug} />
-          {/* Fill the .bn-aura wrapper the embed emits so the iframe covers the card. */}
-          <style>{`
-            .bn-aura { position: absolute; inset: 0; overflow: hidden; }
-            .bn-aura iframe {
-              position: absolute; inset: 0; width: 100%; height: 100%;
-              border: 0; display: block; background: transparent;
-            }
-          `}</style>
+          {/* Poster underneath the live embed: the static fallback that rasterizes
+              into the PNG (the cross-origin iframe never does). */}
+          {background.posterSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={background.posterSrc.startsWith('data:') ? background.posterSrc : proxiedImage(background.posterSrc)}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div data-share-ui="true" className="absolute inset-0">
+            <AuraBackground slug={background.slug} />
+            {/* Fill the .bn-aura wrapper the embed emits so the iframe covers the card. */}
+            <style>{`
+              .bn-aura { position: absolute; inset: 0; overflow: hidden; }
+              .bn-aura iframe {
+                position: absolute; inset: 0; width: 100%; height: 100%;
+                border: 0; display: block; background: transparent;
+              }
+            `}</style>
+          </div>
         </>
       ) : null}
       {scrim > 0 && (
