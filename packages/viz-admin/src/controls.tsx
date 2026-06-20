@@ -210,16 +210,19 @@ export function TransformControls({
   transform,
   onChange,
   showHeight = false,
+  maxWidthPct = 100,
 }: {
   transform: TransformLike
   onChange: (patch: Partial<TransformLike>) => void
   showHeight?: boolean
+  /** Upper bound for the Width field (% of card). Defaults to 100. */
+  maxWidthPct?: number
 }) {
   return (
     <div className="grid grid-cols-2 gap-1.5">
       <ScrubField label="X" value={Math.round(transform.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
       <ScrubField label="Y" value={Math.round(transform.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
-      <ScrubField label="W" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
+      <ScrubField label="W" value={Math.round(transform.widthPct)} min={4} max={maxWidthPct} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
       {showHeight ? (
         <ScrubField label="H" value={Math.round(transform.heightPct ?? DEFAULT_GRAPHIC_HEIGHT_PCT)} min={4} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
       ) : (

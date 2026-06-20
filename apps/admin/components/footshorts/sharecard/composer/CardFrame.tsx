@@ -90,7 +90,14 @@ function Footer({ handle }: { handle: string }) {
 function CardBackgroundLayer({ background, scrim }: { background: CardBackground; scrim: number }) {
   return (
     <div className="absolute inset-0 z-0" aria-hidden>
-      {background.type === 'news' ? (
+      {background.type === 'image' ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={background.src.startsWith('data:') ? background.src : proxiedImage(background.src)}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : background.type === 'news' ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={proxiedImage(background.url)} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : background.type === 'ai' ? (

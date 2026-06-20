@@ -221,4 +221,10 @@ export interface VizModule<TConfig = unknown> {
    * renders; it has no effect on the story renderers.
    */
   placement?: 'stack' | 'overlay'
+  /**
+   * Upper bound for the composer's free-transform Width field (% of card).
+   * Defaults to 100 — set higher for modules whose content is designed to bleed
+   * past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
+   */
+  maxWidthPct?: number
 }

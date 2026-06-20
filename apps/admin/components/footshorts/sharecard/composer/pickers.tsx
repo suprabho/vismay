@@ -43,6 +43,29 @@ function asCtx(ctx: unknown): FootshortsComposerCtx | null {
   return ctx && typeof ctx === 'object' && 'competitions' in ctx ? (ctx as FootshortsComposerCtx) : null
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return blobToDataUrl(file)
+}
+
+/** Resolve any image source (an upload data URL or a remote news URL) to a base64
+ *  data URL the generate route accepts as a `referenceImage`. Remote URLs go
+ *  through the same-origin proxy so the fetch + read succeed without taint. */
+async function urlToDataUrl(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url
+  const res = await fetch(proxiedImage(url))
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return blobToDataUrl(await res.blob())
+}
+
 function fixtureLabel(f: FixtureRow): string {
   const home = f.home?.name ?? f.home_team_name ?? 'TBD'
   const away = f.away?.name ?? f.away_team_name ?? 'TBD'
@@ -314,9 +337,22 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
   const c = asCtx(ctx)
   const [subject, setSubject] = useState('')
   const [styleId, setStyleId] = useState(SHARE_IMAGE_STYLES[0]?.id ?? '')
+  const [refSrc, setRefSrc] = useState<string | null>(null)
+  const [refQuery, setRefQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const dataUrl = typeof value === 'string' ? value : ''
+  const newsWithImage = (c?.data.news ?? []).filter((n) => n.image_url)
+  const refQ = refQuery.trim().toLowerCase()
+  const filteredRefNews = refQ
+    ? newsWithImage.filter((n) => n.headline.toLowerCase().includes(refQ))
+    : newsWithImage
+
+  const onRefUpload = async (file: File | null) => {
+    if (!file || !file.type.startsWith('image/')) return
+    setError(null)
+    setRefSrc(await fileToDataUrl(file))
+  }
 
   const generate = async () => {
     const s = subject.trim()
@@ -341,6 +377,7 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
           ratio: frame?.ratio ?? '1:1',
           model: 'image.default',
           paletteHexes,
+          referenceImage: refSrc ? await urlToDataUrl(refSrc) : undefined,
         }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
@@ -378,6 +415,56 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
           </option>
         ))}
       </select>
+
+      {/* Reference image — steer the generation with a news photo or an upload. */}
+      <div className="flex flex-col gap-1.5">
+        {refSrc ? (
+          <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={refSrc.startsWith('data:') ? refSrc : proxiedImage(refSrc)} alt="" className="h-8 w-8 rounded border border-white/10 object-cover" />
+            <span className="text-[11px] text-neutral-400">Reference attached</span>
+            <button type="button" className="ml-auto text-[11px] text-neutral-400 underline" onClick={() => setRefSrc(null)}>
+              clear ref
+            </button>
+          </div>
+        ) : (
+          <>
+            <label className="cursor-pointer text-[11px] text-neutral-400 hover:text-white">
+              + reference image
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => void onRefUpload(e.target.files?.[0] ?? null)} />
+            </label>
+            {newsWithImage.length > 0 ? (
+              <>
+                <span className={hintCls}>…or use a news photo as reference</span>
+                <input
+                  className={inputCls}
+                  placeholder="Search news…"
+                  value={refQuery}
+                  onChange={(e) => setRefQuery(e.target.value)}
+                />
+                <div className="grid max-h-24 grid-cols-6 gap-1 overflow-y-auto">
+                  {filteredRefNews.slice(0, 24).map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      title={`use “${n.headline}” as reference`}
+                      onClick={() => setRefSrc(n.image_url!)}
+                      className="flex aspect-square items-center justify-center overflow-hidden rounded border border-white/10 bg-neutral-900 hover:border-white/30"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={proxiedImage(n.image_url!)} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                  {filteredRefNews.length === 0 && (
+                    <p className="col-span-6 py-1.5 text-[11px] text-neutral-600">No news matches “{refQuery.trim()}”.</p>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </>
+        )}
+      </div>
+
       <button
         type="button"
         className="rounded-md border border-white/10 px-2 py-1.5 text-[11px] text-neutral-200 hover:bg-white/5 disabled:opacity-40"

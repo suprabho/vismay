@@ -138,10 +138,15 @@ export type CardBackground =
   | { type: 'news'; url: string; label?: string }
   | { type: 'ai'; dataUrl: string }
   | { type: 'aura'; slug: string }
+  /** A generic image backdrop sourced from the Background tab's picker — a news
+   *  thumbnail / upload / AI generation. `src` is a base64 data URL (upload or
+   *  generated, captured directly) or a remote URL (a news image, proxied on
+   *  render). Supersedes the narrower `news` / `ai` variants for new cards;
+   *  those are retained so older snapshots still render. */
+  | { type: 'image'; src: string }
 
 export const BACKGROUND_KINDS: Array<{ id: Exclude<CardBackground['type'], 'none'>; label: string }> = [
-  { id: 'news', label: 'News image' },
-  { id: 'ai', label: 'AI image' },
+  { id: 'image', label: 'Image' },
   { id: 'aura', label: 'Aura' },
 ]
 

@@ -43,6 +43,9 @@ const matchTimelineCardModule: VizModule<FsCardMatchTimelineConfig> = {
   type: 'fscard:match-timeline',
   label: 'Match timeline',
   slots: ['foreground'],
+  // Timeline is built to stretch wide and crop horizontally, so allow up to 3×
+  // card width in the composer's Width field (default cap is 100%).
+  maxWidthPct: 300,
   parseConfig,
   adminForm,
   load: () => import('./Component'),

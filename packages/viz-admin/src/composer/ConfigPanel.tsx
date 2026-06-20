@@ -50,6 +50,7 @@ export function ConfigPanel<TCtx>({
               transform={transform}
               onChange={(p) => onLayerTransformChange(layer.id, p)}
               showHeight={transform.heightPct != null}
+              maxWidthPct={mod.maxWidthPct}
             />
           </Section>
         )}

@@ -9,12 +9,17 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): FsCard
   if (typeof r.newsId !== 'string' || !r.newsId) {
     throw new Error(`${ctx.label}: fscard:news-image requires a 'newsId'`)
   }
-  return { type: 'fscard:news-image', newsId: r.newsId }
+  return {
+    type: 'fscard:news-image',
+    newsId: r.newsId,
+    hideCaption: r.hideCaption === true ? true : undefined,
+  }
 }
 
 function adminForm(): AdminFormField[] {
   return [
     { kind: 'picker', key: 'newsId', label: 'Article', pickerId: 'footshorts:news', required: true },
+    { kind: 'boolean', key: 'hideCaption', label: 'Hide headline' },
   ]
 }
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
-import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Stack, Trash, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Sparkle, Stack, Trash, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
   LayerListPanel,
   ConfigPanel,
@@ -41,10 +41,11 @@ import {
   type MatchStyle,
 } from './types'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
-import { SHARE_IMAGE_STYLES } from '@/lib/footshortsShareStyles'
 import { registerFootshortsShareCardModules } from './modules'
+import { proxiedImage } from './modules/shared'
 import { footshortsHost } from './composer/host'
 import { registerFootshortsPickers } from './composer/pickers'
+import { ImagePicker } from './composer/ImagePicker'
 import { ThemePanel } from './composer/ThemePanel'
 import { useFootshortsCardData } from './composer/useFootshortsCardData'
 import { compKeyOf, type CompetitionOption, type FootshortsComposerCtx } from './composer/ctx'
@@ -199,11 +200,12 @@ const inputCls = selectCls
 const actionBtn =
   'rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40'
 
-type EditorTab = 'layers' | 'setup' | 'background' | 'publish'
+type EditorTab = 'layers' | 'setup' | 'image' | 'aura' | 'publish'
 const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
   { id: 'layers', label: 'Layers', Icon: Stack },
   { id: 'setup', label: 'Card setup', Icon: FrameCorners },
-  { id: 'background', label: 'Background', Icon: ImageIcon },
+  { id: 'image', label: 'Image background', Icon: ImageIcon },
+  { id: 'aura', label: 'Aura background', Icon: Sparkle },
   { id: 'publish', label: 'Publish', Icon: PaperPlaneTilt },
 ]
 const railBtn = (active: boolean) =>
@@ -220,7 +222,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const layers = composer.layers
   const [selection, setSelection] = useState<ComposerSelection>(null)
   const [multiSel, setMultiSel] = useState<string[]>([])
-  const [activeTab, setActiveTab] = useState<'layers' | 'setup' | 'background' | 'publish'>('layers')
+  const [activeTab, setActiveTab] = useState<EditorTab>('layers')
 
   // card-level frame controls
   const [themeName, setThemeName] = useState<ThemeName>('terrace')
@@ -233,13 +235,11 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [logoVariant, setLogoVariant] = useState<LogoVariant>('mark')
   const [eyebrowOverride, setEyebrowOverride] = useState('')
   const [showEyebrow, setShowEyebrow] = useState(true)
-  // Card-level decorative background (behind the layer stack): AI image or aura.
+  // Card-level decorative background (behind the layer stack): image (news /
+  // upload / AI) or an animated aura.
   const [background, setBackground] = useState<CardBackground>({ type: 'none' })
   const [backgroundScrim, setBackgroundScrim] = useState(0.5)
-  const [bgSubject, setBgSubject] = useState('')
   const [auraSlug, setAuraSlug] = useState('')
-  const [bgBusy, setBgBusy] = useState(false)
-  const [bgError, setBgError] = useState<string | null>(null)
 
   // card library + publish
   const [savedCards, setSavedCards] = useState<SavedCard[]>([])
@@ -258,7 +258,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [tagLoading, setTagLoading] = useState(false)
   const pendingTagsRef = useRef<EntityResult[] | null>(null)
 
-  const data = useFootshortsCardData({ layers, competitions, ratio })
+  // The Image-background tab's picker browses news thumbnails (and uses them as
+  // AI references), so pull the news feed while it's open even with no news layer.
+  const data = useFootshortsCardData({ layers, competitions, ratio, forceNews: activeTab === 'image' })
   const hasLayers = layers.length > 0
   const representativeType = layers[0] ? String(layers[0].layer.type).replace('fscard:', '') : 'match'
 
@@ -442,30 +444,41 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     [],
   )
 
-  const handleGenerateBg = useCallback(async () => {
-    const s = bgSubject.trim()
-    if (!s) {
-      setBgError('Describe the background.')
-      return
-    }
-    setBgBusy(true)
-    setBgError(null)
-    try {
-      const paletteHexes = [resolvedTheme.colors.accent, accentHex].filter(Boolean)
-      const res = await fetch('/api/footshorts/share/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ styleId: SHARE_IMAGE_STYLES[0]?.id, subject: s, ratio, model: 'image.default', paletteHexes }),
-      })
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
-      if (!res.ok || !body.ok || !body.dataUrl) throw new Error(body.error ?? `HTTP ${res.status}`)
-      setBackground({ type: 'ai', dataUrl: body.dataUrl })
-    } catch (e) {
-      setBgError(e instanceof Error ? e.message : 'Generation failed')
-    } finally {
-      setBgBusy(false)
-    }
-  }, [bgSubject, resolvedTheme, accentHex, ratio])
+  // Palette hints handed to the image picker's AI generation so output stays on
+  // brand (the resolved accent + any per-card accent override).
+  const bgPaletteHexes = useMemo(
+    () => [resolvedTheme.colors.accent, accentHex].filter(Boolean),
+    [resolvedTheme, accentHex],
+  )
+
+  // Thumbnail of the current image-ish background, for the Image tab preview.
+  const bgPreviewSrc =
+    background.type === 'image'
+      ? background.src.startsWith('data:')
+        ? background.src
+        : proxiedImage(background.src)
+      : background.type === 'ai'
+        ? background.dataUrl
+        : background.type === 'news'
+          ? proxiedImage(background.url)
+          : null
+
+  // Scrim darkens whatever backdrop is set, for legibility — shared by both the
+  // Image and Aura tabs since it's a property of the background regardless of kind.
+  const scrimControl =
+    background.type !== 'none' ? (
+      <label className={labelCls}>
+        {`Scrim ${Math.round(backgroundScrim * 100)}%`}
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(backgroundScrim * 100)}
+          onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
+          className="mt-1 w-full"
+        />
+      </label>
+    ) : null
 
   // ── snapshot save / load ────────────────────────────────────────────────────
   useEffect(() => {
@@ -575,9 +588,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setMultiSel([])
     setBackground({ type: 'none' })
     setBackgroundScrim(0.5)
-    setBgSubject('')
     setAuraSlug('')
-    setBgError(null)
     pendingTagsRef.current = null
     setTags([])
     setCurrentCardId(null)
@@ -823,56 +834,84 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                 </div>
               </div>
             )}
-            {activeTab === 'background' && (
+            {activeTab === 'image' && (
               <div className="space-y-4">
-                {/* card background (behind the layer stack) */}
-                <div className="flex flex-col gap-2 rounded-lg border border-white/10 p-3">
+                {/* Image backdrop (behind the layer stack): news thumbnail / upload /
+                    AI generation (with an optional reference drawn from the news feed). */}
+                <div className="flex flex-col gap-3 rounded-lg border border-white/10 p-3">
                   <div className="flex items-center justify-between">
-                    <span className={labelCls}>Background (behind layers)</span>
-                    {background.type !== 'none' && (
-                      <button className="text-[11px] text-neutral-400 underline" onClick={() => setBackground({ type: 'none' })}>
+                    <span className={labelCls}>Image background</span>
+                    {background.type === 'image' && (
+                      <button
+                        className="text-[11px] text-neutral-400 underline"
+                        onClick={() => setBackground({ type: 'none' })}
+                      >
                         clear
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className={labelCls}>
-                      Aura slug
-                      <input
-                        className={inputCls}
-                        placeholder="(none)"
-                        value={auraSlug}
-                        onChange={(e) => {
-                          const v = e.target.value
-                          setAuraSlug(v)
-                          setBackground(v.trim() ? { type: 'aura', slug: v.trim() } : { type: 'none' })
-                        }}
-                      />
-                    </label>
-                    <label className={labelCls}>
-                      AI background
-                      <div className="mt-1 flex gap-1">
-                        <input className={inputCls} placeholder="describe…" value={bgSubject} onChange={(e) => setBgSubject(e.target.value)} />
-                        <button className={actionBtn} disabled={bgBusy} onClick={() => void handleGenerateBg()}>
-                          {bgBusy ? '…' : 'Gen'}
-                        </button>
-                      </div>
-                    </label>
-                  </div>
-                  {bgError && <p className="text-[11px] text-red-400">{bgError}</p>}
-                  {background.type !== 'none' && (
-                    <label className={labelCls}>
-                      {`Scrim ${Math.round(backgroundScrim * 100)}%`}
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={Math.round(backgroundScrim * 100)}
-                        onChange={(e) => setBackgroundScrim(Number(e.target.value) / 100)}
-                        className="mt-1 w-full"
-                      />
-                    </label>
+
+                  {bgPreviewSrc && (
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={bgPreviewSrc} alt="" className="h-12 w-12 rounded border border-white/10 object-cover" />
+                      <span className="text-[11px] text-neutral-500">Image background set</span>
+                    </div>
                   )}
+
+                  <ImagePicker
+                    ratio={ratio}
+                    paletteHexes={bgPaletteHexes}
+                    news={data.news}
+                    onPick={(src) => {
+                      setBackground({ type: 'image', src })
+                      setAuraSlug('')
+                    }}
+                  />
+
+                  {scrimControl}
+                </div>
+              </div>
+            )}
+            {activeTab === 'aura' && (
+              <div className="space-y-4">
+                {/* Aura backdrop: an animated embed — shows in the live preview only,
+                    never rasterized into the exported PNG. */}
+                <div className="flex flex-col gap-3 rounded-lg border border-white/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className={labelCls}>Aura background</span>
+                    {background.type === 'aura' && (
+                      <button
+                        className="text-[11px] text-neutral-400 underline"
+                        onClick={() => {
+                          setBackground({ type: 'none' })
+                          setAuraSlug('')
+                        }}
+                      >
+                        clear
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-neutral-500">
+                    Animated aura embed — shows in the live preview only; it is not captured into the exported PNG.
+                  </p>
+
+                  <label className={labelCls}>
+                    Aura slug
+                    <input
+                      className={inputCls}
+                      placeholder="(none)"
+                      value={auraSlug}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setAuraSlug(v)
+                        setBackground(v.trim() ? { type: 'aura', slug: v.trim() } : { type: 'none' })
+                      }}
+                    />
+                  </label>
+
+                  {scrimControl}
                 </div>
               </div>
             )}

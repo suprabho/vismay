@@ -10,6 +10,7 @@ import type { FsCardNewsImageConfig } from '../types'
  * `fscard:news-image` — a news photo with the publisher + headline captioned over
  * a bottom gradient (the caption now lives in the module, so the layer is
  * self-contained). Resolves the article from the injected news list by id.
+ * `hideCaption` drops the caption for a clean, title-free photo.
  */
 export default function NewsImageCardComponent({
   config,
@@ -37,14 +38,16 @@ export default function NewsImageCardComponent({
       ) : (
         <div className="absolute inset-0 bg-surface" />
       )}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-3 pt-10">
-        {item.publisher ? (
-          <div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-white/70">
-            {item.publisher}
-          </div>
-        ) : null}
-        <div className="text-[19px] font-bold leading-tight text-white">{item.headline}</div>
-      </div>
+      {!config.hideCaption && (
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-3 pt-10">
+          {item.publisher ? (
+            <div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-white/70">
+              {item.publisher}
+            </div>
+          ) : null}
+          <div className="text-[19px] font-bold leading-tight text-white">{item.headline}</div>
+        </div>
+      )}
     </>
   )
 }

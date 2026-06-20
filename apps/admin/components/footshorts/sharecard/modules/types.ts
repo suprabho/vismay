@@ -45,6 +45,8 @@ export interface FsCardFormConfig {
 export interface FsCardNewsImageConfig {
   type: 'fscard:news-image'
   newsId: string
+  /** Hide the publisher + headline caption overlaid on the photo (image only). */
+  hideCaption?: boolean
 }
 
 export interface FsCardNewsArticleConfig {

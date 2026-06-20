@@ -58,11 +58,15 @@ export function useFootshortsCardData({
   competitions,
   ratio,
   newsLimit = 40,
+  forceNews = false,
 }: {
   layers: ComposerLayer[]
   competitions: CompetitionOption[]
   ratio: AspectRatio
   newsLimit?: number
+  /** Fetch the news feed even when no news layer references it — set while the
+   *  Background tab's image picker (which browses news thumbnails) is shown. */
+  forceNews?: boolean
 }): FootshortsCardData {
   const [fixturesByComp, setFixturesByComp] = useState<Record<string, FixtureRow[]>>({})
   const [standingsByComp, setStandingsByComp] = useState<Record<string, StandingRow[]>>({})
@@ -84,7 +88,7 @@ export function useFootshortsCardData({
   const compKeysKey = compKeys.join('|')
   const eventIds = usedEventFixtureIds(layers)
   const eventIdsKey = eventIds.join('|')
-  const needNews = wantsNews(layers)
+  const needNews = wantsNews(layers) || forceNews
 
   // Fixtures + standings per referenced competition.
   useEffect(() => {

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { SHARE_IMAGE_STYLES } from '@/lib/footshortsShareStyles'
 import type { AspectRatio, NewsItem } from '../types'
-import { labelCls, selectCls } from './controls'
+import { proxiedImage } from '../modules/shared'
+import { inputCls, labelCls, selectCls } from './controls'
 
 export type ImageSource = 'upload' | 'generated' | 'news'
 
@@ -13,6 +14,21 @@ async function fileToDataUrl(file: File): Promise<string> {
     reader.onload = () => resolve(reader.result as string)
     reader.onerror = () => reject(new Error('read failed'))
     reader.readAsDataURL(file)
+  })
+}
+
+/** Turn any image source into a base64 data URL the generate route accepts as a
+ *  `referenceImage`. A remote URL (e.g. a news thumbnail) is routed through the
+ *  same-origin proxy first so the cross-origin fetch + canvas read both succeed. */
+async function urlToDataUrl(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url
+  const res = await fetch(proxiedImage(url))
+  const blob = await res.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.readAsDataURL(blob)
   })
 }
 
@@ -33,12 +49,20 @@ export function ImagePicker({
 }) {
   const [subject, setSubject] = useState('')
   const [styleId, setStyleId] = useState(SHARE_IMAGE_STYLES[0]!.id)
+  const [refSrc, setRefSrc] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [refQuery, setRefQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const onUpload = async (file: File | null) => {
     if (!file || !file.type.startsWith('image/')) return
     onPick(await fileToDataUrl(file), 'upload')
+  }
+
+  const onRefUpload = async (file: File | null) => {
+    if (!file || !file.type.startsWith('image/')) return
+    setRefSrc(await fileToDataUrl(file))
   }
 
   const generate = async () => {
@@ -49,6 +73,10 @@ export function ImagePicker({
     setBusy(true)
     setError(null)
     try {
+      // A reference image conditions the generation — the route switches to the
+      // multimodal model when one is present. News refs are remote URLs, so
+      // resolve them to a data URL (via the proxy) the route can decode.
+      const referenceImage = refSrc ? await urlToDataUrl(refSrc) : undefined
       const res = await fetch('/api/footshorts/share/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,6 +86,7 @@ export function ImagePicker({
           ratio,
           model: 'image.default',
           paletteHexes: paletteHexes.filter(Boolean),
+          referenceImage,
         }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
@@ -71,6 +100,12 @@ export function ImagePicker({
   }
 
   const newsWithImage = (news ?? []).filter((n) => n.image_url)
+  const matchHeadline = (q: string) => {
+    const s = q.trim().toLowerCase()
+    return s ? newsWithImage.filter((n) => n.headline.toLowerCase().includes(s)) : newsWithImage
+  }
+  const filteredNews = matchHeadline(query)
+  const filteredRefNews = matchHeadline(refQuery)
 
   return (
     <div className="space-y-2.5">
@@ -100,6 +135,49 @@ export function ImagePicker({
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-2">
+          {refSrc ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={refSrc.startsWith('data:') ? refSrc : proxiedImage(refSrc)} alt="" className="h-8 w-8 rounded border border-white/10 object-cover" />
+              <button onClick={() => setRefSrc(null)} className="text-[11px] text-neutral-400 hover:text-white">
+                clear ref
+              </button>
+            </>
+          ) : (
+            <label className="cursor-pointer text-[11px] text-neutral-400 hover:text-white">
+              + reference image
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => void onRefUpload(e.target.files?.[0] ?? null)} />
+            </label>
+          )}
+        </div>
+        {newsWithImage.length > 0 && !refSrc && (
+          <>
+            <input
+              value={refQuery}
+              onChange={(e) => setRefQuery(e.target.value)}
+              placeholder="Search news for a reference…"
+              className={inputCls}
+            />
+            <div className="grid max-h-20 grid-cols-6 gap-1 overflow-y-auto">
+              {filteredRefNews.slice(0, 18).map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  title={`use “${n.headline}” as reference`}
+                  onClick={() => setRefSrc(n.image_url!)}
+                  className="flex aspect-square items-center justify-center overflow-hidden rounded border border-white/10 bg-neutral-900 hover:border-white/30"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+              {filteredRefNews.length === 0 && (
+                <p className="col-span-6 py-1.5 text-[11px] text-neutral-600">No news matches “{refQuery.trim()}”.</p>
+              )}
+            </div>
+          </>
+        )}
         <button
           onClick={() => void generate()}
           disabled={busy || !subject.trim()}
@@ -113,8 +191,14 @@ export function ImagePicker({
       {newsWithImage.length > 0 && (
         <div>
           <span className={labelCls}>News thumbnails</span>
-          <div className="mt-1 grid max-h-32 grid-cols-4 gap-1.5 overflow-y-auto">
-            {newsWithImage.slice(0, 30).map((n) => (
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search news…"
+            className={inputCls}
+          />
+          <div className="mt-1.5 grid max-h-32 grid-cols-4 gap-1.5 overflow-y-auto">
+            {filteredNews.slice(0, 30).map((n) => (
               <button
                 key={n.id}
                 type="button"
@@ -126,6 +210,9 @@ export function ImagePicker({
                 <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
               </button>
             ))}
+            {filteredNews.length === 0 && (
+              <p className="col-span-4 py-2 text-[11px] text-neutral-600">No news matches “{query.trim()}”.</p>
+            )}
           </div>
         </div>
       )}
