@@ -281,11 +281,11 @@ export default function EditorClient({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
+      <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3 overflow-x-auto">
         <Link href={sectionHref} className="text-neutral-400 hover:text-white text-sm shrink-0">
           ← all
         </Link>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[5rem] flex-1">
           <div className="font-mono text-xs text-neutral-500 truncate">{slug}</div>
         </div>
         <button

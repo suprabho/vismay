@@ -36,7 +36,7 @@ export default async function AppSectionLayout({
     <>
       {showTabs && (
         <div className="shrink-0 border-b border-white/10 bg-neutral-950/60 backdrop-blur px-4 py-2 flex items-center gap-3 text-sm">
-          <span className="text-neutral-500 text-xs uppercase tracking-wider">
+          <span className="shrink-0 whitespace-nowrap text-neutral-500 text-xs uppercase tracking-wider">
             {app.name}
           </span>
           <AppAdminTabs appSlug={appSlug} />
