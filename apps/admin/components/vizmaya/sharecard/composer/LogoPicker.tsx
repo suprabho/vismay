@@ -53,6 +53,7 @@ export function LogoPicker({ onPick }: { onPick: (dataUrl: string) => void }) {
     setError(null)
     try {
       const params = new URLSearchParams({ domain: r.domain })
+      if (r.icon) params.set('icon', r.icon)
       if (forBg) params.set('theme', forBg)
       const res = await fetch(`/api/vizmaya/share-cards/logo-image?${params}`)
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
