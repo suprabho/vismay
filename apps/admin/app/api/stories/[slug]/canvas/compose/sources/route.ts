@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { ingestSources } from '@vismay/story-pipeline'
+import { ingestSources, isMarkitdownExt } from '@vismay/story-pipeline'
 import {
   listStorySources,
   getStorySourceById,
@@ -29,14 +29,15 @@ import { extractLibraryItem } from '@/lib/libraryProviders'
  * extraction can be re-run later; the extracted text lands on the `story_sources`
  * row. GET lists a draft's sources (node hydration); DELETE removes one.
  *
- * PDFs are read by a vision model (Claude Sonnet, Gemini fallback — rasterise
- * each page → markdown), which is far cleaner than the pdf-parse text layer for
- * graphical/financial/scanned PDFs but too slow for a request route on long
- * documents. So when dispatch is configured the row is left `pending` and a
- * GitHub Actions worker extracts it and writes back (the compose UI polls
- * `GET …/sources`); see `storySourceExtractDispatch`. With dispatch unset
- * (local dev) PDFs fall back to SYNCHRONOUS deterministic text extraction.
- * HTML/CSV/links/pasted text are always extracted synchronously here.
+ * Documents markitdown handles best — PDFs, Office files (Word/PowerPoint/Excel)
+ * and EPub — are extracted by the async GitHub Actions worker, because
+ * markitdown is a Python CLI (not installable in the Next runtime) and a long
+ * PDF's vision fallback is too slow for a request route. When dispatch is
+ * configured the row is left `pending` and the worker extracts it and writes
+ * back (the compose UI polls `GET …/sources`); see `storySourceExtractDispatch`.
+ * With dispatch unset (local dev) those formats fall back to SYNCHRONOUS
+ * deterministic text extraction (which can't read Office formats — they fail
+ * cleanly). HTML/CSV/links/pasted text are always extracted synchronously here.
  */
 
 export const runtime = 'nodejs'
@@ -44,6 +45,15 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024 // 15 MB
+
+/**
+ * Formats handled by the async worker (markitdown + vision fallback): PDFs,
+ * Office docs and EPub. Everything else is fast enough for the synchronous TS
+ * extractor. The PDF mime check catches blob uploads that lack a `.pdf` name.
+ */
+function isWorkerFormat(filename: string, mime: string): boolean {
+  return isMarkitdownExt(filename) || mime.includes('pdf')
+}
 
 /**
  * Create + extract a `file` source from raw bytes: persist the original to the
@@ -59,7 +69,7 @@ async function createFileSource(
   mime: string,
   buffer: Buffer,
 ): Promise<StorySource> {
-  const isPdf = filename.toLowerCase().endsWith('.pdf') || mime.includes('pdf')
+  const dispatchable = isWorkerFormat(filename, mime)
   const row = await insertStorySource({ storySlug: slug, kind: 'file', filename, mime, status: 'pending' })
 
   const storagePath = sourceStoragePath(slug, row.id, filename)
@@ -72,7 +82,7 @@ async function createFileSource(
     return { ...row, status: 'failed', error }
   }
 
-  if (isPdf && isSourceExtractDispatchConfigured()) {
+  if (dispatchable && isSourceExtractDispatchConfigured()) {
     try {
       await dispatchSourceExtractJob({ sourceId: row.id, slug })
       return { ...row, storagePath, status: 'pending' }
@@ -272,8 +282,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 /**
  * Re-run extraction for a single source that previously `failed` (or to refresh
  * one). Body: `{ id }`. Reuses the same extraction branches as POST — files are
- * re-read from the retained `story-sources` original (PDFs re-dispatch the
- * vision worker when configured, else sync); links are re-fetched. Pasted text has
+ * re-read from the retained `story-sources` original (PDF/Office/EPub re-dispatch
+ * the worker when configured, else sync); links are re-fetched. Pasted text has
  * nothing to re-extract, so it's a no-op.
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -307,9 +317,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
     }
     const filename = row.filename ?? 'source'
     const mime = row.mime ?? 'application/octet-stream'
-    const isPdf = filename.toLowerCase().endsWith('.pdf') || mime.includes('pdf')
 
-    if (isPdf && isSourceExtractDispatchConfigured()) {
+    if (isWorkerFormat(filename, mime) && isSourceExtractDispatchConfigured()) {
       try {
         await updateStorySource(row.id, { status: 'pending', error: null })
         await dispatchSourceExtractJob({ sourceId: row.id, slug })
