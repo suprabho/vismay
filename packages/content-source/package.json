@@ -21,6 +21,7 @@
     "./heygenTemplate": "./src/heygenTemplate.ts",
     "./heygenTemplateDispatch": "./src/heygenTemplateDispatch.ts",
     "./recapDispatch": "./src/recapDispatch.ts",
+    "./workerDispatch": "./src/workerDispatch.ts",
     "./resolveUnits": "./src/resolveUnits.ts",
     "./resolveMobileUnits": "./src/resolveMobileUnits.ts",
     "./silentTimeline": "./src/silentTimeline.ts",
