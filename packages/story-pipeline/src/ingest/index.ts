@@ -7,6 +7,16 @@ export { extract, extractBuffer, extractText, type ExtractedSource } from './ext
 // unbounded on long PDFs) — used by the compose extraction worker, never inside
 // `ingestSources` (which is synchronous).
 export { extractPdfVision, type VisionPdfOptions } from './visionPdf'
+// markitdown is a Python CLI (Office/EPub/text-layer PDF → Markdown) — likewise
+// worker-only, never in the synchronous route. `isMarkitdownExt` lets the route
+// decide which formats to dispatch to the worker.
+export {
+  extractWithMarkitdown,
+  isMarkitdownExt,
+  isMarkitdownAvailable,
+  MARKITDOWN_EXTS,
+  type MarkitdownOptions,
+} from './markitdown'
 
 /**
  * A browser-like User-Agent + Accept. Many sites 403 a bare server fetch (no
