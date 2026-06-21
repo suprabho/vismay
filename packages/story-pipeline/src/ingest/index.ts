@@ -7,9 +7,19 @@ export { extract, extractBuffer, extractText, type ExtractedSource } from './ext
 // unbounded on long PDFs) — used by the compose extraction worker, never inside
 // `ingestSources` (which is synchronous).
 export { extractPdfVision, type VisionPdfOptions } from './visionPdf'
-// markitdown is a Python CLI (Office/EPub/text-layer PDF → Markdown) — likewise
-// worker-only, never in the synchronous route. `isMarkitdownExt` lets the route
-// decide which formats to dispatch to the worker.
+// Local LiteParse extraction + the "is this thin enough to escalate to vision?"
+// assessment. The compose upload route uses these to try a fast, free, local
+// markdown extraction before falling back to the async Claude vision worker.
+export {
+  extractPdfLite,
+  assessLiteExtraction,
+  type LiteExtractionResult,
+  type LiteExtractionAssessment,
+} from './litePdf'
+// markitdown is a Python CLI (Office/EPub/text-layer PDF → Markdown) — worker-
+// only, never in the synchronous route. `isMarkitdownExt` lets the route decide
+// which formats to dispatch to the worker (Office/EPub that the sync path and
+// LiteParse can't read).
 export {
   extractWithMarkitdown,
   isMarkitdownExt,

@@ -28,6 +28,15 @@ const base = `/api/stories`
 /** How many section "Write"/"Rewrite" calls may materialise concurrently. */
 export const MAX_CONCURRENT_SECTIONS = 3
 
+/**
+ * Files larger than this go straight to storage via a signed URL instead of the
+ * multipart route — Vercel rejects proxied request bodies over ~4.5 MB (413).
+ * 4 MB leaves headroom under that cap.
+ */
+const DIRECT_UPLOAD_OVER_BYTES = 4 * 1024 * 1024
+/** Hard client-side ceiling for a source file (the bucket allows up to 100 MB). */
+const MAX_SOURCE_FILE_BYTES = 50 * 1024 * 1024
+
 /** The four author-facing stages — also the tab ids. The visual/done phases
  *  collapse into the content stage. */
 export type ComposeStage = 'sources' | 'angles' | 'outline' | 'content'
@@ -133,9 +142,18 @@ export function useComposeFlow({
     setError(null)
     try {
       const res = await fetch(`${base}/${slug}/canvas/compose/${path}`, init)
-      const data = await res.json()
+      // Tolerate non-JSON bodies: a too-large upload trips Vercel's ~4.5 MB
+      // request cap, which replies with plain-text "Request Entity Too Large"
+      // (HTTP 413) — calling res.json() on that throws an opaque
+      // "Unexpected token 'R'…". Parse defensively and surface a real message.
+      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(data.error ?? `${label} failed`)
+        setError(
+          data?.error ??
+            (res.status === 413
+              ? `${label} failed: file too large to send through the server`
+              : `${label} failed (HTTP ${res.status})`),
+        )
         return null
       }
       return data as T
@@ -167,6 +185,16 @@ export function useComposeFlow({
     return !!data?.source
   }
   async function addFile(file: File): Promise<boolean> {
+    if (file.size > MAX_SOURCE_FILE_BYTES) {
+      setError(
+        `"${file.name}" is too large (max ${Math.round(MAX_SOURCE_FILE_BYTES / 1024 / 1024)} MB)`,
+      )
+      return false
+    }
+    // Files over Vercel's ~4.5 MB request cap can't be proxied through the
+    // multipart route (they 413 before the handler runs). Upload those straight
+    // to storage via a signed URL; small files keep the simple multipart path.
+    if (file.size > DIRECT_UPLOAD_OVER_BYTES) return addFileDirect(file)
     const form = new FormData()
     form.append('file', file)
     const data = await call<{ source: StorySource }>('upload file', 'sources', {
@@ -175,6 +203,67 @@ export function useComposeFlow({
     })
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
+  }
+  // Large-file path: ask for a signed URL (creates a pending row), PUT the file
+  // straight to the story-sources bucket, then trigger extraction via PATCH.
+  async function addFileDirect(file: File): Promise<boolean> {
+    setBusy('upload file')
+    setError(null)
+    try {
+      const signRes = await fetch(`${base}/${slug}/canvas/compose/sources`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          signUpload: { filename: file.name, mime: file.type || 'application/octet-stream' },
+        }),
+      })
+      const signData = await signRes.json().catch(() => null)
+      if (!signRes.ok || !signData?.source || !signData?.upload?.signedUrl) {
+        setError(signData?.error ?? `upload file failed (HTTP ${signRes.status})`)
+        return false
+      }
+      const row = signData.source as StorySource
+      const { signedUrl, contentType } = signData.upload as {
+        signedUrl: string
+        contentType: string
+      }
+      // Show the pending row immediately so the author sees progress.
+      setSources((s) => [...s, row])
+
+      const putRes = await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+        body: file,
+      })
+      if (!putRes.ok) {
+        const pb = await putRes.json().catch(() => null)
+        const error = pb?.message ?? pb?.error ?? `upload failed (HTTP ${putRes.status})`
+        setError(error)
+        setSources((s) => s.map((x) => (x.id === row.id ? { ...x, status: 'failed', error } : x)))
+        return false
+      }
+
+      // Trigger extraction from the stored original (same path as re-extract):
+      // resolves to `extracted` (LiteParse) or `pending` (vision worker; the
+      // polling effect then watches it settle).
+      const exRes = await fetch(`${base}/${slug}/canvas/compose/sources`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: row.id }),
+      })
+      const exData = await exRes.json().catch(() => null)
+      if (exRes.ok && exData?.source) {
+        setSources((s) => s.map((x) => (x.id === row.id ? (exData.source as StorySource) : x)))
+        return true
+      }
+      setError(exData?.error ?? `extraction failed (HTTP ${exRes.status})`)
+      return false
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      return false
+    } finally {
+      setBusy(null)
+    }
   }
   // Attach an existing extracted source from another draft — the server copies
   // its text into a fresh row for this draft (snapshot, no live link).

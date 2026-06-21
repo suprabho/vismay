@@ -106,8 +106,9 @@ export function SourcesStage({
 
   const pendingNote = pending > 0 && (
     <p className="text-[11px] leading-relaxed text-amber-300/80">
-      Extracting {pending} PDF{pending > 1 ? 's' : ''} with Claude — this runs in the
-      background and can take a few minutes. Statuses update automatically.
+      Extracting {pending} document{pending > 1 ? 's' : ''} in the background — Office files
+      and scanned or graphic-heavy PDFs can take a few minutes (text PDFs finish
+      instantly). Statuses update automatically.
     </p>
   )
 

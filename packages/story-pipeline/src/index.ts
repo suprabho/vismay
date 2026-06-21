@@ -25,6 +25,8 @@ export {
   extractBuffer,
   extractText,
   extractPdfVision,
+  extractPdfLite,
+  assessLiteExtraction,
   extractWithMarkitdown,
   isMarkitdownExt,
   isMarkitdownAvailable,
@@ -36,6 +38,8 @@ export type {
   InputText,
   ExtractedSource,
   VisionPdfOptions,
+  LiteExtractionResult,
+  LiteExtractionAssessment,
   MarkitdownOptions,
 } from './ingest'
 export {

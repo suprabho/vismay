@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
+    "@llamaindex/liteparse": "^2.1.1",
     "@mozilla/readability": "^0.6.0",
     "@napi-rs/canvas": "^0.1.80",
     "@vismay/ai-gateway": "workspace:*",

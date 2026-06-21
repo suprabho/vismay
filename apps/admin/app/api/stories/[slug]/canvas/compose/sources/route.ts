@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { ingestSources, isMarkitdownExt } from '@vismay/story-pipeline'
+import { ingestSources, extractPdfLite, isMarkitdownExt } from '@vismay/story-pipeline'
 import {
   listStorySources,
   getStorySourceById,
@@ -8,10 +8,12 @@ import {
   updateStorySource,
   deleteStorySource,
   uploadSourceFile,
+  signSourceUpload,
   removeSourceFile,
   downloadSourceFile,
   sourceStoragePath,
   type StorySource,
+  type StorySourcePatch,
 } from '@vismay/content-source/storySources'
 import { createServiceClient } from '@vismay/content-source/supabase'
 import {
@@ -24,20 +26,28 @@ import { extractLibraryItem } from '@/lib/libraryProviders'
 /**
  * Compose stage 1 — add and extract a source for a draft.
  *
- * POST accepts either `multipart/form-data` with a `file`, or JSON `{ url }` /
- * `{ text }`. The original file is kept in the private `story-sources` bucket so
+ * POST accepts `multipart/form-data` with a `file` (small files), or JSON:
+ * `{ url }`, `{ text }`, a library reference, or `{ signUpload }` (large files —
+ * see below). The original file is kept in the private `story-sources` bucket so
  * extraction can be re-run later; the extracted text lands on the `story_sources`
  * row. GET lists a draft's sources (node hydration); DELETE removes one.
  *
- * Documents markitdown handles best — PDFs, Office files (Word/PowerPoint/Excel)
- * and EPub — are extracted by the async GitHub Actions worker, because
- * markitdown is a Python CLI (not installable in the Next runtime) and a long
- * PDF's vision fallback is too slow for a request route. When dispatch is
- * configured the row is left `pending` and the worker extracts it and writes
- * back (the compose UI polls `GET …/sources`); see `storySourceExtractDispatch`.
- * With dispatch unset (local dev) those formats fall back to SYNCHRONOUS
- * deterministic text extraction (which can't read Office formats — they fail
- * cleanly). HTML/CSV/links/pasted text are always extracted synchronously here.
+ * Extraction (see `extractFileRow`) routes by format:
+ *   - PDFs → LiteParse first — local, fast, free, markdown-preserving. Only
+ *     scanned/graphical PDFs with no usable text layer escalate to the async
+ *     worker (markitdown's text layer → Claude/Gemini vision fallback).
+ *   - Office (Word/PowerPoint/Excel) + EPub → straight to the worker, because
+ *     markitdown (a Python CLI, not installable in the Next runtime) is the only
+ *     thing that reads them; the sync TS path and LiteParse can't.
+ *   - HTML/CSV/links/pasted text → synchronous TS extraction here.
+ * When the worker runs the row is left `pending` and the compose UI polls
+ * `GET …/sources` until it flips; see `storySourceExtractDispatch`. With
+ * dispatch unset (local dev) worker-only formats fail cleanly.
+ *
+ * Large files: Vercel rejects request bodies over ~4.5 MB (plain-text 413), so
+ * multi-MB documents can't be proxied through the multipart path. The client
+ * posts `{ signUpload: { filename, mime } }` to get a signed URL, PUTs the file
+ * straight to the bucket, then calls PATCH `{ id }` to trigger extraction.
  */
 
 export const runtime = 'nodejs'
@@ -45,6 +55,102 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024 // 15 MB
+
+/** Persisted outcome of an extraction run, spread onto the row for the reply. */
+type ExtractPatch = StorySourcePatch & { status: StorySource['status'] }
+
+function isPdfFile(filename: string, mime: string): boolean {
+  return filename.toLowerCase().endsWith('.pdf') || mime.includes('pdf')
+}
+
+/**
+ * Extract an already-stored file row from its bytes and persist the result.
+ * The single extraction code path shared by the multipart upload, the "from
+ * library" asset attach, the large-file direct-upload trigger, and re-extract.
+ *
+ * PDF strategy is a hybrid: LiteParse first — local, fast (~ms/page), free, and
+ * it keeps headings/tables as markdown — and only the THIN results
+ * (scanned/graphical PDFs with no usable text layer) escalate to the async
+ * Claude vision worker. So most PDFs never touch a model or a GitHub runner.
+ * Kill-switch: COMPOSE_PDF_LITEPARSE=0 skips LiteParse without a code change.
+ * Returns a patch (already written to the DB) rather than throwing — expected
+ * failures land as `status: 'failed'`.
+ */
+async function extractFileRow(
+  rowId: string,
+  slug: string,
+  filename: string,
+  mime: string,
+  buffer: Buffer,
+): Promise<ExtractPatch> {
+  const applyExtracted = async (s: {
+    title: string
+    byline?: string
+    body: string
+  }): Promise<ExtractPatch> => {
+    const patch: ExtractPatch = {
+      title: s.title,
+      byline: s.byline ?? null,
+      extractedText: s.body,
+      status: 'extracted',
+      error: null,
+    }
+    await updateStorySource(rowId, patch)
+    return patch
+  }
+  const dispatchToWorker = async (): Promise<ExtractPatch> => {
+    try {
+      await dispatchSourceExtractJob({ sourceId: rowId, slug })
+      await updateStorySource(rowId, { status: 'pending', error: null })
+      return { status: 'pending', error: null }
+    } catch (e) {
+      const error = `extraction dispatch failed: ${e instanceof Error ? e.message : String(e)}`
+      await updateStorySource(rowId, { status: 'failed', error }).catch(() => {})
+      return { status: 'failed', error }
+    }
+  }
+
+  const isPdf = isPdfFile(filename, mime)
+  if (isPdf && process.env.COMPOSE_PDF_LITEPARSE !== '0') {
+    try {
+      const { source, assessment } = await extractPdfLite(buffer, { label: filename })
+      if (!assessment.shouldEscalate && source.body.trim()) return applyExtracted(source)
+      // Thin extraction → the vision worker when configured; otherwise keep
+      // LiteParse's best effort (local dev) before falling to pdf-parse below.
+      console.info(
+        `[compose-extract] ${rowId} LiteParse thin (density=${assessment.density}, ` +
+          `pages=${assessment.pageCount}) → ${isSourceExtractDispatchConfigured() ? 'vision worker' : 'best-effort/pdf-parse'}`,
+      )
+      if (isSourceExtractDispatchConfigured()) return dispatchToWorker()
+      if (source.body.trim()) return applyExtracted(source)
+    } catch (e) {
+      // LiteParse couldn't run (most often the native binding/libpdfium.so not
+      // traced into the serverless bundle on Vercel). Log it so the fall-through
+      // to the Claude worker is diagnosable rather than silent.
+      console.warn(
+        `[compose-extract] ${rowId} LiteParse failed, falling back: ${e instanceof Error ? e.message : String(e)}`,
+      )
+    }
+  }
+  // Worker formats the sync TS path can't read — Office (Word/PowerPoint/Excel)
+  // and EPub, plus any PDF that fell through LiteParse above — go to the async
+  // worker (markitdown → vision fallback) when dispatch is configured.
+  if (isWorkerFormat(filename, mime) && isSourceExtractDispatchConfigured()) return dispatchToWorker()
+
+  try {
+    const { sources, failures } = await ingestSources({ files: [{ name: filename, buffer }] })
+    if (sources.length === 0) {
+      const error = failures[0]?.reason ?? 'could not extract text'
+      await updateStorySource(rowId, { status: 'failed', error })
+      return { status: 'failed', error }
+    }
+    return applyExtracted(sources[0]!)
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e)
+    await updateStorySource(rowId, { status: 'failed', error }).catch(() => {})
+    return { status: 'failed', error }
+  }
+}
 
 /**
  * Formats handled by the async worker (markitdown + vision fallback): PDFs,
@@ -57,11 +163,10 @@ function isWorkerFormat(filename: string, mime: string): boolean {
 
 /**
  * Create + extract a `file` source from raw bytes: persist the original to the
- * private `story-sources` bucket (so extraction can be re-run), then PDFs go to
- * the async vision worker when configured (left `pending`), everything else is
- * extracted synchronously. Returns the row with its outcome reflected — expected
- * failures land as a `failed` status rather than throwing. Shared by the
- * multipart upload and the "from library" asset attach.
+ * private `story-sources` bucket (so extraction can be re-run), then run the
+ * shared {@link extractFileRow}. Returns the row with its outcome reflected.
+ * Used by the (small-file) multipart upload and the "from library" asset attach;
+ * large files take the direct-to-storage `signUpload` path instead.
  */
 async function createFileSource(
   slug: string,
@@ -69,9 +174,7 @@ async function createFileSource(
   mime: string,
   buffer: Buffer,
 ): Promise<StorySource> {
-  const dispatchable = isWorkerFormat(filename, mime)
   const row = await insertStorySource({ storySlug: slug, kind: 'file', filename, mime, status: 'pending' })
-
   const storagePath = sourceStoragePath(slug, row.id, filename)
   try {
     await uploadSourceFile(storagePath, buffer, mime)
@@ -81,39 +184,8 @@ async function createFileSource(
     await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
     return { ...row, status: 'failed', error }
   }
-
-  if (dispatchable && isSourceExtractDispatchConfigured()) {
-    try {
-      await dispatchSourceExtractJob({ sourceId: row.id, slug })
-      return { ...row, storagePath, status: 'pending' }
-    } catch (e) {
-      const error = `extraction dispatch failed: ${e instanceof Error ? e.message : String(e)}`
-      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
-      return { ...row, storagePath, status: 'failed', error }
-    }
-  }
-
-  try {
-    const { sources, failures } = await ingestSources({ files: [{ name: filename, buffer }] })
-    if (sources.length === 0) {
-      const error = failures[0]?.reason ?? 'could not extract text'
-      await updateStorySource(row.id, { status: 'failed', error })
-      return { ...row, storagePath, status: 'failed', error }
-    }
-    const s = sources[0]!
-    const patch = {
-      title: s.title,
-      byline: s.byline ?? null,
-      extractedText: s.body,
-      status: 'extracted' as const,
-    }
-    await updateStorySource(row.id, patch)
-    return { ...row, storagePath, ...patch }
-  } catch (e) {
-    const error = e instanceof Error ? e.message : String(e)
-    await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
-    return { ...row, storagePath, status: 'failed', error }
-  }
+  const patch = await extractFileRow(row.id, slug, filename, mime, buffer)
+  return { ...row, storagePath, ...patch }
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -157,11 +229,43 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     assetKey?: string
     providerKey?: string
     itemId?: string
+    signUpload?: { filename?: string; mime?: string }
   }
   try {
     body = (await req.json()) as typeof body
   } catch {
     return NextResponse.json({ error: 'expected JSON body' }, { status: 400 })
+  }
+
+  // ── Large file: hand back a signed URL so the browser uploads STRAIGHT to
+  // the story-sources bucket, bypassing this function. Vercel rejects request
+  // bodies over ~4.5 MB with a plain-text 413, so multi-MB PDFs can't be
+  // proxied through the multipart path above. We create the row + storagePath
+  // now; the client PUTs the file to `signedUrl`, then calls PATCH { id } to
+  // run extraction from the stored original (same as re-extract). ───────────
+  if (body.signUpload && typeof body.signUpload === 'object') {
+    const filename = typeof body.signUpload.filename === 'string' ? body.signUpload.filename.trim() : ''
+    if (!filename) return NextResponse.json({ error: 'signUpload requires "filename"' }, { status: 400 })
+    // Browsers send a generic/empty type for Office files; derive a reliable one
+    // from the filename so the upload passes the bucket allowlist (same as the
+    // multipart path).
+    const clientMime = typeof body.signUpload.mime === 'string' ? body.signUpload.mime : ''
+    const mime = clientMime && clientMime !== 'application/octet-stream' ? clientMime : guessContentType(filename)
+    const row = await insertStorySource({ storySlug: slug, kind: 'file', filename, mime, status: 'pending' })
+    const storagePath = sourceStoragePath(slug, row.id, filename)
+    try {
+      const { signedUrl } = await signSourceUpload(storagePath)
+      await updateStorySource(row.id, { storagePath })
+      return NextResponse.json({
+        ok: true,
+        source: { ...row, storagePath },
+        upload: { signedUrl, contentType: mime },
+      })
+    } catch (e) {
+      const error = `could not sign upload: ${e instanceof Error ? e.message : String(e)}`
+      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
+      return NextResponse.json({ error }, { status: 500 })
+    }
   }
 
   const url = typeof body.url === 'string' ? body.url.trim() : ''
@@ -305,7 +409,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
   const row = (await listStorySources(slug)).find((s) => s.id === id)
   if (!row) return NextResponse.json({ error: 'source not found' }, { status: 404 })
 
-  // ── File: re-read the retained original from the bucket ────────────────────
+  // ── File: re-read the retained original from the bucket, then extract. Also
+  // the completion step for the large-file `signUpload` flow — once the browser
+  // has PUT the file straight to storage, this downloads it and runs the same
+  // hybrid extraction as every other file path. ─────────────────────────────
   if (row.kind === 'file') {
     if (!row.storagePath) {
       return NextResponse.json({ error: 'no stored original to re-extract' }, { status: 400 })
@@ -320,41 +427,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
     }
     const filename = row.filename ?? 'source'
     const mime = row.mime ?? 'application/octet-stream'
-
-    if (isWorkerFormat(filename, mime) && isSourceExtractDispatchConfigured()) {
-      try {
-        await updateStorySource(row.id, { status: 'pending', error: null })
-        await dispatchSourceExtractJob({ sourceId: row.id, slug })
-        return NextResponse.json({ ok: true, source: { ...row, status: 'pending', error: null } })
-      } catch (e) {
-        const error = `extraction dispatch failed: ${e instanceof Error ? e.message : String(e)}`
-        await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
-        return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
-      }
-    }
-
-    try {
-      const { sources, failures } = await ingestSources({ files: [{ name: filename, buffer }] })
-      if (sources.length === 0) {
-        const error = failures[0]?.reason ?? 'could not extract text'
-        await updateStorySource(row.id, { status: 'failed', error })
-        return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
-      }
-      const s = sources[0]!
-      const patch = {
-        title: s.title,
-        byline: s.byline ?? null,
-        extractedText: s.body,
-        status: 'extracted' as const,
-        error: null,
-      }
-      await updateStorySource(row.id, patch)
-      return NextResponse.json({ ok: true, source: { ...row, ...patch } })
-    } catch (e) {
-      const error = e instanceof Error ? e.message : String(e)
-      await updateStorySource(row.id, { status: 'failed', error }).catch(() => {})
-      return NextResponse.json({ ok: true, source: { ...row, status: 'failed', error } })
-    }
+    const patch = await extractFileRow(row.id, slug, filename, mime, buffer)
+    return NextResponse.json({ ok: true, source: { ...row, ...patch } })
   }
 
   // ── Link: re-fetch + re-extract ────────────────────────────────────────────
