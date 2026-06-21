@@ -27,6 +27,10 @@ export {
   extractPdfVision,
   extractPdfLite,
   assessLiteExtraction,
+  extractWithMarkitdown,
+  isMarkitdownExt,
+  isMarkitdownAvailable,
+  MARKITDOWN_EXTS,
 } from './ingest'
 export type {
   IngestInput,
@@ -36,6 +40,7 @@ export type {
   VisionPdfOptions,
   LiteExtractionResult,
   LiteExtractionAssessment,
+  MarkitdownOptions,
 } from './ingest'
 export {
   graftRecapForeground,

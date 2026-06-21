@@ -16,6 +16,17 @@ export {
   type LiteExtractionResult,
   type LiteExtractionAssessment,
 } from './litePdf'
+// markitdown is a Python CLI (Office/EPub/text-layer PDF → Markdown) — worker-
+// only, never in the synchronous route. `isMarkitdownExt` lets the route decide
+// which formats to dispatch to the worker (Office/EPub that the sync path and
+// LiteParse can't read).
+export {
+  extractWithMarkitdown,
+  isMarkitdownExt,
+  isMarkitdownAvailable,
+  MARKITDOWN_EXTS,
+  type MarkitdownOptions,
+} from './markitdown'
 
 /**
  * A browser-like User-Agent + Accept. Many sites 403 a bare server fetch (no

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/adminAuth'
-import { ingestSources, extractPdfLite } from '@vismay/story-pipeline'
+import { ingestSources, extractPdfLite, isMarkitdownExt } from '@vismay/story-pipeline'
 import {
   listStorySources,
   getStorySourceById,
@@ -32,16 +32,21 @@ import { extractLibraryItem } from '@/lib/libraryProviders'
  * extraction can be re-run later; the extracted text lands on the `story_sources`
  * row. GET lists a draft's sources (node hydration); DELETE removes one.
  *
- * PDF extraction is a hybrid (see `extractFileRow`): LiteParse runs first —
- * local, fast, free, markdown-preserving — and only scanned/graphical PDFs with
- * no usable text layer escalate to the vision worker (Claude Sonnet, Gemini
- * fallback) when dispatch is configured, leaving the row `pending` while a
- * GitHub Actions worker writes back (the compose UI polls `GET …/sources`); see
- * `storySourceExtractDispatch`. HTML/CSV/links/pasted text extract synchronously.
+ * Extraction (see `extractFileRow`) routes by format:
+ *   - PDFs → LiteParse first — local, fast, free, markdown-preserving. Only
+ *     scanned/graphical PDFs with no usable text layer escalate to the async
+ *     worker (markitdown's text layer → Claude/Gemini vision fallback).
+ *   - Office (Word/PowerPoint/Excel) + EPub → straight to the worker, because
+ *     markitdown (a Python CLI, not installable in the Next runtime) is the only
+ *     thing that reads them; the sync TS path and LiteParse can't.
+ *   - HTML/CSV/links/pasted text → synchronous TS extraction here.
+ * When the worker runs the row is left `pending` and the compose UI polls
+ * `GET …/sources` until it flips; see `storySourceExtractDispatch`. With
+ * dispatch unset (local dev) worker-only formats fail cleanly.
  *
  * Large files: Vercel rejects request bodies over ~4.5 MB (plain-text 413), so
- * multi-MB PDFs can't be proxied through the multipart path. The client posts
- * `{ signUpload: { filename, mime } }` to get a signed URL, PUTs the file
+ * multi-MB documents can't be proxied through the multipart path. The client
+ * posts `{ signUpload: { filename, mime } }` to get a signed URL, PUTs the file
  * straight to the bucket, then calls PATCH `{ id }` to trigger extraction.
  */
 
@@ -127,7 +132,10 @@ async function extractFileRow(
       )
     }
   }
-  if (isPdf && isSourceExtractDispatchConfigured()) return dispatchToWorker()
+  // Worker formats the sync TS path can't read — Office (Word/PowerPoint/Excel)
+  // and EPub, plus any PDF that fell through LiteParse above — go to the async
+  // worker (markitdown → vision fallback) when dispatch is configured.
+  if (isWorkerFormat(filename, mime) && isSourceExtractDispatchConfigured()) return dispatchToWorker()
 
   try {
     const { sources, failures } = await ingestSources({ files: [{ name: filename, buffer }] })
@@ -142,6 +150,15 @@ async function extractFileRow(
     await updateStorySource(rowId, { status: 'failed', error }).catch(() => {})
     return { status: 'failed', error }
   }
+}
+
+/**
+ * Formats handled by the async worker (markitdown + vision fallback): PDFs,
+ * Office docs and EPub. Everything else is fast enough for the synchronous TS
+ * extractor. The PDF mime check catches blob uploads that lack a `.pdf` name.
+ */
+function isWorkerFormat(filename: string, mime: string): boolean {
+  return isMarkitdownExt(filename) || mime.includes('pdf')
 }
 
 /**
@@ -196,7 +213,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       return NextResponse.json({ error: `"${f.name}" exceeds 15 MB` }, { status: 400 })
     }
     const buffer = Buffer.from(await f.arrayBuffer())
-    const mime = f.type || 'application/octet-stream'
+    // Some browsers send no / a generic content-type for Office files; derive a
+    // reliable one from the filename so the upload passes the bucket allowlist.
+    const mime =
+      f.type && f.type !== 'application/octet-stream' ? f.type : guessContentType(f.name)
     const source = await createFileSource(slug, f.name, mime, buffer)
     return NextResponse.json({ ok: true, source })
   }
@@ -226,10 +246,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   if (body.signUpload && typeof body.signUpload === 'object') {
     const filename = typeof body.signUpload.filename === 'string' ? body.signUpload.filename.trim() : ''
     if (!filename) return NextResponse.json({ error: 'signUpload requires "filename"' }, { status: 400 })
-    const mime =
-      typeof body.signUpload.mime === 'string' && body.signUpload.mime
-        ? body.signUpload.mime
-        : guessContentType(filename)
+    // Browsers send a generic/empty type for Office files; derive a reliable one
+    // from the filename so the upload passes the bucket allowlist (same as the
+    // multipart path).
+    const clientMime = typeof body.signUpload.mime === 'string' ? body.signUpload.mime : ''
+    const mime = clientMime && clientMime !== 'application/octet-stream' ? clientMime : guessContentType(filename)
     const row = await insertStorySource({ storySlug: slug, kind: 'file', filename, mime, status: 'pending' })
     const storagePath = sourceStoragePath(slug, row.id, filename)
     try {
@@ -368,8 +389,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 /**
  * Re-run extraction for a single source that previously `failed` (or to refresh
  * one). Body: `{ id }`. Reuses the same extraction branches as POST — files are
- * re-read from the retained `story-sources` original (PDFs re-dispatch the
- * vision worker when configured, else sync); links are re-fetched. Pasted text has
+ * re-read from the retained `story-sources` original (PDF/Office/EPub re-dispatch
+ * the worker when configured, else sync); links are re-fetched. Pasted text has
  * nothing to re-extract, so it's a no-op.
  */
 export async function PATCH(req: Request, { params }: { params: Promise<{ slug: string }> }) {

@@ -1,5 +1,6 @@
 import type { FixtureRow, StandingRow, FixtureEvent, EventTypeFilter } from '@vismay/footshorts-viz/types'
-import type { ThemeName } from '@footshorts/brand'
+import type { ThemeName, ColorTokens, Theme } from '@footshorts/brand'
+import { themes } from '@footshorts/brand'
 
 /** Output aspect ratios the creator supports (display label : intrinsic ratio). */
 export type AspectRatio = '1:1' | '4:5' | '9:16' | '3:4' | '5:4' | '4:3'
@@ -128,34 +129,109 @@ export type CardContent =
 /** A decorative backdrop painted behind a data card's content (match,
  *  standings, fixtures, form, timeline, news-article). Bleed cards
  *  (news-image / ai-image) ignore it — their image already IS the card.
- *  `aura` embeds the animated `aura.promad.design` iframe: it shows in the
- *  live preview but, like every aura in this repo, is NOT rasterized into the
- *  exported PNG (html-to-image can't capture cross-origin iframes). News and
- *  AI image backgrounds capture cleanly. */
+ *  `aura` embeds the animated `aura.promad.design` iframe for the LIVE preview;
+ *  the cross-origin iframe can't be rasterized, so the optional `posterSrc` still
+ *  image (data URL upload/generation, or a proxied remote URL) is what lands in
+ *  the exported PNG — mirroring the vizmaya aura layer. Without a poster the
+ *  export falls back to the card background + scrim. News and AI image
+ *  backgrounds capture cleanly. */
 export type CardBackground =
   | { type: 'none' }
   | { type: 'news'; url: string; label?: string }
   | { type: 'ai'; dataUrl: string }
-  | { type: 'aura'; slug: string }
+  | { type: 'aura'; slug: string; posterSrc?: string }
+  /** A generic image backdrop sourced from the Background tab's picker — a news
+   *  thumbnail / upload / AI generation. `src` is a base64 data URL (upload or
+   *  generated, captured directly) or a remote URL (a news image, proxied on
+   *  render). Supersedes the narrower `news` / `ai` variants for new cards;
+   *  those are retained so older snapshots still render. */
+  | { type: 'image'; src: string }
 
 export const BACKGROUND_KINDS: Array<{ id: Exclude<CardBackground['type'], 'none'>; label: string }> = [
-  { id: 'news', label: 'News image' },
-  { id: 'ai', label: 'AI image' },
+  { id: 'image', label: 'Image' },
   { id: 'aura', label: 'Aura' },
 ]
 
-/** A draggable badge placed on the card — a team crest, competition logo, or
- *  country flag. Position is the badge CENTER as a % of the card; width is a %
- *  of the card width. */
+/** Phosphor icon weights (subset we expose in the icon picker). */
+export type PhosphorWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
+
+/** A foreground element placed on the card. Originally just team crests /
+ *  competition logos / country flags, now also free images (upload / AI / news
+ *  thumbnail), emoji, and Phosphor icons. Position is the element CENTER as a %
+ *  of the card; `widthPct` is a % of the card width. The render-affecting extras
+ *  (`scale` / `rotation` / `opacity` / `groupId`) are all OPTIONAL so cards saved
+ *  before they existed round-trip unchanged (read with `?? default`). */
+export type OverlayKind = 'crest' | 'logo' | 'flag' | 'image' | 'emoji' | 'icon'
+
 export interface Overlay {
   id: string
-  url: string
+  /** Image src for crest / logo / flag / image kinds (absent for emoji / icon). */
+  url?: string
   label: string
-  /** badge kind, for the picker only */
-  kind: 'crest' | 'logo' | 'flag'
+  kind: OverlayKind
+  /** Native glyph for `kind:'emoji'`. */
+  glyph?: string
+  /** Phosphor export name + weight + color for `kind:'icon'`. */
+  iconName?: string
+  iconWeight?: PhosphorWeight
+  iconColor?: string
+  /** Provenance + fit for `kind:'image'`. */
+  source?: 'upload' | 'generated' | 'news'
+  objectFit?: 'contain' | 'cover'
+  // ── placement ──
   xPct: number
   yPct: number
   widthPct: number
+  /** Box-fit images only; absent = square sized by width. */
+  heightPct?: number
+  /** CSS multiplier applied on top of the width sizing (default 1). */
+  scale?: number
+  /** Degrees clockwise, matching CSS rotate() (default 0). */
+  rotation?: number
+  /** 0–1 (default 1). */
+  opacity?: number
+  /** false = hidden (default true). */
+  visible?: boolean
+  /** Membership in an `OverlayGroup` — kept contiguous in the array. */
+  groupId?: string
+}
+
+/** Editor-only foreground group. Membership lives on each overlay's `groupId`;
+ *  the renderer ignores groups (group transforms rewrite each member's own flat
+ *  transform). Optional / additive: cards saved before grouping have none. */
+export interface OverlayGroup {
+  id: string
+  name: string
+  /** Panel-only: members hidden under a collapsed header. */
+  collapsed?: boolean
+}
+
+/** Per-card theme override: a base preset plus sparse color / font patches. Kept
+ *  sparse (not a full Theme) so the snapshot stays small and survives base-theme
+ *  edits. Resolve to a full `Theme` via `resolveTheme` before `themeToVars`. */
+export interface CardThemeOverride {
+  base: ThemeName
+  colors?: Partial<ColorTokens>
+  fonts?: Partial<{ sans: string; display: string; mono: string }>
+}
+
+/** Merge a sparse per-card override onto its base preset → a full `Theme`.
+ *  `themeToVars` requires a complete Theme, so this always returns one. With no
+ *  override it's just the named preset. */
+export function resolveTheme(
+  override: CardThemeOverride | undefined,
+  themeName: ThemeName,
+): Theme {
+  const base = themes[override?.base ?? themeName]
+  if (!override) return base
+  return {
+    ...base,
+    colors: { ...base.colors, ...(override.colors ?? {}) },
+    typography: {
+      ...base.typography,
+      fontFamily: { ...base.typography.fontFamily, ...(override.fonts ?? {}) },
+    },
+  }
 }
 
 export type LogoSize = 'sm' | 'md' | 'lg'
@@ -178,8 +254,12 @@ export const LOGO_VARIANTS: Array<{ id: LogoVariant; label: string }> = [
 /** Frame-level styling shared by every card. */
 export interface CardFrameConfig {
   themeName: ThemeName
+  /** Per-card theme override (presets + per-token colors + fonts). When set it
+   *  supersedes `accentHex` (its `colors.accent` flows through `themeToVars`). */
+  themeOverride?: CardThemeOverride
   ratio: AspectRatio
-  /** Optional club accent hex; overrides the theme accent on this card. */
+  /** Optional club accent hex; overrides the theme accent on this card. Legacy:
+   *  superseded by `themeOverride.colors.accent` once a theme override exists. */
   accentHex?: string | null
   /** Small eyebrow label in the header (e.g. competition name). */
   eyebrow?: string | null

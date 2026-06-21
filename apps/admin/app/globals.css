@@ -9,6 +9,12 @@
    globals.generated.css. */
 @import "./globals.generated.css";
 
+/* Shared admin composer UI (VizConfigForm, and the LayerComposer shell + controls
+   that land here in later milestones) lives in `@vismay/viz-admin`, outside the
+   app root, so — like the vertical packages above — Tailwind v4 needs it in
+   @source or its arbitrary classes emit nothing. */
+@source "../../../packages/viz-admin/src/**/*.{ts,tsx}";
+
 /* Footshorts brand color tokens. The footshorts-viz web components (StandingsTable,
    MatchTile, TeamFormStrip, …) style themselves with named brand utilities
    (`bg-surface`, `text-text`, `border-border`, `bg-accent`, …) that resolve to

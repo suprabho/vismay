@@ -751,30 +751,87 @@ export function ShareCardCreator({
     }
   }, [composition, slug, ratio, selectedUnit, templateKind])
 
+  // POST a brand-new card row and return it (shared by first-save + duplicate).
+  const createCard = useCallback(
+    async (name: string, snapshot: VizmayaShareCardSnapshotV2): Promise<SavedCard> => {
+      const res = await fetch('/api/vizmaya/share-cards/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, storySlug: slug, baseType: composeBaseType(snapshot.composition), ratio, config: snapshot }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
+      if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
+      return body.card
+    },
+    [slug, ratio],
+  )
+
   const handleSave = useCallback(async () => {
     if (!story || !selectedUnit || !composition) return
     const snapshot = buildSnapshot()
     if (!snapshot) return
+
+    // Already-saved card → update it in place (keep its name, no prompt).
+    if (currentCardId) {
+      const existing = savedCards.find((c) => c.id === currentCardId)
+      setSaving(true)
+      try {
+        const res = await fetch(`/api/vizmaya/share-cards/cards/${currentCardId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: existing?.name,
+            storySlug: slug,
+            baseType: composeBaseType(composition),
+            ratio,
+            config: snapshot,
+          }),
+        })
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
+        if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
+        setSavedCards((prev) => prev.map((c) => (c.id === body.card!.id ? body.card! : c)))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+
+    // New card → name it and create a row.
     const fallback = `${story.title} · ${TEMPLATES.find((t) => t.id === templateKind)?.label ?? templateKind}`
     const name = window.prompt('Name this card', fallback)?.trim()
     if (!name) return
     setSaving(true)
     try {
-      const res = await fetch('/api/vizmaya/share-cards/cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, storySlug: slug, baseType: composeBaseType(composition), ratio, config: snapshot }),
-      })
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
-      if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
-      setSavedCards((prev) => [body.card!, ...prev])
-      setCurrentCardId(body.card.id)
+      const card = await createCard(name, snapshot)
+      setSavedCards((prev) => [card, ...prev])
+      setCurrentCardId(card.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setSaving(false)
     }
-  }, [story, selectedUnit, composition, buildSnapshot, templateKind, slug, ratio])
+  }, [story, selectedUnit, composition, buildSnapshot, currentCardId, savedCards, createCard, templateKind, slug, ratio])
+
+  // Duplicate the loaded card as a new "… copy" and make the copy the active card,
+  // leaving the original untouched.
+  const handleDuplicate = useCallback(async () => {
+    if (!story || !selectedUnit || !composition || !currentCardId) return
+    const snapshot = buildSnapshot()
+    if (!snapshot) return
+    const base = savedCards.find((c) => c.id === currentCardId)?.name ?? story.title
+    setSaving(true)
+    try {
+      const card = await createCard(`${base} copy`, snapshot)
+      setSavedCards((prev) => [card, ...prev])
+      setCurrentCardId(card.id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Duplicate failed')
+    } finally {
+      setSaving(false)
+    }
+  }, [story, selectedUnit, composition, currentCardId, buildSnapshot, savedCards, createCard])
 
   const loadCard = useCallback(
     (card: SavedCard) => {
@@ -899,6 +956,15 @@ export function ShareCardCreator({
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
+        {currentCardId && (
+          <button
+            onClick={() => void handleDuplicate()}
+            disabled={!composition || saving}
+            className="rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Duplicate
+          </button>
+        )}
       </div>
 
       {/* ── 3-pane row ─────────────────────────────────────────────────────── */}

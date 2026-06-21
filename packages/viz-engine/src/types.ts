@@ -141,6 +141,16 @@ export type AdminFormField =
   | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[] }
   | { kind: 'theme-token'; key: string; label: string }
   | { kind: 'json'; key: string; label: string; placeholder?: string }
+  /**
+   * A domain-specific picker (e.g. "pick a live fixture / team / news item").
+   * The engine owns only the field *shape*; the concrete editor is resolved at
+   * render time from a host-registered picker registry keyed by `pickerId`
+   * (see `@vismay/viz-admin`'s picker registry + VizConfigForm's `picker` case).
+   * `dependsOn` lists sibling field keys whose values scope the picker (e.g. a
+   * `fixture` picker depends on `compKey`). This keeps `VizConfigForm` domain-free
+   * while letting modules declare rich selectors.
+   */
+  | { kind: 'picker'; key: string; label: string; pickerId: string; dependsOn?: string[]; required?: boolean }
 
 /**
  * Background-slot mounting strategies.
@@ -203,4 +213,18 @@ export interface VizModule<TConfig = unknown> {
    * authoritative gate).
    */
   regionPreferences?: readonly ForegroundRegionName[]
+  /**
+   * Composer placement hint. `stack` (default) flows the layer in the arrangement
+   * (a vertical stack slot / a region); `overlay` floats it freely over the whole
+   * surface (positioned by its own config/style), outside the stack flow — used
+   * for badges/stickers. The composer shell reads this to decide where a layer
+   * renders; it has no effect on the story renderers.
+   */
+  placement?: 'stack' | 'overlay'
+  /**
+   * Upper bound for the composer's free-transform Width field (% of card).
+   * Defaults to 100 — set higher for modules whose content is designed to bleed
+   * past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
+   */
+  maxWidthPct?: number
 }
