@@ -141,7 +141,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       return NextResponse.json({ error: `"${f.name}" exceeds 15 MB` }, { status: 400 })
     }
     const buffer = Buffer.from(await f.arrayBuffer())
-    const mime = f.type || 'application/octet-stream'
+    // Some browsers send no / a generic content-type for Office files; derive a
+    // reliable one from the filename so the upload passes the bucket allowlist.
+    const mime =
+      f.type && f.type !== 'application/octet-stream' ? f.type : guessContentType(f.name)
     const source = await createFileSource(slug, f.name, mime, buffer)
     return NextResponse.json({ ok: true, source })
   }
