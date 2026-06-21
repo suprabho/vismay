@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
-import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Sparkle, Stack, Trash, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Sparkle, Stack, Trash, X, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
   LayerListPanel,
   ConfigPanel,
@@ -198,21 +198,31 @@ const selectCls =
   'mt-1 w-full rounded-md border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100 outline-none focus:border-white/30'
 const inputCls = selectCls
 const actionBtn =
-  'rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40'
+  'shrink-0 whitespace-nowrap rounded-md border border-white/10 px-3 py-1.5 text-xs text-neutral-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40'
 
 type EditorTab = 'layers' | 'setup' | 'image' | 'aura' | 'publish'
-const TABS: Array<{ id: EditorTab; label: string; Icon: PhosphorIcon }> = [
-  { id: 'layers', label: 'Layers', Icon: Stack },
-  { id: 'setup', label: 'Card setup', Icon: FrameCorners },
-  { id: 'image', label: 'Image background', Icon: ImageIcon },
-  { id: 'aura', label: 'Aura background', Icon: Sparkle },
-  { id: 'publish', label: 'Publish', Icon: PaperPlaneTilt },
+const TABS: Array<{ id: EditorTab; label: string; short: string; Icon: PhosphorIcon }> = [
+  { id: 'layers', label: 'Layers', short: 'Layers', Icon: Stack },
+  { id: 'setup', label: 'Card setup', short: 'Setup', Icon: FrameCorners },
+  { id: 'image', label: 'Image background', short: 'Image', Icon: ImageIcon },
+  { id: 'aura', label: 'Aura background', short: 'Aura', Icon: Sparkle },
+  { id: 'publish', label: 'Publish', short: 'Publish', Icon: PaperPlaneTilt },
 ]
-const railBtn = (active: boolean) =>
-  `flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${active
-    ? 'border-sky-400/60 bg-white/10 text-white'
-    : 'border-transparent text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
-  }`
+// Tab control: a vertical icon rail on desktop, a horizontal labelled bottom bar
+// on mobile (each button stretches to share the bar width).
+const tabBtn = (active: boolean) =>
+  [
+    'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 text-[10px] leading-none transition-colors',
+    active ? 'text-sky-400' : 'text-neutral-400',
+    'md:h-10 md:w-10 md:flex-none md:flex-row md:gap-0 md:border md:py-0',
+    active
+      ? 'md:border-sky-400/60 md:bg-white/10 md:text-white'
+      : 'md:border-transparent md:text-neutral-400 md:hover:bg-white/5 md:hover:text-neutral-200',
+  ].join(' ')
+// Shared chrome for the two mobile bottom sheets (detail rail + layer edit); the
+// `md:` resets in each usage strip it back to a plain in-flow column on desktop.
+const sheetCls =
+  'fixed inset-x-0 bottom-16 z-40 max-h-[62vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
 
 export function ShareCardCreator({ initialCompetitions }: { initialCompetitions: CompetitionOption[] }) {
   const competitions = initialCompetitions
@@ -223,6 +233,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [selection, setSelection] = useState<ComposerSelection>(null)
   const [multiSel, setMultiSel] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<EditorTab>('layers')
+  // Which bottom sheet is open on mobile: the detail rail ('panel') or the
+  // layer-edit panel ('config'). On desktop both render inline (md: classes
+  // override the hidden state) so this only drives the mobile overlays.
+  const [mobileSheet, setMobileSheet] = useState<'panel' | 'config' | null>(null)
 
   // card-level frame controls
   const [themeName, setThemeName] = useState<ThemeName>('terrace')
@@ -315,6 +329,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     () => ({ competitions, data, frame }),
     [competitions, data, frame],
   )
+  // Select a layer/group and, on mobile, slide up the layer-edit sheet (or
+  // dismiss it when the selection clears). Harmless on desktop, where the edit
+  // panel is always shown inline.
+  const handleSelect = useCallback((sel: ComposerSelection) => {
+    setSelection(sel)
+    setMobileSheet((cur) => (sel ? 'config' : cur === 'config' ? null : cur))
+  }, [])
+
   const onChange = useCallback((next: ComposerState) => setComposer(next), [])
   const onToggleMulti = useCallback(
     (id: string) => setMultiSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
@@ -332,9 +354,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     (type: string) => {
       const layer = footshortsHost.makeLayer(type, ctx)
       setComposer((c) => addLayer(c, layer))
-      setSelection({ kind: 'layer', id: layer.id })
+      handleSelect({ kind: 'layer', id: layer.id })
     },
-    [ctx],
+    [ctx, handleSelect],
   )
   const handleLayerConfig = useCallback(
     (id: string, layer: VizLayer) => setComposer((c) => setLayerConfig(c, id, layer)),
@@ -685,8 +707,8 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
       {/* Load the resolved theme's Google fonts for both preview + PNG capture. */}
       {fontImportUrl && <link rel="stylesheet" href={fontImportUrl} />}
-      <div className="flex shrink-0 items-center justify-between">
-        <div>
+      <div className="flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
           <h1 className="text-sm font-semibold text-neutral-100">Share card composer</h1>
           <p className="text-[11px] text-neutral-500">
             {currentCardName
@@ -694,7 +716,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
               : 'Free-position layers — match, standings, news, badges — on one card.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* Action bar — horizontally scrollable on mobile so the full button set
+            stays reachable without wrapping. */}
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:overflow-visible md:px-0 md:pb-0">
           <button
             className={`${actionBtn} inline-flex items-center gap-1.5`}
             title="New card"
@@ -720,7 +744,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             <FolderOpen size={14} />
             Saved cards{savedCards.length ? ` (${savedCards.length})` : ''}
           </button>
-          <div className="mx-1 h-5 w-px bg-white/10" />
+          <div className="mx-1 h-5 w-px shrink-0 bg-white/10" />
           <button className={actionBtn} disabled={!hasLayers || downloading} onClick={handleDownload}>
             {downloading ? 'Rendering…' : 'Download PNG'}
           </button>
@@ -736,23 +760,51 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         <p className="shrink-0 text-[11px] text-red-400">{saveError ?? shipError}</p>
       )}
 
-      <div className="flex min-h-0 flex-1 gap-4">
-        {/* left: icon rail + active panel */}
-        <div className="flex w-96 shrink-0 gap-2">
-          <div className="flex shrink-0 flex-col gap-1.5">
-            {TABS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                title={label}
-                onClick={() => setActiveTab(id)}
-                className={railBtn(activeTab === id)}
-              >
-                <Icon size={18} weight={activeTab === id ? 'fill' : 'regular'} />
-              </button>
-            ))}
+      <div className="flex min-h-0 flex-1 gap-4 pb-20 md:pb-0">
+        {/* left: icon rail + active panel. On mobile the rail drops to a fixed
+            bottom bar and the panel becomes a bottom sheet — `contents` removes
+            this wrapper from the flow so the center preview spans full width. */}
+        <div className="contents md:flex md:w-96 md:shrink-0 md:gap-2">
+          {/* icon rail (desktop) / bottom tab bar (mobile) */}
+          <div className="fixed inset-x-0 bottom-0 z-50 flex items-stretch gap-1 border-t border-white/10 bg-neutral-950/95 px-2 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] backdrop-blur md:static md:z-auto md:flex-col md:gap-1.5 md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-0 md:backdrop-blur-none">
+            {TABS.map(({ id, label, short, Icon }) => {
+              const active = activeTab === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  title={label}
+                  onClick={() => {
+                    setActiveTab(id)
+                    // Toggle the detail sheet on mobile; on desktop the panel is
+                    // always inline so this just tracks intent.
+                    setMobileSheet((cur) => (cur === 'panel' && active ? null : 'panel'))
+                  }}
+                  className={tabBtn(active)}
+                >
+                  <Icon size={18} weight={active ? 'fill' : 'regular'} />
+                  <span className="md:hidden">{short}</span>
+                </button>
+              )
+            })}
           </div>
-          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto pr-1">
+          {/* active panel (detail rail) — bottom sheet on mobile, inline column on desktop */}
+          <div
+            className={`${mobileSheet === 'panel' ? 'flex flex-col' : 'hidden'} ${sheetCls} md:static md:bottom-auto md:z-auto md:block md:max-h-none md:min-w-0 md:flex-1 md:space-y-4 md:overflow-y-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pr-1 md:pt-0 md:shadow-none`}
+          >
+            <div className="mb-3 flex items-center justify-between md:hidden">
+              <span className="text-xs font-semibold text-neutral-200">
+                {TABS.find((t) => t.id === activeTab)?.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileSheet(null)}
+                className="rounded-md p-1 text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
+                aria-label="Close panel"
+              >
+                <X size={16} />
+              </button>
+            </div>
             {activeTab === 'layers' && (
               <LayerListPanel
                 state={composer}
@@ -761,7 +813,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                 addTypes={addTypes}
                 hasBackground={false}
                 onChange={onChange}
-                onSelect={setSelection}
+                onSelect={handleSelect}
                 onToggleMulti={onToggleMulti}
                 onClearMulti={() => setMultiSel([])}
                 onAdd={handleAddLayer}
@@ -996,7 +1048,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           </div>
         </div>
         {/* center: live preview (drag / resize / rotate / group) */}
-        <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-neutral-950/40 p-4">
+        <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-neutral-950/40 p-2 md:p-4">
           <PreviewPane
             host={footshortsHost}
             state={composer}
@@ -1004,13 +1056,26 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             captureRef={captureRef}
             selection={selection}
             multiSel={multiSel}
-            onSelect={setSelection}
+            onSelect={handleSelect}
             onToggleMulti={onToggleMulti}
             onChange={onChange}
           />
         </div>
-        {/* right: selected-layer properties */}
-        <div className="w-80 shrink-0 space-y-3 overflow-y-auto pl-1">
+        {/* right: selected-layer properties — bottom sheet on mobile, inline column on desktop */}
+        <div
+          className={`${mobileSheet === 'config' ? 'flex flex-col' : 'hidden'} ${sheetCls} md:static md:bottom-auto md:z-auto md:block md:max-h-none md:w-80 md:shrink-0 md:space-y-3 md:overflow-y-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pl-1 md:pt-0 md:shadow-none`}
+        >
+          <div className="mb-3 flex items-center justify-between md:hidden">
+            <span className="text-xs font-semibold text-neutral-200">Layer</span>
+            <button
+              type="button"
+              onClick={() => setMobileSheet(null)}
+              className="rounded-md p-1 text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
+              aria-label="Close panel"
+            >
+              <X size={16} />
+            </button>
+          </div>
           <ConfigPanel
             host={footshortsHost}
             state={composer}
@@ -1023,6 +1088,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           />
         </div>
       </div>
+
+      {/* mobile sheet backdrop — tap to dismiss either bottom sheet */}
+      {mobileSheet && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setMobileSheet(null)}
+        />
+      )}
 
       {showSavedModal && (
         <div
