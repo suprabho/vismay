@@ -389,8 +389,8 @@ function StoryRow({
   onRefresh: () => void
 }) {
   return (
-    <li className="flex items-center justify-between gap-3 px-4 py-3 bg-neutral-950/30 hover:bg-white/2.5 transition-colors">
-      <Link href={`${basePath}/${story.slug}`} className="flex-1 min-w-0">
+    <li className="flex items-center justify-between gap-3 px-4 py-3 bg-neutral-950/30 hover:bg-white/2.5 transition-colors overflow-x-auto">
+      <Link href={`${basePath}/${story.slug}`} className="shrink-0 min-w-[8rem] max-w-[14rem]">
         <div className="font-medium truncate text-sm">{story.title}</div>
         <div className="text-xs text-neutral-500 truncate mt-0.5">
           {story.slug}

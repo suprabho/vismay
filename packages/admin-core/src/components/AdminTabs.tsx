@@ -15,7 +15,7 @@ interface Props {
   className?: string
 }
 
-export function AdminTabs({ tabs, className = 'flex gap-1' }: Props) {
+export function AdminTabs({ tabs, className = 'flex gap-1 overflow-x-auto min-w-0' }: Props) {
   const pathname = usePathname() ?? ''
   return (
     <nav className={className}>
