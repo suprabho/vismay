@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
+import { WorkersPanel } from '@/components/footshorts/WorkersPanel'
 import {
   fetchFootshortsPipelineStats,
   type PipelineStats,
@@ -122,6 +123,10 @@ export default async function AppPipelinePage({ params }: Props) {
     <main className="flex-1 min-h-0 overflow-y-auto">
       <div className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="mb-4 text-lg font-semibold text-white">Pipeline</h1>
+
+        <div className="mb-6">
+          <WorkersPanel />
+        </div>
 
         <h2 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">Freshness</h2>
         <div className="mb-4 flex flex-wrap">
