@@ -112,10 +112,19 @@ async function extractFileRow(
       if (!assessment.shouldEscalate && source.body.trim()) return applyExtracted(source)
       // Thin extraction → the vision worker when configured; otherwise keep
       // LiteParse's best effort (local dev) before falling to pdf-parse below.
+      console.info(
+        `[compose-extract] ${rowId} LiteParse thin (density=${assessment.density}, ` +
+          `pages=${assessment.pageCount}) → ${isSourceExtractDispatchConfigured() ? 'vision worker' : 'best-effort/pdf-parse'}`,
+      )
       if (isSourceExtractDispatchConfigured()) return dispatchToWorker()
       if (source.body.trim()) return applyExtracted(source)
-    } catch {
-      // LiteParse native binding unavailable / parse error — fall through.
+    } catch (e) {
+      // LiteParse couldn't run (most often the native binding/libpdfium.so not
+      // traced into the serverless bundle on Vercel). Log it so the fall-through
+      // to the Claude worker is diagnosable rather than silent.
+      console.warn(
+        `[compose-extract] ${rowId} LiteParse failed, falling back: ${e instanceof Error ? e.message : String(e)}`,
+      )
     }
   }
   if (isPdf && isSourceExtractDispatchConfigured()) return dispatchToWorker()
