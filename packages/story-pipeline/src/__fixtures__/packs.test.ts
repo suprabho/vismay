@@ -252,9 +252,53 @@ async function antiDrift(packTypes: readonly PackLayerType[]) {
   }
 }
 
+/** Re-validate one (type, sample) pair: zod mirror accepts it AND the REAL
+ *  module parseConfig does too. Used for variants the single SAMPLES map can't
+ *  cover (e.g. fs:match-card's grid alongside its single-fixture sample). */
+async function antiDriftSample(
+  type: string,
+  sample: Record<string, unknown>,
+  variant: string,
+  packTypes: readonly PackLayerType[],
+) {
+  const t = packTypes.find((x) => x.type === type)
+  const rel = MODULE_PATHS[type]
+  if (!t || !rel) {
+    check(`anti-drift ${type} (${variant})`, false, 'no pack type or module path')
+    return
+  }
+  const zodOk = t.schema.safeParse(sample)
+  check(`zod accepts ${type} ${variant} sample`, zodOk.success, zodOk.success ? '' : zodOk.error.issues[0]?.message)
+  try {
+    const path = join(__dirname, '../../../..', 'verticals', rel, 'index.ts')
+    const mod = (await import(pathToFileURL(path).href)).default as {
+      parseConfig: (raw: unknown, ctx: { slug: string; label: string }) => unknown
+    }
+    mod.parseConfig(zodOk.success ? zodOk.data : sample, { slug: 'packs-test', label: `${type} ${variant}` })
+    check(`real parseConfig accepts ${type} ${variant}`, true)
+  } catch (e) {
+    check(`real parseConfig accepts ${type} ${variant}`, false, e instanceof Error ? e.message : String(e))
+  }
+}
+
 void (async () => {
   await antiDrift(F1_PACK.extraLayerTypes)
   await antiDrift(FOOTSHORTS_PACK.extraLayerTypes)
+  // fs:match-card grid — the multi-fixture variant the single-card SAMPLE can't reach.
+  await antiDriftSample(
+    'fs:match-card',
+    {
+      type: 'fs:match-card',
+      layout: 'grid',
+      columns: 2,
+      cards: [
+        { home: 'Arsenal', away: 'Chelsea', score: '2 – 1', competition: 'Premier League' },
+        { home: 'Liverpool', away: 'Man City', score: '1 – 1' },
+      ],
+    },
+    'grid',
+    FOOTSHORTS_PACK.extraLayerTypes,
+  )
   console.log(failed ? '\n✗ FAILURES above' : '\n✓ all pack checks passed')
   if (failed) process.exitCode = 1
 })()
