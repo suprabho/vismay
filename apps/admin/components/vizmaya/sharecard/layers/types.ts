@@ -79,7 +79,9 @@ export function emptyMapSpec(): MapSpec {
 }
 
 // ── Background (exactly one) ────────────────────────────────────────────────
-export type ImageSource = 'asset' | 'upload' | 'generated'
+// `source` is provenance metadata only — the renderer never switches on it, so
+// adding a variant is safe (a saved card just round-trips the new tag).
+export type ImageSource = 'asset' | 'upload' | 'generated' | 'logo'
 
 /** Generation params kept so an AI image can be re-rolled / understood later. */
 export interface ImageGenMeta {
