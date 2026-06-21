@@ -199,6 +199,26 @@ export function sourceStoragePath(slug: string, id: string, filename: string): s
   return `${slug}/${id}-${safe}`
 }
 
+/**
+ * Issue a short-lived signed upload URL so the browser can PUT a source file
+ * straight into the private `story-sources` bucket, bypassing the Next.js route.
+ * Vercel rejects request bodies over ~4.5 MB (a plain-text 413), so large PDFs
+ * can't be proxied through the compose upload route — the browser uploads
+ * directly, then triggers extraction by id. Mirrors the assets `sign-upload`.
+ */
+export async function signSourceUpload(
+  storagePath: string,
+): Promise<{ signedUrl: string; token: string }> {
+  const sb = createServiceClient()
+  const { data, error } = await sb.storage
+    .from(BUCKET)
+    .createSignedUploadUrl(storagePath, { upsert: true })
+  if (error || !data) {
+    throw new Error(`signSourceUpload ${storagePath}: ${error?.message ?? 'no signed url'}`)
+  }
+  return { signedUrl: data.signedUrl, token: data.token }
+}
+
 export async function uploadSourceFile(
   storagePath: string,
   bytes: Uint8Array | ArrayBuffer | Buffer,
