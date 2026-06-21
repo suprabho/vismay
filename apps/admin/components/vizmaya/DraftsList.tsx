@@ -60,9 +60,9 @@ export default function DraftsList({ stories }: { stories: Draft[] }) {
             key={s.slug}
             className="flex items-center justify-between gap-3 overflow-x-auto rounded-lg border border-white/10 bg-white/5 p-3"
           >
-            <Link href={`/vizmaya/${s.slug}`} className="shrink-0 hover:underline">
-              <div className="font-medium whitespace-nowrap">{s.title}</div>
-              <div className="text-xs text-neutral-500 whitespace-nowrap">
+            <Link href={`/vizmaya/${s.slug}`} className="shrink-0 min-w-[8rem] max-w-[14rem] hover:underline">
+              <div className="font-medium truncate">{s.title}</div>
+              <div className="text-xs text-neutral-500 truncate">
                 {s.slug} · {s.status}
               </div>
             </Link>

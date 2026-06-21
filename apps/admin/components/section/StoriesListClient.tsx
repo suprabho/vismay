@@ -160,10 +160,10 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
       <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
         {stories.map((s) => (
           <li key={s.slug}>
-            <div className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-white/2.5 transition-colors">
+            <div className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-white/2.5 transition-colors overflow-x-auto">
               <Link
                 href={`${basePath}/${s.slug}`}
-                className="flex-1 min-w-0 flex flex-col active:bg-white/5"
+                className="shrink-0 min-w-[8rem] max-w-[14rem] flex flex-col active:bg-white/5"
               >
                 <div className="font-medium truncate">{s.title}</div>
                 <div className="text-xs text-neutral-500 truncate mt-0.5">{s.slug}</div>
