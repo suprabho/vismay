@@ -7,13 +7,14 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentType,
 } from 'react'
 import { createBrowserClient } from '@vismay/content-source/supabase'
 import type { ResolvedUnit, StoryDefaults } from '@vismay/viz-engine'
 import type { MapTarget } from '@vismay/viz-engine'
 import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
-import AutoplayMapEditor from './AutoplayMapEditor'
+import AutoplayMapEditor, { type MapPickerModalProps } from './AutoplayMapEditor'
 import TunePanel from './AutoplayTunePanel'
 
 /* ─── DB row shapes ────────────────────────────────────────────────── */
@@ -83,6 +84,13 @@ interface Props {
   editStoryMapToken?: string
   /** Action token granting `edit-story-cues` for this slug. */
   editStoryCuesToken?: string
+  /**
+   * Host-injected interactive Mapbox picker, threaded through to
+   * AutoplayMapEditor. The package can't own this — it depends on `mapbox-gl`,
+   * an app-level runtime concern — so the host (vizmaya / render) passes its
+   * own MapPickerModal. Only consumed when `isAdmin` opens the map editor.
+   */
+  MapPickerModalComponent?: ComponentType<MapPickerModalProps>
 }
 
 /* ─── Fixed viewport dimensions per ratio ──────────────────────────── */
@@ -114,6 +122,7 @@ export default function AutoplayShell({
   adminBaseUrl = '',
   editStoryMapToken = '',
   editStoryCuesToken = '',
+  MapPickerModalComponent,
 }: Props) {
   /* ─── Map editor side panel (admin only) ─────────────────────────── */
   const [mapEditorOpen, setMapEditorOpen] = useState(false)
@@ -925,13 +934,14 @@ export default function AutoplayShell({
           full-width so the editor stays usable. The top/bottom offsets
           match the header (py-3 ≈ 52px) and footer (py-3 ≈ 64px) — header
           can wrap on narrow viewports so leave a little extra room. */}
-      {isAdmin && mapEditorOpen && (
+      {isAdmin && mapEditorOpen && MapPickerModalComponent && (
         <div className="fixed top-[64px] bottom-[64px] right-0 z-40 w-full [@media(min-aspect-ratio:1/1)]:w-[420px] flex">
           <AutoplayMapEditor
             slug={slug}
             targets={mapTargets}
             initialYaml={initialMapYaml}
             mapStyle={mapStyle}
+            MapPickerModalComponent={MapPickerModalComponent}
             onClose={() => setMapEditorOpen(false)}
             onSaved={() => setMapReloadNonce((n) => n + 1)}
             adminBaseUrl={adminBaseUrl}

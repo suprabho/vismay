@@ -17,6 +17,13 @@
    utility classes (e.g. the snap container, logo chrome) silently drop. */
 @source "../../../packages/story-reader/src";
 
+/* The headless render surfaces (share / report / slides / autoplay /
+   canvas-frame shells) were extracted into @vismay/render-surface. Same
+   cross-package scanning caveat as story-reader above — scan its source
+   explicitly or the share/pdf grids collapse when their utility classes are
+   purged. */
+@source "../../../packages/render-surface/src";
+
 @theme inline {
   --color-background: var(--color-bg, #0a0e14);
   --color-foreground: var(--color-text, #e0ddd5);

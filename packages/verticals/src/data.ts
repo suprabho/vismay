@@ -258,7 +258,15 @@ export const APPS: AppEntry[] = [
       consumer: { env: 'NEXT_PUBLIC_FOOTSHORTS_URL', default: 'https://footshorts.com' },
       admin: { env: 'NEXT_PUBLIC_ADMIN_FOOTSHORTS_URL', default: 'https://admin.footshorts.com' },
     },
-    branding: { hideLogoInAutoplay: true, dataAttr: 'footshorts' },
+    branding: {
+      hideLogoInAutoplay: true,
+      dataAttr: 'footshorts',
+      // footshorts brand type families, per its `type-display` guideline:
+      // Forum (editorial display serif), Manrope (UI/body), Space Mono
+      // (numbers/scores/timers/@handles). Drives `applyShareBrandFonts` so
+      // every footshorts share card adopts these while keeping story colours.
+      brandFonts: { serif: 'Forum', sans: 'Manrope', mono: 'Space Mono' },
+    },
     surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
     routing: { storyPath: (slug) => `/editorial/${slug}`, epicPath: (slug) => `/editorial/epic/${slug}` },
   },
