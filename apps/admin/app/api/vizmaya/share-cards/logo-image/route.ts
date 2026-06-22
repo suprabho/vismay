@@ -10,13 +10,19 @@ import { isAuthed } from '@/lib/adminAuth'
  * We base64-embed the bytes so `html-to-image` can rasterize the logo on
  * capture without a cross-origin fetch (which would taint the canvas).
  *
- * IMPORTANT: the Brandfetch CDN answers `200 text/html` with a ~450 kB app
- * page (not a 4xx) when a request is off — bad/missing client id, an unknown
- * brand, or an unsupported path. So we MUST verify each response is actually an
- * image (`content-type: image/*`) before accepting it; otherwise we'd embed an
- * HTML document as a fake "logo". We try the `icon` URL the search step already
- * proved renders, then a couple of higher-res domain forms, and accept the
- * first real image.
+ * Two Brandfetch quirks drive the design:
+ *
+ * 1. The CDN does NOT accept your raw client id. The Search API mints a signed,
+ *    *ephemeral* token (`c=1ax{timestamp}…`) and bakes it into the `icon` URLs
+ *    it returns; only that token works against `cdn.brandfetch.io`. So we reuse
+ *    the token + identifier from the search result's `icon` URL (passed in by
+ *    the picker) and must NEVER override its `c`.
+ * 2. On a bad request — wrong/empty token, unknown identifier — the CDN answers
+ *    `200 text/html` with a ~450 kB app page, not a 4xx. So we accept a response
+ *    only when `content-type` is `image/*`; otherwise we'd embed HTML as a
+ *    "logo". The token works for any CDN path, so we derive higher-res `logo` /
+ *    `symbol` variants from the same identifier, then fall back to the original
+ *    icon URL (which has a lettermark fallback and always yields an image).
  */
 
 export const runtime = 'nodejs'
@@ -28,11 +34,10 @@ type LogoTheme = 'light' | 'dark'
 const LOGO_TYPES: readonly LogoType[] = ['logo', 'symbol', 'icon']
 const RENDER_W = 512
 
-/** Only real domains (`example.com`) — guards the CDN host we build below. */
-const DOMAIN_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i
-
-/** Force `c` onto a Brandfetch CDN url, rejecting anything off-host (no SSRF). */
-function brandfetchUrl(raw: string, clientId: string): string | null {
+/** Pull the identifier + signed CDN token out of a search-result `icon` URL,
+ *  rejecting anything not on the Brandfetch CDN host (no SSRF surface). */
+function parseIconUrl(raw: string | null): { id: string; token: string } | null {
+  if (!raw) return null
   let u: URL
   try {
     u = new URL(raw)
@@ -40,16 +45,20 @@ function brandfetchUrl(raw: string, clientId: string): string | null {
     return null
   }
   if (u.hostname !== 'cdn.brandfetch.io') return null
-  u.searchParams.set('c', clientId)
-  return u.toString()
+  const id = u.pathname.split('/').filter(Boolean)[0]
+  const token = u.searchParams.get('c')
+  if (!id || !token) return null
+  return { id, token }
 }
 
-/** Documented logo-link form: cdn.brandfetch.io/{domain}/{params}?c=… */
-function domainUrl(domain: string, type: LogoType, theme: LogoTheme | null, clientId: string): string {
-  const segs = [`type/${type}`, `w/${RENDER_W}`, `h/${RENDER_W}`]
+/** Build a CDN logo url for an identifier, reusing the ephemeral token. The
+ *  type is a path segment (`/logo`), matching the form the Search API returns.
+ *  `fallback/404` makes a missing variant 404 so we fall through to the next. */
+function cdnUrl(id: string, type: LogoType, theme: LogoTheme | null, token: string): string {
+  const segs = [`w/${RENDER_W}`, `h/${RENDER_W}`]
   if (theme) segs.push(`theme/${theme}`)
-  segs.push('fallback/404')
-  return `https://cdn.brandfetch.io/${domain}/${segs.join('/')}?c=${encodeURIComponent(clientId)}`
+  segs.push('fallback/404', type)
+  return `https://cdn.brandfetch.io/${id}/${segs.join('/')}?c=${encodeURIComponent(token)}`
 }
 
 export async function GET(req: Request) {
@@ -57,19 +66,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const clientId = process.env.BRANDFETCH_CLIENT_ID
-  if (!clientId) {
+  const params = new URL(req.url).searchParams
+  const rawIcon = params.get('icon')
+  const parsed = parseIconUrl(rawIcon)
+  if (!parsed || !rawIcon) {
     return NextResponse.json(
-      { error: 'logo fetch unavailable — set BRANDFETCH_CLIENT_ID' },
-      { status: 501 },
+      { error: 'missing a Brandfetch "icon" url to derive the logo from' },
+      { status: 400 },
     )
   }
 
-  const params = new URL(req.url).searchParams
-  const domain = params.get('domain')?.trim().toLowerCase() ?? ''
-  if (!DOMAIN_RE.test(domain)) {
-    return NextResponse.json({ error: 'invalid "domain"' }, { status: 400 })
-  }
   const themeParam = params.get('theme')
   const theme: LogoTheme | null = themeParam === 'light' || themeParam === 'dark' ? themeParam : null
   const wanted = params.get('type') as LogoType | null
@@ -77,17 +83,9 @@ export async function GET(req: Request) {
     (t, i, a) => a.indexOf(t) === i,
   ) as LogoType[]
 
-  // Candidate URLs, tried in order; first real image wins. The search `icon` is
-  // proven to render but ignores `theme`, so when a light/dark variant is asked
-  // for we try the theme-aware domain forms first and keep `icon` as a fallback.
-  const iconUrl = (() => {
-    const raw = params.get('icon')
-    return raw ? brandfetchUrl(raw, clientId) : null
-  })()
-  const domainUrls = types.map((type) => domainUrl(domain, type, theme, clientId))
-  const candidates = theme
-    ? [...domainUrls, ...(iconUrl ? [iconUrl] : [])]
-    : [...(iconUrl ? [iconUrl] : []), ...domainUrls]
+  // Prefer higher-res logo/symbol/icon variants (same id + token), then fall
+  // back to the original icon url as-is (lettermark fallback → always an image).
+  const candidates = [...types.map((t) => cdnUrl(parsed.id, t, theme, parsed.token)), rawIcon]
 
   let lastCt = ''
   try {
@@ -100,13 +98,13 @@ export async function GET(req: Request) {
       const buf = Buffer.from(await res.arrayBuffer())
       if (buf.byteLength === 0) continue
       const dataUrl = `data:${ct};base64,${buf.toString('base64')}`
-      return NextResponse.json({ ok: true, dataUrl, domain })
+      return NextResponse.json({ ok: true, dataUrl, id: parsed.id })
     }
     return NextResponse.json(
       {
         error:
           'no logo image returned for this brand' +
-          (lastCt && lastCt !== 'image/*' ? ` (Brandfetch served "${lastCt}" — check the client id is enabled for the Logo CDN)` : ''),
+          (lastCt && !lastCt.startsWith('image/') ? ` (Brandfetch served "${lastCt}")` : ''),
       },
       { status: 404 },
     )

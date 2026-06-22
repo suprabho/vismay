@@ -49,11 +49,14 @@ export function LogoPicker({ onPick }: { onPick: (dataUrl: string) => void }) {
   }
 
   const pick = async (r: LogoSearchResult) => {
+    if (!r.icon) {
+      setError('No logo available for this brand.')
+      return
+    }
     setPicking(r.domain)
     setError(null)
     try {
-      const params = new URLSearchParams({ domain: r.domain })
-      if (r.icon) params.set('icon', r.icon)
+      const params = new URLSearchParams({ icon: r.icon })
       if (forBg) params.set('theme', forBg)
       const res = await fetch(`/api/vizmaya/share-cards/logo-image?${params}`)
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
@@ -112,7 +115,8 @@ export function LogoPicker({ onPick }: { onPick: (dataUrl: string) => void }) {
             <button
               key={r.domain}
               type="button"
-              disabled={picking != null}
+              disabled={picking != null || !r.icon}
+              title={r.icon ? r.domain : `${r.domain} — no logo available`}
               onClick={() => void pick(r)}
               className="flex items-center gap-2 rounded-md border border-white/10 bg-neutral-900 px-2 py-1.5 text-left hover:border-white/30 disabled:opacity-50"
             >
