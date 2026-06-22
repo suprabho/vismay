@@ -12,7 +12,7 @@ import {
   getReportMapOverride,
   getReportPins,
   isReportMapHidden,
-} from '@/lib/storyReportConfig'
+} from '../lib/storyReportConfig'
 
 const SLIDE_W = 1920
 const SLIDE_H = 1080

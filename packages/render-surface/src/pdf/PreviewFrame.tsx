@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useFitScale } from '@/lib/useFitScale'
+import { useFitScale } from '../lib/useFitScale'
 
 interface Props {
   /** Native (print) width of the frame, in CSS px. */

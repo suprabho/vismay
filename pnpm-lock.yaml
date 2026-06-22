@@ -149,7 +149,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -539,6 +539,196 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/render:
+    dependencies:
+      '@base-ui/react':
+        specifier: ^1.3.0
+        version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@chenglou/pretext':
+        specifier: ^0.0.4
+        version: 0.0.4
+      '@deck.gl/aggregation-layers':
+        specifier: ^9.3.0
+        version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers':
+        specifier: ^9.3.0
+        version: 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@deck.gl/mapbox':
+        specifier: ^9.3.0
+        version: 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@math.gl/web-mercator@4.1.0)
+      '@deck.gl/react':
+        specifier: ^9.3.0
+        version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@iconify-icons/circle-flags':
+        specifier: ^1.2.41
+        version: 1.2.41
+      '@iconify-icons/noto':
+        specifier: ^1.2.10
+        version: 1.2.10
+      '@iconify-icons/twemoji':
+        specifier: ^1.2.8
+        version: 1.2.8
+      '@iconify/react':
+        specifier: ^6.0.2
+        version: 6.0.2(react@19.2.4)
+      '@next/third-parties':
+        specifier: ^16.2.3
+        version: 16.2.6(next@16.2.2(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
+      '@phosphor-icons/react':
+        specifier: ^2.1.10
+        version: 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@react-three/drei':
+        specifier: ^10.0.0
+        version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.14)(expo-asset@55.0.17(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(expo-file-system@55.0.20(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)))(expo@55.0.24)(react-dom@19.2.4(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(three@0.171.0))(@types/react@19.2.14)(@types/three@0.171.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.171.0)
+      '@react-three/fiber':
+        specifier: ^9.1.0
+        version: 9.6.1(@types/react@19.2.14)(expo-asset@55.0.17(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(expo-file-system@55.0.20(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)))(expo@55.0.24)(react-dom@19.2.4(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(three@0.171.0)
+      '@rive-app/canvas':
+        specifier: ^2.37.1
+        version: 2.37.7
+      '@rive-app/canvas-advanced-single':
+        specifier: ^2.37.1
+        version: 2.37.7
+      '@rive-app/react-canvas':
+        specifier: ^4.28.0
+        version: 4.28.5(react@19.2.4)
+      '@supabase/supabase-js':
+        specifier: ^2.103.0
+        version: 2.105.4
+      '@types/file-saver':
+        specifier: ^2.0.7
+        version: 2.0.7
+      '@vercel/analytics':
+        specifier: ^2.0.1
+        version: 2.0.1(next@16.2.2(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
+      '@vismay/admin-core':
+        specifier: workspace:*
+        version: link:../../packages/admin-core
+      '@vismay/content-source':
+        specifier: workspace:*
+        version: link:../../packages/content-source
+      '@vismay/f1-viz':
+        specifier: workspace:*
+        version: link:../../verticals/f1-viz
+      '@vismay/footshorts-viz':
+        specifier: workspace:*
+        version: link:../../verticals/footshorts-viz
+      '@vismay/kidzovo-viz':
+        specifier: workspace:*
+        version: link:../../verticals/kidzovo-viz
+      '@vismay/render-surface':
+        specifier: workspace:*
+        version: link:../../packages/render-surface
+      '@vismay/starship-viz':
+        specifier: workspace:*
+        version: link:../../verticals/starship-viz
+      '@vismay/story-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/story-pipeline
+      '@vismay/story-reader':
+        specifier: workspace:*
+        version: link:../../packages/story-reader
+      '@vismay/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@vismay/verticals':
+        specifier: workspace:*
+        version: link:../../packages/verticals
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../../packages/viz-engine
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      deck.gl:
+        specifier: ^9.3.0
+        version: 9.3.2(@arcgis/core@4.34.8)(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))(@luma.gl/webgl@9.3.3(@luma.gl/core@9.3.3))(@math.gl/web-mercator@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
+      echarts-for-react:
+        specifier: ^3.0.6
+        version: 3.0.6(echarts@6.0.0)(react@19.2.4)
+      file-saver:
+        specifier: ^2.0.5
+        version: 2.0.5
+      html-to-image:
+        specifier: ^1.11.13
+        version: 1.11.13
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
+      lucide-react:
+        specifier: ^1.7.0
+        version: 1.16.0(react@19.2.4)
+      mapbox-gl:
+        specifier: ^3.21.0
+        version: 3.23.1
+      next:
+        specifier: 16.2.2
+        version: 16.2.2(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: 19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: 19.2.4
+        version: 19.2.4(react@19.2.4)
+      react-map-gl:
+        specifier: ^8.1.1
+        version: 8.1.1(mapbox-gl@3.23.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.6.0
+      three:
+        specifier: ^0.171.0
+        version: 0.171.0
+      tw-animate-css:
+        specifier: ^1.4.0
+        version: 1.4.0
+      yaml:
+        specifier: ^2.8.3
+        version: 2.9.0
+    devDependencies:
+      '@next/env':
+        specifier: 16.2.2
+        version: 16.2.2
+      '@tailwindcss/postcss':
+        specifier: ^4
+        version: 4.3.0
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.14)
+      '@types/three':
+        specifier: ^0.171.0
+        version: 0.171.0
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.7.0)
+      eslint-config-next:
+        specifier: 16.2.2
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      tailwindcss:
+        specifier: ^4
+        version: 4.3.0
+      tsx:
+        specifier: ^4.20.6
+        version: 4.22.4
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/vizf1/brand:
     dependencies:
       react:
@@ -727,6 +917,9 @@ importers:
       '@vismay/kidzovo-viz':
         specifier: workspace:*
         version: link:../../verticals/kidzovo-viz
+      '@vismay/render-surface':
+        specifier: workspace:*
+        version: link:../../packages/render-surface
       '@vismay/starship-viz':
         specifier: workspace:*
         version: link:../../verticals/starship-viz
@@ -1006,6 +1199,73 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.22.4
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/render-surface:
+    dependencies:
+      '@chenglou/pretext':
+        specifier: ^0.0.4
+        version: 0.0.4
+      '@rive-app/react-canvas':
+        specifier: ^4.28.0
+        version: 4.28.5(react@19.2.4)
+      '@vismay/admin-core':
+        specifier: workspace:*
+        version: link:../admin-core
+      '@vismay/content-source':
+        specifier: workspace:*
+        version: link:../content-source
+      '@vismay/story-reader':
+        specifier: workspace:*
+        version: link:../story-reader
+      '@vismay/verticals':
+        specifier: workspace:*
+        version: link:../verticals
+      '@vismay/viz-engine':
+        specifier: workspace:*
+        version: link:../viz-engine
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
+      echarts-for-react:
+        specifier: ^3.0.6
+        version: 3.0.6(echarts@6.0.0)(react@19.2.4)
+      file-saver:
+        specifier: ^2.0.5
+        version: 2.0.5
+      html-to-image:
+        specifier: ^1.11.13
+        version: 1.11.13
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
+      next:
+        specifier: ^16.0.0
+        version: 16.2.2(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      yaml:
+        specifier: ^2.8.3
+        version: 2.9.0
+    devDependencies:
+      '@types/file-saver':
+        specifier: ^2.0.7
+        version: 2.0.7
+      '@types/node':
+        specifier: ^20
+        version: 20.19.41
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.14)
       typescript:
         specifier: ^5
         version: 5.9.3

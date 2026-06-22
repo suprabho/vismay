@@ -258,7 +258,15 @@ export const APPS: AppEntry[] = [
       consumer: { env: 'NEXT_PUBLIC_FOOTSHORTS_URL', default: 'https://footshorts.com' },
       admin: { env: 'NEXT_PUBLIC_ADMIN_FOOTSHORTS_URL', default: 'https://admin.footshorts.com' },
     },
-    branding: { hideLogoInAutoplay: true, dataAttr: 'footshorts' },
+    branding: {
+      hideLogoInAutoplay: true,
+      dataAttr: 'footshorts',
+      // footshorts brand type families, per its `type-display` guideline:
+      // Forum (editorial display serif), Manrope (UI/body), Space Mono
+      // (numbers/scores/timers/@handles). Drives `applyShareBrandFonts` so
+      // every footshorts share card adopts these while keeping story colours.
+      brandFonts: { serif: 'Forum', sans: 'Manrope', mono: 'Space Mono' },
+    },
     surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
     routing: { storyPath: (slug) => `/editorial/${slug}`, epicPath: (slug) => `/editorial/epic/${slug}` },
   },
@@ -306,4 +314,46 @@ export function resolveAppUrls(slug: string): {
     consumerUrl: resolveUrl(app.urls.consumer),
     adminUrl: resolveUrl(app.urls.admin),
   }
+}
+
+/**
+ * The five headless render surfaces, in the order the render-engine extraction
+ * repoints them off vizmaya.fyi onto the neutral `apps/render` service.
+ */
+export type RenderSurfaceKind =
+  | 'canvasFrame'
+  | 'share'
+  | 'slides'
+  | 'report'
+  | 'autoplay'
+
+/** Per-surface env override — the strangler's flip knob, one per surface. */
+const RENDER_SURFACE_ENV: Record<RenderSurfaceKind, string> = {
+  canvasFrame: 'RENDER_SURFACE_URL_CANVAS_FRAME',
+  share: 'RENDER_SURFACE_URL_SHARE',
+  slides: 'RENDER_SURFACE_URL_SLIDES',
+  report: 'RENDER_SURFACE_URL_REPORT',
+  autoplay: 'RENDER_SURFACE_URL_AUTOPLAY',
+}
+
+/**
+ * Render-surface origin for one surface of a story. **Server-only** (URL
+ * signing / CI dispatch). Resolved in order:
+ *   1. `RENDER_SURFACE_URL_<SURFACE>` — the strangler knob. Set it to the
+ *      apps/render origin to flip that one surface off vizmaya.fyi; unset
+ *      surfaces keep rendering on the live vizmaya.fyi fallback, so surfaces
+ *      move one at a time and each is independently revertable (unset the env).
+ *   2. the owning app's render surface (`RENDER_SURFACE_URL_<APP>` or default),
+ *      so a single app (e.g. footshorts) can be flipped independently.
+ *   3. `https://vizmaya.fyi` (the app default).
+ *
+ * Behaviour-neutral until one of the envs above is set.
+ */
+export function renderSurfaceUrl(
+  surface: RenderSurfaceKind,
+  vertical?: string | null
+): string {
+  const perSurface = process.env[RENDER_SURFACE_ENV[surface]]
+  if (perSurface) return normalizeUrl(perSurface)
+  return resolveAppUrls(appSlugForVertical(vertical)).renderSurfaceUrl
 }

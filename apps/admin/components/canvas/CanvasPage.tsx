@@ -10,7 +10,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { readComposeState } from '@vismay/content-source/composeState'
 import { listStorySources } from '@vismay/content-source/storySources'
-import { renderSurfaceUrlForVertical } from '@/lib/publicSite'
+import { renderSurfaceUrl } from '@/lib/publicSite'
 import CanvasClient from '@/components/canvas/CanvasClient'
 import {
   canvasFrameId,
@@ -80,30 +80,29 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
   // the client.
   //
   // Every vertical's story renders through a headless render surface, resolved
-  // per the story's owning app (`renderSurfaceUrlForVertical`, lib/publicSite).
-  // Today that's vizmaya-fyi for every app (the one surface footshorts/vizf1
-  // iframe into); the render-engine extraction flips apps to the neutral
-  // apps/render service one at a time via RENDER_SURFACE_URL_*. The canvas-frame
-  // id and the output specs sign separately so a surface can be repointed on its
-  // own without splitting this route.
+  // PER SURFACE (`renderSurfaceUrl`, lib/publicSite). Today every surface
+  // resolves to vizmaya-fyi (the one surface footshorts/vizf1 iframe into); the
+  // render-engine extraction flips them to the neutral apps/render service one
+  // surface at a time via RENDER_SURFACE_URL_<SURFACE>. The canvas-frame id and
+  // each output spec sign against their own surface, so a flip moves exactly
+  // that surface and the others keep their live vizmaya.fyi fallback.
   const vertical =
     typeof story.frontmatter.vertical === 'string'
       ? story.frontmatter.vertical
       : undefined
-  const renderBaseUrl = renderSurfaceUrlForVertical(vertical)
   const sectionUnits = units.filter((u) => u.subIndex === 0)
   const SIGN_TTL_SECONDS = 24 * 60 * 60
   const signedSrcById: Record<string, string> = {}
   for (const u of sectionUnits) {
     const sectionId = u.parentConfig.id ?? `section-${u.parentIndex}`
     signedSrcById[canvasFrameId(sectionId)] = signOutputUrl({
-      baseUrl: renderBaseUrl,
+      baseUrl: renderSurfaceUrl('canvasFrame', vertical),
       path: `/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
       ttlSeconds: SIGN_TTL_SECONDS,
     })
     for (const spec of outputSpecsForUnit(u, slug)) {
       signedSrcById[spec.id] = signOutputUrl({
-        baseUrl: renderBaseUrl,
+        baseUrl: renderSurfaceUrl(spec.group, vertical),
         path: spec.path,
         ttlSeconds: SIGN_TTL_SECONDS,
         query: spec.query,

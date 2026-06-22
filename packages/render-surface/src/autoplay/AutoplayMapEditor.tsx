@@ -23,8 +23,8 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ComponentType,
 } from 'react'
-import MapPickerModal from '@/components/MapPickerModal'
 import {
   hydrateOverrides,
   parseMapOverrides,
@@ -41,11 +41,29 @@ import {
 } from '@vismay/viz-engine'
 import { useTabIndent } from '@vismay/content-source/useTabIndent'
 
+/**
+ * Props the map picker the editor opens must accept. The picker component
+ * itself (`MapPickerModal`) lives in the host app — it depends on `mapbox-gl`,
+ * which is an app-level concern — and is injected via `MapPickerModalComponent`
+ * so the package stays free of the heavy map runtime. The interface captures
+ * exactly the subset of props this editor passes; the app's MapPickerModal has
+ * a superset (optional `hideMobileTarget`, `frame`).
+ */
+export interface MapPickerModalProps {
+  sectionRaw: string
+  sectionLabel: string
+  style?: string
+  onApply: (nextRaw: string) => void
+  onClose: () => void
+}
+
 interface Props {
   slug: string
   targets: MapTarget[]
   initialYaml: string | null
   mapStyle: string
+  /** Host-injected interactive Mapbox picker (the app owns `mapbox-gl`). */
+  MapPickerModalComponent: ComponentType<MapPickerModalProps>
   onClose?: () => void
   /**
    * Fired after a successful PUT to admin's `/api/stories/<slug>/map`.
@@ -86,6 +104,7 @@ export default function AutoplayMapEditor({
   targets,
   initialYaml,
   mapStyle,
+  MapPickerModalComponent,
   onClose,
   onSaved,
   adminBaseUrl,
@@ -383,7 +402,7 @@ export default function AutoplayMapEditor({
       </div>
 
       {editingTarget && (
-        <MapPickerModal
+        <MapPickerModalComponent
           sectionRaw={editingSectionRaw}
           sectionLabel={editingTarget.label}
           style={mapStyle}

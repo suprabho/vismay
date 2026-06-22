@@ -12,10 +12,14 @@
 // re-exports `registerAllVerticals`, which pulls in the viz-engine barrel
 // (deck.gl / mapbox / echarts). `/data` is route metadata + lazy import thunks
 // only, so this stays lean.
-import {
-  APPS,
-  appSlugForVertical,
-  resolveAppUrls,
+import { APPS } from '@vismay/verticals/data'
+// Re-export the per-surface render-surface resolver from the registry so admin
+// signing sites import it from `@/lib/publicSite` as before. It lives in the
+// registry (not here) so vizmaya-side callers — e.g. the CI dispatch libs —
+// can resolve the same surface origins without importing admin code.
+export {
+  renderSurfaceUrl,
+  type RenderSurfaceKind,
 } from '@vismay/verticals/data'
 
 function normalize(url: string): string {
@@ -131,18 +135,6 @@ for (const app of APPS) {
     storyPath: app.routing.storyPath ?? null,
     epicPath: app.routing.epicPath ?? null,
   }
-}
-
-/**
- * Render-surface origin for the app that owns a story's `vertical`. **Server-
- * only** (URL signing / CI dispatch). Today every app resolves to vizmaya.fyi
- * (the one headless render surface every vertical iframes into); the render-
- * engine extraction flips them to the neutral `apps/render` service one app/
- * surface at a time via each app's `RENDER_SURFACE_URL_*` override. Replaces
- * the hard-coded `vizmayaPublicUrl` base that canvas/screenshot signing used.
- */
-export function renderSurfaceUrlForVertical(vertical?: string | null): string {
-  return resolveAppUrls(appSlugForVertical(vertical)).renderSurfaceUrl
 }
 
 /** Public URL for a story in the given consumer app, or null if the app
