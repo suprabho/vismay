@@ -221,8 +221,11 @@ const tabBtn = (active: boolean) =>
   ].join(' ')
 // Shared chrome for the two mobile bottom sheets (detail rail + layer edit); the
 // `md:` resets in each usage strip it back to a plain in-flow column on desktop.
+// z-50 keeps the sheet (and its tap targets) above the canvas' FreeTransformLayer
+// drag overlay (`absolute inset-0 z-40`), which on mobile spans the full-width
+// preview and would otherwise sit on top of the sheet's controls and swallow taps.
 const sheetCls =
-  'fixed inset-x-0 bottom-16 z-40 max-h-[62vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
+  'fixed inset-x-0 bottom-16 z-50 max-h-[62vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
 
 export function ShareCardCreator({ initialCompetitions }: { initialCompetitions: CompetitionOption[] }) {
   const competitions = initialCompetitions
@@ -1089,10 +1092,12 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         </div>
       </div>
 
-      {/* mobile sheet backdrop — tap to dismiss either bottom sheet */}
+      {/* mobile sheet backdrop — tap to dismiss either bottom sheet. z-[45] sits
+          above the canvas drag overlay (z-40) so it masks the preview's transform
+          handles while a sheet is open, and below the sheet itself (z-50). */}
       {mobileSheet && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-[45] bg-black/40 md:hidden"
           onClick={() => setMobileSheet(null)}
         />
       )}
