@@ -45,6 +45,14 @@ export interface NewShareCard {
   config: unknown
 }
 
+/** Patch for an already-saved card. Every field is optional so a re-save can
+ *  overwrite just the snapshot while keeping the user-given name. */
+export interface UpdateShareCard {
+  name?: string
+  cardType?: string
+  config?: unknown
+}
+
 /** A tag to attach when publishing, addressed by (type, slug) — resolved to an
  *  entity id here, so callers don't need to know entity ids. */
 export interface ShareCardEntityInput {
@@ -132,6 +140,28 @@ export async function createShareCard(input: NewShareCard): Promise<SavedShareCa
     .select(SELECT_WITH_ENTITIES)
     .single()
   if (error) throw new Error(`createShareCard: ${error.message}`)
+  return rowToCard(data as Row)
+}
+
+/** Overwrite an existing card in place (used by Save on an already-loaded card,
+ *  so re-saving updates the same row instead of inserting a duplicate). */
+export async function updateShareCard(
+  id: string,
+  patch: UpdateShareCard,
+): Promise<SavedShareCard> {
+  const sb = createServiceClient()
+  // No DB trigger maintains updated_at, so bump it here.
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (patch.name !== undefined) update.name = patch.name
+  if (patch.cardType !== undefined) update.card_type = patch.cardType
+  if (patch.config !== undefined) update.config = patch.config
+  const { data, error } = await sb
+    .from('footshorts_share_cards')
+    .update(update)
+    .eq('id', id)
+    .select(SELECT_WITH_ENTITIES)
+    .single()
+  if (error) throw new Error(`updateShareCard: ${error.message}`)
   return rowToCard(data as Row)
 }
 

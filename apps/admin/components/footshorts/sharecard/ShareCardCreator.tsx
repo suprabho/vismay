@@ -580,6 +580,32 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!hasLayers) return false
+
+    // Editing an already-saved card → overwrite it in place (keep its name, no
+    // prompt) so re-saving updates the same row instead of piling up duplicates.
+    if (currentCardId) {
+      setSaving(true)
+      setSaveError(null)
+      try {
+        const res = await fetch(`/api/footshorts/share/cards/${currentCardId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cardType: representativeType, config: buildSnapshot() }),
+        })
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
+        if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
+        setSavedCards((prev) => prev.map((c) => (c.id === body.card!.id ? body.card! : c)))
+        setCurrentCardName(body.card.name)
+        return true
+      } catch (e) {
+        setSaveError(e instanceof Error ? e.message : 'Save failed')
+        return false
+      } finally {
+        setSaving(false)
+      }
+    }
+
+    // New (unsaved) card → name it and create a fresh row.
     const name = window.prompt('Name this card', currentCardName || 'Footshorts card')?.trim()
     if (!name) return false
     setSaving(true)
@@ -602,7 +628,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     } finally {
       setSaving(false)
     }
-  }, [hasLayers, currentCardName, representativeType, buildSnapshot])
+  }, [hasLayers, currentCardId, currentCardName, representativeType, buildSnapshot])
 
   // Reset the editor to a blank, unsaved card. Brand/frame settings (theme,
   // ratio, handle, logo) carry over so the next card starts from the same studio
