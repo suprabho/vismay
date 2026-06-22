@@ -5,7 +5,6 @@ import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 import type { ImageSource } from '../layers/types'
 import { labelCls } from './controls'
-import { LogoPicker } from './LogoPicker'
 
 export interface AssetEntry {
   url: string
@@ -136,8 +135,6 @@ export function ImagePicker({
           className="mt-1 block w-full text-[11px] text-neutral-400 file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2 file:py-1 file:text-[11px] file:text-neutral-100 hover:file:bg-white/20"
         />
       </div>
-
-      <LogoPicker onPick={(dataUrl) => onPick(dataUrl, 'logo')} />
 
       <div className="space-y-1.5 rounded-lg border border-white/10 bg-neutral-950/60 p-2.5">
         <span className={labelCls}>Generate</span>
