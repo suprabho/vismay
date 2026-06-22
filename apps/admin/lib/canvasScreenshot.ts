@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 import { signOutputUrl } from '@vismay/admin-core/signedUrl'
-import { vizmayaPublicUrl } from '@/lib/publicSite'
+import { renderSurfaceUrl } from '@/lib/publicSite'
 
 /**
  * Server-side screenshot of one rendered canvas section.
@@ -38,7 +38,9 @@ export async function screenshotCanvasSection(args: {
   const settleMs = args.settleMs ?? DEFAULT_SETTLE_MS
 
   const url = signOutputUrl({
-    baseUrl: vizmayaPublicUrl,
+    // Same canvas-frame surface the canvas iframe shows — follows the
+    // `canvasFrame` flip (RENDER_SURFACE_URL_CANVAS_FRAME), vizmaya.fyi default.
+    baseUrl: renderSurfaceUrl('canvasFrame'),
     path: `/story/${encodeURIComponent(args.slug)}/canvas-frame/${encodeURIComponent(args.sectionId)}`,
     ttlSeconds: SIGN_TTL_SECONDS,
   })
