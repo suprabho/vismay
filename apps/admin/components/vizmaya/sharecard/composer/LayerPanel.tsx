@@ -30,6 +30,7 @@ import {
   type Selection,
 } from './mutations'
 import { ImagePicker, type AssetEntry } from './ImagePicker'
+import { LogoPicker } from './LogoPicker'
 import { IconPicker } from './IconPicker'
 import { EmojiPicker } from './EmojiPicker'
 import { Inspector, type MapDefaults } from './Inspector'
@@ -69,7 +70,7 @@ interface Props {
   setMultiSel?: (ids: string[]) => void
 }
 
-type AddMode = null | 'emoji' | 'flag' | 'icon' | 'image'
+type AddMode = null | 'emoji' | 'flag' | 'icon' | 'image' | 'brand'
 
 const ELEMENT_DEFAULT_WIDTH: Record<ElementLayer['kind'], number> = {
   emoji: 14,
@@ -270,7 +271,7 @@ export function LayerPanel({
             >
               + Map
             </button>
-            {(['image', 'emoji', 'icon', 'flag'] as const).map((m) => (
+            {(['image', 'brand', 'emoji', 'icon', 'flag'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setAddMode(addMode === m ? null : m)}
@@ -301,6 +302,11 @@ export function LayerPanel({
                 ratio={'1:1' as AspectRatio}
                 onPick={(src, source) => addEl({ kind: 'image', src, source, objectFit: 'contain' }, 'Image')}
               />
+            </div>
+          )}
+          {addMode === 'brand' && (
+            <div className="shrink-0 rounded-md border border-white/10 bg-neutral-950/50 p-2">
+              <LogoPicker onPick={(dataUrl) => addEl({ kind: 'image', src: dataUrl, source: 'logo', objectFit: 'contain' }, 'Logo')} />
             </div>
           )}
 
