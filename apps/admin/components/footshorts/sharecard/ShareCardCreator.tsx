@@ -224,8 +224,10 @@ const tabBtn = (active: boolean) =>
 // z-50 keeps the sheet (and its tap targets) above the canvas' FreeTransformLayer
 // drag overlay (`absolute inset-0 z-40`), which on mobile spans the full-width
 // preview and would otherwise sit on top of the sheet's controls and swallow taps.
+// Sheet sits fully above the fixed bottom tab bar: its bottom edge clears the
+// bar's height plus the device safe-area inset (so it never tucks underneath).
 const sheetCls =
-  'fixed inset-x-0 bottom-16 z-50 max-h-[62vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
+  'fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-50 max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
 
 // Mobile = below the `md` (768px) breakpoint, where the side panels collapse into
 // draggable bottom sheets. Used to gate the drag-to-resize behaviour and the
@@ -243,7 +245,8 @@ function useIsMobile() {
 }
 
 // Snap heights (in vh) the sheet settles to after a drag — peek / default / tall.
-const SHEET_SNAPS = [38, 62, 88]
+const SHEET_SNAPS = [30, 45, 82]
+const SHEET_DEFAULT_VH = 45
 
 /** A bottom sheet that, on mobile, can be dragged by its grab handle to resize
  *  (so it stops covering the canvas) and snaps to {@link SHEET_SNAPS}. On desktop
@@ -264,7 +267,7 @@ function DraggableSheet({
   desktopClassName: string
   children: ReactNode
 }) {
-  const [heightVh, setHeightVh] = useState(62)
+  const [heightVh, setHeightVh] = useState(SHEET_DEFAULT_VH)
   const drag = useRef<{ y: number; h: number } | null>(null)
 
   const onPointerDown = (e: ReactPointerEvent) => {
@@ -274,7 +277,7 @@ function DraggableSheet({
   const onPointerMove = (e: ReactPointerEvent) => {
     if (!drag.current) return
     const dy = ((drag.current.y - e.clientY) / window.innerHeight) * 100
-    setHeightVh(Math.min(92, Math.max(20, drag.current.h + dy)))
+    setHeightVh(Math.min(88, Math.max(18, drag.current.h + dy)))
   }
   const onPointerUp = (e: ReactPointerEvent) => {
     if (!drag.current) return
@@ -286,7 +289,7 @@ function DraggableSheet({
   return (
     <div
       className={`${open ? 'flex flex-col' : 'hidden'} ${sheetCls} ${desktopClassName}`}
-      style={isMobile && open ? { height: `${heightVh}vh`, maxHeight: '92vh' } : undefined}
+      style={isMobile && open ? { height: `${heightVh}vh`, maxHeight: '88vh' } : undefined}
     >
       {/* grab handle + title row — pinned to the top of the scroll area on mobile,
           stripped out on desktop (md:hidden). */}
