@@ -224,10 +224,10 @@ const tabBtn = (active: boolean) =>
 // z-50 keeps the sheet (and its tap targets) above the canvas' FreeTransformLayer
 // drag overlay (`absolute inset-0 z-40`), which on mobile spans the full-width
 // preview and would otherwise sit on top of the sheet's controls and swallow taps.
-// Sheet sits fully above the fixed bottom tab bar: its bottom edge clears the
-// bar's height plus the device safe-area inset (so it never tucks underneath).
+// The bottom tab bar is hidden while a sheet is open, so the sheet sits flush
+// to the bottom edge (with the device safe-area inset as bottom padding).
 const sheetCls =
-  'fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-50 max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
+  'fixed inset-x-0 bottom-0 z-50 max-h-[88vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-3 shadow-2xl'
 
 // Mobile = below the `md` (768px) breakpoint, where the side panels collapse into
 // draggable bottom sheets. Used to gate the drag-to-resize behaviour and the
@@ -245,8 +245,8 @@ function useIsMobile() {
 }
 
 // Snap heights (in vh) the sheet settles to after a drag — peek / default / tall.
-const SHEET_SNAPS = [30, 45, 82]
-const SHEET_DEFAULT_VH = 45
+const SHEET_SNAPS = [26, 38, 80]
+const SHEET_DEFAULT_VH = 38
 
 /** A bottom sheet that, on mobile, can be dragged by its grab handle to resize
  *  (so it stops covering the canvas) and snaps to {@link SHEET_SNAPS}. On desktop
@@ -893,7 +893,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             this wrapper from the flow so the center preview spans full width. */}
         <div className="contents md:flex md:w-96 md:shrink-0 md:gap-2">
           {/* icon rail (desktop) / bottom tab bar (mobile) */}
-          <div className="fixed inset-x-0 bottom-0 z-50 flex items-stretch gap-1 border-t border-white/10 bg-neutral-950/95 px-2 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] backdrop-blur md:static md:z-auto md:flex-col md:gap-1.5 md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-0 md:backdrop-blur-none">
+          <div className={`fixed inset-x-0 bottom-0 z-50 ${mobileSheet ? 'hidden md:flex' : 'flex'} items-stretch gap-1 border-t border-white/10 bg-neutral-950/95 px-2 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] backdrop-blur md:static md:z-auto md:flex-col md:gap-1.5 md:border-0 md:bg-transparent md:px-0 md:py-0 md:pb-0 md:backdrop-blur-none`}>
             {TABS.map(({ id, label, short, Icon }) => {
               const active = activeTab === id
               return (

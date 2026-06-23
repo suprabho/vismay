@@ -29,7 +29,7 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable} antialiased`}>
       <body>
         <div className="admin-root h-svh bg-neutral-950 text-neutral-100 flex flex-col overflow-hidden">
-          <header className="shrink-0 flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
+          <header data-app-chrome className="shrink-0 flex items-center justify-between gap-3 border-b border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 pt-[max(env(safe-area-inset-top),0.75rem)]">
             <div className="flex items-center gap-4 min-w-0">
               <Link href="/" className="font-medium tracking-tight">
                 admin
