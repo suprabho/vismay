@@ -1,0 +1,129 @@
+# =============================================================================
+# Throwaway demo for the Tier-1 "stage" (subjects & objects). NOT listed.
+# Exercises: a subject (rocket) with a lifetime + z-focus, an ambient object
+# (particles), per-beat transform tracks, sparse-keyframe interpolation, and
+# capture snap. See docs/deck-stage-subjects-objects.md.
+# =============================================================================
+
+defaults:
+  mapOpacity: 0
+  # Page-level flat backdrop (no aura asset dependency).
+  storyBackground:
+    type: color
+    color: "#0a0e1a"
+  panel:
+    background: "rgba(14,20,34,0.62)"
+    border: "1px solid rgba(120,140,180,0.20)"
+    borderRadius: "18px"
+    padding: "28px"
+    backdropBlur: "16px"
+  scroll:
+    mode: snap
+    paddingY: "12vh"
+  progress: true
+
+  # ── Tier-1 stage ──────────────────────────────────────────────────────────
+  stage:
+    entities:
+      # SUBJECT — interactive, takes z-focus, alive Ascent → Re-entry.
+      - id: starship
+        role: subject
+        interactive: true
+        zFocusCapable: true
+        content: { type: image, src: /demo-stage/starship.svg, size: 0.22, alt: "Demo rocket" }
+        enter: { section: ascent }
+        exit: { section: reentry }
+        enterTransform: { position: { x: 0.7, y: -0.8 }, opacity: 0, scale: 0.4, rotation: -10 }
+        exitTransform: { position: { x: 0.2, y: 1.1 }, opacity: 0, scale: 0.5, rotation: 16 }
+        keyframes:
+          - at: { section: ascent }
+            transform: { position: { x: 0.5, y: -0.4 }, scale: 0.6, opacity: 1, rotation: -8, zBand: mid }
+            easing: easeOut
+          - at: { section: maxq }
+            transform: { position: { x: 0.35, y: 0.05 }, scale: 0.95, opacity: 1, rotation: 0, zBand: mid }
+            easing: easeInOut
+          - at: { section: orbit }
+            transform: { position: { x: 0.15, y: 0.0 }, scale: 1.25, opacity: 1, rotation: 4, zBand: front, zIndex: 5 }
+            easing: easeInOut
+          - at: { section: reentry }
+            transform: { position: { x: 0.25, y: 0.3 }, scale: 0.8, opacity: 1, rotation: 12, zBand: mid }
+            easing: easeIn
+      # OBJECT — ambient decor, non-interactive, drifts the whole story.
+      - id: particles
+        role: object
+        content: { type: image, src: /demo-stage/particles.svg, size: 0.55, alt: "" }
+        portrait: { hidden: true }
+        keyframes:
+          - at: { section: liftoff }
+            transform: { position: { x: -0.5, y: 0.5 }, scale: 1.0, opacity: 0.5, zBand: behind }
+            easing: linear
+          - at: { section: touchdown }
+            transform: { position: { x: 0.5, y: -0.5 }, scale: 1.5, opacity: 0.35, zBand: behind }
+            easing: linear
+
+sections:
+  - id: liftoff
+    kind: bodyText
+    text: "Liftoff"
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+
+  - id: ascent
+    kind: bodyText
+    text: "Ascent"
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+
+  - id: maxq
+    kind: bodyText
+    text: "Max-Q"
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+
+  - id: orbit
+    kind: bodyText
+    text: "Orbit"
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+
+  - id: reentry
+    kind: bodyText
+    text: "Re-entry"
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
+
+  - id: touchdown
+    kind: bodyText
+    text: "Touchdown"
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }

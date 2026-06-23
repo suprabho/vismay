@@ -8,9 +8,10 @@ import {
   ForegroundVizSlot,
   ForegroundLayoutSlot,
   BackgroundVizSlot,
+  StageVizSlot,
   StoryShellProvider,
 } from '@vismay/viz-engine'
-import { resolveSlots, resolveSlotsFlat } from '@vismay/viz-engine'
+import { resolveSlots, resolveSlotsFlat, resolveStage } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
 import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette, VizLayer } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
@@ -167,6 +168,14 @@ export default function StoryShell({
       containerRef.current?.scrollTo({ top: 0 })
     }
   }, [isPortrait])
+
+  // Tier-1 stage: densify the story's `defaults.stage` into one settled frame
+  // per active unit. Resolved here (not per render surface) so it rides the
+  // existing `defaults` + active `units` with no extra props on the page route.
+  const resolvedStage = useMemo(
+    () => resolveStage(units, defaults.stage, { isPortrait }),
+    [units, defaults.stage, isPortrait]
+  )
 
   // The map-step layering (parent/sub/autoplay/mobile) now lives inside the
   // map module's PersistentComponent — it reads `units`, `mapOverrides`,
@@ -394,6 +403,12 @@ export default function StoryShell({
         activeUnit={activeUnit}
         mode={mode}
       />
+
+      {/* ─── Persistent stage tier (subjects & objects, Tier 1) ───────────
+          Flat-sprite entities that flow across beats. Renders a back layer
+          (behind content) and a front layer (z-focus, above the foreground).
+          No-op when `defaults.stage` is empty. */}
+      <StageVizSlot stage={resolvedStage} activeUnit={activeUnit} />
 
       {/* ─── Persistent foreground chart panel ──────────────────────────
           Keyed by chartId so the instance persists across subsections of

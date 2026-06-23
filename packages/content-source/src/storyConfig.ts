@@ -100,6 +100,69 @@ export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
     })
   }
 
+  // Validate the optional Tier-1 stage (`defaults.stage`). Shape checks only —
+  // beat selectors are resolved against units later in `resolveStage`, and a
+  // body's deep config validates downstream via its module's `parseConfig`.
+  const validateStage = (stage: unknown): void => {
+    if (stage === undefined) return
+    const where = `${slug}.config.yaml defaults.stage`
+    if (
+      typeof stage !== 'object' ||
+      stage === null ||
+      !Array.isArray((stage as { entities?: unknown }).entities)
+    ) {
+      throw new Error(`${where}: must be an object with an 'entities' array`)
+    }
+    const ids = new Set<string>()
+    ;(stage as { entities: unknown[] }).entities.forEach((e, i) => {
+      const label = `${where}.entities[${i}]`
+      if (!e || typeof e !== 'object') throw new Error(`${label}: must be an object`)
+      const ent = e as Record<string, unknown>
+      if (typeof ent.id !== 'string' || ent.id.trim() === '') {
+        throw new Error(`${label}: missing 'id'`)
+      }
+      if (ids.has(ent.id)) throw new Error(`${label}: duplicate id '${ent.id}'`)
+      ids.add(ent.id)
+      if (ent.role !== 'subject' && ent.role !== 'object') {
+        throw new Error(`${label} ('${ent.id}'): 'role' must be 'subject' or 'object'`)
+      }
+      if (
+        !ent.content ||
+        typeof ent.content !== 'object' ||
+        typeof (ent.content as { type?: unknown }).type !== 'string'
+      ) {
+        throw new Error(`${label} ('${ent.id}'): 'content' must be an object with a 'type' string`)
+      }
+      if (!Array.isArray(ent.keyframes) || ent.keyframes.length === 0) {
+        throw new Error(`${label} ('${ent.id}'): 'keyframes' must be a non-empty array`)
+      }
+      ;(ent.keyframes as unknown[]).forEach((kf, k) => {
+        const klabel = `${label} ('${ent.id}') keyframes[${k}]`
+        if (!kf || typeof kf !== 'object') throw new Error(`${klabel}: must be an object`)
+        const at = (kf as { at?: unknown }).at
+        const atOk =
+          typeof at === 'number' ||
+          (typeof at === 'object' && at !== null && 'section' in (at as object))
+        if (!atOk) throw new Error(`${klabel}: 'at' must be a unit index or { section, sub? }`)
+        const tf = (kf as { transform?: unknown }).transform
+        if (!tf || typeof tf !== 'object') throw new Error(`${klabel}: missing 'transform'`)
+        const op = (tf as { opacity?: unknown }).opacity
+        if (op !== undefined && (typeof op !== 'number' || op < 0 || op > 1)) {
+          throw new Error(`${klabel}: transform.opacity must be between 0 and 1`)
+        }
+        const zb = (tf as { zBand?: unknown }).zBand
+        if (zb !== undefined && zb !== 'behind' && zb !== 'mid' && zb !== 'front') {
+          throw new Error(`${klabel}: transform.zBand must be 'behind' | 'mid' | 'front'`)
+        }
+      })
+      if (ent.role === 'object' && (ent.interactive === true || ent.zFocusCapable === true)) {
+        console.warn(
+          `[stage] ${label} ('${ent.id}'): 'interactive'/'zFocusCapable' are ignored for objects`
+        )
+      }
+    })
+  }
+
   raw.sections.forEach((s, i) => {
     if (!s || typeof s !== 'object') {
       throw new Error(`Section ${i} in ${slug}.config.yaml is not an object`)
@@ -153,6 +216,8 @@ export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
       }
     }
   })
+
+  validateStage((raw.defaults as { stage?: unknown } | undefined)?.stage)
 
   return {
     defaults: { ...DEFAULTS, ...(raw.defaults ?? {}) },

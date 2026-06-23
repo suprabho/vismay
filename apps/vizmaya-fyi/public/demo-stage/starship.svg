@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400" role="img" aria-label="Demo rocket">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef2f9"/>
+      <stop offset="1" stop-color="#97a3ba"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd166"/>
+      <stop offset="1" stop-color="#ff7a30" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- fins -->
+  <path d="M52 232 L18 322 L52 286 Z" fill="#c3cddd"/>
+  <path d="M148 232 L182 322 L148 286 Z" fill="#c3cddd"/>
+  <!-- body -->
+  <path d="M100 8 C142 70 152 180 150 286 L50 286 C48 180 58 70 100 8 Z" fill="url(#body)" stroke="#5b6577" stroke-width="3"/>
+  <!-- window -->
+  <circle cx="100" cy="92" r="15" fill="#3a6f8a" stroke="#22424f" stroke-width="3"/>
+  <!-- nozzle -->
+  <rect x="78" y="286" width="44" height="14" rx="3" fill="#7c8699"/>
+  <!-- flame -->
+  <path d="M80 300 L100 392 L120 300 Z" fill="url(#flame)"/>
+  <path d="M90 300 L100 352 L110 300 Z" fill="#fff1c2"/>
+</svg>
