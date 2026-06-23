@@ -56,3 +56,14 @@ body {
   background: #fde047;
   color: #0a0a0a;
 }
+
+/* Immersive composer on mobile: a page that renders `[data-composer-immersive]`
+   (the footshorts share-card creator) hides the global admin header and the app
+   tab strip on small screens, so the canvas + bottom sheet own the viewport.
+   Desktop keeps the full chrome. */
+@media (max-width: 767px) {
+  body:has([data-composer-immersive]) [data-app-chrome],
+  body:has([data-composer-immersive]) [data-app-tabs] {
+    display: none;
+  }
+}

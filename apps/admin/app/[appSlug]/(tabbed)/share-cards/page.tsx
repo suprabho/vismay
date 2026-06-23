@@ -33,7 +33,7 @@ export default async function ShareCardsPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden text-neutral-100">
+    <div data-composer-immersive className="min-h-0 flex-1 overflow-hidden text-neutral-100">
       <ShareCardCreator initialCompetitions={competitions} />
     </div>
   )
