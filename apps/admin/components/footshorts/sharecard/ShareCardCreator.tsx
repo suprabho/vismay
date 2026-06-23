@@ -830,7 +830,11 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
       {/* Load the resolved theme's Google fonts for both preview + PNG capture. */}
       {fontImportUrl && <link rel="stylesheet" href={fontImportUrl} />}
-      <div className="flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      {/* Title + action bar. Hidden on mobile while a bottom sheet is open so the
+          canvas behind the sheet gets the freed-up vertical space; always shown on desktop. */}
+      <div
+        className={`${mobileSheet ? 'hidden md:flex' : 'flex'} shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between`}
+      >
         <div className="min-w-0">
           <h1 className="text-sm font-semibold text-neutral-100">Share card composer</h1>
           <p className="text-[11px] text-neutral-500">
