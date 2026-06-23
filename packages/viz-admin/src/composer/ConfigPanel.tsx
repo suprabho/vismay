@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { getVizModule, type VizLayer } from '@vismay/viz-engine'
 import VizConfigForm from '../VizConfigForm'
 import { ColorField, NumberSlider, TransformControls } from '../controls'
@@ -20,6 +20,7 @@ export function ConfigPanel<TCtx>({
   state,
   selection,
   ctx,
+  layout = 'stacked',
   onLayerConfigChange,
   onLayerTransformChange,
   onLayerBoxChange,
@@ -29,6 +30,10 @@ export function ConfigPanel<TCtx>({
   state: ComposerState
   selection: ComposerSelection
   ctx: TCtx
+  /** `stacked` shows every section in a column (desktop); `tabbed` groups them
+   *  into horizontal tabs so only one section is visible — keeps the mobile
+   *  bottom sheet short. */
+  layout?: 'stacked' | 'tabbed'
   onLayerConfigChange: (id: string, layer: VizLayer) => void
   onLayerTransformChange: (id: string, patch: Partial<TransformLike>) => void
   onLayerBoxChange: (id: string, patch: Partial<LayerBox>) => void
@@ -39,39 +44,57 @@ export function ConfigPanel<TCtx>({
     const mod = layer ? getVizModule(layer.layer.type) : undefined
     if (!layer || !mod) return <Empty />
     const transform = layer.transform ?? DEFAULT_TRANSFORM
+    const sections: PanelSection[] = []
+    if (host.arrangement === 'free') {
+      sections.push({
+        id: 'transform',
+        title: 'Transform',
+        content: (
+          <TransformControls
+            transform={transform}
+            onChange={(p) => onLayerTransformChange(layer.id, p)}
+            showHeight={transform.heightPct != null}
+            maxWidthPct={mod.maxWidthPct}
+          />
+        ),
+      })
+      sections.push({
+        id: 'background',
+        title: 'Background',
+        content: <LayerBoxControls box={layer.box} onChange={(p) => onLayerBoxChange(layer.id, p)} />,
+      })
+    }
+    sections.push({
+      id: 'content',
+      title: 'Content',
+      content: (
+        <VizConfigForm
+          module={mod}
+          value={layer.layer as unknown as Record<string, FormValue>}
+          onChange={(next) =>
+            onLayerConfigChange(layer.id, {
+              ...(next as Record<string, unknown>),
+              type: layer.layer.type,
+            } as VizLayer)
+          }
+          ctx={ctx}
+        />
+      ),
+    })
     return (
       <div className="flex flex-col">
         <div className="border-b border-white/10 px-1 pb-2 text-[11px] font-semibold text-neutral-200">
           {mod.label}
         </div>
-        {host.arrangement === 'free' && (
-          <Section title="Transform">
-            <TransformControls
-              transform={transform}
-              onChange={(p) => onLayerTransformChange(layer.id, p)}
-              showHeight={transform.heightPct != null}
-              maxWidthPct={mod.maxWidthPct}
-            />
-          </Section>
+        {layout === 'tabbed' && sections.length > 1 ? (
+          <TabbedSections sections={sections} />
+        ) : (
+          sections.map((s, i) => (
+            <Section key={s.id} title={s.title} last={i === sections.length - 1}>
+              {s.content}
+            </Section>
+          ))
         )}
-        {host.arrangement === 'free' && (
-          <Section title="Background">
-            <LayerBoxControls box={layer.box} onChange={(p) => onLayerBoxChange(layer.id, p)} />
-          </Section>
-        )}
-        <Section title="Content" last>
-          <VizConfigForm
-            module={mod}
-            value={layer.layer as unknown as Record<string, FormValue>}
-            onChange={(next) =>
-              onLayerConfigChange(layer.id, {
-                ...(next as Record<string, unknown>),
-                type: layer.layer.type,
-              } as VizLayer)
-            }
-            ctx={ctx}
-          />
-        </Section>
       </div>
     )
   }
@@ -146,6 +169,43 @@ function LayerBoxControls({
           </label>
         </>
       )}
+    </div>
+  )
+}
+
+interface PanelSection {
+  id: string
+  title: string
+  content: ReactNode
+}
+
+/** Horizontal tab bar over the panel sections — only the active section renders,
+ *  so the (mobile) sheet stays short instead of stacking every group. */
+function TabbedSections({ sections }: { sections: PanelSection[] }) {
+  const [activeId, setActiveId] = useState(sections[0]?.id)
+  const active = sections.find((s) => s.id === activeId) ?? sections[0]
+  return (
+    <div className="flex flex-col">
+      <div className="flex gap-1 border-b border-white/10 px-0.5 pt-2">
+        {sections.map((s) => {
+          const isActive = s.id === active?.id
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActiveId(s.id)}
+              className={`-mb-px border-b-2 px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                isActive
+                  ? 'border-sky-400 text-neutral-100'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              {s.title}
+            </button>
+          )
+        })}
+      </div>
+      <div className="px-1 py-2.5">{active?.content}</div>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
 import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Sparkle, Stack, Trash, X, type Icon as PhosphorIcon } from '@phosphor-icons/react'
@@ -227,6 +227,96 @@ const tabBtn = (active: boolean) =>
 const sheetCls =
   'fixed inset-x-0 bottom-16 z-50 max-h-[62vh] overflow-y-auto rounded-t-2xl border-t border-white/10 bg-neutral-950 px-4 pb-5 pt-3 shadow-2xl'
 
+// Mobile = below the `md` (768px) breakpoint, where the side panels collapse into
+// draggable bottom sheets. Used to gate the drag-to-resize behaviour and the
+// tabbed config layout (both are no-ops on the inline desktop columns).
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return isMobile
+}
+
+// Snap heights (in vh) the sheet settles to after a drag — peek / default / tall.
+const SHEET_SNAPS = [38, 62, 88]
+
+/** A bottom sheet that, on mobile, can be dragged by its grab handle to resize
+ *  (so it stops covering the canvas) and snaps to {@link SHEET_SNAPS}. On desktop
+ *  the `desktopClassName` md: resets turn it back into a plain inline column and
+ *  the handle/drag are hidden, leaving height auto. */
+function DraggableSheet({
+  open,
+  title,
+  onClose,
+  isMobile,
+  desktopClassName,
+  children,
+}: {
+  open: boolean
+  title: string
+  onClose: () => void
+  isMobile: boolean
+  desktopClassName: string
+  children: ReactNode
+}) {
+  const [heightVh, setHeightVh] = useState(62)
+  const drag = useRef<{ y: number; h: number } | null>(null)
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    drag.current = { y: e.clientY, h: heightVh }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (!drag.current) return
+    const dy = ((drag.current.y - e.clientY) / window.innerHeight) * 100
+    setHeightVh(Math.min(92, Math.max(20, drag.current.h + dy)))
+  }
+  const onPointerUp = (e: ReactPointerEvent) => {
+    if (!drag.current) return
+    drag.current = null
+    e.currentTarget.releasePointerCapture?.(e.pointerId)
+    setHeightVh((h) => SHEET_SNAPS.reduce((a, b) => (Math.abs(b - h) < Math.abs(a - h) ? b : a)))
+  }
+
+  return (
+    <div
+      className={`${open ? 'flex flex-col' : 'hidden'} ${sheetCls} ${desktopClassName}`}
+      style={isMobile && open ? { height: `${heightVh}vh`, maxHeight: '92vh' } : undefined}
+    >
+      {/* grab handle + title row — pinned to the top of the scroll area on mobile,
+          stripped out on desktop (md:hidden). */}
+      <div className="sticky top-0 z-10 -mx-4 -mt-3 mb-2 shrink-0 bg-neutral-950 px-4 pt-2 md:hidden">
+        <div
+          className="flex touch-none cursor-grab justify-center py-1 active:cursor-grabbing"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          <div className="h-1 w-10 rounded-full bg-white/25" />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-neutral-200">{title}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
+            aria-label="Close panel"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 export function ShareCardCreator({ initialCompetitions }: { initialCompetitions: CompetitionOption[] }) {
   const competitions = initialCompetitions
 
@@ -240,6 +330,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   // layer-edit panel ('config'). On desktop both render inline (md: classes
   // override the hidden state) so this only drives the mobile overlays.
   const [mobileSheet, setMobileSheet] = useState<'panel' | 'config' | null>(null)
+  const isMobile = useIsMobile()
 
   // card-level frame controls
   const [themeName, setThemeName] = useState<ThemeName>('terrace')
@@ -817,23 +908,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
               )
             })}
           </div>
-          {/* active panel (detail rail) — bottom sheet on mobile, inline column on desktop */}
-          <div
-            className={`${mobileSheet === 'panel' ? 'flex flex-col' : 'hidden'} ${sheetCls} md:static md:bottom-auto md:z-auto md:block md:max-h-none md:min-w-0 md:flex-1 md:space-y-4 md:overflow-y-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pr-1 md:pt-0 md:shadow-none`}
+          {/* active panel (detail rail) — draggable bottom sheet on mobile, inline column on desktop */}
+          <DraggableSheet
+            open={mobileSheet === 'panel'}
+            title={TABS.find((t) => t.id === activeTab)?.label ?? ''}
+            onClose={() => setMobileSheet(null)}
+            isMobile={isMobile}
+            desktopClassName="md:static md:bottom-auto md:z-auto md:block md:max-h-none md:min-w-0 md:flex-1 md:space-y-4 md:overflow-y-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pr-1 md:pt-0 md:shadow-none"
           >
-            <div className="mb-3 flex items-center justify-between md:hidden">
-              <span className="text-xs font-semibold text-neutral-200">
-                {TABS.find((t) => t.id === activeTab)?.label}
-              </span>
-              <button
-                type="button"
-                onClick={() => setMobileSheet(null)}
-                className="rounded-md p-1 text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
-                aria-label="Close panel"
-              >
-                <X size={16} />
-              </button>
-            </div>
             {activeTab === 'layers' && (
               <LayerListPanel
                 state={composer}
@@ -1074,7 +1156,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                 </div>
               </div>
             )}
-          </div>
+          </DraggableSheet>
         </div>
         {/* center: live preview (drag / resize / rotate / group) */}
         <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-white/5 bg-neutral-950/40 p-2 md:p-4">
@@ -1090,32 +1172,26 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             onChange={onChange}
           />
         </div>
-        {/* right: selected-layer properties — bottom sheet on mobile, inline column on desktop */}
-        <div
-          className={`${mobileSheet === 'config' ? 'flex flex-col' : 'hidden'} ${sheetCls} md:static md:bottom-auto md:z-auto md:block md:max-h-none md:w-80 md:shrink-0 md:space-y-3 md:overflow-y-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pl-1 md:pt-0 md:shadow-none`}
+        {/* right: selected-layer properties — draggable bottom sheet on mobile, inline column on desktop */}
+        <DraggableSheet
+          open={mobileSheet === 'config'}
+          title="Layer"
+          onClose={() => setMobileSheet(null)}
+          isMobile={isMobile}
+          desktopClassName="md:static md:bottom-auto md:z-auto md:block md:max-h-none md:w-80 md:shrink-0 md:space-y-3 md:overflow-y-auto md:rounded-none md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pl-1 md:pt-0 md:shadow-none"
         >
-          <div className="mb-3 flex items-center justify-between md:hidden">
-            <span className="text-xs font-semibold text-neutral-200">Layer</span>
-            <button
-              type="button"
-              onClick={() => setMobileSheet(null)}
-              className="rounded-md p-1 text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
-              aria-label="Close panel"
-            >
-              <X size={16} />
-            </button>
-          </div>
           <ConfigPanel
             host={footshortsHost}
             state={composer}
             selection={selection}
             ctx={ctx}
+            layout={isMobile ? 'tabbed' : 'stacked'}
             onLayerConfigChange={handleLayerConfig}
             onLayerTransformChange={handleLayerTransform}
             onLayerBoxChange={handleLayerBox}
             onBackgroundChange={() => undefined}
           />
-        </div>
+        </DraggableSheet>
       </div>
 
       {/* mobile sheet backdrop — tap to dismiss either bottom sheet. z-[45] sits
