@@ -39,6 +39,20 @@ export interface SavedShareCard {
   updatedAt: string
 }
 
+/**
+ * A saved card without its `config` snapshot. The snapshot can be multiple MB
+ * (AI/image backgrounds embed base64 data URLs), so the gallery — which only
+ * needs a name + thumbnail — lists summaries and lazy-loads the full `config`
+ * via {@link getShareCard} when a card is opened.
+ */
+export type ShareCardSummary = Omit<SavedShareCard, 'config' | 'entities'>
+
+export interface ShareCardPage {
+  cards: ShareCardSummary[]
+  /** True if rows beyond this page exist (caller should offer to load more). */
+  hasMore: boolean
+}
+
 export interface NewShareCard {
   name: string
   cardType: string
@@ -130,6 +144,62 @@ export async function listShareCards(limit = 100): Promise<SavedShareCard[]> {
     .limit(limit)
   if (error) throw new Error(`listShareCards: ${error.message}`)
   return (data as Row[]).map(rowToCard)
+}
+
+// Columns for the lightweight gallery list — everything except the heavy `config`
+// snapshot and the entity join (both only needed once a card is actually opened).
+const SUMMARY_COLS = 'id, name, card_type, status, image_url, ratio, published_at, created_at, updated_at'
+
+type SummaryRow = Omit<Row, 'config' | 'footshorts_share_card_entities'>
+
+function summaryRowToCard(r: SummaryRow): ShareCardSummary {
+  return {
+    id: r.id,
+    name: r.name,
+    cardType: r.card_type,
+    status: r.status,
+    imageUrl: r.image_url,
+    ratio: r.ratio,
+    publishedAt: r.published_at,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }
+}
+
+const DEFAULT_PAGE_SIZE = 24
+const MAX_PAGE_SIZE = 100
+
+/**
+ * Paginated, `config`-free list of saved cards, newest first. Fetches one row
+ * past `limit` to report {@link ShareCardPage.hasMore} without a count query.
+ */
+export async function listShareCardSummaries(
+  opts: { limit?: number; offset?: number } = {},
+): Promise<ShareCardPage> {
+  const limit = Math.min(Math.max(Math.trunc(opts.limit ?? DEFAULT_PAGE_SIZE), 1), MAX_PAGE_SIZE)
+  const offset = Math.max(Math.trunc(opts.offset ?? 0), 0)
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('footshorts_share_cards')
+    .select(SUMMARY_COLS)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit) // inclusive both ends → limit + 1 rows
+  if (error) throw new Error(`listShareCardSummaries: ${error.message}`)
+  const rows = (data as SummaryRow[]) ?? []
+  const hasMore = rows.length > limit
+  return { cards: (hasMore ? rows.slice(0, limit) : rows).map(summaryRowToCard), hasMore }
+}
+
+/** Fetch a single card with its full `config` snapshot + entity tags. */
+export async function getShareCard(id: string): Promise<SavedShareCard | null> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('footshorts_share_cards')
+    .select(SELECT_WITH_ENTITIES)
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(`getShareCard: ${error.message}`)
+  return data ? rowToCard(data as Row) : null
 }
 
 export async function createShareCard(input: NewShareCard): Promise<SavedShareCard> {

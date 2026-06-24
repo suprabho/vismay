@@ -71,6 +71,16 @@ interface SavedCard {
   entities?: Array<{ id: string; type: string; slug: string; name: string; crestUrl: string | null }>
 }
 
+/** Gallery list item — the `config` snapshot (which can be multiple MB) is
+ *  omitted and lazy-loaded per card on open via {@link loadCard}. */
+interface SavedCardSummary {
+  id: string
+  name: string
+}
+
+// How many saved cards to fetch per page in the "Saved cards" gallery.
+const SAVED_CARDS_PAGE = 24
+
 /** The legacy single-`cardType` snapshot — only the fields the v1→v2 migration reads. */
 interface ShareCardSnapshotV1 {
   version?: 1
@@ -352,8 +362,16 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [backgroundScrim, setBackgroundScrim] = useState(0.5)
   const [auraSlug, setAuraSlug] = useState('')
 
-  // card library + publish
-  const [savedCards, setSavedCards] = useState<SavedCard[]>([])
+  // card library + publish. The gallery lists lightweight summaries (no config)
+  // and pages in more on scroll; a card's full config is fetched on open.
+  const [savedCards, setSavedCards] = useState<SavedCardSummary[]>([])
+  const [hasMoreCards, setHasMoreCards] = useState(false)
+  const [loadingCards, setLoadingCards] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [openingCardId, setOpeningCardId] = useState<string | null>(null)
+  const [cardsError, setCardsError] = useState<string | null>(null)
+  const loadingMoreRef = useRef(false)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
   const [currentCardId, setCurrentCardId] = useState<string | null>(null)
   const [currentCardName, setCurrentCardName] = useState('')
   const [showSavedModal, setShowSavedModal] = useState(false)
@@ -600,21 +618,76 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     ) : null
 
   // ── snapshot save / load ────────────────────────────────────────────────────
+  // Fetch one page of card summaries (no config) at the given offset.
+  const fetchCardsPage = useCallback(async (offset: number) => {
+    const res = await fetch(`/api/footshorts/share/cards?limit=${SAVED_CARDS_PAGE}&offset=${offset}`)
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean
+      cards?: SavedCardSummary[]
+      hasMore?: boolean
+      error?: string
+    }
+    if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+    return { cards: body.cards ?? [], hasMore: !!body.hasMore }
+  }, [])
+
+  // Initial page on mount (loadingCards starts true, so no synchronous setState).
   useEffect(() => {
     let alive = true
     void (async () => {
       try {
-        const res = await fetch('/api/footshorts/share/cards')
-        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; cards?: SavedCard[] }
-        if (alive && body.ok) setSavedCards(body.cards ?? [])
-      } catch {
-        /* non-fatal */
+        const page = await fetchCardsPage(0)
+        if (!alive) return
+        setSavedCards(page.cards)
+        setHasMoreCards(page.hasMore)
+        setCardsError(null)
+      } catch (e) {
+        if (alive) setCardsError(e instanceof Error ? e.message : 'Could not load saved cards')
+      } finally {
+        if (alive) setLoadingCards(false)
       }
     })()
     return () => {
       alive = false
     }
-  }, [])
+  }, [fetchCardsPage])
+
+  // Append the next page; deduped by id so a card inserted at the head (after a
+  // save) can't shift offsets into a duplicate. Guarded against re-entry.
+  const loadMoreCards = useCallback(async () => {
+    if (loadingMoreRef.current) return
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    try {
+      const page = await fetchCardsPage(savedCards.length)
+      setSavedCards((prev) => {
+        const seen = new Set(prev.map((c) => c.id))
+        return [...prev, ...page.cards.filter((c) => !seen.has(c.id))]
+      })
+      setHasMoreCards(page.hasMore)
+      setCardsError(null)
+    } catch (e) {
+      setCardsError(e instanceof Error ? e.message : 'Could not load more cards')
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
+  }, [fetchCardsPage, savedCards.length])
+
+  // Lazy-load the next page when the sentinel scrolls into view in the modal.
+  useEffect(() => {
+    if (!showSavedModal || !hasMoreCards) return
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMoreCards()
+      },
+      { rootMargin: '160px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [showSavedModal, hasMoreCards, loadMoreCards])
 
   const buildSnapshot = useCallback(
     (): ShareCardSnapshotV2 => ({
@@ -688,7 +761,8 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         })
         const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
         if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
-        setSavedCards((prev) => prev.map((c) => (c.id === body.card!.id ? body.card! : c)))
+        const summary = { id: body.card.id, name: body.card.name }
+        setSavedCards((prev) => prev.map((c) => (c.id === summary.id ? summary : c)))
         setCurrentCardName(body.card.name)
         return true
       } catch (e) {
@@ -712,7 +786,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
       if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
-      setSavedCards((prev) => [body.card!, ...prev])
+      setSavedCards((prev) => [{ id: body.card!.id, name: body.card!.name }, ...prev])
       setCurrentCardId(body.card.id)
       setCurrentCardName(body.card.name)
       return true
@@ -765,16 +839,30 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setShipError(null)
   }, [hasLayers])
 
+  // Open a saved card: fetch its full config (the list omits it) and apply it.
   const loadCard = useCallback(
-    (card: SavedCard) => {
-      const restored: EntityResult[] = (card.entities ?? [])
-        .filter((e) => e.type === 'team' || e.type === 'league')
-        .map((e) => ({ id: e.id, type: e.type as 'team' | 'league', slug: e.slug, name: e.name, crest_url: e.crestUrl }))
-      setTags(restored)
-      pendingTagsRef.current = restored
-      applySnapshot(card.config)
-      setCurrentCardId(card.id)
-      setCurrentCardName(card.name)
+    async (id: string) => {
+      setOpeningCardId(id)
+      setCardsError(null)
+      try {
+        const res = await fetch(`/api/footshorts/share/cards/${id}`)
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
+        if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
+        const card = body.card
+        const restored: EntityResult[] = (card.entities ?? [])
+          .filter((e) => e.type === 'team' || e.type === 'league')
+          .map((e) => ({ id: e.id, type: e.type as 'team' | 'league', slug: e.slug, name: e.name, crest_url: e.crestUrl }))
+        setTags(restored)
+        pendingTagsRef.current = restored
+        applySnapshot(card.config)
+        setCurrentCardId(card.id)
+        setCurrentCardName(card.name)
+        setShowSavedModal(false)
+      } catch (e) {
+        setCardsError(e instanceof Error ? e.message : 'Could not open card')
+      } finally {
+        setOpeningCardId(null)
+      }
     },
     [applySnapshot],
   )
@@ -869,7 +957,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             onClick={() => setShowSavedModal(true)}
           >
             <FolderOpen size={14} />
-            Saved cards{savedCards.length ? ` (${savedCards.length})` : ''}
+            Saved cards{savedCards.length ? ` (${savedCards.length}${hasMoreCards ? '+' : ''})` : ''}
           </button>
           <div className="mx-1 h-5 w-px shrink-0 bg-white/10" />
           <button className={actionBtn} disabled={!hasLayers || downloading} onClick={handleDownload}>
@@ -1234,37 +1322,63 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              {savedCards.length === 0 ? (
+              {cardsError && (
+                <p className="mb-2 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
+                  {cardsError}
+                </p>
+              )}
+              {loadingCards && savedCards.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-white/10 px-3 py-8 text-center text-xs text-neutral-600">
+                  Loading…
+                </p>
+              ) : savedCards.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-white/10 px-3 py-8 text-center text-xs text-neutral-600">
                   No saved cards yet — build one and hit Save.
                 </p>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {savedCards.map((c) => (
-                    <div
-                      key={c.id}
-                      className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs ${currentCardId === c.id ? 'bg-white/10 text-neutral-100' : 'text-neutral-300 hover:bg-white/5'
-                        }`}
-                    >
-                      <button
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                        onClick={() => {
-                          loadCard(c)
-                          setShowSavedModal(false)
-                        }}
+                  {savedCards.map((c) => {
+                    const opening = openingCardId === c.id
+                    return (
+                      <div
+                        key={c.id}
+                        className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs ${currentCardId === c.id ? 'bg-white/10 text-neutral-100' : 'text-neutral-300 hover:bg-white/5'
+                          }`}
                       >
-                        <span className="truncate">{c.name}</span>
-                        {currentCardId === c.id && <span className="shrink-0 text-[10px] text-sky-400">current</span>}
-                      </button>
+                        <button
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:opacity-60"
+                          disabled={openingCardId !== null}
+                          onClick={() => void loadCard(c.id)}
+                        >
+                          <span className="truncate">{c.name}</span>
+                          {opening && <span className="shrink-0 text-[10px] text-neutral-500">opening…</span>}
+                          {!opening && currentCardId === c.id && (
+                            <span className="shrink-0 text-[10px] text-sky-400">current</span>
+                          )}
+                        </button>
+                        <button
+                          className="shrink-0 rounded p-1 text-neutral-500 hover:bg-white/10 hover:text-red-400"
+                          title="Delete card"
+                          onClick={() => void handleDeleteSaved(c.id)}
+                        >
+                          <Trash size={14} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                  {/* Lazy-load sentinel — paging in more cards as it scrolls into
+                      view; the button is a manual fallback (and progress hint). */}
+                  {hasMoreCards && (
+                    <div ref={sentinelRef} className="pt-1">
                       <button
-                        className="shrink-0 rounded p-1 text-neutral-500 hover:bg-white/10 hover:text-red-400"
-                        title="Delete card"
-                        onClick={() => void handleDeleteSaved(c.id)}
+                        className="w-full rounded-md border border-white/10 px-2 py-1.5 text-[11px] text-neutral-400 hover:bg-white/5 disabled:opacity-50"
+                        disabled={loadingMore}
+                        onClick={() => void loadMoreCards()}
                       >
-                        <Trash size={14} />
+                        {loadingMore ? 'Loading…' : 'Load more'}
                       </button>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
