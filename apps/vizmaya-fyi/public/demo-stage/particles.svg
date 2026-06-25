@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320" role="img" aria-label="">
+  <g fill="#cdd6e6">
+    <circle cx="38" cy="64" r="4.5" opacity="0.55"/>
+    <circle cx="120" cy="28" r="2.5" opacity="0.40"/>
+    <circle cx="210" cy="70" r="3.5" opacity="0.50"/>
+    <circle cx="284" cy="40" r="2" opacity="0.35"/>
+    <circle cx="66" cy="150" r="3" opacity="0.45"/>
+    <circle cx="160" cy="130" r="5" opacity="0.55"/>
+    <circle cx="250" cy="168" r="2.5" opacity="0.40"/>
+    <circle cx="30" cy="240" r="3.5" opacity="0.50"/>
+    <circle cx="112" cy="226" r="2" opacity="0.35"/>
+    <circle cx="196" cy="262" r="4" opacity="0.50"/>
+    <circle cx="288" cy="244" r="3" opacity="0.45"/>
+    <circle cx="150" cy="300" r="2.5" opacity="0.40"/>
+  </g>
+</svg>

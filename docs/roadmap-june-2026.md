@@ -50,6 +50,24 @@ Splits into two responses:
 
 ---
 
+## Update — Jun 23, 2026
+
+W4 opened by landing the month's payoff **and** pulling the post-June north star forward. The in-month focus (① ② ④ ⑤) is delivered — mostly early — and the ⑤→④ convergence is real: the composer emits Deck/mapStory stories end-to-end. What's new since Jun 13:
+
+- **⑧ render-engine extraction — DONE, ahead of its own trigger.** Jun 13 parked ⑧ to "July+, once the dual identity actually constrains." It shipped anyway. The vertical-agnostic render surfaces (share / report / slides / autoplay / canvas-frame) are extracted into **`@vismay/render-surface`** + a standalone **`apps/render`** service, and every signing site resolves **per-surface via `RENDER_SURFACE_URL_<SURFACE>`** (strangler flip, registry-resolved in `@vismay/verticals`). `vizmaya.fyi` is no longer doing double duty — it's now just *one* consumer of the engine. **Live in prod** at `https://render.vismay.xyz` (signed-URL gated); all 5 surfaces + the PDF download path flipped and verified end-to-end. Combined with the **A vertical-registry paydown** (also done), this closes the drift bug *class* the Jun 13 standings-grid bug exposed — a month+ ahead of schedule.
+  - PRs #268→#271 (per-app resolution → extract `@vismay/render-surface` → scaffold `apps/render` → per-surface repoint), consolidated to `main` via #317, plus #319 (`apps/render/.env.example`) and #320 (PDF report/slides cutover — a `content-source` handler change, **not** the workflow-default flip the plan assumed). Ops facts: [render-templates.md](render-templates.md).
+  - **Out of scope (correctly):** `render-video.yml` stays on vizmaya.fyi — video capture drives the public `/story` reader, which was never extracted. The 5 thin-mount surface routes in vizmaya-fyi remain as a zero-cost revert fallback.
+  - **Gotcha logged:** merging the stack near-simultaneously merged each PR into its *parent branch*, not `main` (GitHub auto-retarget never fired) — only the foot reached `main` until the #317 consolidation caught it.
+- **③ Rete finishing — done** (#193: user-facing delete for layers / regions / override seeds — the original ~60% delete/disconnect gap closed).
+- **④b subjects/objects Tier 1 — pulled back in and SHIPPED** (the one item Jun 11 slipped to July). The Deck "stage" — a 3rd persistent tier of authorable subjects (interactive, z-focus) + objects (ambient decor) that flow across beats with enter/exit lifetimes + per-beat transform tracks — landed **flat 2D**, with the data model authored **3D-ready** (reserved `position3d`/`quaternion`/`camera`) so Tier 2's real-3D bodies need no re-authoring. `@vismay/viz-engine` `resolveStage` + `StageVizSlot`, mounted via `defaults.stage` (no render-surface changes); validated on a `_demo-stage` deck incl. z-focus + capture snap. PR #321.
+- **Parked items over-ran scope (in a good way):** ⑥ Footshorts saw heavy build-out (share-card composer suite, mobile, Brandfetch logos, recaps, football-data) despite its July park; ⑦ Ovo/Kidzovo got opportunistic pickup (`kidzovo-stories-live`, per-`.riv` input schemas).
+
+**Honest state:** with ④b Tier 1 now pulled back in, the in-month plan is effectively **complete and over-delivered**. The only deferral left is the ④b **3D tiers** — Tier 2 (fixed-z 3D, the real starship body) and Tier 3 (z-traversal-lite) — which were always July+ and stay there (the Tier-1 schema is authored 3D-ready so they don't reopen the data model). ⑤ converging early and ⑧ landing freed the capacity that made the ④b pull-in possible.
+
+**Remaining W4:** (1) optional **decommission** — drop the vizmaya-fyi thin-mount surface routes once `apps/render` burns in; (2) convergence QA/buffer; (3) doc hygiene — `docs/auth.md` refresh (flagged Jun 11) + this entry.
+
+---
+
 ## Three findings that reframe the plan
 
 - **① "Auth to viz-admin" actually targets `apps/admin`.** `packages/viz-admin` is a *component library* with no auth boundary — the real auth lives in `apps/admin/lib/adminAuth.ts` (HMAC cookie). `@supabase/supabase-js` is already wired in `packages/content-source` and vizmaya-fyi, so the gap is a users table (migration 055) + a session-store swap, not a from-scratch integration.

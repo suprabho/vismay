@@ -260,6 +260,14 @@ export interface StoryDefaults {
    * `logoPalette` over this. Values are theme tokens (`"$accent"`) or hex.
    */
   logoPalette?: LogoPalette
+  /**
+   * Tier-1 "stage" — persistent flat-sprite entities (subjects + objects) that
+   * flow across beats with per-beat transform tracks. Mounts once at the page
+   * level (like `storyBackground`), between background and foreground. The flat
+   * renderer ignores the transform's reserved 3D fields.
+   * See docs/deck-stage-subjects-objects.md.
+   */
+  stage?: StageConfig
 }
 
 export interface MapPinConfig {
@@ -487,6 +495,115 @@ export interface StorySectionConfig {
 export interface StoryConfig {
   defaults: StoryDefaults
   sections: StorySectionConfig[]
+}
+
+/* ─── Stage tier (subjects & objects, Tier 1) ───────────────────────
+ *
+ * A 3rd persistent render tier on top of background + foreground. Authorable
+ * entities flow across beats (units) with enter/exit lifetimes + per-beat
+ * transform tracks, interpolated on beat change. Tier 1 renders flat 2D image
+ * sprites; the transform is authored 3D-ready (`position3d` / `quaternion` /
+ * `camera` are reserved for Tier 2 and ignored by the flat renderer). The map
+ * module's persistent-aggregated camera is the prototype this generalizes.
+ * See docs/deck-stage-subjects-objects.md.
+ */
+
+/**
+ * Per-keyframe transform in normalized, centered stage space: (0,0) = stage
+ * centre, 1.0 = half the viewport min-dimension (vmin). Reflow-safe across
+ * landscape/portrait and the natural frame for a future 3D camera.
+ */
+export interface StageTransform {
+  /** Position; {x:0,y:0} = centre. Default {x:0,y:0}. */
+  position?: { x: number; y: number }
+  /** Uniform scale multiplier. Default 1. */
+  scale?: number
+  /** 0..1. Default 1. */
+  opacity?: number
+  /** In-plane (screen-Z) rotation, degrees — the only rotation the flat renderer applies. Default 0. */
+  rotation?: number
+  /**
+   * Coarse depth band for "step in front of content" (z-focus):
+   *   'behind' → behind the foreground (ambient objects)
+   *   'mid'    → between background and foreground (default)
+   *   'front'  → in front of foreground content/text (subject z-focus)
+   */
+  zBand?: 'behind' | 'mid' | 'front'
+  /** Fine z-ordering within a band. Default 0. */
+  zIndex?: number
+
+  /* ── Reserved for Tier 2/3 — authored now, ignored by the flat renderer ── */
+  /** Full 3D position in stage space. When set, x/y should equal `position`. */
+  position3d?: { x: number; y: number; z: number }
+  /** Orientation quaternion [x,y,z,w]. */
+  quaternion?: [number, number, number, number]
+  /** Euler sugar (deg) for hand-authoring before a visual editor exists. */
+  rotation3d?: { x: number; y: number; z: number }
+  /** Per-keyframe camera target for the fixed-z 3D stage (Tier 2). */
+  camera?: {
+    position?: { x: number; y: number; z: number }
+    target?: { x: number; y: number; z: number }
+    fov?: number
+  }
+}
+
+/**
+ * Which beat a keyframe / lifetime edge targets. A bare number is sugar for the
+ * flat desktop-unit index (escape hatch). The object form resolves to a unit
+ * index against the story's units so it survives content edits:
+ *   { section: 'ascent', sub: 1 }  — by section id + subsection index
+ *   { section: 3 }                 — by section index, sub defaults to 0
+ */
+export type BeatSelector = { section: string | number; sub?: number }
+
+export type StageEasing =
+  | 'linear'
+  | 'ease'
+  | 'easeIn'
+  | 'easeOut'
+  | 'easeInOut'
+  | { cubicBezier: [number, number, number, number] }
+
+export interface StageKeyframe {
+  /** Beat this keyframe targets. */
+  at: BeatSelector | number
+  /** Target transform at this beat. */
+  transform: StageTransform
+  /** Easing for the segment LEAVING this keyframe toward the next. Default 'easeInOut'. */
+  easing?: StageEasing
+}
+
+export interface StageEntity {
+  /** Stable id (capture diagnostics / a future editor). Unique within the stage. */
+  id: string
+  /** 'subject' = center-stage, interactive, z-focus capable. 'object' = ambient decor. */
+  role: 'subject' | 'object'
+  /**
+   * What renders. Any registered viz type (a `VizRef`); Tier 1 renders only
+   * `{ type: 'image', src }` (`assets://`, http(s), or same-origin `/path`).
+   * The VizRef shape lets a Tier-2 `{ type: 'starship:viewer', … }` body slot
+   * in without re-authoring the motion track.
+   */
+  content: VizRef
+  /** Enter beat. Omit = from the first beat. Outside [enter, exit] the entity is absent. */
+  enter?: BeatSelector | number
+  /** Exit beat (inclusive — last visible beat). Omit = through the last beat. */
+  exit?: BeatSelector | number
+  /** Optional pre-roll / post-roll poses at the lifetime edges (e.g. opacity 0 + offscreen) so the entity fades/flies in and out. */
+  enterTransform?: StageTransform
+  exitTransform?: StageTransform
+  /** Sparse, beat-keyed transform track. At least one keyframe. */
+  keyframes: StageKeyframe[]
+  /** Subject-only: reader can interact (hit-test/hover now; grab/scrub in Tier 2). Forced false for objects. Default true for subjects. */
+  interactive?: boolean
+  /** Subject-only: may take z-focus (zBand 'front'). Forced false for objects. */
+  zFocusCapable?: boolean
+  /** Portrait degrade. Default: objects hide on portrait, subjects keep. */
+  portrait?: { hidden?: boolean }
+}
+
+export interface StageConfig {
+  entities: StageEntity[]
 }
 
 /* ─── Share mode config ─────────────────────────────────────────── */
@@ -790,4 +907,35 @@ export interface ResolvedUnit {
    * overrides survive content tweaks within the same section.
    */
   sliceIndex?: number
+}
+
+/* ─── Resolved stage (output of resolveStage) ───────────────────────
+ *
+ * One settled frame per unit, index-aligned with the active units array (like
+ * map steps align with units). The renderer reads `frames[activeUnit]` and
+ * tweens (live) or snaps (capture/reduced-motion) to it. Pure primitives —
+ * safe to serialize from a server component into a client one.
+ */
+export interface ResolvedStageFrame {
+  /** False outside the entity's lifetime — the renderer paints nothing. */
+  present: boolean
+  /** Fully-resolved transform (Tier-1 defaults applied). */
+  transform: StageTransform
+  /** Easing to use when animating INTO this frame from the previous one. */
+  easing: StageEasing
+}
+
+export interface ResolvedStageEntity {
+  id: string
+  role: 'subject' | 'object'
+  content: VizRef
+  /** Resolved interactivity (forced false for objects / when not interactive). */
+  interactive: boolean
+  zFocusCapable: boolean
+  /** One frame per unit, index-aligned with the active units array. */
+  frames: ResolvedStageFrame[]
+}
+
+export interface ResolvedStage {
+  entities: ResolvedStageEntity[]
 }
