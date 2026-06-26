@@ -1,4 +1,6 @@
 export { RaceRow } from './RaceRow'
 export { DriverStandings } from './DriverStandings'
+export { ConstructorStandings } from './ConstructorStandings'
+export { QualifyingResults } from './QualifyingResults'
 export { PositionChart } from './PositionChart'
 export { EntityChip } from './EntityChip'

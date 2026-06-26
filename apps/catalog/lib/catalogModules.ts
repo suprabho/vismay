@@ -9,6 +9,11 @@ import { sample as raceCardSample } from '@vismay/f1-viz/modules/race-card/sampl
 import { sample as driverStandingsSample } from '@vismay/f1-viz/modules/driver-standings/sample'
 import { sample as positionChartSample } from '@vismay/f1-viz/modules/position-chart/sample'
 import { sample as raceReplaySample } from '@vismay/f1-viz/modules/race-replay/sample'
+import { sample as constructorStandingsSample } from '@vismay/f1-viz/modules/constructor-standings/sample'
+import { sample as qualifyingResultsSample } from '@vismay/f1-viz/modules/qualifying-results/sample'
+import { sample as telemetryClipSample } from '@vismay/f1-viz/modules/telemetry-clip/sample'
+import { sample as track3dSample } from '@vismay/f1-viz/modules/track-3d/sample'
+import { sample as telemetryChartSample } from '@vismay/f1-viz/modules/telemetry-chart/sample'
 import {
   sample as matchCardSample,
   sampleGrid as matchCardGridSample,
@@ -89,6 +94,16 @@ export const catalogModules: CatalogEntry[] = [
   { type: 'f1:driver-standings', category: 'F1', sample: driverStandingsSample },
   { type: 'f1:position-chart', category: 'F1', sample: positionChartSample },
   { type: 'f1:race-replay', category: 'F1', sample: raceReplaySample },
+  { type: 'f1:constructor-standings', category: 'F1', sample: constructorStandingsSample },
+  { type: 'f1:qualifying-results', category: 'F1', sample: qualifyingResultsSample },
+  { type: 'f1:telemetry-clip', category: 'F1', sample: telemetryClipSample },
+  {
+    type: 'f1:track-3d',
+    category: 'F1',
+    sample: track3dSample,
+    previewNotice: 'WebGL 3D track — drag to orbit on the detail page; renders flat without elevation data.',
+  },
+  { type: 'f1:telemetry-chart', category: 'F1', sample: telemetryChartSample },
   { type: 'fs:match-card', category: 'Footshorts', sample: matchCardSample },
   {
     type: 'fs:match-card',

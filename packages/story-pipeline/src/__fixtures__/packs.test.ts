@@ -118,6 +118,22 @@ const SAMPLES: Record<string, Record<string, unknown>> = {
     score: '2 – 1',
     competition: 'Premier League · matchday 35',
   },
+  'f1:telemetry-clip': {
+    type: 'f1:telemetry-clip',
+    sessionKey: '2024_monaco_R',
+    lapFrom: 12,
+    lapTo: 14,
+    driverNumbers: [1, 16],
+    focalDriverNumber: 1,
+    caption: 'Verstappen vs Leclerc — sector 2',
+  },
+  'f1:track-3d': {
+    type: 'f1:track-3d',
+    sessionKey: '2024_monaco_R',
+    focalDriverNumber: 1,
+    chaseCam: true,
+    title: 'Monaco — the climb to Casino',
+  },
   'fs:standings-table': {
     type: 'fs:standings-table',
     rows: [
@@ -220,6 +236,8 @@ check(
 const MODULE_PATHS: Record<string, string> = {
   'f1:race-card': 'f1-viz/src/modules/race-card',
   'f1:driver-standings': 'f1-viz/src/modules/driver-standings',
+  'f1:telemetry-clip': 'f1-viz/src/modules/telemetry-clip',
+  'f1:track-3d': 'f1-viz/src/modules/track-3d',
   'fs:match-card': 'footshorts-viz/src/modules/match-card',
   'fs:standings-table': 'footshorts-viz/src/modules/standings-table',
   'fs:team-form-strip': 'footshorts-viz/src/modules/team-form-strip',

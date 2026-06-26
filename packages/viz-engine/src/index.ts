@@ -16,6 +16,10 @@ export { default as StageVizSlot } from './StageVizSlot'
 export { default as ChartPanel } from './charts/ChartPanel'
 export { default as MapboxBackground } from './charts/MapboxBackground'
 export { default as GenericChart } from './charts/GenericChart'
+// StoryEChart + capture context: option-driven, capture-safe ECharts host for
+// verticals that render an inline ECharts option (e.g. f1:telemetry-chart).
+export { default as StoryEChart } from './charts/StoryEChart'
+export { ChartCaptureProvider, useChartCapture, type ChartCaptureValue } from './charts/chartCapture'
 
 // Story type taxonomy (formerly @/types/story)
 export * from './types/story'

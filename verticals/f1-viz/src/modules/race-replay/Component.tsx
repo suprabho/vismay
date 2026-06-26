@@ -11,14 +11,29 @@ export default function RaceReplayVizComponent({
   mode,
   noteReady,
 }: VizRenderProps<RaceReplayConfig>) {
-  // Inline fixture → no-network source; otherwise a URL/sessionRef fixture source.
+  // Source selection (in priority order):
+  //   1. inline fixture → no network
+  //   2. sessionKey → real telemetry from the Supabase replay route
+  //   3. fixtureUrl / sessionRef → static fixture (catalog/back-compat)
+  // All three resolve to the same `ReplayFixture` wire shape, so the render
+  // layer is unaware of the origin.
   const source = useMemo(() => {
     if (config.fixture) return createInlineDataSource(config.fixture)
+    if (config.sessionKey) {
+      const base = config.apiBase ?? ''
+      return createFixtureDataSource({
+        resolveUrl: (ref) => `${base}/api/replay/${encodeURIComponent(ref)}`,
+        fallbackRef: config.fallbackRef ?? 'demo',
+      })
+    }
     return createFixtureDataSource({
       resolveUrl: config.fixtureUrl ? () => config.fixtureUrl as string : undefined,
       fallbackRef: config.fallbackRef ?? 'demo',
     })
-  }, [config.fixture, config.fixtureUrl, config.fallbackRef])
+  }, [config.fixture, config.sessionKey, config.apiBase, config.fixtureUrl, config.fallbackRef])
+
+  // The ref the source resolves: prefer the real session key.
+  const sessionRef = config.sessionKey ?? config.sessionRef ?? 'sample'
 
   useEffect(() => {
     const h = requestAnimationFrame(() => noteReady())
@@ -43,7 +58,7 @@ export default function RaceReplayVizComponent({
         <h3 className="shrink-0 text-sm font-semibold text-text">{config.title}</h3>
       )}
       <RaceReplay
-        sessionRef={config.sessionRef ?? 'sample'}
+        sessionRef={sessionRef}
         dataSource={source}
         autoPlay={autoPlay}
       />

@@ -28,10 +28,15 @@
     "nativewind": { "optional": true }
   },
   "dependencies": {
-    "@vismay/viz-engine": "workspace:*"
+    "@vismay/viz-engine": "workspace:*",
+    "three": "^0.171.0",
+    "@react-three/fiber": "^9.1.0",
+    "@react-three/drei": "^10.0.0"
   },
   "devDependencies": {
     "@types/react": "^19",
+    "@types/three": "^0.171.0",
+    "echarts": "^6.0.0",
     "typescript": "^5"
   }
 }

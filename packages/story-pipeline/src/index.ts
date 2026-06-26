@@ -46,6 +46,7 @@ export {
   graftRecapForeground,
   graftSectionBody,
   collectRecapDirectives,
+  collectVerticalDirectives,
   type GraftRecapResult,
 } from './ingest/recapForeground'
 export { research, type ResearchOptions } from './research'

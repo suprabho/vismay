@@ -97,6 +97,8 @@ export type QualifyingRow = {
   driverName: string
   constructorId: string
   constructorName: string
+  /** Constructor primary colour (e.g. `#27F4D2`). Tints the driver chip + team. */
+  constructorColor?: string | null
   q1: string | null
   q2: string | null
   q3: string | null
