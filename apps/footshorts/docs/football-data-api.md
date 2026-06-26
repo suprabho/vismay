@@ -11,14 +11,11 @@ decision row and Phases 3/5).
 - **Tier:** free — **10 req/min**, **personal/educational only**, 13 competitions, no
   player/squad or per-match-stats endpoints. See [Constraints](#constraints--what-the-free-tier-doesnt-give-us).
 
-All three worker scripts share the same minimal wrapper:
+All three worker scripts (`seed.ts`, `fixtures.ts`, `scores.ts`) import one shared wrapper
+from `worker/src/footballData.ts`, which retries on a `429` (see below):
 
 ```ts
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, { headers: { 'X-Auth-Token': FD_TOKEN } });
-  if (!res.ok) throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
-}
+import { fdFetch, sleep, FD_TOKEN, filterCompetitions } from './footballData';
 ```
 
 ### Rate-limit response headers
@@ -32,11 +29,25 @@ Docs: <https://docs.football-data.org/general/v4/lookup_tables.html>
 | `X-API-Version` | API version in use (`v4`) |
 | `X-Authenticated-Client` | detected client, or `anonymous` |
 
-Scripts pace blindly with a fixed `sleep(6500)` (6.5 s) between calls. `scores.ts`'s
-`fdFetch` now reads `X-RequestCounter-Reset` on a `429` and waits that many seconds (capped
-at 90 s) before retrying, up to 3 times — so a shared-token rate-limit hit (the scores cron
-collides with the hourly ingest at 00:00/12:00 UTC) no longer fails the whole competition.
-`seed.ts` and `fixtures.ts` still throw on any non-200. See [Known gaps](#known-gaps).
+Scripts pace blindly with a fixed `sleep(6500)` (6.5 s) between calls. The shared `fdFetch`
+also reads `X-RequestCounter-Reset` on a `429` and waits that many seconds (+1 s buffer,
+capped at 90 s) before retrying, up to 3 times — so a shared-token rate-limit hit no longer
+fails the whole competition. We don't yet read `X-RequestsAvailable` for adaptive pacing.
+See [Known gaps](#known-gaps).
+
+### Scoping a run to specific competitions
+
+`scores.ts` and `fixtures.ts` accept an optional `--competitions=` flag (or `COMPETITIONS`
+env var) to limit a run to a subset — handy for re-running just one competition after a
+rate-limit hit, or refreshing the World Cup after a knockout draw without touching the rest.
+
+- **scores** keys by football-data **code**: `pnpm scores -- --competitions=WC,PL`
+- **fixtures** keys by entity **slug**: `pnpm fixtures -- --competitions=world-cup,premier-league`
+
+Matching is case-insensitive; unmatched tokens are warned about and ignored. Both workflows
+expose the same filter as a `workflow_dispatch` input (blank on the schedule → all). The two
+workflows also share one `concurrency` group (`footshorts-football-data`) so a manual
+dispatch of one can't overlap a scheduled run of the other on the shared token.
 
 ### Enum lookup tables
 
@@ -135,10 +146,8 @@ hallucinations from polluting the follow graph.
 
 ## Known gaps
 
-- `scores.ts`'s `fdFetch` now retries on `429` (reads `X-RequestCounter-Reset`), but
-  `seed.ts` and `fixtures.ts` still ignore the rate-limit headers and throw on a single hit.
-  Reading `X-RequestsAvailable` would additionally allow adaptive pacing instead of a fixed
-  6.5 s. Extracting one shared `fdFetch` would let all three benefit from the retry.
+- The shared `fdFetch` retries on `429` (reads `X-RequestCounter-Reset`) but still ignores
+  `X-RequestsAvailable`; reading it would allow adaptive pacing instead of a fixed 6.5 s.
 - `normalizeStatus()` doesn't map `EXTRA_TIME` / `PENALTY_SHOOTOUT` / `AWARDED`; they fall
   through to `s.toLowerCase()`, so a knockout match in extra time lands as
   `status='extra_time'` rather than `live`. Tighten before knockout rounds.

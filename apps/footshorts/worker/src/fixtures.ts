@@ -16,27 +16,14 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { fdFetch, sleep, FD_TOKEN, filterCompetitions } from './footballData';
 
-const FD_BASE = 'https://api.football-data.org/v4';
-const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN },
-  });
-  if (!res.ok) {
-    throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 type FdSeason = { startDate: string; endDate: string };
 
@@ -244,7 +231,15 @@ async function syncStandings(
 async function main() {
   if (!FD_TOKEN) throw new Error('FOOTBALL_DATA_TOKEN required');
 
-  const comps = await loadCompetitions();
+  // Optional --competitions=world-cup,premier-league (or COMPETITIONS env) to
+  // scope a run to a subset — e.g. refreshing just the World Cup after a draw.
+  // Keyed by slug (the seeded league's entity slug), not the FD code.
+  const comps = filterCompetitions(await loadCompetitions(), (c) => c.slug, 'fixtures');
+  if (comps.length === 0) {
+    console.log('[fixtures] no competitions selected; nothing to do.');
+    return;
+  }
+
   const teamIndex = await loadTeamIndex();
   console.log(
     `[fixtures] ${comps.length} competitions, ${teamIndex.size} teams indexed`,

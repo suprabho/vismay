@@ -9,9 +9,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { fdFetch, sleep, FD_TOKEN } from './footballData';
 
-const FD_BASE = 'https://api.football-data.org/v4';
-const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -47,19 +46,6 @@ function commonName(name: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
-
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN },
-  });
-  if (!res.ok) {
-    throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
-}
-
-// Rate limit: 10 req/min on free tier → sleep 6.5s between calls to be safe
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function seedLeagues() {
   console.log('[seed] leagues...');
