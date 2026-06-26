@@ -1,0 +1,70 @@
+{
+  "steps": [
+    {
+      "title": "Jio Platforms: ARPU & Monthly Data per User — FY2024 to FY2026",
+      "option": {
+        "grid": {
+          "top": 48,
+          "left": 48,
+          "right": 60,
+          "bottom": 40,
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "category",
+          "data": ["FY2024", "FY2025", "FY2026"],
+          "name": "Fiscal Year",
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisLabel": { "color": "$muted" }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "ARPU (₹/month)",
+            "position": "left",
+            "axisLabel": {
+              "color": "$muted",
+              "formatter": "₹{value}"
+            },
+            "splitLine": { "lineStyle": { "color": "$line" } }
+          },
+          {
+            "type": "value",
+            "name": "Data (GB/month)",
+            "position": "right",
+            "axisLabel": {
+              "color": "$muted",
+              "formatter": "{value} GB"
+            },
+            "splitLine": { "show": false }
+          }
+        ],
+        "legend": {
+          "top": 8,
+          "textStyle": { "color": "$muted" }
+        },
+        "tooltip": { "trigger": "axis" },
+        "series": [
+          {
+            "name": "ARPU (₹/month)",
+            "type": "bar",
+            "yAxisIndex": 0,
+            "data": [181.7, 206.2, 214.0],
+            "itemStyle": { "color": "$accent" }
+          },
+          {
+            "name": "Data per User (GB/month)",
+            "type": "line",
+            "yAxisIndex": 1,
+            "data": [28.7, 33.6, 42.3],
+            "smooth": true,
+            "symbol": "circle",
+            "symbolSize": 8,
+            "itemStyle": { "color": "$teal" },
+            "lineStyle": { "width": 2.5 }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+defaults:
+  storyBackground:
+    type: color
+    value: "#f6f4ef"
+    fixed: true
+  overlay:
+    color: transparent
+    opacity: 0
+  panel:
+    background: transparent
+    border: none
+  scroll:
+    mode: snap
+    paddingY: 12vh
+  chart:
+    theme: light-editorial
+  progress: true
+sections:
+  - text: Every rupee. Accounted for.
+    foreground: []
+
+  - text: Where Does ₹1.47 Trillion Go?
+    foreground:
+      - chart: jio-sankey-pl
+
+  - text: Revenue, EBITDA and profit — all compounding
+    foreground:
+      - chart: jio-revenue-growth-bar
+
+  - text: Margins expanding across every line
+    foreground:
+      - chart: jio-margin-lines
+
+  - text: The deleveraging has been dramatic
+    foreground:
+      - chart: jio-leverage-bar
+
+  - text: Users consuming more, paying more
+    foreground:
+      - chart: jio-arpu-data
+
+  - text: The cap table reads like a global summit
+    foreground:
+      - chart: jio-shareholders-bar
