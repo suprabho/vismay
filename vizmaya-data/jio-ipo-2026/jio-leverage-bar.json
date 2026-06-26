@@ -1,0 +1,81 @@
+{
+  "steps": [
+    {
+      "title": "Net Debt / EBITDA — Indian Telecom, FY2026",
+      "subtitle": "Jio's IPO proceeds (₹275,000 Mn) will retire nearly all remaining net debt",
+      "option": {
+        "grid": {
+          "top": 32,
+          "left": 16,
+          "right": 80,
+          "bottom": 16,
+          "containLabel": true
+        },
+        "xAxis": {
+          "type": "value",
+          "name": "Net Debt / EBITDA (×)",
+          "nameLocation": "end",
+          "nameTextStyle": { "color": "$muted", "fontSize": 11 },
+          "max": 11,
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } },
+          "axisLabel": {
+            "color": "$muted",
+            "formatter": "{value}×"
+          }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Vodafone Idea", "Airtel", "Jio (FY2026)", "Jio (post-IPO est.)"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": {
+            "color": "$text",
+            "fontSize": 13,
+            "fontWeight": "500"
+          }
+        },
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": { "type": "none" },
+          "formatter": "{b}: {c}×"
+        },
+        "series": [
+          {
+            "type": "bar",
+            "data": [
+              {
+                "value": 10.5,
+                "itemStyle": { "color": "$red", "borderRadius": [0, 4, 4, 0] }
+              },
+              {
+                "value": 1.36,
+                "itemStyle": { "color": "$amber", "borderRadius": [0, 4, 4, 0] }
+              },
+              {
+                "value": 0.36,
+                "itemStyle": { "color": "$teal", "borderRadius": [0, 4, 4, 0] }
+              },
+              {
+                "value": 0.02,
+                "itemStyle": { "color": "$positive", "borderRadius": [0, 4, 4, 0] }
+              }
+            ],
+            "barMaxWidth": 36,
+            "label": {
+              "show": true,
+              "position": "right",
+              "color": "$text",
+              "fontSize": 13,
+              "fontWeight": "600",
+              "formatter": function(p) {
+                if (p.dataIndex === 0) return ">10×";
+                if (p.dataIndex === 3) return "~0×";
+                return p.value + "×";
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

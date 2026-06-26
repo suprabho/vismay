@@ -39,7 +39,7 @@ The margin story is consistent across all four lines: EBITDA, EBIT, PBT and PAT 
 
 ## The deleveraging has been dramatic
 
-Net Leverage fell from 0.88× in FY2024 to 0.36× in FY2026. Airtel sits at 1.36×. Vodafone Idea exceeds 10×. IPO proceeds of ₹275,000 Mn are earmarked for debt prepayment — leverage will compress further post-listing.
+Net Leverage fell from 0.88× in FY2024 to 0.36× in FY2026. Airtel sits at 1.36×. Vodafone Idea exceeds 10×. IPO proceeds of ₹275,000 Mn are earmarked for debt prepayment — and since net debt ≈ ₹275Bn (0.36× × ~₹763Bn EBITDA), Jio is effectively going debt-free at listing. No other large Indian telecom can say that.
 
 ## Users consuming more, paying more
 

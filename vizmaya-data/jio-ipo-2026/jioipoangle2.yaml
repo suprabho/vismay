@@ -34,6 +34,7 @@ sections:
   - text: The deleveraging has been dramatic
     foreground:
       - chart: jio-leverage-bar
+        file: jio-leverage-bar.json
 
   - text: Users consuming more, paying more
     foreground:
