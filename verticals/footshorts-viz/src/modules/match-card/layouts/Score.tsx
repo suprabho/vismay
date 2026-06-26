@@ -54,7 +54,12 @@ export function ScoreCard({
   }
   const teams: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr',
+    // `minmax(0, 1fr)` (not a bare `1fr`) so the team columns can shrink below
+    // their content's min-content width. A bare `1fr` keeps the implicit
+    // `min-width: auto`, which lets a long single-word name (Germany,
+    // Netherlands, Australia) force its track wider than the card and push the
+    // away crest + name past the right border, where the frame clips them.
+    gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
     alignItems: 'center',
     gap: '14px',
     width: '100%',
@@ -64,11 +69,19 @@ export function ScoreCard({
     flexDirection: 'column',
     alignItems: 'center',
     gap: '6px',
+    // Pair with the `minmax(0, …)` tracks above so this flex column can shrink
+    // and its name actually wraps instead of overflowing the card.
+    minWidth: 0,
   }
   const teamName: CSSProperties = {
     fontFamily: 'var(--font-serif, ui-serif)',
     fontSize: '15px',
     fontWeight: 600,
+    maxWidth: '100%',
+    // Wrap on spaces first; break a too-long single word as a last resort so
+    // it never spills past the card edge.
+    overflowWrap: 'break-word',
+    hyphens: 'auto',
   }
   const scoreCol: CSSProperties = {
     display: 'flex',
