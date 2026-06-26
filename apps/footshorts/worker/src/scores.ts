@@ -10,9 +10,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { fdFetch, sleep, FD_TOKEN, filterCompetitions } from './footballData';
 
-const FD_BASE = 'https://api.football-data.org/v4';
-const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -34,9 +33,6 @@ const LOOKBACK_DAYS = 2;
 // stored kickoff_at without colliding with another fixture between the same teams.
 const KICKOFF_WINDOW_MS = 6 * 60 * 60 * 1000;
 
-// Free tier: 10 req/min. 6.5s between FD calls keeps us well clear.
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 type FdMatch = {
   id: number;
   utcDate: string;
@@ -47,16 +43,6 @@ type FdMatch = {
     fullTime: { home: number | null; away: number | null };
   };
 };
-
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN },
-  });
-  if (!res.ok) {
-    throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 async function loadTeamMap(): Promise<Map<number, string>> {
   const { data, error } = await supabase
@@ -147,12 +133,20 @@ async function refreshCompetition(code: string, teamMap: Map<number, string>) {
 async function main() {
   if (!FD_TOKEN) throw new Error('FOOTBALL_DATA_TOKEN required');
 
+  // Optional --competitions=WC,PL (or COMPETITIONS env) to scope a run to a
+  // subset — e.g. re-running just the World Cup after a rate-limit hit.
+  const codes = filterCompetitions(COMPETITION_CODES, (c) => c, 'scores');
+  if (codes.length === 0) {
+    console.log('[scores] no competitions selected; nothing to do.');
+    return;
+  }
+
   const teamMap = await loadTeamMap();
   console.log(`[scores] loaded ${teamMap.size} team mappings`);
 
-  for (let i = 0; i < COMPETITION_CODES.length; i++) {
+  for (let i = 0; i < codes.length; i++) {
     if (i > 0) await sleep(6500);
-    const code = COMPETITION_CODES[i]!;
+    const code = codes[i]!;
     try {
       await refreshCompetition(code, teamMap);
     } catch (e) {
