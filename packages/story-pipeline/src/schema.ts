@@ -286,10 +286,11 @@ export function sectionContentSchemaFor(format: 'deck' | 'map') {
       : z
           .array(z.string())
           .min(1)
-          .max(5)
+          .max(3)
           .describe(
-            'Body prose, one string per paragraph — lean panel copy: 30–60 words per paragraph, ' +
-              'no padding. Factual magazine register.',
+            'Body prose, one string per paragraph — a slide is not a scroll: 1–3 paragraphs of ' +
+              '20–40 words each, ≤ ~75 words total (the slide region clips on a phone, it does not ' +
+              'scroll). Lean panel copy, no padding. Factual magazine register.',
           )
   return z.object({
     heading: z

@@ -474,9 +474,13 @@ export function contentSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PA
         `are EXACTLY ONE standfirst (dek): a single 35–70-word scene-setting paragraph wrapped ` +
         `in *single asterisks* (it renders as the italic dek under the title) — no second ` +
         `paragraph, no byline.`
-      : `Keep it lean: panel copy, not an essay — 30–60 words per paragraph, no padding, no ` +
-        `restated context. The figures the visual needs must appear in the prose, but say each ` +
-        `thing once.`
+      : `LENGTH IS A HARD CONSTRAINT — a slide is not a scroll: 1–3 short paragraphs, 20–40 words ` +
+        `each, ≤ ~75 words for the WHOLE section. The prose shares the slide with its visual (a ` +
+        `chart, stat, quote, or image) and renders in a fixed region — on a phone that region ` +
+        `stacks into a small box that CLIPS rather than scrolls, so every sentence past the fold ` +
+        `is lost off the slide. Panel copy, not an essay: one idea per paragraph, no padding, no ` +
+        `restated context. Cover, hero, and closing slides are tighter still — a single line or ` +
+        `two. The figures the visual needs must appear in the prose, but say each thing once.`
   return (
     `You write the PROSE for ONE section of a ${pack.name} ${format} data story.\n\n` +
     `Produce:\n` +
