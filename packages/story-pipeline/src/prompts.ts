@@ -474,9 +474,13 @@ export function contentSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PA
         `are EXACTLY ONE standfirst (dek): a single 35–70-word scene-setting paragraph wrapped ` +
         `in *single asterisks* (it renders as the italic dek under the title) — no second ` +
         `paragraph, no byline.`
-      : `Keep it lean: panel copy, not an essay — 30–60 words per paragraph, no padding, no ` +
-        `restated context. The figures the visual needs must appear in the prose, but say each ` +
-        `thing once.`
+      : `LENGTH IS A HARD CONSTRAINT — a slide is not a scroll: 1–3 short paragraphs, 20–40 words ` +
+        `each, ≤ ~75 words for the WHOLE section. The prose shares the slide with its visual (a ` +
+        `chart, stat, quote, or image) and renders in a fixed region — on a phone that region ` +
+        `stacks into a small box that CLIPS rather than scrolls, so every sentence past the fold ` +
+        `is lost off the slide. Panel copy, not an essay: one idea per paragraph, no padding, no ` +
+        `restated context. Cover, hero, and closing slides are tighter still — a single line or ` +
+        `two. The figures the visual needs must appear in the prose, but say each thing once.`
   return (
     `You write the PROSE for ONE section of a ${pack.name} ${format} data story.\n\n` +
     `Produce:\n` +
@@ -561,6 +565,13 @@ export function visualSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PAC
     `Match the number of elements to the layout's regions; if the prose carries more than the ` +
     `layout holds, lead with the essentials (a later section can carry the rest) or pick a layout ` +
     `with more regions. A multi-row keyValue is ONE element; do not also pile a stat and prose on it.\n` +
+    `- FIT THE SLIDE — a deck section is ONE fixed viewport-tall slide that CLIPS overflow (it does ` +
+    `NOT scroll), and on a phone the two regions stack into small boxes. Keep every element sparse ` +
+    `enough to fit unscrolled: a keyValue lists AT MOST ~5 rows (carry the most load-bearing facts; ` +
+    `drop or split the rest to a later section), a chart shows a handful of categories, and NEVER ` +
+    `pair a multi-paragraph text block with a dense table or long stat list on the same slide. When ` +
+    `the material has more than one slide holds, that is a sign it needs another section, not a ` +
+    `denser slide.\n` +
     `- COVER/HERO sections follow the cover rule in the format guidance above — the editorial ` +
     `cover surface (layout/eyebrow/dek as section fields), NEVER ` +
     `content foreground layers. The full breakdown / "at a glance" belongs in a later section, ` +
