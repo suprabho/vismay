@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
 import { listModulesForSlot, type VizLayer } from '@vismay/viz-engine'
-import { CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Sparkle, Stack, Trash, X, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { CheckCircle, CopySimple, FolderOpen, FrameCorners, Image as ImageIcon, PaperPlaneTilt, Plus, Sparkle, Stack, Trash, X, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
   LayerListPanel,
   ConfigPanel,
@@ -377,6 +377,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [showSavedModal, setShowSavedModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Brief "Saved ✓" confirmation shown in the toolbar after a successful save;
+  // auto-clears via the effect below so it stays a transient toast, not a label.
+  const [savedToast, setSavedToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!savedToast) return
+    const t = setTimeout(() => setSavedToast(null), 2500)
+    return () => clearTimeout(t)
+  }, [savedToast])
   const [shipping, setShipping] = useState(false)
   const [shipError, setShipError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
@@ -753,6 +761,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     if (currentCardId) {
       setSaving(true)
       setSaveError(null)
+      setSavedToast(null)
       try {
         const res = await fetch(`/api/footshorts/share/cards/${currentCardId}`, {
           method: 'PUT',
@@ -764,6 +773,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         const summary = { id: body.card.id, name: body.card.name }
         setSavedCards((prev) => prev.map((c) => (c.id === summary.id ? summary : c)))
         setCurrentCardName(body.card.name)
+        setSavedToast(`Saved “${body.card.name}”`)
         return true
       } catch (e) {
         setSaveError(e instanceof Error ? e.message : 'Save failed')
@@ -778,6 +788,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     if (!name) return false
     setSaving(true)
     setSaveError(null)
+    setSavedToast(null)
     try {
       const res = await fetch('/api/footshorts/share/cards', {
         method: 'POST',
@@ -789,6 +800,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       setSavedCards((prev) => [{ id: body.card!.id, name: body.card!.name }, ...prev])
       setCurrentCardId(body.card.id)
       setCurrentCardName(body.card.name)
+      setSavedToast(`Saved “${body.card.name}”`)
       return true
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Save failed')
@@ -973,6 +985,12 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       </div>
       {(saveError || shipError) && (
         <p className="shrink-0 text-[11px] text-red-400">{saveError ?? shipError}</p>
+      )}
+      {savedToast && !saveError && (
+        <p className="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-emerald-400">
+          <CheckCircle size={13} weight="fill" />
+          {savedToast}
+        </p>
       )}
 
       <div className="flex min-h-0 flex-1 gap-4 pb-20 md:pb-0">
