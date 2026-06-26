@@ -32,9 +32,11 @@ Docs: <https://docs.football-data.org/general/v4/lookup_tables.html>
 | `X-API-Version` | API version in use (`v4`) |
 | `X-Authenticated-Client` | detected client, or `anonymous` |
 
-We currently **don't read** these — scripts pace blindly with a fixed `sleep(6500)` (6.5 s)
-between calls and throw on any non-200. A `429` is therefore a hard failure, not a backoff.
-See [Known gaps](#known-gaps).
+Scripts pace blindly with a fixed `sleep(6500)` (6.5 s) between calls. `scores.ts`'s
+`fdFetch` now reads `X-RequestCounter-Reset` on a `429` and waits that many seconds (capped
+at 90 s) before retrying, up to 3 times — so a shared-token rate-limit hit (the scores cron
+collides with the hourly ingest at 00:00/12:00 UTC) no longer fails the whole competition.
+`seed.ts` and `fixtures.ts` still throw on any non-200. See [Known gaps](#known-gaps).
 
 ### Enum lookup tables
 
@@ -133,9 +135,10 @@ hallucinations from polluting the follow graph.
 
 ## Known gaps
 
-- `fdFetch` ignores `X-RequestsAvailable` / `X-RequestCounter-Reset` and doesn't special-case
-  `429`. A single rate-limit hit throws. Reading the headers would allow adaptive pacing
-  instead of a fixed 6.5 s.
+- `scores.ts`'s `fdFetch` now retries on `429` (reads `X-RequestCounter-Reset`), but
+  `seed.ts` and `fixtures.ts` still ignore the rate-limit headers and throw on a single hit.
+  Reading `X-RequestsAvailable` would additionally allow adaptive pacing instead of a fixed
+  6.5 s. Extracting one shared `fdFetch` would let all three benefit from the retry.
 - `normalizeStatus()` doesn't map `EXTRA_TIME` / `PENALTY_SHOOTOUT` / `AWARDED`; they fall
   through to `s.toLowerCase()`, so a knockout match in extra time lands as
   `status='extra_time'` rather than `live`. Tighten before knockout rounds.

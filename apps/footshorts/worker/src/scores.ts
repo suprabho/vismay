@@ -37,6 +37,14 @@ const KICKOFF_WINDOW_MS = 6 * 60 * 60 * 1000;
 // Free tier: 10 req/min. 6.5s between FD calls keeps us well clear.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// We pace calls 6.5s apart, but FOOTBALL_DATA_TOKEN is shared with the hourly
+// ingest + daily fixtures workflows, whose crons collide with ours at 00:00 and
+// 12:00 UTC — so a 429 can still land mid-run. When it does, retry instead of
+// failing the whole competition.
+const FD_MAX_RETRIES = 3;
+// Cap the wait so a bogus/huge reset header can't stall the job past its timeout.
+const FD_MAX_RETRY_WAIT_MS = 90 * 1000;
+
 type FdMatch = {
   id: number;
   utcDate: string;
@@ -49,13 +57,30 @@ type FdMatch = {
 };
 
 async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN },
-  });
-  if (!res.ok) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${FD_BASE}${path}`, {
+      headers: { 'X-Auth-Token': FD_TOKEN },
+    });
+    if (res.ok) return res.json() as Promise<T>;
+
+    // On a rate-limit, football-data returns seconds-until-reset; wait that long
+    // (plus a 1s buffer) and retry. Fall back to the 60s window length if the
+    // header is missing or unparseable.
+    if (res.status === 429 && attempt < FD_MAX_RETRIES) {
+      const reset = Number(res.headers.get('X-RequestCounter-Reset'));
+      const waitMs = Math.min(
+        (Number.isFinite(reset) && reset > 0 ? reset : 60) * 1000 + 1000,
+        FD_MAX_RETRY_WAIT_MS,
+      );
+      console.warn(
+        `  rate-limited on ${path}; waiting ${Math.round(waitMs / 1000)}s then retrying (attempt ${attempt + 1}/${FD_MAX_RETRIES})`,
+      );
+      await sleep(waitMs);
+      continue;
+    }
+
     throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
   }
-  return res.json() as Promise<T>;
 }
 
 async function loadTeamMap(): Promise<Map<number, string>> {
