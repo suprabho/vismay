@@ -756,9 +756,12 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!hasLayers) return false
 
-    // Editing an already-saved card → overwrite it in place (keep its name, no
-    // prompt) so re-saving updates the same row instead of piling up duplicates.
+    // Editing an already-saved card → overwrite it in place (keep its name) so
+    // re-saving updates the same row instead of piling up duplicates. Confirm
+    // first so the user knows they're overwriting *this* card, not making a copy.
     if (currentCardId) {
+      const label = currentCardName.trim() || 'this card'
+      if (!window.confirm(`Save changes to “${label}”?\n\nThis overwrites the saved card.`)) return false
       setSaving(true)
       setSaveError(null)
       setSavedToast(null)
