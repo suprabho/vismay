@@ -44,6 +44,10 @@ function defaultTransform(type: string, ratio: AspectRatio): TransformLike {
   if (type === 'fscard:news-image' || type === 'fscard:ai-image') {
     return { xPct: 50, yPct: 50, widthPct: 100, heightPct: 100, scale: 1, rotation: 0, opacity: 1 }
   }
+  // A bracket tree needs most of the card.
+  if (type === 'fscard:bracket') {
+    return { ...DEFAULT_TRANSFORM, widthPct: 94, heightPct: 84 }
+  }
   return { ...DEFAULT_TRANSFORM, widthPct: 82, heightPct: 55 }
 }
 
@@ -55,6 +59,7 @@ const FOOTSHORTS_LAYER_TYPES: Array<{ type: string; name: string }> = [
   { type: 'fscard:fixtures', name: 'Fixtures' },
   { type: 'fscard:standings', name: 'Standings' },
   { type: 'fscard:form', name: 'Form grid' },
+  { type: 'fscard:bracket', name: 'Bracket' },
   { type: 'fscard:news-image', name: 'News image' },
   { type: 'fscard:news-article', name: 'News article' },
   { type: 'fscard:ai-image', name: 'AI image' },
@@ -81,6 +86,34 @@ function defaultConfig(type: string, ctx: FootshortsComposerCtx): Record<string,
       return { type, compKey, group: null }
     case 'fscard:form':
       return { type, compKey, teamSlug: '' }
+    case 'fscard:bracket':
+      // Seed an *incomplete* draw so the card renders something on insert —
+      // a few locked-in teams, the rest qualification placeholders, empty
+      // later rounds. The editor's `rounds` JSON field is then the edit point.
+      return {
+        type,
+        layout: 'tree',
+        title: 'World Cup 26 · Round of 16',
+        competitionSlug: 'world-cup',
+        rounds: [
+          {
+            stage: 'ROUND_OF_16',
+            ties: [
+              { a: { team: 'germany' }, b: '3rd A/C/D' },
+              { a: 'Winner E', b: 'Runner-up F' },
+              { a: { team: 'brazil' }, b: { team: 'japan' } },
+              { a: 'Winner G', b: '3rd B/E/F' },
+              { a: { team: 'argentina' }, b: 'Runner-up C' },
+              { a: { team: 'netherlands' }, b: { team: 'morocco' } },
+              { a: 'Winner H', b: '3rd A/D/E' },
+              { a: { team: 'usa' }, b: 'Runner-up B' },
+            ],
+          },
+          { stage: 'QUARTER_FINALS', ties: [{}, {}, {}, {}] },
+          { stage: 'SEMI_FINALS', ties: [{}, {}] },
+          { stage: 'FINAL', ties: [{}] },
+        ],
+      }
     case 'fscard:news-image':
     case 'fscard:news-article':
       return { type, newsId: '' }

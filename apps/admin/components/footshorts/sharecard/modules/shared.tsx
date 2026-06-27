@@ -6,7 +6,12 @@ import {
   type MatchCardConfig,
   type MatchCardLayout,
 } from '@vismay/footshorts-viz/web'
-import type { FixtureRow } from '@vismay/footshorts-viz/types'
+import type {
+  Bracket,
+  BracketSlot,
+  FixtureRow,
+  FixtureTeamRef,
+} from '@vismay/footshorts-viz/types'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
@@ -39,6 +44,35 @@ export function withProxiedFixtureCrests(f: FixtureRow): FixtureRow {
     ...f,
     home: f.home ? { ...f.home, crest_url: proxyCrest(f.home.crest_url) } : f.home,
     away: f.away ? { ...f.away, crest_url: proxyCrest(f.away.crest_url) } : f.away,
+  }
+}
+
+function proxyTeamRef(ref: FixtureTeamRef): FixtureTeamRef {
+  return ref ? { ...ref, crest_url: proxyCrest(ref.crest_url) } : ref
+}
+
+function proxySlot(slot: BracketSlot | undefined): BracketSlot | undefined {
+  if (!slot || slot.kind !== 'team') return slot
+  return { ...slot, team: proxyTeamRef(slot.team) }
+}
+
+/** Clone a built bracket with every team crest URL proxied for clean capture —
+ *  walks both the fixture-derived team refs and the incomplete-draw slot refs.
+ *  Crest resolves the bundled palette flag into `crest_url` at build time, so
+ *  proxying here covers the World-Cup flags too. */
+export function withProxiedBracketCrests(bracket: Bracket): Bracket {
+  return {
+    ...bracket,
+    rounds: bracket.rounds.map((round) => ({
+      ...round,
+      ties: round.ties.map((tie) => ({
+        ...tie,
+        teamA: proxyTeamRef(tie.teamA),
+        teamB: proxyTeamRef(tie.teamB),
+        slotA: proxySlot(tie.slotA),
+        slotB: proxySlot(tie.slotB),
+      })),
+    })),
   }
 }
 
