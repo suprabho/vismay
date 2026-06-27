@@ -7,6 +7,8 @@ import type {
 } from '@vismay/content-source/storySources'
 import { SourceRow } from './SourceRow'
 import { SourceLibraryModal, type LibraryAsset, type LibraryGroup } from './SourceLibraryModal'
+import { TelemetrySessionPicker } from './TelemetrySessionPicker'
+import type { TelemetrySession } from './useComposeFlow'
 import { SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
 
 /**
@@ -35,13 +37,16 @@ export function SourcesStage({
   onReextract,
   onGenAngles,
   onCreateRecap,
+  onLoadTelemetrySessions,
+  onCreateTelemetrySource,
 }: {
   sources: StorySource[]
   busy: string | null
   extracted: number
   pending: number
   wide?: boolean
-  /** The draft's app — gates the footshorts-only "Create recap" button. */
+  /** The draft's vertical (frontmatter `vertical`, per CanvasPage) — gates the
+   *  footshorts-only "Create recap" button and the f1-only telemetry picker. */
   appSlug?: string | null
   onAddUrl: (url: string) => Promise<boolean>
   onAddText: (text: string) => Promise<boolean>
@@ -56,14 +61,25 @@ export function SourcesStage({
   onReextract: (id: string) => void
   onGenAngles: () => void
   onCreateRecap: () => Promise<boolean>
+  onLoadTelemetrySessions: () => Promise<TelemetrySession[]>
+  onCreateTelemetrySource: (opts: {
+    sessionKey: string
+    driverNumbers?: number[]
+    constructors?: string[]
+    prompt?: string
+  }) => Promise<boolean>
 }) {
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
   const [libraryOpen, setLibraryOpen] = useState(false)
   // "Create recap" opens the SAME library modal in recap-only mode.
   const [recapOpen, setRecapOpen] = useState(false)
+  const [telemetryOpen, setTelemetryOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const showRecap = appSlug === 'footshorts'
+  // `appSlug` is actually the story's frontmatter `vertical` (see CanvasPage) —
+  // 'f1' for VizF1 stories, not the 'vizf1' app slug.
+  const showTelemetry = appSlug === 'f1'
 
   async function addUrl() {
     if (!url.trim()) return
@@ -157,6 +173,16 @@ export function SourcesStage({
           🏆 Create recap
         </button>
       )}
+      {showTelemetry && (
+        <button
+          onClick={() => setTelemetryOpen(true)}
+          disabled={!!busy}
+          className={`w-full ${btnGhostCls}`}
+          title="Build a telemetry brief from an ingested race (filtered by drivers/constructors) and attach it as a source"
+        >
+          🏎️ Add telemetry session
+        </button>
+      )}
     </div>
   )
 
@@ -194,6 +220,13 @@ export function SourcesStage({
           onSearchDatasets={onSearchDatasets}
           onEnrich={onEnrich}
           onCreateRecap={onCreateRecap}
+        />
+      )}
+      {telemetryOpen && (
+        <TelemetrySessionPicker
+          onClose={() => setTelemetryOpen(false)}
+          loadSessions={onLoadTelemetrySessions}
+          onCreate={onCreateTelemetrySource}
         />
       )}
       <SectionHeading

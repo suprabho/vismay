@@ -531,7 +531,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -817,6 +817,9 @@ importers:
       '@vismay/eval-entities':
         specifier: workspace:*
         version: link:../../../packages/eval-entities
+      '@vismay/f1-viz':
+        specifier: workspace:*
+        version: link:../../../verticals/f1-viz
       '@vizf1/brand':
         specifier: workspace:*
         version: link:../brand
@@ -1546,6 +1549,12 @@ importers:
 
   verticals/f1-viz:
     dependencies:
+      '@react-three/drei':
+        specifier: ^10.0.0
+        version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.14)(expo-asset@55.0.17(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(expo-file-system@55.0.20(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)))(expo@55.0.24)(react-dom@19.2.4(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(three@0.171.0))(@types/react@19.2.14)(@types/three@0.171.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.171.0)
+      '@react-three/fiber':
+        specifier: ^9.1.0
+        version: 9.6.1(@types/react@19.2.14)(expo-asset@55.0.17(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(expo-file-system@55.0.20(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)))(expo@55.0.24)(react-dom@19.2.4(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(three@0.171.0)
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -1567,10 +1576,22 @@ importers:
       react-native:
         specifier: '*'
         version: 0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
+      three:
+        specifier: ^0.171.0
+        version: 0.171.0
     devDependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.45.4
+        version: 2.105.4
       '@types/react':
         specifier: ^19
         version: 19.2.14
+      '@types/three':
+        specifier: ^0.171.0
+        version: 0.171.0
+      echarts:
+        specifier: ^6.0.0
+        version: 6.0.0
       typescript:
         specifier: ^5
         version: 5.9.3

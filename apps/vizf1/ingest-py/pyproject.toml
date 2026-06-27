@@ -1,0 +1,18 @@
+[project]
+name = "vizf1-ingest"
+version = "0.1.0"
+description = "FastF1 -> Supabase telemetry ingestion for VizF1"
+requires-python = ">=3.11"
+dependencies = [
+  "fastf1>=3.4.0,<4.0",
+  "pandas>=2.2.2,<3.0",
+  "numpy>=1.26.4,<3.0",
+  "supabase>=2.4.0,<3.0",
+  "python-dotenv>=1.0.1,<2.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["vizf1_ingest*"]
+
+# Standalone sibling app — deliberately NOT a pnpm workspace package. pnpm/Turbo
+# do not manage it; use a Python toolchain (see README).

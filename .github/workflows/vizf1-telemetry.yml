@@ -1,0 +1,75 @@
+name: VizF1 - telemetry ingest
+
+# Loads FastF1 telemetry (speed/throttle/brake/gear + car positions + circuit
+# elevation) for one session and upserts it into Supabase (vizf1_telemetry_* /
+# vizf1_car_positions / vizf1_lap_telemetry). Powers the race replay, the
+# telemetry-clip player, the 3D track view, and telemetry-grounded stories.
+#
+# Telemetry only exists AFTER a session has run (FastF1's live-timing source),
+# so this is dispatch-first: trigger it (or run apps/vizf1/ingest-py locally)
+# once a session is complete. A scheduled per-round path can be added later once
+# a "latest completed round" resolver exists — a blind weekly full-season
+# backfill would be a runaway.
+#
+# Required repo secrets (in `Production` — shared project-wide):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Season year, e.g. 2024'
+        required: true
+      gp:
+        description: 'Grand Prix name, e.g. "Monaco"'
+        required: true
+      session:
+        description: 'Session: R | Q | S | SS | SQ | FP1 | FP2 | FP3'
+        required: false
+        default: 'R'
+
+concurrency:
+  group: vizf1-telemetry
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizf1/ingest-py
+    env:
+      # FastF1 downloads are slow + rate-limited — cache the dir across runs.
+      FASTF1_CACHE_DIR: ${{ github.workspace }}/.fastf1-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache FastF1 downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FASTF1_CACHE_DIR }}
+          key: fastf1-${{ inputs.year }}-${{ inputs.gp }}-${{ inputs.session }}
+          restore-keys: |
+            fastf1-${{ inputs.year }}-
+            fastf1-
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Ingest telemetry
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python -m vizf1_ingest.cli ingest \
+            --year "${{ inputs.year }}" \
+            --gp "${{ inputs.gp }}" \
+            --session "${{ inputs.session }}"

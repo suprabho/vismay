@@ -10,6 +10,7 @@
     "./web": "./src/web/index.ts",
     "./native": "./src/native/index.ts",
     "./grands-prix": "./src/data/grands-prix.ts",
+    "./telemetry-brief": "./src/telemetry/buildTelemetryBrief.ts",
     "./modules/*/sample": "./src/modules/*/sample.ts"
   },
   "peerDependencies": {
@@ -28,10 +29,16 @@
     "nativewind": { "optional": true }
   },
   "dependencies": {
-    "@vismay/viz-engine": "workspace:*"
+    "@vismay/viz-engine": "workspace:*",
+    "three": "^0.171.0",
+    "@react-three/fiber": "^9.1.0",
+    "@react-three/drei": "^10.0.0"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "@types/react": "^19",
+    "@types/three": "^0.171.0",
+    "echarts": "^6.0.0",
     "typescript": "^5"
   }
 }

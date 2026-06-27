@@ -17,9 +17,19 @@ interface RaceReplayProps {
 }
 
 export function RaceReplay({ sessionRef }: RaceReplayProps) {
-  // v1: fixture-backed. Any round falls back to the shared demo fixture until
-  // real per-session telemetry is ingested (swap this source for a Supabase one).
-  const source = useMemo(() => createFixtureDataSource({ fallbackRef: 'demo' }), [])
+  // Source selection. Default is fixture-backed (any round falls back to the
+  // shared demo fixture). When NEXT_PUBLIC_VIZF1_REPLAY_SOURCE=supabase, fetch
+  // real ingested telemetry from /api/replay/<ref>, still falling back to the
+  // demo fixture if a session hasn't been ingested yet.
+  const source = useMemo(() => {
+    if (process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase') {
+      return createFixtureDataSource({
+        resolveUrl: (ref) => `/api/replay/${encodeURIComponent(ref)}`,
+        fallbackRef: 'demo',
+      })
+    }
+    return createFixtureDataSource({ fallbackRef: 'demo' })
+  }, [])
   const race = useReplayData(source, sessionRef)
 
   // ── Playback state ──────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@
     "backfill:driver-meta:ci": "tsx src/backfillDriverMeta.ts",
     "build:story-segments": "tsx --env-file=.env src/buildStorySegments.ts",
     "build:story-segments:ci": "tsx src/buildStorySegments.ts",
+    "build:telemetry-brief": "tsx --env-file=.env src/telemetry/buildTelemetryBrief.ts",
     "capture:replay": "tsx src/captureReplayFixture.ts",
     "gen:replay-fixture": "node scripts/genSyntheticReplayFixture.mjs",
     "eval": "tsx --env-file=.env src/eval/run.ts",
@@ -22,6 +23,7 @@
     "@google/genai": "^1.50.1",
     "@supabase/supabase-js": "^2.45.4",
     "@vismay/eval-entities": "workspace:*",
+    "@vismay/f1-viz": "workspace:*",
     "@vizf1/brand": "workspace:*",
     "rss-parser": "^3.13.0",
     "zod": "^3.23.8"

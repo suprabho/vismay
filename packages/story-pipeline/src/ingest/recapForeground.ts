@@ -20,7 +20,7 @@
 
 // Deep import (not the barrel): recapFences is pure TS with no React/CSS graph,
 // so this stays importable from the standalone tsx pipeline scripts/tests.
-import { extractFsDirectives, type FsDirective } from '@vismay/viz-engine/src/lib/recapFences'
+import { extractDirectives, extractFsDirectives, type FsDirective } from '@vismay/viz-engine/src/lib/recapFences'
 import type { GeneratedStory, GeneratedSection, SourceDoc } from '../types'
 
 /** A foreground layer object carrying a `type`, as it sits in a section body. */
@@ -28,9 +28,11 @@ type ForegroundLayer = Record<string, unknown> & { type?: unknown }
 
 /**
  * Walk a section body's `foreground` (single layer, array, or a regions map) and
- * return mutable references to every `fs:` layer, in document order.
+ * return mutable references to every layer in `namespace` (e.g. `fs`, `f1`), in
+ * document order.
  */
-function collectFsLayers(body: Record<string, unknown>): ForegroundLayer[] {
+function collectLayers(body: Record<string, unknown>, namespace = 'fs'): ForegroundLayer[] {
+  const prefix = `${namespace}:`
   const out: ForegroundLayer[] = []
   const visit = (node: unknown): void => {
     if (Array.isArray(node)) {
@@ -39,7 +41,7 @@ function collectFsLayers(body: Record<string, unknown>): ForegroundLayer[] {
     }
     if (!node || typeof node !== 'object') return
     const obj = node as Record<string, unknown>
-    if (typeof obj.type === 'string' && obj.type.startsWith('fs:')) out.push(obj as ForegroundLayer)
+    if (typeof obj.type === 'string' && obj.type.startsWith(prefix)) out.push(obj as ForegroundLayer)
     // Foreground-regions shape: { layout?, regions: { key: layer | layer[] } }.
     if (obj.regions && typeof obj.regions === 'object') {
       for (const v of Object.values(obj.regions as Record<string, unknown>)) visit(v)
@@ -47,6 +49,11 @@ function collectFsLayers(body: Record<string, unknown>): ForegroundLayer[] {
   }
   visit(body.foreground)
   return out
+}
+
+/** Back-compat: footshorts `fs:` layer collection. */
+function collectFsLayers(body: Record<string, unknown>): ForegroundLayer[] {
+  return collectLayers(body, 'fs')
 }
 
 /**
@@ -156,6 +163,19 @@ export function collectRecapDirectives(sources: Array<SourceDoc | string>): FsDi
   return out
 }
 
+/** Pull every directive in `namespace` (e.g. 'f1') out of a set of sources. */
+export function collectVerticalDirectives(
+  sources: Array<SourceDoc | string>,
+  namespace: string,
+): FsDirective[] {
+  const out: FsDirective[] = []
+  for (const src of sources) {
+    const body = typeof src === 'string' ? src : src.body
+    out.push(...extractDirectives(body, namespace))
+  }
+  return out
+}
+
 /** Notable string values in a directive config that, if present in a section's
  *  text, signal the directive belongs there (team names, competition, title). */
 function directiveKeywords(d: FsDirective): string[] {
@@ -168,6 +188,9 @@ function directiveKeywords(d: FsDirective): string[] {
   pushStr(c.away)
   pushStr(c.competition)
   pushStr(c.title)
+  // f1 telemetry directives: caption + sessionKey are the strongest section hints.
+  pushStr(c.caption)
+  pushStr(c.sessionKey)
   // Walk nested fixtures / rows for team names (bracket, standings, match-tile/row).
   const visit = (node: unknown): void => {
     if (Array.isArray(node)) return node.forEach(visit)
@@ -204,16 +227,18 @@ export function graftSectionBody(
   body: Record<string, unknown>,
   directives: FsDirective[],
   sectionText: string,
+  namespace = 'fs',
 ): number {
   if (!body || typeof body !== 'object' || directives.length === 0) return 0
   let applied = 0
-  for (const layer of collectFsLayers(body)) {
+  for (const layer of collectLayers(body, namespace)) {
     const candidates = directives.filter((d) => d.type === layer.type)
     if (candidates.length === 0) continue
-    // GRID match-card: fill each tile from a matching single-fixture directive
-    // instead of collapsing the whole grid onto one fixture (the recap only
-    // emits single-fixture cards, so a type-only swap would wipe layout/cards).
-    if (isGridMatchCard(layer)) {
+    // GRID match-card (footshorts only): fill each tile from a matching
+    // single-fixture directive instead of collapsing the whole grid onto one
+    // fixture (the recap only emits single-fixture cards, so a type-only swap
+    // would wipe layout/cards). Other verticals have no grid layers.
+    if (namespace === 'fs' && isGridMatchCard(layer)) {
       const singles = candidates.filter((d) => !isGridDirective(d))
       if (graftGridCards(layer, singles).length > 0) applied++
       continue
