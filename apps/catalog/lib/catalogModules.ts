@@ -60,9 +60,16 @@ export interface CatalogEntry {
   /**
    * Some modules can't render a working preview inside the catalog
    * (e.g. chart needs a runtime data endpoint the catalog doesn't serve).
-   * When set, the card shows this notice instead of attempting to render.
+   * When set, both the card and the detail page show this notice instead of
+   * attempting to render.
    */
   previewNotice?: string
+  /**
+   * For modules that render fine on the detail page but shouldn't auto-mount in
+   * the grid (e.g. an expensive WebGL scene best viewed full-size). The compact
+   * card shows this notice; the detail page mounts the live component.
+   */
+  cardNotice?: string
 }
 
 /** The routing/key identity for a catalog entry (falls back to its module type). */
@@ -101,7 +108,7 @@ export const catalogModules: CatalogEntry[] = [
     type: 'f1:track-3d',
     category: 'F1',
     sample: track3dSample,
-    previewNotice: 'WebGL 3D track — drag to orbit on the detail page; renders flat without elevation data.',
+    cardNotice: 'WebGL 3D track — open to orbit; renders flat without elevation data.',
   },
   { type: 'f1:telemetry-chart', category: 'F1', sample: telemetryChartSample },
   { type: 'fs:match-card', category: 'Footshorts', sample: matchCardSample },
