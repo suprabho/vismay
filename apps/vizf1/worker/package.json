@@ -23,6 +23,7 @@
     "@google/genai": "^1.50.1",
     "@supabase/supabase-js": "^2.45.4",
     "@vismay/eval-entities": "workspace:*",
+    "@vismay/f1-viz": "workspace:*",
     "@vizf1/brand": "workspace:*",
     "rss-parser": "^3.13.0",
     "zod": "^3.23.8"

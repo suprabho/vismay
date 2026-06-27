@@ -10,6 +10,7 @@
     "./web": "./src/web/index.ts",
     "./native": "./src/native/index.ts",
     "./grands-prix": "./src/data/grands-prix.ts",
+    "./telemetry-brief": "./src/telemetry/buildTelemetryBrief.ts",
     "./modules/*/sample": "./src/modules/*/sample.ts"
   },
   "peerDependencies": {
@@ -34,6 +35,7 @@
     "@react-three/drei": "^10.0.0"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "@types/react": "^19",
     "@types/three": "^0.171.0",
     "echarts": "^6.0.0",

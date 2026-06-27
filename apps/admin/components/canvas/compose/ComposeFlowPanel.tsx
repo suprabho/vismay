@@ -133,6 +133,8 @@ export function ComposeFlow({
           onReextract={flow.reextract}
           onGenAngles={() => flow.genAngles()}
           onCreateRecap={flow.createRecap}
+          onLoadTelemetrySessions={flow.loadTelemetrySessions}
+          onCreateTelemetrySource={flow.createTelemetrySource}
         />
       </div>
 

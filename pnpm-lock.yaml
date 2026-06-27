@@ -817,6 +817,9 @@ importers:
       '@vismay/eval-entities':
         specifier: workspace:*
         version: link:../../../packages/eval-entities
+      '@vismay/f1-viz':
+        specifier: workspace:*
+        version: link:../../../verticals/f1-viz
       '@vizf1/brand':
         specifier: workspace:*
         version: link:../brand
@@ -1577,6 +1580,9 @@ importers:
         specifier: ^0.171.0
         version: 0.171.0
     devDependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.45.4
+        version: 2.105.4
       '@types/react':
         specifier: ^19
         version: 19.2.14

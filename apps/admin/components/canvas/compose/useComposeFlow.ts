@@ -25,6 +25,33 @@ import type { ChartRequirementView } from './ChartCard'
 
 const base = `/api/stories`
 
+/** A driver in an ingested telemetry session (for the "Add telemetry session" picker). */
+export interface TelemetryDriver {
+  number: number
+  abbr: string
+  name: string
+  team: string
+  teamId: string
+  teamColour: string
+}
+/** A constructor derived from a session's driver roster. */
+export interface TelemetryConstructor {
+  name: string
+  id: string
+  colour: string
+}
+/** One ingested telemetry session, with its roster + constructors. */
+export interface TelemetrySession {
+  sessionKey: string
+  label: string
+  season: number
+  round: number | null
+  sessionType: string
+  ready: boolean
+  drivers: TelemetryDriver[]
+  constructors: TelemetryConstructor[]
+}
+
 /** How many section "Write"/"Rewrite" calls may materialise concurrently. */
 export const MAX_CONCURRENT_SECTIONS = 3
 
@@ -387,6 +414,36 @@ export function useComposeFlow({
   async function createRecap(): Promise<boolean> {
     return genAngles(undefined, 'recap')
   }
+
+  // ── F1 telemetry source (vizf1 only) ─────────────────────────────────────
+  // List the ingested telemetry sessions (+ their drivers/constructors) for the
+  // "Add telemetry session" picker. This route lives outside the per-story
+  // compose namespace, so it's a direct fetch rather than `call`.
+  async function loadTelemetrySessions(): Promise<TelemetrySession[]> {
+    try {
+      const res = await fetch('/api/vizf1/telemetry/sessions', { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { sessions?: TelemetrySession[] }
+      return data.sessions ?? []
+    } catch {
+      return []
+    }
+  }
+  // Build a focused telemetry brief server-side and attach it as a text source.
+  async function createTelemetrySource(opts: {
+    sessionKey: string
+    driverNumbers?: number[]
+    constructors?: string[]
+    prompt?: string
+  }): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add telemetry', 'telemetry-source', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(opts),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
     // Persist immediately (fire-and-forget) so the choice survives a reload
@@ -601,6 +658,8 @@ export function useComposeFlow({
     reextract,
     genAngles,
     createRecap,
+    loadTelemetrySessions,
+    createTelemetrySource,
     pickAngle,
     genOutline,
     cycleStatus,
