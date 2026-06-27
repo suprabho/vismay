@@ -45,8 +45,8 @@ export function SourcesStage({
   extracted: number
   pending: number
   wide?: boolean
-  /** The draft's app — gates the footshorts-only "Create recap" button and the
-   *  vizf1-only "Add telemetry session" picker. */
+  /** The draft's vertical (frontmatter `vertical`, per CanvasPage) — gates the
+   *  footshorts-only "Create recap" button and the f1-only telemetry picker. */
   appSlug?: string | null
   onAddUrl: (url: string) => Promise<boolean>
   onAddText: (text: string) => Promise<boolean>
@@ -77,7 +77,9 @@ export function SourcesStage({
   const [telemetryOpen, setTelemetryOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const showRecap = appSlug === 'footshorts'
-  const showTelemetry = appSlug === 'vizf1'
+  // `appSlug` is actually the story's frontmatter `vertical` (see CanvasPage) —
+  // 'f1' for VizF1 stories, not the 'vizf1' app slug.
+  const showTelemetry = appSlug === 'f1'
 
   async function addUrl() {
     if (!url.trim()) return
