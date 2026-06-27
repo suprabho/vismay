@@ -11,6 +11,7 @@ const TABS: AdminTab[] = [
   { href: '/vizmaya/demos', label: 'Demos' },
   { href: '/vizmaya/social', label: 'Social' },
   { href: '/vizmaya/share-cards', label: 'Share cards' },
+  { href: '/vizmaya/video', label: 'Video' },
 ]
 
 export function AdminTabs() {
