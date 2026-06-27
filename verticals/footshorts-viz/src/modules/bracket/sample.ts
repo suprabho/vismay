@@ -219,3 +219,57 @@ export const sampleTreeVertical: BracketConfig = {
   ...sampleTree,
   layout: 'tree-vertical',
 }
+
+/**
+ * Incomplete-bracket sample: a World Cup Round of 32 published before the draw
+ * is finished. 14 teams are locked into their spots; every other slot is still
+ * a qualification descriptor ("Winner Group I", "3rd A/C/D/F", "Runner-up K"),
+ * and the Round of 16 → Final are entirely TBD.
+ *
+ * This is the `rounds` (static) authoring path — there are no fixtures yet, so
+ * the structure is given verbatim and built via `buildStaticBracket`. Slot
+ * shorthands: a `{ team }` object = confirmed entrant (crest + flag from the
+ * bundled palette), a bare string = placeholder, `{}`/omitted = a blank TBD.
+ */
+export const sampleIncomplete: BracketConfig = {
+  type: 'fs:bracket',
+  layout: 'tree',
+  title: 'World Cup 26 · Round of 32',
+  competitionSlug: 'world-cup',
+  rounds: [
+    {
+      stage: 'ROUND_OF_32',
+      ties: [
+        { a: { team: 'germany' }, b: '3rd A/C/D/F' },
+        { a: 'Winner Group I', b: '3rd D/F/G/H' },
+        { a: { team: 'south-africa' }, b: { team: 'canada' } },
+        { a: { team: 'netherlands' }, b: { team: 'morocco' } },
+        { a: 'Runner-up K', b: 'Runner-up L' },
+        { a: 'Winner Group H', b: 'Runner-up J' },
+        { a: { team: 'usa' }, b: { team: 'bosnia' } },
+        { a: 'Winner Group G', b: '3rd A/H/I/J' },
+        { a: { team: 'brazil' }, b: { team: 'japan' } },
+        { a: { team: 'ivory-coast', name: "Côte d'Ivoire" }, b: 'Runner-up I' },
+        { a: { team: 'mexico' }, b: '3rd C/E/H' },
+        { a: 'Winner Group L', b: '3rd E/I/J/K' },
+        { a: { team: 'argentina' }, b: 'Runner-up H' },
+        { a: { team: 'australia' }, b: 'Runner-up G' },
+        { a: { team: 'switzerland' }, b: '3rd E/F/G/I/J' },
+        { a: 'Winner Group K', b: '3rd D/E/I/J/L' },
+      ],
+    },
+    // Later rounds exist in the draw but no participants are known yet.
+    { stage: 'ROUND_OF_16', ties: [{}, {}, {}, {}, {}, {}, {}, {}] },
+    { stage: 'QUARTER_FINALS', ties: [{}, {}, {}, {}] },
+    { stage: 'SEMI_FINALS', ties: [{}, {}] },
+    { stage: 'FINAL', ties: [{}] },
+  ],
+}
+
+/**
+ * The same incomplete World Cup draw forced into the portrait/mobile layout.
+ */
+export const sampleIncompleteVertical: BracketConfig = {
+  ...sampleIncomplete,
+  layout: 'tree-vertical',
+}

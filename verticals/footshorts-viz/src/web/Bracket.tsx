@@ -1,8 +1,9 @@
 'use client'
 
-import type { Bracket as BracketModel, BracketTie, FixtureRow } from '../types'
+import type { Bracket as BracketModel, BracketSlot, BracketTie, FixtureRow } from '../types'
 import { stageLabel } from '../stageLabel'
 import { MatchRow } from './MatchRow'
+import { Crest } from '../data/Crest'
 
 type Props = { bracket: BracketModel }
 
@@ -29,7 +30,50 @@ function aggregateFixture(tie: BracketTie): FixtureRow {
   }
 }
 
+// One stacked row in a slot-based (incomplete) tie card.
+function SlotRow({ slot }: { slot: BracketSlot }) {
+  if (slot.kind !== 'team') {
+    const label = slot.kind === 'placeholder' ? slot.label : 'TBD'
+    return (
+      <div className="flex items-center gap-2 px-3 py-2">
+        <span
+          className="shrink-0 rounded-full border border-dashed border-white/25"
+          style={{ width: 20, height: 20 }}
+          aria-hidden
+        />
+        <span className="min-w-0 flex-1 truncate text-[13px] italic text-text/40">{label}</span>
+      </div>
+    )
+  }
+  const slug = slot.team?.slug ?? slot.name
+  const tone = slot.winner ? 'font-semibold text-text' : 'text-text/75'
+  return (
+    <div className="flex items-center gap-2 px-3 py-2">
+      <Crest team={slug} crestUrl={slot.team?.crest_url ?? undefined} size={20} className="shrink-0 object-contain" />
+      <span className={`min-w-0 flex-1 truncate text-[13px] ${tone}`}>{slot.name}</span>
+      {slot.score != null ? (
+        <span className={`tabular-nums text-[13px] ${tone}`}>{slot.score}</span>
+      ) : null}
+    </div>
+  )
+}
+
+// Incomplete/static ties have no legs to render through MatchRow — just two
+// slots (team / placeholder / TBD). Drawn as a compact two-row card.
+function SlotTieCard({ tie }: { tie: BracketTie }) {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-lg border border-white/20 bg-white/10">
+      <SlotRow slot={tie.slotA!} />
+      <div className="border-t border-white/15" />
+      <SlotRow slot={tie.slotB!} />
+    </div>
+  )
+}
+
 export function TieCard({ tie }: { tie: BracketTie }) {
+  if (tie.slotA && tie.slotB && tie.legs.length === 0) {
+    return <SlotTieCard tie={tie} />
+  }
   const showAggregate = tie.legs.length >= 2 && tie.aggregate !== null
   const winnerName =
     tie.winnerTeamId === tie.teamA?.id
@@ -86,7 +130,7 @@ export function Bracket({ bracket }: Props) {
           <div className="flex flex-col gap-2">
             {round.ties.map((tie) => (
               <TieCard
-                key={tie.legs.map((l) => l.id).join('|')}
+                key={tie.id ?? tie.legs.map((l) => l.id).join('|')}
                 tie={tie}
               />
             ))}

@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native'
-import type { Bracket as BracketModel, BracketTie, FixtureRow } from '../types'
+import type { Bracket as BracketModel, BracketSlot, BracketTie, FixtureRow } from '../types'
 import { stageLabel } from '../stageLabel'
 import { MatchRow } from './MatchRow'
 
@@ -28,7 +28,44 @@ function aggregateFixture(tie: BracketTie): FixtureRow {
   }
 }
 
+function SlotRow({ slot }: { slot: BracketSlot }) {
+  if (slot.kind !== 'team') {
+    const label = slot.kind === 'placeholder' ? slot.label : 'TBD'
+    return (
+      <View className="px-3 py-2">
+        <Text className="text-[13px] italic text-text/40">{label}</Text>
+      </View>
+    )
+  }
+  return (
+    <View className="flex-row items-center px-3 py-2">
+      <Text className={`flex-1 text-[13px] ${slot.winner ? 'font-semibold text-text' : 'text-text/75'}`}>
+        {slot.name}
+      </Text>
+      {slot.score != null ? (
+        <Text className={`text-[13px] ${slot.winner ? 'font-semibold text-text' : 'text-text/75'}`}>
+          {slot.score}
+        </Text>
+      ) : null}
+    </View>
+  )
+}
+
+// Incomplete/static ties have no legs — render the two slots directly.
+function SlotTieCard({ tie }: { tie: BracketTie }) {
+  return (
+    <View className="overflow-hidden rounded-lg border border-white/20 bg-white/10">
+      <SlotRow slot={tie.slotA!} />
+      <View className="border-t border-white/15" />
+      <SlotRow slot={tie.slotB!} />
+    </View>
+  )
+}
+
 export function TieCard({ tie }: { tie: BracketTie }) {
+  if (tie.slotA && tie.slotB && tie.legs.length === 0) {
+    return <SlotTieCard tie={tie} />
+  }
   const showAggregate = tie.legs.length >= 2 && tie.aggregate !== null
   const winnerName =
     tie.winnerTeamId === tie.teamA?.id
@@ -87,7 +124,7 @@ export function Bracket({ bracket }: Props) {
           </Text>
           <View style={{ gap: 8 }}>
             {round.ties.map((tie) => (
-              <TieCard key={tie.legs.map((l) => l.id).join('|')} tie={tie} />
+              <TieCard key={tie.id ?? tie.legs.map((l) => l.id).join('|')} tie={tie} />
             ))}
           </View>
         </View>

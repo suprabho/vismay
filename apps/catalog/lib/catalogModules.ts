@@ -28,6 +28,8 @@ import {
   sample as bracketSample,
   sampleTree as bracketSampleTree,
   sampleTreeVertical as bracketSampleTreeVertical,
+  sampleIncomplete as bracketSampleIncomplete,
+  sampleIncompleteVertical as bracketSampleIncompleteVertical,
 } from '@vismay/footshorts-viz/modules/bracket/sample'
 import { sample as tacticsBoardSample } from '@vismay/footshorts-viz/modules/tactics-board/sample'
 import {
@@ -134,6 +136,20 @@ export const catalogModules: CatalogEntry[] = [
     label: 'Footshorts — bracket (vertical)',
     category: 'Footshorts',
     sample: bracketSampleTreeVertical,
+  },
+  {
+    type: 'fs:bracket',
+    id: 'fs:bracket@incomplete',
+    label: 'Footshorts — bracket (incomplete draw)',
+    category: 'Footshorts',
+    sample: bracketSampleIncomplete,
+  },
+  {
+    type: 'fs:bracket',
+    id: 'fs:bracket@incomplete-vertical',
+    label: 'Footshorts — bracket (incomplete, vertical)',
+    category: 'Footshorts',
+    sample: bracketSampleIncompleteVertical,
   },
   { type: 'fs:tactics-board', category: 'Footshorts', sample: tacticsBoardSample },
   { type: 'fs:team-form-strip', category: 'Footshorts', sample: teamFormStripSample },
