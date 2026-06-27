@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { RaceRow } from '@vismay/f1-viz/types'
 import { findGrandPrix, flagUrl } from '@vismay/f1-viz/grands-prix'
-import { RaceWeekendTabs } from '@/components/RaceWeekendTabs'
+import { useSessionResults, formatLapMs } from '@/lib/useSessionResults'
 
 function dateLabel(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, {
@@ -96,10 +97,54 @@ export function RaceCardExpandable({ race }: { race: RaceRow }) {
         </div>
       </button>
       {open && expandable ? (
-        <div className="border-t border-border/50 p-3">
-          <RaceWeekendTabs race={race} />
+        <div className="space-y-2 border-t border-border/50 p-3">
+          <Top10 round={race.round} />
+          <Link
+            href={`/race/${race.round}`}
+            className="block rounded-lg border border-border bg-surface py-2 text-center text-xs font-medium text-text transition-colors hover:border-accent"
+          >
+            View race details →
+          </Link>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+/** Compact top-10 race classification for the schedule card — the full results
+ *  (every finisher, qualifying/practice, telemetry) live on the race details page. */
+function Top10({ round }: { round: number }) {
+  const q = useSessionResults(round, 'race')
+  if (q.isLoading)
+    return <div className="rounded-lg border border-border bg-bg p-3 text-center text-xs text-muted">Loading results…</div>
+  const rows = (q.data ?? []).slice(0, 10)
+  if (rows.length === 0)
+    return <div className="rounded-lg border border-border bg-bg p-3 text-center text-xs text-muted">No results yet</div>
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-bg">
+      {rows.map((r, i) => (
+        <div
+          key={r.driverId}
+          className="grid grid-cols-[22px_1fr_auto] items-center gap-2 border-b border-border/40 px-3 py-1.5 text-xs last:border-b-0"
+        >
+          <span className="text-muted">{r.position ?? i + 1}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            {r.driverCode ? (
+              <span
+                className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+                style={{
+                  backgroundColor: r.constructorColor ? `${r.constructorColor}22` : 'var(--color-bg)',
+                  color: r.constructorColor ?? 'var(--color-text)',
+                }}
+              >
+                {r.driverCode}
+              </span>
+            ) : null}
+            <span className="truncate text-text">{r.driverName}</span>
+          </span>
+          <span className="font-mono text-[11px] text-text/70">{formatLapMs(r.bestLapMs)}</span>
+        </div>
+      ))}
     </div>
   )
 }
