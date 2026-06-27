@@ -58,6 +58,17 @@ def _session_date_iso(session) -> str | None:
     return None
 
 
+def _mark_status(sink: SupabaseSink, session_key: str, values: dict) -> None:
+    """Best-effort status patch. Status fields are advisory, so a failed write
+    must never mask the real error (or crash an otherwise-successful ingest) —
+    e.g. when Supabase is timing out, the failure handler's own update would
+    raise and bury the original exception."""
+    try:
+        sink.update("vizf1_telemetry_sessions", {"session_key": session_key}, values)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("status update %s failed: %s", values, exc)
+
+
 def _build_lap_rows(session_key: str, processed_laps: list[dict], aggregates: dict) -> list[dict]:
     rows: list[dict] = []
     # Union of (driver, lap) keys across processed laps + aggregates.
@@ -132,19 +143,16 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
     aggregates: dict = {}
     if is_practice:
         logger.info("Practice session — skipping lap-telemetry channel storage")
-        sink.update("vizf1_telemetry_sessions", {"session_key": session_key},
-                    {"telemetry_status": "skipped"})
+        _mark_status(sink, session_key, {"telemetry_status": "skipped"})
     else:
         try:
             channel_rows, aggregates = telemetry.extract_lap_telemetry(session, session_key)
             sink.upsert("vizf1_lap_telemetry", channel_rows,
                         on_conflict="session_key,driver_number,lap")
-            sink.update("vizf1_telemetry_sessions", {"session_key": session_key},
-                        {"telemetry_status": "done", "telemetry_error": None})
+            _mark_status(sink, session_key, {"telemetry_status": "done", "telemetry_error": None})
         except Exception as exc:  # noqa: BLE001
             logger.error("Phase 2 failed for %s: %s", session_key, exc)
-            sink.update("vizf1_telemetry_sessions", {"session_key": session_key},
-                        {"telemetry_status": "failed", "telemetry_error": str(exc)[:2000]})
+            _mark_status(sink, session_key, {"telemetry_status": "failed", "telemetry_error": str(exc)[:2000]})
 
     # ── Merge processed laps + aggregates -> vizf1_telemetry_laps ────────────
     lap_rows = _build_lap_rows(session_key, processed_laps, aggregates)
@@ -155,15 +163,16 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
         circuit_row = positions.build_circuit_row(session, year, gp_name)
         sink.upsert("vizf1_telemetry_circuits", [circuit_row], on_conflict="circuit_key,year")
         position_rows = positions.build_position_rows(session, session_key, ckey)
+        # One driver per request: each row carries a full-race position blob
+        # (~0.5-1 MB), so batching multiple drivers overruns the PostgREST
+        # request budget and trips a Cloudflare 522 on race-length sessions.
         sink.upsert("vizf1_car_positions", position_rows,
-                    on_conflict="session_key,driver_number")
-        sink.update("vizf1_telemetry_sessions", {"session_key": session_key},
-                    {"positions_status": "done", "positions_error": None})
+                    on_conflict="session_key,driver_number", chunk=1)
+        _mark_status(sink, session_key, {"positions_status": "done", "positions_error": None})
         logger.info("Positions done for %s: %d drivers", session_key, len(position_rows))
     except Exception as exc:  # noqa: BLE001
         logger.error("Phase 3 failed for %s: %s", session_key, exc)
-        sink.update("vizf1_telemetry_sessions", {"session_key": session_key},
-                    {"positions_status": "failed", "positions_error": str(exc)[:2000]})
+        _mark_status(sink, session_key, {"positions_status": "failed", "positions_error": str(exc)[:2000]})
 
     logger.info("Ingest complete: %s", session_key)
     return session_key
