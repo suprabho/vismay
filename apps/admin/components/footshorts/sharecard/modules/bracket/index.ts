@@ -66,6 +66,10 @@ const bracketCardModule: VizModule<FsCardBracketConfig> = {
   adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
+  // A bracket tree can outgrow the card; let the author size the box up to 300%
+  // (rather than scroll it) in both axes.
+  maxWidthPct: 300,
+  maxHeightPct: 300,
   stableIdentity: (c) => {
     const nTies = c.rounds?.reduce((n, r) => n + (r.ties?.length ?? 0), 0) ?? 0
     return `fscard:bracket:${c.compKey ?? 'static'}:${c.rounds?.length ?? 0}:${nTies}:${c.layout}`
