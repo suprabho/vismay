@@ -147,6 +147,32 @@ export type TeamLane = {
 }
 
 /**
+/**
+ * One competitor slot in a knockout tie.
+ *
+ * Knockout brackets are often *incomplete*: before a tie's participants are
+ * decided, a slot holds either a qualification descriptor ("Winner Group I",
+ * "3rd A/C/D/F", "Runner-up K") or is entirely unknown. The fixture-derived
+ * path only ever produces `team` slots; the direct authoring path
+ * (`buildStaticBracket`) is the one that emits `placeholder` / `tbd` so a draw
+ * can be drawn before every entrant is known.
+ *
+ *   - `team`        — a confirmed entrant (crest + name, optional aggregate score)
+ *   - `placeholder` — an unresolved qualification descriptor, shown dimmed
+ *   - `tbd`         — fully unknown; rendered as a faint blank slot
+ */
+export type BracketSlot =
+  | {
+      kind: 'team'
+      team: FixtureTeamRef
+      name: string
+      score?: number | null
+      winner?: boolean
+    }
+  | { kind: 'placeholder'; label: string }
+  | { kind: 'tbd' }
+
+/**
  * A knockout tie: one or two legs between the same pair of teams in the same
  * stage. We don't have a `tie_id` on fixtures — buildBracket pairs legs by
  * unordered team pair within (competition_slug, season, stage).
@@ -163,6 +189,21 @@ export type BracketTie = {
   teamBName: string
   aggregate: { a: number; b: number } | null
   winnerTeamId: string | null
+  /**
+   * Stable identity for React keys. The fixture path leaves this undefined and
+   * keys off the legs' ids; the static/incomplete path sets it because those
+   * ties have no legs (an all-TBD round would otherwise collide on an empty
+   * key).
+   */
+  id?: string
+  /**
+   * Per-slot detail for incomplete brackets. When present the renderers draw
+   * from these (team / placeholder / tbd) instead of `teamA`/`teamB`; when
+   * absent (the fixture path) they fall back to the team fields above, so this
+   * is fully backward compatible.
+   */
+  slotA?: BracketSlot
+  slotB?: BracketSlot
 }
 
 export type BracketRound = {

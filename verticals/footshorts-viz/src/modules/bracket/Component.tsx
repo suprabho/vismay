@@ -7,6 +7,7 @@ import { BracketTree } from '../../web/BracketTree'
 import { FsFrame } from '../../web/FsFrame'
 import { pickFsBackground } from '../shared/background'
 import { buildBracket } from '../../buildBracket'
+import { buildStaticBracket } from '../../buildStaticBracket'
 import type { BracketConfig } from './index'
 
 export default function BracketVizComponent({
@@ -18,7 +19,18 @@ export default function BracketVizComponent({
     return () => cancelAnimationFrame(h)
   }, [noteReady])
 
-  const bracket = useMemo(() => buildBracket(config.fixtures), [config.fixtures])
+  // The incomplete/static path (`rounds`) wins when present; otherwise derive
+  // the bracket from the flat fixture list.
+  const bracket = useMemo(
+    () =>
+      config.rounds
+        ? buildStaticBracket({
+            rounds: config.rounds,
+            competitionSlug: config.competitionSlug,
+          })
+        : buildBracket(config.fixtures ?? []),
+    [config.rounds, config.fixtures, config.competitionSlug],
+  )
   const isTree =
     config.layout === 'tree' ||
     config.layout === 'tree-vertical' ||
