@@ -11,7 +11,6 @@ import {
   MatchRow,
   Bracket,
   buildBracket,
-  isBracketDrawn,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/native';
 
@@ -50,7 +49,6 @@ export default function LeagueScreen() {
     () => buildBracket(scheduleFixtures.data ?? []),
     [scheduleFixtures.data],
   );
-  const bracketDrawn = isBracketDrawn(bracket);
   const scheduleRounds = useMemo(
     () => groupFixturesByRound(scheduleFixtures.data ?? []),
     [scheduleFixtures.data],
@@ -178,13 +176,7 @@ export default function LeagueScreen() {
             )
           ) : null}
 
-          {activeTab === 'glory' ? (
-            bracketDrawn ? (
-              <Bracket bracket={bracket!} />
-            ) : (
-              <EmptyNote text="Knockout draw not set yet — see the Schedule tab for upcoming rounds." />
-            )
-          ) : null}
+          {activeTab === 'glory' ? <Bracket bracket={bracket!} /> : null}
         </View>
       </View>
     </ScrollView>
