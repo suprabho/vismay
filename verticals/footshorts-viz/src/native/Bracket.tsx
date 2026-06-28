@@ -54,9 +54,9 @@ function SlotRow({ slot }: { slot: BracketSlot }) {
 // Incomplete/static ties have no legs — render the two slots directly.
 function SlotTieCard({ tie }: { tie: BracketTie }) {
   return (
-    <View className="overflow-hidden rounded-lg border border-white/20 bg-white/10">
+    <View className="overflow-hidden rounded-lg border border-border bg-surface">
       <SlotRow slot={tie.slotA!} />
-      <View className="border-t border-white/15" />
+      <View className="border-t border-border" />
       <SlotRow slot={tie.slotB!} />
     </View>
   )
@@ -75,11 +75,11 @@ export function TieCard({ tie }: { tie: BracketTie }) {
         : null
 
   return (
-    <View className="overflow-hidden rounded-lg border border-white/20 bg-white/10">
+    <View className="overflow-hidden rounded-lg border border-border bg-surface">
       {showAggregate ? (
         <>
           {winnerName ? (
-            <View className="border-t border-white/15 bg-white/5 px-3 py-1.5">
+            <View className="border-t border-border bg-bg px-3 py-1.5">
               <Text className="text-[11px] font-semibold text-text/80">
                 {winnerName} advance
               </Text>
@@ -93,7 +93,7 @@ export function TieCard({ tie }: { tie: BracketTie }) {
         // Dividers above subsequent legs only. Leg 0 has either the aggregate
         // MatchRow above it (whose own bottom border draws the line) or the
         // card edge above it (no divider needed).
-        <View key={leg.id} className={i > 0 ? 'border-t border-white/15' : ''}>
+        <View key={leg.id} className={i > 0 ? 'border-t border-border' : ''}>
           {tie.legs.length > 1 ? (
             <Text
               className="px-3 pt-1.5 text-[10px] font-semibold uppercase text-text/55"

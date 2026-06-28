@@ -143,7 +143,7 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
       : 'vs';
 
   return (
-    <View className={`flex-row items-center border-b border-white/20 ${sizes.padding}`}>
+    <View className={`flex-row items-center border-b border-border ${sizes.padding}`}>
       <TeamCell
         name={homeName}
         crest={fixture.home?.crest_url ?? null}
