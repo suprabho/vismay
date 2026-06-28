@@ -7,7 +7,6 @@ import {
   StandingsTable,
   BracketTree,
   buildBracket,
-  isBracketDrawn,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/web';
 import { EntityShareCards } from '@/components/EntityShareCards';
@@ -110,7 +109,6 @@ export default function LeaguePage() {
     () => buildBracket(scheduleFixtures.data ?? []),
     [scheduleFixtures.data],
   );
-  const bracketDrawn = isBracketDrawn(bracket);
   const scheduleRounds = useMemo(
     () => groupFixturesByRound(scheduleFixtures.data ?? []),
     [scheduleFixtures.data],
@@ -224,18 +222,12 @@ export default function LeaguePage() {
         ) : null}
 
         {activeTab === 'glory' ? (
-          bracketDrawn ? (
-            <BracketTree
-              bracket={bracket!}
-              competitionSlug={slug}
-              competitionColor={league.data.primary_color ?? undefined}
-              title={league.data.name}
-            />
-          ) : (
-            <p className="text-sm text-muted">
-              Knockout draw not set yet — see the Schedule tab for upcoming rounds.
-            </p>
-          )
+          <BracketTree
+            bracket={bracket!}
+            competitionSlug={slug}
+            competitionColor={league.data.primary_color ?? undefined}
+            title={league.data.name}
+          />
         ) : null}
       </div>
     </main>
