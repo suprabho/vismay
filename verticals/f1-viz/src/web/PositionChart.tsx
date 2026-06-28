@@ -17,6 +17,26 @@ const PADDING = { top: 16, right: 12, bottom: 24, left: 28 }
 const VIEW_W = 640
 const VIEW_H = 320
 
+// Teammates share a constructor colour, so lanes drawn with the same colour are
+// indistinguishable. Cycle stroke styles for the 2nd, 3rd… lane of each colour
+// so teammates read apart at a glance (and in the legend swatch). The first lane
+// of a colour stays solid; `undefined` means "no dash" on the SVG attribute.
+const DASH_VARIANTS: (string | undefined)[] = [undefined, '6 4', '1.5 4', '8 4 1.5 4']
+
+/**
+ * Map each lane to a stroke dash pattern, keyed by how many earlier lanes share
+ * its colour. Lanes with a unique colour always render solid.
+ */
+function dashByLane<T extends { color: string }>(lanes: T[]): (string | undefined)[] {
+  const seen = new Map<string, number>()
+  return lanes.map((lane) => {
+    const key = lane.color.toLowerCase()
+    const n = seen.get(key) ?? 0
+    seen.set(key, n + 1)
+    return DASH_VARIANTS[n % DASH_VARIANTS.length]
+  })
+}
+
 export function PositionChart({
   raceLabel,
   lanes,
@@ -35,6 +55,8 @@ export function PositionChart({
   const allPoints = lanes.flatMap((l) => l.points)
   const maxLap = totalLaps ?? Math.max(1, ...allPoints.map((p) => p.lap))
   const maxPos = Math.max(1, ...allPoints.map((p) => p.position))
+
+  const laneDashes = dashByLane(lanes)
 
   const xScale = (lap: number) =>
     PADDING.left +
@@ -92,7 +114,7 @@ export function PositionChart({
           </text>
         ))}
         {/* Lanes */}
-        {lanes.map((lane) => {
+        {lanes.map((lane, laneIdx) => {
           if (lane.points.length === 0) return null
           const d = lane.points
             .slice()
@@ -106,6 +128,7 @@ export function PositionChart({
               fill="none"
               stroke={lane.color}
               strokeWidth={1.5}
+              strokeDasharray={laneDashes[laneIdx]}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -113,12 +136,22 @@ export function PositionChart({
         })}
       </svg>
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
-        {lanes.map((lane) => (
+        {lanes.map((lane, laneIdx) => (
           <div key={lane.driverId} className="flex items-center gap-1.5 text-[11px]">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: lane.color }}
-            />
+            {/* Line swatch mirrors the lane's stroke style so teammates sharing a
+                colour stay distinguishable in the legend too. */}
+            <svg width={16} height={6} viewBox="0 0 16 6" aria-hidden="true">
+              <line
+                x1={0}
+                y1={3}
+                x2={16}
+                y2={3}
+                stroke={lane.color}
+                strokeWidth={2}
+                strokeDasharray={laneDashes[laneIdx]}
+                strokeLinecap="round"
+              />
+            </svg>
             <span className="text-text">{lane.driverCode ?? lane.driverName}</span>
           </div>
         ))}
