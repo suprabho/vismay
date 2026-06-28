@@ -99,15 +99,44 @@ def _build_lap_rows(session_key: str, processed_laps: list[dict], aggregates: di
     return rows
 
 
+def _canonical_gp_name(session, fallback: str) -> str:
+    """The official Grand Prix name from FastF1's event metadata.
+
+    Operators dispatch the ingest with whatever FastF1 accepts as a GP arg —
+    "Bahrain", "Sakhir", "Jeddah", a round number — but the web links telemetry
+    to the OpenF1 schedule by GP NAME (apps/vizf1/web/lib/useTelemetrySession),
+    so the stored name MUST be the official one ("Bahrain Grand Prix"). Deriving
+    it from the loaded session rather than trusting the CLI arg is what keeps a
+    short-name ingest from silently producing a session that no schedule row can
+    find. Falls back to the supplied arg if FastF1 omits the field.
+    """
+    try:
+        name = session.event.get("EventName")
+    except Exception:
+        name = None
+    if name is not None and pd.notna(name):
+        text = str(name).strip()
+        if text:
+            return text
+    return fallback
+
+
 def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: str) -> str:
     """Load + normalize + upsert one session. Returns the session_key."""
-    session_key = extract.make_session_key(year, gp_name, session_type)
-    logger.info("Loading FastF1 session: %s", session_key)
+    logger.info("Loading FastF1 session: %s %s %s", year, gp_name, session_type)
 
     session = fastf1.get_session(year, gp_name, session_type)
     # Load everything once — telemetry=True pulls car_data + pos_data.
     session.load(laps=True, telemetry=True, weather=True, messages=True)
     laps_df = session.laps
+
+    # Canonicalize the GP name from the loaded event so session_key, circuit_key
+    # and gp_name are stable no matter how the session was requested (see
+    # _canonical_gp_name) — and so gp_name matches the schedule's race_name.
+    gp_name = _canonical_gp_name(session, gp_name)
+    session_key = extract.make_session_key(year, gp_name, session_type)
+    ckey = extract.circuit_key(gp_name)
+    logger.info("Resolved session_key: %s (gp_name=%r)", session_key, gp_name)
 
     # ── Phase 1: session metadata, drivers, results, processed laps ──────────
     standings = extract.fetch_championship_standings(year)
@@ -116,7 +145,6 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
     weather_data = extract.extract_weather(session, laps_df)
     stints = extract.extract_stints(laps_df)
     processed_laps = extract.build_processed_laps(session, laps_df)
-    ckey = extract.circuit_key(gp_name)
 
     session_row = {
         "session_key":      session_key,
