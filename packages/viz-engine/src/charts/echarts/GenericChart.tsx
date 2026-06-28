@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import type { EChartsOption } from 'echarts'
-import { chartTooltip, useChartColors, useIsMobile } from '../lib/chartTheme'
+import { useChartColors, useIsMobile } from '../../lib/chartTheme'
+import { chartTooltip } from './_kit/tooltip'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
 

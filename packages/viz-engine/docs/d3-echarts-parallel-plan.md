@@ -11,6 +11,41 @@ own terms, plus a registry that can dispatch to either.
 
 ---
 
+## Implementation status
+
+**Phases 0 and 1 are implemented** — D3 and ECharts now run in parallel.
+
+Landed:
+- `charts/_shared/types.ts` — the renderer-agnostic contract (`ChartRenderProps`,
+  `ChartEngine`, `RegisteredChart`).
+- `charts/registry.ts` + a rewritten `charts/ChartPanel.tsx` that lazily
+  `import()`s each chart, so engines code-split per chart (verified: a route
+  using only the D3 chart does not load the `echarts-for-react` chunk).
+- ECharts charts moved to `charts/echarts/`; `chartTooltip` moved to
+  `charts/echarts/_kit/tooltip.ts` so `lib/chartTheme.ts` is engine-agnostic.
+- `charts/d3/BeeswarmChart.tsx` — first D3 chart (`beeswarm-example`), wired
+  through the same theme/mobile contract; deterministic SVG (no force sim) so
+  capture rasterises identically each run.
+- D3 submodule deps added to `package.json`; ESLint cross-engine guardrails in
+  `eslint.config.mjs`; a package `tsconfig.json` + `typecheck`/`lint` scripts.
+- Demo route at `apps/catalog/app/d3-demo/`.
+
+Deliberate deviations from the original plan below:
+- **A third `engine: 'svg'` category** was added for hand-built charts that use
+  no charting library (`QatarPlantMap`, `FeedbackLoopDiagram`). They stay at the
+  `charts/` root rather than being forced into `echarts/` or `d3/`.
+- **Readiness stays in the chart module wrapper.** `noteReady` increments a
+  shared counter, so signalling it from both the wrapper and the chart would
+  flip `__pdfReady__` early. The wrapper keeps owning the single rAF signal;
+  the ECharts `finished`-event rewire (§3.5) is deferred until the wrapper's
+  signal is removed per-chart. `noteReady` is therefore not in `ChartRenderProps`.
+- **Observable Plot is deferred to Phase 2.** Phase 1 uses raw `d3-*` modules;
+  `@observablehq/plot` and the `plot:<id>` path are not yet added.
+
+The sections below are the original plan, kept for the Phase 2–4 roadmap.
+
+---
+
 ## 1. Guiding principles
 
 1. **ECharts stays the default** for dashboard staples and JSON-driven
