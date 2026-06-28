@@ -31,9 +31,26 @@ interface ResultJson {
 }
 interface Row {
   session_key: string
+  gp_name: string | null
   positions_status: string | null
   drivers: DriverJson[] | null
   session_results: ResultJson[] | null
+}
+
+/**
+ * Normalize a GP / race name to a comparison slug: lowercase, accents stripped,
+ * every run of non-alphanumerics collapsed to a single underscore. Neutralizes
+ * the punctuation/spacing/accent differences between OpenF1's `meeting_name`
+ * (the schedule's race_name) and FastF1's event name (telemetry gp_name) so the
+ * two link reliably — e.g. "São Paulo Grand Prix" ⇄ "Sao Paulo Grand Prix".
+ */
+function slugName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 }
 
 /**
@@ -53,17 +70,27 @@ export function useTelemetrySession(raceName: string | null) {
     queryFn: async (): Promise<TelemetrySessionInfo | null> => {
       const sb = supabaseBrowser()
       const year = new Date().getFullYear()
+      // Fetch the season's race sessions and match on the GP name in JS rather
+      // than a server-side exact `ilike`: a short-name ingest ("Bahrain" vs the
+      // schedule's "Bahrain Grand Prix") or a punctuation/accent difference must
+      // still resolve. Slug-equality is the primary match; a prefix fallback
+      // covers a stored short name being a leading slice of the official one.
       const { data, error } = await sb
         .from('vizf1_telemetry_sessions')
-        .select('session_key, positions_status, drivers, session_results')
+        .select('session_key, gp_name, positions_status, drivers, session_results')
         .eq('season', year)
         .eq('session_type', 'R')
-        .ilike('gp_name', raceName!)
-        .limit(1)
       if (error) throw error
-      const row0 = (data ?? [])[0]
-      if (!row0) return null
-      const r = row0 as Row
+      const rows = (data ?? []) as Row[]
+      const want = slugName(raceName!)
+      const r =
+        rows.find((row) => row.gp_name && slugName(row.gp_name) === want) ??
+        rows.find((row) => {
+          if (!row.gp_name) return false
+          const got = slugName(row.gp_name)
+          return got.startsWith(want) || want.startsWith(got)
+        })
+      if (!r) return null
 
       const drivers: TelemetryDriver[] = (r.drivers ?? []).map((d) => ({
         number: d.driverNumber,
