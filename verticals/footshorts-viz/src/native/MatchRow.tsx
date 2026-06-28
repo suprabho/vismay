@@ -68,12 +68,12 @@ const MONTH_SHORT = [
 // web sibling defers the same conversion until after hydration.
 function kickoffLabel(iso: string, status: FixtureRow['status']): string {
   const d = new Date(iso);
+  if (status === 'finished') {
+    return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+  }
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
-  // Finished and upcoming both show the kickoff date *and* time, so a result
-  // row reads "Jun 25 21:00" rather than a bare day with no sense of when it
-  // was played.
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
   return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()} ${hh}:${mm}`;

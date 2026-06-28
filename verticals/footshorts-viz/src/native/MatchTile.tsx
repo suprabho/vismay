@@ -36,7 +36,8 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
   const awayName = away?.name ?? fixture.away_team_name ?? 'TBD';
 
   // Top-left label: score for finished games, LIVE pill, or local kick-off
-  // time. Day label for non-today fixtures so a strip of tiles self-orients.
+  // time. Non-today fixtures pair the day with the time so a strip of tiles
+  // self-orients and still tells you when the match starts.
   let topLabel: React.ReactNode;
   if (isFinished && fixture.home_score != null && fixture.away_score != null) {
     topLabel = (
@@ -71,16 +72,17 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
     const d = new Date(fixture.kickoff_at);
     const today = new Date();
     const isToday = d.toDateString() === today.toDateString();
+    const time = d.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
     const text = isToday
-      ? d.toLocaleTimeString(undefined, {
-          hour: 'numeric',
-          minute: '2-digit',
-        })
-      : d.toLocaleDateString(undefined, {
+      ? time
+      : `${d.toLocaleDateString(undefined, {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
-        });
+        })} · ${time}`;
     topLabel = (
       <Text
         className="text-white text-xs font-bold uppercase"
