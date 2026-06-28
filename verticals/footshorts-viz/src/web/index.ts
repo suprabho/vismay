@@ -15,6 +15,16 @@ export { FsFrame } from './FsFrame'
 export type { FsBackgroundConfig } from '../modules/shared/background'
 export { Crest } from '../data/Crest'
 export { buildBracket, isBracketDrawn } from '../buildBracket'
+export { buildStaticBracket } from '../buildStaticBracket'
+export type {
+  StaticBracketInput,
+  StaticRoundInput,
+  StaticTieInput,
+  StaticSlotInput,
+} from '../buildStaticBracket'
+// NB: the bracket *model* types (Bracket, BracketSlot, …) are re-exported from
+// '@vismay/footshorts-viz/types', not here — `Bracket` is already a component
+// value export above, so re-exporting the type would collide.
 export { groupFixturesByRound } from '../scheduleRounds'
 export type { ScheduleRound } from '../scheduleRounds'
 export { stageLabel, stageRank, isKnockoutStage } from '../stageLabel'

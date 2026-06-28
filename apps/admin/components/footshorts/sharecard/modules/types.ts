@@ -1,5 +1,9 @@
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
+import type { StaticRoundInput } from '@vismay/footshorts-viz/web'
 import type { MatchRowVariant, MatchStyle, PhosphorWeight } from '../types'
+
+/** Bracket layouts offered in the share card (mirrors the story `fs:bracket`). */
+export type BracketCardLayout = 'tree' | 'tree-vertical' | 'tree-horizontal' | 'list'
 
 /**
  * `fscard:*` layer configs — each carries the PICKS (which competition, which
@@ -40,6 +44,30 @@ export interface FsCardFormConfig {
   type: 'fscard:form'
   compKey: string
   teamSlug: string
+}
+
+/**
+ * `fscard:bracket` — a knockout bracket card. Two data sources, pick one:
+ *  - `rounds`: an explicit, *incomplete* draw (slot-vs-slot ties where a slot
+ *    may be a confirmed team, a qualification placeholder, or TBD). Authored
+ *    directly in the editor, no live data — the World Cup "14 teams locked in"
+ *    look. Takes precedence when present.
+ *  - `compKey`: pull a competition's knockout fixtures from the injected data
+ *    and build a complete bracket.
+ */
+export interface FsCardBracketConfig {
+  type: 'fscard:bracket'
+  /** Incomplete/static draw authored inline; wins over `compKey`. */
+  rounds?: StaticRoundInput[]
+  /** Competition whose knockout fixtures build a complete (live) bracket. */
+  compKey?: string
+  layout: BracketCardLayout
+  /** Centre-emblem caption, e.g. "World Cup 26 · Round of 32". */
+  title?: string
+  /** Competition slug for the emblem colour + name (defaults to world-cup / the fixtures' slug). */
+  competitionSlug?: string
+  /** Team id whose path through the tree is highlighted. */
+  highlightTeamId?: string
 }
 
 export interface FsCardNewsImageConfig {
@@ -103,6 +131,7 @@ export type FsCardConfig =
   | FsCardFixturesConfig
   | FsCardStandingsConfig
   | FsCardFormConfig
+  | FsCardBracketConfig
   | FsCardNewsImageConfig
   | FsCardNewsArticleConfig
   | FsCardAiImageConfig
