@@ -72,12 +72,12 @@ function kickoffLabel(iso: string, status: FixtureRow['status'], local: boolean)
   const d = new Date(iso);
   const month = local ? d.getMonth() : d.getUTCMonth();
   const date = local ? d.getDate() : d.getUTCDate();
-  if (status === 'finished') {
-    return `${MONTH_SHORT[month]} ${date}`;
-  }
   if (status === 'live') return 'LIVE';
   if (status === 'postponed') return 'PPD';
   if (status === 'cancelled') return 'CXL';
+  // Finished and upcoming both show the kickoff date *and* time, so a result
+  // row reads "Jun 25 21:00" rather than a bare day with no sense of when it
+  // was played.
   const hh = String(local ? d.getHours() : d.getUTCHours()).padStart(2, '0');
   const mm = String(local ? d.getMinutes() : d.getUTCMinutes()).padStart(2, '0');
   return `${MONTH_SHORT[month]} ${date} ${hh}:${mm}`;
