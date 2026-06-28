@@ -113,6 +113,9 @@ export function useEntityShareCards(entityId: string | undefined) {
         seen.add(item.id);
         items.push(item);
       }
+      // Latest first. Ordering on the embedded to-one `card` doesn't reliably
+      // reorder the parent rows, so sort the assembled list explicitly.
+      items.sort((a, b) => b.published_at.localeCompare(a.published_at));
       return items;
     },
     staleTime: 60 * 1000,
