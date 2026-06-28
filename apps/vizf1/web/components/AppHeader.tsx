@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '@/lib/AuthProvider'
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean }
 
@@ -14,6 +15,7 @@ const NAV: NavItem[] = [
 
 export function AppHeader() {
   const pathname = usePathname() ?? ''
+  const { session, loading } = useAuth()
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur">
@@ -38,6 +40,27 @@ export function AppHeader() {
               </Link>
             )
           })}
+          {!loading &&
+            (session ? (
+              <Link
+                href="/following"
+                aria-label="Following"
+                className={
+                  pathname.startsWith('/following') || pathname.startsWith('/onboarding')
+                    ? 'ml-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-text'
+                    : 'ml-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:text-text'
+                }
+              >
+                Following
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="ml-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text hover:border-muted"
+              >
+                Sign in
+              </Link>
+            ))}
         </nav>
       </div>
     </header>
