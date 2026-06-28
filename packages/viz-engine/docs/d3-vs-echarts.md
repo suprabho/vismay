@@ -454,8 +454,10 @@ Need a chart? Start here.
 │   │   └── Hand-built with logic? → new file in `charts/echarts/`.
 │   └── No, it's bespoke (beeswarm, hexbin, chord, custom illustration,
 │        annotation-heavy explainer, diagram).
-│       └── D3 → new file in `charts/d3/` using d3-* modules (SVG-first).
-│           (A `plot:<id>` Observable Plot JSON path is planned — Phase 2.)
+│       └── D3 (SVG-first).
+│           ├── Tabular shape Observable Plot expresses? → emit `plot:<id>`
+│           │   JSON (see generic-plot-schema.md).
+│           └── Otherwise → new file in `charts/d3/` using d3-* modules.
 │
 ├── Is it a hand-built diagram/illustration with no charting library at all?
 │   └── Plain React+SVG → new file at `charts/` root (engine-neutral), e.g.

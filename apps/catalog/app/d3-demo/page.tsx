@@ -27,6 +27,19 @@ export default function D3DemoPage() {
           <ChartPanel chartId="beeswarm-example" activeStep={1} />
         </div>
       </section>
+
+      <h2 style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 16, margin: '40px 0 4px' }}>
+        D3 ⋅ plot:demo (JSON-driven Observable Plot)
+      </h2>
+      <p style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, opacity: 0.7, marginBottom: 24 }}>
+        Rendered via <code>&lt;ChartPanel chartId=&quot;plot:demo&quot; slug=&quot;demo&quot; /&gt;</code> — the spec is
+        fetched as JSON from <code>/api/chart-data/demo/demo</code>, parallel to the ECharts <code>data:</code> path.
+      </p>
+      <section style={{ display: 'grid', gap: 24, gridTemplateColumns: '1fr', maxWidth: 820 }}>
+        <div style={{ height: 420, border: '1px solid #1a2830', borderRadius: 8, padding: 8 }}>
+          <ChartPanel chartId="plot:demo" slug="demo" activeStep={0} />
+        </div>
+      </section>
     </main>
   )
 }

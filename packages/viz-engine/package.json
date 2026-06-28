@@ -19,6 +19,7 @@
     "@deck.gl/mapbox": "^9.3.0",
     "@deck.gl/react": "^9.3.0",
     "@iconify/react": "^6.0.2",
+    "@observablehq/plot": "^0.6.17",
     "@phosphor-icons/react": "^2.1.10",
     "@rive-app/canvas": "^2.37.1",
     "@rive-app/react-canvas": "^4.28.0",

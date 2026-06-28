@@ -15,6 +15,7 @@ export { default as BackgroundVizSlot } from './BackgroundVizSlot'
 export { default as ChartPanel } from './charts/ChartPanel'
 export { default as MapboxBackground } from './charts/MapboxBackground'
 export { default as GenericChart } from './charts/echarts/GenericChart'
+export { default as GenericPlot } from './charts/d3/GenericPlot'
 export { CHART_REGISTRY } from './charts/registry'
 export type { ChartEngine, ChartRenderer, ChartRenderProps, RegisteredChart } from './charts/_shared/types'
 // chartTooltip moved out of lib/chartTheme (now engine-agnostic) into the ECharts kit.
