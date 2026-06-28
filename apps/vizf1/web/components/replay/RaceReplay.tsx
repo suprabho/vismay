@@ -6,6 +6,7 @@ import { DriverToggleList, type StandingsSortMode } from './DriverToggleList'
 import { PlaybackControls, type PlaybackSpeed } from './PlaybackControls'
 import { FocusedDriverCard } from './FocusedDriverCard'
 import { AlertIcon, SpinnerIcon } from './icons'
+import VizMount from '@/components/VizMount'
 import { createFixtureDataSource } from '@/lib/replay/dataSource'
 import { useReplayData } from '@/lib/replay/useReplayData'
 import { computeLiveStandings, findFrameIndex, timeAtLapStart } from '@/lib/replay/trackProjection'
@@ -44,6 +45,8 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
 
   const [visibleDrivers, setVisibleDrivers] = useState<Set<number>>(new Set())
   const [focusedDriver, setFocusedDriver] = useState<number | null>(null)
+  // Viewport renderer: the SVG 2D map (default) or the orbit-able 3D track.
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d')
   const [sortMode, setSortMode] = useState<StandingsSortMode>('live')
   const [sortModeUserSet, setSortModeUserSet] = useState(false)
 
@@ -130,6 +133,25 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
   const focusedDriverObj = useMemo(
     () => race.session?.drivers.find((d) => d.driverNumber === focusedDriver) ?? null,
     [race.session, focusedDriver],
+  )
+
+  // 3D track viz config. It consumes the same replay data seam as the 2D
+  // viewport, so resolve its source the same way RaceReplay does: a real
+  // session_key on the Supabase route, else the round ref (which falls back to
+  // the bundled demo fixture). The viz is self-contained — it brings its own
+  // playback — so it replaces the SVG map (and the parent scrubber) in 3D mode.
+  const track3dConfig = useMemo(
+    () => ({
+      type: 'f1:track-3d' as const,
+      ...(process.env.NEXT_PUBLIC_VIZF1_REPLAY_SOURCE === 'supabase'
+        ? { sessionKey: sessionRef }
+        : { sessionRef, fallbackRef: 'demo' }),
+      focalDriverNumber: focusedDriver,
+      interactive: true,
+      chaseCam: false,
+      autoPlay: true,
+    }),
+    [sessionRef, focusedDriver],
   )
 
   // Live race position per driver, recomputed at the 100 ms cadence of currentTimeMs.
@@ -241,19 +263,47 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="relative min-w-0 flex-1">
-          <TrackViewport
-            circuit={race.circuit}
-            drivers={race.session?.drivers ?? []}
-            tracks={race.tracks}
-            visibleDrivers={visibleDrivers}
-            focusedDriver={focusedDriver}
-            focusedLaps={focusedLaps}
-            sectorBests={race.sectorBests}
-            currentLap={currentLap}
-            aggregates={race.aggregates}
-            currentTimeRef={currentTimeRef}
-            redrawSignal={redrawSignal}
-          />
+          <div className="mb-2 flex items-center justify-end">
+            <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-0.5">
+              {(['2d', '3d'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    setViewMode(m)
+                    if (m === '3d') setPlaying(false)
+                  }}
+                  aria-pressed={viewMode === m}
+                  className={
+                    viewMode === m
+                      ? 'rounded-full bg-accent px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-accent-text'
+                      : 'rounded-full px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-widest text-muted transition-colors hover:text-text'
+                  }
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+          {viewMode === '3d' ? (
+            <div className="h-[460px] overflow-hidden rounded-xl border border-border bg-surface">
+              <VizMount type="f1:track-3d" config={track3dConfig} />
+            </div>
+          ) : (
+            <TrackViewport
+              circuit={race.circuit}
+              drivers={race.session?.drivers ?? []}
+              tracks={race.tracks}
+              visibleDrivers={visibleDrivers}
+              focusedDriver={focusedDriver}
+              focusedLaps={focusedLaps}
+              sectorBests={race.sectorBests}
+              currentLap={currentLap}
+              aggregates={race.aggregates}
+              currentTimeRef={currentTimeRef}
+              redrawSignal={redrawSignal}
+            />
+          )}
           {focusedDriverObj && (
             <FocusedDriverCard
               driver={focusedDriverObj}
@@ -283,7 +333,7 @@ export function RaceReplay({ sessionRef }: RaceReplayProps) {
         )}
       </div>
 
-      {race.bounds && (
+      {viewMode === '2d' && race.bounds && (
         <PlaybackControls
           playing={playing}
           speed={speed}

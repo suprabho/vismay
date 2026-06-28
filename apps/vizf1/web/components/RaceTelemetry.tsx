@@ -19,9 +19,9 @@ function Panel({ title, hint, children }: { title: string; hint?: string; childr
 
 /**
  * Race-page Telemetry tab: real telemetry widgets for the round's race session.
- * 3D track (orbit, focused on the winner), a 2D clip auto-set to the fastest-lap
- * window, and a lap-time-by-lap chart. A driver multiselect drives the chart +
- * clip; a lap-range control retargets the clip.
+ * A 2D clip auto-set to the fastest-lap window and a lap-time-by-lap chart. A
+ * driver multiselect drives the chart + clip; a lap-range control retargets the
+ * clip. (The orbit-able 3D track now lives on the Race Replay page.)
  */
 export function RaceTelemetry({ raceName }: { raceName: string }) {
   const sessionQ = useTelemetrySession(raceName)
@@ -49,7 +49,6 @@ export function RaceTelemetry({ raceName }: { raceName: string }) {
     ? [Math.max(1, fastest.lap - 1), fastest.lap + 1]
     : [1, 3])
   const [lapFrom, lapTo] = window
-  const winner = session?.finishingOrder[0] ?? selected[0]
 
   const toggleDriver = (n: number) => {
     const base = selOverride ?? defaultSel
@@ -61,13 +60,6 @@ export function RaceTelemetry({ raceName }: { raceName: string }) {
     setRangeOverride([Math.min(next[0], next[1]), Math.max(next[0], next[1])])
   }
 
-  const track3dConfig = useMemo(
-    () =>
-      session
-        ? { type: 'f1:track-3d', sessionKey: session.sessionKey, focalDriverNumber: winner, interactive: true, chaseCam: false, autoPlay: true }
-        : null,
-    [session, winner],
-  )
   const clipConfig = useMemo(
     () =>
       session && selected.length
@@ -150,12 +142,6 @@ export function RaceTelemetry({ raceName }: { raceName: string }) {
           <span className="ml-auto text-[10px]">Clip shows the first 3 selected drivers.</span>
         </div>
       </div>
-
-      <Panel title="3D track" hint="drag to orbit">
-        <div className="h-[440px] overflow-hidden rounded-xl border border-border bg-surface">
-          {track3dConfig ? <VizMount type="f1:track-3d" config={track3dConfig} /> : null}
-        </div>
-      </Panel>
 
       <Panel title="Telemetry clip" hint={`laps ${lapFrom}–${lapTo}`}>
         <div className="min-h-[520px] overflow-hidden rounded-xl border border-border bg-surface">
