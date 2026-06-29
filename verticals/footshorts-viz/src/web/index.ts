@@ -16,6 +16,7 @@ export type { FsBackgroundConfig } from '../modules/shared/background'
 export { Crest } from '../data/Crest'
 export { buildBracket, isBracketDrawn } from '../buildBracket'
 export { buildStaticBracket } from '../buildStaticBracket'
+export { advanceBracket } from '../advanceBracket'
 export type {
   StaticBracketInput,
   StaticRoundInput,

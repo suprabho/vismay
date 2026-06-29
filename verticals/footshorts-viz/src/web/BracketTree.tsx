@@ -1,7 +1,8 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useMemo } from 'react'
 import type { Bracket as BracketModel, BracketRound, BracketSlot, BracketTie, FixtureTeamRef } from '../types'
+import { advanceBracket } from '../advanceBracket'
 import { stageLabel } from '../stageLabel'
 import { Crest } from '../data/Crest'
 import { findTeam } from '../data/teams'
@@ -684,12 +685,16 @@ function VerticalTree({
 // making both the viewport and the container report a wide width; in that case
 // drive the layout from an explicit story-level portrait flag passed via config
 // (BracketConfig.layout = 'tree-vertical') rather than any CSS/JS auto-detect.
-export function BracketTree({ orientation = 'auto', ...rest }: Props) {
+export function BracketTree({ orientation = 'auto', bracket, ...rest }: Props) {
   // Scope the responsive CSS to this instance.
   const cid = 'bkt-' + useId().replace(/[^a-zA-Z0-9]/g, '')
-  if (rest.bracket.rounds.length === 0) return null
-  if (orientation === 'vertical') return <VerticalTree {...rest} />
-  if (orientation === 'horizontal') return <HorizontalTree {...rest} />
+  // Complete the structure (so every connector draws) and advance decided
+  // winners into the next round before either layout lays out the tree.
+  const tree = useMemo(() => advanceBracket(bracket) ?? bracket, [bracket])
+  const treeRest = { ...rest, bracket: tree }
+  if (tree.rounds.length === 0) return null
+  if (orientation === 'vertical') return <VerticalTree {...treeRest} />
+  if (orientation === 'horizontal') return <HorizontalTree {...treeRest} />
 
   // 'auto': render both layouts and let a pure-CSS media query pick one by the
   // viewport's portrait/landscape flag — landscape shows the wide mirrored
@@ -702,10 +707,10 @@ export function BracketTree({ orientation = 'auto', ...rest }: Props) {
     <div style={{ width: '100%' }}>
       <style>{`.${cid}-v{display:none}@media (max-aspect-ratio:1/1){.${cid}-h{display:none}.${cid}-v{display:block}}`}</style>
       <div className={`${cid}-h`}>
-        <HorizontalTree {...rest} />
+        <HorizontalTree {...treeRest} />
       </div>
       <div className={`${cid}-v`}>
-        <VerticalTree {...rest} />
+        <VerticalTree {...treeRest} />
       </div>
     </div>
   )
