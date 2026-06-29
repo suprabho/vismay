@@ -463,11 +463,143 @@ const cokeStudioProvider: LibraryProvider = {
   },
 }
 
+/**
+ * FIFA World Cup 2026 teams (`fifa_wc26_teams`) — the per-nation dataset behind
+ * the footshorts `fifa-wc26` epic map / team-profile panel: squad value, GDP,
+ * population, inequality, democracy index, FIFA rank, GHI, WHR. The map only
+ * reads this table client-side, so without a provider the numbers can't be
+ * reused as research; this surfaces one team's full profile on attach.
+ *
+ * Search-based (48 rows, but the picker's "type to query datasets" affordance
+ * is search): match a country name / FIFA code / confederation. App-scoped to
+ * footshorts, where the epic now lives. `extract` reproduces the panel's stat
+ * block AND each metric's rank among the 48 — computed exactly like the
+ * landing's `getFifaWc26TeamProfile` (rank 1 = highest value).
+ */
+const FIFA_WC26_COLS =
+  'code, name, confederation, qualification, is_host, is_debut, ' +
+  'squad_value_eur_mn, gdp_nominal_usd_bn, gdp_per_capita_ppp_usd, ' +
+  'population_mn, land_area_sq_km, gini_index, eiu_democracy_index_2024, ' +
+  'regime_type, fifa_ranking, ghi_2025_score, whr_2025_rank'
+
+interface FifaWc26Row {
+  code: string
+  name: string
+  confederation: string
+  qualification: string
+  is_host: boolean
+  is_debut: boolean
+  squad_value_eur_mn: number | null
+  gdp_nominal_usd_bn: number | null
+  gdp_per_capita_ppp_usd: number | null
+  population_mn: number | null
+  land_area_sq_km: number | null
+  gini_index: number | null
+  eiu_democracy_index_2024: number | null
+  regime_type: string | null
+  fifa_ranking: number | null
+  ghi_2025_score: number | null
+  whr_2025_rank: number | null
+}
+
+/** Rank a value (1 = highest) within a desc-sorted list; null → no rank. */
+function fifaRankOf(value: number | null, descSorted: number[]): number | null {
+  if (value == null) return null
+  const idx = descSorted.findIndex((v) => v <= value)
+  return idx === -1 ? descSorted.length : idx + 1
+}
+
+const fifaWc26Provider: LibraryProvider = {
+  key: 'fifa-wc26',
+  label: 'World Cup 2026 teams',
+  apps: ['footshorts'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('fifa_wc26_teams')
+      .select('code, name, confederation, squad_value_eur_mn, fifa_ranking')
+      .or(`name.ilike.${pat},code.ilike.${pat},confederation.ilike.${pat}`)
+      .order('squad_value_eur_mn', { ascending: false, nullsFirst: false })
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      code: string
+      name: string | null
+      confederation: string | null
+      squad_value_eur_mn: number | null
+      fifa_ranking: number | null
+    }>
+    return rows.map((r) => ({
+      id: r.code,
+      title: r.name ?? r.code,
+      subtitle:
+        [
+          r.confederation,
+          r.squad_value_eur_mn != null ? `€${r.squad_value_eur_mn.toLocaleString('en-US')}mn squad` : null,
+          r.fifa_ranking != null ? `FIFA #${r.fifa_ranking}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined,
+    }))
+  },
+  async extract(code) {
+    const sb = createServiceClient()
+    // The row IS the profile, but ranks need the whole field — fetch all 48.
+    const { data, error } = await sb.from('fifa_wc26_teams').select(FIFA_WC26_COLS)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as unknown as FifaWc26Row[]
+    const team = rows.find((r) => r.code === code)
+    if (!team) return null
+
+    const total = rows.length
+    const sortedDesc = (pick: (r: FifaWc26Row) => number | null): number[] =>
+      rows
+        .map(pick)
+        .filter((v): v is number => v != null)
+        .sort((a, b) => b - a)
+    const rank = (value: number | null, pick: (r: FifaWc26Row) => number | null): string =>
+      value == null ? '' : ` (#${fifaRankOf(value, sortedDesc(pick))} of ${total})`
+
+    const num = (n: number | null): string => (n == null ? '—' : n.toLocaleString('en-US'))
+    const gdpNominal = (n: number | null): string =>
+      n == null ? '—' : n >= 1000 ? `$${(n / 1000).toFixed(2)} tn` : `$${n.toLocaleString('en-US')} bn`
+    const flags = [team.is_host ? 'Host' : null, team.is_debut ? 'Debut' : null].filter(Boolean).join(', ')
+
+    const lines = [
+      `Confederation: ${team.confederation}`,
+      `Qualification: ${team.qualification}${flags ? ` (${flags})` : ''}`,
+      team.fifa_ranking != null ? `FIFA ranking: #${team.fifa_ranking}` : null,
+      '',
+      `Squad value: €${num(team.squad_value_eur_mn)} mn${rank(team.squad_value_eur_mn, (r) => r.squad_value_eur_mn)}`,
+      `GDP nominal: ${gdpNominal(team.gdp_nominal_usd_bn)}${rank(team.gdp_nominal_usd_bn, (r) => r.gdp_nominal_usd_bn)}`,
+      `GDP per capita (PPP): $${num(team.gdp_per_capita_ppp_usd)}${rank(team.gdp_per_capita_ppp_usd, (r) => r.gdp_per_capita_ppp_usd)}`,
+      `Population: ${num(team.population_mn)} mn${rank(team.population_mn, (r) => r.population_mn)}`,
+      `Land area: ${num(team.land_area_sq_km)} sq km${rank(team.land_area_sq_km, (r) => r.land_area_sq_km)}`,
+      `Gini index: ${num(team.gini_index)}`,
+      `EIU democracy index 2024: ${num(team.eiu_democracy_index_2024)}${rank(team.eiu_democracy_index_2024, (r) => r.eiu_democracy_index_2024)}`,
+      team.regime_type ? `Regime: ${team.regime_type}` : null,
+      team.ghi_2025_score != null ? `Global Hunger Index 2025: ${num(team.ghi_2025_score)}` : null,
+      team.whr_2025_rank != null ? `World Happiness Report 2025 rank: #${team.whr_2025_rank}` : null,
+    ]
+      .filter((l) => l != null)
+      .join('\n')
+
+    const text = `# ${team.name} (${team.code}) — World Cup 2026 profile\n\n${lines}`
+    return {
+      title: `${team.name} · World Cup 2026`,
+      byline: `FIFA World Cup 2026 · ${team.confederation}`,
+      text,
+    }
+  },
+}
+
 const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
   newsProvider({ key: 'footshorts-news', label: 'Football news', table: 'articles', app: 'footshorts' }),
   recapsProvider,
+  fifaWc26Provider,
   newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
   ieaNewsProvider,
   epsteinProvider,
