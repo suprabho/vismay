@@ -11,6 +11,60 @@ own terms, plus a registry that can dispatch to either.
 
 ---
 
+## Implementation status
+
+**Phases 0, 1 and 2 are implemented** — D3 and ECharts now run in parallel,
+including JSON-driven authoring for both engines.
+
+Landed:
+- `charts/_shared/types.ts` — the renderer-agnostic contract (`ChartRenderProps`,
+  `ChartEngine`, `RegisteredChart`).
+- `charts/registry.ts` + a rewritten `charts/ChartPanel.tsx` that lazily
+  `import()`s each chart, so engines code-split per chart (verified: a route
+  using only the D3 chart does not load the `echarts-for-react` chunk).
+- ECharts charts moved to `charts/echarts/`; `chartTooltip` moved to
+  `charts/echarts/_kit/tooltip.ts` so `lib/chartTheme.ts` is engine-agnostic.
+- `charts/d3/BeeswarmChart.tsx` — first D3 chart (`beeswarm-example`), wired
+  through the same theme/mobile contract; deterministic SVG (no force sim) so
+  capture rasterises identically each run.
+- D3 submodule deps added to `package.json`; ESLint cross-engine guardrails in
+  `eslint.config.mjs`; a package `tsconfig.json` + `typecheck`/`lint` scripts.
+- Demo route at `apps/catalog/app/d3-demo/`.
+
+Phase 2 — JSON-driven D3 (`plot:` prefix):
+- Added `@observablehq/plot`.
+- `charts/d3/GenericPlot.tsx` — fetches `/api/chart-data/<slug>/<id>` and renders
+  an Observable Plot spec authored as JSON (marks declared as `{type,data,options}`
+  tuples). Shares the `$token` color + CSS-var resolution with GenericChart via
+  the new `charts/_shared/jsonTokens.ts`.
+- Wired `plot:<id>` in `ChartPanel` (lazy-loaded, so Plot only enters a bundle
+  that renders a `plot:` chart — verified: Plot, the ECharts runtime, and the
+  bespoke D3 chunk are three disjoint chunks).
+- Schema documented in `docs/generic-plot-schema.md`; catalog `/d3-demo` and a
+  demo `/api/chart-data` route render it end to end.
+
+Still open in Phase 2: teaching the vizmaya-fyi **ingest generator** to emit
+`plot:` specs. The engine + endpoint support it now, but the prompt change is a
+content-quality rollout (the plan's "one story per format") best done with a
+test story rather than blind — left as a follow-up.
+
+Deliberate deviations from the original plan below:
+- **A third `engine: 'svg'` category** was added for hand-built charts that use
+  no charting library (`QatarPlantMap`, `FeedbackLoopDiagram`). They stay at the
+  `charts/` root rather than being forced into `echarts/` or `d3/`.
+- **Readiness stays in the chart module wrapper.** `noteReady` increments a
+  shared counter, so signalling it from both the wrapper and the chart would
+  flip `__pdfReady__` early. The wrapper keeps owning the single rAF signal;
+  the ECharts `finished`-event rewire (§3.5) is deferred until the wrapper's
+  signal is removed per-chart. `noteReady` is therefore not in `ChartRenderProps`.
+- **Phase 1 used raw `d3-*` modules; Observable Plot arrived in Phase 2.** The
+  bespoke beeswarm is hand-built D3; `@observablehq/plot` backs the JSON-driven
+  `plot:<id>` path.
+
+The sections below are the original plan, kept for the Phase 3–4 roadmap.
+
+---
+
 ## 1. Guiding principles
 
 1. **ECharts stays the default** for dashboard staples and JSON-driven

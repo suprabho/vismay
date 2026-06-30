@@ -1,26 +1,44 @@
 'use client'
 
-import KoreaBarChart from './KoreaBarChart'
-import HeliumPriceChart from './HeliumPriceChart'
-import FeedbackLoopDiagram from './FeedbackLoopDiagram'
-import DRAMPriceChart from './DRAMPriceChart'
-import StockCandlestickChart from './StockCandlestickChart'
-import PolarExposureChart from './PolarExposureChart'
-import HBMDRAMTreemap from './HBMDRAMTreemap'
-import LNGCarrierTreemap from './LNGCarrierTreemap'
-import QatarPlantMap from './QatarPlantMap'
-import DDR5AreaChart from './DDR5AreaChart'
-import GenericChart from './GenericChart'
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import GenericChart from './echarts/GenericChart'
+import { CHART_REGISTRY } from './registry'
+import type { ChartRenderProps } from './_shared/types'
+
+// Lazy so Observable Plot only enters the bundle of a story that renders a
+// `plot:` chart — keeps it out of every story that uses ECharts only.
+const GenericPlot = lazy(() => import('./d3/GenericPlot'))
 
 /**
- * Foreground chart registry. Maps a string id (used in YAML config or
- * ScrollySection blocks) to its chart component. The persistent map
- * background is NOT in this registry — it lives at page level.
+ * Foreground chart dispatcher. Resolves a string id to its chart component.
+ * The persistent map background is NOT here — it lives at page level.
  *
- * An id prefixed with `data:` is resolved by GenericChart, which loads
- * `content/stories/<slug>/charts/<id>.json` and renders its ECharts option.
- * This is the path used by stories generated via `npm run ingest`.
+ * Resolution order:
+ *   1. `data:<id>` → {@link GenericChart} (ECharts JSON loaded at runtime from
+ *      `/api/chart-data/<slug>/<id>`). This is the path used by stories
+ *      generated via `npm run ingest`.
+ *   2. `plot:<id>` → {@link GenericPlot} (Observable Plot JSON from the same
+ *      endpoint). The D3-family parallel to `data:`.
+ *   3. a key in {@link CHART_REGISTRY} → the registered chart, lazily imported
+ *      so its engine bundle (ECharts, D3, …) splits cleanly per chart.
+ *
+ * Each registry chart is wrapped in <Suspense> while its chunk loads.
+ * Readiness for headless capture is signalled by the chart module wrapper
+ * (`modules/chart/Component.tsx`), not here — see `_shared/types.ts`.
  */
+
+// React.lazy must be called once per component, not per render — cache by id.
+const lazyCache = new Map<string, LazyExoticComponent<ComponentType<ChartRenderProps>>>()
+
+function getLazyChart(entry: { id: string; load: () => Promise<{ default: ComponentType<ChartRenderProps> }> }) {
+  let cached = lazyCache.get(entry.id)
+  if (!cached) {
+    cached = lazy(entry.load)
+    lazyCache.set(entry.id, cached)
+  }
+  return cached
+}
+
 export default function ChartPanel({
   chartId,
   activeStep = 0,
@@ -35,28 +53,24 @@ export default function ChartPanel({
     const id = chartId.slice('data:'.length)
     return <GenericChart slug={slug} id={id} activeStep={activeStep} />
   }
-  switch (chartId) {
-    case 'stock-candlestick':
-      return <StockCandlestickChart activeStep={activeStep} />
-    case 'polar-exposure':
-      return <PolarExposureChart activeStep={activeStep} />
-    case 'hbm-treemap':
-      return <HBMDRAMTreemap activeStep={activeStep} />
-    case 'lng-treemap':
-      return <LNGCarrierTreemap activeStep={activeStep} />
-    case 'qatar-map':
-      return <QatarPlantMap activeStep={activeStep} />
-    case 'ddr5-area':
-      return <DDR5AreaChart activeStep={activeStep} />
-    case 'korea-bar':
-      return <KoreaBarChart activeStep={activeStep} />
-    case 'helium-price':
-      return <HeliumPriceChart activeStep={activeStep} />
-    case 'feedback-loop':
-      return <FeedbackLoopDiagram activeStep={activeStep} />
-    case 'dram-price':
-      return <DRAMPriceChart activeStep={activeStep} />
-    default:
-      return null
+
+  if (chartId?.startsWith('plot:')) {
+    if (!slug) return null
+    const id = chartId.slice('plot:'.length)
+    return (
+      <Suspense fallback={null}>
+        <GenericPlot slug={slug} id={id} activeStep={activeStep} />
+      </Suspense>
+    )
   }
+
+  const entry = chartId ? CHART_REGISTRY[chartId] : undefined
+  if (!entry) return null
+
+  const LazyChart = getLazyChart(entry)
+  return (
+    <Suspense fallback={null}>
+      <LazyChart slug={slug} activeStep={activeStep} />
+    </Suspense>
+  )
 }

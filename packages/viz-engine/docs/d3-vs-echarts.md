@@ -436,3 +436,44 @@ rule, and migrate bespoke charts opportunistically.
   graphics and for SVG-first export pipelines.
 - For Vismay specifically: keep ECharts, add a D3-family tool for bespoke
   charts and static export. Don't replace.
+
+---
+
+## Appendix: which engine? (author decision tree)
+
+The parallel-engine setup is live (see `d3-echarts-parallel-plan.md`, Phases 0
+and 1). When you add a chart, pick the engine like this:
+
+```
+Need a chart? Start here.
+
+├── Is it a standard type (line/bar/area/scatter/pie/treemap/
+│   candlestick/sankey/heatmap/radar)?
+│   ├── Yes → ECharts.
+│   │   ├── One-off, content-driven values? → emit `data:<id>` JSON via ingest.
+│   │   └── Hand-built with logic? → new file in `charts/echarts/`.
+│   └── No, it's bespoke (beeswarm, hexbin, chord, custom illustration,
+│        annotation-heavy explainer, diagram).
+│       └── D3 (SVG-first).
+│           ├── Tabular shape Observable Plot expresses? → emit `plot:<id>`
+│           │   JSON (see generic-plot-schema.md).
+│           └── Otherwise → new file in `charts/d3/` using d3-* modules.
+│
+├── Is it a hand-built diagram/illustration with no charting library at all?
+│   └── Plain React+SVG → new file at `charts/` root (engine-neutral), e.g.
+│       `QatarPlantMap`, `FeedbackLoopDiagram`.
+│
+├── Does the chart need 5k+ marks?
+│   └── ECharts (canvas) is easier than building a D3 canvas path.
+│
+├── Does it need to render as static SVG for share/PDF without a browser?
+│   └── D3 with `renderToStaticSvg` (planned — Phase 3).
+│
+└── Does it need pan/zoom/brush/data-zoom out of the box?
+    └── ECharts.
+```
+
+Then register the id in `charts/registry.ts` with its `engine`. The per-folder
+ESLint guardrails (`eslint.config.mjs`) stop ECharts and D3 imports from
+leaking across the split, which is what keeps each story's bundle to the
+engine(s) it actually uses.
