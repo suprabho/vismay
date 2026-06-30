@@ -55,6 +55,7 @@ export {
   generateStory,
   generateOutline,
   generateChart,
+  generateChartRequirement,
   generateRegions,
   injectRegions,
   generateSection,

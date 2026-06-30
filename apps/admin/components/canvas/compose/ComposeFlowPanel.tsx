@@ -173,6 +173,7 @@ export function ComposeFlow({
               busy={flow.busy}
               wide={wide}
               onGenerate={flow.genCharts}
+              onRegeneratePrompt={flow.regenChartPrompt}
             />
           )}
         </div>
