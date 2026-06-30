@@ -92,29 +92,93 @@ const CARD_LAYOUT: Record<Exclude<MatchStyle, 'tile'>, MatchCardLayout> = {
   'card-score': 'score',
 }
 
+/** A scoreline as `[home, away]`. */
+export type ScorePair = [number, number]
+
+/** Parse "1 - 1" / "1–1" / "2—3" into `[home, away]` non-negative integers, or
+ *  null when it isn't two numbers split by a hyphen / en- / em-dash. */
+export function parseScorePair(raw: string): ScorePair | null {
+  const m = raw.trim().match(/^(\d+)\s*[-–—]\s*(\d+)$/)
+  return m ? [Number(m[1]), Number(m[2])] : null
+}
+
+export interface ResolvedMatchScore {
+  /** Main scoreline, or null when there's nothing to show yet (pre-match, no override). */
+  main: ScorePair | null
+  /** Penalty shootout, or null when none was supplied. */
+  pens: ScorePair | null
+}
+
+/**
+ * Resolve the display score for a match card, applying an optional hardcoded
+ * main-score override and penalty shootout — neither of which we ingest with
+ * fixture data, so the author types them in the studio.
+ *
+ * Throws an author-facing `Error` when the inputs don't form a coherent result,
+ * so a nonsensical scoreline surfaces as a visible message instead of being
+ * published. The shootout must "add up": both scores are valid numbers, a tie
+ * that reaches penalties is level, and the shootout itself has a winner.
+ */
+export function resolveMatchScore(
+  fixture: FixtureRow,
+  scoreOverride?: string,
+  penalties?: string,
+): ResolvedMatchScore {
+  const override = scoreOverride?.trim()
+  const pensRaw = penalties?.trim()
+  const finished =
+    fixture.status === 'finished' && fixture.home_score != null && fixture.away_score != null
+
+  // Main score: an explicit override wins; otherwise the fixture's own result
+  // (only once finished — a scheduled match has no score to show).
+  let main: ScorePair | null = null
+  if (override) {
+    main = parseScorePair(override)
+    if (!main) throw new Error(`Score "${override}" must be two numbers, e.g. "1 - 1".`)
+  } else if (finished) {
+    main = [fixture.home_score as number, fixture.away_score as number]
+  }
+
+  if (!pensRaw) return { main, pens: null }
+
+  // Penalties supplied — the result must add up.
+  if (!main) {
+    throw new Error('Set the main score before adding a penalty shootout.')
+  }
+  if (main[0] !== main[1]) {
+    throw new Error(`A match decided on penalties must be level — "${main[0]} – ${main[1]}" isn't.`)
+  }
+  const pens = parseScorePair(pensRaw)
+  if (!pens) throw new Error(`Penalties "${pensRaw}" must be two numbers, e.g. "2 - 3".`)
+  if (pens[0] === pens[1]) {
+    throw new Error(`A penalty shootout can't end level — "${pens[0]} – ${pens[1]}".`)
+  }
+  return { main, pens }
+}
+
 /** Build an `fs:match-card` config from a fixture, carrying real crests (proxied
  *  for clean capture) and brand colors so the editorial card themes itself.
- *  `penalties` (a hardcoded shootout result like "4 – 2") is appended as a
- *  parenthetical so the card layouts render it as the "PENS" sub-line via
- *  `splitScoreNote`. */
+ *  `score` overrides the fixture-derived scoreline (and forces the "FT" label);
+ *  pass the full display string including any `(pens …)` note so the card
+ *  layouts render the shootout as the "PENS" sub-line via `splitScoreNote`. */
 export function fixtureToMatchCardConfig(
   fixture: FixtureRow,
   layout: MatchCardLayout,
   competition: string,
-  penalties?: string,
+  score?: string,
 ): MatchCardConfig {
   const finished =
     fixture.status === 'finished' && fixture.home_score != null && fixture.away_score != null
-  const baseScore = finished ? `${fixture.home_score}–${fixture.away_score}` : undefined
-  const pens = penalties?.trim()
-  const score = baseScore && pens ? `${baseScore} (${pens} pens)` : baseScore
+  const resolvedScore =
+    score ?? (finished ? `${fixture.home_score}–${fixture.away_score}` : undefined)
   return {
     type: 'fs:match-card',
     layout,
     home: fixture.home?.name ?? fixture.home_team_name ?? 'TBD',
     away: fixture.away?.name ?? fixture.away_team_name ?? 'TBD',
-    score,
-    kickoff: finished ? 'FT' : kickoffLabel(fixture.kickoff_at),
+    score: resolvedScore,
+    // An explicit score (override or finished result) reads as full-time.
+    kickoff: resolvedScore ? 'FT' : kickoffLabel(fixture.kickoff_at),
     competition,
     competitionSlug: fixture.competition_slug,
     homeColor: fixture.home?.primary_color ?? undefined,
@@ -126,32 +190,37 @@ export function fixtureToMatchCardConfig(
 
 /** A fixture rendered as the colorful `tile` or an editorial `MatchCard` layout.
  *  `tile` self-sizes; the editorial layouts fill their host's height.
- *  `penalties` is an optional hardcoded shootout result (e.g. "4 – 2"), shown
- *  on a finished fixture as the "PENS" sub-line (cards) or an inline note (tile). */
+ *  `scoreOverride` (e.g. "1 - 1") and `penalties` (e.g. "2 - 3") are optional
+ *  hardcoded values; the shootout shows as the "PENS" sub-line (cards) or an
+ *  inline note (tile). Throws via `resolveMatchScore` when they don't add up —
+ *  callers validate first and render the message. */
 export function MatchStyleCard({
   fixture,
   style,
   competitionName,
+  scoreOverride,
   penalties,
 }: {
   fixture: FixtureRow
   style: MatchStyle
   competitionName: string
+  scoreOverride?: string
   penalties?: string
 }) {
-  // Only surface the shootout once the match is finished — a hardcoded value on
-  // a scheduled/live fixture would otherwise show a result before there is one.
-  const pens =
-    fixture.status === 'finished' && penalties?.trim() ? penalties.trim() : undefined
+  const { main, pens } = resolveMatchScore(fixture, scoreOverride, penalties)
+  const penNote = pens ? `pens ${pens[0]} – ${pens[1]}` : null
   if (style === 'tile') {
     return (
       <MatchTile
         fixture={withProxiedFixtureCrests(fixture)}
-        penaltyNote={pens ? `${pens} pens` : null}
+        scoreOverride={main ? `${main[0]} – ${main[1]}` : null}
+        penaltyNote={penNote}
       />
     )
   }
-  const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName, pens)
+  const mainStr = main ? `${main[0]}–${main[1]}` : undefined
+  const score = mainStr && penNote ? `${mainStr} (${penNote})` : mainStr
+  const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName, score)
   return <MatchCard config={config} />
 }
 
