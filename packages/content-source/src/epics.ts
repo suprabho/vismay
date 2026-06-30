@@ -229,6 +229,7 @@ export interface EpicMembershipRow {
   slug: string
   title: string
   status: string
+  appSlug: string | null
   inEpic: boolean
   position: number | null
 }
@@ -236,7 +237,7 @@ export interface EpicMembershipRow {
 export async function getEpicMemberships(epicSlug: string): Promise<EpicMembershipRow[]> {
   const sb = createServiceClient()
   const [storiesR, membersR] = await Promise.all([
-    sb.from('stories').select('slug, title, status'),
+    sb.from('stories').select('slug, title, status, app_slug'),
     sb.from('story_epics').select('story_slug, position').eq('epic_slug', epicSlug),
   ])
   if (storiesR.error) throw new Error(`getEpicMemberships stories: ${storiesR.error.message}`)
@@ -247,11 +248,17 @@ export async function getEpicMemberships(epicSlug: string): Promise<EpicMembersh
     positions.set(m.story_slug, m.position)
   }
 
-  return ((storiesR.data ?? []) as { slug: string; title: string | null; status: string }[])
+  return ((storiesR.data ?? []) as {
+    slug: string
+    title: string | null
+    status: string
+    app_slug: string | null
+  }[])
     .map((s) => ({
       slug: s.slug,
       title: s.title ?? s.slug,
       status: s.status,
+      appSlug: s.app_slug ?? null,
       inEpic: positions.has(s.slug),
       position: positions.get(s.slug) ?? null,
     }))

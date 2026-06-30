@@ -50,6 +50,7 @@ interface StoriesPayload {
     slug: string
     title: string
     status: string
+    appSlug: string | null
     inEpic: boolean
     position: number | null
   }[]
@@ -116,6 +117,9 @@ export default function EpicEditorClient({
   const [savingApp, setSavingApp] = useState(false)
   const [showOnHome, setShowOnHome] = useState<boolean>(true)
   const [savingShowOnHome, setSavingShowOnHome] = useState(false)
+  // Stories-tab filters. `appFilter` is an app slug, '' for all apps.
+  const [appFilter, setAppFilter] = useState<string>('')
+  const [storyQuery, setStoryQuery] = useState<string>('')
 
   useEffect(() => {
     async function load() {
@@ -399,6 +403,14 @@ export default function EpicEditorClient({
       })
     : []
 
+  // Apply the Stories-tab filters (app + free-text) on top of the sort.
+  const q = storyQuery.trim().toLowerCase()
+  const visibleStories = sortedStories.filter((s) => {
+    if (appFilter && s.appSlug !== appFilter) return false
+    if (q && !s.title.toLowerCase().includes(q) && !s.slug.toLowerCase().includes(q)) return false
+    return true
+  })
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="px-4 py-5 border-b border-white/5 flex items-start justify-between gap-3">
@@ -528,15 +540,44 @@ export default function EpicEditorClient({
       )}
 
       {tab === 'stories' && stories && (
-        <section>
+        <section className="flex-1 min-h-0 flex flex-col">
           <div className="px-4 py-3 border-b border-white/5 flex items-baseline justify-between">
             <h2 className="font-medium">Stories</h2>
             <span className="text-xs text-neutral-500">
               {Object.values(memberships).filter((m) => m.inEpic).length} of {stories.length} in epic
             </span>
           </div>
-          <ul className="divide-y divide-white/5">
-            {sortedStories.map((s) => {
+          <div className="px-4 py-2 border-b border-white/5 flex items-center gap-2 shrink-0">
+            <input
+              type="search"
+              value={storyQuery}
+              onChange={(e) => setStoryQuery(e.target.value)}
+              placeholder="Filter by title or slug…"
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="flex-1 min-w-0 bg-neutral-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-white/30"
+              aria-label="Filter stories by title or slug"
+            />
+            <label className="flex items-center gap-1.5 text-xs text-neutral-500 shrink-0">
+              <span className="uppercase tracking-wider">App</span>
+              <select
+                value={appFilter}
+                onChange={(e) => setAppFilter(e.target.value)}
+                className="text-sm bg-neutral-900 border border-white/10 rounded-lg px-2 py-1.5 text-neutral-100 cursor-pointer"
+                aria-label="Filter stories by app"
+              >
+                <option value="">All apps</option>
+                {apps.map((a) => (
+                  <option key={a.slug} value={a.slug}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
+            {visibleStories.map((s) => {
               const m = memberships[s.slug] ?? { inEpic: false, position: null }
               return (
                 <li key={s.slug} className="px-4 py-3 flex items-center gap-3">
@@ -571,9 +612,11 @@ export default function EpicEditorClient({
                 </li>
               )
             })}
-            {sortedStories.length === 0 && (
+            {visibleStories.length === 0 && (
               <li className="px-4 py-6 text-center text-sm text-neutral-500">
-                No stories in the database yet.
+                {sortedStories.length === 0
+                  ? 'No stories in the database yet.'
+                  : 'No stories match the current filters.'}
               </li>
             )}
           </ul>
