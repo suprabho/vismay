@@ -160,7 +160,7 @@ export function resolveMatchScore(
  *  for clean capture) and brand colors so the editorial card themes itself.
  *  `score` overrides the fixture-derived scoreline (and forces the "FT" label);
  *  pass the full display string including any `(pens …)` note so the card
- *  layouts render the shootout as the "PENS" sub-line via `splitScoreNote`. */
+ *  layouts render the shootout as the "PENS" note via `splitScoreNote`. */
 export function fixtureToMatchCardConfig(
   fixture: FixtureRow,
   layout: MatchCardLayout,
@@ -208,18 +208,21 @@ export function MatchStyleCard({
   penalties?: string
 }) {
   const { main, pens } = resolveMatchScore(fixture, scoreOverride, penalties)
-  const penNote = pens ? `pens ${pens[0]} – ${pens[1]}` : null
   if (style === 'tile') {
+    // The tile has one compact label line, so the shootout sits inline.
     return (
       <MatchTile
         fixture={withProxiedFixtureCrests(fixture)}
         scoreOverride={main ? `${main[0]} – ${main[1]}` : null}
-        penaltyNote={penNote}
+        penaltyNote={pens ? `pens ${pens[0]} – ${pens[1]}` : null}
       />
     )
   }
   const mainStr = main ? `${main[0]}–${main[1]}` : undefined
-  const score = mainStr && penNote ? `${mainStr} (${penNote})` : mainStr
+  // Newline so the score layout stacks the "PENS" label above the shootout
+  // score (it renders the note with `white-space: pre-line`).
+  const cardNote = pens ? `pens\n${pens[0]} – ${pens[1]}` : null
+  const score = mainStr && cardNote ? `${mainStr} (${cardNote})` : mainStr
   const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName, score)
   return <MatchCard config={config} />
 }
