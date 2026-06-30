@@ -225,9 +225,9 @@ export function MatchStyleCard({
     )
   }
   const mainStr = main ? `${main[0]}–${main[1]}` : undefined
-  // Newline so the score layout stacks the "PENS" label above the shootout
-  // score (it renders the note with `white-space: pre-line`).
-  const cardNote = pens ? `pens\n${pens[0]} – ${pens[1]}` : null
+  // Just the shootout score — the "PEN" status label already says it was pens,
+  // so the note doesn't repeat the word.
+  const cardNote = pens ? `${pens[0]} – ${pens[1]}` : null
   const score = mainStr && cardNote ? `${mainStr} (${cardNote})` : mainStr
   const config = fixtureToMatchCardConfig(
     fixture,

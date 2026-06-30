@@ -117,11 +117,6 @@ export function ScoreCard({
     textTransform: 'uppercase',
     color: accent,
     opacity: 0.75,
-    // Honour a newline in the note (e.g. a "PENS" label above the shootout
-    // score); single-line notes are unaffected.
-    whiteSpace: 'pre-line',
-    lineHeight: 1.3,
-    textAlign: 'center',
   }
   const kickoff: CSSProperties = {
     fontFamily: 'var(--font-mono)',

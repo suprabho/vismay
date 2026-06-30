@@ -40,13 +40,9 @@ export function resolveFixture(config: MatchCardConfig): ResolvedFixture {
  * Split a trailing parenthetical off a display score, so layouts can render
  * the shootout/extra-time note smaller under the full-time result:
  * "3 – 3 (4 – 2 pens)" → { main: "3 – 3", note: "4 – 2 pens" }.
- *
- * The note may contain a newline (e.g. "pens\n2 – 3") so a layout that opts into
- * `white-space: pre-line` can stack a label above the shootout score; `[\s\S]`
- * (not `.`) keeps that newline inside the captured note.
  */
 export function splitScoreNote(score: string): { main: string; note?: string } {
-  const m = score.match(/^(.*\S)\s*\(([\s\S]+)\)$/)
+  const m = score.match(/^(.*\S)\s*\((.+)\)$/)
   return m ? { main: m[1], note: m[2] } : { main: score }
 }
 
