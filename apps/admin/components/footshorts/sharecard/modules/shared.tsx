@@ -158,27 +158,33 @@ export function resolveMatchScore(
 
 /** Build an `fs:match-card` config from a fixture, carrying real crests (proxied
  *  for clean capture) and brand colors so the editorial card themes itself.
- *  `score` overrides the fixture-derived scoreline (and forces the "FT" label);
+ *  `score` overrides the fixture-derived scoreline (and forces the result label);
  *  pass the full display string including any `(pens …)` note so the card
- *  layouts render the shootout as the "PENS" note via `splitScoreNote`. */
+ *  layouts render the shootout as the "PENS" note via `splitScoreNote`.
+ *  `penaltyResult` swaps the "FT" status for "PEN" (shootout decider). */
 export function fixtureToMatchCardConfig(
   fixture: FixtureRow,
   layout: MatchCardLayout,
   competition: string,
   score?: string,
+  penaltyResult = false,
 ): MatchCardConfig {
   const finished =
     fixture.status === 'finished' && fixture.home_score != null && fixture.away_score != null
   const resolvedScore =
     score ?? (finished ? `${fixture.home_score}–${fixture.away_score}` : undefined)
+  // A shootout-decided tie reads "PEN" instead of "FT".
+  const statusLabel = penaltyResult ? 'PEN' : 'FT'
   return {
     type: 'fs:match-card',
     layout,
     home: fixture.home?.name ?? fixture.home_team_name ?? 'TBD',
     away: fixture.away?.name ?? fixture.away_team_name ?? 'TBD',
     score: resolvedScore,
-    // An explicit score (override or finished result) reads as full-time.
-    kickoff: resolvedScore ? 'FT' : kickoffLabel(fixture.kickoff_at),
+    // An explicit score (override or finished result) reads as full-time. The
+    // score/compact/portrait layouts render `kickoff`; horizontal reads `statusLabel`.
+    kickoff: resolvedScore ? statusLabel : kickoffLabel(fixture.kickoff_at),
+    statusLabel: resolvedScore ? statusLabel : undefined,
     competition,
     competitionSlug: fixture.competition_slug,
     homeColor: fixture.home?.primary_color ?? undefined,
@@ -223,7 +229,13 @@ export function MatchStyleCard({
   // score (it renders the note with `white-space: pre-line`).
   const cardNote = pens ? `pens\n${pens[0]} – ${pens[1]}` : null
   const score = mainStr && cardNote ? `${mainStr} (${cardNote})` : mainStr
-  const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName, score)
+  const config = fixtureToMatchCardConfig(
+    fixture,
+    CARD_LAYOUT[style],
+    competitionName,
+    score,
+    pens != null,
+  )
   return <MatchCard config={config} />
 }
 
