@@ -159,11 +159,12 @@ function toOutline(out: OutlineLike, format: StoryFormat): StoryOutline {
 
 /**
  * The chart DATA pass — turn ONE chart REQUIREMENT (from the outline) into a
- * full `ChartSpec` by generating the numeric series grounded in the sources.
- * Decoupled from the outline so chart numbers are produced by a focused call
- * rather than fabricated as a byproduct of skeleton planning. The model emits
- * only `categories` + `series`; the id/title/chartType/axes come from the
- * requirement and are merged in here.
+ * full `ChartSpec` by generating the source-grounded data. Decoupled from the
+ * outline so chart data is produced by a focused call rather than fabricated as
+ * a byproduct of skeleton planning. The model emits a compact flint tabular spec
+ * (columns + rows + channel encodings); the id/title/chartType/axes come from
+ * the requirement and are merged in here. `buildEChartsOption` compiles the
+ * result to an ECharts option via flint's `assembleECharts`.
  */
 export async function generateChart(
   args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
@@ -177,7 +178,7 @@ export async function generateChart(
     metadata: { feature: 'story-pipeline-chart' },
   })
   const { requirement: _omit, ...meta } = args.requirement
-  return { ...meta, categories: data.categories, series: data.series }
+  return { ...meta, columns: data.columns, rows: data.rows, encodings: data.encodings }
 }
 
 /**

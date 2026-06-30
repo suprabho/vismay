@@ -1,5 +1,6 @@
 import { GEN_FOREGROUND_TYPES, getForegroundLayout } from './vizEngine'
 import { SECTION_KINDS, sectionKindsFor } from './schema'
+import { CHART_TYPES, SEMANTIC_TYPE_HINTS } from './chartVocab'
 import { VIZMAYA_PACK } from './packs/vizmaya'
 import type { DomainPack } from './packs/types'
 import type {
@@ -220,11 +221,12 @@ export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PA
     `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
     `- title, subtitle, byline.\n` +
-    `- charts: every chart the story needs, declared as a REQUIREMENT — a kebab-case id, ` +
-    `chartType (bar|line), a title, and a precise "requirement" describing exactly what to ` +
-    `plot (which figures/series/categories and over what range, all from the sources). Do ` +
-    `NOT fabricate the numbers here — the data is generated in a focused later pass. Sections ` +
-    `reference charts by id.\n` +
+    `- charts: every chart the story needs, declared as a REQUIREMENT — a kebab-case id, a ` +
+    `chartType (one of: ${CHART_TYPES.join(', ')}), a title, and a precise "requirement" ` +
+    `describing exactly what to plot (which figures/series/categories and over what range, ` +
+    `all from the sources). Pick the chartType that best fits the comparison — not always a ` +
+    `bar or line. Do NOT fabricate the numbers here — the data is generated in a focused ` +
+    `later pass. Sections reference charts by id.\n` +
     `- imagePrompts: vivid prompts for sections that want imagery. For a DECK story ALWAYS ` +
     `include one 16:9 prompt whose "section" EXACTLY matches the cover's heading — it becomes ` +
     `the full-bleed cover hero image.\n` +
@@ -284,18 +286,26 @@ export function buildOutlinePrompt(
 export function chartSystem(pack: DomainPack = VIZMAYA_PACK): string {
   return (
   `You produce the DATA for ONE chart in a ${pack.name} data story, grounded strictly ` +
-  `in the provided sources. Given a chart requirement (what to plot) and the ` +
-  `research material, return:\n` +
-  `- categories: the X-axis labels, in the order they should appear.\n` +
-  `- series: one or more named series, each with one number per category (same ` +
-  `order as categories).\n\n` +
+  `in the provided sources. The chart is rendered with flint-chart: you describe the ` +
+  `data as a small table and say which columns map to which channels — flint derives ` +
+  `the axes, scales, and layout. Given a chart requirement (its type + what to plot) ` +
+  `and the research material, return:\n` +
+  `- columns: each data column, with a name and a flint semanticType. Common types — ` +
+  `${SEMANTIC_TYPE_HINTS}. The semanticType drives axis formatting and scales, so be ` +
+  `accurate (a year is Year, a share is Percentage, a place is Country/Region).\n` +
+  `- rows: the data, one array per row with exactly one value per column, in column order. ` +
+  `Numbers as numbers (not strings).\n` +
+  `- encodings: which column fills each channel — typically x (category/time axis) and y ` +
+  `(one or more measure columns; multiple y columns make a multi-series). Use color to ` +
+  `split series by a category column; angle/value for pie/rose/funnel/pyramid slices; ` +
+  `size for scatter bubbles; y2 for a Range Area band's upper bound.\n\n` +
   `Rules:\n` +
-  `- Use ONLY figures present in or directly derivable from the sources — never ` +
-  `invent or estimate numbers. If the requirement asks for data the sources don't ` +
-  `support, plot the closest subset the sources DO support and keep categories/` +
-  `series consistent.\n` +
-  `- Every series must have exactly one value per category.\n` +
-  `- Keep it tight and legible (a handful of categories; few series).`
+  `- Use ONLY figures present in or directly derivable from the sources — never invent or ` +
+  `estimate numbers. If the requirement asks for data the sources don't support, plot the ` +
+  `closest subset the sources DO support.\n` +
+  `- Every row must have exactly one value per column; reference only real column names in ` +
+  `encodings.\n` +
+  `- Keep it tight and legible (a handful of rows; few series).`
   )
 }
 

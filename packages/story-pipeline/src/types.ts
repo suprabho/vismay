@@ -6,6 +6,10 @@
  * to match these (the section `body` reuses viz-engine's own layer schemas).
  */
 
+import type { ChartType, ChartChannel } from './chartVocab'
+
+export type { ChartType } from './chartVocab'
+
 export type StoryFormat = 'deck' | 'map'
 
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
@@ -68,19 +72,39 @@ export interface AnglesBrief {
   angles: StoryAngle[]
 }
 
+/** One column of a {@link ChartSpec}'s tabular data, with its flint semantic type. */
+export interface ChartColumn {
+  /** Column name — referenced by {@link ChartEncodings}. */
+  name: string
+  /** Flint semantic type (e.g. `Quantity`, `Year`, `Country`); drives axis/format/scale. */
+  semanticType: string
+}
+
 /**
- * A simplified chart spec the model emits. Deterministically expanded into a
- * full ECharts option by `buildEChartsOption` — keeps the structured-output
- * schema clean (no arbitrary nested option objects).
+ * Channel → column-name map (flint `chart_spec.encodings`). `y` accepts an array
+ * to fold multiple measure columns into a static multi-series. See
+ * {@link CHART_CHANNELS} for what each channel drives.
+ */
+export type ChartEncodings = Partial<Record<ChartChannel, string | string[]>>
+
+/**
+ * The chart spec the data pass produces: a compact flint tabular description the
+ * model can author reliably (columns + rows + channel encodings), which
+ * `buildEChartsOption` compiles to a full ECharts option via flint's
+ * `assembleECharts`. The id/title/chartType/axes come from the
+ * {@link ChartRequirement} and are merged in by `generateChart`.
  */
 export interface ChartSpec {
   /** Referenced by a `{ type: 'chart', id }` layer and written to `<slug>/charts/<id>.json`. */
   id: string
   title?: string
-  chartType: 'bar' | 'line'
-  /** X-axis category labels. */
-  categories: string[]
-  series: Array<{ name: string; data: number[] }>
+  chartType: ChartType
+  /** The data columns, each tagged with a flint semantic type. */
+  columns: ChartColumn[]
+  /** Data rows — each one value per column, in `columns` order. */
+  rows: Array<Array<string | number>>
+  /** Which columns map to which chart channels. */
+  encodings: ChartEncodings
   xLabel?: string
   yLabel?: string
 }
@@ -88,12 +112,12 @@ export interface ChartSpec {
 /**
  * A chart the outline plans, WITHOUT data — the skeleton declares the chart's
  * shape + a precise `requirement`; the `generateChart` pass produces the
- * numeric series, yielding a full {@link ChartSpec}.
+ * grounded data + encodings, yielding a full {@link ChartSpec}.
  */
 export interface ChartRequirement {
   id: string
   title?: string
-  chartType: 'bar' | 'line'
+  chartType: ChartType
   /** What to plot — figures/series/categories/range, grounded in the sources. */
   requirement: string
   xLabel?: string
