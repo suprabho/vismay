@@ -17,6 +17,20 @@ export interface FsCardMatchConfig {
   compKey: string
   fixtureId: string
   matchStyle: MatchStyle
+  /**
+   * Hardcoded main scoreline, e.g. "1 - 1" (home–away). We don't always have
+   * the right result in fixture data, so the author can override the big score
+   * shown on the card. When omitted, the fixture's own finished score is used.
+   */
+  scoreOverride?: string
+  /**
+   * Hardcoded penalty-shootout result, e.g. "2 - 3" (home–away). We don't
+   * ingest shootout data separately, so the author types it in the studio.
+   * Renders as the "PENS" sub-line on the card styles and an inline note on the
+   * tile. Requires a level main score and a decisive shootout (see
+   * `resolveMatchScore`). Omit for non-shootout ties.
+   */
+  penalties?: string
 }
 
 export interface FsCardMatchTimelineConfig {

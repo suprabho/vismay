@@ -82,6 +82,9 @@ export interface MatchCardConfig extends FsBackgroundConfig {
   score?: string
   /** Pre-match kickoff label, e.g. "1:30 PM" or "Sat · 17:30". */
   kickoff?: string
+  /** Full-time status shown under the score on the horizontal layout. Defaults
+   *  to "FT"; set to "PEN" / "AET" when a tie was decided in a shootout / extra time. */
+  statusLabel?: string
   /** Full competition line, e.g. "Premier League · matchday 35". */
   competition?: string
   /** Optional slug into the bundled competition palette. Falls back to slugified `competition`. */
@@ -208,6 +211,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): MatchC
     away: r.away,
     score: asString(r.score),
     kickoff: asString(r.kickoff),
+    statusLabel: asString(r.statusLabel),
     competition: asString(r.competition),
     competitionSlug: asString(r.competitionSlug),
     accent: asString(r.accent),
@@ -237,6 +241,7 @@ function adminForm(): AdminFormField[] {
     { kind: 'text', key: 'away', label: 'Away team', required: true },
     { kind: 'text', key: 'score', label: 'Score / status (e.g. "2 – 1", "Live")' },
     { kind: 'text', key: 'kickoff', label: 'Kickoff label (e.g. "1:30 PM")' },
+    { kind: 'text', key: 'statusLabel', label: 'Full-time status (e.g. "FT", "PEN", "AET")' },
     { kind: 'text', key: 'competition', label: 'Competition line' },
     { kind: 'text', key: 'competitionSlug', label: 'Competition slug (palette key)' },
     { kind: 'text', key: 'homeColor', label: 'Home color override (hex)' },
