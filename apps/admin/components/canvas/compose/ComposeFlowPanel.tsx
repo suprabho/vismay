@@ -164,6 +164,8 @@ export function ComposeFlow({
             onCycleStatus={flow.cycleStatus}
             onMove={flow.move}
             onRegenerate={flow.genOutline}
+            onRegenSection={flow.regenSection}
+            onAddSection={flow.addSection}
             onMaterialize={flow.materialize}
           />
           {flow.charts.length > 0 && (

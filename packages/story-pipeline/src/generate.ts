@@ -2,6 +2,7 @@ import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
 import {
   outlineSchemaFor,
+  sectionStubSchemaFor,
   sectionContentSchemaFor,
   sectionVisualSchemaFor,
   subsectionContentSchema,
@@ -12,6 +13,8 @@ import {
 import {
   outlineSystem,
   buildOutlinePrompt,
+  outlineSectionSystem,
+  buildOutlineSectionPrompt,
   contentSystem,
   buildContentPrompt,
   visualSystem,
@@ -137,6 +140,51 @@ export async function generateOutline(
   )
   // Keep the retry only if it actually improved.
   return lintOutline(retried).length <= issues.length ? retried : outline
+}
+
+/**
+ * Regenerate ONE outline section in place, or draft a NEW one from an author
+ * prompt — the per-slide affordances of the compose outline tab. Decoupled from
+ * {@link generateOutline} so re-planning a single beat (or slotting in a new
+ * one) doesn't churn the rest of the deck. The caller supplies the surrounding
+ * sections (the target excluded for a regenerate) and the outline's charts for
+ * context; this returns a single {@link SectionStub} in the format's shape. The
+ * caller owns insertion, heading de-duplication, and persistence.
+ */
+export async function generateOutlineSection(
+  input: GenerateInput,
+  args: {
+    mode: 'regenerate' | 'add'
+    /** Surrounding sections for context (exclude the target on a regenerate). */
+    outline: SectionStub[]
+    /** Chart requirements the new/regenerated section may reference by id. */
+    charts: ChartRequirement[]
+    /** The section being replaced (regenerate only). */
+    target?: SectionStub
+    /** 1-based slot the added section will occupy (add only). */
+    position?: number
+    /** Author steer — feedback when regenerating, the prompt when adding. */
+    instruction?: string
+  },
+  opts: GenerateOptions = {},
+): Promise<SectionStub> {
+  const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
+  const pack = opts.pack ?? VIZMAYA_PACK
+  const result = await generateStructured({
+    model: opts.model,
+    system: outlineSectionSystem(format, pack),
+    schema: sectionStubSchemaFor(format),
+    prompt: buildOutlineSectionPrompt(input.sources, input.brief, input.answers, {
+      mode: args.mode,
+      outline: args.outline,
+      charts: args.charts,
+      target: args.target,
+      position: args.position,
+      instruction: args.instruction,
+    }),
+    metadata: { feature: 'story-pipeline-outline-section', format },
+  })
+  return result as SectionStub
 }
 
 /** The schema output, structurally — both format variants of the stub satisfy SectionStub. */

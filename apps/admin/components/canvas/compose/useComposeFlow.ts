@@ -486,6 +486,40 @@ export function useComposeFlow({
     }
     return !!data?.outline
   }
+  // Regenerate ONE outline section in place — a fresh stub for just this slide,
+  // leaving the rest of the deck untouched. Outline-phase, unmaterialised only.
+  async function regenSection(entryId: string, feedback?: string): Promise<boolean> {
+    const data = await call<{ entry: ComposeOutlineEntry; outline: ComposeOutlineEntry[] }>(
+      `regen:${entryId}`,
+      'outline/section',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: 'regenerate', entryId, ...(feedback ? { feedback } : {}) }),
+      },
+    )
+    if (data?.outline) setSt((s) => ({ ...s, outline: data.outline }))
+    return !!data?.outline
+  }
+  // Add a NEW outline section from a prompt, slotted after `afterId` (or at the
+  // end). Lands as a `pending` entry the author can then accept + materialise.
+  async function addSection(prompt?: string, afterId?: string): Promise<boolean> {
+    const data = await call<{ entry: ComposeOutlineEntry; outline: ComposeOutlineEntry[] }>(
+      'add-section',
+      'outline/section',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'add',
+          ...(prompt ? { prompt } : {}),
+          ...(afterId ? { afterId } : {}),
+        }),
+      },
+    )
+    if (data?.outline) setSt((s) => ({ ...s, outline: data.outline }))
+    return !!data?.outline
+  }
   async function persistOutline(outline: ComposeOutlineEntry[]) {
     setSt((s) => ({ ...s, outline }))
     await call('save outline', 'outline', {
@@ -662,6 +696,8 @@ export function useComposeFlow({
     createTelemetrySource,
     pickAngle,
     genOutline,
+    regenSection,
+    addSection,
     cycleStatus,
     move,
     materialize,
