@@ -11,12 +11,16 @@ type Props = {
   fixture: FixtureRow;
   // Crest washed into the bottom-right corner. Pass null/omit for no watermark.
   competitionCrest?: string | null;
+  // Optional shootout note (e.g. "4 – 2 pens") shown next to a finished score.
+  // Shootout data isn't ingested, so callers pass a hardcoded value when a
+  // knockout tie was decided on penalties; omit/null for everything else.
+  penaltyNote?: string | null;
 };
 
 // Self-sized at h-32; parents control width via a wrapper (`w-56`, `w-full`,
 // etc.) so the tile drops cleanly into horizontal strips, grids, or single
 // callouts without baking a width into the component.
-export function MatchTile({ fixture, competitionCrest = null }: Props) {
+export function MatchTile({ fixture, competitionCrest = null, penaltyNote = null }: Props) {
   const home = fixture.home;
   const away = fixture.away;
   const isFinished = fixture.status === 'finished';
@@ -42,6 +46,9 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
     topLabel = (
       <span className="font-bold tabular-nums">
         {fixture.home_score} – {fixture.away_score}
+        {penaltyNote ? (
+          <span className="ml-1.5 font-semibold normal-case opacity-80">({penaltyNote})</span>
+        ) : null}
       </span>
     );
   } else if (isLive) {

@@ -18,7 +18,9 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): FsCard
   const matchStyle = (MATCH_STYLES as string[]).includes(r.matchStyle as string)
     ? (r.matchStyle as MatchStyle)
     : 'tile'
-  return { type: 'fscard:match', compKey: r.compKey, fixtureId: r.fixtureId, matchStyle }
+  const penalties =
+    typeof r.penalties === 'string' && r.penalties.trim() ? r.penalties.trim() : undefined
+  return { type: 'fscard:match', compKey: r.compKey, fixtureId: r.fixtureId, matchStyle, penalties }
 }
 
 function adminForm(): AdminFormField[] {
@@ -36,6 +38,7 @@ function adminForm(): AdminFormField[] {
         { value: 'card-score', label: 'Card · Score' },
       ],
     },
+    { kind: 'text', key: 'penalties', label: 'Penalties (shootout, e.g. "4 – 2")' },
   ]
 }
 
@@ -47,7 +50,8 @@ const matchCardModule: VizModule<FsCardMatchConfig> = {
   adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
-  stableIdentity: (c) => `fscard:match:${c.compKey}:${c.fixtureId}:${c.matchStyle}`,
+  stableIdentity: (c) =>
+    `fscard:match:${c.compKey}:${c.fixtureId}:${c.matchStyle}:${c.penalties ?? ''}`,
 }
 
 export default matchCardModule

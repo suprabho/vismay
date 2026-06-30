@@ -93,20 +93,27 @@ const CARD_LAYOUT: Record<Exclude<MatchStyle, 'tile'>, MatchCardLayout> = {
 }
 
 /** Build an `fs:match-card` config from a fixture, carrying real crests (proxied
- *  for clean capture) and brand colors so the editorial card themes itself. */
+ *  for clean capture) and brand colors so the editorial card themes itself.
+ *  `penalties` (a hardcoded shootout result like "4 – 2") is appended as a
+ *  parenthetical so the card layouts render it as the "PENS" sub-line via
+ *  `splitScoreNote`. */
 export function fixtureToMatchCardConfig(
   fixture: FixtureRow,
   layout: MatchCardLayout,
   competition: string,
+  penalties?: string,
 ): MatchCardConfig {
   const finished =
     fixture.status === 'finished' && fixture.home_score != null && fixture.away_score != null
+  const baseScore = finished ? `${fixture.home_score}–${fixture.away_score}` : undefined
+  const pens = penalties?.trim()
+  const score = baseScore && pens ? `${baseScore} (${pens} pens)` : baseScore
   return {
     type: 'fs:match-card',
     layout,
     home: fixture.home?.name ?? fixture.home_team_name ?? 'TBD',
     away: fixture.away?.name ?? fixture.away_team_name ?? 'TBD',
-    score: finished ? `${fixture.home_score}–${fixture.away_score}` : undefined,
+    score,
     kickoff: finished ? 'FT' : kickoffLabel(fixture.kickoff_at),
     competition,
     competitionSlug: fixture.competition_slug,
@@ -118,20 +125,33 @@ export function fixtureToMatchCardConfig(
 }
 
 /** A fixture rendered as the colorful `tile` or an editorial `MatchCard` layout.
- *  `tile` self-sizes; the editorial layouts fill their host's height. */
+ *  `tile` self-sizes; the editorial layouts fill their host's height.
+ *  `penalties` is an optional hardcoded shootout result (e.g. "4 – 2"), shown
+ *  on a finished fixture as the "PENS" sub-line (cards) or an inline note (tile). */
 export function MatchStyleCard({
   fixture,
   style,
   competitionName,
+  penalties,
 }: {
   fixture: FixtureRow
   style: MatchStyle
   competitionName: string
+  penalties?: string
 }) {
+  // Only surface the shootout once the match is finished — a hardcoded value on
+  // a scheduled/live fixture would otherwise show a result before there is one.
+  const pens =
+    fixture.status === 'finished' && penalties?.trim() ? penalties.trim() : undefined
   if (style === 'tile') {
-    return <MatchTile fixture={withProxiedFixtureCrests(fixture)} />
+    return (
+      <MatchTile
+        fixture={withProxiedFixtureCrests(fixture)}
+        penaltyNote={pens ? `${pens} pens` : null}
+      />
+    )
   }
-  const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName)
+  const config = fixtureToMatchCardConfig(fixture, CARD_LAYOUT[style], competitionName, pens)
   return <MatchCard config={config} />
 }
 

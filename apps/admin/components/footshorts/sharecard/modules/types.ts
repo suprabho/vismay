@@ -17,6 +17,13 @@ export interface FsCardMatchConfig {
   compKey: string
   fixtureId: string
   matchStyle: MatchStyle
+  /**
+   * Hardcoded penalty-shootout result, e.g. "4 – 2" (home–away). We don't
+   * ingest shootout data separately, so the author types it in the studio.
+   * When set on a finished, level fixture it renders as the "PENS" sub-line on
+   * the card styles and an inline note on the tile. Omit for non-shootout ties.
+   */
+  penalties?: string
 }
 
 export interface FsCardMatchTimelineConfig {

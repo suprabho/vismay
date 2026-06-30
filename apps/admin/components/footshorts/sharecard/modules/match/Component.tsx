@@ -28,14 +28,24 @@ export default function MatchCardComponent({ config, noteReady }: VizRenderProps
           {competitionName}
         </div>
         <div className="w-full">
-          <MatchStyleCard fixture={fixture} style="tile" competitionName={competitionName} />
+          <MatchStyleCard
+            fixture={fixture}
+            style="tile"
+            competitionName={competitionName}
+            penalties={config.penalties}
+          />
         </div>
       </div>
     )
   }
   return (
     <div className="flex h-full min-h-0 items-center justify-center px-3 py-2">
-      <MatchStyleCard fixture={fixture} style={config.matchStyle} competitionName={competitionName} />
+      <MatchStyleCard
+        fixture={fixture}
+        style={config.matchStyle}
+        competitionName={competitionName}
+        penalties={config.penalties}
+      />
     </div>
   )
 }
