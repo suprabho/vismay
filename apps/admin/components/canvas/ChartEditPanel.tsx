@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from 'react'
 import CodeEditor, { type CodeEditorMarker } from '@/components/vizmaya/CodeEditor'
+import { useIsMobile } from './useIsMobile'
 
 interface Props {
   slug: string
@@ -40,6 +41,7 @@ export default function ChartEditPanel({
   onSave,
   onClose,
 }: Props) {
+  const isMobile = useIsMobile()
   const [value, setValue] = useState('')
   const [baseline, setBaseline] = useState('')
   const [loading, setLoading] = useState(true)
@@ -150,7 +152,8 @@ export default function ChartEditPanel({
         top: 0,
         right: 0,
         bottom: 0,
-        width: 'min(560px, 45vw)',
+        left: isMobile ? 0 : undefined,
+        width: isMobile ? '100%' : 'min(560px, 45vw)',
         background: '#0e0e0e',
         borderLeft: '1px solid #2a2a2a',
         boxShadow: '-8px 0 24px rgba(0,0,0,0.5)',

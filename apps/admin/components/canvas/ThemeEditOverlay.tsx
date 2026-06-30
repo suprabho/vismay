@@ -15,6 +15,7 @@ import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { Theme } from '@vismay/viz-engine'
 import ThemeEditor from '@/components/vizmaya/ThemeEditor'
 import PromptBar from './PromptBar'
+import { useIsMobile } from './useIsMobile'
 
 interface Props {
   initial: Theme | null
@@ -41,6 +42,7 @@ export default function ThemeEditOverlay({
   // parent should pass `key={themeIdentity}` so this component remounts —
   // simpler than a setState-in-effect reset and the linter prefers it.
   const [draft, setDraft] = useState<Theme | null>(initial)
+  const isMobile = useIsMobile()
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
   const onKey = (e: React.KeyboardEvent) => {
@@ -61,7 +63,8 @@ export default function ThemeEditOverlay({
         top: 0,
         right: 0,
         bottom: 0,
-        width: 'min(560px, 45vw)',
+        left: isMobile ? 0 : undefined,
+        width: isMobile ? '100%' : 'min(560px, 45vw)',
         background: '#0e0e0e',
         borderLeft: '1px solid #2a2a2a',
         boxShadow: '-8px 0 24px rgba(0,0,0,0.5)',

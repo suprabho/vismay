@@ -10,6 +10,7 @@ import type { AiSlotKind } from './aiSlots'
 import { setAssistantEditorSelection } from '@/lib/assistantContext'
 import SelectionAiOverlay from './SelectionAiOverlay'
 import type { SelectionLanguage } from './aiSelectionActions'
+import { useIsMobile } from './useIsMobile'
 
 /** Map a slice's Monaco language to the selection-overlay's language buckets. */
 function selectionLanguage(language: string): SelectionLanguage {
@@ -92,6 +93,7 @@ export default function EditorPanel({
   // only when the user has no unsaved edits we'd clobber. Without this,
   // saving over a stale draft would silently overwrite the picker's
   // just-applied YAML.
+  const isMobile = useIsMobile()
   const [draft, setDraft] = useState(slice.text)
   const sliceTitleRef = useRef(slice.title)
   const sliceTextRef = useRef(slice.text)
@@ -173,7 +175,8 @@ export default function EditorPanel({
         top: 0,
         right: 0,
         bottom: 0,
-        width: 'min(560px, 45vw)',
+        left: isMobile ? 0 : undefined,
+        width: isMobile ? '100%' : 'min(560px, 45vw)',
         background: '#0e0e0e',
         borderLeft: '1px solid #2a2a2a',
         boxShadow: '-8px 0 24px rgba(0,0,0,0.5)',
