@@ -531,7 +531,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -804,7 +804,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -1327,6 +1327,9 @@ importers:
       csv-parse:
         specifier: ^6.2.1
         version: 6.2.1
+      flint-chart:
+        specifier: ^0.1.2
+        version: 0.1.3(echarts@6.0.0)
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -6625,6 +6628,24 @@ packages:
 
   flatted@3.4.2:
     resolution: {integrity: sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==}
+
+  flint-chart@0.1.3:
+    resolution: {integrity: sha512-RckIdZPWmqK4iM859h8DZgdu/nGVIw85/nJ3WJXiXkz2w0KDtM5OGLRSmzi5bNQIzO5YC+4up5if6//AOvD6aA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      chart.js: ^4.0.0
+      echarts: ^5.0.0 || ^6.0.0
+      vega: ^5.0.0 || ^6.0.0
+      vega-lite: ^5.0.0 || ^6.0.0
+    peerDependenciesMeta:
+      chart.js:
+        optional: true
+      echarts:
+        optional: true
+      vega:
+        optional: true
+      vega-lite:
+        optional: true
 
   flow-enums-runtime@0.0.6:
     resolution: {integrity: sha512-3PYnM29RFXwvAN6Pc/scUfkI7RwhQ/xqyLUyPNlXUp9S40zI8nup9tUSrTLSVnWGBN38FNiGWbwZOB6uR4OGdw==}
@@ -16423,6 +16444,10 @@ snapshots:
   flatpickr@4.6.13: {}
 
   flatted@3.4.2: {}
+
+  flint-chart@0.1.3(echarts@6.0.0):
+    optionalDependencies:
+      echarts: 6.0.0
 
   flow-enums-runtime@0.0.6: {}
 

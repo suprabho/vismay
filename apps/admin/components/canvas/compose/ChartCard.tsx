@@ -7,7 +7,8 @@ import { Caret, Chip, DetailBlock } from './ui'
 export interface ChartRequirementView {
   id: string
   title?: string
-  chartType: 'bar' | 'line'
+  /** A flint chart-template name, e.g. "Bar Chart", "Scatter Plot" (see CHART_TYPES). */
+  chartType: string
   requirement: string
   xLabel?: string
   yLabel?: string

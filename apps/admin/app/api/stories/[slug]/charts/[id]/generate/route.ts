@@ -9,6 +9,7 @@ import {
   generateChart,
   buildChartData,
   type ChartRequirement,
+  type ChartType,
   type ResearchBrief,
   type StoryFormat,
 } from '@vismay/story-pipeline'
@@ -48,7 +49,7 @@ interface StoredBrief {
 interface Body {
   /** Override/supply the chart requirement (required when there's no compose draft). */
   requirement?: string
-  chartType?: 'bar' | 'line'
+  chartType?: ChartType
   title?: string
   /** Refine loop: the author's note on what to change about the current data. */
   feedback?: string
@@ -83,7 +84,7 @@ export async function POST(
   const requirement: ChartRequirement | null = overrideReq
     ? {
         id,
-        chartType: body.chartType ?? planned?.chartType ?? 'bar',
+        chartType: body.chartType ?? planned?.chartType ?? 'Bar Chart',
         title: body.title ?? planned?.title,
         requirement: overrideReq,
         xLabel: planned?.xLabel,
