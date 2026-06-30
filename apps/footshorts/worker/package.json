@@ -10,6 +10,7 @@
     "ingest:ci": "tsx src/ingest.ts",
     "scores": "tsx --env-file=.env src/scores.ts",
     "scores:ci": "tsx src/scores.ts",
+    "match:score": "tsx --env-file=.env src/matchScore.ts",
     "events": "tsx --env-file=.env src/events.ts",
     "events:ci": "tsx src/events.ts",
     "events:sr": "tsx --env-file=.env src/events-sportradar.ts",
