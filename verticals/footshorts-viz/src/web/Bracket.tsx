@@ -37,7 +37,7 @@ function SlotRow({ slot }: { slot: BracketSlot }) {
     return (
       <div className="flex items-center gap-2 px-3 py-2">
         <span
-          className="shrink-0 rounded-full border border-dashed border-white/25"
+          className="shrink-0 rounded-full border border-dashed border-border"
           style={{ width: 20, height: 20 }}
           aria-hidden
         />
@@ -62,9 +62,9 @@ function SlotRow({ slot }: { slot: BracketSlot }) {
 // slots (team / placeholder / TBD). Drawn as a compact two-row card.
 function SlotTieCard({ tie }: { tie: BracketTie }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-white/20 bg-white/10">
+    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
       <SlotRow slot={tie.slotA!} />
-      <div className="border-t border-white/15" />
+      <div className="border-t border-border" />
       <SlotRow slot={tie.slotB!} />
     </div>
   )
@@ -83,11 +83,11 @@ export function TieCard({ tie }: { tie: BracketTie }) {
         : null
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-white/20 bg-white/10">
+    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
       {showAggregate ? (
         <>
           {winnerName ? (
-            <div className="border-t border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-text/80">
+            <div className="border-t border-border bg-bg px-3 py-1.5 text-[11px] font-semibold text-text/80">
               {winnerName} advance
             </div>
           ) : null}
@@ -101,7 +101,7 @@ export function TieCard({ tie }: { tie: BracketTie }) {
         // card edge above it (no divider needed).
         <div
           key={leg.id}
-          className={i > 0 ? 'border-t border-white/15' : ''}
+          className={i > 0 ? 'border-t border-border' : ''}
         >
           {tie.legs.length > 1 ? (
             <div className="px-3 pt-1.5 text-[10px] font-semibold uppercase tracking-[1.2px] text-text/55">

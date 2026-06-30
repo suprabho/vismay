@@ -143,7 +143,7 @@ function SlotLine({ slot }: { slot: BracketSlot }) {
     return (
       <div className="flex items-center gap-1.5 px-2" style={{ height: CELL_H / 2 }}>
         <span
-          className="shrink-0 rounded-full border border-dashed border-white/25"
+          className="shrink-0 rounded-full border border-dashed border-border"
           style={{ width: 18, height: 18 }}
           aria-hidden
         />
@@ -179,19 +179,21 @@ function TieCell({
   const [slotA, slotB] = tieSlots(tie)
   return (
     <div
-      className="absolute flex flex-col justify-center overflow-hidden rounded-md bg-white/5"
+      className="absolute flex flex-col justify-center overflow-hidden rounded-md bg-surface"
       style={{
         left: x,
         top,
         width: w,
         height: CELL_H,
-        border: highlight ? '1px solid var(--color-accent, #e2117a)' : '1px solid rgba(255,255,255,0.15)',
-        boxShadow: highlight ? '0 0 14px -2px var(--color-accent, #e2117a)' : undefined,
+        border: highlight
+          ? '1px solid rgb(var(--sf-color-accent, 226 17 122))'
+          : '1px solid rgb(var(--sf-color-border, 255 255 255))',
+        boxShadow: highlight ? '0 0 14px -2px rgb(var(--sf-color-accent, 226 17 122))' : undefined,
         zIndex: 10,
       }}
     >
       <SlotLine slot={slotA} />
-      <div className="border-t border-white/10" />
+      <div className="border-t border-border" />
       <SlotLine slot={slotB} />
     </div>
   )
@@ -370,7 +372,7 @@ function HorizontalTree({
               key={c.key}
               d={c.d}
               fill="none"
-              stroke={c.on ? 'var(--color-accent, #e2117a)' : 'rgba(255,255,255,0.22)'}
+              stroke={c.on ? 'rgb(var(--sf-color-accent, 226 17 122))' : 'rgb(var(--sf-color-muted, 255 255 255) / 0.5)'}
               strokeWidth={c.on ? 2 : 1}
             />
           ))}
@@ -647,7 +649,7 @@ function VerticalTree({
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                stroke={s.on ? 'var(--color-accent, #e2117a)' : 'rgba(255,255,255,0.3)'}
+                stroke={s.on ? 'rgb(var(--sf-color-accent, 226 17 122))' : 'rgb(var(--sf-color-muted, 255 255 255) / 0.5)'}
                 strokeWidth={s.on ? 2.5 : 1.5}
               />
             ))}
