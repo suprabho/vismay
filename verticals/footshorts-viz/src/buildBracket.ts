@@ -178,18 +178,23 @@ export function buildBracket(fixtures: FixtureRow[]): Bracket | null {
       tieGroups.set(key, list)
     }
 
-    const ties: BracketTie[] = []
-    for (const legs of tieGroups.values()) {
-      ties.push(buildTie(stage, legs))
+    // Sort by each tie's earliest kickoff taken from its *source* legs. An
+    // all-TBD tie (both teams unknown) drops its legs in `buildTie`, so we can't
+    // read kickoff back off the built tie — capture it here while the source
+    // fixtures are still in hand.
+    const built: { tie: BracketTie; kickoff: string }[] = []
+    const push = (legs: FixtureRow[]) => {
+      const kickoff = legs.reduce(
+        (min, leg) => (leg.kickoff_at < min ? leg.kickoff_at : min),
+        legs[0]!.kickoff_at,
+      )
+      built.push({ tie: buildTie(stage, legs), kickoff })
     }
-    for (const lone of unpairable) {
-      ties.push(buildTie(stage, [lone]))
-    }
+    for (const legs of tieGroups.values()) push(legs)
+    for (const lone of unpairable) push([lone])
 
-    ties.sort((x, y) =>
-      x.legs[0]!.kickoff_at.localeCompare(y.legs[0]!.kickoff_at),
-    )
-    rounds.push({ stage, ties })
+    built.sort((x, y) => x.kickoff.localeCompare(y.kickoff))
+    rounds.push({ stage, ties: built.map((b) => b.tie) })
   }
 
   rounds.sort((x, y) => stageRank(x.stage) - stageRank(y.stage))
