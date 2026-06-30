@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Caret, Chip, DetailBlock } from './ui'
+import { Caret, Chip, DetailBlock, btnGhostCls, inputCls } from './ui'
 
 /** A chart requirement as the outline persisted it (see `chartRequirementSchema`). */
 export interface ChartRequirementView {
@@ -22,12 +22,25 @@ export interface ChartRequirementView {
 export function ChartCard({
   chart,
   result,
+  busy,
+  onRegenerate,
 }: {
   chart: ChartRequirementView
   /** Outcome of the last batch generate run, if any (id → ok). */
   result?: boolean
+  /** The flow's single-flight busy key, so a regen-in-flight disables the button. */
+  busy?: string | null
+  /** Re-plan THIS chart's requirement (its prompt), optionally with a note. */
+  onRegenerate?: (id: string, feedback?: string) => Promise<boolean>
 }) {
   const [open, setOpen] = useState(false)
+  const [feedback, setFeedback] = useState('')
+  const regenBusy = busy === `chart:${chart.id}`
+
+  async function regenerate() {
+    if (!onRegenerate || regenBusy) return
+    if (await onRegenerate(chart.id, feedback.trim() || undefined)) setFeedback('')
+  }
   return (
     <li className="rounded-lg border border-white/10 bg-neutral-900/60">
       <div
@@ -62,6 +75,28 @@ export function ChartCard({
                 .filter(Boolean)
                 .join(' · ')}
             </DetailBlock>
+          )}
+          {onRegenerate && (
+            <div className="flex gap-1.5 pt-0.5">
+              <input
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') regenerate()
+                }}
+                disabled={regenBusy}
+                placeholder="Re-plan this chart with a note (optional)…"
+                className={`min-w-0 flex-1 ${inputCls}`}
+              />
+              <button
+                onClick={regenerate}
+                disabled={!!busy}
+                title="Re-plan this chart's prompt — sharpen what it plots / change its type"
+                className={`shrink-0 ${btnGhostCls}`}
+              >
+                {regenBusy ? 'Re-planning…' : 'Regenerate prompt'}
+              </button>
+            </div>
           )}
         </div>
       ) : (

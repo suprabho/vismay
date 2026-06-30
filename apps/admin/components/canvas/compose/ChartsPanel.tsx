@@ -6,7 +6,8 @@ import { SectionHeading, btnGhostCls } from './ui'
 /**
  * Charts panel (shown under the Outline stage): the outline plans chart
  * REQUIREMENTS; this generates the actual data, grounded in the sources.
- * Per-chart regenerate lives on the canvas chart node.
+ * Each card can re-plan its own requirement (prompt); per-chart DATA regenerate
+ * also lives on the canvas chart node.
  */
 export function ChartsPanel({
   charts,
@@ -14,12 +15,15 @@ export function ChartsPanel({
   busy,
   wide,
   onGenerate,
+  onRegeneratePrompt,
 }: {
   charts: ChartRequirementView[]
   results: Record<string, boolean>
   busy: string | null
   wide?: boolean
   onGenerate: () => void
+  /** Re-plan a single chart's requirement (prompt), optionally with a note. */
+  onRegeneratePrompt?: (id: string, feedback?: string) => Promise<boolean>
 }) {
   return (
     <section className="space-y-3 border-t border-white/10 pt-4">
@@ -32,7 +36,13 @@ export function ChartsPanel({
         }
       >
         {charts.map((c) => (
-          <ChartCard key={c.id} chart={c} result={results[c.id]} />
+          <ChartCard
+            key={c.id}
+            chart={c}
+            result={results[c.id]}
+            busy={busy}
+            onRegenerate={onRegeneratePrompt}
+          />
         ))}
       </ul>
       <button

@@ -345,6 +345,62 @@ export function buildChartPrompt(
   return base
 }
 
+// ── Chart REQUIREMENT pass (re-plans ONE chart's prompt, not its data) ──────
+//
+// The outline plans every chart's requirement as a byproduct of skeleton
+// planning. This focused pass re-plans a SINGLE chart's requirement — its
+// chartType, title, axes and the precise "what to plot" prompt — grounded in
+// the brief + chosen angle + sources, so an author can refine one chart's plan
+// (optionally with a note) without regenerating the whole outline. It produces
+// the PLAN only (no numbers); the data pass still fills the figures afterwards.
+
+export function chartRequirementSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+    `You re-plan the REQUIREMENT for ONE chart in a ${pack.name} data story — its plan, ` +
+    `not its data. Given the chart's current plan, the research brief + chosen angle, and ` +
+    `the sources, return a sharper requirement for this chart:\n` +
+    `- id: keep it EXACTLY as given — story layers reference this chart by id.\n` +
+    `- chartType: one of ${CHART_TYPES.join(', ')} — pick the template that best fits the ` +
+    `comparison this chart makes (change it if a different type fits better).\n` +
+    `- title: a short, specific chart title.\n` +
+    `- requirement: exactly what this chart must plot — which figures/series/categories and ` +
+    `over what range/time, all grounded in the sources. Concrete, NOT generic.\n` +
+    `- xLabel / yLabel: axis labels when they help.\n\n` +
+    `Do NOT invent the numbers here — a later focused pass produces the data. Ground every ` +
+    `figure you reference in the sources.` +
+    guidance(pack.outlineGuidance)
+  )
+}
+
+export const CHART_REQUIREMENT_SYSTEM = chartRequirementSystem()
+
+export function buildChartRequirementPrompt(
+  req: ChartRequirement,
+  brief: ResearchBrief,
+  sources: SourceDoc[],
+  feedback?: string,
+): string {
+  const base =
+    `CURRENT CHART PLAN\n${renderChartRequirement(req)}\n\n` +
+    `RESEARCH BRIEF\n` +
+    `Summary: ${brief.summary}\n` +
+    `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n` +
+    (brief.candidateAngles.length
+      ? `Chosen angle:\n${brief.candidateAngles.map((a) => `- ${a}`).join('\n')}\n`
+      : '') +
+    `\nSOURCES\n${renderSources(sources, CHART_SOURCE_CHARS)}`
+  if (feedback) {
+    return (
+      `${base}\n\nRe-plan this chart's requirement per this note ` +
+      `(keep what works, change only what's needed):\n${feedback}`
+    )
+  }
+  return (
+    `${base}\n\nRe-plan this chart's requirement — sharpen what it plots and pick the ` +
+    `chart type that best fits, keeping the same id.`
+  )
+}
+
 // ── Map-region data pass (turns a choropleth REQUIREMENT into per-region values)
 //
 // The exact mirror of the chart data pass, for the PRIMARY visual of a map

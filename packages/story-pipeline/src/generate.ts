@@ -7,6 +7,7 @@ import {
   subsectionContentSchema,
   subsectionVisualSchema,
   chartDataSchema,
+  chartRequirementSchema,
   regionDataSchema,
 } from './schema'
 import {
@@ -22,6 +23,8 @@ import {
   buildSubsectionVisualPrompt,
   chartSystem,
   buildChartPrompt,
+  chartRequirementSystem,
+  buildChartRequirementPrompt,
   regionsSystem,
   buildRegionsPrompt,
 } from './prompts'
@@ -179,6 +182,31 @@ export async function generateChart(
   })
   const { requirement: _omit, ...meta } = args.requirement
   return { ...meta, columns: data.columns, rows: data.rows, encodings: data.encodings }
+}
+
+/**
+ * The chart REQUIREMENT (re-)plan pass — re-plan ONE chart's PROMPT (its
+ * chartType, title, axes, and the precise "what to plot" requirement), grounded
+ * in the brief + chosen angle + sources, optionally steered by an author note.
+ * This is the plan, NOT the data: {@link generateChart} still produces the
+ * figures afterwards. The `id` is preserved so any layer referencing this chart
+ * stays valid. Lets an author refine a single chart's plan without regenerating
+ * the whole outline.
+ */
+export async function generateChartRequirement(
+  args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
+  opts: { model?: string; pack?: DomainPack; feedback?: string } = {},
+): Promise<ChartRequirement> {
+  const out = await generateStructured({
+    model: opts.model,
+    system: chartRequirementSystem(opts.pack),
+    prompt: buildChartRequirementPrompt(args.requirement, args.brief, args.sources, opts.feedback),
+    schema: chartRequirementSchema,
+    metadata: { feature: 'story-pipeline-chart-requirement' },
+  })
+  // Force the original id — layers reference this chart by id, so a model that
+  // ignores the "keep the id" instruction can't orphan them.
+  return { ...out, id: args.requirement.id }
 }
 
 /**

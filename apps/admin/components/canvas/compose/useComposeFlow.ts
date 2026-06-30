@@ -615,6 +615,40 @@ export function useComposeFlow({
     }
   }
 
+  // Re-plan ONE chart's REQUIREMENT (its prompt), optionally with a note. The
+  // server regenerates the chartType/title/axes + "what to plot" and persists it
+  // into storyOutline.charts; mirror the new requirement into local state so the
+  // card updates without a reload. This re-plans the chart — its DATA is then
+  // regenerated via "Generate charts" (or the canvas node).
+  async function regenChartPrompt(id: string, feedback?: string): Promise<boolean> {
+    const data = await call<{ chart: ChartRequirementView }>(`chart:${id}`, 'charts', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, ...(feedback ? { feedback } : {}) }),
+    })
+    if (!data?.chart) return false
+    setSt((s) => {
+      const outline = (s.storyOutline ?? null) as { charts?: ChartRequirementView[] } | null
+      if (!outline?.charts) return s
+      return {
+        ...s,
+        storyOutline: {
+          ...outline,
+          charts: outline.charts.map((c) => (c.id === id ? data.chart : c)),
+        },
+      }
+    })
+    // The persisted data (if any) is now stale relative to the new plan — clear
+    // its ✓/✗ so the author knows to regenerate it.
+    setChartResults((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    return true
+  }
+
   const phase = st.phase
   // Accepted entries not yet materialised — what the Materialize button creates.
   const newAcceptedCount = st.outline.filter((e) => e.status === 'accepted' && !e.sectionId).length
@@ -669,6 +703,7 @@ export function useComposeFlow({
     frameSrcFor,
     genImages,
     genCharts,
+    regenChartPrompt,
     phase,
     newAcceptedCount,
     outlineEditable,
