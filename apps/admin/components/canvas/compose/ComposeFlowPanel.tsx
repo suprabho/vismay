@@ -172,9 +172,11 @@ export function ComposeFlow({
             <ChartsPanel
               charts={flow.charts}
               results={flow.chartResults}
+              errors={flow.chartErrors}
               busy={flow.busy}
               wide={wide}
               onGenerate={flow.genCharts}
+              onRetry={flow.retryChart}
               onRegeneratePrompt={flow.regenChartPrompt}
             />
           )}

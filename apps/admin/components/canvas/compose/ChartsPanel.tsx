@@ -12,16 +12,22 @@ import { SectionHeading, btnGhostCls } from './ui'
 export function ChartsPanel({
   charts,
   results,
+  errors,
   busy,
   wide,
   onGenerate,
+  onRetry,
   onRegeneratePrompt,
 }: {
   charts: ChartRequirementView[]
   results: Record<string, boolean>
+  /** Failure reason for the charts that came back ✗ (id → message). */
+  errors?: Record<string, string>
   busy: string | null
   wide?: boolean
   onGenerate: () => void
+  /** Retry a single failed chart's DATA (regenerates just that chart). */
+  onRetry?: (id: string) => Promise<boolean>
   /** Re-plan a single chart's requirement (prompt), optionally with a note. */
   onRegeneratePrompt?: (id: string, feedback?: string) => Promise<boolean>
 }) {
@@ -40,7 +46,9 @@ export function ChartsPanel({
             key={c.id}
             chart={c}
             result={results[c.id]}
+            error={errors?.[c.id]}
             busy={busy}
+            onRetry={onRetry}
             onRegenerate={onRegeneratePrompt}
           />
         ))}
