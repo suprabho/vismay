@@ -42,6 +42,12 @@ export type EditableKind =
   | 'narration'
   // Frame inputs — sliced from the story's config.yaml + markdown body.
   | 'content'
+  // Deck cover editorial text — the `eyebrow` / `heading` / `dek` / `byline`
+  // fields the full-bleed cover paints over its hero image. They live at the
+  // section root in config.yaml (NOT the markdown body), so a cover needs its
+  // own slot: editing the markdown `content` doesn't touch them. Only offered
+  // on deck `kind: cover` sections, where it REPLACES the Content leaf.
+  | 'cover'
   | 'layout'
   | 'background'
   // Story-wide `defaults` block (config.yaml `defaults:`). For deck stories
@@ -227,6 +233,30 @@ export function buildEditableSlice(
         title: `Content · ${anchor}`,
         placeholder:
           'Markdown body for this section. Lines are split into paragraphs on blank-line breaks; the `paragraphs:` config slice still applies on render.',
+      }
+    }
+
+    case 'cover': {
+      // The cover's editorial text lives at the section root in config.yaml.
+      // Present the fields that render (in top-to-bottom cover order) as a
+      // small YAML mapping; heading falls back to the resolved unit heading so
+      // the current title always shows even if it's only anchored in markdown.
+      const section = readConfigSection(sources.configYaml, unit.parentIndex)
+      const str = (key: string): string => {
+        const v = section?.[key]
+        return typeof v === 'string' ? v.trim() : ''
+      }
+      const fields: Record<string, string> = {}
+      if (str('eyebrow')) fields.eyebrow = str('eyebrow')
+      const heading = str('heading') || (unit.heading ?? '').trim()
+      if (heading) fields.heading = heading
+      if (str('dek')) fields.dek = str('dek')
+      if (str('byline')) fields.byline = str('byline')
+      return {
+        text: Object.keys(fields).length === 0 ? '' : safeStringify(fields),
+        language: 'yaml',
+        title: `Cover · §${unit.parentIndex}`,
+        placeholder: COVER_PLACEHOLDER,
       }
     }
 
@@ -561,6 +591,40 @@ export function mergeSlice(
       }
     }
 
+    case 'cover': {
+      // Splice the editorial fields back onto the section entry in config.yaml,
+      // preserving everything else (layout, panel, foreground, background …).
+      // Each known field is set when present + non-empty, else deleted — so
+      // clearing a field in the editor removes it (heading then falls back to
+      // the markdown anchor heading). Unknown keys the user might type are
+      // ignored: this slot owns only the cover's copy.
+      const { doc, section } = mutableConfigSection(
+        sources.configYaml,
+        unit.parentIndex
+      )
+      const parsed = trimmed === '' ? {} : parseYaml(editedText)
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error(
+          'Cover text must be a mapping of eyebrow / heading / dek / byline.'
+        )
+      }
+      const p = parsed as Record<string, unknown>
+      for (const key of ['eyebrow', 'heading', 'dek', 'byline'] as const) {
+        const v = p[key]
+        if (typeof v === 'string' && v.trim()) {
+          section[key] = v.trim()
+        } else {
+          delete section[key]
+        }
+      }
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
+
     case 'layout': {
       const { doc, section } = mutableConfigSection(
         sources.configYaml,
@@ -861,6 +925,17 @@ const SHARE_MAP_PLACEHOLDER = `# Share-card map override for this section. Examp
 #
 # Empty body removes the override. Wraps live under \`sections.<id>.map:\`
 # in share.yaml — same shape ShareCard reads.`
+
+const COVER_PLACEHOLDER = `# Editorial text for this deck cover — painted over the full-bleed hero.
+# Every field is optional; omit one (or leave it blank) to drop it.
+#
+# eyebrow: "Topic · Date · What this is"   # kicker line above the title
+# heading: "The cover title"               # the big display headline
+# dek:     "One-line standfirst below the title."
+# byline:  "By …"                          # optional attribution line
+#
+# Saved onto this section in config.yaml. Clearing \`heading\` falls back to the
+# markdown anchor heading ("Cover").`
 
 const DEFAULTS_PLACEHOLDER = `# Story-wide defaults (config.yaml \`defaults:\`). Deck stories use:
 #

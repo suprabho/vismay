@@ -19,6 +19,7 @@ import {
   shareMapOverrideNode,
   narrationNode,
   contentNode,
+  coverNode,
   parseCanvasSources,
   liveUnit,
   buildInputGraph,
@@ -424,6 +425,12 @@ interface SectionView {
   sectionId: string
   heading: string
   frameSrc: string
+  /** Section kind (config `kind`), e.g. 'cover'. Drives deck-cover framing. */
+  kind?: string
+  /** Deck cover editorial node (eyebrow / heading / dek / byline) when this
+   *  section is a `kind: cover`; null otherwise. On a deck cover it replaces
+   *  the markdown Content leaf so the actual cover copy is editable. */
+  cover: InputNodeData | null
   /** Tiered input lineage feeding the frame (leaf → region → group). */
   graph: InputGraph
   /** Override card data per group; only the expanded group's is actually
@@ -448,6 +455,10 @@ function buildSectionView(
   // fields (heading, paragraphs, sliceIndex) are kept intact — those come
   // from server-side resolveUnits and don't change on a config save.
   const live = liveUnit(unit, configYaml)
+  const kind =
+    typeof live.parentConfig.kind === 'string'
+      ? live.parentConfig.kind
+      : undefined
   const sectionId =
     live.parentConfig.id ?? `section-${live.parentIndex}`
   const heading =
@@ -471,6 +482,11 @@ function buildSectionView(
     sectionId,
     heading,
     frameSrc,
+    kind,
+    // Precompute the cover editorial node from the live unit so it reflects
+    // in-canvas config saves; null for non-cover sections (which keep the
+    // markdown Content leaf).
+    cover: kind === 'cover' ? coverNode(live) : null,
     // Feed the live unit (with configYaml-fresh parentConfig) so the
     // graph rebuilds against the latest background/foreground/regions
     // after an in-canvas edit — without it, the iframe would update via
@@ -2016,10 +2032,12 @@ export default function CanvasClient({
 
       // Total height of the left graph, used to vertically center it on the
       // frame. Mirrors the placement walk in `mountInputs`.
-      function measureLeftHeight(g: InputGraph): number {
-        // Content / Layout / Theme standalone block (Content's row height
-        // varies with its collapse state).
-        let h = contentLeafH() + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
+      function measureLeftHeight(g: InputGraph, isCoverContent: boolean): number {
+        // Content / Layout / Theme standalone block. The Content row's height
+        // varies with its collapse state; a deck cover swaps it for the fixed-
+        // height Cover editorial leaf (no collapse). Must mirror mountInputs.
+        const contentRowH = isCoverContent ? LEAF_H : contentLeafH()
+        let h = contentRowH + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
         // Background band (>=1 row: a placeholder when empty). Deck sections
         // with no per-section background drop the band entirely — the backdrop
         // is page-level (edited via the Deck defaults button), so a
@@ -2296,7 +2314,11 @@ export default function CanvasClient({
 
       async function mountInputs(view: SectionView): Promise<void> {
         const g = view.graph
-        const offset = FRAME_H / 2 - measureLeftHeight(g) / 2
+        // Deck sections read as slide parts; a deck `kind: cover` swaps its
+        // markdown Content leaf for the Cover editorial node (view.cover).
+        const isDeck = formatRef.current === 'deck'
+        const isCoverContent = isDeck && view.cover != null
+        const offset = FRAME_H / 2 - measureLeftHeight(g, isCoverContent) / 2
 
         const addLeaf = async (
           d: {
@@ -2572,25 +2594,37 @@ export default function CanvasClient({
          * "layout" field is meaningless and saving one would clobber the
          * stack. Theme lives in markdown frontmatter and stays
          * non-editable here — frontmatter editing is its own concern. */
-        // Deck sections read as slide parts, not map inputs.
-        const isDeck = formatRef.current === 'deck'
+        // Deck sections read as slide parts, not map inputs. `isDeck` /
+        // `isCoverContent` are computed at the top of mountInputs (the
+        // measure walk needs them too).
         const deckLeafLabel: Partial<Record<'content' | 'layout' | 'theme', string>> =
           isDeck ? { content: 'Slide text', layout: 'Slide layout' } : {}
         for (const key of ['content', 'layout', 'theme'] as const) {
+          // Deck cover: the "content" row is the Cover editorial node (config
+          // eyebrow / heading / dek / byline), not the markdown body — that's
+          // the one surface that actually changes a cover's copy.
+          const coverRow = key === 'content' && isCoverContent
           let editKind: EditableKind | undefined
-          if (key === 'content') {
+          if (coverRow) {
+            editKind = 'cover'
+          } else if (key === 'content') {
             editKind = 'content'
           } else if (key === 'layout' && g.foreground.shape === 'regions') {
             editKind = 'layout'
           }
           const relabel = deckLeafLabel[key]
-          const data = relabel ? { ...g[key], label: relabel } : g[key]
-          // Content is collapsible: collapsed = header-only chip, expanded =
-          // the full markdown body scrolling inside CONTENT_BODY_MAX_H.
-          // Toggling flips the session ref then re-mounts the left graph so
-          // every dependent node re-walks at the new pitch.
+          const data = coverRow
+            ? view.cover!
+            : relabel
+              ? { ...g[key], label: relabel }
+              : g[key]
+          // The markdown Content leaf is collapsible (collapsed = header chip,
+          // expanded = the body scrolling inside CONTENT_BODY_MAX_H); toggling
+          // flips the session ref then re-mounts the left graph so every
+          // dependent node re-walks at the new pitch. The Cover leaf is a small
+          // fixed card and opts out.
           const extras =
-            key === 'content'
+            key === 'content' && !coverRow
               ? {
                   collapse: {
                     collapsed: contentCollapsedRef.current,
@@ -2605,7 +2639,8 @@ export default function CanvasClient({
               : undefined
           const node = await addLeaf(data, regionColX, y, editKind, extras)
           await wire(node, 'value', frame, key)
-          y += (key === 'content' ? contentLeafH() : LEAF_H) + LGAP_Y
+          y +=
+            (key === 'content' && !coverRow ? contentLeafH() : LEAF_H) + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 
