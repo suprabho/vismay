@@ -80,6 +80,7 @@ import {
   replaceTheme,
   saveConfigYaml,
   saveMarkdown,
+  saveStoryMetadata,
   unwrapLayerFromMapPicker,
   wrapLayerForMapPicker,
   writeDefaultsMapStyle,
@@ -105,7 +106,9 @@ import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
 import ChartEditPanel from './ChartEditPanel'
+import StorySettingsPanel from './StorySettingsPanel'
 import { ComposeFlowPanel } from './compose/ComposeFlowPanel'
+import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { ComposeState } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
 
@@ -725,6 +728,7 @@ export default function CanvasClient({
     setGenError(null)
     setGenSectionOpen(false)
     setEvalOpen(false)
+    setStorySettingsOpen(false)
     setFootballError(null)
     setFootballOpen(true)
   }, [])
@@ -736,6 +740,8 @@ export default function CanvasClient({
   }, [openFootball])
   // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
   const [evalOpen, setEvalOpen] = useState(false)
+  // ⚙ Story settings: story-level editorial + publishing + deck-defaults panel.
+  const [storySettingsOpen, setStorySettingsOpen] = useState(false)
   // ✨ Research & outline (compose) drawer. The panel stays mounted while this
   // toggles (visibility only) so in-session research survives close → reopen.
   // `composeStarting` covers the no-state case where the header button kicks
@@ -3811,6 +3817,42 @@ export default function CanvasClient({
     setSlotError(null)
   }, [])
 
+  // Story-wide editorial frontmatter (title/subtitle/byline/date) from the
+  // Story settings panel. Reads the latest markdown via the ref, merges the
+  // patch, and rewrites frontmatter — preserving theme/aura/all other keys and
+  // the body. Rejects (surfaced inline by the panel) if the frontmatter can't
+  // be parsed, so a save never serializes onto empty data and wipes it.
+  const handleStorySettingsEditorial = useCallback(
+    async (patch: Partial<Record<'title' | 'subtitle' | 'byline' | 'date', string>>) => {
+      const parsed = parseFrontmatter(markdownRef.current ?? '')
+      if (parsed.yamlError) {
+        throw new Error('Frontmatter is unparseable — fix it in the Markdown editor first.')
+      }
+      const nextMarkdown = serializeFrontmatter({ ...parsed.data, ...patch }, parsed.body)
+      await saveMarkdown(slug, nextMarkdown)
+      setSources((prev) => ({ ...prev, markdown: nextMarkdown }))
+      setDataNonce((n) => n + 1)
+    },
+    [slug]
+  )
+
+  // Story-wide publishing metadata (status/listed/displayOrder). Writes the
+  // frontmatter mirror AND the explicit fields in one PUT — same shape the
+  // classic editor's Save uses — so the DB columns and markdown stay in sync.
+  const handleStorySettingsMetadata = useCallback(
+    async (meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>) => {
+      const parsed = parseFrontmatter(markdownRef.current ?? '')
+      if (parsed.yamlError) {
+        throw new Error('Frontmatter is unparseable — fix it in the Markdown editor first.')
+      }
+      const nextMarkdown = serializeFrontmatter({ ...parsed.data, ...meta }, parsed.body)
+      await saveStoryMetadata(slug, { markdown: nextMarkdown, ...meta })
+      setSources((prev) => ({ ...prev, markdown: nextMarkdown }))
+      setDataNonce((n) => n + 1)
+    },
+    [slug]
+  )
+
   // Story-wide `defaults.mapStyle` write, called from the map picker's URL
   // input. Bumps dataNonce so the iframes pick up the new style URL on the
   // next render. Throws on save failure so the modal can surface the error
@@ -4146,6 +4188,7 @@ export default function CanvasClient({
           onClick={() => {
             setGenError(null)
             setEvalOpen(false)
+            setStorySettingsOpen(false)
             setGenSectionOpen((o) => !o)
           }}
           title="Generate a new section from a brief"
@@ -4171,6 +4214,7 @@ export default function CanvasClient({
           <button
             onClick={() => {
               setGenSectionOpen(false)
+              setStorySettingsOpen(false)
               setEvalOpen((o) => !o)
             }}
             title="Evaluate the current section — render it and get a vision critique"
@@ -4190,29 +4234,47 @@ export default function CanvasClient({
             ✦ Evaluate
           </button>
         )}
-        {format === 'deck' && sectionUnits.length > 0 && (
-          <button
-            onClick={() =>
-              setEditorTarget({ kind: 'defaults', unit: sectionUnits[0] })
-            }
-            title="Edit story-wide deck defaults — page backdrop, overlay, panel, scroll, chart"
-            style={{
-              pointerEvents: 'auto',
-              marginLeft: 12,
-              background: 'transparent',
-              color: '#9bb0d8',
-              border: '1px solid #2a4d8f',
-              borderRadius: 5,
-              padding: '3px 9px',
-              fontSize: 11,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Deck defaults
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setGenSectionOpen(false)
+            setEvalOpen(false)
+            setStorySettingsOpen((o) => !o)
+          }}
+          title="Story settings — title, byline, publishing, app assignment, deck defaults"
+          style={{
+            pointerEvents: 'auto',
+            marginLeft: 12,
+            background: storySettingsOpen ? '#10303f' : 'transparent',
+            color: '#9bb0d8',
+            border: `1px solid ${storySettingsOpen ? '#5aa9d8' : '#2a4d8f'}`,
+            borderRadius: 5,
+            padding: '3px 9px',
+            fontSize: 11,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          ⚙ Story
+        </button>
       </header>
+      {storySettingsOpen && (
+        <StorySettingsPanel
+          slug={slug}
+          appSlug={appSlug}
+          format={format}
+          markdown={sources.markdown}
+          canEditDeckDefaults={format === 'deck' && sectionUnits.length > 0}
+          onEditorialChange={handleStorySettingsEditorial}
+          onPublishingChange={handleStorySettingsMetadata}
+          onOpenDeckDefaults={() => {
+            const unit = sectionUnits[0]
+            if (!unit) return
+            setStorySettingsOpen(false)
+            setEditorTarget({ kind: 'defaults', unit })
+          }}
+          onClose={() => setStorySettingsOpen(false)}
+        />
+      )}
       {composeState && (
         <ComposeFlowPanel
           slug={slug}
