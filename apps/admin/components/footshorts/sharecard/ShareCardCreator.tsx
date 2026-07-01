@@ -903,7 +903,13 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     try {
       const dataUrl = await capture()
       if (!dataUrl) throw new Error('Could not render the card image.')
-      const res = await fetch('/api/footshorts/share/publish', {
+      // Rendered PNG → Blob: a base64 data URL carried in the publish JSON blows
+      // past Vercel's ~4.5 MB request-body cap (413), so the bytes go straight to
+      // Storage via a signed URL and never travel through the API route.
+      const png = await (await fetch(dataUrl)).blob()
+
+      // 1. Persist the card (creating it if new) + get a signed upload URL.
+      const signRes = await fetch('/api/footshorts/share/publish-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -911,8 +917,39 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           name,
           cardType: representativeType,
           config: buildSnapshot(),
+        }),
+      })
+      const sign = (await signRes.json().catch(() => ({}))) as {
+        ok?: boolean
+        id?: string
+        signedUrl?: string
+        error?: string
+      }
+      if (!signRes.ok || !sign.ok || !sign.id || !sign.signedUrl) {
+        throw new Error(sign.error ?? `HTTP ${signRes.status}`)
+      }
+      // Adopt the id now so a failed upload/finalize retries the same row instead
+      // of stranding a fresh draft on every attempt.
+      setCurrentCardId(sign.id)
+
+      // 2. Upload the PNG direct to Storage (bypasses the function body cap).
+      const putRes = await fetch(sign.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/png', 'x-upsert': 'true' },
+        body: png,
+      })
+      if (!putRes.ok) {
+        const err = (await putRes.json().catch(() => null)) as { message?: string; error?: string } | null
+        throw new Error(err?.message ?? err?.error ?? `Image upload failed (HTTP ${putRes.status})`)
+      }
+
+      // 3. Finalize: flip to published + write entity tags (small JSON body).
+      const res = await fetch('/api/footshorts/share/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: sign.id,
           ratio,
-          imageDataUrl: dataUrl,
           entities: tags.map((t) => ({ type: t.type, slug: t.slug })),
         }),
       })
@@ -931,8 +968,16 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
-      {/* Load the resolved theme's Google fonts for both preview + PNG capture. */}
-      {fontImportUrl && <link rel="stylesheet" href={fontImportUrl} />}
+      {/* Load the resolved theme's Google fonts for both preview + PNG capture.
+          Preconnect to gstatic (crossOrigin) so the woff2 files html-to-image
+          embeds are fetched early — matching every other capture surface. */}
+      {fontImportUrl && (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          <link rel="stylesheet" href={fontImportUrl} />
+        </>
+      )}
       {/* Title + action bar. Hidden on mobile while a bottom sheet is open so the
           canvas behind the sheet gets the freed-up vertical space; always shown on desktop. */}
       <div
