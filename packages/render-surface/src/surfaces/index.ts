@@ -15,3 +15,7 @@ export {
   CanvasFrameSurface,
   type CanvasFrameSurfaceProps,
 } from './CanvasFrameSurface'
+export {
+  VideoProjectSurface,
+  type VideoProjectSurfaceProps,
+} from './VideoProjectSurface'
