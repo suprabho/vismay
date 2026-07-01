@@ -1,0 +1,169 @@
+{
+  "steps": [
+    {
+      "title": "CapEx vs. OpEx Contributions to Annual Cost",
+      "option": {
+        "grid": {
+          "top": 36,
+          "left": 86,
+          "right": 149,
+          "bottom": 151
+        },
+        "color": [
+          "$accent",
+          "$teal",
+          "$accent2",
+          "$amber",
+          "$positive",
+          "$muted"
+        ],
+        "xAxis": {
+          "data": [
+            "Servers",
+            "Facility",
+            "Network infrastructure",
+            "Energy",
+            "Taxes",
+            "Maintenance",
+            "Labor",
+            "Utility works",
+            "Land",
+            "Water"
+          ],
+          "name": "Cost Component",
+          "type": "category",
+          "nameGap": 115,
+          "axisLine": {
+            "show": true,
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": true,
+            "alignWithLabel": true
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "rotate": 90,
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "nameLocation": "middle",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontSize": 12
+          }
+        },
+        "yAxis": {
+          "name": "Annualized Cost ($ millions/year)",
+          "type": "value",
+          "scale": false,
+          "nameGap": 45,
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "nameLocation": "middle",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontSize": 12
+          }
+        },
+        "legend": {
+          "top": 20,
+          "data": [
+            "CapEx ($M/yr)",
+            "OpEx ($M/yr)"
+          ],
+          "type": "plain",
+          "align": "left",
+          "right": 10,
+          "orient": "vertical",
+          "textStyle": {
+            "color": "$muted"
+          }
+        },
+        "series": [
+          {
+            "data": [
+              5021,
+              1387,
+              1167,
+              0,
+              0,
+              0,
+              0,
+              20,
+              13,
+              0
+            ],
+            "name": "CapEx ($M/yr)",
+            "type": "bar",
+            "stack": "total",
+            "itemStyle": {
+              "color": "$accent"
+            },
+            "barCategoryGap": "10%"
+          },
+          {
+            "data": [
+              0,
+              0,
+              0,
+              594,
+              143,
+              120,
+              40,
+              0,
+              0,
+              6
+            ],
+            "name": "OpEx ($M/yr)",
+            "type": "bar",
+            "stack": "total",
+            "itemStyle": {
+              "color": "$teal"
+            },
+            "barCategoryGap": "10%"
+          }
+        ],
+        "graphic": [
+          {
+            "z": 100,
+            "top": 4,
+            "type": "text",
+            "right": 10,
+            "style": {
+              "fill": "#333",
+              "text": "__flint_series_key",
+              "fontSize": 11,
+              "textAlign": "right",
+              "fontWeight": "bold"
+            }
+          }
+        ],
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          }
+        }
+      }
+    }
+  ]
+}

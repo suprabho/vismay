@@ -1,0 +1,81 @@
+{
+  "steps": [
+    {
+      "title": "Up-Front CapEx Breakdown — $38 Billion Total",
+      "option": {
+        "color": [
+          "$accent",
+          "$teal",
+          "$accent2",
+          "$amber",
+          "$positive",
+          "$muted"
+        ],
+        "series": [
+          {
+            "data": [
+              {
+                "name": "Servers",
+                "value": 1
+              },
+              {
+                "name": "Facility",
+                "value": 1
+              },
+              {
+                "name": "Network infrastructure",
+                "value": 1
+              },
+              {
+                "name": "Land",
+                "value": 1
+              },
+              {
+                "name": "Utility works",
+                "value": 1
+              }
+            ],
+            "type": "pie",
+            "label": {
+              "show": true,
+              "width": 52.400000000000006,
+              "fontSize": 11,
+              "overflow": "break",
+              "formatter": "{b}: {d}%"
+            },
+            "center": [
+              "50%",
+              "50%"
+            ],
+            "radius": [
+              "0%",
+              "80px"
+            ],
+            "emphasis": {
+              "itemStyle": {
+                "shadowBlur": 10,
+                "shadowColor": "rgba(0, 0, 0, 0.5)",
+                "shadowOffsetX": 0
+              }
+            },
+            "itemStyle": {
+              "borderRadius": 0
+            },
+            "labelLine": {
+              "show": true,
+              "length": 22,
+              "length2": 26
+            },
+            "labelLayout": {
+              "hideOverlap": true
+            },
+            "avoidLabelOverlap": true
+          }
+        ],
+        "tooltip": {
+          "trigger": "item"
+        }
+      }
+    }
+  ]
+}

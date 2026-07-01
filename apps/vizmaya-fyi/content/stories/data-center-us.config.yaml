@@ -1,0 +1,272 @@
+defaults:
+  storyBackground:
+    type: color
+    value: "#f6f4ef"
+    fixed: true
+  overlay:
+    color: transparent
+    opacity: 0
+  panel:
+    background: transparent
+    border: none
+  scroll:
+    mode: snap
+    paddingY: 12vh
+  chart:
+    theme: light-editorial
+  progress: true
+sections:
+  - id: cover
+    text: So You Want to Build a Data Center
+    kind: cover
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        stat:
+          - type: keyValue
+            title: The Entry Ticket
+            items:
+              - key: Up-front CapEx
+                value: $38B
+                color: accent
+              - key: Annualized cost, every year after
+                value: $8.5B / yr
+                color: accent2
+              - key: Servers' share of that bill
+                value: 60%
+                color: amber
+            listStyle:
+              size: md
+              gap: normal
+              layout: columns
+              keyColumnWidth: 260px
+        chart:
+          - type: chart
+            id: annualized-cost-breakdown
+
+  - id: before-you-sign-anything
+    text: Before You Sign Anything
+    kind: stat
+    foreground:
+      layout: stat-top-chart-below
+      regions:
+        stat:
+          - type: keyValue
+            title: Key Numbers — 1 GW AI Data Center
+            items:
+              - key: Up-front CapEx
+                value: $38B
+                color: accent
+              - key: Annualized Total Cost
+                value: $8.5B / yr
+                color: accent2
+              - key: Servers' share of annual cost
+                value: 60%  ($5B/yr)
+                color: amber
+              - key: Energy's share of annual cost
+                value: 7%  ($594M/yr)
+                color: teal
+              - key: Cost per MW (vs. prior $10.8M/MW)
+                value: $8.5M / MW
+                color: muted
+            listStyle:
+              size: md
+              gap: tight
+              layout: columns
+              keyColumnWidth: 260px
+        chart:
+          - type: chart
+            id: annualized-cost-breakdown
+
+  - id: the-line-item-that-will-blindside-you
+    text: The Line Item That Will Blindside You
+    kind: data
+    foreground:
+      layout: text-left-chart-right
+      regions:
+        text:
+          - type: keyValue
+            title: Annual Cost by Component
+            items:
+              - key: Servers
+                value: $5,021M/yr — 59%
+                color: accent
+              - key: Facility
+                value: $1,387M/yr — 16.3%
+              - key: Network infra
+                value: $1,167M/yr — 13.7%
+              - key: Energy
+                value: $594M/yr — 7.0%
+                color: teal
+              - key: Labor (smallest)
+                value: $40M/yr — 0.5%
+                color: muted
+            listStyle:
+              size: sm
+              gap: tight
+              justify: center
+        chart:
+          - type: chart
+            id: annualized-cost-breakdown
+
+  - id: where-the-first-38-billion-actually-goes
+    text: Where the First $38 Billion Actually Goes
+    kind: data
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        stat:
+          - type: keyValue
+            title: Up-Front CapEx
+            items:
+              - key: Servers
+                value: $21.2B
+                color: accent2
+              - key: Facility
+                value: $11.4B
+                color: accent
+              - key: Networking
+                value: $4.9B
+                color: teal
+              - key: Land & Utility
+                value: $0.3B
+                color: muted
+              - key: Total
+                value: $37.9B
+            listStyle:
+              size: md
+              gap: normal
+              layout: columns
+              keyColumnWidth: 9ch
+        chart:
+          - type: chart
+            id: upfront-capex-breakdown
+
+  - id: welcome-to-your-mortgage
+    text: Welcome to Your Mortgage
+    kind: data
+    foreground:
+      layout: text-left-chart-right
+      regions:
+        text:
+          - type: keyValue
+            title: Annual Cost Structure
+            items:
+              - key: Annualized CapEx
+                value: $7,607M/yr (89.3%)
+                color: accent
+              - key: Annualized OpEx
+                value: $907M/yr (10.7%)
+                color: muted
+              - key: Energy (largest OpEx)
+                value: $594M/yr (7.0%)
+                color: amber
+              - key: Server CRF
+                value: 0.24 — 5-yr lifespan
+                color: muted
+              - key: Facility CRF
+                value: 0.13 — 14-yr lifespan
+                color: muted
+            listStyle:
+              size: sm
+              gap: normal
+              layout: columns
+              keyColumnWidth: 55%
+        chart:
+          - type: chart
+            id: capex-vs-opex-stack
+
+  - id: the-one-decision-that-costs-you-6-billion
+    text: The One Decision That Costs You $6 Billion
+    kind: data
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        stat:
+          - type: bigStat
+            value: ~$6B
+            unit: /yr
+            label: swing between a 3-year and 7-year server refresh cycle
+            delta: $13B → $8.5B → $7B as lifespan extends from 3 to 5 to 7 years
+            deltaColor: muted
+            color: accent2
+            align: left
+            statStyle:
+              size: lg
+              justify: center
+        chart:
+          - type: chart
+            id: lifespan-sensitivity
+
+  - id: read-the-fine-print-before-you-break-ground
+    text: Read the Fine Print Before You Break Ground
+    kind: bodyText
+    foreground:
+      layout: text-left-chart-right
+      regions:
+        text:
+          - type: bodyText
+            from: text
+            content:
+              - "Epoch AI flags six limits before you take this model to your board: this is a stylized model, not any real facility. It assumes grid-only power and an all-GB200 NVL72 server fleet — swap the architecture or the power source and networking, cooling, and power costs all shift."
+              - Inputs use US averages; your actual costs will vary by state. Tax abatement estimates carry real uncertainty — many incentive agreements are incomplete or not directly comparable to whatever your state offers.
+              - The $8.5B/year base case assumes a 5-year IT lifespan. That figure climbs to ~$13B at 3 years and falls to ~$7B at 7 years. Treat this model as a floor, not a ceiling.
+            showHeading: false
+            textStyle: {}
+        chart:
+          - type: keyValue
+            title: Prior vs. Updated Per-MW Estimate
+            items:
+              - key: Prior model (DGX H100, 100 MW)
+                value: $10.8M / MW
+                color: muted
+              - key: Updated model (GB200 NVL72, 1 GW)
+                value: $8.5M / MW
+                color: accent2
+              - key: Change
+                value: −21%
+                color: positive
+              - key: IT lifespan — 3 yr scenario
+                value: ~$13B / yr
+                color: red
+              - key: IT lifespan — 5 yr (base)
+                value: $8.5B / yr
+                color: accent
+              - key: IT lifespan — 7 yr scenario
+                value: ~$7B / yr
+                color: teal
+            listStyle:
+              size: sm
+              gap: normal
+
+  - id: so-are-you-still-building-one
+    text: So, Are You Still Building One?
+    kind: closing
+    foreground:
+      layout: stat-left-chart-right
+      regions:
+        stat:
+          - type: bigStat
+            value: $8.5B
+            unit: /yr
+            label: Your mortgage payment, every year the facility runs
+            delta: "Servers: 60% · Energy: 7% · Labor: 0.5%"
+            deltaColor: muted
+            color: accent2
+            align: left
+            statStyle:
+              size: lg
+              gap: loose
+              justify: center
+              textMaxWidth: 32ch
+        chart:
+          - type: bodyText
+            from: text
+            content:
+              - The dominant cost of frontier AI infrastructure was never going to be electricity — it's capital, locked into hardware that depreciates faster than your construction loan matures. Servers alone consume 60% of the annual bill; energy, despite running one gigawatt continuously, is just 7%.
+              - The $38B is your entry ticket — the minimum buy-in. The $8.5B/year that follows is the mortgage payment, and it swings by $6B depending entirely on how long you can make the hardware last — from ~$13B/yr at 3 years to ~$7B/yr at 7 years.
+              - "Full model: docs.google.com/spreadsheets/d/1-iqUky_cR4Kvmv9pLs67ChQLlCfSXVqV955ARmx2ypc — CC BY 4.0, Epoch AI (Amelia Michael & Ben Cottier, May 14, 2026)."
+            showHeading: false
+            textStyle:
+              size: normal
+              color: text

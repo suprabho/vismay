@@ -1,0 +1,104 @@
+{
+  "steps": [
+    {
+      "title": "How IT Equipment Lifespan Drives Annual Cost",
+      "option": {
+        "grid": {
+          "top": 36,
+          "left": 86,
+          "right": 38,
+          "bottom": 61
+        },
+        "color": [
+          "$accent",
+          "$teal",
+          "$accent2",
+          "$amber",
+          "$positive",
+          "$muted"
+        ],
+        "xAxis": {
+          "data": [
+            "3",
+            "5",
+            "7"
+          ],
+          "name": "IT Equipment Lifespan (years)",
+          "type": "category",
+          "nameGap": 25,
+          "axisLine": {
+            "show": true,
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": true,
+            "alignWithLabel": true
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "rotate": 0,
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "nameLocation": "middle",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontSize": 12
+          }
+        },
+        "yAxis": {
+          "name": "Total Annualized Cost ($ billions/year)",
+          "type": "value",
+          "scale": false,
+          "nameGap": 45,
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "nameLocation": "middle",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontSize": 12
+          }
+        },
+        "series": [
+          {
+            "data": [
+              13,
+              8.5,
+              7
+            ],
+            "type": "bar",
+            "itemStyle": {
+              "color": "$accent",
+              "borderRadius": 0
+            },
+            "barCategoryGap": "10%"
+          }
+        ],
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          }
+        }
+      }
+    }
+  ]
+}

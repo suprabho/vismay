@@ -1,0 +1,173 @@
+{
+  "steps": [
+    {
+      "title": "Annualized Cost of Ownership — 1 GW AI Data Center",
+      "option": {
+        "grid": {
+          "top": 36,
+          "left": 86,
+          "right": 38,
+          "bottom": 151
+        },
+        "color": [
+          "$accent",
+          "$teal",
+          "$accent2",
+          "$amber",
+          "$positive",
+          "$muted"
+        ],
+        "xAxis": {
+          "data": [
+            "Servers",
+            "Facility",
+            "Network infrastructure",
+            "Energy",
+            "Taxes",
+            "Maintenance",
+            "Labor",
+            "Utility works",
+            "Land",
+            "Water"
+          ],
+          "name": "Annualized Cost ($ millions/year)",
+          "type": "category",
+          "nameGap": 120,
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": true,
+            "alignWithLabel": true
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "rotate": 90,
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "nameLocation": "middle",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontSize": 12
+          }
+        },
+        "yAxis": {
+          "name": "Cost Component",
+          "type": "value",
+          "scale": false,
+          "nameGap": 40,
+          "axisLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "axisTick": {
+            "show": true
+          },
+          "axisLabel": {
+            "color": "$muted",
+            "rotate": 0,
+            "fontSize": 10
+          },
+          "splitLine": {
+            "lineStyle": {
+              "color": "$line"
+            }
+          },
+          "nameLocation": "middle",
+          "nameTextStyle": {
+            "color": "$muted",
+            "fontSize": 12
+          }
+        },
+        "series": [
+          {
+            "data": [
+              5021,
+              1387,
+              1167,
+              594,
+              143,
+              120,
+              40,
+              20,
+              13,
+              6
+            ],
+            "type": "bar",
+            "barWidth": 1.5,
+            "itemStyle": {
+              "color": "$accent"
+            },
+            "barCategoryGap": "10%"
+          },
+          {
+            "z": 2,
+            "data": [
+              [
+                "Servers",
+                5021
+              ],
+              [
+                "Facility",
+                1387
+              ],
+              [
+                "Network infrastructure",
+                1167
+              ],
+              [
+                "Energy",
+                594
+              ],
+              [
+                "Taxes",
+                143
+              ],
+              [
+                "Maintenance",
+                120
+              ],
+              [
+                "Labor",
+                40
+              ],
+              [
+                "Utility works",
+                20
+              ],
+              [
+                "Land",
+                13
+              ],
+              [
+                "Water",
+                6
+              ]
+            ],
+            "type": "scatter",
+            "itemStyle": {
+              "color": "$teal",
+              "borderColor": "#fff",
+              "borderWidth": 1
+            },
+            "symbolSize": 10
+          }
+        ],
+        "tooltip": {
+          "trigger": "axis",
+          "axisPointer": {
+            "type": "shadow"
+          }
+        }
+      }
+    }
+  ]
+}
