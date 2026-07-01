@@ -25,6 +25,10 @@ import { resolveStoryPack, sourcesToDocs } from '../shared'
  * any chart layer the VISUAL pass later emits (which references a chart id)
  * actually resolves. Per-chart regeneration is also available from the canvas
  * chart node. Idempotent: re-running overwrites with fresh data.
+ *
+ * An optional `{ id }` body narrows the run to a SINGLE chart — the per-chart
+ * "Retry" on a failed card — so a lone failure can be re-generated without
+ * re-running (and overwriting) the charts that already succeeded.
  */
 
 export const runtime = 'nodejs'
@@ -41,15 +45,29 @@ interface StoredBrief {
   suggestedFormat?: StoryFormat
 }
 
-export async function POST(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug } = await params
+
+  // Optional `{ id }` narrows the run to a single chart (the per-chart Retry on
+  // a failed card). No body / no id regenerates every planned chart.
+  let onlyId = ''
+  try {
+    const body = (await req.json()) as { id?: unknown }
+    if (typeof body?.id === 'string') onlyId = body.id
+  } catch {
+    // no body — regenerate all
+  }
 
   const state = await readComposeState(slug)
   if (!state) return NextResponse.json({ error: 'no compose draft for this slug' }, { status: 404 })
 
-  const charts =
+  const planned =
     ((state.storyOutline as { charts?: ChartRequirement[] } | undefined)?.charts) ?? []
+  const charts = onlyId ? planned.filter((c) => c.id === onlyId) : planned
+  if (onlyId && charts.length === 0) {
+    return NextResponse.json({ error: `chart "${onlyId}" not found in outline` }, { status: 404 })
+  }
   if (charts.length === 0) {
     return NextResponse.json({ ok: true, charts: [] })
   }
