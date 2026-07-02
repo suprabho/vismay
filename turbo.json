@@ -11,6 +11,7 @@
         "NEXT_PUBLIC_SITE_URL",
         "SUPABASE_SERVICE_ROLE_KEY",
         "CONTENT_SOURCE",
+        "SSG_STORY_LIMIT",
         "ADMIN_PASSWORD",
         "ADMIN_SESSION_SECRET",
         "GEMINI_API_KEY",
