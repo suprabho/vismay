@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Redirect } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useTheme } from '@footshorts/brand/native';
 import { useAuth } from '@/lib/AuthProvider';
 
 export default function LoginScreen() {
-  const { session, loading, signInWithPassword, signUpWithPassword, signInWithGoogle } = useAuth();
+  const { session, loading, signInWithPassword, signUpWithPassword, signInWithGoogle, signInWithApple } =
+    useAuth();
+  const { themeName } = useTheme();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +31,16 @@ export default function LoginScreen() {
     setError(null);
     setBusy(true);
     const { error: err } = await signInWithGoogle();
+    setBusy(false);
+    if (err) setError(err);
+    // On success, the root redirects.
+  }
+
+  async function apple() {
+    if (busy) return;
+    setError(null);
+    setBusy(true);
+    const { error: err } = await signInWithApple();
     setBusy(false);
     if (err) setError(err);
     // On success, the root redirects.
@@ -83,6 +97,22 @@ export default function LoginScreen() {
         <Text className="text-muted text-xs uppercase">or</Text>
         <View className="flex-1 h-px bg-border" />
       </View>
+
+      {Platform.OS === 'ios' ? (
+        // Apple guideline 4.8: third-party login (Google) requires offering
+        // Sign in with Apple. HIG-compliant native button, iOS only.
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+          buttonStyle={
+            themeName === 'terrace'
+              ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+          }
+          cornerRadius={8}
+          style={{ height: 48, marginBottom: 12 }}
+          onPress={apple}
+        />
+      ) : null}
 
       <Pressable
         onPress={google}

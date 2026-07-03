@@ -1,4 +1,6 @@
 import { Session } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -20,7 +22,9 @@ type AuthContextValue = {
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
+  signInWithApple: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<{ error: string | null }>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -112,8 +116,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       return { error: exchangeError?.message ?? null };
     },
+    signInWithApple: async () => {
+      try {
+        // Apple gets the SHA-256 digest of the nonce; the raw nonce goes to
+        // Supabase, which hashes it server-side and compares against the
+        // identityToken's nonce claim.
+        const rawNonce = Crypto.randomUUID();
+        const hashedNonce = await Crypto.digestStringAsync(
+          Crypto.CryptoDigestAlgorithm.SHA256,
+          rawNonce,
+        );
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+          nonce: hashedNonce,
+        });
+        if (!credential.identityToken) {
+          return { error: 'Apple sign-in did not complete. Please try again.' };
+        }
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: 'apple',
+          token: credential.identityToken,
+          nonce: rawNonce,
+        });
+        return { error: error?.message ?? null };
+      } catch (e: unknown) {
+        // Cancel is not an error — mirrors the Google flow's dismiss handling.
+        if ((e as { code?: string })?.code === 'ERR_REQUEST_CANCELED') return { error: null };
+        return { error: e instanceof Error ? e.message : 'Apple sign-in failed.' };
+      }
+    },
     signOut: async () => {
       await supabase.auth.signOut();
+    },
+    deleteAccount: async () => {
+      const { error } = await supabase.rpc('delete_account');
+      if (error) return { error: error.message };
+      // Server-side sessions are cascade-deleted with the user; a global
+      // signOut would 403 against a nonexistent user, so only clear local state.
+      await supabase.auth.signOut({ scope: 'local' });
+      return { error: null };
     },
     refreshProfile: async () => {
       if (session) await loadProfile(session.user.id);
