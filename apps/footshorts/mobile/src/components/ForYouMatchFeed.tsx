@@ -36,6 +36,7 @@ import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
 import {
   MatchRow,
   MatchTile,
+  TeamFormStrip,
   TieCard,
   buildBracket,
   stageLabel,
@@ -614,13 +615,8 @@ function TeamCardContent({ section, expanded }: { section: TeamSection; expanded
       ) : null}
       <ExpandableBody expanded={expanded}>
         {formItems.length > 0 ? (
-          <View className="mt-5">
-            <SectionLabel text="Form · last 5" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {formItems.map((f) => (
-                <TeamFormPill key={f.id} fixture={f} teamId={teamId} />
-              ))}
-            </ScrollView>
+          <View className="mt-1">
+            <TeamFormStrip fixtures={formItems} teamId={teamId} />
           </View>
         ) : null}
 
@@ -824,7 +820,7 @@ function MatchdayPager({ fixtures }: { fixtures: FixtureRow[] }) {
 
   if (pages.length <= 1) {
     return (
-      <View className='bg-white/20 border-1 border-white/50'>
+      <View className='bg-white/20 border border-white/50'>
         {(pages[0] ?? []).map((f) => (
           <MatchRow key={f.id} fixture={f} />
         ))}
@@ -925,60 +921,6 @@ function Carousel({ pages }: { pages: FixtureRow[][] }) {
             }}
           />
         ))}
-      </View>
-    </View>
-  );
-}
-
-function TeamFormPill({ fixture, teamId }: { fixture: FixtureRow; teamId: string }) {
-  const isHome = fixture.home?.id === teamId;
-  const teamGoals = isHome ? fixture.home_score : fixture.away_score;
-  const oppGoals = isHome ? fixture.away_score : fixture.home_score;
-  const opp = isHome ? fixture.away : fixture.home;
-  const oppName = opp?.name ?? (isHome ? fixture.away_team_name : fixture.home_team_name) ?? 'TBD';
-
-  let result: 'W' | 'D' | 'L' | '-' = '-';
-  if (fixture.status === 'finished' && teamGoals !== null && oppGoals !== null) {
-    result = teamGoals > oppGoals ? 'W' : teamGoals < oppGoals ? 'L' : 'D';
-  }
-
-  const resultColor =
-    result === 'W' ? '#00D26A' : result === 'L' ? '#EF4444' : result === 'D' ? '#8E8E99' : '#24242E';
-  const resultFg = result === 'W' || result === 'L' ? '#0B0B0F' : '#F4F4F5';
-
-  const scoreText = teamGoals !== null && oppGoals !== null ? `${teamGoals}–${oppGoals}` : '—';
-
-  return (
-    <View
-      className="border border-border rounded-xl px-3 py-2 mr-2 items-center"
-      style={{ minWidth: 80 }}
-    >
-      {opp?.crest_url ? (
-        <Image
-          source={{ uri: opp.crest_url }}
-          style={{ width: 22, height: 22, marginBottom: 4 }}
-          contentFit="contain"
-        />
-      ) : (
-        <View style={{ width: 22, height: 22, marginBottom: 4 }} />
-      )}
-      <Text className="text-text text-xs font-semibold" numberOfLines={1}>
-        {scoreText}
-      </Text>
-      <Text className="text-muted text-[10px] mt-0.5" numberOfLines={1} style={{ maxWidth: 62 }}>
-        {isHome ? 'vs ' : '@ '}
-        {oppName}
-      </Text>
-      <View
-        style={{
-          marginTop: 4,
-          borderRadius: 4,
-          backgroundColor: resultColor,
-          paddingHorizontal: 6,
-          paddingVertical: 1,
-        }}
-      >
-        <Text style={{ color: resultFg, fontSize: 10, fontWeight: '700' }}>{result}</Text>
       </View>
     </View>
   );

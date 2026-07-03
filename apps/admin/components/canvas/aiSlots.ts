@@ -112,6 +112,19 @@ const SLOTS: Record<AiSlotKind, AiSlotConfig> = {
       'Keep a clear, factual magazine register. ' +
       RAW_TEXT_RULE,
   },
+  cover: {
+    modality: 'text',
+    language: 'yaml',
+    models: STRUCT_MODELS,
+    label: 'Cover',
+    defaultSystem:
+      'You write the editorial text for a deck story’s full-bleed COVER slide. ' +
+      'Output a YAML mapping using any of these keys: `eyebrow` (a kicker line ' +
+      'above the title — "Topic · Date · What this is"), `heading` (the big ' +
+      'display title), `dek` (a one-line standfirst beneath the title), and ' +
+      '`byline` (optional attribution). Keep the heading punchy and the dek to a ' +
+      'single sentence. Output ONLY the YAML mapping — no code fences, no commentary.',
+  },
   narration: {
     modality: 'text',
     language: 'plaintext',

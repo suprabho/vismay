@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { ComposeState } from '@vismay/content-source/composeState'
 import { LayoutLegend } from './LayoutPreview'
 import { OutlineEntryCard } from './OutlineEntryCard'
-import { SectionHeading, btnGhostCls, btnSuccessCls, inputCls } from './ui'
+import { SectionHeading, btnGhostCls, btnPrimaryCls, btnSuccessCls, inputCls } from './ui'
 
 /**
  * Outline stage: the planned entries with accept/reject status chips, layout
@@ -24,6 +24,8 @@ export function OutlineStage({
   onCycleStatus,
   onMove,
   onRegenerate,
+  onRegenSection,
+  onAddSection,
   onMaterialize,
 }: {
   st: ComposeState
@@ -35,9 +37,14 @@ export function OutlineStage({
   onCycleStatus: (id: string) => void
   onMove: (id: string, dir: -1 | 1) => void
   onRegenerate: (feedback?: string) => Promise<boolean>
+  /** Regenerate a single slide in place (outline phase, unmaterialised only). */
+  onRegenSection: (id: string, feedback?: string) => Promise<boolean>
+  /** Add a new slide from a prompt, appended to the end of the outline. */
+  onAddSection: (prompt?: string) => Promise<boolean>
   onMaterialize: () => void
 }) {
   const [feedback, setFeedback] = useState('')
+  const [addPrompt, setAddPrompt] = useState('')
   const [open, setOpen] = useState<Set<string>>(new Set())
 
   function toggle(id: string) {
@@ -50,6 +57,9 @@ export function OutlineStage({
   }
   async function regenerate() {
     if (await onRegenerate(feedback.trim() || undefined)) setFeedback('')
+  }
+  async function addSlide() {
+    if (await onAddSection(addPrompt.trim() || undefined)) setAddPrompt('')
   }
 
   return (
@@ -79,12 +89,37 @@ export function OutlineStage({
             format={st.format}
             statusEditable={statusEditable}
             outlineEditable={outlineEditable}
+            busy={!!busy}
+            regenBusy={busy === `regen:${e.id}`}
             onCycleStatus={() => onCycleStatus(e.id)}
             onToggle={() => toggle(e.id)}
             onMove={(dir) => onMove(e.id, dir)}
+            onRegenerate={(fb) => onRegenSection(e.id, fb)}
           />
         ))}
       </ul>
+      {/* Add a brand-new slide from a prompt — appended to the end, lands
+          `pending` for the author to accept + materialise. */}
+      {outlineEditable && (
+        <div className="flex gap-2 border-t border-white/10 pt-3">
+          <input
+            value={addPrompt}
+            onChange={(e) => setAddPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !busy) addSlide()
+            }}
+            placeholder="Add a new slide — describe what it should cover…"
+            className={`min-w-0 flex-1 ${inputCls}`}
+          />
+          <button
+            onClick={addSlide}
+            disabled={!!busy}
+            className={`shrink-0 ${btnPrimaryCls}`}
+          >
+            {busy === 'add-section' ? 'Adding…' : '+ Add slide'}
+          </button>
+        </div>
+      )}
       {outlineEditable &&
         (wide ? (
           <div className="flex gap-2">

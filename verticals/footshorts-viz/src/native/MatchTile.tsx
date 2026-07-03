@@ -6,6 +6,7 @@ import {
   getCompetitionDisplayName,
   getCompetitionPalette,
 } from '../competitionMeta';
+import { Crest } from './Crest';
 
 type Props = {
   fixture: FixtureRow;
@@ -143,8 +144,16 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
         {topLabel}
 
         <View style={{ flex: 1, marginTop: 8, gap: 6, overflow: 'hidden' }}>
-          <TeamRow name={homeName} crest={home?.crest_url ?? null} />
-          <TeamRow name={awayName} crest={away?.crest_url ?? null} />
+          <TeamRow
+            teamKey={home?.slug ?? home?.id ?? homeName}
+            name={homeName}
+            crest={home?.crest_url ?? null}
+          />
+          <TeamRow
+            teamKey={away?.slug ?? away?.id ?? awayName}
+            name={awayName}
+            crest={away?.crest_url ?? null}
+          />
         </View>
 
         <Text
@@ -160,14 +169,19 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
 }
 
 function TeamRow({
+  teamKey,
   name,
   crest,
 }: {
+  /** Slug/name used to resolve the bundled crest when no explicit URL is given. */
+  teamKey: string;
   name: string;
   crest: string | null;
 }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {/* White chip hosts the crest; Crest resolves the bundled flag/badge and
+          falls back to a monogram, so a missing crest_url is never a blank circle. */}
       <View
         style={{
           width: 20,
@@ -176,15 +190,10 @@ function TeamRow({
           backgroundColor: 'rgba(255,255,255,0.85)',
           alignItems: 'center',
           justifyContent: 'center',
+          overflow: 'hidden',
         }}
       >
-        {crest ? (
-          <Image
-            source={{ uri: crest }}
-            style={{ width: 16, height: 16 }}
-            contentFit="contain"
-          />
-        ) : null}
+        <Crest team={teamKey} crestUrl={crest ?? undefined} size={16} />
       </View>
       <Text
         numberOfLines={1}

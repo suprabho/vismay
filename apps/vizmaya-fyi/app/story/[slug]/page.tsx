@@ -2,7 +2,7 @@ export const revalidate = 60
 
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
+import { getStoryContent, getPrerenderStorySlugs } from '@vismay/content-source/content'
 import { getEpicsForStory, getEpicStories } from '@vismay/content-source/epics'
 import { getAuthorsForStory } from '@vismay/content-source/authors'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
@@ -26,11 +26,8 @@ interface RouteParams {
 }
 
 export async function generateStaticParams() {
-  const slugs = await getViewableStorySlugs()
-  const withConfig = await Promise.all(
-    slugs.map(async (slug) => ((await hasStoryConfig(slug)) ? slug : null))
-  )
-  return withConfig.filter((s): s is string => s !== null).map((slug) => ({ slug }))
+  const slugs = await getPrerenderStorySlugs()
+  return slugs.map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {

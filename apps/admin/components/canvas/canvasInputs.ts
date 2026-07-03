@@ -138,6 +138,40 @@ export function contentNode(
   }
 }
 
+/**
+ * Deck cover editorial text: the `eyebrow` / `heading` / `dek` / `byline`
+ * fields the full-bleed cover paints over its hero image. These live at the
+ * section root in config.yaml (not the markdown body), so for a `kind: cover`
+ * section this node REPLACES the markdown Content leaf — clicking it opens the
+ * `cover` editor slice (see canvasEditing). Shown in top-to-bottom cover order;
+ * `heading` falls back to the resolved unit heading so the title always shows.
+ */
+export function coverNode(unit: ResolvedUnit): InputNodeData {
+  const cfg = unit.parentConfig as unknown as {
+    eyebrow?: unknown
+    heading?: unknown
+    dek?: unknown
+    byline?: unknown
+  }
+  const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+  const fields: Record<string, string> = {}
+  if (str(cfg.eyebrow)) fields.eyebrow = str(cfg.eyebrow)
+  const heading = str(cfg.heading) || (unit.heading ?? '').trim()
+  if (heading) fields.heading = heading
+  if (str(cfg.dek)) fields.dek = str(cfg.dek)
+  if (str(cfg.byline)) fields.byline = str(cfg.byline)
+  const has = Object.keys(fields).length > 0
+  return {
+    id: 'cover',
+    label: 'Cover',
+    tag: has ? 'COVER' : '—',
+    body: has
+      ? truncateLines(safeYamlStringify(fields), 12)
+      : '(no cover text yet — click to add eyebrow / heading / dek)',
+    variant: has ? 'mono' : 'muted',
+  }
+}
+
 /* ── Foreground layout helpers ─────────────────────────────────────── */
 
 /** Region-shaped foreground: `{ regions: { … } }`, optionally with a `layout`

@@ -1,7 +1,14 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+
+// Hermes has no WebCrypto; without this the PKCE code verifier silently
+// degrades to Math.random inside supabase-js.
+if (typeof globalThis.crypto === 'undefined') {
+  (globalThis as any).crypto = { getRandomValues: Crypto.getRandomValues };
+}
 
 // expo-secure-store is native-only (iOS Keychain / Android Keystore).
 // On web we fall back to localStorage so dev previews work.
@@ -38,5 +45,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
   },
 });
