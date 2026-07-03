@@ -4,7 +4,7 @@ import { Redirect } from 'expo-router';
 import { useAuth } from '@/lib/AuthProvider';
 
 export default function LoginScreen() {
-  const { session, loading, signInWithPassword, signUpWithPassword } = useAuth();
+  const { session, loading, signInWithPassword, signUpWithPassword, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,16 @@ export default function LoginScreen() {
     setBusy(true);
     const fn = mode === 'signin' ? signInWithPassword : signUpWithPassword;
     const { error: err } = await fn(email.trim(), password);
+    setBusy(false);
+    if (err) setError(err);
+    // On success, the root redirects.
+  }
+
+  async function google() {
+    if (busy) return;
+    setError(null);
+    setBusy(true);
+    const { error: err } = await signInWithGoogle();
     setBusy(false);
     if (err) setError(err);
     // On success, the root redirects.
@@ -66,6 +76,20 @@ export default function LoginScreen() {
             {mode === 'signin' ? 'Sign in' : 'Create account'}
           </Text>
         )}
+      </Pressable>
+
+      <View className="flex-row items-center gap-3 my-4">
+        <View className="flex-1 h-px bg-border" />
+        <Text className="text-muted text-xs uppercase">or</Text>
+        <View className="flex-1 h-px bg-border" />
+      </View>
+
+      <Pressable
+        onPress={google}
+        disabled={busy}
+        className="bg-surface border border-border rounded-lg py-3 items-center"
+      >
+        <Text className="text-text font-semibold">Continue with Google</Text>
       </Pressable>
 
       <Pressable

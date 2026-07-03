@@ -1,6 +1,11 @@
 import { Session } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from './supabase';
+
+// Closes the auth popup if the app was reopened by the OAuth redirect.
+WebBrowser.maybeCompleteAuthSession();
 
 type Profile = {
   id: string;
@@ -14,6 +19,7 @@ type AuthContextValue = {
   loading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -82,6 +88,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUpWithPassword: async (email, password) => {
       const { error } = await supabase.auth.signUp({ email, password });
       return { error: error?.message ?? null };
+    },
+    signInWithGoogle: async () => {
+      const redirectTo = Linking.createURL('auth-callback');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error) return { error: error.message };
+      if (!data?.url) return { error: 'Could not start Google sign-in. Please try again.' };
+
+      const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      // Cancel / dismiss is not an error — the user just backed out.
+      if (res.type !== 'success') return { error: null };
+
+      const url = new URL(res.url);
+      const errorDescription = url.searchParams.get('error_description');
+      if (errorDescription) return { error: errorDescription };
+
+      const code = url.searchParams.get('code');
+      if (!code) return { error: 'Google sign-in did not complete. Please try again.' };
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      return { error: exchangeError?.message ?? null };
     },
     signOut: async () => {
       await supabase.auth.signOut();

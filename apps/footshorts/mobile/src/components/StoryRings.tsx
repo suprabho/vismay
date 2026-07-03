@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import type { StoryGroup } from '@/lib/useFollowedStories';
+import type { StoryGroup, StoryItem } from '@/lib/useFollowedStories';
 
 function initialsOf(name: string): string {
   return name
@@ -18,10 +18,10 @@ const RING_SEEN = '#2a2a30';
 
 type Props = {
   groups: StoryGroup[];
-  seen?: ReadonlySet<string>;
+  isStorySeen?: (it: StoryItem) => boolean;
 };
 
-export function StoryRings({ groups, seen }: Props) {
+export function StoryRings({ groups, isStorySeen }: Props) {
   const router = useRouter();
 
   // Push fully-read groups to the end so unread stays up front; preserve
@@ -29,14 +29,14 @@ export function StoryRings({ groups, seen }: Props) {
   // index so navigation into the story viewer still opens the right entity.
   const ordered = useMemo(() => {
     const withIdx = groups.map((g, originalIndex) => {
-      const allSeen = seen ? g.items.every((it) => seen.has(it.article_id)) : false;
+      const allSeen = isStorySeen ? g.items.every(isStorySeen) : false;
       return { g, originalIndex, allSeen };
     });
     return [
       ...withIdx.filter((x) => !x.allSeen),
       ...withIdx.filter((x) => x.allSeen),
     ];
-  }, [groups, seen]);
+  }, [groups, isStorySeen]);
 
   return (
     <FlatList

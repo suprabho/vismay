@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -5,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEntity, usePlayersInTeam } from '@/lib/useEntity';
 import { useTeamStanding } from '@/lib/useStandings';
 import { useTeamFixtures } from '@/lib/useFixtures';
-import { MatchRow } from '@vismay/footshorts-viz/native';
+import { MatchRow, TeamFormStrip } from '@vismay/footshorts-viz/native';
+import { EntityShareCards } from '@/components/EntityShareCards';
 
 // Match web's `max-w-2xl` so team hubs sit in a readable column on wider
 // devices and bleed-to-edge on phones.
@@ -24,6 +26,12 @@ export default function TeamScreen() {
   const pastFixtures = useTeamFixtures(teamId, 'past', 10);
   const upcomingFixtures = useTeamFixtures(teamId, 'upcoming', 5);
   const players = usePlayersInTeam(slug);
+
+  // 'past' is ordered kickoff_at DESC; the form strip reads oldest → newest.
+  const formItems = useMemo(
+    () => [...(pastFixtures.data ?? [])].slice(0, 5).reverse(),
+    [pastFixtures.data],
+  );
 
   if (team.isLoading) {
     return (
@@ -84,11 +92,17 @@ export default function TeamScreen() {
               <Stat label="GD" value={standing.data.goal_difference} />
               <Stat label="Pts" value={standing.data.points} emphasis />
             </View>
-            {standing.data.form ? (
-              <Text className="text-muted text-xs mt-2">Form: {standing.data.form}</Text>
-            ) : null}
           </View>
         ) : null}
+
+        {/* Outside the standings guard so cup-only teams still get a form strip. */}
+        {teamId && formItems.length > 0 ? (
+          <View className="px-5">
+            <TeamFormStrip fixtures={formItems} teamId={teamId} />
+          </View>
+        ) : null}
+
+        <EntityShareCards entityId={teamId} />
 
         <Section title="Upcoming">
           <FixtureList

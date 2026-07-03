@@ -38,14 +38,6 @@ export default function ProfileScreen() {
         </Text>
       </Pressable>
 
-      <Pressable
-        onPress={() => router.push('/admin')}
-        className="flex-row items-center justify-between bg-surface border border-border rounded-lg px-4 py-3 mb-3"
-      >
-        <Text className="text-text font-medium">Pipeline stats</Text>
-        <Text className="text-muted text-sm">→</Text>
-      </Pressable>
-
       <View className="bg-surface border border-border rounded-lg px-4 py-3 mb-3">
         <Text className="text-text text-sm font-medium mb-2">Theme</Text>
         <View className="flex-row gap-2">

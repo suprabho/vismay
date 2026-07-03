@@ -1,5 +1,5 @@
-import { Image } from 'expo-image';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text } from 'react-native';
+import { Crest } from './Crest';
 
 type Props = {
   name: string;
@@ -16,13 +16,7 @@ export function EntityChip({ name, crestUrl, selected, onPress }: Props) {
         selected ? 'bg-accent/20 border-accent' : 'bg-surface border-border'
       }`}
     >
-      {crestUrl ? (
-        <Image
-          source={{ uri: crestUrl }}
-          style={{ width: 20, height: 20, marginRight: 8 }}
-          contentFit="contain"
-        />
-      ) : null}
+      <Crest team={name} crestUrl={crestUrl ?? undefined} size={20} style={{ marginRight: 8 }} />
       <Text className={selected ? 'text-accent text-sm font-medium' : 'text-text text-sm'}>
         {name}
       </Text>
