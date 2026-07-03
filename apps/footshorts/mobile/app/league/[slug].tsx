@@ -9,8 +9,6 @@ import { useLeagueFixtures } from '@/lib/useFixtures';
 import {
   StandingsTable,
   MatchRow,
-  BracketTree,
-  buildBracket,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/native';
 import { EntityShareCards } from '@/components/EntityShareCards';
@@ -19,13 +17,12 @@ import { EntityShareCards } from '@/components/EntityShareCards';
 // centered 640px frame on tablets/landscape and bleeds-to-edge on phones.
 const MAX_CONTENT_WIDTH = 640;
 
-type Tab = 'recent' | 'standings' | 'schedule' | 'glory';
+type Tab = 'recent' | 'standings' | 'schedule';
 
 const TAB_LABEL: Record<Tab, string> = {
   recent: 'Recent',
   standings: 'Standings',
   schedule: 'Schedule',
-  glory: 'Road to Glory',
 };
 
 export default function LeagueScreen() {
@@ -38,34 +35,30 @@ export default function LeagueScreen() {
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
-  // Full schedule for every competition — feeds both the Schedule tab and the
-  // bracket. A complete domestic season is ~380 fixtures, so cap well above that.
+  // Full schedule for every competition — feeds the Schedule tab. A complete
+  // domestic season is ~380 fixtures, so cap well above that.
   const scheduleFixtures = useLeagueFixtures(slug, 'all', 500);
 
   const standingGroups = useMemo(
     () => (standings.data ? groupStandings(standings.data) : []),
     [standings.data],
   );
-  const bracket = useMemo(
-    () => buildBracket(scheduleFixtures.data ?? []),
-    [scheduleFixtures.data],
-  );
   const scheduleRounds = useMemo(
     () => groupFixturesByRound(scheduleFixtures.data ?? []),
     [scheduleFixtures.data],
   );
 
-  // Tabs surface only when their data exists. A competition with both a league
-  // phase and knockouts (World Cup, new-format UCL) shows Standings AND Road to
-  // Glory together. Recent is always available and is the default.
+  // Tabs surface only when their data exists. Recent is always available and is
+  // the default. (Knockout brackets are authored in admin as editorial assets
+  // rather than auto-derived here — football-data's free feed carries no draw
+  // linkage, so the tree can't be reconstructed reliably from fixtures.)
   const availableTabs = useMemo<Tab[]>(
     () => [
       'recent',
       ...(standingGroups.length > 0 ? (['standings'] as const) : []),
       ...(scheduleRounds.length > 0 ? (['schedule'] as const) : []),
-      ...(bracket ? (['glory'] as const) : []),
     ],
-    [standingGroups.length, scheduleRounds.length, bracket],
+    [standingGroups.length, scheduleRounds.length],
   );
   const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
 
@@ -177,15 +170,6 @@ export default function LeagueScreen() {
             ) : (
               <EmptyNote text="No fixtures scheduled yet." />
             )
-          ) : null}
-
-          {activeTab === 'glory' ? (
-            <BracketTree
-              bracket={bracket!}
-              competitionSlug={slug}
-              competitionColor={league.data.primary_color ?? undefined}
-              title={league.data.name}
-            />
           ) : null}
         </View>
       </View>
