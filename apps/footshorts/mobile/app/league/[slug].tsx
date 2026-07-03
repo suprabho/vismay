@@ -9,10 +9,11 @@ import { useLeagueFixtures } from '@/lib/useFixtures';
 import {
   StandingsTable,
   MatchRow,
-  Bracket,
+  BracketTree,
   buildBracket,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/native';
+import { EntityShareCards } from '@/components/EntityShareCards';
 
 // Mirror web's max-w-2xl readable column so the league hub sits in a
 // centered 640px frame on tablets/landscape and bleeds-to-edge on phones.
@@ -114,6 +115,8 @@ export default function LeagueScreen() {
           </View>
         </View>
 
+        <EntityShareCards entityId={league.data.id} />
+
         <TabBar tabs={availableTabs} active={activeTab} onChange={setTab} />
 
         <View className="px-5 mt-6">
@@ -176,7 +179,14 @@ export default function LeagueScreen() {
             )
           ) : null}
 
-          {activeTab === 'glory' ? <Bracket bracket={bracket!} /> : null}
+          {activeTab === 'glory' ? (
+            <BracketTree
+              bracket={bracket!}
+              competitionSlug={slug}
+              competitionColor={league.data.primary_color ?? undefined}
+              title={league.data.name}
+            />
+          ) : null}
         </View>
       </View>
     </ScrollView>

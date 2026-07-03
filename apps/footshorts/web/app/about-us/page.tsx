@@ -450,6 +450,7 @@ export default function AboutUs() {
               heading="Company"
               links={[
                 { label: 'About', href: '#' },
+                { label: 'Privacy', href: '/privacy' },
                 { label: 'Contact', href: '#' },
               ]}
             />
