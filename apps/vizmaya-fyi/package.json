@@ -30,7 +30,11 @@
     "coke-studio:import": "npx tsx scripts/coke-studio/import.ts",
     "coke-studio:fetch-lyrics": "npx tsx scripts/coke-studio/fetch-lyrics.ts",
     "coke-studio:extract-places": "npx tsx scripts/coke-studio/extract-places.ts",
-    "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts"
+    "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts",
+    "trade:discover-oec": "npx tsx scripts/trade/discover-oec.ts",
+    "trade:import-oec": "npx tsx scripts/trade/import-oec.ts",
+    "trade:import-comtrade": "npx tsx scripts/trade/import-comtrade.ts",
+    "trade:import-trademap": "npx tsx scripts/trade/import-trademap.ts"
   },
   "dependencies": {
     "@vismay/admin-core": "workspace:*",
