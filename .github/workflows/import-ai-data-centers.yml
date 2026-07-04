@@ -13,6 +13,8 @@ name: Import AI Data Centers
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_* writes
+#   NEXT_PUBLIC_MAPBOX_TOKEN   — geocodes facility addresses to map coords
+#                                (shared with the render workflows)
 
 on:
   schedule:
@@ -53,4 +55,5 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
         run: pnpm ai-data-centers:import
