@@ -1,0 +1,4 @@
+Name,Current H100 equivalents,Current power (MW),Current total capital cost (2025 USD billions),Owner,Users,Project,Investors,Construction companies,Energy companies,Country,Address,Notes,Selected Sources
+Stargate Abilene,450000,610,22.5,Crusoe,OpenAI,Stargate,"Blue Owl, Primary Digital Infrastructure",DPR Construction,Lancium,United States,"1 Stargate Way, Abilene, TX",Synthetic fixture row — values are not real,https://example.com/source-a
+xAI Colossus,300000,420,12.1,xAI,xAI,Colossus,xAI,,Memphis Light Gas and Water,United States,"3231 Paul R Lowry Rd, Memphis, TN",Synthetic fixture row — values are not real,https://example.com/source-b
+Sample Facility Without Coords,50000,80,2.4,ExampleCo,ExampleCo,,,,,United States,"100 Example Rd, Nowhere, KS",Synthetic fixture row exercising the no-coords warning path,https://example.com/source-c

@@ -1,0 +1,8 @@
+Name,Date,Power (MW),H100 equivalents,Total capital cost (2025 USD billions)
+Stargate Abilene,2025-06-01,200,150000,8.0
+Stargate Abilene,2025-12-01,400,300000,15.0
+Stargate Abilene,2026-06-01,610,450000,22.5
+xAI Colossus,2024-09-01,150,100000,4.0
+xAI Colossus,2025-06-01,300,230000,8.5
+xAI Colossus,2026-03-01,420,300000,12.1
+Sample Facility Without Coords,2026,80,50000,2.4
