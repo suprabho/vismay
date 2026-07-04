@@ -185,6 +185,14 @@ export const chartEncodingsSchema = z.object({
   value: z.string().optional().describe('Segment measure for funnel / pyramid charts.'),
   group: z.string().optional().describe('Secondary grouping column (grouped / bump charts).'),
   detail: z.string().optional().describe('Detail/grouping column for connected lines.'),
+  source: z
+    .string()
+    .optional()
+    .describe('Edge-source column for relationship charts (Sankey / Chord / Network Graph).'),
+  target: z
+    .string()
+    .optional()
+    .describe('Edge-target column for relationship charts (Sankey / Chord / Network Graph).'),
 })
 
 /**

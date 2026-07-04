@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { CHART_TYPES, RELATIONSHIP_CHART_TYPES } from '@vismay/story-pipeline/chartVocab'
 import CodeEditor, { type CodeEditorMarker } from '@/components/vizmaya/CodeEditor'
 import { useIsMobile } from './useIsMobile'
 
@@ -55,6 +56,10 @@ export default function ChartEditPanel({
   // A note for the data pass: what to plot (first run) or a refine instruction
   // (regenerate). Optional for compose drafts — the planned requirement is used.
   const [note, setNote] = useState('')
+  // Chart template override. '' = let the plan decide (compose outline's
+  // chartType, or Bar Chart for ad-hoc charts). Needed to reach the templates
+  // the outline rarely plans on its own — e.g. the relationship charts.
+  const [chartType, setChartType] = useState('')
 
   const dirty = value !== baseline
   const hasErrors = markers.some((m) => m.severity === 'error')
@@ -103,13 +108,14 @@ export default function ChartEditPanel({
     setGenError(null)
     try {
       const trimmed = note.trim()
-      const body = hasData
+      const body: Record<string, string> = hasData
         ? trimmed
           ? { feedback: trimmed }
           : {}
         : trimmed
           ? { requirement: trimmed }
           : {}
+      if (chartType) body.chartType = chartType
       const res = await fetch(
         `/api/stories/${encodeURIComponent(slug)}/charts/${encodeURIComponent(chartId)}/generate`,
         {
@@ -230,6 +236,38 @@ export default function ChartEditPanel({
 
       {/* Generate / Regenerate — source-grounded chart data. */}
       <div style={{ padding: '10px 16px', borderBottom: '1px solid #1f1f1f', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <select
+          value={chartType}
+          onChange={(e) => setChartType(e.target.value)}
+          style={{
+            background: '#161616',
+            border: '1px solid #2a2a2a',
+            borderRadius: 5,
+            padding: '6px 8px',
+            fontSize: 12,
+            color: chartType ? '#ddd' : '#888',
+            outline: 'none',
+            fontFamily: 'inherit',
+          }}
+        >
+          <option value="">Template: from plan (auto)</option>
+          <optgroup label="Tabular">
+            {CHART_TYPES.filter(
+              (t) => !(RELATIONSHIP_CHART_TYPES as readonly string[]).includes(t),
+            ).map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Relationships (rows are source → target edges)">
+            {RELATIONSHIP_CHART_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </optgroup>
+        </select>
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
