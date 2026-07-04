@@ -1,0 +1,91 @@
+name: Import trade data
+
+# Monthly refresh of the global-trade tables (trade_product_exports et al,
+# migration 063) from two automated sources:
+#   * OEC BotMarket (source='oec')      — scripts/trade/import-oec.ts
+#   * UN Comtrade   (source='comtrade') — scripts/trade/import-comtrade.ts
+# The third source (ITC TradeMap, source='trademap') is a manual CSV drop by
+# design — no cron; see scripts/trade/import-trademap.ts.
+#
+# Trade data is annual with monthly revisions, so the scheduled run pulls the
+# incremental default (last 3 years). Dispatch with full_backfill=true after
+# schema changes or to rebuild from 2001. The discovery input runs the
+# read-only BotMarket catalog sweep — useful because oec.world fronts
+# Cloudflare and may 403 from dev networks while working fine from here
+# (same contingency as documented in scrape-energy-profile-news.yml for iea.org).
+#
+# Required repo secrets (in the `Production` environment):
+#   NEXT_PUBLIC_SUPABASE_URL    — same value as Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY   — service role key for trade_* writes
+#   OEC_BOTMARKET_API_KEY       — Bearer key (POST /api/promo/claim)
+#   OEC_TRADE_DATASET_SLUG      — dataset slug pinned via discovery
+#   COMTRADE_API_KEY            — free key from comtradedeveloper.un.org
+
+on:
+  schedule:
+    # 05:15 UTC on the 3rd of each month — after month-start source
+    # revisions; the :15 offset avoids the top-of-hour Actions queue spike.
+    - cron: '15 5 3 * *'
+  workflow_dispatch:
+    inputs:
+      full_backfill:
+        description: 'Backfill from 2001 instead of the 3-year incremental window'
+        type: boolean
+        default: false
+      discovery:
+        description: 'Only run the read-only BotMarket catalog discovery'
+        type: boolean
+        default: false
+
+concurrency:
+  group: import-trade-data
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Discover OEC BotMarket catalog
+        if: ${{ inputs.discovery }}
+        env:
+          OEC_BOTMARKET_API_KEY: ${{ secrets.OEC_BOTMARKET_API_KEY }}
+        run: pnpm trade:discover-oec
+
+      - name: Import OEC BotMarket exports
+        if: ${{ !inputs.discovery }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OEC_BOTMARKET_API_KEY: ${{ secrets.OEC_BOTMARKET_API_KEY }}
+          OEC_TRADE_DATASET_SLUG: ${{ secrets.OEC_TRADE_DATASET_SLUG }}
+        run: pnpm trade:import-oec ${{ inputs.full_backfill && '-- --full' || '' }}
+
+      # always(): an OEC failure (Cloudflare, schema drift) still shows as a
+      # red run, but must not block the Comtrade series from staying fresh.
+      - name: Import UN Comtrade exports
+        if: ${{ !inputs.discovery && always() }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          COMTRADE_API_KEY: ${{ secrets.COMTRADE_API_KEY }}
+        run: pnpm trade:import-comtrade ${{ inputs.full_backfill && '-- --full' || '' }}

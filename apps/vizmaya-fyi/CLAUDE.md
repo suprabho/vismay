@@ -103,6 +103,21 @@ Pump prices for gasoline, automotive diesel and light fuel oil across **33 count
 - **Reader:** extended `getIeaCountryProfile` in [lib/epics.ts](lib/epics.ts) — adds `timeseries.oilPrices` (last 60 months, USD/L).
 - **Chart:** [components/energy-profile/charts/OilPricesChart.tsx](components/energy-profile/charts/OilPricesChart.tsx).
 
+### Global Trade (epic seeded as draft — data layer only so far)
+
+Yearly goods exports by HS product (HS2 + HS4) for the world aggregate plus
+the top-20 exporters, 2001+. Three providers write the same long fact table
+with `source` in the PK (`'oec' | 'comtrade' | 'trademap'`) so re-imports
+never clobber across providers; readers pin one source per view. Full
+provenance + gotchas: [vizmaya-data/global-trade/CLAUDE.md](../../vizmaya-data/global-trade/CLAUDE.md).
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/063_global_trade.sql](../../supabase/vizmaya-fyi/migrations/063_global_trade.sql) — `trade_countries`, `trade_products`, `trade_product_exports`, plus the `global-trade` epic row (`status='draft'`, so it stays invisible until the landing page ships).
+- **Importers:** [scripts/trade/](scripts/trade/) — `pnpm trade:import-oec` (OEC BotMarket API; run `pnpm trade:discover-oec` first to pin the dataset slug/columns), `pnpm trade:import-comtrade` (UN Comtrade API), `pnpm trade:import-trademap` (manual TradeMap Excel→CSV drop under `scripts/trade/data/` — TradeMap has no API and must not be scraped). All support `--dry-run`/`--full`/`--since`/`--reporter`.
+- **Cron:** [.github/workflows/import-trade-data.yml](../../.github/workflows/import-trade-data.yml) — monthly incremental; `workflow_dispatch` inputs for `full_backfill` and read-only BotMarket `discovery` (oec.world is Cloudflare-fronted and may 403 from dev networks).
+- **Reader:** `getWorldTradeProfile` / `getProductExports` / `getReporterTradeProfile` in [packages/content-source/src/trade.ts](../../packages/content-source/src/trade.ts) — same dense `ChartSeries` shape as the energy-profile charts.
+- **API:** `/api/global-trade/world`, `/api/global-trade/product/[hsCode]`.
+- **Secrets** (Production environment): `OEC_BOTMARKET_API_KEY`, `OEC_TRADE_DATASET_SLUG`, `COMTRADE_API_KEY` (plus the usual Supabase pair).
+
 ## AI gateway
 
 New AI calls (text + image) go through [@vismay/ai-gateway](../../packages/ai-gateway/README.md),
