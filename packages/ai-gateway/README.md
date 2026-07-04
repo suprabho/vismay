@@ -9,8 +9,12 @@ goes through one seam.
 
 Today the repo has direct `@google/genai` + `@anthropic-ai/sdk` calls in a
 dozen places: [judge.ts](../../packages/eval-entities/src/judge.ts), the energy
-profile + epstein scripts, the audio render workflow, the CF workers. Each one
+profile + epstein scripts, the CF workers. Each one
 reads `GEMINI_API_KEY` directly, has its own retry shape, no shared logging.
+(TTS/narration audio is deliberately **not** a gateway migration target — it
+has its own provider seam in `@vismay/content-source/storyTtsProvider`, since
+the Vercel gateway can't route to a self-hosted voicebox server; see
+[docs/voicebox-tts.md](../../docs/voicebox-tts.md).)
 
 Routing through the gateway gives us:
 
