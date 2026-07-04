@@ -1,10 +1,7 @@
 import { redirect } from 'next/navigation'
-import { isAuthed } from '@/lib/adminAuth'
-import DcRecapsClient from './DcRecapsClient'
 
-export const dynamic = 'force-dynamic'
-
-export default async function DcRecapsPage() {
-  if (!(await isAuthed())) redirect('/login?next=/vizmaya/dc-recaps')
-  return <DcRecapsClient />
+// The DC-specific timeline was generalized into the epic-tagged
+// /vizmaya/recaps tab; keep old bookmarks working.
+export default function DcRecapsRedirect() {
+  redirect('/vizmaya/recaps?epic=ai-data-centers')
 }
