@@ -74,10 +74,52 @@ function ilikePattern(query: string): string {
   return `%${safe}%`
 }
 
+// ── Cross-app epic sharing ───────────────────────────────────────────────────
+
+/**
+ * Vizmaya epics whose compose research material — the explainer AND the curated
+ * member stories — is also offered to other desks' drafts. Sharing is read-only
+ * and picker-level: ownership (`epics.app_slug`), homepage surfacing, and story
+ * routing are untouched, unlike the fifa-wc26 move which repointed app_slug.
+ * Epic slug → extra app_slugs that may attach its material.
+ *
+ * The football desk's nation stories (fifa-wc26) lean on vizmaya's country
+ * context: global-trade is the trade counterpart to the country energy
+ * profiles dataset below, and energy-profile's explainer + story rail
+ * complement that dataset's numbers.
+ */
+const SHARED_EPICS: Record<string, string[]> = {
+  'global-trade': ['footshorts'],
+  'energy-profile': ['footshorts'],
+}
+
+/** Epic slugs shared with an app, beyond the ones it owns. */
+function sharedEpicSlugsFor(appSlug: string | null): string[] {
+  if (!appSlug) return []
+  return Object.entries(SHARED_EPICS)
+    .filter(([, apps]) => apps.includes(appSlug))
+    .map(([slug]) => slug)
+}
+
+/** Published-story slugs curated into the epics shared with an app. Empty when
+ *  nothing is shared; slugs are kebab-case so they embed safely in a
+ *  PostgREST `.or(slug.in.(...))` filter. */
+async function sharedEpicStorySlugs(appSlug: string | null): Promise<string[]> {
+  const shared = sharedEpicSlugsFor(appSlug)
+  if (!shared.length) return []
+  const sb = createServiceClient()
+  const { data, error } = await sb.from('story_epics').select('story_slug').in('epic_slug', shared)
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as Array<{ story_slug: string }>
+  return [...new Set(rows.map((r) => r.story_slug))]
+}
+
 // ── Providers ───────────────────────────────────────────────────────────────
 
 /** Published stories — reuse another story's prose. Covers every vertical, since
- *  footshorts/f1 editorial stories are rows in the shared `stories` table. */
+ *  footshorts/f1 editorial stories are rows in the shared `stories` table.
+ *  Beyond the draft's own app, stories curated into a SHARED_EPICS epic are
+ *  included too (their app_slug subtitle marks the cross-desk origin). */
 const storiesProvider: LibraryProvider = {
   key: 'story',
   label: 'Published stories',
@@ -90,7 +132,12 @@ const storiesProvider: LibraryProvider = {
       .neq('slug', excludeSlug)
       .order('updated_at', { ascending: false })
       .limit(500)
-    if (appSlug) q = q.eq('app_slug', appSlug)
+    if (appSlug) {
+      const sharedStories = await sharedEpicStorySlugs(appSlug)
+      q = sharedStories.length
+        ? q.or(`app_slug.eq.${appSlug},slug.in.(${sharedStories.join(',')})`)
+        : q.eq('app_slug', appSlug)
+    }
     const { data, error } = await q
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ slug: string; title: string | null; app_slug: string | null }>
@@ -110,14 +157,20 @@ const storiesProvider: LibraryProvider = {
 }
 
 /** Epic explainers — the evergreen pillar narrative + key takeaways for a topic
- *  hub. Only epics that actually carry explainer prose are offered. */
+ *  hub. Only epics that actually carry explainer prose are offered. An app sees
+ *  its own epics plus any listed for it in SHARED_EPICS. */
 const epicsProvider: LibraryProvider = {
   key: 'epic',
   label: 'Epic explainers',
   async list({ appSlug }) {
     const sb = createServiceClient()
     let q = sb.from('epics').select('slug, name, description, explainer').order('slug', { ascending: true })
-    if (appSlug) q = q.eq('app_slug', appSlug)
+    if (appSlug) {
+      const shared = sharedEpicSlugsFor(appSlug)
+      q = shared.length
+        ? q.or(`app_slug.eq.${appSlug},slug.in.(${shared.join(',')})`)
+        : q.eq('app_slug', appSlug)
+    }
     const { data, error } = await q
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
