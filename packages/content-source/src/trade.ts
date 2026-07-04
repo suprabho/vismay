@@ -63,6 +63,25 @@ export interface ReporterTradeProfile {
   totalExports: { years: number[]; values: (number | null)[] }
 }
 
+export interface TradeLandscape {
+  source: TradeSource
+  /** The year the landscape snapshot is taken from — the most recent year
+   *  with broad reporter coverage, not simply max(year) (early single-country
+   *  partial years would otherwise skew every cross-country comparison). */
+  year: number
+  reporters: {
+    code: string
+    name: string
+    /** Sum of the reporter's HS2 chapter values in `year` (plain USD). */
+    totalUsd: number
+    topChapters: { hsCode: string; valueUsd: number }[]
+  }[]
+  /** Chapters that appear in at least one reporter's top set. `totalUsd` sums
+   *  across the tracked reporters only — not a true world total. */
+  chapters: { hsCode: string; name: string; totalUsd: number }[]
+  edges: { reporter: string; hsCode: string; valueUsd: number }[]
+}
+
 interface ExportRow {
   reporter_code: string
   hs_code: string
@@ -79,7 +98,13 @@ interface ExportRow {
  */
 async function pageExportRows(
   sb: ReturnType<typeof createServiceClient>,
-  filters: { reporterCode?: string; hsCode?: string; source: TradeSource },
+  filters: {
+    reporterCode?: string
+    hsCode?: string
+    hsCodes?: string[]
+    minYear?: number
+    source: TradeSource
+  },
 ): Promise<ExportRow[]> {
   const rows: ExportRow[] = []
   const pageSize = 1000
@@ -96,6 +121,8 @@ async function pageExportRows(
       .range(from, from + pageSize - 1)
     if (filters.reporterCode) query = query.eq('reporter_code', filters.reporterCode)
     if (filters.hsCode) query = query.eq('hs_code', filters.hsCode)
+    if (filters.hsCodes) query = query.in('hs_code', filters.hsCodes)
+    if (filters.minYear != null) query = query.gte('year', filters.minYear)
 
     const { data, error } = await query
     if (error) throw new Error(`pageExportRows(${JSON.stringify(filters)}): ${error.message}`)
@@ -370,4 +397,117 @@ export async function getReporterTradeProfile(
     })),
     totalExports: { years, values: denseSeries(totalByYear, years) },
   }
+}
+
+/**
+ * Cross-reporter snapshot for the epic landing: every tracked reporter's HS2
+ * chapter values in one recent year, shaped as reporter totals plus
+ * reporter→chapter edges for the radial trade-relations network.
+ *
+ * The snapshot year is the most recent one where at least 85% of reporters
+ * have HS2 rows — countries publish to Comtrade on lags of a year or more,
+ * so the newest year is routinely the early-filer minority (mid-2026: 2025
+ * has 14 of 20 reporters and is missing China). A landscape without the top
+ * exporter misleads worse than a year-stale one; the threshold flips forward
+ * automatically as laggards publish. Returns null before any importer runs.
+ */
+export async function getTradeLandscape(opts?: {
+  source?: TradeSource
+  year?: number
+  topChaptersPerReporter?: number
+}): Promise<TradeLandscape | null> {
+  const sb = createServiceClient()
+  const topK = opts?.topChaptersPerReporter ?? 6
+
+  const source = await resolveSource(sb, {}, opts?.source)
+  if (!source) return null
+
+  const { data: hs2Products, error: hs2Error } = await sb
+    .from('trade_products')
+    .select('hs_code, name')
+    .eq('hs_level', 2)
+  if (hs2Error) throw new Error(`getTradeLandscape products: ${hs2Error.message}`)
+  const chapterName = new Map((hs2Products ?? []).map((p) => [p.hs_code as string, p.name as string]))
+  if (chapterName.size === 0) return null
+
+  // Only the last few years matter for picking the snapshot; keeps the page
+  // read at ~2k rows instead of the full 25-year HS2 history.
+  const minYear = (opts?.year ?? new Date().getFullYear()) - 3
+  const rows = await pageExportRows(sb, {
+    source,
+    hsCodes: [...chapterName.keys()],
+    minYear,
+  })
+
+  // reporter → year → chapter → value
+  const byReporter = new Map<string, Map<number, Map<string, number>>>()
+  const reportersByYear = new Map<number, Set<string>>()
+  for (const r of rows) {
+    if (r.value_usd == null || r.reporter_code === WORLD_CODE) continue
+    if (!byReporter.has(r.reporter_code)) byReporter.set(r.reporter_code, new Map())
+    const byYear = byReporter.get(r.reporter_code)!
+    if (!byYear.has(r.year)) byYear.set(r.year, new Map())
+    byYear.get(r.year)!.set(r.hs_code, r.value_usd)
+    if (!reportersByYear.has(r.year)) reportersByYear.set(r.year, new Set())
+    reportersByYear.get(r.year)!.add(r.reporter_code)
+  }
+  if (byReporter.size === 0) return null
+
+  let year: number
+  if (opts?.year) {
+    year = opts.year
+  } else {
+    const quorum = Math.max(3, Math.ceil(byReporter.size * 0.85))
+    const qualifying = [...reportersByYear.entries()]
+      .filter(([, reporters]) => reporters.size >= quorum)
+      .map(([y]) => y)
+    if (qualifying.length === 0) return null
+    year = Math.max(...qualifying)
+  }
+
+  const { data: countries, error: countriesError } = await sb
+    .from('trade_countries')
+    .select('code, name')
+  if (countriesError) throw new Error(`getTradeLandscape countries: ${countriesError.message}`)
+  const countryNameByCode = new Map((countries ?? []).map((c) => [c.code as string, c.name as string]))
+
+  const reporters: TradeLandscape['reporters'] = []
+  const edges: TradeLandscape['edges'] = []
+  const chapterTotals = new Map<string, number>()
+
+  for (const [code, byYear] of byReporter) {
+    const chapters = byYear.get(year)
+    if (!chapters || chapters.size === 0) continue
+    let totalUsd = 0
+    for (const [hsCode, value] of chapters) {
+      totalUsd += value
+      chapterTotals.set(hsCode, (chapterTotals.get(hsCode) ?? 0) + value)
+    }
+    const topChapters = [...chapters.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, topK)
+      .map(([hsCode, valueUsd]) => ({ hsCode, valueUsd }))
+    reporters.push({
+      code,
+      name: countryNameByCode.get(code) ?? code,
+      totalUsd,
+      topChapters,
+    })
+    for (const c of topChapters) {
+      edges.push({ reporter: code, hsCode: c.hsCode, valueUsd: c.valueUsd })
+    }
+  }
+  if (reporters.length === 0) return null
+  reporters.sort((a, b) => b.totalUsd - a.totalUsd)
+
+  const edgeChapters = new Set(edges.map((e) => e.hsCode))
+  const chapters = [...edgeChapters]
+    .map((hsCode) => ({
+      hsCode,
+      name: chapterName.get(hsCode) ?? hsCode,
+      totalUsd: chapterTotals.get(hsCode) ?? 0,
+    }))
+    .sort((a, b) => b.totalUsd - a.totalUsd)
+
+  return { source, year, reporters, chapters, edges }
 }
