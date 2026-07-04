@@ -805,10 +805,11 @@ export async function getDataCenterProfile(slug: string): Promise<DcFacilityProf
 }
 
 // ---------------------------------------------------------------------------
-// AI Data Centers news + markets — backs /api/ai-data-centers/news and
-// /api/ai-data-centers/stocks. Tables dc_news / dc_stocks / dc_stock_prices
-// (migration 065), filled daily by scripts/ai-data-centers/scrape-news.ts and
-// scripts/ai-data-centers/import-stock-prices.ts.
+// AI Data Centers news + markets — backs /api/ai-data-centers/news, /stocks
+// and /recap. Tables dc_news / dc_stocks / dc_stock_prices (migration 065)
+// plus dc_news_recaps (migration 066), filled daily by
+// scripts/ai-data-centers/scrape-news.ts, import-stock-prices.ts and
+// generate-news-recap.ts.
 
 export interface DcNewsItem {
   id: number
@@ -850,6 +851,64 @@ export async function getDcNews(opts?: {
     topics: (r.topics as string[]) ?? [],
     tickers: (r.tickers as string[]) ?? [],
   }))
+}
+
+export interface DcNewsRecap {
+  id: number
+  windowHours: number
+  windowStart: string
+  windowEnd: string
+  /** LLM one-liner for cards/lists; null when the recap is deterministic-only. */
+  headline: string | null
+  /** The full recap brief, ready to render as markdown. */
+  markdown: string
+  model: string | null
+  articleCount: number
+  topics: string[]
+  tickers: string[]
+  generatedAt: string
+}
+
+const DC_RECAP_COLUMNS =
+  'id, window_hours, window_start, window_end, headline, markdown, model, ' +
+  'article_count, topics, tickers, generated_at'
+
+function mapDcNewsRecapRow(r: any): DcNewsRecap {
+  return {
+    id: r.id as number,
+    windowHours: r.window_hours as number,
+    windowStart: r.window_start as string,
+    windowEnd: r.window_end as string,
+    headline: (r.headline as string | null) ?? null,
+    markdown: r.markdown as string,
+    model: (r.model as string | null) ?? null,
+    articleCount: (r.article_count as number) ?? 0,
+    topics: (r.topics as string[]) ?? [],
+    tickers: (r.tickers as string[]) ?? [],
+    generatedAt: r.generated_at as string,
+  }
+}
+
+/**
+ * Newest recap snapshots first. Rows are written daily (plus any manual
+ * dispatches) by scripts/ai-data-centers/generate-news-recap.ts —
+ * table dc_news_recaps, migration 066.
+ */
+export async function listDcNewsRecaps(limit = 14): Promise<DcNewsRecap[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_news_recaps')
+    .select(DC_RECAP_COLUMNS)
+    .order('generated_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(`listDcNewsRecaps: ${error.message}`)
+  return (data ?? []).map(mapDcNewsRecapRow)
+}
+
+/** The most recent recap snapshot, or null before the worker's first run. */
+export async function getLatestDcNewsRecap(): Promise<DcNewsRecap | null> {
+  const recaps = await listDcNewsRecaps(1)
+  return recaps[0] ?? null
 }
 
 export interface DcStock {
