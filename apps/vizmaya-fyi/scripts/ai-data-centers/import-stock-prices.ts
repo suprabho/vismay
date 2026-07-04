@@ -9,6 +9,14 @@
  * dedicated free APIs (Stooq, Alpha Vantage) either miss the Taiwan/Korea
  * listings or cap requests too low for a daily fleet-wide pull.
  *
+ * Rate limiting: Yahoo throttles per IP and sheds anonymous traffic from
+ * shared IPs (GitHub Actions runners especially) first, so the fetch path
+ * layers several defences — a browser-like cookie+crumb session, query1/
+ * query2 host rotation, a run-wide Retry-After-aware cooldown (one 429 means
+ * the next request will 429 too, so the whole run pauses, not one symbol),
+ * and up to three passes over rate-limited tickers with a long cool-down and
+ * a fresh session between passes.
+ *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full        # 5y backfill
  *               pnpm ai-data-centers:import-stocks -- --range 3mo
@@ -40,7 +48,22 @@ const USER_AGENT =
 const DEFAULT_RANGE = '1mo' // daily incremental — generous overlap, upsert dedupes
 const FULL_RANGE = '5y'
 const UPSERT_BATCH = 500
-const TICKER_DELAY_MS = 400
+const TICKER_DELAY_MS = 600
+const TICKER_JITTER_MS = 400 // uniform spacing looks like a bot — smear it
+const FETCH_TIMEOUT_MS = 15_000
+const MAX_FETCH_ROUNDS = 3
+// Run-wide 429 cooldown (see `limiter`): first hit pauses everything 20s,
+// repeats double it up to 60s. A Retry-After above the cap is ignored — the
+// pass-level cool-down handles sustained throttling.
+const RATE_LIMIT_BASE_MS = 20_000
+const RATE_LIMIT_MAX_MS = 60_000
+// Tickers that failed on rate limiting get re-tried in later passes, each
+// behind a longer cool-down and a fresh Yahoo session.
+const MAX_PASSES = 3
+const PASS_COOLDOWN_MS = 90_000
+// Two consecutive tickers exhausting their retries on pure 429s means the IP
+// is hard-throttled — defer the rest of the pass instead of grinding through.
+const MAX_CONSECUTIVE_RATE_LIMITED = 2
 
 interface Args {
   range: string
@@ -85,34 +108,137 @@ interface YahooChart {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+interface YahooSession {
+  cookie: string | null
+  crumb: string | null
+}
+
+/**
+ * Bootstrap a browser-like Yahoo session. fc.yahoo.com sets an `A3` cookie on
+ * any response (even its usual 404), and the crumb endpoint turns that cookie
+ * into an API token. Both are optional — the chart endpoint answers keyless
+ * requests too — but anonymous traffic is the first thing Yahoo's edge sheds
+ * when throttling, so a session dramatically cuts 429s from CI runners.
+ */
+async function createSession(): Promise<YahooSession> {
+  const session: YahooSession = { cookie: null, crumb: null }
+  try {
+    const res = await fetch('https://fc.yahoo.com/', {
+      headers: { 'user-agent': USER_AGENT },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
+    const cookies = res.headers.getSetCookie?.() ?? []
+    session.cookie =
+      cookies
+        .map((c) => c.split(';')[0])
+        .filter(Boolean)
+        .join('; ') || null
+  } catch {
+    // keyless fallback
+  }
+  if (!session.cookie) return session
+  try {
+    const res = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: { 'user-agent': USER_AGENT, accept: 'text/plain', cookie: session.cookie },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
+    if (res.ok) {
+      const text = (await res.text()).trim()
+      // An HTML error page here just means "no crumb today".
+      if (text && text.length <= 64 && !text.includes('<')) session.crumb = text
+    }
+  } catch {
+    // crumb is optional
+  }
+  return session
+}
+
+/**
+ * Yahoo rate-limits per IP, not per symbol — one 429 means the next request
+ * will 429 too. Every fetch funnels through this shared gate: a 429 escalates
+ * a run-wide cooldown (honouring Retry-After up to the cap), a success
+ * resets it.
+ */
+const limiter = {
+  waitUntil: 0,
+  cooldownMs: 0,
+  async gate() {
+    const wait = this.waitUntil - Date.now()
+    if (wait > 0) await sleep(wait)
+  },
+  hit(retryAfter: number) {
+    this.cooldownMs = Math.min(
+      Math.max(RATE_LIMIT_BASE_MS, this.cooldownMs * 2, retryAfter),
+      RATE_LIMIT_MAX_MS
+    )
+    this.waitUntil = Math.max(this.waitUntil, Date.now() + this.cooldownMs)
+  },
+  settle() {
+    this.cooldownMs = 0
+    this.waitUntil = 0
+  },
+}
+
+/** A fetch that exhausted its retries on nothing but 429s — retriable in a later pass. */
+class RateLimitError extends Error {}
+
+function retryAfterMs(res: Response): number {
+  const seconds = Number(res.headers.get('retry-after'))
+  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
+}
+
 /**
  * Fetch one symbol's daily bars, rotating hosts with backoff. Returns null
  * for a symbol Yahoo doesn't know (logged upstream) — everything else throws
- * after the retries are exhausted.
+ * after the retries are exhausted; RateLimitError specifically when every
+ * response was a 429, so the caller can defer to a later pass.
  */
-async function fetchChart(symbol: string, range: string): Promise<YahooChart | null> {
+async function fetchChart(
+  symbol: string,
+  range: string,
+  session: YahooSession
+): Promise<YahooChart | null> {
   const path =
     `/v8/finance/chart/${encodeURIComponent(symbol)}` +
-    `?range=${encodeURIComponent(range)}&interval=1d&includePrePost=false`
+    `?range=${encodeURIComponent(range)}&interval=1d&includePrePost=false` +
+    (session.crumb ? `&crumb=${encodeURIComponent(session.crumb)}` : '')
+  const headers: Record<string, string> = { 'user-agent': USER_AGENT, accept: 'application/json' }
+  if (session.cookie) headers.cookie = session.cookie
   let lastErr: Error | null = null
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let only429s = true
+  for (let attempt = 0; attempt < MAX_FETCH_ROUNDS; attempt++) {
     for (const host of YAHOO_HOSTS) {
+      await limiter.gate()
       try {
         const res = await fetch(`https://${host}${path}`, {
-          headers: { 'user-agent': USER_AGENT, accept: 'application/json' },
+          headers,
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         })
         if (res.status === 404) return null
-        if (!res.ok) {
-          lastErr = new Error(`${host} ${res.status} ${res.statusText}`)
-          continue
+        if (res.ok) {
+          limiter.settle()
+          return (await res.json()) as YahooChart
         }
-        return (await res.json()) as YahooChart
+        lastErr = new Error(`${host} ${res.status} ${res.statusText}`)
+        if (res.status === 429) limiter.hit(retryAfterMs(res))
+        else only429s = false
       } catch (err) {
         lastErr = err instanceof Error ? err : new Error(String(err))
+        only429s = false
       }
     }
-    await sleep(2000 * 2 ** attempt)
+    // Two full rounds of nothing but 429s while the shared cooldown is
+    // already escalating: grinding on just drains the run's time budget —
+    // bail and let the pass-level retry (fresh session, longer cool-down)
+    // pick this symbol up again.
+    if (only429s && attempt >= 1) throw new RateLimitError(lastErr?.message ?? '429')
+    // 429 pacing is the limiter's job; this backoff is for transient errors.
+    if (attempt < MAX_FETCH_ROUNDS - 1 && !only429s) {
+      await sleep(2000 * 2 ** attempt + Math.random() * 1000)
+    }
   }
+  if (only429s) throw new RateLimitError(lastErr?.message ?? '429')
   throw lastErr ?? new Error(`fetch failed for ${symbol}`)
 }
 
@@ -187,43 +313,89 @@ async function main() {
       (args.dryRun ? ' (dry run)' : '')
   )
 
+  let session = await createSession()
+  console.log(
+    session.cookie
+      ? `Yahoo session ready (cookie${session.crumb ? ' + crumb' : ''})`
+      : 'No Yahoo session cookie — continuing keyless'
+  )
+
   let totalRows = 0
-  const failures: string[] = []
-  for (const stock of stocks) {
-    try {
-      const chart = await fetchChart(stock.ticker, args.range)
-      if (!chart) {
-        failures.push(stock.ticker)
-        console.error(`  ✗ ${stock.ticker} (${stock.name}): unknown symbol (404)`)
-        continue
-      }
-      const rows = shapeRows(stock.ticker, chart)
-      if (rows.length === 0) {
-        failures.push(stock.ticker)
-        console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in response`)
-        continue
-      }
-      if (!args.dryRun) {
-        for (let i = 0; i < rows.length; i += UPSERT_BATCH) {
-          const batch = rows.slice(i, i + UPSERT_BATCH)
-          const { error: upsertErr } = await sb
-            .from('dc_stock_prices')
-            .upsert(batch, { onConflict: 'ticker,trade_date' })
-          if (upsertErr) throw new Error(`upsert: ${upsertErr.message}`)
+  const failures: string[] = [] // 404s / empty responses — never retried
+  let pending = stocks
+
+  for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass++) {
+    if (pass > 1) {
+      const cooldown = PASS_COOLDOWN_MS * (pass - 1)
+      console.log(
+        `\nRetry pass ${pass}/${MAX_PASSES}: ${pending.length} ticker(s) ` +
+          `after a ${cooldown / 1000}s cool-down`
+      )
+      await sleep(cooldown)
+      // A fresh cookie often lands in a different rate bucket.
+      session = await createSession()
+      limiter.settle()
+    }
+
+    const retriable: typeof pending = []
+    let consecutiveRateLimited = 0
+    for (let i = 0; i < pending.length; i++) {
+      const stock = pending[i]
+      try {
+        const chart = await fetchChart(stock.ticker, args.range, session)
+        if (!chart) {
+          failures.push(stock.ticker)
+          console.error(`  ✗ ${stock.ticker} (${stock.name}): unknown symbol (404)`)
+          continue
+        }
+        const rows = shapeRows(stock.ticker, chart)
+        if (rows.length === 0) {
+          failures.push(stock.ticker)
+          console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in response`)
+          continue
+        }
+        if (!args.dryRun) {
+          for (let j = 0; j < rows.length; j += UPSERT_BATCH) {
+            const batch = rows.slice(j, j + UPSERT_BATCH)
+            const { error: upsertErr } = await sb
+              .from('dc_stock_prices')
+              .upsert(batch, { onConflict: 'ticker,trade_date' })
+            if (upsertErr) throw new Error(`upsert: ${upsertErr.message}`)
+          }
+        }
+        totalRows += rows.length
+        consecutiveRateLimited = 0
+        console.log(
+          `  ✓ ${stock.ticker} (${stock.name}): ${rows.length} bars ` +
+            `${rows[0].trade_date} → ${rows[rows.length - 1].trade_date}`
+        )
+      } catch (err) {
+        retriable.push(stock)
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(
+          `  ✗ ${stock.ticker} (${stock.name}): ${msg}` +
+            (pass < MAX_PASSES ? ' (will retry)' : '')
+        )
+        if (err instanceof RateLimitError) {
+          consecutiveRateLimited++
+          if (consecutiveRateLimited >= MAX_CONSECUTIVE_RATE_LIMITED && i < pending.length - 1) {
+            const deferred = pending.slice(i + 1)
+            retriable.push(...deferred)
+            console.error(
+              `  -- rate-limited ${consecutiveRateLimited}× in a row — ` +
+                `abandoning this pass (${deferred.length} ticker(s) not attempted)`
+            )
+            break
+          }
         }
       }
-      totalRows += rows.length
-      console.log(
-        `  ✓ ${stock.ticker} (${stock.name}): ${rows.length} bars ` +
-          `${rows[0].trade_date} → ${rows[rows.length - 1].trade_date}`
-      )
-    } catch (err) {
-      failures.push(stock.ticker)
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`  ✗ ${stock.ticker} (${stock.name}): ${msg}`)
+      await sleep(TICKER_DELAY_MS + Math.random() * TICKER_JITTER_MS)
     }
-    await sleep(TICKER_DELAY_MS)
+    pending = retriable
   }
+
+  // Whatever is still pending exhausted every pass — count it as failed.
+  failures.push(...pending.map((s) => s.ticker))
 
   console.log(
     `\nDone. ${totalRows} bars across ${stocks.length - failures.length}/${stocks.length} tickers.`

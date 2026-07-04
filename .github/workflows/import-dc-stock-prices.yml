@@ -34,7 +34,9 @@ concurrency:
 jobs:
   import:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Generous: the importer pauses run-wide on Yahoo 429s and makes up to
+    # three passes with 90s/180s cool-downs when the runner IP is throttled.
+    timeout-minutes: 30
     environment: Production
     defaults:
       run:
