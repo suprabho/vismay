@@ -82,6 +82,24 @@ export interface TradeLandscape {
   edges: { reporter: string; hsCode: string; valueUsd: number }[]
 }
 
+export type TradeFlow = 'export' | 'import'
+
+export interface TradeWeb {
+  source: TradeSource
+  year: number
+  /** Which side's reporting the edges come from — reported exports and
+   *  reported imports of the same pair disagree (CIF/FOB, timing), so they
+   *  are separate lenses, never mixed. */
+  flow: TradeFlow
+  countries: { code: string; name: string }[]
+  /** Directed goods movement `from` exporter → `to` importer, one edge per
+   *  HS2 chapter kept for that pair (top chapters per pair, top pairs per
+   *  country — the long tail is dropped for legibility, not summed). */
+  edges: { from: string; to: string; hsCode: string; valueUsd: number }[]
+  /** Chapters appearing in edges, for the legend. */
+  chapters: { hsCode: string; name: string }[]
+}
+
 interface ExportRow {
   reporter_code: string
   hs_code: string
@@ -510,4 +528,125 @@ export async function getTradeLandscape(opts?: {
     .sort((a, b) => b.totalUsd - a.totalUsd)
 
   return { source, year, reporters, chapters, edges }
+}
+
+/**
+ * Country↔country trade web for one (year, flow): bilateral HS2 flows among
+ * the tracked reporters (trade_bilateral_flows, migration 065), pruned to
+ * the top chapters per pair and top pairs per country so the radial graph
+ * stays legible. Returns null when the table is empty for the slice (i.e.
+ * before import-comtrade-bilateral has run).
+ *
+ * Rather than paging all ~37k rows of a (year, flow) slice, this reads only
+ * the largest N by value — the pruning keeps far fewer edges than that, so
+ * the cut-off never affects what's drawn.
+ */
+export async function getTradeWeb(opts: {
+  year: number
+  flow?: TradeFlow
+  source?: TradeSource
+  /** HS2 chapters kept per country pair. */
+  chaptersPerPair?: number
+  /** Partner pairs kept per country (by pair total). */
+  pairsPerCountry?: number
+}): Promise<TradeWeb | null> {
+  const sb = createServiceClient()
+  const flow: TradeFlow = opts.flow ?? 'export'
+  const chaptersPerPair = opts.chaptersPerPair ?? 3
+  const pairsPerCountry = opts.pairsPerCountry ?? 8
+  const fetchCap = 4000
+
+  let rows: {
+    reporter_code: string
+    partner_code: string
+    hs_code: string
+    value_usd: number | null
+    source: string
+  }[] = []
+  let source: TradeSource | null = opts.source ?? null
+  for (const candidate of source ? [source] : SOURCE_PREFERENCE) {
+    const { data, error } = await sb
+      .from('trade_bilateral_flows')
+      .select('reporter_code, partner_code, hs_code, value_usd, source')
+      .eq('source', candidate)
+      .eq('year', opts.year)
+      .eq('flow', flow)
+      .not('value_usd', 'is', null)
+      .order('value_usd', { ascending: false })
+      .range(0, fetchCap - 1)
+    if (error) {
+      // Table missing (migration 065 not applied) reads as empty, not fatal —
+      // callers fall back to the unilateral landscape web.
+      if (/relation|does not exist|schema cache/i.test(error.message)) return null
+      throw new Error(`getTradeWeb(${opts.year}, ${flow}): ${error.message}`)
+    }
+    if (data && data.length > 0) {
+      rows = data
+      source = candidate
+      break
+    }
+  }
+  if (rows.length === 0 || !source) return null
+
+  // pair key "exporter→importer": for reported imports, the reporter is the
+  // importing side, so goods move partner → reporter.
+  const pairChapters = new Map<string, Map<string, number>>()
+  for (const r of rows) {
+    if (r.value_usd == null) continue
+    const from = flow === 'export' ? r.reporter_code : r.partner_code
+    const to = flow === 'export' ? r.partner_code : r.reporter_code
+    const key = `${from}→${to}`
+    if (!pairChapters.has(key)) pairChapters.set(key, new Map())
+    const chapters = pairChapters.get(key)!
+    chapters.set(r.hs_code, (chapters.get(r.hs_code) ?? 0) + r.value_usd)
+  }
+
+  // Top pairs per exporting country, then top chapters within each pair.
+  const pairsByFrom = new Map<string, { key: string; total: number }[]>()
+  for (const [key, chapters] of pairChapters) {
+    const from = key.split('→')[0]
+    let total = 0
+    for (const v of chapters.values()) total += v
+    if (!pairsByFrom.has(from)) pairsByFrom.set(from, [])
+    pairsByFrom.get(from)!.push({ key, total })
+  }
+
+  const edges: TradeWeb['edges'] = []
+  for (const pairs of pairsByFrom.values()) {
+    pairs.sort((a, b) => b.total - a.total)
+    for (const { key } of pairs.slice(0, pairsPerCountry)) {
+      const [from, to] = key.split('→')
+      const kept = [...pairChapters.get(key)!.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, chaptersPerPair)
+      for (const [hsCode, valueUsd] of kept) {
+        edges.push({ from, to, hsCode, valueUsd })
+      }
+    }
+  }
+  if (edges.length === 0) return null
+
+  const codes = new Set<string>()
+  for (const e of edges) {
+    codes.add(e.from)
+    codes.add(e.to)
+  }
+  const { data: countryRows, error: countriesError } = await sb
+    .from('trade_countries')
+    .select('code, name')
+    .in('code', [...codes])
+  if (countriesError) throw new Error(`getTradeWeb countries: ${countriesError.message}`)
+  const countries = (countryRows ?? [])
+    .map((c) => ({ code: c.code as string, name: c.name as string }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const chapterCodes = [...new Set(edges.map((e) => e.hsCode))]
+  const products = await fetchProducts(sb, chapterCodes)
+  const chapterTotals = new Map<string, number>()
+  for (const e of edges) chapterTotals.set(e.hsCode, (chapterTotals.get(e.hsCode) ?? 0) + e.valueUsd)
+  const chapters = chapterCodes
+    .map((hsCode) => ({ hsCode, name: products.get(hsCode)?.name ?? hsCode }))
+    .sort((a, b) => (chapterTotals.get(b.hsCode) ?? 0) - (chapterTotals.get(a.hsCode) ?? 0))
+
+  return { source, year: opts.year, flow, countries, edges, chapters }
 }

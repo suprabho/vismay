@@ -9,6 +9,11 @@ migration 064; the public epics read policy hides drafts).
 - `trade_countries` — ISO2 reporters + the `WLD` world pseudo-code
 - `trade_products` — HS codes with explicit `hs_level` (2/4/6) + `parent_code`
 - `trade_product_exports` — long facts: `(reporter_code, hs_code, year, source) → value_usd`
+- `trade_bilateral_flows` (migration 065) — reporter × partner × HS2 × year ×
+  flow (`export`/`import`), **pairs among the tracked reporters only**. Feeds
+  the /global-trade trade-web viz. Both flow directions are stored because
+  reported X and reported M of the same pair disagree (CIF/FOB, timing) —
+  readers treat them as separate lenses, never mixed.
 
 `source` (`'oec' | 'comtrade' | 'trademap'`) is part of the fact PK: the three
 providers publish near-identical numbers (TradeMap and OEC both derive from
@@ -23,6 +28,7 @@ normalise units (TradeMap publishes USD thousands).
 | `pnpm trade:discover-oec` | OEC BotMarket catalog | read-only reconnaissance |
 | `pnpm trade:import-oec` | OEC BotMarket (`source='oec'`) | automated, cron |
 | `pnpm trade:import-comtrade` | UN Comtrade (`source='comtrade'`) | automated, cron |
+| `pnpm trade:import-comtrade-bilateral` | UN Comtrade bilateral HS2 (`trade_bilateral_flows`) | automated, cron (~2 calls/year) |
 | `pnpm trade:import-trademap` | ITC TradeMap (`source='trademap'`) | manual CSV drop only |
 
 All support `--dry-run`; the API importers support `--full` (backfill from
