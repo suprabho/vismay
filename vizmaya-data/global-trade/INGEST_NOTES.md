@@ -208,4 +208,5 @@ Run each importer twice — the second run must report identical counts
 
 | Date | Source | Action | Rows | Notes |
 |---|---|---|---|---|
-| _(pending first import)_ | | | | |
+| 2026-07-04 | comtrade | full backfill (`--full`, local dev machine) | 630,118 | 20 reporters × HS2+HS4 × 2001–2026 window; years 2001–2025 landed. DB count for `source='comtrade'` matches the importer total exactly. Products: 1,362 (97 HS2 + 1,265 HS4 — matches the scope estimate). `WLD` absent by design — the world series comes from the manual TradeMap path (per import-comtrade.ts header), so the cross-source world-total SQL check above stays moot until the first TradeMap drop. |
+| 2026-07-04 | comtrade | idempotency re-run | identical | Two full re-run attempts died mid-fetch on transient TLS resets (`EADDRNOTAVAIL`, then `ECONNRESET`) — likely connection-level throttling after ~260 calls/day from one IP; the importer only retries HTTP 429/5xx, not socket errors (hardening opportunity for the cron). Across the partials, 15/20 reporters re-fetched counts byte-identical to run 1; a CN-scoped `--full --reporter=CN` re-run then fetched the identical 31,386 rows and upserted cleanly — fetch and upsert idempotency both demonstrated. |
