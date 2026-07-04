@@ -52,6 +52,9 @@ function parseArgs(argv: string[]): Args {
   const args: Args = { range: DEFAULT_RANGE, dryRun: false, ticker: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
+    // pnpm forwards the `--` separator itself (npm strips it), so a bare
+    // `pnpm ai-data-centers:import-stocks -- --full` delivers ['--', '--full'].
+    if (a === '--') continue
     if (a === '--full') args.range = FULL_RANGE
     else if (a === '--range') args.range = argv[++i] ?? DEFAULT_RANGE
     else if (a === '--dry-run') args.dryRun = true
