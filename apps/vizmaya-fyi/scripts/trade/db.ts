@@ -33,6 +33,16 @@ export interface TradeExportRow {
   source: TradeSource
 }
 
+export interface TradeBilateralRow {
+  reporter_code: string
+  partner_code: string
+  hs_code: string
+  year: number
+  flow: 'export' | 'import'
+  value_usd: number
+  source: TradeSource
+}
+
 /** Derive hs_level/parent_code from a bare HS code string, or null when the
  *  code isn't a 2/4/6-digit HS code (e.g. TradeMap's 'TOTAL' row). */
 export function classifyHsCode(
@@ -85,6 +95,31 @@ export async function upsertTradeExports(rows: TradeExportRow[], tag: string): P
     if (error) throw new Error(`[${tag}] upsert trade_product_exports at offset ${i}: ${error.message}`)
     if (i % 10000 === 0) {
       console.log(`[${tag}] upserted ${Math.min(i + batchSize, rows.length)}/${rows.length} export rows`)
+    }
+  }
+}
+
+export async function upsertTradeBilateralFlows(rows: TradeBilateralRow[], tag: string): Promise<void> {
+  const sb = createServiceClient()
+  const batchSize = 1000
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize)
+    const { error } = await sb
+      .from('trade_bilateral_flows')
+      .upsert(batch, {
+        onConflict: 'reporter_code,partner_code,hs_code,year,flow,source',
+        ignoreDuplicates: false,
+      })
+    if (error) {
+      throw new Error(
+        `[${tag}] upsert trade_bilateral_flows at offset ${i}: ${error.message}` +
+          (error.message.includes('trade_bilateral_flows') && error.message.match(/relation|does not exist|schema cache/i)
+            ? ' — is migration 065_trade_bilateral.sql applied?'
+            : ''),
+      )
+    }
+    if (i % 10000 === 0) {
+      console.log(`[${tag}] upserted ${Math.min(i + batchSize, rows.length)}/${rows.length} bilateral rows`)
     }
   }
 }

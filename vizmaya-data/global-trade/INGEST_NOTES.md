@@ -41,6 +41,15 @@ Reference view (world, all products, yearly exports, USD):
 - **Reporters:** world (`WLD`) + top-20 goods exporters — full list with M49
   codes in `apps/vizmaya-fyi/scripts/trade/reporters.ts`. Full bilateral
   grain rejected (billions of rows at HS4).
+- **Bilateral (added 2026-07-04 for the trade-web viz):** pairs **among the
+  tracked reporters only**, HS2 grain, both flows (`export` + `import` — the
+  two reportings disagree via CIF/FOB and timing, kept as separate lenses).
+  `trade_bilateral_flows`, migration 065. Volume: 20×19 pairs × ~97 chapters
+  × 2 flows ≈ 74k rows/year (~1.9M full history). Comtrade accepts
+  comma-joined reporter AND partner code lists, so one (year, flow) slice is
+  a single ~37k-record call — full backfill ≈ 52 calls. Partners outside the
+  tracked set are not ingested (the ring viz can't draw them; revisit if a
+  "rest of world" node is ever wanted).
 - **Products:** HS2 + HS4. HS6 deferred (≈5,600 codes, little chart value).
 - **Years:** 2001+ (`TRADE_MIN_YEAR`) — matches TradeMap's series start.
 - **Volume estimate:** 21 reporters × ~1,350 HS2+HS4 codes × 25 years ×
