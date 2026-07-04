@@ -1,4 +1,5 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { getIeaCountryProfile, type IeaCountryProfile } from '@vismay/content-source/epics'
 
 /**
  * Compose "from library" PROVIDERS — pluggable sources of in-DB content that can
@@ -464,6 +465,118 @@ const cokeStudioProvider: LibraryProvider = {
 }
 
 /**
+ * Country energy profiles (`iea_countries` + `iea_country_energy` +
+ * `iea_oil_prices_monthly`) — the per-country dataset behind the vizmaya
+ * `/energy-profile` epic map. Like the WC26 teams table, the map only reads it
+ * through its own API, so without a provider the numbers can't be reused as
+ * research. `extract` reuses the epic's own reader (`getIeaCountryProfile`) and
+ * flattens it to the CountryDetail sheet's content: editorial summary, the four
+ * stat tiles, latest-year electricity / primary mixes, pump prices, and the
+ * country's recent energy news.
+ *
+ * Serves footshorts as well as vizmaya-fyi: the fifa-wc26 epic gives the
+ * football desk per-nation stories, and country energy context belongs in the
+ * same research pool. The embedded 30-day news slice also means footshorts gets
+ * energy news per country without opening the separate `iea-news` provider.
+ */
+type EnergyMix = IeaCountryProfile['timeseries']['electricityMix']
+
+/** The most recent year with any share data, flattened to "Source share%"
+ *  parts sorted largest-first; null when the mix is empty. */
+function latestMixBreakdown(mix: EnergyMix): { year: number; parts: string[] } | null {
+  for (let i = mix.years.length - 1; i >= 0; i--) {
+    const entries = mix.series
+      .map((s) => ({ name: s.name, value: s.values[i] }))
+      .filter((e): e is { name: string; value: number } => e.value != null && e.value > 0)
+    if (entries.length) {
+      entries.sort((a, b) => b.value - a.value)
+      return { year: mix.years[i], parts: entries.map((e) => `${e.name} ${e.value.toFixed(1)}%`) }
+    }
+  }
+  return null
+}
+
+const energyProfileProvider: LibraryProvider = {
+  key: 'energy-profile',
+  label: 'Country energy profiles',
+  apps: ['vizmaya-fyi', 'footshorts'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('iea_countries')
+      .select('code, name, summary')
+      .or(`name.ilike.${pat},code.ilike.${pat}`)
+      .order('name', { ascending: true })
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{ code: string; name: string | null; summary: string | null }>
+    return rows.map((r) => ({
+      id: r.code,
+      title: r.name ?? r.code,
+      subtitle: r.summary?.slice(0, 120) ?? undefined,
+    }))
+  },
+  async extract(code) {
+    const profile = await getIeaCountryProfile(code)
+    if (!profile) return null
+
+    const tile = (key: string, label: string, format: (v: number) => string): string | null => {
+      const t = profile.latest[key]
+      return t ? `${label}: ${format(t.value)} (${t.year})` : null
+    }
+    const tiles = [
+      tile('energy_per_capita_kwh', 'Energy use per person', (v) => `${Math.round(v).toLocaleString('en-US')} kWh`),
+      tile('ghg_from_energy_mt', 'GHG from energy', (v) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} Mt CO₂e`),
+      tile('renewables_share_energy', 'Renewables share of energy', (v) => `${v.toFixed(1)}%`),
+      tile('electricity_demand_twh', 'Electricity demand', (v) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} TWh`),
+    ].filter(Boolean) as string[]
+
+    const elec = latestMixBreakdown(profile.timeseries.electricityMix)
+    const primary = latestMixBreakdown(profile.timeseries.primaryEnergyMix)
+
+    const { months, gasoline, diesel } = profile.timeseries.oilPrices
+    const lastMonth = months.length ? months[months.length - 1] : null
+    const lastGasoline = gasoline.length ? gasoline[gasoline.length - 1] : null
+    const lastDiesel = diesel.length ? diesel[diesel.length - 1] : null
+    const fuel =
+      lastMonth && (lastGasoline != null || lastDiesel != null)
+        ? `Retail fuel prices (${lastMonth}, USD/L): ` +
+          [
+            lastGasoline != null ? `gasoline ${lastGasoline.toFixed(2)}` : null,
+            lastDiesel != null ? `diesel ${lastDiesel.toFixed(2)}` : null,
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : null
+
+    const news = profile.news
+      .slice(0, 6)
+      .map((n) => `- ${n.title} (${n.publishedAt.slice(0, 10)})${n.summary ? ` — ${n.summary}` : ''}`)
+      .join('\n')
+
+    const text = [
+      `# ${profile.name} (${profile.code}) — country energy profile`,
+      profile.summary?.trim() || null,
+      tiles.length ? tiles.join('\n') : null,
+      elec ? `Electricity mix (${elec.year}): ${elec.parts.join(', ')}` : null,
+      primary ? `Primary energy mix (${primary.year}): ${primary.parts.join(', ')}` : null,
+      fuel,
+      news ? `Recent energy news (30d):\n${news}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+
+    return {
+      title: `${profile.name} · energy profile`,
+      byline: 'Energy profile · OWID / IEA',
+      text,
+    }
+  },
+}
+
+/**
  * FIFA World Cup 2026 teams (`fifa_wc26_teams`) — the per-nation dataset behind
  * the footshorts `fifa-wc26` epic map / team-profile panel: squad value, GDP,
  * population, inequality, democracy index, FIFA rank, GHI, WHR. The map only
@@ -602,6 +715,7 @@ const PROVIDERS: LibraryProvider[] = [
   fifaWc26Provider,
   newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
   ieaNewsProvider,
+  energyProfileProvider,
   epsteinProvider,
   cokeStudioProvider,
 ]
