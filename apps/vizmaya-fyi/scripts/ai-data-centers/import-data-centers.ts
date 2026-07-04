@@ -431,13 +431,62 @@ async function upsertTimeline(rows: TimelineRow[]): Promise<void> {
   }
 }
 
-// Print curated-coords suggestions for facilities that lack them. Never
-// writes to the DB — the operator pastes the output into facilityCoords.ts,
-// keeping the scheduled job deterministic.
-async function suggestCoords(facilities: FacilityRow[]): Promise<void> {
-  const token = process.env.MAPBOX_TOKEN ?? process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  if (!token) throw new Error('--geocode needs MAPBOX_TOKEN (or NEXT_PUBLIC_MAPBOX_TOKEN)')
+function mapboxToken(): string | undefined {
+  return process.env.MAPBOX_TOKEN ?? process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+}
 
+// Geocode "{Address}, {Country}" to [lng, lat] via Mapbox. Returns null on any
+// miss so callers warn-and-continue. Deterministic per query string, so
+// re-running the import produces stable coordinates.
+async function geocodeOne(
+  query: string,
+  token: string,
+): Promise<[number, number] | null> {
+  const url =
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json` +
+    `?limit=1&access_token=${token}`
+  const res = await fetch(url)
+  if (!res.ok) return null
+  const json = (await res.json()) as { features?: { center?: [number, number] }[] }
+  return json.features?.[0]?.center ?? null
+}
+
+// Fill lat/lng for facilities that have neither a CSV coordinate nor a curated
+// override, by geocoding Epoch's Address column. Mutates the rows in place and
+// returns how many were resolved. No token → no-op (curated coords still win).
+// Epoch's slugs churn as campuses are added, so relying on this keeps the map
+// populated without hand-maintaining 60+ coordinates.
+async function geocodeMissing(facilities: FacilityRow[]): Promise<number> {
+  const token = mapboxToken()
+  if (!token) {
+    console.warn('[geocode] no MAPBOX_TOKEN — facilities without curated coords stay off the map')
+    return 0
+  }
+  let resolved = 0
+  for (const f of facilities) {
+    if (f.lat != null) continue // CSV or curated coord already applied
+    const query = [f.address, f.country].filter(Boolean).join(', ')
+    if (!query) {
+      console.warn(`[geocode] ${f.slug}: no address to geocode`)
+      continue
+    }
+    const center = await geocodeOne(query, token)
+    if (!center) {
+      console.warn(`[geocode] ${f.slug}: no match for "${query}"`)
+      continue
+    }
+    f.lng = center[0]
+    f.lat = center[1]
+    resolved++
+  }
+  return resolved
+}
+
+// --geocode: print curated-coords suggestions without writing anything, for
+// pasting into facilityCoords.ts as overrides.
+async function suggestCoords(facilities: FacilityRow[]): Promise<void> {
+  const token = mapboxToken()
+  if (!token) throw new Error('--geocode needs MAPBOX_TOKEN (or NEXT_PUBLIC_MAPBOX_TOKEN)')
   for (const f of facilities) {
     if (f.lat != null || FACILITY_COORDS[f.slug]) continue
     const query = [f.address, f.country].filter(Boolean).join(', ')
@@ -445,16 +494,7 @@ async function suggestCoords(facilities: FacilityRow[]): Promise<void> {
       console.warn(`[geocode] ${f.slug}: no address to geocode`)
       continue
     }
-    const url =
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json` +
-      `?limit=1&access_token=${token}`
-    const res = await fetch(url)
-    if (!res.ok) {
-      console.warn(`[geocode] ${f.slug}: ${res.status} ${res.statusText}`)
-      continue
-    }
-    const json = (await res.json()) as { features?: { center?: [number, number] }[] }
-    const center = json.features?.[0]?.center
+    const center = await geocodeOne(query, token)
     if (!center) {
       console.warn(`[geocode] ${f.slug}: no match for "${query}"`)
       continue
@@ -502,6 +542,14 @@ async function main(): Promise<void> {
     ? parseTimelines(timelinesCsv, new Set(facilities.map((f) => f.slug)))
     : []
   console.log(`[timelines] parsed ${timeline.length} timeline rows`)
+
+  // Backfill map coordinates for facilities Epoch ships without them (most of
+  // them) by geocoding the Address column. Curated overrides + CSV coords are
+  // already applied and skipped here.
+  const geocoded = await geocodeMissing(facilities)
+  if (geocoded > 0) console.log(`[geocode] resolved ${geocoded} facility coordinates`)
+  const stillMissing = facilities.filter((f) => f.lat == null).length
+  if (stillMissing > 0) console.warn(`[geocode] ${stillMissing} facilities still without coords`)
 
   await upsertFacilities(facilities)
   console.log(`[facilities] upserted ${facilities.length} facility rows`)

@@ -1,17 +1,16 @@
 /**
- * Curated map coordinates for Epoch AI Frontier Data Centers facilities,
- * keyed by the importer's slugified facility name.
+ * Curated map-coordinate OVERRIDES for Epoch AI Frontier Data Centers
+ * facilities, keyed by the importer's slugified facility name.
  *
- * Epoch's data_centers.csv carries a street Address but (as of the first
- * import) no lat/lng columns, so the /ai-data-centers map pins come from this
- * table instead. Same pattern as lib/energy-profile/countryCentroids.ts: the
- * importer reads this file and the weekly upsert never overwrites the values.
+ * Epoch's data_centers.csv carries a street Address but no lat/lng, so the
+ * importer geocodes that Address via Mapbox to place map pins (see
+ * geocodeMissing in scripts/ai-data-centers/import-data-centers.ts). This file
+ * is the override layer: entries here win over both CSV coordinates and
+ * geocoding, so use it to correct any facility Mapbox places poorly and to pin
+ * the marquee campuses precisely even when no token is available.
  *
- * Coordinates are approximate campus locations compiled from public reporting
- * and permit filings — good enough to drop a pin on a US-scale map, not
- * parcel-grade. To add entries for new facilities, run the importer with
- * --geocode (needs MAPBOX_TOKEN) and paste the suggestions it prints, or look
- * the site up by its Address column.
+ * Slugs must match Epoch's real names (lowercased, punctuation → "-"). The
+ * values below are approximate campus locations from public reporting.
  */
 
 export interface FacilityCoord {
@@ -20,21 +19,13 @@ export interface FacilityCoord {
 }
 
 export const FACILITY_COORDS: Record<string, FacilityCoord> = {
-  // OpenAI/Oracle/Crusoe Stargate campus, Abilene TX
-  'stargate-abilene': { lat: 32.5227, lng: -99.8034 },
-  // xAI Colossus, Memphis TN (former Electrolux plant)
-  'xai-colossus': { lat: 35.0537, lng: -90.1479 },
-  'colossus': { lat: 35.0537, lng: -90.1479 },
-  // Microsoft Fairwater, Mount Pleasant WI
-  'microsoft-fairwater': { lat: 42.7128, lng: -87.8721 },
-  'fairwater': { lat: 42.7128, lng: -87.8721 },
-  // Meta Hyperion, Richland Parish LA
-  'meta-hyperion': { lat: 32.4483, lng: -91.7337 },
-  'hyperion': { lat: 32.4483, lng: -91.7337 },
-  // Meta Prometheus, New Albany OH
-  'meta-prometheus': { lat: 40.0898, lng: -82.7885 },
-  'prometheus': { lat: 40.0898, lng: -82.7885 },
-  // Amazon/Anthropic Project Rainier, New Carlisle IN
-  'project-rainier': { lat: 41.7128, lng: -86.5264 },
-  'anthropic-project-rainier': { lat: 41.7128, lng: -86.5264 },
+  // OpenAI / Oracle / Crusoe — Lancium Clean Campus, Abilene TX
+  'openai-stargate-abilene': { lat: 32.5227, lng: -99.8034 },
+  'crusoe-abilene-expansion': { lat: 32.5227, lng: -99.8034 },
+  // xAI Colossus — former Electrolux plant, southwest Memphis TN
+  'colossus-1': { lat: 35.0537, lng: -90.1479 },
+  // Microsoft Fairwater — Mount Pleasant WI
+  'microsoft-fairwater-wisconsin': { lat: 42.7089, lng: -87.879 },
+  // Amazon (Anthropic) Project Rainier — New Carlisle IN
+  'anthropic-amazon-new-carlisle': { lat: 41.7017, lng: -86.5089 },
 }
