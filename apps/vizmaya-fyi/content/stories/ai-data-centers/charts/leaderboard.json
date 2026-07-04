@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "title": "Where the compute sits — H100-equivalents by facility",
+      "option": {
+        "grid": { "left": 8, "right": 72, "top": 12, "bottom": 24, "containLabel": true },
+        "tooltip": {
+          "trigger": "item",
+          "backgroundColor": "#0b0e12",
+          "borderColor": "#232b33",
+          "textStyle": { "color": "#dbe7f0", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+          "formatter": "{b}<br/><b>{c}</b> H100e"
+        },
+        "xAxis": {
+          "type": "value",
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "splitLine": { "lineStyle": { "color": "#232b33", "type": "dashed" } },
+          "axisLabel": { "color": "#8b98a5", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Microsoft Fairwater", "Meta Prometheus", "Project Rainier", "Meta Hyperion", "xAI Colossus", "Stargate Abilene"],
+          "axisLine": { "show": false },
+          "axisTick": { "show": false },
+          "axisLabel": { "color": "#dbe7f0", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 12 }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "data": [200000, 180000, 220000, 300000, 340000, 450000],
+            "barCategoryGap": "35%",
+            "itemStyle": { "color": "#a78bfa", "borderRadius": [0, 2, 2, 0] },
+            "label": { "show": true, "position": "right", "color": "#dbe7f0", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "{c}" }
+          }
+        ]
+      }
+    }
+  ]
+}

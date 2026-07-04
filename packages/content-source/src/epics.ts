@@ -692,3 +692,114 @@ export async function getIeaCountryProfile(
     })),
   }
 }
+
+// ---------------------------------------------------------------------------
+// AI Data Centers epic — backs /ai-data-centers and
+// /api/ai-data-centers[/[slug]]. Tables dc_facilities / dc_facility_timeline
+// (migration 063), filled weekly from Epoch AI's Frontier Data Centers Hub
+// (CC BY 4.0) by scripts/ai-data-centers/import-data-centers.ts.
+
+export interface DcFacility {
+  slug: string
+  name: string
+  owner: string | null
+  users: string | null
+  project: string | null
+  country: string | null
+  address: string | null
+  lat: number | null
+  lng: number | null
+  h100Equivalents: number | null
+  powerMw: number | null
+  capexUsdBn: number | null
+  investors: string | null
+  constructionCompanies: string | null
+  energyCompanies: string | null
+  notes: string | null
+  sources: string | null
+}
+
+function mapDcFacilityRow(r: any): DcFacility {
+  return {
+    slug: r.slug as string,
+    name: r.name as string,
+    owner: (r.owner as string | null) ?? null,
+    users: (r.users as string | null) ?? null,
+    project: (r.project as string | null) ?? null,
+    country: (r.country as string | null) ?? null,
+    address: (r.address as string | null) ?? null,
+    lat: (r.lat as number | null) ?? null,
+    lng: (r.lng as number | null) ?? null,
+    h100Equivalents: (r.h100_equivalents as number | null) ?? null,
+    powerMw: (r.power_mw as number | null) ?? null,
+    capexUsdBn: (r.capex_usd_bn as number | null) ?? null,
+    investors: (r.investors as string | null) ?? null,
+    constructionCompanies: (r.construction_companies as string | null) ?? null,
+    energyCompanies: (r.energy_companies as string | null) ?? null,
+    notes: (r.notes as string | null) ?? null,
+    sources: (r.sources as string | null) ?? null,
+  }
+}
+
+const DC_FACILITY_COLUMNS =
+  'slug, name, owner, users, project, country, address, lat, lng, ' +
+  'h100_equivalents, power_mw, capex_usd_bn, investors, ' +
+  'construction_companies, energy_companies, notes, sources'
+
+export async function listDataCenters(): Promise<DcFacility[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_facilities')
+    .select(DC_FACILITY_COLUMNS)
+    .order('power_mw', { ascending: false, nullsFirst: false })
+  if (error) throw new Error(`listDataCenters: ${error.message}`)
+  return (data ?? []).map(mapDcFacilityRow)
+}
+
+export const DC_METRICS = [
+  { key: 'power_mw', label: 'Power capacity (MW)' },
+  { key: 'h100_equivalents', label: 'Compute (H100 equivalents)' },
+  { key: 'capex_usd_bn', label: 'Capital cost (2025 USD bn)' },
+] as const
+
+export type DcMetricKey = typeof DC_METRICS[number]['key']
+
+export interface DcTimelineSeries {
+  metric: DcMetricKey
+  /** [ISO date, value] pairs sorted ascending — ECharts time-axis ready. */
+  points: [string, number][]
+}
+
+export interface DcFacilityProfile extends DcFacility {
+  timeline: DcTimelineSeries[]
+}
+
+/** Returns null when the slug isn't in dc_facilities at all. */
+export async function getDataCenterProfile(slug: string): Promise<DcFacilityProfile | null> {
+  const sb = createServiceClient()
+  const [facilityR, timelineR] = await Promise.all([
+    sb.from('dc_facilities').select(DC_FACILITY_COLUMNS).eq('slug', slug).maybeSingle(),
+    sb
+      .from('dc_facility_timeline')
+      .select('metric, as_of, value')
+      .eq('facility_slug', slug)
+      .order('as_of', { ascending: true }),
+  ])
+  if (facilityR.error) {
+    throw new Error(`getDataCenterProfile(${slug}) facility: ${facilityR.error.message}`)
+  }
+  if (!facilityR.data) return null
+  if (timelineR.error) {
+    throw new Error(`getDataCenterProfile(${slug}) timeline: ${timelineR.error.message}`)
+  }
+
+  const rows = (timelineR.data ?? []) as { metric: string; as_of: string; value: number }[]
+  const timeline: DcTimelineSeries[] = DC_METRICS.map((m) => ({
+    metric: m.key,
+    points: rows
+      .filter((r) => r.metric === m.key)
+      .map((r) => [r.as_of, r.value] as [string, number]),
+  })).filter((s) => s.points.length > 0)
+
+  return { ...mapDcFacilityRow(facilityR.data), timeline }
+}

@@ -1,0 +1,4 @@
+# Real manual downloads from epoch.ai — the importer's fallback inputs.
+# Only the synthetic sample_* fixtures belong in git.
+data_centers.csv
+data_center_timelines.csv

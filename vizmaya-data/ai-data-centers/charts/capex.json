@@ -1,0 +1,41 @@
+{
+  "_meta": {
+    "id": "capex",
+    "title": "The bill",
+    "subtitle": "Capital committed, 2025 USD billions",
+    "source": "Epoch AI — Frontier Data Centers (CC BY 4.0)",
+    "data_cutoff": "2026-06-01",
+    "note": "Representative snapshot — reconcile against dc_facilities before publishing"
+  },
+  "grid": { "left": 8, "right": 56, "top": 12, "bottom": 24, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0b0e12",
+    "borderColor": "#232b33",
+    "textStyle": { "color": "#dbe7f0", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{b}<br/><b>${c}B</b>"
+  },
+  "xAxis": {
+    "type": "value",
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#232b33", "type": "dashed" } },
+    "axisLabel": { "color": "#8b98a5", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "${value}B" }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": ["Meta Prometheus", "Microsoft Fairwater", "Project Rainier", "xAI Colossus", "Meta Hyperion", "Stargate Abilene"],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#dbe7f0", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 12 }
+  },
+  "series": [
+    {
+      "type": "bar",
+      "data": [10, 11, 12, 15, 18, 25],
+      "barCategoryGap": "35%",
+      "itemStyle": { "color": "#34d399", "borderRadius": [0, 2, 2, 0] },
+      "label": { "show": true, "position": "right", "color": "#dbe7f0", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "${c}B" }
+    }
+  ]
+}
