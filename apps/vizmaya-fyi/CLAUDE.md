@@ -130,6 +130,21 @@ Tracks the build-out of frontier AI data centers (power, compute, capital cost) 
 - **Explorer UI:** [app/ai-data-centers/page.tsx](app/ai-data-centers/page.tsx) → `AiDataCentersLanding.tsx` (Mapbox markers sized by a power/compute/capital toggle + sortable leaderboard) → `AiDataCenterDetail.tsx` in the shared [components/DetailSheet.tsx](components/DetailSheet.tsx) (stat tiles + per-metric timeline ECharts from `components/ai-data-centers/charts/`). Palette in [app/ai-data-centers/theme.ts](app/ai-data-centers/theme.ts). The page degrades to an empty map before migration 063 / the first import.
 - **Editorial story:** source of record in [vizmaya-data/ai-data-centers/](../../vizmaya-data/ai-data-centers/) (CSVs + `charts/*.json` with `_meta` + `story.yaml` + `INGEST_NOTES.md`); runtime copies at `content/stories/ai-data-centers.{md,config.yaml}` + `content/stories/ai-data-centers/charts/*.json` (served by `/api/chart-data/[slug]/[id]`). **The story figures are a representative snapshot** — epoch.ai is unreachable from the sandbox, so reconcile against the real `dc_*` tables (INGEST_NOTES.md checklist) before flipping the epic to published.
 
+### AI Data Centers news + stock pipeline
+
+Two daily feeds extend the epic beyond the Epoch facility registry: tagged
+industry news (AI / data centers / microprocessors / semiconductors) and
+daily price bars for ~29 related stocks, each tracked on its **home exchange**
+(NVDA on NASDAQ, TSMC as 2330.TW, Samsung as 005930.KS, ASML as ASML.AS,
+Tokyo Electron as 8035.T, SMIC as 0981.HK, …) in its native currency.
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/065_dc_news_stocks.sql](../../supabase/vizmaya-fyi/migrations/065_dc_news_stocks.sql) — `dc_news` (unique on `source_url`; classifier rejects persist with `relevant=false` so they're never re-sent to the LLM), `dc_stocks` (curated ticker registry, seeded in the migration — **adding a company is a single insert**, both pipelines read the table), `dc_stock_prices` (daily OHLCV, PK `(ticker, trade_date)`, dates in the exchange's own calendar, close split-adjusted).
+- **News scraper:** [scripts/ai-data-centers/scrape-news.ts](scripts/ai-data-centers/scrape-news.ts) (`pnpm ai-data-centers:scrape-news`) — Google News RSS across four queries, then Gemma (`gemma-4-26b-a4b-it`, same JSON-scrape idiom as the energy scraper) applies a relevance gate + topic tags + ticker links. Cron: [.github/workflows/scrape-ai-data-centers-news.yml](../../.github/workflows/scrape-ai-data-centers-news.yml) (daily 06:45 UTC, staggered off the 06:15 energy-profile scrape). Secrets: the Supabase pair + `GEMINI_API_KEY` (all already in Production).
+- **Stock importer:** [scripts/ai-data-centers/import-stock-prices.ts](scripts/ai-data-centers/import-stock-prices.ts) (`pnpm ai-data-centers:import-stocks`) — Yahoo Finance keyless v8 chart API, host rotation + backoff, `--full` (5y) / `--range` / `--ticker` / `--dry-run`. Cron: [.github/workflows/import-dc-stock-prices.yml](../../.github/workflows/import-dc-stock-prices.yml) (22:45 UTC Mon–Fri, after US close ⇒ same-day Asia/EU sessions included). **First deploy: apply migration 065, then dispatch the workflow once with `full_backfill=true`.** Note: news.google.com and query1.finance.yahoo.com are both unreachable from the dev sandbox proxy — run these in Actions (same contingency as epoch.ai / iea.org).
+- **Readers:** `getDcNews({limit, topic, ticker})` + `getDcStockMarket(days)` in [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts) — the market reader returns per-ticker close series + window `changePct`, keeping empty-series tickers visible pre-backfill.
+- **API:** `/api/ai-data-centers/news` (`?limit&topic&ticker`) + `/api/ai-data-centers/stocks` (`?days`, default 90, max 730). Static segments win over the `[slug]` route, so no collision.
+- **UI:** not wired yet — the landing/detail pages don't render news or stocks; that's the natural next step once the tables have data.
+
 ## AI gateway
 
 New AI calls (text + image) go through [@vismay/ai-gateway](../../packages/ai-gateway/README.md),

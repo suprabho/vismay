@@ -1,0 +1,60 @@
+name: Scrape AI Data Centers news
+
+# Daily pull of Google News' RSS search across four AI-infrastructure queries
+# (AI data centers, semiconductors, microprocessors, AI infra). Each new
+# article is classified by Gemma — relevance gate, topic tags, and tracked
+# tickers from dc_stocks — and upserted into dc_news. Idempotent on
+# source_url (off-topic items persist with relevant=false so they aren't
+# re-classified), so re-runs and manual dispatches are safe.
+#
+# Google News rather than per-publisher scraping for the same reason as
+# scrape-energy-profile-news.yml: one free, machine-friendly feed with broad
+# outlet coverage that works from any IP.
+#
+# Required repo secrets (in the `Production` environment so secrets.X resolves):
+#   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_news writes
+#   GEMINI_API_KEY             — Gemma classification (shared with render-audio)
+
+on:
+  schedule:
+    # 06:45 UTC daily — picks up overnight news before US/EU work hours; the
+    # :45 offset avoids the top-of-hour Actions queue spike and staggers off
+    # the 06:15 energy-profile scrape so the two never share a Gemini window.
+    - cron: '45 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: scrape-ai-data-centers-news
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Scrape AI Data Centers news
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm ai-data-centers:scrape-news
