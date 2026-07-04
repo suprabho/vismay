@@ -28,3 +28,28 @@ export function shortProductName(name: string, max = 34): string {
   if (clause.length <= max) return clause
   return `${clause.slice(0, max - 1).trimEnd()}…`
 }
+
+/** Fixed colors for the heavyweight HS2 chapters (trade-web edge tint);
+ *  anything unlisted cycles through CHAPTER_FALLBACKS by rank. */
+export const HS2_CHAPTER_COLORS: Record<string, string> = {
+  '85': '#5eead4', // electrical machinery, electronics
+  '84': '#60a5fa', // machinery, computers
+  '87': '#f4a261', // vehicles
+  '27': '#e76f51', // mineral fuels
+  '30': '#f9c74f', // pharmaceuticals
+  '71': '#e9d8a6', // gems, precious metals
+  '90': '#c084fc', // optical, medical instruments
+  '39': '#94d2bd', // plastics
+  '29': '#ee9b9b', // organic chemicals
+  '88': '#a5b4fc', // aircraft
+  '99': '#9ca3af', // commodities not specified
+}
+
+export const CHAPTER_FALLBACKS = [
+  '#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854',
+  '#ffd92f', '#e5c494', '#b3b3b3', '#80b1d3', '#fb8072',
+]
+
+export function chapterColor(hsCode: string, rank: number): string {
+  return HS2_CHAPTER_COLORS[hsCode] ?? CHAPTER_FALLBACKS[rank % CHAPTER_FALLBACKS.length]
+}

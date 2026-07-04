@@ -6,8 +6,9 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { Map, Source, Layer, type MapRef } from "react-map-gl/mapbox";
 import VizmayaLogo from "@/components/VizmayaLogo";
 import type { Epic, EpicStory } from "@vismay/content-source/epics";
-import type { TradeLandscape } from "@vismay/content-source/trade";
+import type { TradeFlow, TradeLandscape, TradeWeb } from "@vismay/content-source/trade";
 import RadialTradeNetwork from "@/components/global-trade/charts/RadialTradeNetwork";
+import TradeWebNetwork from "@/components/global-trade/charts/TradeWebNetwork";
 import { formatUsd } from "@/components/global-trade/charts/colors";
 import { COUNTRY_CENTROIDS } from "@/lib/energy-profile/countryCentroids";
 import { applyMapPalette } from "@vismay/viz-engine";
@@ -44,6 +45,11 @@ export default function GlobalTradeLanding({ epic, landscape, stories, theme, ma
   const [hoveredCode, setHoveredCode] = useState<string | null>(null);
   const [cursor, setCursor] = useState<"grab" | "pointer">("grab");
   const [networkOpen, setNetworkOpen] = useState(false);
+  const [flow, setFlow] = useState<TradeFlow>("export");
+  // Bilateral country↔country web, fetched lazily per flow lens. 'missing'
+  // (no bilateral rows yet — migration 065 / bilateral import pending) falls
+  // back to the unilateral country↔chapter radial.
+  const [web, setWeb] = useState<TradeWeb | "loading" | "missing">("loading");
 
   // Same base-map restyling loop as the energy-profile globe: poll for the
   // Mapbox instance, then re-apply the palette on every style.load.
@@ -79,6 +85,36 @@ export default function GlobalTradeLanding({ epic, landscape, stories, theme, ma
   useEffect(() => {
     if (window.matchMedia("(min-width: 1024px)").matches) setNetworkOpen(true);
   }, []);
+
+  // Fetch the bilateral web for the landscape year whenever the panel is
+  // open and the lens changes. 404 = table empty → unilateral fallback.
+  useEffect(() => {
+    if (!landscape || !networkOpen) return;
+    let cancelled = false;
+    setWeb("loading");
+    fetch(`/api/global-trade/web?year=${landscape.year}&flow=${flow}`)
+      .then(async (r) => {
+        if (r.status === 404) {
+          if (!cancelled) setWeb("missing");
+          return;
+        }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = (await r.json()) as TradeWeb;
+        if (!cancelled) setWeb(data);
+      })
+      .catch(() => {
+        if (!cancelled) setWeb("missing");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [landscape, networkOpen, flow]);
+
+  const totalsByCode = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const r of landscape?.reporters ?? []) out[r.code] = r.totalUsd;
+    return out;
+  }, [landscape]);
 
   const pins: ReporterPin[] = useMemo(() => {
     if (!landscape) return [];
@@ -343,23 +379,32 @@ export default function GlobalTradeLanding({ epic, landscape, stories, theme, ma
             className="px-4 pt-3 pb-2 flex items-start justify-between gap-2 shrink-0"
             style={{ borderBottom: `1px solid ${alpha(theme.bone, 8)}` }}
           >
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-mono uppercase tracking-[0.22em]" style={{ color: theme.accent }}>
                 Trade web · {landscape.year}
               </p>
               <p className="text-[11px] mt-0.5" style={{ color: theme.muted }}>
-                Each line links an exporter to one of its top HS chapters — hover to trace, click a country to open its profile.
+                {typeof web === "object"
+                  ? "Country-to-country flows — each line is one HS chapter between two countries, width is its volume. Hover to trace, click a country for its profile."
+                  : web === "missing"
+                    ? "Each line links an exporter to one of its top HS chapters — country-to-country flows appear once the bilateral import runs."
+                    : "Loading flows…"}
               </p>
-              <p className="text-[10px] font-mono mt-1 flex items-center gap-3" style={{ color: theme.muted }}>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block rounded-full" style={{ width: 7, height: 7, background: theme.accent }} />
-                  Exporters
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block rounded-full" style={{ width: 7, height: 7, background: theme.chapter }} />
-                  HS chapters
-                </span>
-              </p>
+              <div className="mt-1.5 inline-flex rounded-full overflow-hidden" style={{ border: `1px solid ${alpha(theme.bone, 15)}` }}>
+                {(["export", "import"] as TradeFlow[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFlow(f)}
+                    className="px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-wider transition-colors"
+                    style={{
+                      background: flow === f ? alpha(theme.accent, 25) : "transparent",
+                      color: flow === f ? theme.accentHi : theme.muted,
+                    }}
+                  >
+                    {f === "export" ? "Exports" : "Imports"}
+                  </button>
+                ))}
+              </div>
             </div>
             <button
               onClick={() => setNetworkOpen(false)}
@@ -371,7 +416,17 @@ export default function GlobalTradeLanding({ epic, landscape, stories, theme, ma
             </button>
           </div>
           <div className="flex-1 min-h-0">
-            <RadialTradeNetwork landscape={landscape} onSelectReporter={selectReporter} />
+            {typeof web === "object" ? (
+              <TradeWebNetwork web={web} totalsByCode={totalsByCode} onSelectCountry={selectReporter} />
+            ) : web === "missing" ? (
+              <RadialTradeNetwork landscape={landscape} onSelectReporter={selectReporter} />
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-[11px] font-mono" style={{ color: theme.muted }}>
+                  Loading trade web…
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

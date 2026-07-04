@@ -97,3 +97,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           COMTRADE_API_KEY: ${{ secrets.COMTRADE_API_KEY }}
         run: pnpm trade:import-comtrade ${{ inputs.full_backfill && '-- --full' || '' }}
+
+      # Bilateral HS2 flows among the tracked reporters (trade web viz).
+      # Cheap: ~2 calls/year. Needs migration 065_trade_bilateral.sql.
+      - name: Import UN Comtrade bilateral flows
+        if: ${{ !inputs.discovery && always() }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          COMTRADE_API_KEY: ${{ secrets.COMTRADE_API_KEY }}
+        run: pnpm trade:import-comtrade-bilateral ${{ inputs.full_backfill && '-- --full' || '' }}
