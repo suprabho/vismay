@@ -320,6 +320,14 @@ export default function EditorClient({
           report ↗
         </Link>
         <Link
+          href={signedLinks.newsletter}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-neutral-400 hover:text-white shrink-0"
+        >
+          newsletter ↗
+        </Link>
+        <Link
           href={signedLinks.autoplay}
           target="_blank"
           rel="noreferrer"
