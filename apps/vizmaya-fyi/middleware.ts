@@ -29,7 +29,9 @@ export const config = {
     '/story/:slug/canvas-frame/:id',
     '/story/:slug/report',
     '/story/:slug/slides',
+    '/story/:slug/newsletter',
     '/reports',
     '/reports/:slug',
+    '/newsletters/:slug',
   ],
 }
