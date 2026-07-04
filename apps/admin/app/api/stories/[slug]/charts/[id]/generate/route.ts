@@ -8,6 +8,7 @@ import { readComposeState } from '@vismay/content-source/composeState'
 import {
   generateChart,
   buildChartData,
+  CHART_TYPES,
   type ChartRequirement,
   type ChartType,
   type ResearchBrief,
@@ -71,6 +72,9 @@ export async function POST(
   } catch {
     // empty body is fine
   }
+  if (body.chartType != null && !(CHART_TYPES as readonly string[]).includes(String(body.chartType))) {
+    return NextResponse.json({ error: `unknown chartType "${body.chartType}"` }, { status: 400 })
+  }
 
   const state = await readComposeState(slug)
   const sb = (state?.brief ?? {}) as StoredBrief
@@ -78,7 +82,9 @@ export async function POST(
     ((state?.storyOutline as { charts?: ChartRequirement[] } | undefined)?.charts) ?? []
   const planned = outlineCharts.find((c) => c.id === id)
 
-  // Resolve the requirement: caller override → compose outline → error.
+  // Resolve the requirement: caller override → compose outline → error. A
+  // caller-picked chartType (the canvas template select) wins in both paths, so
+  // e.g. a planned Bar Chart can be re-generated as a relationship chart.
   const overrideReq =
     typeof body.requirement === 'string' ? body.requirement.trim().slice(0, MAX_REQUIREMENT_LENGTH) : ''
   const requirement: ChartRequirement | null = overrideReq
@@ -90,7 +96,9 @@ export async function POST(
         xLabel: planned?.xLabel,
         yLabel: planned?.yLabel,
       }
-    : (planned ?? null)
+    : planned
+      ? { ...planned, chartType: body.chartType ?? planned.chartType }
+      : null
   if (!requirement) {
     return NextResponse.json(
       { error: 'no chart requirement — pass "requirement" or generate from a compose draft' },

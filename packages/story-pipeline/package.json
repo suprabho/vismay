@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./ingest": "./src/ingest/index.ts",
     "./models": "./src/models.ts",
-    "./cover": "./src/cover.ts"
+    "./cover": "./src/cover.ts",
+    "./chartVocab": "./src/chartVocab.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

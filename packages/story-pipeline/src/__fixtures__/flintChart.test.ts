@@ -174,4 +174,94 @@ for (const { type, expect, spec } of beyond) {
   })
 }
 
+// Relationship templates — edge rows (source → target → weight), hand-assembled
+// without flint. This is the "trade relationships in the canvas" path.
+const tradeEdges: Pick<ChartSpec, 'columns' | 'rows' | 'encodings'> = {
+  columns: [
+    { name: 'exporter', semanticType: 'Country' },
+    { name: 'product', semanticType: 'Category' },
+    { name: 'valueUsd', semanticType: 'Amount' },
+  ],
+  rows: [
+    ['China', 'Electronics', 900],
+    ['China', 'Vehicles', 200],
+    ['Germany', 'Vehicles', 400],
+    ['Germany', 'Machinery', 350],
+    ['US', 'Electronics', 300],
+  ],
+  encodings: { source: 'exporter', target: 'product', value: 'valueUsd' },
+}
+
+check('Sankey Diagram assembles nodes + links from edge rows', () => {
+  const o = compile({ id: 'trade-sankey', chartType: 'Sankey Diagram', ...tradeEdges })
+  const s = asArray(o.series)[0]
+  assert.equal(s.type, 'sankey', 'sankey series')
+  assert.equal(asArray(s.data).length, 6, 'six unique nodes (3 exporters + 3 products)')
+  assert.equal(asArray(s.links).length, 5, 'one link per edge row')
+  assert.equal(asArray(s.links)[0].value, 900, 'weight rides the value channel')
+})
+
+check('sankey drops cycle-closing edges instead of throwing at render', () => {
+  const o = compile({
+    id: 'cycle',
+    chartType: 'Sankey Diagram',
+    columns: [
+      { name: 'from', semanticType: 'Category' },
+      { name: 'to', semanticType: 'Category' },
+      { name: 'v', semanticType: 'Quantity' },
+    ],
+    rows: [
+      ['A', 'B', 1],
+      ['B', 'C', 1],
+      ['C', 'A', 1], // closes A→B→C→A
+    ],
+    encodings: { source: 'from', target: 'to', value: 'v' },
+  })
+  assert.equal(asArray(asArray(o.series)[0].links).length, 2, 'cycle-closing edge dropped')
+})
+
+check('Chord Diagram is a circular graph with sized, categorised nodes', () => {
+  const o = compile({ id: 'trade-chord', chartType: 'Chord Diagram', ...tradeEdges })
+  const s = asArray(o.series)[0]
+  assert.equal(s.type, 'graph', 'graph series')
+  assert.equal(s.layout, 'circular', 'circular layout')
+  assert.equal(asArray(s.categories).length, 2, 'bipartite edges → two categories')
+  assert.equal(asArray(s.categories)[0].name, 'exporter', 'category named from source column')
+  const china = asArray(s.data).find((n: any) => n.name === 'China')
+  const us = asArray(s.data).find((n: any) => n.name === 'US')
+  assert.ok(china.symbolSize > us.symbolSize, 'node size scales with edge weight')
+})
+
+check('Network Graph uses force layout', () => {
+  const o = compile({ id: 'trade-net', chartType: 'Network Graph', ...tradeEdges })
+  const s = asArray(o.series)[0]
+  assert.equal(s.type, 'graph', 'graph series')
+  assert.equal(s.layout, 'force', 'force layout')
+})
+
+check('relationship charts stay on renderer $-tokens', () => {
+  const o = compile({ id: 'trade-chord2', chartType: 'Chord Diagram', ...tradeEdges })
+  assert.ok(Array.isArray(o.color) && o.color[0] === '$accent', 'palette tokenised')
+  const s = asArray(o.series)[0]
+  assert.equal(asArray(s.categories)[0].itemStyle?.color, '$accent', 'category colour tokenised')
+  assert.equal(asArray(s.links)[0].lineStyle?.color, '$accent', 'edge colour tokenised')
+})
+
+check('relationship edges resolve positionally when encodings are sloppy', () => {
+  const o = compile({
+    id: 'pos',
+    chartType: 'Network Graph',
+    columns: [
+      { name: 'a', semanticType: 'Category' },
+      { name: 'b', semanticType: 'Category' },
+      { name: 'w', semanticType: 'Quantity' },
+    ],
+    rows: [['X', 'Y', 3]],
+    encodings: {},
+  })
+  const s = asArray(o.series)[0]
+  assert.equal(asArray(s.links).length, 1, 'edge built from column positions')
+  assert.equal(asArray(s.links)[0].value, 3, 'weight from third column')
+})
+
 console.log(`\n${process.exitCode ? '✗ failures above' : `✓ all ${passed} flint-chart checks passed`}`)

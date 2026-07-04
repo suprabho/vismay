@@ -11,6 +11,12 @@
 
 export * from './types'
 export {
+  CHART_TYPES,
+  RELATIONSHIP_CHART_TYPES,
+  isRelationshipChartType,
+  type RelationshipChartType,
+} from './chartVocab'
+export {
   packForVertical,
   configFormatForVertical,
   VIZMAYA_PACK,

@@ -243,7 +243,10 @@ export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PA
     `chartType (one of: ${CHART_TYPES.join(', ')}), a title, and a precise "requirement" ` +
     `describing exactly what to plot (which figures/series/categories and over what range, ` +
     `all from the sources). Pick the chartType that best fits the comparison — not always a ` +
-    `bar or line. Do NOT fabricate the numbers here — the data is generated in a focused ` +
+    `bar or line. Relationship types (Sankey Diagram, Chord Diagram, Network Graph) draw ` +
+    `flows/links BETWEEN entities — pick one when the point is who-connects-to-whom (trade ` +
+    `relationships, supply flows, networks) rather than a trend or ranking. Do NOT fabricate ` +
+    `the numbers here — the data is generated in a focused ` +
     `later pass. Sections reference charts by id.\n` +
     `- imagePrompts: vivid prompts for sections that want imagery. For a DECK story ALWAYS ` +
     `include one 16:9 prompt whose "section" EXACTLY matches the cover's heading — it becomes ` +
@@ -428,7 +431,9 @@ export function chartSystem(pack: DomainPack = VIZMAYA_PACK): string {
   `- encodings: which column fills each channel — typically x (category/time axis) and y ` +
   `(one or more measure columns; multiple y columns make a multi-series). Use color to ` +
   `split series by a category column; angle/value for pie/rose/funnel/pyramid slices; ` +
-  `size for scatter bubbles; y2 for a Range Area band's upper bound.\n\n` +
+  `size for scatter bubbles; y2 for a Range Area band's upper bound. For relationship ` +
+  `charts (Sankey Diagram, Chord Diagram, Network Graph) every row is ONE edge: map ` +
+  `source and target to the endpoint columns and value to the flow-weight column.\n\n` +
   `Rules:\n` +
   `- Use ONLY figures present in or directly derivable from the sources — never invent or ` +
   `estimate numbers. If the requirement asks for data the sources don't support, plot the ` +

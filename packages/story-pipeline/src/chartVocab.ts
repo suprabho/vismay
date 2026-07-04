@@ -12,9 +12,26 @@
  */
 
 /**
- * The flint chart templates the outline may plan and the data pass may emit.
- * Curated to the ones that assemble from flat rows with the {@link CHART_CHANNELS}
- * encodings (no source/target graphs, hierarchies, or OHLC inputs).
+ * Relationship templates — charts whose rows are EDGES (one source→target link
+ * per row, weight on the `value` channel) rather than flat categories/measures.
+ * flint's assembler can't build these from the tabular channels, so
+ * `buildEChartsOption` hand-assembles their ECharts options instead (sankey /
+ * circular graph / force graph). This is what "trade relationships",
+ * flows-between-entities, and network stories plan.
+ */
+export const RELATIONSHIP_CHART_TYPES = [
+  'Sankey Diagram',
+  'Chord Diagram',
+  'Network Graph',
+] as const
+
+export type RelationshipChartType = (typeof RELATIONSHIP_CHART_TYPES)[number]
+
+/**
+ * The chart templates the outline may plan and the data pass may emit. The
+ * tabular ones assemble from flat rows via flint with the {@link CHART_CHANNELS}
+ * encodings (no hierarchies or OHLC inputs); the {@link RELATIONSHIP_CHART_TYPES}
+ * take edge rows and are assembled by hand.
  */
 export const CHART_TYPES = [
   'Bar Chart',
@@ -35,9 +52,15 @@ export const CHART_TYPES = [
   'Bump Chart',
   'Waterfall Chart',
   'Histogram',
+  ...RELATIONSHIP_CHART_TYPES,
 ] as const
 
 export type ChartType = (typeof CHART_TYPES)[number]
+
+/** Whether a chart type takes edge rows (source→target) instead of flat tabular rows. */
+export function isRelationshipChartType(type: string): type is RelationshipChartType {
+  return (RELATIONSHIP_CHART_TYPES as readonly string[]).includes(type)
+}
 
 /**
  * The encoding channels the data pass may map columns to. A curated slice of
@@ -46,8 +69,11 @@ export type ChartType = (typeof CHART_TYPES)[number]
  * - y2 — the upper bound of a Range Area band.
  * - color — the series/category discriminator (legend).
  * - size — bubble magnitude on a scatter.
- * - angle / value — the slice/segment measure for pie/rose/funnel/pyramid.
+ * - angle / value — the slice/segment measure for pie/rose/funnel/pyramid;
+ *   `value` doubles as the edge weight on relationship charts.
  * - group / detail — secondary grouping for grouped/bump charts.
+ * - source / target — the edge endpoints for {@link RELATIONSHIP_CHART_TYPES}
+ *   (each row is one source→target link).
  */
 export const CHART_CHANNELS = [
   'x',
@@ -59,6 +85,8 @@ export const CHART_CHANNELS = [
   'value',
   'group',
   'detail',
+  'source',
+  'target',
 ] as const
 
 export type ChartChannel = (typeof CHART_CHANNELS)[number]
