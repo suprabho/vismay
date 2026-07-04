@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import type { DcNewsAdminItem, DcPipelineStats } from '@vismay/content-source/epics'
 import { appEpicUrl } from '@/lib/publicSite'
+import { Badge, isStale, timeAgo } from '@/components/vizmaya/dc/shared'
 
 // The four topics the Gemma classifier can assign (scrape-news.ts). The
 // selects union these with whatever actually occurs in the data, so a future
@@ -11,24 +12,6 @@ import { appEpicUrl } from '@/lib/publicSite'
 const KNOWN_TOPICS = ['ai', 'data-centers', 'semiconductors', 'microprocessors']
 
 type Relevance = 'relevant' | 'rejected' | 'all'
-
-function isStale(iso: string | null | undefined, hours: number): boolean {
-  if (!iso) return false
-  return Date.now() - new Date(iso).getTime() > hours * 3_600_000
-}
-
-function timeAgo(iso: string | null): string {
-  if (!iso) return '—'
-  const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  if (sec < 60) return `${sec}s ago`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  if (day < 30) return `${day}d ago`
-  return `${Math.floor(day / 30)}mo ago`
-}
 
 export default function DcPipelineClient() {
   const [stats, setStats] = useState<DcPipelineStats | null>(null)
@@ -220,9 +203,12 @@ export default function DcPipelineClient() {
             <VolumeBars days={stats.news.byDay} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xs uppercase tracking-[0.18em] text-neutral-400 mb-3">
-              Latest recap
-            </h2>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-xs uppercase tracking-[0.18em] text-neutral-400">Latest recap</h2>
+              <Link href="/vizmaya/dc-recaps" className="text-xs text-neutral-400 hover:text-white">
+                all recaps →
+              </Link>
+            </div>
             {latestRecap ? (
               <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
                 <div className="font-medium">
@@ -517,25 +503,5 @@ function ChipRow({
         )
       })}
     </div>
-  )
-}
-
-function Badge({
-  children,
-  accent = false,
-  onClick,
-}: {
-  children: React.ReactNode
-  accent?: boolean
-  onClick?: () => void
-}) {
-  const cls =
-    'text-[10px] font-mono px-1.5 py-0.5 rounded border ' +
-    (accent ? 'text-sky-300 border-sky-300/20 bg-sky-300/5' : 'text-neutral-400 border-white/10 bg-white/[0.03]')
-  if (!onClick) return <span className={cls}>{children}</span>
-  return (
-    <button type="button" onClick={onClick} className={`${cls} hover:border-white/30 cursor-pointer`}>
-      {children}
-    </button>
   )
 }

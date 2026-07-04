@@ -51,3 +51,20 @@ classifier-**rejected** rows for auditing the Gemma gate.
   [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts).
   Before migrations 065/066 the routes return a readable 500 and the page
   shows the error banner instead of crashing.
+
+## DC Recaps tab (/vizmaya/dc-recaps)
+
+Companion to the DC Pipeline tab: the full snapshot timeline of the daily
+recap worker's markdown briefs (`dc_news_recaps`, one row per run — the
+08:15 UTC cron plus manual dispatches). Each row shows the LLM headline (or
+a `deterministic` badge when Gemini was unavailable), window/story-count/model
+meta, topic + ticker badges, and the raw markdown behind a `<details>`
+toggle (newest one open by default). A staleness warning appears when the
+newest recap is older than 36h.
+
+- **Page:** [app/vizmaya/(tabbed)/dc-recaps/](<app/vizmaya/(tabbed)/dc-recaps/>).
+- **API:** `/api/vizmaya/dc-recaps` (`?limit`, default 20, max 60),
+  `isAuthed()`-gated, backed by the existing `listDcNewsRecaps()` reader.
+- Shared bits (timeAgo/isStale/Badge) live in
+  [components/vizmaya/dc/shared.tsx](components/vizmaya/dc/shared.tsx),
+  used by both DC tabs.
