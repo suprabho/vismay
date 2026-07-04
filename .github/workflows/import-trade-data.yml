@@ -46,6 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: Production
+    # The secrets context is not usable in step-level `if`, so the OEC gate
+    # below reads the slug through job env instead.
+    env:
+      OEC_TRADE_DATASET_SLUG: ${{ secrets.OEC_TRADE_DATASET_SLUG }}
     defaults:
       run:
         working-directory: apps/vizmaya-fyi
@@ -76,7 +80,7 @@ jobs:
       # with no slug pinned the importer can only hard-fail, so skip instead
       # of painting every scheduled run red.
       - name: Import OEC BotMarket exports
-        if: ${{ !inputs.discovery && secrets.OEC_TRADE_DATASET_SLUG != '' }}
+        if: ${{ !inputs.discovery && env.OEC_TRADE_DATASET_SLUG != '' }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
