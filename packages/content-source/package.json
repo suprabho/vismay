@@ -34,6 +34,7 @@
     "./storyAudioGenerate": "./src/storyAudioGenerate.ts",
     "./storyConfig": "./src/storyConfig.ts",
     "./storySection": "./src/storySection.ts",
+    "./storyReorder": "./src/storyReorder.ts",
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
     "./footshortsData": "./src/footshortsData.ts",
     "./footshortsShareCards": "./src/footshortsShareCards.ts",
