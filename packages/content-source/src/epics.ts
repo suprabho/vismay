@@ -911,6 +911,204 @@ export async function getLatestDcNewsRecap(): Promise<DcNewsRecap | null> {
   return recaps[0] ?? null
 }
 
+export interface DcNewsAdminItem extends DcNewsItem {
+  /** False when the Gemma classifier rejected the article. */
+  relevant: boolean
+  fetchedAt: string
+}
+
+/**
+ * Admin variant of getDcNews: can surface classifier-rejected rows and
+ * free-text-search titles, so the pipeline dashboard can audit what the
+ * relevance gate is doing. Not exposed on the public site.
+ */
+export async function listDcNewsForAdmin(opts?: {
+  limit?: number
+  topic?: string
+  ticker?: string
+  /** Case-insensitive substring match on the title. */
+  q?: string
+  relevance?: 'all' | 'relevant' | 'rejected'
+}): Promise<DcNewsAdminItem[]> {
+  const sb = createServiceClient()
+  let query = sb
+    .from('dc_news')
+    .select('id, source_url, title, summary, source, published_at, relevant, topics, tickers, fetched_at')
+    .order('published_at', { ascending: false })
+    .limit(opts?.limit ?? 50)
+  const relevance = opts?.relevance ?? 'relevant'
+  if (relevance === 'relevant') query = query.eq('relevant', true)
+  if (relevance === 'rejected') query = query.eq('relevant', false)
+  if (opts?.topic) query = query.contains('topics', [opts.topic])
+  if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
+  if (opts?.q) {
+    // Escape LIKE wildcards so a literal "%" in the search box doesn't match everything.
+    const escaped = opts.q.replace(/[\\%_]/g, '\\$&')
+    query = query.ilike('title', `%${escaped}%`)
+  }
+  const { data, error } = await query
+  if (error) throw new Error(`listDcNewsForAdmin: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    id: r.id as number,
+    url: r.source_url as string,
+    title: r.title as string,
+    summary: (r.summary as string | null) ?? null,
+    source: (r.source as string | null) ?? null,
+    publishedAt: r.published_at as string,
+    relevant: r.relevant as boolean,
+    topics: (r.topics as string[]) ?? [],
+    tickers: (r.tickers as string[]) ?? [],
+    fetchedAt: r.fetched_at as string,
+  }))
+}
+
+export interface DcPipelineDay {
+  /** UTC calendar day, YYYY-MM-DD. */
+  day: string
+  relevant: number
+  rejected: number
+}
+
+export interface DcPipelineStats {
+  news: {
+    total: number
+    relevant: number
+    rejected: number
+    /** Relevant stories published in the trailing 24h / 7d. */
+    relevant24h: number
+    relevant7d: number
+    latestPublishedAt: string | null
+    latestFetchedAt: string | null
+    /** Last 14 UTC days by published_at, oldest first, zero-filled. */
+    byDay: DcPipelineDay[]
+    /** Relevant stories in the last 30d per topic, biggest first. */
+    byTopic: { topic: string; count: number }[]
+    /** Relevant stories in the last 30d per linked ticker, biggest first. */
+    byTicker: { ticker: string; count: number }[]
+  }
+  recaps: {
+    total: number
+    latest: DcNewsRecap | null
+  }
+  stocks: {
+    activeTickers: number
+    totalTickers: number
+    /** Newest close bar across all tickers, null before the first backfill. */
+    latestTradeDate: string | null
+    /** Active tickers with at least one bar in the trailing 7 days. */
+    tickersFresh7d: number
+  }
+}
+
+/**
+ * Health snapshot of the AI Data Centers news + stock pipeline for the admin
+ * dashboard: scrape volume and relevance-gate behaviour over the trailing
+ * windows, recap-worker freshness, and stock-feed freshness. Counts come from
+ * head-only count queries; the per-day/topic/ticker breakdowns aggregate the
+ * last 30 days of dc_news rows in process (tens of rows per day, so the
+ * 5 000-row ceiling is generous).
+ */
+export async function getDcPipelineStats(): Promise<DcPipelineStats> {
+  const sb = createServiceClient()
+  const now = Date.now()
+  const DAY_MS = 86_400_000
+  const cutoff30d = new Date(now - 30 * DAY_MS).toISOString()
+  const cutoff7dDate = new Date(now - 7 * DAY_MS).toISOString().slice(0, 10)
+
+  const [totalR, relevantR, recentR, latestFetchR, latestPubR, recapCountR, recapLatestR, stocksR, latestBarR, freshBarsR] =
+    await Promise.all([
+      sb.from('dc_news').select('id', { count: 'exact', head: true }),
+      sb.from('dc_news').select('id', { count: 'exact', head: true }).eq('relevant', true),
+      sb
+        .from('dc_news')
+        .select('published_at, relevant, topics, tickers')
+        .gte('published_at', cutoff30d)
+        .limit(5_000),
+      sb.from('dc_news').select('fetched_at').order('fetched_at', { ascending: false }).limit(1),
+      sb.from('dc_news').select('published_at').order('published_at', { ascending: false }).limit(1),
+      sb.from('dc_news_recaps').select('id', { count: 'exact', head: true }),
+      sb.from('dc_news_recaps').select(DC_RECAP_COLUMNS).order('generated_at', { ascending: false }).limit(1),
+      sb.from('dc_stocks').select('ticker, is_active'),
+      sb.from('dc_stock_prices').select('trade_date').order('trade_date', { ascending: false }).limit(1),
+      sb.from('dc_stock_prices').select('ticker').gte('trade_date', cutoff7dDate).limit(10_000),
+    ])
+  for (const [label, r] of [
+    ['total', totalR], ['relevant', relevantR], ['recent', recentR],
+    ['latestFetch', latestFetchR], ['latestPub', latestPubR],
+    ['recapCount', recapCountR], ['recapLatest', recapLatestR],
+    ['stocks', stocksR], ['latestBar', latestBarR], ['freshBars', freshBarsR],
+  ] as const) {
+    if (r.error) throw new Error(`getDcPipelineStats ${label}: ${r.error.message}`)
+  }
+
+  const total = totalR.count ?? 0
+  const relevant = relevantR.count ?? 0
+
+  // Zero-filled 14-day scaffold so the volume chart shows quiet days too.
+  const byDayMap = new Map<string, DcPipelineDay>()
+  for (let i = 13; i >= 0; i--) {
+    const day = new Date(now - i * DAY_MS).toISOString().slice(0, 10)
+    byDayMap.set(day, { day, relevant: 0, rejected: 0 })
+  }
+  const topicCounts = new Map<string, number>()
+  const tickerCounts = new Map<string, number>()
+  let relevant24h = 0
+  let relevant7d = 0
+  const recent = (recentR.data ?? []) as {
+    published_at: string
+    relevant: boolean
+    topics: string[] | null
+    tickers: string[] | null
+  }[]
+  for (const row of recent) {
+    const ts = Date.parse(row.published_at)
+    const bucket = byDayMap.get(row.published_at.slice(0, 10))
+    if (bucket) {
+      if (row.relevant) bucket.relevant += 1
+      else bucket.rejected += 1
+    }
+    if (!row.relevant) continue
+    if (now - ts <= DAY_MS) relevant24h += 1
+    if (now - ts <= 7 * DAY_MS) relevant7d += 1
+    for (const t of row.topics ?? []) topicCounts.set(t, (topicCounts.get(t) ?? 0) + 1)
+    for (const t of row.tickers ?? []) tickerCounts.set(t, (tickerCounts.get(t) ?? 0) + 1)
+  }
+  const descending = (a: { count: number }, b: { count: number }) => b.count - a.count
+
+  const stocks = (stocksR.data ?? []) as { ticker: string; is_active: boolean }[]
+  const activeTickers = new Set(stocks.filter((s) => s.is_active).map((s) => s.ticker))
+  const freshTickers = new Set(
+    ((freshBarsR.data ?? []) as { ticker: string }[])
+      .map((b) => b.ticker)
+      .filter((t) => activeTickers.has(t)),
+  )
+
+  return {
+    news: {
+      total,
+      relevant,
+      rejected: total - relevant,
+      relevant24h,
+      relevant7d,
+      latestPublishedAt: (latestPubR.data?.[0]?.published_at as string | undefined) ?? null,
+      latestFetchedAt: (latestFetchR.data?.[0]?.fetched_at as string | undefined) ?? null,
+      byDay: [...byDayMap.values()],
+      byTopic: [...topicCounts].map(([topic, count]) => ({ topic, count })).sort(descending),
+      byTicker: [...tickerCounts].map(([ticker, count]) => ({ ticker, count })).sort(descending),
+    },
+    recaps: {
+      total: recapCountR.count ?? 0,
+      latest: recapLatestR.data?.[0] ? mapDcNewsRecapRow(recapLatestR.data[0]) : null,
+    },
+    stocks: {
+      activeTickers: activeTickers.size,
+      totalTickers: stocks.length,
+      latestTradeDate: (latestBarR.data?.[0]?.trade_date as string | undefined) ?? null,
+      tickersFresh7d: freshTickers.size,
+    },
+  }
+}
+
 export interface DcStock {
   /** Yahoo Finance symbol of the home listing (NVDA, 2330.TW, ASML.AS, …). */
   ticker: string
