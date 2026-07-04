@@ -45,6 +45,16 @@ appears. Every chart's `_meta.source`, the story source list, and the
 explorer UI must credit "Epoch AI — Frontier Data Centers (CC BY 4.0)" with a
 link to https://epoch.ai/data/ai-data-centers.
 
+## Live explorer extras (not story data)
+
+The `/ai-data-centers` explorer additionally carries a news feed (`dc_news`,
+Google News RSS) and daily price bars for related stocks (`dc_stocks` /
+`dc_stock_prices`, Yahoo Finance) — see migration 065 and
+`apps/vizmaya-fyi/CLAUDE.md`. Those are live dashboard surfaces with their own
+sources; they never feed figures into this story, whose data values remain
+Epoch-only per the rules above. Price data is shown as market movement, never
+as investment advice or price targets.
+
 ## Reporting cut-off
 
 Anchor every figure to the Epoch "last updated" date recorded in

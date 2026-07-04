@@ -803,3 +803,121 @@ export async function getDataCenterProfile(slug: string): Promise<DcFacilityProf
 
   return { ...mapDcFacilityRow(facilityR.data), timeline }
 }
+
+// ---------------------------------------------------------------------------
+// AI Data Centers news + markets — backs /api/ai-data-centers/news and
+// /api/ai-data-centers/stocks. Tables dc_news / dc_stocks / dc_stock_prices
+// (migration 065), filled daily by scripts/ai-data-centers/scrape-news.ts and
+// scripts/ai-data-centers/import-stock-prices.ts.
+
+export interface DcNewsItem {
+  id: number
+  url: string
+  title: string
+  summary: string | null
+  /** Outlet name (Reuters, Bloomberg, …). */
+  source: string | null
+  publishedAt: string
+  /** Subset of 'ai' | 'data-centers' | 'semiconductors' | 'microprocessors'. */
+  topics: string[]
+  /** dc_stocks tickers named in the story. */
+  tickers: string[]
+}
+
+export async function getDcNews(opts?: {
+  limit?: number
+  topic?: string
+  ticker?: string
+}): Promise<DcNewsItem[]> {
+  const sb = createServiceClient()
+  let query = sb
+    .from('dc_news')
+    .select('id, source_url, title, summary, source, published_at, topics, tickers')
+    .eq('relevant', true)
+    .order('published_at', { ascending: false })
+    .limit(opts?.limit ?? 30)
+  if (opts?.topic) query = query.contains('topics', [opts.topic])
+  if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
+  const { data, error } = await query
+  if (error) throw new Error(`getDcNews: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    id: r.id as number,
+    url: r.source_url as string,
+    title: r.title as string,
+    summary: (r.summary as string | null) ?? null,
+    source: (r.source as string | null) ?? null,
+    publishedAt: r.published_at as string,
+    topics: (r.topics as string[]) ?? [],
+    tickers: (r.tickers as string[]) ?? [],
+  }))
+}
+
+export interface DcStock {
+  /** Yahoo Finance symbol of the home listing (NVDA, 2330.TW, ASML.AS, …). */
+  ticker: string
+  name: string
+  exchange: string
+  /** Market code: US | TW | KR | JP | NL | HK. */
+  market: string
+  currency: string
+  category: 'semiconductors' | 'semi-equipment' | 'hyperscalers' | 'data-centers'
+}
+
+export interface DcStockSeries extends DcStock {
+  /** [trade_date, close] pairs sorted ascending — ECharts time-axis ready. */
+  points: [string, number][]
+  latestClose: number | null
+  latestDate: string | null
+  /** % change first→last close over the window; null with <2 points. */
+  changePct: number | null
+}
+
+/**
+ * Every active tracked stock with its close series over the trailing window.
+ * Tickers with no bars yet (pre-backfill) still appear, with empty points —
+ * the UI can grey them out rather than lose the registry row.
+ */
+export async function getDcStockMarket(days = 90): Promise<DcStockSeries[]> {
+  const sb = createServiceClient()
+  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)
+  const [stocksR, pricesR] = await Promise.all([
+    sb
+      .from('dc_stocks')
+      .select('ticker, name, exchange, market, currency, category')
+      .eq('is_active', true)
+      .order('category')
+      .order('ticker'),
+    sb
+      .from('dc_stock_prices')
+      .select('ticker, trade_date, close')
+      .gte('trade_date', cutoff)
+      .order('trade_date', { ascending: true })
+      // PostgREST defaults to 1000 rows; ~30 tickers × 260 trading days of a
+      // 1y window needs an explicit ceiling.
+      .limit(50_000),
+  ])
+  if (stocksR.error) throw new Error(`getDcStockMarket stocks: ${stocksR.error.message}`)
+  if (pricesR.error) throw new Error(`getDcStockMarket prices: ${pricesR.error.message}`)
+
+  const pointsByTicker = new Map<string, [string, number][]>()
+  for (const r of (pricesR.data ?? []) as { ticker: string; trade_date: string; close: number }[]) {
+    if (!pointsByTicker.has(r.ticker)) pointsByTicker.set(r.ticker, [])
+    pointsByTicker.get(r.ticker)!.push([r.trade_date, r.close])
+  }
+
+  return ((stocksR.data ?? []) as DcStock[]).map((stock) => {
+    const points = pointsByTicker.get(stock.ticker) ?? []
+    const first = points[0] ?? null
+    const last = points.length > 0 ? points[points.length - 1] : null
+    return {
+      ...stock,
+      points,
+      latestClose: last?.[1] ?? null,
+      latestDate: last?.[0] ?? null,
+      changePct:
+        first && last && points.length > 1 && first[1] !== 0
+          ? ((last[1] - first[1]) / first[1]) * 100
+          : null,
+    }
+  })
+}
