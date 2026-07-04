@@ -21,6 +21,7 @@
     "seed:af-ids:ci": "tsx src/seed-af-ids.ts",
     "fixtures": "tsx --env-file=.env src/fixtures.ts",
     "fixtures:ci": "tsx src/fixtures.ts",
+    "fixtures:upcoming": "tsx --env-file=.env src/upcomingFixtures.ts",
     "recap": "tsx --env-file=.env src/recap.ts",
     "recap:ci": "tsx src/recap.ts",
     "backfill:images": "tsx --env-file=.env src/backfillImages.ts",
