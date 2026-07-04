@@ -45,10 +45,15 @@ components drop in. API: `/api/global-trade/world`,
 
 ## Gotchas
 
-- `import-oec.ts`'s dataset slug + column mapping are **provisional until
-  discovery runs** (see INGEST_NOTES.md). It hard-fails with pointers.
-- oec.world fronts Cloudflare — dev networks may 403 where GitHub Actions
-  works; use the workflow's `discovery` dispatch input.
+- **OEC is parked (discovery ran 2026-07-04)** — BotMarket only carries BACI
+  at bilateral-HS6 grain (~500 requests per reporter-year at the 1,000-row
+  cap), and its `/query` returns positional `columns`+`rows` arrays that
+  `import-oec.ts` can't parse. Comtrade is the primary automated source;
+  leave `OEC_TRADE_DATASET_SLUG` unset (the cron's OEC step skips on it)
+  until import-oec.ts is redesigned. Full findings: INGEST_NOTES.md Phase 0.
+- oec.world fronts Cloudflare — some networks 403 where GitHub Actions and
+  typical dev machines work; the workflow's `discovery` dispatch input is the
+  fallback.
 - Comtrade reporter codes are M49 with quirks (France 251, India 699,
   Switzerland 757, USA 842) — see `scripts/trade/reporters.ts`.
 - World totals: derive by summing HS2 rows per year (the fact table has no

@@ -7,9 +7,14 @@ the BotMarket discovery output that pins the import-oec.ts config.
 
 | Tier | Source | Access | Status |
 |---|---|---|---|
-| 1 | **OEC BotMarket** (botmarket.oec.world) | Free keyed JSON API — Bearer `bot_market_ak_…`, every query free, 1,000 rows/request | key claim + discovery pending (see below) |
-| 1 | **UN Comtrade Plus** (comtradeapi.un.org) | Free official API — 500 calls/day, 100k records/call with key | key registration pending |
+| 1 | **UN Comtrade Plus** (comtradeapi.un.org) | Free official API — 500 calls/day, 100k records/call with key | key claimed (env + `Production`); dry-run verified 2026-07-04 (CN 2023 → 2,612 rows) |
+| 2 | **OEC BotMarket** (botmarket.oec.world) | Free keyed JSON API — Bearer `bot_market_ak_…`, every query free, 1,000 rows/request | key claimed; discovery run 2026-07-04 — **grain mismatch, importer needs redesign** (see Phase 0 findings) |
 | 2 | **ITC TradeMap** (beta.trademap.org) | Manual Excel export only | as-needed manual drops |
+
+> **Tier change (2026-07-04):** Comtrade promoted to the primary automated
+> source. BotMarket discovery found no pre-aggregated country×product dataset
+> — only bilateral HS6 BACI, which is ~500 paged requests per reporter-year
+> versus ~2 Comtrade calls for the same slice. Details under Phase 0 findings.
 
 ### Why three sources for one fact table
 
@@ -47,7 +52,7 @@ Reference view (world, all products, yearly exports, USD):
 
 | Source | Native unit | Conversion |
 |---|---|---|
-| OEC BotMarket | USD | none (confirm at discovery) |
+| OEC BotMarket (`baci-hs92.value`) | USD — **confirmed at discovery** (chn→usa 2023 hs 852520 = $53.9B, matches known ~$50B cellphone flow; note BACI's upstream CSV is USD thousands, BotMarket already rescales) | none |
 | UN Comtrade (`primaryValue`) | USD | none |
 | TradeMap | USD **thousands** | ×1000 in import-trademap.ts |
 
@@ -60,44 +65,123 @@ Reference view (world, all products, yearly exports, USD):
 - **TradeMap:** cite "ITC Trade Map, International Trade Centre" on any
   figure using `source='trademap'` rows.
 
-## Phase 0 — BotMarket discovery (TO RUN)
+## Phase 0 — BotMarket discovery (RUN 2026-07-04, from dev machine)
 
-Blocked from the authoring sandbox: botmarket.oec.world / oec.world returned
-Cloudflare 403 (both via fetch and the egress proxy). Run from a normal dev
-machine, or via GitHub Actions → "Import trade data" → Run workflow with
-`discovery: true`.
+Cloudflare did **not** block the dev machine (the earlier 403s were specific
+to the authoring sandbox). Checklist results:
 
-Checklist:
+1. ✅ `OEC_BOTMARKET_API_KEY` — in `.env.local` and the `Production` environment.
+2. ✅ `COMTRADE_API_KEY` — in both places; verified working via
+   `pnpm trade:import-comtrade -- --dry-run --reporter=CN --since=2023`
+   (2,612 rows, 1,312 HS2+HS4 products, plausible USD values).
+3. ✅ `pnpm trade:discover-oec` — output below.
+4. ⚠️ **Do not set `OEC_TRADE_DATASET_SLUG` yet.** The right slug would be
+   `baci-hs92`, but import-oec.ts cannot consume it as written (grain +
+   response-shape mismatch, below). Setting the slug now produces a run that
+   paginates forever and parses 0 rows. Leave it unset so the importer keeps
+   hard-failing with its pointer here.
+5. ✅ Pagination: `offset` **works** (verified: offset=2 returns rows 3–5 of
+   the offset=0 ordering; rows come back ordered by hs_code). `total`,
+   `count`, `offset` are included in every response. `OEC_TRADE_EXTRA_FILTERS`
+   sub-chunking not needed for correctness — only for politeness.
+6. ⛔ Not run — blocked on the import-oec.ts redesign decision (below).
 
-1. Claim key: `curl -X POST https://botmarket.oec.world/api/promo/claim -H 'content-type: application/json' -d '{"buyer_email":"hello@promad.design"}'`
-   → store as `OEC_BOTMARKET_API_KEY` in `apps/vizmaya-fyi/.env.local` and the
-   GitHub `Production` environment.
-2. Register the Comtrade key at <https://comtradedeveloper.un.org> (product
-   "comtrade - v1") → `COMTRADE_API_KEY` in the same two places.
-3. `pnpm trade:discover-oec` — paste the catalog + chosen dataset schema
-   below.
-4. Pin `OEC_TRADE_DATASET_SLUG` (env + `Production` secret) and correct the
-   `COLS` mapping in `scripts/trade/import-oec.ts` if the real column names
-   differ from the guesses (`country_iso3`, `hs4`, `hs4_name`, `year`,
-   `trade_value`).
-5. Confirm `/query` pagination: does `offset` work, or must slices be
-   sub-chunked via `OEC_TRADE_EXTRA_FILTERS`? Record here.
-6. `pnpm trade:import-oec -- --dry-run --reporter=CN --since=2023` — check
-   row counts (~1,260 HS4 + ~97 HS2 per year if the dataset carries both
-   levels) before a real run.
+### Findings — why import-oec.ts can't run as designed
 
-### Discovery output (paste here)
+**No pre-aggregated dataset exists.** The catalog (1,276 datasets) has
+exactly two trade-flow datasets, both BACI **bilateral HS6** grain
+(`year × exporter × importer × hs6`):
+
+| Slug | Vocabulary | Actual years (members/year) | Rows |
+|---|---|---|---|
+| `baci-hs92` | HS 1992 | 1995–2024 | 269.9M |
+| `baci-hs17` | HS 2017 | **2018–2024 only** (metadata claims 1995 — wrong) | 79.3M |
+
+Only `baci-hs92` covers the 2001+ scope. Everything else in the trade /
+economic-complexity domains is ECI/PCI indices, OECD agriculture, etc.
+
+**Three concrete blockers in import-oec.ts:**
+
+1. **Grain:** the importer assumes country×HS4×year totals. Reality is
+   bilateral HS6: China 2023 alone is **535,522 rows** (verified via `total`)
+   → ~536 paged requests at the 1,000-row cap. 21 reporters × 24 years ≈
+   **~100k+ requests** for a backfill — the "~1,100 requests" estimate in the
+   refresh-cadence section was based on the assumed aggregated dataset and is
+   off by ~100×. Also blows the `--max-requests=1500` default within 3
+   reporter-years. The importer would need to sum over importers and roll
+   HS6→HS4/HS2 client-side.
+2. **Response shape:** `/query` returns `columns: [...]` + `rows: [[...]]`
+   (positional arrays), but `queryPage` treats rows as objects
+   (`r[COLS.year]`) — every row parses to `undefined` and the run dies at the
+   "parsed 0 export rows" guard. Needs a zip-columns step regardless of grain.
+3. **Column names:** real schema is `year, exporter_id (iso3 lowercase),
+   exporter_name, importer_id, importer_name, hs_code (HS6 zero-padded),
+   product_name, hs_revision, value (USD), quantity (mt), unit_abbrevation,
+   unit_name`. The `COLS` guesses (`country_iso3`/`hs4`/`hs4_name`/
+   `trade_value`) are all wrong; fixable via the existing `OEC_TRADE_COL_*`
+   env overrides, but moot until 1–2 are addressed.
+
+**HS-vocabulary caveat for cross-source reads:** BACI-HS92 speaks HS 1992;
+Comtrade reports in current revisions. HS2 chapters are stable, but HS4
+diverges where products moved chapters (e.g. smartphones: 8525 in HS92 vs
+8517 in HS17). If OEC rows ever land, `trade_products` will mix vocabularies
+across sources — fine while readers pin one source per view, but rules out
+naive cross-source joins at HS4.
+
+**Decision (recorded 2026-07-04): Comtrade is the primary automated source.**
+The same CN-2023 slice that costs BotMarket ~536 requests is ~2 Comtrade
+calls (server-side aggregation, `partnerCode=0`). Since no `oec` rows will
+exist, `SOURCE_PREFERENCE` in packages/content-source/src/trade.ts already
+falls through to `comtrade` — no code change needed there. Options for OEC,
+whenever it's worth revisiting:
+
+- **(a) Park it** (current state): slug unset, importer hard-fails with a
+  pointer here. Zero cost.
+- **(b) Redesign import-oec.ts** as an *annual* aggregating importer:
+  paginate `exporter_id×year` slices (~12k requests per year-slice for all 21
+  reporters, offset paging verified), zip columns, sum over `importer_id`,
+  roll HS6→HS4+HS2 in HS92 vocabulary. Only worth it if the BACI
+  harmonised/mirrored series becomes editorially valuable over raw Comtrade.
+
+### Discovery output (2026-07-04)
+
+Marketplace: free mode, `max_rows_per_query: 1000`, formats parquet/csv,
+filters as query params (`?col=a,b` = SQL IN; reserved: `limit`, `offset`,
+`format`). Catalog: 1,276 datasets; `domain=trade` → 2 (the BACI pair).
+
+Pinned dataset (if OEC is ever revived): **`baci-hs92`**
 
 ```
-(pending — see checklist above)
+slug: baci-hs92 — BACI International Trade Database (HS 1992)
+source: OEC/Datawheel, upstream CEPII BACI · license CC BY 4.0
+grain: year × exporter × importer × hs6 · 269,894,500 rows · 1995–2024 annual
+coding: ISO alpha-3 lowercase countries; hs_code 6-digit zero-padded HS92
+query_filters: year, exporter_id, importer_id, hs_code
+schema: year(int) exporter_id exporter_name importer_id importer_name
+        hs_code product_name hs_revision(int) value(USD) quantity
+        unit_abbrevation unit_name
+response: { columns: [...], rows: [[positional]], count, total, offset,
+            max_rows_per_query, filters_applied, cost_usd }
+probes:  chn→usa 2023 852520 → value 53,863,749,087 (plain USD ✓)
+         chn 2023 (all partners) → total 535,522 rows
+         2023 (all exporters)    → total 11,194,668 rows
+         offset=2 → rows 3–5 of offset=0 ordering (offset paging ✓)
 ```
+
+Licensing note: BotMarket datasets carry explicit `license: CC BY 4.0` with
+OEC/CEPII citation — cite "BACI (CEPII), via the Observatory of Economic
+Complexity (Datawheel)" on any `source='oec'` figure.
 
 ## Refresh cadence
 
 - **Cron:** monthly (3rd, 05:15 UTC) via `.github/workflows/import-trade-data.yml`,
   incremental 3-year window (`--since=currentYear-2` default in the scripts).
 - **Full backfill:** dispatch the workflow with `full_backfill: true` —
-  ~1,100 BotMarket requests (free tier) + ~120 Comtrade calls (of 500/day).
+  ~120 Comtrade calls (of 500/day). OEC is parked (see Phase 0 findings; the
+  old ~1,100-request estimate assumed a pre-aggregated dataset that doesn't
+  exist — the real bilateral-HS6 cost is ~100k+ requests). The workflow's OEC
+  step is gated on the `OEC_TRADE_DATASET_SLUG` secret being set (skips, not
+  fails, while OEC stays parked); the Comtrade step already runs `always()`.
 - **TradeMap drops:** whenever a curated world view is wanted; re-runs are
   idempotent.
 

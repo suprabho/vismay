@@ -71,8 +71,12 @@ jobs:
           OEC_BOTMARKET_API_KEY: ${{ secrets.OEC_BOTMARKET_API_KEY }}
         run: pnpm trade:discover-oec
 
+      # Parked until import-oec.ts is redesigned for BACI's bilateral-HS6
+      # grain (vizmaya-data/global-trade/INGEST_NOTES.md, Phase 0 findings):
+      # with no slug pinned the importer can only hard-fail, so skip instead
+      # of painting every scheduled run red.
       - name: Import OEC BotMarket exports
-        if: ${{ !inputs.discovery }}
+        if: ${{ !inputs.discovery && secrets.OEC_TRADE_DATASET_SLUG != '' }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
