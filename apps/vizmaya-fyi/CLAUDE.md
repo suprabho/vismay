@@ -64,6 +64,63 @@ A narrated render paces the headless walk off the TTS audio cues (`cue.end_ms - 
 - No new env vars; the dispatch path reuses `GITHUB_DISPATCH_TOKEN` / `GITHUB_DISPATCH_REPO` / `GITHUB_DISPATCH_REF`.
 - Same GitHub repo secrets as the video workflow (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`).
 
+## Story HTML newsletter render (+ Substack export)
+
+`/api/story-newsletter/[slug]` produces a hosted HTML issue of a story with
+selected map sections, charts and deck panels captured as static PNGs. Same
+dispatch-or-sync split and `{ status: 'ready' | 'rendering', public_url? }`
+polling shape as the PDF/video pipelines. One render yields two artifacts in
+the `story-newsletter` bucket:
+
+- `<slug>/newsletter.html` (`public_url`) — inline-styled, email-safe,
+  600px single-column document; doubles as the browser preview and works in
+  any ESP.
+- `<slug>/newsletter.substack.html` (`substack_url`) — stripped semantic
+  HTML (h2/h3, p, figure/img, blockquote, hr) matched to what Substack's
+  editor keeps on paste.
+
+**Substack v1 workflow (no API — Substack doesn't have a public one):** the
+`/newsletters/[slug]` builder's **Copy for Substack** button copies the
+substack variant as rich text; paste into a new Substack post, set
+title/subtitle, publish — Substack re-uploads the referenced images to its
+CDN and sends it as both the email newsletter and the blog post. The
+substack variant's public URL also works with Substack's post-import. A
+direct (unofficial, cookie-auth) API push is a deliberate non-goal for v1.
+
+- **Capture surface:** `/story/[slug]/newsletter` (`NewsletterSurface` in
+  `@vismay/render-surface`, mirrored in apps/render) renders only the visual
+  blocks at 1200px behind `[data-newsletter-visual="<key>"]` markers; the
+  worker waits for `window.__pdfReady__` (shared readiness coordinator) then
+  element-screenshots each marker. Signed-URL-gated (middleware matcher).
+- **Render worker:** [packages/content-source/src/storyNewsletterRender.ts](../../packages/content-source/src/storyNewsletterRender.ts)
+  (`renderStoryNewsletter`) — capture + pure HTML assembly
+  ([storyNewsletterHtml.ts](../../packages/content-source/src/storyNewsletterHtml.ts)).
+  Text-only issues skip the browser entirely. App wrapper
+  [lib/storyNewsletterRender.ts](lib/storyNewsletterRender.ts) owns URL
+  signing; CLI: `npx tsx scripts/generate-newsletter.ts <slug> [--force]`.
+- **Per-story config:** `content/stories/<slug>.newsletter.yaml` (also
+  `stories.newsletter_yaml` after migration 065). Inclusive by default —
+  every unit ships with text + visuals; overrides exclude units, hide
+  map/visual/text per unit, set captions, and frame the issue
+  (subject/preheader/intro/outro/CTA). Parser + block resolver:
+  [packages/content-source/src/storyNewsletterConfig.ts](../../packages/content-source/src/storyNewsletterConfig.ts).
+  Edited via the `/newsletters/[slug]` builder (signed-URL-gated).
+- **Cache key:** `(slug, content_revision_hash)` where the hash is sha256
+  over markdown + config.yaml + newsletter.yaml + every chart JSON. Rows in
+  `story_newsletters`; images at `<slug>/images/<key>.png` with `?v=<hash>`
+  cache-busting.
+- **Dispatch:** `storyNewsletterDispatch.ts` fires
+  `.github/workflows/render-newsletter.yml` when `GITHUB_DISPATCH_TOKEN` +
+  `GITHUB_DISPATCH_REPO` are set. Honors `RENDER_SURFACE_URL_NEWSLETTER` for
+  the render-service strangler, like report/slides.
+
+**Deploy requirements:**
+- Apply migration `065_story_newsletters.sql` — adds the `story_newsletters`
+  table, the `story-newsletter` bucket, and `stories.newsletter_yaml`.
+- No new env vars; the workflow reuses the PDF pipeline's secrets
+  (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `NEXT_PUBLIC_MAPBOX_TOKEN`, `ADMIN_SESSION_SECRET`).
+
 ## Epics (/energy-profile, /epstein, …)
 
 Topic collections that bundle a bespoke landing page with curated vizmaya stories. Data model lives in migration `015_epics_iea.sql` (per-epic tables still carry the `iea_` prefix from when the epic was called "iea"; renamed to `energy-profile` in migration 019).

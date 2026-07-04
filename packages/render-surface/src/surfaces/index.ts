@@ -15,3 +15,7 @@ export {
   CanvasFrameSurface,
   type CanvasFrameSurfaceProps,
 } from './CanvasFrameSurface'
+export {
+  NewsletterSurface,
+  type NewsletterSurfaceProps,
+} from './NewsletterSurface'
