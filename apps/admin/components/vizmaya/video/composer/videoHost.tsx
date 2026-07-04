@@ -11,19 +11,9 @@ import {
 } from '@vismay/viz-admin'
 import type { VizLayer } from '@vismay/viz-engine'
 
-/** Editor-px down-scale from the project's true output size (1080/1920). The
- *  shell's PreviewPane then fits THIS to the available center column. */
-const EDITOR_SCALE = 0.5
-
 /** Per-render context threaded to the host: the current project aspect. */
 export interface VideoComposerCtx {
   aspect: VideoProjectAspect
-}
-
-/** Natural editor-px card size for the aspect (PreviewPane scales it to fit). */
-function cardSizeFor(aspect: VideoProjectAspect): { w: number; h: number } {
-  const out = PROJECT_OUTPUT_SIZE[aspect]
-  return { w: Math.round(out.w * EDITOR_SCALE), h: Math.round(out.h * EDITOR_SCALE) }
 }
 
 /** A fresh engine layer for a newly added clip type. `src` starts empty — the
@@ -94,7 +84,13 @@ export const videoHost: ComposerHost<VideoComposerCtx> = {
     transform: defaultTransform(type),
   }),
   backgroundOptions: () => [],
-  cardSize: (ctx) => cardSizeFor(ctx.aspect),
+  // MUST equal the frame's natural px size (VideoPreviewFrame renders at
+  // PROJECT_OUTPUT_SIZE): the shell sizes the FreeTransformLayer overlay by
+  // cardSize while fit-scaling the frame to it, so any mismatch skews the
+  // selection boxes and drag deltas relative to the drawn pixels. Full output
+  // px also keeps the editor WYSIWYG with the render shell (fixed-px/rem type
+  // occupies the same share of the frame).
+  cardSize: (ctx) => PROJECT_OUTPUT_SIZE[ctx.aspect],
   renderFrame: ({ ctx, body, captureRef }) => (
     <VideoPreviewFrame aspect={ctx.aspect} body={body} captureRef={captureRef} />
   ),

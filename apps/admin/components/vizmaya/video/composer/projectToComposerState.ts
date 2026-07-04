@@ -1,11 +1,17 @@
 import {
   clipsEndMs,
+  DEFAULT_TRANSFORM,
   resolveClipFrame,
+  type ClipRole,
   type ComposerLayer,
   type ComposerState,
+  type TransformLike,
   type VideoClip,
   type VideoProjectSnapshot,
 } from '@vismay/viz-admin'
+
+/** Default on-timeline length (ms) for a clip created from the editor. */
+export const DEFAULT_CLIP_MS = 3000
 
 /**
  * The seam between the snapshot (single source of truth) and the composer shell.
@@ -25,19 +31,40 @@ function trackOf(snapshot: VideoProjectSnapshot, clip: VideoClip) {
   return snapshot.tracks.find((t) => t.id === clip.trackId)
 }
 
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+
 /**
- * Is the playhead inside the clip's SETTLED window — i.e. not on an active
- * enter/exit ramp? Only then is the composer layer's transform the clip's real
- * settled transform, so only then is it safe to write a drag back verbatim.
- * (Mirrors the ramp math in `resolveClipFrame`.)
+ * Fold an edited composer transform back into a clip's SETTLED transform.
+ *
+ * The composer layer's transform is the RESOLVED (animated) pose sampled at the
+ * playhead — on an enter/exit ramp it's offset from the settled pose, so adopting
+ * it verbatim would bake the ramp offset in. Instead we re-resolve the clip's
+ * pre-edit pose at the same playhead and apply the DELTA between it and the
+ * edited pose to the settled transform: additive for position/rotation/opacity,
+ * multiplicative for scale (ramps scale multiplicatively), verbatim for the box
+ * size channels (ramps never touch them). In the settled window resolved ==
+ * settled, so this degenerates to adopting the edit verbatim; on a ramp the
+ * offsets commute through the ramp lerp, so the on-canvas box tracks the pointer.
  */
-export function isClipSettled(clip: VideoClip, playheadMs: number): boolean {
-  const local = playheadMs - clip.startMs
-  if (local < 0 || local >= clip.durationMs) return false
-  const enterDur = clip.enterAnim.kind === 'none' ? 0 : Math.min(clip.enterAnim.durationMs, clip.durationMs)
-  const exitDur = clip.exitAnim.kind === 'none' ? 0 : Math.min(clip.exitAnim.durationMs, clip.durationMs)
-  const exitStart = clip.durationMs - exitDur
-  return local >= enterDur && local < exitStart
+function mergeEditedTransform(
+  clip: VideoClip,
+  edited: TransformLike | undefined,
+  playheadMs: number,
+): TransformLike {
+  if (!edited) return clip.transform
+  const resolved = resolveClipFrame(clip, playheadMs)?.transform
+  if (!resolved) return clip.transform
+  const settled = clip.transform
+  const scaleK = resolved.scale > 1e-6 ? edited.scale / resolved.scale : 1
+  return {
+    xPct: settled.xPct + (edited.xPct - resolved.xPct),
+    yPct: settled.yPct + (edited.yPct - resolved.yPct),
+    widthPct: edited.widthPct,
+    heightPct: edited.heightPct,
+    scale: settled.scale * scaleK,
+    rotation: settled.rotation + (edited.rotation - resolved.rotation),
+    opacity: clamp01(settled.opacity + (edited.opacity - resolved.opacity)),
+  }
 }
 
 /**
@@ -86,17 +113,28 @@ function clipName(clip: VideoClip): string {
   return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
+/** Editor role for a layer created on the canvas, by engine type. */
+function roleForLayerType(type: string): ClipRole {
+  if (type === 'text') return 'text'
+  if (type === 'video') return 'media'
+  return 'object'
+}
+
 /**
  * Write the composer's edits back into the snapshot, by clip id.
  *
- * IMPORTANT round-trip rule: the composer layer's `transform` is the RESOLVED
- * (animated) transform sampled at the current playhead. If the user dragged a
- * clip while it sits on an enter/exit RAMP, that resolved pose is offset from the
- * settled pose, so writing it back verbatim would corrupt the settled transform.
- * For MVP simplicity we therefore only write the transform back when the clip is
- * in its SETTLED window (no active ramp); otherwise we write the layer CONFIG
- * only and leave the settled transform untouched. The caller (VideoEditor) is
- * responsible for passing the same `playheadMs` the state was projected at.
+ *  - Transform edits go through `mergeEditedTransform` so a drag lands on the
+ *    settled pose even while the playhead sits on an enter/exit ramp.
+ *  - Composer layers with NO backing clip are creations (the canvas
+ *    "+ Video/Image/Text" menu, layer duplicate): they become clips at the
+ *    playhead on the top visual track, with `none` ramps so what you just
+ *    placed is visible where you placed it (ramps opt in via the timing panel).
+ *  - Clips that are live+visual at this playhead but MISSING from the composer
+ *    state were removed via the layer list: drop them. Non-live clips are
+ *    absent from every projection, so they're always kept.
+ *
+ * The caller (VideoEditor) is responsible for passing the same `playheadMs`
+ * the state was projected at.
  */
 export function applyComposerEditsToSnapshot(
   snapshot: VideoProjectSnapshot,
@@ -104,20 +142,58 @@ export function applyComposerEditsToSnapshot(
   playheadMs: number,
 ): VideoProjectSnapshot {
   const byId = new Map(composerState.layers.map((l) => [l.id, l]))
-  const clips = snapshot.clips.map((clip) => {
-    const cl = byId.get(clip.id)
-    if (!cl) return clip
-    const settled = isClipSettled(clip, playheadMs)
-    return {
-      ...clip,
-      layer: cl.layer,
-      box: cl.box,
-      // Only adopt the dragged transform when the clip is settled at this
-      // playhead — otherwise the resolved pose carries the ramp offset.
-      transform: settled && cl.transform ? cl.transform : clip.transform,
+  const clips = snapshot.clips
+    .filter((clip) => {
+      if (byId.has(clip.id)) return true
+      // Mirror the projection's inclusion rule exactly: only clips that WERE
+      // projected (visual track + live) can have been removed by the list.
+      const track = trackOf(snapshot, clip)
+      const wasProjected = track?.kind === 'visual' && resolveClipFrame(clip, playheadMs) !== null
+      return !wasProjected
+    })
+    .map((clip) => {
+      const cl = byId.get(clip.id)
+      if (!cl) return clip
+      return {
+        ...clip,
+        layer: cl.layer,
+        box: cl.box,
+        transform: mergeEditedTransform(clip, cl.transform, playheadMs),
+      }
+    })
+
+  const known = new Set(snapshot.clips.map((c) => c.id))
+  const topVisual = snapshot.tracks
+    .filter((t) => t.kind === 'visual')
+    .reduce<(typeof snapshot.tracks)[number] | null>(
+      (best, t) => (!best || t.index > best.index ? t : best),
+      null,
+    )
+  if (topVisual) {
+    for (const l of composerState.layers) {
+      if (known.has(l.id)) continue
+      clips.push({
+        id: l.id,
+        trackId: topVisual.id,
+        layer: l.layer,
+        role: roleForLayerType(l.layer.type),
+        startMs: Math.round(playheadMs),
+        durationMs: DEFAULT_CLIP_MS,
+        transform: l.transform ?? DEFAULT_TRANSFORM,
+        box: l.box,
+        enterAnim: { kind: 'none', durationMs: 0 },
+        exitAnim: { kind: 'none', durationMs: 0 },
+        visible: l.visible,
+      })
     }
-  })
-  return { ...snapshot, clips, background: composerState.background }
+  }
+
+  return {
+    ...snapshot,
+    clips,
+    durationMs: Math.max(snapshot.durationMs, clipsEndMs(clips)),
+    background: composerState.background,
+  }
 }
 
 /** Append a clip and bump the project duration to cover it. */
