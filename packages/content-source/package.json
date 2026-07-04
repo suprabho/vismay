@@ -16,6 +16,7 @@
     "./demoAuth": "./src/demoAuth.ts",
     "./demos": "./src/demos.ts",
     "./epics": "./src/epics.ts",
+    "./pipelines": "./src/pipelines.ts",
     "./frontmatter": "./src/frontmatter.ts",
     "./getFontImports": "./src/getFontImports.ts",
     "./heygenTemplate": "./src/heygenTemplate.ts",

@@ -29,42 +29,51 @@ which wraps the Vercel AI Gateway. Do not import `@google/genai`, `@anthropic-ai
 - Resolver step that turns YAML `prompt:` fields into cached generations at
   build time.
 
-## DC Pipeline tab (/vizmaya/dc-pipeline)
+## Pipeline tab (/vizmaya/pipeline)
 
-Monitoring dashboard for the AI Data Centers news + stock pipeline (tables
-`dc_news` / `dc_news_recaps` / `dc_stocks` / `dc_stock_prices`, migrations
-065–066 — pipeline docs in
-[apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)). Shows scrape volume
-and relevance-gate stats (stat tiles + a stacked 14-day bar chart of
-relevant vs rejected), topic/ticker breakdowns over the trailing 30 days, the
-latest daily recap (with its raw markdown), stock-feed freshness, and a
-filterable news list that — unlike the public reader — can surface
-classifier-**rejected** rows for auditing the Gemma gate.
+Generalized monitoring dashboard for every epic with a live content pipeline,
+driven by the adapter registry in
+[packages/content-source/src/pipelines.ts](../../packages/content-source/src/pipelines.ts)
+(currently `ai-data-centers` — dc_news/dc_news_recaps/dc_stocks, migrations
+065–066, pipeline docs in [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md)
+— and `energy-profile` — iea_news, migration 015). Renders one health card per
+epic (24h/7d volume, gate keep-rate where there's a relevance gate, fetch/recap
+staleness, stock-feed freshness, 14-day volume bars) above a merged,
+epic-tagged news feed with epic/topic/tag/search filters. The relevant vs
+rejected filter surfaces classifier-**rejected** rows for auditing the Gemma
+gate on epics that have one. Each epic's "tags" are its secondary tag group —
+dc_stocks tickers for AI Data Centers, ISO country codes for Energy Profile.
+`?epic=<slug>` deep-links a scoped view; `/vizmaya/dc-pipeline` redirects here.
+Adding a pipeline for a new epic = one adapter entry in pipelines.ts, no UI
+changes.
 
-- **Page:** [app/vizmaya/(tabbed)/dc-pipeline/](<app/vizmaya/(tabbed)/dc-pipeline/>)
-  (`DcPipelineClient.tsx` does all rendering; no chart lib, the volume bars
-  are plain divs).
-- **API:** `/api/vizmaya/dc-pipeline` (stats snapshot) +
-  `/api/vizmaya/dc-pipeline/news` (`?limit&topic&ticker&q&relevance=all|relevant|rejected`),
-  both `isAuthed()`-gated.
-- **Readers:** `getDcPipelineStats()` + `listDcNewsForAdmin()` in
-  [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts).
-  Before migrations 065/066 the routes return a readable 500 and the page
-  shows the error banner instead of crashing.
+- **Page:** [app/vizmaya/(tabbed)/pipeline/](<app/vizmaya/(tabbed)/pipeline/>)
+  (`PipelineClient.tsx` does all rendering; no chart lib, the volume bars are
+  plain divs).
+- **API:** `/api/vizmaya/pipeline` (per-epic health snapshots; failures come
+  back per epic in `entry.error` instead of 500-ing the page) +
+  `/api/vizmaya/pipeline/news`
+  (`?limit&epic&topic&tag&q&relevance=all|relevant|rejected`), both
+  `isAuthed()`-gated.
+- **Readers:** `getPipelineOverview()` + `listPipelineNews()` in
+  pipelines.ts, which map/merge the per-epic readers (`getDcPipelineStats()`,
+  `listDcNewsForAdmin()`, … in
+  [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)).
 
-## DC Recaps tab (/vizmaya/dc-recaps)
+## Recaps tab (/vizmaya/recaps)
 
-Companion to the DC Pipeline tab: the full snapshot timeline of the daily
-recap worker's markdown briefs (`dc_news_recaps`, one row per run — the
-08:15 UTC cron plus manual dispatches). Each row shows the LLM headline (or
-a `deterministic` badge when Gemini was unavailable), window/story-count/model
-meta, topic + ticker badges, and the raw markdown behind a `<details>`
-toggle (newest one open by default). A staleness warning appears when the
-newest recap is older than 36h.
+Companion to the Pipeline tab: the merged snapshot timeline of every epic's
+recap-worker markdown briefs, tagged by epic (today just AI Data Centers —
+`dc_news_recaps`, one row per run: the 08:15 UTC cron plus manual dispatches).
+Each row shows the epic badge, the LLM headline (or a `deterministic` badge
+when Gemini was unavailable), window/story-count/model meta, topic + tag
+badges, and the raw markdown behind a `<details>` toggle (newest one open by
+default). A staleness warning appears when the newest recap is older than 36h.
+`?epic=<slug>` deep-links a scoped view; `/vizmaya/dc-recaps` redirects here.
 
-- **Page:** [app/vizmaya/(tabbed)/dc-recaps/](<app/vizmaya/(tabbed)/dc-recaps/>).
-- **API:** `/api/vizmaya/dc-recaps` (`?limit`, default 20, max 60),
-  `isAuthed()`-gated, backed by the existing `listDcNewsRecaps()` reader.
+- **Page:** [app/vizmaya/(tabbed)/recaps/](<app/vizmaya/(tabbed)/recaps/>).
+- **API:** `/api/vizmaya/recaps` (`?limit&epic`, default 20, max 60),
+  `isAuthed()`-gated, backed by `listPipelineRecaps()` in pipelines.ts.
 - Shared bits (timeAgo/isStale/Badge) live in
-  [components/vizmaya/dc/shared.tsx](components/vizmaya/dc/shared.tsx),
-  used by both DC tabs.
+  [components/vizmaya/pipeline/shared.tsx](components/vizmaya/pipeline/shared.tsx),
+  used by both tabs.
