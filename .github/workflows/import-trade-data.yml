@@ -1,7 +1,7 @@
 name: Import trade data
 
 # Monthly refresh of the global-trade tables (trade_product_exports et al,
-# migration 063) from two automated sources:
+# migration 064) from two automated sources:
 #   * OEC BotMarket (source='oec')      — scripts/trade/import-oec.ts
 #   * UN Comtrade   (source='comtrade') — scripts/trade/import-comtrade.ts
 # The third source (ITC TradeMap, source='trademap') is a manual CSV drop by

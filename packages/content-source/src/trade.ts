@@ -2,7 +2,7 @@
  * Server-side read helpers for the global-trade dataset (Global Trade epic).
  *
  * Tables: trade_countries, trade_products, trade_product_exports — see
- * supabase/vizmaya-fyi/migrations/063_global_trade.sql. Rows are long-format
+ * supabase/vizmaya-fyi/migrations/064_global_trade.sql. Rows are long-format
  * (reporter × hs_code × year × source); these readers shape them into the
  * same dense null-filled `ChartSeries` arrays the energy-profile charts use,
  * so ECharts components drop in unchanged.

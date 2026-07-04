@@ -2,9 +2,9 @@
 
 International goods-trade data (yearly exports by HS product) powering
 research, stories, and the future `global-trade` epic (seeded as `draft` in
-migration 063; the public epics read policy hides drafts).
+migration 064; the public epics read policy hides drafts).
 
-## Tables (supabase/vizmaya-fyi, migration 063_global_trade.sql)
+## Tables (supabase/vizmaya-fyi, migration 064_global_trade.sql)
 
 - `trade_countries` — ISO2 reporters + the `WLD` world pseudo-code
 - `trade_products` — HS codes with explicit `hs_level` (2/4/6) + `parent_code`

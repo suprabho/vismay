@@ -1,0 +1,59 @@
+name: Import AI Data Centers
+
+# Weekly pull of Epoch AI's Frontier Data Centers CSVs (CC BY 4.0,
+# https://epoch.ai/data/ai-data-centers), upserted into dc_facilities /
+# dc_facility_timeline. Idempotent on facility slug and
+# (facility_slug, metric, as_of), so re-runs and manual dispatches are safe.
+#
+# Runs in Actions rather than locally because epoch.ai fronts Cloudflare bot
+# detection that 403s generic fetchers from some networks; Actions runners
+# get through with a plain fetch. The importer logs the raw CSV header rows
+# on every run — check them here if Epoch renames columns.
+#
+# Required repo secrets (in the `Production` environment so secrets.X resolves):
+#   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_* writes
+#   NEXT_PUBLIC_MAPBOX_TOKEN   — geocodes facility addresses to map coords
+#                                (shared with the render workflows)
+
+on:
+  schedule:
+    # Mondays 07:30 UTC — Epoch refreshes ~weekly. The :30 offset avoids the
+    # top-of-hour Actions queue spike.
+    - cron: '30 7 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: import-ai-data-centers
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Import Epoch AI data centers
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+        run: pnpm ai-data-centers:import

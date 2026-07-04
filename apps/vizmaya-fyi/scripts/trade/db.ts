@@ -1,7 +1,7 @@
 /**
  * Shared upsert helpers for the global-trade importers. All three importers
  * (oec / comtrade / trademap) write the same three tables from migration
- * 063_global_trade.sql, so the batching + onConflict wiring lives here once.
+ * 064_global_trade.sql, so the batching + onConflict wiring lives here once.
  *
  * Idempotency: trade_countries on (code), trade_products on (hs_code),
  * trade_product_exports on (reporter_code, hs_code, year, source) — re-runs
