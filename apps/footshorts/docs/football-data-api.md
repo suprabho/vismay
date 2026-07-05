@@ -117,14 +117,15 @@ Per seeded league (from `entities` where `football_data_id` is set):
 - `normalizeSeason()`: multi-year league (Aug→May) → `"25-26"`; single-year cup → `"2025"`.
 - **`fixture_stats` is left empty** — shots/possession/cards/xG are paid-tier.
 
-### `scores.ts` — finished-score refresh (every 12h)
+### `scores.ts` — finished-score refresh (every 3h)
 
 Update-only, never inserts. Per comp code:
 
 - `GET /competitions/{code}/matches?status=FINISHED&dateFrom&dateTo` over a **2-day** lookback.
 - Resolve each FD match to a local fixture by `(home_team_id, away_team_id, kickoff_at ±6h)`
   — skips if 0 or >1 match. Writes `home_score`, `away_score`, `status='finished'`.
-- Scheduled by `.github/workflows/scores.yml`.
+- Scheduled by `.github/workflows/footshorts-scores.yml`: scores-only top-ups every
+  3 hours, with the 00:00/12:00 UTC slots also running events + recaps.
 
 ### `entityResolver.ts` — names → canonical IDs
 

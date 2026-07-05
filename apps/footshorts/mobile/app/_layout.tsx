@@ -7,13 +7,25 @@ import {
   type ThemeStorage,
 } from '@footshorts/brand/native';
 import type { ThemeName } from '@footshorts/brand';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { StatusBar } from 'expo-status-bar';
+import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/lib/AuthProvider';
+
+// React Native has no window focus event, so refetchOnWindowFocus is inert
+// unless the focus manager is driven by AppState. Without this, an app
+// resumed from background keeps showing whatever React Query cached at the
+// last mount — stale scores survive indefinitely.
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener('change', (state) => {
+    handleFocus(state === 'active');
+  });
+  return () => subscription.remove();
+});
 
 const THEME_STORAGE_KEY = 'sf.theme';
 
@@ -29,7 +41,7 @@ const themeStorage: ThemeStorage = {
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 60_000, refetchOnWindowFocus: false },
+    queries: { staleTime: 60_000, refetchOnWindowFocus: true },
   },
 });
 

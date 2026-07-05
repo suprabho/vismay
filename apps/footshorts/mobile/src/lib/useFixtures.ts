@@ -15,6 +15,11 @@ const FIXTURE_COLS = `
 
 export type FixtureKind = 'past' | 'upcoming' | 'all';
 
+// Scores land in Supabase from batch syncs, so a mounted fixtures screen has
+// to poll to pick them up. 60s matches staleTime; foreground-only (the
+// refetchIntervalInBackground default) so a backgrounded app stays quiet.
+const FIXTURES_REFETCH_MS = 60 * 1000;
+
 function applyKind<T extends { lt: Function; gte: Function; order: Function }>(
   q: T,
   kind: FixtureKind,
@@ -50,6 +55,7 @@ export function useLeagueFixtures(
       return (data ?? []) as unknown as FixtureRow[];
     },
     staleTime: 60 * 1000,
+    refetchInterval: FIXTURES_REFETCH_MS,
   });
 }
 
@@ -72,5 +78,6 @@ export function useTeamFixtures(
       return (data ?? []) as unknown as FixtureRow[];
     },
     staleTime: 60 * 1000,
+    refetchInterval: FIXTURES_REFETCH_MS,
   });
 }
