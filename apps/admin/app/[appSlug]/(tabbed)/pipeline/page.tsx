@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { WorkersPanel } from '@/components/footshorts/WorkersPanel'
+import { MatchtimePanel } from '@/components/footshorts/MatchtimePanel'
 import {
   fetchFootshortsPipelineStats,
   type PipelineStats,
@@ -126,6 +127,10 @@ export default async function AppPipelinePage({ params }: Props) {
 
         <div className="mb-6">
           <WorkersPanel />
+        </div>
+
+        <div className="mb-6">
+          <MatchtimePanel />
         </div>
 
         <h2 className="mb-2 text-xs uppercase tracking-wide text-neutral-500">Freshness</h2>
