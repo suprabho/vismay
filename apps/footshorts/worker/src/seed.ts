@@ -37,8 +37,10 @@ function commonName(name: string): string {
   return name
     // Drop governing-body prefixes on league names
     .replace(/\b(UEFA|FIFA|CONMEBOL|CONCACAF|AFC Champions)\b/gi, '')
-    // Drop club-type tokens anywhere in the name (case-insensitive: VfB, HSV, etc.)
-    .replace(/\b(FC|CF|CD|SSC|SS|AFC|AC|AS|RC|RCD|CA|SL|SC|BK|IF|FK|NK|HSV|TSV|VFL|VFB|RB)\b/gi, '')
+    // Drop club-type tokens anywhere in the name (case-insensitive: VfB, HSV, etc.).
+    // Glued acronyms (ACF Fiorentina, Genoa CFC, Atalanta BC) need their own
+    // entries — \b won't split them into AC/CF etc.
+    .replace(/\b(FC|CFC|CF|CD|SSC|SS|AFC|ACF|AC|AS|RC|RCD|CA|SL|SC|BC|BK|IF|FK|NK|HSV|TSV|VFL|VFB|RB)\b/gi, '')
     // Drop leading "1. FC" / "1. FSV" style prefixes (German)
     .replace(/^\s*\d+\.\s*(FC|FSV|FCN)?\s*/i, '')
     // Drop trailing founding years

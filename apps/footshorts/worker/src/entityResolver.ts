@@ -75,6 +75,10 @@ const ALIASES: Record<string, string> = {
   'inter': 'internazionale-milano',
   'inter-milan': 'internazionale-milano',
   'verona': 'hellas-verona',
+  // official forms with glued acronyms, in case Gemini echoes them verbatim
+  'acf-fiorentina': 'fiorentina',
+  'atalanta-bc': 'atalanta',
+  'genoa-cfc': 'genoa',
   // teams — French
   'psg': 'paris-saint-germain',
   'lyon': 'olympique-lyonnais',

@@ -101,6 +101,10 @@ Seeded competition codes:
 - `commonName()` strips club-type tokens (`FC`, `SSC`, `1. FC` …) and trailing founding
   years so FD's official names slugify to what news articles use: `"Juventus FC"` →
   `juventus`, `"Bologna FC 1909"` → `bologna`. Display `name` keeps the original.
+  Glued acronyms need their own strip entries (`\b` won't split them): `ACF`, `CFC`,
+  `BC` cover `"ACF Fiorentina"` → `fiorentina`, `"Genoa CFC"` → `genoa`,
+  `"Atalanta BC"` → `atalanta`. If a team's chip never appears despite coverage, check
+  the worker logs for `[entity-miss]` — the slug likely kept a token like this.
 - `CL/EL/WC/EC` are non-domestic → membership recorded, but they don't set a team's
   `league_slug` (that always points at the domestic league).
 - Players are **not** seeded — squads are paid-tier (`seed-squads.ts` exists for the
