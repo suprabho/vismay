@@ -1,31 +1,43 @@
 name: VizF1 - telemetry ingest
 
 # Loads FastF1 telemetry (speed/throttle/brake/gear + car positions + circuit
-# elevation) for one session and upserts it into Supabase (vizf1_telemetry_* /
+# elevation) and upserts it into Supabase (vizf1_telemetry_* /
 # vizf1_car_positions / vizf1_lap_telemetry). Powers the race replay, the
 # telemetry-clip player, the 3D track view, and telemetry-grounded stories.
 #
-# Telemetry only exists AFTER a session has run (FastF1's live-timing source),
-# so this is dispatch-first: trigger it (or run apps/vizf1/ingest-py locally)
-# once a session is complete. A scheduled per-round path can be added later once
-# a "latest completed round" resolver exists — a blind weekly full-season
-# backfill would be a runaway.
+# Two paths:
+#   - Scheduled (race-weekend cadence, Fri-Mon): `ingest-latest` resolves which
+#     sessions have completed but aren't fully ingested (FastF1 schedule vs the
+#     Supabase status columns) and loads them newest-first, capped per run — so
+#     a cron run can never turn into a full-season backfill.
+#   - Manual dispatch with a `gp` input: ingest that one session (unchanged
+#     escape hatch for backfills / re-runs; also available locally via
+#     apps/vizf1/ingest-py).
+#
+# Telemetry only exists AFTER a session has run (FastF1's live-timing source);
+# the resolver's grace window keeps scheduled runs from firing early.
 #
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 
 on:
+  schedule:
+    # Every 6h Fri (5) through Mon (1): covers sprint quali (Fri), quali/sprint
+    # (Sat), the race (Sun), and a Monday catch-up for anything FastF1 published
+    # late. Off-cycle offset (:45) avoids top-of-hour spikes; non-weekend runs
+    # resolve to "nothing pending" and exit in seconds.
+    - cron: '45 */6 * * 5,6,0,1'
   workflow_dispatch:
     inputs:
       year:
-        description: 'Season year, e.g. 2024'
-        required: true
+        description: 'Season year, e.g. 2024 (auto mode: defaults to current year)'
+        required: false
       gp:
-        description: 'Grand Prix name, e.g. "Monaco"'
-        required: true
+        description: 'Grand Prix name, e.g. "Monaco". Leave empty to auto-ingest latest completed sessions.'
+        required: false
       session:
-        description: 'Session: R | Q | S | SS | SQ | FP1 | FP2 | FP3'
+        description: 'Session: R | Q | S | SS | SQ | FP1 | FP2 | FP3 (manual mode only)'
         required: false
         default: 'R'
 
@@ -36,7 +48,8 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Auto mode may load several uncached sessions in one run.
+    timeout-minutes: 60
     environment: Production
     defaults:
       run:
@@ -56,20 +69,36 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.FASTF1_CACHE_DIR }}
-          key: fastf1-${{ inputs.year }}-${{ inputs.gp }}-${{ inputs.session }}
+          # run_id-keyed so every run saves its (possibly grown) cache; the
+          # restore-key prefix picks up the most recent one.
+          key: fastf1-${{ github.run_id }}
           restore-keys: |
-            fastf1-${{ inputs.year }}-
             fastf1-
 
       - name: Install Python deps
         run: pip install -r requirements.txt
 
-      - name: Ingest telemetry
+      - name: Ingest telemetry (requested session)
+        if: inputs.gp != ''
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          if [ -z "${{ inputs.year }}" ]; then
+            echo "the 'year' input is required when 'gp' is set" >&2
+            exit 1
+          fi
           python -m vizf1_ingest.cli ingest \
             --year "${{ inputs.year }}" \
             --gp "${{ inputs.gp }}" \
-            --session "${{ inputs.session }}"
+            --session "${{ inputs.session || 'R' }}"
+
+      - name: Ingest latest completed sessions
+        if: inputs.gp == ''
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VIZF1_YEAR: ${{ inputs.year }}
+        run: |
+          python -m vizf1_ingest.cli ingest-latest \
+            ${VIZF1_YEAR:+--year "$VIZF1_YEAR"}

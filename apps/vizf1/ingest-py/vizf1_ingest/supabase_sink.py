@@ -54,3 +54,15 @@ class SupabaseSink:
         for col, val in match.items():
             q = q.eq(col, val)
         q.execute()
+
+    def fetch_rows(self, table: str, columns: str, match: dict[str, Any]) -> list[dict[str, Any]]:
+        """Select `columns` from rows matching all `match` equalities.
+
+        Sized for small metadata reads (e.g. one season's ~100 rows in
+        vizf1_telemetry_sessions) — no pagination, so don't point it at the
+        blob tables.
+        """
+        q = self._client.table(table).select(columns)
+        for col, val in match.items():
+            q = q.eq(col, val)
+        return q.execute().data or []
