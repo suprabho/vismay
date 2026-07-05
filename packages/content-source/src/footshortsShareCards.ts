@@ -84,7 +84,7 @@ export interface PublishShareCardInput {
   ratio: string
   /** Rendered PNG bytes. */
   png: Uint8Array
-  /** Entity tags, addressed by (type, slug). Unknown entities are skipped. */
+  /** Entity tags, addressed by (type, slug). Unknown entities fail the publish. */
   entities: ShareCardEntityInput[]
 }
 
@@ -246,13 +246,15 @@ export async function deleteShareCard(id: string): Promise<void> {
   if (error) throw new Error(`deleteShareCard: ${error.message}`)
 }
 
-/** Resolve (type, slug) tag inputs to entity ids. Unknown entities are dropped. */
+/** Resolve (type, slug) tag inputs to entity ids. Inputs that don't match an
+ *  entities row come back in `unresolved` so callers can fail loudly — a tag
+ *  dropped here means the card silently never surfaces on that entity's page. */
 async function resolveEntityIds(
   sb: ReturnType<typeof createServiceClient>,
   inputs: ShareCardEntityInput[],
-): Promise<string[]> {
+): Promise<{ ids: string[]; unresolved: ShareCardEntityInput[] }> {
   const wanted = inputs.filter((e) => e.slug)
-  if (wanted.length === 0) return []
+  if (wanted.length === 0) return { ids: [], unresolved: [] }
   const slugs = Array.from(new Set(wanted.map((e) => e.slug)))
   const { data, error } = await sb.from('entities').select('id, type, slug').in('slug', slugs)
   if (error) throw new Error(`resolveEntityIds: ${error.message}`)
@@ -263,11 +265,13 @@ async function resolveEntityIds(
     ]),
   )
   const ids = new Set<string>()
+  const unresolved: ShareCardEntityInput[] = []
   for (const e of wanted) {
     const id = byKey.get(`${e.type}:${e.slug}`)
     if (id) ids.add(id)
+    else unresolved.push(e)
   }
-  return Array.from(ids)
+  return { ids: Array.from(ids), unresolved }
 }
 
 /** Create a new card row or update an existing one's editable fields, returning
@@ -343,7 +347,7 @@ export interface FinalizeShareCardPublishInput {
   id: string
   /** Aspect ratio the PNG was captured at (e.g. "1:1"). */
   ratio: string
-  /** Entity tags, addressed by (type, slug). Unknown entities are skipped. */
+  /** Entity tags, addressed by (type, slug). Unknown entities fail the publish. */
   entities: ShareCardEntityInput[]
 }
 
@@ -359,7 +363,37 @@ export async function finalizeShareCardPublish(
   const sb = createServiceClient()
   const { data: pub } = sb.storage.from(SHARE_CARD_BUCKET).getPublicUrl(`${input.id}.png`)
 
-  // 1. Flip to published.
+  // 1. Resolve tags up front — an unknown (type, slug) is an error the admin can
+  //    fix, not a tag to drop: a published-but-untagged card never surfaces on
+  //    the team/league pages it was meant for.
+  const { ids: entityIds, unresolved } = await resolveEntityIds(sb, input.entities)
+  if (unresolved.length > 0) {
+    throw new Error(
+      `finalizeShareCardPublish(tags): unknown entities: ${unresolved
+        .map((e) => `${e.type}:${e.slug}`)
+        .join(', ')}`,
+    )
+  }
+
+  // 2. Rewrite tags without a destructive window: upsert the wanted rows first,
+  //    then prune the stale ones, so a failure part-way leaves the previous tags
+  //    intact instead of a stripped card.
+  if (entityIds.length > 0) {
+    const { error: tagErr } = await sb
+      .from('footshorts_share_card_entities')
+      .upsert(
+        entityIds.map((entity_id) => ({ card_id: input.id, entity_id })),
+        { onConflict: 'card_id,entity_id', ignoreDuplicates: true },
+      )
+    if (tagErr) throw new Error(`finalizeShareCardPublish(tags): ${tagErr.message}`)
+  }
+  let prune = sb.from('footshorts_share_card_entities').delete().eq('card_id', input.id)
+  if (entityIds.length > 0) prune = prune.not('entity_id', 'in', `(${entityIds.join(',')})`)
+  const { error: pruneErr } = await prune
+  if (pruneErr) throw new Error(`finalizeShareCardPublish(prune): ${pruneErr.message}`)
+
+  // 3. Flip to published only after the tags landed, so a tag failure can't
+  //    leave a live card invisible to entity pages.
   const { error: pubErr } = await sb
     .from('footshorts_share_cards')
     .update({
@@ -371,17 +405,7 @@ export async function finalizeShareCardPublish(
     .eq('id', input.id)
   if (pubErr) throw new Error(`finalizeShareCardPublish(publish): ${pubErr.message}`)
 
-  // 2. Replace entity tags.
-  const entityIds = await resolveEntityIds(sb, input.entities)
-  await sb.from('footshorts_share_card_entities').delete().eq('card_id', input.id)
-  if (entityIds.length > 0) {
-    const { error: tagErr } = await sb
-      .from('footshorts_share_card_entities')
-      .insert(entityIds.map((entity_id) => ({ card_id: input.id, entity_id })))
-    if (tagErr) throw new Error(`finalizeShareCardPublish(tags): ${tagErr.message}`)
-  }
-
-  // 3. Return the fresh row.
+  // 4. Return the fresh row.
   const { data, error } = await sb
     .from('footshorts_share_cards')
     .select(SELECT_WITH_ENTITIES)
