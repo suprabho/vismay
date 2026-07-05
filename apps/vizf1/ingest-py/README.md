@@ -40,11 +40,14 @@ python -m vizf1_ingest.cli list-sessions --year 2024
 `ingest-latest` diffs the FastF1 event schedule against the
 `vizf1_telemetry_sessions` status columns and ingests sessions that have
 completed (scheduled start + `--grace-hours`, default 4, in the past) but
-aren't fully loaded — newest first, capped at `--max` (default 3) per run so a
-scheduled run can never snowball into a full-season backfill. Partially
-ingested or failed sessions count as missing and are retried (all writes are
-idempotent upserts). `--sessions` picks the session types to watch (default
-`R,Q,S,SQ,SS` — practice excluded).
+aren't fully loaded — newest first, until `--max` (default 3) sessions have
+ingested successfully, so a scheduled run can never snowball into a
+full-season backfill. Sessions FastF1 hasn't published data for yet (a
+just-finished weekend, or its livetiming mirror lagging) are skipped without
+consuming an ingest slot and picked up by a later run. Partially ingested or
+failed sessions count as missing and are retried (all writes are idempotent
+upserts). `--sessions` picks the session types to watch (default `R,Q,S,SQ,SS`
+— practice excluded).
 
 `--session`: `R` (race), `Q` (qualifying), `S`/`SS`/`SQ` (sprint variants),
 `FP1`/`FP2`/`FP3` (practice). Practice sessions skip the heavy

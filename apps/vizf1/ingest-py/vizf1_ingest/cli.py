@@ -37,13 +37,37 @@ def _cmd_ingest(args, sink: SupabaseSink) -> int:
     return 0
 
 
+# Exception class names FastF1 uses to say "this session has no published data
+# (yet)": raised directly when the archive is missing, or when touching
+# session.laps after a load that found nothing. Name-matched (not imported)
+# because SessionNotAvailableError lives in the private fastf1._api module.
+_NOT_READY_EXC = {"SessionNotAvailableError", "DataNotLoadedError", "NoLapDataError"}
+
+
+def _is_data_not_ready(exc: BaseException | None) -> bool:
+    """True if the exception (or anything in its cause/context chain) means
+    FastF1 simply hasn't published the session's data yet — expected for a
+    session that just finished, or while the livetiming mirror lags a fresh
+    race weekend. Retry next run; don't fail the batch."""
+    seen: set[int] = set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
+        if type(exc).__name__ in _NOT_READY_EXC:
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
 def _cmd_ingest_latest(args, sink: SupabaseSink) -> int:
     """Ingest whatever has completed but isn't fully loaded yet (cron entry point).
 
-    Resolves pending sessions from the schedule + Supabase status, newest first,
-    and ingests up to --max of them. Exits non-zero if any attempt failed so a
-    scheduled run goes red instead of silently dropping a session — the next
-    run retries it for free (idempotent upserts).
+    Walks the pending list newest-first until --max sessions have INGESTED
+    successfully. "Data not published yet" (fresh session / stale livetiming
+    mirror) is an expected condition, not a failure: it's skipped without
+    consuming an ingest slot — so an unavailable just-finished weekend can't
+    starve the older backlog — and the next scheduled run retries it for free
+    (idempotent upserts). Exits non-zero only on unexpected errors so a red
+    run means real breakage.
     """
     year = args.year or dt.datetime.now(dt.timezone.utc).year
     types = {t.strip().upper() for t in args.sessions.split(",") if t.strip()}
@@ -53,26 +77,40 @@ def _cmd_ingest_latest(args, sink: SupabaseSink) -> int:
         print(f"nothing to ingest: season {year} is up to date for {sorted(types)}")
         return 0
 
-    todo = pending[: args.max]
-    skipped = len(pending) - len(todo)
-    print(f"{len(pending)} pending session(s); ingesting {len(todo)}"
-          + (f" (deferring {skipped} to later runs)" if skipped else ""))
-    for p in todo:
+    print(f"{len(pending)} pending session(s); ingesting up to {args.max}, newest first:")
+    for p in pending:
         print(f"  - {p.session_key} (started {p.start_utc.isoformat()}Z)")
     if args.dry_run:
         print("dry run — no writes")
         return 0
 
+    ingested = 0
+    not_ready: list[str] = []
     failures: list[str] = []
-    for p in todo:
+    for p in pending:
+        if ingested >= args.max:
+            break
         try:
             key = ingest_session(sink, p.year, p.gp_name, p.session_type)
             print(f"  ok {key}")
+            ingested += 1
         except Exception as exc:  # noqa: BLE001 — one bad session must not abort the batch
+            if _is_data_not_ready(exc):
+                print(f"  not ready: {p.session_key} — FastF1 has no data for it yet, will retry next run")
+                not_ready.append(p.session_key)
+                continue
             logging.error("ingest-latest: %s failed: %s", p.session_key, exc)
             failures.append(p.session_key)
+            # Hard failures are expensive (a full FastF1 load each) and usually
+            # systemic (Supabase/network down) — don't grind through the whole
+            # backlog on a bad day.
+            if len(failures) >= args.max:
+                print("stopping early: hard-failure budget exhausted", file=sys.stderr)
+                break
+
+    print(f"done: {ingested} ingested, {len(not_ready)} not ready yet, {len(failures)} failed")
     if failures:
-        print(f"completed with {len(failures)} failure(s): {', '.join(failures)}", file=sys.stderr)
+        print(f"failed: {', '.join(failures)}", file=sys.stderr)
         return 1
     return 0
 

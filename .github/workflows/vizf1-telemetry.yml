@@ -57,6 +57,9 @@ jobs:
     env:
       # FastF1 downloads are slow + rate-limited — cache the dir across runs.
       FASTF1_CACHE_DIR: ${{ github.workspace }}/.fastf1-cache
+      # Unbuffered stdout so the CLI's progress prints interleave correctly
+      # with fastf1's stderr logging in the Actions log.
+      PYTHONUNBUFFERED: '1'
 
     steps:
       - uses: actions/checkout@v4
