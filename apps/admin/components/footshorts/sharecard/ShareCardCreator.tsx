@@ -394,6 +394,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [tagResults, setTagResults] = useState<EntityResult[]>([])
   const [tagLoading, setTagLoading] = useState(false)
   const pendingTagsRef = useRef<EntityResult[] | null>(null)
+  // Tags the user added by hand (or that a loaded card restored) — pinned so the
+  // layer-driven re-seed below can't silently strip them.
+  const manualTagKeysRef = useRef<Set<string>>(new Set())
 
   // The Image-background tab's picker browses news thumbnails (and uses them as
   // AI references), so pull the news feed while it's open even with no news layer.
@@ -560,9 +563,17 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     if (pendingTagsRef.current) {
       setTags(pendingTagsRef.current)
       pendingTagsRef.current = null
-    } else {
-      setTags(suggestedTags)
+      return
     }
+    // Re-seed from the layers, but keep pinned (manually added / restored) tags —
+    // editing a layer must not silently drop them off the publish payload.
+    setTags((prev) => {
+      const suggested = new Set(suggestedTags.map((t) => `${t.type}:${t.slug}`))
+      const pinned = prev.filter(
+        (t) => manualTagKeysRef.current.has(`${t.type}:${t.slug}`) && !suggested.has(`${t.type}:${t.slug}`),
+      )
+      return [...suggestedTags, ...pinned]
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tagKey])
 
@@ -579,15 +590,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     }
   }, [tagQuery])
 
-  const addTag = useCallback(
-    (t: EntityResult) =>
-      setTags((prev) => (prev.some((p) => p.type === t.type && p.slug === t.slug) ? prev : [...prev, t])),
-    [],
-  )
-  const removeTag = useCallback(
-    (type: string, slug: string) => setTags((prev) => prev.filter((p) => !(p.type === type && p.slug === slug))),
-    [],
-  )
+  const addTag = useCallback((t: EntityResult) => {
+    manualTagKeysRef.current.add(`${t.type}:${t.slug}`)
+    setTags((prev) => (prev.some((p) => p.type === t.type && p.slug === t.slug) ? prev : [...prev, t]))
+  }, [])
+  const removeTag = useCallback((type: string, slug: string) => {
+    manualTagKeysRef.current.delete(`${type}:${slug}`)
+    setTags((prev) => prev.filter((p) => !(p.type === type && p.slug === slug)))
+  }, [])
 
   // Palette hints handed to the image picker's AI generation so output stays on
   // brand (the resolved accent + any per-card accent override).
@@ -824,6 +834,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setBackgroundScrim(0.5)
     setAuraSlug('')
     pendingTagsRef.current = null
+    manualTagKeysRef.current = new Set()
     setTags([])
     setCurrentCardId(null)
     setCurrentCardName('')
@@ -869,6 +880,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           .map((e) => ({ id: e.id, type: e.type as 'team' | 'league', slug: e.slug, name: e.name, crest_url: e.crestUrl }))
         setTags(restored)
         pendingTagsRef.current = restored
+        // Pin the saved tags so later layer edits re-seed *around* them instead
+        // of replacing them.
+        manualTagKeysRef.current = new Set(restored.map((e) => `${e.type}:${e.slug}`))
         applySnapshot(card.config)
         setCurrentCardId(card.id)
         setCurrentCardName(card.name)
@@ -898,6 +912,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       .prompt('Name this card (shown in the product)', currentCardName || 'Footshorts card')
       ?.trim()
     if (!name) return
+    // An untagged card never surfaces on team/league pages (only in Discover for
+    // 24h) — and re-shipping with no tags strips an already-tagged card.
+    if (tags.length === 0) {
+      const proceed = window.confirm(
+        'No entity tags are set — this card will not appear on any team or league page. Ship anyway?',
+      )
+      if (!proceed) return
+    }
     setShipping(true)
     setShipError(null)
     try {
