@@ -6,62 +6,74 @@ import { useAuth } from '@/lib/AuthProvider'
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean }
 
+// Same three tabs as the Footshorts feed header; the schedule/calendar lives
+// on the For You feed now, so /schedule and /race highlight For You.
 const NAV: NavItem[] = [
-  { href: '/feed', label: 'For You', match: (p) => p === '/feed' || p.startsWith('/driver') || p.startsWith('/team') },
-  { href: '/schedule', label: 'Schedule', match: (p) => p.startsWith('/schedule') || p.startsWith('/race') },
+  {
+    href: '/feed',
+    label: 'For you',
+    match: (p) =>
+      p === '/feed' ||
+      p.startsWith('/driver') ||
+      p.startsWith('/team') ||
+      p.startsWith('/schedule') ||
+      p.startsWith('/race'),
+  },
   { href: '/discover', label: 'Discover', match: (p) => p.startsWith('/discover') },
   { href: '/editorial', label: 'Editorial', match: (p) => p.startsWith('/editorial') },
 ]
 
+// One-to-one port of the Footshorts feed header: brand mark absolute-left,
+// pill tab group centered, avatar/sign-in absolute-right.
 export function AppHeader() {
   const pathname = usePathname() ?? ''
   const { session, loading } = useAuth()
 
+  const letter = (session?.user?.email ?? '?').charAt(0).toUpperCase()
+
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur">
-      <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-        <Link href="/feed" className="text-lg font-bold text-text">
+    <header className="sticky top-0 z-10 bg-bg/80 backdrop-blur">
+      <div className="relative mx-auto flex max-w-2xl items-center justify-center px-4 py-1">
+        <Link
+          href="/feed"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-bold text-text sm:text-lg"
+          aria-label="VizF1"
+        >
           VizF1
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="mx-auto my-2 inline-flex rounded-full border border-border bg-surface/60 p-1">
           {NAV.map((item) => {
             const active = item.match(pathname)
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={
-                  active
-                    ? 'rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-text'
-                    : 'rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:text-text'
-                }
+                className={`whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-4 sm:text-sm ${
+                  active ? 'bg-accent font-semibold text-accent-text' : 'text-muted hover:text-text'
+                }`}
               >
                 {item.label}
               </Link>
             )
           })}
-          {!loading &&
-            (session ? (
-              <Link
-                href="/following"
-                aria-label="Following"
-                className={
-                  pathname.startsWith('/following') || pathname.startsWith('/onboarding')
-                    ? 'ml-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-text'
-                    : 'ml-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:text-text'
-                }
-              >
-                Following
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="ml-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text hover:border-muted"
-              >
-                Sign in
-              </Link>
-            ))}
         </nav>
+        {!loading &&
+          (session ? (
+            <Link
+              href="/following"
+              aria-label="Following"
+              className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-text hover:border-muted"
+            >
+              {letter}
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="absolute right-4 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text hover:border-muted sm:px-3 sm:text-sm"
+            >
+              Sign in
+            </Link>
+          ))}
       </div>
     </header>
   )
