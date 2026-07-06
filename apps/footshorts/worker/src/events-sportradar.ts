@@ -62,14 +62,61 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let srCalls = 0;
 
+// Sportradar's gateway intermittently returns a transient 5xx (the 502 Bad
+// Gateway we saw abort a whole run) or a 429 when we brush the trial's 1-QPS
+// limit. A single blip shouldn't fail the job, so retry these with exponential
+// backoff. Other 4xx (bad key, not found) are permanent — thrown immediately so
+// we don't waste retries or the trial budget waiting on something that can't fix
+// itself.
+const SR_MAX_RETRIES = 4;
+const SR_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+// Cap a single backoff so a large/bogus Retry-After can't stall the job.
+const SR_MAX_BACKOFF_MS = 30 * 1000;
+
 async function srFetch<T>(path: string): Promise<T> {
-  srCalls++;
   const sep = path.includes('?') ? '&' : '?';
-  const res = await fetch(`${SR_BASE}${path}${sep}api_key=${SR_KEY}`);
-  if (!res.ok) {
-    throw new Error(`sportradar ${path} failed: ${res.status} ${res.statusText}`);
+  const url = `${SR_BASE}${path}${sep}api_key=${SR_KEY}`;
+
+  for (let attempt = 0; ; attempt++) {
+    srCalls++; // every attempt is a real request against the trial allowance
+
+    // fetch() rejects only on transport failures (DNS, reset, TLS); a bad HTTP
+    // status resolves normally. Capture whichever happened as a retry `reason`.
+    let res: Response | null = null;
+    let reason = '';
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      reason = (e as Error).message;
+    }
+
+    if (res) {
+      if (res.ok) return (await res.json()) as T;
+      // Permanent client errors won't change on retry — surface immediately.
+      if (!SR_RETRYABLE_STATUS.has(res.status)) {
+        throw new Error(`sportradar ${path} failed: ${res.status} ${res.statusText}`);
+      }
+      reason = `${res.status} ${res.statusText}`;
+    }
+
+    if (attempt >= SR_MAX_RETRIES) {
+      throw new Error(`sportradar ${path} failed after ${attempt + 1} attempts: ${reason}`);
+    }
+
+    // Honor Retry-After when present (429/503 often set it), else exponential
+    // backoff on the 1-QPS gap: 3s, 6s, 12s, 24s (capped).
+    const retryAfter = res ? Number(res.headers.get('retry-after')) : NaN;
+    const waitMs = Math.min(
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : SR_GAP_MS * 2 ** (attempt + 1),
+      SR_MAX_BACKOFF_MS,
+    );
+    console.warn(
+      `[events:sr] ${path} transient failure (${reason}); retry ${attempt + 1}/${SR_MAX_RETRIES} in ${Math.round(waitMs / 1000)}s`,
+    );
+    await sleep(waitMs);
   }
-  return (await res.json()) as T;
 }
 
 // Normalize team names to compare across providers: lowercase, strip accents and
