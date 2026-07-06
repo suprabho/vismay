@@ -26,6 +26,10 @@
  *   npm run events:sr -- --season      # list the full WC season schedule + exit
  *   npm run events:sr -- --probe       # dump the first matched raw timeline + exit
  *   npm run events:sr -- --dry         # match + parse, don't write
+ *
+ * Also dispatchable from the admin Pipeline tab's "Match timelines" panel,
+ * which fires .github/workflows/footshorts-events-sr.yml (days/dry inputs map
+ * to the flags above).
  */
 
 import { createClient } from '@supabase/supabase-js';

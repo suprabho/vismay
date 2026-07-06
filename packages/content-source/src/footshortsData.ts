@@ -493,6 +493,88 @@ export async function fetchFixtureEvents(fixtureId: string): Promise<FixtureEven
   return (data ?? []) as FixtureEventRow[]
 }
 
+// ── Sportradar match-timeline coverage (admin Pipeline tab) ──────────────────
+
+/** A finished World Cup fixture with its timeline-hydration state. */
+export interface MatchtimeFixture {
+  id: string
+  kickoffAt: string
+  home: string
+  away: string
+  /** Rows in fixture_events for this fixture; 0 = the next sync will target it. */
+  eventCount: number
+}
+
+export interface MatchtimeCoverage {
+  /** Finished World Cup fixtures, newest kickoff first. */
+  fixtures: MatchtimeFixture[]
+  finished: number
+  hydrated: number
+  pending: number
+}
+
+/**
+ * Timeline-hydration coverage for the Sportradar events sync (the worker's
+ * events-sportradar.ts): every finished World Cup fixture with its
+ * fixture_events count, so the admin Pipeline tab can show which matches the
+ * next run will hydrate. Scoped to the same competition slug the script uses.
+ */
+export async function fetchMatchtimeCoverage(): Promise<MatchtimeCoverage> {
+  const supabase = createServiceClient()
+
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('id, kickoff_at, home_team_id, away_team_id, home_team_name, away_team_name')
+    .eq('competition_slug', 'world-cup')
+    .eq('status', 'finished')
+    .order('kickoff_at', { ascending: false })
+  if (error) throw error
+  const rows = (data ?? []) as {
+    id: string
+    kickoff_at: string
+    home_team_id: string | null
+    away_team_id: string | null
+    home_team_name: string | null
+    away_team_name: string | null
+  }[]
+  if (rows.length === 0) return { fixtures: [], finished: 0, hydrated: 0, pending: 0 }
+
+  // Count events per fixture, paging because PostgREST caps a read at 1,000
+  // rows and a full WC is ~1,200 events. Ordered by pk so pages don't overlap.
+  const counts = new Map<string, number>()
+  const ids = rows.map((r) => r.id)
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data: evs, error: evErr } = await supabase
+      .from('fixture_events')
+      .select('id, fixture_id')
+      .in('fixture_id', ids)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (evErr) throw evErr
+    const page = (evs ?? []) as { fixture_id: string }[]
+    for (const e of page) counts.set(e.fixture_id, (counts.get(e.fixture_id) ?? 0) + 1)
+    if (page.length < PAGE) break
+  }
+
+  const entities = await loadTeamEntities(
+    supabase,
+    rows.flatMap((r) => [r.home_team_id, r.away_team_id]).filter((x): x is string => !!x),
+  )
+  const teamName = (id: string | null, fallback: string | null) =>
+    (id ? entities.get(id)?.name : null) ?? fallback ?? '?'
+
+  const fixtures = rows.map((r) => ({
+    id: r.id,
+    kickoffAt: r.kickoff_at,
+    home: teamName(r.home_team_id, r.home_team_name),
+    away: teamName(r.away_team_id, r.away_team_name),
+    eventCount: counts.get(r.id) ?? 0,
+  }))
+  const hydrated = fixtures.filter((f) => f.eventCount > 0).length
+  return { fixtures, finished: fixtures.length, hydrated, pending: fixtures.length - hydrated }
+}
+
 // ── news ──────────────────────────────────────────────────────────────────────
 
 /** A football-tagged entity attached to an article (team or league). */
