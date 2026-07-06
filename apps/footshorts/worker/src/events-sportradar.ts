@@ -35,8 +35,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SR_KEY = process.env.SPORTRADAR_API_KEY!;
-const SR_ACCESS = process.env.SPORTRADAR_ACCESS_LEVEL ?? 'trial';
-const SR_LANG = process.env.SPORTRADAR_LANG ?? 'en';
+// Default an unset OR empty access level/lang to the trial tier. In CI these
+// come from `${{ vars.SPORTRADAR_ACCESS_LEVEL }}`, which GitHub renders as an
+// empty string (not undefined) when the repo variable isn't set — so `??` would
+// NOT fall back and we'd build `.../soccer//v4/...` with an empty tier segment,
+// which Sportradar's gateway can't route → a deterministic 502 on every call.
+// `|| default` (with a trim to catch stray whitespace) treats empty as unset.
+const SR_ACCESS = process.env.SPORTRADAR_ACCESS_LEVEL?.trim() || 'trial';
+const SR_LANG = process.env.SPORTRADAR_LANG?.trim() || 'en';
 const SR_BASE = `https://api.sportradar.com/soccer/${SR_ACCESS}/v4/${SR_LANG}`;
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
