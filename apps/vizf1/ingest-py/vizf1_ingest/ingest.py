@@ -10,11 +10,25 @@ import logging
 
 import fastf1
 import pandas as pd
+from fastf1.exceptions import DataNotLoadedError
 
 from . import extract, positions, telemetry
 from .supabase_sink import SupabaseSink
 
 logger = logging.getLogger(__name__)
+
+
+class SessionDataUnavailable(RuntimeError):
+    """FastF1 has no timing data for a requested session.
+
+    `Session.load()` logs-and-continues when its live-timing source returns
+    nothing — the session hasn't run yet, or FastF1 hasn't published its data —
+    leaving the laps frame unpopulated. Accessing `session.laps` then raises a
+    bare `DataNotLoadedError` from deep inside FastF1. We convert that into this
+    typed, actionable error so the CLI reports it cleanly (no scary traceback)
+    and the batch resolver can log-and-continue: data that's merely late will be
+    there on the next scheduled run, which retries for free.
+    """
 
 # Aggregate dict key -> vizf1_telemetry_laps column.
 _AGG_COLS = {
@@ -128,7 +142,19 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
     session = fastf1.get_session(year, gp_name, session_type)
     # Load everything once — telemetry=True pulls car_data + pos_data.
     session.load(laps=True, telemetry=True, weather=True, messages=True)
-    laps_df = session.laps
+    try:
+        laps_df = session.laps
+    except DataNotLoadedError as exc:
+        # load() above logs-and-continues when FastF1's live-timing source has
+        # no data for the session, leaving _laps unset — accessing it here then
+        # raises DataNotLoadedError. There is nothing to ingest; surface it as a
+        # clear, retryable error instead of a bare traceback (see
+        # SessionDataUnavailable).
+        raise SessionDataUnavailable(
+            f"No timing data available for {year} {gp_name} {session_type} — the "
+            "session may not have run yet, or FastF1 hasn't published its "
+            "live-timing data. Try again once the session has completed."
+        ) from exc
 
     # Canonicalize the GP name from the loaded event so session_key, circuit_key
     # and gp_name are stable no matter how the session was requested (see

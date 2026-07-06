@@ -20,7 +20,7 @@ import sys
 import fastf1
 
 from .config import load_settings
-from .ingest import ingest_session, list_available_sessions
+from .ingest import SessionDataUnavailable, ingest_session, list_available_sessions
 from .latest import resolve_pending_sessions
 from .supabase_sink import SupabaseSink
 
@@ -32,7 +32,14 @@ def _setup(settings) -> SupabaseSink:
 
 
 def _cmd_ingest(args, sink: SupabaseSink) -> int:
-    key = ingest_session(sink, args.year, args.gp, args.session)
+    try:
+        key = ingest_session(sink, args.year, args.gp, args.session)
+    except SessionDataUnavailable as exc:
+        # A requested session whose data isn't published yet is an expected,
+        # retryable condition — report it cleanly (no traceback) but still exit
+        # non-zero so the operator/CI sees the request produced no data.
+        print(f"no data ingested: {exc}", file=sys.stderr)
+        return 1
     print(f"ingested {key}")
     return 0
 
