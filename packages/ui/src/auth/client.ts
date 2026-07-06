@@ -1,6 +1,6 @@
 'use client'
 
-import { createBrowserClient } from '@supabase/ssr'
+import { createBrowserClient, type CookieOptionsWithName } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
@@ -43,9 +43,20 @@ export interface AuthClient {
  * and the PKCE code verifier are stored in cookies — readable by the matching
  * server `/auth/callback` route, which is what makes OAuth / magic-link work
  * uniformly across consumer apps and admin.
+ *
+ * `cookieOptions` MUST mirror whatever the app's *server* Supabase client sets —
+ * especially `domain`. A cookie written with a `domain` can only be overwritten
+ * or cleared by a writer that sets the same `domain`; if the server scopes the
+ * session cookie to a parent domain (e.g. `.vismay.xyz`) but this client leaves
+ * it host-only, gotrue-js here can never clear an invalidated session, so a dead
+ * refresh token loops against `/token` until it trips the rate limiter.
  */
-export function createAuthBrowserClient(url: string, anonKey: string): SupabaseClient {
-  return createBrowserClient(url, anonKey)
+export function createAuthBrowserClient(
+  url: string,
+  anonKey: string,
+  options?: { cookieOptions?: CookieOptionsWithName },
+): SupabaseClient {
+  return createBrowserClient(url, anonKey, options)
 }
 
 /** Consumer adapter: all methods go through the browser Supabase client. */
