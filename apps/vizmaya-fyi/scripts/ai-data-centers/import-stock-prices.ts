@@ -4,17 +4,18 @@
  *
  *   • US tickers (market='US')          → massive.com market-data REST API, a
  *     keyed, licensed feed (Polygon-compatible aggregates endpoint).
- *   • International (TW/KR/JP/NL/HK)     → Stooq's free keyless daily CSV, the
- *     one no-key source spanning all five non-US exchanges massive.com doesn't
- *     cover (massive.com is US-only).
+ *   • International (TW/KR/JP/NL/HK)     → Twelve Data's time_series API, which
+ *     covers all five non-US exchanges massive.com doesn't (massive.com is
+ *     US-only). Stooq was tried first but bot-gates GitHub's datacenter IPs.
  *
  * Both normalise to the same (ticker, trade_date, o/h/l/c/v) rows and upsert
  * idempotently on (ticker, trade_date). Prices stay in the listing's native
  * currency; close is split-adjusted.
  *
- * Symbol mapping (Stooq): the dc_stocks `market` column (US|TW|KR|JP|NL|HK)
- * gives the Stooq suffix directly — note Korea is `.KS` in the ticker but `.kr`
- * on Stooq, so we key off `market`, never the ticker suffix.
+ * Symbol mapping (Twelve Data): the dc_stocks `market` column (US|TW|KR|JP|NL|
+ * HK) maps to the exchange MIC (TW→XTAI, KR→XKRX, JP→XTKS, NL→XAMS, HK→XHKG),
+ * paired with the numeric code — so 005930.KS resolves as symbol 005930 on
+ * XKRX. We key off `market`, never the Yahoo-style ticker suffix.
  *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full          # ~5y backfill
@@ -23,13 +24,13 @@
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
- *   MASSIVE_API_TOKEN — massive.com REST API key. Needed for the US tickers;
- *   the international tickers use Stooq, which needs no key.
+ *   MASSIVE_API_TOKEN   — massive.com REST API key (US tickers).
+ *   TWELVEDATA_API_KEY  — Twelve Data API key (international tickers).
  *
  * Idempotency: upsert on (ticker, trade_date). Trading days come from the
  * source in the exchange's own calendar — massive.com timestamps are converted
- * in US/Eastern; Stooq already dates each bar by its local trading day. A bar
- * written mid-session is partial but self-heals on the next run.
+ * in US/Eastern; Twelve Data already dates each bar by its local trading day. A
+ * bar written mid-session is partial but self-heals on the next run.
  */
 
 import { config as loadEnv } from 'dotenv'
@@ -40,9 +41,16 @@ loadEnv({ path: '.env' })
 
 const MASSIVE_API_BASE = 'https://api.massive.com'
 const MASSIVE_KEY = process.env.MASSIVE_API_TOKEN?.trim() || null
-const STOOQ_CSV_URL = 'https://stooq.com/q/d/l/'
-// dc_stocks.market → Stooq exchange suffix. US never reaches Stooq.
-const STOOQ_SUFFIX: Record<string, string> = { TW: 'tw', KR: 'kr', JP: 'jp', NL: 'nl', HK: 'hk' }
+const TWELVEDATA_BASE = 'https://api.twelvedata.com'
+const TWELVEDATA_KEY = process.env.TWELVEDATA_API_KEY?.trim() || null
+// dc_stocks.market → Twelve Data exchange MIC. US never reaches Twelve Data.
+const TD_MIC: Record<string, string> = {
+  TW: 'XTAI', // Taiwan Stock Exchange
+  KR: 'XKRX', // Korea Exchange
+  JP: 'XTKS', // Tokyo Stock Exchange
+  NL: 'XAMS', // Euronext Amsterdam
+  HK: 'XHKG', // Hong Kong Exchanges
+}
 // massive.com/Polygon daily aggregate timestamps are Eastern-Time day starts.
 const US_TZ = 'America/New_York'
 const USER_AGENT =
@@ -54,7 +62,9 @@ const UPSERT_BATCH = 500
 const REQUEST_DELAY_MS = 400
 const REQUEST_JITTER_MS = 300 // uniform spacing looks like a bot — smear it
 const FETCH_TIMEOUT_MS = 20_000
-const MAX_ATTEMPTS = 3
+// massive.com's free tier throttles to a few calls/minute, so a ticker can get
+// caught mid-window; retry enough times to ride out a full cooldown cycle.
+const MAX_ATTEMPTS = 5
 // massive.com's free tier rate-limits; a 429 pauses the whole run (Retry-After
 // aware) so we glide under the cap rather than hammering it.
 const RATE_LIMIT_BASE_MS = 15_000
@@ -112,6 +122,8 @@ function dateWindow(lookbackDays: number): { from: string; to: string } {
 }
 
 function numOrNull(s: string | undefined): number | null {
+  // Number('') and Number('  ') are 0, not NaN — treat blanks as missing.
+  if (s == null || s.trim() === '') return null
   const n = Number(s)
   return Number.isFinite(n) ? n : null
 }
@@ -228,56 +240,94 @@ async function fetchMassive(ticker: string, from: string, to: string): Promise<P
       high: b.h ?? null,
       low: b.l ?? null,
       close: b.c,
-      volume: b.v ?? null,
+      // massive.com returns split-adjusted volume, which is fractional; the
+      // dc_stock_prices.volume column is bigint, so round to whole shares.
+      volume: b.v == null ? null : Math.round(b.v),
     })
   }
   return dedupeByDate(rows)
 }
 
-/** dc_stocks ticker + market → Stooq symbol, e.g. 005930.KS (KR) → 005930.kr. */
-function stooqSymbol(ticker: string, market: string): string {
-  const suffix = STOOQ_SUFFIX[market]
-  if (!suffix) throw new Error(`no Stooq suffix for market ${market}`)
-  return `${ticker.split('.')[0].toLowerCase()}.${suffix}`
+interface TdValue {
+  datetime: string
+  open?: string
+  high?: string
+  low?: string
+  close?: string
+  volume?: string
+}
+interface TdResp {
+  status?: string
+  values?: TdValue[]
+  message?: string
+  code?: number
 }
 
-/** Daily bars for an international ticker from Stooq's free CSV endpoint. */
-async function fetchStooq(
+/**
+ * Daily bars for an international ticker from Twelve Data's time_series API.
+ * Symbol = the numeric code + the market's MIC (005930.KS → 005930 on XKRX).
+ * Twelve Data signals rate/credit limits with `code: 429` inside a 200 body, so
+ * we check that as well as the HTTP status and route both through the limiter.
+ */
+async function fetchTwelveData(
   ticker: string,
   market: string,
   from: string,
   to: string
 ): Promise<PriceRow[]> {
-  const sym = stooqSymbol(ticker, market)
+  if (!TWELVEDATA_KEY) throw new Error('TWELVEDATA_API_KEY not set — cannot fetch international tickers')
+  const mic = TD_MIC[market]
+  if (!mic) throw new Error(`no Twelve Data MIC for market ${market}`)
+  const symbol = ticker.split('.')[0]
   const url =
-    `${STOOQ_CSV_URL}?s=${encodeURIComponent(sym)}&i=d` +
-    `&d1=${from.replace(/-/g, '')}&d2=${to.replace(/-/g, '')}`
-  const res = await getWithRetry(url, { 'user-agent': USER_AGENT }, `stooq ${sym}`)
-  const body = await res.text()
-  if (!res.ok) throw new Error(`stooq ${sym} ${res.status} ${res.statusText}`)
-  // Stooq answers unknown symbols / throttling with a non-CSV body ("No data",
-  // "Exceeded the daily hits limit", or an HTML page) at HTTP 200.
-  if (!body.startsWith('Date,')) {
-    throw new Error(`stooq ${sym}: ${body.slice(0, 120).replace(/\s+/g, ' ').trim() || 'empty response'}`)
+    `${TWELVEDATA_BASE}/time_series?symbol=${encodeURIComponent(symbol)}&mic_code=${mic}` +
+    `&interval=1day&start_date=${from}&end_date=${to}&outputsize=5000&order=ASC`
+  const label = `td ${symbol}:${mic}`
+  let lastErr: Error | null = null
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    await limiter.gate()
+    let data: TdResp
+    let httpStatus = 0
+    try {
+      // apikey goes in the Authorization header so it never lands in a logged URL.
+      const res = await fetch(url, {
+        headers: { authorization: `apikey ${TWELVEDATA_KEY}` },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      })
+      httpStatus = res.status
+      data = (await res.json().catch(() => ({}))) as TdResp
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err))
+      if (attempt < MAX_ATTEMPTS - 1) await sleep(1500 * 2 ** attempt + Math.random() * 500)
+      continue
+    }
+    if (httpStatus === 429 || data.code === 429) {
+      limiter.hit(0) // free tier is 8 credits/min; pause and let the window reset
+      lastErr = new Error(`${label} 429 ${data.message ?? ''}`.trim())
+      continue
+    }
+    if (data.status === 'error') {
+      throw new Error(`${label} ${data.code ?? httpStatus}: ${data.message ?? 'error'}`)
+    }
+    limiter.settle()
+    const rows: PriceRow[] = []
+    for (const v of data.values ?? []) {
+      const c = Number(v.close)
+      if (!v.datetime || !Number.isFinite(c)) continue
+      const vol = numOrNull(v.volume)
+      rows.push({
+        ticker,
+        trade_date: v.datetime.slice(0, 10), // already the local trading day
+        open: numOrNull(v.open),
+        high: numOrNull(v.high),
+        low: numOrNull(v.low),
+        close: c,
+        volume: vol == null ? null : Math.round(vol),
+      })
+    }
+    return dedupeByDate(rows)
   }
-  const rows: PriceRow[] = []
-  const lines = body.trim().split(/\r?\n/)
-  for (let i = 1; i < lines.length; i++) {
-    // Date,Open,High,Low,Close,Volume — no quoting, so a plain split is safe.
-    const [date, open, high, low, close, volume] = lines[i].split(',')
-    const c = Number(close)
-    if (!date || !Number.isFinite(c)) continue // skip N/D / blank closes
-    rows.push({
-      ticker,
-      trade_date: date, // Stooq already dates each bar by its local trading day
-      open: numOrNull(open),
-      high: numOrNull(high),
-      low: numOrNull(low),
-      close: c,
-      volume: numOrNull(volume) == null ? null : Math.round(Number(volume)),
-    })
-  }
-  return dedupeByDate(rows)
+  throw lastErr ?? new Error(`${label}: fetch failed`)
 }
 
 async function main() {
@@ -303,13 +353,17 @@ async function main() {
 
   const { from, to } = dateWindow(args.lookbackDays)
   const usCount = stocks.filter((s) => s.market === 'US').length
+  const intlCount = stocks.length - usCount
   console.log(
     `Importing daily bars ${from} → ${to} for ${stocks.length} ticker(s) ` +
-      `(${usCount} US via massive.com, ${stocks.length - usCount} international via Stooq)` +
+      `(${usCount} US via massive.com, ${intlCount} international via Twelve Data)` +
       (args.dryRun ? ' (dry run)' : '')
   )
   if (usCount > 0 && !MASSIVE_KEY) {
     console.error('⚠ MASSIVE_API_TOKEN not set — the US tickers will fail until it is')
+  }
+  if (intlCount > 0 && !TWELVEDATA_KEY) {
+    console.error('⚠ TWELVEDATA_API_KEY not set — the international tickers will fail until it is')
   }
 
   let totalRows = 0
@@ -320,7 +374,7 @@ async function main() {
       const rows =
         stock.market === 'US'
           ? await fetchMassive(stock.ticker, from, to)
-          : await fetchStooq(stock.ticker, stock.market, from, to)
+          : await fetchTwelveData(stock.ticker, stock.market, from, to)
       if (rows.length === 0) {
         failures.push(stock.ticker)
         console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in range`)
