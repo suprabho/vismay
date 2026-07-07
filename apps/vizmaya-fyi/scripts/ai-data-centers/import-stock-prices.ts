@@ -1,132 +1,80 @@
 /**
- * AI Data Centers stock price importer — pulls daily OHLCV bars for every
- * active ticker in dc_stocks from Yahoo Finance's v8 chart API and upserts
- * into dc_stock_prices. Each company is tracked on its home exchange
- * (2330.TW, 005930.KS, ASML.AS, 8035.T, …), so prices move in the listing's
- * own market and native currency.
+ * AI Data Centers stock price importer — populates dc_stock_prices with daily
+ * OHLCV bars for every active dc_stocks ticker, routed by home market:
  *
- * Yahoo's chart endpoint is keyless and covers every market in the registry;
- * dedicated free APIs (Stooq, Alpha Vantage) either miss the Taiwan/Korea
- * listings or cap requests too low for a daily fleet-wide pull.
+ *   • US tickers (market='US')          → massive.com market-data REST API, a
+ *     keyed, licensed feed (Polygon-compatible aggregates endpoint).
+ *   • International (TW/KR/JP/NL/HK)     → Stooq's free keyless daily CSV, the
+ *     one no-key source spanning all five non-US exchanges massive.com doesn't
+ *     cover (massive.com is US-only).
  *
- * Rate limiting: Yahoo throttles per IP and sheds anonymous traffic from
- * shared IPs (GitHub Actions runners especially) first, so the fetch path
- * layers several defences — a browser-like cookie+crumb session, query1/
- * query2 host rotation, a run-wide Retry-After-aware cooldown (one 429 means
- * the next request will 429 too, so the whole run pauses, not one symbol),
- * and up to three passes over rate-limited tickers with a long cool-down and
- * a fresh session between passes.
+ * Both normalise to the same (ticker, trade_date, o/h/l/c/v) rows and upsert
+ * idempotently on (ticker, trade_date). Prices stay in the listing's native
+ * currency; close is split-adjusted.
  *
- * The durable fix for CI is to stop egressing from the blocked runner IP.
- * Two ways, either optional and either sufficient:
- *   - MASSIVE_API_TOKEN: fetch each Yahoo URL through Massive's Render API
- *     (Bearer auth, format=raw ⇒ Yahoo's JSON passes through) from Massive's
- *     residential network. Simplest — one API key, no session needed. Note
- *     Massive is only the delivery layer; the data is still Yahoo's.
- *   - STOCKS_HTTPS_PROXY: route requests through a residential HTTP proxy
- *     (http://user:pass@host:port), egressing from a real-user IP.
- * The token wins if both are set; with neither, requests go direct (fine for
- * local dev). The cookie/crumb + retry defences above stay as a backstop.
+ * Symbol mapping (Stooq): the dc_stocks `market` column (US|TW|KR|JP|NL|HK)
+ * gives the Stooq suffix directly — note Korea is `.KS` in the ticker but `.kr`
+ * on Stooq, so we key off `market`, never the ticker suffix.
  *
  * Run locally:  pnpm ai-data-centers:import-stocks
- *               pnpm ai-data-centers:import-stocks -- --full        # 5y backfill
- *               pnpm ai-data-centers:import-stocks -- --range 3mo
+ *               pnpm ai-data-centers:import-stocks -- --full          # ~5y backfill
+ *               pnpm ai-data-centers:import-stocks -- --days 90
  *               pnpm ai-data-centers:import-stocks -- --ticker NVDA --dry-run
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
- * Optional env (pick one to beat CI 429s; see above):
- *   MASSIVE_API_TOKEN [+ MASSIVE_GEO, default 'us'] — Massive Render API key.
- *   STOCKS_HTTPS_PROXY — residential proxy URL (http://user:pass@host:port).
+ *   MASSIVE_API_TOKEN — massive.com REST API key. Needed for the US tickers;
+ *   the international tickers use Stooq, which needs no key.
  *
- * Idempotency: upsert on (ticker, trade_date). Trading days are computed in
- * the exchange's own timezone (meta.exchangeTimezoneName), so a Tokyo bar
- * lands on its Tokyo date regardless of when the cron fires. A bar written
- * mid-session is partial but self-heals — the next run overwrites it with the
- * completed bar. `close` follows Yahoo v8 semantics: split-adjusted, not
- * dividend-adjusted.
+ * Idempotency: upsert on (ticker, trade_date). Trading days come from the
+ * source in the exchange's own calendar — massive.com timestamps are converted
+ * in US/Eastern; Stooq already dates each bar by its local trading day. A bar
+ * written mid-session is partial but self-heals on the next run.
  */
 
 import { config as loadEnv } from 'dotenv'
-import { fetch, ProxyAgent, setGlobalDispatcher, type Response } from 'undici'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
 
-/**
- * Build an undici ProxyAgent from a proxy URL, lifting any `user:pass` in the
- * URL into a Proxy-Authorization header (undici wants credentials out of the
- * CONNECT uri). Handles Massive's gateway
- * (`http://USER:PASS@network.joinmassive.com:65534`) and any plain host:port.
- */
-function proxyDispatcher(raw: string): ProxyAgent {
-  const u = new URL(raw)
-  const uri = `${u.protocol}//${u.host}`
-  if (!u.username && !u.password) return new ProxyAgent({ uri })
-  const creds = `${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`
-  return new ProxyAgent({ uri, token: `Basic ${Buffer.from(creds).toString('base64')}` })
-}
-
-// Yahoo sheds anonymous traffic from shared datacenter IPs first, so a plain
-// fetch from a GitHub Actions runner 429s on the very first request. When
-// STOCKS_HTTPS_PROXY is set, route every request in this module through it so
-// Yahoo sees a residential IP. `fetch` is imported from undici (not the global)
-// because the global fetch ignores a userland dispatcher; the Supabase client
-// keeps the global fetch, so DB writes never travel through the proxy.
-const PROXY_URL = process.env.STOCKS_HTTPS_PROXY?.trim() || null
-if (PROXY_URL) setGlobalDispatcher(proxyDispatcher(PROXY_URL))
-
-// Alternative to the raw proxy: Massive's Render API (API-key auth). It fetches
-// the Yahoo URL from its own residential network and, with format=raw, returns
-// Yahoo's JSON body verbatim — so it dodges the runner-IP 429s with a single
-// Bearer token instead of a user:pass proxy URL. Takes precedence over the
-// proxy when set; MASSIVE_GEO pins the exit country (Yahoo is US-centric).
-const MASSIVE_TOKEN = process.env.MASSIVE_API_TOKEN?.trim() || null
-const MASSIVE_GEO = process.env.MASSIVE_GEO?.trim() || 'us'
-const MASSIVE_ENDPOINT = 'https://render.joinmassive.com/browser'
-
-// query2 is a mirror — trying both hosts rides out per-host rate limiting.
-const YAHOO_HOSTS = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']
-// Yahoo 429s obvious non-browser agents on some edges.
+const MASSIVE_API_BASE = 'https://api.massive.com'
+const MASSIVE_KEY = process.env.MASSIVE_API_TOKEN?.trim() || null
+const STOOQ_CSV_URL = 'https://stooq.com/q/d/l/'
+// dc_stocks.market → Stooq exchange suffix. US never reaches Stooq.
+const STOOQ_SUFFIX: Record<string, string> = { TW: 'tw', KR: 'kr', JP: 'jp', NL: 'nl', HK: 'hk' }
+// massive.com/Polygon daily aggregate timestamps are Eastern-Time day starts.
+const US_TZ = 'America/New_York'
 const USER_AGENT =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
-const DEFAULT_RANGE = '1mo' // daily incremental — generous overlap, upsert dedupes
-const FULL_RANGE = '5y'
+const DEFAULT_LOOKBACK_DAYS = 45 // daily incremental — generous overlap, upsert dedupes
+const FULL_LOOKBACK_DAYS = 5 * 365 + 30 // ~5y backfill
 const UPSERT_BATCH = 500
-const TICKER_DELAY_MS = 600
-const TICKER_JITTER_MS = 400 // uniform spacing looks like a bot — smear it
-const FETCH_TIMEOUT_MS = 15_000
-const MAX_FETCH_ROUNDS = 3
-// Run-wide 429 cooldown (see `limiter`): first hit pauses everything 20s,
-// repeats double it up to 60s. A Retry-After above the cap is ignored — the
-// pass-level cool-down handles sustained throttling.
-const RATE_LIMIT_BASE_MS = 20_000
+const REQUEST_DELAY_MS = 400
+const REQUEST_JITTER_MS = 300 // uniform spacing looks like a bot — smear it
+const FETCH_TIMEOUT_MS = 20_000
+const MAX_ATTEMPTS = 3
+// massive.com's free tier rate-limits; a 429 pauses the whole run (Retry-After
+// aware) so we glide under the cap rather than hammering it.
+const RATE_LIMIT_BASE_MS = 15_000
 const RATE_LIMIT_MAX_MS = 60_000
-// Tickers that failed on rate limiting get re-tried in later passes, each
-// behind a longer cool-down and a fresh Yahoo session.
-const MAX_PASSES = 3
-const PASS_COOLDOWN_MS = 90_000
-// Two consecutive tickers exhausting their retries on pure 429s means the IP
-// is hard-throttled — defer the rest of the pass instead of grinding through.
-const MAX_CONSECUTIVE_RATE_LIMITED = 2
 
 interface Args {
-  range: string
+  lookbackDays: number
   dryRun: boolean
   ticker: string | null
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { range: DEFAULT_RANGE, dryRun: false, ticker: null }
+  const args: Args = { lookbackDays: DEFAULT_LOOKBACK_DAYS, dryRun: false, ticker: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     // pnpm forwards the `--` separator itself (npm strips it), so a bare
     // `pnpm ai-data-centers:import-stocks -- --full` delivers ['--', '--full'].
     if (a === '--') continue
-    if (a === '--full') args.range = FULL_RANGE
-    else if (a === '--range') args.range = argv[++i] ?? DEFAULT_RANGE
+    else if (a === '--full') args.lookbackDays = FULL_LOOKBACK_DAYS
+    else if (a === '--days') args.lookbackDays = Number(argv[++i]) || DEFAULT_LOOKBACK_DAYS
     else if (a === '--dry-run') args.dryRun = true
     else if (a === '--ticker') args.ticker = argv[++i] ?? null
     else throw new Error(`Unknown flag: ${a}`)
@@ -134,78 +82,51 @@ function parseArgs(argv: string[]): Args {
   return args
 }
 
-interface YahooChart {
-  chart: {
-    result?: Array<{
-      meta?: { exchangeTimezoneName?: string; currency?: string }
-      timestamp?: number[]
-      indicators?: {
-        quote?: Array<{
-          open?: (number | null)[]
-          high?: (number | null)[]
-          low?: (number | null)[]
-          close?: (number | null)[]
-          volume?: (number | null)[]
-        }>
-      }
-    }>
-    error?: { code?: string; description?: string } | null
-  }
+interface Stock {
+  ticker: string
+  name: string
+  market: string
+}
+
+interface PriceRow {
+  ticker: string
+  trade_date: string
+  open: number | null
+  high: number | null
+  low: number | null
+  close: number
+  volume: number | null
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-interface YahooSession {
-  cookie: string | null
-  crumb: string | null
+/** YYYY-MM-DD (UTC) — used for the request window bounds. */
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function dateWindow(lookbackDays: number): { from: string; to: string } {
+  const now = new Date()
+  const from = new Date(now.getTime() - lookbackDays * 86_400_000)
+  return { from: isoDate(from), to: isoDate(now) }
+}
+
+function numOrNull(s: string | undefined): number | null {
+  const n = Number(s)
+  return Number.isFinite(n) ? n : null
+}
+
+/** Collapse duplicate dates to the last bar, sorted ascending. */
+function dedupeByDate(rows: PriceRow[]): PriceRow[] {
+  const byDate = new Map<string, PriceRow>()
+  for (const row of rows) byDate.set(row.trade_date, row)
+  return [...byDate.values()].sort((a, b) => a.trade_date.localeCompare(b.trade_date))
 }
 
 /**
- * Bootstrap a browser-like Yahoo session. fc.yahoo.com sets an `A3` cookie on
- * any response (even its usual 404), and the crumb endpoint turns that cookie
- * into an API token. Both are optional — the chart endpoint answers keyless
- * requests too — but anonymous traffic is the first thing Yahoo's edge sheds
- * when throttling, so a session dramatically cuts 429s from CI runners.
- */
-async function createSession(): Promise<YahooSession> {
-  const session: YahooSession = { cookie: null, crumb: null }
-  try {
-    const res = await fetch('https://fc.yahoo.com/', {
-      headers: { 'user-agent': USER_AGENT },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-    const cookies = res.headers.getSetCookie?.() ?? []
-    session.cookie =
-      cookies
-        .map((c) => c.split(';')[0])
-        .filter(Boolean)
-        .join('; ') || null
-  } catch {
-    // keyless fallback
-  }
-  if (!session.cookie) return session
-  try {
-    const res = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-      headers: { 'user-agent': USER_AGENT, accept: 'text/plain', cookie: session.cookie },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-    if (res.ok) {
-      const text = (await res.text()).trim()
-      // An HTML error page here just means "no crumb today".
-      if (text && text.length <= 64 && !text.includes('<')) session.crumb = text
-    }
-  } catch {
-    // crumb is optional
-  }
-  return session
-}
-
-/**
- * Yahoo rate-limits per IP, not per symbol — one 429 means the next request
- * will 429 too. Every fetch funnels through this shared gate: a 429 escalates
- * a run-wide cooldown (honouring Retry-After up to the cap), a success
- * resets it.
+ * Both sources rate-limit per IP, so every request funnels through one shared
+ * gate: a 429 escalates a run-wide cooldown (honouring Retry-After), a success
+ * resets it. Also retries transient network errors and 5xx.
  */
 const limiter = {
   waitUntil: 0,
@@ -227,156 +148,136 @@ const limiter = {
   },
 }
 
-/** A fetch that exhausted its retries on nothing but 429s — retriable in a later pass. */
-class RateLimitError extends Error {}
-
 function retryAfterMs(res: Response): number {
   const seconds = Number(res.headers.get('retry-after'))
   return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0
 }
 
-/**
- * Build the request for one symbol's chart. Direct/proxy mode hits Yahoo
- * (query1/query2) with the browser session; Massive mode wraps the same Yahoo
- * URL in the Render API (Bearer auth, format=raw ⇒ Yahoo's JSON passes
- * through), so the fetch egresses from Massive's residential network instead of
- * the runner IP. crumb/cookie only apply to the direct path — with Massive the
- * request to Yahoo comes from Massive's own browser, not us.
- */
-function buildChartRequest(
-  symbol: string,
-  range: string,
-  host: string,
-  session: YahooSession
-): { url: string; headers: Record<string, string> } {
-  const yahooUrl =
-    `https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}` +
-    `?range=${encodeURIComponent(range)}&interval=1d&includePrePost=false` +
-    (!MASSIVE_TOKEN && session.crumb ? `&crumb=${encodeURIComponent(session.crumb)}` : '')
-  if (MASSIVE_TOKEN) {
-    const u = new URL(MASSIVE_ENDPOINT)
-    u.searchParams.set('url', yahooUrl)
-    u.searchParams.set('format', 'raw') // origin body passes through verbatim
-    if (MASSIVE_GEO) u.searchParams.set('geo', MASSIVE_GEO)
-    return {
-      url: u.toString(),
-      headers: { authorization: `Bearer ${MASSIVE_TOKEN}`, accept: 'application/json' },
-    }
-  }
-  const headers: Record<string, string> = { 'user-agent': USER_AGENT, accept: 'application/json' }
-  if (session.cookie) headers.cookie = session.cookie
-  return { url: yahooUrl, headers }
-}
-
-/**
- * Fetch one symbol's daily bars, rotating hosts with backoff. Returns null
- * for a symbol Yahoo doesn't know (logged upstream) — everything else throws
- * after the retries are exhausted; RateLimitError specifically when every
- * response was a 429, so the caller can defer to a later pass.
- */
-async function fetchChart(
-  symbol: string,
-  range: string,
-  session: YahooSession
-): Promise<YahooChart | null> {
+async function getWithRetry(
+  url: string,
+  headers: Record<string, string>,
+  label: string
+): Promise<Response> {
   let lastErr: Error | null = null
-  let only429s = true
-  for (let attempt = 0; attempt < MAX_FETCH_ROUNDS; attempt++) {
-    for (const host of YAHOO_HOSTS) {
-      await limiter.gate()
-      try {
-        const req = buildChartRequest(symbol, range, host, session)
-        const res = await fetch(req.url, {
-          headers: req.headers,
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        })
-        if (res.status === 404) return null
-        if (res.ok) {
-          limiter.settle()
-          return (await res.json()) as YahooChart
-        }
-        // Surface a snippet of the error body — Massive/Yahoo explain the
-        // rejection (bad token, product not enabled, bad param) in it, and the
-        // bare status alone ("403 Forbidden") isn't enough to act on.
-        const detail = (await res.text().catch(() => ''))
-          .slice(0, 180)
-          .replace(/\s+/g, ' ')
-          .trim()
-        lastErr = new Error(
-          `${MASSIVE_TOKEN ? 'massive' : host} ${res.status} ${res.statusText}` +
-            (detail ? ` — ${detail}` : '')
-        )
-        if (res.status === 429) limiter.hit(retryAfterMs(res))
-        else only429s = false
-      } catch (err) {
-        lastErr = err instanceof Error ? err : new Error(String(err))
-        only429s = false
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    await limiter.gate()
+    try {
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+      if (res.status === 429) {
+        limiter.hit(retryAfterMs(res))
+        lastErr = new Error(`${label} 429 Too Many Requests`)
+        continue // the next limiter.gate() waits out the cooldown
       }
-    }
-    // Two full rounds of nothing but 429s while the shared cooldown is
-    // already escalating: grinding on just drains the run's time budget —
-    // bail and let the pass-level retry (fresh session, longer cool-down)
-    // pick this symbol up again.
-    if (only429s && attempt >= 1) throw new RateLimitError(lastErr?.message ?? '429')
-    // 429 pacing is the limiter's job; this backoff is for transient errors.
-    if (attempt < MAX_FETCH_ROUNDS - 1 && !only429s) {
-      await sleep(2000 * 2 ** attempt + Math.random() * 1000)
+      if (res.status >= 500) {
+        lastErr = new Error(`${label} ${res.status} ${res.statusText}`)
+        if (attempt < MAX_ATTEMPTS - 1) await sleep(1500 * 2 ** attempt + Math.random() * 500)
+        continue
+      }
+      limiter.settle()
+      return res
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err))
+      if (attempt < MAX_ATTEMPTS - 1) await sleep(1500 * 2 ** attempt + Math.random() * 500)
     }
   }
-  if (only429s) throw new RateLimitError(lastErr?.message ?? '429')
-  throw lastErr ?? new Error(`fetch failed for ${symbol}`)
+  throw lastErr ?? new Error(`${label}: fetch failed`)
 }
 
-interface PriceRow {
-  ticker: string
-  trade_date: string
-  open: number | null
-  high: number | null
-  low: number | null
-  close: number
-  volume: number | null
+interface MassiveBar {
+  t: number // ms timestamp of the aggregate window start
+  o?: number
+  h?: number
+  l?: number
+  c?: number
+  v?: number
+}
+interface MassiveResp {
+  status?: string
+  results?: MassiveBar[]
+  error?: string
+  message?: string
 }
 
-/** Epoch seconds → YYYY-MM-DD in the exchange's own calendar. */
-function tradeDate(ts: number, timeZone: string): string {
-  return new Date(ts * 1000).toLocaleDateString('en-CA', { timeZone })
-}
-
-function shapeRows(ticker: string, chart: YahooChart): PriceRow[] {
-  const result = chart.chart.result?.[0]
-  if (!result) {
-    const err = chart.chart.error
-    throw new Error(err ? `${err.code}: ${err.description}` : 'empty chart result')
+/** Daily bars for a US ticker from massive.com's Polygon-compatible aggregates API. */
+async function fetchMassive(ticker: string, from: string, to: string): Promise<PriceRow[]> {
+  if (!MASSIVE_KEY) throw new Error('MASSIVE_API_TOKEN not set — cannot fetch US tickers')
+  const url =
+    `${MASSIVE_API_BASE}/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/1/day/${from}/${to}` +
+    `?adjusted=true&sort=asc&limit=50000`
+  const res = await getWithRetry(
+    url,
+    { authorization: `Bearer ${MASSIVE_KEY}`, accept: 'application/json', 'user-agent': USER_AGENT },
+    `massive ${ticker}`
+  )
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).slice(0, 180).replace(/\s+/g, ' ').trim()
+    throw new Error(`massive ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ''}`)
   }
-  const timeZone = result.meta?.exchangeTimezoneName ?? 'UTC'
-  const timestamps = result.timestamp ?? []
-  const quote = result.indicators?.quote?.[0] ?? {}
+  const data = (await res.json()) as MassiveResp
+  // Polygon returns status OK/DELAYED with results; anything else is an error.
+  if (data.status && data.status !== 'OK' && data.status !== 'DELAYED') {
+    throw new Error(`massive ${data.status}: ${data.error ?? data.message ?? 'error'}`)
+  }
   const rows: PriceRow[] = []
-  for (let i = 0; i < timestamps.length; i++) {
-    const close = quote.close?.[i]
-    // Yahoo pads holidays/suspensions with all-null entries — skip them.
-    if (close == null) continue
+  for (const b of data.results ?? []) {
+    if (b.c == null) continue // a bar without a close is unusable
     rows.push({
       ticker,
-      trade_date: tradeDate(timestamps[i], timeZone),
-      open: quote.open?.[i] ?? null,
-      high: quote.high?.[i] ?? null,
-      low: quote.low?.[i] ?? null,
-      close,
-      volume: quote.volume?.[i] ?? null,
+      trade_date: new Date(b.t).toLocaleDateString('en-CA', { timeZone: US_TZ }),
+      open: b.o ?? null,
+      high: b.h ?? null,
+      low: b.l ?? null,
+      close: b.c,
+      volume: b.v ?? null,
     })
   }
-  // Rare duplicate timestamps within a session collapse to the last bar.
-  const byDate = new Map<string, PriceRow>()
-  for (const row of rows) byDate.set(row.trade_date, row)
-  return [...byDate.values()].sort((a, b) => a.trade_date.localeCompare(b.trade_date))
+  return dedupeByDate(rows)
 }
 
-/** One-line summary of how this run reaches Yahoo, for the startup log. */
-function transportLabel(): string {
-  if (MASSIVE_TOKEN) return `Fetching via Massive Render API (geo=${MASSIVE_GEO})`
-  if (PROXY_URL) return `Routing Yahoo requests through proxy ${new URL(PROXY_URL).host}`
-  return 'No MASSIVE_API_TOKEN or STOCKS_HTTPS_PROXY set — going direct (expect 429s from CI)'
+/** dc_stocks ticker + market → Stooq symbol, e.g. 005930.KS (KR) → 005930.kr. */
+function stooqSymbol(ticker: string, market: string): string {
+  const suffix = STOOQ_SUFFIX[market]
+  if (!suffix) throw new Error(`no Stooq suffix for market ${market}`)
+  return `${ticker.split('.')[0].toLowerCase()}.${suffix}`
+}
+
+/** Daily bars for an international ticker from Stooq's free CSV endpoint. */
+async function fetchStooq(
+  ticker: string,
+  market: string,
+  from: string,
+  to: string
+): Promise<PriceRow[]> {
+  const sym = stooqSymbol(ticker, market)
+  const url =
+    `${STOOQ_CSV_URL}?s=${encodeURIComponent(sym)}&i=d` +
+    `&d1=${from.replace(/-/g, '')}&d2=${to.replace(/-/g, '')}`
+  const res = await getWithRetry(url, { 'user-agent': USER_AGENT }, `stooq ${sym}`)
+  const body = await res.text()
+  if (!res.ok) throw new Error(`stooq ${sym} ${res.status} ${res.statusText}`)
+  // Stooq answers unknown symbols / throttling with a non-CSV body ("No data",
+  // "Exceeded the daily hits limit", or an HTML page) at HTTP 200.
+  if (!body.startsWith('Date,')) {
+    throw new Error(`stooq ${sym}: ${body.slice(0, 120).replace(/\s+/g, ' ').trim() || 'empty response'}`)
+  }
+  const rows: PriceRow[] = []
+  const lines = body.trim().split(/\r?\n/)
+  for (let i = 1; i < lines.length; i++) {
+    // Date,Open,High,Low,Close,Volume — no quoting, so a plain split is safe.
+    const [date, open, high, low, close, volume] = lines[i].split(',')
+    const c = Number(close)
+    if (!date || !Number.isFinite(c)) continue // skip N/D / blank closes
+    rows.push({
+      ticker,
+      trade_date: date, // Stooq already dates each bar by its local trading day
+      open: numOrNull(open),
+      high: numOrNull(high),
+      low: numOrNull(low),
+      close: c,
+      volume: numOrNull(volume) == null ? null : Math.round(Number(volume)),
+    })
+  }
+  return dedupeByDate(rows)
 }
 
 async function main() {
@@ -385,13 +286,13 @@ async function main() {
 
   let query = sb
     .from('dc_stocks')
-    .select('ticker, name')
+    .select('ticker, name, market')
     .eq('is_active', true)
     .order('ticker')
   if (args.ticker) query = query.eq('ticker', args.ticker)
   const { data: stockRows, error: stocksErr } = await query
   if (stocksErr) throw new Error(`dc_stocks read failed: ${stocksErr.message}`)
-  const stocks = (stockRows ?? []) as { ticker: string; name: string }[]
+  const stocks = (stockRows ?? []) as Stock[]
   if (stocks.length === 0) {
     throw new Error(
       args.ticker
@@ -400,110 +301,61 @@ async function main() {
     )
   }
 
+  const { from, to } = dateWindow(args.lookbackDays)
+  const usCount = stocks.filter((s) => s.market === 'US').length
   console.log(
-    `Importing ${args.range} of daily bars for ${stocks.length} ticker(s)` +
+    `Importing daily bars ${from} → ${to} for ${stocks.length} ticker(s) ` +
+      `(${usCount} US via massive.com, ${stocks.length - usCount} international via Stooq)` +
       (args.dryRun ? ' (dry run)' : '')
   )
-  console.log(transportLabel())
-
-  // Massive fetches Yahoo from its own browser/IP, so our cookie+crumb (bound to
-  // the runner IP) buys nothing there — skip the bootstrap in API mode.
-  let session: YahooSession = { cookie: null, crumb: null }
-  if (!MASSIVE_TOKEN) {
-    session = await createSession()
-    console.log(
-      session.cookie
-        ? `Yahoo session ready (cookie${session.crumb ? ' + crumb' : ''})`
-        : 'No Yahoo session cookie — continuing keyless'
-    )
+  if (usCount > 0 && !MASSIVE_KEY) {
+    console.error('⚠ MASSIVE_API_TOKEN not set — the US tickers will fail until it is')
   }
 
   let totalRows = 0
-  const failures: string[] = [] // 404s / empty responses — never retried
-  let pending = stocks
+  const failures: string[] = []
 
-  for (let pass = 1; pass <= MAX_PASSES && pending.length > 0; pass++) {
-    if (pass > 1) {
-      const cooldown = PASS_COOLDOWN_MS * (pass - 1)
-      console.log(
-        `\nRetry pass ${pass}/${MAX_PASSES}: ${pending.length} ticker(s) ` +
-          `after a ${cooldown / 1000}s cool-down`
-      )
-      await sleep(cooldown)
-      // A fresh cookie often lands in a different rate bucket. Massive rotates
-      // exit IPs itself, so there's no session to refresh in API mode.
-      if (!MASSIVE_TOKEN) session = await createSession()
-      limiter.settle()
-    }
-
-    const retriable: typeof pending = []
-    let consecutiveRateLimited = 0
-    for (let i = 0; i < pending.length; i++) {
-      const stock = pending[i]
-      try {
-        const chart = await fetchChart(stock.ticker, args.range, session)
-        if (!chart) {
-          failures.push(stock.ticker)
-          console.error(`  ✗ ${stock.ticker} (${stock.name}): unknown symbol (404)`)
-          continue
-        }
-        const rows = shapeRows(stock.ticker, chart)
-        if (rows.length === 0) {
-          failures.push(stock.ticker)
-          console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in response`)
-          continue
-        }
-        if (!args.dryRun) {
-          for (let j = 0; j < rows.length; j += UPSERT_BATCH) {
-            const batch = rows.slice(j, j + UPSERT_BATCH)
-            const { error: upsertErr } = await sb
-              .from('dc_stock_prices')
-              .upsert(batch, { onConflict: 'ticker,trade_date' })
-            if (upsertErr) throw new Error(`upsert: ${upsertErr.message}`)
-          }
-        }
-        totalRows += rows.length
-        consecutiveRateLimited = 0
-        console.log(
-          `  ✓ ${stock.ticker} (${stock.name}): ${rows.length} bars ` +
-            `${rows[0].trade_date} → ${rows[rows.length - 1].trade_date}`
-        )
-      } catch (err) {
-        retriable.push(stock)
-        const msg = err instanceof Error ? err.message : String(err)
-        console.error(
-          `  ✗ ${stock.ticker} (${stock.name}): ${msg}` +
-            (pass < MAX_PASSES ? ' (will retry)' : '')
-        )
-        if (err instanceof RateLimitError) {
-          consecutiveRateLimited++
-          if (consecutiveRateLimited >= MAX_CONSECUTIVE_RATE_LIMITED && i < pending.length - 1) {
-            const deferred = pending.slice(i + 1)
-            retriable.push(...deferred)
-            console.error(
-              `  -- rate-limited ${consecutiveRateLimited}× in a row — ` +
-                `abandoning this pass (${deferred.length} ticker(s) not attempted)`
-            )
-            break
-          }
+  for (const stock of stocks) {
+    try {
+      const rows =
+        stock.market === 'US'
+          ? await fetchMassive(stock.ticker, from, to)
+          : await fetchStooq(stock.ticker, stock.market, from, to)
+      if (rows.length === 0) {
+        failures.push(stock.ticker)
+        console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in range`)
+        continue
+      }
+      if (!args.dryRun) {
+        for (let j = 0; j < rows.length; j += UPSERT_BATCH) {
+          const batch = rows.slice(j, j + UPSERT_BATCH)
+          const { error: upsertErr } = await sb
+            .from('dc_stock_prices')
+            .upsert(batch, { onConflict: 'ticker,trade_date' })
+          if (upsertErr) throw new Error(`upsert: ${upsertErr.message}`)
         }
       }
-      await sleep(TICKER_DELAY_MS + Math.random() * TICKER_JITTER_MS)
+      totalRows += rows.length
+      console.log(
+        `  ✓ ${stock.ticker} (${stock.name}): ${rows.length} bars ` +
+          `${rows[0].trade_date} → ${rows[rows.length - 1].trade_date}`
+      )
+    } catch (err) {
+      failures.push(stock.ticker)
+      console.error(
+        `  ✗ ${stock.ticker} (${stock.name}): ${err instanceof Error ? err.message : String(err)}`
+      )
     }
-    pending = retriable
+    await sleep(REQUEST_DELAY_MS + Math.random() * REQUEST_JITTER_MS)
   }
-
-  // Whatever is still pending exhausted every pass — count it as failed.
-  failures.push(...pending.map((s) => s.ticker))
 
   console.log(
     `\nDone. ${totalRows} bars across ${stocks.length - failures.length}/${stocks.length} tickers.`
   )
   if (failures.length > 0) {
     console.error(`Failed: ${failures.join(', ')}`)
-    // Every ticker failing means the source is down or blocking us — paint
-    // the run red. Partial failures stay green so one delisting doesn't
-    // mask 28 fresh series.
+    // Every ticker failing means a source is down or misconfigured — paint the
+    // run red. Partial failures stay green so one delisting doesn't mask the rest.
     if (failures.length === stocks.length) process.exit(1)
   }
 }
