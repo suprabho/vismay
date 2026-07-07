@@ -128,8 +128,9 @@ Update-only, never inserts. Per comp code:
 - `GET /competitions/{code}/matches?status=FINISHED&dateFrom&dateTo` over a **2-day** lookback.
 - Resolve each FD match to a local fixture by `(home_team_id, away_team_id, kickoff_at ±6h)`
   — skips if 0 or >1 match. Writes `home_score`, `away_score`, `status='finished'`.
-- Scheduled by `.github/workflows/footshorts-scores.yml`: scores-only top-ups every
-  3 hours, with the 00:00/12:00 UTC slots also running events + recaps.
+- Scheduled by `.github/workflows/footshorts-scores.yml` every 3 hours (scores only).
+  Events + recaps are decoupled into `.github/workflows/footshorts-recap.yml`, which
+  runs its own twice-daily (00:00/12:00 UTC) schedule.
 
 ### `entityResolver.ts` — names → canonical IDs
 

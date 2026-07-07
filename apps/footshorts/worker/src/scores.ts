@@ -7,8 +7,8 @@
  * and write home_score / away_score / status='finished'.
  *
  * Run via: `npm run scores` (one-shot) or scheduled by
- * .github/workflows/footshorts-scores.yml (every 3h; the 00:00/12:00 UTC slots
- * also run events + recaps).
+ * .github/workflows/footshorts-scores.yml (every 3h). Recaps and their event
+ * syncs are decoupled into .github/workflows/footshorts-recap.yml.
  */
 
 import { createClient } from '@supabase/supabase-js';

@@ -170,7 +170,7 @@ export function MatchtimePanel() {
           <div className="min-w-0">
             <div className="text-xs text-neutral-500">
               Hydrates finished World Cup fixtures with goals/cards/subs. Idempotent — already
-              hydrated matches are skipped. Also runs inside the Scores refresh worker every 12h.
+              hydrated matches are skipped. Also runs inside the Daily recap worker every 12h.
             </div>
             <div className="mt-1 flex items-center gap-2 text-[11px]">
               <span className={rs.cls}>{rs.label}</span>
