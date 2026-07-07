@@ -295,7 +295,17 @@ async function fetchChart(
           limiter.settle()
           return (await res.json()) as YahooChart
         }
-        lastErr = new Error(`${MASSIVE_TOKEN ? 'massive' : host} ${res.status} ${res.statusText}`)
+        // Surface a snippet of the error body — Massive/Yahoo explain the
+        // rejection (bad token, product not enabled, bad param) in it, and the
+        // bare status alone ("403 Forbidden") isn't enough to act on.
+        const detail = (await res.text().catch(() => ''))
+          .slice(0, 180)
+          .replace(/\s+/g, ' ')
+          .trim()
+        lastErr = new Error(
+          `${MASSIVE_TOKEN ? 'massive' : host} ${res.status} ${res.statusText}` +
+            (detail ? ` — ${detail}` : '')
+        )
         if (res.status === 429) limiter.hit(retryAfterMs(res))
         else only429s = false
       } catch (err) {
