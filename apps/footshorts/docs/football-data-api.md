@@ -101,6 +101,10 @@ Seeded competition codes:
 - `commonName()` strips club-type tokens (`FC`, `SSC`, `1. FC` …) and trailing founding
   years so FD's official names slugify to what news articles use: `"Juventus FC"` →
   `juventus`, `"Bologna FC 1909"` → `bologna`. Display `name` keeps the original.
+  Glued acronyms need their own strip entries (`\b` won't split them): `ACF`, `CFC`,
+  `BC` cover `"ACF Fiorentina"` → `fiorentina`, `"Genoa CFC"` → `genoa`,
+  `"Atalanta BC"` → `atalanta`. If a team's chip never appears despite coverage, check
+  the worker logs for `[entity-miss]` — the slug likely kept a token like this.
 - `CL/EL/WC/EC` are non-domestic → membership recorded, but they don't set a team's
   `league_slug` (that always points at the domestic league).
 - Players are **not** seeded — squads are paid-tier (`seed-squads.ts` exists for the
@@ -117,14 +121,16 @@ Per seeded league (from `entities` where `football_data_id` is set):
 - `normalizeSeason()`: multi-year league (Aug→May) → `"25-26"`; single-year cup → `"2025"`.
 - **`fixture_stats` is left empty** — shots/possession/cards/xG are paid-tier.
 
-### `scores.ts` — finished-score refresh (every 12h)
+### `scores.ts` — finished-score refresh (every 3h)
 
 Update-only, never inserts. Per comp code:
 
 - `GET /competitions/{code}/matches?status=FINISHED&dateFrom&dateTo` over a **2-day** lookback.
 - Resolve each FD match to a local fixture by `(home_team_id, away_team_id, kickoff_at ±6h)`
   — skips if 0 or >1 match. Writes `home_score`, `away_score`, `status='finished'`.
-- Scheduled by `.github/workflows/scores.yml`.
+- Scheduled by `.github/workflows/footshorts-scores.yml` every 3 hours (scores only).
+  Events + recaps are decoupled into `.github/workflows/footshorts-recap.yml`, which
+  runs its own twice-daily (00:00/12:00 UTC) schedule.
 
 ### `entityResolver.ts` — names → canonical IDs
 

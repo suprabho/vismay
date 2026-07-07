@@ -58,6 +58,8 @@ export interface ContentSource {
   getConfigFormat(slug: string): Promise<ConfigFormat>
   readShareYaml(slug: string): Promise<string | null>
   readReportYaml(slug: string): Promise<string | null>
+  /** Per-story newsletter export config — see storyNewsletterConfig. */
+  readNewsletterYaml(slug: string): Promise<string | null>
   readTtsYaml(slug: string): Promise<string | null>
   /** Per-unit dwell times for silent (no-narration) video — see storyTiming. */
   readTimingYaml(slug: string): Promise<string | null>
@@ -97,6 +99,7 @@ export interface ContentSource {
   writeConfig(slug: string, raw: string | null, format: ConfigFormat): Promise<void>
   writeShareYaml(slug: string, raw: string | null): Promise<void>
   writeReportYaml(slug: string, raw: string | null): Promise<void>
+  writeNewsletterYaml(slug: string, raw: string | null): Promise<void>
   writeTtsYaml(slug: string, raw: string | null): Promise<void>
   writeMapYaml(slug: string, raw: string | null): Promise<void>
   writeChart(slug: string, chartId: string, data: unknown): Promise<void>
@@ -216,6 +219,9 @@ const fsSource: ContentSource = {
   async readReportYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.report.yaml`))
   },
+  async readNewsletterYaml(slug) {
+    return fsReadIfExists(path.join(STORIES_DIR, `${slug}.newsletter.yaml`))
+  },
   async readTtsYaml(slug) {
     return fsReadIfExists(path.join(STORIES_DIR, `${slug}.tts.yaml`))
   },
@@ -292,6 +298,14 @@ const fsSource: ContentSource = {
   },
   async writeReportYaml(slug, raw) {
     const p = path.join(STORIES_DIR, `${slug}.report.yaml`)
+    if (raw == null) {
+      if (fs.existsSync(p)) fs.unlinkSync(p)
+      return
+    }
+    fs.writeFileSync(p, raw, 'utf8')
+  },
+  async writeNewsletterYaml(slug, raw) {
+    const p = path.join(STORIES_DIR, `${slug}.newsletter.yaml`)
     if (raw == null) {
       if (fs.existsSync(p)) fs.unlinkSync(p)
       return
@@ -459,6 +473,19 @@ const dbSource: ContentSource = {
     if (error) throw new Error(`readReportYaml ${slug}: ${error.message}`)
     return (data as { report_yaml?: string | null } | null)?.report_yaml ?? null
   },
+  async readNewsletterYaml(slug) {
+    const sb = createServiceClient()
+    const { data, error } = await sb
+      .from('stories')
+      .select('newsletter_yaml')
+      .eq('slug', slug)
+      .maybeSingle()
+    // Pre-065 deployments don't have the newsletter_yaml column; treat as
+    // null rather than failing — readers fall through to "all sections in".
+    if (error?.message?.includes('newsletter_yaml')) return null
+    if (error) throw new Error(`readNewsletterYaml ${slug}: ${error.message}`)
+    return (data as { newsletter_yaml?: string | null } | null)?.newsletter_yaml ?? null
+  },
   async readTtsYaml(slug) {
     const sb = createServiceClient()
     const { data, error } = await sb
@@ -621,6 +648,14 @@ const dbSource: ContentSource = {
       .update({ report_yaml: raw, updated_at: new Date().toISOString() })
       .eq('slug', slug)
     if (error) throw new Error(`writeReportYaml ${slug}: ${error.message}`)
+  },
+  async writeNewsletterYaml(slug, raw) {
+    const sb = createServiceClient()
+    const { error } = await sb
+      .from('stories')
+      .update({ newsletter_yaml: raw, updated_at: new Date().toISOString() })
+      .eq('slug', slug)
+    if (error) throw new Error(`writeNewsletterYaml ${slug}: ${error.message}`)
   },
   async writeTtsYaml(slug, raw) {
     const sb = createServiceClient()

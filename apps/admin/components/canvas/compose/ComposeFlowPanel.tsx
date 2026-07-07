@@ -133,6 +133,8 @@ export function ComposeFlow({
           onReextract={flow.reextract}
           onGenAngles={() => flow.genAngles()}
           onCreateRecap={flow.createRecap}
+          onLoadTelemetrySessions={flow.loadTelemetrySessions}
+          onCreateTelemetrySource={flow.createTelemetrySource}
         />
       </div>
 
@@ -162,15 +164,20 @@ export function ComposeFlow({
             onCycleStatus={flow.cycleStatus}
             onMove={flow.move}
             onRegenerate={flow.genOutline}
+            onRegenSection={flow.regenSection}
+            onAddSection={flow.addSection}
             onMaterialize={flow.materialize}
           />
           {flow.charts.length > 0 && (
             <ChartsPanel
               charts={flow.charts}
               results={flow.chartResults}
+              errors={flow.chartErrors}
               busy={flow.busy}
               wide={wide}
               onGenerate={flow.genCharts}
+              onRetry={flow.retryChart}
+              onRegeneratePrompt={flow.regenChartPrompt}
             />
           )}
         </div>

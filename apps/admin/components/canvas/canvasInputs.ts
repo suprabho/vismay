@@ -71,12 +71,31 @@ export function liveUnit(
 ): ResolvedUnit {
   if (!configYaml) return unit
   try {
-    const doc = parseYaml(configYaml) as { sections?: unknown[] } | null
+    // JSON-native configs (new verticals) must be read with `JSON.parse`, the
+    // SAME way `loadStoryConfig` parses them server-side — the renderer that
+    // feeds the centre Frame uses that path. `parseYaml` is a YAML-1.2 superset
+    // and *usually* round-trips JSON, but the two parsers are not identical, and
+    // any divergence here desyncs the left-column input nodes (Layout /
+    // Foreground) from the rendered slide. Parse JSON natively, fall back to
+    // YAML for legacy configs (where `JSON.parse` throws on the first token).
+    const doc = parseConfigDoc(configYaml) as { sections?: unknown[] } | null
     const section = doc?.sections?.[unit.parentIndex]
     if (!section || typeof section !== 'object') return unit
     return { ...unit, parentConfig: section as StorySectionConfig }
   } catch {
     return unit
+  }
+}
+
+/** Parse a story config string the same way `loadStoryConfig` does: JSON-native
+ *  via `JSON.parse`, legacy YAML via `parseYaml`. JSON is the strict subset, so
+ *  trying it first keeps JSON configs byte-identical to the server's view and
+ *  only falls through to YAML when the text isn't JSON. */
+function parseConfigDoc(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return parseYaml(text)
   }
 }
 
@@ -119,12 +138,54 @@ export function contentNode(
   }
 }
 
+/**
+ * Deck cover editorial text: the `eyebrow` / `heading` / `dek` / `byline`
+ * fields the full-bleed cover paints over its hero image. These live at the
+ * section root in config.yaml (not the markdown body), so for a `kind: cover`
+ * section this node REPLACES the markdown Content leaf — clicking it opens the
+ * `cover` editor slice (see canvasEditing). Shown in top-to-bottom cover order;
+ * `heading` falls back to the resolved unit heading so the title always shows.
+ */
+export function coverNode(unit: ResolvedUnit): InputNodeData {
+  const cfg = unit.parentConfig as unknown as {
+    eyebrow?: unknown
+    heading?: unknown
+    dek?: unknown
+    byline?: unknown
+  }
+  const str = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+  const fields: Record<string, string> = {}
+  if (str(cfg.eyebrow)) fields.eyebrow = str(cfg.eyebrow)
+  const heading = str(cfg.heading) || (unit.heading ?? '').trim()
+  if (heading) fields.heading = heading
+  if (str(cfg.dek)) fields.dek = str(cfg.dek)
+  if (str(cfg.byline)) fields.byline = str(cfg.byline)
+  const has = Object.keys(fields).length > 0
+  return {
+    id: 'cover',
+    label: 'Cover',
+    tag: has ? 'COVER' : '—',
+    body: has
+      ? truncateLines(safeYamlStringify(fields), 12)
+      : '(no cover text yet — click to add eyebrow / heading / dek)',
+    variant: has ? 'mono' : 'muted',
+  }
+}
+
 /* ── Foreground layout helpers ─────────────────────────────────────── */
 
-/** Region-shaped foreground: `{ layout: string, regions: { … } }`. The
- *  alternative is a flat `VizLayer | VizLayer[]` with no layout/regions. */
+/** Region-shaped foreground: `{ regions: { … } }`, optionally with a `layout`
+ *  name. The alternative is a flat `VizLayer | VizLayer[]`.
+ *
+ *  `layout` is OPTIONAL here on purpose — it mirrors the engine's
+ *  `isRegionsInput` (`viz-engine/src/lib/resolveSlots.ts`), which discriminates
+ *  on `regions` alone: the inline-region form omits `layout`, and the deck
+ *  format can carry the name at the section root (`section.layout`) instead.
+ *  Requiring `layout` here made the canvas mis-read those slides as a flat
+ *  stack while the renderer drew the regions — so Layout / Foreground went
+ *  blank on a slide that clearly had both. */
 interface ForegroundRegionsShape {
-  layout: string
+  layout?: string
   regions: Record<string, unknown>
 }
 function asForegroundRegions(
@@ -134,13 +195,26 @@ function asForegroundRegions(
     foreground &&
     typeof foreground === 'object' &&
     !Array.isArray(foreground) &&
-    typeof (foreground as { layout?: unknown }).layout === 'string' &&
+    // A `map` VizLayer also carries a `regions` field — exclude anything that
+    // looks like a layer (`type`), exactly as `isRegionsInput` does.
+    !('type' in (foreground as object)) &&
     typeof (foreground as { regions?: unknown }).regions === 'object' &&
     (foreground as { regions?: unknown }).regions !== null
   ) {
     return foreground as ForegroundRegionsShape
   }
   return null
+}
+
+/** The layout name for a region-shaped foreground: the inner `foreground.layout`
+ *  wins, else the section-root `layout` sugar the deck format uses. */
+function foregroundLayoutName(
+  unit: ResolvedUnit,
+  regions: ForegroundRegionsShape
+): string | null {
+  if (regions.layout && regions.layout.trim()) return regions.layout
+  const rootLayout = (unit.parentConfig as { layout?: unknown }).layout
+  return typeof rootLayout === 'string' && rootLayout.trim() ? rootLayout : null
 }
 
 export function layoutNode(unit: ResolvedUnit): InputNodeData {
@@ -154,12 +228,15 @@ export function layoutNode(unit: ResolvedUnit): InputNodeData {
       variant: 'muted',
     }
   }
+  const name = foregroundLayoutName(unit, regions)
   return {
     id: 'layout',
     label: 'Layout',
-    tag: 'NAME',
-    body: regions.layout,
-    variant: 'mono',
+    tag: name ? 'NAME' : '—',
+    // Region-shaped but unnamed: the renderer falls back to the default layout.
+    // Surface that rather than the misleading "flat layer stack" copy.
+    body: name ?? '(regions — no named layout)',
+    variant: name ? 'mono' : 'muted',
   }
 }
 
@@ -369,7 +446,12 @@ export function buildForegroundGraph(unit: ResolvedUnit): ForegroundGraph {
         })
       ),
     }))
-    return { shape: 'regions', layout: regionsShape.layout, regions, layers: [] }
+    return {
+      shape: 'regions',
+      layout: foregroundLayoutName(unit, regionsShape),
+      regions,
+      layers: [],
+    }
   }
   const layers = asLayerArray(fg).map((l, i) =>
     layerLeaf(l, 'fg', i, { kind: 'foregroundFlat', index: i })

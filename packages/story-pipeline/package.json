@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./ingest": "./src/ingest/index.ts",
     "./models": "./src/models.ts",
-    "./cover": "./src/cover.ts"
+    "./cover": "./src/cover.ts",
+    "./chartVocab": "./src/chartVocab.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -25,6 +26,7 @@
     "@vismay/content-source": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "csv-parse": "^6.2.1",
+    "flint-chart": "^0.1.2",
     "gray-matter": "^4.0.3",
     "jsdom": "^29.0.2",
     "mailparser": "^3.9.8",

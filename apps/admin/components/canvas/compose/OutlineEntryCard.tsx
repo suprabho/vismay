@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import type { ComposeFormat, ComposeOutlineEntry } from '@vismay/content-source/composeState'
 import { LayoutPreview } from './LayoutPreview'
-import { Chip, DetailBlock, iconBtnCls, type ChipTone } from './ui'
+import { Chip, DetailBlock, btnGhostCls, iconBtnCls, inputCls, type ChipTone } from './ui'
 
 const STATUS_TONE: Record<ComposeOutlineEntry['status'], ChipTone> = {
   accepted: 'emerald',
@@ -25,9 +26,12 @@ export function OutlineEntryCard({
   format,
   statusEditable,
   outlineEditable,
+  busy,
+  regenBusy,
   onCycleStatus,
   onToggle,
   onMove,
+  onRegenerate,
 }: {
   entry: ComposeOutlineEntry
   index: number
@@ -36,12 +40,20 @@ export function OutlineEntryCard({
   format: ComposeFormat
   /** Status chip cycles pending → accepted → rejected (unmaterialised only). */
   statusEditable: boolean
-  /** Reorder arrows — outline stage of a live draft only. */
+  /** Reorder arrows + per-slide regenerate — outline stage of a live draft only. */
   outlineEditable: boolean
+  /** A single-flight pipeline call is in progress (any outline op). */
+  busy?: boolean
+  /** This card's regenerate call is the one in flight. */
+  regenBusy?: boolean
   onCycleStatus: () => void
   onToggle: () => void
   onMove: (dir: -1 | 1) => void
+  /** Regenerate just this slide, with an optional steering note. */
+  onRegenerate?: (feedback?: string) => Promise<boolean>
 }) {
+  const [regenOpen, setRegenOpen] = useState(false)
+  const [feedback, setFeedback] = useState('')
   const hasDetail = Boolean(
     e.visual ||
       e.context ||
@@ -51,6 +63,17 @@ export function OutlineEntryCard({
       e.regionRequirement,
   )
   const statusTone = STATUS_TONE[e.status]
+  // Regenerate is a STRUCTURE edit, so it's offered only on a live, not-yet-
+  // materialised slide (a regenerated stub would desync from written prose).
+  const canRegen = outlineEditable && !e.sectionId && !!onRegenerate
+
+  async function regenerate() {
+    if (!onRegenerate) return
+    if (await onRegenerate(feedback.trim() || undefined)) {
+      setFeedback('')
+      setRegenOpen(false)
+    }
+  }
 
   return (
     <li className="rounded-lg border border-white/10 bg-neutral-900/60 p-3">
@@ -83,6 +106,18 @@ export function OutlineEntryCard({
                 ↓
               </button>
             </>
+          )}
+          {canRegen && (
+            <button
+              onClick={() => setRegenOpen((v) => !v)}
+              disabled={busy}
+              className={iconBtnCls}
+              aria-expanded={regenOpen}
+              title="Regenerate this slide"
+              aria-label="Regenerate this slide"
+            >
+              <span className={regenBusy ? 'inline-block animate-spin' : undefined}>↻</span>
+            </button>
           )}
           {hasDetail && (
             <button
@@ -133,6 +168,27 @@ export function OutlineEntryCard({
       {outlineEditable && (
         <div className="mt-2">
           <LayoutPreview layout={e.layout} format={format} />
+        </div>
+      )}
+
+      {/* Per-slide regenerate: a fresh take on just this section, with an
+          optional steering note. Leaves the rest of the outline untouched. */}
+      {canRegen && regenOpen && (
+        <div className="mt-2 flex gap-1.5">
+          <input
+            value={feedback}
+            onChange={(ev) => setFeedback(ev.target.value)}
+            onKeyDown={(ev) => {
+              if (ev.key === 'Enter' && !busy) regenerate()
+            }}
+            placeholder="Regenerate this slide with a note (optional)…"
+            disabled={busy}
+            autoFocus
+            className={`min-w-0 flex-1 ${inputCls}`}
+          />
+          <button onClick={regenerate} disabled={busy} className={`shrink-0 ${btnGhostCls}`}>
+            {regenBusy ? 'Regenerating…' : 'Regenerate'}
+          </button>
         </div>
       )}
 

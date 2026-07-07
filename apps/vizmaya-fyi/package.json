@@ -24,12 +24,21 @@
     "energy-profile:import-owid": "npx tsx scripts/energy-profile/import-owid.ts",
     "energy-profile:import-iea-oil-prices": "npx tsx scripts/energy-profile/import-iea-oil-prices.ts",
     "energy-profile:generate-summaries": "npx tsx scripts/energy-profile/generate-summaries.ts",
+    "ai-data-centers:import": "npx tsx scripts/ai-data-centers/import-data-centers.ts",
+    "ai-data-centers:scrape-news": "npx tsx scripts/ai-data-centers/scrape-news.ts",
+    "ai-data-centers:import-stocks": "npx tsx scripts/ai-data-centers/import-stock-prices.ts",
+    "ai-data-centers:news-recap": "npx tsx scripts/ai-data-centers/generate-news-recap.ts",
     "flags:upload": "npx tsx scripts/upload-flags.ts",
     "fifa-wc26:import": "npx tsx scripts/fifa-wc26/import.ts",
     "coke-studio:import": "npx tsx scripts/coke-studio/import.ts",
     "coke-studio:fetch-lyrics": "npx tsx scripts/coke-studio/fetch-lyrics.ts",
     "coke-studio:extract-places": "npx tsx scripts/coke-studio/extract-places.ts",
-    "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts"
+    "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts",
+    "trade:discover-oec": "npx tsx scripts/trade/discover-oec.ts",
+    "trade:import-oec": "npx tsx scripts/trade/import-oec.ts",
+    "trade:import-comtrade": "npx tsx scripts/trade/import-comtrade.ts",
+    "trade:import-comtrade-bilateral": "npx tsx scripts/trade/import-comtrade-bilateral.ts",
+    "trade:import-trademap": "npx tsx scripts/trade/import-trademap.ts"
   },
   "dependencies": {
     "@vismay/admin-core": "workspace:*",

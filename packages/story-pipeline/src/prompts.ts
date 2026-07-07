@@ -1,5 +1,6 @@
 import { GEN_FOREGROUND_TYPES, getForegroundLayout } from './vizEngine'
 import { SECTION_KINDS, sectionKindsFor } from './schema'
+import { CHART_TYPES, SEMANTIC_TYPE_HINTS } from './chartVocab'
 import { VIZMAYA_PACK } from './packs/vizmaya'
 import type { DomainPack } from './packs/types'
 import type {
@@ -170,9 +171,15 @@ const DECK_LAYOUT_MENU = layoutMenu(DECK_LAYOUT_NAMES)
 
 // ── Step 1: outline ────────────────────────────────────────────────────────
 
-export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
-  const visualGuidance =
-    format === 'map'
+/**
+ * The "visual" guidance paragraph for the outline planner — how each section's
+ * visualisation (map camera + choropleth, or deck layers + layout) should be
+ * described. Shared verbatim by {@link outlineSystem} (the whole-outline plan)
+ * and {@link outlineSectionSystem} (the single-section regenerate/add pass) so
+ * both speak the same layout/geo vocabulary.
+ */
+function outlineVisualGuidance(format: StoryFormat, pack: DomainPack): string {
+  return format === 'map'
       ? `A ${pack.name} MAP story is a JOURNEY THROUGH GEOGRAPHY: each section frames a place and the ` +
         `map itself carries the data (pins, or a choropleth shading areas by value) — the map IS ` +
         `the chart, not a backdrop. Every section MUST set "geo": the named focus plus camera ` +
@@ -206,25 +213,41 @@ export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PA
       : `For each section's "visual" name the foreground layers it features (${layerTypesInlineFor(pack)}) ` +
         `and what each shows, and set "layout" to the deck layout that frames them best ` +
         `(${DECK_LAYOUTS}).`
-  const stubFields =
-    format === 'map'
+}
+
+/**
+ * The bullet list of format-specific stub fields (geo/regionRequirement/
+ * subsections for map, layout/chartId for deck). Shared verbatim by
+ * {@link outlineSystem} and {@link outlineSectionSystem}.
+ */
+function outlineStubFields(format: StoryFormat): string {
+  return format === 'map'
       ? `  • geo: the geography it frames — focus + camera center [lng, lat] + zoom (REQUIRED).\n` +
         `  • optional chartId when the section features a supporting chart.\n` +
         `  • optional regionRequirement when the section shades geography by a metric.\n` +
         `  • optional subsections (2–4) when one map context is explored across several beats.\n`
       : `  • optional layout naming the deck layout that frames the visual.\n` +
         `  • optional chartId when the section features a chart.\n`
+}
+
+export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PACK): string {
+  const visualGuidance = outlineVisualGuidance(format, pack)
+  const stubFields = outlineStubFields(format)
   return (
     `You plan a ${pack.name} ${format} data story from research + the editor's answers — the ` +
     `SKELETON only, no prose yet. The downstream writer and designer act ONLY on what you put ` +
     `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
     `- title, subtitle, byline.\n` +
-    `- charts: every chart the story needs, declared as a REQUIREMENT — a kebab-case id, ` +
-    `chartType (bar|line), a title, and a precise "requirement" describing exactly what to ` +
-    `plot (which figures/series/categories and over what range, all from the sources). Do ` +
-    `NOT fabricate the numbers here — the data is generated in a focused later pass. Sections ` +
-    `reference charts by id.\n` +
+    `- charts: every chart the story needs, declared as a REQUIREMENT — a kebab-case id, a ` +
+    `chartType (one of: ${CHART_TYPES.join(', ')}), a title, and a precise "requirement" ` +
+    `describing exactly what to plot (which figures/series/categories and over what range, ` +
+    `all from the sources). Pick the chartType that best fits the comparison — not always a ` +
+    `bar or line. Relationship types (Sankey Diagram, Chord Diagram, Network Graph) draw ` +
+    `flows/links BETWEEN entities — pick one when the point is who-connects-to-whom (trade ` +
+    `relationships, supply flows, networks) rather than a trend or ranking. Do NOT fabricate ` +
+    `the numbers here — the data is generated in a focused ` +
+    `later pass. Sections reference charts by id.\n` +
     `- imagePrompts: vivid prompts for sections that want imagery. For a DECK story ALWAYS ` +
     `include one 16:9 prompt whose "section" EXACTLY matches the cover's heading — it becomes ` +
     `the full-bleed cover hero image.\n` +
@@ -274,6 +297,118 @@ export function buildOutlinePrompt(
   return base
 }
 
+// ── Single-section outline pass (regenerate one slide / add a new slide) ────
+//
+// The whole-outline planner produces every section at once; these drive the
+// per-slide affordances in the compose outline tab — regenerate ONE section in
+// place, or draft a NEW one from an author prompt — so re-planning a single
+// beat doesn't churn the rest of the deck.
+
+/**
+ * Single-section variant of {@link outlineSystem}. Same stub contract and
+ * layout/geo vocabulary, but the model returns ONE section stub (no
+ * title/charts/imagePrompts) that must slot into an existing outline and keep
+ * its heading unique. Used to regenerate or add a single slide.
+ */
+export function outlineSectionSystem(
+  format: StoryFormat,
+  pack: DomainPack = VIZMAYA_PACK,
+): string {
+  return (
+    `You revise the SKELETON of ONE section in a ${pack.name} ${format} data story outline — no ` +
+    `prose yet, just the stub. The downstream writer and designer act ONLY on what you put in ` +
+    `this stub, so make its expectations explicit and concrete.\n\n` +
+    `Return exactly ONE section stub with —\n` +
+    `  • heading (UNIQUE across every other section in the story — it is the markdown anchor, so a ` +
+    `duplicate heading collides and the section loses its prose) and kind ` +
+    `(${sectionKindsFor(format).join(' | ')}).\n` +
+    `  • intent: one line on the section's job.\n` +
+    `  • context: how it connects to the sections around it (what it follows from, what it sets up).\n` +
+    `  • expectedContent: the specific facts, figures, and quotes it must carry — concrete and ` +
+    `grounded in the sources, NOT generic placeholders.\n` +
+    `  • visual: the visualisation it features (see below).\n` +
+    outlineStubFields(format) +
+    `${outlineVisualGuidance(format, pack)}\n\n` +
+    `Keep the section consistent with the rest of the outline: its narrative arc and the fixed ` +
+    `opening (cover/hero) and closing roles — a regenerated or added BODY section must not try to ` +
+    `be the cover or the closer. If it features a chart, reference one of the outline's EXISTING ` +
+    `chart ids; do not invent a new chart here. Ground every figure in the sources; do not invent ` +
+    `data.` +
+    guidance(pack.outlineGuidance)
+  )
+}
+
+/** A compact one-line-per-section digest of the current outline, so the model
+ *  can place a new/regenerated section in context and avoid duplicate headings. */
+function renderOutlineContext(sections: SectionStub[]): string {
+  if (sections.length === 0) return '(no sections yet)'
+  return sections
+    .map((s, i) => {
+      const layout = s.layout ? ` · layout ${s.layout}` : ''
+      return `${i + 1}. [${s.kind}${layout}] ${s.heading} — ${s.intent}`
+    })
+    .join('\n')
+}
+
+/**
+ * Build the prompt for a single-section regenerate or add. `mode: 'regenerate'`
+ * passes the section being replaced (and any author feedback); `mode: 'add'`
+ * passes the author's prompt plus the 1-based slot the new section will occupy.
+ * `outline` is the surrounding sections (the target excluded for a regenerate),
+ * and `charts` are the chart ids the section may reference.
+ */
+export function buildOutlineSectionPrompt(
+  sources: SourceDoc[],
+  brief: ResearchBrief,
+  answers: ComposeAnswers,
+  args: {
+    mode: 'regenerate' | 'add'
+    outline: SectionStub[]
+    charts: ChartRequirement[]
+    target?: SectionStub
+    position?: number
+    instruction?: string
+  },
+): string {
+  const chartLine = args.charts.length
+    ? `\n\nAVAILABLE CHARTS (reference by id):\n${args.charts
+        .map((c) => `- ${c.id} (${c.chartType}): ${c.title}`)
+        .join('\n')}`
+    : ''
+  const base =
+    `RESEARCH BRIEF\n` +
+    `Summary: ${brief.summary}\n` +
+    `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n` +
+    `Entities: ${brief.entities.join(', ')}\n` +
+    `Candidate angles:\n${brief.candidateAngles.map((a) => `- ${a}`).join('\n')}\n\n` +
+    `EDITOR'S ANSWERS\n${renderAnswers(brief, answers)}\n\n` +
+    `CURRENT OUTLINE (the surrounding sections this one must fit between):\n` +
+    `${renderOutlineContext(args.outline)}${chartLine}\n\n` +
+    `SOURCES\n${renderSources(sources)}`
+  const steer = args.instruction?.trim()
+  if (args.mode === 'regenerate') {
+    return (
+      `${base}\n\nREGENERATE THIS SECTION (replace it in place, keeping its role in the arc):\n` +
+      `${JSON.stringify(args.target ?? {})}\n\n` +
+      (steer
+        ? `Apply this feedback — change what it asks, keep what already works:\n${steer}`
+        : `Produce a fresh take on this section: a different framing or visualisation that still ` +
+          `serves the same narrative role. Its heading must stay unique across the outline.`)
+    )
+  }
+  const where =
+    args.position != null
+      ? ` It will be inserted as section ${args.position} of ${args.outline.length + 1}.`
+      : ''
+  return (
+    `${base}\n\nADD ONE NEW SECTION to this outline.${where}\n\n` +
+    `What the author wants this section to be:\n${steer || '(no prompt — propose the section that ' +
+      'best fills a gap in the current arc)'}\n\n` +
+    `Make it a NEW beat that adds something the existing sections don't already cover, with a ` +
+    `heading unique across the whole outline.`
+  )
+}
+
 // ── Chart data pass (turns a chart REQUIREMENT into numeric series) ────────
 //
 // Decoupled from the outline so chart data is grounded in the sources by a
@@ -284,18 +419,28 @@ export function buildOutlinePrompt(
 export function chartSystem(pack: DomainPack = VIZMAYA_PACK): string {
   return (
   `You produce the DATA for ONE chart in a ${pack.name} data story, grounded strictly ` +
-  `in the provided sources. Given a chart requirement (what to plot) and the ` +
-  `research material, return:\n` +
-  `- categories: the X-axis labels, in the order they should appear.\n` +
-  `- series: one or more named series, each with one number per category (same ` +
-  `order as categories).\n\n` +
+  `in the provided sources. The chart is rendered with flint-chart: you describe the ` +
+  `data as a small table and say which columns map to which channels — flint derives ` +
+  `the axes, scales, and layout. Given a chart requirement (its type + what to plot) ` +
+  `and the research material, return:\n` +
+  `- columns: each data column, with a name and a flint semanticType. Common types — ` +
+  `${SEMANTIC_TYPE_HINTS}. The semanticType drives axis formatting and scales, so be ` +
+  `accurate (a year is Year, a share is Percentage, a place is Country/Region).\n` +
+  `- rows: the data, one array per row with exactly one value per column, in column order. ` +
+  `Numbers as numbers (not strings).\n` +
+  `- encodings: which column fills each channel — typically x (category/time axis) and y ` +
+  `(one or more measure columns; multiple y columns make a multi-series). Use color to ` +
+  `split series by a category column; angle/value for pie/rose/funnel/pyramid slices; ` +
+  `size for scatter bubbles; y2 for a Range Area band's upper bound. For relationship ` +
+  `charts (Sankey Diagram, Chord Diagram, Network Graph) every row is ONE edge: map ` +
+  `source and target to the endpoint columns and value to the flow-weight column.\n\n` +
   `Rules:\n` +
-  `- Use ONLY figures present in or directly derivable from the sources — never ` +
-  `invent or estimate numbers. If the requirement asks for data the sources don't ` +
-  `support, plot the closest subset the sources DO support and keep categories/` +
-  `series consistent.\n` +
-  `- Every series must have exactly one value per category.\n` +
-  `- Keep it tight and legible (a handful of categories; few series).`
+  `- Use ONLY figures present in or directly derivable from the sources — never invent or ` +
+  `estimate numbers. If the requirement asks for data the sources don't support, plot the ` +
+  `closest subset the sources DO support.\n` +
+  `- Every row must have exactly one value per column; reference only real column names in ` +
+  `encodings.\n` +
+  `- Keep it tight and legible (a handful of rows; few series).`
   )
 }
 
@@ -333,6 +478,62 @@ export function buildChartPrompt(
     )
   }
   return base
+}
+
+// ── Chart REQUIREMENT pass (re-plans ONE chart's prompt, not its data) ──────
+//
+// The outline plans every chart's requirement as a byproduct of skeleton
+// planning. This focused pass re-plans a SINGLE chart's requirement — its
+// chartType, title, axes and the precise "what to plot" prompt — grounded in
+// the brief + chosen angle + sources, so an author can refine one chart's plan
+// (optionally with a note) without regenerating the whole outline. It produces
+// the PLAN only (no numbers); the data pass still fills the figures afterwards.
+
+export function chartRequirementSystem(pack: DomainPack = VIZMAYA_PACK): string {
+  return (
+    `You re-plan the REQUIREMENT for ONE chart in a ${pack.name} data story — its plan, ` +
+    `not its data. Given the chart's current plan, the research brief + chosen angle, and ` +
+    `the sources, return a sharper requirement for this chart:\n` +
+    `- id: keep it EXACTLY as given — story layers reference this chart by id.\n` +
+    `- chartType: one of ${CHART_TYPES.join(', ')} — pick the template that best fits the ` +
+    `comparison this chart makes (change it if a different type fits better).\n` +
+    `- title: a short, specific chart title.\n` +
+    `- requirement: exactly what this chart must plot — which figures/series/categories and ` +
+    `over what range/time, all grounded in the sources. Concrete, NOT generic.\n` +
+    `- xLabel / yLabel: axis labels when they help.\n\n` +
+    `Do NOT invent the numbers here — a later focused pass produces the data. Ground every ` +
+    `figure you reference in the sources.` +
+    guidance(pack.outlineGuidance)
+  )
+}
+
+export const CHART_REQUIREMENT_SYSTEM = chartRequirementSystem()
+
+export function buildChartRequirementPrompt(
+  req: ChartRequirement,
+  brief: ResearchBrief,
+  sources: SourceDoc[],
+  feedback?: string,
+): string {
+  const base =
+    `CURRENT CHART PLAN\n${renderChartRequirement(req)}\n\n` +
+    `RESEARCH BRIEF\n` +
+    `Summary: ${brief.summary}\n` +
+    `Key facts:\n${brief.keyFacts.map((f) => `- ${f}`).join('\n')}\n` +
+    (brief.candidateAngles.length
+      ? `Chosen angle:\n${brief.candidateAngles.map((a) => `- ${a}`).join('\n')}\n`
+      : '') +
+    `\nSOURCES\n${renderSources(sources, CHART_SOURCE_CHARS)}`
+  if (feedback) {
+    return (
+      `${base}\n\nRe-plan this chart's requirement per this note ` +
+      `(keep what works, change only what's needed):\n${feedback}`
+    )
+  }
+  return (
+    `${base}\n\nRe-plan this chart's requirement — sharpen what it plots and pick the ` +
+    `chart type that best fits, keeping the same id.`
+  )
 }
 
 // ── Map-region data pass (turns a choropleth REQUIREMENT into per-region values)

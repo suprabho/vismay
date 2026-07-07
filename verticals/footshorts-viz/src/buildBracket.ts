@@ -1,6 +1,7 @@
 import type {
   Bracket,
   BracketRound,
+  BracketSlot,
   BracketTie,
   FixtureRow,
   FixtureTeamRef,
@@ -46,6 +47,24 @@ function sumLeg(
   return { a: leg.away_score, b: leg.home_score }
 }
 
+// Turn one side of a tie into a render slot. A confirmed entry becomes a `team`
+// slot; an unknown side falls back to whatever the fixture carries — a
+// descriptive name ("Winner Group A", seeded by football-data.org before the
+// draw) becomes a `placeholder`, and a blank/literal-TBD side becomes `tbd`.
+// This is what lets the bracket render as a real (if incomplete) tree before the
+// matchups are decided, instead of a row of "TBD vs TBD" matches.
+function buildSlot(
+  ref: FixtureTeamRef,
+  rawName: string | null,
+  score: number | null,
+  winner: boolean,
+): BracketSlot {
+  if (ref) return { kind: 'team', team: ref, name: ref.name, score, winner }
+  const label = rawName?.trim()
+  if (label && label.toUpperCase() !== 'TBD') return { kind: 'placeholder', label }
+  return { kind: 'tbd' }
+}
+
 function buildTie(stage: string, legs: FixtureRow[]): BracketTie {
   const sortedLegs = [...legs].sort((x, y) =>
     x.kickoff_at.localeCompare(y.kickoff_at),
@@ -81,15 +100,43 @@ function buildTie(stage: string, legs: FixtureRow[]): BracketTie {
       aggregate.a > aggregate.b ? teamAId : teamRefId(teamB)
   }
 
+  // A tie is "drawn" once both participants are confirmed teams. Until then it's
+  // rendered from explicit slots (team / placeholder / TBD) rather than as
+  // matches: a side may be a real team, a qualification descriptor, or unknown.
+  const teamBId = teamRefId(teamB)
+  const anyUnknown = !teamA || !teamB
+  const bothUnknown = !teamA && !teamB
+  const slots = anyUnknown
+    ? {
+        slotA: buildSlot(
+          teamA,
+          leg1.home_team_name,
+          aggregate ? aggregate.a : null,
+          winnerTeamId != null && winnerTeamId === teamAId,
+        ),
+        slotB: buildSlot(
+          teamB,
+          leg1.away_team_name,
+          aggregate ? aggregate.b : null,
+          winnerTeamId != null && winnerTeamId === teamBId,
+        ),
+      }
+    : null
+
   return {
     stage,
-    legs: sortedLegs,
+    // When neither side is known there's no match to show — drop the legs so the
+    // renderers fall through to the compact slot card (keyed off `id`). A tie
+    // with at least one confirmed team keeps its legs and renders as matches.
+    legs: bothUnknown ? [] : sortedLegs,
     teamA,
     teamB,
     teamAName,
     teamBName,
     aggregate,
     winnerTeamId,
+    ...(bothUnknown ? { id: leg1.id } : {}),
+    ...(slots ?? {}),
   }
 }
 
@@ -131,18 +178,23 @@ export function buildBracket(fixtures: FixtureRow[]): Bracket | null {
       tieGroups.set(key, list)
     }
 
-    const ties: BracketTie[] = []
-    for (const legs of tieGroups.values()) {
-      ties.push(buildTie(stage, legs))
+    // Sort by each tie's earliest kickoff taken from its *source* legs. An
+    // all-TBD tie (both teams unknown) drops its legs in `buildTie`, so we can't
+    // read kickoff back off the built tie — capture it here while the source
+    // fixtures are still in hand.
+    const built: { tie: BracketTie; kickoff: string }[] = []
+    const push = (legs: FixtureRow[]) => {
+      const kickoff = legs.reduce(
+        (min, leg) => (leg.kickoff_at < min ? leg.kickoff_at : min),
+        legs[0]!.kickoff_at,
+      )
+      built.push({ tie: buildTie(stage, legs), kickoff })
     }
-    for (const lone of unpairable) {
-      ties.push(buildTie(stage, [lone]))
-    }
+    for (const legs of tieGroups.values()) push(legs)
+    for (const lone of unpairable) push([lone])
 
-    ties.sort((x, y) =>
-      x.legs[0]!.kickoff_at.localeCompare(y.legs[0]!.kickoff_at),
-    )
-    rounds.push({ stage, ties })
+    built.sort((x, y) => x.kickoff.localeCompare(y.kickoff))
+    rounds.push({ stage, ties: built.map((b) => b.tie) })
   }
 
   rounds.sort((x, y) => stageRank(x.stage) - stageRank(y.stage))
@@ -158,9 +210,13 @@ export function buildBracket(fixtures: FixtureRow[]): Bracket | null {
 /**
  * Whether a bracket's draw is actually set — i.e. at least one tie has both
  * teams known. Before a tournament's knockout draw exists, football-data.org
- * seeds the rounds with TBD placeholders (null team refs); rendering those as a
- * tree produces an empty, broken-looking bracket, so callers use this to fall
- * back to a schedule view until real matchups appear.
+ * seeds the rounds with TBD placeholders (null team refs).
+ *
+ * The renderers no longer need this to avoid a broken view — `buildBracket` now
+ * emits explicit `slotA`/`slotB` (team / placeholder / TBD) for unresolved ties,
+ * so an undrawn bracket draws as a proper incomplete tree. Kept as a predicate
+ * for callers that still want to distinguish "draw is live" from "still TBD"
+ * (e.g. to choose a headline or skip a share card).
  */
 export function isBracketDrawn(bracket: Bracket | null): boolean {
   if (!bracket) return false

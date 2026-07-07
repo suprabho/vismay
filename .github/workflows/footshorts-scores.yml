@@ -1,21 +1,28 @@
 name: Footshorts - scores refresh
 
-# Pulls latest match scores from football-data.org and upserts into the
-# footshorts Supabase. Runs twice daily; safe to re-run (idempotent on match id).
+# Pulls the latest finished-match scores from football-data.org into the
+# footshorts Supabase. Update-only (never inserts) and idempotent, so it's safe
+# to re-run. Runs every 3 hours to keep results fresh.
+#
+# Recaps and their event-sync prerequisites are DECOUPLED from this workflow:
+# they run on their own twice-daily schedule in footshorts-recap.yml. Keeping
+# scores on its own job means a 3-hourly top-up never drags along the
+# Gemini / API-Football / Sportradar budgets a recap consumes, and a recap
+# failure can't fail the scores refresh (or vice versa).
 #
 # Required repo secrets (in `Production` — shared project-wide with vizmaya /
 # vizf1 / energy-profile workflows):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 #   FOOTBALL_DATA_TOKEN          - football-data.org API token (footshorts-only)
-#   API_FOOTBALL_TOKEN           - API-Football key, for per-match goal events
-#   SPORTRADAR_API_KEY           - Sportradar key, for World Cup match timelines
-#   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
 
 on:
   schedule:
-    # Every 12 hours at 00:00 and 12:00 UTC. GH cron is UTC and can drift up to ~15 min under load.
-    - cron: '0 0,12 * * *'
+    # Every 3 hours. Knockout matches finish ~18:00-01:00 UTC and a 3-hourly
+    # cadence caps how long a result stays stale at ~3h. GH cron is UTC and can
+    # drift up to ~15 min under load (in practice we've seen scheduled runs land
+    # 2-3h late).
+    - cron: '0 */3 * * *'
   workflow_dispatch:
     inputs:
       competitions:
@@ -63,58 +70,3 @@ jobs:
           FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
         # Empty on scheduled runs → all competitions; set via workflow_dispatch to scope.
         run: pnpm scores:ci -- --competitions="${{ inputs.competitions }}"
-
-      # Hydrate per-match goal events (scorers + minutes) from API-Football for
-      # fixtures that just finished. Idempotent (skips fixtures that already have
-      # events) and self-limited to ~90 API calls/run to stay under the free-tier
-      # 100/day cap, so it's safe on every run. Soft-fails: if API-Football is
-      # down or quota-exhausted it must not block the recap below.
-      - name: Sync match events
-        continue-on-error: true
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          API_FOOTBALL_TOKEN: ${{ secrets.API_FOOTBALL_TOKEN }}
-          # 'direct' (default, api-sports.io) or 'rapidapi' — match the channel
-          # the API_FOOTBALL_TOKEN secret was issued on. Unset → direct.
-          API_FOOTBALL_HOST: ${{ vars.API_FOOTBALL_HOST }}
-        run: pnpm events:ci
-
-      # Hydrate World Cup match timelines (goals/cards/subs) from Sportradar into
-      # the same fixture_events table. The API-Football sync above is keyed by a
-      # seeded api_football_id bridge the WC fixtures don't have, so WC timelines
-      # come from Sportradar instead — matched by team name. WC-only and self-
-      # limited to 150 calls/run to stay inside the trial budget; idempotent (skips
-      # fixtures that already have events). Must run BEFORE the recaps so the World
-      # Cup recap's fs:match-timeline blocks have events. Soft-fails so a trial-key
-      # lapse can't block the recap below, and no-ops once the tournament ends.
-      - name: Sync World Cup match events (Sportradar)
-        continue-on-error: true
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SPORTRADAR_API_KEY: ${{ secrets.SPORTRADAR_API_KEY }}
-          # 'trial' (default, api.sportradar.com trial tier) or 'production' — match
-          # the tier the SPORTRADAR_API_KEY secret was issued on. Unset → trial.
-          SPORTRADAR_ACCESS_LEVEL: ${{ vars.SPORTRADAR_ACCESS_LEVEL }}
-        run: pnpm events:sr:ci
-
-      # Generate the recap brief once scores are fresh. recap.ts covers a rolling
-      # window ending now (default 24h) and includes only fixtures that have
-      # finished within it, no-opping if none have. Each run inserts a new snapshot,
-      # so the twice-daily cron yields a recap timeline.
-      - name: Generate recap (all competitions)
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: pnpm recap:ci
-
-      # World Cup–only recap. Same rolling window; no-ops when no WC fixtures
-      # finished in the window, so it harmlessly stops once the tournament ends.
-      - name: Generate recap (World Cup)
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: pnpm recap:ci -- --scope=world-cup

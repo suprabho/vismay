@@ -4,12 +4,17 @@ import { useEffect, useRef } from 'react'
 import type { NewsCard } from '@/lib/useNewsFeed'
 import { NewsReelCard } from './NewsReelCard'
 
+// Fixed-height snap cards inside the max-w-2xl column — mirrors the Footshorts
+// Discover feed. Height leaves room for the 62px sticky AppHeader above so each
+// card fills the viewport without bleeding past the fixed-width column.
+const FEED_HEIGHT = 'h-[calc(100dvh-72px)]'
+
 /**
  * Vertical TikTok-style pager.
  *
- * Each card is a full-screen snap-target. IntersectionObserver fires
- * `onCardSeen` when a card is ~70% visible — analytics seam for when we wire
- * an article_views table.
+ * Each card is a fixed-height snap-target within the centered column.
+ * IntersectionObserver fires `onCardSeen` when a card is ~70% visible —
+ * analytics seam for when we wire an article_views table.
  */
 export function NewsReel({
   items,
@@ -47,7 +52,7 @@ export function NewsReel({
 
   if (items.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted">
+      <div className={`${FEED_HEIGHT} flex items-center justify-center text-sm text-muted`}>
         No news yet — run the ingest worker.
       </div>
     )
@@ -56,12 +61,14 @@ export function NewsReel({
   return (
     <div
       ref={containerRef}
-      className="h-[100dvh] w-full snap-y snap-mandatory overflow-y-auto"
+      className={`${FEED_HEIGHT} snap-y snap-mandatory overflow-y-auto overscroll-contain`}
       style={{ scrollbarWidth: 'none' }}
     >
       {items.map((c) => (
-        <div key={c.id} data-card-id={c.id} className="h-[100dvh] w-full">
-          <NewsReelCard card={c} />
+        <div key={c.id} data-card-id={c.id} className={`${FEED_HEIGHT} snap-start pb-3`}>
+          <div className="h-full">
+            <NewsReelCard card={c} />
+          </div>
         </div>
       ))}
     </div>

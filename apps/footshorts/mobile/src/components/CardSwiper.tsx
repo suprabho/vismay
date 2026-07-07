@@ -2,17 +2,23 @@ import { useRef } from 'react';
 import { FlatList, useWindowDimensions, View, type ViewToken } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FeedCard as FeedCardType } from '@footshorts/shared/schemas';
+import type { ShareCardItem } from '@/lib/useShareCards';
 import { FeedCard } from './FeedCard';
+import { ShareCardFeedItem } from './ShareCardFeedItem';
+
+export type DiscoverRow =
+  | { kind: 'article'; published_at: string; article: FeedCardType }
+  | { kind: 'card'; published_at: string; card: ShareCardItem };
 
 type Props = {
-  items: FeedCardType[];
+  rows: DiscoverRow[];
   onEndReached?: () => void;
   ListFooterComponent?: React.ReactElement;
   topGap?: number;
   onItemSeen?: (articleId: string) => void;
 };
 
-export function CardSwiper({ items, onEndReached, ListFooterComponent, topGap: topGapOverride, onItemSeen }: Props) {
+export function CardSwiper({ rows, onEndReached, ListFooterComponent, topGap: topGapOverride, onItemSeen }: Props) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const cardHeight = height;
@@ -29,8 +35,10 @@ export function CardSwiper({ items, onEndReached, ListFooterComponent, topGap: t
         const cb = onItemSeenRef.current;
         if (!cb) return;
         for (const v of viewableItems) {
-          const id = (v.item as FeedCardType | undefined)?.article_id;
-          if (id) cb(id);
+          const row = v.item as DiscoverRow | undefined;
+          // Only article rows feed the persisted seen-set; swiping past a
+          // share card in Discover never marks it seen (web parity).
+          if (row?.kind === 'article') cb(row.article.article_id);
         }
       },
     },
@@ -38,20 +46,31 @@ export function CardSwiper({ items, onEndReached, ListFooterComponent, topGap: t
 
   return (
     <FlatList
-      data={items}
-      keyExtractor={(item) => item.article_id}
+      data={rows}
+      keyExtractor={(row) =>
+        row.kind === 'article' ? `a:${row.article.article_id}` : `c:${row.card.id}`
+      }
       renderItem={({ item }) => (
         <View style={{ height: cardHeight, paddingTop: topGap, paddingHorizontal: 12 }}>
           <View className="flex-1 rounded-t-3xl overflow-hidden bg-surface border border-b-0 border-border">
-            <FeedCard
-              headline={item.headline}
-              summary={item.summary}
-              imageUrl={item.image_url}
-              publisher={item.publisher}
-              url={item.url}
-              publishedAt={item.published_at}
-              entities={item.entities}
-            />
+            {item.kind === 'article' ? (
+              <FeedCard
+                headline={item.article.headline}
+                summary={item.article.summary}
+                imageUrl={item.article.image_url}
+                publisher={item.article.publisher}
+                url={item.article.url}
+                publishedAt={item.article.published_at}
+                entities={item.article.entities}
+              />
+            ) : (
+              <ShareCardFeedItem
+                imageUrl={item.card.image_url}
+                name={item.card.name}
+                ratio={item.card.ratio}
+                entities={item.card.entities}
+              />
+            )}
           </View>
         </View>
       )}
@@ -59,6 +78,7 @@ export function CardSwiper({ items, onEndReached, ListFooterComponent, topGap: t
       snapToInterval={cardHeight}
       decelerationRate="fast"
       showsVerticalScrollIndicator={false}
+      getItemLayout={(_, index) => ({ length: cardHeight, offset: cardHeight * index, index })}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
       ListFooterComponent={ListFooterComponent}

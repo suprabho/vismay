@@ -19,3 +19,7 @@ export {
   VideoProjectSurface,
   type VideoProjectSurfaceProps,
 } from './VideoProjectSurface'
+export {
+  NewsletterSurface,
+  type NewsletterSurfaceProps,
+} from './NewsletterSurface'

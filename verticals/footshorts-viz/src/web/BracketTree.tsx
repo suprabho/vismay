@@ -1,7 +1,8 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useMemo } from 'react'
 import type { Bracket as BracketModel, BracketRound, BracketSlot, BracketTie, FixtureTeamRef } from '../types'
+import { advanceBracket } from '../advanceBracket'
 import { stageLabel } from '../stageLabel'
 import { Crest } from '../data/Crest'
 import { findTeam } from '../data/teams'
@@ -142,7 +143,7 @@ function SlotLine({ slot }: { slot: BracketSlot }) {
     return (
       <div className="flex items-center gap-1.5 px-2" style={{ height: CELL_H / 2 }}>
         <span
-          className="shrink-0 rounded-full border border-dashed border-white/25"
+          className="shrink-0 rounded-full border border-dashed border-border"
           style={{ width: 18, height: 18 }}
           aria-hidden
         />
@@ -178,19 +179,21 @@ function TieCell({
   const [slotA, slotB] = tieSlots(tie)
   return (
     <div
-      className="absolute flex flex-col justify-center overflow-hidden rounded-md bg-white/5"
+      className="absolute flex flex-col justify-center overflow-hidden rounded-md bg-surface"
       style={{
         left: x,
         top,
         width: w,
         height: CELL_H,
-        border: highlight ? '1px solid var(--color-accent, #e2117a)' : '1px solid rgba(255,255,255,0.15)',
-        boxShadow: highlight ? '0 0 14px -2px var(--color-accent, #e2117a)' : undefined,
+        border: highlight
+          ? '1px solid rgb(var(--sf-color-accent, 226 17 122))'
+          : '1px solid rgb(var(--sf-color-border, 255 255 255))',
+        boxShadow: highlight ? '0 0 14px -2px rgb(var(--sf-color-accent, 226 17 122))' : undefined,
         zIndex: 10,
       }}
     >
       <SlotLine slot={slotA} />
-      <div className="border-t border-white/10" />
+      <div className="border-t border-border" />
       <SlotLine slot={slotB} />
     </div>
   )
@@ -369,7 +372,7 @@ function HorizontalTree({
               key={c.key}
               d={c.d}
               fill="none"
-              stroke={c.on ? 'var(--color-accent, #e2117a)' : 'rgba(255,255,255,0.22)'}
+              stroke={c.on ? 'rgb(var(--sf-color-accent, 226 17 122))' : 'rgb(var(--sf-color-muted, 255 255 255) / 0.5)'}
               strokeWidth={c.on ? 2 : 1}
             />
           ))}
@@ -646,7 +649,7 @@ function VerticalTree({
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                stroke={s.on ? 'var(--color-accent, #e2117a)' : 'rgba(255,255,255,0.3)'}
+                stroke={s.on ? 'rgb(var(--sf-color-accent, 226 17 122))' : 'rgb(var(--sf-color-muted, 255 255 255) / 0.5)'}
                 strokeWidth={s.on ? 2.5 : 1.5}
               />
             ))}
@@ -684,12 +687,16 @@ function VerticalTree({
 // making both the viewport and the container report a wide width; in that case
 // drive the layout from an explicit story-level portrait flag passed via config
 // (BracketConfig.layout = 'tree-vertical') rather than any CSS/JS auto-detect.
-export function BracketTree({ orientation = 'auto', ...rest }: Props) {
+export function BracketTree({ orientation = 'auto', bracket, ...rest }: Props) {
   // Scope the responsive CSS to this instance.
   const cid = 'bkt-' + useId().replace(/[^a-zA-Z0-9]/g, '')
-  if (rest.bracket.rounds.length === 0) return null
-  if (orientation === 'vertical') return <VerticalTree {...rest} />
-  if (orientation === 'horizontal') return <HorizontalTree {...rest} />
+  // Complete the structure (so every connector draws) and advance decided
+  // winners into the next round before either layout lays out the tree.
+  const tree = useMemo(() => advanceBracket(bracket) ?? bracket, [bracket])
+  const treeRest = { ...rest, bracket: tree }
+  if (tree.rounds.length === 0) return null
+  if (orientation === 'vertical') return <VerticalTree {...treeRest} />
+  if (orientation === 'horizontal') return <HorizontalTree {...treeRest} />
 
   // 'auto': render both layouts and let a pure-CSS media query pick one by the
   // viewport's portrait/landscape flag — landscape shows the wide mirrored
@@ -702,10 +709,10 @@ export function BracketTree({ orientation = 'auto', ...rest }: Props) {
     <div style={{ width: '100%' }}>
       <style>{`.${cid}-v{display:none}@media (max-aspect-ratio:1/1){.${cid}-h{display:none}.${cid}-v{display:block}}`}</style>
       <div className={`${cid}-h`}>
-        <HorizontalTree {...rest} />
+        <HorizontalTree {...treeRest} />
       </div>
       <div className={`${cid}-v`}>
-        <VerticalTree {...rest} />
+        <VerticalTree {...treeRest} />
       </div>
     </div>
   )

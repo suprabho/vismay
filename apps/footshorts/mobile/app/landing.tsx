@@ -1,8 +1,10 @@
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { MatchTile } from '@vismay/footshorts-viz/native';
 import { useAuth } from '@/lib/AuthProvider';
+import { PRIVACY_URL } from '@/lib/links';
 import { useLandingMatchSnapshot } from '@/lib/useLandingMatchSnapshot';
 
 /**
@@ -111,7 +113,9 @@ export default function LandingScreen() {
         <View className="flex-row items-center justify-center gap-4 mt-10 px-6">
           <Text className="text-muted text-xs">Terms</Text>
           <Text className="text-muted text-xs">·</Text>
-          <Text className="text-muted text-xs">Privacy</Text>
+          <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
+            <Text className="text-muted text-xs">Privacy</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>

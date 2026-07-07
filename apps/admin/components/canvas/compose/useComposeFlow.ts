@@ -25,6 +25,33 @@ import type { ChartRequirementView } from './ChartCard'
 
 const base = `/api/stories`
 
+/** A driver in an ingested telemetry session (for the "Add telemetry session" picker). */
+export interface TelemetryDriver {
+  number: number
+  abbr: string
+  name: string
+  team: string
+  teamId: string
+  teamColour: string
+}
+/** A constructor derived from a session's driver roster. */
+export interface TelemetryConstructor {
+  name: string
+  id: string
+  colour: string
+}
+/** One ingested telemetry session, with its roster + constructors. */
+export interface TelemetrySession {
+  sessionKey: string
+  label: string
+  season: number
+  round: number | null
+  sessionType: string
+  ready: boolean
+  drivers: TelemetryDriver[]
+  constructors: TelemetryConstructor[]
+}
+
 /** How many section "Write"/"Rewrite" calls may materialise concurrently. */
 export const MAX_CONCURRENT_SECTIONS = 3
 
@@ -85,6 +112,9 @@ export function useComposeFlow({
   // Per-chart generation outcome (id → ok), set by the batch "Generate charts"
   // step so each chart shows ✓ / ✗ after a run.
   const [chartResults, setChartResults] = useState<Record<string, boolean>>({})
+  // Failure reason for the charts that came back ✗ (id → message), so a failed
+  // card can explain WHY and the author can judge whether a retry will help.
+  const [chartErrors, setChartErrors] = useState<Record<string, string>>({})
 
   // Chart REQUIREMENTS the outline planned (no data yet) — the batch step turns
   // these into chart_data via the source-grounded generateChart pass.
@@ -387,6 +417,36 @@ export function useComposeFlow({
   async function createRecap(): Promise<boolean> {
     return genAngles(undefined, 'recap')
   }
+
+  // ── F1 telemetry source (vizf1 only) ─────────────────────────────────────
+  // List the ingested telemetry sessions (+ their drivers/constructors) for the
+  // "Add telemetry session" picker. This route lives outside the per-story
+  // compose namespace, so it's a direct fetch rather than `call`.
+  async function loadTelemetrySessions(): Promise<TelemetrySession[]> {
+    try {
+      const res = await fetch('/api/vizf1/telemetry/sessions', { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { sessions?: TelemetrySession[] }
+      return data.sessions ?? []
+    } catch {
+      return []
+    }
+  }
+  // Build a focused telemetry brief server-side and attach it as a text source.
+  async function createTelemetrySource(opts: {
+    sessionKey: string
+    driverNumbers?: number[]
+    constructors?: string[]
+    prompt?: string
+  }): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add telemetry', 'telemetry-source', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(opts),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
+  }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
     // Persist immediately (fire-and-forget) so the choice survives a reload
@@ -427,6 +487,40 @@ export function useComposeFlow({
       }))
       setTab('outline')
     }
+    return !!data?.outline
+  }
+  // Regenerate ONE outline section in place — a fresh stub for just this slide,
+  // leaving the rest of the deck untouched. Outline-phase, unmaterialised only.
+  async function regenSection(entryId: string, feedback?: string): Promise<boolean> {
+    const data = await call<{ entry: ComposeOutlineEntry; outline: ComposeOutlineEntry[] }>(
+      `regen:${entryId}`,
+      'outline/section',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: 'regenerate', entryId, ...(feedback ? { feedback } : {}) }),
+      },
+    )
+    if (data?.outline) setSt((s) => ({ ...s, outline: data.outline }))
+    return !!data?.outline
+  }
+  // Add a NEW outline section from a prompt, slotted after `afterId` (or at the
+  // end). Lands as a `pending` entry the author can then accept + materialise.
+  async function addSection(prompt?: string, afterId?: string): Promise<boolean> {
+    const data = await call<{ entry: ComposeOutlineEntry; outline: ComposeOutlineEntry[] }>(
+      'add-section',
+      'outline/section',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'add',
+          ...(prompt ? { prompt } : {}),
+          ...(afterId ? { afterId } : {}),
+        }),
+      },
+    )
+    if (data?.outline) setSt((s) => ({ ...s, outline: data.outline }))
     return !!data?.outline
   }
   async function persistOutline(outline: ComposeOutlineEntry[]) {
@@ -544,18 +638,89 @@ export function useComposeFlow({
 
   // ── Charts: turn the outline's chart requirements into source-grounded
   // chart_data in one batch (per-chart regenerate also lives on the canvas). ──
+
+  /** Fold a batch/retry run's per-chart outcomes into results + errors. */
+  function applyChartOutcomes(outcomes: Array<{ id: string; ok: boolean; error?: string }>) {
+    setChartResults((prev) => {
+      const next = { ...prev }
+      for (const c of outcomes) next[c.id] = c.ok
+      return next
+    })
+    setChartErrors((prev) => {
+      const next = { ...prev }
+      for (const c of outcomes) {
+        if (c.ok) delete next[c.id]
+        else next[c.id] = c.error || 'generation failed'
+      }
+      return next
+    })
+  }
+
   async function genCharts() {
     if (!charts.length || busy) return
-    const data = await call<{ charts: Array<{ id: string; ok: boolean }> }>('charts', 'charts', {
-      method: 'POST',
+    const data = await call<{ charts: Array<{ id: string; ok: boolean; error?: string }> }>(
+      'charts',
+      'charts',
+      { method: 'POST' },
+    )
+    if (data?.charts) applyChartOutcomes(data.charts)
+  }
+
+  // Retry ONE failed chart's DATA in place — regenerates + writes just this
+  // chart (not the whole batch), leaving the ones that already succeeded
+  // untouched. A per-chart busy key means only this card's button spins.
+  async function retryChart(id: string): Promise<boolean> {
+    const data = await call<{ charts: Array<{ id: string; ok: boolean; error?: string }> }>(
+      `chart-retry:${id}`,
+      'charts',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      },
+    )
+    if (data?.charts) applyChartOutcomes(data.charts)
+    return data?.charts?.some((c) => c.id === id && c.ok) ?? false
+  }
+
+  // Re-plan ONE chart's REQUIREMENT (its prompt), optionally with a note. The
+  // server regenerates the chartType/title/axes + "what to plot" and persists it
+  // into storyOutline.charts; mirror the new requirement into local state so the
+  // card updates without a reload. This re-plans the chart — its DATA is then
+  // regenerated via "Generate charts" (or the canvas node).
+  async function regenChartPrompt(id: string, feedback?: string): Promise<boolean> {
+    const data = await call<{ chart: ChartRequirementView }>(`chart:${id}`, 'charts', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, ...(feedback ? { feedback } : {}) }),
     })
-    if (data?.charts) {
-      setChartResults((prev) => {
-        const next = { ...prev }
-        for (const c of data.charts) next[c.id] = c.ok
-        return next
-      })
-    }
+    if (!data?.chart) return false
+    setSt((s) => {
+      const outline = (s.storyOutline ?? null) as { charts?: ChartRequirementView[] } | null
+      if (!outline?.charts) return s
+      return {
+        ...s,
+        storyOutline: {
+          ...outline,
+          charts: outline.charts.map((c) => (c.id === id ? data.chart : c)),
+        },
+      }
+    })
+    // The persisted data (if any) is now stale relative to the new plan — clear
+    // its ✓/✗ (and any prior failure reason) so the author knows to regenerate it.
+    setChartResults((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setChartErrors((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    return true
   }
 
   const phase = st.phase
@@ -583,6 +748,7 @@ export function useComposeFlow({
     setTab,
     charts,
     chartResults,
+    chartErrors,
     extracted,
     pending,
     written,
@@ -601,8 +767,12 @@ export function useComposeFlow({
     reextract,
     genAngles,
     createRecap,
+    loadTelemetrySessions,
+    createTelemetrySource,
     pickAngle,
     genOutline,
+    regenSection,
+    addSection,
     cycleStatus,
     move,
     materialize,
@@ -610,6 +780,8 @@ export function useComposeFlow({
     frameSrcFor,
     genImages,
     genCharts,
+    retryChart,
+    regenChartPrompt,
     phase,
     newAcceptedCount,
     outlineEditable,

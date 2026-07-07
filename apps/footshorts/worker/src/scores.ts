@@ -6,7 +6,9 @@
  * last 2 days, resolve each to a local fixture by (home_team_id, away_team_id, kickoff_at ±6h),
  * and write home_score / away_score / status='finished'.
  *
- * Run via: `npm run scores` (one-shot) or scheduled by .github/workflows/scores.yml (every 12h).
+ * Run via: `npm run scores` (one-shot) or scheduled by
+ * .github/workflows/footshorts-scores.yml (every 3h). Recaps and their event
+ * syncs are decoupled into .github/workflows/footshorts-recap.yml.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -25,8 +27,8 @@ const COMPETITION_CODES = [
   'WC', 'EC', 'DED', 'PPL', 'BSA', 'ELC',
 ];
 
-// Window we ask FD about. Cron runs every 12h; 2 days catches anything we missed
-// on the previous run (delayed kickoffs, late results, FD ingestion lag).
+// Window we ask FD about. Cron runs every 3h; 2 days catches anything we missed
+// on previous runs (delayed kickoffs, late results, FD ingestion lag).
 const LOOKBACK_DAYS = 2;
 
 // ±6h around FD's utcDate is enough to absorb clock drift between FD and our

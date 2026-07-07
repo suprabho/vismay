@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
@@ -8,7 +8,8 @@ import { useAuth } from '@/lib/AuthProvider';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useFollowedStories } from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
-import { CardSwiper } from '@/components/CardSwiper';
+import { useDiscoverShareCards } from '@/lib/useShareCards';
+import { CardSwiper, type DiscoverRow } from '@/components/CardSwiper';
 import { StoryRings } from '@/components/StoryRings';
 import { ForYouMatchFeed } from '@/components/ForYouMatchFeed';
 import { EditorialMagazine } from '@/components/EditorialMagazine';
@@ -61,22 +62,42 @@ function FeedBody({ tab }: { tab: Tab }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const discover = useDiscoverFeed();
+  const shareCards = useDiscoverShareCards();
   const stories = useFollowedStories();
-  const { seen, markSeen } = useSeenArticles();
+  const { markSeen, isStorySeen } = useSeenArticles();
 
-  const items = discover.data?.pages.flatMap((p) => p.items) ?? [];
+  const articles = useMemo(
+    () => discover.data?.pages.flatMap((p) => p.items) ?? [],
+    [discover.data]
+  );
+
+  // Interleave shipped cards with articles, newest-first. Cards are a small,
+  // recent set (last 24h) so they naturally sort near the top; articles drive
+  // pagination as the user scrolls deeper.
+  const rows = useMemo<DiscoverRow[]>(() => {
+    const merged: DiscoverRow[] = [
+      ...articles.map((a) => ({ kind: 'article' as const, published_at: a.published_at, article: a })),
+      ...(shareCards.data ?? []).map((c) => ({
+        kind: 'card' as const,
+        published_at: c.published_at,
+        card: c,
+      })),
+    ];
+    merged.sort((x, y) => y.published_at.localeCompare(x.published_at));
+    return merged;
+  }, [articles, shareCards.data]);
 
   useEffect(() => {
     if (
       tab === 'discover' &&
-      items.length === 0 &&
+      articles.length === 0 &&
       discover.hasNextPage &&
       !discover.isFetchingNextPage &&
       !discover.isLoading
     ) {
       discover.fetchNextPage();
     }
-  }, [tab, items.length, discover]);
+  }, [tab, articles.length, discover]);
 
   const showRings = tab === 'forYou' && (stories.data?.length ?? 0) > 0;
   const topGap = insets.top + 56 + (showRings ? RINGS_HEIGHT : 0);
@@ -116,7 +137,7 @@ function FeedBody({ tab }: { tab: Tab }) {
             pointerEvents="box-none"
             style={{ position: 'absolute', left: 0, right: 0, top: insets.top + 56, height: RINGS_HEIGHT }}
           >
-            <StoryRings groups={stories.data!} seen={seen} />
+            <StoryRings groups={stories.data!} isStorySeen={isStorySeen} />
           </View>
         ) : null}
       </>
@@ -148,7 +169,7 @@ function FeedBody({ tab }: { tab: Tab }) {
     );
   }
 
-  if (items.length === 0 && !discover.hasNextPage) {
+  if (rows.length === 0 && !discover.hasNextPage) {
     return (
       <View className="flex-1 items-center justify-center px-6">
         <Text className="text-text text-lg mb-2">Nothing here yet</Text>
@@ -157,7 +178,7 @@ function FeedBody({ tab }: { tab: Tab }) {
     );
   }
 
-  if (items.length === 0) {
+  if (rows.length === 0) {
     return (
       <View className="flex-1 items-center justify-center">
         <ActivityIndicator color="#00D26A" />
@@ -167,7 +188,7 @@ function FeedBody({ tab }: { tab: Tab }) {
 
   return (
     <CardSwiper
-      items={items}
+      rows={rows}
       topGap={insets.top + 56}
       onItemSeen={markSeen}
       onEndReached={() => {

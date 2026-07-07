@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { useRouter } from 'next/navigation'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { ResolvedUnit, Theme, StoryDefaults } from '@vismay/viz-engine'
 import { getForegroundLayout, getVizModule } from '@vismay/viz-engine'
@@ -19,6 +20,7 @@ import {
   shareMapOverrideNode,
   narrationNode,
   contentNode,
+  coverNode,
   parseCanvasSources,
   liveUnit,
   buildInputGraph,
@@ -80,6 +82,7 @@ import {
   replaceTheme,
   saveConfigYaml,
   saveMarkdown,
+  saveStoryMetadata,
   unwrapLayerFromMapPicker,
   wrapLayerForMapPicker,
   writeDefaultsMapStyle,
@@ -89,6 +92,14 @@ import {
   appendStorySection,
   appendSectionForegroundLayers,
 } from '@vismay/content-source/storySection'
+import {
+  moveStorySection,
+  sectionMoveIndexMap,
+  remapMapOverrides,
+  remapTtsUnits,
+  remapReportPages,
+} from '@vismay/content-source/storyReorder'
+import { SectionRail } from './SectionRail'
 import { FootballDataModal, type FootballSection } from './FootballDataModal'
 import AssistantLauncher from '@/components/AssistantLauncher'
 import {
@@ -105,7 +116,9 @@ import ImageEditModal, { type ImageLayerDraft } from './ImageEditModal'
 import SlotInspector from './SlotInspector'
 import ThemeEditOverlay from './ThemeEditOverlay'
 import ChartEditPanel from './ChartEditPanel'
+import StorySettingsPanel from './StorySettingsPanel'
 import { ComposeFlowPanel } from './compose/ComposeFlowPanel'
+import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { ComposeState } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
 
@@ -421,6 +434,12 @@ interface SectionView {
   sectionId: string
   heading: string
   frameSrc: string
+  /** Section kind (config `kind`), e.g. 'cover'. Drives deck-cover framing. */
+  kind?: string
+  /** Deck cover editorial node (eyebrow / heading / dek / byline) when this
+   *  section is a `kind: cover`; null otherwise. On a deck cover it replaces
+   *  the markdown Content leaf so the actual cover copy is editable. */
+  cover: InputNodeData | null
   /** Tiered input lineage feeding the frame (leaf → region → group). */
   graph: InputGraph
   /** Override card data per group; only the expanded group's is actually
@@ -445,6 +464,10 @@ function buildSectionView(
   // fields (heading, paragraphs, sliceIndex) are kept intact — those come
   // from server-side resolveUnits and don't change on a config save.
   const live = liveUnit(unit, configYaml)
+  const kind =
+    typeof live.parentConfig.kind === 'string'
+      ? live.parentConfig.kind
+      : undefined
   const sectionId =
     live.parentConfig.id ?? `section-${live.parentIndex}`
   const heading =
@@ -468,6 +491,11 @@ function buildSectionView(
     sectionId,
     heading,
     frameSrc,
+    kind,
+    // Precompute the cover editorial node from the live unit so it reflects
+    // in-canvas config saves; null for non-cover sections (which keep the
+    // markdown Content leaf).
+    cover: kind === 'cover' ? coverNode(live) : null,
     // Feed the live unit (with configYaml-fresh parentConfig) so the
     // graph rebuilds against the latest background/foreground/regions
     // after an in-canvas edit — without it, the iframe would update via
@@ -481,6 +509,42 @@ function buildSectionView(
     },
     outputs,
   }
+}
+
+/** Detect a JSON-native config (footshorts/f1) vs legacy YAML — the same
+ *  sniff `applySection` used inline before structural edits needed it too.
+ *  JSON is the strict subset, so a parseable `{…}` document is JSON. */
+function sniffConfigFormat(configText: string): 'yaml' | 'json' {
+  if (!configText.trim().startsWith('{')) return 'yaml'
+  try {
+    JSON.parse(configText)
+    return 'json'
+  } catch {
+    return 'yaml'
+  }
+}
+
+/** Permute resolved units to a new section order: rewrite each unit's
+ *  `parentIndex` through the old→new map and re-sort. Headings/paragraphs
+ *  travel with their section, so a client-side reorder stays exact without
+ *  re-running the server's resolveUnits. */
+function remapUnitIndexes(
+  units: ResolvedUnit[],
+  indexMap: number[]
+): ResolvedUnit[] {
+  return units
+    .map((u) =>
+      indexMap[u.parentIndex] !== undefined &&
+      indexMap[u.parentIndex] !== u.parentIndex
+        ? { ...u, parentIndex: indexMap[u.parentIndex] }
+        : u
+    )
+    .sort(
+      (a, b) =>
+        a.parentIndex - b.parentIndex ||
+        a.subIndex - b.subIndex ||
+        (a.sliceIndex ?? 0) - (b.sliceIndex ?? 0)
+    )
 }
 
 /**
@@ -513,6 +577,7 @@ export default function CanvasClient({
   appSlug = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
   // Sources live in state so save handlers can patch them locally,
   // triggering iframe reload + preview re-render without a full page
   // refetch. Server's initial value seeds it once.
@@ -611,9 +676,18 @@ export default function CanvasClient({
   const contentCollapsedRef = useRef(false)
 
   const parsedSources = useMemo(() => parseCanvasSources(sources), [sources])
+  // Units live in state so structural edits (section reorder / insert) can
+  // update the canvas without a server round-trip — resolveUnits only runs
+  // at SSR, so a client-side reorder permutes this copy (headings/paragraphs
+  // travel with their section) and the `sectionUnits` change triggers the
+  // editor rebuild effect. Reseeded if the server prop ever changes.
+  const [liveUnits, setLiveUnits] = useState(units)
+  useEffect(() => {
+    setLiveUnits(units)
+  }, [units])
   const sectionUnits = useMemo(
-    () => units.filter((u) => u.subIndex === 0),
-    [units]
+    () => liveUnits.filter((u) => u.subIndex === 0),
+    [liveUnits]
   )
   // Section views are pure data; cheap to memoise once and index into.
   // Includes dataNonce so URL changes propagate after a save, and
@@ -694,6 +768,15 @@ export default function CanvasClient({
     kind: string
     body: Record<string, unknown>
   } | null>(null)
+  // Where an approved ✨ section lands: tacked onto the end (header button)
+  // or right after the section the user is on (the rail's ＋ chip). Shown as
+  // a toggle in the review step so either entry point can switch.
+  const [genPlacement, setGenPlacement] = useState<'end' | 'after-active'>(
+    'end'
+  )
+  /* ─── Section rail (reorder / insert) state ─────────────────── */
+  const [railBusy, setRailBusy] = useState(false)
+  const [railError, setRailError] = useState<string | null>(null)
   // 🏟️ "Add football data" picker — footshorts-only (gated on the fs: modules
   // being in this vertical's registry). Pulls real standings (per group),
   // matches, timelines, fixtures, form and brackets from the DB and drops them
@@ -725,6 +808,7 @@ export default function CanvasClient({
     setGenError(null)
     setGenSectionOpen(false)
     setEvalOpen(false)
+    setStorySettingsOpen(false)
     setFootballError(null)
     setFootballOpen(true)
   }, [])
@@ -736,6 +820,8 @@ export default function CanvasClient({
   }, [openFootball])
   // ✦ Evaluator (Feature 3): screenshot + vision critique of the active section.
   const [evalOpen, setEvalOpen] = useState(false)
+  // ⚙ Story settings: story-level editorial + publishing + deck-defaults panel.
+  const [storySettingsOpen, setStorySettingsOpen] = useState(false)
   // ✨ Research & outline (compose) drawer. The panel stays mounted while this
   // toggles (visibility only) so in-session research survives close → reopen.
   // `composeStarting` covers the no-state case where the header button kicks
@@ -2010,10 +2096,12 @@ export default function CanvasClient({
 
       // Total height of the left graph, used to vertically center it on the
       // frame. Mirrors the placement walk in `mountInputs`.
-      function measureLeftHeight(g: InputGraph): number {
-        // Content / Layout / Theme standalone block (Content's row height
-        // varies with its collapse state).
-        let h = contentLeafH() + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
+      function measureLeftHeight(g: InputGraph, isCoverContent: boolean): number {
+        // Content / Layout / Theme standalone block. The Content row's height
+        // varies with its collapse state; a deck cover swaps it for the fixed-
+        // height Cover editorial leaf (no collapse). Must mirror mountInputs.
+        const contentRowH = isCoverContent ? LEAF_H : contentLeafH()
+        let h = contentRowH + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
         // Background band (>=1 row: a placeholder when empty). Deck sections
         // with no per-section background drop the band entirely — the backdrop
         // is page-level (edited via the Deck defaults button), so a
@@ -2290,7 +2378,11 @@ export default function CanvasClient({
 
       async function mountInputs(view: SectionView): Promise<void> {
         const g = view.graph
-        const offset = FRAME_H / 2 - measureLeftHeight(g) / 2
+        // Deck sections read as slide parts; a deck `kind: cover` swaps its
+        // markdown Content leaf for the Cover editorial node (view.cover).
+        const isDeck = formatRef.current === 'deck'
+        const isCoverContent = isDeck && view.cover != null
+        const offset = FRAME_H / 2 - measureLeftHeight(g, isCoverContent) / 2
 
         const addLeaf = async (
           d: {
@@ -2566,25 +2658,37 @@ export default function CanvasClient({
          * "layout" field is meaningless and saving one would clobber the
          * stack. Theme lives in markdown frontmatter and stays
          * non-editable here — frontmatter editing is its own concern. */
-        // Deck sections read as slide parts, not map inputs.
-        const isDeck = formatRef.current === 'deck'
+        // Deck sections read as slide parts, not map inputs. `isDeck` /
+        // `isCoverContent` are computed at the top of mountInputs (the
+        // measure walk needs them too).
         const deckLeafLabel: Partial<Record<'content' | 'layout' | 'theme', string>> =
           isDeck ? { content: 'Slide text', layout: 'Slide layout' } : {}
         for (const key of ['content', 'layout', 'theme'] as const) {
+          // Deck cover: the "content" row is the Cover editorial node (config
+          // eyebrow / heading / dek / byline), not the markdown body — that's
+          // the one surface that actually changes a cover's copy.
+          const coverRow = key === 'content' && isCoverContent
           let editKind: EditableKind | undefined
-          if (key === 'content') {
+          if (coverRow) {
+            editKind = 'cover'
+          } else if (key === 'content') {
             editKind = 'content'
           } else if (key === 'layout' && g.foreground.shape === 'regions') {
             editKind = 'layout'
           }
           const relabel = deckLeafLabel[key]
-          const data = relabel ? { ...g[key], label: relabel } : g[key]
-          // Content is collapsible: collapsed = header-only chip, expanded =
-          // the full markdown body scrolling inside CONTENT_BODY_MAX_H.
-          // Toggling flips the session ref then re-mounts the left graph so
-          // every dependent node re-walks at the new pitch.
+          const data = coverRow
+            ? view.cover!
+            : relabel
+              ? { ...g[key], label: relabel }
+              : g[key]
+          // The markdown Content leaf is collapsible (collapsed = header chip,
+          // expanded = the body scrolling inside CONTENT_BODY_MAX_H); toggling
+          // flips the session ref then re-mounts the left graph so every
+          // dependent node re-walks at the new pitch. The Cover leaf is a small
+          // fixed card and opts out.
           const extras =
-            key === 'content'
+            key === 'content' && !coverRow
               ? {
                   collapse: {
                     collapsed: contentCollapsedRef.current,
@@ -2599,7 +2703,8 @@ export default function CanvasClient({
               : undefined
           const node = await addLeaf(data, regionColX, y, editKind, extras)
           await wire(node, 'value', frame, key)
-          y += (key === 'content' ? contentLeafH() : LEAF_H) + LGAP_Y
+          y +=
+            (key === 'content' && !coverRow ? contentLeafH() : LEAF_H) + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 
@@ -3419,46 +3524,158 @@ export default function CanvasClient({
     [genBrief, genBusy, slug, format]
   )
 
-  // Append one section to the live story (markdown + config), save both, bump
+  // Add one section to the live story (markdown + config), save both, bump
   // the nonce, and jump to it. Shared by the AI section preview and the football
   // data picker. Config surgery is format-aware: a JSON-native story (footshorts/
   // f1) must use the JSON serializer — YAML surgery on a JSON config corrupts it.
+  //
+  // Placement: 'end' appends (the historical behavior); 'after-active' lands
+  // the new section right after the one the user is on — implemented as
+  // append-then-move in the config (the markdown block stays appended; config
+  // entries find their prose by text anchor, not position) plus an index remap
+  // of the positional sidecars (map/tts/report), same as a rail reorder.
   const applySection = useCallback(
-    async (section: { heading: string; paragraphs: string[]; kind: string; body: Record<string, unknown> }) => {
+    async (
+      section: { heading: string; paragraphs: string[]; kind: string; body: Record<string, unknown> },
+      placement: 'end' | 'after-active' = 'end',
+    ) => {
       const cfg = configYamlRef.current ?? ''
-      let format: 'yaml' | 'json' = 'yaml'
-      if (cfg.trim().startsWith('{')) {
-        try {
-          JSON.parse(cfg)
-          format = 'json'
-        } catch {
-          format = 'yaml'
-        }
-      }
+      const format = sniffConfigFormat(cfg)
       const next = appendStorySection(markdownRef.current ?? '', cfg, section, format)
       // The appended section lands at the end → its index is the old count.
-      const newIndex = sectionViewsRef.current.length
+      const count = sectionUnitsRef.current.length
+      let nextConfig = next.configYaml
+      let newIndex = count
+      let indexMap: number[] | null = null
+      let nextMapYaml: string | null = null
+      let nextTtsYaml: string | null = null
+      let nextReportYaml: string | null = null
+      if (placement === 'after-active' && stateRef.current.activeSectionIndex < count - 1) {
+        newIndex = stateRef.current.activeSectionIndex + 1
+        nextConfig = moveStorySection(nextConfig, count, newIndex, format)
+        indexMap = sectionMoveIndexMap(count + 1, count, newIndex)
+        const cur = sourcesRef.current
+        nextMapYaml = remapMapOverrides(cur.mapYaml, indexMap)
+        nextTtsYaml = remapTtsUnits(cur.ttsYaml, indexMap)
+        nextReportYaml = remapReportPages(cur.reportYaml, indexMap)
+      }
       await saveMarkdown(slug, next.markdown)
-      await saveConfigYaml(slug, next.configYaml)
-      setSources((prev) => ({ ...prev, markdown: next.markdown, configYaml: next.configYaml }))
+      await saveConfigYaml(slug, nextConfig)
+      if (nextMapYaml !== null)
+        await saveSlice(slug, { target: 'map', patch: {}, newRaw: nextMapYaml })
+      if (nextTtsYaml !== null)
+        await saveSlice(slug, { target: 'tts', patch: {}, newRaw: nextTtsYaml })
+      if (nextReportYaml !== null)
+        await saveSlice(slug, { target: 'report', patch: {}, newRaw: nextReportYaml })
+      // Synthesize the new section's unit so the canvas can navigate to it
+      // without a server round-trip — resolveUnits only runs at SSR, and the
+      // heading/paragraphs here are exactly what we just wrote to markdown.
+      // `parentConfig` mirrors the entry appendStorySection built (id/text
+      // derived from the heading, body keys never overriding either). The
+      // frame iframe stays blank until the next full load signs its URL, but
+      // the node graph + previews are live immediately.
+      const entry: Record<string, unknown> = { id: next.id, text: section.heading.trim() }
+      if (section.kind) entry.kind = section.kind
+      for (const [k, v] of Object.entries(section.body)) {
+        if (k !== 'id' && k !== 'text') entry[k] = v
+      }
+      const newUnit: ResolvedUnit = {
+        parentIndex: newIndex,
+        subIndex: 0,
+        parentConfig: entry as ResolvedUnit['parentConfig'],
+        heading: section.heading.trim(),
+        subheading: undefined,
+        paragraphs: section.paragraphs,
+      }
+      const map = indexMap
+      setLiveUnits((prev) => {
+        const shifted = map ? remapUnitIndexes(prev, map) : prev
+        return [...shifted, newUnit].sort(
+          (a, b) => a.parentIndex - b.parentIndex || a.subIndex - b.subIndex,
+        )
+      })
+      setSources((prev) => ({
+        ...prev,
+        markdown: next.markdown,
+        configYaml: nextConfig,
+        ...(nextMapYaml !== null ? { mapYaml: nextMapYaml } : {}),
+        ...(nextTtsYaml !== null ? { ttsYaml: nextTtsYaml } : {}),
+        ...(nextReportYaml !== null ? { reportYaml: nextReportYaml } : {}),
+      }))
       setDataNonce((n) => n + 1)
       setActiveSectionIndex(newIndex)
+      // Re-run the server render in the background: it re-resolves units from
+      // the saved files and — crucially — signs the new section's frame URL,
+      // which the synthesized unit can't provide. The reseed effect swaps the
+      // fresh units in when the payload lands; the canvas stays interactive
+      // meanwhile.
+      router.refresh()
+    },
+    [slug, router],
+  )
+
+  // Move a section one slot (the rail's ◀ ▶). Slide order IS the config's
+  // `sections[]` order, so the move is a config rewrite plus an index remap
+  // of the sidecars that address sections positionally — narration and map
+  // overrides stay glued to their sections. The permuted unit list triggers
+  // the editor rebuild effect, which re-lands on the moved section.
+  const handleMoveSection = useCallback(
+    async (from: number, to: number) => {
+      const count = sectionUnitsRef.current.length
+      if (from === to || from < 0 || from >= count || to < 0 || to >= count) return
+      setRailBusy(true)
+      setRailError(null)
+      try {
+        const cfg = configYamlRef.current ?? ''
+        const format = sniffConfigFormat(cfg)
+        const nextConfig = moveStorySection(cfg, from, to, format)
+        const indexMap = sectionMoveIndexMap(count, from, to)
+        const cur = sourcesRef.current
+        const nextMapYaml = remapMapOverrides(cur.mapYaml, indexMap)
+        const nextTtsYaml = remapTtsUnits(cur.ttsYaml, indexMap)
+        const nextReportYaml = remapReportPages(cur.reportYaml, indexMap)
+        await saveConfigYaml(slug, nextConfig)
+        if (nextMapYaml !== null)
+          await saveSlice(slug, { target: 'map', patch: {}, newRaw: nextMapYaml })
+        if (nextTtsYaml !== null)
+          await saveSlice(slug, { target: 'tts', patch: {}, newRaw: nextTtsYaml })
+        if (nextReportYaml !== null)
+          await saveSlice(slug, { target: 'report', patch: {}, newRaw: nextReportYaml })
+        setLiveUnits((prev) => remapUnitIndexes(prev, indexMap))
+        setSources((prev) => ({
+          ...prev,
+          configYaml: nextConfig,
+          ...(nextMapYaml !== null ? { mapYaml: nextMapYaml } : {}),
+          ...(nextTtsYaml !== null ? { ttsYaml: nextTtsYaml } : {}),
+          ...(nextReportYaml !== null ? { reportYaml: nextReportYaml } : {}),
+        }))
+        setDataNonce((n) => n + 1)
+        setActiveSectionIndex(to)
+      } catch (e) {
+        setRailError(e instanceof Error ? e.message : 'Could not reorder sections.')
+      } finally {
+        setRailBusy(false)
+      }
     },
     [slug],
   )
 
-  // Apply the approved preview: append it and reset the generate-section panel.
+  // Apply the approved preview: add it (at the chosen placement) and reset
+  // the generate-section panel.
   const handleApplySection = useCallback(async () => {
     if (!genResult || genBusy) return
     setGenBusy(true)
     setGenError(null)
     try {
-      await applySection({
-        heading: genResult.heading,
-        paragraphs: genResult.paragraphs,
-        kind: genResult.kind,
-        body: genResult.body,
-      })
+      await applySection(
+        {
+          heading: genResult.heading,
+          paragraphs: genResult.paragraphs,
+          kind: genResult.kind,
+          body: genResult.body,
+        },
+        genPlacement,
+      )
       setGenSectionOpen(false)
       setGenBrief('')
       setGenResult(null)
@@ -3469,7 +3686,7 @@ export default function CanvasClient({
     } finally {
       setGenBusy(false)
     }
-  }, [genResult, genBusy, applySection])
+  }, [genResult, genBusy, applySection, genPlacement])
 
   // Add a real-data block picked from the football data modal. Preferred path:
   // drop it as a NODE (a new foreground layer) into the section the user is
@@ -3490,15 +3707,7 @@ export default function CanvasClient({
           : []
 
         const cfg = configYamlRef.current ?? ''
-        let format: 'yaml' | 'json' = 'yaml'
-        if (cfg.trim().startsWith('{')) {
-          try {
-            JSON.parse(cfg)
-            format = 'json'
-          } catch {
-            format = 'yaml'
-          }
-        }
+        const format = sniffConfigFormat(cfg)
 
         const inserted =
           unit && layers.length
@@ -3810,6 +4019,42 @@ export default function CanvasClient({
     setSlotTarget(null)
     setSlotError(null)
   }, [])
+
+  // Story-wide editorial frontmatter (title/subtitle/byline/date) from the
+  // Story settings panel. Reads the latest markdown via the ref, merges the
+  // patch, and rewrites frontmatter — preserving theme/aura/all other keys and
+  // the body. Rejects (surfaced inline by the panel) if the frontmatter can't
+  // be parsed, so a save never serializes onto empty data and wipes it.
+  const handleStorySettingsEditorial = useCallback(
+    async (patch: Partial<Record<'title' | 'subtitle' | 'byline' | 'date', string>>) => {
+      const parsed = parseFrontmatter(markdownRef.current ?? '')
+      if (parsed.yamlError) {
+        throw new Error('Frontmatter is unparseable — fix it in the Markdown editor first.')
+      }
+      const nextMarkdown = serializeFrontmatter({ ...parsed.data, ...patch }, parsed.body)
+      await saveMarkdown(slug, nextMarkdown)
+      setSources((prev) => ({ ...prev, markdown: nextMarkdown }))
+      setDataNonce((n) => n + 1)
+    },
+    [slug]
+  )
+
+  // Story-wide publishing metadata (status/listed/displayOrder). Writes the
+  // frontmatter mirror AND the explicit fields in one PUT — same shape the
+  // classic editor's Save uses — so the DB columns and markdown stay in sync.
+  const handleStorySettingsMetadata = useCallback(
+    async (meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>) => {
+      const parsed = parseFrontmatter(markdownRef.current ?? '')
+      if (parsed.yamlError) {
+        throw new Error('Frontmatter is unparseable — fix it in the Markdown editor first.')
+      }
+      const nextMarkdown = serializeFrontmatter({ ...parsed.data, ...meta }, parsed.body)
+      await saveStoryMetadata(slug, { markdown: nextMarkdown, ...meta })
+      setSources((prev) => ({ ...prev, markdown: nextMarkdown }))
+      setDataNonce((n) => n + 1)
+    },
+    [slug]
+  )
 
   // Story-wide `defaults.mapStyle` write, called from the map picker's URL
   // input. Bumps dataNonce so the iframes pick up the new style URL on the
@@ -4146,6 +4391,8 @@ export default function CanvasClient({
           onClick={() => {
             setGenError(null)
             setEvalOpen(false)
+            setStorySettingsOpen(false)
+            setGenPlacement('end')
             setGenSectionOpen((o) => !o)
           }}
           title="Generate a new section from a brief"
@@ -4171,6 +4418,7 @@ export default function CanvasClient({
           <button
             onClick={() => {
               setGenSectionOpen(false)
+              setStorySettingsOpen(false)
               setEvalOpen((o) => !o)
             }}
             title="Evaluate the current section — render it and get a vision critique"
@@ -4190,29 +4438,71 @@ export default function CanvasClient({
             ✦ Evaluate
           </button>
         )}
-        {format === 'deck' && sectionUnits.length > 0 && (
-          <button
-            onClick={() =>
-              setEditorTarget({ kind: 'defaults', unit: sectionUnits[0] })
-            }
-            title="Edit story-wide deck defaults — page backdrop, overlay, panel, scroll, chart"
-            style={{
-              pointerEvents: 'auto',
-              marginLeft: 12,
-              background: 'transparent',
-              color: '#9bb0d8',
-              border: '1px solid #2a4d8f',
-              borderRadius: 5,
-              padding: '3px 9px',
-              fontSize: 11,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Deck defaults
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setGenSectionOpen(false)
+            setEvalOpen(false)
+            setStorySettingsOpen((o) => !o)
+          }}
+          title="Story settings — title, byline, publishing, app assignment, deck defaults"
+          style={{
+            pointerEvents: 'auto',
+            marginLeft: 12,
+            background: storySettingsOpen ? '#10303f' : 'transparent',
+            color: '#9bb0d8',
+            border: `1px solid ${storySettingsOpen ? '#5aa9d8' : '#2a4d8f'}`,
+            borderRadius: 5,
+            padding: '3px 9px',
+            fontSize: 11,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          ⚙ Story
+        </button>
       </header>
+      {sectionUnits.length > 0 && (
+        <SectionRail
+          sections={sectionUnits.map((u, i) => ({
+            key: u.parentConfig?.id ?? `section-${i}`,
+            label: u.parentConfig?.id ?? u.heading ?? `section ${i + 1}`,
+            kind:
+              typeof u.parentConfig?.kind === 'string'
+                ? u.parentConfig.kind
+                : undefined,
+          }))}
+          active={activeSectionIndex}
+          busy={railBusy}
+          error={railError}
+          onSelect={setActiveSectionIndex}
+          onMove={(from, to) => void handleMoveSection(from, to)}
+          onAdd={() => {
+            setGenError(null)
+            setEvalOpen(false)
+            setStorySettingsOpen(false)
+            setGenPlacement('after-active')
+            setGenSectionOpen(true)
+          }}
+        />
+      )}
+      {storySettingsOpen && (
+        <StorySettingsPanel
+          slug={slug}
+          appSlug={appSlug}
+          format={format}
+          markdown={sources.markdown}
+          canEditDeckDefaults={format === 'deck' && sectionUnits.length > 0}
+          onEditorialChange={handleStorySettingsEditorial}
+          onPublishingChange={handleStorySettingsMetadata}
+          onOpenDeckDefaults={() => {
+            const unit = sectionUnits[0]
+            if (!unit) return
+            setStorySettingsOpen(false)
+            setEditorTarget({ kind: 'defaults', unit })
+          }}
+          onClose={() => setStorySettingsOpen(false)}
+        />
+      )}
       {composeState && (
         <ComposeFlowPanel
           slug={slug}
@@ -4509,8 +4799,32 @@ export default function CanvasClient({
                     marginTop: 2,
                   }}
                 >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGenPlacement((p) =>
+                        p === 'end' ? 'after-active' : 'end'
+                      )
+                    }
+                    disabled={genBusy}
+                    title="Toggle where the new section lands"
+                    style={{
+                      background: 'transparent',
+                      color: '#888',
+                      border: '1px dashed #333',
+                      borderRadius: 5,
+                      padding: '3px 8px',
+                      fontSize: 10,
+                      cursor: genBusy ? 'default' : 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {genPlacement === 'end'
+                      ? 'at end ⇄'
+                      : `after §${activeSectionIndex + 1} ⇄`}
+                  </button>
                   <span style={{ fontSize: 10, color: '#666' }}>
-                    appended at end · not saved yet
+                    not saved yet
                   </span>
                   <button
                     type="button"

@@ -18,6 +18,7 @@ import {
   coverImageLayer,
   isDeckCover,
   collectRecapDirectives,
+  collectVerticalDirectives,
   graftSectionBody,
   type StoryFormat,
   type ComposeAnswers,
@@ -243,6 +244,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           ...(contentForVisual.paragraphs ?? []),
         ].join('\n')
         graftSectionBody(visualBody, recapDirectives, sectionText)
+      }
+      // VizF1 telemetry grounding: a telemetry brief source carries real `f1:`
+      // directives (exact sessionKey / lap window / driver numbers). Swap the
+      // model's guess on any f1:telemetry-clip / f1:track-3d layer it placed for
+      // the brief's real config, matched by caption/sessionKey overlap. No-op
+      // for non-f1 stories or sources without `f1:` fences.
+      if (pack.id === 'f1') {
+        const f1Directives = collectVerticalDirectives(docs, 'f1')
+        if (f1Directives.length > 0) {
+          const sectionText = [
+            entry.heading,
+            ...(contentForVisual.paragraphs ?? []),
+          ].join('\n')
+          graftSectionBody(visualBody, f1Directives, sectionText, 'f1')
+        }
       }
       if (hasSubs) {
         // Per-beat camera dives: center/zoom from the planned geo, tilt + focal

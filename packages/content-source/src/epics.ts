@@ -229,6 +229,7 @@ export interface EpicMembershipRow {
   slug: string
   title: string
   status: string
+  appSlug: string | null
   inEpic: boolean
   position: number | null
 }
@@ -236,7 +237,7 @@ export interface EpicMembershipRow {
 export async function getEpicMemberships(epicSlug: string): Promise<EpicMembershipRow[]> {
   const sb = createServiceClient()
   const [storiesR, membersR] = await Promise.all([
-    sb.from('stories').select('slug, title, status'),
+    sb.from('stories').select('slug, title, status, app_slug'),
     sb.from('story_epics').select('story_slug, position').eq('epic_slug', epicSlug),
   ])
   if (storiesR.error) throw new Error(`getEpicMemberships stories: ${storiesR.error.message}`)
@@ -247,11 +248,17 @@ export async function getEpicMemberships(epicSlug: string): Promise<EpicMembersh
     positions.set(m.story_slug, m.position)
   }
 
-  return ((storiesR.data ?? []) as { slug: string; title: string | null; status: string }[])
+  return ((storiesR.data ?? []) as {
+    slug: string
+    title: string | null
+    status: string
+    app_slug: string | null
+  }[])
     .map((s) => ({
       slug: s.slug,
       title: s.title ?? s.slug,
       status: s.status,
+      appSlug: s.app_slug ?? null,
       inEpic: positions.has(s.slug),
       position: positions.get(s.slug) ?? null,
     }))
@@ -684,4 +691,609 @@ export async function getIeaCountryProfile(
       topics: (r.topics as string[]) ?? [],
     })),
   }
+}
+
+// ---------------------------------------------------------------------------
+// AI Data Centers epic — backs /ai-data-centers and
+// /api/ai-data-centers[/[slug]]. Tables dc_facilities / dc_facility_timeline
+// (migration 063), filled weekly from Epoch AI's Frontier Data Centers Hub
+// (CC BY 4.0) by scripts/ai-data-centers/import-data-centers.ts.
+
+export interface DcFacility {
+  slug: string
+  name: string
+  owner: string | null
+  users: string | null
+  project: string | null
+  country: string | null
+  address: string | null
+  lat: number | null
+  lng: number | null
+  h100Equivalents: number | null
+  powerMw: number | null
+  capexUsdBn: number | null
+  investors: string | null
+  constructionCompanies: string | null
+  energyCompanies: string | null
+  notes: string | null
+  sources: string | null
+}
+
+function mapDcFacilityRow(r: any): DcFacility {
+  return {
+    slug: r.slug as string,
+    name: r.name as string,
+    owner: (r.owner as string | null) ?? null,
+    users: (r.users as string | null) ?? null,
+    project: (r.project as string | null) ?? null,
+    country: (r.country as string | null) ?? null,
+    address: (r.address as string | null) ?? null,
+    lat: (r.lat as number | null) ?? null,
+    lng: (r.lng as number | null) ?? null,
+    h100Equivalents: (r.h100_equivalents as number | null) ?? null,
+    powerMw: (r.power_mw as number | null) ?? null,
+    capexUsdBn: (r.capex_usd_bn as number | null) ?? null,
+    investors: (r.investors as string | null) ?? null,
+    constructionCompanies: (r.construction_companies as string | null) ?? null,
+    energyCompanies: (r.energy_companies as string | null) ?? null,
+    notes: (r.notes as string | null) ?? null,
+    sources: (r.sources as string | null) ?? null,
+  }
+}
+
+const DC_FACILITY_COLUMNS =
+  'slug, name, owner, users, project, country, address, lat, lng, ' +
+  'h100_equivalents, power_mw, capex_usd_bn, investors, ' +
+  'construction_companies, energy_companies, notes, sources'
+
+export async function listDataCenters(): Promise<DcFacility[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_facilities')
+    .select(DC_FACILITY_COLUMNS)
+    .order('power_mw', { ascending: false, nullsFirst: false })
+  if (error) throw new Error(`listDataCenters: ${error.message}`)
+  return (data ?? []).map(mapDcFacilityRow)
+}
+
+export const DC_METRICS = [
+  { key: 'power_mw', label: 'Power capacity (MW)' },
+  { key: 'h100_equivalents', label: 'Compute (H100 equivalents)' },
+  { key: 'capex_usd_bn', label: 'Capital cost (2025 USD bn)' },
+] as const
+
+export type DcMetricKey = typeof DC_METRICS[number]['key']
+
+export interface DcTimelineSeries {
+  metric: DcMetricKey
+  /** [ISO date, value] pairs sorted ascending — ECharts time-axis ready. */
+  points: [string, number][]
+}
+
+export interface DcFacilityProfile extends DcFacility {
+  timeline: DcTimelineSeries[]
+}
+
+/** Returns null when the slug isn't in dc_facilities at all. */
+export async function getDataCenterProfile(slug: string): Promise<DcFacilityProfile | null> {
+  const sb = createServiceClient()
+  const [facilityR, timelineR] = await Promise.all([
+    sb.from('dc_facilities').select(DC_FACILITY_COLUMNS).eq('slug', slug).maybeSingle(),
+    sb
+      .from('dc_facility_timeline')
+      .select('metric, as_of, value')
+      .eq('facility_slug', slug)
+      .order('as_of', { ascending: true }),
+  ])
+  if (facilityR.error) {
+    throw new Error(`getDataCenterProfile(${slug}) facility: ${facilityR.error.message}`)
+  }
+  if (!facilityR.data) return null
+  if (timelineR.error) {
+    throw new Error(`getDataCenterProfile(${slug}) timeline: ${timelineR.error.message}`)
+  }
+
+  const rows = (timelineR.data ?? []) as { metric: string; as_of: string; value: number }[]
+  const timeline: DcTimelineSeries[] = DC_METRICS.map((m) => ({
+    metric: m.key,
+    points: rows
+      .filter((r) => r.metric === m.key)
+      .map((r) => [r.as_of, r.value] as [string, number]),
+  })).filter((s) => s.points.length > 0)
+
+  return { ...mapDcFacilityRow(facilityR.data), timeline }
+}
+
+// ---------------------------------------------------------------------------
+// AI Data Centers news + markets — backs /api/ai-data-centers/news, /stocks
+// and /recap. Tables dc_news / dc_stocks / dc_stock_prices (migration 065)
+// plus dc_news_recaps (migration 066), filled daily by
+// scripts/ai-data-centers/scrape-news.ts, import-stock-prices.ts and
+// generate-news-recap.ts.
+
+export interface DcNewsItem {
+  id: number
+  url: string
+  title: string
+  summary: string | null
+  /** Outlet name (Reuters, Bloomberg, …). */
+  source: string | null
+  publishedAt: string
+  /** Subset of 'ai' | 'data-centers' | 'semiconductors' | 'microprocessors'. */
+  topics: string[]
+  /** dc_stocks tickers named in the story. */
+  tickers: string[]
+}
+
+export async function getDcNews(opts?: {
+  limit?: number
+  topic?: string
+  ticker?: string
+}): Promise<DcNewsItem[]> {
+  const sb = createServiceClient()
+  let query = sb
+    .from('dc_news')
+    .select('id, source_url, title, summary, source, published_at, topics, tickers')
+    .eq('relevant', true)
+    .order('published_at', { ascending: false })
+    .limit(opts?.limit ?? 30)
+  if (opts?.topic) query = query.contains('topics', [opts.topic])
+  if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
+  const { data, error } = await query
+  if (error) throw new Error(`getDcNews: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    id: r.id as number,
+    url: r.source_url as string,
+    title: r.title as string,
+    summary: (r.summary as string | null) ?? null,
+    source: (r.source as string | null) ?? null,
+    publishedAt: r.published_at as string,
+    topics: (r.topics as string[]) ?? [],
+    tickers: (r.tickers as string[]) ?? [],
+  }))
+}
+
+export interface DcNewsRecap {
+  id: number
+  windowHours: number
+  windowStart: string
+  windowEnd: string
+  /** LLM one-liner for cards/lists; null when the recap is deterministic-only. */
+  headline: string | null
+  /** The full recap brief, ready to render as markdown. */
+  markdown: string
+  model: string | null
+  articleCount: number
+  topics: string[]
+  tickers: string[]
+  generatedAt: string
+}
+
+const DC_RECAP_COLUMNS =
+  'id, window_hours, window_start, window_end, headline, markdown, model, ' +
+  'article_count, topics, tickers, generated_at'
+
+function mapDcNewsRecapRow(r: any): DcNewsRecap {
+  return {
+    id: r.id as number,
+    windowHours: r.window_hours as number,
+    windowStart: r.window_start as string,
+    windowEnd: r.window_end as string,
+    headline: (r.headline as string | null) ?? null,
+    markdown: r.markdown as string,
+    model: (r.model as string | null) ?? null,
+    articleCount: (r.article_count as number) ?? 0,
+    topics: (r.topics as string[]) ?? [],
+    tickers: (r.tickers as string[]) ?? [],
+    generatedAt: r.generated_at as string,
+  }
+}
+
+/**
+ * Newest recap snapshots first. Rows are written daily (plus any manual
+ * dispatches) by scripts/ai-data-centers/generate-news-recap.ts —
+ * table dc_news_recaps, migration 066.
+ */
+export async function listDcNewsRecaps(limit = 14): Promise<DcNewsRecap[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_news_recaps')
+    .select(DC_RECAP_COLUMNS)
+    .order('generated_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(`listDcNewsRecaps: ${error.message}`)
+  return (data ?? []).map(mapDcNewsRecapRow)
+}
+
+/** The most recent recap snapshot, or null before the worker's first run. */
+export async function getLatestDcNewsRecap(): Promise<DcNewsRecap | null> {
+  const recaps = await listDcNewsRecaps(1)
+  return recaps[0] ?? null
+}
+
+export interface DcNewsAdminItem extends DcNewsItem {
+  /** False when the Gemma classifier rejected the article. */
+  relevant: boolean
+  fetchedAt: string
+}
+
+/**
+ * Admin variant of getDcNews: can surface classifier-rejected rows and
+ * free-text-search titles, so the pipeline dashboard can audit what the
+ * relevance gate is doing. Not exposed on the public site.
+ */
+export async function listDcNewsForAdmin(opts?: {
+  limit?: number
+  topic?: string
+  ticker?: string
+  /** Case-insensitive substring match on the title. */
+  q?: string
+  relevance?: 'all' | 'relevant' | 'rejected'
+}): Promise<DcNewsAdminItem[]> {
+  const sb = createServiceClient()
+  let query = sb
+    .from('dc_news')
+    .select('id, source_url, title, summary, source, published_at, relevant, topics, tickers, fetched_at')
+    .order('published_at', { ascending: false })
+    .limit(opts?.limit ?? 50)
+  const relevance = opts?.relevance ?? 'relevant'
+  if (relevance === 'relevant') query = query.eq('relevant', true)
+  if (relevance === 'rejected') query = query.eq('relevant', false)
+  if (opts?.topic) query = query.contains('topics', [opts.topic])
+  if (opts?.ticker) query = query.contains('tickers', [opts.ticker])
+  if (opts?.q) {
+    // Escape LIKE wildcards so a literal "%" in the search box doesn't match everything.
+    const escaped = opts.q.replace(/[\\%_]/g, '\\$&')
+    query = query.ilike('title', `%${escaped}%`)
+  }
+  const { data, error } = await query
+  if (error) throw new Error(`listDcNewsForAdmin: ${error.message}`)
+  return (data ?? []).map((r: any) => ({
+    id: r.id as number,
+    url: r.source_url as string,
+    title: r.title as string,
+    summary: (r.summary as string | null) ?? null,
+    source: (r.source as string | null) ?? null,
+    publishedAt: r.published_at as string,
+    relevant: r.relevant as boolean,
+    topics: (r.topics as string[]) ?? [],
+    tickers: (r.tickers as string[]) ?? [],
+    fetchedAt: r.fetched_at as string,
+  }))
+}
+
+export interface DcPipelineDay {
+  /** UTC calendar day, YYYY-MM-DD. */
+  day: string
+  relevant: number
+  rejected: number
+}
+
+export interface DcPipelineStats {
+  news: {
+    total: number
+    relevant: number
+    rejected: number
+    /** Relevant stories published in the trailing 24h / 7d. */
+    relevant24h: number
+    relevant7d: number
+    latestPublishedAt: string | null
+    latestFetchedAt: string | null
+    /** Last 14 UTC days by published_at, oldest first, zero-filled. */
+    byDay: DcPipelineDay[]
+    /** Relevant stories in the last 30d per topic, biggest first. */
+    byTopic: { topic: string; count: number }[]
+    /** Relevant stories in the last 30d per linked ticker, biggest first. */
+    byTicker: { ticker: string; count: number }[]
+  }
+  recaps: {
+    total: number
+    latest: DcNewsRecap | null
+  }
+  stocks: {
+    activeTickers: number
+    totalTickers: number
+    /** Newest close bar across all tickers, null before the first backfill. */
+    latestTradeDate: string | null
+    /** Active tickers with at least one bar in the trailing 7 days. */
+    tickersFresh7d: number
+  }
+}
+
+/**
+ * Health snapshot of the AI Data Centers news + stock pipeline for the admin
+ * dashboard: scrape volume and relevance-gate behaviour over the trailing
+ * windows, recap-worker freshness, and stock-feed freshness. Counts come from
+ * head-only count queries; the per-day/topic/ticker breakdowns aggregate the
+ * last 30 days of dc_news rows in process (tens of rows per day, so the
+ * 5 000-row ceiling is generous).
+ */
+export async function getDcPipelineStats(): Promise<DcPipelineStats> {
+  const sb = createServiceClient()
+  const now = Date.now()
+  const DAY_MS = 86_400_000
+  const cutoff30d = new Date(now - 30 * DAY_MS).toISOString()
+  const cutoff7dDate = new Date(now - 7 * DAY_MS).toISOString().slice(0, 10)
+
+  const [totalR, relevantR, recentR, latestFetchR, latestPubR, recapCountR, recapLatestR, stocksR, latestBarR, freshBarsR] =
+    await Promise.all([
+      sb.from('dc_news').select('id', { count: 'exact', head: true }),
+      sb.from('dc_news').select('id', { count: 'exact', head: true }).eq('relevant', true),
+      sb
+        .from('dc_news')
+        .select('published_at, relevant, topics, tickers')
+        .gte('published_at', cutoff30d)
+        .limit(5_000),
+      sb.from('dc_news').select('fetched_at').order('fetched_at', { ascending: false }).limit(1),
+      sb.from('dc_news').select('published_at').order('published_at', { ascending: false }).limit(1),
+      sb.from('dc_news_recaps').select('id', { count: 'exact', head: true }),
+      sb.from('dc_news_recaps').select(DC_RECAP_COLUMNS).order('generated_at', { ascending: false }).limit(1),
+      sb.from('dc_stocks').select('ticker, is_active'),
+      sb.from('dc_stock_prices').select('trade_date').order('trade_date', { ascending: false }).limit(1),
+      sb.from('dc_stock_prices').select('ticker').gte('trade_date', cutoff7dDate).limit(10_000),
+    ])
+  for (const [label, r] of [
+    ['total', totalR], ['relevant', relevantR], ['recent', recentR],
+    ['latestFetch', latestFetchR], ['latestPub', latestPubR],
+    ['recapCount', recapCountR], ['recapLatest', recapLatestR],
+    ['stocks', stocksR], ['latestBar', latestBarR], ['freshBars', freshBarsR],
+  ] as const) {
+    if (r.error) throw new Error(`getDcPipelineStats ${label}: ${r.error.message}`)
+  }
+
+  const total = totalR.count ?? 0
+  const relevant = relevantR.count ?? 0
+
+  // Zero-filled 14-day scaffold so the volume chart shows quiet days too.
+  const byDayMap = new Map<string, DcPipelineDay>()
+  for (let i = 13; i >= 0; i--) {
+    const day = new Date(now - i * DAY_MS).toISOString().slice(0, 10)
+    byDayMap.set(day, { day, relevant: 0, rejected: 0 })
+  }
+  const topicCounts = new Map<string, number>()
+  const tickerCounts = new Map<string, number>()
+  let relevant24h = 0
+  let relevant7d = 0
+  const recent = (recentR.data ?? []) as {
+    published_at: string
+    relevant: boolean
+    topics: string[] | null
+    tickers: string[] | null
+  }[]
+  for (const row of recent) {
+    const ts = Date.parse(row.published_at)
+    const bucket = byDayMap.get(row.published_at.slice(0, 10))
+    if (bucket) {
+      if (row.relevant) bucket.relevant += 1
+      else bucket.rejected += 1
+    }
+    if (!row.relevant) continue
+    if (now - ts <= DAY_MS) relevant24h += 1
+    if (now - ts <= 7 * DAY_MS) relevant7d += 1
+    for (const t of row.topics ?? []) topicCounts.set(t, (topicCounts.get(t) ?? 0) + 1)
+    for (const t of row.tickers ?? []) tickerCounts.set(t, (tickerCounts.get(t) ?? 0) + 1)
+  }
+  const descending = (a: { count: number }, b: { count: number }) => b.count - a.count
+
+  const stocks = (stocksR.data ?? []) as { ticker: string; is_active: boolean }[]
+  const activeTickers = new Set(stocks.filter((s) => s.is_active).map((s) => s.ticker))
+  const freshTickers = new Set(
+    ((freshBarsR.data ?? []) as { ticker: string }[])
+      .map((b) => b.ticker)
+      .filter((t) => activeTickers.has(t)),
+  )
+
+  return {
+    news: {
+      total,
+      relevant,
+      rejected: total - relevant,
+      relevant24h,
+      relevant7d,
+      latestPublishedAt: (latestPubR.data?.[0]?.published_at as string | undefined) ?? null,
+      latestFetchedAt: (latestFetchR.data?.[0]?.fetched_at as string | undefined) ?? null,
+      byDay: [...byDayMap.values()],
+      byTopic: [...topicCounts].map(([topic, count]) => ({ topic, count })).sort(descending),
+      byTicker: [...tickerCounts].map(([ticker, count]) => ({ ticker, count })).sort(descending),
+    },
+    recaps: {
+      total: recapCountR.count ?? 0,
+      latest: recapLatestR.data?.[0] ? mapDcNewsRecapRow(recapLatestR.data[0]) : null,
+    },
+    stocks: {
+      activeTickers: activeTickers.size,
+      totalTickers: stocks.length,
+      latestTradeDate: (latestBarR.data?.[0]?.trade_date as string | undefined) ?? null,
+      tickersFresh7d: freshTickers.size,
+    },
+  }
+}
+
+export interface DcStock {
+  /** Yahoo Finance symbol of the home listing (NVDA, 2330.TW, ASML.AS, …). */
+  ticker: string
+  name: string
+  exchange: string
+  /** Market code: US | TW | KR | JP | NL | HK. */
+  market: string
+  currency: string
+  category: 'semiconductors' | 'semi-equipment' | 'hyperscalers' | 'data-centers'
+}
+
+export interface DcStockSeries extends DcStock {
+  /** [trade_date, close] pairs sorted ascending — ECharts time-axis ready. */
+  points: [string, number][]
+  latestClose: number | null
+  latestDate: string | null
+  /** % change first→last close over the window; null with <2 points. */
+  changePct: number | null
+}
+
+/**
+ * Every active tracked stock with its close series over the trailing window.
+ * Tickers with no bars yet (pre-backfill) still appear, with empty points —
+ * the UI can grey them out rather than lose the registry row.
+ */
+export async function getDcStockMarket(days = 90): Promise<DcStockSeries[]> {
+  const sb = createServiceClient()
+  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10)
+  const [stocksR, pricesR] = await Promise.all([
+    sb
+      .from('dc_stocks')
+      .select('ticker, name, exchange, market, currency, category')
+      .eq('is_active', true)
+      .order('category')
+      .order('ticker'),
+    sb
+      .from('dc_stock_prices')
+      .select('ticker, trade_date, close')
+      .gte('trade_date', cutoff)
+      .order('trade_date', { ascending: true })
+      // PostgREST defaults to 1000 rows; ~30 tickers × 260 trading days of a
+      // 1y window needs an explicit ceiling.
+      .limit(50_000),
+  ])
+  if (stocksR.error) throw new Error(`getDcStockMarket stocks: ${stocksR.error.message}`)
+  if (pricesR.error) throw new Error(`getDcStockMarket prices: ${pricesR.error.message}`)
+
+  const pointsByTicker = new Map<string, [string, number][]>()
+  for (const r of (pricesR.data ?? []) as { ticker: string; trade_date: string; close: number }[]) {
+    if (!pointsByTicker.has(r.ticker)) pointsByTicker.set(r.ticker, [])
+    pointsByTicker.get(r.ticker)!.push([r.trade_date, r.close])
+  }
+
+  return ((stocksR.data ?? []) as DcStock[]).map((stock) => {
+    const points = pointsByTicker.get(stock.ticker) ?? []
+    const first = points[0] ?? null
+    const last = points.length > 0 ? points[points.length - 1] : null
+    return {
+      ...stock,
+      points,
+      latestClose: last?.[1] ?? null,
+      latestDate: last?.[0] ?? null,
+      changePct:
+        first && last && points.length > 1 && first[1] !== 0
+          ? ((last[1] - first[1]) / first[1]) * 100
+          : null,
+    }
+  })
+}
+
+/** One daily bar destined for dc_stock_prices. */
+export interface DcStockPriceRow {
+  ticker: string
+  trade_date: string
+  open: number | null
+  high: number | null
+  low: number | null
+  close: number
+  volume: number | null
+}
+
+/** A non-US tracked stock the admin can hand-upload Stooq CSV prices for. */
+export interface DcStockUploadTarget {
+  ticker: string
+  name: string
+  market: string
+  /** Most recent trade_date already stored, or null if none yet. */
+  latestDate: string | null
+  /** How many bars are stored for this ticker. */
+  bars: number
+}
+
+/**
+ * The international (non-US) tracked stocks plus their current price coverage,
+ * for the admin "upload international prices" panel. US tickers are excluded —
+ * they come from massive.com in CI; only the non-US names are hand-uploaded.
+ */
+export async function listDcStockUploadTargets(): Promise<DcStockUploadTarget[]> {
+  const sb = createServiceClient()
+  const { data: stocks, error } = await sb
+    .from('dc_stocks')
+    .select('ticker, name, market')
+    .eq('is_active', true)
+    .neq('market', 'US')
+    .order('market')
+    .order('ticker')
+  if (error) throw new Error(`listDcStockUploadTargets stocks: ${error.message}`)
+  const rows = (stocks ?? []) as { ticker: string; name: string; market: string }[]
+  const tickers = rows.map((s) => s.ticker)
+
+  const latest = new Map<string, string>()
+  const bars = new Map<string, number>()
+  if (tickers.length > 0) {
+    const { data: prices, error: pErr } = await sb
+      .from('dc_stock_prices')
+      .select('ticker, trade_date')
+      .in('ticker', tickers)
+      .order('trade_date', { ascending: false })
+      .limit(50_000)
+    if (pErr) throw new Error(`listDcStockUploadTargets prices: ${pErr.message}`)
+    for (const r of (prices ?? []) as { ticker: string; trade_date: string }[]) {
+      if (!latest.has(r.ticker)) latest.set(r.ticker, r.trade_date) // desc ⇒ first is newest
+      bars.set(r.ticker, (bars.get(r.ticker) ?? 0) + 1)
+    }
+  }
+  return rows.map((s) => ({
+    ticker: s.ticker,
+    name: s.name,
+    market: s.market,
+    latestDate: latest.get(s.ticker) ?? null,
+    bars: bars.get(s.ticker) ?? 0,
+  }))
+}
+
+/**
+ * Parse a Stooq daily-OHLCV CSV (`Date,Open,High,Low,Close,Volume`) into
+ * dc_stock_prices rows for one ticker. Stooq's CSV carries no symbol column, so
+ * the ticker is supplied by the caller. Rows with a missing/`N/D` close are
+ * skipped; volume is rounded to whole shares; duplicate dates collapse to the
+ * last bar. Throws if the text isn't a Stooq CSV (e.g. an HTML error page).
+ */
+export function parseStooqCsv(csvText: string, ticker: string): DcStockPriceRow[] {
+  const numOrNull = (s: string | undefined): number | null => {
+    // Number('') and Number('  ') are 0, not NaN — treat blanks as missing.
+    if (s == null || s.trim() === '') return null
+    const n = Number(s)
+    return Number.isFinite(n) ? n : null
+  }
+  const text = csvText.trim()
+  if (!text.startsWith('Date,')) {
+    throw new Error(
+      `${ticker}: not a Stooq daily CSV — expected a "Date,Open,High,Low,Close,Volume" header`
+    )
+  }
+  const byDate = new Map<string, DcStockPriceRow>()
+  const lines = text.split(/\r?\n/)
+  for (let i = 1; i < lines.length; i++) {
+    // Date,Open,High,Low,Close,Volume — no quoting, so a plain split is safe.
+    const [date, open, high, low, close, volume] = lines[i].split(',')
+    const c = Number(close)
+    if (!date || !Number.isFinite(c)) continue // skip N/D / blank closes
+    const vol = numOrNull(volume)
+    byDate.set(date, {
+      ticker,
+      trade_date: date, // Stooq already dates each bar by its local trading day
+      open: numOrNull(open),
+      high: numOrNull(high),
+      low: numOrNull(low),
+      close: c,
+      volume: vol == null ? null : Math.round(vol),
+    })
+  }
+  return [...byDate.values()].sort((a, b) => a.trade_date.localeCompare(b.trade_date))
+}
+
+/** Upsert daily bars into dc_stock_prices (idempotent on ticker+trade_date). */
+export async function upsertDcStockPrices(rows: DcStockPriceRow[]): Promise<number> {
+  if (rows.length === 0) return 0
+  const sb = createServiceClient()
+  const BATCH = 500
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await sb
+      .from('dc_stock_prices')
+      .upsert(rows.slice(i, i + BATCH), { onConflict: 'ticker,trade_date' })
+    if (error) throw new Error(`upsertDcStockPrices: ${error.message}`)
+  }
+  return rows.length
 }

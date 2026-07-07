@@ -394,6 +394,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [tagResults, setTagResults] = useState<EntityResult[]>([])
   const [tagLoading, setTagLoading] = useState(false)
   const pendingTagsRef = useRef<EntityResult[] | null>(null)
+  // Tags the user added by hand (or that a loaded card restored) — pinned so the
+  // layer-driven re-seed below can't silently strip them.
+  const manualTagKeysRef = useRef<Set<string>>(new Set())
 
   // The Image-background tab's picker browses news thumbnails (and uses them as
   // AI references), so pull the news feed while it's open even with no news layer.
@@ -560,9 +563,17 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     if (pendingTagsRef.current) {
       setTags(pendingTagsRef.current)
       pendingTagsRef.current = null
-    } else {
-      setTags(suggestedTags)
+      return
     }
+    // Re-seed from the layers, but keep pinned (manually added / restored) tags —
+    // editing a layer must not silently drop them off the publish payload.
+    setTags((prev) => {
+      const suggested = new Set(suggestedTags.map((t) => `${t.type}:${t.slug}`))
+      const pinned = prev.filter(
+        (t) => manualTagKeysRef.current.has(`${t.type}:${t.slug}`) && !suggested.has(`${t.type}:${t.slug}`),
+      )
+      return [...suggestedTags, ...pinned]
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tagKey])
 
@@ -579,15 +590,14 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     }
   }, [tagQuery])
 
-  const addTag = useCallback(
-    (t: EntityResult) =>
-      setTags((prev) => (prev.some((p) => p.type === t.type && p.slug === t.slug) ? prev : [...prev, t])),
-    [],
-  )
-  const removeTag = useCallback(
-    (type: string, slug: string) => setTags((prev) => prev.filter((p) => !(p.type === type && p.slug === slug))),
-    [],
-  )
+  const addTag = useCallback((t: EntityResult) => {
+    manualTagKeysRef.current.add(`${t.type}:${t.slug}`)
+    setTags((prev) => (prev.some((p) => p.type === t.type && p.slug === t.slug) ? prev : [...prev, t]))
+  }, [])
+  const removeTag = useCallback((type: string, slug: string) => {
+    manualTagKeysRef.current.delete(`${type}:${slug}`)
+    setTags((prev) => prev.filter((p) => !(p.type === type && p.slug === slug)))
+  }, [])
 
   // Palette hints handed to the image picker's AI generation so output stays on
   // brand (the resolved accent + any per-card accent override).
@@ -824,6 +834,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setBackgroundScrim(0.5)
     setAuraSlug('')
     pendingTagsRef.current = null
+    manualTagKeysRef.current = new Set()
     setTags([])
     setCurrentCardId(null)
     setCurrentCardName('')
@@ -869,6 +880,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           .map((e) => ({ id: e.id, type: e.type as 'team' | 'league', slug: e.slug, name: e.name, crest_url: e.crestUrl }))
         setTags(restored)
         pendingTagsRef.current = restored
+        // Pin the saved tags so later layer edits re-seed *around* them instead
+        // of replacing them.
+        manualTagKeysRef.current = new Set(restored.map((e) => `${e.type}:${e.slug}`))
         applySnapshot(card.config)
         setCurrentCardId(card.id)
         setCurrentCardName(card.name)
@@ -898,12 +912,26 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       .prompt('Name this card (shown in the product)', currentCardName || 'Footshorts card')
       ?.trim()
     if (!name) return
+    // An untagged card never surfaces on team/league pages (only in Discover for
+    // 24h) — and re-shipping with no tags strips an already-tagged card.
+    if (tags.length === 0) {
+      const proceed = window.confirm(
+        'No entity tags are set — this card will not appear on any team or league page. Ship anyway?',
+      )
+      if (!proceed) return
+    }
     setShipping(true)
     setShipError(null)
     try {
       const dataUrl = await capture()
       if (!dataUrl) throw new Error('Could not render the card image.')
-      const res = await fetch('/api/footshorts/share/publish', {
+      // Rendered PNG → Blob: a base64 data URL carried in the publish JSON blows
+      // past Vercel's ~4.5 MB request-body cap (413), so the bytes go straight to
+      // Storage via a signed URL and never travel through the API route.
+      const png = await (await fetch(dataUrl)).blob()
+
+      // 1. Persist the card (creating it if new) + get a signed upload URL.
+      const signRes = await fetch('/api/footshorts/share/publish-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -911,8 +939,39 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           name,
           cardType: representativeType,
           config: buildSnapshot(),
+        }),
+      })
+      const sign = (await signRes.json().catch(() => ({}))) as {
+        ok?: boolean
+        id?: string
+        signedUrl?: string
+        error?: string
+      }
+      if (!signRes.ok || !sign.ok || !sign.id || !sign.signedUrl) {
+        throw new Error(sign.error ?? `HTTP ${signRes.status}`)
+      }
+      // Adopt the id now so a failed upload/finalize retries the same row instead
+      // of stranding a fresh draft on every attempt.
+      setCurrentCardId(sign.id)
+
+      // 2. Upload the PNG direct to Storage (bypasses the function body cap).
+      const putRes = await fetch(sign.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/png', 'x-upsert': 'true' },
+        body: png,
+      })
+      if (!putRes.ok) {
+        const err = (await putRes.json().catch(() => null)) as { message?: string; error?: string } | null
+        throw new Error(err?.message ?? err?.error ?? `Image upload failed (HTTP ${putRes.status})`)
+      }
+
+      // 3. Finalize: flip to published + write entity tags (small JSON body).
+      const res = await fetch('/api/footshorts/share/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: sign.id,
           ratio,
-          imageDataUrl: dataUrl,
           entities: tags.map((t) => ({ type: t.type, slug: t.slug })),
         }),
       })
@@ -931,8 +990,16 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
-      {/* Load the resolved theme's Google fonts for both preview + PNG capture. */}
-      {fontImportUrl && <link rel="stylesheet" href={fontImportUrl} />}
+      {/* Load the resolved theme's Google fonts for both preview + PNG capture.
+          Preconnect to gstatic (crossOrigin) so the woff2 files html-to-image
+          embeds are fetched early — matching every other capture surface. */}
+      {fontImportUrl && (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          <link rel="stylesheet" href={fontImportUrl} />
+        </>
+      )}
       {/* Title + action bar. Hidden on mobile while a bottom sheet is open so the
           canvas behind the sheet gets the freed-up vertical space; always shown on desktop. */}
       <div

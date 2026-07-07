@@ -2,16 +2,20 @@ import { generateStructured } from './ai'
 import { normalizeSectionBody } from './vizEngine'
 import {
   outlineSchemaFor,
+  sectionStubSchemaFor,
   sectionContentSchemaFor,
   sectionVisualSchemaFor,
   subsectionContentSchema,
   subsectionVisualSchema,
   chartDataSchema,
+  chartRequirementSchema,
   regionDataSchema,
 } from './schema'
 import {
   outlineSystem,
   buildOutlinePrompt,
+  outlineSectionSystem,
+  buildOutlineSectionPrompt,
   contentSystem,
   buildContentPrompt,
   visualSystem,
@@ -22,6 +26,8 @@ import {
   buildSubsectionVisualPrompt,
   chartSystem,
   buildChartPrompt,
+  chartRequirementSystem,
+  buildChartRequirementPrompt,
   regionsSystem,
   buildRegionsPrompt,
 } from './prompts'
@@ -139,6 +145,51 @@ export async function generateOutline(
   return lintOutline(retried).length <= issues.length ? retried : outline
 }
 
+/**
+ * Regenerate ONE outline section in place, or draft a NEW one from an author
+ * prompt — the per-slide affordances of the compose outline tab. Decoupled from
+ * {@link generateOutline} so re-planning a single beat (or slotting in a new
+ * one) doesn't churn the rest of the deck. The caller supplies the surrounding
+ * sections (the target excluded for a regenerate) and the outline's charts for
+ * context; this returns a single {@link SectionStub} in the format's shape. The
+ * caller owns insertion, heading de-duplication, and persistence.
+ */
+export async function generateOutlineSection(
+  input: GenerateInput,
+  args: {
+    mode: 'regenerate' | 'add'
+    /** Surrounding sections for context (exclude the target on a regenerate). */
+    outline: SectionStub[]
+    /** Chart requirements the new/regenerated section may reference by id. */
+    charts: ChartRequirement[]
+    /** The section being replaced (regenerate only). */
+    target?: SectionStub
+    /** 1-based slot the added section will occupy (add only). */
+    position?: number
+    /** Author steer — feedback when regenerating, the prompt when adding. */
+    instruction?: string
+  },
+  opts: GenerateOptions = {},
+): Promise<SectionStub> {
+  const format = opts.format ?? input.brief.suggestedFormat ?? 'deck'
+  const pack = opts.pack ?? VIZMAYA_PACK
+  const result = await generateStructured({
+    model: opts.model,
+    system: outlineSectionSystem(format, pack),
+    schema: sectionStubSchemaFor(format),
+    prompt: buildOutlineSectionPrompt(input.sources, input.brief, input.answers, {
+      mode: args.mode,
+      outline: args.outline,
+      charts: args.charts,
+      target: args.target,
+      position: args.position,
+      instruction: args.instruction,
+    }),
+    metadata: { feature: 'story-pipeline-outline-section', format },
+  })
+  return result as SectionStub
+}
+
 /** The schema output, structurally — both format variants of the stub satisfy SectionStub. */
 interface OutlineLike extends Omit<StoryOutline, 'format'> {
   format: StoryFormat
@@ -159,11 +210,12 @@ function toOutline(out: OutlineLike, format: StoryFormat): StoryOutline {
 
 /**
  * The chart DATA pass — turn ONE chart REQUIREMENT (from the outline) into a
- * full `ChartSpec` by generating the numeric series grounded in the sources.
- * Decoupled from the outline so chart numbers are produced by a focused call
- * rather than fabricated as a byproduct of skeleton planning. The model emits
- * only `categories` + `series`; the id/title/chartType/axes come from the
- * requirement and are merged in here.
+ * full `ChartSpec` by generating the source-grounded data. Decoupled from the
+ * outline so chart data is produced by a focused call rather than fabricated as
+ * a byproduct of skeleton planning. The model emits a compact flint tabular spec
+ * (columns + rows + channel encodings); the id/title/chartType/axes come from
+ * the requirement and are merged in here. `buildEChartsOption` compiles the
+ * result to an ECharts option via flint's `assembleECharts`.
  */
 export async function generateChart(
   args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
@@ -177,7 +229,32 @@ export async function generateChart(
     metadata: { feature: 'story-pipeline-chart' },
   })
   const { requirement: _omit, ...meta } = args.requirement
-  return { ...meta, categories: data.categories, series: data.series }
+  return { ...meta, columns: data.columns, rows: data.rows, encodings: data.encodings }
+}
+
+/**
+ * The chart REQUIREMENT (re-)plan pass — re-plan ONE chart's PROMPT (its
+ * chartType, title, axes, and the precise "what to plot" requirement), grounded
+ * in the brief + chosen angle + sources, optionally steered by an author note.
+ * This is the plan, NOT the data: {@link generateChart} still produces the
+ * figures afterwards. The `id` is preserved so any layer referencing this chart
+ * stays valid. Lets an author refine a single chart's plan without regenerating
+ * the whole outline.
+ */
+export async function generateChartRequirement(
+  args: { requirement: ChartRequirement; brief: ResearchBrief; sources: SourceDoc[] },
+  opts: { model?: string; pack?: DomainPack; feedback?: string } = {},
+): Promise<ChartRequirement> {
+  const out = await generateStructured({
+    model: opts.model,
+    system: chartRequirementSystem(opts.pack),
+    prompt: buildChartRequirementPrompt(args.requirement, args.brief, args.sources, opts.feedback),
+    schema: chartRequirementSchema,
+    metadata: { feature: 'story-pipeline-chart-requirement' },
+  })
+  // Force the original id — layers reference this chart by id, so a model that
+  // ignores the "keep the id" instruction can't orphan them.
+  return { ...out, id: args.requirement.id }
 }
 
 /**

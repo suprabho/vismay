@@ -84,7 +84,7 @@ export interface PublishShareCardInput {
   ratio: string
   /** Rendered PNG bytes. */
   png: Uint8Array
-  /** Entity tags, addressed by (type, slug). Unknown entities are skipped. */
+  /** Entity tags, addressed by (type, slug). Unknown entities fail the publish. */
   entities: ShareCardEntityInput[]
 }
 
@@ -246,13 +246,15 @@ export async function deleteShareCard(id: string): Promise<void> {
   if (error) throw new Error(`deleteShareCard: ${error.message}`)
 }
 
-/** Resolve (type, slug) tag inputs to entity ids. Unknown entities are dropped. */
+/** Resolve (type, slug) tag inputs to entity ids. Inputs that don't match an
+ *  entities row come back in `unresolved` so callers can fail loudly — a tag
+ *  dropped here means the card silently never surfaces on that entity's page. */
 async function resolveEntityIds(
   sb: ReturnType<typeof createServiceClient>,
   inputs: ShareCardEntityInput[],
-): Promise<string[]> {
+): Promise<{ ids: string[]; unresolved: ShareCardEntityInput[] }> {
   const wanted = inputs.filter((e) => e.slug)
-  if (wanted.length === 0) return []
+  if (wanted.length === 0) return { ids: [], unresolved: [] }
   const slugs = Array.from(new Set(wanted.map((e) => e.slug)))
   const { data, error } = await sb.from('entities').select('id, type, slug').in('slug', slugs)
   if (error) throw new Error(`resolveEntityIds: ${error.message}`)
@@ -263,78 +265,175 @@ async function resolveEntityIds(
     ]),
   )
   const ids = new Set<string>()
+  const unresolved: ShareCardEntityInput[] = []
   for (const e of wanted) {
     const id = byKey.get(`${e.type}:${e.slug}`)
     if (id) ids.add(id)
+    else unresolved.push(e)
   }
-  return Array.from(ids)
+  return { ids: Array.from(ids), unresolved }
 }
 
-/**
- * Ship a share card into the consumer product: upload the rendered PNG to the
- * public bucket, flip the row to `published`, and (re)write its entity tags.
- * Pass `id` to update an existing card in place; omit it to create a new one.
- */
-export async function publishShareCard(input: PublishShareCardInput): Promise<SavedShareCard> {
-  const sb = createServiceClient()
-
-  // 1. Get a stable card id (needed for the storage path) — update or insert.
-  let id = input.id
-  if (id) {
+/** Create a new card row or update an existing one's editable fields, returning
+ *  the stable id (needed for the `<id>.png` storage path). Shared by the
+ *  server-side {@link publishShareCard} and the client-direct
+ *  {@link prepareShareCardUpload} flow. */
+async function ensureShareCardRow(
+  sb: ReturnType<typeof createServiceClient>,
+  input: { id?: string; name: string; cardType: string; config: unknown },
+): Promise<string> {
+  if (input.id) {
     const { error } = await sb
       .from('footshorts_share_cards')
       .update({ name: input.name, card_type: input.cardType, config: input.config })
-      .eq('id', id)
-    if (error) throw new Error(`publishShareCard(update): ${error.message}`)
-  } else {
-    const { data, error } = await sb
-      .from('footshorts_share_cards')
-      .insert({ name: input.name, card_type: input.cardType, config: input.config })
-      .select('id')
-      .single()
-    if (error) throw new Error(`publishShareCard(insert): ${error.message}`)
-    id = (data as { id: string }).id
+      .eq('id', input.id)
+    if (error) throw new Error(`ensureShareCardRow(update): ${error.message}`)
+    return input.id
+  }
+  const { data, error } = await sb
+    .from('footshorts_share_cards')
+    .insert({ name: input.name, card_type: input.cardType, config: input.config })
+    .select('id')
+    .single()
+  if (error) throw new Error(`ensureShareCardRow(insert): ${error.message}`)
+  return (data as { id: string }).id
+}
+
+export interface PrepareShareCardUploadInput {
+  /** Existing card to re-publish in place; omit to create a new one. */
+  id?: string
+  name: string
+  cardType: string
+  config: unknown
+}
+
+export interface PreparedShareCardUpload {
+  /** The (created or existing) card id — pass it back to {@link finalizeShareCardPublish}. */
+  id: string
+  /** Short-lived signed URL the browser PUTs the rendered PNG straight to Storage. */
+  signedUrl: string
+  token: string
+  /** Storage object path (`<id>.png`). */
+  path: string
+  /** Public URL the PNG resolves to once uploaded. */
+  imageUrl: string
+}
+
+/**
+ * Phase 1 of shipping a card: persist its editable fields (creating the row if
+ * new) and hand back a signed upload URL so the browser can PUT the rendered
+ * PNG *straight to Storage*. Vercel caps serverless request bodies at ~4.5 MB
+ * (a plain 413), so a high-res PNG can't be proxied through the publish route —
+ * it goes direct, mirroring the assets `sign-upload` flow. Pair with
+ * {@link finalizeShareCardPublish} once the upload lands.
+ */
+export async function prepareShareCardUpload(
+  input: PrepareShareCardUploadInput,
+): Promise<PreparedShareCardUpload> {
+  const sb = createServiceClient()
+  const id = await ensureShareCardRow(sb, input)
+  const path = `${id}.png`
+  const { data, error } = await sb.storage
+    .from(SHARE_CARD_BUCKET)
+    .createSignedUploadUrl(path, { upsert: true })
+  if (error || !data) {
+    throw new Error(`prepareShareCardUpload(sign): ${error?.message ?? 'no signed url'}`)
+  }
+  const { data: pub } = sb.storage.from(SHARE_CARD_BUCKET).getPublicUrl(path)
+  return { id, signedUrl: data.signedUrl, token: data.token, path, imageUrl: pub.publicUrl }
+}
+
+export interface FinalizeShareCardPublishInput {
+  id: string
+  /** Aspect ratio the PNG was captured at (e.g. "1:1"). */
+  ratio: string
+  /** Entity tags, addressed by (type, slug). Unknown entities fail the publish. */
+  entities: ShareCardEntityInput[]
+}
+
+/**
+ * Phase 2 of shipping a card: the rendered PNG is already at `<id>.png` (either
+ * uploaded direct from the browser via {@link prepareShareCardUpload}, or by
+ * {@link publishShareCard}). Flip the row to `published`, stamp its public image
+ * URL + ratio, and (re)write its entity tags. Returns the fresh row.
+ */
+export async function finalizeShareCardPublish(
+  input: FinalizeShareCardPublishInput,
+): Promise<SavedShareCard> {
+  const sb = createServiceClient()
+  const { data: pub } = sb.storage.from(SHARE_CARD_BUCKET).getPublicUrl(`${input.id}.png`)
+
+  // 1. Resolve tags up front — an unknown (type, slug) is an error the admin can
+  //    fix, not a tag to drop: a published-but-untagged card never surfaces on
+  //    the team/league pages it was meant for.
+  const { ids: entityIds, unresolved } = await resolveEntityIds(sb, input.entities)
+  if (unresolved.length > 0) {
+    throw new Error(
+      `finalizeShareCardPublish(tags): unknown entities: ${unresolved
+        .map((e) => `${e.type}:${e.slug}`)
+        .join(', ')}`,
+    )
   }
 
-  // 2. Upload the PNG and resolve its public URL.
-  const path = `${id}.png`
-  const { error: upErr } = await sb.storage
-    .from(SHARE_CARD_BUCKET)
-    .upload(path, input.png, { contentType: 'image/png', upsert: true })
-  if (upErr) throw new Error(`publishShareCard(upload): ${upErr.message}`)
-  const { data: pub } = sb.storage.from(SHARE_CARD_BUCKET).getPublicUrl(path)
-  const imageUrl = pub.publicUrl
+  // 2. Rewrite tags without a destructive window: upsert the wanted rows first,
+  //    then prune the stale ones, so a failure part-way leaves the previous tags
+  //    intact instead of a stripped card.
+  if (entityIds.length > 0) {
+    const { error: tagErr } = await sb
+      .from('footshorts_share_card_entities')
+      .upsert(
+        entityIds.map((entity_id) => ({ card_id: input.id, entity_id })),
+        { onConflict: 'card_id,entity_id', ignoreDuplicates: true },
+      )
+    if (tagErr) throw new Error(`finalizeShareCardPublish(tags): ${tagErr.message}`)
+  }
+  let prune = sb.from('footshorts_share_card_entities').delete().eq('card_id', input.id)
+  if (entityIds.length > 0) prune = prune.not('entity_id', 'in', `(${entityIds.join(',')})`)
+  const { error: pruneErr } = await prune
+  if (pruneErr) throw new Error(`finalizeShareCardPublish(prune): ${pruneErr.message}`)
 
-  // 3. Flip to published.
+  // 3. Flip to published only after the tags landed, so a tag failure can't
+  //    leave a live card invisible to entity pages.
   const { error: pubErr } = await sb
     .from('footshorts_share_cards')
     .update({
       status: 'published',
-      image_url: imageUrl,
+      image_url: pub.publicUrl,
       ratio: input.ratio,
       published_at: new Date().toISOString(),
     })
-    .eq('id', id)
-  if (pubErr) throw new Error(`publishShareCard(publish): ${pubErr.message}`)
+    .eq('id', input.id)
+  if (pubErr) throw new Error(`finalizeShareCardPublish(publish): ${pubErr.message}`)
 
-  // 4. Replace entity tags.
-  const entityIds = await resolveEntityIds(sb, input.entities)
-  await sb.from('footshorts_share_card_entities').delete().eq('card_id', id)
-  if (entityIds.length > 0) {
-    const { error: tagErr } = await sb
-      .from('footshorts_share_card_entities')
-      .insert(entityIds.map((entity_id) => ({ card_id: id!, entity_id })))
-    if (tagErr) throw new Error(`publishShareCard(tags): ${tagErr.message}`)
-  }
-
-  // 5. Return the fresh row.
+  // 4. Return the fresh row.
   const { data, error } = await sb
     .from('footshorts_share_cards')
     .select(SELECT_WITH_ENTITIES)
-    .eq('id', id)
+    .eq('id', input.id)
     .single()
-  if (error) throw new Error(`publishShareCard(read): ${error.message}`)
+  if (error) throw new Error(`finalizeShareCardPublish(read): ${error.message}`)
   return rowToCard(data as Row)
+}
+
+/**
+ * Ship a share card into the consumer product with the PNG bytes in hand:
+ * upsert the row, upload the rendered PNG to the public bucket, then publish +
+ * tag via {@link finalizeShareCardPublish}. Pass `id` to update an existing card
+ * in place; omit it to create a new one.
+ *
+ * NOTE: the admin UI ships via {@link prepareShareCardUpload} +
+ * {@link finalizeShareCardPublish} instead, so the multi-MB PNG uploads direct
+ * to Storage and never hits Vercel's ~4.5 MB request-body cap. This variant is
+ * kept for server-side callers that already hold the bytes (< the cap).
+ */
+export async function publishShareCard(input: PublishShareCardInput): Promise<SavedShareCard> {
+  const sb = createServiceClient()
+  const id = await ensureShareCardRow(sb, input)
+  const { error: upErr } = await sb.storage
+    .from(SHARE_CARD_BUCKET)
+    .upload(`${id}.png`, input.png, { contentType: 'image/png', upsert: true })
+  if (upErr) throw new Error(`publishShareCard(upload): ${upErr.message}`)
+  return finalizeShareCardPublish({ id, ratio: input.ratio, entities: input.entities })
 }
 
 /** Pull a shipped card back to draft (removes it from the product). The PNG and

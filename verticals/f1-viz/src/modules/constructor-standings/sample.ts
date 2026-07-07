@@ -1,0 +1,57 @@
+import type { ConstructorStandingsConfig } from './index'
+
+export const sample: ConstructorStandingsConfig = {
+  type: 'f1:constructor-standings',
+  rows: [
+    {
+      position: 1,
+      constructorId: 'mclaren',
+      constructorName: 'McLaren',
+      nationality: 'British',
+      primaryColor: '#FF8000',
+      logoUrl: null,
+      points: 666,
+      wins: 6,
+    },
+    {
+      position: 2,
+      constructorId: 'red_bull',
+      constructorName: 'Red Bull',
+      nationality: 'Austrian',
+      primaryColor: '#3671C6',
+      logoUrl: null,
+      points: 589,
+      wins: 9,
+    },
+    {
+      position: 3,
+      constructorId: 'ferrari',
+      constructorName: 'Ferrari',
+      nationality: 'Italian',
+      primaryColor: '#E8002D',
+      logoUrl: null,
+      points: 536,
+      wins: 5,
+    },
+    {
+      position: 4,
+      constructorId: 'mercedes',
+      constructorName: 'Mercedes',
+      nationality: 'German',
+      primaryColor: '#27F4D2',
+      logoUrl: null,
+      points: 446,
+      wins: 4,
+    },
+    {
+      position: 5,
+      constructorId: 'aston_martin',
+      constructorName: 'Aston Martin',
+      nationality: 'British',
+      primaryColor: '#229971',
+      logoUrl: null,
+      points: 94,
+      wins: 0,
+    },
+  ],
+}

@@ -45,8 +45,8 @@ export const FOOTSHORTS_WORKERS: WorkerDef[] = [
     id: 'footshorts-scores',
     workflowFile: 'footshorts-scores.yml',
     label: 'Scores refresh',
-    description: 'Refreshes match scores + events, then generates recaps.',
-    schedule: 'Every 12h',
+    description: 'Refreshes finished-match scores from football-data.org.',
+    schedule: 'Every 3h',
   },
   {
     id: 'footshorts-fixtures',
@@ -59,10 +59,26 @@ export const FOOTSHORTS_WORKERS: WorkerDef[] = [
     id: 'footshorts-recap',
     workflowFile: 'footshorts-recap.yml',
     label: 'Daily recap',
-    description: 'Ad-hoc editorial recap over a trailing window.',
-    schedule: 'Manual',
+    description:
+      'Generates the editorial recap over a trailing window (scheduled run first hydrates match events).',
+    schedule: 'Every 12h · manual ad-hoc',
   },
 ]
+
+/**
+ * The on-demand Sportradar WC match-timeline sync (footshorts-events-sr.yml).
+ * Deliberately NOT in FOOTSHORTS_WORKERS: it has its own Pipeline-tab panel
+ * with inputs (lookback days / dry run), and the scheduled Daily recap run
+ * already hydrates WC events as one of its steps — so a generic entry here would
+ * be redundant.
+ */
+export const SPORTRADAR_EVENTS_WORKER: WorkerDef = {
+  id: 'footshorts-events-sr',
+  workflowFile: 'footshorts-events-sr.yml',
+  label: 'WC match timelines (Sportradar)',
+  description: 'Hydrates finished World Cup fixtures with goals/cards/subs from Sportradar.',
+  schedule: 'Manual · also runs inside Daily recap',
+}
 
 /** Most recent run of a worker's workflow, or null when it has never run. */
 export interface WorkerLastRun {
@@ -197,6 +213,21 @@ async function fetchLastRun(
     event: run.event,
     url: run.html_url,
   }
+}
+
+/**
+ * Status (definition + last run) for a single worker — same best-effort
+ * last-run read as fetchWorkerStatuses.
+ */
+export async function fetchWorkerStatus(worker: WorkerDef): Promise<WorkerStatus> {
+  const { token, repo } = dispatchEnv()
+  let lastRun: WorkerLastRun | null = null
+  try {
+    lastRun = await fetchLastRun(token, repo, worker)
+  } catch {
+    lastRun = null
+  }
+  return { ...worker, lastRun }
 }
 
 /**

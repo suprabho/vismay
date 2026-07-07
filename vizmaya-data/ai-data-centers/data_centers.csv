@@ -1,0 +1,7 @@
+Name,Current H100 equivalents,Current power (MW),Current total capital cost (2025 USD billions),Owner,Users,Project,Country,Address,Notes
+Stargate Abilene,450000,900,25,Crusoe / Oracle,OpenAI,Stargate,United States,"Abilene, TX",Representative snapshot — reconcile against Epoch CSV on first import
+xAI Colossus,340000,560,15,xAI,xAI,Colossus,United States,"Memphis, TN",Representative snapshot — reconcile against Epoch CSV on first import
+Meta Hyperion,300000,500,18,Meta,Meta,Hyperion,United States,"Richland Parish, LA",Representative snapshot — reconcile against Epoch CSV on first import
+Meta Prometheus,180000,300,10,Meta,Meta,Prometheus,United States,"New Albany, OH",Representative snapshot — reconcile against Epoch CSV on first import
+Project Rainier,220000,400,12,Amazon,Anthropic,Rainier,United States,"New Carlisle, IN",Representative snapshot — reconcile against Epoch CSV on first import
+Microsoft Fairwater,200000,350,11,Microsoft,OpenAI / Microsoft,Fairwater,United States,"Mount Pleasant, WI",Representative snapshot — reconcile against Epoch CSV on first import

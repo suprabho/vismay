@@ -1,21 +1,36 @@
 name: Footshorts - daily recap
 
-# Generates a rolling "last X hours" editorial recap (worker/src/recap.ts) and
-# inserts a snapshot into the footshorts Supabase `daily_recaps` table. The
-# cross-competition + World Cup recaps run automatically off the scores refresh
-# (see footshorts-scores.yml); this workflow is the manual entry point for AD-HOC
-# recaps filtered by competition and/or team — e.g. "just Real Madrid's last 12h".
+# Owns the footshorts recap end-to-end (worker/src/recap.ts): a rolling
+# "last X hours" editorial brief inserted as a snapshot into the `daily_recaps`
+# table. Two entry points:
+#
+#   • schedule (twice daily, 00:00 / 12:00 UTC) — the automatic run. First
+#     hydrates the match events the recap narrates (API-Football goals +
+#     Sportradar World Cup timelines), then generates the cross-competition and
+#     World Cup recaps. These steps used to live inside footshorts-scores.yml;
+#     they were split out so a 3-hourly scores top-up never drags the
+#     Gemini / API budgets along, and a recap failure can't fail the scores job.
+#
+#   • workflow_dispatch — an AD-HOC recap filtered by window / competition / team
+#     (e.g. "just Real Madrid's last 12h"). Recap-only: it reads the events the
+#     scheduled run already hydrated, so it needs no API-Football / Sportradar key.
 #
 # recap.ts covers a trailing window ending now (default 24h) and includes only
-# fixtures that have finished within it; it no-ops if none have. Each run inserts a
-# new snapshot row, so re-runs add to the timeline rather than overwriting.
+# fixtures that have finished within it; it no-ops if none have. Each run inserts
+# a new snapshot row, so re-runs add to the timeline rather than overwriting.
 #
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 #   GEMINI_API_KEY               - Google AI Studio key, for the recap narrative
+#   API_FOOTBALL_TOKEN           - API-Football key, per-match goal events (scheduled run)
+#   SPORTRADAR_API_KEY           - Sportradar key, World Cup match timelines (scheduled run)
 
 on:
+  schedule:
+    # Twice daily — the cadence the recaps kept while they lived in
+    # footshorts-scores.yml. GH cron is UTC and can drift up to ~15 min under load.
+    - cron: '0 0,12 * * *'
   workflow_dispatch:
     inputs:
       hours:
@@ -35,8 +50,12 @@ on:
         default: ''
 
 concurrency:
-  # Keyed by the filter combination so independent recaps don't cancel each other.
-  group: footshorts-recap-${{ inputs.competition }}-${{ inputs.team }}
+  # Scheduled runs hydrate Sportradar World Cup events on a 1-QPS trial key, so
+  # they join the shared football-data lock to serialise against scores /
+  # fixtures / events-sr. Manual runs are recap-only (no external football API)
+  # and key by their filter combination so independent ad-hoc recaps don't cancel
+  # each other.
+  group: ${{ github.event_name == 'schedule' && 'footshorts-football-data' || format('footshorts-recap-{0}-{1}', inputs.competition, inputs.team) }}
   cancel-in-progress: false
 
 jobs:
@@ -65,7 +84,68 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: .
 
-      - name: Generate recap
+      # ---- Scheduled automatic recap: event prep, then both recaps ----------
+
+      # Hydrate per-match goal events (scorers + minutes) from API-Football for
+      # fixtures that just finished. Idempotent (skips fixtures that already have
+      # events) and self-limited to ~90 API calls/run to stay under the free-tier
+      # 100/day cap. Soft-fails: if API-Football is down or quota-exhausted it must
+      # not block the recap below.
+      - name: Sync match events
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          API_FOOTBALL_TOKEN: ${{ secrets.API_FOOTBALL_TOKEN }}
+          # 'direct' (default, api-sports.io) or 'rapidapi' — match the channel
+          # the API_FOOTBALL_TOKEN secret was issued on. Unset → direct.
+          API_FOOTBALL_HOST: ${{ vars.API_FOOTBALL_HOST }}
+        run: pnpm events:ci
+
+      # Hydrate World Cup match timelines (goals/cards/subs) from Sportradar into
+      # the same fixture_events table. WC fixtures lack the seeded api_football_id
+      # bridge events.ts keys on, so their timelines come from Sportradar instead —
+      # matched by team name. WC-only and self-limited to 150 calls/run (trial
+      # budget), idempotent. Must run BEFORE the recaps so the World Cup recap's
+      # fs:match-timeline blocks have events. Soft-fails so a trial-key lapse can't
+      # block the recap below, and no-ops once the tournament ends.
+      - name: Sync World Cup match events (Sportradar)
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SPORTRADAR_API_KEY: ${{ secrets.SPORTRADAR_API_KEY }}
+          # 'trial' (default, api.sportradar.com trial tier) or 'production' — match
+          # the tier the SPORTRADAR_API_KEY secret was issued on. Unset → trial.
+          SPORTRADAR_ACCESS_LEVEL: ${{ vars.SPORTRADAR_ACCESS_LEVEL }}
+        run: pnpm events:sr:ci
+
+      # Generate the recap brief once events are fresh. Each run inserts a new
+      # snapshot, so the twice-daily cron yields a recap timeline.
+      - name: Generate recap (all competitions)
+        if: github.event_name == 'schedule'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm recap:ci
+
+      # World Cup–only recap. Same rolling window; no-ops when no WC fixtures
+      # finished in the window, so it harmlessly stops once the tournament ends.
+      - name: Generate recap (World Cup)
+        if: github.event_name == 'schedule'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm recap:ci -- --scope=world-cup
+
+      # ---- Manual ad-hoc recap: one filtered snapshot -----------------------
+
+      - name: Generate recap (ad-hoc)
+        if: github.event_name == 'workflow_dispatch'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

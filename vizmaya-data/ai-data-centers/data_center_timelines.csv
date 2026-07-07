@@ -1,0 +1,21 @@
+Name,Date,Power (MW),H100 equivalents,Total capital cost (2025 USD billions)
+Stargate Abilene,2024-06-01,0,0,2
+Stargate Abilene,2024-12-01,200,120000,9
+Stargate Abilene,2025-06-01,500,300000,17
+Stargate Abilene,2026-06-01,900,450000,25
+xAI Colossus,2024-06-01,100,80000,3
+xAI Colossus,2024-12-01,250,150000,7
+xAI Colossus,2025-06-01,400,250000,11
+xAI Colossus,2026-06-01,560,340000,15
+Meta Hyperion,2025-01-01,0,0,2
+Meta Hyperion,2025-06-01,150,90000,8
+Meta Hyperion,2026-06-01,500,300000,18
+Meta Prometheus,2025-01-01,50,30000,3
+Meta Prometheus,2025-06-01,180,110000,6
+Meta Prometheus,2026-06-01,300,180000,10
+Project Rainier,2024-06-01,0,0,2
+Project Rainier,2025-06-01,200,110000,7
+Project Rainier,2026-06-01,400,220000,12
+Microsoft Fairwater,2025-01-01,50,30000,3
+Microsoft Fairwater,2025-06-01,180,110000,7
+Microsoft Fairwater,2026-06-01,350,200000,11

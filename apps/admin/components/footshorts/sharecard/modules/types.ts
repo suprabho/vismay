@@ -1,5 +1,9 @@
 import type { EventTypeFilter } from '@vismay/footshorts-viz/types'
+import type { StaticRoundInput } from '@vismay/footshorts-viz/web'
 import type { MatchRowVariant, MatchStyle, PhosphorWeight } from '../types'
+
+/** Bracket layouts offered in the share card (mirrors the story `fs:bracket`). */
+export type BracketCardLayout = 'tree' | 'tree-vertical' | 'tree-horizontal' | 'list'
 
 /**
  * `fscard:*` layer configs — each carries the PICKS (which competition, which
@@ -13,6 +17,20 @@ export interface FsCardMatchConfig {
   compKey: string
   fixtureId: string
   matchStyle: MatchStyle
+  /**
+   * Hardcoded main scoreline, e.g. "1 - 1" (home–away). We don't always have
+   * the right result in fixture data, so the author can override the big score
+   * shown on the card. When omitted, the fixture's own finished score is used.
+   */
+  scoreOverride?: string
+  /**
+   * Hardcoded penalty-shootout result, e.g. "2 - 3" (home–away). We don't
+   * ingest shootout data separately, so the author types it in the studio.
+   * Renders as the "PENS" sub-line on the card styles and an inline note on the
+   * tile. Requires a level main score and a decisive shootout (see
+   * `resolveMatchScore`). Omit for non-shootout ties.
+   */
+  penalties?: string
 }
 
 export interface FsCardMatchTimelineConfig {
@@ -40,6 +58,30 @@ export interface FsCardFormConfig {
   type: 'fscard:form'
   compKey: string
   teamSlug: string
+}
+
+/**
+ * `fscard:bracket` — a knockout bracket card. Two data sources, pick one:
+ *  - `rounds`: an explicit, *incomplete* draw (slot-vs-slot ties where a slot
+ *    may be a confirmed team, a qualification placeholder, or TBD). Authored
+ *    directly in the editor, no live data — the World Cup "14 teams locked in"
+ *    look. Takes precedence when present.
+ *  - `compKey`: pull a competition's knockout fixtures from the injected data
+ *    and build a complete bracket.
+ */
+export interface FsCardBracketConfig {
+  type: 'fscard:bracket'
+  /** Incomplete/static draw authored inline; wins over `compKey`. */
+  rounds?: StaticRoundInput[]
+  /** Competition whose knockout fixtures build a complete (live) bracket. */
+  compKey?: string
+  layout: BracketCardLayout
+  /** Centre-emblem caption, e.g. "World Cup 26 · Round of 32". */
+  title?: string
+  /** Competition slug for the emblem colour + name (defaults to world-cup / the fixtures' slug). */
+  competitionSlug?: string
+  /** Team id whose path through the tree is highlighted. */
+  highlightTeamId?: string
 }
 
 export interface FsCardNewsImageConfig {
@@ -103,6 +145,7 @@ export type FsCardConfig =
   | FsCardFixturesConfig
   | FsCardStandingsConfig
   | FsCardFormConfig
+  | FsCardBracketConfig
   | FsCardNewsImageConfig
   | FsCardNewsArticleConfig
   | FsCardAiImageConfig

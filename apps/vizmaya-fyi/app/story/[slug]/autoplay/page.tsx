@@ -4,13 +4,12 @@
 //
 // Thin mount: the route body lives in `@vismay/render-surface` so apps/render
 // can serve the identical surface. This file owns only the route segment
-// config (`dynamic` + `generateStaticParams`) and the env/branding injection —
-// including the app-local MapPickerModal (it depends on mapbox-gl, an app
-// runtime concern, so the package accepts it as a prop).
+// config and the env/branding injection — including the app-local
+// MapPickerModal (it depends on mapbox-gl, an app runtime concern, so the
+// package accepts it as a prop). No generateStaticParams: force-dynamic means
+// nothing is prerendered, so enumerating slugs here would only slow the build.
 export const dynamic = 'force-dynamic'
 
-import { getViewableStorySlugs } from '@vismay/content-source/content'
-import { hasStoryConfig } from '@vismay/content-source/storyConfig'
 import { AutoplaySurface } from '@vismay/render-surface/surfaces'
 import { adminBaseUrl } from '@/lib/adminBaseUrl'
 import MapPickerModal from '@/components/MapPickerModal'
@@ -18,14 +17,6 @@ import MapPickerModal from '@/components/MapPickerModal'
 interface RouteParams {
   params: Promise<{ slug: string }>
   searchParams?: Promise<{ aspect?: string; start?: string }>
-}
-
-export async function generateStaticParams() {
-  const slugs = await getViewableStorySlugs()
-  const withConfig = await Promise.all(
-    slugs.map(async (slug) => ((await hasStoryConfig(slug)) ? slug : null))
-  )
-  return withConfig.filter((s): s is string => s !== null).map((slug) => ({ slug }))
 }
 
 export default async function AutoplayPage({ params, searchParams }: RouteParams) {

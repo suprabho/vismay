@@ -123,7 +123,7 @@ export default function HorizontalLayout({ config }: { config: MatchCardConfig }
             <span style={scoreText}>{f.scorePlaceholder ? (config.kickoff ?? 'vs') : scoreMain}</span>
             {!f.scorePlaceholder && scoreNote && <span style={kickoffText}>{scoreNote}</span>}
             {!f.scorePlaceholder && config.kickoff && (
-              <span style={kickoffText}>FT</span>
+              <span style={kickoffText}>{config.statusLabel ?? 'FT'}</span>
             )}
           </div>
           <div style={team('flex-end')}>

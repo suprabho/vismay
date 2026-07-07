@@ -11,6 +11,12 @@
 
 export * from './types'
 export {
+  CHART_TYPES,
+  RELATIONSHIP_CHART_TYPES,
+  isRelationshipChartType,
+  type RelationshipChartType,
+} from './chartVocab'
+export {
   packForVertical,
   configFormatForVertical,
   VIZMAYA_PACK,
@@ -46,6 +52,7 @@ export {
   graftRecapForeground,
   graftSectionBody,
   collectRecapDirectives,
+  collectVerticalDirectives,
   type GraftRecapResult,
 } from './ingest/recapForeground'
 export { research, type ResearchOptions } from './research'
@@ -53,7 +60,9 @@ export { generateAngles } from './angles'
 export {
   generateStory,
   generateOutline,
+  generateOutlineSection,
   generateChart,
+  generateChartRequirement,
   generateRegions,
   injectRegions,
   generateSection,

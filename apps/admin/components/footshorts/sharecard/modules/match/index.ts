@@ -18,7 +18,23 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): FsCard
   const matchStyle = (MATCH_STYLES as string[]).includes(r.matchStyle as string)
     ? (r.matchStyle as MatchStyle)
     : 'tile'
-  return { type: 'fscard:match', compKey: r.compKey, fixtureId: r.fixtureId, matchStyle }
+  // Carry the raw score/penalties strings through; semantic validation (do they
+  // add up?) happens at render time so the studio shows a message rather than
+  // the layer vanishing while the author is mid-edit.
+  const scoreOverride =
+    typeof r.scoreOverride === 'string' && r.scoreOverride.trim()
+      ? r.scoreOverride.trim()
+      : undefined
+  const penalties =
+    typeof r.penalties === 'string' && r.penalties.trim() ? r.penalties.trim() : undefined
+  return {
+    type: 'fscard:match',
+    compKey: r.compKey,
+    fixtureId: r.fixtureId,
+    matchStyle,
+    scoreOverride,
+    penalties,
+  }
 }
 
 function adminForm(): AdminFormField[] {
@@ -36,6 +52,8 @@ function adminForm(): AdminFormField[] {
         { value: 'card-score', label: 'Card · Score' },
       ],
     },
+    { kind: 'text', key: 'scoreOverride', label: 'Score override (e.g. "1 - 1")' },
+    { kind: 'text', key: 'penalties', label: 'Penalties (shootout, e.g. "2 - 3")' },
   ]
 }
 
@@ -47,7 +65,8 @@ const matchCardModule: VizModule<FsCardMatchConfig> = {
   adminForm,
   load: () => import('./Component'),
   readinessProfile: 'instant',
-  stableIdentity: (c) => `fscard:match:${c.compKey}:${c.fixtureId}:${c.matchStyle}`,
+  stableIdentity: (c) =>
+    `fscard:match:${c.compKey}:${c.fixtureId}:${c.matchStyle}:${c.scoreOverride ?? ''}:${c.penalties ?? ''}`,
 }
 
 export default matchCardModule

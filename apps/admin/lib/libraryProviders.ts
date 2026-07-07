@@ -1,4 +1,5 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { getIeaCountryProfile, type IeaCountryProfile } from '@vismay/content-source/epics'
 
 /**
  * Compose "from library" PROVIDERS — pluggable sources of in-DB content that can
@@ -73,10 +74,52 @@ function ilikePattern(query: string): string {
   return `%${safe}%`
 }
 
+// ── Cross-app epic sharing ───────────────────────────────────────────────────
+
+/**
+ * Vizmaya epics whose compose research material — the explainer AND the curated
+ * member stories — is also offered to other desks' drafts. Sharing is read-only
+ * and picker-level: ownership (`epics.app_slug`), homepage surfacing, and story
+ * routing are untouched, unlike the fifa-wc26 move which repointed app_slug.
+ * Epic slug → extra app_slugs that may attach its material.
+ *
+ * The football desk's nation stories (fifa-wc26) lean on vizmaya's country
+ * context: global-trade is the trade counterpart to the country energy
+ * profiles dataset below, and energy-profile's explainer + story rail
+ * complement that dataset's numbers.
+ */
+const SHARED_EPICS: Record<string, string[]> = {
+  'global-trade': ['footshorts'],
+  'energy-profile': ['footshorts'],
+}
+
+/** Epic slugs shared with an app, beyond the ones it owns. */
+function sharedEpicSlugsFor(appSlug: string | null): string[] {
+  if (!appSlug) return []
+  return Object.entries(SHARED_EPICS)
+    .filter(([, apps]) => apps.includes(appSlug))
+    .map(([slug]) => slug)
+}
+
+/** Published-story slugs curated into the epics shared with an app. Empty when
+ *  nothing is shared; slugs are kebab-case so they embed safely in a
+ *  PostgREST `.or(slug.in.(...))` filter. */
+async function sharedEpicStorySlugs(appSlug: string | null): Promise<string[]> {
+  const shared = sharedEpicSlugsFor(appSlug)
+  if (!shared.length) return []
+  const sb = createServiceClient()
+  const { data, error } = await sb.from('story_epics').select('story_slug').in('epic_slug', shared)
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as Array<{ story_slug: string }>
+  return [...new Set(rows.map((r) => r.story_slug))]
+}
+
 // ── Providers ───────────────────────────────────────────────────────────────
 
 /** Published stories — reuse another story's prose. Covers every vertical, since
- *  footshorts/f1 editorial stories are rows in the shared `stories` table. */
+ *  footshorts/f1 editorial stories are rows in the shared `stories` table.
+ *  Beyond the draft's own app, stories curated into a SHARED_EPICS epic are
+ *  included too (their app_slug subtitle marks the cross-desk origin). */
 const storiesProvider: LibraryProvider = {
   key: 'story',
   label: 'Published stories',
@@ -89,7 +132,12 @@ const storiesProvider: LibraryProvider = {
       .neq('slug', excludeSlug)
       .order('updated_at', { ascending: false })
       .limit(500)
-    if (appSlug) q = q.eq('app_slug', appSlug)
+    if (appSlug) {
+      const sharedStories = await sharedEpicStorySlugs(appSlug)
+      q = sharedStories.length
+        ? q.or(`app_slug.eq.${appSlug},slug.in.(${sharedStories.join(',')})`)
+        : q.eq('app_slug', appSlug)
+    }
     const { data, error } = await q
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ slug: string; title: string | null; app_slug: string | null }>
@@ -109,14 +157,20 @@ const storiesProvider: LibraryProvider = {
 }
 
 /** Epic explainers — the evergreen pillar narrative + key takeaways for a topic
- *  hub. Only epics that actually carry explainer prose are offered. */
+ *  hub. Only epics that actually carry explainer prose are offered. An app sees
+ *  its own epics plus any listed for it in SHARED_EPICS. */
 const epicsProvider: LibraryProvider = {
   key: 'epic',
   label: 'Epic explainers',
   async list({ appSlug }) {
     const sb = createServiceClient()
     let q = sb.from('epics').select('slug, name, description, explainer').order('slug', { ascending: true })
-    if (appSlug) q = q.eq('app_slug', appSlug)
+    if (appSlug) {
+      const shared = sharedEpicSlugsFor(appSlug)
+      q = shared.length
+        ? q.or(`app_slug.eq.${appSlug},slug.in.(${shared.join(',')})`)
+        : q.eq('app_slug', appSlug)
+    }
     const { data, error } = await q
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
@@ -463,13 +517,258 @@ const cokeStudioProvider: LibraryProvider = {
   },
 }
 
+/**
+ * Country energy profiles (`iea_countries` + `iea_country_energy` +
+ * `iea_oil_prices_monthly`) — the per-country dataset behind the vizmaya
+ * `/energy-profile` epic map. Like the WC26 teams table, the map only reads it
+ * through its own API, so without a provider the numbers can't be reused as
+ * research. `extract` reuses the epic's own reader (`getIeaCountryProfile`) and
+ * flattens it to the CountryDetail sheet's content: editorial summary, the four
+ * stat tiles, latest-year electricity / primary mixes, pump prices, and the
+ * country's recent energy news.
+ *
+ * Serves footshorts as well as vizmaya-fyi: the fifa-wc26 epic gives the
+ * football desk per-nation stories, and country energy context belongs in the
+ * same research pool. The embedded 30-day news slice also means footshorts gets
+ * energy news per country without opening the separate `iea-news` provider.
+ */
+type EnergyMix = IeaCountryProfile['timeseries']['electricityMix']
+
+/** The most recent year with any share data, flattened to "Source share%"
+ *  parts sorted largest-first; null when the mix is empty. */
+function latestMixBreakdown(mix: EnergyMix): { year: number; parts: string[] } | null {
+  for (let i = mix.years.length - 1; i >= 0; i--) {
+    const entries = mix.series
+      .map((s) => ({ name: s.name, value: s.values[i] }))
+      .filter((e): e is { name: string; value: number } => e.value != null && e.value > 0)
+    if (entries.length) {
+      entries.sort((a, b) => b.value - a.value)
+      return { year: mix.years[i], parts: entries.map((e) => `${e.name} ${e.value.toFixed(1)}%`) }
+    }
+  }
+  return null
+}
+
+const energyProfileProvider: LibraryProvider = {
+  key: 'energy-profile',
+  label: 'Country energy profiles',
+  apps: ['vizmaya-fyi', 'footshorts'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('iea_countries')
+      .select('code, name, summary')
+      .or(`name.ilike.${pat},code.ilike.${pat}`)
+      .order('name', { ascending: true })
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{ code: string; name: string | null; summary: string | null }>
+    return rows.map((r) => ({
+      id: r.code,
+      title: r.name ?? r.code,
+      subtitle: r.summary?.slice(0, 120) ?? undefined,
+    }))
+  },
+  async extract(code) {
+    const profile = await getIeaCountryProfile(code)
+    if (!profile) return null
+
+    const tile = (key: string, label: string, format: (v: number) => string): string | null => {
+      const t = profile.latest[key]
+      return t ? `${label}: ${format(t.value)} (${t.year})` : null
+    }
+    const tiles = [
+      tile('energy_per_capita_kwh', 'Energy use per person', (v) => `${Math.round(v).toLocaleString('en-US')} kWh`),
+      tile('ghg_from_energy_mt', 'GHG from energy', (v) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} Mt CO₂e`),
+      tile('renewables_share_energy', 'Renewables share of energy', (v) => `${v.toFixed(1)}%`),
+      tile('electricity_demand_twh', 'Electricity demand', (v) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} TWh`),
+    ].filter(Boolean) as string[]
+
+    const elec = latestMixBreakdown(profile.timeseries.electricityMix)
+    const primary = latestMixBreakdown(profile.timeseries.primaryEnergyMix)
+
+    const { months, gasoline, diesel } = profile.timeseries.oilPrices
+    const lastMonth = months.length ? months[months.length - 1] : null
+    const lastGasoline = gasoline.length ? gasoline[gasoline.length - 1] : null
+    const lastDiesel = diesel.length ? diesel[diesel.length - 1] : null
+    const fuel =
+      lastMonth && (lastGasoline != null || lastDiesel != null)
+        ? `Retail fuel prices (${lastMonth}, USD/L): ` +
+          [
+            lastGasoline != null ? `gasoline ${lastGasoline.toFixed(2)}` : null,
+            lastDiesel != null ? `diesel ${lastDiesel.toFixed(2)}` : null,
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : null
+
+    const news = profile.news
+      .slice(0, 6)
+      .map((n) => `- ${n.title} (${n.publishedAt.slice(0, 10)})${n.summary ? ` — ${n.summary}` : ''}`)
+      .join('\n')
+
+    const text = [
+      `# ${profile.name} (${profile.code}) — country energy profile`,
+      profile.summary?.trim() || null,
+      tiles.length ? tiles.join('\n') : null,
+      elec ? `Electricity mix (${elec.year}): ${elec.parts.join(', ')}` : null,
+      primary ? `Primary energy mix (${primary.year}): ${primary.parts.join(', ')}` : null,
+      fuel,
+      news ? `Recent energy news (30d):\n${news}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+
+    return {
+      title: `${profile.name} · energy profile`,
+      byline: 'Energy profile · OWID / IEA',
+      text,
+    }
+  },
+}
+
+/**
+ * FIFA World Cup 2026 teams (`fifa_wc26_teams`) — the per-nation dataset behind
+ * the footshorts `fifa-wc26` epic map / team-profile panel: squad value, GDP,
+ * population, inequality, democracy index, FIFA rank, GHI, WHR. The map only
+ * reads this table client-side, so without a provider the numbers can't be
+ * reused as research; this surfaces one team's full profile on attach.
+ *
+ * Search-based (48 rows, but the picker's "type to query datasets" affordance
+ * is search): match a country name / FIFA code / confederation. App-scoped to
+ * footshorts, where the epic now lives. `extract` reproduces the panel's stat
+ * block AND each metric's rank among the 48 — computed exactly like the
+ * landing's `getFifaWc26TeamProfile` (rank 1 = highest value).
+ */
+const FIFA_WC26_COLS =
+  'code, name, confederation, qualification, is_host, is_debut, ' +
+  'squad_value_eur_mn, gdp_nominal_usd_bn, gdp_per_capita_ppp_usd, ' +
+  'population_mn, land_area_sq_km, gini_index, eiu_democracy_index_2024, ' +
+  'regime_type, fifa_ranking, ghi_2025_score, whr_2025_rank'
+
+interface FifaWc26Row {
+  code: string
+  name: string
+  confederation: string
+  qualification: string
+  is_host: boolean
+  is_debut: boolean
+  squad_value_eur_mn: number | null
+  gdp_nominal_usd_bn: number | null
+  gdp_per_capita_ppp_usd: number | null
+  population_mn: number | null
+  land_area_sq_km: number | null
+  gini_index: number | null
+  eiu_democracy_index_2024: number | null
+  regime_type: string | null
+  fifa_ranking: number | null
+  ghi_2025_score: number | null
+  whr_2025_rank: number | null
+}
+
+/** Rank a value (1 = highest) within a desc-sorted list; null → no rank. */
+function fifaRankOf(value: number | null, descSorted: number[]): number | null {
+  if (value == null) return null
+  const idx = descSorted.findIndex((v) => v <= value)
+  return idx === -1 ? descSorted.length : idx + 1
+}
+
+const fifaWc26Provider: LibraryProvider = {
+  key: 'fifa-wc26',
+  label: 'World Cup 2026 teams',
+  apps: ['footshorts'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('fifa_wc26_teams')
+      .select('code, name, confederation, squad_value_eur_mn, fifa_ranking')
+      .or(`name.ilike.${pat},code.ilike.${pat},confederation.ilike.${pat}`)
+      .order('squad_value_eur_mn', { ascending: false, nullsFirst: false })
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      code: string
+      name: string | null
+      confederation: string | null
+      squad_value_eur_mn: number | null
+      fifa_ranking: number | null
+    }>
+    return rows.map((r) => ({
+      id: r.code,
+      title: r.name ?? r.code,
+      subtitle:
+        [
+          r.confederation,
+          r.squad_value_eur_mn != null ? `€${r.squad_value_eur_mn.toLocaleString('en-US')}mn squad` : null,
+          r.fifa_ranking != null ? `FIFA #${r.fifa_ranking}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined,
+    }))
+  },
+  async extract(code) {
+    const sb = createServiceClient()
+    // The row IS the profile, but ranks need the whole field — fetch all 48.
+    const { data, error } = await sb.from('fifa_wc26_teams').select(FIFA_WC26_COLS)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as unknown as FifaWc26Row[]
+    const team = rows.find((r) => r.code === code)
+    if (!team) return null
+
+    const total = rows.length
+    const sortedDesc = (pick: (r: FifaWc26Row) => number | null): number[] =>
+      rows
+        .map(pick)
+        .filter((v): v is number => v != null)
+        .sort((a, b) => b - a)
+    const rank = (value: number | null, pick: (r: FifaWc26Row) => number | null): string =>
+      value == null ? '' : ` (#${fifaRankOf(value, sortedDesc(pick))} of ${total})`
+
+    const num = (n: number | null): string => (n == null ? '—' : n.toLocaleString('en-US'))
+    const gdpNominal = (n: number | null): string =>
+      n == null ? '—' : n >= 1000 ? `$${(n / 1000).toFixed(2)} tn` : `$${n.toLocaleString('en-US')} bn`
+    const flags = [team.is_host ? 'Host' : null, team.is_debut ? 'Debut' : null].filter(Boolean).join(', ')
+
+    const lines = [
+      `Confederation: ${team.confederation}`,
+      `Qualification: ${team.qualification}${flags ? ` (${flags})` : ''}`,
+      team.fifa_ranking != null ? `FIFA ranking: #${team.fifa_ranking}` : null,
+      '',
+      `Squad value: €${num(team.squad_value_eur_mn)} mn${rank(team.squad_value_eur_mn, (r) => r.squad_value_eur_mn)}`,
+      `GDP nominal: ${gdpNominal(team.gdp_nominal_usd_bn)}${rank(team.gdp_nominal_usd_bn, (r) => r.gdp_nominal_usd_bn)}`,
+      `GDP per capita (PPP): $${num(team.gdp_per_capita_ppp_usd)}${rank(team.gdp_per_capita_ppp_usd, (r) => r.gdp_per_capita_ppp_usd)}`,
+      `Population: ${num(team.population_mn)} mn${rank(team.population_mn, (r) => r.population_mn)}`,
+      `Land area: ${num(team.land_area_sq_km)} sq km${rank(team.land_area_sq_km, (r) => r.land_area_sq_km)}`,
+      `Gini index: ${num(team.gini_index)}`,
+      `EIU democracy index 2024: ${num(team.eiu_democracy_index_2024)}${rank(team.eiu_democracy_index_2024, (r) => r.eiu_democracy_index_2024)}`,
+      team.regime_type ? `Regime: ${team.regime_type}` : null,
+      team.ghi_2025_score != null ? `Global Hunger Index 2025: ${num(team.ghi_2025_score)}` : null,
+      team.whr_2025_rank != null ? `World Happiness Report 2025 rank: #${team.whr_2025_rank}` : null,
+    ]
+      .filter((l) => l != null)
+      .join('\n')
+
+    const text = `# ${team.name} (${team.code}) — World Cup 2026 profile\n\n${lines}`
+    return {
+      title: `${team.name} · World Cup 2026`,
+      byline: `FIFA World Cup 2026 · ${team.confederation}`,
+      text,
+    }
+  },
+}
+
 const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
   newsProvider({ key: 'footshorts-news', label: 'Football news', table: 'articles', app: 'footshorts' }),
   recapsProvider,
+  fifaWc26Provider,
   newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
   ieaNewsProvider,
+  energyProfileProvider,
   epsteinProvider,
   cokeStudioProvider,
 ]

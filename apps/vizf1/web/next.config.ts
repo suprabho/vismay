@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     '@vismay/viz-engine',
     '@vismay/story-embed',
     '@vismay/f1-viz',
+    '@vismay/ui',
     '@vizf1/brand',
   ],
 }
