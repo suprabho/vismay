@@ -59,6 +59,17 @@ changes.
   pipelines.ts, which map/merge the per-epic readers (`getDcPipelineStats()`,
   `listDcNewsForAdmin()`, … in
   [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)).
+- **International stock upload (AI Data Centers only):** a card
+  ([components/vizmaya/pipeline/StockUploadCard.tsx](components/vizmaya/pipeline/StockUploadCard.tsx),
+  shown when the scoped/any epic has `meta.hasStocks`) for hand-loading the
+  non-US tickers. massive.com (the US price source) is US-only and every free
+  API for TW/KR/JP/NL/HK is plan-gated or bot-gates CI IPs, so the daily Stooq
+  CSV is downloaded in a browser (each row links straight to it) and uploaded
+  to `POST /api/vizmaya/pipeline/stock-prices`
+  ([route](<app/api/vizmaya/pipeline/stock-prices/route.ts>)), which validates
+  the ticker and runs `parseStooqCsv` + `upsertDcStockPrices` from
+  `@vismay/content-source/epics`. The GET on the same route
+  (`listDcStockUploadTargets`) drives the per-ticker coverage rows.
 
 ## Recaps tab (/vizmaya/recaps)
 

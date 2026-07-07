@@ -1,21 +1,18 @@
 /**
  * AI Data Centers stock price importer — populates dc_stock_prices with daily
- * OHLCV bars for every active dc_stocks ticker, routed by home market:
+ * OHLCV bars for the US tickers (market='US') from massive.com's market-data
+ * REST API (a keyed, licensed, Polygon-compatible aggregates endpoint).
  *
- *   • US tickers (market='US')          → massive.com market-data REST API, a
- *     keyed, licensed feed (Polygon-compatible aggregates endpoint).
- *   • International (TW/KR/JP/NL/HK)     → Twelve Data's time_series API, which
- *     covers all five non-US exchanges massive.com doesn't (massive.com is
- *     US-only). Stooq was tried first but bot-gates GitHub's datacenter IPs.
+ * The international tickers (TW/KR/JP/NL/HK) are NOT fetched here: massive.com
+ * is US-only, and every free API that covers those exchanges is either
+ * plan-gated (Twelve Data, Alpha Vantage) or bot-gates CI's datacenter IPs
+ * (Stooq, Yahoo). They're hand-uploaded instead through the admin Pipeline tab
+ * (/vizmaya/pipeline → AI Data Centers → "International prices — Stooq upload"),
+ * which parses a browser-downloaded Stooq CSV and upserts the same rows via
+ * parseStooqCsv + upsertDcStockPrices in @vismay/content-source/epics.
  *
- * Both normalise to the same (ticker, trade_date, o/h/l/c/v) rows and upsert
- * idempotently on (ticker, trade_date). Prices stay in the listing's native
- * currency; close is split-adjusted.
- *
- * Symbol mapping (Twelve Data): the dc_stocks `market` column (US|TW|KR|JP|NL|
- * HK) maps to the exchange MIC (TW→XTAI, KR→XKRX, JP→XTKS, NL→XAMS, HK→XHKG),
- * paired with the numeric code — so 005930.KS resolves as symbol 005930 on
- * XKRX. We key off `market`, never the Yahoo-style ticker suffix.
+ * Upsert is idempotent on (ticker, trade_date); prices stay in the listing's
+ * native currency; close is split-adjusted.
  *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full          # ~5y backfill
@@ -24,13 +21,11 @@
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
- *   MASSIVE_API_TOKEN   — massive.com REST API key (US tickers).
- *   TWELVEDATA_API_KEY  — Twelve Data API key (international tickers).
+ *   MASSIVE_API_TOKEN — massive.com REST API key (US tickers).
  *
- * Idempotency: upsert on (ticker, trade_date). Trading days come from the
- * source in the exchange's own calendar — massive.com timestamps are converted
- * in US/Eastern; Twelve Data already dates each bar by its local trading day. A
- * bar written mid-session is partial but self-heals on the next run.
+ * Idempotency: upsert on (ticker, trade_date). massive.com daily timestamps are
+ * converted to trade dates in US/Eastern. A bar written mid-session is partial
+ * but self-heals on the next run.
  */
 
 import { config as loadEnv } from 'dotenv'
@@ -41,16 +36,6 @@ loadEnv({ path: '.env' })
 
 const MASSIVE_API_BASE = 'https://api.massive.com'
 const MASSIVE_KEY = process.env.MASSIVE_API_TOKEN?.trim() || null
-const TWELVEDATA_BASE = 'https://api.twelvedata.com'
-const TWELVEDATA_KEY = process.env.TWELVEDATA_API_KEY?.trim() || null
-// dc_stocks.market → Twelve Data exchange MIC. US never reaches Twelve Data.
-const TD_MIC: Record<string, string> = {
-  TW: 'XTAI', // Taiwan Stock Exchange
-  KR: 'XKRX', // Korea Exchange
-  JP: 'XTKS', // Tokyo Stock Exchange
-  NL: 'XAMS', // Euronext Amsterdam
-  HK: 'XHKG', // Hong Kong Exchanges
-}
 // massive.com/Polygon daily aggregate timestamps are Eastern-Time day starts.
 const US_TZ = 'America/New_York'
 const USER_AGENT =
@@ -121,13 +106,6 @@ function dateWindow(lookbackDays: number): { from: string; to: string } {
   return { from: isoDate(from), to: isoDate(now) }
 }
 
-function numOrNull(s: string | undefined): number | null {
-  // Number('') and Number('  ') are 0, not NaN — treat blanks as missing.
-  if (s == null || s.trim() === '') return null
-  const n = Number(s)
-  return Number.isFinite(n) ? n : null
-}
-
 /** Collapse duplicate dates to the last bar, sorted ascending. */
 function dedupeByDate(rows: PriceRow[]): PriceRow[] {
   const byDate = new Map<string, PriceRow>()
@@ -136,7 +114,7 @@ function dedupeByDate(rows: PriceRow[]): PriceRow[] {
 }
 
 /**
- * Both sources rate-limit per IP, so every request funnels through one shared
+ * massive.com rate-limits per IP, so every request funnels through one shared
  * gate: a 429 escalates a run-wide cooldown (honouring Retry-After), a success
  * resets it. Also retries transient network errors and 5xx.
  */
@@ -248,88 +226,6 @@ async function fetchMassive(ticker: string, from: string, to: string): Promise<P
   return dedupeByDate(rows)
 }
 
-interface TdValue {
-  datetime: string
-  open?: string
-  high?: string
-  low?: string
-  close?: string
-  volume?: string
-}
-interface TdResp {
-  status?: string
-  values?: TdValue[]
-  message?: string
-  code?: number
-}
-
-/**
- * Daily bars for an international ticker from Twelve Data's time_series API.
- * Symbol = the numeric code + the market's MIC (005930.KS → 005930 on XKRX).
- * Twelve Data signals rate/credit limits with `code: 429` inside a 200 body, so
- * we check that as well as the HTTP status and route both through the limiter.
- */
-async function fetchTwelveData(
-  ticker: string,
-  market: string,
-  from: string,
-  to: string
-): Promise<PriceRow[]> {
-  if (!TWELVEDATA_KEY) throw new Error('TWELVEDATA_API_KEY not set — cannot fetch international tickers')
-  const mic = TD_MIC[market]
-  if (!mic) throw new Error(`no Twelve Data MIC for market ${market}`)
-  const symbol = ticker.split('.')[0]
-  const url =
-    `${TWELVEDATA_BASE}/time_series?symbol=${encodeURIComponent(symbol)}&mic_code=${mic}` +
-    `&interval=1day&start_date=${from}&end_date=${to}&outputsize=5000&order=ASC`
-  const label = `td ${symbol}:${mic}`
-  let lastErr: Error | null = null
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    await limiter.gate()
-    let data: TdResp
-    let httpStatus = 0
-    try {
-      // apikey goes in the Authorization header so it never lands in a logged URL.
-      const res = await fetch(url, {
-        headers: { authorization: `apikey ${TWELVEDATA_KEY}` },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      })
-      httpStatus = res.status
-      data = (await res.json().catch(() => ({}))) as TdResp
-    } catch (err) {
-      lastErr = err instanceof Error ? err : new Error(String(err))
-      if (attempt < MAX_ATTEMPTS - 1) await sleep(1500 * 2 ** attempt + Math.random() * 500)
-      continue
-    }
-    if (httpStatus === 429 || data.code === 429) {
-      limiter.hit(0) // free tier is 8 credits/min; pause and let the window reset
-      lastErr = new Error(`${label} 429 ${data.message ?? ''}`.trim())
-      continue
-    }
-    if (data.status === 'error') {
-      throw new Error(`${label} ${data.code ?? httpStatus}: ${data.message ?? 'error'}`)
-    }
-    limiter.settle()
-    const rows: PriceRow[] = []
-    for (const v of data.values ?? []) {
-      const c = Number(v.close)
-      if (!v.datetime || !Number.isFinite(c)) continue
-      const vol = numOrNull(v.volume)
-      rows.push({
-        ticker,
-        trade_date: v.datetime.slice(0, 10), // already the local trading day
-        open: numOrNull(v.open),
-        high: numOrNull(v.high),
-        low: numOrNull(v.low),
-        close: c,
-        volume: vol == null ? null : Math.round(vol),
-      })
-    }
-    return dedupeByDate(rows)
-  }
-  throw lastErr ?? new Error(`${label}: fetch failed`)
-}
-
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const sb = createServiceClient()
@@ -352,29 +248,28 @@ async function main() {
   }
 
   const { from, to } = dateWindow(args.lookbackDays)
-  const usCount = stocks.filter((s) => s.market === 'US').length
-  const intlCount = stocks.length - usCount
+  const usStocks = stocks.filter((s) => s.market === 'US')
+  const intlStocks = stocks.filter((s) => s.market !== 'US')
   console.log(
-    `Importing daily bars ${from} → ${to} for ${stocks.length} ticker(s) ` +
-      `(${usCount} US via massive.com, ${intlCount} international via Twelve Data)` +
+    `Importing daily bars ${from} → ${to} for ${usStocks.length} US ticker(s) via massive.com` +
       (args.dryRun ? ' (dry run)' : '')
   )
-  if (usCount > 0 && !MASSIVE_KEY) {
+  if (usStocks.length > 0 && !MASSIVE_KEY) {
     console.error('⚠ MASSIVE_API_TOKEN not set — the US tickers will fail until it is')
   }
-  if (intlCount > 0 && !TWELVEDATA_KEY) {
-    console.error('⚠ TWELVEDATA_API_KEY not set — the international tickers will fail until it is')
+  if (intlStocks.length > 0) {
+    console.log(
+      `Skipping ${intlStocks.length} international ticker(s) — hand-uploaded via the admin ` +
+        `Pipeline tab: ${intlStocks.map((s) => s.ticker).join(', ')}`
+    )
   }
 
   let totalRows = 0
   const failures: string[] = []
 
-  for (const stock of stocks) {
+  for (const stock of usStocks) {
     try {
-      const rows =
-        stock.market === 'US'
-          ? await fetchMassive(stock.ticker, from, to)
-          : await fetchTwelveData(stock.ticker, stock.market, from, to)
+      const rows = await fetchMassive(stock.ticker, from, to)
       if (rows.length === 0) {
         failures.push(stock.ticker)
         console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in range`)
@@ -404,13 +299,13 @@ async function main() {
   }
 
   console.log(
-    `\nDone. ${totalRows} bars across ${stocks.length - failures.length}/${stocks.length} tickers.`
+    `\nDone. ${totalRows} bars across ${usStocks.length - failures.length}/${usStocks.length} US tickers.`
   )
   if (failures.length > 0) {
     console.error(`Failed: ${failures.join(', ')}`)
-    // Every ticker failing means a source is down or misconfigured — paint the
-    // run red. Partial failures stay green so one delisting doesn't mask the rest.
-    if (failures.length === stocks.length) process.exit(1)
+    // Every US ticker failing means massive.com is down or misconfigured — paint
+    // the run red. Partial failures stay green so one delisting doesn't mask the rest.
+    if (usStocks.length > 0 && failures.length === usStocks.length) process.exit(1)
   }
 }
 
