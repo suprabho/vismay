@@ -54,7 +54,9 @@ const UPSERT_BATCH = 500
 const REQUEST_DELAY_MS = 400
 const REQUEST_JITTER_MS = 300 // uniform spacing looks like a bot — smear it
 const FETCH_TIMEOUT_MS = 20_000
-const MAX_ATTEMPTS = 3
+// massive.com's free tier throttles to a few calls/minute, so a ticker can get
+// caught mid-window; retry enough times to ride out a full cooldown cycle.
+const MAX_ATTEMPTS = 5
 // massive.com's free tier rate-limits; a 429 pauses the whole run (Retry-After
 // aware) so we glide under the cap rather than hammering it.
 const RATE_LIMIT_BASE_MS = 15_000
@@ -228,7 +230,9 @@ async function fetchMassive(ticker: string, from: string, to: string): Promise<P
       high: b.h ?? null,
       low: b.l ?? null,
       close: b.c,
-      volume: b.v ?? null,
+      // massive.com returns split-adjusted volume, which is fractional; the
+      // dc_stock_prices.volume column is bigint, so round to whole shares.
+      volume: b.v == null ? null : Math.round(b.v),
     })
   }
   return dedupeByDate(rows)
