@@ -40,6 +40,7 @@
     "./footshortsData": "./src/footshortsData.ts",
     "./footshortsShareCards": "./src/footshortsShareCards.ts",
     "./vizmayaShareCards": "./src/vizmayaShareCards.ts",
+    "./videoProjects": "./src/videoProjects.ts",
     "./footshortsBlocks": "./src/footshortsBlocks.ts",
     "./storyDemoConfig": "./src/storyDemoConfig.ts",
     "./storyNewsletter": "./src/storyNewsletter.ts",

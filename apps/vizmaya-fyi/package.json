@@ -48,6 +48,7 @@
     "@vismay/story-pipeline": "workspace:*",
     "@vismay/story-reader": "workspace:*",
     "@vismay/verticals": "workspace:*",
+    "@vismay/viz-admin": "workspace:*",
     "@vismay/viz-engine": "workspace:*",
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/f1-viz": "workspace:*",

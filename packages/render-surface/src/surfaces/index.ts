@@ -16,6 +16,10 @@ export {
   type CanvasFrameSurfaceProps,
 } from './CanvasFrameSurface'
 export {
+  VideoProjectSurface,
+  type VideoProjectSurfaceProps,
+} from './VideoProjectSurface'
+export {
   NewsletterSurface,
   type NewsletterSurfaceProps,
 } from './NewsletterSurface'

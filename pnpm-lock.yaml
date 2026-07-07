@@ -959,6 +959,9 @@ importers:
       '@vismay/verticals':
         specifier: workspace:*
         version: link:../../packages/verticals
+      '@vismay/viz-admin':
+        specifier: workspace:*
+        version: link:../../packages/viz-admin
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../../packages/viz-engine
@@ -1247,6 +1250,9 @@ importers:
       '@vismay/verticals':
         specifier: workspace:*
         version: link:../verticals
+      '@vismay/viz-admin':
+        specifier: workspace:*
+        version: link:../viz-admin
       '@vismay/viz-engine':
         specifier: workspace:*
         version: link:../viz-engine
