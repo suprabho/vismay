@@ -13,10 +13,12 @@ name: Import AI Data Centers stock prices
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_stock_prices writes
-#   STOCKS_HTTPS_PROXY (recommended) — residential proxy URL of the form
-#     http://user:pass@host:port. Yahoo 429s the shared Actions runner IP;
-#     routing through a residential IP is what keeps the run green. Optional —
-#     unset and the run makes direct requests, which CI usually rate-limits.
+# Plus ONE of these — Yahoo 429s the shared Actions runner IP, so the run needs
+# to egress from a residential IP to stay green (data is still Yahoo's either way):
+#   MASSIVE_API_TOKEN  — Massive Render API key; fetches each Yahoo URL from
+#     Massive's residential network (format=raw ⇒ raw JSON). Simplest, one key.
+#   STOCKS_HTTPS_PROXY — residential proxy URL (http://user:pass@host:port).
+# With neither, the run makes direct requests, which CI usually rate-limits.
 
 on:
   schedule:
@@ -65,5 +67,6 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MASSIVE_API_TOKEN: ${{ secrets.MASSIVE_API_TOKEN }}
           STOCKS_HTTPS_PROXY: ${{ secrets.STOCKS_HTTPS_PROXY }}
         run: pnpm ai-data-centers:import-stocks ${{ inputs.full_backfill && '-- --full' || '' }}
