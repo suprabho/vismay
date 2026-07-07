@@ -80,7 +80,7 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
         <div className="px-4 py-10 text-sm text-neutral-500 text-center">
           No recaps yet. Generate one with{' '}
           <code className="font-mono text-neutral-400">pnpm recap</code> in the footshorts
-          worker — it runs automatically off the scores workflow and covers the last 24 hours.
+          worker — it runs automatically twice a day and covers the last 24 hours.
         </div>
       ) : (
         <div className="flex-1 min-h-0 grid grid-cols-[260px_1fr]">
