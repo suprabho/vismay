@@ -1178,3 +1178,122 @@ export async function getDcStockMarket(days = 90): Promise<DcStockSeries[]> {
     }
   })
 }
+
+/** One daily bar destined for dc_stock_prices. */
+export interface DcStockPriceRow {
+  ticker: string
+  trade_date: string
+  open: number | null
+  high: number | null
+  low: number | null
+  close: number
+  volume: number | null
+}
+
+/** A non-US tracked stock the admin can hand-upload Stooq CSV prices for. */
+export interface DcStockUploadTarget {
+  ticker: string
+  name: string
+  market: string
+  /** Most recent trade_date already stored, or null if none yet. */
+  latestDate: string | null
+  /** How many bars are stored for this ticker. */
+  bars: number
+}
+
+/**
+ * The international (non-US) tracked stocks plus their current price coverage,
+ * for the admin "upload international prices" panel. US tickers are excluded —
+ * they come from massive.com in CI; only the non-US names are hand-uploaded.
+ */
+export async function listDcStockUploadTargets(): Promise<DcStockUploadTarget[]> {
+  const sb = createServiceClient()
+  const { data: stocks, error } = await sb
+    .from('dc_stocks')
+    .select('ticker, name, market')
+    .eq('is_active', true)
+    .neq('market', 'US')
+    .order('market')
+    .order('ticker')
+  if (error) throw new Error(`listDcStockUploadTargets stocks: ${error.message}`)
+  const rows = (stocks ?? []) as { ticker: string; name: string; market: string }[]
+  const tickers = rows.map((s) => s.ticker)
+
+  const latest = new Map<string, string>()
+  const bars = new Map<string, number>()
+  if (tickers.length > 0) {
+    const { data: prices, error: pErr } = await sb
+      .from('dc_stock_prices')
+      .select('ticker, trade_date')
+      .in('ticker', tickers)
+      .order('trade_date', { ascending: false })
+      .limit(50_000)
+    if (pErr) throw new Error(`listDcStockUploadTargets prices: ${pErr.message}`)
+    for (const r of (prices ?? []) as { ticker: string; trade_date: string }[]) {
+      if (!latest.has(r.ticker)) latest.set(r.ticker, r.trade_date) // desc ⇒ first is newest
+      bars.set(r.ticker, (bars.get(r.ticker) ?? 0) + 1)
+    }
+  }
+  return rows.map((s) => ({
+    ticker: s.ticker,
+    name: s.name,
+    market: s.market,
+    latestDate: latest.get(s.ticker) ?? null,
+    bars: bars.get(s.ticker) ?? 0,
+  }))
+}
+
+/**
+ * Parse a Stooq daily-OHLCV CSV (`Date,Open,High,Low,Close,Volume`) into
+ * dc_stock_prices rows for one ticker. Stooq's CSV carries no symbol column, so
+ * the ticker is supplied by the caller. Rows with a missing/`N/D` close are
+ * skipped; volume is rounded to whole shares; duplicate dates collapse to the
+ * last bar. Throws if the text isn't a Stooq CSV (e.g. an HTML error page).
+ */
+export function parseStooqCsv(csvText: string, ticker: string): DcStockPriceRow[] {
+  const numOrNull = (s: string | undefined): number | null => {
+    // Number('') and Number('  ') are 0, not NaN — treat blanks as missing.
+    if (s == null || s.trim() === '') return null
+    const n = Number(s)
+    return Number.isFinite(n) ? n : null
+  }
+  const text = csvText.trim()
+  if (!text.startsWith('Date,')) {
+    throw new Error(
+      `${ticker}: not a Stooq daily CSV — expected a "Date,Open,High,Low,Close,Volume" header`
+    )
+  }
+  const byDate = new Map<string, DcStockPriceRow>()
+  const lines = text.split(/\r?\n/)
+  for (let i = 1; i < lines.length; i++) {
+    // Date,Open,High,Low,Close,Volume — no quoting, so a plain split is safe.
+    const [date, open, high, low, close, volume] = lines[i].split(',')
+    const c = Number(close)
+    if (!date || !Number.isFinite(c)) continue // skip N/D / blank closes
+    const vol = numOrNull(volume)
+    byDate.set(date, {
+      ticker,
+      trade_date: date, // Stooq already dates each bar by its local trading day
+      open: numOrNull(open),
+      high: numOrNull(high),
+      low: numOrNull(low),
+      close: c,
+      volume: vol == null ? null : Math.round(vol),
+    })
+  }
+  return [...byDate.values()].sort((a, b) => a.trade_date.localeCompare(b.trade_date))
+}
+
+/** Upsert daily bars into dc_stock_prices (idempotent on ticker+trade_date). */
+export async function upsertDcStockPrices(rows: DcStockPriceRow[]): Promise<number> {
+  if (rows.length === 0) return 0
+  const sb = createServiceClient()
+  const BATCH = 500
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await sb
+      .from('dc_stock_prices')
+      .upsert(rows.slice(i, i + BATCH), { onConflict: 'ticker,trade_date' })
+    if (error) throw new Error(`upsertDcStockPrices: ${error.message}`)
+  }
+  return rows.length
+}

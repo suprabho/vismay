@@ -1,21 +1,20 @@
 name: Import AI Data Centers stock prices
 
-# Weekday pull of daily OHLCV bars for every active dc_stocks ticker, upserted
-# into dc_stock_prices. US tickers come from the massive.com market-data API;
-# the international tickers (TWSE, KRX, TSE, Euronext Amsterdam, HKEX) come from
-# Twelve Data — massive.com is US-only. One run after the US close also captures
-# that day's completed Asian and European sessions. Idempotent on
-# (ticker, trade_date) — the default window overlaps generously and re-runs
-# simply overwrite.
+# Weekday pull of daily OHLCV bars for the US dc_stocks tickers from the
+# massive.com market-data API, upserted into dc_stock_prices. The international
+# tickers (TWSE, KRX, TSE, Euronext Amsterdam, HKEX) aren't on massive.com
+# (US-only) and are hand-uploaded via the admin Pipeline tab instead — see the
+# importer header at apps/vizmaya-fyi/scripts/ai-data-centers/import-stock-prices.ts.
+# Idempotent on (ticker, trade_date) — the default window overlaps generously
+# and re-runs simply overwrite.
 #
-# First deploy: dispatch once with full_backfill=true to load ~5 years of
+# First deploy: dispatch once with full_backfill=true to load ~5 years of US
 # history, then let the schedule keep it fresh.
 #
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_stock_prices writes
 #   MASSIVE_API_TOKEN          — massive.com market-data API key (US tickers)
-#   TWELVEDATA_API_KEY         — Twelve Data API key (international tickers)
 
 on:
   schedule:
@@ -65,5 +64,4 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           MASSIVE_API_TOKEN: ${{ secrets.MASSIVE_API_TOKEN }}
-          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
         run: pnpm ai-data-centers:import-stocks ${{ inputs.full_backfill && '-- --full' || '' }}

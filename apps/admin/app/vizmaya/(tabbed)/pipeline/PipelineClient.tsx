@@ -9,6 +9,7 @@ import type {
 } from '@vismay/content-source/pipelines'
 import { appEpicUrl } from '@/lib/publicSite'
 import { Badge, isStale, timeAgo } from '@/components/vizmaya/pipeline/shared'
+import StockUploadCard from '@/components/vizmaya/pipeline/StockUploadCard'
 
 type Relevance = 'relevant' | 'rejected' | 'all'
 
@@ -176,6 +177,12 @@ export default function PipelineClient({ initialEpic }: { initialEpic: string })
           <div className="text-sm text-neutral-500 py-6">loading pipelines…</div>
         )}
       </section>
+
+      {(selected ? selected.meta.hasStocks : entries.some((e) => e.meta.hasStocks)) && (
+        <section className="px-4 py-4 border-b border-white/5">
+          <StockUploadCard onUploaded={() => setReloadKey((k) => k + 1)} />
+        </section>
+      )}
 
       <section>
         <div className="px-4 py-3 border-b border-white/5 flex items-baseline justify-between">
