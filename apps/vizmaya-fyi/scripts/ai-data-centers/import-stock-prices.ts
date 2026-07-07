@@ -17,6 +17,11 @@
  * and up to three passes over rate-limited tickers with a long cool-down and
  * a fresh session between passes.
  *
+ * The durable fix for CI is to change the egress IP: set STOCKS_HTTPS_PROXY to
+ * a residential proxy URL and every Yahoo request leaves from a real-user IP
+ * instead of the shared runner IP Yahoo blocks. The defences above still run
+ * as a backstop. Unset the var and requests go direct (fine for local dev).
+ *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full        # 5y backfill
  *               pnpm ai-data-centers:import-stocks -- --range 3mo
@@ -24,6 +29,8 @@
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+ * Optional env: STOCKS_HTTPS_PROXY — route Yahoo through a residential proxy
+ *   (http://user:pass@host:port) to dodge datacenter-IP 429s from CI runners.
  *
  * Idempotency: upsert on (ticker, trade_date). Trading days are computed in
  * the exchange's own timezone (meta.exchangeTimezoneName), so a Tokyo bar
@@ -34,10 +41,34 @@
  */
 
 import { config as loadEnv } from 'dotenv'
+import { fetch, ProxyAgent, setGlobalDispatcher, type Response } from 'undici'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
+
+/**
+ * Build an undici ProxyAgent from a proxy URL, lifting any `user:pass` in the
+ * URL into a Proxy-Authorization header (undici wants credentials out of the
+ * CONNECT uri). Handles Massive's gateway
+ * (`http://USER:PASS@network.joinmassive.com:65534`) and any plain host:port.
+ */
+function proxyDispatcher(raw: string): ProxyAgent {
+  const u = new URL(raw)
+  const uri = `${u.protocol}//${u.host}`
+  if (!u.username && !u.password) return new ProxyAgent({ uri })
+  const creds = `${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`
+  return new ProxyAgent({ uri, token: `Basic ${Buffer.from(creds).toString('base64')}` })
+}
+
+// Yahoo sheds anonymous traffic from shared datacenter IPs first, so a plain
+// fetch from a GitHub Actions runner 429s on the very first request. When
+// STOCKS_HTTPS_PROXY is set, route every request in this module through it so
+// Yahoo sees a residential IP. `fetch` is imported from undici (not the global)
+// because the global fetch ignores a userland dispatcher; the Supabase client
+// keeps the global fetch, so DB writes never travel through the proxy.
+const PROXY_URL = process.env.STOCKS_HTTPS_PROXY?.trim() || null
+if (PROXY_URL) setGlobalDispatcher(proxyDispatcher(PROXY_URL))
 
 // query2 is a mirror — trying both hosts rides out per-host rate limiting.
 const YAHOO_HOSTS = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']
@@ -311,6 +342,11 @@ async function main() {
   console.log(
     `Importing ${args.range} of daily bars for ${stocks.length} ticker(s)` +
       (args.dryRun ? ' (dry run)' : '')
+  )
+  console.log(
+    PROXY_URL
+      ? `Routing Yahoo requests through proxy ${new URL(PROXY_URL).host}`
+      : 'No STOCKS_HTTPS_PROXY set — Yahoo requests go direct (expect 429s from CI)'
   )
 
   let session = await createSession()
