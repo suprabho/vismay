@@ -1,14 +1,26 @@
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/lib/AuthProvider';
 import { useFollows, useFollowMutation } from '@/lib/useFollows';
 import { EntityChip } from '@vismay/footshorts-viz/native';
 
 export default function FollowingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { session, loading: authLoading } = useAuth();
   const { data: follows, isLoading } = useFollows();
   const { unfollow } = useFollowMutation();
+
+  if (authLoading) {
+    return (
+      <View className="flex-1 bg-bg items-center justify-center">
+        <ActivityIndicator color="#00D26A" />
+      </View>
+    );
+  }
+
+  if (!session) return <Redirect href="/login" />;
 
   if (isLoading) {
     return (

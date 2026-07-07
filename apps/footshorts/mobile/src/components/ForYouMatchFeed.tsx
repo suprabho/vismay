@@ -4,7 +4,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   Vibration,
   View,
@@ -12,9 +11,11 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useTheme } from '@footshorts/brand/native';
+import type { ColorTokens } from '@footshorts/brand';
 import Animated, {
   LinearTransition,
   runOnJS,
@@ -255,7 +256,8 @@ function WalletCard({
     zIndex: lift.value > 0 ? 1000 : 0,
   }));
 
-  const palette = paletteFor(card.entity.primary_color);
+  const { theme } = useTheme();
+  const palette = paletteFor(card.entity.primary_color, theme.colors);
   const shadowStyle = useAnimatedStyle(() => ({
     borderRadius: 22,
     shadowColor: palette.shadow,
@@ -293,11 +295,13 @@ function CardShell({
   shadowStyle: unknown;
   children: React.ReactNode;
 }) {
-  const palette = paletteFor(entity.primary_color);
+  const { theme } = useTheme();
+  const palette = paletteFor(entity.primary_color, theme.colors);
 
   return (
     <Animated.View style={shadowStyle as any}>
       <View
+        className="bg-surface"
         style={{
           borderRadius: 22,
           overflow: 'hidden',
@@ -305,53 +309,36 @@ function CardShell({
           borderColor: palette.border,
         }}
       >
-        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: palette.base }} />
-        {/* Brand top wash for depth */}
-        <View
-          pointerEvents="none"
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 120, backgroundColor: palette.top }}
-        />
-        {/* Edge-lit top hairline */}
-        <View
-          pointerEvents="none"
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: palette.hairline }}
-        />
+        {/* Brand accent glow — subtle wash near the top, mirrors web's CardShell */}
+        {palette.glow ? (
+          <LinearGradient
+            colors={[palette.glow, 'transparent']}
+            pointerEvents="none"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 130, opacity: 0.22 }}
+          />
+        ) : null}
         <View style={{ padding: 16 }}>{children}</View>
       </View>
     </Animated.View>
   );
 }
 
+// Web's CardShell keeps the card surface at the theme's neutral color always,
+// using the entity's brand color only as a decorative accent (border tint +
+// soft glow) — never as a fill. Mirrored here rather than the old full-brand
+// card background.
 type Palette = {
-  base: string; // full card bg
-  top: string; // top band overlay
   border: string;
-  hairline: string;
+  glow: string | null;
   shadow: string;
-  accent: string;
-  accentText: string;
 };
 
-function paletteFor(hex: string | null | undefined): Palette {
-  const fallback: Palette = {
-    base: 'rgba(22,22,29,0.92)',
-    top: 'rgba(255,255,255,0.05)',
-    border: '#2A2A34',
-    hairline: 'rgba(255,255,255,0.10)',
-    shadow: '#000000',
-    accent: 'rgba(255,255,255,0.10)',
-    accentText: '#F4F4F5',
-  };
-  if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return fallback;
+function paletteFor(hex: string | null | undefined, colors: ColorTokens): Palette {
+  const brand = hex && /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : null;
   return {
-    base: hex + 'CC', // ~80%
-    top: hex + 'FF', // solid brand color band at top for depth
-    border: hex + 'FF',
-    hairline: 'rgba(255,255,255,0.22)',
-    shadow: hex,
-    accent: 'rgba(255,255,255,0.18)',
-    accentText: '#F4F4F5',
+    border: brand ? `${brand}59` : colors.border, // ~35% alpha tint, mirrors web's brandHex()+`${brand}59`
+    glow: brand,
+    shadow: brand ?? '#000000',
   };
 }
 
@@ -405,8 +392,8 @@ function ExpandableBody({
 function SectionLabel({ text }: { text: string }) {
   return (
     <Text
+      className="text-muted"
       style={{
-        color: 'rgba(244,244,245,0.78)',
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 1.8,
@@ -419,25 +406,10 @@ function SectionLabel({ text }: { text: string }) {
   );
 }
 
-function BrandChip({
-  label,
-  palette,
-}: {
-  label: string;
-  palette: Palette;
-}) {
+function BrandChip({ label }: { label: string }) {
   return (
-    <View
-      style={{
-        backgroundColor: palette.accent,
-        borderColor: palette.border,
-        borderWidth: 1,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 999,
-      }}
-    >
-      <Text style={{ color: palette.accentText, fontSize: 11, fontWeight: '600', letterSpacing: 0.2 }}>
+    <View className="rounded-full border border-text/10 bg-text/10 px-2.5 py-1">
+      <Text className="text-text" style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.2 }}>
         {label}
       </Text>
     </View>
@@ -455,17 +427,16 @@ function CollapsedHeader({
   secondary: string | null;
   chipLabel: string | null;
 }) {
-  const palette = paletteFor(entity.primary_color);
   const crestSize = 42;
   return (
     <View className="flex-row items-center">
       {entity.crest_url ? (
         <View
+          className="bg-text/10"
           style={{
             width: crestSize + 10,
             height: crestSize + 10,
             borderRadius: (crestSize + 10) / 2,
-            backgroundColor: 'rgba(255,255,255,0.40)',
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: 12,
@@ -482,21 +453,19 @@ function CollapsedHeader({
       )}
       <View className="flex-1 pr-2">
         <Text
-          style={{ color: '#F4F4F5', fontSize: 17, fontWeight: '700', letterSpacing: 0.1 }}
+          className="text-text"
+          style={{ fontSize: 17, fontWeight: '700', letterSpacing: 0.1 }}
           numberOfLines={1}
         >
           {primary}
         </Text>
         {secondary ? (
-          <Text
-            style={{ color: 'rgba(244,244,245,0.65)', fontSize: 12, marginTop: 2 }}
-            numberOfLines={1}
-          >
+          <Text className="text-muted" style={{ fontSize: 12, marginTop: 2 }} numberOfLines={1}>
             {secondary}
           </Text>
         ) : null}
       </View>
-      {chipLabel ? <BrandChip label={chipLabel} palette={palette} /> : null}
+      {chipLabel ? <BrandChip label={chipLabel} /> : null}
     </View>
   );
 }
@@ -547,11 +516,7 @@ function LeagueCardContent({
         ) : null}
 
         {section.nextMatchday.length > 0 ? (
-          <View
-            className="mt-4 p-4 rounded-xl border-white/20 overflow-hidden"
-          >
-            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+          <View className="mt-4">
             <SectionLabel
               text={
                 section.nextMatchdayNumber != null
@@ -820,7 +785,7 @@ function MatchdayPager({ fixtures }: { fixtures: FixtureRow[] }) {
 
   if (pages.length <= 1) {
     return (
-      <View className='bg-white/20 border border-white/50'>
+      <View className="rounded-lg border border-text/10 bg-text/10">
         {(pages[0] ?? []).map((f) => (
           <MatchRow key={f.id} fixture={f} />
         ))}
@@ -881,7 +846,11 @@ function Carousel({ pages }: { pages: FixtureRow[][] }) {
 
   return (
     <View>
-      <View onLayout={onContainerLayout} style={{ overflow: 'hidden' }}>
+      <View
+        className="rounded-lg border border-text/10 bg-text/10"
+        onLayout={onContainerLayout}
+        style={{ overflow: 'hidden' }}
+      >
         {width > 0 ? (
           <GestureDetector gesture={pan}>
             <Animated.View
@@ -912,12 +881,12 @@ function Carousel({ pages }: { pages: FixtureRow[][] }) {
         {pages.map((_, i) => (
           <View
             key={i}
+            className={i === pageIdx ? 'bg-text' : 'bg-text/30'}
             style={{
               width: i === pageIdx ? 18 : 6,
               height: 6,
               borderRadius: 3,
               marginHorizontal: 3,
-              backgroundColor: i === pageIdx ? '#F4F4F5' : 'rgba(244,244,245,0.30)',
             }}
           />
         ))}
