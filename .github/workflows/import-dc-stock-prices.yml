@@ -1,30 +1,28 @@
 name: Import AI Data Centers stock prices
 
-# Weekday pull of daily OHLCV bars for every active dc_stocks ticker from
-# Yahoo Finance's keyless v8 chart API, upserted into dc_stock_prices. Each
-# company trades on its home exchange (NASDAQ/NYSE, TWSE, KRX, TSE, Euronext
-# Amsterdam, HKEX), so one run after the US close also captures that day's
-# completed Asian and European sessions. Idempotent on (ticker, trade_date) —
-# the default 1mo window overlaps generously and re-runs simply overwrite.
+# Weekday pull of daily OHLCV bars for every active dc_stocks ticker, upserted
+# into dc_stock_prices. US tickers come from the massive.com market-data API;
+# the international tickers (TWSE, KRX, TSE, Euronext Amsterdam, HKEX) come from
+# Stooq's keyless daily CSV — massive.com is US-only. One run after the US close
+# also captures that day's completed Asian and European sessions. Idempotent on
+# (ticker, trade_date) — the default window overlaps generously and re-runs
+# simply overwrite.
 #
-# First deploy: dispatch once with full_backfill=true to load 5 years of
+# First deploy: dispatch once with full_backfill=true to load ~5 years of
 # history, then let the schedule keep it fresh.
 #
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_stock_prices writes
-# Plus ONE of these — Yahoo 429s the shared Actions runner IP, so the run needs
-# to egress from a residential IP to stay green (data is still Yahoo's either way):
-#   MASSIVE_API_TOKEN  — Massive Render API key; fetches each Yahoo URL from
-#     Massive's residential network (format=raw ⇒ raw JSON). Simplest, one key.
-#   STOCKS_HTTPS_PROXY — residential proxy URL (http://user:pass@host:port).
-# With neither, the run makes direct requests, which CI usually rate-limits.
+#   MASSIVE_API_TOKEN          — massive.com market-data API key. Powers the US
+#     tickers; the international tickers use Stooq's keyless CSV, so no other
+#     data secret is needed.
 
 on:
   schedule:
     # 22:45 UTC Mon–Fri — after the US close (21:00 UTC in winter, 20:00 in
-    # summer) with slack for Yahoo's feed to settle; the :45 offset avoids
-    # the top-of-hour Actions queue spike.
+    # summer) with slack for the feeds to settle; the :45 offset avoids the
+    # top-of-hour Actions queue spike.
     - cron: '45 22 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -40,8 +38,8 @@ concurrency:
 jobs:
   import:
     runs-on: ubuntu-latest
-    # Generous: the importer pauses run-wide on Yahoo 429s and makes up to
-    # three passes with 90s/180s cool-downs when the runner IP is throttled.
+    # Generous: massive.com's free tier rate-limits, so the importer glides
+    # under it behind a run-wide 429 cooldown; 30 min is ample headroom.
     timeout-minutes: 30
     environment: Production
     defaults:
@@ -68,5 +66,4 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           MASSIVE_API_TOKEN: ${{ secrets.MASSIVE_API_TOKEN }}
-          STOCKS_HTTPS_PROXY: ${{ secrets.STOCKS_HTTPS_PROXY }}
         run: pnpm ai-data-centers:import-stocks ${{ inputs.full_backfill && '-- --full' || '' }}
