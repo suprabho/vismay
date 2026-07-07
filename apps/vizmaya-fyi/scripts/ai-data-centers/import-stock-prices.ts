@@ -17,6 +17,17 @@
  * and up to three passes over rate-limited tickers with a long cool-down and
  * a fresh session between passes.
  *
+ * The durable fix for CI is to stop egressing from the blocked runner IP.
+ * Two ways, either optional and either sufficient:
+ *   - MASSIVE_API_TOKEN: fetch each Yahoo URL through Massive's Render API
+ *     (Bearer auth, format=raw ⇒ Yahoo's JSON passes through) from Massive's
+ *     residential network. Simplest — one API key, no session needed. Note
+ *     Massive is only the delivery layer; the data is still Yahoo's.
+ *   - STOCKS_HTTPS_PROXY: route requests through a residential HTTP proxy
+ *     (http://user:pass@host:port), egressing from a real-user IP.
+ * The token wins if both are set; with neither, requests go direct (fine for
+ * local dev). The cookie/crumb + retry defences above stay as a backstop.
+ *
  * Run locally:  pnpm ai-data-centers:import-stocks
  *               pnpm ai-data-centers:import-stocks -- --full        # 5y backfill
  *               pnpm ai-data-centers:import-stocks -- --range 3mo
@@ -24,6 +35,9 @@
  * Run in CI:    .github/workflows/import-dc-stock-prices.yml (weekday cron)
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+ * Optional env (pick one to beat CI 429s; see above):
+ *   MASSIVE_API_TOKEN [+ MASSIVE_GEO, default 'us'] — Massive Render API key.
+ *   STOCKS_HTTPS_PROXY — residential proxy URL (http://user:pass@host:port).
  *
  * Idempotency: upsert on (ticker, trade_date). Trading days are computed in
  * the exchange's own timezone (meta.exchangeTimezoneName), so a Tokyo bar
@@ -34,10 +48,43 @@
  */
 
 import { config as loadEnv } from 'dotenv'
+import { fetch, ProxyAgent, setGlobalDispatcher, type Response } from 'undici'
 import { createServiceClient } from '@vismay/content-source/supabase'
 
 loadEnv({ path: '.env.local' })
 loadEnv({ path: '.env' })
+
+/**
+ * Build an undici ProxyAgent from a proxy URL, lifting any `user:pass` in the
+ * URL into a Proxy-Authorization header (undici wants credentials out of the
+ * CONNECT uri). Handles Massive's gateway
+ * (`http://USER:PASS@network.joinmassive.com:65534`) and any plain host:port.
+ */
+function proxyDispatcher(raw: string): ProxyAgent {
+  const u = new URL(raw)
+  const uri = `${u.protocol}//${u.host}`
+  if (!u.username && !u.password) return new ProxyAgent({ uri })
+  const creds = `${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`
+  return new ProxyAgent({ uri, token: `Basic ${Buffer.from(creds).toString('base64')}` })
+}
+
+// Yahoo sheds anonymous traffic from shared datacenter IPs first, so a plain
+// fetch from a GitHub Actions runner 429s on the very first request. When
+// STOCKS_HTTPS_PROXY is set, route every request in this module through it so
+// Yahoo sees a residential IP. `fetch` is imported from undici (not the global)
+// because the global fetch ignores a userland dispatcher; the Supabase client
+// keeps the global fetch, so DB writes never travel through the proxy.
+const PROXY_URL = process.env.STOCKS_HTTPS_PROXY?.trim() || null
+if (PROXY_URL) setGlobalDispatcher(proxyDispatcher(PROXY_URL))
+
+// Alternative to the raw proxy: Massive's Render API (API-key auth). It fetches
+// the Yahoo URL from its own residential network and, with format=raw, returns
+// Yahoo's JSON body verbatim — so it dodges the runner-IP 429s with a single
+// Bearer token instead of a user:pass proxy URL. Takes precedence over the
+// proxy when set; MASSIVE_GEO pins the exit country (Yahoo is US-centric).
+const MASSIVE_TOKEN = process.env.MASSIVE_API_TOKEN?.trim() || null
+const MASSIVE_GEO = process.env.MASSIVE_GEO?.trim() || 'us'
+const MASSIVE_ENDPOINT = 'https://render.joinmassive.com/browser'
 
 // query2 is a mirror — trying both hosts rides out per-host rate limiting.
 const YAHOO_HOSTS = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']
@@ -189,6 +236,39 @@ function retryAfterMs(res: Response): number {
 }
 
 /**
+ * Build the request for one symbol's chart. Direct/proxy mode hits Yahoo
+ * (query1/query2) with the browser session; Massive mode wraps the same Yahoo
+ * URL in the Render API (Bearer auth, format=raw ⇒ Yahoo's JSON passes
+ * through), so the fetch egresses from Massive's residential network instead of
+ * the runner IP. crumb/cookie only apply to the direct path — with Massive the
+ * request to Yahoo comes from Massive's own browser, not us.
+ */
+function buildChartRequest(
+  symbol: string,
+  range: string,
+  host: string,
+  session: YahooSession
+): { url: string; headers: Record<string, string> } {
+  const yahooUrl =
+    `https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}` +
+    `?range=${encodeURIComponent(range)}&interval=1d&includePrePost=false` +
+    (!MASSIVE_TOKEN && session.crumb ? `&crumb=${encodeURIComponent(session.crumb)}` : '')
+  if (MASSIVE_TOKEN) {
+    const u = new URL(MASSIVE_ENDPOINT)
+    u.searchParams.set('url', yahooUrl)
+    u.searchParams.set('format', 'raw') // origin body passes through verbatim
+    if (MASSIVE_GEO) u.searchParams.set('geo', MASSIVE_GEO)
+    return {
+      url: u.toString(),
+      headers: { authorization: `Bearer ${MASSIVE_TOKEN}`, accept: 'application/json' },
+    }
+  }
+  const headers: Record<string, string> = { 'user-agent': USER_AGENT, accept: 'application/json' }
+  if (session.cookie) headers.cookie = session.cookie
+  return { url: yahooUrl, headers }
+}
+
+/**
  * Fetch one symbol's daily bars, rotating hosts with backoff. Returns null
  * for a symbol Yahoo doesn't know (logged upstream) — everything else throws
  * after the retries are exhausted; RateLimitError specifically when every
@@ -199,20 +279,15 @@ async function fetchChart(
   range: string,
   session: YahooSession
 ): Promise<YahooChart | null> {
-  const path =
-    `/v8/finance/chart/${encodeURIComponent(symbol)}` +
-    `?range=${encodeURIComponent(range)}&interval=1d&includePrePost=false` +
-    (session.crumb ? `&crumb=${encodeURIComponent(session.crumb)}` : '')
-  const headers: Record<string, string> = { 'user-agent': USER_AGENT, accept: 'application/json' }
-  if (session.cookie) headers.cookie = session.cookie
   let lastErr: Error | null = null
   let only429s = true
   for (let attempt = 0; attempt < MAX_FETCH_ROUNDS; attempt++) {
     for (const host of YAHOO_HOSTS) {
       await limiter.gate()
       try {
-        const res = await fetch(`https://${host}${path}`, {
-          headers,
+        const req = buildChartRequest(symbol, range, host, session)
+        const res = await fetch(req.url, {
+          headers: req.headers,
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         })
         if (res.status === 404) return null
@@ -220,7 +295,7 @@ async function fetchChart(
           limiter.settle()
           return (await res.json()) as YahooChart
         }
-        lastErr = new Error(`${host} ${res.status} ${res.statusText}`)
+        lastErr = new Error(`${MASSIVE_TOKEN ? 'massive' : host} ${res.status} ${res.statusText}`)
         if (res.status === 429) limiter.hit(retryAfterMs(res))
         else only429s = false
       } catch (err) {
@@ -287,6 +362,13 @@ function shapeRows(ticker: string, chart: YahooChart): PriceRow[] {
   return [...byDate.values()].sort((a, b) => a.trade_date.localeCompare(b.trade_date))
 }
 
+/** One-line summary of how this run reaches Yahoo, for the startup log. */
+function transportLabel(): string {
+  if (MASSIVE_TOKEN) return `Fetching via Massive Render API (geo=${MASSIVE_GEO})`
+  if (PROXY_URL) return `Routing Yahoo requests through proxy ${new URL(PROXY_URL).host}`
+  return 'No MASSIVE_API_TOKEN or STOCKS_HTTPS_PROXY set — going direct (expect 429s from CI)'
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const sb = createServiceClient()
@@ -312,13 +394,19 @@ async function main() {
     `Importing ${args.range} of daily bars for ${stocks.length} ticker(s)` +
       (args.dryRun ? ' (dry run)' : '')
   )
+  console.log(transportLabel())
 
-  let session = await createSession()
-  console.log(
-    session.cookie
-      ? `Yahoo session ready (cookie${session.crumb ? ' + crumb' : ''})`
-      : 'No Yahoo session cookie — continuing keyless'
-  )
+  // Massive fetches Yahoo from its own browser/IP, so our cookie+crumb (bound to
+  // the runner IP) buys nothing there — skip the bootstrap in API mode.
+  let session: YahooSession = { cookie: null, crumb: null }
+  if (!MASSIVE_TOKEN) {
+    session = await createSession()
+    console.log(
+      session.cookie
+        ? `Yahoo session ready (cookie${session.crumb ? ' + crumb' : ''})`
+        : 'No Yahoo session cookie — continuing keyless'
+    )
+  }
 
   let totalRows = 0
   const failures: string[] = [] // 404s / empty responses — never retried
@@ -332,8 +420,9 @@ async function main() {
           `after a ${cooldown / 1000}s cool-down`
       )
       await sleep(cooldown)
-      // A fresh cookie often lands in a different rate bucket.
-      session = await createSession()
+      // A fresh cookie often lands in a different rate bucket. Massive rotates
+      // exit IPs itself, so there's no session to refresh in API mode.
+      if (!MASSIVE_TOKEN) session = await createSession()
       limiter.settle()
     }
 
