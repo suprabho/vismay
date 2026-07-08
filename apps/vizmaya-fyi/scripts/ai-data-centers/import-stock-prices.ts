@@ -51,9 +51,15 @@ const US_TZ = 'America/New_York'
 // dc-yahoo-stock-scraper actor (e.g. `username~dc-yahoo-stock-scraper`).
 const APIFY_TOKEN = process.env.APIFY_TOKEN?.trim() || null
 const APIFY_ACTOR_ID = process.env.APIFY_ACTOR_ID?.trim() || null
-// run-sync-get-dataset-items runs the actor and returns its dataset in one call;
-// the platform caps the synchronous wait at ~5 min, ample for a few tickers.
-const APIFY_TIMEOUT_MS = 300_000
+// We start the actor run async and poll its status rather than using
+// run-sync-get-dataset-items: the platform hard-caps the synchronous wait at
+// ~5 min, and a cold-start + residential-proxy scrape of a handful of tickers
+// can run past that (which is what kept this cron failing — the client aborted
+// at 300s while the actor was still going). Polling lets it take as long as it
+// needs, up to a generous overall budget.
+const APIFY_RUN_BUDGET_MS = 12 * 60_000 // total wait for the actor run to finish
+const APIFY_POLL_INTERVAL_MS = 5_000 // status poll cadence
+const APIFY_REQUEST_TIMEOUT_MS = 30_000 // per REST call (start / poll / dataset read)
 const USER_AGENT =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
@@ -263,11 +269,27 @@ interface ApifyBar {
   volume?: number | null
 }
 
+/** Small helper: one Apify REST call with a per-request timeout + readable errors. */
+async function apifyFetch(url: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(url, {
+    ...init,
+    headers: { accept: 'application/json', ...(init?.headers ?? {}) },
+    signal: AbortSignal.timeout(APIFY_REQUEST_TIMEOUT_MS),
+  })
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).slice(0, 200).replace(/\s+/g, ' ').trim()
+    throw new Error(`apify ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ''}`)
+  }
+  return res
+}
+
 /**
- * Daily bars for the international tickers via the Apify actor. One synchronous
- * REST call runs the actor (it scrapes Yahoo on a residential IP, looping all
- * tickers internally) and returns its whole dataset; we group the rows by ticker
- * so each is reported + upserted independently. Throws on transport/actor error.
+ * Daily bars for the international tickers via the Apify actor. Starts the run
+ * async (the actor scrapes Yahoo on a residential IP, looping all tickers
+ * internally), polls until it reaches a terminal status, then reads its dataset
+ * and groups the rows by ticker so each is reported + upserted independently.
+ * Polling avoids the ~5-min synchronous-endpoint cap. Throws on transport /
+ * non-success terminal status / timeout.
  */
 async function fetchApifyIntl(
   tickers: string[],
@@ -276,20 +298,56 @@ async function fetchApifyIntl(
   if (!APIFY_TOKEN || !APIFY_ACTOR_ID) {
     throw new Error('APIFY_TOKEN / APIFY_ACTOR_ID not set — cannot fetch international tickers')
   }
-  const url =
-    `https://api.apify.com/v2/acts/${encodeURIComponent(APIFY_ACTOR_ID)}` +
-    `/run-sync-get-dataset-items?token=${encodeURIComponent(APIFY_TOKEN)}&clean=true`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'application/json' },
-    body: JSON.stringify({ tickers, range: yahooRange(lookbackDays), interval: '1d' }),
-    signal: AbortSignal.timeout(APIFY_TIMEOUT_MS),
-  })
-  if (!res.ok) {
-    const detail = (await res.text().catch(() => '')).slice(0, 200).replace(/\s+/g, ' ').trim()
-    throw new Error(`apify ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ''}`)
+  const tok = encodeURIComponent(APIFY_TOKEN)
+
+  // 1. Start the run.
+  const startRes = await apifyFetch(
+    `https://api.apify.com/v2/acts/${encodeURIComponent(APIFY_ACTOR_ID)}/runs?token=${tok}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tickers, range: yahooRange(lookbackDays), interval: '1d' }),
+    }
+  )
+  const started = ((await startRes.json()) as { data?: { id?: string } }).data
+  const runId = started?.id
+  if (!runId) throw new Error('apify: run start returned no run id')
+
+  // 2. Poll the run until it terminates or we run out of budget.
+  const deadline = Date.now() + APIFY_RUN_BUDGET_MS
+  let datasetId: string | undefined
+  for (;;) {
+    await sleep(APIFY_POLL_INTERVAL_MS)
+    const pollRes = await apifyFetch(
+      `https://api.apify.com/v2/actor-runs/${encodeURIComponent(runId)}?token=${tok}`
+    )
+    const run = ((await pollRes.json()) as {
+      data?: { status?: string; defaultDatasetId?: string }
+    }).data
+    const status = run?.status
+    if (status === 'SUCCEEDED') {
+      datasetId = run?.defaultDatasetId
+      break
+    }
+    if (status && status !== 'RUNNING' && status !== 'READY') {
+      // FAILED / ABORTED / TIMED-OUT — surface it.
+      throw new Error(`apify: run ${runId} ended ${status}`)
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `apify: run ${runId} still ${status ?? 'pending'} after ${Math.round(
+          APIFY_RUN_BUDGET_MS / 60_000
+        )} min`
+      )
+    }
   }
-  const items = (await res.json()) as ApifyBar[]
+  if (!datasetId) throw new Error('apify: succeeded run has no dataset id')
+
+  // 3. Read the dataset.
+  const itemsRes = await apifyFetch(
+    `https://api.apify.com/v2/datasets/${encodeURIComponent(datasetId)}/items?token=${tok}&clean=true`
+  )
+  const items = (await itemsRes.json()) as ApifyBar[]
   if (!Array.isArray(items)) throw new Error('apify: unexpected response (expected a dataset array)')
 
   const byTicker = new Map<string, PriceRow[]>()

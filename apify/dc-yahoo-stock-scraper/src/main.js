@@ -100,26 +100,31 @@ async function fetchTicker(ticker) {
   throw lastErr ?? new Error('fetch failed')
 }
 
-let ok = 0
-let failed = 0
-for (const ticker of tickers) {
-  try {
-    const rows = await fetchTicker(ticker)
-    if (rows.length === 0) {
-      console.warn(`${ticker}: 0 bars`)
-      failed++
-      continue
+// Scrape all tickers concurrently — each uses its own proxy session, so there's
+// no shared rate limit to respect, and running them in parallel keeps the whole
+// run well under the caller's budget even when a residential IP is slow.
+const results = await Promise.all(
+  tickers.map(async (ticker) => {
+    try {
+      const rows = await fetchTicker(ticker)
+      if (rows.length === 0) {
+        console.warn(`${ticker}: 0 bars`)
+        return false
+      }
+      await Actor.pushData(rows)
+      console.log(
+        `${ticker}: ${rows.length} bars (${rows[0].trade_date} → ${rows[rows.length - 1].trade_date})`,
+      )
+      return true
+    } catch (err) {
+      console.error(`${ticker}: ${err?.message ?? err}`)
+      return false
     }
-    await Actor.pushData(rows)
-    console.log(
-      `${ticker}: ${rows.length} bars (${rows[0].trade_date} → ${rows[rows.length - 1].trade_date})`,
-    )
-    ok++
-  } catch (err) {
-    console.error(`${ticker}: ${err?.message ?? err}`)
-    failed++
-  }
-}
+  }),
+)
+
+const ok = results.filter(Boolean).length
+const failed = results.length - ok
 
 console.log(`Done — ${ok}/${tickers.length} ok, ${failed} failed`)
 await Actor.exit()
