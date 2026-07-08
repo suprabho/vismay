@@ -7,10 +7,13 @@ import type { DcStockUploadTarget } from '@vismay/content-source/epics'
 // Stooq, so we key off market, not the Yahoo-style ticker suffix).
 const STOOQ_SUFFIX: Record<string, string> = { TW: 'tw', KR: 'kr', JP: 'jp', NL: 'nl', HK: 'hk' }
 
-function stooqDownloadUrl(ticker: string, market: string): string | null {
+function stooqDataUrl(ticker: string, market: string): string | null {
   const suffix = STOOQ_SUFFIX[market]
   if (!suffix) return null
-  return `https://stooq.com/q/d/l/?s=${ticker.split('.')[0].toLowerCase()}.${suffix}&i=d`
+  // The history *page*, not the raw /q/d/l/ endpoint — hitting that directly
+  // returns "Access denied" without a session. Opening the page establishes it;
+  // Stooq's own "Download data in csv file" link on the page then works.
+  return `https://stooq.com/q/d/?s=${ticker.split('.')[0].toLowerCase()}.${suffix}`
 }
 
 type RowState = { status: 'idle' | 'uploading' | 'ok' | 'error'; message?: string }
@@ -77,9 +80,11 @@ export default function StockUploadCard({ onUploaded }: { onUploaded?: () => voi
         <div>
           <h3 className="font-medium">International prices — Stooq upload</h3>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Stooq blocks CI&apos;s datacenter IPs, so these non-US tickers are hand-loaded: download
-            each CSV (opens Stooq in a new tab), then upload it here. US tickers come from
-            massive.com automatically.
+            Stooq blocks CI&apos;s datacenter IPs, so these non-US tickers are hand-loaded. Click a
+            ticker&apos;s <span className="text-neutral-400">Stooq ↗</span> to open its history page,
+            use Stooq&apos;s own <em>Download data in csv file</em> link, then upload that file here.
+            (Stooq rate-limits — if a file reads &ldquo;Access denied&rdquo;, wait a bit and retry.)
+            US tickers come from massive.com automatically.
           </p>
         </div>
         <button
@@ -98,7 +103,7 @@ export default function StockUploadCard({ onUploaded }: { onUploaded?: () => voi
       <ul className="mt-3 divide-y divide-white/5">
         {(targets ?? []).map((t) => {
           const rs = rowState[t.ticker] ?? { status: 'idle' as const }
-          const dl = stooqDownloadUrl(t.ticker, t.market)
+          const dl = stooqDataUrl(t.ticker, t.market)
           return (
             <li key={t.ticker} className="py-2 flex items-center gap-3">
               <div className="min-w-0 flex-1">
@@ -122,9 +127,9 @@ export default function StockUploadCard({ onUploaded }: { onUploaded?: () => voi
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-neutral-400 hover:text-white shrink-0"
-                  title="Download the daily OHLCV CSV from Stooq"
+                  title="Open this ticker's history on Stooq, then use its download link"
                 >
-                  ⬇ Stooq
+                  Stooq ↗
                 </a>
               )}
               <input
