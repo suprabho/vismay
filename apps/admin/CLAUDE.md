@@ -59,6 +59,18 @@ changes.
   pipelines.ts, which map/merge the per-epic readers (`getDcPipelineStats()`,
   `listDcNewsForAdmin()`, … in
   [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)).
+- **US stock sparklines (AI Data Centers only):** a card
+  ([components/vizmaya/pipeline/StockMarketCard.tsx](components/vizmaya/pipeline/StockMarketCard.tsx),
+  same `meta.hasStocks` gate) that renders one compact area sparkline per US
+  ticker (grouped by `dc_stocks.category`, window-selectable 30/90/180/365d),
+  with latest close, first→last `changePct`, and a stale-date warning. Backed
+  by `GET /api/vizmaya/pipeline/stock-market`
+  ([route](<app/api/vizmaya/pipeline/stock-market/route.ts>)) → `getDcStockMarket`
+  from `@vismay/content-source/epics` (the same reader the public
+  `/api/ai-data-centers/stocks` uses, here `isAuthed()`-gated). The route
+  returns every ticker; the client filters to `market === 'US'` (US prices land
+  automatically from massive.com — the non-US names are covered by the Stooq
+  upload card below). Inline SVG, no chart lib, matching the volume-bars idiom.
 - **International stock upload (AI Data Centers only):** a card
   ([components/vizmaya/pipeline/StockUploadCard.tsx](components/vizmaya/pipeline/StockUploadCard.tsx),
   shown when the scoped/any epic has `meta.hasStocks`) for hand-loading the
