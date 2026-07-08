@@ -1244,11 +1244,14 @@ export async function listDcStockUploadTargets(): Promise<DcStockUploadTarget[]>
 }
 
 /**
- * Parse a Stooq daily-OHLCV CSV (`Date,Open,High,Low,Close,Volume`) into
- * dc_stock_prices rows for one ticker. Stooq's CSV carries no symbol column, so
- * the ticker is supplied by the caller. Rows with a missing/`N/D` close are
- * skipped; volume is rounded to whole shares; duplicate dates collapse to the
- * last bar. Throws if the text isn't a Stooq CSV (e.g. an HTML error page).
+ * Parse a daily-OHLCV CSV into dc_stock_prices rows for one ticker. Columns are
+ * resolved by header name, so it accepts Stooq's `Date,Open,High,Low,Close,
+ * Volume` and any export with those named columns (e.g. Yahoo's, whose extra
+ * `Adj Close` is ignored). The CSV has no symbol, so the ticker is supplied by
+ * the caller. Only `YYYY-MM-DD` rows with a finite close are kept; volume is
+ * rounded to whole shares; duplicate dates collapse to the last bar. Throws if
+ * the header lacks Date/Close — e.g. when Stooq serves an "Access denied" /
+ * rate-limit page instead of data.
  */
 export function parseStooqCsv(csvText: string, ticker: string): DcStockPriceRow[] {
   const numOrNull = (s: string | undefined): number | null => {
@@ -1257,27 +1260,39 @@ export function parseStooqCsv(csvText: string, ticker: string): DcStockPriceRow[
     const n = Number(s)
     return Number.isFinite(n) ? n : null
   }
-  const text = csvText.trim()
-  if (!text.startsWith('Date,')) {
+  const lines = csvText.trim().split(/\r?\n/)
+  // Resolve columns by header name so Stooq, Yahoo (extra Adj Close), etc. all
+  // work regardless of order.
+  const header = (lines[0] ?? '').split(',').map((h) => h.trim().toLowerCase())
+  const di = header.indexOf('date')
+  const ci = header.indexOf('close')
+  if (di < 0 || ci < 0) {
+    const preview = (lines[0] ?? '').slice(0, 80).replace(/\s+/g, ' ').trim()
     throw new Error(
-      `${ticker}: not a Stooq daily CSV — expected a "Date,Open,High,Low,Close,Volume" header`
+      `${ticker}: not a daily-OHLCV CSV — need Date + Close columns. Got: "${preview || 'empty file'}"`
     )
   }
+  const oi = header.indexOf('open')
+  const hi = header.indexOf('high')
+  const lo = header.indexOf('low')
+  const vi = header.indexOf('volume')
+  const at = (cols: string[], i: number) => (i >= 0 ? cols[i] : undefined)
+
   const byDate = new Map<string, DcStockPriceRow>()
-  const lines = text.split(/\r?\n/)
   for (let i = 1; i < lines.length; i++) {
-    // Date,Open,High,Low,Close,Volume — no quoting, so a plain split is safe.
-    const [date, open, high, low, close, volume] = lines[i].split(',')
-    const c = Number(close)
-    if (!date || !Number.isFinite(c)) continue // skip N/D / blank closes
-    const vol = numOrNull(volume)
+    const cols = lines[i].split(',')
+    const date = at(cols, di)?.trim()
+    const close = Number(at(cols, ci))
+    // Skip blank/`N/D` closes and any non-ISO date (stray header/footer rows).
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(close)) continue
+    const vol = numOrNull(at(cols, vi))
     byDate.set(date, {
       ticker,
-      trade_date: date, // Stooq already dates each bar by its local trading day
-      open: numOrNull(open),
-      high: numOrNull(high),
-      low: numOrNull(low),
-      close: c,
+      trade_date: date, // already the local trading day
+      open: numOrNull(at(cols, oi)),
+      high: numOrNull(at(cols, hi)),
+      low: numOrNull(at(cols, lo)),
+      close,
       volume: vol == null ? null : Math.round(vol),
     })
   }
