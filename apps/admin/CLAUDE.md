@@ -69,15 +69,17 @@ changes.
   from `@vismay/content-source/epics` (the same reader the public
   `/api/ai-data-centers/stocks` uses, here `isAuthed()`-gated). The route
   returns every ticker; the client filters to `market === 'US'` (US prices land
-  automatically from massive.com — the non-US names are covered by the Stooq
-  upload card below). Inline SVG, no chart lib, matching the volume-bars idiom.
-- **International stock upload (AI Data Centers only):** a card
+  automatically from massive.com — the non-US names come from the Apify importer,
+  with the upload card below as manual fallback). Inline SVG, no chart lib, matching the volume-bars idiom.
+- **International stock upload (AI Data Centers only) — manual fallback:** a card
   ([components/vizmaya/pipeline/StockUploadCard.tsx](components/vizmaya/pipeline/StockUploadCard.tsx),
   shown when the scoped/any epic has `meta.hasStocks`) for hand-loading the
-  non-US tickers. massive.com (the US price source) is US-only and every free
-  API for TW/KR/JP/NL/HK is plan-gated or bot-gates CI IPs, so the daily Stooq
-  CSV is downloaded in a browser (each row links straight to it) and uploaded
-  to `POST /api/vizmaya/pipeline/stock-prices`
+  non-US tickers. The **primary** path is now automated — the cron scrapes Yahoo
+  for the international tickers via the Apify actor `apify/dc-yahoo-stock-scraper`
+  (residential proxy, since Yahoo blocks CI's datacenter IP); see
+  [apps/vizmaya-fyi/CLAUDE.md](../vizmaya-fyi/CLAUDE.md). This card stays as a
+  backstop for days Apify/Yahoo misbehave: a browser-downloaded Stooq CSV (each
+  row links straight to it) uploaded to `POST /api/vizmaya/pipeline/stock-prices`
   ([route](<app/api/vizmaya/pipeline/stock-prices/route.ts>)), which validates
   the ticker and runs `parseStooqCsv` + `upsertDcStockPrices` from
   `@vismay/content-source/epics`. The GET on the same route
