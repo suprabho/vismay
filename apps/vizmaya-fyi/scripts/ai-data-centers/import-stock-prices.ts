@@ -1,15 +1,18 @@
 /**
  * AI Data Centers stock price importer — populates dc_stock_prices with daily
- * OHLCV bars for the US tickers (market='US') from massive.com's market-data
- * REST API (a keyed, licensed, Polygon-compatible aggregates endpoint).
+ * OHLCV bars for every tracked ticker, split by exchange:
  *
- * The international tickers (TW/KR/JP/NL/HK) are NOT fetched here: massive.com
- * is US-only, and every free API that covers those exchanges is either
- * plan-gated (Twelve Data, Alpha Vantage) or bot-gates CI's datacenter IPs
- * (Stooq, Yahoo). They're hand-uploaded instead through the admin Pipeline tab
- * (/vizmaya/pipeline → AI Data Centers → "International prices — Stooq upload"),
- * which parses a browser-downloaded Stooq CSV and upserts the same rows via
- * parseStooqCsv + upsertDcStockPrices in @vismay/content-source/epics.
+ *   • US tickers (market='US') ← massive.com's market-data REST API (a keyed,
+ *     licensed, Polygon-compatible aggregates endpoint).
+ *   • International tickers (TW/KR/JP/NL/HK) ← Yahoo Finance, scraped by an
+ *     Apify actor (apify/dc-yahoo-stock-scraper) running on a residential proxy.
+ *
+ * Why the split: Yahoo blocks datacenter IPs, so CI (a datacenter IP) can't hit
+ * it directly — that's what kept this cron failing. Apify runs the same fetch on
+ * a residential IP and we pull the finished rows over its REST API. massive.com
+ * covers only US listings, so it stays the US source. (The admin Pipeline tab's
+ * Stooq upload — parseStooqCsv + upsertDcStockPrices — remains as a manual
+ * fallback if Apify ever has an off day.)
  *
  * Upsert is idempotent on (ticker, trade_date); prices stay in the listing's
  * native currency; close is split-adjusted.
@@ -22,10 +25,14 @@
  *
  * Required env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  *   MASSIVE_API_TOKEN — massive.com REST API key (US tickers).
+ *   APIFY_TOKEN + APIFY_ACTOR_ID — Apify API token and the deployed
+ *     dc-yahoo-stock-scraper actor id (international tickers). Missing ⇒ the
+ *     international tickers are skipped with a note (US still imports).
  *
- * Idempotency: upsert on (ticker, trade_date). massive.com daily timestamps are
- * converted to trade dates in US/Eastern. A bar written mid-session is partial
- * but self-heals on the next run.
+ * Idempotency: upsert on (ticker, trade_date). Daily timestamps are converted to
+ * trade dates in the exchange's own timezone (US/Eastern for massive.com; the
+ * exchange tz for Yahoo). A bar written mid-session is partial but self-heals on
+ * the next run.
  */
 
 import { config as loadEnv } from 'dotenv'
@@ -38,6 +45,15 @@ const MASSIVE_API_BASE = 'https://api.massive.com'
 const MASSIVE_KEY = process.env.MASSIVE_API_TOKEN?.trim() || null
 // massive.com/Polygon daily aggregate timestamps are Eastern-Time day starts.
 const US_TZ = 'America/New_York'
+
+// Apify runs the Yahoo scrape for the international tickers on a residential IP
+// (CI's datacenter IP is blocked by Yahoo). APIFY_ACTOR_ID is the deployed
+// dc-yahoo-stock-scraper actor (e.g. `username~dc-yahoo-stock-scraper`).
+const APIFY_TOKEN = process.env.APIFY_TOKEN?.trim() || null
+const APIFY_ACTOR_ID = process.env.APIFY_ACTOR_ID?.trim() || null
+// run-sync-get-dataset-items runs the actor and returns its dataset in one call;
+// the platform caps the synchronous wait at ~5 min, ample for a few tickers.
+const APIFY_TIMEOUT_MS = 300_000
 const USER_AGENT =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
@@ -226,6 +242,89 @@ async function fetchMassive(ticker: string, from: string, to: string): Promise<P
   return dedupeByDate(rows)
 }
 
+/** Smallest Yahoo `range` window that comfortably covers a lookback in days. */
+function yahooRange(lookbackDays: number): string {
+  if (lookbackDays <= 25) return '1mo'
+  if (lookbackDays <= 80) return '3mo'
+  if (lookbackDays <= 170) return '6mo'
+  if (lookbackDays <= 350) return '1y'
+  if (lookbackDays <= 700) return '2y'
+  if (lookbackDays <= 1900) return '5y' // --full is ~5y (1855d)
+  return 'max'
+}
+
+interface ApifyBar {
+  ticker?: string
+  trade_date?: string
+  open?: number | null
+  high?: number | null
+  low?: number | null
+  close?: number | null
+  volume?: number | null
+}
+
+/**
+ * Daily bars for the international tickers via the Apify actor. One synchronous
+ * REST call runs the actor (it scrapes Yahoo on a residential IP, looping all
+ * tickers internally) and returns its whole dataset; we group the rows by ticker
+ * so each is reported + upserted independently. Throws on transport/actor error.
+ */
+async function fetchApifyIntl(
+  tickers: string[],
+  lookbackDays: number
+): Promise<Map<string, PriceRow[]>> {
+  if (!APIFY_TOKEN || !APIFY_ACTOR_ID) {
+    throw new Error('APIFY_TOKEN / APIFY_ACTOR_ID not set — cannot fetch international tickers')
+  }
+  const url =
+    `https://api.apify.com/v2/acts/${encodeURIComponent(APIFY_ACTOR_ID)}` +
+    `/run-sync-get-dataset-items?token=${encodeURIComponent(APIFY_TOKEN)}&clean=true`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ tickers, range: yahooRange(lookbackDays), interval: '1d' }),
+    signal: AbortSignal.timeout(APIFY_TIMEOUT_MS),
+  })
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).slice(0, 200).replace(/\s+/g, ' ').trim()
+    throw new Error(`apify ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ''}`)
+  }
+  const items = (await res.json()) as ApifyBar[]
+  if (!Array.isArray(items)) throw new Error('apify: unexpected response (expected a dataset array)')
+
+  const byTicker = new Map<string, PriceRow[]>()
+  for (const it of items) {
+    if (!it || typeof it.ticker !== 'string' || !it.trade_date || typeof it.close !== 'number') continue
+    const arr = byTicker.get(it.ticker) ?? []
+    arr.push({
+      ticker: it.ticker,
+      trade_date: it.trade_date,
+      open: it.open ?? null,
+      high: it.high ?? null,
+      low: it.low ?? null,
+      close: it.close,
+      volume: it.volume == null ? null : Math.round(it.volume),
+    })
+    byTicker.set(it.ticker, arr)
+  }
+  for (const [t, rows] of byTicker) byTicker.set(t, dedupeByDate(rows))
+  return byTicker
+}
+
+/** Upsert a ticker's bars into dc_stock_prices in batches (idempotent). */
+async function upsertRows(
+  sb: ReturnType<typeof createServiceClient>,
+  rows: PriceRow[]
+): Promise<void> {
+  for (let j = 0; j < rows.length; j += UPSERT_BATCH) {
+    const batch = rows.slice(j, j + UPSERT_BATCH)
+    const { error } = await sb
+      .from('dc_stock_prices')
+      .upsert(batch, { onConflict: 'ticker,trade_date' })
+    if (error) throw new Error(`upsert: ${error.message}`)
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const sb = createServiceClient()
@@ -250,24 +349,31 @@ async function main() {
   const { from, to } = dateWindow(args.lookbackDays)
   const usStocks = stocks.filter((s) => s.market === 'US')
   const intlStocks = stocks.filter((s) => s.market !== 'US')
+  const apifyConfigured = Boolean(APIFY_TOKEN && APIFY_ACTOR_ID)
   console.log(
-    `Importing daily bars ${from} → ${to} for ${usStocks.length} US ticker(s) via massive.com` +
+    `Importing daily bars ${from} → ${to}: ${usStocks.length} US via massive.com, ` +
+      `${intlStocks.length} international via Apify` +
       (args.dryRun ? ' (dry run)' : '')
   )
   if (usStocks.length > 0 && !MASSIVE_KEY) {
     console.error('⚠ MASSIVE_API_TOKEN not set — the US tickers will fail until it is')
   }
-  if (intlStocks.length > 0) {
-    console.log(
-      `Skipping ${intlStocks.length} international ticker(s) — hand-uploaded via the admin ` +
-        `Pipeline tab: ${intlStocks.map((s) => s.ticker).join(', ')}`
+  if (intlStocks.length > 0 && !apifyConfigured) {
+    console.error(
+      `⚠ APIFY_TOKEN / APIFY_ACTOR_ID not set — skipping ${intlStocks.length} international ` +
+        `ticker(s) until they are: ${intlStocks.map((s) => s.ticker).join(', ')}`
     )
   }
 
   let totalRows = 0
   const failures: string[] = []
+  // Count only tickers we actually attempt (an unconfigured source is skipped,
+  // not failed) so "everything we tried failed" can paint the run red.
+  let attempted = 0
 
+  // US tickers — massive.com, one request per ticker under a shared 429 gate.
   for (const stock of usStocks) {
+    attempted++
     try {
       const rows = await fetchMassive(stock.ticker, from, to)
       if (rows.length === 0) {
@@ -275,15 +381,7 @@ async function main() {
         console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars in range`)
         continue
       }
-      if (!args.dryRun) {
-        for (let j = 0; j < rows.length; j += UPSERT_BATCH) {
-          const batch = rows.slice(j, j + UPSERT_BATCH)
-          const { error: upsertErr } = await sb
-            .from('dc_stock_prices')
-            .upsert(batch, { onConflict: 'ticker,trade_date' })
-          if (upsertErr) throw new Error(`upsert: ${upsertErr.message}`)
-        }
-      }
+      if (!args.dryRun) await upsertRows(sb, rows)
       totalRows += rows.length
       console.log(
         `  ✓ ${stock.ticker} (${stock.name}): ${rows.length} bars ` +
@@ -298,14 +396,46 @@ async function main() {
     await sleep(REQUEST_DELAY_MS + Math.random() * REQUEST_JITTER_MS)
   }
 
-  console.log(
-    `\nDone. ${totalRows} bars across ${usStocks.length - failures.length}/${usStocks.length} US tickers.`
-  )
+  // International tickers — one Apify actor run scrapes Yahoo for all of them on
+  // a residential IP, then we split the dataset back out per ticker.
+  if (intlStocks.length > 0 && apifyConfigured) {
+    attempted += intlStocks.length
+    try {
+      const byTicker = await fetchApifyIntl(
+        intlStocks.map((s) => s.ticker),
+        args.lookbackDays
+      )
+      for (const stock of intlStocks) {
+        const rows = byTicker.get(stock.ticker) ?? []
+        if (rows.length === 0) {
+          failures.push(stock.ticker)
+          console.error(`  ✗ ${stock.ticker} (${stock.name}): 0 bars from Apify`)
+          continue
+        }
+        if (!args.dryRun) await upsertRows(sb, rows)
+        totalRows += rows.length
+        console.log(
+          `  ✓ ${stock.ticker} (${stock.name}): ${rows.length} bars ` +
+            `${rows[0].trade_date} → ${rows[rows.length - 1].trade_date}`
+        )
+      }
+    } catch (err) {
+      // The whole actor call failed — every international ticker is a failure.
+      for (const stock of intlStocks) failures.push(stock.ticker)
+      console.error(
+        `  ✗ international fetch via Apify failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
+
+  const ok = attempted - failures.length
+  console.log(`\nDone. ${totalRows} bars across ${ok}/${attempted} attempted tickers.`)
   if (failures.length > 0) {
     console.error(`Failed: ${failures.join(', ')}`)
-    // Every US ticker failing means massive.com is down or misconfigured — paint
-    // the run red. Partial failures stay green so one delisting doesn't mask the rest.
-    if (usStocks.length > 0 && failures.length === usStocks.length) process.exit(1)
+    // Every attempted ticker failing means a source is down or misconfigured —
+    // paint the run red. Partial failures stay green so one delisting or a single
+    // source's bad day doesn't mask the rest.
+    if (attempted > 0 && failures.length === attempted) process.exit(1)
   }
 }
 

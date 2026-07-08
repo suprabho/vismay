@@ -1,20 +1,25 @@
 name: Import AI Data Centers stock prices
 
-# Weekday pull of daily OHLCV bars for the US dc_stocks tickers from the
-# massive.com market-data API, upserted into dc_stock_prices. The international
-# tickers (TWSE, KRX, TSE, Euronext Amsterdam, HKEX) aren't on massive.com
-# (US-only) and are hand-uploaded via the admin Pipeline tab instead — see the
-# importer header at apps/vizmaya-fyi/scripts/ai-data-centers/import-stock-prices.ts.
+# Weekday pull of daily OHLCV bars for the dc_stocks tickers into
+# dc_stock_prices, split by exchange: US tickers from the massive.com market-data
+# API, and the international tickers (TWSE, KRX, TSE, Euronext Amsterdam, HKEX)
+# from Yahoo Finance via the Apify actor apify/dc-yahoo-stock-scraper (Yahoo
+# blocks CI's datacenter IP, so Apify runs the fetch on a residential IP). See
+# the importer header at apps/vizmaya-fyi/scripts/ai-data-centers/import-stock-prices.ts.
 # Idempotent on (ticker, trade_date) — the default window overlaps generously
 # and re-runs simply overwrite.
 #
-# First deploy: dispatch once with full_backfill=true to load ~5 years of US
+# First deploy: dispatch once with full_backfill=true to load ~5 years of
 # history, then let the schedule keep it fresh.
 #
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_stock_prices writes
 #   MASSIVE_API_TOKEN          — massive.com market-data API key (US tickers)
+#   APIFY_TOKEN                — Apify API token (international tickers)
+#   APIFY_ACTOR_ID             — deployed actor id, e.g. user~dc-yahoo-stock-scraper
+# The APIFY_* pair is optional: without it the US tickers still import and the
+# international ones are skipped with a note (see apify/dc-yahoo-stock-scraper).
 
 on:
   schedule:
@@ -64,4 +69,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           MASSIVE_API_TOKEN: ${{ secrets.MASSIVE_API_TOKEN }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          APIFY_ACTOR_ID: ${{ secrets.APIFY_ACTOR_ID }}
         run: pnpm ai-data-centers:import-stocks ${{ inputs.full_backfill && '-- --full' || '' }}
