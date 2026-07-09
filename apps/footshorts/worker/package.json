@@ -26,6 +26,7 @@
     "recap:ci": "tsx src/recap.ts",
     "backfill:images": "tsx --env-file=.env src/backfillImages.ts",
     "backfill:colors": "tsx --env-file=.env src/backfillColors.ts",
+    "backfill:entity-tags": "tsx --env-file=.env src/backfillEntityTags.ts",
     "eval": "tsx --env-file=.env src/eval/run.ts",
     "typecheck": "tsc --noEmit"
   },
