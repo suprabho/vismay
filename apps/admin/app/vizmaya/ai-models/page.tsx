@@ -13,6 +13,7 @@ interface Feature {
   modality: 'text' | 'image'
   default: string
   description: string
+  choices?: readonly string[]
 }
 interface Alias {
   alias: string
@@ -85,7 +86,9 @@ export default function AiModelsPage() {
       ) : (
         <div className="mt-6 divide-y divide-white/5 rounded-lg border border-white/10">
           {data.features.map((f) => {
-            const aliases = data.aliases[f.modality]
+            const aliases = f.choices
+              ? data.aliases[f.modality].filter((a) => f.choices!.includes(a.alias))
+              : data.aliases[f.modality]
             const current = data.map[f.key] ?? f.default
             return (
               <div

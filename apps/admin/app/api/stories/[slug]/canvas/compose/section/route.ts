@@ -36,6 +36,7 @@ import {
   replaceConfigBody,
   sectionAnchor,
 } from '../shared'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Compose stage 4 — the per-section CONTENT / VISUAL passes, grounded in the
@@ -87,7 +88,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
 
   const docs = sourcesToDocs(await listStorySources(slug))
-  const model = resolveModel(body.model, state.model)
+  // Per-stage default from the admin "AI models" page (see composeAngles note).
+  const model = resolveModel(body.model, await getFeatureModel('composeSection'))
   const pack = await resolveStoryPack(slug)
   // Pre-fetch any vertical data the pack hydrates onto generated layers (e.g. f1
   // driver headshots from the DB) — only the VISUAL pass consumes it, so skip

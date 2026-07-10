@@ -1,4 +1,5 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
+import { TEXT_MODEL_CHOICES } from '@vismay/story-pipeline'
 
 /**
  * Per-feature AI model mapping.
@@ -21,7 +22,20 @@ export interface AiFeature {
   /** Code default when no override row exists. An @vismay/ai-gateway alias. */
   default: string
   description: string
+  /**
+   * Optional allow-list of aliases this feature accepts. When set, the picker
+   * only offers these and PUT validation rejects anything else. When absent,
+   * every alias of the modality is allowed (the default behavior).
+   */
+  choices?: readonly string[]
 }
+
+/**
+ * The 6 schema-safe text models the compose flow supports. Kept in sync with
+ * `packages/story-pipeline/src/models.ts` so the compose pickers can't offer a
+ * model that `resolveModel`'s `isAllowedTextModel` guard would silently discard.
+ */
+const COMPOSE_ALIASES: readonly string[] = TEXT_MODEL_CHOICES.map((c) => c.alias)
 
 export const AI_FEATURES: AiFeature[] = [
   {
@@ -79,6 +93,31 @@ export const AI_FEATURES: AiFeature[] = [
     modality: 'image',
     default: 'image.default',
     description: 'AI image layers (default; the layer picker can override).',
+  },
+  {
+    key: 'composeAngles',
+    label: 'Compose · angle generation',
+    modality: 'text',
+    default: 'text.claude',
+    description: 'Compose flow — proposes story angles from the sources.',
+    choices: COMPOSE_ALIASES,
+  },
+  {
+    key: 'composeOutline',
+    label: 'Compose · outline',
+    modality: 'text',
+    default: 'text.claude',
+    description: 'Compose flow — turns the chosen angle into a section outline.',
+    choices: COMPOSE_ALIASES,
+  },
+  {
+    key: 'composeSection',
+    label: 'Compose · draft (sections)',
+    modality: 'text',
+    default: 'text.claude',
+    description:
+      'Compose flow — writes each section’s prose + visual config. Schema-heavy; prefer Claude/GPT.',
+    choices: COMPOSE_ALIASES,
   },
 ]
 
