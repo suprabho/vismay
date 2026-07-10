@@ -17,7 +17,7 @@ export const MODELS = {
     /** Reasoning, long context, strict JSON. Use for judge + complex extraction. */
     pro: 'google/gemini-3.1-pro-preview',
     /** Long-form prose, editorial register. Use for narrative content gen. */
-    claude: 'anthropic/claude-sonnet-4.6',
+    claude: 'anthropic/claude-sonnet-5',
     /** Frontier editorial + long-horizon agentic. Escalate from claude here. */
     opus: 'anthropic/claude-opus-4.8',
     /** Anthropic's tier above opus — deepest reasoning + long-horizon agentic. 1M ctx, $10/$50 per MTok. */

@@ -13,6 +13,7 @@ interface Feature {
   modality: 'text' | 'image'
   default: string
   description: string
+  choices?: readonly string[]
 }
 interface Alias {
   alias: string
@@ -67,7 +68,7 @@ export default function AiModelsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl p-6">
+    <div className="flex-1 overflow-y-auto p-6 mx-auto w-full max-w-3xl">
       <h1 className="text-lg font-medium">AI models</h1>
       <p className="mt-1 text-sm text-neutral-400">
         Choose which model each AI feature uses. Saved instantly. Features with a
@@ -85,7 +86,9 @@ export default function AiModelsPage() {
       ) : (
         <div className="mt-6 divide-y divide-white/5 rounded-lg border border-white/10">
           {data.features.map((f) => {
-            const aliases = data.aliases[f.modality]
+            const aliases = f.choices
+              ? data.aliases[f.modality].filter((a) => f.choices!.includes(a.alias))
+              : data.aliases[f.modality]
             const current = data.map[f.key] ?? f.default
             return (
               <div

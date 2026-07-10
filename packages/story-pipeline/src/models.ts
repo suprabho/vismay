@@ -14,10 +14,13 @@ export interface ModelChoice {
 // them ("response did not match schema"). The pipeline still falls back to a
 // tool-calling model automatically if a Gemini option is chosen and fails.
 export const TEXT_MODEL_CHOICES: ReadonlyArray<ModelChoice> = [
-  { alias: 'text.claude', label: 'Claude Sonnet 4.6 — long-form prose (default)' },
+  { alias: 'text.claude', label: 'Claude Sonnet 5 — long-form prose (default)' },
   { alias: 'text.opus', label: 'Claude Opus 4.8 — frontier editorial' },
   { alias: 'text.fable', label: 'Claude Fable 5 — frontier reasoning' },
   { alias: 'text.proPlus', label: 'GPT-5.6 Sol — cross-provider' },
+  { alias: 'text.terra', label: 'GPT-5.6 Terra — fast OpenAI flagship' },
+  { alias: 'text.grok', label: 'Grok 4.5 — xAI, lowest latency' },
+  { alias: 'text.luna', label: 'GPT-5.6 Luna — budget cross-provider' },
   { alias: 'text.pro', label: 'Gemini 3.1 Pro — fast, but weaker at union schemas' },
   { alias: 'text.deepseek', label: 'DeepSeek V4 — budget reasoning' },
   { alias: 'text.fast', label: 'Gemini 3 Flash — fast + cheap' },

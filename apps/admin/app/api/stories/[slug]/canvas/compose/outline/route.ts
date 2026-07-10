@@ -15,6 +15,7 @@ import {
   type ComposeOutlineEntry,
 } from '@vismay/content-source/composeState'
 import { resolveModel, resolveStoryPack, sourcesToDocs } from '../shared'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Compose stage 3 — generate (or refine) the outline grounded in the chosen
@@ -57,7 +58,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     return NextResponse.json({ error: 'no extracted sources yet' }, { status: 422 })
   }
 
-  const model = resolveModel(body.model, state.model)
+  // Per-stage default from the admin "AI models" page (see composeAngles note).
+  const model = resolveModel(body.model, await getFeatureModel('composeOutline'))
   const sb = (state.brief ?? {}) as StoredBrief
   const brief: ResearchBrief = {
     summary: sb.summary ?? '',
