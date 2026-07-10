@@ -13,6 +13,7 @@ import {
   Lightning,
   Scales,
   MusicNotes,
+  ChartLineUp,
 } from '@phosphor-icons/react'
 import type { SourceListItem as LibrarySource } from '@vismay/content-source/storySources'
 import { Chip, btnGhostCls, btnPrimaryCls } from './ui'
@@ -55,6 +56,10 @@ const GROUP_ICON: Record<string, typeof FileText> = {
   'iea-news': Lightning,
   epstein: Scales,
   'coke-studio': MusicNotes,
+  'dc-news': Newspaper,
+  'dc-news-recap': FileText,
+  'dc-stock-market': ChartLineUp,
+  'dc-stocks': ChartLineUp,
 }
 
 const KIND_ICON = { file: FileText, link: LinkSimple, text: TextAa } as const
