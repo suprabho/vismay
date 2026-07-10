@@ -9,7 +9,7 @@ import { DEFAULT_TEXT_MODEL } from './models'
 // Opt in with STORY_PIPELINE_ANTHROPIC_DIRECT=1 (and ANTHROPIC_API_KEY set):
 // every structured call then hits api.anthropic.com directly, using its own
 // quota instead of the shared gateway budget. Only Claude models are reachable
-// this way; the pipeline default (`text.claude`) maps to Sonnet 4.6 so the
+// this way; the pipeline default (`text.claude`) maps to Sonnet 5 so the
 // output matches the gateway path it replaces. Production (the gateway) is
 // untouched — this is for offline harnesses and quota-bound eval runs.
 
@@ -17,7 +17,7 @@ import { DEFAULT_TEXT_MODEL } from './models'
 function anthropicModelId(alias: string): string {
   if (alias === 'text.fable') return 'claude-fable-5'
   if (alias === 'text.opus') return 'claude-opus-4-8'
-  return 'claude-sonnet-4-6' // text.claude (the default) and any other alias
+  return 'claude-sonnet-5' // text.claude (the default) and any other alias
 }
 
 function useAnthropicDirect(): boolean {
