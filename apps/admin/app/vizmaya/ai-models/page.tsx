@@ -68,7 +68,7 @@ export default function AiModelsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl p-6">
+    <div className="flex-1 overflow-y-auto p-6 mx-auto w-full max-w-3xl">
       <h1 className="text-lg font-medium">AI models</h1>
       <p className="mt-1 text-sm text-neutral-400">
         Choose which model each AI feature uses. Saved instantly. Features with a
