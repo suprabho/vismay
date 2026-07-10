@@ -15,6 +15,7 @@ import { DEFAULT_TEXT_MODEL } from './models'
 
 /** Map a pipeline text alias to the Anthropic model id for the direct path. */
 function anthropicModelId(alias: string): string {
+  if (alias === 'text.fable') return 'claude-fable-5'
   if (alias === 'text.opus') return 'claude-opus-4-8'
   return 'claude-sonnet-4-6' // text.claude (the default) and any other alias
 }

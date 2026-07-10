@@ -16,7 +16,8 @@ export interface ModelChoice {
 export const TEXT_MODEL_CHOICES: ReadonlyArray<ModelChoice> = [
   { alias: 'text.claude', label: 'Claude Sonnet 4.6 — long-form prose (default)' },
   { alias: 'text.opus', label: 'Claude Opus 4.8 — frontier editorial' },
-  { alias: 'text.proPlus', label: 'GPT-5.5 — cross-provider' },
+  { alias: 'text.fable', label: 'Claude Fable 5 — frontier reasoning' },
+  { alias: 'text.proPlus', label: 'GPT-5.6 Sol — cross-provider' },
   { alias: 'text.pro', label: 'Gemini 3.1 Pro — fast, but weaker at union schemas' },
   { alias: 'text.deepseek', label: 'DeepSeek V4 — budget reasoning' },
   { alias: 'text.fast', label: 'Gemini 3 Flash — fast + cheap' },

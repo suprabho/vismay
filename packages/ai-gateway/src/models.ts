@@ -20,12 +20,19 @@ export const MODELS = {
     claude: 'anthropic/claude-sonnet-4.6',
     /** Frontier editorial + long-horizon agentic. Escalate from claude here. */
     opus: 'anthropic/claude-opus-4.8',
+    /** Anthropic's tier above opus — deepest reasoning + long-horizon agentic. 1M ctx, $10/$50 per MTok. */
+    fable: 'anthropic/claude-fable-5',
     /**
      * Cross-provider reasoning frontier — escalate here if `pro` (Gemini) misses.
      * Deliberately a different lineage than `pro`/`opus` so it's a real second
-     * opinion, not the same family one tier up.
+     * opinion, not the same family one tier up. Sol is deep but slow (~46tps);
+     * reach for `terra` when latency matters.
      */
-    proPlus: 'openai/gpt-5.5',
+    proPlus: 'openai/gpt-5.6-sol',
+    /** Fast OpenAI flagship — 1.1M ctx, $2.5/$15 per MTok, ~100tps. */
+    terra: 'openai/gpt-5.6-terra',
+    /** xAI general model — lowest latency of the set (~0.9s to first token). 500K ctx, $2/$6. */
+    grok: 'xai/grok-4.5',
     /**
      * Coding / structured-edit default. OpenAI Codex — best at producing and
      * editing code, YAML, and JSON config with valid syntax. Use for tasks that
@@ -37,13 +44,17 @@ export const MODELS = {
     /** xAI build/code-focused model. Alternative coder for cross-checking output. */
     codeBuild: 'xai/grok-build-0.1',
 
-    /* ── Budget tier (Chinese providers, ~10–30× cheaper than `pro`) ── */
+    /* ── Budget tier (~10–30× cheaper than `pro`) ── */
     /** Cheap reasoning workhorse, 1M ctx. Strong default for high-volume tasks. */
     deepseek: 'deepseek/deepseek-v4-flash',
     /** Cheapest 1M-ctx general model (vision-capable). Bulk summarise/tag/extract. */
     qwen: 'alibaba/qwen3.5-flash',
     /** Ultra-cheap, 200K ctx, reasoning + tools. Lowest-cost option overall. */
     glm: 'zai/glm-4.7-flash',
+    /** OpenAI budget tier — 1.1M ctx, $1/$6 per MTok. Cheap cross-provider option. */
+    luna: 'openai/gpt-5.6-luna',
+    /** Meta's cheap general model — 1M ctx, $1.25/$4.25 per MTok. */
+    muse: 'meta/muse-spark-1.1',
     /** Budget coder for YAML/JSON when `code` is overkill. 262K ctx. */
     codeCheap: 'alibaba/qwen3-coder-30b-a3b',
   },
@@ -65,6 +76,27 @@ export const MODELS = {
     imagenUltra: 'google/imagen-4.0-ultra-generate-001',
     /** ByteDance Seedream — cheap ($0.03/image) dedicated image model. Budget option. */
     seedream: 'bytedance/seedream-4.0',
+    /** Seedream 4.5 — newer Seedream tier ($0.04/image). */
+    seedream45: 'bytedance/seedream-4.5',
+    /** Seedream 5.0 Lite — latest Seedream line, lite tier ($0.04/image). */
+    seedreamLite: 'bytedance/seedream-5.0-lite',
+    /* ── The models below IGNORE `aspectRatio` (they take a `size` param generateImage
+     *    doesn't send) — output comes back at the provider's default size. Prefer
+     *    Imagen/Seedream/default when the layer's aspect ratio matters. ── */
+    /** Recraft v4.1 — latest Recraft mainline ($0.04/image). Strong design/brand styles. */
+    recraft: 'recraft/recraft-v4.1',
+    /** Recraft v4.1 Utility — variant tuned for utility/graphic assets ($0.04/image). */
+    recraftUtility: 'recraft/recraft-v4.1-utility',
+    /** Recraft v4 — previous Recraft mainline ($0.04/image). */
+    recraftV4: 'recraft/recraft-v4',
+    /** Recraft v2 — older, cheaper Recraft ($0.02/image). */
+    recraftV2: 'recraft/recraft-v2',
+    /** Black Forest Labs Flux Pro 1.1 ($0.04/image). */
+    fluxPro: 'bfl/flux-pro-1.1',
+    /** Prodia-hosted Flux Schnell — cheapest option ($0.001/image). Fast drafts. */
+    fluxSchnell: 'prodia/flux-fast-schnell',
+    /** xAI Grok Imagine ($0.02/image). */
+    grokImage: 'xai/grok-imagine-image',
   },
 } as const
 
