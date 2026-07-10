@@ -235,8 +235,15 @@ goes dark.
 New AI calls (text + image) go through [@vismay/ai-gateway](../../packages/ai-gateway/README.md),
 which wraps the Vercel AI Gateway. The existing direct `@google/genai` /
 `@anthropic-ai/sdk` call sites (judge, energy summaries, scrape-news, epstein
-scripts, generate-audio) still hit the providers directly — they'll migrate
-batch-by-batch once the gateway has burned in.
+scripts) still hit the providers directly — they'll migrate batch-by-batch
+once the gateway has burned in.
+
+**TTS is deliberately excluded from the gateway:** narration audio goes
+through the provider seam in
+[@vismay/content-source/storyTtsProvider](../../packages/content-source/src/storyTtsProvider.ts)
+(Gemini TTS or a self-hosted voicebox server — see
+[docs/voicebox-tts.md](../../docs/voicebox-tts.md)). The Vercel gateway can't
+route to a self-hosted audio server and its audit model is text/image-shaped.
 
 **Migration 043 (`043_ai_generations.sql`)** adds the audit table the gateway
 writes to. Apply before deploying any feature that calls `generateImage` /
@@ -269,10 +276,13 @@ units:
 
 - **Edit:** `/admin/<slug>` → "Narration" tab. Each mobile unit shows its current default + an override textarea. Save persists the YAML; "Regenerate audio" fires `render-audio.yml`.
 - **Identity:** `(parentIndex, subIndex, sliceIndex)` — same as `resolveUnits` mobile units. Hero splits into `sliceIndex=0` (title, silent) and `sliceIndex=1` (dek+byline). Methodology units (`TTS_SKIP_IDS` in [lib/storyTts.ts](lib/storyTts.ts)) are intentionally excluded from TTS — the override input is disabled for them.
-- **Cache invalidation:** the script's chunk hash includes the override text, so only edited chunks regenerate.
+- **Cache invalidation:** the script's chunk hash includes the override text **and the `provider:voice` key**, so edited chunks regenerate — and switching TTS provider/voice regenerates everything (never mixed-voice stories).
 
-**Audio render dispatch:** `lib/storyAudioDispatch.ts` fires `.github/workflows/render-audio.yml` when `GITHUB_DISPATCH_TOKEN` + `GITHUB_DISPATCH_REPO` are set (same envs as PDF/video). The workflow needs an additional repo secret: `GEMINI_API_KEY`. Without dispatch envs configured, the regen button returns `mode: 'unconfigured'` with a hint to run `npx tsx scripts/generate-audio.ts <slug> --force` locally.
+**TTS provider:** selected per run by `TTS_PROVIDER` — `gemini` (default; needs `GEMINI_API_KEY`) or `voicebox` (self-hosted, no quota; needs `VOICEBOX_URL` + `VOICEBOX_PROFILE_ID`, plus `VOICEBOX_TOKEN` against the deployed server). Seam: [packages/content-source/src/storyTtsProvider.ts](../../packages/content-source/src/storyTtsProvider.ts); deployment + cutover runbook: [docs/voicebox-tts.md](../../docs/voicebox-tts.md). Both providers store canonical mono/24 kHz/16-bit WAV chunks, so the video render's `-c copy` concat is provider-agnostic.
+
+**Audio render dispatch:** `lib/storyAudioDispatch.ts` fires `.github/workflows/render-audio.yml` when `GITHUB_DISPATCH_TOKEN` + `GITHUB_DISPATCH_REPO` are set (same envs as PDF/video). The workflow needs an additional repo secret: `GEMINI_API_KEY` (and the voicebox secrets once `TTS_PROVIDER=voicebox`). Without dispatch envs configured, the regen button returns `mode: 'unconfigured'` with a hint to run `npx tsx scripts/generate-audio.ts <slug> --force` locally.
 
 **Deploy requirements:**
 - Apply migration `012_story_tts.sql` — adds `stories.tts_yaml`.
 - Add `GEMINI_API_KEY` to the `Production` environment in repo secrets so render-audio.yml can authenticate to Gemini.
+- For voicebox: `VOICEBOX_URL` / `VOICEBOX_TOKEN` / `VOICEBOX_PROFILE_ID` secrets + repo variable `TTS_PROVIDER` — see [docs/voicebox-tts.md](../../docs/voicebox-tts.md).

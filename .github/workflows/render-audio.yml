@@ -10,6 +10,11 @@ name: Render story audio
 #   NEXT_PUBLIC_SUPABASE_URL    — same value as in Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY   — service role key for storage writes
 #   GEMINI_API_KEY              — Google Generative Language API key for TTS
+#
+# TTS provider selection (docs/voicebox-tts.md): the repo variable
+# TTS_PROVIDER picks `gemini` (default until cutover) or `voicebox`.
+# The voicebox path additionally needs the Production secrets
+# VOICEBOX_URL, VOICEBOX_TOKEN and VOICEBOX_PROFILE_ID.
 
 on:
   workflow_dispatch:
@@ -43,6 +48,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Needed by the voicebox path's WAV normalization fallback (no-op
+      # for canonical output; see storyTtsProvider.normalizeWav).
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Generate audio
         env:
           # Story content (markdown, config.yaml, tts.yaml) lives in Postgres
@@ -52,6 +62,13 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Repo variable, not a secret — flipping it is the provider
+          # kill-switch and needs no commit. Empty/unset resolves to gemini
+          # (becomes voicebox at the Phase 3 cutover).
+          TTS_PROVIDER: ${{ vars.TTS_PROVIDER }}
+          VOICEBOX_URL: ${{ secrets.VOICEBOX_URL }}
+          VOICEBOX_TOKEN: ${{ secrets.VOICEBOX_TOKEN }}
+          VOICEBOX_PROFILE_ID: ${{ secrets.VOICEBOX_PROFILE_ID }}
         # `--force` because the dispatch is triggered by an explicit admin
         # action; we want every chunk re-checked against current overrides
         # rather than relying on the chunk-hash cache.

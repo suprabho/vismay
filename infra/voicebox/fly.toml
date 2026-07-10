@@ -1,0 +1,43 @@
+# Fly config for the persistent voicebox TTS server (docs/voicebox-tts.md).
+# Deployed by .github/workflows/build-voicebox-image.yml, which builds the
+# upstream voicebox image at a pinned SHA and layers the Caddy token proxy
+# from this directory on top.
+#
+# Sizing: CPU-first (Kokoro / LuxTTS class engines run fine on CPU; matches
+# voicebox's own compose limits of 4 CPUs / 8 GB). Revisit GPU only if the
+# measured realtime factor is unacceptable — see the runbook.
+
+app = 'vismay-voicebox'
+primary_region = 'iad'
+
+[env]
+  LOG_LEVEL = 'info'
+  NUMBA_CACHE_DIR = '/tmp/numba_cache'
+  # Fly machines mount a single volume; keep the HuggingFace model cache on
+  # it (upstream compose uses a second volume for this) so a restart doesn't
+  # re-download models.
+  HF_HOME = '/app/data/hf-cache'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Suspend when idle — audio renders are bursty. waitForVoiceboxReady in
+  # @vismay/content-source absorbs the wake + model-load window.
+  auto_stop_machines = 'suspend'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '10s'
+    grace_period = '2m'
+    method = 'GET'
+    path = '/health'
+
+[[mounts]]
+  source = 'voicebox_data'
+  destination = '/app/data'
+
+[[vm]]
+  size = 'shared-cpu-4x'
+  memory = '8gb'

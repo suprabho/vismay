@@ -54,6 +54,7 @@
     "./storyShareRender": "./src/storyShareRender.ts",
     "./storySourceExtractDispatch": "./src/storySourceExtractDispatch.ts",
     "./storyTts": "./src/storyTts.ts",
+    "./storyTtsProvider": "./src/storyTtsProvider.ts",
     "./trade": "./src/trade.ts",
     "./storyVideo": "./src/storyVideo.ts",
     "./storyVideoDispatch": "./src/storyVideoDispatch.ts",

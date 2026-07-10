@@ -8,10 +8,16 @@
  *
  * Reads each story's content + config, resolves mobile units (the same
  * `resolveUnits` the runtime player uses, so `unit_index` cues stay aligned),
- * packs consecutive units into chunks (~250 words of audio each) and calls
- * Gemini TTS once per chunk — not once per unit. This keeps daily request
- * volume well under Gemini's quota. Per-unit playback cues are stored alongside
+ * packs consecutive units into chunks (~250 words of audio each) and makes one
+ * TTS call per chunk — not once per unit. The provider is selected via
+ * `TTS_PROVIDER` (see ./storyTtsProvider): `gemini` (hosted; chunking keeps
+ * daily request volume under its quota) or `voicebox` (self-hosted; no quota,
+ * chunking kept for cue alignment). Per-unit playback cues are stored alongside
  * the chunk audio so the autoplay player can drive `activeUnit` from currentTime.
+ *
+ * The chunk-hash cache key includes `provider:voice`, so switching provider or
+ * voice invalidates every chunk — a plain (non-force) run then fully re-voices
+ * a story rather than leaving it mixed-voice.
  *
  * Narration text + per-unit overrides + the methodology skip-list all come from
  * `./storyTts` (`defaultNarrationText`, `parseTtsConfig`, `findTtsOverride`,
@@ -44,6 +50,17 @@ import {
   TTS_SKIP_IDS,
   type TtsConfig,
 } from './storyTts'
+import {
+  resolveTtsProvider,
+  callVoiceboxOnce,
+  waitForVoiceboxReady,
+  wrapPcmInWav,
+  wavDurationMs,
+  VOICEBOX_MAX_TEXT_CHARS,
+  type TtsProviderName,
+  type TtsCallResult,
+  type VoiceboxContext,
+} from './storyTtsProvider'
 
 type ServiceClient = ReturnType<typeof createServiceClient>
 
@@ -61,8 +78,18 @@ export interface GenerateStoryAudioOptions {
   slug: string
   /** Regenerate every chunk even if the transcript hash is unchanged. */
   force?: boolean
-  /** Gemini API key (default `process.env.GEMINI_API_KEY`). */
+  /** TTS provider (default `TTS_PROVIDER` env, falling back to `gemini`). */
+  provider?: TtsProviderName
+  /** Gemini API key (default `process.env.GEMINI_API_KEY`; gemini only). */
   geminiApiKey?: string
+  /** Voicebox server base URL (default `VOICEBOX_URL`; voicebox only). */
+  voiceboxUrl?: string
+  /** Voicebox voice profile id (default `VOICEBOX_PROFILE_ID`; voicebox only). */
+  voiceboxProfileId?: string
+  /** Bearer token for the voicebox auth proxy (default `VOICEBOX_TOKEN`). */
+  voiceboxToken?: string
+  /** Per-request voicebox timeout (default `VOICEBOX_TIMEOUT_MS` or 300000). */
+  voiceboxTimeoutMs?: number
   /** Supabase service client (default `createServiceClient()`). */
   supabase?: ServiceClient
   /** Target words per chunk (default `CHUNK_WORD_TARGET` env or 250). */
@@ -71,7 +98,7 @@ export interface GenerateStoryAudioOptions {
   rateLimitMs?: number
   /** Storage bucket for chunk WAVs (default `story-audio`). */
   bucket?: string
-  /** Prebuilt Gemini voice (default `Orus`). */
+  /** Prebuilt Gemini voice (default `Orus`; gemini only). */
   voiceName?: string
   /** Optional whisper.cpp forced alignment. */
   whisper?: WhisperOptions
@@ -121,61 +148,14 @@ function unitNarration(unit: ResolvedUnit, ttsConfig: TtsConfig | null): string 
   return override ? override.script : defaultNarrationText(unit)
 }
 
-/* ─── WAV conversion ───────────────────────────────────────────────── */
+/* ─── TTS providers ────────────────────────────────────────────────── */
 
-interface WavConversionOptions {
-  numChannels: number
-  sampleRate: number
-  bitsPerSample: number
-}
-
-function createWavHeader(dataLength: number, options: WavConversionOptions): Buffer {
-  const { numChannels, sampleRate, bitsPerSample } = options
-  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8
-  const blockAlign = (numChannels * bitsPerSample) / 8
-  const buffer = Buffer.alloc(44)
-
-  buffer.write('RIFF', 0)
-  buffer.writeUInt32LE(36 + dataLength, 4)
-  buffer.write('WAVE', 8)
-  buffer.write('fmt ', 12)
-  buffer.writeUInt32LE(16, 16)
-  buffer.writeUInt16LE(1, 20)
-  buffer.writeUInt16LE(numChannels, 22)
-  buffer.writeUInt32LE(sampleRate, 24)
-  buffer.writeUInt32LE(byteRate, 28)
-  buffer.writeUInt16LE(blockAlign, 32)
-  buffer.writeUInt16LE(bitsPerSample, 34)
-  buffer.write('data', 36)
-  buffer.writeUInt32LE(dataLength, 40)
-
-  return buffer
-}
-
-function wrapPcmInWav(pcmData: Buffer): Buffer {
-  const header = createWavHeader(pcmData.length, {
-    numChannels: 1,
-    sampleRate: 24000,
-    bitsPerSample: 16,
-  })
-  return Buffer.concat([header, pcmData])
-}
-
-/**
- * Duration in ms of a WAV produced by `wrapPcmInWav` (mono / 24kHz / 16-bit).
- * Reads the standard 44-byte header off the front and divides by the byte rate.
- */
-function wavDurationMs(wav: Buffer): number {
-  const pcmBytes = Math.max(0, wav.length - 44)
-  const samples = pcmBytes / 2
-  return Math.round((samples / 24000) * 1000)
-}
-
-/* ─── Gemini TTS ───────────────────────────────────────────────────── */
+// WAV parsing/normalization + the voicebox client live in ./storyTtsProvider.
+// This file only owns the per-provider retry policy and context wiring.
 
 /**
  * Rate limiter — enforces a minimum interval between Gemini API calls.
- * 8000ms ≈ 7.5 req/min.
+ * 8000ms ≈ 7.5 req/min. (Voicebox is self-hosted and needs no limiter.)
  */
 function makeRateLimiter(minIntervalMs: number) {
   let lastCallAt = 0
@@ -190,22 +170,24 @@ function makeRateLimiter(minIntervalMs: number) {
 }
 
 interface GeminiContext {
+  provider: 'gemini'
   apiKey: string
   voiceName: string
   rateLimit: () => Promise<void>
 }
 
+interface VoiceboxTtsContext {
+  provider: 'voicebox'
+  voicebox: VoiceboxContext
+}
+
+type TtsContext = GeminiContext | VoiceboxTtsContext
+
 /**
  * Single Gemini TTS call. Returns the parsed WAV buffer, or an object
  * describing why it failed so the retry layer can decide what to do.
  */
-async function callGeminiOnce(
-  ctx: GeminiContext,
-  text: string
-): Promise<
-  | { ok: true; buffer: Buffer }
-  | { ok: false; status: number; retryAfterMs?: number; error: string }
-> {
+async function callGeminiOnce(ctx: GeminiContext, text: string): Promise<TtsCallResult> {
   await ctx.rateLimit()
   try {
     const res = await fetch(
@@ -265,35 +247,49 @@ async function callGeminiOnce(
 }
 
 /**
- * Generate speech with automatic retry on rate-limit (429) and transient
- * server errors (500/503). Honors `Retry-After` hints from Gemini when present.
+ * Generate speech with automatic retry on transient failures.
+ *
+ * Gemini: retries 429/500/503, honors `Retry-After` hints, and bails with
+ * `DailyQuotaExhaustedError` when the hint signals a multi-minute wait.
+ * Voicebox: retries network errors (status 0 — server suspended/unreachable),
+ * 429 and any 5xx with a short 2/4/8/16s ladder; no quota concept.
  */
-async function generateSpeech(ctx: GeminiContext, text: string): Promise<Buffer | null> {
+async function generateSpeech(ctx: TtsContext, text: string): Promise<Buffer | null> {
   const MAX_ATTEMPTS = 5
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const result = await callGeminiOnce(ctx, text)
+    const result =
+      ctx.provider === 'gemini'
+        ? await callGeminiOnce(ctx, text)
+        : await callVoiceboxOnce(ctx.voicebox, text)
     if (result.ok) return result.buffer
 
-    const retryable = result.status === 429 || result.status === 500 || result.status === 503
+    const retryable =
+      ctx.provider === 'gemini'
+        ? result.status === 429 || result.status === 500 || result.status === 503
+        : result.status === 0 || result.status === 429 || result.status >= 500
 
     if (!retryable || attempt === MAX_ATTEMPTS) {
-      console.error(`  Gemini API error ${result.status}: ${result.error}`)
+      console.error(`  ${ctx.provider} TTS error ${result.status}: ${result.error}`)
       return null
     }
 
     // If Gemini's hint is longer than 5 minutes, treat it as a daily-quota
     // signal — bail out instead of sleeping overnight inside the script.
     const MAX_INLINE_BACKOFF = 5 * 60 * 1000
-    if (result.retryAfterMs && result.retryAfterMs > MAX_INLINE_BACKOFF) {
+    if (ctx.provider === 'gemini' && result.retryAfterMs && result.retryAfterMs > MAX_INLINE_BACKOFF) {
       console.error(
         `\n  ✗ Gemini returned a ${Math.round(result.retryAfterMs / 60_000)}-minute retry delay — likely daily quota exhausted. Stopping.`
       )
       throw new DailyQuotaExhaustedError()
     }
 
-    // Backoff: honor server hint if present, otherwise exponential (15s, 30s, 60s, 120s).
+    // Backoff: honor a server hint if present, otherwise exponential —
+    // 15/30/60/120s for Gemini's quota windows, 2/4/8/16s for a local server.
     const backoffMs =
-      result.retryAfterMs ?? Math.min(120_000, 15_000 * Math.pow(2, attempt - 1))
+      result.retryAfterMs ??
+      (ctx.provider === 'gemini'
+        ? Math.min(120_000, 15_000 * Math.pow(2, attempt - 1))
+        : Math.min(16_000, 2_000 * Math.pow(2, attempt - 1)))
     process.stdout.write(
       `\n  ⚠ ${result.status} — backing off ${Math.round(backoffMs / 1000)}s (attempt ${attempt}/${MAX_ATTEMPTS})... `
     )
@@ -655,8 +651,7 @@ export async function generateStoryAudio(
 ): Promise<GenerateStoryAudioResult> {
   const { slug, force = false } = options
 
-  const apiKey = options.geminiApiKey ?? process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set.')
+  const provider = resolveTtsProvider(options.provider)
 
   const supabase = options.supabase ?? createServiceClient()
   const bucket = options.bucket ?? 'story-audio'
@@ -673,13 +668,45 @@ export async function generateStoryAudio(
     throw new Error('whisper.enabled is set but whisper.model is missing.')
   }
 
-  const geminiCtx: GeminiContext = {
-    apiKey,
-    voiceName,
-    rateLimit: makeRateLimiter(rateLimitMs),
+  // Each provider validates only its own credentials, so a voicebox run
+  // needs no Gemini key and vice versa.
+  let ttsCtx: TtsContext
+  if (provider === 'gemini') {
+    const apiKey = options.geminiApiKey ?? process.env.GEMINI_API_KEY
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set.')
+    ttsCtx = { provider, apiKey, voiceName, rateLimit: makeRateLimiter(rateLimitMs) }
+  } else {
+    const baseUrl = (options.voiceboxUrl ?? process.env.VOICEBOX_URL ?? '').replace(/\/+$/, '')
+    const profileId = options.voiceboxProfileId ?? process.env.VOICEBOX_PROFILE_ID
+    if (!baseUrl) throw new Error('TTS_PROVIDER=voicebox but VOICEBOX_URL is not set.')
+    if (!profileId) throw new Error('TTS_PROVIDER=voicebox but VOICEBOX_PROFILE_ID is not set.')
+    ttsCtx = {
+      provider,
+      voicebox: {
+        baseUrl,
+        profileId,
+        token: options.voiceboxToken ?? process.env.VOICEBOX_TOKEN,
+        timeoutMs:
+          options.voiceboxTimeoutMs ?? Number(process.env.VOICEBOX_TIMEOUT_MS ?? 300_000),
+      },
+    }
   }
 
+  // Part of the chunk cache key: changing provider or voice invalidates
+  // every chunk so a story is never left half-and-half between voices.
+  const voiceKey =
+    ttsCtx.provider === 'gemini'
+      ? `gemini:${ttsCtx.voiceName}`
+      : `voicebox:${ttsCtx.voicebox.profileId}`
+
   console.log(`\n━━━ ${slug} ━━━`)
+  console.log(`  TTS: ${voiceKey}`)
+
+  // Fail fast (and absorb a suspended server's wake + model load) before
+  // resolving any content — one clear error instead of a retry ladder per chunk.
+  if (ttsCtx.provider === 'voicebox') {
+    await waitForVoiceboxReady(ttsCtx.voicebox)
+  }
 
   const units = await resolveMobileUnits(slug)
   if (units.length === 0) {
@@ -704,7 +731,7 @@ export async function generateStoryAudio(
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]
     const transcript = chunk.texts.join(CHUNK_SEPARATOR)
-    const hash = hashText(transcript)
+    const hash = hashText(`${voiceKey}|${transcript}`)
 
     if (!force && existingHashes.get(i) === hash) {
       console.log(
@@ -720,11 +747,19 @@ export async function generateStoryAudio(
       continue
     }
 
+    if (ttsCtx.provider === 'voicebox' && transcript.length > VOICEBOX_MAX_TEXT_CHARS) {
+      console.log(
+        `  [${i + 1}/${chunks.length}] ✗ transcript is ${transcript.length} chars — over voicebox's ~5000-char request limit. Reduce CHUNK_WORD_TARGET.`
+      )
+      failed++
+      continue
+    }
+
     process.stdout.write(
       `  [${i + 1}/${chunks.length}] generating (${chunk.unitIndices.length} units, ${wordCount(transcript)}w)... `
     )
 
-    const audioBuffer = await generateSpeech(geminiCtx, transcript)
+    const audioBuffer = await generateSpeech(ttsCtx, transcript)
     if (!audioBuffer) {
       console.log('✗ TTS failed')
       failed++
