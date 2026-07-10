@@ -46,13 +46,22 @@ export interface AiSlotConfig {
 /* ─── Model alias sets (the "context-appropriate subset") ────────── */
 
 /** Long-form editorial prose — content + narration scripts. */
-const PROSE_MODELS = ['text.claude', 'text.opus', 'text.pro', 'text.fast', 'text.deepseek'] as const
+const PROSE_MODELS = [
+  'text.claude',
+  'text.opus',
+  'text.fable',
+  'text.pro',
+  'text.fast',
+  'text.deepseek',
+] as const
 /** Structured / strict output — YAML slices, layout tokens, theme objects. */
 const STRUCT_MODELS = [
   'text.code',
   'text.pro',
   'text.codeLong',
   'text.proPlus',
+  'text.fable',
+  'text.terra',
   'text.fast',
   'text.codeCheap',
   'text.qwen',
@@ -65,27 +74,50 @@ const IMAGE_MODELS = [
   'image.imagenFast',
   'image.imagenUltra',
   'image.seedream',
+  'image.seedream45',
+  'image.seedreamLite',
+  'image.recraft',
+  'image.recraftUtility',
+  'image.recraftV4',
+  'image.recraftV2',
+  'image.fluxPro',
+  'image.fluxSchnell',
+  'image.grokImage',
 ] as const
 
 /** Friendly labels for the model dropdown. Falls back to the alias tail. */
 export const MODEL_LABELS: Record<string, string> = {
   'text.fast': 'Gemini 3 Flash · fast',
   'text.pro': 'Gemini 3.1 Pro',
-  'text.proPlus': 'GPT-5.5 · frontier',
+  'text.proPlus': 'GPT-5.6 Sol · frontier',
+  'text.terra': 'GPT-5.6 Terra · fast',
+  'text.luna': 'GPT-5.6 Luna · cheap',
   'text.claude': 'Claude Sonnet',
   'text.opus': 'Claude Opus · frontier',
+  'text.fable': 'Claude Fable 5 · frontier+',
   'text.code': 'GPT-5 Codex · code/YAML',
   'text.codeLong': 'Qwen3 Coder · 1M ctx',
   'text.codeBuild': 'Grok Build · code',
+  'text.grok': 'Grok 4.5 · fast',
   'text.deepseek': 'DeepSeek V4 · cheap',
   'text.qwen': 'Qwen 3.5 Flash · cheap',
   'text.glm': 'GLM 4.7 Flash · cheapest',
+  'text.muse': 'Muse Spark 1.1 · cheap',
   'text.codeCheap': 'Qwen3 Coder 30B · cheap',
   'image.default': 'Gemini Image',
   'image.imagen': 'Imagen 4',
   'image.imagenFast': 'Imagen 4 · fast',
   'image.imagenUltra': 'Imagen 4 · ultra',
   'image.seedream': 'Seedream · cheap',
+  'image.seedream45': 'Seedream 4.5',
+  'image.seedreamLite': 'Seedream 5.0 Lite',
+  'image.recraft': 'Recraft v4.1',
+  'image.recraftUtility': 'Recraft v4.1 Utility',
+  'image.recraftV4': 'Recraft v4',
+  'image.recraftV2': 'Recraft v2 · cheap',
+  'image.fluxPro': 'Flux Pro 1.1',
+  'image.fluxSchnell': 'Flux Schnell · cheapest',
+  'image.grokImage': 'Grok Imagine',
 }
 
 export function modelLabel(alias: string): string {

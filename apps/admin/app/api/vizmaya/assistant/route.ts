@@ -25,6 +25,9 @@ export const ASSISTANT_MODELS = [
   'text.fast',
   'text.pro',
   'text.claude',
+  'text.opus',
+  'text.fable',
+  'text.grok',
 ] as const
 const MAX_MESSAGES = 24
 const MAX_CONTENT_LENGTH = 4000
