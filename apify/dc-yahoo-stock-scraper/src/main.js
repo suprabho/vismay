@@ -13,7 +13,7 @@
 // massive.com US feed; trade_date is the exchange-local calendar day.
 //
 // Input (see .actor/input_schema.json):
-//   tickers    string[]  Yahoo symbols, e.g. ["2330.TW","005930.KS","ASML.AS"]
+//   tickers    string[]  Yahoo symbols, e.g. ["2317.TW","005930.KS","8035.T"]
 //   range      string    history window (default "3mo"): 1mo|3mo|6mo|1y|2y|5y|10y|max
 //   interval   string    bar interval (default "1d")
 //   proxyGroup string    "RESIDENTIAL" (default, reliable) or "DATACENTER" (free, may be blocked)

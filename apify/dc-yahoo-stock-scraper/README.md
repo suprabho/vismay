@@ -23,7 +23,7 @@ the international names.
 
 | field | default | notes |
 |-------|---------|-------|
-| `tickers` | – (required) | Yahoo symbols, home-exchange form: `2330.TW`, `005930.KS`, `8035.T`, `ASML.AS`, `0981.HK` |
+| `tickers` | – (required) | Yahoo symbols, home-exchange form: `2317.TW`, `005930.KS`, `8035.T`, `0981.HK` |
 | `range` | `3mo` | `1mo`/`3mo`/`6mo`/`1y`/`2y`/`5y`/`10y`/`max` |
 | `interval` | `1d` | bar interval |
 | `proxyGroup` | `RESIDENTIAL` | `DATACENTER` is free but Yahoo may block it |

@@ -1110,7 +1110,7 @@ export async function getDcPipelineStats(): Promise<DcPipelineStats> {
 }
 
 export interface DcStock {
-  /** Yahoo Finance symbol of the home listing (NVDA, 2330.TW, ASML.AS, …). */
+  /** Yahoo Finance symbol of the home listing (NVDA, 2317.TW, 8035.T, …). */
   ticker: string
   name: string
   exchange: string
