@@ -911,6 +911,18 @@ export async function getLatestDcNewsRecap(): Promise<DcNewsRecap | null> {
   return recaps[0] ?? null
 }
 
+/** One recap snapshot by its surrogate id, or null if it's gone. */
+export async function getDcNewsRecap(id: number): Promise<DcNewsRecap | null> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('dc_news_recaps')
+    .select(DC_RECAP_COLUMNS)
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(`getDcNewsRecap: ${error.message}`)
+  return data ? mapDcNewsRecapRow(data) : null
+}
+
 export interface DcNewsAdminItem extends DcNewsItem {
   /** False when the Gemma classifier rejected the article. */
   relevant: boolean

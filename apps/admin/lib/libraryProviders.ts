@@ -1,5 +1,13 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
-import { getIeaCountryProfile, type IeaCountryProfile } from '@vismay/content-source/epics'
+import {
+  getIeaCountryProfile,
+  type IeaCountryProfile,
+  listDcNewsForAdmin,
+  listDcNewsRecaps,
+  getDcNewsRecap,
+  getDcStockMarket,
+  type DcStockSeries,
+} from '@vismay/content-source/epics'
 
 /**
  * Compose "from library" PROVIDERS — pluggable sources of in-DB content that can
@@ -760,6 +768,221 @@ const fifaWc26Provider: LibraryProvider = {
   },
 }
 
+// ── AI Data Centers epic providers ───────────────────────────────────────────
+// The epic's three live streams (migrations 065–066), all scoped to vizmaya-fyi:
+// the DC-specific news feed, the daily recap briefs, and the stock watchlist.
+// All reuse content-source readers so the dc_* SQL stays in one place.
+
+/**
+ * AI Data Centers news (`dc_news`) — the DC-specific Google-News feed, Gemma
+ * relevance-gated and ticker-linked. Distinct from `iea_news` above (energy-
+ * agency coverage). Search-based like its IEA sibling; reuses the admin reader
+ * so only classifier-relevant stories surface.
+ */
+const dcNewsProvider: LibraryProvider = {
+  key: 'dc-news',
+  label: 'Data center news',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit }) {
+    const rows = await listDcNewsForAdmin({ q: query, limit, relevance: 'relevant' })
+    return rows.map((r) => ({
+      id: String(r.id),
+      title: r.title,
+      subtitle: r.source ?? r.summary?.slice(0, 120) ?? undefined,
+    }))
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('dc_news')
+      .select('title, summary, source, source_url, topics, tickers')
+      .eq('id', Number(id))
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      summary: string | null
+      source: string | null
+      source_url: string | null
+      topics: string[] | null
+      tickers: string[] | null
+    } | null
+    if (!row) return null
+    const meta = [
+      row.topics?.length ? `Topics: ${row.topics.join(', ')}` : null,
+      row.tickers?.length ? `Tickers: ${row.tickers.join(', ')}` : null,
+      row.source_url ? `Source: ${row.source_url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const text = [row.title, row.summary, meta].filter(Boolean).join('\n\n').trim()
+    if (!text) return null
+    return { title: row.title ?? 'Data center news', byline: row.source ?? 'Data center news', text }
+  },
+}
+
+/**
+ * AI Data Centers recaps (`dc_news_recaps`) — the daily markdown brief digesting
+ * dc_news (LLM headline + themed sections + a market-movers table), one row per
+ * run. List-based like the footshorts recap provider; the markdown is the
+ * research text verbatim (plain prose/links, no `fs:` fences to graft).
+ */
+const dcNewsRecapProvider: LibraryProvider = {
+  key: 'dc-news-recap',
+  label: 'Data center recaps',
+  apps: ['vizmaya-fyi'],
+  async list() {
+    const recaps = await listDcNewsRecaps(100)
+    return recaps.map((r) => {
+      const when = new Date(r.generatedAt).toISOString().slice(0, 16).replace('T', ' ')
+      const meta = [
+        r.windowHours ? `last ${r.windowHours}h` : null,
+        r.articleCount ? `${r.articleCount} stories` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      return {
+        id: String(r.id),
+        title: r.headline ?? `${when} recap`,
+        subtitle: meta || undefined,
+      }
+    })
+  },
+  async extract(id) {
+    const recap = await getDcNewsRecap(Number(id))
+    const text = (recap?.markdown ?? '').trim()
+    if (!recap || !text) return null
+    const day = new Date(recap.generatedAt).toISOString().slice(0, 10)
+    return {
+      title: recap.headline ?? `Data center recap · ${day}`,
+      byline: `Data center recap · ${day}`,
+      text,
+    }
+  },
+}
+
+// ── Stock watchlist (`dc_stocks` + `dc_stock_prices`) ─────────────────────────
+// Two providers keyed distinctly so a single query can't collide their groups
+// (the picker keys sections by provider key): a list-only whole-market snapshot
+// surfaced up front, and a search-only per-ticker lookup (also reachable by the
+// AI-research enrich agent, which only sees `search` providers). Both flatten
+// getDcStockMarket's computed series into research prose; the heavy price read
+// runs only on attach (extract), never on list.
+
+const DC_STOCK_WINDOW_DAYS = 90
+const DC_CATEGORY_LABELS: Record<string, string> = {
+  semiconductors: 'Semiconductors',
+  'semi-equipment': 'Semiconductor equipment',
+  hyperscalers: 'Hyperscalers',
+  'data-centers': 'Data centers & infrastructure',
+}
+const dcCategoryLabel = (cat: string): string => DC_CATEGORY_LABELS[cat] ?? cat
+const fmtClose = (value: number | null, currency: string): string =>
+  value == null ? '—' : `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${currency}`
+const fmtPct = (pct: number | null): string =>
+  pct == null ? 'n/a' : `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+
+const dcStockMarketProvider: LibraryProvider = {
+  key: 'dc-stock-market',
+  label: 'Data center market',
+  apps: ['vizmaya-fyi'],
+  async list() {
+    // Cheap head-count only — the price series is read lazily in extract.
+    const sb = createServiceClient()
+    const { count } = await sb
+      .from('dc_stocks')
+      .select('ticker', { count: 'exact', head: true })
+      .eq('is_active', true)
+    return [
+      {
+        id: 'snapshot',
+        title: 'Market snapshot — all tracked tickers',
+        subtitle: count ? `${count} tickers · latest closes + ${DC_STOCK_WINDOW_DAYS}d change` : undefined,
+      },
+    ]
+  },
+  async extract() {
+    const market = await getDcStockMarket(DC_STOCK_WINDOW_DAYS)
+    if (!market.length) return null
+    const dates = market.map((s) => s.latestDate).filter((d): d is string => !!d).sort()
+    const latestDate = dates.length ? dates[dates.length - 1] : null
+    const byCategory = new Map<string, DcStockSeries[]>()
+    for (const s of market) {
+      if (!byCategory.has(s.category)) byCategory.set(s.category, [])
+      byCategory.get(s.category)!.push(s)
+    }
+    const sections = [...byCategory.entries()].map(([cat, list]) => {
+      const lines = list.map(
+        (s) => `- ${s.name} (${s.ticker}): ${fmtClose(s.latestClose, s.currency)}, ${fmtPct(s.changePct)}`,
+      )
+      return `${dcCategoryLabel(cat)}\n${lines.join('\n')}`
+    })
+    const text = [
+      `# Data center stock watchlist — ${DC_STOCK_WINDOW_DAYS}-day snapshot`,
+      latestDate
+        ? `Latest close ${latestDate}. Prices are in each listing's native currency; change is first→last close over the ${DC_STOCK_WINDOW_DAYS}-day window.`
+        : null,
+      ...sections,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return { title: 'Data center market snapshot', byline: `Stock watchlist · ${latestDate ?? 'latest'}`, text }
+  },
+}
+
+const dcStocksProvider: LibraryProvider = {
+  key: 'dc-stocks',
+  label: 'Data center stocks',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error } = await sb
+      .from('dc_stocks')
+      .select('ticker, name, exchange, category')
+      .eq('is_active', true)
+      .or(`name.ilike.${pat},ticker.ilike.${pat},category.ilike.${pat}`)
+      .order('category')
+      .order('ticker')
+      .limit(limit)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      ticker: string
+      name: string | null
+      exchange: string | null
+      category: string | null
+    }>
+    return rows.map((r) => ({
+      id: r.ticker,
+      title: r.name ? `${r.name} (${r.ticker})` : r.ticker,
+      subtitle:
+        [r.category ? dcCategoryLabel(r.category) : null, r.exchange].filter(Boolean).join(' · ') || undefined,
+    }))
+  },
+  async extract(ticker) {
+    const market = await getDcStockMarket(DC_STOCK_WINDOW_DAYS)
+    const s = market.find((x) => x.ticker === ticker)
+    if (!s) return null
+    const tail = s.points
+      .slice(-10)
+      .map(([d, c]) => `  ${d}: ${c.toLocaleString('en-US', { maximumFractionDigits: 2 })}`)
+    const text = [
+      `# ${s.name} (${s.ticker}) — ${dcCategoryLabel(s.category)}`,
+      [
+        `Exchange: ${s.exchange} (${s.market})`,
+        `Currency: ${s.currency}`,
+        `Latest close: ${fmtClose(s.latestClose, s.currency)}${s.latestDate ? ` (${s.latestDate})` : ''}`,
+        `Change over ${DC_STOCK_WINDOW_DAYS}d: ${fmtPct(s.changePct)}`,
+      ].join('\n'),
+      tail.length ? `Recent closes (${s.currency}):\n${tail.join('\n')}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return { title: `${s.name} · stock`, byline: `Stock · ${s.ticker}`, text }
+  },
+}
+
 const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
@@ -771,6 +994,10 @@ const PROVIDERS: LibraryProvider[] = [
   energyProfileProvider,
   epsteinProvider,
   cokeStudioProvider,
+  dcNewsProvider,
+  dcNewsRecapProvider,
+  dcStockMarketProvider,
+  dcStocksProvider,
 ]
 
 const byKey = new Map(PROVIDERS.map((p) => [p.key, p]))
