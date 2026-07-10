@@ -192,8 +192,11 @@ Tracks the build-out of frontier AI data centers (power, compute, capital cost) 
 Two daily feeds extend the epic beyond the Epoch facility registry: tagged
 industry news (AI / data centers / microprocessors / semiconductors) and
 daily price bars for ~29 related stocks, each tracked on its **home exchange**
-(NVDA on NASDAQ, TSMC as 2330.TW, Samsung as 005930.KS, ASML as ASML.AS,
-Tokyo Electron as 8035.T, SMIC as 0981.HK, …) in its native currency.
+(NVDA on NASDAQ, Samsung as 005930.KS, Tokyo Electron as 8035.T, SMIC as
+0981.HK, …) in its native currency. Two deliberate exceptions: TSMC and ASML
+are tracked via their US ADRs (`TSM` on NYSE, `ASML` on NASDAQ; migration 067
+retired `2330.TW` and `ASML.AS`) so their prices import automatically with
+the US tickers instead of through the intl paths.
 
 - **Schema:** [supabase/vizmaya-fyi/migrations/065_dc_news_stocks.sql](../../supabase/vizmaya-fyi/migrations/065_dc_news_stocks.sql) — `dc_news` (unique on `source_url`; classifier rejects persist with `relevant=false` so they're never re-sent to the LLM), `dc_stocks` (curated ticker registry, seeded in the migration — **adding a company is a single insert**, both pipelines read the table), `dc_stock_prices` (daily OHLCV, PK `(ticker, trade_date)`, dates in the exchange's own calendar, close split-adjusted).
 - **News scraper:** [scripts/ai-data-centers/scrape-news.ts](scripts/ai-data-centers/scrape-news.ts) (`pnpm ai-data-centers:scrape-news`) — Google News RSS across four queries, then Gemma (`gemma-4-26b-a4b-it`, same JSON-scrape idiom as the energy scraper) applies a relevance gate + topic tags + ticker links. Cron: [.github/workflows/scrape-ai-data-centers-news.yml](../../.github/workflows/scrape-ai-data-centers-news.yml) (daily 06:45 UTC, staggered off the 06:15 energy-profile scrape). Secrets: the Supabase pair + `GEMINI_API_KEY` (all already in Production).

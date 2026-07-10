@@ -5,7 +5,7 @@ import { getPipelineEpic, listPipelineNews } from '@vismay/content-source/pipeli
 export const dynamic = 'force-dynamic'
 
 const TOPIC_RE = /^[a-z0-9-]+$/i
-// Secondary tags: dc_stocks tickers (NVDA, 2330.TW, ASML.AS, 005930.KS, …)
+// Secondary tags: dc_stocks tickers (NVDA, 2317.TW, 005930.KS, …)
 // or ISO country codes (US, CN) depending on the epic.
 const TAG_RE = /^[A-Z0-9.-]+$/i
 const RELEVANCE = new Set(['all', 'relevant', 'rejected'])
