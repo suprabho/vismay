@@ -126,8 +126,8 @@ export function ComposeFlow({
           onAddFromSource={flow.addFromSource}
           onAddAsset={flow.addAsset}
           onAddFromProvider={flow.addFromProvider}
-          onLoadLibrary={flow.loadLibrary}
-          onSearchDatasets={flow.searchDatasets}
+          onLoadTabs={flow.loadLibraryTabs}
+          onLoadPage={flow.loadLibraryPage}
           onEnrich={flow.addEnrich}
           onRemoveSource={flow.removeSource}
           onReextract={flow.reextract}
