@@ -1,12 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type {
-  StorySource,
-  SourceListItem as LibrarySource,
-} from '@vismay/content-source/storySources'
+import type { StorySource } from '@vismay/content-source/storySources'
 import { SourceRow } from './SourceRow'
-import { SourceLibraryModal, type LibraryAsset, type LibraryGroup } from './SourceLibraryModal'
+import { SourceLibraryModal, type LibraryTab, type LibraryPage } from './SourceLibraryModal'
 import { TelemetrySessionPicker } from './TelemetrySessionPicker'
 import type { TelemetrySession } from './useComposeFlow'
 import { SectionHeading, btnGhostCls, btnPrimaryCls, inputCls } from './ui'
@@ -30,8 +27,8 @@ export function SourcesStage({
   onAddFromSource,
   onAddAsset,
   onAddFromProvider,
-  onLoadLibrary,
-  onSearchDatasets,
+  onLoadTabs,
+  onLoadPage,
   onEnrich,
   onRemoveSource,
   onReextract,
@@ -54,8 +51,8 @@ export function SourcesStage({
   onAddFromSource: (id: string) => Promise<boolean>
   onAddAsset: (key: string) => Promise<boolean>
   onAddFromProvider: (providerKey: string, itemId: string) => Promise<boolean>
-  onLoadLibrary: () => Promise<{ sources: LibrarySource[]; assets: LibraryAsset[]; groups: LibraryGroup[] }>
-  onSearchDatasets: (query: string) => Promise<LibraryGroup[]>
+  onLoadTabs: () => Promise<LibraryTab[]>
+  onLoadPage: (tab: string, offset: number, limit: number, q: string) => Promise<LibraryPage>
   onEnrich: (focus: string) => Promise<{ ok: boolean; message?: string }>
   onRemoveSource: (id: string) => void
   onReextract: (id: string) => void
@@ -201,11 +198,11 @@ export function SourcesStage({
       {libraryOpen && (
         <SourceLibraryModal
           onClose={() => setLibraryOpen(false)}
-          loadLibrary={onLoadLibrary}
+          loadTabs={onLoadTabs}
+          loadPage={onLoadPage}
           onAddFromSource={onAddFromSource}
           onAddAsset={onAddAsset}
           onAddFromProvider={onAddFromProvider}
-          onSearchDatasets={onSearchDatasets}
           onEnrich={onEnrich}
         />
       )}
@@ -213,11 +210,11 @@ export function SourcesStage({
         <SourceLibraryModal
           recapMode
           onClose={() => setRecapOpen(false)}
-          loadLibrary={onLoadLibrary}
+          loadTabs={onLoadTabs}
+          loadPage={onLoadPage}
           onAddFromSource={onAddFromSource}
           onAddAsset={onAddAsset}
           onAddFromProvider={onAddFromProvider}
-          onSearchDatasets={onSearchDatasets}
           onEnrich={onEnrich}
           onCreateRecap={onCreateRecap}
         />

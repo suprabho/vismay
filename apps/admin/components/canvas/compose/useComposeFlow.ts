@@ -1,17 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type {
   ComposeOutlineEntry,
   ComposePhase,
   ComposeState,
 } from '@vismay/content-source/composeState'
-import type {
-  StorySource,
-  SourceListItem as LibrarySource,
-} from '@vismay/content-source/storySources'
+import type { StorySource } from '@vismay/content-source/storySources'
 import { composeImageFilename } from '@vismay/story-pipeline/cover'
-import type { LibraryAsset, LibraryGroup } from './SourceLibraryModal'
+import type { LibraryTab, LibraryPage } from './SourceLibraryModal'
 import { canvasFrameId } from '../canvasOutputs'
 import type { ChartRequirementView } from './ChartCard'
 
@@ -343,42 +340,42 @@ export function useComposeFlow({
     }
     return { ok: false, message: data?.message ?? 'No dataset material found.' }
   }
-  // Dynamic dataset search — the large corpora (IEA/Epstein/Coke Studio) are
-  // queried on demand rather than listed. Returns matching provider groups.
-  async function searchDatasets(query: string): Promise<LibraryGroup[]> {
+  // The "from library" picker's tab strip — one tab per applicable provider
+  // plus the synthetic Research sources / Document assets tabs. Cheap metadata
+  // only; each tab's items load lazily through `loadLibraryPage`. Memoised on
+  // `slug` so the modal's fetch effects don't re-run (and reset pagination)
+  // every time the panel re-renders — e.g. after each "Add".
+  const loadLibraryTabs = useCallback(async (): Promise<LibraryTab[]> => {
     try {
-      const res = await fetch(
-        `${base}/${slug}/canvas/compose/library/search?q=${encodeURIComponent(query)}`,
-        { cache: 'no-store' },
-      )
+      const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
       if (!res.ok) return []
-      const data = (await res.json()) as { groups?: LibraryGroup[] }
-      return data.groups ?? []
+      const data = (await res.json()) as { tabs?: LibraryTab[] }
+      return data.tabs ?? []
     } catch {
       return []
     }
-  }
-  // Pull the "from library" picker contents — prior extracted sources, doc
-  // assets, and provider groups (stories/epics). Not single-flight (`call`):
-  // the modal owns its own loading state.
-  async function loadLibrary(): Promise<{
-    sources: LibrarySource[]
-    assets: LibraryAsset[]
-    groups: LibraryGroup[]
-  }> {
-    try {
-      const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
-      if (!res.ok) return { sources: [], assets: [], groups: [] }
-      const data = (await res.json()) as {
-        sources?: LibrarySource[]
-        assets?: LibraryAsset[]
-        groups?: LibraryGroup[]
+  }, [slug])
+  // One paginated page of a single picker tab (`tab` = a provider key, or
+  // `sources` / `assets`). `total` is the full match count so the modal can
+  // drive "Load more". Memoised on `slug` (see above). Not single-flight
+  // (`call`): the modal owns its loading state.
+  const loadLibraryPage = useCallback(
+    async (tab: string, offset: number, limit: number, q: string): Promise<LibraryPage> => {
+      try {
+        const qs = new URLSearchParams({ tab, offset: String(offset), limit: String(limit) })
+        if (q) qs.set('q', q)
+        const res = await fetch(`${base}/${slug}/canvas/compose/library/page?${qs.toString()}`, {
+          cache: 'no-store',
+        })
+        if (!res.ok) return { items: [], total: 0 }
+        const data = (await res.json()) as { items?: LibraryPage['items']; total?: number }
+        return { items: data.items ?? [], total: data.total ?? 0 }
+      } catch {
+        return { items: [], total: 0 }
       }
-      return { sources: data.sources ?? [], assets: data.assets ?? [], groups: data.groups ?? [] }
-    } catch {
-      return { sources: [], assets: [], groups: [] }
-    }
-  }
+    },
+    [slug],
+  )
   async function removeSource(id: string) {
     const data = await call<{ ok: boolean }>('remove', `sources?id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -760,8 +757,8 @@ export function useComposeFlow({
     addFromSource,
     addAsset,
     addFromProvider,
-    loadLibrary,
-    searchDatasets,
+    loadLibraryTabs,
+    loadLibraryPage,
     addEnrich,
     removeSource,
     reextract,

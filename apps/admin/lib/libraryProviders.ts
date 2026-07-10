@@ -39,6 +39,28 @@ export interface LibraryGroup {
   items: LibraryItem[]
 }
 
+/** One page of a provider's items plus the full (filtered) match count — drives
+ *  the picker's per-tab "Load more" affordance. */
+export interface LibraryPage {
+  items: LibraryItem[]
+  total: number
+}
+
+/** How the picker's tab strip should present a tab. `provider` tabs are backed
+ *  by a `LibraryProvider`; `sources`/`assets` are the two synthetic tabs handled
+ *  directly by the page route. */
+export type LibraryTabKind = 'provider' | 'sources' | 'assets'
+
+/** Lightweight tab descriptor for the picker — no items, so it's cheap to build
+ *  (just the app-scope filter, no per-provider query). */
+export interface LibraryTab {
+  key: string
+  label: string
+  /** `list` tabs surface content up front; `search` tabs need a query first. */
+  mode: 'list' | 'search'
+  kind: LibraryTabKind
+}
+
 /** Extracted text for one item, ready to snapshot as a source row. */
 export interface LibraryExtract {
   title: string
@@ -51,28 +73,41 @@ interface ListCtx {
   appSlug: string | null
   /** The draft's own slug — excluded from results so you can't attach yourself. */
   excludeSlug: string
+  /** Zero-based row offset for the requested page. */
+  offset: number
+  /** Max rows to return for the page. */
+  limit: number
+  /** Optional server-side text filter scoped to the active tab. */
+  query?: string
 }
 
 interface SearchCtx extends ListCtx {
   /** The user's (sanitised) query — never empty when `search` is invoked. */
   query: string
-  /** Max hits to return. */
-  limit: number
 }
 
 /**
  * A provider is `list`-based (bounded set surfaced up front — stories, epics,
  * news), `search`-based (large corpus queried on demand — the datasets), or
- * both. `extract` resolves a chosen item's text regardless of how it surfaced.
+ * both. Each returns a `LibraryPage` (a page of items + the full match count)
+ * so the picker can paginate. `extract` resolves a chosen item's text
+ * regardless of how it surfaced.
  */
 interface LibraryProvider {
   key: string
   label: string
   /** Which app_slugs this provider serves; omit to serve every app. */
   apps?: string[]
-  list?(ctx: ListCtx): Promise<LibraryItem[]>
-  search?(ctx: SearchCtx): Promise<LibraryItem[]>
+  list?(ctx: ListCtx): Promise<LibraryPage>
+  search?(ctx: SearchCtx): Promise<LibraryPage>
   extract(id: string): Promise<LibraryExtract | null>
+}
+
+/** Slice an already-materialised item list into a page + report its full size.
+ *  Used by providers whose corpus is fetched whole (small sets or reader-backed
+ *  queries that don't take an offset), then paged in memory. */
+function pageOf(items: LibraryItem[], offset: number, limit: number): LibraryPage {
+  return { items: items.slice(offset, offset + limit), total: items.length }
 }
 
 /** Strip characters that would break a PostgREST `.or(...)` filter, then wrap as
@@ -131,29 +166,32 @@ async function sharedEpicStorySlugs(appSlug: string | null): Promise<string[]> {
 const storiesProvider: LibraryProvider = {
   key: 'story',
   label: 'Published stories',
-  async list({ appSlug, excludeSlug }) {
+  async list({ appSlug, excludeSlug, offset, limit, query }) {
     const sb = createServiceClient()
     let q = sb
       .from('stories')
-      .select('slug, title, app_slug')
+      .select('slug, title, app_slug', { count: 'exact' })
       .eq('status', 'published')
       .neq('slug', excludeSlug)
       .order('updated_at', { ascending: false })
-      .limit(500)
+    if (query) q = q.ilike('title', ilikePattern(query))
     if (appSlug) {
       const sharedStories = await sharedEpicStorySlugs(appSlug)
       q = sharedStories.length
         ? q.or(`app_slug.eq.${appSlug},slug.in.(${sharedStories.join(',')})`)
         : q.eq('app_slug', appSlug)
     }
-    const { data, error } = await q
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ slug: string; title: string | null; app_slug: string | null }>
-    return rows.map((r) => ({
-      id: r.slug,
-      title: r.title ?? r.slug,
-      subtitle: r.app_slug ?? undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.slug,
+        title: r.title ?? r.slug,
+        subtitle: r.app_slug ?? undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(slug) {
     const sb = createServiceClient()
@@ -170,7 +208,7 @@ const storiesProvider: LibraryProvider = {
 const epicsProvider: LibraryProvider = {
   key: 'epic',
   label: 'Epic explainers',
-  async list({ appSlug }) {
+  async list({ appSlug, offset, limit, query }) {
     const sb = createServiceClient()
     let q = sb.from('epics').select('slug, name, description, explainer').order('slug', { ascending: true })
     if (appSlug) {
@@ -187,9 +225,14 @@ const epicsProvider: LibraryProvider = {
       description: string | null
       explainer: string | null
     }>
-    return rows
+    // Explainer prose is required, so we filter (and query) in memory over the
+    // small epic set, then page the result.
+    const ql = query?.trim().toLowerCase()
+    const items = rows
       .filter((r) => (r.explainer ?? '').trim().length > 0)
+      .filter((r) => !ql || `${r.name ?? ''} ${r.description ?? ''} ${r.slug}`.toLowerCase().includes(ql))
       .map((r) => ({ id: r.slug, title: r.name ?? r.slug, subtitle: r.description ?? undefined }))
+    return pageOf(items, offset, limit)
   },
   async extract(slug) {
     const sb = createServiceClient()
@@ -224,7 +267,7 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
     key: opts.key,
     label: opts.label,
     apps: [opts.app],
-    async list() {
+    async list({ offset, limit, query }) {
       const sb = createServiceClient()
       const { data, error } = await sb
         .from(opts.table)
@@ -239,9 +282,14 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
         publisher: string | null
         summary: string | null
       }>
-      return rows
+      // A usable `summary` is required, so filter (and query) in memory over the
+      // bounded feed, then page the result.
+      const ql = query?.trim().toLowerCase()
+      const items = rows
         .filter((r) => (r.summary ?? '').trim().length > 0)
+        .filter((r) => !ql || `${r.headline ?? ''} ${r.publisher ?? ''}`.toLowerCase().includes(ql))
         .map((r) => ({ id: r.id, title: r.headline ?? 'Untitled', subtitle: r.publisher ?? undefined }))
+      return pageOf(items, offset, limit)
     },
     async extract(id) {
       const sb = createServiceClient()
@@ -279,13 +327,14 @@ const recapsProvider: LibraryProvider = {
   key: 'footshorts-recap',
   label: 'Match recaps',
   apps: ['footshorts'],
-  async list() {
+  async list({ offset, limit, query }) {
     const sb = createServiceClient()
-    const { data, error } = await sb
+    let q = sb
       .from('daily_recaps')
-      .select('id, scope, window_hours, fixture_count, article_count, generated_at')
+      .select('id, scope, window_hours, fixture_count, article_count, generated_at', { count: 'exact' })
       .order('generated_at', { ascending: false })
-      .limit(100)
+    if (query) q = q.ilike('scope', ilikePattern(query))
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       id: string
@@ -295,7 +344,7 @@ const recapsProvider: LibraryProvider = {
       article_count: number | null
       generated_at: string
     }>
-    return rows.map((r) => {
+    const items = rows.map((r) => {
       const scope = r.scope ?? 'all'
       const counts = [
         r.fixture_count ? `${r.fixture_count} fixtures` : null,
@@ -311,6 +360,7 @@ const recapsProvider: LibraryProvider = {
         subtitle: counts || undefined,
       }
     })
+    return { items, total: count ?? items.length }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -341,22 +391,25 @@ const ieaNewsProvider: LibraryProvider = {
   key: 'iea-news',
   label: 'IEA energy news',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('iea_news')
-      .select('id, title, summary, published_at')
+      .select('id, title, summary, published_at', { count: 'exact' })
       .or(`title.ilike.${pat},summary.ilike.${pat}`)
       .order('published_at', { ascending: false })
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ id: number; title: string | null; summary: string | null }>
-    return rows.map((r) => ({
-      id: String(r.id),
-      title: r.title ?? 'Untitled',
-      subtitle: r.summary?.slice(0, 120) ?? undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: String(r.id),
+        title: r.title ?? 'Untitled',
+        subtitle: r.summary?.slice(0, 120) ?? undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -390,15 +443,15 @@ const epsteinProvider: LibraryProvider = {
   key: 'epstein',
   label: 'Epstein documents',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('epstein_documents')
-      .select('id, filename, source, page_count')
+      .select('id, filename, source, page_count', { count: 'exact' })
       .or(`filename.ilike.${pat},raw_text.ilike.${pat}`)
       .not('raw_text', 'is', null)
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       id: string
@@ -406,11 +459,14 @@ const epsteinProvider: LibraryProvider = {
       source: string | null
       page_count: number | null
     }>
-    return rows.map((r) => ({
-      id: r.id,
-      title: r.filename ?? 'Untitled document',
-      subtitle: [r.source, r.page_count ? `${r.page_count}p` : null].filter(Boolean).join(' · ') || undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        title: r.filename ?? 'Untitled document',
+        subtitle: [r.source, r.page_count ? `${r.page_count}p` : null].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -441,14 +497,14 @@ const cokeStudioProvider: LibraryProvider = {
   key: 'coke-studio',
   label: 'Coke Studio songs',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('coke_studio_songs')
-      .select('song_id, title, artists, season, notes')
+      .select('song_id, title, artists, season, notes', { count: 'exact' })
       .or(`title.ilike.${pat},artists.ilike.${pat},notes.ilike.${pat}`)
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       song_id: string
@@ -456,11 +512,14 @@ const cokeStudioProvider: LibraryProvider = {
       artists: string | null
       season: number | null
     }>
-    return rows.map((r) => ({
-      id: r.song_id,
-      title: r.title ?? r.song_id,
-      subtitle: [r.artists, r.season ? `S${r.season}` : null].filter(Boolean).join(' · ') || undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.song_id,
+        title: r.title ?? r.song_id,
+        subtitle: [r.artists, r.season ? `S${r.season}` : null].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -561,22 +620,25 @@ const energyProfileProvider: LibraryProvider = {
   key: 'energy-profile',
   label: 'Country energy profiles',
   apps: ['vizmaya-fyi', 'footshorts'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('iea_countries')
-      .select('code, name, summary')
+      .select('code, name, summary', { count: 'exact' })
       .or(`name.ilike.${pat},code.ilike.${pat}`)
       .order('name', { ascending: true })
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ code: string; name: string | null; summary: string | null }>
-    return rows.map((r) => ({
-      id: r.code,
-      title: r.name ?? r.code,
-      subtitle: r.summary?.slice(0, 120) ?? undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.code,
+        title: r.name ?? r.code,
+        subtitle: r.summary?.slice(0, 120) ?? undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(code) {
     const profile = await getIeaCountryProfile(code)
@@ -687,15 +749,15 @@ const fifaWc26Provider: LibraryProvider = {
   key: 'fifa-wc26',
   label: 'World Cup 2026 teams',
   apps: ['footshorts'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('fifa_wc26_teams')
-      .select('code, name, confederation, squad_value_eur_mn, fifa_ranking')
+      .select('code, name, confederation, squad_value_eur_mn, fifa_ranking', { count: 'exact' })
       .or(`name.ilike.${pat},code.ilike.${pat},confederation.ilike.${pat}`)
       .order('squad_value_eur_mn', { ascending: false, nullsFirst: false })
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       code: string
@@ -704,18 +766,21 @@ const fifaWc26Provider: LibraryProvider = {
       squad_value_eur_mn: number | null
       fifa_ranking: number | null
     }>
-    return rows.map((r) => ({
-      id: r.code,
-      title: r.name ?? r.code,
-      subtitle:
-        [
-          r.confederation,
-          r.squad_value_eur_mn != null ? `€${r.squad_value_eur_mn.toLocaleString('en-US')}mn squad` : null,
-          r.fifa_ranking != null ? `FIFA #${r.fifa_ranking}` : null,
-        ]
-          .filter(Boolean)
-          .join(' · ') || undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.code,
+        title: r.name ?? r.code,
+        subtitle:
+          [
+            r.confederation,
+            r.squad_value_eur_mn != null ? `€${r.squad_value_eur_mn.toLocaleString('en-US')}mn squad` : null,
+            r.fifa_ranking != null ? `FIFA #${r.fifa_ranking}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(code) {
     const sb = createServiceClient()
@@ -783,13 +848,19 @@ const dcNewsProvider: LibraryProvider = {
   key: 'dc-news',
   label: 'Data center news',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
+    // The admin reader takes no offset, so this is a single page: report
+    // total = items.length (no "Load more"), and beyond page 1 return nothing.
+    if (offset > 0) return { items: [], total: 0 }
     const rows = await listDcNewsForAdmin({ q: query, limit, relevance: 'relevant' })
-    return rows.map((r) => ({
-      id: String(r.id),
-      title: r.title,
-      subtitle: r.source ?? r.summary?.slice(0, 120) ?? undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: String(r.id),
+        title: r.title,
+        subtitle: r.source ?? r.summary?.slice(0, 120) ?? undefined,
+      })),
+      total: rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -830,22 +901,26 @@ const dcNewsRecapProvider: LibraryProvider = {
   key: 'dc-news-recap',
   label: 'Data center recaps',
   apps: ['vizmaya-fyi'],
-  async list() {
+  async list({ offset, limit, query }) {
     const recaps = await listDcNewsRecaps(100)
-    return recaps.map((r) => {
-      const when = new Date(r.generatedAt).toISOString().slice(0, 16).replace('T', ' ')
-      const meta = [
-        r.windowHours ? `last ${r.windowHours}h` : null,
-        r.articleCount ? `${r.articleCount} stories` : null,
-      ]
-        .filter(Boolean)
-        .join(' · ')
-      return {
-        id: String(r.id),
-        title: r.headline ?? `${when} recap`,
-        subtitle: meta || undefined,
-      }
-    })
+    const ql = query?.trim().toLowerCase()
+    const items = recaps
+      .map((r) => {
+        const when = new Date(r.generatedAt).toISOString().slice(0, 16).replace('T', ' ')
+        const meta = [
+          r.windowHours ? `last ${r.windowHours}h` : null,
+          r.articleCount ? `${r.articleCount} stories` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        return {
+          id: String(r.id),
+          title: r.headline ?? `${when} recap`,
+          subtitle: meta || undefined,
+        }
+      })
+      .filter((it) => !ql || `${it.title} ${it.subtitle ?? ''}`.toLowerCase().includes(ql))
+    return pageOf(items, offset, limit)
   },
   async extract(id) {
     const recap = await getDcNewsRecap(Number(id))
@@ -885,20 +960,21 @@ const dcStockMarketProvider: LibraryProvider = {
   key: 'dc-stock-market',
   label: 'Data center market',
   apps: ['vizmaya-fyi'],
-  async list() {
+  async list({ offset, limit, query }) {
     // Cheap head-count only — the price series is read lazily in extract.
     const sb = createServiceClient()
     const { count } = await sb
       .from('dc_stocks')
       .select('ticker', { count: 'exact', head: true })
       .eq('is_active', true)
-    return [
-      {
-        id: 'snapshot',
-        title: 'Market snapshot — all tracked tickers',
-        subtitle: count ? `${count} tickers · latest closes + ${DC_STOCK_WINDOW_DAYS}d change` : undefined,
-      },
-    ]
+    const item: LibraryItem = {
+      id: 'snapshot',
+      title: 'Market snapshot — all tracked tickers',
+      subtitle: count ? `${count} tickers · latest closes + ${DC_STOCK_WINDOW_DAYS}d change` : undefined,
+    }
+    const ql = query?.trim().toLowerCase()
+    const items = ql && !item.title.toLowerCase().includes(ql) ? [] : [item]
+    return pageOf(items, offset, limit)
   },
   async extract() {
     const market = await getDcStockMarket(DC_STOCK_WINDOW_DAYS)
@@ -934,17 +1010,17 @@ const dcStocksProvider: LibraryProvider = {
   key: 'dc-stocks',
   label: 'Data center stocks',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('dc_stocks')
-      .select('ticker, name, exchange, category')
+      .select('ticker, name, exchange, category', { count: 'exact' })
       .eq('is_active', true)
       .or(`name.ilike.${pat},ticker.ilike.${pat},category.ilike.${pat}`)
       .order('category')
       .order('ticker')
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       ticker: string
@@ -952,12 +1028,15 @@ const dcStocksProvider: LibraryProvider = {
       exchange: string | null
       category: string | null
     }>
-    return rows.map((r) => ({
-      id: r.ticker,
-      title: r.name ? `${r.name} (${r.ticker})` : r.ticker,
-      subtitle:
-        [r.category ? dcCategoryLabel(r.category) : null, r.exchange].filter(Boolean).join(' · ') || undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.ticker,
+        title: r.name ? `${r.name} (${r.ticker})` : r.ticker,
+        subtitle:
+          [r.category ? dcCategoryLabel(r.category) : null, r.exchange].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(ticker) {
     const market = await getDcStockMarket(DC_STOCK_WINDOW_DAYS)
@@ -1015,27 +1094,73 @@ export async function getDraftApp(slug: string): Promise<string | null> {
   }
 }
 
+/** Default page size for a picker tab. */
+const PAGE_LIMIT = 20
+
+/** Is a provider in scope for a draft's app? Providers with no `apps` serve all. */
+function providerServesApp(p: LibraryProvider, appSlug: string | null): boolean {
+  return !p.apps || (appSlug != null && p.apps.includes(appSlug))
+}
+
 /**
- * Every applicable provider's group for a draft. Each provider runs
- * independently — one that throws (missing table, etc.) is dropped rather than
- * failing the whole picker. Empty groups are omitted.
+ * The picker's tab strip for a draft — every applicable provider (one tab each)
+ * plus the two synthetic "Research sources" and "Document assets" tabs. Cheap:
+ * only the app-scope filter runs, no per-provider query, so items are loaded
+ * lazily per tab through {@link getLibraryGroupPage} / the page route.
+ *
+ * Unlike the old flat list this does NOT drop empty providers (that would need a
+ * query per provider) — a provider whose corpus is empty simply shows an empty
+ * tab. For the primary desks every applicable provider is backed by a real
+ * table, so phantom tabs are not a concern in practice.
  */
-export async function getLibraryGroups(slug: string): Promise<LibraryGroup[]> {
+export async function getLibraryTabs(slug: string): Promise<LibraryTab[]> {
   const appSlug = await getDraftApp(slug)
-  const applicable = PROVIDERS.filter(
-    (p) => p.list && (!p.apps || (appSlug != null && p.apps.includes(appSlug))),
-  )
-  const groups = await Promise.all(
-    applicable.map(async (p) => {
-      try {
-        const items = await p.list!({ appSlug, excludeSlug: slug })
-        return items.length ? { key: p.key, label: p.label, items } : null
-      } catch {
-        return null
-      }
-    }),
-  )
-  return groups.filter((g): g is LibraryGroup => g != null)
+  const providerTabs: LibraryTab[] = PROVIDERS.filter(
+    (p) => (p.list || p.search) && providerServesApp(p, appSlug),
+  ).map((p) => ({
+    key: p.key,
+    label: p.label,
+    mode: p.list ? 'list' : 'search',
+    kind: 'provider',
+  }))
+  return [
+    ...providerTabs,
+    { key: 'sources', label: 'Research sources', mode: 'list', kind: 'sources' },
+    { key: 'assets', label: 'Document assets', mode: 'list', kind: 'assets' },
+  ]
+}
+
+/**
+ * One page of a single provider tab. Uses the provider's `list` when it has one
+ * (passing the active `query` for a server-side filter), else its `search`
+ * (which needs a >=2-char query — short queries return an empty page, matching
+ * {@link searchLibrary}). App-scope is enforced and errors are isolated, so a
+ * bad tab yields an empty page rather than failing the picker.
+ */
+export async function getLibraryGroupPage(
+  slug: string,
+  key: string,
+  opts: { offset?: number; limit?: number; query?: string } = {},
+): Promise<LibraryPage> {
+  const provider = byKey.get(key)
+  if (!provider) return { items: [], total: 0 }
+  const appSlug = await getDraftApp(slug)
+  if (!providerServesApp(provider, appSlug)) return { items: [], total: 0 }
+  const offset = opts.offset ?? 0
+  const limit = opts.limit ?? PAGE_LIMIT
+  const query = (opts.query ?? '').trim()
+  try {
+    if (provider.list) {
+      return await provider.list({ appSlug, excludeSlug: slug, offset, limit, query: query || undefined })
+    }
+    if (provider.search) {
+      if (query.length < 2) return { items: [], total: 0 }
+      return await provider.search({ appSlug, excludeSlug: slug, query, offset, limit })
+    }
+    return { items: [], total: 0 }
+  } catch {
+    return { items: [], total: 0 }
+  }
 }
 
 /** Max hits returned per dataset for a single query. */
@@ -1057,7 +1182,7 @@ export async function searchLibrary(slug: string, rawQuery: string): Promise<Lib
   const groups = await Promise.all(
     applicable.map(async (p) => {
       try {
-        const items = await p.search!({ appSlug, excludeSlug: slug, query, limit: SEARCH_LIMIT })
+        const { items } = await p.search!({ appSlug, excludeSlug: slug, query, limit: SEARCH_LIMIT, offset: 0 })
         return items.length ? { key: p.key, label: p.label, items } : null
       } catch {
         return null
