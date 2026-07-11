@@ -104,7 +104,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ slug: 
     const r = appendStorySection(md, cfg, {
       heading: asCover ? COVER_ANCHOR : entry.heading,
       paragraphs: [entry.intent || ''],
-      kind: entry.kind,
+      // A deck opener the model labelled `hero` is normalised to the canonical
+      // `cover` kind so the stored config matches its `## Cover` anchor.
+      kind: asCover ? 'cover' : entry.kind,
       body: asCover
         ? completeCoverBody(placeholderBody(entry), { heading: entry.heading })
         : placeholderBody(entry),

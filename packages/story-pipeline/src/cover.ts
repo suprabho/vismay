@@ -39,9 +39,19 @@ export const COVER_PANEL = {
   backdropBlur: '0',
 } as const
 
-/** Is this section the deck-format editorial cover? */
+/**
+ * Is this section the deck-format editorial cover?
+ *
+ * A deck opener may come back labelled `cover` OR `hero`: the deck kind enum
+ * offers both, the outline lint's `COVER_KINDS` (lintLayout.ts) accepts either
+ * as a valid opening title card, and the reader aliases them. Recognise both
+ * here so a deck opener the model happened to call `hero` still routes through
+ * `completeCoverBody` — otherwise it ships with no `foreground`/`map`, and
+ * `loadStoryConfig` throws "missing 'map.center'" and 404s the whole story
+ * (the failure mode that motivated this).
+ */
 export function isDeckCover(format: string, kind: string | undefined): boolean {
-  return format === 'deck' && kind === 'cover'
+  return format === 'deck' && (kind === 'cover' || kind === 'hero')
 }
 
 /** kebab-case slug used in compose asset filenames (mirrors the assets panel). */

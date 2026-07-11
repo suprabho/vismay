@@ -40,7 +40,11 @@ export function serializeStory(
     const res = appendStorySection(markdown, configYaml, {
       heading: asCover ? COVER_ANCHOR : section.heading,
       paragraphs: section.paragraphs,
-      kind: section.kind,
+      // Normalise a deck opener the model labelled `hero` to the canonical
+      // `cover` kind so the stored config matches its `## Cover` anchor and the
+      // deck convention (the reader treats hero/cover alike; `cover` is the
+      // deck value).
+      kind: asCover ? 'cover' : section.kind,
       body: asCover
         ? completeCoverBody(section.body, {
             heading: section.heading,
