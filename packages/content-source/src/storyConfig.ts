@@ -198,6 +198,27 @@ export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
         )
       })
     }
+    // A deck editorial cover renders title-over-scrim from its own
+    // `heading`/`eyebrow`/`dek`/`text` and legitimately carries no map and no
+    // image layer (see `completeCoverBody` in @vismay/story-pipeline, which
+    // seeds an empty `foreground` for exactly this reason). A section-root
+    // `layout: hero-full-bleed` (or an explicit `cover` kind) is the
+    // unambiguous marker for that surface. Normalise such a section to an empty
+    // `foreground` when it declares no layer slot, so it satisfies the
+    // layer-slot requirement below instead of falling through to the legacy
+    // `map.center` check and 404ing the whole story. Map-story heroes never set
+    // a section-root `hero-full-bleed` layout, so their genuine missing-map
+    // errors still surface.
+    const isCoverStyleSection =
+      (s as { layout?: unknown }).layout === 'hero-full-bleed' ||
+      (s as { kind?: unknown }).kind === 'cover'
+    const declaresSlot =
+      (s as { background?: unknown }).background !== undefined ||
+      (s as { foreground?: unknown }).foreground !== undefined
+    if (isCoverStyleSection && !declaresSlot) {
+      ;(s as { foreground?: unknown }).foreground = []
+    }
+
     // Legacy `map:` block is only required when the section is purely legacy —
     // i.e. it declares neither `background:` nor `foreground:`. New stories
     // that opt into the layered schema (background-only, foreground-only, or
