@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { LandingPage } from '@/components/landing/LandingPage'
 import { isAuthed } from '@/lib/adminAuth'
 import { listUnassignedStories } from '@vismay/content-source/apps'
+import { APP_BY_SLUG } from '@vismay/verticals/data'
 import DraftsList from '@/components/vizmaya/DraftsList'
 
 interface AppEntry {
@@ -9,23 +10,30 @@ interface AppEntry {
   name: string
   description: string
   status: 'available' | 'coming-soon'
+  /** Registry slug in @vismay/verticals APPS — drives the brand mark. Note
+   *  vizmaya's registry slug is 'vizmaya-fyi'; experiments/storytime-ovo have
+   *  no registry entry, so the lookup stays optional. */
+  slug?: string
 }
 
 const APPS: AppEntry[] = [
   {
     href: '/vizmaya',
+    slug: 'vizmaya-fyi',
     name: 'Vizmaya FYI',
     description: 'Stories, epics, demos, charts, social, narration.',
     status: 'available',
   },
   {
     href: '/vizf1',
+    slug: 'vizf1',
     name: 'VizF1',
     description: 'F1 stories and epics tagged to the vizf1 app.',
     status: 'available',
   },
   {
     href: '/footshorts',
+    slug: 'footshorts',
     name: 'Footshorts',
     description: 'Football stories and epics tagged to the footshorts app.',
     status: 'available',
@@ -81,10 +89,23 @@ function AppCard({ app }: { app: AppEntry }) {
     ? 'cursor-not-allowed opacity-60'
     : 'hover:bg-white/10 hover:border-white/20'
 
+  // Brand mark from the verticals registry (currentColor SVG string); apps
+  // without a registry entry / logo just render the neutral card.
+  const logoSvg = app.slug ? APP_BY_SLUG.get(app.slug)?.branding.logoSvg : undefined
+
   const body = (
     <div className="flex items-baseline justify-between gap-4">
       <div className="space-y-1 min-w-0">
-        <div className="font-medium">{app.name}</div>
+        <div className="flex items-center gap-2.5 font-medium">
+          {logoSvg && (
+            <span
+              aria-hidden
+              className="shrink-0 text-neutral-300 [&>svg]:h-5 [&>svg]:w-auto"
+              dangerouslySetInnerHTML={{ __html: logoSvg }}
+            />
+          )}
+          {app.name}
+        </div>
         <div className="text-sm text-neutral-400">{app.description}</div>
       </div>
       {disabled && (

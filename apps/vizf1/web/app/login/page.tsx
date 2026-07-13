@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, type CSSProperties } from 'react'
 import { AuthWidget, createSupabaseAuthClient } from '@vismay/ui'
+import { ChequeredFlagMark } from '@vizf1/brand/logos'
 import { useAuth } from '@/lib/AuthProvider'
 import { supabaseAuth } from '@/lib/supabaseAuth'
 
@@ -35,7 +36,7 @@ export default function LoginPage() {
           authClient={authClient}
           providers={['password', 'google']}
           allowSignup
-          brand={{ name: 'VizF1' }}
+          brand={{ name: 'VizF1', logo: <ChequeredFlagMark className="h-6 w-auto text-accent" /> }}
           copy={{ signupSubtitle: 'Create an account to follow drivers and teams.' }}
           onAuthed={() => router.replace('/onboarding/drivers')}
           style={BRAND_STYLE}

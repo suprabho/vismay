@@ -233,6 +233,15 @@ const AUDIO_DISPATCH: SurfaceDispatch = { workflow: 'render-audio.yml', bucket: 
 const ALL_SURFACES_DISPATCH = { pdf: PDF_DISPATCH, video: VIDEO_DISPATCH, audio: AUDIO_DISPATCH }
 
 /**
+ * VizF1 chequered-flag mark (flat colorway), linework as `currentColor` so
+ * consumers tint it with their surrounding text color. Source: Figma
+ * "Vismay Brands" node 120-196; React siblings (monograms, gradient flag)
+ * live in apps/vizf1/brand/src/logos.tsx — keep the geometry in sync.
+ */
+const VIZF1_LOGO_SVG =
+  '<svg viewBox="0 0 406.319 238.021" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.0213 226L108.191 129.83" stroke="currentColor" stroke-width="24.0426" stroke-linecap="round"/><path d="M146.66 115.404H103.383L114.525 104.792C133.302 86.9103 158.237 76.9362 184.166 76.9362H204.362L176.505 103.466C168.459 111.13 157.772 115.404 146.66 115.404Z" fill="currentColor"/><path d="M242.83 76.9362H199.553L227.409 50.4065C235.456 42.7427 246.143 38.4681 257.255 38.4681H300.532L272.676 64.9978C264.629 72.6615 253.942 76.9362 242.83 76.9362Z" fill="currentColor"/><path d="M276.489 115.404H223.596L257.936 82.6995C261.82 78.9998 266.98 76.9362 272.345 76.9362H276.491C293.853 76.9362 302.327 98.124 289.754 110.098C286.178 113.504 281.428 115.404 276.489 115.404Z" fill="currentColor"/><path d="M222.634 38.4681H175.511C201.44 13.7738 235.874 0 271.681 0H276.489L245.848 29.1827C239.589 35.1434 231.277 38.4681 222.634 38.4681Z" fill="currentColor"/><path d="M165.405 153.872H163.873C148.976 153.872 141.705 135.693 152.492 125.42C159.243 118.99 168.208 115.404 177.531 115.404H223.596L196.094 141.597C187.819 149.477 176.831 153.872 165.405 153.872Z" fill="currentColor"/><path d="M344.77 38.4681H305.34L330.411 14.5913C340.246 5.22456 353.308 0 366.889 0H406.319L381.249 23.8767C371.413 33.2435 358.352 38.4681 344.77 38.4681Z" fill="currentColor"/></svg>'
+
+/**
  * Every consumer app. Order is stable. Stories with no consumer app
  * (kidzovo/starship internals, vizmaya's own) resolve to `vizmaya-fyi` via
  * `appSlugForVertical()`, so only apps that own a render surface need an entry.
@@ -277,7 +286,7 @@ export const APPS: AppEntry[] = [
       consumer: { env: 'NEXT_PUBLIC_VIZF1_URL', default: 'https://vizf1.com' },
       admin: { env: 'NEXT_PUBLIC_ADMIN_VIZF1_URL', default: 'https://admin.vizf1.com' },
     },
-    branding: { hideLogoInAutoplay: true, dataAttr: 'vizf1' },
+    branding: { hideLogoInAutoplay: true, dataAttr: 'vizf1', logoSvg: VIZF1_LOGO_SVG },
     // vizf1 has no epic landing route.
     surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
     routing: { storyPath: (slug) => `/editorial/${slug}` },

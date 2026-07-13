@@ -32,7 +32,7 @@ function useCircuitGeometry(circuitId: string) {
   })
 }
 
-export function CircuitMap({ circuitId, accent = '#e10600', height = 160 }: Props) {
+export function CircuitMap({ circuitId, accent = '#ff4346', height = 160 }: Props) {
   const q = useCircuitGeometry(circuitId)
   const d = q.data?.track_path_svg ?? null
 

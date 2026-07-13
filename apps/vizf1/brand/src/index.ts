@@ -14,8 +14,8 @@ export const F1_BRAND = {
     border: '#1f2330',
     text: '#f5f5f5',
     muted: '#8e8e99',
-    accent: '#e10600', // F1 red
-    accentText: '#ffffff',
+    accent: '#ff4346', // VizF1 coral red (Figma "Vismay Brands" node 120-196)
+    accentText: '#0b0d12', // near-black ink on accent — brand lockup is black-on-red
   },
   /** Constructor accents — used by f1:position-chart lane colours. */
   constructors: {
