@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { VF1MonogramFlat } from '@vizf1/brand/logos'
 import { useAuth } from '@/lib/AuthProvider'
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean }
@@ -36,10 +37,10 @@ export function AppHeader() {
       <div className="relative mx-auto flex max-w-2xl items-center justify-center px-4 py-1">
         <Link
           href="/feed"
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-bold text-text sm:text-lg"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-text"
           aria-label="VizF1"
         >
-          VizF1
+          <VF1MonogramFlat className="h-5 w-auto sm:h-6" />
         </Link>
         <nav className="mx-auto my-2 inline-flex rounded-full border border-border bg-surface/60 p-1">
           {NAV.map((item) => {
