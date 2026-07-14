@@ -29,8 +29,11 @@ function normalize(url: string): string {
 export const vizmayaPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_VIZMAYA_URL || 'https://vizmaya.fyi'
 )
+// www is canonical: the apex 307s to www at the platform level WITHOUT CORS
+// headers, which kills cross-origin fetches (e.g. f1 modules loading telemetry
+// from a foreign render surface) at the redirect hop.
 export const vizf1PublicUrl: string = normalize(
-  process.env.NEXT_PUBLIC_VIZF1_URL || 'https://vizf1.com'
+  process.env.NEXT_PUBLIC_VIZF1_URL || 'https://www.vizf1.com'
 )
 export const footshortsPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_FOOTSHORTS_URL || 'https://footshorts.com'
