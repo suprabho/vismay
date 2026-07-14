@@ -24,13 +24,21 @@ import { extractDirectives, extractFsDirectives, type FsDirective } from '@visma
 import type { GeneratedStory, GeneratedSection, SourceDoc } from '../types'
 
 /** A foreground layer object carrying a `type`, as it sits in a section body. */
-type ForegroundLayer = Record<string, unknown> & { type?: unknown }
+export type ForegroundLayer = Record<string, unknown> & { type?: unknown }
 
 /**
  * Walk a section body's `foreground` (single layer, array, or a regions map) and
  * return mutable references to every layer in `namespace` (e.g. `fs`, `f1`), in
- * document order.
+ * document order. Exported so callers can post-process vertical layers after a
+ * graft (e.g. pin an `apiBase` on fetch-backed f1 modules).
  */
+export function collectForegroundLayers(
+  body: Record<string, unknown>,
+  namespace: string,
+): ForegroundLayer[] {
+  return collectLayers(body, namespace)
+}
+
 function collectLayers(body: Record<string, unknown>, namespace = 'fs'): ForegroundLayer[] {
   const prefix = `${namespace}:`
   const out: ForegroundLayer[] = []

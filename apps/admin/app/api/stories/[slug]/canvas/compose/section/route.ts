@@ -19,10 +19,12 @@ import {
   isDeckCover,
   collectRecapDirectives,
   collectVerticalDirectives,
+  collectForegroundLayers,
   graftSectionBody,
   type StoryFormat,
   type ComposeAnswers,
 } from '@vismay/story-pipeline'
+import { vizf1PublicUrl } from '@/lib/publicSite'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { listStorySources } from '@vismay/content-source/storySources'
 import { readComposeState } from '@vismay/content-source/composeState'
@@ -57,6 +59,21 @@ export const maxDuration = 120
 // needs at most one retry per other in-flight writer. The client caps in-flight
 // writes at MAX_CONCURRENT_SECTIONS (3); 5 leaves comfortable headroom.
 const SECTION_WRITE_RETRIES = 5
+
+// f1 modules that fetch live telemetry from the vizf1 app's API routes at
+// render time. The canvas frame + outputs render on the shared vizmaya.fyi
+// surface (renderSurfaceUrl), where a host-relative `/api/telemetry/...` fetch
+// 404s — pin these layers to the vizf1 origin so they resolve on any surface.
+// Layers carrying inline data (`clip` / `fixture`) never fetch, so skip them.
+const F1_FETCHING_TYPES = new Set(['f1:telemetry-clip', 'f1:race-replay', 'f1:track-3d'])
+
+function pinF1ApiBase(body: Record<string, unknown>): void {
+  for (const layer of collectForegroundLayers(body, 'f1')) {
+    if (!F1_FETCHING_TYPES.has(layer.type as string)) continue
+    if (layer.apiBase || layer.clip || layer.fixture) continue
+    layer.apiBase = vizf1PublicUrl
+  }
+}
 
 interface StoredBrief {
   summary?: string
@@ -259,6 +276,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
           ].join('\n')
           graftSectionBody(visualBody, f1Directives, sectionText, 'f1')
         }
+        // After the graft (which replaces the whole layer config), pin the
+        // vizf1 origin on fetch-backed layers — grafted or model-guessed —
+        // so they load telemetry on the vizmaya.fyi render surface too.
+        pinF1ApiBase(visualBody)
       }
       if (hasSubs) {
         // Per-beat camera dives: center/zoom from the planned geo, tilt + focal

@@ -53,6 +53,8 @@ export {
   graftSectionBody,
   collectRecapDirectives,
   collectVerticalDirectives,
+  collectForegroundLayers,
+  type ForegroundLayer,
   type GraftRecapResult,
 } from './ingest/recapForeground'
 export { research, type ResearchOptions } from './research'

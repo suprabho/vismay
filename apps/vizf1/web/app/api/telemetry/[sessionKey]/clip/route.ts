@@ -13,6 +13,10 @@ import { supabaseServer } from '@/lib/supabaseServer'
  */
 export const dynamic = 'force-dynamic'
 
+// Public read-only data, also fetched cross-origin by f1: viz modules rendering
+// on the shared vizmaya.fyi render surface (admin canvas / compose previews).
+const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
+
 const VALID_CHANNELS = new Set(['speed', 'throttle', 'brake', 'drs', 'nGear', 'rpm'])
 
 function downsampleByStride<T>(arr: T[] | undefined, stride: number): T[] {
@@ -69,7 +73,7 @@ export async function GET(
   if (!driversRaw || !Number.isFinite(lapFrom) || !Number.isFinite(lapTo) || lapTo < lapFrom) {
     return NextResponse.json(
       { message: 'drivers, lapFrom and lapTo (lapTo >= lapFrom) are required' },
-      { status: 400 },
+      { status: 400, headers: CORS_HEADERS },
     )
   }
 
@@ -79,7 +83,10 @@ export async function GET(
     .filter((n) => Number.isFinite(n) && n > 0)
     .slice(0, 3)
   if (driverNumbers.length === 0) {
-    return NextResponse.json({ message: 'drivers must contain a numeric driver number' }, { status: 400 })
+    return NextResponse.json(
+      { message: 'drivers must contain a numeric driver number' },
+      { status: 400, headers: CORS_HEADERS },
+    )
   }
 
   const channels = (url.searchParams.get('channels') ?? 'speed,throttle,brake')
@@ -98,7 +105,7 @@ export async function GET(
     .eq('session_key', sessionKey)
     .maybeSingle()
   if (!sess) {
-    return NextResponse.json({ message: 'Session not found' }, { status: 404 })
+    return NextResponse.json({ message: 'Session not found' }, { status: 404, headers: CORS_HEADERS })
   }
   const s = sess as {
     session_key: string
@@ -206,7 +213,7 @@ export async function GET(
   if (tracks.length === 0 && drivers.length > 0 && s.positions_status !== 'done') {
     return NextResponse.json(
       { status: 'positions_not_ready', positionsStatus: s.positions_status ?? 'unknown' },
-      { status: 202 },
+      { status: 202, headers: CORS_HEADERS },
     )
   }
 
@@ -263,6 +270,6 @@ export async function GET(
       tracks,
       telemetry,
     },
-    { headers: { 'Cache-Control': 'public, max-age=300, must-revalidate' } },
+    { headers: { 'Cache-Control': 'public, max-age=300, must-revalidate', ...CORS_HEADERS } },
   )
 }
