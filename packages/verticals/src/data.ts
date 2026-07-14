@@ -283,7 +283,9 @@ export const APPS: AppEntry[] = [
     slug: 'vizf1',
     urls: {
       renderSurface: { env: 'RENDER_SURFACE_URL_VIZF1', default: 'https://vizmaya.fyi' },
-      consumer: { env: 'NEXT_PUBLIC_VIZF1_URL', default: 'https://vizf1.com' },
+      // www is canonical — the apex 307s to www without CORS headers, which
+      // breaks cross-origin telemetry fetches at the redirect hop.
+      consumer: { env: 'NEXT_PUBLIC_VIZF1_URL', default: 'https://www.vizf1.com' },
       admin: { env: 'NEXT_PUBLIC_ADMIN_VIZF1_URL', default: 'https://admin.vizf1.com' },
     },
     branding: { hideLogoInAutoplay: true, dataAttr: 'vizf1', logoSvg: VIZF1_LOGO_SVG },
