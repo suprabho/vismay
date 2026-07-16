@@ -570,7 +570,10 @@ export const sectionStubSchema = sectionStubSchemaFor('deck')
 /** The outline schema, with section stubs narrowed to the format. */
 export function outlineSchemaFor(format: 'deck' | 'map', pack: DomainPack = VIZMAYA_PACK) {
   return z.object({
-    format: z.enum(['deck', 'map']).describe('The story format to produce.'),
+    // The caller's choice, forced by `toOutline` after generation — so it must
+    // not block validation when the model omits it. `.default(format)` keeps the
+    // parsed object well-formed with the correct format regardless.
+    format: z.enum(['deck', 'map']).default(format).describe('The story format to produce.'),
     title: z.string().describe('Story headline.'),
     subtitle: z.string().describe('One-line deck/subtitle.'),
     byline: z.string().describe(`Attribution line, e.g. "${pack.bylineExample}".`),

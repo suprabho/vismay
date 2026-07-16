@@ -238,6 +238,7 @@ export function outlineSystem(format: StoryFormat, pack: DomainPack = VIZMAYA_PA
     `SKELETON only, no prose yet. The downstream writer and designer act ONLY on what you put ` +
     `in each section stub, so make every section's expectations explicit and concrete.\n\n` +
     `Produce:\n` +
+    `- format: "${format}" (echo it back verbatim).\n` +
     `- title, subtitle, byline.\n` +
     `- charts: every chart the story needs, declared as a REQUIREMENT — a kebab-case id, a ` +
     `chartType (one of: ${CHART_TYPES.join(', ')}), a title, and a precise "requirement" ` +
