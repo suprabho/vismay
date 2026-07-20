@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "id": "distance-vs-time",
+    "title": "A two-week voyage, stretched to ten years",
+    "subtitle": "Days to cover the ~565-nautical-mile Troy-to-Ithaca route",
+    "source": "Harry Mount's Odyssey (BOAT International); Severin, The Ulysses Voyage; Roth, We Followed Odysseus",
+    "note": "Straight-line Troy to Ithaca is ~565 nm — a week or two under Bronze Age sail. Odysseus takes ten years, of which only a single sailing season is actual voyaging. Log scale."
+  },
+  "grid": { "left": 8, "right": 80, "top": 16, "bottom": 36, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0a0910",
+    "borderColor": "#2a2636",
+    "textStyle": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{b}<br/><b>{c}</b> days"
+  },
+  "xAxis": {
+    "type": "log",
+    "name": "days (log)",
+    "nameTextStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 10 },
+    "min": 1,
+    "max": 4000,
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#2a2636", "type": "dashed" } },
+    "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": [
+      "Cruise ship, today",
+      "Direct galley, good winds",
+      "Superyacht, today",
+      "Severin's replica galley (1985)",
+      "Hal Roth's re-sail (35-ft sloop)",
+      "Odysseus"
+    ],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#e8ddc9", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "series": [
+    {
+      "type": "bar",
+      "barCategoryGap": "38%",
+      "itemStyle": { "borderRadius": [0, 2, 2, 0] },
+      "label": { "show": true, "position": "right", "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "{c} d" },
+      "data": [
+        { "value": 1,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 6,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 7,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 120,  "itemStyle": { "color": "#4c5fb0" } },
+        { "value": 730,  "itemStyle": { "color": "#4c5fb0" } },
+        { "value": 3650, "itemStyle": { "color": "#7c2438" }, "label": { "show": true, "position": "right", "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "10 years" } }
+      ]
+    }
+  ]
+}

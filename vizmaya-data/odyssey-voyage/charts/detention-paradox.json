@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "id": "detention-paradox",
+    "title": "The ten years are a trap of detention, not distance",
+    "subtitle": "Duration of each phase of the homeward voyage, in days",
+    "source": "Homer, Odyssey (Books 9-13); durations reconstructed from the text",
+    "note": "Two stationary islands — Circe (1 year) and Calypso (7 years) — account for ~80% of the decade. The genuinely adventurous sailing is a single season's worth of movement."
+  },
+  "grid": { "left": 8, "right": 64, "top": 16, "bottom": 28, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0a0910",
+    "borderColor": "#2a2636",
+    "textStyle": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{b}<br/><b>{c}</b> days"
+  },
+  "xAxis": {
+    "type": "value",
+    "name": "days",
+    "nameTextStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 10 },
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#2a2636", "type": "dashed" } },
+    "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": [
+      "Voyage home to Ithaca (1 night)",
+      "Underworld (a day)",
+      "Lotus-Eaters (brief)",
+      "Sirens to Scylla (brief)",
+      "Cicones / Ismaros",
+      "Cyclops",
+      "Scheria (Phaeacians)",
+      "Row to the Laestrygonians",
+      "Drift to the Lotus-Eaters",
+      "Ogygia to Scheria (17-day sail)",
+      "Thrinacia (storm-bound)",
+      "Aeolus + the near-miss",
+      "Circe — ONE YEAR",
+      "Calypso — SEVEN YEARS"
+    ],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#e8ddc9", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "series": [
+    {
+      "type": "bar",
+      "barCategoryGap": "32%",
+      "itemStyle": { "borderRadius": [0, 2, 2, 0] },
+      "label": { "show": true, "position": "right", "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "{c}" },
+      "data": [
+        { "value": 1,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 1,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 1,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 2,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 3,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 3,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 3,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 7,    "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 11,   "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 20,   "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 35,   "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 40,   "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 365,  "itemStyle": { "color": "#7c2438" } },
+        { "value": 2555, "itemStyle": { "color": "#5a1a2b" }, "label": { "show": true, "position": "insideRight", "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "2,555 days" } }
+      ]
+    }
+  ]
+}
