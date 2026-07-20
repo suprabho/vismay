@@ -69,6 +69,8 @@ export type DriverLane = {
   driverName: string
   /** Hex string used to colour the polyline; usually constructor accent. */
   color: string
+  /** Driver headshot URL for the end-of-line avatar. Null → initials monogram. */
+  headshotUrl?: string | null
   points: LapPosition[]
 }
 
