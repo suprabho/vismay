@@ -117,7 +117,7 @@ export function useFollowedFixtures() {
       const { data: follows, error: fErr } = await supabase
         .from('follows')
         .select(
-          'entity_id, created_at, entity:entities(id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color)'
+          'entity_id, created_at, entity:entities(id, type, slug, name, country, league_slug, team_slug, crest_url, primary_color, avatar_bg_color)'
         )
         .order('created_at', { ascending: false });
       if (fErr) throw fErr;

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { entityAvatarColor } from '@vismay/footshorts-viz/native';
 import type { StoryGroup, StoryItem } from '@/lib/useFollowedStories';
 
 function initialsOf(name: string): string {
@@ -45,7 +46,9 @@ export function StoryRings({ groups, isStorySeen }: Props) {
       keyExtractor={({ g }) => g.entity.id}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 4, gap: 14 }}
-      renderItem={({ item: { g, originalIndex, allSeen } }) => (
+      renderItem={({ item: { g, originalIndex, allSeen } }) => {
+        const avatarBg = entityAvatarColor(g.entity);
+        return (
         <Pressable
           onPress={() => router.push({ pathname: '/story', params: { start: String(originalIndex) } })}
           hitSlop={4}
@@ -61,13 +64,13 @@ export function StoryRings({ groups, isStorySeen }: Props) {
               >
                 <View
                   className="flex-1 self-stretch rounded-full bg-surface items-center justify-center overflow-hidden"
-                  style={{ opacity: allSeen ? 0.55 : 1 }}
+                  style={{ padding: 5, backgroundColor: avatarBg ?? undefined, opacity: allSeen ? 0.55 : 1 }}
                 >
                   {g.entity.crest_url ? (
                     <Image
                       source={{ uri: g.entity.crest_url }}
                       style={{ width: '100%', height: '100%' }}
-                      contentFit="cover"
+                      contentFit="contain"
                       transition={120}
                     />
                   ) : (
@@ -87,7 +90,8 @@ export function StoryRings({ groups, isStorySeen }: Props) {
             </Text>
           </View>
         </Pressable>
-      )}
+        );
+      }}
     />
   );
 }

@@ -42,6 +42,7 @@ import {
   buildBracket,
   stageLabel,
   competitionFollowLabel,
+  entityAvatarColor,
 } from '@vismay/footshorts-viz/native';
 
 // Match web's "Upcoming" tile strip: wide enough that two tiles read clearly
@@ -428,6 +429,7 @@ function CollapsedHeader({
   chipLabel: string | null;
 }) {
   const crestSize = 42;
+  const avatarBg = entityAvatarColor(entity);
   return (
     <View className="flex-row items-center">
       {entity.crest_url ? (
@@ -440,6 +442,7 @@ function CollapsedHeader({
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: 12,
+            backgroundColor: avatarBg ?? undefined,
           }}
         >
           <Image
