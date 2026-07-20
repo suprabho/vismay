@@ -1,0 +1,298 @@
+# Story config — odyssey-voyage  (CARTOGRAPHIC map story, style A)
+#
+# A scroll-driven prose rail over a live Mapbox map that flies from landfall to
+# landfall. Charts attach via `chart: data:<id>` (JSON in odyssey-voyage/charts/).
+# No `foreground:` panels — a foreground slot would suppress the prose rail
+# (see map-story-authoring.md §3). Pins are coloured by identification status:
+#   amber  = undisputed anchor (excavated)   accent2 = real navigation (Cape Malea)
+#   accent = traditional / literary          teal    = excavated, Homeric link contested
+#   muted  = contested (rival IDs)
+# Every position after Cape Malea is contested; pins sit at the traditional
+# candidate location. Coordinates are [lng, lat].
+
+defaults:
+  scroll:
+    mode: continuous
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.72
+  pinColor: "#a63a52"
+  pinRadius: 8
+  flySpeed: 1.1
+
+sections:
+
+  # ── HERO ──────────────────────────────────────────────
+  - id: a-two-week-voyage-ten-years-long
+    text: A Two-Week Voyage, Ten Years Long
+    kind: hero
+    eyebrow: "Homer's Odyssey · Troy → Ithaca · a contested map"
+    mobileParagraphs: [0, 1]
+    map:
+      center: [17.0, 37.2]
+      zoom: 4.1
+      pitch: 0
+      bearing: 0
+      pins:
+        - { coordinates: [26.24, 39.96], label: Troy, color: amber, radius: 8 }
+        - { coordinates: [25.37, 40.96], label: Ismaros, color: amber, radius: 7 }
+        - { coordinates: [23.19, 36.43], label: Cape Malea, color: accent2, radius: 8 }
+        - { coordinates: [10.90, 33.80], label: Lotus-Eaters, color: muted, radius: 7 }
+        - { coordinates: [15.16, 37.56], label: Cyclops, color: muted, radius: 7 }
+        - { coordinates: [14.95, 38.47], label: Aeolus, color: muted, radius: 7 }
+        - { coordinates: [15.00, 37.50], label: Laestrygonians, color: muted, radius: 7 }
+        - { coordinates: [13.09, 41.24], label: Circe, color: accent, radius: 7 }
+        - { coordinates: [20.53, 39.24], label: Underworld, color: teal, radius: 7 }
+        - { coordinates: [14.43, 40.58], label: Sirens, color: accent, radius: 7 }
+        - { coordinates: [15.63, 38.25], label: Scylla, color: accent, radius: 7 }
+        - { coordinates: [14.00, 37.50], label: Thrinacia, color: muted, radius: 7 }
+        - { coordinates: [14.28, 36.06], label: Calypso, color: accent, radius: 8 }
+        - { coordinates: [19.92, 39.62], label: Scheria, color: accent, radius: 7 }
+        - { coordinates: [20.71, 38.42], label: Ithaca, color: amber, radius: 8 }
+
+  # ── The detention paradox ─────────────────────────────
+  - id: ten-years-almost-none-of-it-sailing
+    text: Ten Years, Almost None of It Sailing
+    kind: text
+    chart: data:detention-paradox
+    mobileParagraphs: [0, 1]
+    map:
+      center: [17.0, 37.2]
+      zoom: 4.0
+      pitch: 0
+      bearing: 0
+
+  # ── Troy ──────────────────────────────────────────────
+  - id: troy-where-it-begins
+    text: Troy — Where It Begins
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [26.24, 39.96]
+      zoom: 6.2
+      pitch: 40
+      bearing: -10
+      pins:
+        - { coordinates: [26.24, 39.96], label: "Troy (Hisarlik)", color: amber, radius: 10, pulse: true }
+
+  # ── The Cicones ───────────────────────────────────────
+  - id: the-cicones
+    text: The Cicones
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [25.37, 40.96]
+      zoom: 6.4
+      pitch: 30
+      bearing: 0
+      pins:
+        - { coordinates: [25.37, 40.96], label: "Ismaros / Maroneia", color: amber, radius: 10, pulse: true }
+
+  # ── Cape Malea — the hinge ────────────────────────────
+  - id: cape-malea-into-wonderland
+    text: Cape Malea — Into Wonderland
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [23.19, 36.43]
+      zoom: 6.6
+      pitch: 45
+      bearing: 12
+      pins:
+        - { coordinates: [23.19, 36.43], label: "Cape Malea", color: accent2, radius: 11, pulse: true }
+
+  # ── Distance vs time ──────────────────────────────────
+  - id: a-two-week-trip-in-ten-years
+    text: A Two-Week Trip, in Ten Years
+    kind: text
+    chart: data:distance-vs-time
+    mobileParagraphs: [0, 1]
+    map:
+      center: [17.0, 35.8]
+      zoom: 4.4
+      pitch: 0
+      bearing: 0
+
+  # ── The Lotus-Eaters ──────────────────────────────────
+  - id: the-lotus-eaters
+    text: The Lotus-Eaters
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [10.90, 33.80]
+      zoom: 5.6
+      pitch: 25
+      bearing: 0
+      pins:
+        - { coordinates: [10.90, 33.80], label: "Djerba (traditional)", color: muted, radius: 10, pulse: true }
+
+  # ── The Cyclops ───────────────────────────────────────
+  - id: the-cyclops
+    text: The Cyclops
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [15.16, 37.56]
+      zoom: 6.2
+      pitch: 40
+      bearing: -8
+      pins:
+        - { coordinates: [15.16, 37.56], label: "Sicily / Mt Etna", color: muted, radius: 10, pulse: true }
+
+  # ── Aeolus ────────────────────────────────────────────
+  - id: aeolus-and-the-bag-of-winds
+    text: Aeolus and the Bag of Winds
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [14.95, 38.47]
+      zoom: 6.6
+      pitch: 35
+      bearing: 0
+      pins:
+        - { coordinates: [14.95, 38.47], label: "Lipari (Aeolian Is.)", color: muted, radius: 10, pulse: true }
+
+  # ── The Laestrygonians ────────────────────────────────
+  - id: the-laestrygonians
+    text: The Laestrygonians
+    kind: text
+    chart: data:casualties
+    mobileParagraphs: [0, 1]
+    map:
+      center: [14.90, 37.60]
+      zoom: 5.8
+      pitch: 30
+      bearing: 0
+      pins:
+        - { coordinates: [15.00, 37.50], label: "Telepylos (Sicily / Mezapos)", color: muted, radius: 10, pulse: true }
+
+  # ── The cost, counted ─────────────────────────────────
+  - id: the-cost-of-the-voyage
+    text: The Cost of the Voyage
+    kind: text
+    chart: data:attrition
+    mobileParagraphs: [0, 1]
+    map:
+      center: [17.0, 38.0]
+      zoom: 4.6
+      pitch: 0
+      bearing: 0
+
+  # ── Circe ─────────────────────────────────────────────
+  - id: circe
+    text: Circe
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [13.09, 41.24]
+      zoom: 6.6
+      pitch: 40
+      bearing: 6
+      pins:
+        - { coordinates: [13.09, 41.24], label: "Monte Circeo", color: accent, radius: 10, pulse: true }
+
+  # ── The Underworld ────────────────────────────────────
+  - id: the-underworld
+    text: The Underworld
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [20.53, 39.24]
+      zoom: 6.6
+      pitch: 45
+      bearing: -6
+      pins:
+        - { coordinates: [20.53, 39.24], label: "Necromanteion, Acheron R.", color: teal, radius: 10, pulse: true }
+
+  # ── Scylla, Charybdis, the Sirens ─────────────────────
+  - id: scylla-charybdis-and-the-sirens
+    text: Scylla, Charybdis, and the Sirens
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [15.63, 38.25]
+      zoom: 7.0
+      pitch: 40
+      bearing: 0
+      pins:
+        - { coordinates: [15.63, 38.25], label: "Strait of Messina", color: accent, radius: 10, pulse: true }
+        - { coordinates: [14.43, 40.58], label: "Li Galli (Sirens)", color: accent, radius: 7 }
+
+  # ── Thrinacia ─────────────────────────────────────────
+  - id: thrinacia-the-cattle-of-the-sun
+    text: Thrinacia — The Cattle of the Sun
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [14.00, 37.50]
+      zoom: 6.2
+      pitch: 35
+      bearing: 0
+      pins:
+        - { coordinates: [14.00, 37.50], label: "Thrinacia (Sicily)", color: muted, radius: 10, pulse: true }
+
+  # ── Calypso — the great detention ─────────────────────
+  - id: calypso-seven-years
+    text: Calypso — Seven Years
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [14.28, 36.06]
+      zoom: 7.2
+      pitch: 45
+      bearing: 10
+      pins:
+        - { coordinates: [14.28, 36.06], label: "Gozo — Calypso's Cave", color: accent, radius: 12, pulse: true }
+
+  # ── The Phaeacians ────────────────────────────────────
+  - id: the-phaeacians
+    text: The Phaeacians
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [19.92, 39.62]
+      zoom: 6.6
+      pitch: 35
+      bearing: 0
+      pins:
+        - { coordinates: [19.92, 39.62], label: "Scheria / Corfu", color: accent, radius: 10, pulse: true }
+
+  # ── Ithaca — home ─────────────────────────────────────
+  - id: ithaca-home
+    text: Ithaca — Home
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [20.71, 38.42]
+      zoom: 7.2
+      pitch: 45
+      bearing: -8
+      pins:
+        - { coordinates: [20.71, 38.42], label: "Ithaki", color: amber, radius: 12, pulse: true }
+        - { coordinates: [20.42, 38.25], label: "Paliki (Bittlestone)", color: muted, radius: 7 }
+
+  # ── Closing — the honest map ──────────────────────────
+  - id: there-is-no-true-route
+    text: There Is No True Route
+    kind: text
+    mobileParagraphs: [0, 1]
+    map:
+      center: [17.0, 37.2]
+      zoom: 4.1
+      pitch: 0
+      bearing: 0
+      pins:
+        - { coordinates: [26.24, 39.96], label: Troy, color: amber, radius: 8 }
+        - { coordinates: [25.37, 40.96], label: Ismaros, color: amber, radius: 7 }
+        - { coordinates: [23.19, 36.43], label: Cape Malea, color: accent2, radius: 8 }
+        - { coordinates: [10.90, 33.80], label: Lotus-Eaters, color: muted, radius: 7 }
+        - { coordinates: [15.16, 37.56], label: Cyclops, color: muted, radius: 7 }
+        - { coordinates: [14.95, 38.47], label: Aeolus, color: muted, radius: 7 }
+        - { coordinates: [15.00, 37.50], label: Laestrygonians, color: muted, radius: 7 }
+        - { coordinates: [13.09, 41.24], label: Circe, color: accent, radius: 7 }
+        - { coordinates: [20.53, 39.24], label: Underworld, color: teal, radius: 7 }
+        - { coordinates: [14.43, 40.58], label: Sirens, color: accent, radius: 7 }
+        - { coordinates: [15.63, 38.25], label: Scylla, color: accent, radius: 7 }
+        - { coordinates: [14.00, 37.50], label: Thrinacia, color: muted, radius: 7 }
+        - { coordinates: [14.28, 36.06], label: Calypso, color: accent, radius: 8 }
+        - { coordinates: [19.92, 39.62], label: Scheria, color: accent, radius: 7 }
+        - { coordinates: [20.71, 38.42], label: Ithaca, color: amber, radius: 8 }

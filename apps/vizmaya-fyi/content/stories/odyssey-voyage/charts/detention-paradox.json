@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "title": "Where the ten years actually go",
+      "option": {
+        "grid": { "left": 8, "right": 70, "top": 10, "bottom": 28, "containLabel": true },
+        "tooltip": { "trigger": "item", "formatter": "{b}<br/>{c} days" },
+        "xAxis": {
+          "type": "value",
+          "name": "days",
+          "nameTextStyle": { "color": "$muted" },
+          "axisLabel": { "color": "$muted" },
+          "axisLine": { "show": false },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["All 12 voyaging legs", "Circe — 1 year", "Calypso — 7 years"],
+          "axisLabel": { "color": "$text" },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barCategoryGap": "40%",
+            "itemStyle": { "borderRadius": [0, 2, 2, 0] },
+            "label": { "show": true, "position": "right", "color": "$muted", "formatter": "{c}" },
+            "data": [
+              { "value": 127, "itemStyle": { "color": "$accent2" } },
+              { "value": 365, "itemStyle": { "color": "$accent" } },
+              { "value": 2555, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

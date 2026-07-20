@@ -1,0 +1,62 @@
+{
+  "steps": [
+    {
+      "title": "Twelve ships and 720 men — down to one, alone",
+      "option": {
+        "grid": { "left": 44, "right": 48, "top": 26, "bottom": 60, "containLabel": true },
+        "tooltip": { "trigger": "axis" },
+        "legend": { "bottom": 0, "icon": "circle", "itemWidth": 8, "itemHeight": 8, "textStyle": { "color": "$muted" } },
+        "xAxis": {
+          "type": "category",
+          "boundaryGap": false,
+          "data": ["Troy", "Cicones", "Cyclops", "Aeolus", "Laestryg.", "Circe", "Scylla", "Thrinacia", "Calypso"],
+          "axisLabel": { "color": "$muted", "rotate": 32 },
+          "axisLine": { "lineStyle": { "color": "$line" } },
+          "axisTick": { "show": false }
+        },
+        "yAxis": [
+          {
+            "type": "value",
+            "name": "Men",
+            "nameTextStyle": { "color": "$muted" },
+            "axisLabel": { "color": "$muted" },
+            "axisLine": { "show": false },
+            "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } }
+          },
+          {
+            "type": "value",
+            "name": "Ships",
+            "max": 12,
+            "nameTextStyle": { "color": "$muted" },
+            "axisLabel": { "color": "$muted" },
+            "axisLine": { "show": false },
+            "splitLine": { "show": false }
+          }
+        ],
+        "series": [
+          {
+            "name": "Men surviving",
+            "type": "line",
+            "data": [720, 648, 642, 642, 48, 46, 40, 1, 1],
+            "symbol": "circle",
+            "symbolSize": 7,
+            "lineStyle": { "color": "$red", "width": 2.5 },
+            "itemStyle": { "color": "$red" },
+            "areaStyle": { "color": "$red", "opacity": 0.12 }
+          },
+          {
+            "name": "Ships surviving",
+            "type": "line",
+            "step": "end",
+            "yAxisIndex": 1,
+            "data": [12, 12, 12, 12, 1, 1, 1, 0, 0],
+            "symbol": "rect",
+            "symbolSize": 6,
+            "lineStyle": { "color": "$amber", "width": 1.5, "type": "dashed" },
+            "itemStyle": { "color": "$amber" }
+          }
+        ]
+      }
+    }
+  ]
+}

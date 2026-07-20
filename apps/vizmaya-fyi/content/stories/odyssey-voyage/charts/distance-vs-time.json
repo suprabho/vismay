@@ -1,0 +1,44 @@
+{
+  "steps": [
+    {
+      "title": "Days to sail the same 565 miles home",
+      "option": {
+        "grid": { "left": 8, "right": 74, "top": 10, "bottom": 32, "containLabel": true },
+        "tooltip": { "trigger": "item", "formatter": "{b}<br/>{c} days" },
+        "xAxis": {
+          "type": "log",
+          "min": 1,
+          "max": 4000,
+          "name": "days (log)",
+          "nameTextStyle": { "color": "$muted" },
+          "axisLabel": { "color": "$muted" },
+          "axisLine": { "show": false },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Cruise ship, today", "Direct galley, good winds", "Superyacht, today", "Severin's replica (1985)", "Hal Roth's re-sail", "Odysseus"],
+          "axisLabel": { "color": "$text" },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barCategoryGap": "34%",
+            "itemStyle": { "borderRadius": [0, 2, 2, 0] },
+            "label": { "show": true, "position": "right", "color": "$muted", "formatter": "{c} d" },
+            "data": [
+              { "value": 1, "itemStyle": { "color": "$accent2" } },
+              { "value": 6, "itemStyle": { "color": "$accent2" } },
+              { "value": 7, "itemStyle": { "color": "$accent2" } },
+              { "value": 120, "itemStyle": { "color": "$teal" } },
+              { "value": 730, "itemStyle": { "color": "$teal" } },
+              { "value": 3650, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

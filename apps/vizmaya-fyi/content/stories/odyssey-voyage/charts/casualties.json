@@ -1,0 +1,39 @@
+{
+  "steps": [
+    {
+      "title": "Men lost, by episode",
+      "option": {
+        "grid": { "left": 8, "right": 60, "top": 8, "bottom": 24, "containLabel": true },
+        "tooltip": { "trigger": "item", "formatter": "{b}<br/>{c} men" },
+        "xAxis": {
+          "type": "value",
+          "axisLabel": { "color": "$muted" },
+          "axisLine": { "show": false },
+          "splitLine": { "lineStyle": { "color": "$line", "type": "dashed" } }
+        },
+        "yAxis": {
+          "type": "category",
+          "data": ["Cyclops", "Scylla", "Thrinacia", "Cicones", "Laestrygonians"],
+          "axisLabel": { "color": "$text" },
+          "axisLine": { "show": false },
+          "axisTick": { "show": false }
+        },
+        "series": [
+          {
+            "type": "bar",
+            "barCategoryGap": "36%",
+            "itemStyle": { "borderRadius": [0, 2, 2, 0] },
+            "label": { "show": true, "position": "right", "color": "$muted", "formatter": "{c}" },
+            "data": [
+              { "value": 6, "itemStyle": { "color": "$accent2" } },
+              { "value": 6, "itemStyle": { "color": "$accent2" } },
+              { "value": 39, "itemStyle": { "color": "$red" } },
+              { "value": 72, "itemStyle": { "color": "$red" } },
+              { "value": 594, "itemStyle": { "color": "$accent" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
