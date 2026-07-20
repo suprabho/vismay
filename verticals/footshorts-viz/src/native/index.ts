@@ -23,3 +23,4 @@ export {
   isLeagueCompetition,
   competitionFollowLabel,
 } from '../competitionMeta'
+export { entityAvatarColor } from '../entityAvatarColor'

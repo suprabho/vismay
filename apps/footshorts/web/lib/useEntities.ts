@@ -13,6 +13,8 @@ export type Entity = {
   team_slug: string | null;
   crest_url: string | null;
   primary_color: string | null;
+  /** Dedicated feed avatar-disc background (Asset Studio); falls back to primary_color. */
+  avatar_bg_color?: string | null;
   popularity: number;
 };
 

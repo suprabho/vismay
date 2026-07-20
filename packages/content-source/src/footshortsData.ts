@@ -730,8 +730,15 @@ export interface AssetEntity {
   name: string
   country: string | null
   crest_url: string | null
+  /** Decorative brand color — card glow/border + match-tile gradients. */
   primary_color: string | null
+  /** Dedicated feed avatar-disc background, independent of primary_color. */
+  avatar_bg_color: string | null
 }
+
+/** Columns that hydrate an {@link AssetEntity}. One source of truth so the search
+ *  and the two color writers below always return the same shape. */
+const ASSET_ENTITY_COLS = 'id, type, slug, name, country, crest_url, primary_color, avatar_bg_color'
 
 /**
  * Search teams / competitions by name for the asset-studio picker. Unlike the
@@ -748,7 +755,7 @@ export async function searchAssetEntities(opts: {
   const supabase = createServiceClient()
   let query = supabase
     .from('entities')
-    .select('id, type, slug, name, country, crest_url, primary_color')
+    .select(ASSET_ENTITY_COLS)
     .in('type', opts.type ? [opts.type] : ['team', 'league'])
     .order('name', { ascending: true })
     .limit(limit)
@@ -777,7 +784,34 @@ export async function updateEntityPrimaryColor(
     .from('entities')
     .update({ primary_color: value })
     .eq('id', id)
-    .select('id, type, slug, name, country, crest_url, primary_color')
+    .select(ASSET_ENTITY_COLS)
+    .single()
+  if (error) throw error
+  if (!data) throw new Error(`entity not found: ${id}`)
+  return data as AssetEntity
+}
+
+/**
+ * Set (or clear) an entity's dedicated avatar background color — the disc behind
+ * the crest in the feed story-rings + cards. Independent of `primary_color`. Pass
+ * a `#RRGGBB` hex to set it, or `null` to clear back to "use primary_color".
+ * Returns the updated row. Throws on an invalid hex or a missing entity.
+ * SERVER-ONLY.
+ */
+export async function updateEntityAvatarBgColor(
+  id: string,
+  avatarBgColor: string | null,
+): Promise<AssetEntity> {
+  if (avatarBgColor !== null && !isPrimaryColorHex(avatarBgColor)) {
+    throw new Error(`invalid avatar_bg_color: expected #RRGGBB, got ${String(avatarBgColor)}`)
+  }
+  const value = avatarBgColor === null ? null : avatarBgColor.trim().toUpperCase()
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entities')
+    .update({ avatar_bg_color: value })
+    .eq('id', id)
+    .select(ASSET_ENTITY_COLS)
     .single()
   if (error) throw error
   if (!data) throw new Error(`entity not found: ${id}`)
