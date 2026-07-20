@@ -40,7 +40,11 @@ export function RaceTelemetry({ raceName }: { raceName: string }) {
   const selected = selOverride ?? defaultSel
 
   const laps = useTelemetryLaps(session?.sessionKey ?? null, session?.drivers ?? [], selected)
-  const fastest = laps.data?.fastest ?? null
+  // Target the fastest lap that has channel telemetry — when a session's feed
+  // broke mid-race, the absolute fastest lap may have nothing to play.
+  const fastest = laps.data?.fastestWithTelemetry ?? null
+  const fastestIsPartial =
+    fastest != null && laps.data?.fastest != null && fastest.lap !== laps.data.fastest.lap
   const maxLap = laps.data?.maxLap ?? 0
 
   // Clip window: explicit override, else the fastest-lap window, else opening laps.
@@ -136,7 +140,7 @@ export function RaceTelemetry({ raceName }: { raceName: string }) {
               onClick={() => setRangeOverride(null)}
               className="rounded-full px-2 py-0.5 text-accent hover:underline"
             >
-              ↺ fastest lap (#{fastest.driverNumber}, L{fastest.lap})
+              ↺ {fastestIsPartial ? 'fastest telemetry lap' : 'fastest lap'} (#{fastest.driverNumber}, L{fastest.lap})
             </button>
           ) : null}
           <span className="ml-auto text-[10px]">Clip shows the first 3 selected drivers.</span>
