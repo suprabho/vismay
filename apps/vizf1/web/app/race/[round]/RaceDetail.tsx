@@ -42,15 +42,23 @@ export default function RaceDetail({ round }: { round: number }) {
           <CircuitMap circuitId={race.circuitId} />
         </div>
       ) : null}
-      <Link
-        href={`/race/${round}/replay`}
-        className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-2.5 text-xs font-medium text-text transition-colors hover:border-accent"
-      >
-        <span className="text-accent">▶</span> Race Replay
-      </Link>
-      <div className="mt-6">
-        <RaceWeekendTabs race={race} />
-      </div>
+      {race.status === 'canceled' ? (
+        <div className="mt-4 rounded-xl border border-border bg-surface p-4 text-center text-xs text-muted">
+          This Grand Prix was canceled — no session data is available.
+        </div>
+      ) : (
+        <>
+          <Link
+            href={`/race/${round}/replay`}
+            className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-2.5 text-xs font-medium text-text transition-colors hover:border-accent"
+          >
+            <span className="text-accent">▶</span> Race Replay
+          </Link>
+          <div className="mt-6">
+            <RaceWeekendTabs race={race} />
+          </div>
+        </>
+      )}
     </main>
   )
 }

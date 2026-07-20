@@ -102,6 +102,17 @@ export function listSessions(meetingKey: number): Promise<OpenF1Session[]> {
   return fetchOpenF1<OpenF1Session>(`/sessions?meeting_key=${meetingKey}`)
 }
 
+/**
+ * All Race sessions of a season — used by the circuit-outline deriver to fall
+ * back to a previous season's race at the same circuit when the current
+ * season's race has no usable location data (canceled race, telemetry outage).
+ */
+export function listRaceSessions(year: number): Promise<OpenF1Session[]> {
+  return fetchOpenF1<OpenF1Session>(`/sessions?year=${year}&session_name=Race`, {
+    treat404AsEmpty: true,
+  })
+}
+
 // =====================================================
 // Drivers (per session — includes headshot_url + team colour)
 // =====================================================
