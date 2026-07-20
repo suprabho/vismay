@@ -59,6 +59,12 @@ export function PositionChart({
 
   const allPoints = lanes.flatMap((l) => l.points)
   const maxLap = totalLaps ?? Math.max(1, ...allPoints.map((p) => p.lap))
+  // Start the x-axis at the first datapoint, not a hardcoded 1. A lap-based
+  // race chart still starts at lap 1, but a standings-by-round chart starts at
+  // the season's first *raced* round — F1 seasons open with pre-season testing
+  // (round 1/2, no points), so forcing the axis to R1 drew a misleading empty
+  // band before the opening race.
+  const minLap = Math.min(maxLap, ...allPoints.map((p) => p.lap))
   const maxPos = Math.max(1, ...allPoints.map((p) => p.position))
 
   // Grow the plot when a wide position span (e.g. a P22 → P1 recovery
@@ -69,7 +75,7 @@ export function PositionChart({
 
   const xScale = (lap: number) =>
     PADDING.left +
-    ((lap - 1) / Math.max(1, maxLap - 1)) * (VIEW_W - PADDING.left - PADDING.right)
+    ((lap - minLap) / Math.max(1, maxLap - minLap)) * (VIEW_W - PADDING.left - PADDING.right)
   const yScale = (pos: number) =>
     PADDING.top + ((pos - 1) / Math.max(1, maxPos - 1)) * plotH
 
@@ -129,8 +135,8 @@ export function PositionChart({
             />
           </g>
         ))}
-        {/* X axis labels — first, mid, last */}
-        {[1, Math.ceil(maxLap / 2), maxLap].map((lap) => (
+        {/* X axis labels — first, mid, last (deduped for a 1- or 2-round span) */}
+        {[...new Set([minLap, Math.round((minLap + maxLap) / 2), maxLap])].map((lap) => (
           <text
             key={lap}
             x={xScale(lap)}
