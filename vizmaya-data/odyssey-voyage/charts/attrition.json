@@ -1,0 +1,96 @@
+{
+  "_meta": {
+    "id": "attrition",
+    "title": "Twelve ships and seven hundred men — down to one man alone",
+    "subtitle": "Fleet and crew surviving after each episode",
+    "source": "Homer, Odyssey; fleet reconstructed at 12 ships / ~720 men (~60 per ship)",
+    "note": "The men-remaining line is a reconstruction: only the loss events are explicit in the text (Cicones 72, Cyclops 6, Laestrygonians 11 ships, Scylla 6, Thrinacia all remaining). By Calypso only Odysseus is left."
+  },
+  "grid": { "left": 44, "right": 56, "top": 30, "bottom": 78, "containLabel": true },
+  "tooltip": {
+    "trigger": "axis",
+    "axisPointer": { "type": "cross", "lineStyle": { "color": "#9a8f86", "type": "dashed" } },
+    "backgroundColor": "#0a0910",
+    "borderColor": "#2a2636",
+    "textStyle": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11 }
+  },
+  "legend": {
+    "bottom": 0,
+    "icon": "circle",
+    "itemWidth": 8,
+    "itemHeight": 8,
+    "textStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "xAxis": {
+    "type": "category",
+    "boundaryGap": false,
+    "data": ["Troy", "Cicones", "Lotus-Eaters", "Cyclops", "Aeolus", "Laestrygonians", "Circe", "Scylla", "Thrinacia", "Calypso"],
+    "axisLine": { "lineStyle": { "color": "#2a2636" } },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10, "rotate": 34 }
+  },
+  "yAxis": [
+    {
+      "type": "value",
+      "name": "Men",
+      "nameTextStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 10 },
+      "axisLine": { "show": false },
+      "axisTick": { "show": false },
+      "splitLine": { "lineStyle": { "color": "#2a2636", "type": "dashed" } },
+      "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+    },
+    {
+      "type": "value",
+      "name": "Ships",
+      "max": 12,
+      "nameTextStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 10 },
+      "axisLine": { "show": false },
+      "axisTick": { "show": false },
+      "splitLine": { "show": false },
+      "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+    }
+  ],
+  "series": [
+    {
+      "name": "Men surviving",
+      "type": "line",
+      "yAxisIndex": 0,
+      "data": [720, 648, 648, 642, 642, 48, 46, 40, 1, 1],
+      "smooth": 0,
+      "symbol": "circle",
+      "symbolSize": 7,
+      "lineStyle": { "color": "#c0603a", "width": 2.5 },
+      "itemStyle": { "color": "#c0603a" },
+      "areaStyle": {
+        "color": {
+          "type": "linear", "x": 0, "y": 0, "x2": 0, "y2": 1,
+          "colorStops": [
+            { "offset": 0, "color": "rgba(192,96,58,0.22)" },
+            { "offset": 1, "color": "rgba(192,96,58,0.02)" }
+          ]
+        }
+      },
+      "markPoint": {
+        "symbol": "pin",
+        "symbolSize": 46,
+        "label": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 10 },
+        "itemStyle": { "color": "#5a1a2b" },
+        "data": [
+          { "name": "-11 ships", "coord": ["Laestrygonians", 48] },
+          { "name": "alone", "coord": ["Thrinacia", 1] }
+        ]
+      }
+    },
+    {
+      "name": "Ships surviving",
+      "type": "line",
+      "yAxisIndex": 1,
+      "step": "end",
+      "data": [12, 12, 12, 12, 12, 1, 1, 1, 0, 0],
+      "symbol": "rect",
+      "symbolSize": 6,
+      "lineStyle": { "color": "#c9a24b", "width": 1.5, "type": "dashed" },
+      "itemStyle": { "color": "#c9a24b" }
+    }
+  ]
+}
