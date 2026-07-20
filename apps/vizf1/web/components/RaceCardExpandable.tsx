@@ -19,6 +19,8 @@ function statusPill(status: RaceRow['status']) {
     return <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">Live</span>
   if (status === 'finished')
     return <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">Result</span>
+  if (status === 'canceled')
+    return <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted line-through">Canceled</span>
   return <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">Upcoming</span>
 }
 

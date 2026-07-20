@@ -9,7 +9,7 @@
  * call sites keep working.
  */
 
-export type RaceStatus = 'upcoming' | 'live' | 'finished'
+export type RaceStatus = 'upcoming' | 'live' | 'finished' | 'canceled'
 
 export type RaceRow = {
   /** Composite key — `${season}-${round}`. */
