@@ -25,6 +25,7 @@ type RawRow = {
     family_name: string
     code: string | null
     primary_color: string | null
+    headshot_url: string | null
   } | null
 }
 
@@ -55,7 +56,7 @@ export function useStandingsOverTime(topN = 6, forceInclude: string[] = []) {
       const { data, error } = await sb
         .from('vizf1_session_results')
         .select(
-          'position, driver_id, vizf1_sessions!inner(session_type, vizf1_races!inner(season, round)), drivers:vizf1_drivers!inner(given_name, family_name, code, primary_color)',
+          'position, driver_id, vizf1_sessions!inner(session_type, vizf1_races!inner(season, round)), drivers:vizf1_drivers!inner(given_name, family_name, code, primary_color, headshot_url)',
         )
         .in('vizf1_sessions.session_type', ['race', 'sprint'])
         .eq('vizf1_sessions.vizf1_races.season', year)
@@ -72,7 +73,7 @@ export function useStandingsOverTime(topN = 6, forceInclude: string[] = []) {
       >()
       const driverInfo = new Map<
         string,
-        { code: string | null; name: string; color: string | null }
+        { code: string | null; name: string; color: string | null; headshot: string | null }
       >()
 
       for (const r of rows) {
@@ -91,6 +92,7 @@ export function useStandingsOverTime(topN = 6, forceInclude: string[] = []) {
             code: r.drivers.code,
             name: `${r.drivers.given_name} ${r.drivers.family_name}`,
             color: r.drivers.primary_color,
+            headshot: r.drivers.headshot_url,
           })
         }
       }
@@ -149,7 +151,7 @@ export function useStandingsOverTime(topN = 6, forceInclude: string[] = []) {
       const finalOrder = orderedIds.filter((id) => include.has(id))
 
       const lanes: DriverLane[] = finalOrder
-        .map((driverId) => {
+        .map((driverId): DriverLane | null => {
           const info = driverInfo.get(driverId)
           if (!info) return null
           return {
@@ -157,6 +159,7 @@ export function useStandingsOverTime(topN = 6, forceInclude: string[] = []) {
             driverCode: info.code,
             driverName: info.name,
             color: info.color ?? '#9ca3af',
+            headshotUrl: info.headshot,
             points: positionsByDriver.get(driverId) ?? [],
           }
         })

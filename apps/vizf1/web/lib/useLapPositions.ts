@@ -67,12 +67,28 @@ export function useLapPositions(
       }
       for (const arr of byDriver.values()) arr.sort((a, b) => a.lap - b.lap)
 
+      // Headshots for the end-of-line avatars. The driver meta passed in (from
+      // useSessionResults) carries no headshot, so look them up directly.
+      const { data: heads } = await sb
+        .from('vizf1_drivers')
+        .select('driver_id, headshot_url')
+        .in(
+          'driver_id',
+          drivers.map((d) => d.driverId),
+        )
+      const headshots = new Map(
+        ((heads ?? []) as { driver_id: string; headshot_url: string | null }[]).map(
+          (h) => [h.driver_id, h.headshot_url],
+        ),
+      )
+
       const lanes: DriverLane[] = drivers
         .map((d) => ({
           driverId: d.driverId,
           driverCode: d.driverCode,
           driverName: d.driverName,
           color: d.constructorColor ?? '#9ca3af',
+          headshotUrl: headshots.get(d.driverId) ?? null,
           points: byDriver.get(d.driverId) ?? [],
         }))
         .filter((l) => l.points.length > 0)
