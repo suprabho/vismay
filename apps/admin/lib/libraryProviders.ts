@@ -493,6 +493,74 @@ const epsteinProvider: LibraryProvider = {
   },
 }
 
+// Reference books scraped into per-article rows (migration 068). Book-generic:
+// one provider searches book_articles across every book-epic, keyed by
+// book_name. Search-based so the composer's AI research agent reaches it too,
+// not just the picker. Adding a book = a migration + importer, no code here.
+const bookFactsProvider: LibraryProvider = {
+  key: 'book-facts',
+  label: 'Book facts',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error, count } = await sb
+      .from('book_articles')
+      .select('id, title, book_name, section, page_start', { count: 'exact' })
+      .or(`title.ilike.${pat},body.ilike.${pat}`)
+      .order('article_index', { ascending: true })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      id: string
+      title: string | null
+      book_name: string | null
+      section: string | null
+      page_start: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        title: r.title ?? 'Untitled',
+        subtitle:
+          [r.book_name, r.section, r.page_start ? `p${r.page_start}` : null].filter(Boolean).join(' · ') ||
+          undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('book_articles')
+      .select('title, book_name, section, page_start, page_end, body')
+      .eq('id', id)
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      book_name: string | null
+      section: string | null
+      page_start: number | null
+      page_end: number | null
+      body: string | null
+    } | null
+    if (!row?.body) return null
+    const body = row.body.length > MAX_DOC_TEXT ? `${row.body.slice(0, MAX_DOC_TEXT)}\n\n…[truncated]` : row.body
+    const pages =
+      row.page_start != null
+        ? row.page_end != null && row.page_end !== row.page_start
+          ? `pp. ${row.page_start}–${row.page_end}`
+          : `p. ${row.page_start}`
+        : null
+    const head = [row.book_name, row.section, pages].filter(Boolean).join(' · ')
+    return {
+      title: row.title ?? 'Book excerpt',
+      byline: row.book_name ? `${row.book_name}${row.section ? ` · ${row.section}` : ''}` : 'Book facts',
+      text: [head, row.title, body].filter(Boolean).join('\n\n').trim(),
+    }
+  },
+}
+
 const cokeStudioProvider: LibraryProvider = {
   key: 'coke-studio',
   label: 'Coke Studio songs',
@@ -1072,6 +1140,7 @@ const PROVIDERS: LibraryProvider[] = [
   ieaNewsProvider,
   energyProfileProvider,
   epsteinProvider,
+  bookFactsProvider,
   cokeStudioProvider,
   dcNewsProvider,
   dcNewsRecapProvider,
