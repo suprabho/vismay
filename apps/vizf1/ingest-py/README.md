@@ -67,3 +67,25 @@ All writes are idempotent upserts on the natural key, so re-running is a no-op.
 - Telemetry only exists **after a session has run** (FastF1's live-timing source).
 - FastF1 downloads are slow + rate-limited; set `FASTF1_CACHE_DIR` and cache it
   in CI.
+
+## When the scheduled run goes red
+
+`SessionNotAvailableError: No data for this session!` on a session that
+definitely ran — with `Falling back to livetiming mirror` lines in the log —
+means the GitHub runner drew a Cloudflare-blocked IP: `livetiming.formula1.com`
+rejects most datacenter IPs (per-runner lottery), and FastF1's mirror fallback
+(`livetiming-mirror.fastf1.dev`) has been observed empty (404s for every
+session). The red run is by design (`ingest-latest` exits non-zero so nothing
+is silently dropped) and each later scheduled run retries for free — but only a
+runner that slips through the block can succeed.
+
+When a session needs to land *now* (e.g. the race replay is waiting on it), run
+the ingest locally — residential IPs reach the primary source fine:
+
+```bash
+cd apps/vizf1/ingest-py
+ln -sf ../worker/.env .env   # or fill .env per .env.example
+.venv/bin/python -m vizf1_ingest.cli ingest-latest
+```
+
+The next scheduled run then resolves to "nothing to ingest" and goes green.
