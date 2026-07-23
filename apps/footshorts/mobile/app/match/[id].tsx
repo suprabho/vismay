@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MatchRow, MatchTimeline, getCompetitionDisplayName } from '@vismay/footshorts-viz/native';
 import type { EventTypeFilter } from '@vismay/footshorts-viz/native';
 import { useFixtureDetail } from '@/lib/useFixtureDetail';
+import { isHiddenCompetition } from '@/lib/hiddenContent';
 
 // Match web's `max-w-2xl` so the match page sits in a readable column on wider
 // devices and bleeds to edge on phones (same constant as team/[slug]).
@@ -62,6 +63,12 @@ export default function MatchScreen() {
         </Pressable>
       </View>
     );
+  }
+
+  // Deep-link guard: fixtures from hidden competitions (see hiddenContent.ts)
+  // never render — the hero would otherwise print the competition's name.
+  if (isHiddenCompetition(data.fixture.competition_slug)) {
+    return <Redirect href="/" />;
   }
 
   const { fixture, events } = data;

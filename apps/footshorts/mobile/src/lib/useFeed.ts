@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { isHiddenEntity } from './hiddenContent';
 import { useAuth } from './AuthProvider';
 import type { FeedCard, FeedCardEntity } from '@footshorts/shared/schemas';
 
@@ -24,7 +25,9 @@ function pickCardEntities(joins: ArticleEntityJoin[] | null | undefined): FeedCa
   return (joins ?? [])
     .filter(
       (ae): ae is { confidence: number | null; entity: FeedCardEntity } =>
-        !!ae.entity && (ae.entity.type === 'team' || ae.entity.type === 'league')
+        !!ae.entity &&
+        (ae.entity.type === 'team' || ae.entity.type === 'league') &&
+        !isHiddenEntity(ae.entity)
     )
     .sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
     .map((ae) => ae.entity);

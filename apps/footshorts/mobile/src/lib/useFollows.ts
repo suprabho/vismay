@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { isHiddenEntity } from './hiddenContent';
 import { useAuth } from './AuthProvider';
 import type { Entity } from './useEntities';
 
@@ -22,7 +23,7 @@ export function useFollows() {
         .select('entity_id, created_at, entity:entities(id, type, slug, name, country, league_slug, crest_url)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as unknown as Follow[]) ?? [];
+      return ((data as unknown as Follow[]) ?? []).filter((f) => !isHiddenEntity(f.entity));
     },
   });
 }
