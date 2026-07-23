@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { isKnockoutStage } from '@vismay/footshorts-viz/native';
 import { supabase } from './supabase';
+import { filterHiddenFixtures, isHiddenEntity } from './hiddenContent';
 import { useAuth } from './AuthProvider';
 import type { Entity } from './useEntities';
 import type { FixtureRow } from './useFixtures';
@@ -122,7 +123,9 @@ export function useFollowedFixtures() {
         .order('created_at', { ascending: false });
       if (fErr) throw fErr;
 
-      const rows = ((follows as unknown as FollowRow[]) ?? []).filter((r) => !!r.entity);
+      const rows = ((follows as unknown as FollowRow[]) ?? []).filter(
+        (r) => !!r.entity && !isHiddenEntity(r.entity),
+      );
       const leagueEntities = rows.filter((r) => r.entity.type === 'league').map((r) => r.entity);
       const teamEntities = rows.filter((r) => r.entity.type === 'team').map((r) => r.entity);
 
@@ -182,8 +185,8 @@ export function useFollowedFixtures() {
         ]);
         return {
           entity: team,
-          past: ((pastRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd),
-          upcoming: ((upRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd),
+          past: filterHiddenFixtures((pastRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd),
+          upcoming: filterHiddenFixtures((upRes.data ?? []) as unknown as FixtureRow[]).filter(notTbd),
         };
       });
 

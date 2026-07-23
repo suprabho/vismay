@@ -1,9 +1,10 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { useEntity } from '@/lib/useEntity';
+import { isHiddenCompetition } from '@/lib/hiddenContent';
 import { useStandings, groupStandings } from '@/lib/useStandings';
 import { useLeagueFixtures } from '@/lib/useFixtures';
 import {
@@ -61,6 +62,12 @@ export default function LeagueScreen() {
     [standingGroups.length, scheduleRounds.length],
   );
   const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
+
+  // Deep-link guard: hidden competitions (see hiddenContent.ts) never render.
+  // Placed after the hook calls so the hook order stays unconditional.
+  if (isHiddenCompetition(slug)) {
+    return <Redirect href="/" />;
+  }
 
   if (league.isLoading) {
     return (

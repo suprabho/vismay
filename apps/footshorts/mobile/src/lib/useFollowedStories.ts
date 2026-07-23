@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { isHiddenEntity } from './hiddenContent';
 import { useAuth } from './AuthProvider';
 import type { Entity } from './useEntities';
 
@@ -94,7 +95,9 @@ export function useFollowedStories() {
         .order('created_at', { ascending: false });
       if (fErr) throw fErr;
 
-      const followRows = (follows as unknown as FollowRow[]) ?? [];
+      const followRows = ((follows as unknown as FollowRow[]) ?? []).filter(
+        (f) => !isHiddenEntity(f.entity),
+      );
       if (followRows.length === 0) return [];
 
       const entityIds = followRows.map((f) => f.entity_id);

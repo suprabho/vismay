@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { hiddenCompetitionInList } from './hiddenContent';
 import type { FixtureRow } from './useFixtures';
 
 /**
@@ -28,12 +29,14 @@ export function useLandingMatchSnapshot() {
           .from('fixtures')
           .select(SNAPSHOT_COLS)
           .eq('status', 'finished')
+          .not('competition_slug', 'in', hiddenCompetitionInList())
           .lt('kickoff_at', now)
           .order('kickoff_at', { ascending: false })
           .limit(3),
         supabase
           .from('fixtures')
           .select(SNAPSHOT_COLS)
+          .not('competition_slug', 'in', hiddenCompetitionInList())
           .gte('kickoff_at', now)
           .order('kickoff_at', { ascending: true })
           .limit(6),

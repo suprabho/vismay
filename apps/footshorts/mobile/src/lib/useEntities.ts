@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { isHiddenCompetition } from './hiddenContent';
 
 export type Entity = {
   id: string;
@@ -25,7 +26,7 @@ export function useLeagues() {
         .eq('type', 'league')
         .order('name');
       if (error) throw error;
-      return (data ?? []) as Entity[];
+      return ((data ?? []) as Entity[]).filter((l) => !isHiddenCompetition(l.slug));
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -41,7 +42,7 @@ export function useTeams(leagueSlugs: string[] | null) {
     queryKey: ['entities', 'teams', leagueSlugs?.slice().sort()],
     enabled: !!leagueSlugs && leagueSlugs.length > 0,
     queryFn: async (): Promise<Entity[]> => {
-      const slugs = leagueSlugs ?? [];
+      const slugs = (leagueSlugs ?? []).filter((s) => !isHiddenCompetition(s));
       if (slugs.length === 0) return [];
 
       const { data, error } = await supabase
