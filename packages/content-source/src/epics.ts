@@ -8,7 +8,7 @@
  * Schema: supabase/vizmaya-fyi/migrations/015_epics_iea.sql
  */
 
-import { createServiceClient } from './supabase'
+import { createBrowserClient, createServiceClient } from './supabase'
 
 export interface Epic {
   slug: string
@@ -1323,4 +1323,71 @@ export async function upsertDcStockPrices(rows: DcStockPriceRow[]): Promise<numb
     if (error) throw new Error(`upsertDcStockPrices: ${error.message}`)
   }
   return rows.length
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Searching for Umami (`searching-for-umami` epic, `umami` app).
+ * `food_dishes` rows are loaded from the TasteAtlas corpus in
+ * vizmaya-data/searching-for-umami by scripts/searching-for-umami/import.ts.
+ * Schema: supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export interface FoodDish {
+  slug: string
+  name: string
+  cuisine: string
+  countryCode: string | null
+  region: string | null
+  category: string | null
+  description: string
+  ingredients: string[]
+  rating: number | null
+  ratingCount: number | null
+  rankInCuisine: number | null
+  imageUrl: string | null
+  sourceUrl: string
+  tags: string[]
+}
+
+function mapFoodDishRow(r: any): FoodDish {
+  return {
+    slug: r.slug as string,
+    name: r.name as string,
+    cuisine: r.cuisine as string,
+    countryCode: (r.country_code as string | null) ?? null,
+    region: (r.region as string | null) ?? null,
+    category: (r.category as string | null) ?? null,
+    description: r.description as string,
+    ingredients: Array.isArray(r.ingredients) ? (r.ingredients as string[]) : [],
+    rating: (r.rating as number | null) ?? null,
+    ratingCount: (r.rating_count as number | null) ?? null,
+    rankInCuisine: (r.rank_in_cuisine as number | null) ?? null,
+    imageUrl: (r.image_url as string | null) ?? null,
+    sourceUrl: r.source_url as string,
+    tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
+  }
+}
+
+// food_dishes is public-read (RLS `using (true)`), so this reader falls back
+// to the anon key when SUPABASE_SERVICE_ROLE_KEY isn't set — the umami
+// consumer app runs on the documented anon-only env, unlike admin/vizmaya
+// which always carry the service key.
+function createFoodReadClient() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : createBrowserClient()
+}
+
+/** All dishes for one food epic, ordered by cuisine listing rank. */
+export async function listFoodDishes(epicSlug: string): Promise<FoodDish[]> {
+  const sb = createFoodReadClient()
+  const { data, error } = await sb
+    .from('food_dishes')
+    .select(
+      'slug, name, cuisine, country_code, region, category, description, ' +
+        'ingredients, rating, rating_count, rank_in_cuisine, image_url, source_url, tags'
+    )
+    .eq('epic_slug', epicSlug)
+    .order('cuisine', { ascending: true })
+    .order('rank_in_cuisine', { ascending: true, nullsFirst: false })
+  if (error) throw new Error(`listFoodDishes(${epicSlug}): ${error.message}`)
+  return (data ?? []).map(mapFoodDishRow)
 }

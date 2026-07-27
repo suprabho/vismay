@@ -23,6 +23,10 @@
   - changed-files:
       - any-glob-to-any-file: "apps/catalog/**"
 
+"area:umami":
+  - changed-files:
+      - any-glob-to-any-file: "apps/umami/**"
+
 "pkg":
   - changed-files:
       - any-glob-to-any-file: "packages/**"

@@ -1,8 +1,8 @@
--- Searching for Umami — a food/cuisine corpus scraped from TasteAtlas: the
--- top-rated dishes tagged under five Asian cuisines (India, China, Thailand,
--- Indonesia, Japan), with per-dish facts (region, category, ingredients,
--- rating, image/source URL) so the corpus can power a food epic landing and,
--- later, grounded sources in the story composer.
+-- Searching for Umami — the food vertical's consumer app (`umami`, served from
+-- apps/umami/web) plus its first corpus: the top-rated dishes TasteAtlas tags
+-- under five Asian cuisines (India, China, Thailand, Indonesia, Japan), with
+-- per-dish facts (region, category, ingredients, rating, image/source URL)
+-- powering the app's home landing and, later, grounded composer sources.
 --
 -- Source corpus + ingest notes: vizmaya-data/searching-for-umami/{README,INGEST_NOTES}.md
 -- Scraper (local-run only — TasteAtlas blocks datacenter IPs):
@@ -10,6 +10,8 @@
 --   (pnpm searching-for-umami:scrape)
 -- Importer: apps/vizmaya-fyi/scripts/searching-for-umami/import.ts
 --   (pnpm searching-for-umami:import)
+-- App registration: AppEntry in packages/verticals/src/data.ts; consumer app
+--   apps/umami/web renders the epic's landing at `/`.
 --
 -- The unit of storage is one row per dish. The table is food-generic (keyed
 -- by epic_slug, cuisine denormalized as a text slug) so future food epics
@@ -50,8 +52,14 @@ create policy "Public read food_dishes"
   on food_dishes for select
   using (true);
 
--- Seed the epic row. Draft + hidden from home — there's no landing page yet;
--- the corpus ships first (same rollout as global-trade and seriously-curious).
+-- Register the `umami` consumer app so the epic below can home on it (FK) and
+-- admin grows a Searching for Umami section. Same pattern as migration 050.
+insert into apps (slug, name) values ('umami', 'Searching for Umami')
+  on conflict (slug) do nothing;
+
+-- Seed the epic row, homed on the umami app. Draft + hidden from home — the
+-- corpus ships first (same rollout as global-trade and seriously-curious);
+-- the app's own landing renders regardless via a static fallback descriptor.
 -- landing_component is metadata only while draft (nothing switches on it).
 -- on-conflict keeps the seed authoritative on re-run.
 insert into epics (
@@ -64,7 +72,7 @@ insert into epics (
     'A field guide to Asian cuisines, dish by dish — the top-rated foods of India, China, Thailand, Indonesia and Japan, with their regions, categories, key ingredients and ratings.',
     'food-dishes',
     'draft',
-    'vizmaya-fyi',
+    'umami',
     false,
     'A food corpus for the Searching for Umami epic: the top-rated dishes TasteAtlas tags under five Asian cuisines — India, China, Thailand, Indonesia and Japan. Each row is one dish with its region of origin, food category, key ingredients, community rating and source link, so stories can compare cuisines, map dishes to regions, and rank what the world actually eats.',
     '["Top-rated dishes across five Asian cuisines, one row per dish", "Per-dish facts: region, category, key ingredients, rating, source link", "India first, then China, Thailand, Indonesia and Japan", "Sourced from TasteAtlas listings; descriptions truncated, source_url carries attribution"]'::jsonb,

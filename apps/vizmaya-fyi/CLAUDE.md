@@ -230,18 +230,33 @@ goes dark.
 - **API:** `/api/ai-data-centers/recap` — `{ recap }` (newest, `null` before the first run); `?limit=N` returns `{ recaps }` for a timeline.
 - **First deploy:** apply migration 066, then dispatch the workflow once (or wait for the cron). Gemini is unreachable from the dev sandbox proxy — run in Actions, or use `--dry-run` locally to preview the deterministic layer.
 
-### Searching for Umami (epic seeded as draft — corpus pipeline)
+### Searching for Umami (`umami` app + epic, seeded draft — corpus pipeline)
 
-A food corpus scraped from TasteAtlas: the top-rated dishes tagged under five
-Asian cuisines (India, China, Thailand, Indonesia, Japan), one row per dish
-with region, category, key ingredients, rating and source link. Corpus source
-of record + rights note: [vizmaya-data/searching-for-umami/](../../vizmaya-data/searching-for-umami/)
+The food vertical. A standalone consumer app (`apps/umami/web`, registered as
+app slug `umami` — AppEntry in `packages/verticals/src/data.ts`, default
+domain umami.fyi) whose first corpus is scraped from TasteAtlas: the top-rated
+dishes tagged under five Asian cuisines (India, China, Thailand, Indonesia,
+Japan), one row per dish with region, category, key ingredients, rating and
+source link. The epic + corpus pipeline stay homed here (vizmaya-fyi
+scripts/data — same split as fifa-wc26, whose importer stayed after the epic
+moved to footshorts). Corpus source of record + rights note:
+[vizmaya-data/searching-for-umami/](../../vizmaya-data/searching-for-umami/)
 (README + INGEST_NOTES).
 
 - **Schema:** [supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql](../../supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql)
-  — `food_dishes` (food-generic, keyed by `epic_slug`, unique on
-  `(epic_slug, slug)`) + the `searching-for-umami` epic row (`status='draft'`,
-  hidden from home — no landing page yet).
+  — registers the `umami` row in `apps`, creates `food_dishes` (food-generic,
+  keyed by `epic_slug`, unique on `(epic_slug, slug)`, public-read RLS), and
+  seeds the `searching-for-umami` epic row (`app_slug='umami'`,
+  `status='draft'`, hidden from home).
+- **Consumer app:** [apps/umami/web](../umami/web) — landing + cuisine/dish
+  explorer at `/` (reads `listFoodDishes()` with anon-only env, degrades to
+  empty states without env), story reader at `/editorial/[slug]` via
+  `@vismay/story-embed` (iframes vizmaya.fyi — no umami vertical/viz package
+  yet, so umami stories carry no `vertical:` key and render as vizmaya's own).
+  Admin gets Stories/Compose/Epics tabs at `/umami` from the `apps` row alone.
+- **Reader:** `listFoodDishes(epicSlug)` in
+  [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)
+  (service-role with anon fallback — `food_dishes` is public-read).
 - **Scraper:** [scripts/searching-for-umami/scrape-tasteatlas.ts](scripts/searching-for-umami/scrape-tasteatlas.ts)
   (`pnpm searching-for-umami:scrape`). **Local-run only** — TasteAtlas is
   behind Cloudflare and blocks datacenter IPs (sandbox proxy denies the domain
@@ -258,13 +273,18 @@ of record + rights note: [vizmaya-data/searching-for-umami/](../../vizmaya-data/
   30-row sample (`tags: ["sample-data"]`, null ratings) so the pipeline works
   end-to-end; the importer warns when sample rows are present. Run the real
   scrape before publishing.
-- **Deploy:** apply migration 069, then `pnpm searching-for-umami:import`.
+- **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
+  the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
+  `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set
+  `NEXT_PUBLIC_UMAMI_URL` on the admin Vercel project so cross-app links
+  resolve.
 - **Publish checklist (later):** real scrape → re-import → review/rewrite
-  descriptions for rights → build `app/searching-for-umami/` landing
-  (+ `listFoodDishes()` reader in `packages/content-source/src/epics.ts` and
-  an API route) → flip epic to `published` in a follow-up migration. Optional:
-  a `food-dishes` composer library provider cloned from `bookFactsProvider`
-  in `apps/admin/lib/libraryProviders.ts` to make dishes ground-able sources.
+  descriptions for rights → flip epic to `published` in a follow-up migration.
+  Optional follow-ups: a `food-dishes` composer library provider cloned from
+  `bookFactsProvider` in `apps/admin/lib/libraryProviders.ts` to make dishes
+  ground-able sources; a `verticals/umami-viz` package + VerticalEntry when
+  umami wants custom food viz modules (that also means gen:sources + the
+  transpile/dep wiring in the four shared surfaces).
 
 ## AI gateway
 

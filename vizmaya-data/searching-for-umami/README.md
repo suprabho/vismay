@@ -32,8 +32,12 @@ food landing page ranks/maps on and a composed story can be grounded on.
 ## Relationship to the live pipeline
 
 - **Migration** `supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql`
-  creates `food_dishes` (public-read) and seeds the `searching-for-umami`
-  epic row (`draft`, hidden from home — there's no landing page yet).
+  registers the `umami` consumer app, creates `food_dishes` (public-read) and
+  seeds the `searching-for-umami` epic row (`app_slug='umami'`, `draft`,
+  hidden from home).
+- **Consumer app** `apps/umami/web` (Searching for Umami, default domain
+  umami.fyi) renders the cuisine/dish explorer at `/` via `listFoodDishes()`
+  in `packages/content-source/src/epics.ts`.
 - **Scraper** `apps/vizmaya-fyi/scripts/searching-for-umami/scrape-tasteatlas.ts`
   (`pnpm searching-for-umami:scrape`) — **local-run only**: TasteAtlas sits
   behind Cloudflare and blocks datacenter IPs (the dev sandbox and GitHub

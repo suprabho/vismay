@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/* Searching for Umami — warm, dark, spice-market palette. Brand fonts are a
+ * follow-up (system stack for now so builds need no network). Tokens are
+ * namespaced `umami-*` so Tailwind emits bg-umami-bg / text-umami-accent etc.
+ * No @source lines needed: StoryEmbed styles itself inline by design, and no
+ * other workspace package's classes are used here. */
+@theme {
+  --color-umami-bg: #171210;
+  --color-umami-surface: #221a15;
+  --color-umami-raised: #2b211a;
+  --color-umami-border: #3a2d22;
+  --color-umami-text: #f4ece1;
+  --color-umami-muted: #a5927f;
+  --color-umami-accent: #e07a2f; /* turmeric */
+  --color-umami-chili: #c8452f;
+  --color-umami-leaf: #7d9c5c;
+  --font-display: ui-serif, 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+}
+
+html {
+  background: var(--color-umami-bg);
+  color: var(--color-umami-text);
+}

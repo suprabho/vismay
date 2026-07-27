@@ -92,6 +92,7 @@ if TasteAtlas moves its "best rated" pages, fix the URL there, nothing else.
 2. `pnpm searching-for-umami:import` twice (second run proves idempotency).
 3. Review/rewrite descriptions for rights compliance before any public
    surface ships.
-4. Build the landing page (`apps/vizmaya-fyi/app/searching-for-umami/`),
-   then flip the epic to `status='published'` (+ `show_on_home` if wanted)
-   in a follow-up migration.
+4. Flip the epic to `status='published'` in a follow-up migration. The
+   landing already lives in the `umami` consumer app (`apps/umami/web`,
+   explorer at `/`), which degrades to empty states until the corpus and
+   env are in place.
