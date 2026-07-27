@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { isHiddenEntity } from './hiddenContent';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
 
 /**
@@ -55,6 +56,10 @@ function discoverRowToItem(r: DiscoverRow): ShareCardItem | null {
   const entities = (r.footshorts_share_card_entities ?? [])
     .map((j) => j.entity)
     .filter((e): e is FeedCardEntity => !!e);
+  // A card tagged with a hidden competition (see hiddenContent.ts) is that
+  // competition's content — the watermark is baked into the PNG — so drop the
+  // whole card, not just the tag.
+  if (entities.some((e) => isHiddenEntity(e))) return null;
   return {
     id: r.id,
     name: r.name,

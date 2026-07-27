@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { isHiddenCompetition } from './hiddenContent';
 
 // StandingRow lives in @vismay/footshorts-viz. Re-export keeps app call sites
 // working; internal uses below need the import too.
@@ -27,7 +28,7 @@ async function fetchLatestSeason(competitionSlug: string): Promise<string | null
 export function useStandings(competitionSlug: string | undefined, season?: string) {
   return useQuery({
     queryKey: ['standings', competitionSlug, season ?? 'latest'],
-    enabled: !!competitionSlug,
+    enabled: !!competitionSlug && !isHiddenCompetition(competitionSlug),
     queryFn: async (): Promise<StandingRow[]> => {
       const s = season ?? (await fetchLatestSeason(competitionSlug!));
       if (!s) return [];

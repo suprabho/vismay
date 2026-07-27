@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { filterHiddenFixtures, isHiddenCompetition } from './hiddenContent';
 
 // Football-domain types live in @vismay/footshorts-viz so mobile MatchRow
 // and any vertical components share a single source of truth.
@@ -43,7 +44,7 @@ export function useLeagueFixtures(
 ) {
   return useQuery({
     queryKey: ['fixtures', 'league', competitionSlug, kind, limit],
-    enabled: !!competitionSlug,
+    enabled: !!competitionSlug && !isHiddenCompetition(competitionSlug),
     queryFn: async (): Promise<FixtureRow[]> => {
       let q = supabase
         .from('fixtures')
@@ -75,7 +76,7 @@ export function useTeamFixtures(
       q = applyKind(q, kind, limit);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as FixtureRow[];
+      return filterHiddenFixtures((data ?? []) as unknown as FixtureRow[]);
     },
     staleTime: 60 * 1000,
     refetchInterval: FIXTURES_REFETCH_MS,
