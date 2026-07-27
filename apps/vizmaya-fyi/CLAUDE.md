@@ -230,6 +230,42 @@ goes dark.
 - **API:** `/api/ai-data-centers/recap` — `{ recap }` (newest, `null` before the first run); `?limit=N` returns `{ recaps }` for a timeline.
 - **First deploy:** apply migration 066, then dispatch the workflow once (or wait for the cron). Gemini is unreachable from the dev sandbox proxy — run in Actions, or use `--dry-run` locally to preview the deterministic layer.
 
+### Searching for Umami (epic seeded as draft — corpus pipeline)
+
+A food corpus scraped from TasteAtlas: the top-rated dishes tagged under five
+Asian cuisines (India, China, Thailand, Indonesia, Japan), one row per dish
+with region, category, key ingredients, rating and source link. Corpus source
+of record + rights note: [vizmaya-data/searching-for-umami/](../../vizmaya-data/searching-for-umami/)
+(README + INGEST_NOTES).
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql](../../supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql)
+  — `food_dishes` (food-generic, keyed by `epic_slug`, unique on
+  `(epic_slug, slug)`) + the `searching-for-umami` epic row (`status='draft'`,
+  hidden from home — no landing page yet).
+- **Scraper:** [scripts/searching-for-umami/scrape-tasteatlas.ts](scripts/searching-for-umami/scrape-tasteatlas.ts)
+  (`pnpm searching-for-umami:scrape`). **Local-run only** — TasteAtlas is
+  behind Cloudflare and blocks datacenter IPs (sandbox proxy denies the domain
+  outright; GH-hosted runners would 403 too, same lesson as Yahoo → Apify).
+  Resumable (checkpoint + skip-already-scraped), polite (sequential, 2–4 s
+  delays, aborts after 3 consecutive 403/429s), writes only
+  `vizmaya-data/searching-for-umami/dishes.json` — never the DB. First run:
+  `--cuisine india --limit 5 --headed`.
+- **Importer:** [scripts/searching-for-umami/import.ts](scripts/searching-for-umami/import.ts)
+  (`pnpm searching-for-umami:import`, `--dry-run` validates without env) —
+  dishes.json → `food_dishes`, idempotent upsert on `(epic_slug, slug)`.
+  Hard-fails on descriptions > 600 chars (rights: summaries stay truncated).
+- **Sample data caveat:** the committed `dishes.json` is a hand-authored
+  30-row sample (`tags: ["sample-data"]`, null ratings) so the pipeline works
+  end-to-end; the importer warns when sample rows are present. Run the real
+  scrape before publishing.
+- **Deploy:** apply migration 069, then `pnpm searching-for-umami:import`.
+- **Publish checklist (later):** real scrape → re-import → review/rewrite
+  descriptions for rights → build `app/searching-for-umami/` landing
+  (+ `listFoodDishes()` reader in `packages/content-source/src/epics.ts` and
+  an API route) → flip epic to `published` in a follow-up migration. Optional:
+  a `food-dishes` composer library provider cloned from `bookFactsProvider`
+  in `apps/admin/lib/libraryProviders.ts` to make dishes ground-able sources.
+
 ## AI gateway
 
 New AI calls (text + image) go through [@vismay/ai-gateway](../../packages/ai-gateway/README.md),

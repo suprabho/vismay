@@ -13,3 +13,5 @@ apps/vizmaya-fyi/public/content
 supabase/.temp/
 # Abandoned render-surface extraction — build artifacts only, no source (see plan)
 apps/render/
+# TasteAtlas scraper's persistent Chromium profile (Cloudflare clearance)
+vizmaya-data/searching-for-umami/.browser-profile/
