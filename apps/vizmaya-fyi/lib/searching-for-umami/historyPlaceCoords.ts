@@ -31,4 +31,9 @@ export const HISTORY_PLACE_COORDS: Record<string, PlaceCoord> = {
   'new world': { lat: 15.0, lng: -85.0 },
   'spice islands': { lat: -1.5, lng: 127.5 }, // Maluku Islands
   'maluku islands': { lat: -1.5, lng: 127.5 },
+  // Compound places (no single ISO code, so Mapbox gets no country constraint
+  // and free-matches badly — "China and Vietnam" hit Las Vegas): pin a fair
+  // midpoint by hand.
+  'china and vietnam': { lat: 23.0, lng: 107.0 }, // Sino-Vietnamese border region
+  'maritime southeast asia': { lat: 0.0, lng: 115.0 }, // island SE Asia centroid
 }

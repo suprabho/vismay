@@ -20,6 +20,10 @@
  *                       (reviewed/rejected rows are NEVER touched), re-resolves wiki
  *   --geocode           no enrichment: scan existing events missing coords and
  *                       print ready-to-paste historyPlaceCoords.ts suggestions
+ *   --regeocode         no enrichment: re-geocode EVERY placed event in the DB
+ *                       (curated overrides → country-constrained Mapbox) and
+ *                       update rows whose coordinates change — surgical repair
+ *                       after geocoder fixes, no LLM cost, review states untouched
  *
  * Required env (apps/vizmaya-fyi/.env.local / .env): NEXT_PUBLIC_SUPABASE_URL,
  * SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY. Optional: MAPBOX_TOKEN ??
@@ -67,6 +71,7 @@ const opt = (name: string): string | null => multiOpt(name)[0] ?? null
 const DRY_RUN = flag('--dry-run')
 const FORCE = flag('--force')
 const GEOCODE_MODE = flag('--geocode')
+const REGEOCODE_MODE = flag('--regeocode')
 const DISHES_ONLY = flag('--dishes-only')
 const INGREDIENTS_ONLY = flag('--ingredients-only')
 const ONLY_SUBJECTS = new Set(multiOpt('--subject'))
@@ -297,8 +302,8 @@ function mapboxToken(): string | null {
 }
 
 async function geocodePlace(place: string, countryCode: string | null): Promise<{ lat: number; lng: number } | null> {
-  const key = place.toLowerCase().trim()
-  const curated = HISTORY_PLACE_COORDS[key]
+  const key = `${place.toLowerCase().trim()}|${countryCode ?? ''}`
+  const curated = HISTORY_PLACE_COORDS[place.toLowerCase().trim()]
   if (curated) return curated
   if (geoCache.has(key)) return geoCache.get(key)!
   const token = mapboxToken()
@@ -311,8 +316,11 @@ async function geocodePlace(place: string, countryCode: string | null): Promise<
   }
   const query = [place, country].filter(Boolean).join(', ')
   try {
+    // `country=` is load-bearing: without it, country-scale names resolve to
+    // same-named US towns ("Japan" → Japan, Missouri; "India" → India, PA).
+    const countryParam = countryCode ? `&country=${countryCode.toLowerCase()}` : ''
     const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?limit=1&access_token=${token}`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?limit=1${countryParam}&access_token=${token}`
     )
     if (!res.ok) {
       geoCache.set(key, null)
@@ -374,6 +382,44 @@ async function runGeocodeMode(sb: SupabaseClient): Promise<void> {
   console.log('[history] paste verified lines into lib/searching-for-umami/historyPlaceCoords.ts, then re-run with --force for affected subjects')
 }
 
+/** Re-geocode every placed event and update rows whose coords change.
+ *  No LLM involved; review states untouched. */
+async function runRegeocodeMode(sb: SupabaseClient): Promise<void> {
+  const { data, error } = await sb
+    .from('food_history_events')
+    .select('id, place, country_code, lat, lng')
+    .not('place', 'is', null)
+  if (error) throw new Error(`events read: ${error.message}`)
+  const rows = (data ?? []) as Array<{
+    id: string
+    place: string
+    country_code: string | null
+    lat: number | null
+    lng: number | null
+  }>
+  console.log(`[history] re-geocoding ${rows.length} placed events`)
+  let changed = 0
+  let cleared = 0
+  for (const r of rows) {
+    const coord = await geocodePlace(r.place, r.country_code)
+    const same =
+      (coord?.lat ?? null) === r.lat && (coord?.lng ?? null) === r.lng
+    if (same) continue
+    const { error: upErr } = await sb
+      .from('food_history_events')
+      .update({ lat: coord?.lat ?? null, lng: coord?.lng ?? null, updated_at: new Date().toISOString() })
+      .eq('id', r.id)
+    if (upErr) {
+      console.warn(`  ✗ ${r.id} (${r.place}): ${upErr.message}`)
+      continue
+    }
+    if (coord) changed++
+    else cleared++
+    await sleep(60)
+  }
+  console.log(`[history] re-geocode done: ${changed} updated, ${cleared} cleared to null`)
+}
+
 /* ── main ────────────────────────────────────────────────────────────────── */
 
 async function main(): Promise<void> {
@@ -384,6 +430,10 @@ async function main(): Promise<void> {
 
   if (GEOCODE_MODE) {
     await runGeocodeMode(sb)
+    return
+  }
+  if (REGEOCODE_MODE) {
+    await runRegeocodeMode(sb)
     return
   }
 
