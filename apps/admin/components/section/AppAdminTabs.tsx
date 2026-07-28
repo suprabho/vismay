@@ -20,10 +20,11 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
   }
-  // Recipe-corpora coverage (food_recipes/food_ingredients, migration 070) is
-  // the food vertical's — umami-only.
+  // Recipe-corpora coverage (migration 070) + the history review queue
+  // (migration 071) are the food vertical's — umami-only.
   if (appSlug === 'umami') {
     tabs.push({ href: `/${appSlug}/recipes`, label: 'Recipes' })
+    tabs.push({ href: `/${appSlug}/history`, label: 'History' })
   }
   return <Tabs tabs={tabs} />
 }

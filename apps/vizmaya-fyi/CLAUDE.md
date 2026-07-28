@@ -292,6 +292,21 @@ moved to footshorts). Corpus source of record + rights note:
   apps/admin — stat cards, per-cuisine source bars, dish-backfill counts,
   searchable browse; readers `getFoodRecipeCoverage`/`listFoodRecipesForAdmin`
   in content-source epics.ts).
+- **History layer (migration 071):** `food_history_subjects` +
+  `food_history_events` — AI-extracted, per-claim-cited, **review-gated**
+  dish/ingredient timelines from Wikipedia (MediaWiki API, CC BY-SA;
+  paraphrase-enforced with a verbatim guard, `source_url` + `wiki_oldid`
+  permalink per claim). Worker `pnpm searching-for-umami:enrich-history`
+  (subject registry + title overrides in
+  scripts/searching-for-umami/history-subjects.ts; curated place coords in
+  lib/searching-for-umami/historyPlaceCoords.ts; `--force` replaces only
+  ai-draft rows). Review at the umami **History** tab (`/umami/history`,
+  approve/reject; readers `getFoodHistoryCoverage`/
+  `listFoodHistoryEventsForAdmin`/`setFoodHistoryEventStatus` in
+  content-source epics.ts). Composer grounding via the `food-history`
+  provider (whole-subject cited timelines, drafts flagged). No anon RLS —
+  public surfaces later via an additive reviewed-only policy (sketched in the
+  migration). Full rationale + rights: vizmaya-data/searching-for-umami/INGEST_NOTES.md.
 - **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
   the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set
