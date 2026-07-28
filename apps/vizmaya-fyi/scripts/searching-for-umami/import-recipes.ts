@@ -287,7 +287,9 @@ async function upsertBatches(
   batchSize: number
 ): Promise<void> {
   for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize)
+    // supabase-js's upsert typing rejects a bare generic T[]; the rows are
+    // plain payload objects, so widen through unknown.
+    const batch = rows.slice(i, i + batchSize) as unknown as Record<string, unknown>[]
     const { error } = await db.from(table).upsert(batch, { onConflict })
     if (error) {
       if (/relation .* does not exist|Could not find the table/i.test(error.message)) {
