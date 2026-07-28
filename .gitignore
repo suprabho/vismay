@@ -13,3 +13,10 @@ apps/vizmaya-fyi/public/content
 supabase/.temp/
 # Abandoned render-surface extraction — build artifacts only, no source (see plan)
 apps/render/
+# TasteAtlas scraper's browser profile (wiped per run) + runtime checkpoint
+vizmaya-data/searching-for-umami/.browser-profile/
+vizmaya-data/searching-for-umami/scrape-state.json
+# Local third-party recipe datasets (50 MB, not ours to redistribute — see
+# searching-for-umami INGEST_NOTES for provenance + re-download pointers)
+vizmaya-data/6000+ Indian Food Recipes Dataset/
+vizmaya-data/CulinaryDB/

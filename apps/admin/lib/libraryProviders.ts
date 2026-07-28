@@ -652,6 +652,236 @@ const cokeStudioProvider: LibraryProvider = {
   },
 }
 
+// ── Food vertical (umami) providers ──────────────────────────────────────────
+// The searching-for-umami epic's two data layers (migrations 069–070): the
+// curated public dish canon and the big internal recipe corpora. Recipes are
+// search-only so the composer's AI research agent reaches them too.
+
+/** Human labels for `food_recipes.source`. */
+const FOOD_RECIPE_SOURCES: Record<string, string> = {
+  'archanas-kitchen': "Archana's Kitchen",
+  culinarydb: 'CulinaryDB',
+}
+
+/**
+ * Curated dishes (`food_dishes`) — the TasteAtlas-scraped canon behind the
+ * umami explorer (top-10 best-rated per cuisine + backfilled ingredients).
+ * Small and browsable, so list-based with a server-side filter; `search` is
+ * also provided so the AI research agent can query dishes directly. Items are
+ * keyed by dish slug (one food epic today; revisit if a second epic lands).
+ */
+const foodDishesProvider: LibraryProvider = {
+  key: 'food-dishes',
+  label: 'Dishes',
+  apps: ['umami'],
+  async list({ offset, limit, query }) {
+    const sb = createServiceClient()
+    let q = sb
+      .from('food_dishes')
+      .select('slug, name, cuisine, category, rating, rank_in_cuisine', { count: 'exact' })
+      .order('cuisine', { ascending: true })
+      .order('rank_in_cuisine', { ascending: true, nullsFirst: false })
+    if (query) {
+      const pat = ilikePattern(query)
+      q = q.or(
+        `name.ilike.${pat},cuisine.ilike.${pat},category.ilike.${pat},region.ilike.${pat},description.ilike.${pat}`,
+      )
+    }
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      slug: string
+      name: string | null
+      cuisine: string | null
+      category: string | null
+      rating: number | null
+      rank_in_cuisine: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: r.slug,
+        title: r.name ?? r.slug,
+        subtitle:
+          [
+            r.cuisine,
+            r.category,
+            r.rating != null ? `★ ${r.rating.toFixed(1)}` : null,
+            r.rank_in_cuisine != null ? `#${r.rank_in_cuisine}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async search(ctx) {
+    return this.list!(ctx)
+  },
+  async extract(slug) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('food_dishes')
+      .select('name, cuisine, country_code, region, category, description, ingredients, rating, rank_in_cuisine, source_url')
+      .eq('slug', slug)
+      .limit(1)
+    const row = (data?.[0] ?? null) as {
+      name: string | null
+      cuisine: string | null
+      country_code: string | null
+      region: string | null
+      category: string | null
+      description: string | null
+      ingredients: string[] | null
+      rating: number | null
+      rank_in_cuisine: number | null
+      source_url: string | null
+    } | null
+    if (!row) return null
+    const meta = [
+      row.category ? `Category: ${row.category}` : null,
+      row.region ? `Region: ${row.region}` : null,
+      row.rating != null
+        ? `TasteAtlas rating: ${row.rating.toFixed(1)}${row.rank_in_cuisine != null ? ` (best-rated #${row.rank_in_cuisine} in ${row.cuisine})` : ''}`
+        : null,
+      row.ingredients?.length ? `Key ingredients: ${row.ingredients.join(', ')}` : null,
+      row.source_url ? `Source: ${row.source_url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const text = [
+      `# ${row.name ?? slug} — ${row.cuisine ?? 'dish'}`,
+      meta,
+      row.description?.trim() || null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return {
+      title: `${row.name ?? slug} · dish`,
+      byline: 'Searching for Umami · TasteAtlas',
+      text,
+    }
+  },
+}
+
+/**
+ * Recipe corpora (`food_recipes`, migration 070) — 52k rows across
+ * Archana's Kitchen (Indian, with instructions) and CulinaryDB (world
+ * cuisines as ingredient sets). Search-only: matches title, the dataset's own
+ * cuisine label, or an exact ingredient term (array-contains). These are
+ * internal grounding tables — attaching one snapshots its text as research;
+ * composed prose must not republish instructions verbatim (see the
+ * searching-for-umami INGEST_NOTES rights section).
+ */
+const foodRecipesProvider: LibraryProvider = {
+  key: 'food-recipes',
+  label: 'Food recipes',
+  apps: ['umami'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    // Exact ingredient term for the array-contains arm ("soy sauce" works;
+    // quotes/braces are stripped so the .or() filter can't be broken).
+    const term = query.replace(/["{}(),\\]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+    const ors = [`title.ilike.${pat}`, `cuisine_raw.ilike.${pat}`]
+    if (term) ors.push(`ingredients.cs.{"${term}"}`)
+    const { data, error, count } = await sb
+      .from('food_recipes')
+      .select('id, title, source, cuisine_raw, course, total_min', { count: 'exact' })
+      .or(ors.join(','))
+      .order('source', { ascending: true }) // archanas-kitchen first — richer rows
+      .order('title', { ascending: true })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      id: number
+      title: string | null
+      source: string | null
+      cuisine_raw: string | null
+      course: string | null
+      total_min: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: String(r.id),
+        title: r.title ?? 'Untitled recipe',
+        subtitle:
+          [
+            r.source ? FOOD_RECIPE_SOURCES[r.source] ?? r.source : null,
+            r.cuisine_raw,
+            r.course,
+            r.total_min != null ? `${r.total_min} min` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('food_recipes')
+      .select(
+        'title, title_native, source, cuisine, cuisine_raw, course, diet, prep_min, cook_min, total_min, servings, ingredients, instructions, url',
+      )
+      .eq('id', Number(id))
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      title_native: string | null
+      source: string | null
+      cuisine: string | null
+      cuisine_raw: string | null
+      course: string | null
+      diet: string | null
+      prep_min: number | null
+      cook_min: number | null
+      total_min: number | null
+      servings: number | null
+      ingredients: string[] | null
+      instructions: string | null
+      url: string | null
+    } | null
+    if (!row) return null
+    const sourceLabel = row.source ? FOOD_RECIPE_SOURCES[row.source] ?? row.source : 'Recipe corpus'
+    const times = [
+      row.prep_min != null ? `prep ${row.prep_min} min` : null,
+      row.cook_min != null ? `cook ${row.cook_min} min` : null,
+      row.total_min != null ? `total ${row.total_min} min` : null,
+      row.servings != null ? `serves ${row.servings}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    const meta = [
+      [row.cuisine_raw ?? row.cuisine, row.course, row.diet].filter(Boolean).join(' · ') || null,
+      times || null,
+      row.ingredients?.length ? `Ingredients: ${row.ingredients.join(', ')}` : null,
+      row.url ? `Source: ${row.url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const instructions = row.instructions?.trim()
+      ? row.instructions.length > MAX_DOC_TEXT
+        ? `${row.instructions.slice(0, MAX_DOC_TEXT)}\n\n…[truncated]`
+        : row.instructions
+      : null
+    const text = [
+      row.title_native ? `# ${row.title} (${row.title_native})` : `# ${row.title}`,
+      meta,
+      instructions ? `Instructions:\n${instructions}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return {
+      title: `${row.title ?? 'Recipe'} · recipe`,
+      byline: `${sourceLabel}${row.cuisine_raw ? ` · ${row.cuisine_raw}` : ''}`,
+      text,
+    }
+  },
+}
+
 /**
  * Country energy profiles (`iea_countries` + `iea_country_energy` +
  * `iea_oil_prices_monthly`) — the per-country dataset behind the vizmaya
@@ -1142,6 +1372,8 @@ const PROVIDERS: LibraryProvider[] = [
   epsteinProvider,
   bookFactsProvider,
   cokeStudioProvider,
+  foodDishesProvider,
+  foodRecipesProvider,
   dcNewsProvider,
   dcNewsRecapProvider,
   dcStockMarketProvider,

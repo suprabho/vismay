@@ -16,6 +16,7 @@ const IN_PIPELINE = [
   { name: 'Skincare + Beauty', domain: 'beauty', partner: 'Vanshika' },
   { name: 'Fashion + Styling', domain: 'style', partner: 'Vanshika' },
   { name: 'Music & Events', domain: 'culture', partner: 'Retro Blxxd' },
+  { name: 'Searching for Umami', domain: 'food', partner: 'Supro' },
 ]
 
 const ON_THE_BENCH = [
@@ -24,7 +25,6 @@ const ON_THE_BENCH = [
   'Spirituality — Rohit',
   'Art',
   'Entertainment',
-  'Food & recipe',
   'Science / space',
   'Pets',
   'Manufacturing in India — Padma',

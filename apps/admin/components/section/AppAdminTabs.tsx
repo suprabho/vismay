@@ -20,5 +20,10 @@ export function AppAdminTabs({ appSlug }: Props) {
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
   }
+  // Recipe-corpora coverage (food_recipes/food_ingredients, migration 070) is
+  // the food vertical's — umami-only.
+  if (appSlug === 'umami') {
+    tabs.push({ href: `/${appSlug}/recipes`, label: 'Recipes' })
+  }
   return <Tabs tabs={tabs} />
 }

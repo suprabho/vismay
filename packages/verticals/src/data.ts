@@ -293,6 +293,20 @@ export const APPS: AppEntry[] = [
     surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
     routing: { storyPath: (slug) => `/editorial/${slug}` },
   },
+  {
+    slug: 'umami',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_UMAMI', default: 'https://vizmaya.fyi' },
+      consumer: { env: 'NEXT_PUBLIC_UMAMI_URL', default: 'https://umami.fyi' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_UMAMI_URL', default: 'https://admin.umami.fyi' },
+    },
+    branding: { hideLogoInAutoplay: false, dataAttr: 'umami' },
+    surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
+    // Searching for Umami is a single-epic app for now: the app home IS the
+    // food epic's landing, so every epic resolves to `/`. Stories embed the
+    // vizmaya render (no umami vertical/viz package yet).
+    routing: { storyPath: (slug) => `/editorial/${slug}`, epicPath: () => '/' },
+  },
 ]
 
 /** Lookup by app slug. */

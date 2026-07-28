@@ -39,6 +39,13 @@ const APPS: AppEntry[] = [
     status: 'available',
   },
   {
+    href: '/umami',
+    slug: 'umami',
+    name: 'Searching for Umami',
+    description: 'Food stories and the TasteAtlas cuisine corpus, tagged to the umami app.',
+    status: 'available',
+  },
+  {
     href: '/storytime-ovo',
     name: 'Storytime with Ovo',
     description: 'Stories and epics tagged to the storytime-ovo app.',

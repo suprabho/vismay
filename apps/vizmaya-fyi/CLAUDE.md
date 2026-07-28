@@ -230,6 +230,84 @@ goes dark.
 - **API:** `/api/ai-data-centers/recap` — `{ recap }` (newest, `null` before the first run); `?limit=N` returns `{ recaps }` for a timeline.
 - **First deploy:** apply migration 066, then dispatch the workflow once (or wait for the cron). Gemini is unreachable from the dev sandbox proxy — run in Actions, or use `--dry-run` locally to preview the deterministic layer.
 
+### Searching for Umami (`umami` app + epic, seeded draft — corpus pipeline)
+
+The food vertical. A standalone consumer app (`apps/umami/web`, registered as
+app slug `umami` — AppEntry in `packages/verticals/src/data.ts`, default
+domain umami.fyi) whose first corpus is scraped from TasteAtlas: the top-rated
+dishes tagged under five Asian cuisines (India, China, Thailand, Indonesia,
+Japan), one row per dish with region, category, key ingredients, rating and
+source link. The epic + corpus pipeline stay homed here (vizmaya-fyi
+scripts/data — same split as fifa-wc26, whose importer stayed after the epic
+moved to footshorts). Corpus source of record + rights note:
+[vizmaya-data/searching-for-umami/](../../vizmaya-data/searching-for-umami/)
+(README + INGEST_NOTES).
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql](../../supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql)
+  — registers the `umami` row in `apps`, creates `food_dishes` (food-generic,
+  keyed by `epic_slug`, unique on `(epic_slug, slug)`, public-read RLS), and
+  seeds the `searching-for-umami` epic row (`app_slug='umami'`,
+  `status='draft'`, hidden from home).
+- **Consumer app:** [apps/umami/web](../umami/web) — landing + cuisine/dish
+  explorer at `/` (reads `listFoodDishes()` with anon-only env, degrades to
+  empty states without env), story reader at `/editorial/[slug]` via
+  `@vismay/story-embed` (iframes vizmaya.fyi — no umami vertical/viz package
+  yet, so umami stories carry no `vertical:` key and render as vizmaya's own).
+  Admin gets Stories/Compose/Epics tabs at `/umami` from the `apps` row alone.
+- **Reader:** `listFoodDishes(epicSlug)` in
+  [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)
+  (service-role with anon fallback — `food_dishes` is public-read).
+- **Scraper:** [scripts/searching-for-umami/scrape-tasteatlas.ts](scripts/searching-for-umami/scrape-tasteatlas.ts)
+  (`pnpm searching-for-umami:scrape --headed`). **Local-run only** — TasteAtlas
+  is behind Cloudflare and blocks datacenter IPs (sandbox proxy denies the
+  domain outright; GH-hosted runners would 403 too, same lesson as Yahoo →
+  Apify). **Listing-only capture** via system Chrome (`channel:'chrome'`,
+  bundled Chromium is fingerprint-blocked), headed, fresh `.browser-profile`
+  per listing; dish-page documents are hard-403'd and never visited, so
+  `ingredients`/`rating_count` stay empty. Each listing serves exactly 10 dish
+  cards to anonymous visitors → corpus ceiling is top-10 per cuisine. Full
+  Cloudflare playbook + card-markup traps:
+  `vizmaya-data/searching-for-umami/INGEST_NOTES.md`. Resumable, polite,
+  writes only `dishes.json` — never the DB. Full run ~4 min.
+- **Importer:** [scripts/searching-for-umami/import.ts](scripts/searching-for-umami/import.ts)
+  (`pnpm searching-for-umami:import`, `--dry-run` validates without env) —
+  dishes.json → `food_dishes`, idempotent upsert on `(epic_slug, slug)`.
+  Hard-fails on descriptions > 600 chars (rights: summaries stay truncated).
+- **Corpus status:** real scraped data since 2026-07-27 — 50 rows (top 10
+  best-rated per cuisine) with live ratings, regions, categories, blurbs and
+  CDN images; imported + idempotency-verified, sample rows purged from the DB.
+  Ingredients backfilled for 19/50 from the recipe corpora (tag
+  `ingredients:datasets`).
+- **Recipe corpora (migration 070):** `food_recipes` + `food_ingredients` —
+  internal grounding tables (NO anon RLS; instructions are rights-sensitive)
+  fed by two untracked local datasets under `vizmaya-data/` (Archana's
+  Kitchen 6.9k Indian recipes with instructions; CulinaryDB 45.8k world
+  recipes + 1k-term ingredient vocabulary).
+  `pnpm searching-for-umami:import-recipes` (idempotent, batched) and
+  `pnpm searching-for-umami:backfill-ingredients` (fills dishes.json
+  ingredient gaps by conservative title-matching, then re-run the dish
+  importer). Provenance + rights:
+  [vizmaya-data/searching-for-umami/INGEST_NOTES.md](../../vizmaya-data/searching-for-umami/INGEST_NOTES.md).
+  Admin coverage: the umami desk's **Recipes** tab (`/umami/recipes` in
+  apps/admin — stat cards, per-cuisine source bars, dish-backfill counts,
+  searchable browse; readers `getFoodRecipeCoverage`/`listFoodRecipesForAdmin`
+  in content-source epics.ts).
+- **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
+  the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
+  `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set
+  `NEXT_PUBLIC_UMAMI_URL` on the admin Vercel project so cross-app links
+  resolve.
+- **Publish checklist (later):** ~~real scrape → re-import~~ (done 2026-07-27)
+  → review/rewrite descriptions for rights (blurbs are truncated TasteAtlas
+  editorial text) → flip epic to `published` in a follow-up migration.
+  Composer grounding is live: `food-dishes` (list+search over the dish canon)
+  and `food-recipes` (search-only over the 52k corpus, so the AI research
+  agent reaches it; matches title / cuisine label / exact ingredient term)
+  providers in `apps/admin/lib/libraryProviders.ts`, both scoped to the
+  `umami` app. Remaining optional follow-up: a `verticals/umami-viz` package +
+  VerticalEntry when umami wants custom food viz modules (that also means
+  gen:sources + the transpile/dep wiring in the four shared surfaces).
+
 ## AI gateway
 
 New AI calls (text + image) go through [@vismay/ai-gateway](../../packages/ai-gateway/README.md),

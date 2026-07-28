@@ -38,6 +38,11 @@ export const vizf1PublicUrl: string = normalize(
 export const footshortsPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_FOOTSHORTS_URL || 'https://footshorts.com'
 )
+// Placeholder default until the domain is purchased — override with the env
+// var once the Vercel project has a real hostname.
+export const umamiPublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_UMAMI_URL || 'https://umami.fyi'
+)
 
 /**
  * Per-vertical admin origins. Admin is reachable on its own subdomain of each
@@ -55,12 +60,16 @@ export const adminFootshortsUrl: string = normalize(
 export const adminVizf1Url: string = normalize(
   process.env.NEXT_PUBLIC_ADMIN_VIZF1_URL || 'https://admin.vizf1.com'
 )
+export const adminUmamiUrl: string = normalize(
+  process.env.NEXT_PUBLIC_ADMIN_UMAMI_URL || 'https://admin.umami.fyi'
+)
 
 /** All per-vertical admin origins, for the CORS allow-list. */
 export const adminPublicOrigins: string[] = [
   adminVizmayaUrl,
   adminFootshortsUrl,
   adminVizf1Url,
+  adminUmamiUrl,
 ]
 
 /**
@@ -126,6 +135,7 @@ const CONSUMER_BASE_URLS: Record<string, string> = {
   'vizmaya-fyi': vizmayaPublicUrl,
   footshorts: footshortsPublicUrl,
   vizf1: vizf1PublicUrl,
+  umami: umamiPublicUrl,
 }
 
 // Path shapes now come from the app registry (`APPS[].routing`) — the single
