@@ -296,11 +296,13 @@ moved to footshorts). Corpus source of record + rights note:
 - **Publish checklist (later):** ~~real scrape → re-import~~ (done 2026-07-27)
   → review/rewrite descriptions for rights (blurbs are truncated TasteAtlas
   editorial text) → flip epic to `published` in a follow-up migration.
-  Optional follow-ups: a `food-dishes` composer library provider cloned from
-  `bookFactsProvider` in `apps/admin/lib/libraryProviders.ts` to make dishes
-  ground-able sources; a `verticals/umami-viz` package + VerticalEntry when
-  umami wants custom food viz modules (that also means gen:sources + the
-  transpile/dep wiring in the four shared surfaces).
+  Composer grounding is live: `food-dishes` (list+search over the dish canon)
+  and `food-recipes` (search-only over the 52k corpus, so the AI research
+  agent reaches it; matches title / cuisine label / exact ingredient term)
+  providers in `apps/admin/lib/libraryProviders.ts`, both scoped to the
+  `umami` app. Remaining optional follow-up: a `verticals/umami-viz` package +
+  VerticalEntry when umami wants custom food viz modules (that also means
+  gen:sources + the transpile/dep wiring in the four shared surfaces).
 
 ## AI gateway
 
