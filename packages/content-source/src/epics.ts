@@ -1391,3 +1391,150 @@ export async function listFoodDishes(epicSlug: string): Promise<FoodDish[]> {
   if (error) throw new Error(`listFoodDishes(${epicSlug}): ${error.message}`)
   return (data ?? []).map(mapFoodDishRow)
 }
+
+// ── Food recipe corpora (`food_recipes` + `food_ingredients`, migration 070) —
+// admin-only coverage + browse readers for the umami Recipes tab. The tables
+// carry no anon policies (internal grounding corpora), so these are
+// service-role only — no anon fallback like the dishes reader above.
+
+/** The food epic's launch cuisines — the slugs the importers normalize to. */
+const FOOD_CUISINES = ['india', 'china', 'thailand', 'indonesia', 'japan'] as const
+
+const FOOD_RECIPE_SOURCES = ['archanas-kitchen', 'culinarydb'] as const
+
+export interface FoodRecipeCuisineCoverage {
+  cuisine: string
+  /** Recipes normalized to this cuisine, per source. */
+  recipesBySource: Record<string, number>
+  recipesTotal: number
+  /** The dish canon's footprint for the same cuisine. */
+  dishes: number
+  dishesWithIngredients: number
+}
+
+export interface FoodRecipeCoverage {
+  recipesTotal: number
+  recipesBySource: Record<string, number>
+  withInstructions: number
+  vocabulary: { total: number; compounds: number }
+  cuisines: FoodRecipeCuisineCoverage[]
+  /** Recipes carrying only their dataset's own label (Continental, USA, …). */
+  unmappedRecipes: number
+}
+
+/** Aggregate coverage of the recipe corpora + the dish canon. PostgREST
+ *  aggregates are disabled on the shared instance, so this fans out head-only
+ *  count queries over the known dimensions (all in parallel, ~16 cheap HEADs). */
+export async function getFoodRecipeCoverage(epicSlug: string): Promise<FoodRecipeCoverage> {
+  const sb = createServiceClient()
+  const recipeCount = () => sb.from('food_recipes').select('*', { count: 'exact', head: true })
+  const vocabCount = () => sb.from('food_ingredients').select('*', { count: 'exact', head: true })
+
+  const [dishRows, ...counts] = await Promise.all([
+    listFoodDishes(epicSlug),
+    recipeCount(),
+    ...FOOD_RECIPE_SOURCES.map((s) => recipeCount().eq('source', s)),
+    recipeCount().not('instructions', 'is', null),
+    vocabCount(),
+    vocabCount().eq('is_compound', true),
+    ...FOOD_CUISINES.flatMap((c) => FOOD_RECIPE_SOURCES.map((s) => recipeCount().eq('cuisine', c).eq('source', s))),
+  ])
+  for (const r of counts) {
+    if (r.error) throw new Error(`getFoodRecipeCoverage: ${r.error.message}`)
+  }
+  const n = counts.map((r) => r.count ?? 0)
+  const [recipesTotal, akTotal, cdbTotal, withInstructions, vocabTotal, vocabCompounds, ...cuisineCells] = n
+
+  const cuisines: FoodRecipeCuisineCoverage[] = FOOD_CUISINES.map((cuisine, i) => {
+    const bySource: Record<string, number> = {}
+    FOOD_RECIPE_SOURCES.forEach((s, j) => {
+      bySource[s] = cuisineCells[i * FOOD_RECIPE_SOURCES.length + j]
+    })
+    const dishes = dishRows.filter((d) => d.cuisine === cuisine)
+    return {
+      cuisine,
+      recipesBySource: bySource,
+      recipesTotal: Object.values(bySource).reduce((a, b) => a + b, 0),
+      dishes: dishes.length,
+      dishesWithIngredients: dishes.filter((d) => d.ingredients.length > 0).length,
+    }
+  })
+
+  return {
+    recipesTotal,
+    recipesBySource: { 'archanas-kitchen': akTotal, culinarydb: cdbTotal },
+    withInstructions,
+    vocabulary: { total: vocabTotal, compounds: vocabCompounds },
+    cuisines,
+    unmappedRecipes: recipesTotal - cuisines.reduce((a, c) => a + c.recipesTotal, 0),
+  }
+}
+
+export interface AdminFoodRecipe {
+  id: number
+  title: string
+  source: string
+  cuisine: string | null
+  cuisineRaw: string | null
+  course: string | null
+  diet: string | null
+  totalMin: number | null
+  servings: number | null
+  ingredients: string[]
+  hasInstructions: boolean
+  url: string | null
+}
+
+/** Browse/search the recipe corpora for the admin tab. `q` matches the title,
+ *  the dataset's own cuisine label, or an exact (lowercased) ingredient term;
+ *  `cuisine` takes an epic slug or 'unmapped'. */
+export async function listFoodRecipesForAdmin(opts?: {
+  q?: string
+  source?: string
+  cuisine?: string
+  offset?: number
+  limit?: number
+}): Promise<{ rows: AdminFoodRecipe[]; total: number }> {
+  const sb = createServiceClient()
+  const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 100)
+  const offset = Math.max(opts?.offset ?? 0, 0)
+  let q = sb
+    .from('food_recipes')
+    .select(
+      'id, title, source, cuisine, cuisine_raw, course, diet, total_min, servings, ingredients, instructions, url',
+      { count: 'exact' }
+    )
+  const query = opts?.q?.trim()
+  if (query) {
+    const safe = query.replace(/[%,()*\\:{}"]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (safe) {
+      const pat = `%${safe}%`
+      q = q.or(
+        [`title.ilike.${pat}`, `cuisine_raw.ilike.${pat}`, `ingredients.cs.{"${safe.toLowerCase()}"}`].join(',')
+      )
+    }
+  }
+  if (opts?.source) q = q.eq('source', opts.source)
+  if (opts?.cuisine === 'unmapped') q = q.is('cuisine', null)
+  else if (opts?.cuisine) q = q.eq('cuisine', opts.cuisine)
+  const { data, error, count } = await q
+    .order('source', { ascending: true })
+    .order('title', { ascending: true })
+    .range(offset, offset + limit - 1)
+  if (error) throw new Error(`listFoodRecipesForAdmin: ${error.message}`)
+  const rows = (data ?? []).map((r) => ({
+    id: r.id as number,
+    title: (r.title as string | null) ?? 'Untitled',
+    source: r.source as string,
+    cuisine: (r.cuisine as string | null) ?? null,
+    cuisineRaw: (r.cuisine_raw as string | null) ?? null,
+    course: (r.course as string | null) ?? null,
+    diet: (r.diet as string | null) ?? null,
+    totalMin: (r.total_min as number | null) ?? null,
+    servings: (r.servings as number | null) ?? null,
+    ingredients: Array.isArray(r.ingredients) ? (r.ingredients as string[]) : [],
+    hasInstructions: typeof r.instructions === 'string' && r.instructions.trim().length > 0,
+    url: (r.url as string | null) ?? null,
+  }))
+  return { rows, total: count ?? rows.length }
+}

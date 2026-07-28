@@ -288,6 +288,10 @@ moved to footshorts). Corpus source of record + rights note:
   ingredient gaps by conservative title-matching, then re-run the dish
   importer). Provenance + rights:
   [vizmaya-data/searching-for-umami/INGEST_NOTES.md](../../vizmaya-data/searching-for-umami/INGEST_NOTES.md).
+  Admin coverage: the umami desk's **Recipes** tab (`/umami/recipes` in
+  apps/admin — stat cards, per-cuisine source bars, dish-backfill counts,
+  searchable browse; readers `getFoodRecipeCoverage`/`listFoodRecipesForAdmin`
+  in content-source epics.ts).
 - **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
   the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set
