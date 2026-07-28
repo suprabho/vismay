@@ -30,6 +30,18 @@ class SessionDataUnavailable(RuntimeError):
     there on the next scheduled run, which retries for free.
     """
 
+
+class IngestPhaseFailure(RuntimeError):
+    """One or more phases of an otherwise-completed ingest failed.
+
+    Phases 2/3 catch their own exceptions so a failed phase never blocks the
+    remaining ones (their statuses land in Supabase and the resolver retries
+    them next run). But swallowing them entirely made `ingest-latest` print
+    `ok` and exit 0 on a half-ingested session — a scheduled run stayed green
+    while telemetry silently deferred. Raised at the END of ingest_session so
+    all phases still get their attempt AND the caller sees the failure.
+    """
+
 # Aggregate dict key -> vizf1_telemetry_laps column.
 _AGG_COLS = {
     "avgSpeed": "avg_speed",
@@ -195,6 +207,7 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
     # ── Phase 2: lap telemetry channels + aggregates (skip practice channels) ─
     is_practice = session_type.upper().startswith("FP")
     aggregates: dict = {}
+    phase_errors: list[str] = []
     if is_practice:
         logger.info("Practice session — skipping lap-telemetry channel storage")
         _mark_status(sink, session_key, {"telemetry_status": "skipped"})
@@ -207,6 +220,7 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
         except Exception as exc:  # noqa: BLE001
             logger.error("Phase 2 failed for %s: %s", session_key, exc)
             _mark_status(sink, session_key, {"telemetry_status": "failed", "telemetry_error": str(exc)[:2000]})
+            phase_errors.append(f"phase 2 (lap telemetry): {exc}")
 
     # ── Merge processed laps + aggregates -> vizf1_telemetry_laps ────────────
     lap_rows = _build_lap_rows(session_key, processed_laps, aggregates)
@@ -227,7 +241,10 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
     except Exception as exc:  # noqa: BLE001
         logger.error("Phase 3 failed for %s: %s", session_key, exc)
         _mark_status(sink, session_key, {"positions_status": "failed", "positions_error": str(exc)[:2000]})
+        phase_errors.append(f"phase 3 (positions): {exc}")
 
+    if phase_errors:
+        raise IngestPhaseFailure(f"{session_key}: " + "; ".join(phase_errors))
     logger.info("Ingest complete: %s", session_key)
     return session_key
 

@@ -20,7 +20,7 @@ import sys
 import fastf1
 
 from .config import load_settings
-from .ingest import SessionDataUnavailable, ingest_session, list_available_sessions
+from .ingest import IngestPhaseFailure, SessionDataUnavailable, ingest_session, list_available_sessions
 from .latest import resolve_pending_sessions
 from .supabase_sink import SupabaseSink
 
@@ -39,6 +39,12 @@ def _cmd_ingest(args, sink: SupabaseSink) -> int:
         # retryable condition — report it cleanly (no traceback) but still exit
         # non-zero so the operator/CI sees the request produced no data.
         print(f"no data ingested: {exc}", file=sys.stderr)
+        return 1
+    except IngestPhaseFailure as exc:
+        # Partial ingest: statuses are recorded in Supabase and the next
+        # ingest-latest run retries the failed phases (idempotent upserts) —
+        # but THIS run must not pretend it fully succeeded.
+        print(f"partial ingest: {exc}", file=sys.stderr)
         return 1
     print(f"ingested {key}")
     return 0
