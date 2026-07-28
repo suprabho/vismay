@@ -276,6 +276,18 @@ moved to footshorts). Corpus source of record + rights note:
 - **Corpus status:** real scraped data since 2026-07-27 — 50 rows (top 10
   best-rated per cuisine) with live ratings, regions, categories, blurbs and
   CDN images; imported + idempotency-verified, sample rows purged from the DB.
+  Ingredients backfilled for 19/50 from the recipe corpora (tag
+  `ingredients:datasets`).
+- **Recipe corpora (migration 070):** `food_recipes` + `food_ingredients` —
+  internal grounding tables (NO anon RLS; instructions are rights-sensitive)
+  fed by two untracked local datasets under `vizmaya-data/` (Archana's
+  Kitchen 6.9k Indian recipes with instructions; CulinaryDB 45.8k world
+  recipes + 1k-term ingredient vocabulary).
+  `pnpm searching-for-umami:import-recipes` (idempotent, batched) and
+  `pnpm searching-for-umami:backfill-ingredients` (fills dishes.json
+  ingredient gaps by conservative title-matching, then re-run the dish
+  importer). Provenance + rights:
+  [vizmaya-data/searching-for-umami/INGEST_NOTES.md](../../vizmaya-data/searching-for-umami/INGEST_NOTES.md).
 - **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
   the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set

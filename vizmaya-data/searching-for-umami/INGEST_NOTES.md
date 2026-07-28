@@ -123,3 +123,36 @@ pnpm searching-for-umami:import                            # load into food_dish
 **Fallback if local scraping breaks** (Cloudflare escalates): port the
 scraper to an Apify actor with residential proxies, following
 `apify/dc-yahoo-stock-scraper/`. Mentioned for completeness; not built.
+
+## Recipe corpora (migration 070 — food_recipes + food_ingredients)
+
+Two locally-held datasets widen the food vertical beyond TasteAtlas's
+50-dish ceiling. Both live UNTRACKED under `vizmaya-data/` (50 MB,
+third-party data we don't redistribute via git):
+
+| Folder | What | Rows |
+|---|---|---|
+| `../6000+ Indian Food Recipes Dataset/` | Archana's Kitchen recipes (archanaskitchen.com, Kaggle snapshot Dec 2022): ingredients, prep/cook times, course, diet, full instructions, source URL | 6,871 |
+| `../CulinaryDB/` | CulinaryDB (CoSyLab, IIIT-Delhi, 2018): world-cuisine recipes as title + canonical ingredient sets, plus a 1,033-term ingredient vocabulary (categories, compound constituents) | 45,772 |
+
+- **Importer:** `pnpm searching-for-umami:import-recipes [--dry-run]
+  [--source archanas-kitchen|culinarydb]` → upserts into `food_recipes` /
+  `food_ingredients` (migration 070 must be applied first — vizmaya-fyi
+  migrations go in by hand via the dashboard SQL editor). Idempotent on
+  `(source, source_id)` / `entity_id`; batched small for the shared
+  instance.
+- **Ingredient backfill:** `pnpm searching-for-umami:backfill-ingredients
+  [--dry-run]` title-matches the 50 TasteAtlas dishes against both corpora
+  (conservative: exact normalized equality + curated aliases, consensus
+  ingredient list, known-bad matches excluded) and fills `ingredients` in
+  `dishes.json` with tag `ingredients:datasets`; re-run the dish importer to
+  push. First run 2026-07-28 filled 19/50.
+- **Rights:** these are INTERNAL grounding corpora — migration 070 gives the
+  tables no anon RLS policies. Archana's Kitchen instruction text is the
+  site's editorial property; CulinaryDB is a research dataset (cite CoSyLab
+  if it ever surfaces publicly). Don't render either verbatim on public
+  pages; `food_dishes` remains the only public-read food table.
+- **Cuisine normalization:** `cuisine` gets an epic slug only when confident
+  (AK Indian-regional labels → `india`; CulinaryDB `Indian Subcontinent`→
+  `india`, `China`/`Thailand`/`Japan` likewise; `South East Asia` stays
+  unmapped). The dataset's own label is always kept in `cuisine_raw`.

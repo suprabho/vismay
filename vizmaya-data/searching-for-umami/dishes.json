@@ -8,13 +8,20 @@
     "region": "India",
     "category": "Flatbread",
     "description": "Butter garlic naan is a traditional flatbread and one of the most popular versions of naan. It’s made with flour, baking powder, salt, sugar, and dahi. Once the dough has been baked in a hot tandoor oven, the golden naan is taken out and brushed with butter or ghee, then topped with minced garlic.",
-    "ingredients": [],
+    "ingredients": [
+      "butter",
+      "cumin",
+      "garlic",
+      "sunflower"
+    ],
     "rating": 4.5,
     "rating_count": null,
     "rank_in_cuisine": 1,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/bb78aadeae4e4a1c87b3843d8120aa9a.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/butter-garlic-naan",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.593Z"
   },
   {
@@ -26,13 +33,28 @@
     "region": "Amritsar, India",
     "category": "Flatbread",
     "description": "Coming from the North Indian city of Amritsari, Amritsari kulcha is a flatbread stuffed with potatoes, onions, cottage cheese, and spices. The flatbread is commonly garnished with coriander seeds, cilantro, and red chili powder.",
-    "ingredients": [],
+    "ingredients": [
+      "curd",
+      "salt",
+      "sunflower oil",
+      "whole wheat flour",
+      "potatoes",
+      "red chilli powder",
+      "turmeric powder",
+      "garam masala powder",
+      "amchur",
+      "cumin powder",
+      "green chilli",
+      "all purpose flour"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 2,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/dec410f7acfa475bbf94668ba691d96f.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/amritsari-kulcha",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.595Z"
   },
   {
@@ -62,13 +84,28 @@
     "region": "Delhi, India",
     "category": "Stew",
     "description": "Probably the best known of all Indian dishes, murgh makhani, internationally referred to as butter chicken, is a staple dish at most Indian restaurants. The dish originated in Delhi during the 1950s, when a man named Kundan Lal Gujral opened his restaurant called Moti Mahal.",
-    "ingredients": [],
+    "ingredients": [
+      "chicken",
+      "garam masala",
+      "garlic",
+      "ginger",
+      "butter",
+      "salt",
+      "tomato",
+      "yogurt",
+      "tomato paste",
+      "fenugreek",
+      "onion",
+      "water"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 4,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/713e5f01cbb2463386be9bc57c037639.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/butter-chicken",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.595Z"
   },
   {
@@ -80,13 +117,28 @@
     "region": "Hyderabad, India",
     "category": "Rice Dish",
     "description": "Hyderabadi biryani is a South Indian dish consisting of basmati rice, goat, mutton, or chicken meat, lemon, yogurt, onions, and saffron. There are two main varieties of the dish – kachchi (raw) and pakki (cooked).",
-    "ingredients": [],
+    "ingredients": [
+      "basmati",
+      "cardamom",
+      "chile powder",
+      "cilantro",
+      "cinnamon",
+      "clove",
+      "garlic",
+      "ghee",
+      "ginger",
+      "green chile",
+      "lamb",
+      "lemon"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 5,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/3bd6dfaf53e244dfb7f3ee390447a2f8.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/hyderabadi-biryani",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.595Z"
   },
   {
@@ -98,13 +150,22 @@
     "region": "Southern India, India",
     "category": "Pancake",
     "description": "A traditional southern Indian dish known as masala dosa is popular throughout the country, made from a batter of soaked rice and lentils that is baked into a thin pancake and usually stuffed with potatoes, onions, and mustard seeds. The dish is often garnished with grated coconut and chopped coriander.",
-    "ingredients": [],
+    "ingredients": [
+      "bean",
+      "butter",
+      "curry leaf",
+      "mustard oil",
+      "sunflower",
+      "turmeric"
+    ],
     "rating": 4.3,
     "rating_count": null,
     "rank_in_cuisine": 6,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/ba7bab747c7e41769dbc895a84626a23.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/masala-dosa",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.595Z"
   },
   {
@@ -152,13 +213,20 @@
     "region": "Punjab, India",
     "category": "Rice Pudding",
     "description": "Phirni is a dessert made with ground rice that's cooked in milk and flavored with almonds, saffron, and cardamom. A favorite in North India, it is most often prepared for special occasions or festivals such as Diwali and Karwa Chauth.",
-    "ingredients": [],
+    "ingredients": [
+      "basmati",
+      "milk",
+      "rice",
+      "saffron"
+    ],
     "rating": 4.2,
     "rating_count": null,
     "rank_in_cuisine": 9,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/acd78bd43653438ebb11cef93894fc4e.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/phirni",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.595Z"
   },
   {
@@ -170,13 +238,28 @@
     "region": "Punjab, India",
     "category": "Chicken Dish",
     "description": "Tandoori chicken or tandoori murgh is one of the most popular dishes in Indian cuisine, its name derived from the Persian word tannur, meaning fire. The dish consists of chicken meat that is marinated in yogurt, seasoned with tandoori masala, nutmeg, and cumin, then placed on skewers.",
-    "ingredients": [],
+    "ingredients": [
+      "chicken",
+      "cumin",
+      "paprika",
+      "yogurt",
+      "cardamom",
+      "garlic",
+      "ginger",
+      "salt",
+      "turmeric",
+      "garam masala",
+      "lemon juice",
+      "vegetable oil"
+    ],
     "rating": 4.2,
     "rating_count": null,
     "rank_in_cuisine": 10,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/bdab2e7920f0409188d0b3646826893a.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/tandoori-chicken",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:47:55.595Z"
   },
   {
@@ -224,13 +307,28 @@
     "region": "Beijing, China",
     "category": "Duck Dish",
     "description": "The history of Peking duck goes back to China's Yuan Dynasty of the 13th century. Bianyifang, Beijing's oldest restaurant specializing in Peking duck has been in business since the Jiajing reign of the 16th century, serving as a testament to the popularity of this succulent, tantalizing dish.",
-    "ingredients": [],
+    "ingredients": [
+      "duck",
+      "honey",
+      "pepper white",
+      "soy sauce",
+      "sugar",
+      "cinnamon",
+      "clove",
+      "ginger",
+      "nutmeg",
+      "onion",
+      "orange",
+      "parsley"
+    ],
     "rating": 4.3,
     "rating_count": null,
     "rank_in_cuisine": 3,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/d8c9977734d040b3bed4e29caff5b2b2.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/peking-duck",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:11.491Z"
   },
   {
@@ -278,13 +376,20 @@
     "region": "Guangzhou, China",
     "category": "Stir-fry",
     "description": "Jiao yan you yu or salt-and-pepper squid is a traditional dish originating from Guangzhou. This Cantonese dish is usually made with a combination of squid, potato flour, scallions, Shaoxing wine, garlic, oil, hot peppers, Sichuan pepper or white pepper, and salt. The surface of the squid is cross-hatched and the body is cut into bite-sized pieces.",
-    "ingredients": [],
+    "ingredients": [
+      "cornstarch",
+      "flour",
+      "peanut oil",
+      "salt"
+    ],
     "rating": 4.3,
     "rating_count": null,
     "rank_in_cuisine": 6,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/f9f31e98921741ebb13abd634aa45e20.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/jiao-yan-you-yu",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:11.491Z"
   },
   {
@@ -296,13 +401,28 @@
     "region": "Sichuan, China",
     "category": "Noodle Dish",
     "description": "Traditional dan dan noodles are a true classic of Chinese cuisine. The star of the dish is a spicy sauce served with the noodles. Made with chili oil, preserved vegetables, Sichuan peppercorn, and sometimes sesame or peanut paste, the sauce bursts with heat and complex flavors. The meat, most commonly minced pork or beef, is also commonly included, but mainly acts as a garnish.",
-    "ingredients": [],
+    "ingredients": [
+      "garlic",
+      "peanut oil",
+      "pepper",
+      "scallion",
+      "soy sauce",
+      "wheat",
+      "anise star",
+      "chinese five spice",
+      "hoisin sauce",
+      "pork",
+      "sugar",
+      "tahini"
+    ],
     "rating": 4.3,
     "rating_count": null,
     "rank_in_cuisine": 7,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/148ba9db636c40f699567b013e9828c5.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/dan-dan-noodles",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:11.491Z"
   },
   {
@@ -368,13 +488,22 @@
     "region": "Thailand",
     "category": "Flatbread",
     "description": "Roti canai is a traditional pan-fried flatbread made with flour, water, eggs, and fat of Indian origin, but mainly associated with Malaysia, and surrounding countries like Indonesia, Brunei, and Thailand. The dough for roti canai is repeatedly folded, so the final product has a layered texture, a soft interior, and a crispy outer layer.",
-    "ingredients": [],
+    "ingredients": [
+      "butter",
+      "egg",
+      "flour",
+      "salt",
+      "sugar",
+      "water"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 1,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/4382dae5b7a842f386742b74cebf706d.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/roti-canai-thailand",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:27.058Z"
   },
   {
@@ -404,13 +533,28 @@
     "region": "Central Thailand, Thailand",
     "category": "Chicken Soup",
     "description": "Tom kha gai is Thailand's delicious national dish coming from the central part of the country and bearing the influence of neighbouring Laos.",
-    "ingredients": [],
+    "ingredients": [
+      "basil",
+      "chicken",
+      "coconut milk",
+      "fish",
+      "ginger",
+      "kaffir lime",
+      "lemongras",
+      "lime",
+      "mushroom",
+      "onion",
+      "red chile",
+      "sugar"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 3,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/aed61a190dee4e549a77b17a347c9c75.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/tom-kha-gai",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:27.058Z"
   },
   {
@@ -494,13 +638,25 @@
     "region": "Thailand",
     "category": "Stir-fry",
     "description": "Pad Thai is Thailand's national dish, a flavorful stir-fry (pad in Thai) dish consisting of rice noodles, tofu, dried shrimp, bean sprouts, and eggs. If it's made with meat, chicken and pork are some of the most popular choices. The flavors are an intricate combination of sweet, sour, and salty, with a well-balanced contrast of textures.",
-    "ingredients": [],
+    "ingredients": [
+      "lime",
+      "egg",
+      "peanut",
+      "vegetable oil",
+      "bean",
+      "garlic",
+      "rice",
+      "sugar",
+      "fish"
+    ],
     "rating": 4.2,
     "rating_count": null,
     "rank_in_cuisine": 8,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/ad3ef1fb39eb42958e7462961951e45c.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/pad-thai",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:27.058Z"
   },
   {
@@ -620,13 +776,24 @@
     "region": "Indonesia",
     "category": "Deep-fried Dessert",
     "description": "Fried bananas or plantains are a common everyday snack eaten throughout Indonesia. They come in numerous versions in which the fruit is simply fried in shallow oil, but more often sliced banana pieces are coated in batter before they are fried until golden. Besides numerous other varieties, fried bananas also appear under different names such as godoh biu on Bali or gedhang gorèng on Java.",
-    "ingredients": [],
+    "ingredients": [
+      "banana",
+      "butter",
+      "egg",
+      "flour",
+      "milk",
+      "rum",
+      "sugar",
+      "vanilla"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 5,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/4caeb3d54ad04700bdeca435014b6066.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/pisang-goreng",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:43.615Z"
   },
   {
@@ -638,13 +805,28 @@
     "region": "Indonesia",
     "category": "Stir-fry",
     "description": "Nasi goreng ayam is a traditional fried rice dish that's also popular in Singapore, Brunei, and Malaysia. Although there are many versions of this nasi goreng variety, it is usually made with a combination of chicken thighs, oil, salt, white pepper, shallots, rice, turmeric, soy sauce, fish sauce, galangal, ginger, garlic, scallions, kecap manis, and hot peppers.",
-    "ingredients": [],
+    "ingredients": [
+      "egg",
+      "garlic",
+      "onion",
+      "rice",
+      "soy sauce",
+      "carrot",
+      "chive",
+      "ketchup",
+      "prawn",
+      "sesame",
+      "sugar",
+      "vegetable oil"
+    ],
     "rating": 4.3,
     "rating_count": null,
     "rank_in_cuisine": 6,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/12177ce8eeb64f3c8bdd3eeab66fcd41.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/nasi-goreng-ayam",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:43.615Z"
   },
   {
@@ -800,13 +982,28 @@
     "region": "Japan",
     "category": "Stew",
     "description": "Japanese-style curry known as karē is one of the most popular dishes in the country. It started gaining popularity in Japan during the Meiji period (1868-1912), when the British introduced it to the country. During its early years, karē with rice was an expensive, gourmet dish reserved only for the wealthy.",
-    "ingredients": [],
+    "ingredients": [
+      "butter",
+      "carrot",
+      "onion",
+      "potato",
+      "salt",
+      "allspice",
+      "anise star",
+      "apple",
+      "bouillon",
+      "cardamom",
+      "chicken",
+      "cinnamon"
+    ],
     "rating": 4.4,
     "rating_count": null,
     "rank_in_cuisine": 5,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/04159690147843cd861ad2afffdeed59.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/kare",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:59.493Z"
   },
   {
@@ -836,13 +1033,24 @@
     "region": "Japan",
     "category": "Technique",
     "description": "Also known as dry-frying, karaage is a Japanese cooking technique in which various foods are first lightly coated in arrowroot starch, then deep-fried. The use of arrowroot starch preserves the natural water content of fried foods and produces a crispy outer surface, but alternatively, other coating ingredients such as wheat flour, tapioca, or potato starch can also be used.",
-    "ingredients": [],
+    "ingredients": [
+      "chicken",
+      "ginger",
+      "vegetable oil",
+      "cornstarch",
+      "soy sauce",
+      "egg",
+      "garlic",
+      "lemon"
+    ],
     "rating": 4.3,
     "rating_count": null,
     "rank_in_cuisine": 7,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/f8bc31930a4d49ada9a8a90e4e81de7c.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/karaage",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:59.493Z"
   },
   {
@@ -872,13 +1080,28 @@
     "region": "Japan",
     "category": "Cheese Dessert",
     "description": "Known as soufflé cheesecake in Japan and cotton cheesecake or Japanese cheesecake outside of Japan, this light and fluffy dessert is made by incorporating whisked egg whites into the cake mixture (eggs, milk, sugar, cream cheese), and the combination is then baked in a bain-marie.",
-    "ingredients": [],
+    "ingredients": [
+      "cheese cream",
+      "cornstarch",
+      "cream",
+      "egg",
+      "flour",
+      "milk",
+      "sugar",
+      "butter",
+      "cooking spray",
+      "lemon",
+      "salt",
+      "vanilla"
+    ],
     "rating": 4.2,
     "rating_count": null,
     "rank_in_cuisine": 9,
     "image_url": "https://cdn.tasteatlas.com/images/dishes/d86797bdaf964fd9a570c93ae3d5bb48.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/japanese-cheesecake",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:59.493Z"
   },
   {
@@ -890,13 +1113,27 @@
     "region": "Osaka, Japan",
     "category": "Meat Dish",
     "description": "Shabu-shabu is a popular Japanese dish consisting of thinly sliced meat and vegetables cooked in water. The dish is an evolved version of the traditional Mongolian nabemono (one-pot) cooking. Roughly translated to swish-swish, its name is referring to the sound that is made when the sliced pieces of meat go through the water.",
-    "ingredients": [],
+    "ingredients": [
+      "ginger",
+      "miso",
+      "onion",
+      "pepper",
+      "pork",
+      "sake",
+      "sesame",
+      "soy sauce",
+      "sugar",
+      "vinegar",
+      "water"
+    ],
     "rating": 4.2,
     "rating_count": null,
     "rank_in_cuisine": 10,
     "image_url": "https://cdn.tasteatlas.com/Images/Dishes/20eb7a41894a457181057348f1314c1b.jpg?w=1476&h=830",
     "source_url": "https://www.tasteatlas.com/shabu-shabu",
-    "tags": [],
+    "tags": [
+      "ingredients:datasets"
+    ],
     "scraped_at": "2026-07-27T17:48:59.493Z"
   }
 ]
