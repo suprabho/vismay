@@ -276,10 +276,13 @@ function loadCulinaryDb(): { recipes: RecipeRow[]; ingredients: IngredientRow[] 
 
 /* ── upsert ──────────────────────────────────────────────────────────────── */
 
-async function upsertBatches<T>(
+// rows is any[] on purpose: table is a runtime string on an untyped client, so
+// postgrest's excess-property guard can't reduce a generic here (same pattern
+// as epstein/import-curated.ts). Row shapes stay enforced at the call sites.
+async function upsertBatches(
   db: SupabaseClient,
   table: string,
-  rows: T[],
+  rows: any[],
   onConflict: string,
   batchSize: number
 ): Promise<void> {
