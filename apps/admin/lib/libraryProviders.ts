@@ -7,6 +7,7 @@ import {
   getDcNewsRecap,
   getDcStockMarket,
   type DcStockSeries,
+  listFoodHistoryForSubject,
 } from '@vismay/content-source/epics'
 
 /**
@@ -883,6 +884,119 @@ const foodRecipesProvider: LibraryProvider = {
 }
 
 /**
+ * Food history (`food_history_subjects` + `food_history_events`, migration
+ * 071) — the AI-extracted, per-claim-cited dish & ingredient timelines.
+ * Search-only so the AI research agent reaches it. Items are SUBJECTS
+ * (id '<kind>:<slug>'), not events — a story wants the whole timeline in one
+ * attach. Matches subject names plus event places/claims (event hits map back
+ * to their subject). Rejected events never surface; ai-draft events are
+ * included but flagged [unreviewed] (stories get human review anyway).
+ */
+const foodHistoryProvider: LibraryProvider = {
+  key: 'food-history',
+  label: 'Food history',
+  apps: ['umami'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    // Subject-name hits + event place/claim hits, merged subject-level.
+    const [subjectsRes, eventsRes, allEventsRes] = await Promise.all([
+      sb
+        .from('food_history_subjects')
+        .select('kind, slug, name')
+        .or(`name.ilike.${pat},slug.ilike.${pat}`),
+      sb
+        .from('food_history_events')
+        .select('subject_kind, subject_slug')
+        .or(`place.ilike.${pat},claim.ilike.${pat}`)
+        .neq('status', 'rejected')
+        .limit(400),
+      sb.from('food_history_events').select('subject_kind, subject_slug, status'),
+    ])
+    for (const r of [subjectsRes, eventsRes, allEventsRes]) {
+      if (r.error) throw new Error(r.error.message)
+    }
+    const nameBySubject = new Map<string, string>()
+    const hitKeys: string[] = []
+    for (const s of (subjectsRes.data ?? []) as Array<{ kind: string; slug: string; name: string }>) {
+      const k = `${s.kind}:${s.slug}`
+      nameBySubject.set(k, s.name)
+      hitKeys.push(k)
+    }
+    for (const e of (eventsRes.data ?? []) as Array<{ subject_kind: string; subject_slug: string }>) {
+      const k = `${e.subject_kind}:${e.subject_slug}`
+      if (!hitKeys.includes(k)) hitKeys.push(k)
+    }
+    // Event counts per subject for the subtitle (small corpus — count in JS).
+    const counts = new Map<string, { total: number; reviewed: number }>()
+    for (const e of (allEventsRes.data ?? []) as Array<{
+      subject_kind: string
+      subject_slug: string
+      status: string
+    }>) {
+      if (e.status === 'rejected') continue
+      const k = `${e.subject_kind}:${e.subject_slug}`
+      const c = counts.get(k) ?? { total: 0, reviewed: 0 }
+      c.total++
+      if (e.status === 'reviewed') c.reviewed++
+      counts.set(k, c)
+    }
+    // Only surface subjects that actually have events; fill names for
+    // event-hit subjects that didn't match by name.
+    const withEvents = hitKeys.filter((k) => (counts.get(k)?.total ?? 0) > 0)
+    if (withEvents.some((k) => !nameBySubject.has(k))) {
+      const { data } = await sb.from('food_history_subjects').select('kind, slug, name')
+      for (const s of (data ?? []) as Array<{ kind: string; slug: string; name: string }>) {
+        nameBySubject.set(`${s.kind}:${s.slug}`, s.name)
+      }
+    }
+    const items = withEvents.map((k) => {
+      const [kind] = k.split(':')
+      const c = counts.get(k)!
+      return {
+        id: k,
+        title: nameBySubject.get(k) ?? k,
+        subtitle: `${kind} · ${c.total} events (${c.reviewed} reviewed)`,
+      }
+    })
+    return pageOf(items, offset, limit)
+  },
+  async extract(id) {
+    const [kind, ...rest] = id.split(':')
+    const slug = rest.join(':')
+    if (!kind || !slug) return null
+    const events = await listFoodHistoryForSubject(kind, slug, { includeDrafts: true })
+    if (events.length === 0) return null
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('food_history_subjects')
+      .select('name, wiki_title, wiki_url')
+      .eq('kind', kind)
+      .eq('slug', slug)
+      .maybeSingle()
+    const name = (data?.name as string | undefined) ?? slug
+    const lines = events.map((e) => {
+      const where = e.place
+        ? ` — ${e.place}${e.lat != null && e.lng != null ? ` (${e.lat.toFixed(2)}, ${e.lng.toFixed(2)})` : ''}`
+        : ''
+      const flag = e.status === 'ai-draft' ? ' [unreviewed]' : ''
+      const rev = e.wikiOldid ? ` (rev ${e.wikiOldid})` : ''
+      return `- ${e.dateText}${where}: ${e.claim}${flag}\n  Source: ${e.sourceUrl}${rev}`
+    })
+    const text = [
+      `# History of ${name} (${kind})`,
+      lines.join('\n'),
+      'All claims AI-extracted from Wikipedia (CC BY-SA); lines marked [unreviewed] have not passed editorial review. Cite places and dates from these events rather than asserting from memory.',
+    ].join('\n\n')
+    return {
+      title: `${name} · history`,
+      byline: 'Searching for Umami · Wikipedia (CC BY-SA)',
+      text,
+    }
+  },
+}
+
+/**
  * Country energy profiles (`iea_countries` + `iea_country_energy` +
  * `iea_oil_prices_monthly`) — the per-country dataset behind the vizmaya
  * `/energy-profile` epic map. Like the WC26 teams table, the map only reads it
@@ -1374,6 +1488,7 @@ const PROVIDERS: LibraryProvider[] = [
   cokeStudioProvider,
   foodDishesProvider,
   foodRecipesProvider,
+  foodHistoryProvider,
   dcNewsProvider,
   dcNewsRecapProvider,
   dcStockMarketProvider,

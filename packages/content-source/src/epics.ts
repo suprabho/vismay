@@ -1538,3 +1538,229 @@ export async function listFoodRecipesForAdmin(opts?: {
   }))
   return { rows, total: count ?? rows.length }
 }
+
+// ── Food history (`food_history_subjects` + `food_history_events`, migration
+// 071) — AI-extracted, per-claim-cited, review-gated dish & ingredient
+// timelines. Service-role only (no anon RLS until the reviewed-only public
+// flip ships). Worker: apps/vizmaya-fyi/scripts/searching-for-umami/enrich-history.ts;
+// review surface: the admin umami History tab.
+
+export interface FoodHistorySubject {
+  kind: 'dish' | 'ingredient'
+  slug: string
+  name: string
+  entityId: number | null
+  wikiTitle: string | null
+  wikiUrl: string | null
+  wikiOldid: number | null
+  wikiDescription: string | null
+  enrichedAt: string | null
+}
+
+export interface FoodHistoryEvent {
+  id: string
+  subjectKind: 'dish' | 'ingredient'
+  subjectSlug: string
+  kind: string
+  dateText: string
+  yearStart: number | null
+  yearEnd: number | null
+  place: string | null
+  countryCode: string | null
+  lat: number | null
+  lng: number | null
+  claim: string
+  sourceUrl: string
+  sourceTitle: string | null
+  wikiOldid: number | null
+  model: string | null
+  confidence: 'high' | 'medium' | 'low' | null
+  status: 'ai-draft' | 'reviewed' | 'rejected'
+  reviewNote: string | null
+  createdAt: string
+  reviewedAt: string | null
+}
+
+export interface FoodHistoryCoverage {
+  subjects: { total: number; dishes: number; ingredients: number; enriched: number }
+  events: {
+    total: number
+    byStatus: Record<string, number>
+    byKind: Record<string, number>
+    geocoded: number
+    withPlace: number
+  }
+}
+
+const FOOD_HISTORY_EVENT_COLUMNS =
+  'id, subject_kind, subject_slug, kind, date_text, year_start, year_end, place, country_code, ' +
+  'lat, lng, claim, source_url, source_title, wiki_oldid, model, confidence, status, review_note, ' +
+  'created_at, reviewed_at'
+
+function mapFoodHistoryEvent(r: Record<string, unknown>): FoodHistoryEvent {
+  return {
+    id: r.id as string,
+    subjectKind: r.subject_kind as 'dish' | 'ingredient',
+    subjectSlug: r.subject_slug as string,
+    kind: r.kind as string,
+    dateText: r.date_text as string,
+    yearStart: (r.year_start as number | null) ?? null,
+    yearEnd: (r.year_end as number | null) ?? null,
+    place: (r.place as string | null) ?? null,
+    countryCode: (r.country_code as string | null) ?? null,
+    lat: (r.lat as number | null) ?? null,
+    lng: (r.lng as number | null) ?? null,
+    claim: r.claim as string,
+    sourceUrl: r.source_url as string,
+    sourceTitle: (r.source_title as string | null) ?? null,
+    wikiOldid: (r.wiki_oldid as number | null) ?? null,
+    model: (r.model as string | null) ?? null,
+    confidence: (r.confidence as 'high' | 'medium' | 'low' | null) ?? null,
+    status: r.status as 'ai-draft' | 'reviewed' | 'rejected',
+    reviewNote: (r.review_note as string | null) ?? null,
+    createdAt: r.created_at as string,
+    reviewedAt: (r.reviewed_at as string | null) ?? null,
+  }
+}
+
+/** All history subjects, dishes first then ingredients, alphabetical. */
+export async function listFoodHistorySubjects(): Promise<FoodHistorySubject[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('food_history_subjects')
+    .select('kind, slug, name, entity_id, wiki_title, wiki_url, wiki_oldid, wiki_description, enriched_at')
+    .order('kind', { ascending: true })
+    .order('slug', { ascending: true })
+  if (error) throw new Error(`listFoodHistorySubjects: ${error.message}`)
+  return (data ?? []).map((r) => ({
+    kind: r.kind as 'dish' | 'ingredient',
+    slug: r.slug as string,
+    name: r.name as string,
+    entityId: (r.entity_id as number | null) ?? null,
+    wikiTitle: (r.wiki_title as string | null) ?? null,
+    wikiUrl: (r.wiki_url as string | null) ?? null,
+    wikiOldid: (r.wiki_oldid as number | null) ?? null,
+    wikiDescription: (r.wiki_description as string | null) ?? null,
+    enrichedAt: (r.enriched_at as string | null) ?? null,
+  }))
+}
+
+/** Aggregate coverage. The corpus is small (~100 subjects × ~8 events), so
+ *  this is one skinny select per table aggregated in JS — not the head-count
+ *  fan-out the 52k-row recipes coverage needs. */
+export async function getFoodHistoryCoverage(): Promise<FoodHistoryCoverage> {
+  const sb = createServiceClient()
+  const [subjectsRes, eventsRes] = await Promise.all([
+    sb.from('food_history_subjects').select('kind, enriched_at'),
+    sb.from('food_history_events').select('kind, status, place, lat'),
+  ])
+  if (subjectsRes.error) throw new Error(`food history coverage: ${subjectsRes.error.message}`)
+  if (eventsRes.error) throw new Error(`food history coverage: ${eventsRes.error.message}`)
+  const subjects = (subjectsRes.data ?? []) as Array<{ kind: string; enriched_at: string | null }>
+  const events = (eventsRes.data ?? []) as Array<{
+    kind: string
+    status: string
+    place: string | null
+    lat: number | null
+  }>
+  const byStatus: Record<string, number> = {}
+  const byKind: Record<string, number> = {}
+  for (const e of events) {
+    byStatus[e.status] = (byStatus[e.status] ?? 0) + 1
+    byKind[e.kind] = (byKind[e.kind] ?? 0) + 1
+  }
+  return {
+    subjects: {
+      total: subjects.length,
+      dishes: subjects.filter((s) => s.kind === 'dish').length,
+      ingredients: subjects.filter((s) => s.kind === 'ingredient').length,
+      enriched: subjects.filter((s) => s.enriched_at != null).length,
+    },
+    events: {
+      total: events.length,
+      byStatus,
+      byKind,
+      geocoded: events.filter((e) => e.lat != null).length,
+      withPlace: events.filter((e) => e.place != null).length,
+    },
+  }
+}
+
+/** Browse/filter events for the admin review queue. */
+export async function listFoodHistoryEventsForAdmin(opts?: {
+  subjectKind?: string
+  subjectSlug?: string
+  kind?: string
+  status?: string
+  q?: string
+  offset?: number
+  limit?: number
+}): Promise<{ rows: FoodHistoryEvent[]; total: number }> {
+  const sb = createServiceClient()
+  const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 100)
+  const offset = Math.max(opts?.offset ?? 0, 0)
+  let q = sb.from('food_history_events').select(FOOD_HISTORY_EVENT_COLUMNS, { count: 'exact' })
+  if (opts?.subjectKind) q = q.eq('subject_kind', opts.subjectKind)
+  if (opts?.subjectSlug) q = q.eq('subject_slug', opts.subjectSlug)
+  if (opts?.kind) q = q.eq('kind', opts.kind)
+  if (opts?.status) q = q.eq('status', opts.status)
+  const query = opts?.q?.trim()
+  if (query) {
+    const safe = query.replace(/[%,()*\\:{}"]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (safe) {
+      const pat = `%${safe}%`
+      q = q.or(`claim.ilike.${pat},place.ilike.${pat},subject_slug.ilike.${pat}`)
+    }
+  }
+  const { data, error, count } = await q
+    .order('subject_kind', { ascending: true })
+    .order('subject_slug', { ascending: true })
+    .order('year_start', { ascending: true, nullsFirst: false })
+    .range(offset, offset + limit - 1)
+  if (error) throw new Error(`listFoodHistoryEventsForAdmin: ${error.message}`)
+  const rows = ((data ?? []) as unknown as Record<string, unknown>[]).map(mapFoodHistoryEvent)
+  return { rows, total: count ?? rows.length }
+}
+
+/** Flip an event's review status. Sets reviewed_at when leaving ai-draft,
+ *  clears it on revert. */
+export async function setFoodHistoryEventStatus(
+  id: string,
+  status: 'reviewed' | 'rejected' | 'ai-draft',
+  note?: string
+): Promise<FoodHistoryEvent> {
+  const sb = createServiceClient()
+  const patch: Record<string, unknown> = {
+    status,
+    review_note: note ?? null,
+    reviewed_at: status === 'ai-draft' ? null : new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  const { data, error } = await sb
+    .from('food_history_events')
+    .update(patch)
+    .eq('id', id)
+    .select(FOOD_HISTORY_EVENT_COLUMNS)
+    .single()
+  if (error) throw new Error(`setFoodHistoryEventStatus: ${error.message}`)
+  return mapFoodHistoryEvent(data as unknown as Record<string, unknown>)
+}
+
+/** One subject's timeline, oldest first; excludes rejected. Drafts are
+ *  included only when asked for (composer grounding does; public won't). */
+export async function listFoodHistoryForSubject(
+  subjectKind: string,
+  subjectSlug: string,
+  opts?: { includeDrafts?: boolean }
+): Promise<FoodHistoryEvent[]> {
+  const sb = createServiceClient()
+  let q = sb
+    .from('food_history_events')
+    .select(FOOD_HISTORY_EVENT_COLUMNS)
+    .eq('subject_kind', subjectKind)
+    .eq('subject_slug', subjectSlug)
+  q = opts?.includeDrafts ? q.neq('status', 'rejected') : q.eq('status', 'reviewed')
+  const { data, error } = await q.order('year_start', { ascending: true, nullsFirst: false })
+  if (error) throw new Error(`listFoodHistoryForSubject: ${error.message}`)
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map(mapFoodHistoryEvent)
+}

@@ -36,6 +36,7 @@
     "searching-for-umami:import": "npx tsx scripts/searching-for-umami/import.ts",
     "searching-for-umami:import-recipes": "npx tsx scripts/searching-for-umami/import-recipes.ts",
     "searching-for-umami:backfill-ingredients": "npx tsx scripts/searching-for-umami/backfill-ingredients.ts",
+    "searching-for-umami:enrich-history": "npx tsx scripts/searching-for-umami/enrich-history.ts",
     "coke-studio:fetch-lyrics": "npx tsx scripts/coke-studio/fetch-lyrics.ts",
     "coke-studio:extract-places": "npx tsx scripts/coke-studio/extract-places.ts",
     "social:ingest-youtube": "npx tsx scripts/social/ingest-youtube.ts",

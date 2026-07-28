@@ -156,3 +156,39 @@ third-party data we don't redistribute via git):
   (AK Indian-regional labels → `india`; CulinaryDB `Indian Subcontinent`→
   `india`, `China`/`Thailand`/`Japan` likewise; `South East Asia` stays
   unmapped). The dataset's own label is always kept in `cuisine_raw`.
+
+## History & geography layer (migration 071 — food_history_subjects/events)
+
+The dish & ingredient timeline dataset: AI-extracted, per-claim-cited,
+**review-gated** events (origins, spread, introductions, etymology) for the
+50 dishes + ~50 curated ingredient subjects.
+
+- **Source: Wikipedia via the MediaWiki API** (an API, not scraping).
+  Deliberate strategy call: no single structured food-history source exists,
+  food-history websites are editorial prose (rights + fragility + the same
+  Cloudflare risk TasteAtlas taught us), and ungrounded AI hallucinates
+  historical claims. So the worker directs the AI at one open, licensed
+  source and stores structured claims with citations.
+- **Worker:** `pnpm searching-for-umami:enrich-history` — per subject:
+  resolve the article (title overrides in
+  `scripts/searching-for-umami/history-subjects.ts`, search fallback,
+  disambiguation detection), fetch full plain text + revision id in one call,
+  `gemini-2.5-flash` extracts 3–12 events (paraphrase-enforced; a verbatim
+  guard rejects ≥60-char exact substrings), validate hard, geocode places
+  (curated `lib/searching-for-umami/historyPlaceCoords.ts` overrides →
+  Mapbox), insert as `status='ai-draft'`. Flags: `--dry-run`, `--subject`,
+  `--dishes-only`/`--ingredients-only`, `--limit`, `--force` (replaces only
+  ai-draft rows — reviewed/rejected always survive), `--geocode`
+  (suggestion-print for unresolved places).
+- **Registry drift check:** every raw ingredient string in dishes.json must
+  be matched or excluded in history-subjects.ts; the worker warns otherwise
+  on every run.
+- **Review:** admin umami **History** tab — approve/reject per event; only
+  `reviewed` events ever feed public surfaces (no anon RLS yet; the flip is
+  an additive reviewed-only policy sketched in migration 071's comment).
+- **Composer:** the `food-history` library provider serves whole-subject
+  timelines (drafts flagged `[unreviewed]`) as grounding.
+- **Rights (Wikipedia, CC BY-SA):** stored claims are PARAPHRASED facts —
+  never article text; every row carries `source_url` + `wiki_oldid` for
+  attribution and a revision permalink. Share-alike only binds verbatim
+  reuse, which the pipeline structurally avoids.
