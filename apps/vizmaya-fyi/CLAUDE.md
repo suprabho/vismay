@@ -258,28 +258,32 @@ moved to footshorts). Corpus source of record + rights note:
   [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)
   (service-role with anon fallback — `food_dishes` is public-read).
 - **Scraper:** [scripts/searching-for-umami/scrape-tasteatlas.ts](scripts/searching-for-umami/scrape-tasteatlas.ts)
-  (`pnpm searching-for-umami:scrape`). **Local-run only** — TasteAtlas is
-  behind Cloudflare and blocks datacenter IPs (sandbox proxy denies the domain
-  outright; GH-hosted runners would 403 too, same lesson as Yahoo → Apify).
-  Resumable (checkpoint + skip-already-scraped), polite (sequential, 2–4 s
-  delays, aborts after 3 consecutive 403/429s), writes only
-  `vizmaya-data/searching-for-umami/dishes.json` — never the DB. First run:
-  `--cuisine india --limit 5 --headed`.
+  (`pnpm searching-for-umami:scrape --headed`). **Local-run only** — TasteAtlas
+  is behind Cloudflare and blocks datacenter IPs (sandbox proxy denies the
+  domain outright; GH-hosted runners would 403 too, same lesson as Yahoo →
+  Apify). **Listing-only capture** via system Chrome (`channel:'chrome'`,
+  bundled Chromium is fingerprint-blocked), headed, fresh `.browser-profile`
+  per listing; dish-page documents are hard-403'd and never visited, so
+  `ingredients`/`rating_count` stay empty. Each listing serves exactly 10 dish
+  cards to anonymous visitors → corpus ceiling is top-10 per cuisine. Full
+  Cloudflare playbook + card-markup traps:
+  `vizmaya-data/searching-for-umami/INGEST_NOTES.md`. Resumable, polite,
+  writes only `dishes.json` — never the DB. Full run ~4 min.
 - **Importer:** [scripts/searching-for-umami/import.ts](scripts/searching-for-umami/import.ts)
   (`pnpm searching-for-umami:import`, `--dry-run` validates without env) —
   dishes.json → `food_dishes`, idempotent upsert on `(epic_slug, slug)`.
   Hard-fails on descriptions > 600 chars (rights: summaries stay truncated).
-- **Sample data caveat:** the committed `dishes.json` is a hand-authored
-  30-row sample (`tags: ["sample-data"]`, null ratings) so the pipeline works
-  end-to-end; the importer warns when sample rows are present. Run the real
-  scrape before publishing.
+- **Corpus status:** real scraped data since 2026-07-27 — 50 rows (top 10
+  best-rated per cuisine) with live ratings, regions, categories, blurbs and
+  CDN images; imported + idempotency-verified, sample rows purged from the DB.
 - **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
   the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
   `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set
   `NEXT_PUBLIC_UMAMI_URL` on the admin Vercel project so cross-app links
   resolve.
-- **Publish checklist (later):** real scrape → re-import → review/rewrite
-  descriptions for rights → flip epic to `published` in a follow-up migration.
+- **Publish checklist (later):** ~~real scrape → re-import~~ (done 2026-07-27)
+  → review/rewrite descriptions for rights (blurbs are truncated TasteAtlas
+  editorial text) → flip epic to `published` in a follow-up migration.
   Optional follow-ups: a `food-dishes` composer library provider cloned from
   `bookFactsProvider` in `apps/admin/lib/libraryProviders.ts` to make dishes
   ground-able sources; a `verticals/umami-viz` package + VerticalEntry when

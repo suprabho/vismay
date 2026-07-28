@@ -15,17 +15,20 @@ crowd ratings, regions and ingredient lists. The unit of storage is **one row
 per dish**, tied to the `searching-for-umami` **epic** — the granularity a
 food landing page ranks/maps on and a composed story can be grounded on.
 
-> **⚠️ SAMPLE DATA:** the current `dishes.json` is a hand-authored sample —
-> 6 well-known dishes per cuisine (30 rows) with `tags: ["sample-data"]`,
-> null ratings/images, and placeholder `rank_in_cuisine` ordering. It exists
-> so the migration → import → readers pipeline works end-to-end. Replace it by
-> running the real scraper (below) before publishing anything.
+> **✅ REAL DATA (scraped 2026-07-27):** `dishes.json` holds the live-scraped
+> corpus — the **top 10 best-rated dishes per cuisine (50 rows)** with real
+> community ratings, regions, categories, truncated description blurbs and CDN
+> image URLs. That is the complete set TasteAtlas serves anonymous web
+> visitors: the "Top 100" listing pages render exactly 10 dish cards (no
+> lazy-load/pagination beyond that), and per-dish pages are hard-blocked for
+> automation — so `ingredients` is `[]` and `rating_count` is null throughout
+> (neither appears on listing cards). See INGEST_NOTES.md for the full story.
 
 ## Files
 
 | File | What it is |
 |------|-----------|
-| `dishes.json` | The importer's input, one row per dish. `{ epic_slug, slug, name, cuisine, country_code, region, category, description, ingredients[], rating, rating_count, rank_in_cuisine, image_url, source_url, tags[], scraped_at }`. Currently the 30-row SAMPLE. |
+| `dishes.json` | The importer's input, one row per dish. `{ epic_slug, slug, name, cuisine, country_code, region, category, description, ingredients[], rating, rating_count, rank_in_cuisine, image_url, source_url, tags[], scraped_at }`. 50 scraped rows (top 10 per cuisine). |
 | `scrape-state.json` | Scraper checkpoint (discovered dish URLs per cuisine, failures). Created by the scraper; safe to delete to force re-discovery. Not imported. |
 | `INGEST_NOTES.md` | How to run the scrape, per-field provenance, and the gotchas. |
 
@@ -51,10 +54,14 @@ food landing page ranks/maps on and a composed story can be grounded on.
 ## Refreshing / re-scraping
 
 ```
-pnpm searching-for-umami:scrape --cuisine india --limit 5 --headed   # smoke test
-pnpm searching-for-umami:scrape                                      # full run (~35–45 min)
+pnpm searching-for-umami:scrape --cuisine india --headed   # smoke test
+pnpm searching-for-umami:scrape --headed                   # full run (~4 min)
 pnpm searching-for-umami:import
 ```
+
+`--headed` is effectively required (headless fingerprints get blocked), and
+the machine needs Google Chrome installed — the scraper launches the system
+Chrome, wiping `.browser-profile` for a fresh identity per listing.
 
 The scraper skips dishes already present in `dishes.json` (delete rows or use
 `--force` to refresh them); the importer's upsert only touches rows whose

@@ -1,7 +1,7 @@
 /**
  * Searching for Umami scraper — walks TasteAtlas's per-cuisine "best rated
  * dishes" listings for five Asian cuisines (India, China, Thailand, Indonesia,
- * Japan), visits each dish page, and writes one JSON row per dish into
+ * Japan) and writes one JSON row per dish into
  * vizmaya-data/searching-for-umami/dishes.json (the importer's input).
  *
  * LOCAL-RUN ONLY. TasteAtlas sits behind Cloudflare and blocks datacenter IPs
@@ -10,42 +10,53 @@
  * importer (same stance as seriously-curious): the scraper writes only the
  * corpus JSON, never the DB.
  *
- * Run locally (from apps/vizmaya-fyi; needs `npx playwright install chromium`):
- *   pnpm searching-for-umami:scrape --cuisine india --limit 5 --headed   # smoke test
- *   pnpm searching-for-umami:scrape                                     # full run (~35–45 min)
+ * LISTING-ONLY CAPTURE (learned the hard way, 2026-07-27):
+ *  - The site is htmx server-rendered — no listing XHR API to capture, and
+ *    card links carry hx- handlers, so scripted clicks go nowhere.
+ *  - Individual dish-page DOCUMENT requests (e.g. /butter-garlic-naan) are
+ *    hard-403'd by a stricter Cloudflare rule than the listing pages, in
+ *    every engine/flow tried (goto, goto+referer, same-tab, new-tab), and one
+ *    blocked hit poisons the whole session afterwards. The listing pages
+ *    themselves load clean — so everything is extracted from the listing
+ *    cards, and dish URLs are never visited. Consequences: `ingredients`
+ *    stays [] and `rating_count` stays null (neither is on the cards);
+ *    `description` is the card blurb, truncated (rights bound unchanged).
+ *  - Each listing serves at most 20 dish cards to anonymous visitors (no
+ *    lazy-load/pagination for ranks 21+), so the practical corpus is the
+ *    top ~20 best-rated dishes per cuisine.
+ *  - Playwright's bundled Chromium build is fingerprint-blocked outright
+ *    (403 on every page); the system Chrome channel passes. Keep --headed on:
+ *    headless advertises HeadlessChrome and gets blocked.
+ *  - Only a brand-new profile's FIRST navigation passes; a profile reused
+ *    across browser launches gets challenged on every request. The script
+ *    therefore wipes .browser-profile and relaunches per cuisine, so every
+ *    listing load is a first navigation from a clean identity.
+ *
+ * Run locally (from apps/vizmaya-fyi):
+ *   pnpm searching-for-umami:scrape --cuisine india --limit 10 --headed  # smoke test
+ *   pnpm searching-for-umami:scrape --headed                            # full run (~3–5 min)
  *
  * Flags:
  *   --cuisine <slug>  only this cuisine (india|china|thailand|indonesia|japan)
  *   --limit N         dishes per cuisine (default 100)
- *   --headed          visible browser — use on the first run to click through
- *                     any Cloudflare interstitial; the persistent profile in
- *                     vizmaya-data/searching-for-umami/.browser-profile keeps
- *                     the clearance for later headless runs
- *   --force           re-fetch dishes already present in dishes.json
- *   --dry-run         phase 1 only: discover listing URLs, print counts, no writes
+ *   --headed          visible browser — effectively required (see above)
+ *   --force           re-capture dishes already present in dishes.json
+ *   --dry-run         discover + print counts, no writes
  *
- * Resumability: discovered dish URLs checkpoint to scrape-state.json per
- * cuisine; dishes already in dishes.json are skipped (unless --force);
- * dishes.json is rewritten atomically (temp + rename) every SAVE_EVERY dishes
- * and on exit. Kill and re-run freely.
+ * Resumability: dishes already in dishes.json are skipped (unless --force);
+ * dishes.json is rewritten atomically (temp + rename) after every cuisine.
+ * Kill and re-run freely.
  *
- * Politeness: sequential navigation (concurrency 1), randomized 2–4 s delay
- * between pages, no UA spoofing beyond the real browser's own, abort after 3
- * consecutive 403/429s. Do not parallelize.
+ * Politeness: one document navigation per cuisine (5 total) plus lazy-load
+ * scrolling — far below the old per-dish crawl. Sequential, randomized 2–4 s
+ * delay between cuisines. Do not parallelize.
  *
  * Rights: descriptions are cut at a sentence boundary and hard-capped at
  * MAX_DESCRIPTION chars — never the full editorial text. source_url carries
  * attribution. The importer re-enforces this bound.
- *
- * Extraction is defensive by design — TasteAtlas is an Angular SPA whose
- * markup/API can drift. Phase 1 prefers the internal /api/ JSON the SPA loads
- * listings from, falling back to DOM scraping of rendered cards; phase 2
- * layers JSON-LD → meta tags → DOM heuristics per field. If a run comes back
- * with sparse fields, fix the selectors/urls in the marked blocks below and
- * re-run — resume skips everything already captured.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, type BrowserContext, type Page } from 'playwright'
@@ -59,13 +70,11 @@ const PROFILE_DIR = resolve(DATA_DIR, '.browser-profile')
 
 const EPIC_SLUG = 'searching-for-umami'
 const ORIGIN = 'https://www.tasteatlas.com'
-const SAVE_EVERY = 10
 const MAX_DESCRIPTION = 400
-const MAX_CONSECUTIVE_BLOCKS = 3
 
 /* ── Cuisine config — editable data, no logic below depends on its shape ──
- * listUrls are tried in order until one yields dishes; if TasteAtlas moves
- * its listing pages, fix the URLs here and nothing else. */
+ * listUrls are ALL scraped and unioned (first list is the canonical ranking);
+ * if TasteAtlas moves its listing pages, fix the URLs here and nothing else. */
 const CUISINES = [
   { slug: 'india', name: 'India', countryCode: 'IN' },
   { slug: 'china', name: 'China', countryCode: 'CN' },
@@ -77,15 +86,17 @@ const CUISINES = [
   listUrls: [
     `${ORIGIN}/best-rated-dishes-in-${c.slug}`,
     `${ORIGIN}/100-most-popular-dishes-in-${c.slug}`,
-    `${ORIGIN}/${c.slug}`,
   ],
 }))
 
-/* Root-level paths that are navigation, not dishes — used by the DOM-scrape
- * fallback to filter listing anchors. */
+/* Root-level paths that are navigation, not dishes — a safety net under the
+ * card-scoped harvest. */
 const NON_DISH_PATHS = new Set([
   '', 'search', 'about', 'contact', 'privacy', 'terms', 'blog', 'awards',
   'best', 'map', 'login', 'register', 'app', 'quiz', 'events', 'news',
+  'nearme', 'gourmet', 'recipes', 'where-to-eat', 'restaurants', 'food',
+  'drinks', 'producers', 'products', 'experiences', 'rankings', 'lists',
+  'certificates', 'places', 'foods',
   ...CUISINES.map((c) => c.slug),
 ])
 
@@ -108,14 +119,16 @@ interface DishRow {
   scraped_at: string | null
 }
 
-/** Phase-1 listing hit: what we learn about a dish before visiting its page. */
-interface Listing {
-  url: string
-  slug: string
+/** One listing card, as extracted in the page. */
+interface CardExtract {
+  href: string
   name: string | null
+  rank: number | null
+  category: string | null
+  region: string | null
   rating: number | null
-  ratingCount: number | null
-  rank: number
+  description: string | null
+  imageUrl: string | null
 }
 
 interface ScrapeState {
@@ -138,6 +151,33 @@ const DRY_RUN = flag('--dry-run')
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const politeDelay = () => sleep(2000 + Math.random() * 2000)
+
+/** Cloudflare interstitials ("Just a moment…") auto-solve in a real headed
+ *  browser a few seconds after load — but the initial navigation still
+ *  reports 403. After a blocked navigation, poll until the challenge clears
+ *  (markers gone, real page showing) or the deadline passes. A hard block
+ *  page ("Attention Required") never clears, so give up on it immediately. */
+async function waitOutChallenge(page: Page, timeoutMs = 60000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const state = await page
+      .evaluate(() => {
+        const t = document.title.toLowerCase()
+        if (t.includes('attention required') || t.includes('access denied')) return 'blocked'
+        if (
+          t.includes('just a moment') ||
+          document.querySelector('#challenge-form, #cf-chl-widget, [id^="cf-chl"]') !== null
+        )
+          return 'challenge'
+        return 'clear'
+      })
+      .catch(() => 'challenge' as const) // eval fails mid-reload — still settling
+    if (state === 'clear') return true
+    if (state === 'blocked') return false
+    await sleep(2000)
+  }
+  return false
+}
 
 function loadJson<T>(path: string, fallback: T): T {
   if (!existsSync(path)) return fallback
@@ -183,235 +223,180 @@ function dishSlugFromUrl(url: string): string | null {
     const segments = u.pathname.split('/').filter(Boolean)
     // Dish pages are root-level single-segment slugs (/butter-garlic-naan).
     if (segments.length !== 1) return null
-    const slug = segments[0].toLowerCase()
+    // Case is meaningful: dish paths are lowercase; categories (/Flatbreads)
+    // and restaurants (/KulchaLand) are capitalized. Reject before lowering.
+    if (segments[0] !== segments[0].toLowerCase()) return null
+    const slug = segments[0]
     if (NON_DISH_PATHS.has(slug)) return null
     if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return null
+    // Listing/rank pages masquerading as root slugs ("best-rated-dishes-in-x",
+    // "100-most-popular-…", "where-to-eat-…") are navigation, not dishes.
+    if (/^(\d+|best|top|most|where)-/.test(slug) || /-in-the-world$/.test(slug)) return null
     return slug
   } catch {
     return null
   }
 }
 
-/* ── Phase 1 — discover: cuisine listing → dish URLs ─────────────────────── */
+/** Runs in the page: extract every top-list card in document order.
+ *  Card anatomy (verified 2026-07-27):
+ *    div.card.top-list-primary
+ *      a.card__visual-link[href=/slug] > picture > img[src=cdn…]
+ *      div.card__order "02"
+ *      a.card__label "Flatbread"
+ *      a[href=/slug] > h3 "Amritsari kulcha"
+ *      div.card__location > a.fw-600 "Amritsar, India"
+ *      div.card__info … span.card__info-value "4.4"
+ *      div.card__description … p (full editorial text + inline buttons) */
+async function harvestCards(page: Page): Promise<CardExtract[]> {
+  return page.evaluate(() => {
+    const out: CardExtract[] = []
+    // .top-list-primary only: the page has a sibling .top-list-secondary
+    // section of food PRODUCTS (spirits, teas, chocolate brands) whose cards
+    // share the same anatomy and restart their own rank numbering.
+    for (const card of document.querySelectorAll('.card.top-list-primary')) {
+      const visual = card.querySelector<HTMLAnchorElement>('a.card__visual-link[href]')
+      const titleLink = [...card.querySelectorAll<HTMLAnchorElement>('a[href]')].find((a) =>
+        a.querySelector('h1, h2, h3, h4')
+      )
+      const href = (titleLink ?? visual)?.getAttribute('href')
+      if (!href) continue
 
-/** Recursively harvest listing-like entries from a captured /api/ payload.
- *  The SPA's internal API shape isn't a contract — we look for any object
- *  carrying a TasteAtlas-style url/link plus a name, and read rating fields
- *  opportunistically. */
-function harvestFromApiPayload(payload: unknown, out: Map<string, Listing>): void {
-  if (Array.isArray(payload)) {
-    for (const item of payload) harvestFromApiPayload(item, out)
-    return
-  }
-  if (payload === null || typeof payload !== 'object') return
-  const o = payload as Record<string, unknown>
+      const name =
+        titleLink?.querySelector('h1, h2, h3, h4')?.textContent?.trim() || null
 
-  const urlish = [o.UrlLink, o.urlLink, o.Url, o.url, o.Link, o.link].find(
-    (v): v is string => typeof v === 'string'
-  )
-  const nameish = [o.Name, o.name, o.Title, o.title].find(
-    (v): v is string => typeof v === 'string'
-  )
-  const slug = urlish ? dishSlugFromUrl(urlish) : null
-  if (slug && nameish) {
-    const num = (v: unknown): number | null =>
-      typeof v === 'number' && Number.isFinite(v) ? v : null
-    const existing = out.get(slug)
-    if (!existing) {
-      out.set(slug, {
-        url: `${ORIGIN}/${slug}`,
-        slug,
-        name: nameish,
-        rating: num(o.Rating) ?? num(o.rating) ?? num(o.Stars) ?? null,
-        ratingCount: num(o.RatingCount) ?? num(o.ratingCount) ?? num(o.Votes) ?? null,
-        rank: out.size + 1,
+      const rankText = card.querySelector('[class*="card__order"]')?.textContent?.trim()
+      const rank = rankText && /^\d+$/.test(rankText) ? Number(rankText) : null
+
+      const ratingText = card.querySelector('[class*="card__info-value"]')?.textContent?.trim()
+      const ratingNum = ratingText ? Number(ratingText) : NaN
+      const rating = Number.isFinite(ratingNum) && ratingNum >= 0 && ratingNum <= 5 ? ratingNum : null
+
+      // Description p contains inline expander buttons — strip them.
+      let description: string | null = null
+      const p = card.querySelector('[class*="card__description"] p')
+      if (p) {
+        const clone = p.cloneNode(true) as HTMLElement
+        clone.querySelectorAll('button, a').forEach((el) => el.remove())
+        description = clone.textContent?.trim() || null
+      }
+
+      const img = card.querySelector<HTMLImageElement>('[class*="card__visual"] img')
+
+      out.push({
+        href,
+        name,
+        rank,
+        category: card.querySelector('[class*="card__label"]')?.textContent?.trim() || null,
+        region: card.querySelector('[class*="card__location"] a')?.textContent?.trim() || null,
+        rating,
+        description,
+        imageUrl: img?.src || null,
       })
     }
-  }
-  for (const v of Object.values(o)) {
-    if (v !== null && typeof v === 'object') harvestFromApiPayload(v, out)
-  }
-}
-
-/** DOM fallback: after auto-scrolling the listing, collect root-level dish
- *  anchors in document order. */
-async function harvestFromDom(page: Page, out: Map<string, Listing>): Promise<void> {
-  const anchors = await page.$$eval('a[href]', (els) =>
-    els.map((a) => ({ href: (a as HTMLAnchorElement).href, text: a.textContent?.trim() ?? '' }))
-  )
-  for (const a of anchors) {
-    const slug = dishSlugFromUrl(a.href)
-    if (!slug || out.has(slug)) continue
-    out.set(slug, {
-      url: `${ORIGIN}/${slug}`,
-      slug,
-      name: a.text || null,
-      rating: null,
-      ratingCount: null,
-      rank: out.size + 1,
-    })
-  }
-}
-
-async function discoverCuisine(
-  context: BrowserContext,
-  cuisine: (typeof CUISINES)[number]
-): Promise<Listing[]> {
-  const page = await context.newPage()
-  const found = new Map<string, Listing>()
-
-  // Capture the SPA's own listing API responses — the cleanest data source.
-  page.on('response', (res) => {
-    if (!res.url().includes('/api/')) return
-    res
-      .json()
-      .then((json) => harvestFromApiPayload(json, found))
-      .catch(() => {}) // non-JSON api responses are fine to ignore
+    return out
   })
+}
 
+/** Open one listing URL, wait for the cards to finish rendering, and return
+ *  one complete row per dish found on it. */
+async function scrapeListing(
+  context: BrowserContext,
+  cuisine: (typeof CUISINES)[number],
+  listUrl: string
+): Promise<DishRow[]> {
+  const page = await context.newPage()
   try {
-    for (const listUrl of cuisine.listUrls) {
+    {
       console.log(`[umami] ${cuisine.slug}: opening ${listUrl}`)
       const res = await page.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 45000 })
       if (res && res.status() >= 400) {
-        console.warn(`[umami] ${cuisine.slug}: ${listUrl} → HTTP ${res.status()}, trying next url`)
-        continue
+        console.warn(`[umami] ${cuisine.slug}: ${listUrl} → HTTP ${res.status()}, waiting out interstitial`)
+        if (!(await waitOutChallenge(page))) {
+          console.warn(`[umami] ${cuisine.slug}: ${listUrl} stayed blocked, skipping`)
+          return []
+        }
       }
-      await sleep(4000) // let the SPA hydrate + fire its listing XHRs
+      await sleep(6000) // htmx content settle
 
-      // Lazy-loaded listings grow on scroll: keep scrolling until the count
-      // stops growing or we have enough.
+      // The listing serves AT MOST 20 dish cards to anonymous visitors —
+      // there is no lazy-load or pagination for ranks 21+ (verified
+      // 2026-07-27: 40 slow scroll steps grow nothing; the only hx-get
+      // elements are menu drawers). Cards can still RENDER in two batches,
+      // so wait (with a gentle scroll nudge) until the count stops changing.
       let stable = 0
       let last = 0
-      while (found.size < LIMIT && stable < 3) {
-        await page.mouse.wheel(0, 2500)
-        await sleep(1500)
-        await harvestFromDom(page, found)
-        stable = found.size === last ? stable + 1 : 0
-        last = found.size
+      for (let round = 0; round < 60 && stable < 8; round++) {
+        await page.evaluate(() => window.scrollBy(0, 900)).catch(() => {})
+        await sleep(800)
+        const count = await page
+          .evaluate(() => document.querySelectorAll('.card.top-list-primary').length)
+          .catch(() => 0)
+        if (count >= LIMIT) break
+        stable = count === last ? stable + 1 : 0
+        last = count
       }
-      if (found.size > 0) break
+
+      const cards = await harvestCards(page)
+      const rows = new Map<string, DishRow>()
+      for (const card of cards) {
+        const slug = dishSlugFromUrl(card.href)
+        if (!slug || rows.has(slug)) continue
+        if (!card.name) continue
+        rows.set(slug, {
+          epic_slug: EPIC_SLUG,
+          slug,
+          name: card.name,
+          cuisine: cuisine.slug,
+          country_code: cuisine.countryCode,
+          region: card.region,
+          category: card.category,
+          description: truncateDescription(card.description ?? card.name),
+          ingredients: [], // not present on listing cards; dish pages are hard-403'd
+          rating: card.rating,
+          rating_count: null, // not present on listing cards
+          rank_in_cuisine: card.rank ?? rows.size + 1,
+          image_url: card.imageUrl,
+          source_url: `${ORIGIN}/${slug}`,
+          tags: [],
+          scraped_at: new Date().toISOString(),
+        })
+        if (rows.size >= LIMIT) break
+      }
+
+      if (rows.size > 0) {
+        console.log(`[umami] ${cuisine.slug}: captured ${rows.size} dishes from ${listUrl}`)
+        return [...rows.values()]
+      }
     }
+    console.warn(
+      `[umami] ${cuisine.slug}: 0 dishes captured from ${listUrl} — card markup drifted? fix harvestCards and re-run`
+    )
+    return []
   } finally {
     await page.close()
   }
+}
 
-  const listings = [...found.values()].slice(0, LIMIT)
-  if (listings.length === 0) {
+/** Fresh identity per launch: Cloudflare passes a brand-new profile's first
+ *  navigation, but a profile reused across browser launches gets challenged
+ *  on every request (its cookies no longer match the new session) and
+ *  challenges never clear under automation. Wiping + relaunching per cuisine
+ *  makes every listing load a first navigation from a clean profile — the
+ *  one flow that reliably passes. */
+async function launchFreshContext(): Promise<BrowserContext> {
+  rmSync(PROFILE_DIR, { recursive: true, force: true })
+  const launchOpts = { headless: !HEADED, viewport: { width: 1440, height: 900 } }
+  try {
+    // Real Chrome passes Cloudflare where the bundled Chromium build is
+    // fingerprint-blocked (both verified 2026-07-27).
+    return await chromium.launchPersistentContext(PROFILE_DIR, { ...launchOpts, channel: 'chrome' })
+  } catch (err) {
     console.warn(
-      `[umami] ${cuisine.slug}: 0 dishes discovered — listing URLs or markup drifted; fix CUISINES/listUrls or the harvest selectors and re-run`
+      `[umami] system Chrome unavailable (${err instanceof Error ? err.message.split('\n')[0] : err}) — using bundled Chromium (worse Cloudflare odds)`
     )
-  } else {
-    console.log(`[umami] ${cuisine.slug}: discovered ${listings.length} dishes`)
+    return chromium.launchPersistentContext(PROFILE_DIR, launchOpts)
   }
-  return listings
-}
-
-/* ── Phase 2 — detail: dish page → DishRow fields ────────────────────────── */
-
-interface DetailExtract {
-  name: string | null
-  description: string | null
-  region: string | null
-  category: string | null
-  ingredients: string[]
-  rating: number | null
-  ratingCount: number | null
-  imageUrl: string | null
-}
-
-/** Runs in the page: JSON-LD → meta tags → DOM heuristics, most-trusted first. */
-async function extractDetail(page: Page): Promise<DetailExtract> {
-  return page.evaluate(() => {
-    const out = {
-      name: null as string | null,
-      description: null as string | null,
-      region: null as string | null,
-      category: null as string | null,
-      ingredients: [] as string[],
-      rating: null as number | null,
-      ratingCount: null as number | null,
-      imageUrl: null as string | null,
-    }
-
-    // 1. JSON-LD (schema.org), when present.
-    for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
-      try {
-        const data = JSON.parse(script.textContent ?? '')
-        for (const node of Array.isArray(data) ? data : [data]) {
-          if (!node || typeof node !== 'object') continue
-          out.name ||= typeof node.name === 'string' ? node.name : null
-          out.description ||= typeof node.description === 'string' ? node.description : null
-          out.imageUrl ||=
-            typeof node.image === 'string'
-              ? node.image
-              : typeof node.image?.url === 'string'
-                ? node.image.url
-                : null
-          const agg = node.aggregateRating
-          if (agg && typeof agg === 'object') {
-            const val = Number(agg.ratingValue)
-            const cnt = Number(agg.ratingCount ?? agg.reviewCount)
-            if (Number.isFinite(val)) out.rating ??= val
-            if (Number.isFinite(cnt)) out.ratingCount ??= cnt
-          }
-          if (Array.isArray(node.recipeIngredient)) {
-            out.ingredients = node.recipeIngredient.filter((x: unknown) => typeof x === 'string')
-          }
-        }
-      } catch {
-        /* malformed JSON-LD — ignore */
-      }
-    }
-
-    // 2. Meta tags.
-    const meta = (sel: string) =>
-      document.querySelector<HTMLMetaElement>(sel)?.content?.trim() || null
-    out.name ||= meta('meta[property="og:title"]')
-    out.description ||= meta('meta[name="description"]') || meta('meta[property="og:description"]')
-    out.imageUrl ||= meta('meta[property="og:image"]')
-
-    // 3. DOM heuristics (Angular SPA — class names may drift; keep loose).
-    out.name ||= document.querySelector('h1')?.textContent?.trim() || null
-    if (!out.description) {
-      const p = document.querySelector('[class*="description" i] p, main p, article p')
-      out.description = p?.textContent?.trim() || null
-    }
-    // "Main ingredients" chips: find the heading, harvest sibling links/chips.
-    if (out.ingredients.length === 0) {
-      for (const h of document.querySelectorAll('h2, h3, h4, [class*="title" i]')) {
-        if (!/main ingredients/i.test(h.textContent ?? '')) continue
-        const scope = h.parentElement ?? h
-        out.ingredients = [...scope.querySelectorAll('a, li, [class*="chip" i]')]
-          .map((el) => el.textContent?.trim() ?? '')
-          .filter((t) => t && t.length < 40 && !/main ingredients/i.test(t))
-        if (out.ingredients.length > 0) break
-      }
-    }
-    // Rating widget: first 0–5 float near a rate/star element.
-    if (out.rating === null) {
-      const el = document.querySelector('[class*="rating" i], [class*="rate" i], [class*="star" i]')
-      const m = el?.textContent?.match(/([0-4]\.\d|5\.0|[0-5])\s*$/m)
-      if (m) {
-        const val = Number(m[1])
-        if (Number.isFinite(val) && val >= 0 && val <= 5) out.rating = val
-      }
-    }
-    // Origin breadcrumb: locality links preceding the h1 usually name
-    // region/country ("Punjab, India").
-    const origin = document.querySelector('[class*="origin" i], [class*="location" i], [class*="breadcrumb" i]')
-    if (origin) {
-      const parts = [...origin.querySelectorAll('a, span')]
-        .map((el) => el.textContent?.trim() ?? '')
-        .filter((t) => t && t.length < 60)
-      if (parts.length > 0) out.region = [...new Set(parts)].join(', ')
-    }
-    // Food-type chip: a link to a category listing near the top of the page.
-    const cat = document.querySelector('a[href*="-in-the-world" i], [class*="category" i] a, [class*="subtitle" i] a')
-    out.category ||= cat?.textContent?.trim() || null
-
-    return out
-  })
 }
 
 /* ── main ─────────────────────────────────────────────────────────────────── */
@@ -430,126 +415,72 @@ async function main(): Promise<void> {
   const preexisting = dishes.size
   console.log(`[umami] ${preexisting} dishes already in dishes.json (resume skips them${FORCE ? '' : '; --force to refresh'})`)
 
-  const context = await chromium.launchPersistentContext(PROFILE_DIR, {
-    headless: !HEADED,
-    viewport: { width: 1440, height: 900 },
-  })
-
   let scraped = 0
-  let consecutiveBlocks = 0
-
   try {
     for (const cuisine of targets) {
-      // Phase 1 — discover (checkpointed per cuisine).
-      let cState = state.cuisines[cuisine.slug]
-      let listings: Listing[]
-      if (cState?.discovered && !FORCE) {
-        listings = cState.dishUrls.map((url, i) => ({
-          url,
-          slug: dishSlugFromUrl(url) ?? url,
-          name: null,
-          rating: null,
-          ratingCount: null,
-          rank: i + 1,
-        }))
-        console.log(`[umami] ${cuisine.slug}: ${listings.length} dish urls from checkpoint`)
-      } else {
-        listings = await discoverCuisine(context, cuisine)
-        cState = { dishUrls: listings.map((l) => l.url), discovered: listings.length > 0 }
-        state.cuisines[cuisine.slug] = cState
-        saveJson(STATE_JSON, state)
-        await politeDelay()
-      }
-
-      if (DRY_RUN) continue
-
-      // Phase 2 — detail.
-      for (const listing of listings) {
-        const existing = dishes.get(listing.slug)
-        if (existing && !FORCE) {
-          // Cross-cuisine duplicate: record the second membership, keep one row.
-          if (existing.cuisine !== cuisine.slug) {
-            const tag = `listed-in:${cuisine.slug}`
-            if (!existing.tags.includes(tag)) {
-              existing.tags.push(tag)
-              console.warn(`[umami] ${listing.slug}: already scraped under "${existing.cuisine}", tagged ${tag}`)
-            }
-          }
-          continue
-        }
-
-        const page = await context.newPage()
+      // Union both listings: best-rated is the canonical ranking; the
+      // most-popular list mostly overlaps but contributes extra dishes,
+      // which carry no best-rated rank and a listed-in:most-popular tag.
+      // Each listing gets its own fresh context (see launchFreshContext).
+      const seen = new Set<string>()
+      const rows: DishRow[] = []
+      for (const [listIndex, listUrl] of cuisine.listUrls.entries()) {
+        const context = await launchFreshContext()
+        let listRows: DishRow[] = []
         try {
-          const res = await page.goto(listing.url, { waitUntil: 'domcontentloaded', timeout: 45000 })
-          const status = res?.status() ?? 0
-          if (status === 403 || status === 429) {
-            consecutiveBlocks++
-            console.warn(`[umami] ${listing.url} → HTTP ${status} (${consecutiveBlocks}/${MAX_CONSECUTIVE_BLOCKS})`)
-            if (consecutiveBlocks >= MAX_CONSECUTIVE_BLOCKS) {
-              throw new Error(
-                `aborting: ${MAX_CONSECUTIVE_BLOCKS} consecutive ${status}s — likely bot-blocked. ` +
-                  'Re-run with --headed to clear the interstitial (progress is saved).'
-              )
-            }
-            await sleep(15000 * consecutiveBlocks) // back off before the next attempt
-            continue
-          }
-          consecutiveBlocks = 0
-          await sleep(2500) // SPA hydration
-
-          const detail = await extractDetail(page)
-          const name = detail.name ?? listing.name
-          if (!name) {
-            console.warn(`[umami] ${listing.slug}: no name extracted, recording as failed`)
-            if (!state.failed.includes(listing.url)) state.failed.push(listing.url)
-            continue
-          }
-
-          dishes.set(listing.slug, {
-            epic_slug: EPIC_SLUG,
-            slug: listing.slug,
-            name,
-            cuisine: cuisine.slug,
-            country_code: cuisine.countryCode,
-            region: detail.region,
-            category: detail.category,
-            description: truncateDescription(detail.description ?? name),
-            ingredients: detail.ingredients,
-            rating: detail.rating ?? listing.rating,
-            rating_count: detail.ratingCount ?? listing.ratingCount,
-            rank_in_cuisine: listing.rank,
-            image_url: detail.imageUrl,
-            source_url: listing.url,
-            tags: [],
-            scraped_at: new Date().toISOString(),
-          })
-          scraped++
-          console.log(`[umami] ${cuisine.slug} ${listing.rank}/${listings.length}: ${name}`)
-
-          if (scraped % SAVE_EVERY === 0) {
-            saveDishes(dishes)
-            saveJson(STATE_JSON, state)
-          }
-        } catch (err) {
-          if (err instanceof Error && err.message.startsWith('aborting:')) throw err
-          console.warn(`[umami] ${listing.url} failed: ${err instanceof Error ? err.message : err}`)
-          if (!state.failed.includes(listing.url)) state.failed.push(listing.url)
+          listRows = await scrapeListing(context, cuisine, listUrl)
         } finally {
-          await page.close()
+          await context.close()
+        }
+        for (const row of listRows) {
+          if (seen.has(row.slug)) continue
+          seen.add(row.slug)
+          if (listIndex > 0) {
+            row.rank_in_cuisine = null
+            row.tags = ['listed-in:most-popular']
+          }
+          rows.push(row)
         }
         await politeDelay()
       }
+      state.cuisines[cuisine.slug] = {
+        dishUrls: rows.map((r) => r.source_url),
+        discovered: rows.length > 0,
+      }
+
+      if (!DRY_RUN) {
+        for (const row of rows) {
+          const existing = dishes.get(row.slug)
+          if (existing && !FORCE) {
+            // Cross-cuisine duplicate: record the second membership, keep one row.
+            if (existing.cuisine !== row.cuisine) {
+              const tag = `listed-in:${row.cuisine}`
+              if (!existing.tags.includes(tag)) {
+                existing.tags.push(tag)
+                console.warn(`[umami] ${row.slug}: already captured under "${existing.cuisine}", tagged ${tag}`)
+              }
+            }
+            continue
+          }
+          if (existing && FORCE && existing.cuisine !== row.cuisine) {
+            row.tags = existing.tags // keep accumulated listed-in tags on refresh
+          }
+          dishes.set(row.slug, row)
+          scraped++
+        }
+        saveDishes(dishes)
+        saveJson(STATE_JSON, state)
+      }
+      await politeDelay()
     }
   } finally {
     if (!DRY_RUN) {
       saveDishes(dishes)
       saveJson(STATE_JSON, state)
-      console.log(
-        `[umami] done: +${scraped} scraped this run, ${dishes.size} total in dishes.json` +
-          (state.failed.length ? `, ${state.failed.length} failed urls in scrape-state.json` : '')
-      )
+      console.log(`[umami] done: +${scraped} captured this run, ${dishes.size} total in dishes.json`)
+    } else {
+      console.log('[umami] dry run complete (no writes)')
     }
-    await context.close()
   }
 }
 
