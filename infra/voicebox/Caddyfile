@@ -1,0 +1,33 @@
+# Bearer-token proxy in front of voicebox (which has no auth of its own).
+#
+# GET /health stays open so Fly's http checks and uptime monitors work —
+# it leaks only model-load status. Everything else requires
+#   Authorization: Bearer <VOICEBOX_PROXY_TOKEN>
+# where the token is a Fly secret ({$...} is substituted at config load).
+#
+# No timeouts are set on the reverse_proxy: CPU synthesis of a long chunk
+# is slow and the client owns its own deadline (VOICEBOX_TIMEOUT_MS).
+
+{
+	auto_https off
+	admin off
+}
+
+:8080 {
+	@health {
+		method GET
+		path /health
+	}
+	handle @health {
+		reverse_proxy 127.0.0.1:17493
+	}
+
+	@authorized header Authorization "Bearer {$VOICEBOX_PROXY_TOKEN}"
+	handle @authorized {
+		reverse_proxy 127.0.0.1:17493
+	}
+
+	handle {
+		respond "unauthorized" 401
+	}
+}

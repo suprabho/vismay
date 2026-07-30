@@ -13,6 +13,14 @@
  *   CHUNK_WORD_TARGET=500 npx tsx scripts/generate-audio.ts # tune chunk size
  *   CONTENT_SOURCE=db npx tsx scripts/generate-audio.ts <slug>  # DB-only story
  *
+ * TTS provider (default gemini, needs GEMINI_API_KEY). To use a self-hosted
+ * voicebox server instead (see docs/voicebox-tts.md):
+ *   TTS_PROVIDER=voicebox \
+ *   VOICEBOX_URL=http://127.0.0.1:17600 \
+ *   VOICEBOX_PROFILE_ID=<id from GET /profiles> \
+ *     npx tsx scripts/generate-audio.ts <slug> --force
+ *   (deployed servers also need VOICEBOX_TOKEN for the auth proxy)
+ *
  * Whisper alignment (optional, requires `brew install whisper-cpp` + a model):
  *   USE_WHISPER_ALIGNMENT=1 \
  *   WHISPER_MODEL=/path/to/ggml-base.en.bin \
@@ -27,6 +35,7 @@ import {
   DailyQuotaExhaustedError,
   type WhisperOptions,
 } from '@vismay/content-source/storyAudioGenerate'
+import { resolveTtsProvider } from '@vismay/content-source/storyTtsProvider'
 
 // Load .env from the app root (simple parser, no dependency needed).
 const envPath = path.resolve(__dirname, '..', '.env')
@@ -55,7 +64,15 @@ async function main() {
 
   const storySlugs = slugs.length > 0 ? slugs : await listAudioStorySlugs()
 
+  // Resolve after .env is loaded so TTS_PROVIDER from the file is honored.
+  const provider = resolveTtsProvider()
+  const voiceLabel =
+    provider === 'voicebox'
+      ? `voicebox profile ${process.env.VOICEBOX_PROFILE_ID ?? '(VOICEBOX_PROFILE_ID unset!)'} @ ${process.env.VOICEBOX_URL ?? '(VOICEBOX_URL unset!)'}`
+      : 'gemini voice Orus'
+
   console.log(`Audio generation for: ${storySlugs.join(', ')}`)
+  console.log(`TTS provider: ${voiceLabel}`)
   if (force) console.log('(--force: regenerating all)')
   if (whisper.enabled) {
     if (!whisper.model) {
