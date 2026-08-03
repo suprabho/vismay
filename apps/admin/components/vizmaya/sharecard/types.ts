@@ -107,6 +107,11 @@ export interface SavedCard {
   ratio: string | null
   config: AnyShareCardSnapshot
   imageUrl: string | null
+  /** App the card belongs to (`'umami'`, …); null = legacy vizmaya library. */
+  appSlug?: string | null
+  /** Ordered-carousel grouping: frames share a `carouselId`, sorted by position. */
+  carouselId?: string | null
+  carouselPosition?: number | null
   createdAt: string
   updatedAt: string
 }

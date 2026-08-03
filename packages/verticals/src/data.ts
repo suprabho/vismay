@@ -300,7 +300,15 @@ export const APPS: AppEntry[] = [
       consumer: { env: 'NEXT_PUBLIC_UMAMI_URL', default: 'https://umami.fyi' },
       admin: { env: 'NEXT_PUBLIC_ADMIN_UMAMI_URL', default: 'https://admin.umami.fyi' },
     },
-    branding: { hideLogoInAutoplay: false, dataAttr: 'umami' },
+    branding: {
+      hideLogoInAutoplay: false,
+      dataAttr: 'umami',
+      // Umami brand type: Forum (editorial display serif) + Manrope (UI/body)
+      // + Space Mono (numbers/@handles) — the same registered families the
+      // admin "Social frames" composer seeds with, so share/report surfaces
+      // and social exports agree.
+      brandFonts: { serif: 'Forum', sans: 'Manrope', mono: 'Space Mono' },
+    },
     surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
     // Searching for Umami is a single-epic app for now: the app home IS the
     // food epic's landing, so every epic resolves to `/`. Stories embed the

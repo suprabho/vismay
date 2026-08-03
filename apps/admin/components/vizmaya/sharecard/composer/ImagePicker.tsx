@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { createContext, useContext, useMemo, useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 import type { ImageSource } from '../layers/types'
@@ -12,8 +12,19 @@ export interface AssetEntry {
   contentType: string | null
 }
 
+export interface StyleTemplate {
+  label: string
+  stylePrefix: string
+}
+
+/** App-specific AI style presets, shown AHEAD of the built-ins (so the first
+ *  one becomes the default). Provided by the creator shell (umami wraps the
+ *  editor in this with its food presets) — a context, not a prop, because the
+ *  picker is instantiated from several Inspector/LayerPanel sites. */
+export const ExtraStyleTemplatesContext = createContext<StyleTemplate[]>([])
+
 /** Preset style prefaces for AI generation (prepended to the subject prompt). */
-export const STYLE_TEMPLATES: Array<{ label: string; stylePrefix: string }> = [
+export const STYLE_TEMPLATES: StyleTemplate[] = [
   { label: 'None', stylePrefix: '' },
   { label: 'Editorial photo', stylePrefix: 'Editorial documentary photograph, natural light, shallow depth of field' },
   { label: 'Oil painting', stylePrefix: 'Expressive oil painting, visible brushstrokes, painterly' },
@@ -56,6 +67,8 @@ export function ImagePicker({
   ratio: AspectRatio
   onPick: (src: string, source: ImageSource) => void
 }) {
+  const extraStyles = useContext(ExtraStyleTemplatesContext)
+  const styles = useMemo(() => [...extraStyles, ...STYLE_TEMPLATES], [extraStyles])
   const [subject, setSubject] = useState('')
   const [styleIdx, setStyleIdx] = useState(0)
   const [refSrc, setRefSrc] = useState<string | null>(null)
@@ -90,7 +103,7 @@ export function ImagePicker({
           subject,
           ratio,
           paletteHexes,
-          stylePrefix: STYLE_TEMPLATES[styleIdx].stylePrefix || undefined,
+          stylePrefix: styles[styleIdx]?.stylePrefix || undefined,
           referenceImage,
         }),
       })
@@ -150,7 +163,7 @@ export function ImagePicker({
           onChange={(e) => setStyleIdx(Number(e.target.value))}
           className="w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-100 outline-none focus:border-white/30"
         >
-          {STYLE_TEMPLATES.map((s, i) => (
+          {styles.map((s, i) => (
             <option key={s.label} value={i}>
               {s.label}
             </option>
