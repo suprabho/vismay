@@ -1,8 +1,8 @@
 /**
  * AI Data Centers news scraper — consumes Google News' RSS search across four
  * queries (AI data centers, semiconductors, microprocessors, AI infra), has
- * Gemma classify each new article (relevance gate + topic tags + tracked
- * tickers from dc_stocks), and upserts into dc_news.
+ * Claude Haiku classify each new article (relevance gate + topic tags +
+ * tracked tickers from dc_stocks), and upserts into dc_news.
  *
  * Google News RSS for the same reason as scrape-energy-profile-news.ts:
  * a free, machine-friendly feed with broad outlet coverage (Reuters,
@@ -13,16 +13,22 @@
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — read dc_stocks, write dc_news
- *   GEMINI_API_KEY                                       — topic/ticker tagging
+ *   ANTHROPIC_API_KEY                                    — topic/ticker tagging
  *
  * Idempotency: source_url is the natural key (unique in migration 065).
  * Classifier rejects are stored with relevant=false — the queries here are
  * broader than the energy scraper's, so persisting rejects is what stops the
  * same off-topic article being re-sent to the LLM on every run while it sits
  * in the feed.
+ *
+ * Throughput: the four queries surface ~200-250 never-seen articles per day,
+ * so classification runs through a bounded worker pool, and a soft deadline
+ * stops the loop cleanly before the workflow's 30-minute kill — leftovers are
+ * re-seen as new on the next run. (The sequential Gemma version needed 40-60
+ * min/day and was hard-killed at 30 for weeks.)
  */
 
-import { GoogleGenAI } from '@google/genai'
+import Anthropic from '@anthropic-ai/sdk'
 import { JSDOM } from 'jsdom'
 import { config as loadEnv } from 'dotenv'
 import { createServiceClient } from '@vismay/content-source/supabase'
@@ -41,6 +47,27 @@ const FEED_QUERIES = [
 ]
 
 const TOPIC_VOCABULARY = ['ai', 'data-centers', 'semiconductors', 'microprocessors'] as const
+
+// Haiku is the right tier for a yes/no + tags call: ~1-2s/item vs the 8-15s
+// Gemma took, and structured outputs make the JSON shape a guarantee rather
+// than a regex scrape.
+const CLASSIFIER_MODEL = 'claude-haiku-4-5'
+const CONCURRENCY = 4
+// Stop pulling new items past this, well under the workflow's 30-minute
+// timeout, so the job always exits green with a summary instead of being
+// hard-killed mid-loop.
+const DEADLINE_MS = 25 * 60_000
+
+const CLASSIFICATION_SCHEMA: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    relevant: { type: 'boolean' },
+    topics: { type: 'array', items: { type: 'string' } },
+    tickers: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['relevant', 'topics', 'tickers'],
+  additionalProperties: false,
+}
 
 function feedUrl(query: string): string {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`
@@ -122,7 +149,7 @@ interface Classification {
 }
 
 async function classify(
-  genai: GoogleGenAI,
+  anthropic: Anthropic,
   system: string,
   item: NewsItem,
   validTickers: Set<string>
@@ -131,18 +158,25 @@ async function classify(
     item.summary ? `Summary: ${item.summary}` : '(no summary available)'
   }`
 
-  const response = await genai.models.generateContent({
-    model: 'gemma-4-26b-a4b-it',
-    contents: `${system}\n\n${userText}`,
+  const response = await anthropic.messages.create({
+    model: CLASSIFIER_MODEL,
+    max_tokens: 256,
+    system,
+    messages: [{ role: 'user', content: userText }],
+    output_config: { format: { type: 'json_schema', schema: CLASSIFICATION_SCHEMA } },
   })
 
-  const text = response.text ?? ''
-  // Gemma doesn't honour responseSchema, so scrape the first JSON object out
-  // of the free-form text (same idiom as scrape-energy-profile-news.ts).
-  const match = text.match(/\{[\s\S]*\}/)
-  if (!match) return { relevant: false, topics: [], tickers: [] }
+  let text = ''
+  for (const block of response.content) {
+    if (block.type === 'text') {
+      text = block.text
+      break
+    }
+  }
+  // output_config guarantees schema-valid JSON on a normal finish; a refusal
+  // or max_tokens cut can still yield unparseable text — treat as off-topic.
   try {
-    const parsed = JSON.parse(match[0]) as {
+    const parsed = JSON.parse(text) as {
       relevant?: unknown
       topics?: unknown
       tickers?: unknown
@@ -165,11 +199,27 @@ async function classify(
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Run `worker` over `items` with a bounded number of concurrent tasks. */
+async function pool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
+  let cursor = 0
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const item = items[cursor++]
+      await worker(item)
+    }
+  })
+  await Promise.all(runners)
+}
+
 async function main() {
   const sb = createServiceClient()
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set')
-  const genai = new GoogleGenAI({ apiKey })
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set')
+  // 60s per-request cap + the SDK's built-in 429/5xx retries: a hung or
+  // throttled call surfaces as a throw the per-item retry below can handle,
+  // instead of stalling a pool worker for minutes.
+  const anthropic = new Anthropic({ apiKey, timeout: 60_000, maxRetries: 2 })
+  const startedAt = Date.now()
 
   // The classifier's ticker list comes from dc_stocks so the migration seed
   // stays the single source of truth — adding a company needs no code change.
@@ -187,16 +237,37 @@ async function main() {
   const system = classifierSystem(stocks)
 
   const byUrl = new Map<string, NewsItem>()
+  let feedFailures = 0
   for (const query of FEED_QUERIES) {
     console.log(`Fetching Google News RSS for ${query} ...`)
-    const items = await fetchFeed(query)
-    console.log(`  ${items.length} items`)
-    for (const item of items) {
+    let feedItems: NewsItem[]
+    try {
+      feedItems = await fetchFeed(query)
+    } catch {
+      // Google News occasionally 503s a single query; one retry, then keep
+      // going with the other feeds instead of failing the whole run.
+      await sleep(10_000)
+      try {
+        feedItems = await fetchFeed(query)
+      } catch (retryErr) {
+        const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        console.warn(`  skipping feed: ${msg}`)
+        feedFailures++
+        continue
+      }
+    }
+    console.log(`  ${feedItems.length} items`)
+    for (const item of feedItems) {
       if (!byUrl.has(item.url)) byUrl.set(item.url, item)
     }
   }
+  if (feedFailures === FEED_QUERIES.length) {
+    throw new Error('All feeds failed — Google News RSS outage?')
+  }
   const items = [...byUrl.values()]
-  console.log(`${items.length} unique items across ${FEED_QUERIES.length} feeds`)
+  console.log(
+    `${items.length} unique items across ${FEED_QUERIES.length - feedFailures} feeds`
+  )
 
   if (items.length === 0) {
     console.log('Empty feeds — nothing to do')
@@ -228,16 +299,22 @@ async function main() {
 
   let inserted = 0
   let rejected = 0
-  for (const item of newItems) {
+  let skipped = 0
+  let failed = 0
+  await pool(newItems, CONCURRENCY, async (item) => {
+    if (Date.now() - startedAt > DEADLINE_MS) {
+      skipped++
+      return
+    }
     try {
       let cls: Classification
       try {
-        cls = await classify(genai, system, item, validTickers)
+        cls = await classify(anthropic, system, item, validTickers)
       } catch {
-        // One retry after a pause — the first run can push a few hundred
-        // items through and brush the free-tier RPM limit.
+        // One retry after a pause, on top of the SDK's own backoff — the
+        // first run can push a few hundred items through in one go.
         await sleep(5000)
-        cls = await classify(genai, system, item, validTickers)
+        cls = await classify(anthropic, system, item, validTickers)
       }
       const { error: insertErr } = await sb.from('dc_news').upsert(
         {
@@ -255,7 +332,7 @@ async function main() {
       )
       if (insertErr) {
         console.error(`  ✗ ${item.url}: ${insertErr.message}`)
-        continue
+        return
       }
       if (cls.relevant) {
         inserted++
@@ -268,13 +345,27 @@ async function main() {
         rejected++
         console.log(`  · [${item.source ?? '?'}] ${item.title}  →  off-topic`)
       }
-      await sleep(300) // stay under the Gemini free-tier RPM ceiling
+      await sleep(300) // spaces each worker's requests under the RPM ceiling
     } catch (err) {
+      failed++
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`  ✗ ${item.url}: ${msg}`)
     }
+  })
+
+  // Every attempt failing means a systemic problem (bad key, no credits, API
+  // outage) — fail the run so the cron goes red instead of green-but-empty.
+  if (failed > 0 && inserted + rejected === 0) {
+    throw new Error(
+      `All ${failed} classification attempts failed — check ANTHROPIC_API_KEY / account credits`
+    )
   }
 
+  if (skipped > 0) {
+    console.log(
+      `\nDeadline reached — processed ${newItems.length - skipped} of ${newItems.length} new items; the rest will be picked up next run.`
+    )
+  }
   console.log(
     `\nDone. ${inserted} relevant + ${rejected} off-topic stored, of ${newItems.length} new items.`
   )

@@ -2,8 +2,8 @@ name: Scrape AI Data Centers news
 
 # Daily pull of Google News' RSS search across four AI-infrastructure queries
 # (AI data centers, semiconductors, microprocessors, AI infra). Each new
-# article is classified by Gemma — relevance gate, topic tags, and tracked
-# tickers from dc_stocks — and upserted into dc_news. Idempotent on
+# article is classified by Claude Haiku — relevance gate, topic tags, and
+# tracked tickers from dc_stocks — and upserted into dc_news. Idempotent on
 # source_url (off-topic items persist with relevant=false so they aren't
 # re-classified), so re-runs and manual dispatches are safe.
 #
@@ -14,7 +14,7 @@ name: Scrape AI Data Centers news
 # Required repo secrets (in the `Production` environment so secrets.X resolves):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as Vercel env
 #   SUPABASE_SERVICE_ROLE_KEY  — service role key for dc_news writes
-#   GEMINI_API_KEY             — Gemma classification (shared with render-audio)
+#   ANTHROPIC_API_KEY          — Claude Haiku classification
 
 on:
   schedule:
@@ -56,5 +56,5 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: pnpm ai-data-centers:scrape-news
