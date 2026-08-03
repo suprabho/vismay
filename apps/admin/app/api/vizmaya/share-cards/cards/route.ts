@@ -4,12 +4,18 @@ import { createShareCard, listShareCards } from '@vismay/content-source/vizmayaS
 
 export const dynamic = 'force-dynamic'
 
-/** List saved share cards, newest first. Optionally scoped to one story. */
+/**
+ * List saved share cards, newest first. Optionally scoped to one story and/or
+ * app. `?appSlug=<slug>` scopes to that app's rows; omitted, the list covers
+ * legacy vizmaya rows only (`app_slug is null`) so per-app libraries stay
+ * separate.
+ */
 export async function GET(request: NextRequest) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const storySlug = request.nextUrl.searchParams.get('storySlug') ?? undefined
+  const appSlug = request.nextUrl.searchParams.get('appSlug')
   try {
-    const cards = await listShareCards({ storySlug })
+    const cards = await listShareCards({ storySlug, appSlug })
     return NextResponse.json({ ok: true, cards })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Failed to list cards'
@@ -27,6 +33,9 @@ export async function POST(request: NextRequest) {
     baseType?: string
     ratio?: string | null
     config?: unknown
+    appSlug?: string | null
+    carouselId?: string | null
+    carouselPosition?: number | null
   }
   const name = body.name?.trim()
   if (!name || !body.baseType || body.config == null) {
@@ -51,6 +60,9 @@ export async function POST(request: NextRequest) {
       baseType: body.baseType,
       ratio: body.ratio ?? null,
       config: body.config,
+      appSlug: body.appSlug ?? null,
+      carouselId: body.carouselId ?? null,
+      carouselPosition: body.carouselPosition ?? null,
     })
     return NextResponse.json({ ok: true, card }, { status: 201 })
   } catch (e) {

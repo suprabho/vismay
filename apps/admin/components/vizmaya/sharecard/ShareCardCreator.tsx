@@ -14,10 +14,17 @@ import ThemeProvider from '@/components/canvas/ThemeProvider'
 import VerticalLoader from '@/components/canvas/VerticalLoader'
 import MapPickerModal from '@/components/vizmaya/MapPickerModal'
 import { FrameCorners, Image as ImageIcon, Palette, Stack, TextT, type Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { flushSync } from 'react-dom'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
 import { seedTemplate, detectSupport, SEED_GRAPHIC_ID } from './layers/seedTemplate'
-import type { CardComposition, MapSpec, TemplateKind, Transform } from './layers/types'
+import { isUmamiKind, type CardComposition, type MapSpec, type TemplateKind, type Transform, type UmamiTemplateKind } from './layers/types'
+import { remapCompositionTheme } from './layers/retheme'
+import { UMAMI_PAPER, UMAMI_SPICE, UMAMI_THEMES, umamiThemeName, type UmamiThemeName } from './umami/themes'
+import { seedUmamiTemplate, type UmamiDishLite, type UmamiSeedContent } from './umami/seeds'
+import { UMAMI_STYLE_TEMPLATES } from './umami/styles'
+import { DishPicker } from './umami/DishPicker'
+import { ExtraStyleTemplatesContext } from './composer/ImagePicker'
 import {
   applyV1Overrides,
   composeBaseType,
@@ -77,6 +84,35 @@ const TEMPLATES: Array<{ id: TemplateKind; label: string }> = [
   { id: 'data', label: 'Story data' },
   { id: 'title-text', label: 'Title / text' },
 ]
+
+const UMAMI_TEMPLATES: Array<{ id: TemplateKind; label: string }> = [
+  { id: 'umami-compare', label: 'Comparison (X vs Y)' },
+  { id: 'umami-dish', label: 'Dish spotlight' },
+  { id: 'umami-hook', label: 'Hook frame' },
+  { id: 'umami-story', label: 'Story frame' },
+  { id: 'umami-closing', label: 'Closing frame' },
+]
+
+/** The explainer-carousel default frame sequence ("New carousel"). */
+const UMAMI_CAROUSEL_SEED: UmamiTemplateKind[] = ['umami-hook', 'umami-story', 'umami-closing']
+
+/** A carousel frame parked outside the live editor. The ACTIVE frame lives in
+ *  the ordinary composition/templateKind state; switching frames stashes it
+ *  back here. `cardId` links to the saved row (null until first save). */
+interface CarouselFrame {
+  localId: string
+  cardId: string | null
+  kind: TemplateKind
+  composition: CardComposition
+}
+
+interface CarouselState {
+  id: string
+  name: string | null
+  frames: CarouselFrame[]
+}
+
+const EMPTY_STYLES: never[] = []
 
 const CONTAINED_FOCUS = { top: 0, left: 0, width: 1, height: 1 }
 
@@ -141,19 +177,27 @@ function defaultTemplate(unit: ResolvedUnit): TemplateKind {
 export function ShareCardCreator({
   stories,
   accessToken,
+  mode = 'vizmaya',
 }: {
   stories: StoryOption[]
   accessToken: string
+  /** `umami` switches the composer into the umami "Social frames" mode: umami
+   *  templates + paper/spice palettes, app-scoped saved cards, dish grounding,
+   *  food AI-style presets and the explainer-carousel frame strip. */
+  mode?: 'vizmaya' | 'umami'
 }) {
+  const isUmami = mode === 'umami'
+  const blankTheme = isUmami ? UMAMI_PAPER : DEFAULT_THEME
+
   // Default to a blank canvas (slug ''); the user can attach a story after.
   const [slug, setSlug] = useState<string>('')
   const [story, setStory] = useState<StoryData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [ratio, setRatio] = useState<AspectRatio>('4:5')
+  const [ratio, setRatio] = useState<AspectRatio>(isUmami ? '1:1' : '4:5')
   const [unitIdx, setUnitIdx] = useState<number>(0)
-  const [templateKind, setTemplateKind] = useState<TemplateKind>('map-caption')
+  const [templateKind, setTemplateKind] = useState<TemplateKind>(isUmami ? 'umami-compare' : 'map-caption')
   const [composition, setComposition] = useState<CardComposition | null>(null)
   const [selection, setSelection] = useState<Selection | null>(null)
   // Ungrouped element ids ticked (panel checkbox or canvas shift/⌘-click) to form
@@ -222,7 +266,17 @@ export function ShareCardCreator({
   useEffect(() => {
     if (!slug) {
       // Blank canvas: synthesize a story with the default theme + no units.
-      const blank: StoryData = { slug: '', title: 'Untitled', vertical: null, theme: DEFAULT_THEME, defaults: {}, units: [] }
+      // Umami mode starts on the paper palette with a designed frame seeded
+      // (vs. vizmaya's empty canvas) and tags the umami vertical so the
+      // branding footer shows the umami wordmark.
+      const blank: StoryData = {
+        slug: '',
+        title: 'Untitled',
+        vertical: isUmami ? 'umami' : null,
+        theme: blankTheme,
+        defaults: {},
+        units: [],
+      }
       setStory(blank)
       setUnitIdx(0)
       setError(null)
@@ -232,8 +286,13 @@ export function ShareCardCreator({
         // A saved card composed from scratch (no story) reopening.
         applyLoadedSnapshot(blank, load.snapshot, ratio)
       } else if (!attachKeepRef.current) {
-        setComposition(blankComposition())
-        setTemplateKind('title-text')
+        if (isUmami) {
+          setComposition(seedUmamiTemplate('umami-compare', blankTheme, ratio))
+          setTemplateKind('umami-compare')
+        } else {
+          setComposition(blankComposition())
+          setTemplateKind('title-text')
+        }
         setSelection(null)
       }
       pendingLoadRef.current = null
@@ -322,12 +381,13 @@ export function ShareCardCreator({
     }
   }, [slug])
 
-  // ── saved-card library ────────────────────────────────────────────────────
+  // ── saved-card library (app-scoped: umami sees only umami rows, the vizmaya
+  //    composer only legacy null-scoped rows) ────────────────────────────────
   useEffect(() => {
     let alive = true
     void (async () => {
       try {
-        const res = await fetch('/api/vizmaya/share-cards/cards')
+        const res = await fetch(`/api/vizmaya/share-cards/cards${isUmami ? '?appSlug=umami' : ''}`)
         const body = (await res.json().catch(() => ({}))) as { ok?: boolean; cards?: SavedCard[] }
         if (alive && body.ok) setSavedCards(body.cards ?? [])
       } catch {
@@ -337,12 +397,12 @@ export function ShareCardCreator({
     return () => {
       alive = false
     }
-  }, [])
+  }, [isUmami])
 
   // The theme the card actually renders with: a per-card override (set in the
   // Theme panel) wins, else the attached story's theme, else the default
   // editorial theme for a blank canvas.
-  const effectiveTheme = composition?.theme ?? story?.theme ?? DEFAULT_THEME
+  const effectiveTheme = composition?.theme ?? story?.theme ?? blankTheme
 
   // Import web fonts for whatever the effective theme uses; system stacks
   // resolve to null (no request). Covers story fonts AND from-scratch overrides.
@@ -376,10 +436,49 @@ export function ShareCardCreator({
     [units, story, ratio],
   )
 
+  // Merge a fresh umami seed over the previous composition: seed slots whose
+  // stable `seed-*` id already exists keep the PREVIOUS layer (so a generated
+  // image or a hand-moved slot survives a re-seed), new seed slots come in
+  // fresh, and the user's own added layers / groups / branding carry over.
+  const mergeUmamiSeed = useCallback(
+    (seed: CardComposition, prev: CardComposition | null): CardComposition => {
+      if (!prev) return seed
+      const prevById = new Map(prev.elements.map((e) => [e.id, e]))
+      return {
+        ...seed,
+        elements: [
+          ...seed.elements.map((e) => (prevById.has(e.id) ? prevById.get(e.id)! : e)),
+          ...prev.elements.filter((e) => !e.id.startsWith('seed-')),
+        ],
+        groups: prev.groups,
+        branding: prev.branding,
+      }
+    },
+    [],
+  )
+
   const pickTemplate = useCallback(
     (kind: TemplateKind) => {
       setTemplateKind(kind)
       setSelection(null)
+      if (isUmamiKind(kind)) {
+        // Umami templates seed from the effective theme, not a story section.
+        // A template switch replaces every seed slot (text included), so pass
+        // no prev-slot carry-over for elements that changed identity.
+        setComposition((prev) => {
+          const theme = prev?.theme ?? story?.theme ?? blankTheme
+          const seed = seedUmamiTemplate(kind, theme, ratio)
+          return prev
+            ? {
+                ...seed,
+                elements: [...seed.elements, ...prev.elements.filter((e) => !e.id.startsWith('seed-'))],
+                groups: prev.groups,
+                branding: prev.branding,
+              }
+            : seed
+        })
+        return
+      }
       if (!selectedUnit || !story) return
       setComposition((prev) => {
         const seed = seedTemplate(kind, selectedUnit, story, ratio)
@@ -396,7 +495,50 @@ export function ShareCardCreator({
           : seed
       })
     },
-    [selectedUnit, story, ratio],
+    [selectedUnit, story, ratio, blankTheme],
+  )
+
+  // ── umami: dish grounding + paper/spice toggle ────────────────────────────
+  const [dishPicks, setDishPicks] = useState<{ a?: UmamiDishLite; b?: UmamiDishLite; spotlight?: UmamiDishLite }>({})
+
+  // Re-seed the current umami frame with dish content (labels, name, blurb,
+  // rating). Seed image slots keep any generated/uploaded imagery via the
+  // stable-id merge.
+  const applyUmamiContent = useCallback(
+    (content: UmamiSeedContent) => {
+      if (!isUmamiKind(templateKind)) return
+      setComposition((prev) => {
+        const theme = prev?.theme ?? blankTheme
+        return mergeUmamiSeed(seedUmamiTemplate(templateKind, theme, ratio, content), prev)
+      })
+    },
+    [templateKind, ratio, blankTheme, mergeUmamiSeed],
+  )
+
+  const pickDish = useCallback(
+    (slot: 'a' | 'b' | 'spotlight', dish: UmamiDishLite) => {
+      const next = { ...dishPicks, [slot]: dish }
+      setDishPicks(next)
+      if (templateKind === 'umami-compare') {
+        applyUmamiContent({ dishA: next.a, dishB: next.b })
+      } else if (templateKind === 'umami-dish') {
+        applyUmamiContent({ dish: next.spotlight })
+      }
+    },
+    [dishPicks, templateKind, applyUmamiContent],
+  )
+
+  // Which umami palette the card is currently on (null when hand-customized —
+  // the toggle then remaps from the nearest look, leaving custom hexes alone).
+  const activeUmamiTheme: UmamiThemeName = umamiThemeName(effectiveTheme) ?? 'paper'
+  const setUmamiTheme = useCallback(
+    (name: UmamiThemeName) => {
+      if (name === activeUmamiTheme) return
+      setComposition((prev) =>
+        prev ? remapCompositionTheme(prev, UMAMI_THEMES[activeUmamiTheme], UMAMI_THEMES[name]) : prev,
+      )
+    },
+    [activeUmamiTheme],
   )
 
   const pickStory = useCallback(
@@ -729,13 +871,13 @@ export function ShareCardCreator({
       const dataUrl = await cardRef.current.capture()
       if (!dataUrl) return
       const link = document.createElement('a')
-      link.download = `${slug || 'vizmaya'}-${ratio.replace(':', 'x')}.png`
+      link.download = `${slug || (isUmami ? 'umami' : 'vizmaya')}-${ratio.replace(':', 'x')}.png`
       link.href = dataUrl
       link.click()
     } finally {
       setDownloading(false)
     }
-  }, [slug, ratio])
+  }, [slug, ratio, isUmami])
 
   // ── save / load / delete ──────────────────────────────────────────────────
   const buildSnapshot = useCallback((): VizmayaShareCardSnapshotV2 | null => {
@@ -751,19 +893,33 @@ export function ShareCardCreator({
     }
   }, [composition, slug, ratio, selectedUnit, templateKind])
 
-  // POST a brand-new card row and return it (shared by first-save + duplicate).
+  // POST a brand-new card row and return it (shared by first-save + duplicate +
+  // carousel frames). Umami rows carry `appSlug`; carousel frames additionally
+  // link via `carouselId` + `carouselPosition`.
   const createCard = useCallback(
-    async (name: string, snapshot: VizmayaShareCardSnapshotV2): Promise<SavedCard> => {
+    async (
+      name: string,
+      snapshot: VizmayaShareCardSnapshotV2,
+      carouselRef?: { carouselId: string; carouselPosition: number },
+    ): Promise<SavedCard> => {
       const res = await fetch('/api/vizmaya/share-cards/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, storySlug: slug, baseType: composeBaseType(snapshot.composition), ratio, config: snapshot }),
+        body: JSON.stringify({
+          name,
+          storySlug: slug,
+          baseType: composeBaseType(snapshot.composition),
+          ratio,
+          config: snapshot,
+          appSlug: isUmami ? 'umami' : null,
+          ...(carouselRef ?? {}),
+        }),
       })
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; card?: SavedCard; error?: string }
       if (!res.ok || !body.ok || !body.card) throw new Error(body.error ?? `HTTP ${res.status}`)
       return body.card
     },
-    [slug, ratio],
+    [slug, ratio, isUmami],
   )
 
   const handleSave = useCallback(async () => {
@@ -799,7 +955,7 @@ export function ShareCardCreator({
     }
 
     // New card → name it and create a row.
-    const fallback = `${story.title} · ${TEMPLATES.find((t) => t.id === templateKind)?.label ?? templateKind}`
+    const fallback = `${story.title} · ${[...TEMPLATES, ...UMAMI_TEMPLATES].find((t) => t.id === templateKind)?.label ?? templateKind}`
     const name = window.prompt('Name this card', fallback)?.trim()
     if (!name) return
     setSaving(true)
@@ -839,7 +995,10 @@ export function ShareCardCreator({
       setCurrentCardId(card.id)
       setError(null)
       setRatio(snap.ratio as AspectRatio)
-      if (story && story.slug === snap.storySlug) {
+      // Blank-canvas cards store `storySlug: null` while the synthesized blank
+      // story carries slug '' — normalize both so a from-scratch card applies
+      // immediately instead of staging a load the slug effect never consumes.
+      if (story && (story.slug || null) === (snap.storySlug ?? null)) {
         // Same story already loaded — apply now.
         applyLoadedSnapshot(story, snap, snap.ratio as AspectRatio)
       } else {
@@ -862,6 +1021,278 @@ export function ShareCardCreator({
       /* optimistic */
     }
   }, [])
+
+  // ── umami explainer carousel: an ordered strip of frames, one live in the
+  //    editor at a time. Frames persist as ordinary card rows linked by
+  //    `carouselId` + `carouselPosition` (ids double as the social planner's
+  //    `share_card_carousel.cardIds[]`). ──────────────────────────────────────
+  const [carousel, setCarousel] = useState<CarouselState | null>(null)
+  const [activeFrameIdx, setActiveFrameIdx] = useState(0)
+  const [exportingAll, setExportingAll] = useState(false)
+
+  const loadFrameIntoEditor = useCallback((frame: CarouselFrame) => {
+    setComposition(normalizeComposition(frame.composition))
+    setTemplateKind(frame.kind)
+    setSelection(null)
+    setMultiSel([])
+  }, [])
+
+  /** The carousel's frames with the LIVE editor state stashed into the active
+   *  slot — every carousel operation starts from this. */
+  const framesWithActiveStashed = useCallback((): CarouselFrame[] | null => {
+    if (!carousel || !composition) return null
+    const frames = carousel.frames.slice()
+    const cur = frames[activeFrameIdx]
+    if (cur) frames[activeFrameIdx] = { ...cur, kind: templateKind, composition }
+    return frames
+  }, [carousel, composition, activeFrameIdx, templateKind])
+
+  const startCarousel = useCallback(() => {
+    const theme = effectiveTheme
+    const frames: CarouselFrame[] = UMAMI_CAROUSEL_SEED.map((kind) => ({
+      localId: crypto.randomUUID(),
+      cardId: null,
+      kind,
+      composition: seedUmamiTemplate(kind, theme, ratio),
+    }))
+    setCarousel({ id: crypto.randomUUID(), name: null, frames })
+    setActiveFrameIdx(0)
+    setCurrentCardId(null)
+    loadFrameIntoEditor(frames[0])
+  }, [effectiveTheme, ratio, loadFrameIntoEditor])
+
+  const exitCarousel = useCallback(() => {
+    setCarousel(null)
+    setActiveFrameIdx(0)
+  }, [])
+
+  const switchFrame = useCallback(
+    (idx: number) => {
+      const frames = framesWithActiveStashed()
+      if (!carousel || !frames || idx === activeFrameIdx || !frames[idx]) return
+      setCarousel({ ...carousel, frames })
+      setActiveFrameIdx(idx)
+      loadFrameIntoEditor(frames[idx])
+    },
+    [carousel, activeFrameIdx, framesWithActiveStashed, loadFrameIntoEditor],
+  )
+
+  const addFrame = useCallback(
+    (kind: UmamiTemplateKind) => {
+      const frames = framesWithActiveStashed()
+      if (!carousel || !frames) return
+      const theme = composition?.theme ?? blankTheme
+      const frame: CarouselFrame = {
+        localId: crypto.randomUUID(),
+        cardId: null,
+        kind,
+        composition: seedUmamiTemplate(kind, theme, ratio),
+      }
+      const next = [...frames, frame]
+      setCarousel({ ...carousel, frames: next })
+      setActiveFrameIdx(next.length - 1)
+      loadFrameIntoEditor(frame)
+    },
+    [carousel, composition, blankTheme, ratio, framesWithActiveStashed, loadFrameIntoEditor],
+  )
+
+  const duplicateFrame = useCallback(() => {
+    const frames = framesWithActiveStashed()
+    if (!carousel || !frames) return
+    const src = frames[activeFrameIdx]
+    const copy: CarouselFrame = { ...src, localId: crypto.randomUUID(), cardId: null }
+    const next = [...frames.slice(0, activeFrameIdx + 1), copy, ...frames.slice(activeFrameIdx + 1)]
+    setCarousel({ ...carousel, frames: next })
+    setActiveFrameIdx(activeFrameIdx + 1)
+    loadFrameIntoEditor(copy)
+  }, [carousel, activeFrameIdx, framesWithActiveStashed, loadFrameIntoEditor])
+
+  const deleteFrame = useCallback(
+    (idx: number) => {
+      const frames = framesWithActiveStashed()
+      if (!carousel || !frames || frames.length <= 1) return
+      const removed = frames[idx]
+      const next = frames.filter((_, i) => i !== idx)
+      const nextActive = idx < activeFrameIdx ? activeFrameIdx - 1 : Math.min(activeFrameIdx, next.length - 1)
+      setCarousel({ ...carousel, frames: next })
+      setActiveFrameIdx(nextActive)
+      loadFrameIntoEditor(next[nextActive])
+      // Frame rows are cheap; delete a persisted one optimistically.
+      if (removed?.cardId) {
+        setSavedCards((prev) => prev.filter((c) => c.id !== removed.cardId))
+        void fetch(`/api/vizmaya/share-cards/cards/${removed.cardId}`, { method: 'DELETE' }).catch(() => {})
+      }
+    },
+    [carousel, activeFrameIdx, framesWithActiveStashed, loadFrameIntoEditor],
+  )
+
+  const moveFrame = useCallback(
+    (idx: number, dir: -1 | 1) => {
+      const frames = framesWithActiveStashed()
+      if (!carousel || !frames) return
+      const to = idx + dir
+      if (to < 0 || to >= frames.length) return
+      const next = frames.slice()
+      ;[next[idx], next[to]] = [next[to], next[idx]]
+      // Keep the active highlight following the frame the user is editing.
+      const nextActive = activeFrameIdx === idx ? to : activeFrameIdx === to ? idx : activeFrameIdx
+      setCarousel({ ...carousel, frames: next })
+      setActiveFrameIdx(nextActive)
+    },
+    [carousel, activeFrameIdx, framesWithActiveStashed],
+  )
+
+  /** Persist the whole strip: one row per frame (POST new / PUT existing) with
+   *  `carouselId` + `carouselPosition`. Row ids = the planner's cardIds[]. */
+  const saveCarousel = useCallback(async () => {
+    const frames = framesWithActiveStashed()
+    if (!carousel || !frames) return
+    let name = carousel.name
+    if (!name) {
+      name = window.prompt('Name this carousel', 'Umami carousel')?.trim() || ''
+      if (!name) return
+    }
+    setSaving(true)
+    try {
+      const next: CarouselFrame[] = []
+      for (let i = 0; i < frames.length; i++) {
+        const f = frames[i]
+        const snapshot: VizmayaShareCardSnapshotV2 = {
+          version: 2,
+          storySlug: null,
+          ratio,
+          parentIndex: 0,
+          subIndex: 0,
+          templateKind: f.kind,
+          composition: f.composition,
+        }
+        const frameName = `${name} · ${i + 1}/${frames.length}`
+        if (f.cardId) {
+          const res = await fetch(`/api/vizmaya/share-cards/cards/${f.cardId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: frameName,
+              storySlug: null,
+              baseType: composeBaseType(f.composition),
+              ratio,
+              config: snapshot,
+              carouselId: carousel.id,
+              carouselPosition: i,
+            }),
+          })
+          const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+          if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+          next.push(f)
+        } else {
+          const card = await createCard(frameName, snapshot, { carouselId: carousel.id, carouselPosition: i })
+          next.push({ ...f, cardId: card.id })
+        }
+      }
+      setCarousel({ id: carousel.id, name, frames: next })
+      // Refresh the library so the grouped carousel shows up-to-date rows.
+      const res = await fetch('/api/vizmaya/share-cards/cards?appSlug=umami')
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; cards?: SavedCard[] }
+      if (body.ok) setSavedCards(body.cards ?? [])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }, [carousel, ratio, framesWithActiveStashed, createCard])
+
+  /** Reopen a saved carousel from its grouped library rows. */
+  const loadCarousel = useCallback(
+    (groupId: string) => {
+      const rows = savedCards
+        .filter((c) => c.carouselId === groupId)
+        .sort((a, b) => (a.carouselPosition ?? 0) - (b.carouselPosition ?? 0))
+      if (rows.length === 0) return
+      try {
+        const frames: CarouselFrame[] = rows.map((r) => {
+          const snap = r.config as VizmayaShareCardSnapshotV2
+          return {
+            localId: crypto.randomUUID(),
+            cardId: r.id,
+            kind: snap.templateKind,
+            composition: normalizeComposition(snap.composition),
+          }
+        })
+        const first = rows[0].config as VizmayaShareCardSnapshotV2
+        setRatio(first.ratio as AspectRatio)
+        setCarousel({ id: groupId, name: rows[0].name.replace(/\s·\s\d+\/\d+$/, ''), frames })
+        setActiveFrameIdx(0)
+        setCurrentCardId(null)
+        setError(null)
+        loadFrameIntoEditor(frames[0])
+      } catch {
+        setError("Couldn't load this carousel (older format).")
+      }
+    },
+    [savedCards, loadFrameIntoEditor],
+  )
+
+  const deleteCarousel = useCallback(
+    (groupId: string) => {
+      const rows = savedCards.filter((c) => c.carouselId === groupId)
+      setSavedCards((prev) => prev.filter((c) => c.carouselId !== groupId))
+      for (const r of rows) {
+        void fetch(`/api/vizmaya/share-cards/cards/${r.id}`, { method: 'DELETE' }).catch(() => {})
+      }
+      setCarousel((cur) => (cur?.id === groupId ? null : cur))
+    },
+    [savedCards],
+  )
+
+  /** Export every frame as an ordered PNG. Frames render through the ONE live
+   *  card, so each iteration commits the frame synchronously (flushSync), waits
+   *  two frames for paint, then captures — `capture()` itself gates on fonts +
+   *  image decode. */
+  const exportCarousel = useCallback(async () => {
+    const frames = framesWithActiveStashed()
+    if (!carousel || !frames || !cardRef.current) return
+    setCarousel({ ...carousel, frames })
+    const base = (carousel.name ?? 'carousel').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'carousel'
+    setExportingAll(true)
+    try {
+      for (let i = 0; i < frames.length; i++) {
+        flushSync(() => {
+          setActiveFrameIdx(i)
+          loadFrameIntoEditor(frames[i])
+        })
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+        const dataUrl = await cardRef.current?.capture()
+        if (dataUrl) {
+          const link = document.createElement('a')
+          link.download = `umami-${base}-${String(i + 1).padStart(2, '0')}.png`
+          link.href = dataUrl
+          link.click()
+          // Small gap so the browser registers each download separately.
+          await new Promise((resolve) => setTimeout(resolve, 350))
+        }
+      }
+    } finally {
+      setExportingAll(false)
+    }
+  }, [carousel, framesWithActiveStashed, loadFrameIntoEditor])
+
+  // Grouped library view (umami): carousels as one entry each + loose singles.
+  const savedCarouselGroups = useMemo(() => {
+    if (!isUmami) return []
+    const groups = new Map<string, SavedCard[]>()
+    for (const c of savedCards) {
+      if (!c.carouselId) continue
+      const list = groups.get(c.carouselId) ?? []
+      list.push(c)
+      groups.set(c.carouselId, list)
+    }
+    return [...groups.entries()].map(([id, rows]) => ({
+      id,
+      rows: rows.sort((a, b) => (a.carouselPosition ?? 0) - (b.carouselPosition ?? 0)),
+      name: rows[0]?.name.replace(/\s·\s\d+\/\d+$/, '') ?? 'Carousel',
+    }))
+  }, [isUmami, savedCards])
+  const savedSingles = useMemo(() => savedCards.filter((c) => !c.carouselId), [savedCards])
 
   // ── render ──────────────────────────────────────────────────────────────
   const labelCls = 'block text-[11px] font-medium text-neutral-400'
@@ -893,12 +1324,14 @@ export function ShareCardCreator({
   const defaultChartId = useMemo(() => detectSupport(selectedUnit).chartId ?? '', [selectedUnit])
 
   return (
+    // Umami surfaces its food AI-style presets in every ImagePicker instance.
+    <ExtraStyleTemplatesContext.Provider value={isUmami ? UMAMI_STYLE_TEMPLATES : EMPTY_STYLES}>
     <div className="flex h-full min-h-0 flex-col gap-3">
       {fontImportUrl && <link href={fontImportUrl} rel="stylesheet" />}
 
       {/* ── Top bar: title · saved cards · actions ─────────────────────────── */}
       <div className="flex shrink-0 items-center gap-3">
-        <h1 className="text-lg font-semibold text-neutral-100">Share cards</h1>
+        <h1 className="text-lg font-semibold text-neutral-100">{isUmami ? 'Social frames' : 'Share cards'}</h1>
 
         <div ref={savedRef} className="relative">
           <button
@@ -906,18 +1339,44 @@ export function ShareCardCreator({
             disabled={savedCards.length === 0}
             className="flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-neutral-200 transition-colors hover:bg-white/10 disabled:opacity-40"
           >
-            Saved cards{savedCards.length > 0 ? ` · ${savedCards.length}` : ''}
+            Saved{savedCards.length > 0 ? ` · ${isUmami ? savedCarouselGroups.length + savedSingles.length : savedCards.length}` : ''}
             <span className="text-neutral-500">▾</span>
           </button>
           {savedOpen && savedCards.length > 0 && (
             <div className="absolute left-0 top-full z-50 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg border border-white/10 bg-neutral-900 p-1.5 shadow-xl">
-              {savedCards.map((c) => (
+              {savedCarouselGroups.map((g) => (
+                <div
+                  key={g.id}
+                  className={`flex items-center gap-2 rounded-md border p-1.5 ${carousel?.id === g.id ? 'border-sky-400/50 bg-white/5' : 'border-transparent hover:bg-white/5'}`}
+                >
+                  <button
+                    onClick={() => {
+                      loadCarousel(g.id)
+                      setSavedOpen(false)
+                    }}
+                    title="Load carousel into editor"
+                    className="min-w-0 flex-1 truncate text-left text-[11px] text-neutral-200 hover:text-white"
+                  >
+                    {g.name}
+                    <span className="ml-1 text-neutral-500">· {g.rows.length} frames</span>
+                  </button>
+                  <button
+                    onClick={() => deleteCarousel(g.id)}
+                    className="shrink-0 rounded px-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"
+                    aria-label="Delete saved carousel"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {(isUmami ? savedSingles : savedCards).map((c) => (
                 <div
                   key={c.id}
                   className={`flex items-center gap-2 rounded-md border p-1.5 ${currentCardId === c.id ? 'border-sky-400/50 bg-white/5' : 'border-transparent hover:bg-white/5'}`}
                 >
                   <button
                     onClick={() => {
+                      if (carousel) exitCarousel()
                       loadCard(c)
                       setSavedOpen(false)
                     }}
@@ -940,23 +1399,51 @@ export function ShareCardCreator({
           )}
         </div>
 
+        {isUmami && !carousel && (
+          <button
+            onClick={startCarousel}
+            className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-neutral-200 transition-colors hover:bg-white/10"
+          >
+            New carousel
+          </button>
+        )}
+        {isUmami && carousel && (
+          <button
+            onClick={exitCarousel}
+            title="Back to single-frame editing (unsaved carousel edits stay in memory only)"
+            className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-neutral-200 transition-colors hover:bg-white/10"
+          >
+            Exit carousel
+          </button>
+        )}
+
         <div className="flex-1" />
 
+        {carousel ? (
+          <button
+            onClick={() => void exportCarousel()}
+            disabled={!composition || exportingAll}
+            className="rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exportingAll ? 'Rendering…' : `Export ${carousel.frames.length} PNGs`}
+          </button>
+        ) : (
+          <button
+            onClick={() => void handleDownload()}
+            disabled={!composition || downloading}
+            className="rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {downloading ? 'Rendering…' : 'Download PNG'}
+          </button>
+        )}
         <button
-          onClick={() => void handleDownload()}
-          disabled={!composition || downloading}
-          className="rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {downloading ? 'Rendering…' : 'Download PNG'}
-        </button>
-        <button
-          onClick={() => void handleSave()}
+          onClick={() => void (carousel ? saveCarousel() : handleSave())}
           disabled={!composition || saving}
           className="rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-neutral-100 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'Saving…' : carousel ? 'Save carousel' : 'Save'}
         </button>
-        {currentCardId && (
+        {!carousel && currentCardId && (
           <button
             onClick={() => void handleDuplicate()}
             disabled={!composition || saving}
@@ -966,6 +1453,81 @@ export function ShareCardCreator({
           </button>
         )}
       </div>
+
+      {/* ── Carousel filmstrip (umami) ─────────────────────────────────────── */}
+      {carousel && (
+        <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto rounded-lg border border-white/10 bg-neutral-950/40 px-2 py-1.5">
+          {carousel.frames.map((f, i) => {
+            const label = UMAMI_TEMPLATES.find((t) => t.id === f.kind)?.label ?? f.kind
+            const active = i === activeFrameIdx
+            return (
+              <div
+                key={f.localId}
+                className={`flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 ${
+                  active ? 'border-sky-400/60 bg-white/10' : 'border-white/10 hover:bg-white/5'
+                }`}
+              >
+                <button
+                  onClick={() => switchFrame(i)}
+                  title={label}
+                  className={`text-[11px] ${active ? 'text-white' : 'text-neutral-300 hover:text-white'}`}
+                >
+                  <span className="mr-1 font-semibold text-neutral-500">{i + 1}</span>
+                  {label.replace(/ frame$/, '')}
+                </button>
+                <button
+                  onClick={() => moveFrame(i, -1)}
+                  disabled={i === 0}
+                  title="Move left"
+                  className="rounded px-0.5 text-[10px] text-neutral-500 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                >
+                  ◂
+                </button>
+                <button
+                  onClick={() => moveFrame(i, 1)}
+                  disabled={i === carousel.frames.length - 1}
+                  title="Move right"
+                  className="rounded px-0.5 text-[10px] text-neutral-500 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                >
+                  ▸
+                </button>
+                <button
+                  onClick={() => deleteFrame(i)}
+                  disabled={carousel.frames.length <= 1}
+                  title="Delete frame"
+                  className="rounded px-0.5 text-[10px] text-neutral-500 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                >
+                  ×
+                </button>
+              </div>
+            )
+          })}
+          <button
+            onClick={duplicateFrame}
+            title="Duplicate the active frame"
+            className="shrink-0 rounded-md border border-white/10 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/5 hover:text-white"
+          >
+            ⧉ Duplicate
+          </button>
+          <div className="relative shrink-0">
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) addFrame(e.target.value as UmamiTemplateKind)
+              }}
+              title="Add a frame"
+              className="rounded-md border border-white/10 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-300"
+            >
+              <option value="">+ Add frame…</option>
+              {UMAMI_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* ── 3-pane row ─────────────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
@@ -1000,41 +1562,46 @@ export function ShareCardCreator({
 
           {activeTab === 'setup' && (
             <>
-              <label className={labelCls}>
-                Story {slug === '' ? '· composing from scratch' : '· attached'}
-                <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
-                  <option value="">Blank canvas (no story)</option>
-                  {stories.map((s) => (
-                    <option key={s.slug} value={s.slug}>
-                      {s.title || s.slug}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {slug === '' && (
-                <p className="text-[10px] text-neutral-600">
-                  Build with backgrounds, text, images, icons &amp; flags. Attach a story above to pull in
-                  its theme, map &amp; chart.
-                </p>
-              )}
-              {units.length > 0 && (
-                <label className={labelCls}>
-                  Section
-                  <select value={unitIdx} onChange={(e) => pickUnit(Number(e.target.value))} className={selectCls}>
-                    {units.map((u, i) => (
-                      <option key={`${u.parentIndex}-${u.subIndex}`} value={i}>
-                        {u.heading?.slice(0, 50) || `Section ${u.parentIndex + 1}`}
-                        {u.subIndex > 0 ? ` · step ${u.subIndex}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {/* Umami frames are story-less — no story/section pickers. */}
+              {!isUmami && (
+                <>
+                  <label className={labelCls}>
+                    Story {slug === '' ? '· composing from scratch' : '· attached'}
+                    <select value={slug} onChange={(e) => pickStory(e.target.value)} className={selectCls}>
+                      <option value="">Blank canvas (no story)</option>
+                      {stories.map((s) => (
+                        <option key={s.slug} value={s.slug}>
+                          {s.title || s.slug}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {slug === '' && (
+                    <p className="text-[10px] text-neutral-600">
+                      Build with backgrounds, text, images, icons &amp; flags. Attach a story above to pull in
+                      its theme, map &amp; chart.
+                    </p>
+                  )}
+                  {units.length > 0 && (
+                    <label className={labelCls}>
+                      Section
+                      <select value={unitIdx} onChange={(e) => pickUnit(Number(e.target.value))} className={selectCls}>
+                        {units.map((u, i) => (
+                          <option key={`${u.parentIndex}-${u.subIndex}`} value={i}>
+                            {u.heading?.slice(0, 50) || `Section ${u.parentIndex + 1}`}
+                            {u.subIndex > 0 ? ` · step ${u.subIndex}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <label className={labelCls}>
                   Template
                   <select value={templateKind} onChange={(e) => pickTemplate(e.target.value as TemplateKind)} className={selectCls}>
-                    {TEMPLATES.map((t) => (
+                    {(isUmami ? UMAMI_TEMPLATES : TEMPLATES).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.label}
                       </option>
@@ -1044,7 +1611,7 @@ export function ShareCardCreator({
                 <label className={labelCls}>
                   Format
                   <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
-                    {ASPECT_RATIOS.map((r) => (
+                    {(isUmami ? ASPECT_RATIOS.filter((r) => r.id === '1:1' || r.id === '4:5') : ASPECT_RATIOS).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.label}
                       </option>
@@ -1052,6 +1619,48 @@ export function ShareCardCreator({
                   </select>
                 </label>
               </div>
+              {isUmami && (
+                <div>
+                  <span className={labelCls}>Palette</span>
+                  <div className="mt-1 grid grid-cols-2 gap-1.5">
+                    {(['paper', 'spice'] as const).map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setUmamiTheme(name)}
+                        className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
+                          activeUmamiTheme === name
+                            ? 'border-sky-400/60 bg-white/10 text-neutral-100'
+                            : 'border-white/10 text-neutral-300 hover:bg-white/5'
+                        }`}
+                      >
+                        <span className="flex shrink-0 overflow-hidden rounded-sm border border-white/15">
+                          {[UMAMI_THEMES[name].colors.background, UMAMI_THEMES[name].colors.accent, UMAMI_THEMES[name].colors.text].map((c, i) => (
+                            <span key={i} style={{ background: c }} className="h-4 w-2.5" />
+                          ))}
+                        </span>
+                        <span className="capitalize">{name === 'paper' ? 'Paper (light)' : 'Spice (dark)'}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-neutral-600">
+                    Flips every palette color on the frame; hand-picked colors stay put.
+                  </p>
+                </div>
+              )}
+              {isUmami && templateKind === 'umami-compare' && (
+                <div className="space-y-1.5">
+                  <span className={labelCls}>Ground in dishes</span>
+                  <DishPicker label="Dish A" picked={dishPicks.a?.name ?? null} onPick={(d) => pickDish('a', d)} />
+                  <DishPicker label="Dish B" picked={dishPicks.b?.name ?? null} onPick={(d) => pickDish('b', d)} />
+                </div>
+              )}
+              {isUmami && templateKind === 'umami-dish' && (
+                <div className="space-y-1.5">
+                  <span className={labelCls}>Ground in a dish</span>
+                  <DishPicker label="Dish" picked={dishPicks.spotlight?.name ?? null} onPick={(d) => pickDish('spotlight', d)} />
+                </div>
+              )}
               {composition && (
                 <label className="flex items-center gap-2 text-[12px] text-neutral-200">
                   <input
@@ -1075,6 +1684,14 @@ export function ShareCardCreator({
               // Drop the override so the card falls back to the story / default
               // theme (undefined is omitted by JSON.stringify when saved).
               onReset={() => setComposition({ ...composition, theme: undefined })}
+              extraPresets={
+                isUmami
+                  ? [
+                      { id: 'umami-paper', label: 'Paper (light)', theme: UMAMI_PAPER },
+                      { id: 'umami-spice', label: 'Spice (dark)', theme: UMAMI_SPICE },
+                    ]
+                  : undefined
+              }
             />
           )}
 
@@ -1258,5 +1875,6 @@ export function ShareCardCreator({
         />
       )}
     </div>
+    </ExtraStyleTemplatesContext.Provider>
   )
 }

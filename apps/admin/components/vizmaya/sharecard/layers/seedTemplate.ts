@@ -10,7 +10,8 @@ import type {
   TextStyle,
   Transform,
 } from './types'
-import { DEFAULT_TRANSFORM, emptyMapSpec } from './types'
+import { DEFAULT_TRANSFORM, emptyMapSpec, isUmamiKind } from './types'
+import { seedUmamiTemplate } from '../umami/seeds'
 
 /**
  * Seeds a starting composition for a template. Templates are just presets — the
@@ -80,6 +81,10 @@ export function seedTemplate(
   story: SeedStory,
   _ratio: AspectRatio,
 ): CardComposition {
+  // Umami "Social frames" templates are story-less: they seed purely from the
+  // theme (dish content is merged in later by the dish picker's re-seed).
+  if (isUmamiKind(kind)) return seedUmamiTemplate(kind, story.theme, _ratio)
+
   const c = story.theme.colors
   const support = detectSupport(unit)
   const heading = unit.heading?.trim() || ''

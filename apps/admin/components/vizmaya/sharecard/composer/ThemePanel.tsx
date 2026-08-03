@@ -14,7 +14,7 @@ import { labelCls } from './controls'
 /** Curated full-theme presets for one-click application. Fonts are limited to
  *  families the font-import resolver knows (Google + system), so a preset that
  *  changes fonts loads cleanly into both the live preview and the PNG capture. */
-interface ThemePreset {
+export interface ThemePreset {
   id: string
   label: string
   theme: Theme
@@ -112,6 +112,7 @@ export function ThemePanel({
   storyAttached,
   onChange,
   onReset,
+  extraPresets,
 }: {
   /** Effective theme to display (the override, or the story/default fallback). */
   theme: Theme
@@ -121,15 +122,20 @@ export function ThemePanel({
   storyAttached: boolean
   onChange: (next: Theme) => void
   onReset: () => void
+  /** App-specific presets shown ahead of the built-ins (umami passes its
+   *  paper/spice palettes). */
+  extraPresets?: ThemePreset[]
 }) {
   const setColor = (key: keyof Theme['colors'], v: string) =>
     onChange({ ...theme, colors: { ...theme.colors, [key]: v } })
   const setFont = (key: keyof Theme['fonts'], v: string) =>
     onChange({ ...theme, fonts: { ...theme.fonts, [key]: v } })
 
+  const presets = [...(extraPresets ?? []), ...THEME_PRESETS]
+
   // A preset is "active" when its palette matches the current one (fonts can be
   // tweaked independently, so colors alone decide the highlight).
-  const activePresetId = THEME_PRESETS.find(
+  const activePresetId = presets.find(
     (p) => JSON.stringify(p.theme.colors) === JSON.stringify(theme.colors),
   )?.id
 
@@ -139,7 +145,7 @@ export function ThemePanel({
       <div>
         <span className={labelCls}>Presets</span>
         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-          {THEME_PRESETS.map((p) => (
+          {presets.map((p) => (
             <button
               key={p.id}
               type="button"

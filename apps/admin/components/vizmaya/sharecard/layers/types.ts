@@ -312,8 +312,34 @@ export interface CardComposition {
   branding: BrandingSlot
 }
 
-/** Which template seeded the card — kept so we can relabel / re-seed. */
-export type TemplateKind = 'map-caption' | 'data' | 'title-text'
+/** Which template seeded the card — kept so we can relabel / re-seed. The
+ *  `umami-*` kinds are the umami "Social frames" templates (umami/seeds.ts):
+ *  compare + dish are standalone posts, hook/story/closing are the frame kinds
+ *  of an explainer carousel. */
+export type TemplateKind =
+  | 'map-caption'
+  | 'data'
+  | 'title-text'
+  | 'umami-compare'
+  | 'umami-dish'
+  | 'umami-hook'
+  | 'umami-story'
+  | 'umami-closing'
+
+/** The umami "Social frames" subset of TemplateKind. */
+export const UMAMI_TEMPLATE_KINDS = [
+  'umami-compare',
+  'umami-dish',
+  'umami-hook',
+  'umami-story',
+  'umami-closing',
+] as const
+
+export type UmamiTemplateKind = (typeof UMAMI_TEMPLATE_KINDS)[number]
+
+export function isUmamiKind(kind: TemplateKind): kind is UmamiTemplateKind {
+  return (UMAMI_TEMPLATE_KINDS as readonly string[]).includes(kind)
+}
 
 /** v2 snapshot persisted in `vizmaya_share_cards.config` (opaque jsonb). */
 export interface VizmayaShareCardSnapshotV2 {
