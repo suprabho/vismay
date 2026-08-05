@@ -46,6 +46,13 @@ const APPS: AppEntry[] = [
     status: 'available',
   },
   {
+    href: '/travel',
+    slug: 'travel',
+    name: 'Travel',
+    description: 'Password-gated trip journeys and scrapbook stories; media curation lives on the travel app.',
+    status: 'available',
+  },
+  {
     href: '/storytime-ovo',
     name: 'Storytime with Ovo',
     description: 'Stories and epics tagged to the storytime-ovo app.',
