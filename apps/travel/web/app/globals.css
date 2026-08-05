@@ -1,6 +1,6 @@
-@import 'tailwindcss';
 /* Handwritten caption face for the travel:polaroid module. */
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap');
+@import 'tailwindcss';
 
 /* Tailwind v4 JIT only scans the importing package by default. The engine's
  * slot dispatchers, the story-reader shell, and the travel vertical's modules

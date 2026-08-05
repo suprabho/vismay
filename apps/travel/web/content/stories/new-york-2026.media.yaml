@@ -548,7 +548,7 @@ media:
   - file: d3-day-01.mp4
     kind: video
     day: 3
-    stop: null
+    stop: museum-of-modern-art-moma
     match: auto
     original: 20260314_115325.mp4
   - file: d3-museum-of-modern-art-moma-34.jpg
@@ -638,7 +638,7 @@ media:
   - file: d3-day-02.mp4
     kind: video
     day: 3
-    stop: null
+    stop: museum-of-modern-art-moma
     match: auto
     original: 20260314_120355.mp4
   - file: d3-museum-of-modern-art-moma-46.jpg
@@ -2219,7 +2219,7 @@ media:
   - file: d3-day-03.mp4
     kind: video
     day: 3
-    stop: null
+    stop: guggenheim-museum
     match: auto
     original: 20260314_164838.mp4
   - file: d3-guggenheim-museum-30.jpg
@@ -2442,7 +2442,7 @@ media:
   - file: d3-day-04.mp4
     kind: video
     day: 3
-    stop: null
+    stop: central-park
     match: auto
     original: 20260314_180405.mp4
   - file: d3-central-park-18.jpg
