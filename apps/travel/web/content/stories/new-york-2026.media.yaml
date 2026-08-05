@@ -1,0 +1,2706 @@
+# Media manifest — one row per staged photo/video.
+#   file:  filename in vizmaya-data/travel-media/<slug>/staged/ and (after
+#          upload) in the story-assets bucket → assets://<slug>/<file>
+#   day/stop: where it appears in the journey view. `match: auto` rows were
+#          EXIF-matched — spot-check them; `match: manual` rows need day/stop
+#          filled in by hand. Add `caption:` freely — re-runs never touch
+#          existing rows.
+media:
+  - file: d3-walk-the-brooklyn-bridge-01.jpg
+    kind: image
+    day: 3
+    stop: walk-the-brooklyn-bridge
+    takenAt: 2026-03-14T01:52:56.000Z
+    match: auto
+    original: 20260314_072255.jpg
+  - file: d3-walk-the-brooklyn-bridge-02.jpg
+    kind: image
+    day: 3
+    stop: walk-the-brooklyn-bridge
+    takenAt: 2026-03-14T01:52:58.000Z
+    match: auto
+    original: 20260314_072258.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-01.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:25:10.000Z
+    match: auto
+    original: 20260314_075510.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-02.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:25:12.000Z
+    match: auto
+    original: 20260314_075512.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-03.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:12.000Z
+    match: auto
+    original: 20260314_080211.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-04.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:13.000Z
+    match: auto
+    original: 20260314_080213.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-05.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:31.000Z
+    match: auto
+    original: 20260314_080225.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-06.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:49.000Z
+    match: auto
+    original: 20260314_080248.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-07.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:50.000Z
+    match: auto
+    original: 20260314_080249.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-08.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:55.000Z
+    match: auto
+    original: 20260314_080254.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-09.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:32:56.000Z
+    match: auto
+    original: 20260314_080255.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-10.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:33:56.000Z
+    match: auto
+    original: 20260314_080356.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-11.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:33:58.000Z
+    match: auto
+    original: 20260314_080358.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-12.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:33:59.000Z
+    match: auto
+    original: 20260314_080359.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-13.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:34:16.000Z
+    match: auto
+    original: 20260314_080416.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-14.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:34:17.000Z
+    match: auto
+    original: 20260314_080417.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-15.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:42:04.000Z
+    match: auto
+    original: 20260314_081204.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-16.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:42:06.000Z
+    match: auto
+    original: 20260314_081206.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-17.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:42:18.000Z
+    match: auto
+    original: 20260314_081218.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-18.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:43:21.000Z
+    match: auto
+    original: 20260314_081321.jpg
+  - file: d3-dumbo-piers-manhattan-skyline-19.jpg
+    kind: image
+    day: 3
+    stop: dumbo-piers-manhattan-skyline
+    takenAt: 2026-03-14T02:43:24.000Z
+    match: auto
+    original: 20260314_081324.jpg
+  - file: d3-the-high-line-01.jpg
+    kind: image
+    day: 3
+    stop: the-high-line
+    takenAt: 2026-03-14T04:49:07.000Z
+    match: auto
+    original: 20260314_101907.jpg
+  - file: d3-the-edge-hudson-yards-01.jpg
+    kind: image
+    day: 3
+    stop: the-edge-hudson-yards
+    takenAt: 2026-03-14T04:54:57.000Z
+    match: auto
+    original: 20260314_102457.jpg
+  - file: d3-the-edge-hudson-yards-02.jpg
+    kind: image
+    day: 3
+    stop: the-edge-hudson-yards
+    takenAt: 2026-03-14T04:55:02.000Z
+    match: auto
+    original: 20260314_102502.jpg
+  - file: d3-the-edge-hudson-yards-03.jpg
+    kind: image
+    day: 3
+    stop: the-edge-hudson-yards
+    takenAt: 2026-03-14T05:04:44.000Z
+    match: auto
+    original: 20260314_103443.jpg
+  - file: d3-the-edge-hudson-yards-04.jpg
+    kind: image
+    day: 3
+    stop: the-edge-hudson-yards
+    takenAt: 2026-03-14T05:04:48.000Z
+    match: auto
+    original: 20260314_103448.jpg
+  - file: d3-the-edge-hudson-yards-05.jpg
+    kind: image
+    day: 3
+    stop: the-edge-hudson-yards
+    takenAt: 2026-03-14T05:04:50.000Z
+    match: auto
+    original: 20260314_103450.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-01.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:14:39.000Z
+    match: auto
+    original: 20260314_104439.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-02.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:14:40.000Z
+    match: auto
+    original: 20260314_104440.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-03.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:14:45.000Z
+    match: auto
+    original: 20260314_104445.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-04.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:14:47.000Z
+    match: auto
+    original: 20260314_104447.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-05.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:16:24.000Z
+    match: auto
+    original: 20260314_104624.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-06.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:16:28.000Z
+    match: auto
+    original: 20260314_104628.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-07.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:17:51.000Z
+    match: auto
+    original: 20260314_104751.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-08.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:17:52.000Z
+    match: auto
+    original: 20260314_104752.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-09.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:17:55.000Z
+    match: auto
+    original: 20260314_104755.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-10.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:19:49.000Z
+    match: auto
+    original: 20260314_104949.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-11.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:19:50.000Z
+    match: auto
+    original: 20260314_104950.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-12.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:19:55.000Z
+    match: auto
+    original: 20260314_104955.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-13.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:19:58.000Z
+    match: auto
+    original: 20260314_104958.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-14.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:23:08.000Z
+    match: auto
+    original: 20260314_105308.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-15.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:23:10.000Z
+    match: auto
+    original: 20260314_105310.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-16.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:23:22.000Z
+    match: auto
+    original: 20260314_105322.jpg
+  - file: d3-how-i-met-your-mother-mcgees-pub-17.jpg
+    kind: image
+    day: 3
+    stop: how-i-met-your-mother-mcgees-pub
+    takenAt: 2026-03-14T05:23:24.000Z
+    match: auto
+    original: 20260314_105324.jpg
+  - file: d3-museum-of-modern-art-moma-01.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:03:23.000Z
+    match: auto
+    original: 20260314_113323.jpg
+  - file: d3-museum-of-modern-art-moma-02.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:03:26.000Z
+    match: auto
+    original: 20260314_113326.jpg
+  - file: d3-museum-of-modern-art-moma-03.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:03:29.000Z
+    match: auto
+    original: 20260314_113329.jpg
+  - file: d3-museum-of-modern-art-moma-04.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:03:31.000Z
+    match: auto
+    original: 20260314_113331.jpg
+  - file: d3-museum-of-modern-art-moma-05.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:03:32.000Z
+    match: auto
+    original: 20260314_113332.jpg
+  - file: d3-museum-of-modern-art-moma-06.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:05:39.000Z
+    match: auto
+    original: 20260314_113539.jpg
+  - file: d3-museum-of-modern-art-moma-07.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:05:50.000Z
+    match: auto
+    original: 20260314_113550.jpg
+  - file: d3-museum-of-modern-art-moma-08.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:05:51.000Z
+    match: auto
+    original: 20260314_113551.jpg
+  - file: d3-museum-of-modern-art-moma-09.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:05:52.000Z
+    match: auto
+    original: 20260314_113552.jpg
+  - file: d3-museum-of-modern-art-moma-10.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:06:00.000Z
+    match: auto
+    original: 20260314_113559.jpg
+  - file: d3-museum-of-modern-art-moma-11.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:06:04.000Z
+    match: auto
+    original: 20260314_113604.jpg
+  - file: d3-museum-of-modern-art-moma-12.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:06:06.000Z
+    match: auto
+    original: 20260314_113606.jpg
+  - file: d3-museum-of-modern-art-moma-13.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:06:53.000Z
+    match: auto
+    original: 20260314_113653.jpg
+  - file: d3-museum-of-modern-art-moma-14.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:06:56.000Z
+    match: auto
+    original: 20260314_113655.jpg
+  - file: d3-museum-of-modern-art-moma-15.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:09:12.000Z
+    match: auto
+    original: 20260314_113912.jpg
+  - file: d3-museum-of-modern-art-moma-16.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:09:13.000Z
+    match: auto
+    original: 20260314_113913.jpg
+  - file: d3-museum-of-modern-art-moma-17.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:09:16.000Z
+    match: auto
+    original: 20260314_113915.jpg
+  - file: d3-museum-of-modern-art-moma-18.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:09:20.000Z
+    match: auto
+    original: 20260314_113920.jpg
+  - file: d3-museum-of-modern-art-moma-19.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:12:44.000Z
+    match: auto
+    original: 20260314_114244.jpg
+  - file: d3-museum-of-modern-art-moma-20.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:12:47.000Z
+    match: auto
+    original: 20260314_114247.jpg
+  - file: d3-museum-of-modern-art-moma-21.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:12:48.000Z
+    match: auto
+    original: 20260314_114248.jpg
+  - file: d3-museum-of-modern-art-moma-22.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:13:01.000Z
+    match: auto
+    original: 20260314_114300.jpg
+  - file: d3-museum-of-modern-art-moma-23.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:13:02.000Z
+    match: auto
+    original: 20260314_114301.jpg
+  - file: d3-museum-of-modern-art-moma-24.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:13:30.000Z
+    match: auto
+    original: 20260314_114330.jpg
+  - file: d3-museum-of-modern-art-moma-25.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:13:35.000Z
+    match: auto
+    original: 20260314_114334.jpg
+  - file: d3-museum-of-modern-art-moma-26.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:14:21.000Z
+    match: auto
+    original: 20260314_114421.jpg
+  - file: d3-museum-of-modern-art-moma-27.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:14:23.000Z
+    match: auto
+    original: 20260314_114423.jpg
+  - file: d3-museum-of-modern-art-moma-28.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:15:07.000Z
+    match: auto
+    original: 20260314_114507.jpg
+  - file: d3-museum-of-modern-art-moma-29.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:15:09.000Z
+    match: auto
+    original: 20260314_114509.jpg
+  - file: d3-museum-of-modern-art-moma-30.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:18:47.000Z
+    match: auto
+    original: 20260314_114847.jpg
+  - file: d3-museum-of-modern-art-moma-31.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:18:52.000Z
+    match: auto
+    original: 20260314_114852.jpg
+  - file: d3-museum-of-modern-art-moma-32.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:18:57.000Z
+    match: auto
+    original: 20260314_114857.jpg
+  - file: d3-museum-of-modern-art-moma-33.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:20:31.000Z
+    match: auto
+    original: 20260314_115031.jpg
+  - file: d3-day-01.mp4
+    kind: video
+    day: 3
+    stop: null
+    match: auto
+    original: 20260314_115325.mp4
+  - file: d3-museum-of-modern-art-moma-34.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:24:20.000Z
+    match: auto
+    original: 20260314_115420.jpg
+  - file: d3-museum-of-modern-art-moma-35.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:24:23.000Z
+    match: auto
+    original: 20260314_115423.jpg
+  - file: d3-museum-of-modern-art-moma-36.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:31:52.000Z
+    match: auto
+    original: 20260314_120151.jpg
+  - file: d3-museum-of-modern-art-moma-37.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:31:52.000Z
+    match: auto
+    original: 20260314_120152.jpg
+  - file: d3-museum-of-modern-art-moma-38.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:31:55.000Z
+    match: auto
+    original: 20260314_120155.jpg
+  - file: d3-museum-of-modern-art-moma-39.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:31:59.000Z
+    match: auto
+    original: 20260314_120158.jpg
+  - file: d3-museum-of-modern-art-moma-40.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:32:54.000Z
+    match: auto
+    original: 20260314_120254.jpg
+  - file: d3-museum-of-modern-art-moma-41.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:33:00.000Z
+    match: auto
+    original: 20260314_120300.jpg
+  - file: d3-museum-of-modern-art-moma-42.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:33:28.000Z
+    match: auto
+    original: 20260314_120328.jpg
+  - file: d3-museum-of-modern-art-moma-43.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:33:32.000Z
+    match: auto
+    original: 20260314_120332.jpg
+  - file: d3-museum-of-modern-art-moma-44.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:33:41.000Z
+    match: auto
+    original: 20260314_120341.jpg
+  - file: d3-museum-of-modern-art-moma-45.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:33:45.000Z
+    match: auto
+    original: 20260314_120345.jpg
+  - file: d3-day-02.mp4
+    kind: video
+    day: 3
+    stop: null
+    match: auto
+    original: 20260314_120355.mp4
+  - file: d3-museum-of-modern-art-moma-46.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:34:06.000Z
+    match: auto
+    original: 20260314_120406.jpg
+  - file: d3-museum-of-modern-art-moma-47.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:34:10.000Z
+    match: auto
+    original: 20260314_120410.jpg
+  - file: d3-museum-of-modern-art-moma-48.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:34:15.000Z
+    match: auto
+    original: 20260314_120415.jpg
+  - file: d3-museum-of-modern-art-moma-49.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:34:23.000Z
+    match: auto
+    original: 20260314_120423.jpg
+  - file: d3-museum-of-modern-art-moma-50.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:34:35.000Z
+    match: auto
+    original: 20260314_120435.jpg
+  - file: d3-museum-of-modern-art-moma-51.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:34:51.000Z
+    match: auto
+    original: 20260314_120451.jpg
+  - file: d3-museum-of-modern-art-moma-52.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:35:01.000Z
+    match: auto
+    original: 20260314_120501.jpg
+  - file: d3-museum-of-modern-art-moma-53.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:35:06.000Z
+    match: auto
+    original: 20260314_120506.jpg
+  - file: d3-museum-of-modern-art-moma-54.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:39:29.000Z
+    match: auto
+    original: 20260314_120929.jpg
+  - file: d3-museum-of-modern-art-moma-55.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:39:31.000Z
+    match: auto
+    original: 20260314_120931.jpg
+  - file: d3-museum-of-modern-art-moma-56.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:42:34.000Z
+    match: auto
+    original: 20260314_121234.jpg
+  - file: d3-museum-of-modern-art-moma-57.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:03.000Z
+    match: auto
+    original: 20260314_121403.jpg
+  - file: d3-museum-of-modern-art-moma-58.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:08.000Z
+    match: auto
+    original: 20260314_121408.jpg
+  - file: d3-museum-of-modern-art-moma-59.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:16.000Z
+    match: auto
+    original: 20260314_121416.jpg
+  - file: d3-museum-of-modern-art-moma-60.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:32.000Z
+    match: auto
+    original: 20260314_121432.jpg
+  - file: d3-museum-of-modern-art-moma-61.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:51.000Z
+    match: auto
+    original: 20260314_121451(0).jpg
+  - file: d3-museum-of-modern-art-moma-62.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:51.000Z
+    match: auto
+    original: 20260314_121451.jpg
+  - file: d3-museum-of-modern-art-moma-63.jpg
+    kind: image
+    day: 3
+    stop: museum-of-modern-art-moma
+    takenAt: 2026-03-14T06:44:52.000Z
+    match: auto
+    original: 20260314_121452.jpg
+  - file: d3-rockefeller-center-lego-store-01.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T06:45:10.000Z
+    match: auto
+    original: 20260314_121510.jpg
+  - file: d3-rockefeller-center-lego-store-02.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T06:45:15.000Z
+    match: auto
+    original: 20260314_121515.jpg
+  - file: d3-rockefeller-center-lego-store-03.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:14:22.000Z
+    match: auto
+    original: 20260314_124422.jpg
+  - file: d3-rockefeller-center-lego-store-04.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:15:06.000Z
+    match: auto
+    original: 20260314_124506.jpg
+  - file: d3-rockefeller-center-lego-store-05.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:15:09.000Z
+    match: auto
+    original: 20260314_124509.jpg
+  - file: d3-rockefeller-center-lego-store-06.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:23:26.000Z
+    match: auto
+    original: 20260314_125326.jpg
+  - file: d3-rockefeller-center-lego-store-07.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:23:30.000Z
+    match: auto
+    original: 20260314_125330.jpg
+  - file: d3-rockefeller-center-lego-store-08.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:23:31.000Z
+    match: auto
+    original: 20260314_125331.jpg
+  - file: d3-rockefeller-center-lego-store-09.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:23:57.000Z
+    match: auto
+    original: 20260314_125357.jpg
+  - file: d3-rockefeller-center-lego-store-10.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:23:59.000Z
+    match: auto
+    original: 20260314_125359.jpg
+  - file: d3-rockefeller-center-lego-store-11.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:24:43.000Z
+    match: auto
+    original: 20260314_125443.jpg
+  - file: d3-rockefeller-center-lego-store-12.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:24:47.000Z
+    match: auto
+    original: 20260314_125447.jpg
+  - file: d3-rockefeller-center-lego-store-13.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:24:51.000Z
+    match: auto
+    original: 20260314_125451.jpg
+  - file: d3-rockefeller-center-lego-store-14.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:25:03.000Z
+    match: auto
+    original: 20260314_125503.jpg
+  - file: d3-rockefeller-center-lego-store-15.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:26:34.000Z
+    match: auto
+    original: 20260314_125634.jpg
+  - file: d3-rockefeller-center-lego-store-16.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:27:24.000Z
+    match: auto
+    original: 20260314_125724.jpg
+  - file: d3-rockefeller-center-lego-store-17.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:27:33.000Z
+    match: auto
+    original: 20260314_125733.jpg
+  - file: d3-rockefeller-center-lego-store-18.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:27:58.000Z
+    match: auto
+    original: 20260314_125758.jpg
+  - file: d3-rockefeller-center-lego-store-19.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:28:00.000Z
+    match: auto
+    original: 20260314_125800.jpg
+  - file: d3-rockefeller-center-lego-store-20.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:28:04.000Z
+    match: auto
+    original: 20260314_125804.jpg
+  - file: d3-rockefeller-center-lego-store-21.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:28:49.000Z
+    match: auto
+    original: 20260314_125849.jpg
+  - file: d3-rockefeller-center-lego-store-22.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:28:51.000Z
+    match: auto
+    original: 20260314_125850.jpg
+  - file: d3-rockefeller-center-lego-store-23.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:28:56.000Z
+    match: auto
+    original: 20260314_125855.jpg
+  - file: d3-rockefeller-center-lego-store-24.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:28:57.000Z
+    match: auto
+    original: 20260314_125857.jpg
+  - file: d3-rockefeller-center-lego-store-25.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:33:00.000Z
+    match: auto
+    original: 20260314_130259.jpg
+  - file: d3-rockefeller-center-lego-store-26.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:33:07.000Z
+    match: auto
+    original: 20260314_130307.jpg
+  - file: d3-rockefeller-center-lego-store-27.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:33:07.000Z
+    match: auto
+    original: 20260314_130307~2.jpg
+  - file: d3-rockefeller-center-lego-store-28.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:33:44.000Z
+    match: auto
+    original: 20260314_130343.jpg
+  - file: d3-rockefeller-center-lego-store-29.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:42:06.000Z
+    match: auto
+    original: 20260314_131206.jpg
+  - file: d3-rockefeller-center-lego-store-30.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:42:18.000Z
+    match: auto
+    original: 20260314_131217.jpg
+  - file: d3-rockefeller-center-lego-store-31.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:42:22.000Z
+    match: auto
+    original: 20260314_131222.jpg
+  - file: d3-rockefeller-center-lego-store-32.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:42:27.000Z
+    match: auto
+    original: 20260314_131227.jpg
+  - file: d3-rockefeller-center-lego-store-33.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:42:28.000Z
+    match: auto
+    original: 20260314_131228.jpg
+  - file: d3-rockefeller-center-lego-store-34.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:44:37.000Z
+    match: auto
+    original: 20260314_131437.jpg
+  - file: d3-rockefeller-center-lego-store-35.jpg
+    kind: image
+    day: 3
+    stop: rockefeller-center-lego-store
+    takenAt: 2026-03-14T07:44:39.000Z
+    match: auto
+    original: 20260314_131438.jpg
+  - file: d3-grand-central-terminal-01.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:46:20.000Z
+    match: auto
+    original: 20260314_131620.jpg
+  - file: d3-grand-central-terminal-02.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:46:24.000Z
+    match: auto
+    original: 20260314_131624.jpg
+  - file: d3-grand-central-terminal-03.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:46:31.000Z
+    match: auto
+    original: 20260314_131631.jpg
+  - file: d3-grand-central-terminal-04.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:46:37.000Z
+    match: auto
+    original: 20260314_131637.jpg
+  - file: d3-grand-central-terminal-05.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:50:17.000Z
+    match: auto
+    original: 20260314_132017.jpg
+  - file: d3-grand-central-terminal-06.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:50:18.000Z
+    match: auto
+    original: 20260314_132018.jpg
+  - file: d3-grand-central-terminal-07.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:50:19.000Z
+    match: auto
+    original: 20260314_132019.jpg
+  - file: d3-grand-central-terminal-08.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:50:20.000Z
+    match: auto
+    original: 20260314_132020.jpg
+  - file: d3-grand-central-terminal-09.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T07:50:22.000Z
+    match: auto
+    original: 20260314_132022.jpg
+  - file: d3-grand-central-terminal-10.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:10:04.000Z
+    match: auto
+    original: 20260314_134004.jpg
+  - file: d3-grand-central-terminal-11.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:10:10.000Z
+    match: auto
+    original: 20260314_134010.jpg
+  - file: d3-grand-central-terminal-12.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:12:36.000Z
+    match: auto
+    original: 20260314_134236.jpg
+  - file: d3-grand-central-terminal-13.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:12:40.000Z
+    match: auto
+    original: 20260314_134240.jpg
+  - file: d3-grand-central-terminal-14.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:12:46.000Z
+    match: auto
+    original: 20260314_134246.jpg
+  - file: d3-grand-central-terminal-15.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:18:09.000Z
+    match: auto
+    original: 20260314_134809.jpg
+  - file: d3-grand-central-terminal-16.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:18:11.000Z
+    match: auto
+    original: 20260314_134811.jpg
+  - file: d3-grand-central-terminal-17.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:18:55.000Z
+    match: auto
+    original: 20260314_134855.jpg
+  - file: d3-grand-central-terminal-18.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:18:56.000Z
+    match: auto
+    original: 20260314_134856.jpg
+  - file: d3-grand-central-terminal-19.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:09.000Z
+    match: auto
+    original: 20260314_135609.jpg
+  - file: d3-grand-central-terminal-20.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:11.000Z
+    match: auto
+    original: 20260314_135610.jpg
+  - file: d3-grand-central-terminal-21.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:30.000Z
+    match: auto
+    original: 20260314_135630.jpg
+  - file: d3-grand-central-terminal-22.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:36.000Z
+    match: auto
+    original: 20260314_135635.jpg
+  - file: d3-grand-central-terminal-23.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:36.000Z
+    match: auto
+    original: 20260314_135636.jpg
+  - file: d3-grand-central-terminal-24.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:40.000Z
+    match: auto
+    original: 20260314_135640.jpg
+  - file: d3-grand-central-terminal-25.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:26:44.000Z
+    match: auto
+    original: 20260314_135644.jpg
+  - file: d3-grand-central-terminal-26.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:28:08.000Z
+    match: auto
+    original: 20260314_135808.jpg
+  - file: d3-grand-central-terminal-27.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:28:15.000Z
+    match: auto
+    original: 20260314_135815.jpg
+  - file: d3-grand-central-terminal-28.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:28:16.000Z
+    match: auto
+    original: 20260314_135816.jpg
+  - file: d3-grand-central-terminal-29.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:28:19.000Z
+    match: auto
+    original: 20260314_135819.jpg
+  - file: d3-grand-central-terminal-30.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:28:25.000Z
+    match: auto
+    original: 20260314_135825.jpg
+  - file: d3-grand-central-terminal-31.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:28:38.000Z
+    match: auto
+    original: 20260314_135838.jpg
+  - file: d3-grand-central-terminal-32.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:29:33.000Z
+    match: auto
+    original: 20260314_135933.jpg
+  - file: d3-grand-central-terminal-33.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:35:21.000Z
+    match: auto
+    original: 20260314_140521.jpg
+  - file: d3-grand-central-terminal-34.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:35:28.000Z
+    match: auto
+    original: 20260314_140528.jpg
+  - file: d3-grand-central-terminal-35.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:35:30.000Z
+    match: auto
+    original: 20260314_140530.jpg
+  - file: d3-grand-central-terminal-36.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:58:52.000Z
+    match: auto
+    original: 20260314_142852.jpg
+  - file: d3-grand-central-terminal-37.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:58:54.000Z
+    match: auto
+    original: 20260314_142853.jpg
+  - file: d3-grand-central-terminal-38.jpg
+    kind: image
+    day: 3
+    stop: grand-central-terminal
+    takenAt: 2026-03-14T08:58:56.000Z
+    match: auto
+    original: 20260314_142855.jpg
+  - file: d3-the-metropolitan-museum-of-art-01.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:23:38.000Z
+    match: auto
+    original: 20260314_145338.jpg
+  - file: d3-the-metropolitan-museum-of-art-02.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:23:45.000Z
+    match: auto
+    original: 20260314_145345.jpg
+  - file: d3-the-metropolitan-museum-of-art-03.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:23:55.000Z
+    match: auto
+    original: 20260314_145355.jpg
+  - file: d3-the-metropolitan-museum-of-art-04.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:24:39.000Z
+    match: auto
+    original: 20260314_145439.jpg
+  - file: d3-the-metropolitan-museum-of-art-05.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:25:27.000Z
+    match: auto
+    original: 20260314_145527.jpg
+  - file: d3-the-metropolitan-museum-of-art-06.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:25:37.000Z
+    match: auto
+    original: 20260314_145537.jpg
+  - file: d3-the-metropolitan-museum-of-art-07.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:26:02.000Z
+    match: auto
+    original: 20260314_145602.jpg
+  - file: d3-the-metropolitan-museum-of-art-08.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:26:08.000Z
+    match: auto
+    original: 20260314_145607.jpg
+  - file: d3-the-metropolitan-museum-of-art-09.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:26:10.000Z
+    match: auto
+    original: 20260314_145610.jpg
+  - file: d3-the-metropolitan-museum-of-art-10.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:26:16.000Z
+    match: auto
+    original: 20260314_145616.jpg
+  - file: d3-the-metropolitan-museum-of-art-11.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:26:18.000Z
+    match: auto
+    original: 20260314_145618.jpg
+  - file: d3-the-metropolitan-museum-of-art-12.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:34:17.000Z
+    match: auto
+    original: 20260314_150417.jpg
+  - file: d3-the-metropolitan-museum-of-art-13.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:34:40.000Z
+    match: auto
+    original: 20260314_150440.jpg
+  - file: d3-the-metropolitan-museum-of-art-14.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:35:06.000Z
+    match: auto
+    original: 20260314_150506.jpg
+  - file: d3-the-metropolitan-museum-of-art-15.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:35:42.000Z
+    match: auto
+    original: 20260314_150542.jpg
+  - file: d3-the-metropolitan-museum-of-art-16.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:36:36.000Z
+    match: auto
+    original: 20260314_150635.jpg
+  - file: d3-the-metropolitan-museum-of-art-17.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:36:37.000Z
+    match: auto
+    original: 20260314_150637.jpg
+  - file: d3-the-metropolitan-museum-of-art-18.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:36:49.000Z
+    match: auto
+    original: 20260314_150649.jpg
+  - file: d3-the-metropolitan-museum-of-art-19.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:37:34.000Z
+    match: auto
+    original: 20260314_150734.jpg
+  - file: d3-the-metropolitan-museum-of-art-20.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:38:07.000Z
+    match: auto
+    original: 20260314_150807.jpg
+  - file: d3-the-metropolitan-museum-of-art-21.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:38:10.000Z
+    match: auto
+    original: 20260314_150810.jpg
+  - file: d3-the-metropolitan-museum-of-art-22.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:39:54.000Z
+    match: auto
+    original: 20260314_150953.jpg
+  - file: d3-the-metropolitan-museum-of-art-23.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:39:57.000Z
+    match: auto
+    original: 20260314_150957.jpg
+  - file: d3-the-metropolitan-museum-of-art-24.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:39:58.000Z
+    match: auto
+    original: 20260314_150958.jpg
+  - file: d3-the-metropolitan-museum-of-art-25.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:40:27.000Z
+    match: auto
+    original: 20260314_151027.jpg
+  - file: d3-the-metropolitan-museum-of-art-26.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:40:30.000Z
+    match: auto
+    original: 20260314_151030.jpg
+  - file: d3-the-metropolitan-museum-of-art-27.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:41:00.000Z
+    match: auto
+    original: 20260314_151100.jpg
+  - file: d3-the-metropolitan-museum-of-art-28.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:41:04.000Z
+    match: auto
+    original: 20260314_151104.jpg
+  - file: d3-the-metropolitan-museum-of-art-29.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:41:10.000Z
+    match: auto
+    original: 20260314_151110.jpg
+  - file: d3-the-metropolitan-museum-of-art-30.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:43:27.000Z
+    match: auto
+    original: 20260314_151327.jpg
+  - file: d3-the-metropolitan-museum-of-art-31.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:43:29.000Z
+    match: auto
+    original: 20260314_151328.jpg
+  - file: d3-the-metropolitan-museum-of-art-32.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:43:42.000Z
+    match: auto
+    original: 20260314_151342.jpg
+  - file: d3-the-metropolitan-museum-of-art-33.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:44:31.000Z
+    match: auto
+    original: 20260314_151431.jpg
+  - file: d3-the-metropolitan-museum-of-art-34.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:44:37.000Z
+    match: auto
+    original: 20260314_151437.jpg
+  - file: d3-the-metropolitan-museum-of-art-35.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:44:44.000Z
+    match: auto
+    original: 20260314_151444.jpg
+  - file: d3-the-metropolitan-museum-of-art-36.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:44:54.000Z
+    match: auto
+    original: 20260314_151454.jpg
+  - file: d3-the-metropolitan-museum-of-art-37.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:44:58.000Z
+    match: auto
+    original: 20260314_151457.jpg
+  - file: d3-the-metropolitan-museum-of-art-38.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:00.000Z
+    match: auto
+    original: 20260314_151500.jpg
+  - file: d3-the-metropolitan-museum-of-art-39.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:07.000Z
+    match: auto
+    original: 20260314_151507.jpg
+  - file: d3-the-metropolitan-museum-of-art-40.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:14.000Z
+    match: auto
+    original: 20260314_151514.jpg
+  - file: d3-the-metropolitan-museum-of-art-41.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:16.000Z
+    match: auto
+    original: 20260314_151516.jpg
+  - file: d3-the-metropolitan-museum-of-art-42.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:20.000Z
+    match: auto
+    original: 20260314_151520.jpg
+  - file: d3-the-metropolitan-museum-of-art-43.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:35.000Z
+    match: auto
+    original: 20260314_151534.jpg
+  - file: d3-the-metropolitan-museum-of-art-44.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:45:53.000Z
+    match: auto
+    original: 20260314_151553.jpg
+  - file: d3-the-metropolitan-museum-of-art-45.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:46:07.000Z
+    match: auto
+    original: 20260314_151607.jpg
+  - file: d3-the-metropolitan-museum-of-art-46.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:46:08.000Z
+    match: auto
+    original: 20260314_151608.jpg
+  - file: d3-the-metropolitan-museum-of-art-47.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:46:29.000Z
+    match: auto
+    original: 20260314_151629.jpg
+  - file: d3-the-metropolitan-museum-of-art-48.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:46:47.000Z
+    match: auto
+    original: 20260314_151647.jpg
+  - file: d3-the-metropolitan-museum-of-art-49.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:46:59.000Z
+    match: auto
+    original: 20260314_151659.jpg
+  - file: d3-the-metropolitan-museum-of-art-50.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:47:15.000Z
+    match: auto
+    original: 20260314_151715.jpg
+  - file: d3-the-metropolitan-museum-of-art-51.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:47:23.000Z
+    match: auto
+    original: 20260314_151723.jpg
+  - file: d3-the-metropolitan-museum-of-art-52.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:47:52.000Z
+    match: auto
+    original: 20260314_151752.jpg
+  - file: d3-the-metropolitan-museum-of-art-53.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:47:54.000Z
+    match: auto
+    original: 20260314_151754.jpg
+  - file: d3-the-metropolitan-museum-of-art-54.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:47:56.000Z
+    match: auto
+    original: 20260314_151755.jpg
+  - file: d3-the-metropolitan-museum-of-art-55.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:48:18.000Z
+    match: auto
+    original: 20260314_151818.jpg
+  - file: d3-the-metropolitan-museum-of-art-56.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:48:26.000Z
+    match: auto
+    original: 20260314_151825.jpg
+  - file: d3-the-metropolitan-museum-of-art-57.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:48:45.000Z
+    match: auto
+    original: 20260314_151844.jpg
+  - file: d3-the-metropolitan-museum-of-art-58.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:48:53.000Z
+    match: auto
+    original: 20260314_151853.jpg
+  - file: d3-the-metropolitan-museum-of-art-59.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:49:09.000Z
+    match: auto
+    original: 20260314_151909.jpg
+  - file: d3-the-metropolitan-museum-of-art-60.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:49:25.000Z
+    match: auto
+    original: 20260314_151925.jpg
+  - file: d3-the-metropolitan-museum-of-art-61.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:49:36.000Z
+    match: auto
+    original: 20260314_151936.jpg
+  - file: d3-the-metropolitan-museum-of-art-62.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:50:58.000Z
+    match: auto
+    original: 20260314_152058.jpg
+  - file: d3-the-metropolitan-museum-of-art-63.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:52:08.000Z
+    match: auto
+    original: 20260314_152208.jpg
+  - file: d3-the-metropolitan-museum-of-art-64.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:52:10.000Z
+    match: auto
+    original: 20260314_152210.jpg
+  - file: d3-the-metropolitan-museum-of-art-65.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:53:23.000Z
+    match: auto
+    original: 20260314_152322.jpg
+  - file: d3-the-metropolitan-museum-of-art-66.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:54:19.000Z
+    match: auto
+    original: 20260314_152419.jpg
+  - file: d3-the-metropolitan-museum-of-art-67.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:54:24.000Z
+    match: auto
+    original: 20260314_152424.jpg
+  - file: d3-the-metropolitan-museum-of-art-68.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:54:35.000Z
+    match: auto
+    original: 20260314_152434.jpg
+  - file: d3-the-metropolitan-museum-of-art-69.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:54:42.000Z
+    match: auto
+    original: 20260314_152442.jpg
+  - file: d3-the-metropolitan-museum-of-art-70.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:54:58.000Z
+    match: auto
+    original: 20260314_152457.jpg
+  - file: d3-the-metropolitan-museum-of-art-71.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:55:15.000Z
+    match: auto
+    original: 20260314_152515.jpg
+  - file: d3-the-metropolitan-museum-of-art-72.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:55:27.000Z
+    match: auto
+    original: 20260314_152527.jpg
+  - file: d3-the-metropolitan-museum-of-art-73.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:09.000Z
+    match: auto
+    original: 20260314_152609.jpg
+  - file: d3-the-metropolitan-museum-of-art-74.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:15.000Z
+    match: auto
+    original: 20260314_152615.jpg
+  - file: d3-the-metropolitan-museum-of-art-75.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:16.000Z
+    match: auto
+    original: 20260314_152616.jpg
+  - file: d3-the-metropolitan-museum-of-art-76.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:24.000Z
+    match: auto
+    original: 20260314_152624.jpg
+  - file: d3-the-metropolitan-museum-of-art-77.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:34.000Z
+    match: auto
+    original: 20260314_152634.jpg
+  - file: d3-the-metropolitan-museum-of-art-78.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:39.000Z
+    match: auto
+    original: 20260314_152638.jpg
+  - file: d3-the-metropolitan-museum-of-art-79.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:56:40.000Z
+    match: auto
+    original: 20260314_152640.jpg
+  - file: d3-the-metropolitan-museum-of-art-80.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:57:05.000Z
+    match: auto
+    original: 20260314_152705.jpg
+  - file: d3-the-metropolitan-museum-of-art-81.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T09:58:09.000Z
+    match: auto
+    original: 20260314_152809.jpg
+  - file: d3-the-metropolitan-museum-of-art-82.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:00:21.000Z
+    match: auto
+    original: 20260314_153021.jpg
+  - file: d3-the-metropolitan-museum-of-art-83.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:00:34.000Z
+    match: auto
+    original: 20260314_153034.jpg
+  - file: d3-the-metropolitan-museum-of-art-84.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:00:53.000Z
+    match: auto
+    original: 20260314_153053.jpg
+  - file: d3-the-metropolitan-museum-of-art-85.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:02:25.000Z
+    match: auto
+    original: 20260314_153225.jpg
+  - file: d3-the-metropolitan-museum-of-art-86.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:02:33.000Z
+    match: auto
+    original: 20260314_153233.jpg
+  - file: d3-the-metropolitan-museum-of-art-87.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:02:40.000Z
+    match: auto
+    original: 20260314_153239.jpg
+  - file: d3-the-metropolitan-museum-of-art-88.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:02:53.000Z
+    match: auto
+    original: 20260314_153253.jpg
+  - file: d3-the-metropolitan-museum-of-art-89.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:03:07.000Z
+    match: auto
+    original: 20260314_153307.jpg
+  - file: d3-the-metropolitan-museum-of-art-90.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:04:37.000Z
+    match: auto
+    original: 20260314_153437.jpg
+  - file: d3-the-metropolitan-museum-of-art-91.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:04:38.000Z
+    match: auto
+    original: 20260314_153438.jpg
+  - file: d3-the-metropolitan-museum-of-art-92.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:06:37.000Z
+    match: auto
+    original: 20260314_153637.jpg
+  - file: d3-the-metropolitan-museum-of-art-93.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:17:51.000Z
+    match: auto
+    original: 20260314_154751.jpg
+  - file: d3-the-metropolitan-museum-of-art-94.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:17:58.000Z
+    match: auto
+    original: 20260314_154758.jpg
+  - file: d3-the-metropolitan-museum-of-art-95.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:18:04.000Z
+    match: auto
+    original: 20260314_154803.jpg
+  - file: d3-the-metropolitan-museum-of-art-96.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:18:18.000Z
+    match: auto
+    original: 20260314_154818.jpg
+  - file: d3-the-metropolitan-museum-of-art-97.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:18:30.000Z
+    match: auto
+    original: 20260314_154830.jpg
+  - file: d3-the-metropolitan-museum-of-art-98.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:18:50.000Z
+    match: auto
+    original: 20260314_154850.jpg
+  - file: d3-the-metropolitan-museum-of-art-99.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:19:08.000Z
+    match: auto
+    original: 20260314_154908.jpg
+  - file: d3-the-metropolitan-museum-of-art-100.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:19:28.000Z
+    match: auto
+    original: 20260314_154928.jpg
+  - file: d3-the-metropolitan-museum-of-art-101.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:19:34.000Z
+    match: auto
+    original: 20260314_154934.jpg
+  - file: d3-the-metropolitan-museum-of-art-102.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:19:40.000Z
+    match: auto
+    original: 20260314_154939.jpg
+  - file: d3-the-metropolitan-museum-of-art-103.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:25:58.000Z
+    match: auto
+    original: 20260314_155558.jpg
+  - file: d3-the-metropolitan-museum-of-art-104.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:58:39.000Z
+    match: auto
+    original: 20260314_162839.jpg
+  - file: d3-the-metropolitan-museum-of-art-105.jpg
+    kind: image
+    day: 3
+    stop: the-metropolitan-museum-of-art
+    takenAt: 2026-03-14T10:59:22.000Z
+    match: auto
+    original: 20260314_162922.jpg
+  - file: d3-guggenheim-museum-01.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:05:04.000Z
+    match: auto
+    original: 20260314_163504.jpg
+  - file: d3-guggenheim-museum-02.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:05:08.000Z
+    match: auto
+    original: 20260314_163507.jpg
+  - file: d3-guggenheim-museum-03.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:05:14.000Z
+    match: auto
+    original: 20260314_163513.jpg
+  - file: d3-guggenheim-museum-04.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:09:12.000Z
+    match: auto
+    original: 20260314_163911.jpg
+  - file: d3-guggenheim-museum-05.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:10:11.000Z
+    match: auto
+    original: 20260314_164011.jpg
+  - file: d3-guggenheim-museum-06.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:10:13.000Z
+    match: auto
+    original: 20260314_164013.jpg
+  - file: d3-guggenheim-museum-07.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:10:46.000Z
+    match: auto
+    original: 20260314_164045.jpg
+  - file: d3-guggenheim-museum-08.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:11:59.000Z
+    match: auto
+    original: 20260314_164159.jpg
+  - file: d3-guggenheim-museum-09.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:12:03.000Z
+    match: auto
+    original: 20260314_164203.jpg
+  - file: d3-guggenheim-museum-10.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:12:42.000Z
+    match: auto
+    original: 20260314_164242.jpg
+  - file: d3-guggenheim-museum-11.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:13:09.000Z
+    match: auto
+    original: 20260314_164309.jpg
+  - file: d3-guggenheim-museum-12.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:13:15.000Z
+    match: auto
+    original: 20260314_164315.jpg
+  - file: d3-guggenheim-museum-13.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:13:34.000Z
+    match: auto
+    original: 20260314_164333.jpg
+  - file: d3-guggenheim-museum-14.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:13:37.000Z
+    match: auto
+    original: 20260314_164337.jpg
+  - file: d3-guggenheim-museum-15.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:14:40.000Z
+    match: auto
+    original: 20260314_164440.jpg
+  - file: d3-guggenheim-museum-16.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:15:04.000Z
+    match: auto
+    original: 20260314_164504.jpg
+  - file: d3-guggenheim-museum-17.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:15:09.000Z
+    match: auto
+    original: 20260314_164509.jpg
+  - file: d3-guggenheim-museum-18.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:15:13.000Z
+    match: auto
+    original: 20260314_164513.jpg
+  - file: d3-guggenheim-museum-19.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:15:36.000Z
+    match: auto
+    original: 20260314_164535.jpg
+  - file: d3-guggenheim-museum-20.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:15:44.000Z
+    match: auto
+    original: 20260314_164544.jpg
+  - file: d3-guggenheim-museum-21.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:15:53.000Z
+    match: auto
+    original: 20260314_164553.jpg
+  - file: d3-guggenheim-museum-22.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:16:24.000Z
+    match: auto
+    original: 20260314_164624.jpg
+  - file: d3-guggenheim-museum-23.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:16:29.000Z
+    match: auto
+    original: 20260314_164629.jpg
+  - file: d3-guggenheim-museum-24.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:17:00.000Z
+    match: auto
+    original: 20260314_164700.jpg
+  - file: d3-guggenheim-museum-25.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:17:02.000Z
+    match: auto
+    original: 20260314_164701.jpg
+  - file: d3-guggenheim-museum-26.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:17:13.000Z
+    match: auto
+    original: 20260314_164713.jpg
+  - file: d3-guggenheim-museum-27.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:17:16.000Z
+    match: auto
+    original: 20260314_164716.jpg
+  - file: d3-guggenheim-museum-28.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:17:52.000Z
+    match: auto
+    original: 20260314_164752.jpg
+  - file: d3-guggenheim-museum-29.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:17:54.000Z
+    match: auto
+    original: 20260314_164754.jpg
+  - file: d3-day-03.mp4
+    kind: video
+    day: 3
+    stop: null
+    match: auto
+    original: 20260314_164838.mp4
+  - file: d3-guggenheim-museum-30.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:18:49.000Z
+    match: auto
+    original: 20260314_164849.jpg
+  - file: d3-guggenheim-museum-31.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:18:50.000Z
+    match: auto
+    original: 20260314_164850.jpg
+  - file: d3-guggenheim-museum-32.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:19:30.000Z
+    match: auto
+    original: 20260314_164929.jpg
+  - file: d3-guggenheim-museum-33.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:19:47.000Z
+    match: auto
+    original: 20260314_164947.jpg
+  - file: d3-guggenheim-museum-34.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:19:49.000Z
+    match: auto
+    original: 20260314_164948.jpg
+  - file: d3-guggenheim-museum-35.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:20:59.000Z
+    match: auto
+    original: 20260314_165059.jpg
+  - file: d3-guggenheim-museum-36.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:22:34.000Z
+    match: auto
+    original: 20260314_165234.jpg
+  - file: d3-guggenheim-museum-37.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:36:48.000Z
+    match: auto
+    original: 20260314_170648.jpg
+  - file: d3-guggenheim-museum-38.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:50:38.000Z
+    match: auto
+    original: 20260314_172038.jpg
+  - file: d3-guggenheim-museum-39.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:50:42.000Z
+    match: auto
+    original: 20260314_172041.jpg
+  - file: d3-guggenheim-museum-40.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:50:44.000Z
+    match: auto
+    original: 20260314_172044.jpg
+  - file: d3-guggenheim-museum-41.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:51:04.000Z
+    match: auto
+    original: 20260314_172104.jpg
+  - file: d3-guggenheim-museum-42.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:54:22.000Z
+    match: auto
+    original: 20260314_172422.jpg
+  - file: d3-guggenheim-museum-43.jpg
+    kind: image
+    day: 3
+    stop: guggenheim-museum
+    takenAt: 2026-03-14T11:54:24.000Z
+    match: auto
+    original: 20260314_172423.jpg
+  - file: d3-central-park-01.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:05:49.000Z
+    match: auto
+    original: 20260314_173549.jpg
+  - file: d3-central-park-02.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:05:52.000Z
+    match: auto
+    original: 20260314_173552.jpg
+  - file: d3-central-park-03.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:05:53.000Z
+    match: auto
+    original: 20260314_173553.jpg
+  - file: d3-central-park-04.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:05:55.000Z
+    match: auto
+    original: 20260314_173555.jpg
+  - file: d3-central-park-05.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:05:56.000Z
+    match: auto
+    original: 20260314_173556.jpg
+  - file: d3-central-park-06.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:06:46.000Z
+    match: auto
+    original: 20260314_173646.jpg
+  - file: d3-central-park-07.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:06:54.000Z
+    match: auto
+    original: 20260314_173654.jpg
+  - file: d3-central-park-08.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:08:47.000Z
+    match: auto
+    original: 20260314_173847.jpg
+  - file: d3-central-park-09.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:23.000Z
+    match: auto
+    original: 20260314_175222.jpg
+  - file: d3-central-park-10.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:24.000Z
+    match: auto
+    original: 20260314_175224.jpg
+  - file: d3-central-park-11.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:25.000Z
+    match: auto
+    original: 20260314_175225.jpg
+  - file: d3-central-park-12.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:27.000Z
+    match: auto
+    original: 20260314_175227.jpg
+  - file: d3-central-park-13.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:30.000Z
+    match: auto
+    original: 20260314_175230.jpg
+  - file: d3-central-park-14.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:32.000Z
+    match: auto
+    original: 20260314_175231.jpg
+  - file: d3-central-park-15.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:22:33.000Z
+    match: auto
+    original: 20260314_175233.jpg
+  - file: d3-central-park-16.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:24:40.000Z
+    match: auto
+    original: 20260314_175439.jpg
+  - file: d3-central-park-17.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:24:42.000Z
+    match: auto
+    original: 20260314_175442.jpg
+  - file: d3-day-04.mp4
+    kind: video
+    day: 3
+    stop: null
+    match: auto
+    original: 20260314_180405.mp4
+  - file: d3-central-park-18.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:35:14.000Z
+    match: auto
+    original: 20260314_180514.jpg
+  - file: d3-central-park-19.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:35:18.000Z
+    match: auto
+    original: 20260314_180518.jpg
+  - file: d3-central-park-20.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:35:23.000Z
+    match: auto
+    original: 20260314_180523.jpg
+  - file: d3-central-park-21.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:35:27.000Z
+    match: auto
+    original: 20260314_180527.jpg
+  - file: d3-central-park-22.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:36:30.000Z
+    match: auto
+    original: 20260314_180630.jpg
+  - file: d3-central-park-23.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:36:31.000Z
+    match: auto
+    original: 20260314_180631.jpg
+  - file: d3-central-park-24.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:37:02.000Z
+    match: auto
+    original: 20260314_180702.jpg
+  - file: d3-central-park-25.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:37:03.000Z
+    match: auto
+    original: 20260314_180703.jpg
+  - file: d3-central-park-26.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:37:06.000Z
+    match: auto
+    original: 20260314_180706.jpg
+  - file: d3-central-park-27.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:38:12.000Z
+    match: auto
+    original: 20260314_180811.jpg
+  - file: d3-central-park-28.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:38:13.000Z
+    match: auto
+    original: 20260314_180813.jpg
+  - file: d3-central-park-29.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:38:18.000Z
+    match: auto
+    original: 20260314_180818.jpg
+  - file: d3-central-park-30.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:38:27.000Z
+    match: auto
+    original: 20260314_180827.jpg
+  - file: d3-central-park-31.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:39:42.000Z
+    match: auto
+    original: 20260314_180941.jpg
+  - file: d3-central-park-32.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:39:48.000Z
+    match: auto
+    original: 20260314_180948.jpg
+  - file: d3-central-park-33.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:39:52.000Z
+    match: auto
+    original: 20260314_180952.jpg
+  - file: d3-central-park-34.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:41:48.000Z
+    match: auto
+    original: 20260314_181148.jpg
+  - file: d3-central-park-35.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:41:50.000Z
+    match: auto
+    original: 20260314_181150.jpg
+  - file: d3-central-park-36.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:41:52.000Z
+    match: auto
+    original: 20260314_181152.jpg
+  - file: d3-central-park-37.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:42:22.000Z
+    match: auto
+    original: 20260314_181221.jpg
+  - file: d3-central-park-38.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:42:29.000Z
+    match: auto
+    original: 20260314_181229.jpg
+  - file: d3-central-park-39.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:42:30.000Z
+    match: auto
+    original: 20260314_181230.jpg
+  - file: d3-central-park-40.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:42:31.000Z
+    match: auto
+    original: 20260314_181231.jpg
+  - file: d3-central-park-41.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:43:37.000Z
+    match: auto
+    original: 20260314_181336.jpg
+  - file: d3-central-park-42.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:45:06.000Z
+    match: auto
+    original: 20260314_181506.jpg
+  - file: d3-central-park-43.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:45:09.000Z
+    match: auto
+    original: 20260314_181509.jpg
+  - file: d3-central-park-44.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:47:54.000Z
+    match: auto
+    original: 20260314_181754.jpg
+  - file: d3-central-park-45.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:47:55.000Z
+    match: auto
+    original: 20260314_181755.jpg
+  - file: d3-central-park-46.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:47:58.000Z
+    match: auto
+    original: 20260314_181758.jpg
+  - file: d3-central-park-47.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:48:05.000Z
+    match: auto
+    original: 20260314_181805.jpg
+  - file: d3-central-park-48.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:48:43.000Z
+    match: auto
+    original: 20260314_181843.jpg
+  - file: d3-central-park-49.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:48:47.000Z
+    match: auto
+    original: 20260314_181847.jpg
+  - file: d3-central-park-50.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:48:49.000Z
+    match: auto
+    original: 20260314_181849.jpg
+  - file: d3-central-park-51.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:48:51.000Z
+    match: auto
+    original: 20260314_181851.jpg
+  - file: d3-central-park-52.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:49:50.000Z
+    match: auto
+    original: 20260314_181949.jpg
+  - file: d3-central-park-53.jpg
+    kind: image
+    day: 3
+    stop: central-park
+    takenAt: 2026-03-14T12:51:01.000Z
+    match: auto
+    original: 20260314_182101.jpg
+  - file: d3-gleasons-gym-01.jpg
+    kind: image
+    day: 3
+    stop: gleasons-gym
+    takenAt: 2026-03-14T03:06:43.000Z
+    match: auto
+    original: Screenshot_20260314_083643_Calculator.jpg
