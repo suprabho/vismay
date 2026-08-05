@@ -7,6 +7,7 @@ import {
   createAuthBrowserClient,
   createAdminAuthClient,
 } from '@vismay/ui'
+import { adminCookieDomainForHost } from '@/lib/adminCookieDomain'
 
 interface Props {
   next: string
@@ -29,9 +30,18 @@ export default function AdminAuth({ next, brandName, accent, accentFg }: Props) 
   const router = useRouter()
 
   const authClient = useMemo(() => {
+    // Scope the session cookie to the SAME domain the server client uses
+    // (`.vismay.xyz` for the admin family, host-only elsewhere). Without this
+    // the browser client can't clear an invalid session cookie the server set,
+    // and a dead refresh token loops against /token until it's rate-limited.
+    const domain =
+      typeof window !== 'undefined'
+        ? adminCookieDomainForHost(window.location.hostname)
+        : undefined
     const supabase = createAuthBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      domain ? { cookieOptions: { domain } } : undefined,
     )
     return createAdminAuthClient({ supabase })
   }, [])

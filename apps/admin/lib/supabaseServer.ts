@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies, headers } from 'next/headers'
 import type { NextRequest, NextResponse } from 'next/server'
+import { adminCookieDomainForHost } from './adminCookieDomain'
 
 /**
  * Supabase Auth wiring for admin (server side).
@@ -45,10 +46,10 @@ function cookieDomainForHost(host: string | null | undefined): string | undefine
   // *.vismay.xyz). Every other admin host — admin.vizmaya.fyi,
   // admin.footshorts.com, admin.vizf1.com — is a different registrable domain
   // that can't carry a `.vismay.xyz` cookie, so it gets a host-only cookie and
-  // therefore its own independent per-vertical session.
-  const h = (host ?? '').split(':')[0].toLowerCase()
-  if (h === 'vismay.xyz' || h.endsWith('.vismay.xyz')) return '.vismay.xyz'
-  return undefined
+  // therefore its own independent per-vertical session. The browser client
+  // (AdminAuth) MUST derive the domain from this same rule, or it can't clear
+  // the cookie the server sets — see lib/adminCookieDomain.ts.
+  return adminCookieDomainForHost(host)
 }
 
 /** Merge the host-appropriate cookie domain into Supabase's per-cookie options. */
