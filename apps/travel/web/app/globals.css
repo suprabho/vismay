@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+/* Handwritten caption face for the travel:polaroid module. */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap');
+
+/* Tailwind v4 JIT only scans the importing package by default. The engine's
+ * slot dispatchers, the story-reader shell, and the travel vertical's modules
+ * all use utility classes — point the scanner at each. */
+@source '../../../../packages/viz-engine/src';
+@source '../../../../packages/story-reader/src';
+@source '../../../../verticals/travel-viz/src';
+
+html,
+body {
+  background: var(--color-bg, #faf7f0);
+  color: var(--color-text, #2b2419);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  margin: 0;
+}
+
+/* Mapbox GL requires its stylesheet; the journey map imports it from the
+ * package, but popups/markers also render outside React — keep base controls
+ * legible on the light basemap. */
+.mapboxgl-ctrl-attrib {
+  font-size: 10px;
+}

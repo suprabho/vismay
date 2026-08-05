@@ -154,6 +154,7 @@ const VERTICAL_TO_APP_SLUG: Record<string, string> = {
   footshorts: 'footshorts',
   f1: 'vizf1',
   kidzovo: 'kidzovo',
+  travel: 'travel',
 }
 
 /**

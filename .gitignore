@@ -20,3 +20,5 @@ vizmaya-data/searching-for-umami/scrape-state.json
 # searching-for-umami INGEST_NOTES for provenance + re-download pointers)
 vizmaya-data/6000+ Indian Food Recipes Dataset/
 vizmaya-data/CulinaryDB/
+# Travel-app media staging (originals + staged copies live in the bucket, not git)
+vizmaya-data/travel-media/

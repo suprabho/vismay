@@ -15,6 +15,7 @@
     "./storySources": "./src/storySources.ts",
     "./demoAuth": "./src/demoAuth.ts",
     "./demos": "./src/demos.ts",
+    "./travelTrips": "./src/travelTrips.ts",
     "./epics": "./src/epics.ts",
     "./pipelines": "./src/pipelines.ts",
     "./frontmatter": "./src/frontmatter.ts",

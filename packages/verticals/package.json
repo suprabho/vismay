@@ -13,7 +13,8 @@
     "@vismay/footshorts-viz": "workspace:*",
     "@vismay/f1-viz": "workspace:*",
     "@vismay/kidzovo-viz": "workspace:*",
-    "@vismay/starship-viz": "workspace:*"
+    "@vismay/starship-viz": "workspace:*",
+    "@vismay/travel-viz": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5"
