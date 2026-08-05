@@ -1,0 +1,50 @@
+/* Handwritten caption face for the travel:polaroid module. */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap');
+@import 'tailwindcss';
+
+/* Tailwind v4 JIT only scans the importing package by default. The engine's
+ * slot dispatchers, the story-reader shell, and the travel vertical's modules
+ * all use utility classes — point the scanner at each. */
+@source '../../../../packages/viz-engine/src';
+@source '../../../../packages/story-reader/src';
+@source '../../../../verticals/travel-viz/src';
+
+/* Paper-grain wash over the persistent map on scrapbook stories — SVG
+ * turbulence noise at low opacity plus a cream edge vignette. Sits between
+ * the map background (z-0) and the foreground overlay (z-10). */
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.66 0 0 0 0 0.62 0 0 0 0 0.53 0 0 0 0.055 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+  box-shadow: inset 0 0 22vmin rgba(246, 241, 231, 0.75);
+}
+
+/* Scrapbook layers settle onto the page when a spread becomes active
+ * (travel-viz modules reference this by name; see lib/enter.ts there). */
+@keyframes travel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html,
+body {
+  background: var(--color-bg, #faf7f0);
+  color: var(--color-text, #2b2419);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  margin: 0;
+}
+
+/* Mapbox GL requires its stylesheet; the journey map imports it from the
+ * package, but popups/markers also render outside React — keep base controls
+ * legible on the light basemap. */
+.mapboxgl-ctrl-attrib {
+  font-size: 10px;
+}

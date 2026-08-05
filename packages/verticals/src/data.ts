@@ -105,6 +105,15 @@ export const VERTICALS: VerticalEntry[] = [
     loadBundle: () => import('@vismay/starship-viz'),
     tailwindSources: ['verticals/starship-viz/src/**/*.{ts,tsx}'],
   },
+  {
+    slug: 'travel',
+    loadBundle: () => import('@vismay/travel-viz'),
+    tailwindSources: ['verticals/travel-viz/src/**/*.{ts,tsx}'],
+    publicRoutes: {
+      appSlug: 'travel',
+      storyPath: (slug) => `/t/${slug}/story`,
+    },
+  },
 ]
 
 /** Lookup by slug, for callers that need a single entry. */
@@ -314,6 +323,20 @@ export const APPS: AppEntry[] = [
     // food epic's landing, so every epic resolves to `/`. Stories embed the
     // vizmaya render (no umami vertical/viz package yet).
     routing: { storyPath: (slug) => `/editorial/${slug}`, epicPath: () => '/' },
+  },
+  {
+    slug: 'travel',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_TRAVEL', default: 'https://vizmaya.fyi' },
+      consumer: { env: 'NEXT_PUBLIC_TRAVEL_URL', default: 'https://travel.vismay.xyz' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_TRAVEL_URL', default: 'https://vismay.xyz' },
+    },
+    branding: { hideLogoInAutoplay: true, dataAttr: 'travel' },
+    // Personal trip stories: password-gated reader only — no share cards,
+    // PDFs, or autoplay videos are rendered for this app (the artifacts land
+    // in public buckets, which would leak gated content).
+    surfaces: { share: false, report: false, slides: false, autoplay: false },
+    routing: { storyPath: (slug) => `/t/${slug}/story` },
   },
 ]
 

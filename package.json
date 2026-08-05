@@ -13,11 +13,20 @@
     "typecheck": "turbo run typecheck",
     "mcp:dev": "tsx scripts/mcp-dev.mts",
     "mcp:catalog": "PORT=3100 pnpm --filter @vismay/catalog dev",
-    "gen:sources": "tsx scripts/gen-tailwind-sources.mts"
+    "gen:sources": "tsx scripts/gen-tailwind-sources.mts",
+    "travel:import": "tsx scripts/travel/import-pro-trip.ts",
+    "travel:prepare-media": "tsx scripts/travel/prepare-media.ts",
+    "travel:upload-media": "tsx scripts/travel/upload-media.ts",
+    "travel:sync-media-db": "tsx scripts/travel/sync-media-db.ts",
+    "travel:set-password": "tsx scripts/travel/set-trip-password.ts"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "exifr": "^7.1.3",
+    "sharp": "^0.34.5",
     "tsx": "^4.22.3",
     "turbo": "^2.5.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "yaml": "^2.8.3"
   }
 }
