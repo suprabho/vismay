@@ -6,18 +6,37 @@
  * and handed to `registerVizModule` so apps that never render travel
  * stories tree-shake them out of the bundle.
  *
- * Shipped so far:
- *   - travel:polaroid — a photo in a white polaroid matte with a
- *     handwritten caption, optional rotation and masking tape. Composed
- *     into scrapbook sections via `layout: free` with per-layer
- *     `style.position` / `style.size`.
+ * Modules:
+ *   - travel:polaroid   — photo in a white matte, handwritten caption, tape
+ *   - travel:tapeNote   — handwritten note on a paper scrap
+ *   - travel:ticket     — perforated admission/order stub
+ *   - travel:photoStack — fanned pile of matted photos (+ "N more" tab)
+ *   - travel:postmark   — circular rubber-stamp time/place anchor
+ *   - travel:prefetch   — invisible next-spread image warmer
+ *
+ * Layouts (registerScrapbookLayouts): travel:spread-left / spread-right /
+ * spread-hero / spread-center — paper artifacts positioned over the live map.
  */
 
 import { registerVizModule } from '@vismay/viz-engine'
+import { registerScrapbookLayouts } from './layouts'
 
 export async function register(): Promise<void> {
-  const { default: polaroidModule } = await import('./modules/polaroid')
-  registerVizModule(polaroidModule)
+  const [polaroid, tapeNote, ticket, photoStack, postmark, prefetch] = await Promise.all([
+    import('./modules/polaroid'),
+    import('./modules/tapeNote'),
+    import('./modules/ticket'),
+    import('./modules/photoStack'),
+    import('./modules/postmark'),
+    import('./modules/prefetch'),
+  ])
+  registerVizModule(polaroid.default)
+  registerVizModule(tapeNote.default)
+  registerVizModule(ticket.default)
+  registerVizModule(photoStack.default)
+  registerVizModule(postmark.default)
+  registerVizModule(prefetch.default)
+  registerScrapbookLayouts()
   // eslint-disable-next-line no-console
   console.log('[travel-viz] registered')
 }

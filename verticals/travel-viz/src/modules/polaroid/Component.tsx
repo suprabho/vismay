@@ -4,7 +4,10 @@ import { useEffect, useImperativeHandle, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { resolveAssetUrl } from '@vismay/viz-engine'
 import type { VizCaptureHandle, VizRenderProps } from '@vismay/viz-engine'
+import { enterStyle } from '../../lib/enter'
 import type { PolaroidLayerConfig } from './index'
+
+const ASPECTS = { square: '1 / 1', portrait: '3 / 4', landscape: '4 / 3' } as const
 
 /**
  * `travel:polaroid` — a photo in a white matte with an extra-deep bottom
@@ -61,6 +64,7 @@ export default function PolaroidLayerComponent({
     transform: rotation ? `rotate(${rotation}deg)` : undefined,
     boxShadow: shadow ? '0 10px 28px rgba(20, 16, 8, 0.28)' : undefined,
     borderRadius: 2,
+    ...enterStyle(config.enterDelay),
   }
 
   const tapeBase: CSSProperties = {
@@ -95,7 +99,7 @@ export default function PolaroidLayerComponent({
           style={{
             display: 'block',
             width: '100%',
-            aspectRatio: '1 / 1',
+            aspectRatio: ASPECTS[config.aspect ?? 'square'],
             objectFit: 'cover',
             objectPosition: config.focus ?? 'center',
             background: '#e9e5da',

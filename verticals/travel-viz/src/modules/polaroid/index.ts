@@ -30,6 +30,16 @@ export const polaroidSchema = z.object({
     .string()
     .optional()
     .describe("CSS object-position for the photo's focal point, e.g. 'top' or '30% 50%'."),
+  aspect: z
+    .enum(['square', 'portrait', 'landscape'])
+    .default('square')
+    .describe('Photo window shape — portrait (3:4) avoids cropping phone shots.'),
+  enterDelay: z
+    .number()
+    .min(0)
+    .max(2000)
+    .optional()
+    .describe('Entrance-animation stagger in ms.'),
 })
 
 export type PolaroidLayerConfig = z.infer<typeof polaroidSchema>

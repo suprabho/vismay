@@ -116,14 +116,13 @@ export function listTripSlugs(): string[] {
 }
 
 export function readTrip(slug: string): TripData | null {
-  // Slug doubles as a path segment — reject anything path-like outright.
-  if (!/^[a-z0-9][a-z0-9_-]*$/.test(slug)) return null
+  const trip = readTripBase(slug)
+  if (!trip) return null
+  attachMediaFromYaml(trip)
+  return trip
+}
 
-  const raw = readYamlIfExists<Record<string, unknown>>(
-    path.join(STORIES_DIR, `${slug}.trip.yaml`)
-  )
-  if (!raw) return null
-
+function buildTrip(slug: string, raw: Record<string, unknown>): TripData {
   const rawDays = Array.isArray(raw.days) ? (raw.days as Record<string, unknown>[]) : []
   const days: TripDay[] = rawDays.map((d) => ({
     n: (d.n as number | null) ?? null,
@@ -153,7 +152,7 @@ export function readTrip(slug: string): TripData | null {
     media: [],
   }))
 
-  const trip: TripData = {
+  return {
     slug,
     id: String(raw.id ?? slug),
     city: String(raw.city ?? slug),
@@ -165,23 +164,70 @@ export function readTrip(slug: string): TripData | null {
     days,
     airports: Array.isArray(raw.airports) ? (raw.airports as TripAirport[]) : [],
   }
+}
 
-  attachMedia(trip)
+/**
+ * DB-first variant for the journey view: media comes from `travel_trip_media`
+ * (what /curate edits — only `selected` rows), falling back to the git YAML
+ * manifest when the env is missing, the table isn't migrated/seeded, or the
+ * query fails. Mirrors gate.ts's fails-open-in-dev posture.
+ */
+export async function readTripWithMedia(slug: string): Promise<TripData | null> {
+  const trip = readTripBase(slug)
+  if (!trip) return null
+
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const { listTripMedia } = await import('@vismay/content-source/travelMedia')
+      const rows = (await listTripMedia(slug)).filter((r) => r.selected)
+      if (rows.length > 0) {
+        attachRows(
+          trip,
+          rows.map((r) => ({
+            file: r.file,
+            kind: r.kind,
+            day: r.day,
+            stop: r.stop,
+            caption: r.caption ?? undefined,
+            takenAt: r.taken_at ?? undefined,
+          }))
+        )
+        return trip
+      }
+      console.warn(`[travel] travel_trip_media empty for ${slug} — using YAML manifest`)
+    } catch (e) {
+      console.warn(`[travel] media DB read failed for ${slug}, using YAML manifest:`, e)
+    }
+  }
+  attachMediaFromYaml(trip)
   return trip
 }
 
-function attachMedia(trip: TripData): void {
+/** `readTrip` minus the media attach — shared base for both variants. */
+function readTripBase(slug: string): TripData | null {
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(slug)) return null
+  const raw = readYamlIfExists<Record<string, unknown>>(
+    path.join(STORIES_DIR, `${slug}.trip.yaml`)
+  )
+  if (!raw) return null
+  return buildTrip(slug, raw)
+}
+
+function attachMediaFromYaml(trip: TripData): void {
   const manifest = readYamlIfExists<{ media?: MediaManifestEntry[] }>(
     path.join(STORIES_DIR, `${trip.slug}.media.yaml`)
   )
   if (!manifest?.media) return
+  attachRows(trip, manifest.media)
+}
 
+function attachRows(trip: TripData, entries: MediaManifestEntry[]): void {
   const stopsBySlug = new Map<string, TripStop>()
   for (const day of trip.days) for (const stop of day.stops) stopsBySlug.set(stop.slug, stop)
   const daysByN = new Map<number, TripDay>()
   for (const day of trip.days) if (day.n != null) daysByN.set(day.n, day)
 
-  for (const entry of manifest.media) {
+  for (const entry of entries) {
     if (!entry.file) continue
     const media: StopMedia = {
       file: entry.file,
@@ -197,7 +243,7 @@ function attachMedia(trip: TripData): void {
     }
     const day = entry.day != null ? daysByN.get(entry.day) : undefined
     if (day) day.media.push(media)
-    // Entries with neither a resolvable stop nor day are staged-but-unassigned
-    // (`match: manual` rows the manifest reviewer hasn't filled yet) — skip.
+    // Entries with neither a resolvable stop nor day are unassigned — skip
+    // here; /curate is where they surface.
   }
 }

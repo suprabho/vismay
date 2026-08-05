@@ -8,6 +8,12 @@ import { StoryShell, ThemeProvider } from '@vismay/story-reader'
 
 import VerticalLoader from '@/components/VerticalLoader'
 import { requireTripAuth } from '@/lib/gate'
+import { getCuratedDayMedia } from '@/lib/scrapbookMedia'
+import { injectScrapbookLayers } from '@/lib/scrapbookLayers'
+import { readTrip } from '@/lib/trips'
+
+/** The scrapbook narrates one day of the trip. */
+const SCRAPBOOK_DAY = 3
 
 // Password-gated: render per request (the gate reads the visitor's cookie),
 // and keep every trip page out of search indexes.
@@ -53,6 +59,17 @@ export default async function TripStoryPage({ params }: RouteParams) {
     notFound()
   }
 
+  // Scrapbook injection: curated photos (DB-first, manifest fallback) become
+  // foreground layers on sections that carry a `scrapbook:` block.
+  const trip = readTrip(slug)
+  if (trip) {
+    const mediaByStop = await getCuratedDayMedia(slug, SCRAPBOOK_DAY)
+    config = injectScrapbookLayers(config, mediaByStop, trip, {
+      day: SCRAPBOOK_DAY,
+      slug,
+    })
+  }
+
   const { units, mobileUnits, hasMobileOverrides } = resolveUnits(
     slug,
     story.sections,
@@ -79,6 +96,8 @@ export default async function TripStoryPage({ params }: RouteParams) {
         </>
       )}
       {assetOrigin && <link rel="preconnect" href={assetOrigin} crossOrigin="" />}
+      {/* Paper grain between the map (z-0) and the foreground (z-10). */}
+      <div aria-hidden className="paper-grain" />
       <VerticalLoader vertical={story.frontmatter.vertical}>
         <StoryShell
           units={units}

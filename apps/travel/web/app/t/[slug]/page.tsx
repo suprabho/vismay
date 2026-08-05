@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 
 import TripJourneyMap from '@/components/journey/TripJourneyMap'
 import { requireTripAuth } from '@/lib/gate'
-import { readTrip } from '@/lib/trips'
+import { readTrip, readTripWithMedia } from '@/lib/trips'
 
 // Password-gated: render per request (the gate reads the visitor's cookie),
 // and keep every trip page out of search indexes.
@@ -27,7 +27,8 @@ export default async function TripJourneyPage({ params }: RouteParams) {
   const { slug } = await params
   await requireTripAuth(slug)
 
-  const trip = readTrip(slug)
+  // DB-first media (what /curate edits), YAML manifest fallback.
+  const trip = await readTripWithMedia(slug)
   if (!trip) notFound()
 
   const dayCount = trip.days.filter((d) => d.n != null).length
