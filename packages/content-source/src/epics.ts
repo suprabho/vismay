@@ -1764,3 +1764,314 @@ export async function listFoodHistoryForSubject(
   if (error) throw new Error(`listFoodHistoryForSubject: ${error.message}`)
   return ((data ?? []) as unknown as Record<string, unknown>[]).map(mapFoodHistoryEvent)
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Nashta meal planner (`food_meal_plans`, migration 075) — the admin /nashta
+ * mini-app: AI suggests three combos for a chosen meal (breakfast / lunch /
+ * dinner) from the archanas-kitchen corpus, the user picks one, the plan
+ * gains a shopping list + Hindi YouTube videos. Service-role only (no anon
+ * RLS) — plans embed recipe-derived text from the rights-sensitive corpora,
+ * same posture as food_recipes itself.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export type NashtaMeal = 'breakfast' | 'lunch' | 'dinner'
+
+export interface MealPlanPrefs {
+  vegOnly: boolean | null
+  maxTotalMin: number | null
+  exclude: string[]
+  /** Dishes/drinks the cook explicitly demanded ("masala chai") — the suggest
+   *  route injects matching recipes into the candidate pool so every combo can
+   *  honor them. (Missing on rows from before the field existed.) */
+  mustHave: string[]
+  household: string | null
+  notes: string | null
+}
+
+export interface MealPlanComboItem {
+  recipeId: number
+  /** Denormalized so lists render without a recipes join. */
+  title: string
+  role: 'main' | 'side' | 'condiment' | 'drink' | 'dessert'
+}
+
+export interface MealPlanCombo {
+  title: string
+  rationale: string
+  items: MealPlanComboItem[]
+  estTotalMin: number
+  effort: 'easy' | 'medium' | 'involved'
+  /** "Soak poha 10 min before" / "Ferment batter tonight" — null when none. */
+  overnightPrep: string | null
+}
+
+export interface MealPlanShoppingItem {
+  name: string
+  /** Free text ("1-1/2 cups", "500 g") — keeps the corpus's fractional units natural. */
+  quantity: string
+  category: 'produce' | 'dairy' | 'grains' | 'spices' | 'pantry' | 'other'
+  /** Likely already in an Indian kitchen (salt, turmeric, oil …). */
+  staple: boolean
+  forDishes: string[]
+}
+
+export interface MealPlanShopping {
+  items: MealPlanShoppingItem[]
+  prepAhead: string[]
+}
+
+export interface MealPlanVideo {
+  /** Null on the search-link fallback (no YOUTUBE_API_KEY / quota exhausted). */
+  videoId: string | null
+  url: string
+  title: string
+  channel: string | null
+  thumbnail: string | null
+  /** "12:34" — null when unknown. */
+  duration: string | null
+}
+
+export interface MealPlanDishVideos {
+  recipeId: number
+  dishTitle: string
+  /** The Hindi search query the videos were found with. */
+  query: string
+  videos: MealPlanVideo[]
+}
+
+export interface MealPlan {
+  id: string
+  planDate: string
+  meal: NashtaMeal
+  instructions: string
+  prefs: MealPlanPrefs | null
+  suggestions: MealPlanCombo[]
+  selectedIndex: number | null
+  shopping: MealPlanShopping | null
+  videos: MealPlanDishVideos[] | null
+  status: 'suggested' | 'finalized'
+  model: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+const MEAL_PLAN_COLUMNS =
+  'id, plan_date, meal, instructions, prefs, suggestions, selected_index, shopping_list, videos, status, model, created_at, updated_at'
+
+function mapMealPlanRow(r: Record<string, unknown>): MealPlan {
+  return {
+    id: r.id as string,
+    planDate: r.plan_date as string,
+    meal: (r.meal as NashtaMeal | null) ?? 'breakfast',
+    instructions: r.instructions as string,
+    prefs: (r.prefs as MealPlanPrefs | null) ?? null,
+    suggestions: Array.isArray(r.suggestions) ? (r.suggestions as MealPlanCombo[]) : [],
+    selectedIndex: (r.selected_index as number | null) ?? null,
+    shopping: (r.shopping_list as MealPlanShopping | null) ?? null,
+    videos: (r.videos as MealPlanDishVideos[] | null) ?? null,
+    status: r.status as 'suggested' | 'finalized',
+    model: (r.model as string | null) ?? null,
+    createdAt: r.created_at as string,
+    updatedAt: (r.updated_at as string | null) ?? (r.created_at as string),
+  }
+}
+
+export interface NashtaCandidateRecipe {
+  id: number
+  title: string
+  course: string | null
+  diet: string | null
+  totalMin: number | null
+}
+
+/** Courses that can plausibly land on the table for each meal (mains plus the
+ *  sides/condiments/drinks/desserts a combo needs). Indian lunch and dinner
+ *  mains are largely interchangeable, so dinner also draws from 'Lunch' —
+ *  by corpus size: Lunch ≈ 2.2k, Side Dish ≈ 1.3k, Snack ≈ 850, Dinner ≈ 630,
+ *  Dessert ≈ 600, breakfast courses ≈ 550. */
+const NASHTA_MEAL_COURSES: Record<NashtaMeal, string[]> = {
+  breakfast: [
+    'Indian Breakfast',
+    'South Indian Breakfast',
+    'North Indian Breakfast',
+    'World Breakfast',
+    'Snack',
+    'Side Dish',
+    'One Pot Dish',
+  ],
+  lunch: ['Lunch', 'Main Course', 'One Pot Dish', 'Side Dish', 'Appetizer', 'Snack'],
+  dinner: ['Dinner', 'Lunch', 'Main Course', 'One Pot Dish', 'Side Dish', 'Appetizer', 'Snack', 'Dessert'],
+}
+
+/** Diets that are safely vegetarian in the archanas-kitchen labeling. */
+const NASHTA_VEG_DIETS = [
+  'Vegetarian',
+  'High Protein Vegetarian',
+  'No Onion No Garlic (Sattvic)',
+  'Vegan',
+] as const
+
+/** Meal-suitable candidate pool for the combo suggester: archanas-kitchen
+ *  (instructions guaranteed), cuisine 'india', the chosen meal's courses,
+ *  optional veg/time filters. Fetches the skinny pool (id/title/course/diet/
+ *  total_min, ≤3000 rows) and returns a random sample so repeat runs see
+ *  different corners of the corpus. `titleLike` switches to a title search
+ *  across ALL courses — used to pull the cook's must-have dishes into the
+ *  pool regardless of the random sample. */
+export async function listNashtaCandidateRecipes(opts?: {
+  meal?: NashtaMeal
+  vegOnly?: boolean
+  maxTotalMin?: number
+  sample?: number
+  titleLike?: string
+}): Promise<NashtaCandidateRecipe[]> {
+  const sb = createServiceClient()
+  let q = sb
+    .from('food_recipes')
+    .select('id, title, course, diet, total_min')
+    .eq('source', 'archanas-kitchen')
+    .eq('cuisine', 'india')
+    .not('instructions', 'is', null)
+  if (opts?.titleLike) {
+    const safe = opts.titleLike.replace(/[%,()*\\:{}"]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (safe) q = q.ilike('title', `%${safe}%`)
+  } else {
+    q = q.in('course', NASHTA_MEAL_COURSES[opts?.meal ?? 'breakfast'])
+  }
+  if (opts?.vegOnly) q = q.in('diet', [...NASHTA_VEG_DIETS])
+  if (opts?.maxTotalMin) q = q.lte('total_min', opts.maxTotalMin)
+  const { data, error } = await q.limit(3000)
+  if (error) throw new Error(`listNashtaCandidateRecipes: ${error.message}`)
+  const rows: NashtaCandidateRecipe[] = (data ?? []).map((r) => ({
+    id: r.id as number,
+    title: (r.title as string | null) ?? 'Untitled',
+    course: (r.course as string | null) ?? null,
+    diet: (r.diet as string | null) ?? null,
+    totalMin: (r.total_min as number | null) ?? null,
+  }))
+  const sample = Math.min(Math.max(opts?.sample ?? 350, 10), 1000)
+  if (rows.length <= sample) return rows
+  for (let i = rows.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[rows[i], rows[j]] = [rows[j], rows[i]]
+  }
+  return rows.slice(0, sample)
+}
+
+export interface NashtaRecipeDetail {
+  id: number
+  title: string
+  titleNative: string | null
+  course: string | null
+  diet: string | null
+  prepMin: number | null
+  cookMin: number | null
+  totalMin: number | null
+  servings: number | null
+  ingredientsRaw: string | null
+  instructions: string | null
+  url: string | null
+}
+
+/** Full recipe rows (quantities + instructions) for a selected combo. */
+export async function getFoodRecipesByIds(ids: number[]): Promise<NashtaRecipeDetail[]> {
+  if (ids.length === 0) return []
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('food_recipes')
+    .select(
+      'id, title, title_native, course, diet, prep_min, cook_min, total_min, servings, ingredients_raw, instructions, url'
+    )
+    .in('id', ids)
+  if (error) throw new Error(`getFoodRecipesByIds: ${error.message}`)
+  return (data ?? []).map((r) => ({
+    id: r.id as number,
+    title: (r.title as string | null) ?? 'Untitled',
+    titleNative: (r.title_native as string | null) ?? null,
+    course: (r.course as string | null) ?? null,
+    diet: (r.diet as string | null) ?? null,
+    prepMin: (r.prep_min as number | null) ?? null,
+    cookMin: (r.cook_min as number | null) ?? null,
+    totalMin: (r.total_min as number | null) ?? null,
+    servings: (r.servings as number | null) ?? null,
+    ingredientsRaw: (r.ingredients_raw as string | null) ?? null,
+    instructions: (r.instructions as string | null) ?? null,
+    url: (r.url as string | null) ?? null,
+  }))
+}
+
+/** Insert a fresh 'suggested' plan (the three combos, pre-selection). */
+export async function createMealPlan(input: {
+  planDate: string
+  meal: NashtaMeal
+  instructions: string
+  prefs: MealPlanPrefs | null
+  suggestions: MealPlanCombo[]
+  model?: string
+}): Promise<MealPlan> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('food_meal_plans')
+    .insert({
+      plan_date: input.planDate,
+      meal: input.meal,
+      instructions: input.instructions,
+      prefs: input.prefs,
+      suggestions: input.suggestions,
+      model: input.model ?? null,
+    })
+    .select(MEAL_PLAN_COLUMNS)
+    .single()
+  if (error) throw new Error(`createMealPlan: ${error.message}`)
+  return mapMealPlanRow(data as unknown as Record<string, unknown>)
+}
+
+export async function getMealPlan(id: string): Promise<MealPlan | null> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('food_meal_plans')
+    .select(MEAL_PLAN_COLUMNS)
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(`getMealPlan: ${error.message}`)
+  return data ? mapMealPlanRow(data as unknown as Record<string, unknown>) : null
+}
+
+/** Recent plans, newest morning first. */
+export async function listMealPlans(limit = 20): Promise<MealPlan[]> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('food_meal_plans')
+    .select(MEAL_PLAN_COLUMNS)
+    .order('plan_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 100))
+  if (error) throw new Error(`listMealPlans: ${error.message}`)
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map(mapMealPlanRow)
+}
+
+/** Attach the user's pick + the generated shopping list and videos. */
+export async function finalizeMealPlan(
+  id: string,
+  patch: {
+    selectedIndex: number
+    shopping: MealPlanShopping
+    videos: MealPlanDishVideos[]
+  }
+): Promise<MealPlan> {
+  const sb = createServiceClient()
+  const { data, error } = await sb
+    .from('food_meal_plans')
+    .update({
+      selected_index: patch.selectedIndex,
+      shopping_list: patch.shopping,
+      videos: patch.videos,
+      status: 'finalized',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select(MEAL_PLAN_COLUMNS)
+    .single()
+  if (error) throw new Error(`finalizeMealPlan: ${error.message}`)
+  return mapMealPlanRow(data as unknown as Record<string, unknown>)
+}
