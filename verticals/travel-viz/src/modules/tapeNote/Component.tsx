@@ -100,7 +100,9 @@ export default function TapeNoteLayerComponent({
       <div
         style={{
           fontFamily: "'Caveat', 'Segoe Script', 'Bradley Hand', cursive",
-          fontSize: 'clamp(17px, 1.9vw, 25px)',
+          // vmin keeps the middle term live in both orientations (vw
+          // collapsed to the floor on phones, so tips wrapped to 6+ lines).
+          fontSize: 'clamp(14px, 2.4vmin, 25px)',
           lineHeight: 1.3,
           color: ink,
         }}

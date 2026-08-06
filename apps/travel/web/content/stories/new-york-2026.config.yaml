@@ -82,26 +82,26 @@ sections:
               position: { x: center, y: 6% }
               size: { width: 100%, height: 40% }
               portrait: { size: { height: 30vh } }
+          # Text layers carry no `portrait` height: the spread-center stack
+          # gives them intrinsic height on phones (fixed vh clipped prose).
           - type: bodyText
             style:
-              position: { x: center, y: 50% }
-              size: { width: 92%, height: 26% }
+              position: { x: center, y: 48% }
+              size: { width: 92%, height: 30% }
               panel:
                 background: "rgba(253, 252, 248, 0.94)"
                 border: 1px solid var(--color-line)
                 borderRadius: 3px
                 padding: 1.25rem
                 shadow: 0 10px 30px rgba(20, 16, 8, 0.18)
-              portrait: { size: { height: 26vh } }
           - type: travel:tapeNote
             title: "SUPRABHO'S PICK"
             text: "split one sandwich. trust us — they're massive."
             rotation: 2
             enterDelay: 200
             style:
-              position: { x: center, y: 80% }
-              size: { width: 88%, height: 20% }
-              portrait: { size: { height: 16vh } }
+              position: { x: center, y: 86% }
+              size: { width: 88%, height: 14% }
 
   - id: the-high-line
     text: The High Line
@@ -229,6 +229,8 @@ sections:
       layout: travel:spread-center
       regions:
         content:
+          # Text layers carry no `portrait` height — intrinsic in the
+          # portrait stack (fixed vh clipped prose).
           - type: bodyText
             style:
               position: { x: center, y: 10% }
@@ -239,7 +241,6 @@ sections:
                 borderRadius: 3px
                 padding: 1.5rem
                 shadow: 0 10px 30px rgba(20, 16, 8, 0.18)
-              portrait: { size: { height: 30vh } }
           - type: travel:tapeNote
             title: UNTIL NEXT TIME
             text: "13 stops · 10.5 hours · 386 photos. see you soon, new york."
@@ -249,12 +250,9 @@ sections:
             style:
               position: { x: center, y: 54% }
               size: { width: 88%, height: 24% }
-              portrait: { size: { height: 18vh } }
         meta:
           - type: travel:postmark
             place: New York City
             time: MAR 14
             emoji: 🗽
             enterDelay: 400
-            style:
-              portrait: { size: { height: 110px } }
