@@ -100,6 +100,11 @@ export default function PolaroidLayerComponent({
             display: 'block',
             width: '100%',
             aspectRatio: ASPECTS[config.aspect ?? 'square'],
+            // Shrinkable flex child: without `minHeight: 0` the aspect-ratio
+            // height wins over the figure's maxHeight and the photo overflows
+            // short slots; objectFit crops gracefully instead.
+            flex: '1 1 auto',
+            minHeight: 0,
             objectFit: 'cover',
             objectPosition: config.focus ?? 'center',
             background: '#e9e5da',
@@ -113,9 +118,12 @@ export default function PolaroidLayerComponent({
         <figcaption
           style={{
             minHeight: '2.6em',
+            flexShrink: 0,
             padding: '0.55em 0.2em 0.7em',
             fontFamily: "'Caveat', 'Segoe Script', 'Bradley Hand', cursive",
-            fontSize: 'clamp(14px, 1.6vw, 20px)',
+            // vmin tracks the short viewport edge, so the middle term stays
+            // live in both orientations (vw collapsed to the floor on phones).
+            fontSize: 'clamp(13px, 2vmin, 20px)',
             lineHeight: 1.25,
             color: '#42392c',
             textAlign: 'center',

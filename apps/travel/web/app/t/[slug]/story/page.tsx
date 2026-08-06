@@ -96,8 +96,9 @@ export default async function TripStoryPage({ params }: RouteParams) {
         </>
       )}
       {assetOrigin && <link rel="preconnect" href={assetOrigin} crossOrigin="" />}
-      {/* Paper grain between the map (z-0) and the foreground (z-10). */}
-      <div aria-hidden className="paper-grain" />
+      {/* Paper grain between the map (z-0) and the foreground (z-10).
+          data-scrapbook scopes the story-only root font-size in globals.css. */}
+      <div aria-hidden data-scrapbook className="paper-grain" />
       <VerticalLoader vertical={story.frontmatter.vertical}>
         <StoryShell
           units={units}

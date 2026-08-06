@@ -15,7 +15,7 @@ export const postmarkSchema = z.object({
     .describe('Place name stamped around/inside the ring.'),
   time: z.string().optional().describe('Center line, e.g. "7:00 AM".'),
   emoji: z.string().optional().describe('Small emoji above the time.'),
-  color: z.string().default('#2ca068').describe('Ink color.'),
+  color: z.string().default('#42392c').describe('Ink color.'),
   rotation: z.number().min(-20).max(20).default(-8).describe('Stamp tilt in degrees.'),
   enterDelay: z.number().min(0).max(2000).optional().describe('Entrance stagger in ms.'),
 })

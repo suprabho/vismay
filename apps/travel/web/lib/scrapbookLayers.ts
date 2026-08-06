@@ -9,9 +9,17 @@
  * layers: an authored region keeps its content, injection only fills regions
  * it owns that are empty.
  *
- * Every injected visual layer sets `style.portrait.size.height` — travel:*
- * types are not in the engine's portrait-stack defaults and would collapse
- * to zero height on phones without it.
+ * Portrait sizing: the spread layouts keep absolute region geometry in both
+ * orientations (`stackOnPortrait: false`), so injected layers either fill
+ * their region (`inset: 0` — no style at all) or carry %-of-region geometry
+ * that works at any viewport. When a layer DOES need distinct portrait
+ * geometry (the video overlay), it must author a COMPLETE `style.portrait`
+ * block — position AND full size — because the engine's portrait merge is
+ * shallow (a partial `size` would drop the authored width, and any portrait
+ * size without a position loses `inset: 0`; see ForegroundVizSlot).
+ * spread-center is the exception: it still stacks on portrait, and visual
+ * layers there (the ticket) need `style.portrait.size.height` while text
+ * layers use intrinsic height.
  */
 
 import type {
@@ -72,8 +80,6 @@ function regionsOf(section: StorySectionConfig): Record<string, unknown> {
   return {}
 }
 
-const portrait = (height: string) => ({ portrait: { size: { height } } })
-
 function photoLayers(
   template: ScrapbookTemplate,
   images: CuratedMediaItem[],
@@ -91,10 +97,11 @@ function photoLayers(
           src: shown[0].ref,
           fit: 'cover',
           alt: shown[0].caption ?? '',
-          style: portrait('100%'),
         } as VizLayer,
       ]
     case 'scatter':
+      // %-of-region collage — scales with the photos region box in both
+      // orientations (portrait bounds the region; see layouts.ts).
       return shown.slice(0, 3).map(
         (img, i) =>
           ({
@@ -108,7 +115,6 @@ function photoLayers(
             style: {
               position: { x: SCATTER_POSITIONS[i].x, y: SCATTER_POSITIONS[i].y },
               size: { width: SCATTER_POSITIONS[i].w, height: SCATTER_POSITIONS[i].h },
-              ...portrait('44vh'),
             },
           }) as VizLayer
       )
@@ -121,7 +127,6 @@ function photoLayers(
             caption: img.caption,
             alt: img.caption ?? '',
           })),
-          style: portrait('52vh'),
         } as VizLayer,
       ]
     case 'stack':
@@ -131,7 +136,6 @@ function photoLayers(
           items: shown.slice(0, 5).map((img) => ({ src: img.ref, caption: img.caption })),
           ...more,
           enterDelay: 100,
-          style: portrait('52vh'),
         } as VizLayer,
       ]
     default:
@@ -230,7 +234,13 @@ export function injectScrapbookLayers(
                 borderRadius: '3px',
                 shadow: '0 10px 26px rgba(20, 16, 8, 0.3)',
               },
-              ...portrait('34vh'),
+              // COMPLETE portrait block (position + full size): top-left of
+              // the region, clear of the bottom note card and the top-right
+              // postmark. Partial blocks hit the engine's shallow merge.
+              portrait: {
+                position: { x: '4%', y: '4%' },
+                size: { width: '46%', height: '30%' },
+              },
             },
           } as VizLayer)
         }
@@ -243,6 +253,9 @@ export function injectScrapbookLayers(
         regions['note'] = [{ type: 'bodyText' } as VizLayer]
       }
       if (isCenter && !regions['content']) {
+        // No `portrait` on the text layers: spread-center stacks on portrait
+        // and text types take intrinsic height there — fixed heights clipped
+        // long prose.
         const centerLayers: VizLayer[] = [
           {
             type: 'bodyText',
@@ -256,7 +269,6 @@ export function injectScrapbookLayers(
                 padding: '1.5rem',
                 shadow: '0 10px 30px rgba(20, 16, 8, 0.18)',
               },
-              ...portrait('34vh'),
             },
           } as VizLayer,
         ]
@@ -270,14 +282,14 @@ export function injectScrapbookLayers(
             style: {
               position: { x: 'center', y: '62%' },
               size: { width: '88%', height: '30%' },
-              ...portrait('18vh'),
             },
           } as VizLayer)
         }
         regions['content'] = centerLayers
       }
 
-      // Postmark.
+      // Postmark. No color passed — the module's ink default applies
+      // (dayColor stays on route pins and tickets only).
       if (!regions['meta']) {
         regions['meta'] = [
           {
@@ -285,9 +297,7 @@ export function injectScrapbookLayers(
             place: stop.name,
             time: stop.time,
             emoji: stop.emoji,
-            color: dayColor,
             enterDelay: 260,
-            style: portrait('110px'),
           } as VizLayer,
         ]
       }
@@ -305,7 +315,6 @@ export function injectScrapbookLayers(
               title: stop.tip && suggested ? suggested : undefined,
               rotation: sideParity % 2 === 0 ? -2 : 2,
               enterDelay: 380,
-              style: portrait('16vh'),
             } as VizLayer,
           ]
         }

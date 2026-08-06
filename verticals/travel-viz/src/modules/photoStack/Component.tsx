@@ -59,6 +59,8 @@ export default function PhotoStackLayerComponent({
 
           const frame: CSSProperties = {
             position: isTop ? 'relative' : 'absolute',
+            display: 'flex',
+            flexDirection: 'column',
             background: '#fdfcf8',
             padding: isTop ? '3.5% 3.5% 0' : '2.5%',
             borderRadius: 2,
@@ -81,6 +83,10 @@ export default function PhotoStackLayerComponent({
                   display: 'block',
                   width: '100%',
                   aspectRatio: '4 / 3',
+                  // Shrinkable flex child (see polaroid): lets maxHeight win
+                  // over the aspect-ratio height in short slots.
+                  flex: '1 1 auto',
+                  minHeight: 0,
                   objectFit: 'cover',
                   objectPosition: item.focus ?? 'center',
                   background: '#e9e5da',
@@ -95,9 +101,10 @@ export default function PhotoStackLayerComponent({
                 <figcaption
                   style={{
                     minHeight: '2.2em',
+                    flexShrink: 0,
                     padding: '0.5em 0.2em 0.6em',
                     fontFamily: "'Caveat', 'Segoe Script', 'Bradley Hand', cursive",
-                    fontSize: 'clamp(14px, 1.6vw, 20px)',
+                    fontSize: 'clamp(13px, 2vmin, 20px)',
                     lineHeight: 1.25,
                     color: '#42392c',
                     textAlign: 'center',

@@ -59,8 +59,18 @@ modules (`travel:polaroid/tapeNote/ticket/photoStack/postmark/prefetch`) live
 in `verticals/travel-viz`. Gotchas:
 
 - Layout regions need explicit heights (layers are absolutely positioned).
-- Injected visual layers must set `style.portrait.size.height` (travel types
-  aren't in the engine's portrait-stack defaults).
+- Responsiveness model: layouts keep absolute region geometry in BOTH
+  orientations (`stackOnPortrait: false`; overlay content must FIT the
+  viewport — the snap scroller is behind it and can't be reached through a
+  scrolling overlay). Sizes use clamp() + the `--sb-inset`/`--sb-stamp` vars
+  from globals.css (tablet portrait widens gutters); root font-size is 20px
+  → 14px on portrait, scoped to the story via `html:has([data-scrapbook])`.
+- `style.portrait` blocks: only spread-center still stacks on portrait —
+  visual layers there (the ticket) need `style.portrait.size.height`, text
+  layers must NOT set one (intrinsic height, else prose clips). Elsewhere a
+  layer needing distinct portrait geometry must author a COMPLETE portrait
+  block (position + full size) — the engine's portrait merge is shallow, so
+  partial blocks drop the authored width and lose `inset: 0`.
 - A stop's second spread uses `offset:` to skip photos already shown;
   `video: true|<index>` opts a clip in (off by default).
 - Bad layer configs vanish silently — check the browser console for zod
