@@ -53,6 +53,12 @@ const APPS: AppEntry[] = [
     status: 'available',
   },
   {
+    href: '/nashta',
+    name: 'Nashta',
+    description: 'AI breakfast planner over the food recipe corpus — combos, shopping list, Hindi videos.',
+    status: 'available',
+  },
+  {
     href: '/storytime-ovo',
     name: 'Storytime with Ovo',
     description: 'Stories and epics tagged to the storytime-ovo app.',
