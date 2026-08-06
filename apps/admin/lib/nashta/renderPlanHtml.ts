@@ -127,12 +127,19 @@ function recipesSection(recipes: NashtaRecipeDetail[]): string {
 
 export function renderPlanHtml(plan: MealPlan, recipes: NashtaRecipeDetail[]): string {
   const combo = plan.selectedIndex != null ? plan.suggestions[plan.selectedIndex] : null
-  const title = combo ? combo.title : 'Breakfast plan'
+  const mealLabel = plan.meal.charAt(0).toUpperCase() + plan.meal.slice(1)
+  const title = combo ? combo.title : `${mealLabel} plan`
   const prepAhead = [
     ...(combo?.overnightPrep ? [combo.overnightPrep] : []),
     ...(plan.shopping?.prepAhead ?? []),
   ]
-  const roles: Record<string, string> = { main: 'Main', side: 'Side', condiment: 'Condiment', drink: 'Drink' }
+  const roles: Record<string, string> = {
+    main: 'Main',
+    side: 'Side',
+    condiment: 'Condiment',
+    drink: 'Drink',
+    dessert: 'Dessert',
+  }
   const itemRows = (combo?.items ?? [])
     .map((i) => `<li><span class="role">${roles[i.role] ?? i.role}</span> ${esc(i.title)}</li>`)
     .join('\n')
@@ -180,13 +187,13 @@ export function renderPlanHtml(plan: MealPlan, recipes: NashtaRecipeDetail[]): s
 </head>
 <body>
 <header>
-  <div class="eyebrow">Nashta · tomorrow's breakfast</div>
+  <div class="eyebrow">Nashta · tomorrow's ${esc(plan.meal)}</div>
   <h1>${esc(title)}</h1>
   <div class="muted">${esc(formatPlanDate(plan.planDate))}</div>
   ${combo ? `<p>${esc(combo.rationale)}</p><div class="chips"><span>~${combo.estTotalMin} min</span><span>${esc(combo.effort)}</span></div>` : ''}
 </header>
 ${combo ? `<div class="menu"><ul>${itemRows}</ul></div>` : ''}
-${prepAhead.length ? `<div class="prep"><strong>Tonight:</strong><ul>${prepAhead.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
+${prepAhead.length ? `<div class="prep"><strong>${plan.meal === 'breakfast' ? 'Tonight:' : 'Prep ahead:'}</strong><ul>${prepAhead.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
 ${shoppingSection(plan)}
 ${videosSection(plan.videos)}
 ${recipesSection(recipes)}

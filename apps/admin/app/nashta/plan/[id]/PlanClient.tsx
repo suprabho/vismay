@@ -16,6 +16,7 @@ const ROLE_LABELS: Record<string, string> = {
   side: 'Side',
   condiment: 'Condiment',
   drink: 'Drink',
+  dessert: 'Dessert',
 }
 
 function formatDate(iso: string): string {
@@ -90,10 +91,10 @@ export default function PlanClient({
 
         <header>
           <div className="text-xs uppercase tracking-[0.14em] text-orange-400 font-semibold">
-            Breakfast · {formatDate(plan.planDate)}
+            {plan.meal} · {formatDate(plan.planDate)}
           </div>
           <h1 className="text-2xl font-semibold tracking-tight mt-1">
-            {combo ? combo.title : 'Pick tomorrow’s nashta'}
+            {combo ? combo.title : `Pick tomorrow’s ${plan.meal}`}
           </h1>
           <p className="text-neutral-400 text-sm mt-2">
             {combo ? combo.rationale : `“${plan.instructions}”`}
@@ -152,7 +153,7 @@ function ComboPicker({
           </div>
           {c.overnightPrep && (
             <p className="text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-              Tonight: {c.overnightPrep}
+              Ahead: {c.overnightPrep}
             </p>
           )}
           <button
@@ -202,7 +203,9 @@ function FinalizedPlan({
 
       {prepAhead.length > 0 && (
         <section className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5">
-          <h2 className="text-sm font-semibold text-amber-300 mb-2">🌙 Tonight, before bed</h2>
+          <h2 className="text-sm font-semibold text-amber-300 mb-2">
+            {plan.meal === 'breakfast' ? '🌙 Tonight, before bed' : '⏳ Prep ahead'}
+          </h2>
           <ul className="list-disc pl-5 space-y-1 text-sm text-amber-100/90">
             {prepAhead.map((p, i) => (
               <li key={i}>{p}</li>

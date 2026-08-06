@@ -1766,13 +1766,15 @@ export async function listFoodHistoryForSubject(
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Nashta breakfast planner (`food_meal_plans`, migration 075) — the admin
- * /nashta mini-app: AI suggests three breakfast combos from the
- * archanas-kitchen corpus, the user picks one, the plan gains a shopping
- * list + Hindi YouTube videos. Service-role only (no anon RLS) — plans embed
- * recipe-derived text from the rights-sensitive corpora, same posture as
- * food_recipes itself.
+ * Nashta meal planner (`food_meal_plans`, migration 075) — the admin /nashta
+ * mini-app: AI suggests three combos for a chosen meal (breakfast / lunch /
+ * dinner) from the archanas-kitchen corpus, the user picks one, the plan
+ * gains a shopping list + Hindi YouTube videos. Service-role only (no anon
+ * RLS) — plans embed recipe-derived text from the rights-sensitive corpora,
+ * same posture as food_recipes itself.
  * ────────────────────────────────────────────────────────────────────────── */
+
+export type NashtaMeal = 'breakfast' | 'lunch' | 'dinner'
 
 export interface MealPlanPrefs {
   vegOnly: boolean | null
@@ -1790,7 +1792,7 @@ export interface MealPlanComboItem {
   recipeId: number
   /** Denormalized so lists render without a recipes join. */
   title: string
-  role: 'main' | 'side' | 'condiment' | 'drink'
+  role: 'main' | 'side' | 'condiment' | 'drink' | 'dessert'
 }
 
 export interface MealPlanCombo {
@@ -1840,6 +1842,7 @@ export interface MealPlanDishVideos {
 export interface MealPlan {
   id: string
   planDate: string
+  meal: NashtaMeal
   instructions: string
   prefs: MealPlanPrefs | null
   suggestions: MealPlanCombo[]
@@ -1853,12 +1856,13 @@ export interface MealPlan {
 }
 
 const MEAL_PLAN_COLUMNS =
-  'id, plan_date, instructions, prefs, suggestions, selected_index, shopping_list, videos, status, model, created_at, updated_at'
+  'id, plan_date, meal, instructions, prefs, suggestions, selected_index, shopping_list, videos, status, model, created_at, updated_at'
 
 function mapMealPlanRow(r: Record<string, unknown>): MealPlan {
   return {
     id: r.id as string,
     planDate: r.plan_date as string,
+    meal: (r.meal as NashtaMeal | null) ?? 'breakfast',
     instructions: r.instructions as string,
     prefs: (r.prefs as MealPlanPrefs | null) ?? null,
     suggestions: Array.isArray(r.suggestions) ? (r.suggestions as MealPlanCombo[]) : [],
@@ -1880,17 +1884,24 @@ export interface NashtaCandidateRecipe {
   totalMin: number | null
 }
 
-/** Courses that can plausibly land on an Indian breakfast table (mains plus
- *  the sides/condiments/drinks a combo needs). */
-const NASHTA_COURSES = [
-  'Indian Breakfast',
-  'South Indian Breakfast',
-  'North Indian Breakfast',
-  'World Breakfast',
-  'Snack',
-  'Side Dish',
-  'One Pot Dish',
-] as const
+/** Courses that can plausibly land on the table for each meal (mains plus the
+ *  sides/condiments/drinks/desserts a combo needs). Indian lunch and dinner
+ *  mains are largely interchangeable, so dinner also draws from 'Lunch' —
+ *  by corpus size: Lunch ≈ 2.2k, Side Dish ≈ 1.3k, Snack ≈ 850, Dinner ≈ 630,
+ *  Dessert ≈ 600, breakfast courses ≈ 550. */
+const NASHTA_MEAL_COURSES: Record<NashtaMeal, string[]> = {
+  breakfast: [
+    'Indian Breakfast',
+    'South Indian Breakfast',
+    'North Indian Breakfast',
+    'World Breakfast',
+    'Snack',
+    'Side Dish',
+    'One Pot Dish',
+  ],
+  lunch: ['Lunch', 'Main Course', 'One Pot Dish', 'Side Dish', 'Appetizer', 'Snack'],
+  dinner: ['Dinner', 'Lunch', 'Main Course', 'One Pot Dish', 'Side Dish', 'Appetizer', 'Snack', 'Dessert'],
+}
 
 /** Diets that are safely vegetarian in the archanas-kitchen labeling. */
 const NASHTA_VEG_DIETS = [
@@ -1900,14 +1911,15 @@ const NASHTA_VEG_DIETS = [
   'Vegan',
 ] as const
 
-/** Breakfast-suitable candidate pool for the combo suggester: archanas-kitchen
- *  (instructions guaranteed), cuisine 'india', breakfast-adjacent courses,
+/** Meal-suitable candidate pool for the combo suggester: archanas-kitchen
+ *  (instructions guaranteed), cuisine 'india', the chosen meal's courses,
  *  optional veg/time filters. Fetches the skinny pool (id/title/course/diet/
  *  total_min, ≤3000 rows) and returns a random sample so repeat runs see
  *  different corners of the corpus. `titleLike` switches to a title search
  *  across ALL courses — used to pull the cook's must-have dishes into the
  *  pool regardless of the random sample. */
 export async function listNashtaCandidateRecipes(opts?: {
+  meal?: NashtaMeal
   vegOnly?: boolean
   maxTotalMin?: number
   sample?: number
@@ -1924,7 +1936,7 @@ export async function listNashtaCandidateRecipes(opts?: {
     const safe = opts.titleLike.replace(/[%,()*\\:{}"]/g, ' ').replace(/\s+/g, ' ').trim()
     if (safe) q = q.ilike('title', `%${safe}%`)
   } else {
-    q = q.in('course', [...NASHTA_COURSES])
+    q = q.in('course', NASHTA_MEAL_COURSES[opts?.meal ?? 'breakfast'])
   }
   if (opts?.vegOnly) q = q.in('diet', [...NASHTA_VEG_DIETS])
   if (opts?.maxTotalMin) q = q.lte('total_min', opts.maxTotalMin)
@@ -1991,6 +2003,7 @@ export async function getFoodRecipesByIds(ids: number[]): Promise<NashtaRecipeDe
 /** Insert a fresh 'suggested' plan (the three combos, pre-selection). */
 export async function createMealPlan(input: {
   planDate: string
+  meal: NashtaMeal
   instructions: string
   prefs: MealPlanPrefs | null
   suggestions: MealPlanCombo[]
@@ -2001,6 +2014,7 @@ export async function createMealPlan(input: {
     .from('food_meal_plans')
     .insert({
       plan_date: input.planDate,
+      meal: input.meal,
       instructions: input.instructions,
       prefs: input.prefs,
       suggestions: input.suggestions,

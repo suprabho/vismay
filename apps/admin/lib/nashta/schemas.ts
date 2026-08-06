@@ -41,7 +41,7 @@ export const prefsSchema = z.object({
 export const comboItemSchema = z.object({
   recipeId: z.number().int().describe('id copied EXACTLY from the candidate list'),
   title: z.string().describe('the candidate line\'s title, copied as-is'),
-  role: z.enum(['main', 'side', 'condiment', 'drink']),
+  role: z.enum(['main', 'side', 'condiment', 'drink', 'dessert']),
 })
 
 export const comboSchema = z.object({

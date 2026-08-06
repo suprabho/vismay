@@ -51,7 +51,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const { result: shopping } = await generateStructured({
       model: SHOPPING_MODEL,
       system: SHOPPING_SYSTEM,
-      prompt: buildShoppingPrompt({ combo, recipes, prefs: plan.prefs, instructions: plan.instructions }),
+      prompt: buildShoppingPrompt({ meal: plan.meal, combo, recipes, prefs: plan.prefs, instructions: plan.instructions }),
       schema: shoppingSchema,
       metadata: { feature: 'nashta-shopping' },
     })

@@ -9,6 +9,7 @@ import {
   type MealPlanCombo,
   type MealPlanPrefs,
   type NashtaCandidateRecipe,
+  type NashtaMeal,
 } from '@vismay/content-source/epics'
 import { prefsSchema, suggestionsSchema } from '@/lib/nashta/schemas'
 import { PARSE_PREFS_SYSTEM, SUGGEST_SYSTEM, buildParsePrefsPrompt, buildSuggestPrompt } from '@/lib/nashta/prompts'
@@ -26,11 +27,12 @@ function tomorrowInKolkata(): string {
   return new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 }
 
-/** Dish titles from recent plans' chosen combos, for the variety nudge. */
-function recentDishTitles(plans: Awaited<ReturnType<typeof listMealPlans>>): string[] {
+/** Dish titles from recent plans' chosen combos for the SAME meal — the
+ *  variety nudge (last week's dinners shouldn't veto breakfast poha). */
+function recentDishTitles(plans: Awaited<ReturnType<typeof listMealPlans>>, meal: NashtaMeal): string[] {
   const titles: string[] = []
   for (const p of plans) {
-    if (p.status !== 'finalized' || p.selectedIndex == null) continue
+    if (p.meal !== meal || p.status !== 'finalized' || p.selectedIndex == null) continue
     for (const item of p.suggestions[p.selectedIndex]?.items ?? []) titles.push(item.title)
   }
   return [...new Set(titles)].slice(0, 12)
@@ -56,11 +58,13 @@ function groundCombos(
   return grounded.length === 3 ? grounded : null
 }
 
-// POST { instructions, planDate? } → parse prefs, pick candidates, suggest 3
-// combos, persist a 'suggested' plan.
+const MEALS: NashtaMeal[] = ['breakfast', 'lunch', 'dinner']
+
+// POST { instructions, meal?, planDate? } → parse prefs, pick candidates,
+// suggest 3 combos, persist a 'suggested' plan.
 export async function POST(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  let body: { instructions?: unknown; planDate?: unknown }
+  let body: { instructions?: unknown; meal?: unknown; planDate?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -70,6 +74,7 @@ export async function POST(req: Request) {
   if (!instructions) return NextResponse.json({ error: 'instructions required' }, { status: 400 })
   if (instructions.length > MAX_INSTRUCTIONS)
     return NextResponse.json({ error: `instructions over ${MAX_INSTRUCTIONS} chars` }, { status: 400 })
+  const meal: NashtaMeal = MEALS.includes(body.meal as NashtaMeal) ? (body.meal as NashtaMeal) : 'breakfast'
   const planDate =
     typeof body.planDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.planDate)
       ? body.planDate
@@ -93,11 +98,12 @@ export async function POST(req: Request) {
 
     // 2. Candidate pool (relax the time filter rather than starve the model).
     let candidates = await listNashtaCandidateRecipes({
+      meal,
       vegOnly: prefs?.vegOnly ?? undefined,
       maxTotalMin: prefs?.maxTotalMin ?? undefined,
     })
     if (candidates.length < 20 && prefs?.maxTotalMin) {
-      candidates = await listNashtaCandidateRecipes({ vegOnly: prefs?.vegOnly ?? undefined })
+      candidates = await listNashtaCandidateRecipes({ meal, vegOnly: prefs?.vegOnly ?? undefined })
     }
     if (candidates.length < 5)
       return NextResponse.json({ error: 'not enough recipes match the constraints' }, { status: 422 })
@@ -119,10 +125,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const avoidTitles = recentDishTitles(await listMealPlans(10))
+    const avoidTitles = recentDishTitles(await listMealPlans(20), meal)
 
     // 3. Suggest, with one retry when grounding rejects the structure.
-    const prompt = buildSuggestPrompt({ instructions, prefs, candidates, avoidTitles, planDate })
+    const prompt = buildSuggestPrompt({ meal, instructions, prefs, candidates, avoidTitles, planDate })
     let combos: MealPlanCombo[] | null = null
     let modelUsed = SUGGEST_MODEL
     for (let attempt = 0; attempt < 2 && !combos; attempt++) {
@@ -140,7 +146,7 @@ export async function POST(req: Request) {
     if (!combos)
       return NextResponse.json({ error: 'the model could not build valid combos — try again' }, { status: 502 })
 
-    const plan = await createMealPlan({ planDate, instructions, prefs, suggestions: combos, model: modelUsed })
+    const plan = await createMealPlan({ planDate, meal, instructions, prefs, suggestions: combos, model: modelUsed })
     return NextResponse.json({ plan })
   } catch (e) {
     console.error('nashta suggest failed', e)

@@ -55,7 +55,7 @@ const APPS: AppEntry[] = [
   {
     href: '/nashta',
     name: 'Nashta',
-    description: 'AI breakfast planner over the food recipe corpus — combos, shopping list, Hindi videos.',
+    description: 'AI meal planner (breakfast/lunch/dinner) over the food recipe corpus — combos, shopping list, Hindi videos.',
     status: 'available',
   },
   {

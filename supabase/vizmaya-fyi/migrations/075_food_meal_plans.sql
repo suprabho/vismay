@@ -27,3 +27,7 @@ create table if not exists food_meal_plans (
 create index if not exists food_meal_plans_date_idx on food_meal_plans (plan_date desc, created_at desc);
 
 alter table food_meal_plans enable row level security;
+
+-- The planner generalized from breakfast-only to any meal right after birth;
+-- rows from the breakfast-only days default correctly.
+alter table food_meal_plans add column if not exists meal text not null default 'breakfast';  -- 'breakfast' | 'lunch' | 'dinner'
