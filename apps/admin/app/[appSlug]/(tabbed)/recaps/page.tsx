@@ -5,6 +5,7 @@ import { createServerSupabase } from '@/lib/supabaseServer'
 import { RecapMarkdown } from '@/components/section/RecapMarkdown'
 import { CopyMarkdownButton } from '@/components/section/CopyMarkdownButton'
 import { TriggerRecapButton } from '@/components/footshorts/TriggerRecapButton'
+import { AdminTable } from '@/components/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -83,37 +84,50 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
           worker — it runs automatically off the scores workflow and covers the last 24 hours.
         </div>
       ) : (
-        <div className="flex-1 min-h-0 grid grid-cols-[260px_1fr]">
+        <div className="flex-1 min-h-0 grid grid-cols-[minmax(360px,420px)_1fr] max-md:grid-cols-1">
           {/* List */}
-          <div className="min-h-0 overflow-y-auto border-r border-white/5 p-3 space-y-2">
-            {list.map((r) => {
-              const active = r.id === selId
-              return (
-                <Link
-                  key={r.id}
-                  href={`/${appSlug}/recaps?id=${r.id}`}
-                  className={`block rounded-lg border px-3 py-2.5 transition-colors ${
-                    active
-                      ? 'border-sky-500/60 bg-white/[0.04]'
-                      : 'border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-white">
-                      {new Date(r.generated_at).toLocaleString()}
-                    </span>
-                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-400">
-                      {scopeLabel(r.scope)}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs text-neutral-500">
-                    Last {r.window_hours}h · {r.fixture_count} match{r.fixture_count === 1 ? '' : 'es'} ·{' '}
-                    {r.article_count} stor{r.article_count === 1 ? 'y' : 'ies'}
-                    {r.model ? '' : ' · no narrative'}
-                  </div>
-                </Link>
-              )
-            })}
+          <div className="min-h-0 overflow-auto border-r border-white/5 max-md:border-r-0 max-md:border-b">
+            <AdminTable
+              rows={list}
+              rowKey={(recap) => recap.id}
+              caption="Generated recaps"
+              minWidth="none"
+              empty="No recaps yet."
+              getRowClassName={(recap) => recap.id === selId ? 'bg-white/[0.04]' : ''}
+              columns={[
+                {
+                  key: 'generated',
+                  label: 'Generated',
+                  render: (recap) => (
+                    <Link href={`/${appSlug}/recaps?id=${recap.id}`} className="block hover:text-white">
+                      <div className="text-xs font-semibold text-white">{new Date(recap.generated_at).toLocaleString()}</div>
+                      <div className="mt-1 text-[11px] text-neutral-500">Last {recap.window_hours}h</div>
+                    </Link>
+                  ),
+                },
+                {
+                  key: 'scope',
+                  label: 'Scope',
+                  responsive: 'secondary',
+                  className: 'text-xs text-neutral-400',
+                  render: (recap) => scopeLabel(recap.scope),
+                },
+                {
+                  key: 'records',
+                  label: 'Records',
+                  responsive: 'secondary',
+                  className: 'text-right text-xs tabular-nums text-neutral-400',
+                  render: (recap) => `${recap.fixture_count} matches · ${recap.article_count} stories`,
+                },
+                {
+                  key: 'action',
+                  label: '',
+                  sticky: true,
+                  className: 'w-10 text-right',
+                  render: () => <span className="text-xs text-neutral-500">›</span>,
+                },
+              ]}
+            />
           </div>
 
           {/* Detail */}

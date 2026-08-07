@@ -14,9 +14,11 @@ const VIZMAYA_APP_SLUG = 'vizmaya-fyi'
 
 export default async function AppSectionLayout({
   children,
+  modal,
   params,
 }: {
   children: React.ReactNode
+  modal: React.ReactNode
   params: Promise<{ appSlug: string }>
 }) {
   const { appSlug } = await params
@@ -43,6 +45,7 @@ export default async function AppSectionLayout({
         </div>
       )}
       {children}
+      {modal}
     </>
   )
 }

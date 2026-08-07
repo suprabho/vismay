@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { getApp, listAppEpics, listAppStories } from '@vismay/content-source/apps'
+import { AdminTable } from '@/components/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,22 +43,41 @@ export default async function AdminAppDetailPage({
         {epics.length === 0 ? (
           <div className="px-4 py-4 text-sm text-neutral-500">No epics in this app.</div>
         ) : (
-          <ul className="divide-y divide-white/5">
-            {epics.map((e) => (
-              <li key={e.slug}>
-                <Link
-                  href={`/vizmaya/epics/${e.slug}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/2.5 transition-colors"
-                >
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="font-medium truncate">{e.name}</div>
-                    <div className="text-xs text-neutral-500 truncate mt-0.5">{e.slug}</div>
-                  </div>
-                  <div className="text-xs text-neutral-500 shrink-0">{e.status}</div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <AdminTable
+            rows={epics}
+            rowKey={(epic) => epic.slug}
+            caption={`${app.name} epics`}
+            empty="No epics in this app."
+            columns={[
+              {
+                key: 'epic',
+                label: 'Epic',
+                render: (epic) => (
+                  <Link href={`/vizmaya/epics/${epic.slug}`} className="block hover:text-white">
+                    <div className="truncate font-medium">{epic.name}</div>
+                    <div className="mt-0.5 truncate font-mono text-xs text-neutral-500">{epic.slug}</div>
+                  </Link>
+                ),
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                className: 'w-32 text-neutral-400',
+                render: (epic) => epic.status,
+              },
+              {
+                key: 'action',
+                label: 'Action',
+                sticky: true,
+                className: 'w-20 text-right',
+                render: (epic) => (
+                  <Link href={`/vizmaya/epics/${epic.slug}`} className="text-xs text-neutral-300 hover:text-white">
+                    Edit
+                  </Link>
+                ),
+              },
+            ]}
+          />
         )}
       </section>
 
@@ -68,22 +88,41 @@ export default async function AdminAppDetailPage({
         {stories.length === 0 ? (
           <div className="px-4 py-4 text-sm text-neutral-500">No stories in this app.</div>
         ) : (
-          <ul className="divide-y divide-white/5">
-            {stories.map((s) => (
-              <li key={s.slug}>
-                <Link
-                  href={`/vizmaya/${s.slug}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/2.5 transition-colors"
-                >
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="font-medium truncate">{s.title}</div>
-                    <div className="text-xs text-neutral-500 truncate mt-0.5">{s.slug}</div>
-                  </div>
-                  <div className="text-xs text-neutral-500 shrink-0">{s.status}</div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <AdminTable
+            rows={stories}
+            rowKey={(story) => story.slug}
+            caption={`${app.name} stories`}
+            empty="No stories in this app."
+            columns={[
+              {
+                key: 'story',
+                label: 'Story',
+                render: (story) => (
+                  <Link href={`/vizmaya/${story.slug}`} className="block hover:text-white">
+                    <div className="truncate font-medium">{story.title}</div>
+                    <div className="mt-0.5 truncate font-mono text-xs text-neutral-500">{story.slug}</div>
+                  </Link>
+                ),
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                className: 'w-32 text-neutral-400',
+                render: (story) => story.status,
+              },
+              {
+                key: 'action',
+                label: 'Action',
+                sticky: true,
+                className: 'w-20 text-right',
+                render: (story) => (
+                  <Link href={`/vizmaya/${story.slug}`} className="text-xs text-neutral-300 hover:text-white">
+                    Edit
+                  </Link>
+                ),
+              },
+            ]}
+          />
         )}
       </section>
     </div>

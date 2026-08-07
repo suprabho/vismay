@@ -13,6 +13,7 @@ import AssetsPanel from './AssetsPanel'
 import { ComposeFlow } from '@/components/canvas/compose/ComposeFlowPanel'
 import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
 import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
+import { useAdminPanel } from '@/components/admin'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
@@ -86,6 +87,7 @@ export default function EditorClient({
    *  Server signs on each page render so admin always gets a fresh token. */
   signedLinks: SignedStoryLinks
 }) {
+  const { setDirty } = useAdminPanel()
   const previewUrl = appStoryUrl(appSlug, slug) ?? vizmayaUrl(`/story/${slug}`)
   // Canvas mirrors the editor's own routing split: vizmaya keeps its bespoke
   // /vizmaya/* tree, every other vertical (and unassigned Drafts) goes through
@@ -133,6 +135,11 @@ export default function EditorClient({
       config !== initial.config_yaml,
     [markdown, config, initial]
   )
+
+  useEffect(() => {
+    setDirty(dirty)
+    return () => setDirty(false)
+  }, [dirty, setDirty])
 
   // Warn before navigating away with unsaved work.
   useEffect(() => {

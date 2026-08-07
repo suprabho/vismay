@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { listAuthorsForAdmin } from '@vismay/content-source/authors'
+import { AdminTable } from '@/components/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,29 +24,52 @@ export default async function AdminAuthorsListPage() {
           + New author
         </Link>
       </div>
-      <ul className="divide-y divide-white/5">
-        {authors.map((a) => (
-          <li key={a.slug}>
-            <Link
-              href={`/vizmaya/authors/${a.slug}`}
-              className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-white/[0.025] transition-colors"
-            >
-              <div className="min-w-0 flex flex-col">
-                <div className="font-medium truncate">
-                  {a.name}
-                  {a.status !== 'published' && (
-                    <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400/80">{a.status}</span>
-                  )}
-                </div>
-                <div className="text-xs text-neutral-500 truncate mt-0.5">
-                  {a.slug}
-                  {a.role ? ` · ${a.role}` : ''}
-                </div>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <AdminTable
+        rows={authors}
+        rowKey={(author) => author.slug}
+        caption="Authors"
+        empty="No authors yet."
+        columns={[
+          {
+            key: 'author',
+            label: 'Author',
+            render: (author) => (
+              <Link href={`/vizmaya/authors/${author.slug}`} className="block hover:text-white">
+                <div className="truncate font-medium">{author.name}</div>
+                <div className="mt-0.5 truncate font-mono text-xs text-neutral-500">{author.slug}</div>
+              </Link>
+            ),
+          },
+          {
+            key: 'role',
+            label: 'Role',
+            responsive: 'secondary',
+            className: 'text-neutral-400',
+            render: (author) => author.role || '—',
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            className: 'w-32',
+            render: (author) => (
+              <span className={author.status === 'published' ? 'text-emerald-400' : 'text-amber-400'}>
+                {author.status}
+              </span>
+            ),
+          },
+          {
+            key: 'action',
+            label: 'Action',
+            sticky: true,
+            className: 'w-20 text-right',
+            render: (author) => (
+              <Link href={`/vizmaya/authors/${author.slug}`} className="text-xs text-neutral-300 hover:text-white">
+                Edit
+              </Link>
+            ),
+          },
+        ]}
+      />
     </div>
   )
 }

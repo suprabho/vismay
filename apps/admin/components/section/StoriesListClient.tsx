@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
 import { useStoryUpload, UploadResultBanner } from '@/components/section/storyUpload'
+import { AdminTable } from '@/components/admin'
 
 type Story = {
   slug: string
@@ -144,73 +145,101 @@ export default function StoriesListClient({ appSlug = null, basePath }: Props) {
           onDismiss={() => setUploadResult(null)}
         />
       )}
-      <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2 border-b border-white/5 text-xs uppercase tracking-wider text-neutral-500">
-        <div className="flex-1">Title</div>
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-[104px] text-right">Status</div>
-          <div className="w-4 text-center" title="Listed on home">L</div>
-          <div className="w-16 text-right">Order</div>
-        </div>
-      </div>
       {stories.length === 0 && debouncedQuery !== '' ? (
         <div className="flex-1 min-h-0 flex items-center justify-center text-sm text-neutral-500">
           No stories match “{debouncedQuery}”.
         </div>
       ) : (
-      <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
-        {stories.map((s) => (
-          <li key={s.slug}>
-            <div className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-white/2.5 transition-colors overflow-x-auto">
-              <Link
-                href={`${basePath}/${s.slug}`}
-                className="shrink-0 min-w-[8rem] max-w-[14rem] flex flex-col active:bg-white/5"
-              >
-                <div className="font-medium truncate">{s.title}</div>
-                <div className="text-xs text-neutral-500 truncate mt-0.5">{s.slug}</div>
-              </Link>
-              <div className="flex items-center gap-3 shrink-0">
-                <MoveStoryControl
-                  slug={s.slug}
-                  currentAppSlug={s.appSlug}
-                  onMoved={() => refreshStories()}
-                />
-                <div className="flex items-center gap-1">
-                  <select
-                    value={s.status}
-                    onChange={(e) => updateMeta(s.slug, { status: e.target.value })}
-                    disabled={updating === s.slug}
-                    className="text-xs bg-neutral-900 border border-white/10 rounded px-2 py-1 text-neutral-300 cursor-pointer disabled:opacity-50"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <AdminTable
+          rows={stories}
+          rowKey={(story) => story.slug}
+          caption="Stories"
+          empty="No stories yet."
+          columns={[
+            {
+              key: 'story',
+              label: 'Story',
+              render: (story) => (
+                <Link href={`${basePath}/${story.slug}`} className="block min-w-0 hover:text-white">
+                  <div className="truncate font-medium">{story.title}</div>
+                  <div className="mt-0.5 truncate font-mono text-xs text-neutral-500">{story.slug}</div>
+                </Link>
+              ),
+            },
+            {
+              key: 'status',
+              label: 'Status',
+              className: 'w-36',
+              render: (story) => (
+                <select
+                  value={story.status}
+                  onChange={(event) => updateMeta(story.slug, { status: event.target.value })}
+                  disabled={updating === story.slug}
+                  className="w-full cursor-pointer rounded border border-white/10 bg-neutral-900 px-2 py-1 text-xs text-neutral-300 disabled:opacity-50"
+                  aria-label={`Status for ${story.title}`}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
+              ),
+            },
+            {
+              key: 'listed',
+              label: 'Listed',
+              responsive: 'secondary',
+              className: 'w-20 text-center',
+              render: (story) => (
                 <input
                   type="checkbox"
-                  checked={s.listed}
-                  onChange={(e) => updateMeta(s.slug, { listed: e.target.checked })}
-                  disabled={updating === s.slug}
-                  className="w-4 h-4 cursor-pointer disabled:opacity-50"
+                  checked={story.listed}
+                  onChange={(event) => updateMeta(story.slug, { listed: event.target.checked })}
+                  disabled={updating === story.slug}
+                  className="h-4 w-4 cursor-pointer accent-white disabled:opacity-50"
                   title="Show on home page"
+                  aria-label={`List ${story.title} on home page`}
                 />
+              ),
+            },
+            {
+              key: 'order',
+              label: 'Order',
+              responsive: 'secondary',
+              className: 'w-24',
+              render: (story) => (
                 <input
                   type="number"
-                  value={s.displayOrder != null ? String(s.displayOrder) : ''}
+                  value={story.displayOrder != null ? String(story.displayOrder) : ''}
                   placeholder="#"
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? null : parseInt(e.target.value, 10)
-                    updateMeta(s.slug, { displayOrder: val })
+                  onChange={(event) => {
+                    const value = event.target.value === '' ? null : parseInt(event.target.value, 10)
+                    updateMeta(story.slug, { displayOrder: value })
                   }}
-                  disabled={updating === s.slug}
-                  className="w-16 text-sm bg-neutral-900 border border-white/20 rounded px-2 py-1 text-white cursor-pointer disabled:opacity-50 placeholder:text-neutral-600"
+                  disabled={updating === story.slug}
+                  className="w-16 rounded border border-white/20 bg-neutral-900 px-2 py-1 text-sm text-white placeholder:text-neutral-600 disabled:opacity-50"
                   title="Display order (0-indexed, lower first)"
+                  aria-label={`Display order for ${story.title}`}
                 />
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+              ),
+            },
+            {
+              key: 'actions',
+              label: 'Actions',
+              sticky: true,
+              className: 'w-48 text-right',
+              render: (story) => (
+                <div className="flex items-center justify-end gap-2">
+                  <MoveStoryControl slug={story.slug} currentAppSlug={story.appSlug} onMoved={() => refreshStories()} />
+                  <Link href={`${basePath}/${story.slug}`} className="text-xs text-neutral-300 hover:text-white">
+                    Edit
+                  </Link>
+                </div>
+              ),
+            },
+          ]}
+        />
+      </div>
       )}
     </div>
   )

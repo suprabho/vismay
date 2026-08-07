@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { YoutubeLogo, LinkedinLogo, XLogo, ArrowSquareOut } from '@phosphor-icons/react'
 import {
   PLATFORMS,
@@ -10,13 +10,14 @@ import {
   type Platform,
   type Status,
 } from '@vismay/content-source/socialEngagement'
+import { AdminTable } from '@/components/admin'
 
 interface Resp {
   events: EngagementEvent[]
   summary: EngagementSummary
 }
 
-const PLATFORM_ICONS: Record<Platform, React.ComponentType<{ size?: number; weight?: 'fill' | 'regular' }>> = {
+const PLATFORM_ICONS: Record<Platform, React.ComponentType<{ size?: number; weight?: 'fill' | 'regular'; className?: string }>> = {
   youtube: YoutubeLogo,
   linkedin: LinkedinLogo,
   x: XLogo,
@@ -180,102 +181,88 @@ export function SocialInbox() {
           No engagement events match the current filters.
         </div>
       ) : (
-        <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-white/5">
-          {events.map((e) => (
-            <EventRow
-              key={e.id}
-              event={e}
-              busy={updating === e.id}
-              onStatusChange={(s) => updateStatus(e.id, s)}
-            />
-          ))}
-        </ul>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <AdminTable
+            rows={events}
+            rowKey={(event) => event.id}
+            caption="Social engagement events"
+            empty="No engagement events match the current filters."
+            columns={[
+              {
+                key: 'event',
+                label: 'Event',
+                render: (event) => {
+                  const Icon = PLATFORM_ICONS[event.platform]
+                  return (
+                    <div className="flex min-w-0 items-start gap-3">
+                      <Icon size={16} weight="fill" className="mt-0.5 shrink-0 text-neutral-400" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="truncate font-medium text-neutral-200">{event.author_handle ?? 'Unknown'}</span>
+                          <span className="shrink-0 text-xs text-neutral-500">{event.type}</span>
+                        </div>
+                        {event.content ? <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-neutral-300">{event.content}</p> : null}
+                      </div>
+                    </div>
+                  )
+                },
+              },
+              {
+                key: 'platform',
+                label: 'Platform',
+                responsive: 'secondary',
+                className: 'w-28 text-xs text-neutral-400',
+                render: (event) => PLATFORM_LABELS[event.platform],
+              },
+              {
+                key: 'created',
+                label: 'Received',
+                responsive: 'secondary',
+                className: 'w-28 text-xs tabular-nums text-neutral-500',
+                render: (event) => formatTimeAgo(new Date(event.created_at)),
+              },
+              {
+                key: 'parent',
+                label: 'On',
+                responsive: 'secondary',
+                className: 'max-w-[18rem] text-xs text-neutral-500',
+                render: (event) => event.parent_content ? (
+                  event.parent_url ? <a href={event.parent_url} target="_blank" rel="noreferrer" className="line-clamp-2 underline hover:text-neutral-300">{event.parent_content}</a> : <span className="line-clamp-2">{event.parent_content}</span>
+                ) : '—',
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                className: 'w-32',
+                render: (event) => (
+                  <select
+                    value={event.status}
+                    disabled={updating === event.id}
+                    onChange={(e) => updateStatus(event.id, e.target.value as Status)}
+                    className="w-full cursor-pointer rounded border border-white/10 bg-neutral-900 px-2 py-1 text-xs text-neutral-300 disabled:opacity-50"
+                    aria-label={`Status for ${event.author_handle ?? 'event'}`}
+                  >
+                    {STATUSES.map((status) => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}
+                  </select>
+                ),
+              },
+              {
+                key: 'source',
+                label: '',
+                sticky: true,
+                className: 'w-12 text-right',
+                render: (event) => event.source_url ? (
+                  <a href={event.source_url} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-white" title="View on platform">
+                    <ArrowSquareOut size={16} />
+                  </a>
+                ) : null,
+              },
+            ]}
+          />
+        </div>
       )}
     </div>
   )
-}
-
-function EventRow({
-  event,
-  busy,
-  onStatusChange,
-}: {
-  event: EngagementEvent
-  busy: boolean
-  onStatusChange: (s: Status) => void
-}) {
-  const Icon = PLATFORM_ICONS[event.platform]
-  const timeAgo = useTimeAgo(event.created_at)
-  return (
-    <li className={`px-4 py-4 hover:bg-white/[0.02] transition-colors ${event.status === 'new' ? '' : 'opacity-60'}`}>
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 pt-0.5 text-neutral-400">
-          <Icon size={16} weight="fill" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-medium text-neutral-200 truncate">
-              {event.author_handle ?? 'Unknown'}
-            </span>
-            <span className="text-xs text-neutral-500 shrink-0">{event.type}</span>
-            <span className="text-xs text-neutral-600 shrink-0">·</span>
-            <span className="text-xs text-neutral-500 shrink-0 tabular-nums">{timeAgo}</span>
-          </div>
-          {event.content && (
-            <p className="text-sm text-neutral-300 mt-1 line-clamp-3 whitespace-pre-wrap">
-              {event.content}
-            </p>
-          )}
-          {event.parent_content && (
-            <div className="mt-1.5 text-xs text-neutral-500 line-clamp-1">
-              on:{' '}
-              {event.parent_url ? (
-                <a
-                  href={event.parent_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline hover:text-neutral-300"
-                >
-                  {event.parent_content}
-                </a>
-              ) : (
-                event.parent_content
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {event.source_url && (
-            <a
-              href={event.source_url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-neutral-400 hover:text-white p-1"
-              title="View on platform"
-            >
-              <ArrowSquareOut size={16} />
-            </a>
-          )}
-          <select
-            value={event.status}
-            disabled={busy}
-            onChange={(e) => onStatusChange(e.target.value as Status)}
-            className="text-xs bg-neutral-900 border border-white/10 rounded px-2 py-1 text-neutral-300 cursor-pointer disabled:opacity-50"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </li>
-  )
-}
-
-function useTimeAgo(iso: string): string {
-  return useMemo(() => formatTimeAgo(new Date(iso)), [iso])
 }
 
 function formatTimeAgo(d: Date): string {

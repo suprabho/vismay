@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { appEpicUrl } from '@/lib/publicSite'
 import { listAppEpics } from '@vismay/content-source/apps'
+import { AdminTable } from '@/components/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,39 +31,55 @@ export default async function AppEpicsListPage({ params }: Props) {
           No epics tagged with this app yet.
         </div>
       ) : (
-        <ul className="divide-y divide-white/5">
-          {epics.map((e) => {
-            const previewUrl = appEpicUrl(appSlug, e.slug)
-            return (
-              <li key={e.slug}>
-                <div className="flex items-center justify-between gap-3 hover:bg-white/[0.025] transition-colors">
-                  <Link
-                    href={`/${appSlug}/epics/${e.slug}`}
-                    className="flex-1 min-w-0 flex flex-col px-4 py-4"
-                  >
-                    <div className="font-medium truncate">{e.name}</div>
-                    <div className="text-xs text-neutral-500 mt-0.5 font-mono truncate">
-                      {e.slug}
-                    </div>
+        <AdminTable
+          rows={epics}
+          rowKey={(epic) => epic.slug}
+          caption={`${appSlug} epics`}
+          empty="No epics tagged with this app yet."
+          columns={[
+            {
+              key: 'epic',
+              label: 'Epic',
+              render: (epic) => (
+                <Link href={`/${appSlug}/epics/${epic.slug}`} className="block hover:text-white">
+                  <div className="truncate font-medium">{epic.name}</div>
+                  <div className="mt-0.5 truncate font-mono text-xs text-neutral-500">{epic.slug}</div>
+                </Link>
+              ),
+            },
+            {
+              key: 'status',
+              label: 'Status',
+              className: 'w-32 text-neutral-400',
+              render: (epic) => epic.status,
+            },
+            {
+              key: 'preview',
+              label: 'Preview',
+              responsive: 'secondary',
+              className: 'w-28 text-right',
+              render: (epic) => {
+                const previewUrl = appEpicUrl(appSlug, epic.slug)
+                return previewUrl ? (
+                  <Link href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-300 hover:text-white">
+                    Preview ↗
                   </Link>
-                  <span className="shrink-0 text-xs uppercase tracking-wider text-neutral-500">
-                    {e.status}
-                  </span>
-                  {previewUrl && (
-                    <Link
-                      href={previewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-neutral-300 hover:text-white px-3 py-1.5 mr-4 border border-white/10 rounded-lg hover:bg-white/5 shrink-0"
-                    >
-                      preview →
-                    </Link>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                ) : null
+              },
+            },
+            {
+              key: 'action',
+              label: 'Action',
+              sticky: true,
+              className: 'w-20 text-right',
+              render: (epic) => (
+                <Link href={`/${appSlug}/epics/${epic.slug}`} className="text-xs text-neutral-300 hover:text-white">
+                  Edit
+                </Link>
+              ),
+            },
+          ]}
+        />
       )}
     </div>
   )

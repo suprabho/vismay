@@ -5,6 +5,7 @@ import type { ThemeName } from '@footshorts/brand'
 import { AssetStudioPreview } from './AssetStudioPreview'
 import { buildPreviewData } from './previewData'
 import { THEME_LABELS, THEME_NAMES } from './themeVars'
+import { AdminTable } from '@/components/admin'
 
 /** Structurally matches `AssetEntity` from content-source/footshortsData (kept
  *  local so this client module doesn't import the server-only data file). */
@@ -176,34 +177,43 @@ export function AssetStudio({ initialEntities }: { initialEntities: AssetEntity[
           ) : entities.length === 0 ? (
             <p className="p-3 text-xs text-neutral-500">No entities found.</p>
           ) : (
-            <ul>
-              {entities.map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectEntity(e)}
-                    className={`flex w-full items-center gap-2.5 border-b border-white/5 px-3 py-2 text-left transition-colors last:border-b-0 ${
-                      selected?.id === e.id ? 'bg-emerald-500/15' : 'hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10">
-                      {e.crest_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={e.crest_url} alt="" className="h-5 w-5 object-contain" />
-                      ) : (
-                        <span className="text-[10px] text-neutral-400">{e.name.charAt(0)}</span>
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm text-neutral-100">{e.name}</span>
-                    <span
-                      className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/20"
-                      style={{ background: e.primary_color ?? 'transparent' }}
-                      title={e.primary_color ?? 'no color'}
-                    />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <AdminTable
+              rows={entities}
+              rowKey={(entity) => entity.id}
+              caption="Asset entities"
+              minWidth="none"
+              empty="No entities found."
+              getRowClassName={(entity) => entity.id === selected?.id ? 'bg-emerald-500/15' : ''}
+              columns={[
+                {
+                  key: 'entity',
+                  label: 'Entity',
+                  render: (entity) => (
+                    <button type="button" onClick={() => selectEntity(entity)} className="flex w-full items-center gap-2 text-left hover:text-white">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10">
+                        {entity.crest_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entity.crest_url} alt="" className="h-5 w-5 object-contain" />
+                        ) : (
+                          <span className="text-[10px] text-neutral-400">{entity.name.charAt(0)}</span>
+                        )}
+                      </span>
+                      <span className="min-w-0 truncate text-xs text-neutral-100">{entity.name}</span>
+                    </button>
+                  ),
+                },
+                {
+                  key: 'color',
+                  label: 'Color',
+                  className: 'w-12 text-right',
+                  render: (entity) => (
+                    <button type="button" onClick={() => selectEntity(entity)} className="ml-auto block" title={entity.primary_color ?? 'no color'}>
+                      <span className="block h-3.5 w-3.5 rounded-full border border-white/20" style={{ background: entity.primary_color ?? 'transparent' }} />
+                    </button>
+                  ),
+                },
+              ]}
+            />
           )}
         </div>
       </aside>

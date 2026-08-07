@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAdminPanel } from '@/components/admin'
 
 interface AuthorForm {
   slug: string
@@ -30,10 +31,19 @@ const SAFE_SLUG = /^[a-z0-9-]+$/
 
 export default function AuthorEditorClient({ slug, create }: { slug: string; create: boolean }) {
   const router = useRouter()
+  const { setDirty } = useAdminPanel()
   const [form, setForm] = useState<AuthorForm>(EMPTY)
   const [loading, setLoading] = useState(!create)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const initialRef = useRef<AuthorForm>(create ? EMPTY : EMPTY)
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialRef.current)
+
+  useEffect(() => {
+    setDirty(dirty)
+    return () => setDirty(false)
+  }, [dirty, setDirty])
 
   useEffect(() => {
     if (create) return
@@ -54,6 +64,16 @@ export default function AuthorEditorClient({ slug, create }: { slug: string; cre
           sameAs: (author.sameAs ?? []).join('\n'),
           status: author.status ?? 'published',
         })
+        initialRef.current = {
+          slug: author.slug,
+          name: author.name ?? '',
+          role: author.role ?? '',
+          bio: author.bio ?? '',
+          avatarUrl: author.avatarUrl ?? '',
+          profileUrl: author.profileUrl ?? '',
+          sameAs: (author.sameAs ?? []).join('\n'),
+          status: author.status ?? 'published',
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'load failed')
       } finally {
@@ -103,6 +123,8 @@ export default function AuthorEditorClient({ slug, create }: { slug: string; cre
             body: JSON.stringify(payload),
           })
       if (!res.ok) throw new Error((await res.json()).error ?? 'save failed')
+      initialRef.current = form
+      setDirty(false)
       router.push('/vizmaya/authors')
       router.refresh()
     } catch (e) {

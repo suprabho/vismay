@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import MoveStoryControl from './MoveStoryControl'
+import { AdminTable } from '@/components/admin'
 
 type Draft = { slug: string; title: string; status: string }
 
@@ -54,41 +55,57 @@ export default function DraftsList({ stories }: { stories: Draft[] }) {
           {error}
         </div>
       )}
-      <ul className="grid gap-2">
-        {drafts.map((s) => (
-          <li
-            key={s.slug}
-            className="flex items-center justify-between gap-3 overflow-x-auto rounded-lg border border-white/10 bg-white/5 p-3"
-          >
-            <Link href={`/vizmaya/${s.slug}`} className="shrink-0 min-w-[8rem] max-w-[14rem] hover:underline">
-              <div className="font-medium truncate">{s.title}</div>
-              <div className="text-xs text-neutral-500 truncate">
-                {s.slug} · {s.status}
+      <AdminTable
+        rows={drafts}
+        rowKey={(story) => story.slug}
+        caption="Unassigned drafts"
+        empty="No unassigned drafts."
+        columns={[
+          {
+            key: 'story',
+            label: 'Story',
+            render: (story) => (
+              <Link href={`/vizmaya/${story.slug}`} className="block min-w-0 hover:text-white">
+                <div className="truncate font-medium">{story.title}</div>
+                <div className="mt-0.5 truncate text-xs text-neutral-500">{story.slug}</div>
+              </Link>
+            ),
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            responsive: 'secondary',
+            className: 'w-28 text-neutral-400',
+            render: (story) => story.status,
+          },
+          {
+            key: 'actions',
+            label: 'Actions',
+            sticky: true,
+            className: 'w-52 text-right',
+            render: (story) => (
+              <div className="flex items-center justify-end gap-2">
+                <MoveStoryControl
+                  slug={story.slug}
+                  currentAppSlug={null}
+                  onMoved={(appSlug) => {
+                    if (appSlug !== null) setDrafts((cur) => cur.filter((d) => d.slug !== story.slug))
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(story)}
+                  disabled={deleting === story.slug}
+                  title="Delete this draft permanently"
+                  className="rounded-md border border-red-500/30 px-2.5 py-1.5 text-xs text-red-300 hover:border-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                >
+                  {deleting === story.slug ? 'Deleting…' : 'Delete'}
+                </button>
               </div>
-            </Link>
-            <div className="flex items-center gap-2 shrink-0">
-              <MoveStoryControl
-                slug={s.slug}
-                currentAppSlug={null}
-                onMoved={(appSlug) => {
-                  if (appSlug !== null) {
-                    setDrafts((cur) => cur.filter((d) => d.slug !== s.slug))
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => remove(s)}
-                disabled={deleting === s.slug}
-                title="Delete this draft permanently"
-                className="rounded-md border border-red-500/30 px-2.5 py-1.5 text-xs text-red-300 hover:border-red-400 hover:bg-red-500/10 disabled:opacity-40"
-              >
-                {deleting === s.slug ? 'Deleting…' : 'Delete'}
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+            ),
+          },
+        ]}
+      />
     </div>
   )
 }

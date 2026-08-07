@@ -2,18 +2,10 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  StoryBentoGrid,
-  StoryGridStyles,
-  StoryGridFonts,
-  StoryCard,
-  type StoryCardData,
-  type StoryGridItem,
-  type RenderCardContext,
-} from '@vismay/ui'
-import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
 import { useStoryUpload, UploadResultBanner } from '@/components/section/storyUpload'
+import { AdminTable } from '@/components/admin'
+import type { StoryCardData } from '@vismay/ui'
 
 type Story = StoryCardData & {
   status: string
@@ -48,7 +40,6 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
   const [tab, setTab] = useState<Tab>('home')
   const [query, setQuery] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
-  const [dragIndex, setDragIndex] = useState<number | null>(null)
   const latestRequestId = useRef(0)
 
   async function refreshStories() {
@@ -69,18 +60,6 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
     appSlug,
     () => refreshStories()
   )
-
-  // Per-card typefaces — same resolution the marketing home uses.
-  const fontUrls = useMemo(() => {
-    const urls = new Set<string>()
-    for (const s of stories) {
-      const fonts = s.theme?.fonts
-      if (!fonts) continue
-      const u = getFontImportUrl(fonts)
-      if (u) urls.add(u)
-    }
-    return Array.from(urls)
-  }, [stories])
 
   const q = query.trim().toLowerCase()
   const matchesQuery = (s: Story) =>
@@ -121,79 +100,10 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
     setUpdating(null)
   }
 
-  // Drag-to-reorder the home grid: splice the dragged card to the drop target,
-  // renumber displayOrder across the listed set, and persist each card.
-  async function reorderHome(targetIndex: number) {
-    if (dragIndex === null || dragIndex === targetIndex) return
-    const order = homeListed.map((s) => s.slug)
-    const [moved] = order.splice(dragIndex, 1)
-    order.splice(targetIndex, 0, moved)
-    setDragIndex(null)
-    const orderMap = new Map(order.map((slug, i) => [slug, i]))
-    setStories((prev) =>
-      prev.map((s) => (orderMap.has(s.slug) ? { ...s, displayOrder: orderMap.get(s.slug)! } : s))
-    )
-    await Promise.all(
-      order.map((slug, i) =>
-        fetch(`/api/stories/${slug}`, {
-          method: 'PUT',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ displayOrder: i }),
-        })
-      )
-    )
-  }
-
   // The search box lives in the shared header, so every tab — including Home —
-  // has to honour it. Drag-to-reorder indexes into the full `homeListed`, so we
-  // only allow dragging when no query is active (a filtered grid's indices don't
-  // line up with the persisted order).
+  // has to honour it.
   const homeShown = homeListed.filter(matchesQuery)
   const notOnHomeShown = notOnHome.filter(matchesQuery)
-  const homeItems: StoryGridItem[] = homeShown.map((s, i) => ({ data: s, n: i }))
-
-  const renderHomeCard = (item: StoryGridItem, ctx: RenderCardContext) => {
-    const s = item.data as Story
-    const busy = updating === s.slug
-    return (
-      <StoryCard
-        data={s}
-        n={item.n}
-        big={ctx.big}
-        className={`group${q === '' ? ' cursor-grab' : ''}${dragIndex === ctx.index ? ' opacity-40' : ''}`}
-        draggable={q === ''}
-        onDragStart={q === '' ? () => setDragIndex(ctx.index) : undefined}
-        onDragOver={q === '' ? (e) => e.preventDefault() : undefined}
-        onDrop={
-          q === ''
-            ? (e) => {
-                e.preventDefault()
-                reorderHome(ctx.index)
-              }
-            : undefined
-        }
-        onDragEnd={q === '' ? () => setDragIndex(null) : undefined}
-      >
-        <div className="absolute inset-0 z-[2] flex flex-col justify-between p-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/45">
-          <div className="flex justify-end">
-            <span className="text-[10px] uppercase tracking-wider text-white/60">⠿ drag</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <OverlayBtn href={`${basePath}/${s.slug}`}>Edit</OverlayBtn>
-            <OverlayBtn disabled={busy} onClick={() => updateMeta(s.slug, { listed: false })}>
-              Unlist
-            </OverlayBtn>
-            <OverlayBtn disabled={busy} onClick={() => updateMeta(s.slug, { status: 'draft' })}>
-              → Draft
-            </OverlayBtn>
-            <OverlayBtn disabled={busy} onClick={() => updateMeta(s.slug, { status: 'archived' })}>
-              → Archive
-            </OverlayBtn>
-          </div>
-        </div>
-      </StoryCard>
-    )
-  }
 
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: 'home', label: 'Home', count: homeListed.length },
@@ -209,9 +119,6 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <StoryGridStyles />
-      <StoryGridFonts fontUrls={fontUrls} />
-
       <div className="shrink-0 px-4 py-5 border-b border-white/5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Stories</h1>
@@ -261,49 +168,43 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
         {tab === 'home' && (
           <div className="p-4 space-y-6">
             <p className="text-xs text-neutral-500">
-              These stories appear on the vizmaya.fyi home grid, in this order. Drag a card to reorder; hover for
-              quick actions.
+              These stories appear on the vizmaya.fyi home grid, in this order. Update the order directly in the
+              table; quick actions remain available in the final column.
             </p>
-            {homeItems.length === 0 ? (
-              <div className="text-sm text-neutral-500 py-8 text-center">
-                {q
-                  ? `No home stories match “${query.trim()}”.`
-                  : 'No stories on the home grid yet. Publish a story and add it to home from a section below.'}
-              </div>
-            ) : (
-              <StoryBentoGrid mode="stacked" items={homeItems} renderCard={renderHomeCard} />
-            )}
+            <StoryTable
+              stories={homeShown}
+              basePath={basePath}
+              updating={updating}
+              onRefresh={refreshStories}
+              empty={q ? `No home stories match “${query.trim()}”.` : 'No stories on the home grid yet.'}
+              actionsFor={(s) => [
+                { label: 'Unlist', onClick: () => updateMeta(s.slug, { listed: false }) },
+                { label: '→ Draft', onClick: () => updateMeta(s.slug, { status: 'draft' }) },
+                { label: '→ Archive', onClick: () => updateMeta(s.slug, { status: 'archived' }) },
+              ]}
+              showOrder
+              onOrderChange={(slug, value) => updateMeta(slug, { displayOrder: value })}
+            />
 
             <div className="border-t border-white/5 pt-5">
               <h2 className="text-xs uppercase tracking-wider text-neutral-500 mb-3">
                 Published · not on home ({notOnHome.length})
               </h2>
-              {notOnHomeShown.length === 0 ? (
-                <p className="text-sm text-neutral-600">
-                  {q ? `No matches in “${query.trim()}”.` : 'Every published story is on the home grid.'}
-                </p>
-              ) : (
-                <ul className="divide-y divide-white/5 border border-white/5 rounded-lg overflow-hidden">
-                  {notOnHomeShown.map((s) => (
-                    <StoryRow
-                      key={s.slug}
-                      story={s}
-                      basePath={basePath}
-                      busy={updating === s.slug}
-                      onRefresh={refreshStories}
-                      actions={[
-                        {
-                          label: '＋ Add to home',
-                          onClick: () =>
-                            updateMeta(s.slug, { listed: true, displayOrder: homeListed.length }),
-                        },
-                        { label: '→ Draft', onClick: () => updateMeta(s.slug, { status: 'draft' }) },
-                        { label: '→ Archive', onClick: () => updateMeta(s.slug, { status: 'archived' }) },
-                      ]}
-                    />
-                  ))}
-                </ul>
-              )}
+              <StoryTable
+                stories={notOnHomeShown}
+                basePath={basePath}
+                updating={updating}
+                onRefresh={refreshStories}
+                empty={q ? `No matches in “${query.trim()}”.` : 'Every published story is on the home grid.'}
+                actionsFor={(s) => [
+                  {
+                    label: '＋ Add to home',
+                    onClick: () => updateMeta(s.slug, { listed: true, displayOrder: homeListed.length }),
+                  },
+                  { label: '→ Draft', onClick: () => updateMeta(s.slug, { status: 'draft' }) },
+                  { label: '→ Archive', onClick: () => updateMeta(s.slug, { status: 'archived' }) },
+                ]}
+              />
             </div>
           </div>
         )}
@@ -342,81 +243,10 @@ export default function StoriesManager({ appSlug, basePath }: Props) {
   )
 }
 
-function OverlayBtn({
-  children,
-  href,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode
-  href?: string
-  onClick?: () => void
-  disabled?: boolean
-}) {
-  const cls =
-    'text-[11px] px-2 py-1 rounded bg-white/15 text-white hover:bg-white/30 disabled:opacity-40 transition-colors'
-  if (href) {
-    return (
-      <Link href={href} className={cls} draggable={false}>
-        {children}
-      </Link>
-    )
-  }
-  return (
-    <button type="button" className={cls} onClick={onClick} disabled={disabled} draggable={false}>
-      {children}
-    </button>
-  )
-}
-
 interface RowAction {
   label: string
   onClick: () => void
   danger?: boolean
-}
-
-function StoryRow({
-  story,
-  basePath,
-  busy,
-  actions,
-  onRefresh,
-}: {
-  story: Story
-  basePath: string
-  busy: boolean
-  actions: RowAction[]
-  onRefresh: () => void
-}) {
-  return (
-    <li className="flex items-center justify-between gap-3 px-4 py-3 bg-neutral-950/30 hover:bg-white/2.5 transition-colors overflow-x-auto">
-      <Link href={`${basePath}/${story.slug}`} className="shrink-0 min-w-[8rem] max-w-[14rem]">
-        <div className="font-medium truncate text-sm">{story.title}</div>
-        <div className="text-xs text-neutral-500 truncate mt-0.5">
-          {story.slug}
-          {story.date ? ` · ${story.date}` : ''}
-        </div>
-      </Link>
-      <div className="flex items-center gap-2 shrink-0">
-        <MoveStoryControl slug={story.slug} currentAppSlug={story.appSlug} onMoved={() => onRefresh()} />
-        {actions.map((a) => (
-          <button
-            key={a.label}
-            type="button"
-            disabled={busy}
-            onClick={a.onClick}
-            className={`text-xs px-2 py-1 rounded border transition-colors disabled:opacity-40 ${
-              a.danger
-                ? 'border-red-500/30 text-red-300 hover:bg-red-500/10'
-                : 'border-white/10 text-neutral-300 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
-    </li>
-  )
 }
 
 function RowList({
@@ -438,17 +268,115 @@ function RowList({
     return <div className="text-sm text-neutral-500 py-10 text-center">{empty}</div>
   }
   return (
-    <ul className="divide-y divide-white/5">
-      {stories.map((s) => (
-        <StoryRow
-          key={s.slug}
-          story={s}
-          basePath={basePath}
-          busy={updating === s.slug}
-          actions={actionsFor(s)}
-          onRefresh={onRefresh}
-        />
-      ))}
-    </ul>
+    <StoryTable
+      stories={stories}
+      basePath={basePath}
+      updating={updating}
+      onRefresh={onRefresh}
+      empty={empty}
+      actionsFor={actionsFor}
+    />
+  )
+}
+
+function StoryTable({
+  stories,
+  basePath,
+  updating,
+  onRefresh,
+  empty,
+  actionsFor,
+  showOrder = false,
+  onOrderChange,
+}: {
+  stories: Story[]
+  basePath: string
+  updating: string | null
+  onRefresh: () => void
+  empty: string
+  actionsFor: (story: Story) => RowAction[]
+  showOrder?: boolean
+  onOrderChange?: (slug: string, value: number | null) => void
+}) {
+  return (
+    <AdminTable
+      rows={stories}
+      rowKey={(story) => story.slug}
+      caption="Stories"
+      empty={empty}
+      columns={[
+        {
+          key: 'story',
+          label: 'Story',
+          render: (story) => (
+            <Link href={`${basePath}/${story.slug}`} className="block hover:text-white">
+              <div className="truncate font-medium">{story.title}</div>
+              <div className="mt-0.5 truncate font-mono text-xs text-neutral-500">
+                {story.slug}{story.date ? ` · ${story.date}` : ''}
+              </div>
+            </Link>
+          ),
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          className: 'w-32 text-neutral-400',
+          render: (story) => story.status,
+        },
+        {
+          key: 'listed',
+          label: 'Listed',
+          responsive: 'secondary',
+          className: 'w-20 text-center',
+          render: (story) => story.listed ? 'Yes' : 'No',
+        },
+        ...(showOrder ? [{
+          key: 'order',
+          label: 'Order',
+          responsive: 'secondary' as const,
+          className: 'w-20 tabular-nums text-neutral-400',
+          render: (story: Story) => onOrderChange ? (
+            <input
+              type="number"
+              value={story.displayOrder == null ? '' : String(story.displayOrder)}
+              placeholder="#"
+              onChange={(event) => onOrderChange(story.slug, event.target.value === '' ? null : Number.parseInt(event.target.value, 10))}
+              disabled={updating === story.slug}
+              className="w-16 rounded border border-white/20 bg-neutral-900 px-2 py-1 text-sm text-white placeholder:text-neutral-600 disabled:opacity-50"
+              aria-label={`Display order for ${story.title}`}
+            />
+          ) : story.displayOrder ?? '—',
+        }] : []),
+        {
+          key: 'actions',
+          label: 'Actions',
+          sticky: true,
+          className: 'w-[18rem] text-right',
+          render: (story) => (
+            <div className="flex items-center justify-end gap-2">
+              <MoveStoryControl slug={story.slug} currentAppSlug={story.appSlug} onMoved={onRefresh} />
+              <Link href={`${basePath}/${story.slug}`} className="text-xs text-neutral-300 hover:text-white">
+                Edit
+              </Link>
+              {actionsFor(story).map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  disabled={updating === story.slug}
+                  onClick={action.onClick}
+                  className={`rounded border px-2 py-1 text-xs transition-colors disabled:opacity-40 ${
+                    action.danger
+                      ? 'border-red-500/30 text-red-300 hover:bg-red-500/10'
+                      : 'border-white/10 text-neutral-300 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ),
+        },
+      ]}
+    />
   )
 }

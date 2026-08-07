@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { appEpicUrl } from '@/lib/publicSite'
 import { THEME_REGISTRY } from '../themeRegistry'
 import EmbedPreview from './EmbedPreview'
+import { useAdminPanel } from '@/components/admin'
 
 // Epics whose public landing supports iframe embedding via `?embed=1`. The
 // value is the public-site path and the camera the preview opens to.
@@ -100,6 +101,7 @@ export default function EpicEditorClient({
   slug: string
   sectionHref: string
 }) {
+  const { setDirty } = useAdminPanel()
   const [data, setData] = useState<ThemePayload | null>(null)
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [fontOverrides, setFontOverrides] = useState<Partial<Record<FontKey, string>>>({})
@@ -116,6 +118,7 @@ export default function EpicEditorClient({
   const [savingApp, setSavingApp] = useState(false)
   const [showOnHome, setShowOnHome] = useState<boolean>(true)
   const [savingShowOnHome, setSavingShowOnHome] = useState(false)
+  const baselineRef = useRef<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -292,6 +295,19 @@ export default function EpicEditorClient({
   const effectiveMapStyle = mapStyleOverride || data?.mapStyleDefault || ''
   const mapStyleOverridden = mapStyleOverride !== ''
 
+  const currentSnapshot = useMemo(
+    () => JSON.stringify({ overrides, fontOverrides, mapStyleOverride, memberships, appSlug, showOnHome }),
+    [overrides, fontOverrides, mapStyleOverride, memberships, appSlug, showOnHome],
+  )
+
+  useEffect(() => {
+    if (!stories) return
+    if (baselineRef.current == null) baselineRef.current = currentSnapshot
+    setDirty(baselineRef.current !== currentSnapshot)
+  }, [currentSnapshot, setDirty, stories])
+
+  useEffect(() => () => setDirty(false), [setDirty])
+
   function toggleMember(storySlug: string) {
     setMemberships((prev) => {
       const cur = prev[storySlug] ?? { inEpic: false, position: null }
@@ -355,6 +371,7 @@ export default function EpicEditorClient({
       setError(body?.error ?? `HTTP ${failed.status}`)
     } else {
       setSavedAt(Date.now())
+      baselineRef.current = currentSnapshot
       // Refresh stories so positions reflect any normalisation server-side.
       const r = await fetch(`/api/vizmaya/epics/${slug}/stories`)
       if (r.ok) {

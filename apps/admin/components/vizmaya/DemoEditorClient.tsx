@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import type { DemoStatus } from '@vismay/content-source/demos'
 import type { ShareCardEntry } from '@vismay/content-source/shareCardList'
 import { vizmayaUrl } from '@/lib/publicSite'
+import { useAdminPanel } from '@/components/admin'
 
 interface ShareCardId {
   parentIndex: number
@@ -40,6 +42,8 @@ const TABS: { id: Tab; label: string }[] = [
 const MAX_CURATED_CARDS = 6
 
 export default function DemoEditorClient({ demoId, initial, defaultContentYaml }: Props) {
+  const router = useRouter()
+  const { setDirty, isPanel } = useAdminPanel()
   const [tab, setTab] = useState<Tab>('settings')
   const [clientName, setClientName] = useState(initial.client_name)
   const [clientSlug, setClientSlug] = useState(initial.client_slug)
@@ -67,6 +71,11 @@ export default function DemoEditorClient({ demoId, initial, defaultContentYaml }
       !sameSet(pickedIds, new Set(initial.share_card_ids.map((c) => stableId(c)))),
     [clientName, clientSlug, storySlug, status, contentYaml, password, pickedIds, initial]
   )
+
+  useEffect(() => {
+    setDirty(dirty)
+    return () => setDirty(false)
+  }, [dirty, setDirty])
 
   function save() {
     start(async () => {
@@ -98,8 +107,14 @@ export default function DemoEditorClient({ demoId, initial, defaultContentYaml }
       }
       setPassword('')
       setFeedback({ kind: 'ok', msg: 'Saved' })
-      // Reload so server reflects the latest state on next nav.
-      setTimeout(() => window.location.reload(), 200)
+      setDirty(false)
+      if (isPanel) {
+        router.push('/vizmaya/demos')
+        router.refresh()
+      } else {
+        // Reload so server reflects the latest state on next nav.
+        setTimeout(() => window.location.reload(), 200)
+      }
     })
   }
 

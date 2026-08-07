@@ -3,7 +3,7 @@ import { AdminTabs } from '@/components/vizmaya/AdminTabs'
 
 export const dynamic = 'force-dynamic'
 
-export default async function VizmayaLayout({ children }: { children: React.ReactNode }) {
+export default async function VizmayaLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   const configured = isConfigured()
   const authed = await isAuthed()
   const showTabs = authed && configured
@@ -16,6 +16,7 @@ export default async function VizmayaLayout({ children }: { children: React.Reac
         </div>
       )}
       {children}
+      {modal}
     </>
   )
 }

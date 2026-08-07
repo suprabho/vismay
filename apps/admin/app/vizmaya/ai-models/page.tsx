@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { AdminTable } from '@/components/admin'
 
 interface Feature {
   key: string
@@ -83,42 +84,58 @@ export default function AiModelsPage() {
       {!data ? (
         <div className="mt-6 text-sm text-neutral-500">Loading…</div>
       ) : (
-        <div className="mt-6 divide-y divide-white/5 rounded-lg border border-white/10">
-          {data.features.map((f) => {
-            const aliases = data.aliases[f.modality]
-            const current = data.map[f.key] ?? f.default
-            return (
-              <div
-                key={f.key}
-                className="flex items-center gap-4 px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 text-sm text-neutral-100">
-                    {f.label}
-                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-neutral-500">
-                      {f.modality}
-                    </span>
+        <div className="mt-6 rounded-lg border border-white/10">
+          <AdminTable
+            rows={data.features}
+            rowKey={(feature) => feature.key}
+            empty="No AI features configured."
+            caption="AI feature model assignments"
+            columns={[
+              {
+                key: 'feature',
+                label: 'Feature',
+                render: (feature) => (
+                  <div className="min-w-56">
+                    <div className="text-sm text-neutral-100">{feature.label}</div>
+                    <div className="mt-0.5 text-xs text-neutral-500">{feature.description}</div>
                   </div>
-                  <div className="mt-0.5 text-xs text-neutral-500">
-                    {f.description}
-                  </div>
-                </div>
-                <select
-                  value={current}
-                  disabled={savingKey === f.key}
-                  onChange={(e) => void setModel(f.key, e.target.value)}
-                  className="shrink-0 rounded border border-white/10 bg-neutral-900 px-2 py-1.5 text-[12px] text-neutral-200 focus:border-white/30 focus:outline-none disabled:opacity-40"
-                  title={aliases.find((a) => a.alias === current)?.id}
-                >
-                  {aliases.map((a) => (
-                    <option key={a.alias} value={a.alias}>
-                      {a.alias.replace(/^(text|image)\./, '')} — {a.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )
-          })}
+                ),
+              },
+              {
+                key: 'modality',
+                label: 'Modality',
+                responsive: 'secondary',
+                render: (feature) => (
+                  <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-neutral-500">
+                    {feature.modality}
+                  </span>
+                ),
+              },
+              {
+                key: 'model',
+                label: 'Model',
+                render: (feature) => {
+                  const aliases = data.aliases[feature.modality]
+                  const current = data.map[feature.key] ?? feature.default
+                  return (
+                    <select
+                      value={current}
+                      disabled={savingKey === feature.key}
+                      onChange={(event) => void setModel(feature.key, event.target.value)}
+                      className="w-full min-w-52 rounded border border-white/10 bg-neutral-900 px-2 py-1.5 text-[12px] text-neutral-200 focus:border-white/30 focus:outline-none disabled:opacity-40"
+                      title={aliases.find((alias) => alias.alias === current)?.id}
+                    >
+                      {aliases.map((alias) => (
+                        <option key={alias.alias} value={alias.alias}>
+                          {alias.alias.replace(/^(text|image)\./, '')} — {alias.id}
+                        </option>
+                      ))}
+                    </select>
+                  )
+                },
+              },
+            ]}
+          />
         </div>
       )}
     </div>
