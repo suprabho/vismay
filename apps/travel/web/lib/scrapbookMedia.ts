@@ -9,18 +9,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
 import { getSelectedTripMedia } from '@vismay/content-source/travelMedia'
+import {
+  groupCuratedMediaByStop,
+  type CuratedMediaItem,
+} from '@vismay/content-source/travelScrapbook'
 
 const STORIES_DIR =
   process.env.STORY_CONTENT_DIR || path.join(process.cwd(), 'content/stories')
 
-export interface CuratedMediaItem {
-  file: string
-  /** `assets://<slug>/<file>` */
-  ref: string
-  kind: 'image' | 'video'
-  stop: string | null
-  caption?: string
-}
+export type { CuratedMediaItem }
 
 /** Curated (selected) media for one day, keyed by stop slug, in display order. */
 export async function getCuratedDayMedia(
@@ -37,14 +34,7 @@ export async function getCuratedDayMedia(
       caption: r.caption ?? undefined,
     })) : fallbackFromManifest(slug, day)
 
-  const byStop = new Map<string, CuratedMediaItem[]>()
-  for (const item of items) {
-    if (!item.stop) continue
-    const list = byStop.get(item.stop)
-    if (list) list.push(item)
-    else byStop.set(item.stop, [item])
-  }
-  return byStop
+  return groupCuratedMediaByStop(items)
 }
 
 interface ManifestEntry {

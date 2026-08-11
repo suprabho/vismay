@@ -2,10 +2,12 @@ export type { DomainPack, PackLayerType } from './types'
 export { VIZMAYA_PACK } from './vizmaya'
 export { F1_PACK } from './f1'
 export { FOOTSHORTS_PACK } from './footshorts'
+export { TRAVEL_PACK } from './travel'
 
 import { VIZMAYA_PACK } from './vizmaya'
 import { F1_PACK } from './f1'
 import { FOOTSHORTS_PACK } from './footshorts'
+import { TRAVEL_PACK } from './travel'
 import type { DomainPack } from './types'
 
 /**
@@ -19,6 +21,8 @@ export function packForVertical(vertical?: string | null): DomainPack {
       return F1_PACK
     case 'footshorts':
       return FOOTSHORTS_PACK
+    case 'travel':
+      return TRAVEL_PACK
     default:
       return VIZMAYA_PACK
   }

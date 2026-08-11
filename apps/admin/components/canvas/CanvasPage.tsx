@@ -10,6 +10,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { readComposeState } from '@vismay/content-source/composeState'
 import { listStorySources } from '@vismay/content-source/storySources'
+import { getTripItinerary } from '@vismay/content-source/travelTrips'
 import { renderSurfaceUrl } from '@/lib/publicSite'
 import CanvasClient from '@/components/canvas/CanvasClient'
 import {
@@ -65,6 +66,25 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
     cs.readMarkdown(slug).catch(() => null),
   ])
 
+  // Travel stories: the story-day's stop vocabulary (DB-mirrored itinerary,
+  // migration 076) feeds the Scrapbook slice editor's `stop:` hints.
+  // Best-effort — an unsynced itinerary just means no hints.
+  let travelStops: CanvasSources['travelStops'] = null
+  if (story.frontmatter.vertical === 'travel') {
+    try {
+      const tripSlug = story.frontmatter.trip ?? slug
+      const day = story.frontmatter.day ?? 3
+      const itinerary = await getTripItinerary(tripSlug)
+      travelStops =
+        itinerary?.days
+          .find((d) => d.n === day)
+          ?.stops.map((s) => ({ slug: s.slug, name: s.name, emoji: s.emoji, time: s.time })) ??
+        null
+    } catch {
+      travelStops = null
+    }
+  }
+
   const sources: CanvasSources = {
     shareYaml,
     reportYaml,
@@ -72,6 +92,7 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
     ttsYaml,
     configYaml,
     markdown,
+    travelStops,
   }
 
   // Pre-sign every iframe URL the canvas can mount. 24h TTL — well past

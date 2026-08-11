@@ -18,6 +18,8 @@
     "travel:prepare-media": "tsx scripts/travel/prepare-media.ts",
     "travel:upload-media": "tsx scripts/travel/upload-media.ts",
     "travel:sync-media-db": "tsx scripts/travel/sync-media-db.ts",
+    "travel:sync-trip-db": "tsx scripts/travel/sync-trip-db.ts",
+    "travel:sync-story-db": "tsx scripts/travel/sync-story-db.ts",
     "travel:set-password": "tsx scripts/travel/set-trip-password.ts"
   },
   "devDependencies": {

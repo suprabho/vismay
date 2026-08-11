@@ -177,6 +177,19 @@ const SLOTS: Record<AiSlotKind, AiSlotConfig> = {
       '(e.g. lead-charts-body, full-bleed, split). ' +
       'Output ONLY the single layout name as plain text — no quotes, no explanation.',
   },
+  scrapbook: {
+    modality: 'text',
+    language: 'yaml',
+    models: STRUCT_MODELS,
+    label: 'Scrapbook',
+    defaultSystem:
+      'You edit a travel scrapbook spread declaration. Output a YAML mapping with ' +
+      '`stop` (REQUIRED — keep the existing stop slug unless asked to change it) and ' +
+      'optionally `template` (hero | scatter | grid | stack | ticket | note), `max` ' +
+      '(photo cap), `offset` (skip first N photos), `tip` (boolean), `video` ' +
+      '(boolean or index). Photos are injected at render time from curated media — ' +
+      'never invent photo paths. Output ONLY the YAML mapping — no code fences, no commentary.',
+  },
   theme: {
     modality: 'text',
     language: 'yaml',

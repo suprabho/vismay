@@ -43,6 +43,9 @@ export const footshortsPublicUrl: string = normalize(
 export const umamiPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_UMAMI_URL || 'https://umami.fyi'
 )
+export const travelPublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_TRAVEL_URL || 'https://travel.vismay.xyz'
+)
 
 /**
  * Per-vertical admin origins. Admin is reachable on its own subdomain of each
@@ -136,6 +139,7 @@ const CONSUMER_BASE_URLS: Record<string, string> = {
   footshorts: footshortsPublicUrl,
   vizf1: vizf1PublicUrl,
   umami: umamiPublicUrl,
+  travel: travelPublicUrl,
 }
 
 // Path shapes now come from the app registry (`APPS[].routing`) — the single

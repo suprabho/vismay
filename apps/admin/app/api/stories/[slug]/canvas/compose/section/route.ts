@@ -95,7 +95,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   }
   const sectionId = typeof body.sectionId === 'string' ? body.sectionId : ''
   if (!sectionId) return NextResponse.json({ error: 'missing "sectionId"' }, { status: 400 })
-  const phase = body.phase ?? 'combined'
+  let phase = body.phase ?? 'combined'
 
   const state = await readComposeState(slug)
   if (!state) return NextResponse.json({ error: 'no compose draft for this slug' }, { status: 404 })
@@ -108,6 +108,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   // Per-stage default from the admin "AI models" page (see composeAngles note).
   const model = resolveModel(body.model, await getFeatureModel('composeSection'))
   const pack = await resolveStoryPack(slug)
+  // Travel spreads are prose-only: their visuals (camera + `scrapbook:` block
+  // → injected photo layers) are authored deterministically at compose time,
+  // and the VISUAL pass replaces the whole section body — which would drop
+  // `scrapbook:` and the camera. Force the content pass regardless of what
+  // the drawer sent (it defaults to 'combined').
+  if (pack.id === 'travel') phase = 'content'
   // Pre-fetch any vertical data the pack hydrates onto generated layers (e.g. f1
   // driver headshots from the DB) — only the VISUAL pass consumes it, so skip
   // the lookup on content-only calls.

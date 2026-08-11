@@ -16,76 +16,23 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
+import { buildTripData } from '@vismay/content-source/travelTrips'
+import type {
+  StopMedia,
+  TripAirport,
+  TripData,
+  TripDay,
+  TripStay,
+  TripStop,
+} from '@vismay/content-source/travelTrips'
+
+// Canonical itinerary types live in content-source (shared with admin + the
+// render surface, which read the DB-mirrored itinerary); re-export so the
+// journey components keep importing from '@/lib/trips'.
+export type { StopMedia, TripAirport, TripData, TripDay, TripStay, TripStop }
 
 const STORIES_DIR =
   process.env.STORY_CONTENT_DIR || path.join(process.cwd(), 'content/stories')
-
-export interface StopMedia {
-  file: string
-  /** `assets://<slug>/<file>` — resolve client-side with resolveAssetUrl(). */
-  ref: string
-  kind: 'image' | 'video'
-  caption?: string
-  takenAt?: string
-}
-
-export interface TripStop {
-  slug: string
-  time: string
-  emoji: string
-  name: string
-  desc: string
-  tip?: string
-  coordinates: [number, number] | null
-  tag?: string
-  suggestedBy?: string[]
-  media: StopMedia[]
-}
-
-export interface TripStay {
-  name: string
-  coordinates: [number, number]
-}
-
-export interface TripDay {
-  n: number | null
-  heading: string
-  title: string
-  label?: string
-  subtitle?: string
-  color: string
-  center: [number, number] | null
-  zoom: number | null
-  stay?: TripStay
-  notes?: string
-  stops: TripStop[]
-  /** Media attached to the day but not to a specific stop. */
-  media: StopMedia[]
-}
-
-export interface TripAirport {
-  name: string
-  code: string
-  coordinates: [number, number]
-  date?: string
-  time?: string
-  flight?: string
-  kind: 'arrival' | 'departure'
-  day: number | null
-}
-
-export interface TripData {
-  slug: string
-  id: string
-  city: string
-  subtitle?: string
-  emoji?: string
-  highlights?: string
-  startDate?: string
-  endDate?: string
-  days: TripDay[]
-  airports: TripAirport[]
-}
 
 interface MediaManifestEntry {
   file?: string
@@ -120,50 +67,6 @@ export function readTrip(slug: string): TripData | null {
   if (!trip) return null
   attachMediaFromYaml(trip)
   return trip
-}
-
-function buildTrip(slug: string, raw: Record<string, unknown>): TripData {
-  const rawDays = Array.isArray(raw.days) ? (raw.days as Record<string, unknown>[]) : []
-  const days: TripDay[] = rawDays.map((d) => ({
-    n: (d.n as number | null) ?? null,
-    heading: String(d.heading ?? ''),
-    title: String(d.title ?? d.heading ?? ''),
-    label: d.label as string | undefined,
-    subtitle: d.subtitle as string | undefined,
-    color: String(d.color ?? '#8a8172'),
-    center: (d.center as [number, number] | null) ?? null,
-    zoom: (d.zoom as number | null) ?? null,
-    stay: d.stay as TripStay | undefined,
-    notes: d.notes as string | undefined,
-    stops: (Array.isArray(d.stops) ? (d.stops as Record<string, unknown>[]) : []).map(
-      (s) => ({
-        slug: String(s.slug ?? ''),
-        time: String(s.time ?? ''),
-        emoji: String(s.emoji ?? ''),
-        name: String(s.name ?? ''),
-        desc: String(s.desc ?? ''),
-        tip: s.tip as string | undefined,
-        coordinates: (s.coordinates as [number, number] | null) ?? null,
-        tag: s.tag as string | undefined,
-        suggestedBy: s.suggestedBy as string[] | undefined,
-        media: [],
-      })
-    ),
-    media: [],
-  }))
-
-  return {
-    slug,
-    id: String(raw.id ?? slug),
-    city: String(raw.city ?? slug),
-    subtitle: raw.subtitle as string | undefined,
-    emoji: raw.emoji as string | undefined,
-    highlights: raw.highlights as string | undefined,
-    startDate: raw.startDate as string | undefined,
-    endDate: raw.endDate as string | undefined,
-    days,
-    airports: Array.isArray(raw.airports) ? (raw.airports as TripAirport[]) : [],
-  }
 }
 
 /**
@@ -210,7 +113,7 @@ function readTripBase(slug: string): TripData | null {
     path.join(STORIES_DIR, `${slug}.trip.yaml`)
   )
   if (!raw) return null
-  return buildTrip(slug, raw)
+  return buildTripData(slug, raw)
 }
 
 function attachMediaFromYaml(trip: TripData): void {

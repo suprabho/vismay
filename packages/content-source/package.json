@@ -17,6 +17,7 @@
     "./demos": "./src/demos.ts",
     "./travelTrips": "./src/travelTrips.ts",
     "./travelMedia": "./src/travelMedia.ts",
+    "./travelScrapbook": "./src/travelScrapbook.ts",
     "./epics": "./src/epics.ts",
     "./pipelines": "./src/pipelines.ts",
     "./frontmatter": "./src/frontmatter.ts",

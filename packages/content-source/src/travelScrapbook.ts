@@ -4,10 +4,16 @@
  * per-spread declarations (camera + layout + `scrapbook:` block) and photos
  * flow in from what /curate selected.
  *
- * This lib is the ONLY author of injected layer shapes — if a module schema
- * changes, fix it here once. Injection merges UNDER hand-authored region
- * layers: an authored region keeps its content, injection only fills regions
- * it owns that are empty.
+ * Lifted from apps/travel/web/lib/scrapbookLayers.ts so BOTH hosts render
+ * identical spreads: the travel app's /t/[slug]/story page (which passes its
+ * fallback-aware trip/media loads in) and the shared render surface's
+ * canvas-frame (admin canvas preview — DB-only loads via
+ * `hydrateTravelConfig`, the travel sibling of `hydrateFootshortsConfig`).
+ *
+ * This module is the ONLY author of injected layer shapes — if a module
+ * schema changes, fix it here once. Injection merges UNDER hand-authored
+ * region layers: an authored region keeps its content, injection only fills
+ * regions it owns that are empty.
  *
  * Portrait sizing: the spread layouts keep absolute region geometry in both
  * orientations (`stackOnPortrait: false`), so injected layers either fill
@@ -28,8 +34,9 @@ import type {
   StorySectionConfig,
   VizLayer,
 } from '@vismay/viz-engine'
-import type { TripData, TripDay, TripStop } from './trips'
-import type { CuratedMediaItem } from './scrapbookMedia'
+import type { TripData, TripDay, TripStop } from './travelTrips'
+import { getTripItinerary } from './travelTrips'
+import { getSelectedTripMedia } from './travelMedia'
 
 export type ScrapbookTemplate = 'hero' | 'scatter' | 'grid' | 'stack' | 'ticket' | 'note'
 
@@ -52,6 +59,16 @@ export interface ScrapbookMeta {
 }
 
 export type ScrapbookSectionConfig = StorySectionConfig & { scrapbook?: ScrapbookMeta }
+
+/** One curated (selected) media item, in display order. */
+export interface CuratedMediaItem {
+  file: string
+  /** `assets://<slug>/<file>` */
+  ref: string
+  kind: 'image' | 'video'
+  stop: string | null
+  caption?: string
+}
 
 const SCATTER_ROTATIONS = [-5, 4, -3]
 const SCATTER_POSITIONS: Array<{ x: string; y: string; w: string; h: string }> = [
@@ -320,7 +337,7 @@ export function injectScrapbookLayers(
         }
       }
 
-      // Route pins: full day 3 route, current stop featured.
+      // Route pins: the day's full route, current stop featured.
       const map = section.map
       const mapWithPins =
         map && !map.pins
@@ -381,4 +398,80 @@ export function injectScrapbookLayers(
   }
 
   return { ...config, sections }
+}
+
+/** Group curated media rows by stop slug, preserving display order. */
+export function groupCuratedMediaByStop(
+  items: CuratedMediaItem[]
+): Map<string, CuratedMediaItem[]> {
+  const byStop = new Map<string, CuratedMediaItem[]>()
+  for (const item of items) {
+    if (!item.stop) continue
+    const list = byStop.get(item.stop)
+    if (list) list.push(item)
+    else byStop.set(item.stop, [item])
+  }
+  return byStop
+}
+
+export interface TravelHydratePreloads {
+  /** Pre-resolved trip (e.g. the travel app's fs `.trip.yaml` read). */
+  trip?: TripData | null
+  /** Pre-resolved curated media (e.g. the travel app's manifest fallback). */
+  mediaByStop?: Map<string, CuratedMediaItem[]>
+}
+
+/**
+ * One-call scrapbook hydration for a travel story config — the travel
+ * sibling of `hydrateFootshortsConfig`, consumed by the shared render
+ * surface's canvas frame and the travel app's story page.
+ *
+ * Resolves the owning trip (`frontmatter.trip`, else the story slug) and day
+ * (`frontmatter.day`, default 3), loads the itinerary + curated media
+ * DB-first unless preloaded, and injects. NEVER throws and never blocks
+ * rendering: missing env, missing itinerary, or a failed query returns the
+ * config unchanged (or photo-less spreads when only media is missing).
+ */
+export async function hydrateTravelConfig(
+  storySlug: string,
+  config: StoryConfig,
+  frontmatter: { trip?: string; day?: number },
+  preloaded: TravelHydratePreloads = {}
+): Promise<StoryConfig> {
+  const tripSlug = frontmatter.trip ?? storySlug
+  const day = frontmatter.day ?? 3
+  const hasEnv =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  let trip = preloaded.trip ?? null
+  if (!trip && hasEnv) {
+    try {
+      trip = await getTripItinerary(tripSlug)
+    } catch {
+      trip = null
+    }
+  }
+  if (!trip) return config
+
+  let mediaByStop = preloaded.mediaByStop ?? null
+  if (!mediaByStop) {
+    let items: CuratedMediaItem[] = []
+    if (hasEnv) {
+      try {
+        const rows = await getSelectedTripMedia(tripSlug, day)
+        items = rows.map((r) => ({
+          file: r.file,
+          ref: `assets://${tripSlug}/${r.file}`,
+          kind: r.kind,
+          stop: r.stop,
+          caption: r.caption ?? undefined,
+        }))
+      } catch {
+        items = []
+      }
+    }
+    mediaByStop = groupCuratedMediaByStop(items)
+  }
+
+  return injectScrapbookLayers(config, mediaByStop, trip, { day, slug: tripSlug })
 }

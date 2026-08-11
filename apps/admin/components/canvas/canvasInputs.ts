@@ -30,6 +30,10 @@ export interface CanvasSources {
   ttsYaml: string | null
   configYaml: string | null
   markdown: string | null
+  /** Travel stories: the story-day's stop vocabulary (from the DB-mirrored
+   *  itinerary), surfaced as comment hints in the Scrapbook slice editor so
+   *  `scrapbook.stop` edits have the valid slugs in view. Absent elsewhere. */
+  travelStops?: Array<{ slug: string; name: string; emoji?: string; time?: string }> | null
 }
 
 /** Lazy-parsed view of `CanvasSources`. Caller is expected to memoise the
@@ -305,6 +309,10 @@ export interface InputGraph {
   layout: InputNodeData
   /** Story theme — direct frame input. */
   theme: InputNodeData
+  /** Travel: the section-root `scrapbook:` declaration (stop/template/…)
+   *  that render-time injection expands into the spread's photo/note
+   *  layers. Null for sections without one. */
+  scrapbook: InputNodeData | null
   background: BackgroundGraph
   foreground: ForegroundGraph
 }
@@ -467,6 +475,21 @@ export function buildForegroundGraph(unit: ResolvedUnit): ForegroundGraph {
  *  max-height scroll container, so this is a guard, not a layout clamp. */
 const CONTENT_LEAF_MAX_LINES = 240
 
+/** The travel `scrapbook:` declaration leaf — the injection contract the
+ *  render surface expands into photo/note layers. Only present when the
+ *  section carries the block (travel stories). */
+function scrapbookNode(unit: ResolvedUnit): InputNodeData | null {
+  const meta = (unit.parentConfig as { scrapbook?: unknown }).scrapbook
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null
+  return {
+    id: 'scrapbook',
+    label: 'Scrapbook',
+    tag: 'TRAVEL',
+    body: truncateLines(safeYamlStringify(meta), 8),
+    variant: 'mono',
+  }
+}
+
 /** Whole input subgraph for one section frame. */
 export function buildInputGraph(
   unit: ResolvedUnit,
@@ -476,6 +499,7 @@ export function buildInputGraph(
     content: contentNode(unit, CONTENT_LEAF_MAX_LINES),
     layout: layoutNode(unit),
     theme: themeNode(theme),
+    scrapbook: scrapbookNode(unit),
     background: buildBackgroundGraph(unit),
     foreground: buildForegroundGraph(unit),
   }

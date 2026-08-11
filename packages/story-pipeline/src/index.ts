@@ -22,6 +22,7 @@ export {
   VIZMAYA_PACK,
   F1_PACK,
   FOOTSHORTS_PACK,
+  TRAVEL_PACK,
   type DomainPack,
   type PackLayerType,
 } from './packs'

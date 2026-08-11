@@ -7,6 +7,7 @@ status: "draft"
 listed: false
 vertical: "travel"
 format: "map"
+day: 3
 theme:
   colors:
     background: "#f6f1e7"

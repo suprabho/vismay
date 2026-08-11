@@ -7,6 +7,7 @@ import {
   vizmayaPublicUrl,
   vizf1PublicUrl,
   footshortsPublicUrl,
+  travelPublicUrl,
   adminPublicOrigins,
   originVariants,
 } from '@/lib/publicSite'
@@ -32,6 +33,7 @@ const ALLOWED_CONSUMER_ORIGINS = new Set<string>([
   ...originVariants(vizmayaPublicUrl),
   ...originVariants(vizf1PublicUrl),
   ...originVariants(footshortsPublicUrl),
+  ...originVariants(travelPublicUrl),
   // Per-vertical admin hosts (admin.vizmaya.fyi, …) — trusted admin surfaces.
   // Exact origins (no www variant — these subdomains have no www redirect).
   ...adminPublicOrigins,

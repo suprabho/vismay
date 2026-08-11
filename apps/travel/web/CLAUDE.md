@@ -6,10 +6,13 @@ from ONE content source:
 - **Journey map** — `/t/<slug>` — interactive Mapbox map: day tabs, colored
   stop markers (photo thumbnails when a stop has media), dashed routes,
   stay/airport markers, stop sheet with media strip + lightbox. All days.
-- **Scrapbook story** — `/t/<slug>/story` — day-3 scrapbook over a persistent
-  map background: photo spreads (polaroids, photo stacks, grids), handwritten
-  tape notes, ticket stubs, postmarks. Photos flow in from CURATED media at
-  render time — see "Scrapbook" below.
+- **Scrapbook story** — `/t/<slug>/story` — one-day scrapbook over a
+  persistent map background: photo spreads (polaroids, photo stacks, grids),
+  handwritten tape notes, ticket stubs, postmarks. Photos flow in from CURATED
+  media at render time — see "Scrapbook" below. The day comes from `day:`
+  frontmatter (default 3), and a trip can carry one story per day: story slug
+  `<trip>-day-<n>` + `trip:` frontmatter naming the owning trip (gate,
+  itinerary, and media are keyed on the trip slug).
 
 Plus the admin surfaces (gated by `travel_admin` cookie, ADMIN_PASSWORD):
 
@@ -49,10 +52,11 @@ the `original` filename (`YYYYMMDD_HHMMSS`) is the true local capture time.
 ## Scrapbook architecture
 
 `app/t/[slug]/story/page.tsx` fetches curated media (`lib/scrapbookMedia.ts`,
-DB-first) and calls `injectScrapbookLayers` (`lib/scrapbookLayers.ts`) — the
-ONLY author of injected layer shapes — which fills each section's foreground
-regions from its `scrapbook: {stop, template?, max?, offset?, tip?, video?}`
-block. Templates: `hero` (1 full-bleed) · `scatter` (2-3 polaroids) · `grid`
+DB-first) and calls `hydrateTravelConfig` from
+`@vismay/content-source/travelScrapbook` — the ONLY author of injected layer
+shapes, shared with the admin canvas frames (`CanvasFrameSurface`) so previews
+match production — which fills each section's foreground regions from its
+`scrapbook: {stop, template?, max?, offset?, tip?, video?}` block. Templates: `hero` (1 full-bleed) · `scatter` (2-3 polaroids) · `grid`
 (4-6 imageGrid) · `stack` (photoStack + "+N more") · `ticket`/`note`
 (no-photo spreads). Layouts (`travel:spread-left/right/hero/center`) and
 modules (`travel:polaroid/tapeNote/ticket/photoStack/postmark/prefetch`) live
@@ -97,6 +101,14 @@ photos ──▶ vizmaya-data/travel-media/<slug>/incoming/
 - `pnpm travel:sync-media-db --slug <s> [--dry-run] [--force]` — seed/sync the
   manifest into `travel_trip_media`. Insert-only by default; `--force`
   OVERWRITES curation edits — say so before using it.
+- `pnpm travel:sync-trip-db --slug <s> [--dry-run]` — mirror `.trip.yaml` into
+  `travel_trips.itinerary` (migration 076) so admin compose + canvas frames
+  can read stops. `travel:import` does this automatically when Supabase env
+  is present.
+- `pnpm travel:sync-story-db --slug <s> [--dry-run] [--force]` — seed the
+  story md + config into the shared `stories` table (`app_slug='travel'`).
+  Insert-only by default; `--force` OVERWRITES admin canvas edits with the
+  git files — say so before using it.
 - `pnpm travel:set-password <s> <password> [--status live]` — viewer password.
 - `pnpm --filter @travel/web dev` / `typecheck` — run + verify.
 
@@ -124,5 +136,9 @@ editor — no CI applies them), seed media (`travel:sync-media-db`),
 Deploy (Vercel): project root `apps/travel/web`; env
 `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 `NEXT_PUBLIC_MAPBOX_TOKEN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`.
-Story prose/config ship with the build (publishing those = git push);
-media curation is live via the DB.
+Story prose/config: with `CONTENT_SOURCE=db` set (the target prod posture),
+they read from the shared `stories` table — admin compose/canvas edits at
+`vismay.xyz/travel` go live immediately, and the git files become the dev/seed
+fallback (`travel:sync-story-db` seeds them). Without that env the app reads
+git files (publishing = git push, the legacy posture). Media curation is live
+via the DB either way.
