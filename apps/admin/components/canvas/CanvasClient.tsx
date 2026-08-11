@@ -1268,6 +1268,9 @@ export default function CanvasClient({
           this.addInput('content', new ClassicPreset.Input(socket, 'Content'))
           this.addInput('layout', new ClassicPreset.Input(socket, 'Layout'))
           this.addInput('theme', new ClassicPreset.Input(socket, 'Theme'))
+          // Travel-only: the `scrapbook:` declaration leaf wires in here
+          // when the section carries one (see InputGraph.scrapbook).
+          this.addInput('scrapbook', new ClassicPreset.Input(socket, 'Scrapbook'))
           this.addInput(
             'background',
             new ClassicPreset.Input(socket, 'Background')
@@ -2102,6 +2105,8 @@ export default function CanvasClient({
         // height Cover editorial leaf (no collapse). Must mirror mountInputs.
         const contentRowH = isCoverContent ? LEAF_H : contentLeafH()
         let h = contentRowH + 2 * LEAF_H + 2 * LGAP_Y + BAND_GAP
+        // Travel: one extra standalone row for the Scrapbook declaration leaf.
+        if (g.scrapbook) h += LEAF_H + LGAP_Y
         // Background band (>=1 row: a placeholder when empty). Deck sections
         // with no per-section background drop the band entirely — the backdrop
         // is page-level (edited via the Deck defaults button), so a
@@ -2705,6 +2710,14 @@ export default function CanvasClient({
           await wire(node, 'value', frame, key)
           y +=
             (key === 'content' && !coverRow ? contentLeafH() : LEAF_H) + LGAP_Y
+        }
+        // Travel: the Scrapbook declaration leaf — click-to-edit the
+        // section's `scrapbook:` block (stop/template/max/offset/tip/video).
+        // Mirrored in measureLeftHeight.
+        if (g.scrapbook) {
+          const node = await addLeaf(g.scrapbook, regionColX, y, 'scrapbook')
+          await wire(node, 'value', frame, 'scrapbook')
+          y += LEAF_H + LGAP_Y
         }
         y += BAND_GAP - LGAP_Y
 

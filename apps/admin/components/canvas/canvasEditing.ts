@@ -50,6 +50,11 @@ export type EditableKind =
   | 'cover'
   | 'layout'
   | 'background'
+  // Travel scrapbook declaration — the section-root `scrapbook:` block
+  // (stop/template/max/offset/tip/video) that render-time injection turns
+  // into the spread's photo/note layers (content-source/travelScrapbook).
+  // Only surfaced on travel stories.
+  | 'scrapbook'
   // Story-wide `defaults` block (config.yaml `defaults:`). For deck stories
   // this holds the page backdrop (storyBackground/overlay), the default panel
   // chrome, scroll behaviour, and chart defaults — none of which the legacy
@@ -287,6 +292,27 @@ export function buildEditableSlice(
         language: 'yaml',
         title: `Background · §${unit.parentIndex}`,
         placeholder: BACKGROUND_PLACEHOLDER,
+      }
+    }
+
+    case 'scrapbook': {
+      const section = readConfigSection(sources.configYaml, unit.parentIndex)
+      const meta = (section as { scrapbook?: unknown } | null)?.scrapbook
+      // Append the day's valid stop slugs as YAML comments — mergeSlice
+      // re-parses the edited text, so the comments strip on save.
+      const stops = sources.travelStops ?? []
+      const stopHints =
+        stops.length > 0
+          ? '\n# Stops on this story’s day (valid `stop:` values):\n' +
+            stops
+              .map((s) => `#   ${s.slug} — ${[s.emoji, s.name, s.time && `(${s.time})`].filter(Boolean).join(' ')}`)
+              .join('\n')
+          : ''
+      return {
+        text: meta === undefined ? '' : safeStringify(meta) + stopHints,
+        language: 'yaml',
+        title: `Scrapbook · §${unit.parentIndex}`,
+        placeholder: SCRAPBOOK_PLACEHOLDER + (stopHints ? '\n' + stopHints.trimStart() : ''),
       }
     }
 
@@ -677,6 +703,37 @@ export function mergeSlice(
       }
     }
 
+    case 'scrapbook': {
+      const { doc, section } = mutableConfigSection(
+        sources.configYaml,
+        unit.parentIndex
+      )
+      if (trimmed === '') {
+        // Empty save removes the block — the spread keeps only its
+        // hand-authored layers (injection has nothing to fill from).
+        delete (section as Record<string, unknown>).scrapbook
+      } else {
+        const parsed = parseYaml(editedText)
+        if (
+          !parsed ||
+          typeof parsed !== 'object' ||
+          Array.isArray(parsed) ||
+          typeof (parsed as { stop?: unknown }).stop !== 'string'
+        ) {
+          throw new Error(
+            'scrapbook block needs at least `stop: <stop-slug>` (a stop from the trip itinerary — see the placeholder for all fields)'
+          )
+        }
+        ;(section as Record<string, unknown>).scrapbook = parsed
+      }
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
+
     case 'defaults': {
       // `defaults` is top-level (not section-scoped). Reuse mutableConfigSection
       // only to parse the whole doc + preserve the rest of config.yaml; the
@@ -956,6 +1013,18 @@ const DEFAULTS_PLACEHOLDER = `# Story-wide defaults (config.yaml \`defaults:\`).
 # chart:                  # chart theme + grid defaults
 #   theme: light-editorial
 `
+
+const SCRAPBOOK_PLACEHOLDER = `# Travel scrapbook declaration — render-time injection fills this spread's
+# photo/note layers from the trip's curated media (travel_trip_media).
+#
+# stop: walk-the-brooklyn-bridge   # REQUIRED — a stop slug from the trip itinerary
+# template: scatter                # hero | scatter | grid | stack | ticket | note (auto-picked when omitted)
+# max: 3                           # cap photos shown (rest becomes "+N more")
+# offset: 0                        # skip the first N photos (a stop's 2nd spread)
+# tip: true                        # inject the stop's tip as a footer tape note (default true)
+# video: false                     # true = include first curated clip, or an index
+#
+# Empty save removes the block (spread keeps only hand-authored layers).`
 
 const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the legacy \`map:\` field).
 # Examples:

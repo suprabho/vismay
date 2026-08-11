@@ -6,14 +6,12 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { StoryShell, ThemeProvider } from '@vismay/story-reader'
 
+import { hydrateTravelConfig } from '@vismay/content-source/travelScrapbook'
+
 import VerticalLoader from '@/components/VerticalLoader'
 import { requireTripAuth } from '@/lib/gate'
 import { getCuratedDayMedia } from '@/lib/scrapbookMedia'
-import { injectScrapbookLayers } from '@/lib/scrapbookLayers'
 import { readTrip } from '@/lib/trips'
-
-/** The scrapbook narrates one day of the trip. */
-const SCRAPBOOK_DAY = 3
 
 // Password-gated: render per request (the gate reads the visitor's cookie),
 // and keep every trip page out of search indexes.
@@ -38,15 +36,29 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
 
 export default async function TripStoryPage({ params }: RouteParams) {
   const { slug } = await params
-  await requireTripAuth(slug)
 
-  let story
-  let config
+  // Resolve the owning trip BEFORE the gate: a trip can carry one scrapbook
+  // story per day (story slug ≠ trip slug, `trip:` frontmatter), and the
+  // password gate, itinerary, and curated media are all keyed on the trip.
+  // Falling back to the URL slug keeps the gate's redirect-to-login posture
+  // for unknown slugs (no story ⇒ gate on the slug itself).
+  let story: Awaited<ReturnType<typeof getStoryContent>> | null = null
   try {
     // Trip stories stay `status: draft` / `listed: false` forever — the
-    // password gate above is the real access boundary, so the reader must
+    // password gate below is the real access boundary, so the reader must
     // opt in to drafts.
     story = await getStoryContent(slug, { allowDraft: true })
+  } catch {
+    story = null
+  }
+  const tripSlug = story?.frontmatter.trip ?? slug
+  const day = story?.frontmatter.day ?? 3
+
+  await requireTripAuth(tripSlug)
+  if (!story) notFound()
+
+  let config
+  try {
     if (!(await hasStoryConfig(slug))) notFound()
     config = await loadStoryConfig(slug)
   } catch {
@@ -59,16 +71,15 @@ export default async function TripStoryPage({ params }: RouteParams) {
     notFound()
   }
 
-  // Scrapbook injection: curated photos (DB-first, manifest fallback) become
-  // foreground layers on sections that carry a `scrapbook:` block.
-  const trip = readTrip(slug)
-  if (trip) {
-    const mediaByStop = await getCuratedDayMedia(slug, SCRAPBOOK_DAY)
-    config = injectScrapbookLayers(config, mediaByStop, trip, {
-      day: SCRAPBOOK_DAY,
-      slug,
-    })
-  }
+  // Scrapbook injection: curated photos become foreground layers on sections
+  // carrying a `scrapbook:` block. The shared module (also behind the admin
+  // canvas frames) gets this app's fallback-aware loads: the fs `.trip.yaml`
+  // shipped with the build (DB-mirrored itinerary as fallback inside
+  // hydrate) and DB-first-manifest-fallback curated media.
+  config = await hydrateTravelConfig(slug, config, story.frontmatter, {
+    trip: readTrip(tripSlug),
+    mediaByStop: await getCuratedDayMedia(tripSlug, day),
+  })
 
   const { units, mobileUnits, hasMobileOverrides } = resolveUnits(
     slug,

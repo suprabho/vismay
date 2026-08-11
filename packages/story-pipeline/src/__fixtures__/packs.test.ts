@@ -31,7 +31,7 @@ import {
 import { sectionVisualSchemaFor } from '../schema'
 import { normalizeSectionBody } from '../vizEngine'
 import { lintSectionBody } from '../lintLayout'
-import { F1_PACK, FOOTSHORTS_PACK, VIZMAYA_PACK, packForVertical } from '../packs'
+import { F1_PACK, FOOTSHORTS_PACK, TRAVEL_PACK, VIZMAYA_PACK, packForVertical } from '../packs'
 import type { PackLayerType } from '../packs'
 
 let failed = false
@@ -74,7 +74,18 @@ check('vizmaya menu has no vertical types', !vmVisual.includes('f1:') && !vmVisu
 check('f1 outline inline list has f1 types', outlineSystem('deck', F1_PACK).includes('f1:race-card'))
 check('f1 outline plans the modules', outlineSystem('deck', F1_PACK).includes(F1_PACK.outlineGuidance!))
 check('fs outline plans the modules', outlineSystem('deck', FOOTSHORTS_PACK).includes(FOOTSHORTS_PACK.outlineGuidance!))
-check('packForVertical resolves', packForVertical('f1') === F1_PACK && packForVertical('footshorts') === FOOTSHORTS_PACK && packForVertical(null) === VIZMAYA_PACK && packForVertical('starship') === VIZMAYA_PACK)
+check('packForVertical resolves', packForVertical('f1') === F1_PACK && packForVertical('footshorts') === FOOTSHORTS_PACK && packForVertical('travel') === TRAVEL_PACK && packForVertical(null) === VIZMAYA_PACK && packForVertical('starship') === VIZMAYA_PACK)
+
+// Travel is prose-only: no vertical layers (visuals are injection-owned by
+// content-source/travelScrapbook) — only the desk name/voice may differ from
+// vizmaya's prompts, never the layer menu.
+const travelVisual = visualSystem('map', TRAVEL_PACK)
+check('travel menu has no travel types', !travelVisual.includes('travel:'))
+check('travel has no vertical doc block', !visualSystem('deck', TRAVEL_PACK).includes('VERTICAL MODULES'))
+check('travel desk name splices', chartSystem(TRAVEL_PACK).includes('a Travel data story'))
+check('travel is map-only prose desk', TRAVEL_PACK.formats?.length === 1 && TRAVEL_PACK.formats[0] === 'map' && TRAVEL_PACK.extraLayerTypes.length === 0)
+check('travel content voice', contentSystem('map', TRAVEL_PACK).includes(TRAVEL_PACK.contentGuidance!))
+check('travel research persona', researchSystem(TRAVEL_PACK).startsWith(TRAVEL_PACK.persona))
 
 // ── 3. voice splice ─────────────────────────────────────────────────────────
 check('f1 research persona', researchSystem(F1_PACK).startsWith(F1_PACK.persona))

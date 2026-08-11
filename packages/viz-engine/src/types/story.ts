@@ -65,6 +65,19 @@ export interface Frontmatter {
    */
   format?: StoryFormat
   /**
+   * Travel scrapbooks: the owning trip's slug when it differs from the story
+   * slug (a trip can have one scrapbook story per day). Drives the password
+   * gate, itinerary load, and curated-media load. Missing = the story slug
+   * IS the trip slug (the original single-story-per-trip shape).
+   */
+  trip?: string
+  /**
+   * Travel scrapbooks: which itinerary day this story narrates (media +
+   * route pins + stop lookups are scoped to it). Missing = 3, the day the
+   * pre-frontmatter scrapbook hardcoded.
+   */
+  day?: number
+  /**
    * Optional cover image URL shown as the home page card thumbnail background.
    * Accepts absolute `http(s)` URLs or same-origin `/path` references.
    * Rendered full-bleed at full opacity with no card overlay — the image itself

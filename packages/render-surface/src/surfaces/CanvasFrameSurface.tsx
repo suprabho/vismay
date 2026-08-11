@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getStoryContent } from '@vismay/content-source/content'
 import { loadStoryConfig, hasStoryConfig } from '@vismay/content-source/storyConfig'
 import { hydrateFootshortsConfig } from '@vismay/content-source/hydrateFootshortsConfig'
+import { hydrateTravelConfig } from '@vismay/content-source/travelScrapbook'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { parseMapOverrides } from '@vismay/viz-engine'
 import { resolveUnits } from '@vismay/content-source/resolveUnits'
@@ -50,6 +51,17 @@ export async function CanvasFrameSurface({
     if (story.frontmatter.vertical === 'footshorts') {
       try {
         config = await hydrateFootshortsConfig(config)
+      } catch {
+        // Hydration must never block rendering — fall back silently.
+      }
+    }
+    if (story.frontmatter.vertical === 'travel') {
+      // Scrapbook injection: the canvas frame shows the same injected
+      // spreads (polaroids, tape notes, curated photos) the travel app
+      // renders. DB-only loads here (itinerary mirror + travel_trip_media);
+      // hydrate is no-op-safe when either is missing.
+      try {
+        config = await hydrateTravelConfig(slug, config, story.frontmatter)
       } catch {
         // Hydration must never block rendering — fall back silently.
       }

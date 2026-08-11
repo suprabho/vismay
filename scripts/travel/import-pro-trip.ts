@@ -30,6 +30,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import YAML from 'yaml'
+import { hasSupabaseEnv, upsertItineraryDb, type ItineraryDoc } from './itinerary-db'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -573,7 +574,7 @@ function generateTripYaml(trip: Trip): string {
 
 /* ─── CLI ───────────────────────────────────────────────────────────── */
 
-function main() {
+async function main() {
   const args = process.argv.slice(2)
   const positional = args.filter((a) => !a.startsWith('--'))
   const getFlag = (name: string) => {
@@ -602,8 +603,28 @@ function main() {
   const plan = planHeadings(trip)
 
   const tripYamlPath = path.join(outDir, `${slug}.trip.yaml`)
-  fs.writeFileSync(tripYamlPath, generateTripYaml(trip))
+  const tripYaml = generateTripYaml(trip)
+  fs.writeFileSync(tripYamlPath, tripYaml)
   console.log(`✓ wrote ${path.relative(process.cwd(), tripYamlPath)}`)
+
+  // Mirror the itinerary into travel_trips.itinerary (migration 076) so
+  // admin compose + the shared render surface can read stops without this
+  // repo's filesystem. Offline imports still work — sync later with
+  // `pnpm travel:sync-trip-db --slug <slug>`.
+  if (hasSupabaseEnv()) {
+    try {
+      const outcome = await upsertItineraryDb(slug, YAML.parse(tripYaml) as ItineraryDoc)
+      console.log(`✓ synced itinerary to DB (${outcome})`)
+    } catch (e) {
+      console.warn(
+        `⚠ itinerary DB sync failed (files written; run travel:sync-trip-db later): ${
+          e instanceof Error ? e.message : e
+        }`
+      )
+    }
+  } else {
+    console.log('· skipped itinerary DB sync (no Supabase env) — run travel:sync-trip-db later')
+  }
 
   for (const [file, generate] of [
     [`${slug}.md`, () => generateStoryMarkdown(trip, plan)],
@@ -632,4 +653,7 @@ function main() {
   }
 }
 
-main()
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})
