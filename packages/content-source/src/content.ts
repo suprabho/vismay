@@ -36,27 +36,16 @@ export function isListed(fm: Pick<Frontmatter, 'status' | 'listed'>): boolean {
 }
 
 /**
- * Reads a story markdown file and returns frontmatter + content split into sections by heading.
- * Each story page decides how to use these sections.
+ * Parse a raw markdown document (frontmatter + body) into StoryContent,
+ * splitting the body into sections by heading. Pure — no content-source or
+ * environment access, so hosts that store story markdown elsewhere (their own
+ * DB rows, a publish snapshot) can reuse the exact split the reader expects.
  *
- * Throws for drafts in production so the story route renders a 404 rather than
- * leaking unfinished work.
+ * Performs no viewability check: callers gate drafts themselves.
  */
-export async function getStoryContent(
-  slug: string,
-  opts: { allowDraft?: boolean } = {}
-): Promise<StoryContent> {
-  const raw = await getContentSource().readMarkdown(slug)
-  if (raw == null) throw new Error(`Story "${slug}" not found`)
+export function parseStoryContent(raw: string): StoryContent {
   const { data, content } = matter(raw)
-
   const frontmatter = data as Frontmatter
-  // `allowDraft` is for signed, admin-only preview surfaces (the canvas frame)
-  // that exist precisely to render unpublished work. The public story route
-  // omits it, so drafts stay hidden in production via `isViewable`.
-  if (!opts.allowDraft && !isViewable(frontmatter)) {
-    throw new Error(`Story "${slug}" is a draft and not viewable in this environment`)
-  }
 
   const sections: ContentSection[] = []
   let current: ContentSection | null = null
@@ -81,6 +70,31 @@ export async function getStoryContent(
   if (current) sections.push(current)
 
   return { frontmatter, sections, raw: content }
+}
+
+/**
+ * Reads a story markdown file and returns frontmatter + content split into sections by heading.
+ * Each story page decides how to use these sections.
+ *
+ * Throws for drafts in production so the story route renders a 404 rather than
+ * leaking unfinished work.
+ */
+export async function getStoryContent(
+  slug: string,
+  opts: { allowDraft?: boolean } = {}
+): Promise<StoryContent> {
+  const raw = await getContentSource().readMarkdown(slug)
+  if (raw == null) throw new Error(`Story "${slug}" not found`)
+  const parsed = parseStoryContent(raw)
+
+  // `allowDraft` is for signed, admin-only preview surfaces (the canvas frame)
+  // that exist precisely to render unpublished work. The public story route
+  // omits it, so drafts stay hidden in production via `isViewable`.
+  if (!opts.allowDraft && !isViewable(parsed.frontmatter)) {
+    throw new Error(`Story "${slug}" is a draft and not viewable in this environment`)
+  }
+
+  return parsed
 }
 
 /**

@@ -1,5 +1,5 @@
 import { parse as parseYaml } from 'yaml'
-import { getContentSource } from './contentSource'
+import { getContentSource, type ConfigFormat } from './contentSource'
 import type {
   StoryConfig,
   StoryDefaults,
@@ -37,23 +37,27 @@ export async function hasStoryConfig(slug: string): Promise<boolean> {
 }
 
 /**
- * Load and validate the YAML config for a story slug.
- * Throws if the file is missing, malformed, or missing required fields.
+ * Parse and validate story config text. Pure — no content-source or
+ * environment access, so hosts that store config text elsewhere (their own DB
+ * rows, a publish snapshot) can run the exact validation the reader expects.
+ *
+ * `slug` is used only to label error messages.
+ * Throws if the text is malformed or missing required fields.
  */
-export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
-  const cfg = await getContentSource().readConfig(slug)
-  if (cfg == null) {
-    throw new Error(`Story config for ${slug} is missing`)
-  }
+export function parseStoryConfigText(
+  slug: string,
+  text: string,
+  format: ConfigFormat = 'yaml'
+): StoryConfig {
   // JSON-native stories (new verticals) parse via JSON.parse; legacy YAML via
   // yaml.parse. Both produce the same plain object the validator runs against —
   // JSON is a subset of YAML, so this branch is for a clearer parse error only.
   const raw = (
-    cfg.format === 'json' ? JSON.parse(cfg.text) : parseYaml(cfg.text)
+    format === 'json' ? JSON.parse(text) : parseYaml(text)
   ) as Partial<StoryConfig> | null
 
   if (!raw || typeof raw !== 'object') {
-    throw new Error(`Story config for ${slug} is empty or invalid ${cfg.format.toUpperCase()}`)
+    throw new Error(`Story config for ${slug} is empty or invalid ${format.toUpperCase()}`)
   }
   if (!Array.isArray(raw.sections) || raw.sections.length === 0) {
     throw new Error(`Story config ${slug}.config.yaml has no sections`)
@@ -223,6 +227,18 @@ export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
     defaults: { ...DEFAULTS, ...(raw.defaults ?? {}) },
     sections: raw.sections as StorySectionConfig[],
   }
+}
+
+/**
+ * Load and validate the YAML config for a story slug.
+ * Throws if the file is missing, malformed, or missing required fields.
+ */
+export async function loadStoryConfig(slug: string): Promise<StoryConfig> {
+  const cfg = await getContentSource().readConfig(slug)
+  if (cfg == null) {
+    throw new Error(`Story config for ${slug} is missing`)
+  }
+  return parseStoryConfigText(slug, cfg.text, cfg.format)
 }
 
 /**
