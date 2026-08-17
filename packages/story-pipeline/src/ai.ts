@@ -50,22 +50,69 @@ async function generateStructuredDirect<S extends z.ZodType>(opts: {
   const input_schema = zodToJsonSchema(opts.schema, {
     $refStrategy: 'none',
   }) as Anthropic.Tool.InputSchema
-  const message = await getAnthropic().messages.create({
-    model,
-    max_tokens: 16000,
-    system: opts.system,
-    messages: [{ role: 'user', content: opts.prompt }],
-    tools: [{ name: 'emit', description: 'Return the structured result.', input_schema }],
-    tool_choice: { type: 'tool', name: 'emit' },
-  })
-  const block = message.content.find((b) => b.type === 'tool_use')
-  if (!block || block.type !== 'tool_use') {
-    throw new Error(
-      `anthropic-direct (${model}): no tool_use in reply — stop_reason=${message.stop_reason}` +
-        (message.stop_reason === 'max_tokens' ? ' (raise max_tokens)' : ''),
-    )
+  const tools: Anthropic.Tool[] = [
+    { name: 'emit', description: 'Return the structured result.', input_schema },
+  ]
+  const emitOnce = async (
+    messages: Anthropic.MessageParam[],
+  ): Promise<{ block: Anthropic.ToolUseBlock; message: Anthropic.Message }> => {
+    const message = await getAnthropic().messages.create({
+      model,
+      max_tokens: 16000,
+      system: opts.system,
+      messages,
+      tools,
+      tool_choice: { type: 'tool', name: 'emit' },
+    })
+    const block = message.content.find((b) => b.type === 'tool_use')
+    if (!block || block.type !== 'tool_use') {
+      throw new Error(
+        `anthropic-direct (${model}): no tool_use in reply — stop_reason=${message.stop_reason}` +
+          (message.stop_reason === 'max_tokens' ? ' (raise max_tokens)' : ''),
+      )
+    }
+    return { block, message }
   }
-  return opts.schema.parse(block.input)
+
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: opts.prompt }]
+  const first = await emitOnce(messages)
+  const parsed = opts.schema.safeParse(first.block.input)
+  if (parsed.success) return parsed.data
+
+  // Forced tool use is not schema-strict: the model occasionally deviates
+  // (e.g. a string where an array is required). The gateway path retries on
+  // any failure; mirror that here with ONE corrective turn that feeds the
+  // validation issues back through a tool_result.
+  const issues = parsed.error.issues
+    .slice(0, 8)
+    .map((i) => `- ${i.path.join('.') || '(root)'}: ${i.message}`)
+    .join('\n')
+  const second = await emitOnce([
+    ...messages,
+    { role: 'assistant', content: [first.block] },
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: first.block.id,
+          is_error: true,
+          content:
+            `Your input failed schema validation:\n${issues}\n\n` +
+            'Call emit again with a corrected input that satisfies the schema exactly.',
+        },
+      ],
+    },
+  ])
+  const retried = opts.schema.safeParse(second.block.input)
+  if (retried.success) return retried.data
+  throw new Error(
+    `anthropic-direct (${model}): output failed schema validation after corrective retry — ` +
+      retried.error.issues
+        .slice(0, 5)
+        .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+        .join('; '),
+  )
 }
 
 /**
