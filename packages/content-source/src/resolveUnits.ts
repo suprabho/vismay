@@ -203,7 +203,15 @@ export function resolveUnits(
       // the cover in portrait. So emit one unit that carries both the heading
       // and the dek/byline paragraphs.
       const isFullBleedCover = isHero && section.layout === 'hero-full-bleed'
-      if (isFullBleedCover) {
+      // Heroes that carry a new-schema layer foreground (regions / layer
+      // stack) render the whole cover from their layers, not from the
+      // unit's heading/paragraphs — the legacy title/dek split below would
+      // emit TWO portrait slides that each paint the identical layer
+      // foreground (a visibly duplicated cover). They take the same
+      // single-unit path as the full-bleed cover.
+      const isLayerHero =
+        isHero && (section as { foreground?: unknown }).foreground !== undefined
+      if (isFullBleedCover || isLayerHero) {
         hasMobileOverrides = true
         mobileUnits.push({
           parentIndex,
