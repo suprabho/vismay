@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,18 +8,23 @@ import { vars } from 'nativewind';
 import { terrace, themeToVars } from '@footshorts/brand';
 import { useAuth } from '@/lib/AuthProvider';
 import { PRIVACY_URL } from '@/lib/links';
+import { useLandingBriefs } from '@/lib/useLandingContent';
 import { NetTexture } from '@/components/landing/NetTexture';
 import { StoryCarousel } from '@/components/landing/StoryCarousel';
 import { BriefSlide } from '@/components/landing/slides/BriefSlide';
 import { EndOfFeedSlide } from '@/components/landing/slides/EndOfFeedSlide';
 import { FollowSlide } from '@/components/landing/slides/FollowSlide';
+import { fallbackBriefs } from '@/components/landing/fallbackBriefs';
 import { font } from '@/components/landing/fonts';
-import { BrandMark } from '@/components/landing/ui';
+import { AppIcon } from '@/components/landing/ui';
+
+/** Depth of the briefs deck on the carousel's opening slide. */
+const BRIEF_CARDS = 6;
 
 /**
  * Mobile landing for logged-out users. Three value props run as a story-style
- * carousel, each one a mock of a real app surface — the brief, the follow
- * graph, the end of the feed — under Sign up / Log in.
+ * carousel, each one a mock of a real app surface — a feed of actual published
+ * briefs, the follow graph, the end of the feed — under Sign up / Log in.
  *
  * The screen pins the `terrace` theme rather than following the app's stored
  * preference: a logged-out visitor has never picked one, and the cream paper
@@ -32,12 +38,25 @@ import { BrandMark } from '@/components/landing/ui';
 export default function LandingScreen() {
   const router = useRouter();
   const { session, loading } = useAuth();
+  const { data: briefs } = useLandingBriefs(BRIEF_CARDS);
+
+  const fallbacks = useMemo(() => fallbackBriefs(), []);
+  // All-or-nothing rather than per-slot: a deck mixing live stories with
+  // stand-ins would deal an invented headline between two real ones.
+  const cards = useMemo(
+    () => (briefs && briefs.length > 0 ? briefs : fallbacks),
+    [briefs, fallbacks],
+  );
 
   // If a logged-in user lands here directly (deep link, back stack), bounce
   // out to the index router which will pick onboarding vs feed.
   if (!loading && session) return <Redirect href="/" />;
 
-  const slides = [<BriefSlide key="brief" />, <FollowSlide key="follow" />, <EndOfFeedSlide key="end" />];
+  const slides = [
+    <BriefSlide key="briefs" briefs={cards} />,
+    <FollowSlide key="follow" />,
+    <EndOfFeedSlide key="end" />,
+  ];
 
   return (
     <View className="flex-1 bg-bg" style={vars(themeToVars(terrace))}>
@@ -51,7 +70,7 @@ export default function LandingScreen() {
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center justify-between px-6 pt-1.5 pb-3">
           <View className="flex-row items-center" style={{ gap: 8 }}>
-            <BrandMark size={18} color={terrace.colors.brand} />
+            <AppIcon size={22} />
             <Text
               className="text-text"
               style={{ fontFamily: font.sansBold, fontSize: 18, letterSpacing: -0.2 }}

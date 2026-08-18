@@ -56,7 +56,6 @@ export function EndOfFeedSlide() {
       </Card>
 
       <SlideCopy
-        eyebrow="03 · The end"
         heading="A feed that actually ends."
         body="No infinite scroll, no clickbait, no rage bait. Finish the day's football and put the phone down."
       />

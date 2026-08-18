@@ -1,21 +1,40 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 
 import { font } from './fonts';
+import { initials } from './entity';
 
 /**
- * The `F` monogram from `web/public/brand/mark-f.svg`, inlined so the landing
- * screen doesn't depend on an SVG asset transformer.
+ * The app icon, as shipped to the stores (`assets/icon.png` — the same file
+ * `app.config.ts` points `icon` at), clipped to a rounded square.
+ *
+ * The store asset is opaque RGB: the artwork is a squircle and everything
+ * outside it is near-black, so it can't be drawn flat on the cream landing
+ * without four dark corners. The clip radius below is measured, not guessed —
+ * the artwork's straight top edge begins 27.7% of the way across, so a
+ * circular corner has to be at least that round to stay inside the squircle
+ * everywhere. 29% clears it with margin; the slight overscale keeps the
+ * downscale filter from smearing a corner pixel back into view.
  */
-export function BrandMark({ size = 18, color }: { size?: number; color: string }) {
+const ICON_CLIP = 0.29;
+const ICON_OVERSCAN = 1.06;
+
+export function AppIcon({ size = 22 }: { size?: number }) {
+  const inner = size * ICON_OVERSCAN;
+  const offset = -(inner - size) / 2;
+
   return (
-    <Svg width={(size * 215.073) / 260.428} height={size} viewBox="0 0 215.073 260.428">
-      <Path
-        d="M 180.211 38.9 C 175.957 43.647 169.878 46.349 163.505 46.325 L 83.484 46.028 C 67.282 45.968 54.007 58.88 53.619 75.078 L 52.946 103.15 L 137.655 103.15 L 101.195 149.071 L 69.018 149.071 C 60.87 149.071 54.237 155.623 54.137 163.77 L 52.946 260.428 L 0 260.428 L 3.417 65.792 C 4.058 29.271 33.847 0 70.374 0 L 215.073 0 L 180.211 38.9 Z"
-        fill={color}
+    <View
+      style={{ width: size, height: size, borderRadius: size * ICON_CLIP, overflow: 'hidden' }}
+    >
+      <Image
+        source={require('../../../assets/icon.png')}
+        style={{ width: inner, height: inner, marginLeft: offset, marginTop: offset }}
+        contentFit="cover"
       />
-    </Svg>
+    </View>
   );
 }
 
@@ -65,37 +84,12 @@ export function Card({ children }: { children: ReactNode }) {
   );
 }
 
-/** Outlined capsule — article source and entity tags. */
-export function Pill({
-  label,
-  muted = false,
-  inset = 10,
-}: {
-  label: string;
-  muted?: boolean;
-  inset?: number;
-}) {
-  return (
-    <View
-      className="rounded-full border border-border"
-      style={{ paddingVertical: 3, paddingHorizontal: inset }}
-    >
-      <Text
-        className={muted ? 'text-muted' : 'text-text'}
-        style={{ fontFamily: font.sansMedium, fontSize: 11 }}
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
-
 /**
- * Monogram crest. The app already falls back to initials on a flat colour when
- * an entity has no badge asset, so the mocks use the same treatment rather than
- * shipping placeholder artwork.
+ * Monogram crest — the fallback inside `Crest`. The app already falls back to
+ * initials on a flat colour when an entity has no badge asset, so the mocks use
+ * the same treatment rather than shipping placeholder artwork.
  */
-export function CrestMonogram({
+function CrestMonogram({
   label,
   background,
   size,
@@ -119,6 +113,68 @@ export function CrestMonogram({
       }}
     >
       <Text style={{ fontFamily: font.sansBold, fontSize, color }}>{label}</Text>
+    </View>
+  );
+}
+
+/**
+ * A real club or competition badge, on an optional circular plate.
+ *
+ * Crests come from the entity rows as remote URLs, so two things can go wrong
+ * on a landing screen that may be the first thing a cold install renders: the
+ * entity has no asset at all, or the fetch fails. Both land on the monogram
+ * treatment the feed already uses, which is why this never renders an empty
+ * hole while loading.
+ */
+export function Crest({
+  uri,
+  name,
+  size,
+  plate,
+  monogramColor,
+  monogramSize,
+  /** Badge area as a fraction of the plate — crests need breathing room. */
+  inset = 0.68,
+}: {
+  uri: string | null;
+  name: string;
+  size: number;
+  plate?: string;
+  monogramColor: string;
+  monogramSize?: number;
+  inset?: number;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (!uri || failed) {
+    return (
+      <CrestMonogram
+        label={initials(name)}
+        background={plate ?? 'transparent'}
+        size={size}
+        fontSize={monogramSize ?? size * 0.3}
+        color={monogramColor}
+      />
+    );
+  }
+
+  return (
+    <View
+      className="items-center justify-center"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: plate ?? 'transparent',
+      }}
+    >
+      <Image
+        source={{ uri }}
+        style={{ width: size * inset, height: size * inset }}
+        contentFit="contain"
+        transition={180}
+        onError={() => setFailed(true)}
+      />
     </View>
   );
 }
