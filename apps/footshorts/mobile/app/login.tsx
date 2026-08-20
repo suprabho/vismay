@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { Redirect } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useTheme } from '@footshorts/brand/native';
 import { useAuth } from '@/lib/AuthProvider';
@@ -9,7 +9,12 @@ export default function LoginScreen() {
   const { session, loading, signInWithPassword, signUpWithPassword, signInWithGoogle, signInWithApple } =
     useAuth();
   const { themeName } = useTheme();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  // The landing screen's Sign up CTA routes here with ?mode=signup so the form
+  // opens on create-account rather than making the user find the toggle.
+  const { mode: initialMode } = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<'signin' | 'signup'>(
+    initialMode === 'signup' ? 'signup' : 'signin',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);

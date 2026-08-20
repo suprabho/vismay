@@ -13,6 +13,9 @@
     "apk:local": "bash scripts/build-local-apk.sh"
   },
   "dependencies": {
+    "@expo-google-fonts/forum": "^0.4.1",
+    "@expo-google-fonts/space-grotesk": "^0.4.1",
+    "@expo-google-fonts/space-mono": "^0.4.2",
     "@footshorts/brand": "workspace:*",
     "@footshorts/shared": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
@@ -26,6 +29,7 @@
     "expo-constants": "~55.0.15",
     "expo-crypto": "~55.0.16",
     "expo-dev-client": "~55.0.28",
+    "expo-font": "~55.0.8",
     "expo-image": "~55.0.9",
     "expo-linear-gradient": "~15.0.7",
     "expo-linking": "~55.0.14",
