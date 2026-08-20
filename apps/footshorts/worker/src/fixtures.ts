@@ -52,6 +52,40 @@ function formatGroupLabel(group: string | null | undefined): string {
     .join(' ');
 }
 
+// Mirror of the phase backfill in migration 20260521000000_competition_phases
+// and footshorts-viz's KNOCKOUT_STAGES. Allowlist (not a deny-list of
+// GROUP_STAGE/LEAGUE_STAGE/etc) so stage codes we haven't seen don't get
+// mis-classified as knockouts — league fixtures arrive as 'REGULAR_SEASON'.
+const KNOCKOUT_STAGES = new Set([
+  'PRELIMINARY_ROUND',
+  'FIRST_QUALIFYING_ROUND',
+  'SECOND_QUALIFYING_ROUND',
+  'THIRD_QUALIFYING_ROUND',
+  'PLAY_OFFS',
+  'PLAY_OFF_ROUND',
+  'PLAYOFFS',
+  'LAST_64',
+  'ROUND_OF_32',
+  'LAST_32',
+  'ROUND_OF_16',
+  'LAST_16',
+  'QUARTER_FINALS',
+  'SEMI_FINALS',
+  'THIRD_PLACE',
+  'FINAL',
+]);
+
+function derivePhase(
+  stage: string | null | undefined,
+  matchday: number | null | undefined,
+): string | null {
+  if (stage === 'GROUP_STAGE') return 'group';
+  if (stage === 'LEAGUE_STAGE') return 'league';
+  if (stage && KNOCKOUT_STAGES.has(stage)) return 'knockout';
+  if (matchday != null) return 'league';
+  return null;
+}
+
 function normalizeStatus(s: string): string {
   switch (s) {
     case 'SCHEDULED':
@@ -118,6 +152,7 @@ async function syncFixtures(
       season: normalizeSeason(m.season),
       matchday: m.matchday ?? null,
       stage: m.stage ?? null,
+      phase: derivePhase(m.stage, m.matchday),
       home_team_id: homeId,
       away_team_id: awayId,
       home_team_name: homeId ? null : m.homeTeam?.name ?? 'TBD',
