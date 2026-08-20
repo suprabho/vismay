@@ -13,6 +13,7 @@ import AssetsPanel from './AssetsPanel'
 import { ComposeFlow } from '@/components/canvas/compose/ComposeFlowPanel'
 import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
 import StorySettingsFields from '@/components/vizmaya/StorySettingsFields'
+import TravelPasswordSettings from '@/components/vizmaya/TravelPasswordSettings'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
@@ -475,6 +476,7 @@ export default function EditorClient({
             listed={parsed.data.listed !== false}
             displayOrder={typeof parsed.data.displayOrder === 'number' ? parsed.data.displayOrder : null}
             onChange={updateMetadata}
+            tripSlug={appSlug === 'travel' ? ((parsed.data.trip as string | undefined) ?? slug) : null}
           />
         )}
       </div>
@@ -765,6 +767,7 @@ function SettingsPanel({
   listed,
   displayOrder,
   onChange,
+  tripSlug,
 }: {
   slug: string
   appSlug: string | null
@@ -772,6 +775,9 @@ function SettingsPanel({
   listed: boolean
   displayOrder: number | null
   onChange: (meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>) => void
+  /** Non-null only for travel stories — the trip whose password gate governs
+   *  this story (from `trip:` frontmatter, falling back to the story slug). */
+  tripSlug: string | null
 }) {
   return (
     <div className="flex-1 flex flex-col min-h-0 p-4 overflow-y-auto">
@@ -783,6 +789,7 @@ function SettingsPanel({
         displayOrder={displayOrder}
         onChange={onChange}
       />
+      {tripSlug && <TravelPasswordSettings tripSlug={tripSlug} />}
     </div>
   )
 }

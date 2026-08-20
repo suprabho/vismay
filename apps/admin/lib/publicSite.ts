@@ -44,7 +44,7 @@ export const umamiPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_UMAMI_URL || 'https://umami.fyi'
 )
 export const travelPublicUrl: string = normalize(
-  process.env.NEXT_PUBLIC_TRAVEL_URL || 'https://travel.vismay.xyz'
+  process.env.NEXT_PUBLIC_TRAVEL_URL || 'https://protrip.vismay.xyz'
 )
 
 /**

@@ -328,7 +328,7 @@ export const APPS: AppEntry[] = [
     slug: 'travel',
     urls: {
       renderSurface: { env: 'RENDER_SURFACE_URL_TRAVEL', default: 'https://vizmaya.fyi' },
-      consumer: { env: 'NEXT_PUBLIC_TRAVEL_URL', default: 'https://travel.vismay.xyz' },
+      consumer: { env: 'NEXT_PUBLIC_TRAVEL_URL', default: 'https://protrip.vismay.xyz' },
       admin: { env: 'NEXT_PUBLIC_ADMIN_TRAVEL_URL', default: 'https://vismay.xyz' },
     },
     branding: { hideLogoInAutoplay: true, dataAttr: 'travel' },
