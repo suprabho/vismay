@@ -8,7 +8,10 @@
  * Strategy (cheap → expensive):
  *   1. Exact name match (case-insensitive)
  *   2. Slug match on normalized form
- *   3. Alias table lookup (for "Man Utd" → Manchester United, "Real" → Real Madrid)
+ *   3. Alias lookup — the hardcoded ALIASES map below ("Man Utd" → Manchester
+ *      United, "Real" → Real Madrid), then the `entity_aliases` DB table
+ *      (editor-taught via the admin "resolve identities" UI, e.g. Power
+ *      rankings — no code change/redeploy needed for those)
  *   4. Fuzzy match (Levenshtein) — only if above fail, and only cached
  *
  * Unknown entities are logged for manual review — we DON'T auto-create them.
@@ -28,8 +31,9 @@ function normalize(s: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-// In-memory cache of canonical entities — refreshed on each worker run
+// In-memory caches — refreshed on each worker run
 let entityCache: Map<string, string> | null = null;
+let aliasCache: Map<string, string> | null = null;
 
 async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, string>> {
   if (entityCache) return entityCache;
@@ -47,6 +51,26 @@ async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, st
     cache.set(`${e.type}:${e.slug}`, e.id);
   }
   entityCache = cache;
+  return cache;
+}
+
+// Editor-taught aliases (`entity_aliases` table) — same shape/key as ALIASES
+// below but writable at runtime from the admin, without a worker redeploy.
+// See supabase/footshorts/migrations/20260825000000_entity_aliases.sql.
+async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, string>> {
+  if (aliasCache) return aliasCache;
+
+  const { data, error } = await supabase
+    .from('entity_aliases')
+    .select('entity_type, alias_slug, entity_id');
+
+  if (error) throw error;
+
+  const cache = new Map<string, string>();
+  for (const a of data ?? []) {
+    cache.set(`${a.entity_type}:${a.alias_slug}`, a.entity_id);
+  }
+  aliasCache = cache;
   return cache;
 }
 
@@ -104,6 +128,7 @@ const ALIASES: Record<string, string> = {
 
 async function resolveOne(
   cache: Map<string, string>,
+  aliases: Map<string, string>,
   type: 'league' | 'team' | 'player',
   name: string
 ): Promise<string | null> {
@@ -113,12 +138,16 @@ async function resolveOne(
   const direct = cache.get(`${type}:${slug}`);
   if (direct) return direct;
 
-  // 2. Alias hit
+  // 2a. Hardcoded alias hit
   const aliased = ALIASES[slug];
   if (aliased) {
     const hit = cache.get(`${type}:${aliased}`);
     if (hit) return hit;
   }
+
+  // 2b. Editor-taught alias hit (entity_aliases table)
+  const dbAliasHit = aliases.get(`${type}:${slug}`);
+  if (dbAliasHit) return dbAliasHit;
 
   // 3. Unknown — log for later backfill
   console.log(`[entity-miss] ${type}=${name} (slug=${slug})`);
@@ -130,18 +159,19 @@ export async function resolveEntities(
   entities: GeminiSummary['entities']
 ): Promise<string[]> {
   const cache = await loadEntityCache(supabase);
+  const aliases = await loadAliasCache(supabase);
   const resolvedIds: string[] = [];
 
   for (const name of entities.leagues) {
-    const id = await resolveOne(cache, 'league', name);
+    const id = await resolveOne(cache, aliases, 'league', name);
     if (id) resolvedIds.push(id);
   }
   for (const name of entities.teams) {
-    const id = await resolveOne(cache, 'team', name);
+    const id = await resolveOne(cache, aliases, 'team', name);
     if (id) resolvedIds.push(id);
   }
   for (const name of entities.players) {
-    const id = await resolveOne(cache, 'player', name);
+    const id = await resolveOne(cache, aliases, 'player', name);
     if (id) resolvedIds.push(id);
   }
 
@@ -156,11 +186,13 @@ export async function resolveTeamName(
   name: string
 ): Promise<string | null> {
   const cache = await loadEntityCache(supabase);
-  return resolveOne(cache, 'team', name);
+  const aliases = await loadAliasCache(supabase);
+  return resolveOne(cache, aliases, 'team', name);
 }
 
 export function clearEntityCache() {
   entityCache = null;
+  aliasCache = null;
 }
 
 // Normalization + alias mapping exposed for callers that compare team labels

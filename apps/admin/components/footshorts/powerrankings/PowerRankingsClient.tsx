@@ -7,9 +7,12 @@
  * "Run scrape" button fires footshorts-theanalyst-power-rankings.yml via
  * /api/footshorts/power-rankings/trigger (TriggerRecapButton pattern).
  *
- * Corrections are deliberately lightweight for v1: the narrative and week
- * label edit inline; the rankings list edits as raw JSON behind a toggle
- * (enough to fix a mis-resolved entity id before publishing).
+ * Corrections: the narrative and week label edit inline; the rankings list
+ * edits as raw JSON behind a toggle for anything the table view can't do.
+ * Unresolved teams (entityResolver missed them) get a dedicated picker —
+ * search an existing entity and link it, optionally teaching the resolver
+ * the raw label as an alias (`entity_aliases` table) so future scrapes of
+ * the same label resolve automatically.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -18,6 +21,116 @@ import type {
   PowerRankingSummary,
   SavedPowerRanking,
 } from '@vismay/content-source/footshortsPowerRankings'
+
+interface TeamSearchResult {
+  id: string
+  name: string
+  slug: string
+  crest_url: string | null
+}
+
+/** Inline "unresolved -> resolve" combobox: search existing team entities,
+ *  link one, optionally remember the raw label as an alias. */
+function TeamResolver({
+  teamName,
+  busy,
+  onResolve,
+}: {
+  teamName: string
+  busy: boolean
+  onResolve: (entityId: string, remember: boolean) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState(teamName)
+  const [results, setResults] = useState<TeamSearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [remember, setRemember] = useState(true)
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setLoading(true)
+    const t = setTimeout(() => {
+      fetch(`/api/footshorts/assets/entities?type=team&limit=8&q=${encodeURIComponent(query)}`)
+        .then((res) => res.json())
+        .then((body) => {
+          if (!cancelled) setResults((body.items ?? []) as TeamSearchResult[])
+        })
+        .catch(() => {
+          if (!cancelled) setResults([])
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false)
+        })
+    }, 200)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [open, query])
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-[11px] text-amber-400 hover:underline"
+      >
+        unresolved · resolve
+      </button>
+    )
+  }
+
+  return (
+    <div className="relative inline-block">
+      <input
+        autoFocus
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Search team…"
+        className="w-40 rounded border border-sky-500/60 bg-white/5 px-1.5 py-0.5 text-xs text-white outline-none"
+      />
+      <div className="absolute left-0 top-full z-10 mt-1 w-60 rounded border border-white/10 bg-neutral-900 shadow-xl">
+        <label className="flex items-center gap-1.5 border-b border-white/10 px-2 py-1.5 text-[10px] text-neutral-400">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Remember for future scrapes
+        </label>
+        <div className="max-h-56 overflow-y-auto">
+          {loading ? (
+            <div className="px-2 py-1.5 text-[11px] text-neutral-500">Searching…</div>
+          ) : results.length === 0 ? (
+            <div className="px-2 py-1.5 text-[11px] text-neutral-500">No matches</div>
+          ) : (
+            results.map((r) => (
+              <button
+                type="button"
+                key={r.id}
+                disabled={busy}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onResolve(r.id, remember)
+                  setOpen(false)
+                }}
+                className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[11px] text-neutral-200 hover:bg-white/5 disabled:opacity-40"
+              >
+                {r.crest_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={r.crest_url} alt="" className="h-4 w-4 shrink-0 object-contain" />
+                ) : null}
+                <span className="truncate">{r.name}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type Status = { type: 'idle' | 'ok' | 'err' | 'info'; msg?: string }
 
@@ -188,6 +301,52 @@ export function PowerRankingsClient({ initial }: { initial: PowerRankingSummary[
     }
   }, [detail, narrative, weekLabel, showJson, rankingsJson, refreshList])
 
+  // Resolves every row with this raw team_name to `entityId` and saves
+  // immediately (independent of the deferred narrative/week-label edits, and
+  // of whether the JSON editor is open) — a click on a search result should
+  // just take effect. Optionally teaches the resolver the alias so the same
+  // raw label auto-resolves on the next scrape.
+  const resolveTeam = useCallback(
+    async (teamName: string, entityId: string, remember: boolean) => {
+      if (!detail) return
+      const rankings: PowerRankingEntry[] = detail.rankings.map((r) =>
+        r.team_name === teamName ? { ...r, resolved_entity_id: entityId } : r,
+      )
+      setBusy(true)
+      setStatus({ type: 'idle' })
+      try {
+        const res = await fetch(`/api/footshorts/power-rankings/${detail.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rankings }),
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+        const saved = body.ranking as SavedPowerRanking
+        setDetail(saved)
+        setRankingsJson(JSON.stringify(saved.rankings, null, 2))
+        if (remember) {
+          const aliasRes = await fetch('/api/footshorts/entities/aliases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entityType: 'team', aliasLabel: teamName, entityId }),
+          })
+          if (!aliasRes.ok) {
+            const aliasBody = await aliasRes.json().catch(() => ({}))
+            throw new Error(`Resolved, but alias not saved: ${aliasBody.error ?? aliasRes.status}`)
+          }
+        }
+        setStatus({ type: 'ok', msg: `Resolved "${teamName}".` })
+        await refreshList()
+      } catch (err) {
+        setStatus({ type: 'err', msg: err instanceof Error ? err.message : 'Resolve failed' })
+      } finally {
+        setBusy(false)
+      }
+    },
+    [detail, refreshList],
+  )
+
   const setPublished = useCallback(
     async (publish: boolean) => {
       if (!detail) return
@@ -341,8 +500,9 @@ export function PowerRankingsClient({ initial }: { initial: PowerRankingSummary[
                 {unresolvedCount > 0 && (
                   <div className="rounded bg-amber-950/30 px-2.5 py-1.5 text-[11px] text-amber-200">
                     {unresolvedCount} team{unresolvedCount === 1 ? '' : 's'} not resolved to a canonical
-                    entity (highlighted below) — fix via the JSON editor before publishing, or add an
-                    alias in the worker&apos;s entityResolver.
+                    entity (highlighted below) — click <strong>resolve</strong> next to a team to link
+                    it. &quot;Remember for future scrapes&quot; also teaches the resolver the alias, so
+                    the same raw label won&apos;t show up unresolved next time.
                   </div>
                 )}
 
@@ -410,7 +570,13 @@ export function PowerRankingsClient({ initial }: { initial: PowerRankingSummary[
                               {r.resolved_entity_id ? (
                                 <span className="text-[11px] text-emerald-400">resolved</span>
                               ) : (
-                                <span className="text-[11px] text-amber-400">unresolved</span>
+                                <TeamResolver
+                                  teamName={r.team_name}
+                                  busy={busy}
+                                  onResolve={(entityId, remember) =>
+                                    resolveTeam(r.team_name, entityId, remember)
+                                  }
+                                />
                               )}
                             </td>
                           </tr>
