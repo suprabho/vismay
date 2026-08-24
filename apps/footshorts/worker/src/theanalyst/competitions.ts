@@ -1,33 +1,35 @@
 /**
- * theanalyst.com competition/season identity, keyed by our competition_slug
+ * theanalyst.com competition identity, keyed by our competition_slug
  * (fixtures.competition_slug / entities slug).
  *
- * theanalyst has no discoverable API for these — its match centre addresses
- * everything by opaque string ids in the URL — so this is a manually curated
- * static map, the same role entities.football_data_id plays for
- * football-data.org. Season ids change every season: refresh the seasonId
- * entries at the start of each season (docs/theanalyst-scraping.md).
+ * Only a human-readable URL slug is curated here — the opaque
+ * competitionId/seasonId pair the match centre actually addresses matches by
+ * is read live off theanalyst's own fixtures-listing page during discovery
+ * (matchDiscovery.ts), not hand-maintained. That replaced an earlier version
+ * of this file that DID hand-curate competitionId/seasonId (guessed from a
+ * single example URL, never verified) — season ids change every season and
+ * there was no way to notice a stale one short of the cron silently
+ * discovering zero matches. Reading them fresh off the live page removes
+ * that whole maintenance burden.
  *
- * To find ids: open https://theanalyst.com/opta-football-match-centre in a
- * browser, navigate to a match in the competition, and copy competitionId /
- * seasonId from the address bar.
+ * theanalystSlug values verified live 2026-08-24 by requesting
+ * `https://theanalyst.com/competition/<slug>/fixtures` and checking the
+ * page title. Note it doesn't always match our own slug (`la-liga` vs our
+ * `primera-division`), and `champions-league` 301-redirects to
+ * `uefa-champions-league`.
  */
 
 export type TheanalystCompetition = {
   competitionSlug: string;
-  theanalystCompetitionId: string;
-  theanalystSeasonId: string;
+  /** theanalyst.com's own URL slug: `/competition/<theanalystSlug>/fixtures`. */
+  theanalystSlug: string;
 };
 
 export const THEANALYST_COMPETITIONS: TheanalystCompetition[] = [
-  {
-    // Ids taken from the feature request's example match-centre URL.
-    // TODO(verify): confirm this pair is the Premier League's CURRENT season
-    // before enabling the cron — see docs/theanalyst-scraping.md.
-    competitionSlug: 'premier-league',
-    theanalystCompetitionId: '34pl8szyvrbwcmfkuocjm3r6t',
-    theanalystSeasonId: '830epggffy1nfkfyrtpqdwhlg',
-  },
-  // TODO(verify): populate the other tracked competitions (champions-league,
-  // primera-division, serie-a, bundesliga, ligue-1, …) with real ids.
+  { competitionSlug: 'premier-league', theanalystSlug: 'premier-league' },
+  { competitionSlug: 'primera-division', theanalystSlug: 'la-liga' },
+  { competitionSlug: 'serie-a', theanalystSlug: 'serie-a' },
+  { competitionSlug: 'bundesliga', theanalystSlug: 'bundesliga' },
+  { competitionSlug: 'ligue-1', theanalystSlug: 'ligue-1' },
+  { competitionSlug: 'champions-league', theanalystSlug: 'uefa-champions-league' },
 ];

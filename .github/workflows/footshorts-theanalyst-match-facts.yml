@@ -15,10 +15,12 @@ name: Footshorts - theanalyst match facts
 # refresh flips every 3 hours — so this runs on the same 3-hour cadence,
 # offset 30 minutes later, so freshly-finished fixtures are already visible.
 #
-# DO NOT rely on the schedule until the docs/theanalyst-scraping.md
-# verification checklist has passed (selectors verified against the live
-# site, robots.txt checked, competitions.ts populated with real ids) —
-# until then run it via workflow_dispatch only.
+# Discovery + scrape selectors verified end-to-end against the live site
+# 2026-08-24 (docs/theanalyst-scraping.md) — discovery drives the fixtures
+# page's date-picker calendar with headless Chromium (there's no listing URL),
+# competitionId/seasonId are read live from what it finds rather than
+# hand-curated. Still untested: the actual Supabase write path — run via
+# workflow_dispatch --dry, then for real, before trusting the schedule.
 #
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
@@ -67,6 +69,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
         working-directory: .
+
+      # Match discovery + the match-centre stats widget are client-rendered —
+      # both go through headless Chromium, not plain fetch.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Scrape match facts
         env:
