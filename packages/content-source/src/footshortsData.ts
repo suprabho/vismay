@@ -819,6 +819,64 @@ export async function updateEntityAvatarBgColor(
 }
 
 // ---------------------------------------------------------------------------
+// Entity aliases (admin "resolve identities" UI, e.g. Power rankings tab)
+// ---------------------------------------------------------------------------
+
+export interface EntityAlias {
+  id: string
+  entityType: 'league' | 'team' | 'player'
+  aliasSlug: string
+  aliasLabel: string
+  entityId: string
+  createdAt: string
+}
+
+/** Same normalization `entityResolver.ts` applies to a scraped label, so an
+ *  alias entered here matches it on the next scrape. Duplicated rather than
+ *  shared, same as the worker's own copy — the two run in different packages. */
+function normalizeAliasSlug(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/**
+ * Teach the resolver a raw-label -> canonical-entity mapping: upserts on
+ * (entity_type, alias_slug), so re-resolving the same label just repoints it.
+ * SERVER-ONLY.
+ */
+export async function upsertEntityAlias(opts: {
+  entityType: 'league' | 'team' | 'player'
+  aliasLabel: string
+  entityId: string
+}): Promise<EntityAlias> {
+  const aliasLabel = opts.aliasLabel.trim()
+  const aliasSlug = normalizeAliasSlug(aliasLabel)
+  if (!aliasSlug) throw new Error('upsertEntityAlias: empty alias label')
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entity_aliases')
+    .upsert(
+      { entity_type: opts.entityType, alias_slug: aliasSlug, alias_label: aliasLabel, entity_id: opts.entityId },
+      { onConflict: 'entity_type,alias_slug' },
+    )
+    .select('id, entity_type, alias_slug, alias_label, entity_id, created_at')
+    .single()
+  if (error) throw error
+  return {
+    id: data.id,
+    entityType: data.entity_type,
+    aliasSlug: data.alias_slug,
+    aliasLabel: data.alias_label,
+    entityId: data.entity_id,
+    createdAt: data.created_at,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Pipeline stats (admin "Pipeline" tab)
 // ---------------------------------------------------------------------------
 
