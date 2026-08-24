@@ -13,7 +13,7 @@ import pandas as pd
 from fastf1.exceptions import DataNotLoadedError
 
 from . import extract, positions, telemetry
-from .supabase_sink import SupabaseSink
+from .supabase_sink import SinkUnavailable, SupabaseSink
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +89,14 @@ def _mark_status(sink: SupabaseSink, session_key: str, values: dict) -> None:
     must never mask the real error (or crash an otherwise-successful ingest) —
     e.g. when Supabase is timing out, the failure handler's own update would
     raise and bury the original exception."""
+    if sink.unavailable:
+        logger.warning("sink unavailable — skipping status update %s", values)
+        return
     try:
         sink.update("vizf1_telemetry_sessions", {"session_key": session_key}, values)
     except Exception as exc:  # noqa: BLE001
+        # Includes SinkUnavailable: swallowed here so it can't bury the real
+        # error, but the sink stays latched, so the next phase's write aborts.
         logger.warning("status update %s failed: %s", values, exc)
 
 
@@ -167,6 +172,13 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
             "session may not have run yet, or FastF1 hasn't published its "
             "live-timing data. Try again once the session has completed."
         ) from exc
+    if laps_df.empty:
+        # The mirror fallback can answer with empty payloads instead of erroring
+        # — without this check we'd write a hollow session row and report ok.
+        raise SessionDataUnavailable(
+            f"FastF1 returned no laps for {year} {gp_name} {session_type} — the "
+            "live-timing source (or its mirror) has no data for this session yet."
+        )
 
     # Canonicalize the GP name from the loaded event so session_key, circuit_key
     # and gp_name are stable no matter how the session was requested (see
@@ -201,6 +213,7 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
         "weather_data":     weather_data,
         "positions_status": "pending",
         "telemetry_status": "pending",
+        "data_source":      "fastf1",
     }
     sink.upsert("vizf1_telemetry_sessions", [session_row], on_conflict="session_key")
 
@@ -217,14 +230,22 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
             sink.upsert("vizf1_lap_telemetry", channel_rows,
                         on_conflict="session_key,driver_number,lap")
             _mark_status(sink, session_key, {"telemetry_status": "done", "telemetry_error": None})
+        except SinkUnavailable:
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.error("Phase 2 failed for %s: %s", session_key, exc)
             _mark_status(sink, session_key, {"telemetry_status": "failed", "telemetry_error": str(exc)[:2000]})
             phase_errors.append(f"phase 2 (lap telemetry): {exc}")
 
     # ── Merge processed laps + aggregates -> vizf1_telemetry_laps ────────────
-    lap_rows = _build_lap_rows(session_key, processed_laps, aggregates)
-    sink.upsert("vizf1_telemetry_laps", lap_rows, on_conflict="session_key,driver_number,lap")
+    try:
+        lap_rows = _build_lap_rows(session_key, processed_laps, aggregates)
+        sink.upsert("vizf1_telemetry_laps", lap_rows, on_conflict="session_key,driver_number,lap")
+    except SinkUnavailable:
+        raise
+    except Exception as exc:  # noqa: BLE001 — Phase 3 must still get its attempt
+        logger.error("lap rows failed for %s: %s", session_key, exc)
+        phase_errors.append(f"lap rows: {exc}")
 
     # ── Phase 3: circuit geometry + car positions ───────────────────────────
     try:
@@ -238,6 +259,8 @@ def ingest_session(sink: SupabaseSink, year: int, gp_name: str, session_type: st
                     on_conflict="session_key,driver_number", chunk=1)
         _mark_status(sink, session_key, {"positions_status": "done", "positions_error": None})
         logger.info("Positions done for %s: %d drivers", session_key, len(position_rows))
+    except SinkUnavailable:
+        raise
     except Exception as exc:  # noqa: BLE001
         logger.error("Phase 3 failed for %s: %s", session_key, exc)
         _mark_status(sink, session_key, {"positions_status": "failed", "positions_error": str(exc)[:2000]})

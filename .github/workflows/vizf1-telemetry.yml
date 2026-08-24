@@ -17,6 +17,11 @@ name: VizF1 - telemetry ingest
 # Telemetry only exists AFTER a session has run (FastF1's live-timing source);
 # the resolver's grace window keeps scheduled runs from firing early.
 #
+# When FastF1's live-timing source has no data (the runner drew a
+# Cloudflare-blocked IP and the mirror is empty), the CLI's default
+# `--source auto` falls back to OpenF1 (~4 Hz telemetry, no corner metadata)
+# so race weekends still ingest — see apps/vizf1/ingest-py/README.md.
+#
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
@@ -48,8 +53,9 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    # Auto mode may load several uncached sessions in one run.
-    timeout-minutes: 60
+    # Auto mode may load several uncached sessions in one run; the OpenF1
+    # fallback adds ~8-10 min per race session (rate-limited to ~30 req/min).
+    timeout-minutes: 75
     environment: Production
     defaults:
       run:
