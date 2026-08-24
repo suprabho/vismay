@@ -22,6 +22,7 @@ import fastf1
 from .config import load_settings
 from .ingest import IngestPhaseFailure, SessionDataUnavailable, ingest_session, list_available_sessions
 from .latest import resolve_pending_sessions
+from .openf1_ingest import ingest_session_openf1
 from .supabase_sink import SupabaseSink
 
 
@@ -31,9 +32,29 @@ def _setup(settings) -> SupabaseSink:
     return SupabaseSink(settings)
 
 
+def _ingest_dispatch(sink: SupabaseSink, year: int, gp: str, session_type: str, source: str) -> str:
+    """Route one session ingest to its data source.
+
+    `auto` (the default, and what the scheduled workflow runs) tries FastF1
+    first — 20 Hz telemetry, corners, gap-to-ahead — and falls back to OpenF1
+    (~4 Hz, no corner metadata) only when FastF1 has no session data at all,
+    which in CI usually means the runner drew a Cloudflare-blocked IP for
+    livetiming.formula1.com and the mirror is empty (see README).
+    """
+    if source == "openf1":
+        return ingest_session_openf1(sink, year, gp, session_type)
+    if source == "fastf1":
+        return ingest_session(sink, year, gp, session_type)
+    try:
+        return ingest_session(sink, year, gp, session_type)
+    except SessionDataUnavailable as exc:
+        logging.warning("FastF1 unavailable (%s) — falling back to OpenF1", exc)
+        return ingest_session_openf1(sink, year, gp, session_type)
+
+
 def _cmd_ingest(args, sink: SupabaseSink) -> int:
     try:
-        key = ingest_session(sink, args.year, args.gp, args.session)
+        key = _ingest_dispatch(sink, args.year, args.gp, args.session, args.source)
     except SessionDataUnavailable as exc:
         # A requested session whose data isn't published yet is an expected,
         # retryable condition — report it cleanly (no traceback) but still exit
@@ -79,7 +100,7 @@ def _cmd_ingest_latest(args, sink: SupabaseSink) -> int:
     failures: list[str] = []
     for p in todo:
         try:
-            key = ingest_session(sink, p.year, p.gp_name, p.session_type)
+            key = _ingest_dispatch(sink, p.year, p.gp_name, p.session_type, args.source)
             print(f"  ok {key}")
         except Exception as exc:  # noqa: BLE001 — one bad session must not abort the batch
             logging.error("ingest-latest: %s failed: %s", p.session_key, exc)
@@ -105,7 +126,7 @@ def _cmd_backfill_season(args, sink: SupabaseSink) -> int:
         if not gp:
             continue
         try:
-            key = ingest_session(sink, args.year, gp, args.session)
+            key = _ingest_dispatch(sink, args.year, gp, args.session, args.source)
             print(f"  ok {key}")
         except Exception as exc:  # noqa: BLE001 — one bad event must not abort the season
             logging.warning("backfill: %s %s failed: %s", gp, args.session, exc)
@@ -120,6 +141,14 @@ def _cmd_list_sessions(args, _sink: SupabaseSink) -> int:
     return 0
 
 
+def _add_source_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--source", choices=("auto", "fastf1", "openf1"), default="auto",
+        help="data source: fastf1 (20 Hz, primary), openf1 (~4 Hz fallback), "
+             "or auto = fastf1 with openf1 fallback when no data (default)",
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO,
@@ -132,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--year", type=int, required=True)
     p_ingest.add_argument("--gp", type=str, required=True, help='Grand Prix name, e.g. "Monaco"')
     p_ingest.add_argument("--session", type=str, required=True, help="R | Q | S | SS | SQ | FP1..FP3")
+    _add_source_arg(p_ingest)
     p_ingest.set_defaults(func=_cmd_ingest)
 
     p_latest = sub.add_parser(
@@ -150,11 +180,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_latest.add_argument("--max", type=int, default=3, help="max sessions to ingest per run (default 3)")
     p_latest.add_argument("--dry-run", action="store_true", help="resolve and print, no writes")
+    _add_source_arg(p_latest)
     p_latest.set_defaults(func=_cmd_ingest_latest)
 
     p_back = sub.add_parser("backfill-season", help="ingest one session type for every round in a season")
     p_back.add_argument("--year", type=int, required=True)
     p_back.add_argument("--session", type=str, default="R", help="session type to ingest per round (default R)")
+    _add_source_arg(p_back)
     p_back.set_defaults(func=_cmd_backfill_season)
 
     p_list = sub.add_parser("list-sessions", help="print a season's schedule")
