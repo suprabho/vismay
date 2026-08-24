@@ -1,0 +1,80 @@
+name: Footshorts - theanalyst match facts
+
+# Scrapes Opta match facts from theanalyst.com's match centre
+# (worker/src/theanalystMatchFacts.ts) for recently finished fixtures:
+# first resolves theanalyst matchIds onto fixtures rows (by team names +
+# kickoff date, persisted so it's a one-time cost per fixture), then upserts
+# per-side stats into `opta_match_facts` on (fixture_id, side) — idempotent,
+# safe to re-run.
+#
+# SEPARATE from footshorts-scores.yml / footshorts-events-sr.yml on purpose
+# (same principle that split recaps out of scores): a scrape failure must not
+# fail the score refresh, and this job doesn't touch their rate-limited API
+# budgets so it doesn't join the footshorts-football-data lock. But match
+# facts only exist once a fixture is status='finished', which the scores
+# refresh flips every 3 hours — so this runs on the same 3-hour cadence,
+# offset 30 minutes later, so freshly-finished fixtures are already visible.
+#
+# DO NOT rely on the schedule until the docs/theanalyst-scraping.md
+# verification checklist has passed (selectors verified against the live
+# site, robots.txt checked, competitions.ts populated with real ids) —
+# until then run it via workflow_dispatch only.
+#
+# Required repo secrets (in `Production` — shared project-wide):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+# (No Gemini key — the scrape is deterministic parsing.)
+
+on:
+  schedule:
+    # 30 min after footshorts-scores.yml's 3-hourly refresh. GH cron is UTC
+    # and can drift up to ~15 min under load.
+    - cron: '30 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      competition:
+        description: 'Competition slug to limit to (e.g. premier-league). Blank = all tracked.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: footshorts-theanalyst-match-facts
+  cancel-in-progress: false
+
+jobs:
+  match-facts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/footshorts/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Scrape match facts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
+          INPUT_COMPETITION: ${{ inputs.competition }}
+        run: |
+          ARGS=()
+          [ -n "$INPUT_COMPETITION" ] && ARGS+=("--competition=$INPUT_COMPETITION")
+          pnpm match-facts:ci -- "${ARGS[@]}"

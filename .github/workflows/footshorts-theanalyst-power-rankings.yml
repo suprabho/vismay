@@ -1,0 +1,88 @@
+name: Footshorts - theanalyst power rankings
+
+# Scrapes theanalyst.com's weekly Opta Power Rankings article
+# (worker/src/theanalystPowerRankings.ts) and inserts a status='draft' row
+# into the `power_rankings` table for editorial review in the admin app's
+# Power rankings tab. Never auto-publishes. Idempotent: a content hash skips
+# the insert when the article hasn't changed since the last run, so the cron
+# can safely fire more often than theanalyst publishes.
+#
+# Two entry points:
+#   • schedule — the automatic weekly run.
+#   • workflow_dispatch — the admin tab's "Run scrape" button
+#     (/api/footshorts/power-rankings/trigger → powerRankingsDispatch.ts),
+#     optionally with an article-URL override.
+#
+# DO NOT rely on the schedule until the docs/theanalyst-scraping.md
+# verification checklist has passed (selectors verified against the live
+# site, robots.txt checked, publish cadence confirmed) — until then run it
+# via workflow_dispatch only.
+#
+# Required repo secrets (in `Production` — shared project-wide):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   GEMINI_API_KEY               - for the narrative summary (optional at
+#                                  runtime: without it the draft lands with
+#                                  narrative=null for the editor to write)
+# Optional repo variable:
+#   GEMINI_MODEL                 - overrides default (gemini-2.5-flash)
+
+on:
+  schedule:
+    # PLACEHOLDER cadence: Monday 09:00 UTC, guessed as "after the weekend's
+    # matches are digested". theanalyst's actual publish weekday could not be
+    # verified when this was written (sandboxed authoring, no site access) —
+    # confirm it from the article's history and adjust before trusting this.
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'theanalyst.com article URL to scrape. Blank = the default Power Rankings URL.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  # Own group — no shared external-API budget with the football-data /
+  # API-Football / Sportradar jobs, so no reason to serialise against them.
+  group: footshorts-theanalyst-power-rankings
+  cancel-in-progress: false
+
+jobs:
+  power-rankings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/footshorts/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Scrape power rankings
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
+          INPUT_URL: ${{ inputs.url }}
+        run: |
+          ARGS=()
+          [ -n "$INPUT_URL" ] && ARGS+=("--url=$INPUT_URL")
+          pnpm power-rankings:ci -- "${ARGS[@]}"

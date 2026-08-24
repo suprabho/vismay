@@ -161,3 +161,12 @@ export async function resolveTeamName(
 export function clearEntityCache() {
   entityCache = null;
 }
+
+// Normalization + alias mapping exposed for callers that compare team labels
+// from two providers directly (e.g. theanalyst match discovery matching
+// scraped team names against fixtures) — same rules as resolveOne, minus the
+// entity-cache lookup, so both sides of a comparison collapse to one key.
+export function canonicalTeamKey(name: string): string {
+  const slug = normalize(name);
+  return ALIASES[slug] ?? slug;
+}
