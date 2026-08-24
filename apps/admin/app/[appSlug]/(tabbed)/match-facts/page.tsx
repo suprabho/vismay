@@ -88,11 +88,17 @@ function dateKey(iso: string): string {
 
 function dateLabel(key: string): string {
   return new Date(`${key}T00:00:00Z`).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
+    weekday: 'short',
+    month: 'short',
     day: 'numeric',
     timeZone: 'UTC',
   })
+}
+
+/** Status dot: green = scraped, amber = matched but not scraped, neutral = not yet discovered. */
+function StatusDot({ entry }: { entry: MatchEntry }) {
+  const color = entry.home || entry.away ? 'bg-emerald-500' : entry.fixture.theanalyst_match_id ? 'bg-amber-500' : 'bg-neutral-600'
+  return <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${color}`} />
 }
 
 function StatsTable({ home, away, homeName, awayName }: { home: FactsRow | null; away: FactsRow | null; homeName: string; awayName: string }) {
@@ -132,18 +138,20 @@ function StatsTable({ home, away, homeName, awayName }: { home: FactsRow | null;
 async function linkTheanalystUrlAction(formData: FormData) {
   'use server'
   const appSlug = String(formData.get('appSlug') ?? '')
+  const competition = String(formData.get('competition') ?? '')
   const fixtureId = String(formData.get('fixtureId') ?? '')
   const theanalystUrl = String(formData.get('theanalystUrl') ?? '').trim()
   if (!appSlug || !fixtureId) return
 
+  const backTo = `/${appSlug}/match-facts?competition=${encodeURIComponent(competition)}&fixture=${fixtureId}`
   try {
     await linkFixtureToTheanalystMatch(fixtureId, theanalystUrl)
   } catch (e) {
     const message = e instanceof Error ? e.message : 'failed to link'
-    redirect(`/${appSlug}/match-facts?fixture=${fixtureId}&linkError=${encodeURIComponent(message)}`)
+    redirect(`${backTo}&linkError=${encodeURIComponent(message)}`)
   }
   revalidatePath(`/${appSlug}/match-facts`)
-  redirect(`/${appSlug}/match-facts?fixture=${fixtureId}`)
+  redirect(backTo)
 }
 
 function TheanalystLink({ url }: { url: string | null }) {
@@ -155,21 +163,12 @@ function TheanalystLink({ url }: { url: string | null }) {
   )
 }
 
-function MatchCard({
-  entry,
-  appSlug,
-  backLinkAppSlug,
-  linkError,
-}: {
-  entry: MatchEntry
-  appSlug: string
-  backLinkAppSlug?: string
-  linkError?: string
-}) {
+/** Column 3: full detail for the active fixture — stats, pending state, or the manual-link form. */
+function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; appSlug: string; linkError?: string }) {
   const { fixture, home, away, homeName, awayName } = entry
   const hasFacts = home || away
   return (
-    <div id={`fixture-${fixture.id}`} className="rounded-lg border border-white/10 overflow-hidden scroll-mt-4">
+    <div className="rounded-lg border border-white/10 overflow-hidden">
       <div className="px-3 py-2.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
         <div>
           <span className="text-sm font-semibold text-white">
@@ -200,6 +199,7 @@ function MatchCard({
           {linkError && <p className="text-xs text-amber-400 mb-2">{linkError}</p>}
           <form action={linkTheanalystUrlAction} className="flex items-center gap-2">
             <input type="hidden" name="appSlug" value={appSlug} />
+            <input type="hidden" name="competition" value={fixture.competition_slug ?? ''} />
             <input type="hidden" name="fixtureId" value={fixture.id} />
             <input
               type="url"
@@ -217,14 +217,6 @@ function MatchCard({
           </form>
         </div>
       )}
-      {backLinkAppSlug && (
-        <a
-          href={`/${backLinkAppSlug}/match-facts`}
-          className="block px-3 py-1.5 border-t border-white/5 text-[11px] text-neutral-500 hover:text-white transition-colors"
-        >
-          ← All matches
-        </a>
-      )}
     </div>
   )
 }
@@ -237,17 +229,21 @@ function MatchCard({
  * lifecycle like Power rankings — both tables are public-read already, this
  * tab just makes them human-browsable instead of requiring a Supabase Studio
  * trip.
+ *
+ * Three-column browse: competitions → matches (grouped by date) → facts for
+ * the selected match, all driven by `?competition=&fixture=` so it's plain
+ * links/forms, no client JS.
  */
 export default async function MatchFactsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ appSlug: string }>
-  searchParams: Promise<{ fixture?: string; linkError?: string }>
+  searchParams: Promise<{ competition?: string; fixture?: string; linkError?: string }>
 }) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/match-facts`)
-  const { fixture: selectedFixtureId, linkError } = await searchParams
+  const { competition: competitionParam, fixture: fixtureParam, linkError } = await searchParams
 
   const supabase = await createServerSupabase()
 
@@ -302,7 +298,6 @@ export default async function MatchFactsPage({
   })
 
   const scrapedCount = entries.filter((e) => e.home || e.away).length
-  const selected = selectedFixtureId ? entries.find((e) => e.fixture.id === selectedFixtureId) : null
 
   // Competition → date (YYYY-MM-DD) → entries, both pre-sorted since `entries`
   // is already kickoff_at-desc from the query.
@@ -322,8 +317,28 @@ export default async function MatchFactsPage({
     return competitionLabel(a).localeCompare(competitionLabel(b))
   })
 
+  // Resolve the active competition: explicit ?competition= wins, else the
+  // selected fixture's own competition, else the first one in the list.
+  const fixtureFromParam = fixtureParam ? entries.find((e) => e.fixture.id === fixtureParam) : undefined
+  const activeCompetition =
+    (competitionParam && byCompetition.has(competitionParam) ? competitionParam : undefined) ??
+    (fixtureFromParam ? fixtureFromParam.fixture.competition_slug ?? '—' : undefined) ??
+    competitions[0]
+
+  const activeByDate = activeCompetition ? byCompetition.get(activeCompetition) : undefined
+  const activeDates = activeByDate ? [...activeByDate.keys()].sort((a, b) => (a < b ? 1 : -1)) : []
+
+  // Active fixture: the one from ?fixture= if it belongs to the active
+  // competition, else the most recent match in that competition.
+  const activeEntry =
+    fixtureFromParam && (fixtureFromParam.fixture.competition_slug ?? '—') === activeCompetition
+      ? fixtureFromParam
+      : activeDates.length > 0
+        ? activeByDate!.get(activeDates[0])![0]
+        : undefined
+
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       <div className="shrink-0 px-4 py-5 border-b border-white/5 space-y-3">
         <div>
           <h1 className="text-lg font-semibold">Match facts</h1>
@@ -336,7 +351,7 @@ export default async function MatchFactsPage({
           <form method="GET" className="flex items-center gap-2">
             <select
               name="fixture"
-              defaultValue={selectedFixtureId ?? ''}
+              defaultValue={activeEntry?.fixture.id ?? ''}
               className="bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-neutral-200 max-w-md"
             >
               <option value="">Jump to a fixture…</option>
@@ -369,44 +384,74 @@ export default async function MatchFactsPage({
         <div className="px-4 py-10 text-sm text-neutral-500 text-center">
           No finished fixtures in the last {LOOKBACK_DAYS} days.
         </div>
-      ) : selectedFixtureId ? (
-        <div className="p-4">
-          {selected ? (
-            <MatchCard entry={selected} appSlug={appSlug} backLinkAppSlug={appSlug} linkError={linkError} />
-          ) : (
-            <div className="text-sm text-neutral-500">
-              Fixture not found in the last {LOOKBACK_DAYS} days.{' '}
-              <a href={`/${appSlug}/match-facts`} className="text-white hover:underline">
-                ← All matches
-              </a>
-            </div>
-          )}
-        </div>
       ) : (
-        <div className="p-4 space-y-8">
-          {competitions.map((comp) => {
-            const byDate = byCompetition.get(comp)!
-            const dates = [...byDate.keys()].sort((a, b) => (a < b ? 1 : -1))
-            return (
-              <div key={comp}>
-                <h2 className="text-sm font-semibold text-white mb-3 sticky top-0 bg-neutral-950/95 backdrop-blur py-1">
-                  {competitionLabel(comp)}
-                </h2>
-                <div className="space-y-5">
-                  {dates.map((day) => (
-                    <div key={day}>
-                      <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-2">{dateLabel(day)}</h3>
-                      <div className="space-y-3">
-                        {byDate.get(day)!.map((entry) => (
-                          <MatchCard key={entry.fixture.id} entry={entry} appSlug={appSlug} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        <div className="flex-1 min-h-0 grid grid-cols-[180px_300px_1fr]">
+          {/* Column 1: competitions */}
+          <div className="min-h-0 overflow-y-auto border-r border-white/5 py-2">
+            {competitions.map((comp) => {
+              const active = comp === activeCompetition
+              const compEntries = [...byCompetition.get(comp)!.values()].flat()
+              const compScraped = compEntries.filter((e) => e.home || e.away).length
+              return (
+                <a
+                  key={comp}
+                  href={`/${appSlug}/match-facts?competition=${encodeURIComponent(comp)}`}
+                  className={`block px-3 py-2 text-sm border-l-2 transition-colors ${
+                    active
+                      ? 'border-sky-500 bg-white/[0.04] text-white'
+                      : 'border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.02]'
+                  }`}
+                >
+                  <div className="truncate">{competitionLabel(comp)}</div>
+                  <div className="text-[11px] text-neutral-600">
+                    {compScraped}/{compEntries.length} scraped
+                  </div>
+                </a>
+              )
+            })}
+          </div>
+
+          {/* Column 2: matches in the active competition, grouped by date */}
+          <div className="min-h-0 overflow-y-auto border-r border-white/5 py-2">
+            {activeDates.map((day) => (
+              <div key={day}>
+                <h3 className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-wide text-neutral-500 sticky top-0 bg-neutral-950/95 backdrop-blur">
+                  {dateLabel(day)}
+                </h3>
+                {activeByDate!.get(day)!.map((entry) => {
+                  const active = entry.fixture.id === activeEntry?.fixture.id
+                  return (
+                    <a
+                      key={entry.fixture.id}
+                      href={`/${appSlug}/match-facts?competition=${encodeURIComponent(activeCompetition ?? '')}&fixture=${entry.fixture.id}`}
+                      className={`flex items-center gap-2 px-3 py-1.5 text-sm border-l-2 transition-colors ${
+                        active
+                          ? 'border-sky-500 bg-white/[0.04] text-white'
+                          : 'border-transparent text-neutral-300 hover:text-white hover:bg-white/[0.02]'
+                      }`}
+                    >
+                      <StatusDot entry={entry} />
+                      <span className="truncate">
+                        {entry.homeName} <span className="text-neutral-600">v</span> {entry.awayName}
+                      </span>
+                    </a>
+                  )
+                })}
               </div>
-            )
-          })}
+            ))}
+            {activeDates.length === 0 && (
+              <p className="px-3 py-2 text-xs text-neutral-500">No matches in this competition.</p>
+            )}
+          </div>
+
+          {/* Column 3: facts for the active match */}
+          <div className="min-h-0 overflow-y-auto p-4">
+            {activeEntry ? (
+              <MatchFactsPanel entry={activeEntry} appSlug={appSlug} linkError={linkError} />
+            ) : (
+              <p className="text-sm text-neutral-500">Select a match.</p>
+            )}
+          </div>
         </div>
       )}
     </div>
