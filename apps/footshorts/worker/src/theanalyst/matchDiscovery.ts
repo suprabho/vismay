@@ -32,7 +32,7 @@
  */
 
 import { newRenderedPage } from './fetch';
-import { canonicalTeamKey } from '../entityResolver';
+import { teamKeyVariants } from '../entityResolver';
 
 export type DiscoveredMatch = {
   matchId: string;
@@ -183,38 +183,48 @@ export async function discoverMatchesForCompetition(
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function hasOverlap(a: Set<string>, b: Set<string>): boolean {
+  for (const v of a) if (b.has(v)) return true;
+  return false;
+}
+
 /**
  * Pair discovered matches with unmapped fixtures. Returns fixture_id →
  * {matchId, competitionId, seasonId} for every unambiguous (home, away,
  * date-window) hit.
+ *
+ * Matches on teamKeyVariants() overlap rather than an exact key, since
+ * theanalyst.com's team names ("Palace", "Forest", "Man Utd") often share
+ * no exact slug with our own official entity names ("Crystal Palace FC",
+ * "Nottingham Forest FC", "Manchester United FC") — see teamKeyVariants'
+ * doc comment. Candidate count is small (one competition's recent
+ * matchdays), so an O(fixtures × candidates) scan is cheap.
  */
 export function matchFixtures(
   candidates: DiscoveredMatch[],
   fixtures: UnmappedFixture[]
 ): Map<string, ResolvedMatch> {
-  const byTeams = new Map<string, DiscoveredMatch[]>();
-  for (const c of candidates) {
-    const key = `${canonicalTeamKey(c.homeTeamRaw)}|${canonicalTeamKey(c.awayTeamRaw)}`;
-    const list = byTeams.get(key) ?? [];
-    list.push(c);
-    byTeams.set(key, list);
-  }
+  const candidateVariants = candidates.map((c) => ({
+    c,
+    home: teamKeyVariants(c.homeTeamRaw),
+    away: teamKeyVariants(c.awayTeamRaw),
+  }));
 
   const resolved = new Map<string, ResolvedMatch>();
   for (const f of fixtures) {
-    const key = `${canonicalTeamKey(f.homeTeamName)}|${canonicalTeamKey(f.awayTeamName)}`;
-    const matches = byTeams.get(key);
-    if (!matches?.length) continue;
-
+    const homeVariants = teamKeyVariants(f.homeTeamName);
+    const awayVariants = teamKeyVariants(f.awayTeamName);
     const kickoff = Date.parse(f.kickoffAt);
-    const inWindow = matches.filter((m) => {
-      const d = Date.parse(m.kickoffDate);
+
+    const inWindow = candidateVariants.filter(({ c, home, away }) => {
+      if (!hasOverlap(homeVariants, home) || !hasOverlap(awayVariants, away)) return false;
+      const d = Date.parse(c.kickoffDate);
       return Number.isFinite(d) ? Math.abs(d - kickoff) <= DAY_MS : true;
     });
 
     // A team pairing repeats across a season (home/away legs, cups) — only map
     // when exactly one candidate survives the date window.
-    const only = inWindow.length === 1 ? inWindow[0] : undefined;
+    const only = inWindow.length === 1 ? inWindow[0]?.c : undefined;
     if (only) {
       resolved.set(f.id, { matchId: only.matchId, competitionId: only.competitionId, seasonId: only.seasonId });
     } else if (inWindow.length > 1) {
