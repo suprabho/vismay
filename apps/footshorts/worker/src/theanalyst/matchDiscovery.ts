@@ -55,7 +55,18 @@ export type ResolvedMatch = {
   matchId: string;
   competitionId: string;
   seasonId: string;
+  /** Human-navigable page for this match — same one the admin's "not yet
+   *  discovered" manual-entry form parses ids back out of, so both producers
+   *  keep the ids and the stored URL consistent. */
+  url: string;
 };
+
+/** The wrapper page a person can actually open — verified live (2026-08-24)
+ *  as the href on theanalyst.com's own fixture-tile links. */
+export function theanalystMatchUrl(competitionId: string, seasonId: string, matchId: string): string {
+  const params = new URLSearchParams({ competitionId, seasonId, matchId });
+  return `https://theanalyst.com/opta-football-match-centre?${params}`;
+}
 
 const CALENDAR_HEADER_SELECTOR = '.DatePickerHeader-module_datepicker-header-date-month-year__DQNgv';
 const CALENDAR_GRID_SELECTOR = 'table[role="grid"]';
@@ -226,7 +237,12 @@ export function matchFixtures(
     // when exactly one candidate survives the date window.
     const only = inWindow.length === 1 ? inWindow[0]?.c : undefined;
     if (only) {
-      resolved.set(f.id, { matchId: only.matchId, competitionId: only.competitionId, seasonId: only.seasonId });
+      resolved.set(f.id, {
+        matchId: only.matchId,
+        competitionId: only.competitionId,
+        seasonId: only.seasonId,
+        url: theanalystMatchUrl(only.competitionId, only.seasonId, only.matchId),
+      });
     } else if (inWindow.length > 1) {
       console.log(
         `[theanalyst-discovery] ambiguous: ${f.homeTeamName} vs ${f.awayTeamName} matched ${inWindow.length} listings — skipped`

@@ -995,3 +995,61 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
     topEntities,
   }
 }
+
+// ── theanalyst.com manual match linking ──────────────────────────────────────
+//
+// The admin's Match facts tab lets an editor paste a theanalyst.com URL for a
+// fixture auto-discovery couldn't match (matchDiscovery.ts in the footshorts
+// worker resolves the same ids automatically for everything it can). Both
+// paths write the same three columns plus the URL itself
+// (supabase/footshorts/migrations/20260824000003_fixtures_theanalyst_url.sql).
+
+/**
+ * Pulls competitionId/seasonId/matchId out of any theanalyst.com URL that
+ * carries them as query params — verified live as
+ * `https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…`
+ * (the href on theanalyst's own fixture-tile links), but this doesn't care
+ * about path or param order so the dataviz widget URL works too. Returns
+ * null on anything that isn't a parseable theanalyst.com URL with all three.
+ */
+export function parseTheanalystMatchUrl(
+  raw: string,
+): { matchId: string; competitionId: string; seasonId: string } | null {
+  let url: URL
+  try {
+    url = new URL(raw.trim())
+  } catch {
+    return null
+  }
+  if (!url.hostname.endsWith('theanalyst.com')) return null
+  const matchId = url.searchParams.get('matchId')
+  const competitionId = url.searchParams.get('competitionId')
+  const seasonId = url.searchParams.get('seasonId')
+  if (!matchId || !competitionId || !seasonId) return null
+  return { matchId, competitionId, seasonId }
+}
+
+/**
+ * Manually links a fixture to a theanalyst.com match from a pasted URL —
+ * same three id columns matchDiscovery.ts sets automatically, plus the URL
+ * verbatim as pasted. Throws on an unparseable URL; the next match-facts
+ * cron run picks up the new theanalyst_match_id like any other resolved
+ * fixture (scrape is a separate phase, budget-limited per run).
+ */
+export async function linkFixtureToTheanalystMatch(fixtureId: string, url: string): Promise<void> {
+  const parsed = parseTheanalystMatchUrl(url)
+  if (!parsed) {
+    throw new Error('Not a theanalyst.com match URL — expected matchId/competitionId/seasonId query params')
+  }
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('fixtures')
+    .update({
+      theanalyst_match_id: parsed.matchId,
+      theanalyst_competition_id: parsed.competitionId,
+      theanalyst_season_id: parsed.seasonId,
+      theanalyst_match_url: url.trim(),
+    })
+    .eq('id', fixtureId)
+  if (error) throw error
+}
