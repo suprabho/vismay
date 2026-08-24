@@ -28,6 +28,7 @@ import { createClient } from '@supabase/supabase-js';
 import { THEANALYST_COMPETITIONS, TheanalystCompetition } from './theanalyst/competitions';
 import { discoverMatchesForCompetition, matchFixtures, UnmappedFixture } from './theanalyst/matchDiscovery';
 import { fetchMatchFacts } from './theanalyst/matchCentre';
+import { closeBrowser } from './theanalyst/fetch';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -106,23 +107,20 @@ async function discoverForCompetition(comp: TheanalystCompetition, dry: boolean)
   }
   if (unmapped.length === 0) return 0;
 
-  const candidates = await discoverMatchesForCompetition(
-    comp.theanalystCompetitionId,
-    comp.theanalystSeasonId
-  );
+  const candidates = await discoverMatchesForCompetition(comp.theanalystSlug, LOOKBACK_DAYS);
   const resolved = matchFixtures(candidates, unmapped);
   console.log(
     `[match-facts] ${comp.competitionSlug}: ${unmapped.length} unmapped fixtures, ${candidates.length} listed matches, ${resolved.size} newly resolved`
   );
   if (dry) return resolved.size;
 
-  for (const [fixtureId, matchId] of resolved) {
+  for (const [fixtureId, m] of resolved) {
     const { error: updateError } = await supabase
       .from('fixtures')
       .update({
-        theanalyst_match_id: matchId,
-        theanalyst_competition_id: comp.theanalystCompetitionId,
-        theanalyst_season_id: comp.theanalystSeasonId,
+        theanalyst_match_id: m.matchId,
+        theanalyst_competition_id: m.competitionId,
+        theanalyst_season_id: m.seasonId,
       })
       .eq('id', fixtureId);
     if (updateError) {
@@ -140,14 +138,19 @@ async function scrapeForCompetition(
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
   const { data, error } = await supabase
     .from('fixtures')
-    .select('id, theanalyst_match_id')
+    .select('id, theanalyst_match_id, theanalyst_competition_id, theanalyst_season_id')
     .eq('competition_slug', comp.competitionSlug)
     .not('theanalyst_match_id', 'is', null)
     .eq('status', 'finished')
     .gte('kickoff_at', since);
   if (error) throw new Error(`fixtures query failed: ${error.message}`);
 
-  const mapped = (data ?? []) as Array<{ id: string; theanalyst_match_id: string }>;
+  const mapped = (data ?? []) as Array<{
+    id: string;
+    theanalyst_match_id: string;
+    theanalyst_competition_id: string | null;
+    theanalyst_season_id: string | null;
+  }>;
   if (mapped.length === 0) return 0;
 
   const { data: existing, error: existingError } = await supabase
@@ -166,11 +169,18 @@ async function scrapeForCompetition(
     }
     budget.remaining--;
 
+    if (!fixture.theanalyst_competition_id || !fixture.theanalyst_season_id) {
+      // Shouldn't happen — discovery always persists both alongside the
+      // matchId — but guard rather than pass 'null' into a URL.
+      console.error(`[match-facts] fixture ${fixture.id} has a matchId but no competitionId/seasonId — skipping`);
+      continue;
+    }
+
     let facts;
     try {
       facts = await fetchMatchFacts(
-        comp.theanalystCompetitionId,
-        comp.theanalystSeasonId,
+        fixture.theanalyst_competition_id,
+        fixture.theanalyst_season_id,
         fixture.theanalyst_match_id
       );
     } catch (e: any) {
@@ -227,8 +237,9 @@ async function run() {
 }
 
 run()
+  .then(() => closeBrowser())
   .then(() => process.exit(0))
   .catch((e) => {
     console.error('fatal:', e);
-    process.exit(1);
+    closeBrowser().finally(() => process.exit(1));
   });

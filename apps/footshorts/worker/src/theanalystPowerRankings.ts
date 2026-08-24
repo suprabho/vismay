@@ -26,6 +26,7 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { fetchPowerRankings, RankingEntry } from './theanalyst/powerRankings';
+import { closeBrowser } from './theanalyst/fetch';
 import { resolveTeamName } from './entityResolver';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -148,8 +149,9 @@ async function run() {
 }
 
 run()
+  .then(() => closeBrowser())
   .then(() => process.exit(0))
   .catch((e) => {
     console.error('fatal:', e);
-    process.exit(1);
+    closeBrowser().finally(() => process.exit(1));
   });

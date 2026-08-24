@@ -1,22 +1,25 @@
 name: Footshorts - theanalyst power rankings
 
-# Scrapes theanalyst.com's weekly Opta Power Rankings article
-# (worker/src/theanalystPowerRankings.ts) and inserts a status='draft' row
-# into the `power_rankings` table for editorial review in the admin app's
-# Power rankings tab. Never auto-publishes. Idempotent: a content hash skips
-# the insert when the article hasn't changed since the last run, so the cron
-# can safely fire more often than theanalyst publishes.
+# Scrapes theanalyst.com's Opta Power Rankings — a continuously-updated
+# widget embedded in an evergreen explainer article, not a weekly article
+# itself (worker/src/theanalystPowerRankings.ts) — and inserts a
+# status='draft' row into the `power_rankings` table for editorial review in
+# the admin app's Power rankings tab. Never auto-publishes. Idempotent: a
+# content hash skips the insert when the widget's data hasn't changed since
+# the last run.
 #
 # Two entry points:
-#   • schedule — the automatic weekly run.
+#   • schedule — the automatic daily (Mon-Fri) run.
 #   • workflow_dispatch — the admin tab's "Run scrape" button
 #     (/api/footshorts/power-rankings/trigger → powerRankingsDispatch.ts),
 #     optionally with an article-URL override.
 #
-# DO NOT rely on the schedule until the docs/theanalyst-scraping.md
-# verification checklist has passed (selectors verified against the live
-# site, robots.txt checked, publish cadence confirmed) — until then run it
-# via workflow_dispatch only.
+# Selectors + fetch mode verified live 2026-08-24 (docs/theanalyst-scraping.md):
+# the ranked list is a client-rendered table in a separate cross-origin
+# widget (dataviz.theanalyst.com), located via the article's iframe and
+# fetched with headless Chromium. Still unverified: an actual insert against
+# Supabase (`--dry` then for real, checklist item 5) — run via
+# workflow_dispatch first before trusting the schedule.
 #
 # Required repo secrets (in `Production` — shared project-wide):
 #   NEXT_PUBLIC_SUPABASE_URL
@@ -29,11 +32,12 @@ name: Footshorts - theanalyst power rankings
 
 on:
   schedule:
-    # PLACEHOLDER cadence: Monday 09:00 UTC, guessed as "after the weekend's
-    # matches are digested". theanalyst's actual publish weekday could not be
-    # verified when this was written (sandboxed authoring, no site access) —
-    # confirm it from the article's history and adjust before trusting this.
-    - cron: '0 9 * * 1'
+    # VERIFIED (2026-08-24) against the live dataviz widget's own footer
+    # copy: "Updates daily Monday to Friday." This isn't a weekly article —
+    # the ranked list is a continuously-updated widget embedded in an
+    # evergreen explainer article (see docs/theanalyst-scraping.md). 09:00
+    # UTC gives the widget's daily refresh time to land first.
+    - cron: '0 9 * * 1-5'
   workflow_dispatch:
     inputs:
       url:
@@ -73,6 +77,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
         working-directory: .
+
+      # The ranked list is client-rendered — power-rankings.ts fetches it
+      # with headless Chromium, not plain fetch.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Scrape power rankings
         env:

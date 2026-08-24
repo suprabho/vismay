@@ -1,24 +1,39 @@
 /**
  * theanalyst.com Opta match-centre scraper — per-match stats for both sides.
  *
- * The match centre addresses a match as
- *   /opta-football-match-centre?competitionId=<id>&seasonId=<id>&matchId=<id>
- * (opaque string ids). Stats are extracted label-driven: for each known Opta
- * stat label we look for a DOM row containing that label plus two numbers
- * (home value first, away value second — the standard match-centre layout).
- * Labels we don't model as columns still land in raw_stats.
+ * VERIFIED LIVE (2026-08-24) against a real finished match. Two things were
+ * wrong in the original (authored without site access) version:
  *
- * Deterministic parsing, no LLM — the page is numeric data.
+ * 1. The URL was the `theanalyst.com/opta-football-match-centre` wrapper
+ *    page — same cross-origin-iframe problem as Power Rankings' article
+ *    (see powerRankings.ts): the wrapper's own script only sets its iframe's
+ *    `src` client-side, so `page.content()` on it never has the widget's
+ *    DOM. `matchCentreUrl` now points straight at the widget it proxies to,
+ *    `dataviz.theanalyst.com/opta-football-match-centre/`.
+ * 2. The stats aren't one generic "label near two numbers" shape — the
+ *    widget renders SIX separate `table.Opta-Stats-Bars` sub-widgets (Match
+ *    facts, Attacking, Passing, Shooting, Defending, Discipline), each a
+ *    label `<tr><th>` immediately followed by a data `<tr>` with THREE
+ *    `<td>`: home value, a bar `<div>` (which duplicates both values as text
+ *    inside it — a naive "find N numbers in this row" scan over-collects),
+ *    away value. xG lives in a DIFFERENT table, `table.Opta-shotoverview`,
+ *    one `<tr data-stat="...">` per stat with `<td class="Opta-Home">` /
+ *    `<th class="Opta-StatLabel">` / `<td class="Opta-Away">`.
+ *    `extractLabelPairs` now reads both shapes directly by class name
+ *    instead of guessing at whitespace/number layout.
  *
- * SELECTOR CAVEAT: written without network access to theanalyst.com. The
- * label-row heuristic avoids depending on class names, but the label spellings
- * and home/away ordering MUST be verified against a live match page before
- * production (docs/theanalyst-scraping.md checklist). If the page turns out to
- * be fully JS-rendered, this needs a headless-browser fetch (see the doc).
+ * Real label spellings confirmed live: "Total Team xG" (not "expected goals
+ * (xg)"), "Fouls conceded" (not "fouls committed"), "Corners won" AND
+ * "Corner awarded" (two different tables track corners differently — either
+ * can win), "Passing accuracy" (already correct). "Big chances"/"big chances
+ * missed" did not appear anywhere on the one match checked — still
+ * unverified; they just land in raw_stats as null if theanalyst doesn't
+ * label them this way. Deterministic parsing, no LLM — the page is numeric
+ * data.
  */
 
 import * as cheerio from 'cheerio';
-import { fetchHtml } from './fetch';
+import { fetchRenderedHtml } from './fetch';
 
 export type SideStats = {
   xg: number | null;
@@ -44,28 +59,25 @@ export type MatchFactsPayload = {
 
 export function matchCentreUrl(competitionId: string, seasonId: string, matchId: string): string {
   const params = new URLSearchParams({ competitionId, seasonId, matchId });
-  return `https://theanalyst.com/opta-football-match-centre?${params}`;
+  return `https://dataviz.theanalyst.com/opta-football-match-centre/?${params}`;
 }
 
-/** Column name → label spellings to try, most specific first. Verify against
- *  the live page and extend as the real labels are confirmed. */
+/** Column name → label spellings to try, most specific (real, verified) first. */
 const STAT_LABELS: Record<keyof Omit<SideStats, 'raw_stats'>, string[]> = {
-  xg: ['expected goals (xg)', 'expected goals', 'xg'],
-  shots: ['total shots', 'shots'],
+  xg: ['total team xg', 'expected goals (xg)', 'expected goals', 'xg'],
+  shots: ['shots', 'total shots'],
   shots_on_target: ['shots on target'],
   possession: ['possession'],
-  passes: ['total passes', 'passes'],
-  pass_accuracy: ['pass accuracy', 'passing accuracy'],
+  passes: ['passes', 'total passes'],
+  pass_accuracy: ['passing accuracy', 'pass accuracy'],
   big_chances: ['big chances created', 'big chances'],
   big_chances_missed: ['big chances missed'],
-  corners: ['corners'],
-  fouls: ['fouls committed', 'fouls'],
+  corners: ['corners won', 'corner awarded', 'corners'],
+  fouls: ['fouls conceded', 'fouls committed', 'fouls'],
   yellow_cards: ['yellow cards'],
   red_cards: ['red cards'],
   offsides: ['offsides'],
 };
-
-const NUMBER_RE = /-?\d+(?:\.\d+)?%?/g;
 
 function emptySide(): SideStats {
   return {
@@ -75,37 +87,60 @@ function emptySide(): SideStats {
   };
 }
 
+function parseStatNumber(raw: string): number | null {
+  const stripped = raw.replace(/[^\d.+-]/g, '');
+  // Number('') is 0, not NaN — guard so a genuinely empty cell doesn't parse
+  // as a real 0 value (see the same fix in powerRankings.ts's toNumber).
+  if (!/\d/.test(stripped)) return null;
+  const n = Number(stripped);
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
- * Find each stat label's smallest enclosing "row": the nearest ancestor whose
- * text contains the label AND at least two numbers. Returns [home, away] as
- * the first two numbers in row order.
+ * Reads both real stat-table shapes on the match-centre widget (see module
+ * doc comment): the six `Opta-Stats-Bars` sub-widgets, and the
+ * `Opta-shotoverview` table (xG). First occurrence of a label wins if it
+ * somehow appears in both.
  */
 function extractLabelPairs($: cheerio.CheerioAPI): Map<string, [number, number]> {
   const pairs = new Map<string, [number, number]>();
 
-  $('*').each((_, el) => {
-    const node = $(el);
-    if (node.children().length > 0) return; // leaves only — labels are text nodes
-    const label = node.text().replace(/\s+/g, ' ').trim().toLowerCase();
-    if (!label || label.length > 40 || pairs.has(label)) return;
-    if (NUMBER_RE.test(label)) { NUMBER_RE.lastIndex = 0; return; } // labels are non-numeric
-    NUMBER_RE.lastIndex = 0;
+  $('table.Opta-Stats-Bars').each((_, table) => {
+    const rows = $(table).find('tr').toArray();
+    for (let i = 0; i < rows.length - 1; i++) {
+      const th = $(rows[i]).find('th.Opta-Stats-Bars-Text');
+      if (!th.length) continue;
+      const label = th.text().replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!label || pairs.has(label)) continue;
 
-    // Walk up until the enclosing element's text holds ≥2 numbers besides the label.
-    let ancestor = node.parent();
-    for (let depth = 0; ancestor.length && depth < 4; depth++) {
-      const rowText = ancestor.text().replace(/\s+/g, ' ').trim();
-      const withoutLabel = rowText.toLowerCase().split(label).join(' ');
-      const nums = withoutLabel.match(NUMBER_RE)?.map((n) => Number(n.replace('%', ''))) ?? [];
-      // Rows are small; a huge container means we walked past the stat row.
-      if (rowText.length > 200) break;
-      const [homeVal, awayVal] = nums;
-      if (homeVal !== undefined && awayVal !== undefined && nums.every((n) => Number.isFinite(n))) {
-        pairs.set(label, [homeVal, awayVal]);
-        break;
-      }
-      ancestor = ancestor.parent();
+      const cells = $(rows[i + 1]).find('td.Opta-Outer');
+      if (cells.length < 2) continue;
+      const home = parseStatNumber($(cells[0]).text());
+      const away = parseStatNumber($(cells[cells.length - 1]).text());
+      if (home !== null && away !== null) pairs.set(label, [home, away]);
     }
+  });
+
+  $('table.Opta-shotoverview tr').each((_, tr) => {
+    const $tr = $(tr);
+    const th = $tr.find('th.Opta-StatLabel');
+    if (!th.length) return;
+    // Strip the info-tooltip's own text ("The total xG from a side's
+    // chances.") out of the label — it's nested inside the same <th>.
+    const label = th
+      .clone()
+      .find('.Opta-infotooltip')
+      .remove()
+      .end()
+      .text()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    if (!label || pairs.has(label)) return;
+
+    const home = parseStatNumber($tr.find('td.Opta-Home').text());
+    const away = parseStatNumber($tr.find('td.Opta-Away').text());
+    if (home !== null && away !== null) pairs.set(label, [home, away]);
   });
 
   return pairs;
@@ -117,14 +152,17 @@ export async function fetchMatchFacts(
   matchId: string
 ): Promise<MatchFactsPayload> {
   const url = matchCentreUrl(competitionId, seasonId, matchId);
-  const html = await fetchHtml(url);
+  const html = await fetchRenderedHtml(url, {
+    waitForSelector: 'table.Opta-Stats-Bars, table.Opta-shotoverview',
+    timeoutMs: 20_000,
+  });
   const $ = cheerio.load(html);
   $('script, style, noscript').remove();
 
   const pairs = extractLabelPairs($);
   if (pairs.size === 0) {
     throw new Error(
-      `theanalyst match centre: no stat rows found — JS-rendered page or selector drift? (${url})`
+      `theanalyst match centre: no stat rows found — no data for this match yet, or layout drift? (${url})`
     );
   }
 
