@@ -1,8 +1,10 @@
 name: Footshorts - hourly news ingest
 
-# Pulls football RSS feeds, hands each new article to Gemini for summary +
-# tagging, upserts into the footshorts Supabase. Safe to re-run (idempotent
-# on url_hash).
+# Pulls football RSS feeds — plus theanalyst.com, the one approved scraped
+# source (SCRAPE_SOURCES in worker/src/sources.ts; policy + verification
+# checklist in apps/footshorts/docs/theanalyst-scraping.md) — hands each new
+# article to Gemini for summary + tagging, upserts into the footshorts
+# Supabase. Safe to re-run (idempotent on url_hash).
 #
 # Required repo secrets (in `Production` — shared project-wide with vizmaya /
 # vizf1 / energy-profile workflows):

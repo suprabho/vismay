@@ -10,7 +10,7 @@
 | Backend | Supabase (Postgres + Auth + Edge Functions) |
 | Summarization | Gemini 2.5 Flash |
 | Stats API | football-data.org (MVP) → api-football (growth) — see [`football-data-api.md`](./football-data-api.md) |
-| News source | RSS from 10+ publishers (commercially sound) |
+| News source | RSS from 10+ publishers (commercially sound). One approved exception: theanalyst.com (Opta) is scraped — no public feed exists — with the same mitigations (attribute + link back, summarize only, never reproduce full text); see [`theanalyst-scraping.md`](./theanalyst-scraping.md) |
 | Monetization | Deferred — revisit post-launch |
 
 ## Environment variables (create `.env` files)
@@ -157,6 +157,7 @@ Ideas captured but not on any phase. Pull into a phase when there's a reason to.
 | Gemini rate limits at scale | Flash has generous limits; batch requests if needed; queue via Supabase |
 | Entity misses (Gemini returns "Xavi" for both the player and the coach) | Context-aware resolver: use article body + league context to disambiguate |
 | Commercial terms on RSS | RSS is explicitly syndication-friendly; always link back to source; never reproduce full text |
+| theanalyst.com scraping (ToS / robots.txt / selector drift) | The one approved non-RSS source. Same attribution rules as RSS; polite fetch (identified User-Agent, crawl delay, per-run caps); robots.txt + ToS must be checked and selectors verified against the live site before the crons are trusted — checklist in [`theanalyst-scraping.md`](./theanalyst-scraping.md) |
 | football-data free-tier commercial ban | Upgrade to paid before launch — budget €29–49/mo |
 | Push notification spam | User-configured frequency caps; respect quiet hours |
 

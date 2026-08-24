@@ -42,6 +42,8 @@
     "./hydrateFootshortsConfig": "./src/hydrateFootshortsConfig.ts",
     "./footshortsData": "./src/footshortsData.ts",
     "./footshortsShareCards": "./src/footshortsShareCards.ts",
+    "./footshortsPowerRankings": "./src/footshortsPowerRankings.ts",
+    "./powerRankingsDispatch": "./src/powerRankingsDispatch.ts",
     "./vizmayaShareCards": "./src/vizmayaShareCards.ts",
     "./videoProjects": "./src/videoProjects.ts",
     "./footshortsBlocks": "./src/footshortsBlocks.ts",

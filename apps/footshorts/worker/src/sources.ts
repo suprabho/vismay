@@ -1,7 +1,13 @@
 /**
- * RSS source registry.
- * Each source must be an RSS/Atom feed explicitly published by the outlet
+ * News source registry.
+ * Each RSS source must be an RSS/Atom feed explicitly published by the outlet
  * for syndication — NOT a scraped page. This gives us clean commercial terms.
+ *
+ * One approved exception: theanalyst.com (SCRAPE_SOURCES below) is scraped —
+ * it publishes no feed — with the same mitigations RSS gets (always attribute
+ * and link back, summarize only, never reproduce full text). Rationale,
+ * politeness rules and the pre-launch verification checklist live in
+ * docs/theanalyst-scraping.md. Don't add scraped sources beyond that doc's terms.
  *
  * Verify each feed before launch (URLs can change).
  * Tier 1 = wire/reputable, Tier 2 = fan sites / club official, Tier 3 = specialist
@@ -67,6 +73,32 @@ export const RSS_SOURCES: RssSource[] = [
     feedUrl: 'https://www.football-italia.net/rss.xml',
     tier: 3,
     scope: 'european',
+  },
+];
+
+/**
+ * Scraped sources — the approved exception to the RSS-only policy above.
+ * ingest.ts fetches listingUrl, extracts article links via the matching
+ * adapter in src/theanalyst/, then runs each article through the same
+ * dedupe → summarize → entity-tag pipeline as RSS items.
+ */
+export type ScrapeSource = {
+  id: string;              // stable slug; also selects the scraper adapter
+  publisher: string;       // display name (attribution in the feed)
+  listingUrl: string;      // index page article links are collected from
+  tier: 1 | 2 | 3;
+  scope: 'global' | 'english' | 'european' | 'club';
+};
+
+export const SCRAPE_SOURCES: ScrapeSource[] = [
+  {
+    id: 'theanalyst',
+    publisher: 'The Analyst (Opta)',
+    // TODO(verify): confirm the football listing path against the live site
+    // before enabling in production — see docs/theanalyst-scraping.md.
+    listingUrl: 'https://theanalyst.com/competition/premier-league',
+    tier: 1,
+    scope: 'global',
   },
 ];
 
