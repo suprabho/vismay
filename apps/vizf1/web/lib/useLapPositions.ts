@@ -49,13 +49,22 @@ export function useLapPositions(
         .maybeSingle()
       if (!session) return { totalLaps: 0, lanes: [] }
 
-      const { data, error } = await sb
-        .from('vizf1_session_lap_positions')
-        .select('driver_id, lap, position')
-        .eq('session_id', session.id)
-      if (error) throw error
-
-      const rows = (data ?? []) as LapRow[]
+      // PostgREST caps an unpaginated select at 1000 rows. A full-length race
+      // (22 drivers x 70+ laps) exceeds that, and the truncated result was
+      // silently under-reporting totalLaps (whatever lap the 1000th row
+      // happened to land on) — page through everything instead.
+      const rows: LapRow[] = []
+      const PAGE_SIZE = 1000
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await sb
+          .from('vizf1_session_lap_positions')
+          .select('driver_id, lap, position')
+          .eq('session_id', session.id)
+          .range(from, from + PAGE_SIZE - 1)
+        if (error) throw error
+        rows.push(...((data ?? []) as LapRow[]))
+        if (!data || data.length < PAGE_SIZE) break
+      }
 
       const byDriver = new Map<string, { lap: number; position: number }[]>()
       let totalLaps = 0
