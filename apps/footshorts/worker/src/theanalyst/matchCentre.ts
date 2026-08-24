@@ -174,8 +174,13 @@ export async function fetchMatchFacts(
     for (const label of labels) {
       const pair = pairs.get(label);
       if (!pair) continue;
-      home[column] = pair[0];
-      away[column] = pair[1];
+      // Every mapped column but xg/pass_accuracy is an `int` in opta_match_facts
+      // (migration 20260824000001), but theanalyst reports possession with a
+      // decimal ("64.1") — round rather than let the upsert reject the whole
+      // row with "invalid input syntax for type integer".
+      const round = column !== 'xg' && column !== 'pass_accuracy';
+      home[column] = round ? Math.round(pair[0]) : pair[0];
+      away[column] = round ? Math.round(pair[1]) : pair[1];
       claimed.add(label);
       break;
     }
