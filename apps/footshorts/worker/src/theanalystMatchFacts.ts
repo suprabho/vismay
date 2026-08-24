@@ -121,6 +121,7 @@ async function discoverForCompetition(comp: TheanalystCompetition, dry: boolean)
         theanalyst_match_id: m.matchId,
         theanalyst_competition_id: m.competitionId,
         theanalyst_season_id: m.seasonId,
+        theanalyst_match_url: m.url,
       })
       .eq('id', fixtureId);
     if (updateError) {

@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServerSupabase } from '@/lib/supabaseServer'
+import { linkFixtureToTheanalystMatch } from '@vismay/content-source/footshortsData'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +34,7 @@ type FixtureRow = {
   competition_slug: string | null
   kickoff_at: string
   theanalyst_match_id: string | null
+  theanalyst_match_url: string | null
 }
 
 type MatchEntry = {
@@ -119,7 +122,50 @@ function StatsTable({ home, away, homeName, awayName }: { home: FactsRow | null;
   )
 }
 
-function MatchCard({ entry, backLinkAppSlug }: { entry: MatchEntry; backLinkAppSlug?: string }) {
+/**
+ * Manually links a fixture to a theanalyst.com match — the "not yet
+ * discovered" fallback for when auto-discovery's team-name/date matching
+ * misses (an obscure nickname, a fixture outside the 30-day window, etc.).
+ * Same three id columns matchDiscovery.ts sets automatically, so the next
+ * match-facts cron run scrapes it like any other resolved fixture.
+ */
+async function linkTheanalystUrlAction(formData: FormData) {
+  'use server'
+  const appSlug = String(formData.get('appSlug') ?? '')
+  const fixtureId = String(formData.get('fixtureId') ?? '')
+  const theanalystUrl = String(formData.get('theanalystUrl') ?? '').trim()
+  if (!appSlug || !fixtureId) return
+
+  try {
+    await linkFixtureToTheanalystMatch(fixtureId, theanalystUrl)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'failed to link'
+    redirect(`/${appSlug}/match-facts?fixture=${fixtureId}&linkError=${encodeURIComponent(message)}`)
+  }
+  revalidatePath(`/${appSlug}/match-facts`)
+  redirect(`/${appSlug}/match-facts?fixture=${fixtureId}`)
+}
+
+function TheanalystLink({ url }: { url: string | null }) {
+  if (!url) return null
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline">
+      View on theanalyst.com ↗
+    </a>
+  )
+}
+
+function MatchCard({
+  entry,
+  appSlug,
+  backLinkAppSlug,
+  linkError,
+}: {
+  entry: MatchEntry
+  appSlug: string
+  backLinkAppSlug?: string
+  linkError?: string
+}) {
   const { fixture, home, away, homeName, awayName } = entry
   const hasFacts = home || away
   return (
@@ -138,15 +184,37 @@ function MatchCard({ entry, backLinkAppSlug }: { entry: MatchEntry; backLinkAppS
       {hasFacts ? (
         <>
           <StatsTable home={home} away={away} homeName={homeName} awayName={awayName} />
-          <div className="px-3 py-1.5 border-t border-white/5 text-[11px] text-neutral-600">
-            Scraped {new Date((home ?? away)!.scraped_at).toLocaleString()}
+          <div className="px-3 py-1.5 border-t border-white/5 text-[11px] text-neutral-600 flex items-center justify-between gap-3">
+            <span>Scraped {new Date((home ?? away)!.scraped_at).toLocaleString()}</span>
+            <TheanalystLink url={fixture.theanalyst_match_url} />
           </div>
         </>
+      ) : fixture.theanalyst_match_id ? (
+        <div className="px-3 py-3 text-xs text-neutral-500 flex items-center justify-between gap-3">
+          <span>Matched on theanalyst.com — not scraped yet (waits on the per-run scrape budget).</span>
+          <TheanalystLink url={fixture.theanalyst_match_url} />
+        </div>
       ) : (
-        <div className="px-3 py-3 text-xs text-neutral-500">
-          {fixture.theanalyst_match_id
-            ? 'Matched on theanalyst.com — not scraped yet (waits on the per-run scrape budget).'
-            : 'Not yet discovered on theanalyst.com.'}
+        <div className="px-3 py-3">
+          <p className="text-xs text-neutral-500 mb-2">Not yet discovered on theanalyst.com.</p>
+          {linkError && <p className="text-xs text-amber-400 mb-2">{linkError}</p>}
+          <form action={linkTheanalystUrlAction} className="flex items-center gap-2">
+            <input type="hidden" name="appSlug" value={appSlug} />
+            <input type="hidden" name="fixtureId" value={fixture.id} />
+            <input
+              type="url"
+              name="theanalystUrl"
+              placeholder="https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…"
+              required
+              className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600"
+            />
+            <button
+              type="submit"
+              className="rounded-md bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 text-xs text-neutral-200 whitespace-nowrap"
+            >
+              Link match
+            </button>
+          </form>
         </div>
       )}
       {backLinkAppSlug && (
@@ -175,18 +243,20 @@ export default async function MatchFactsPage({
   searchParams,
 }: {
   params: Promise<{ appSlug: string }>
-  searchParams: Promise<{ fixture?: string }>
+  searchParams: Promise<{ fixture?: string; linkError?: string }>
 }) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/match-facts`)
-  const { fixture: selectedFixtureId } = await searchParams
+  const { fixture: selectedFixtureId, linkError } = await searchParams
 
   const supabase = await createServerSupabase()
 
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000).toISOString()
   const { data: fixturesData, error: fixturesError } = await supabase
     .from('fixtures')
-    .select('id, home_team_id, away_team_id, home_team_name, away_team_name, competition_slug, kickoff_at, theanalyst_match_id')
+    .select(
+      'id, home_team_id, away_team_id, home_team_name, away_team_name, competition_slug, kickoff_at, theanalyst_match_id, theanalyst_match_url',
+    )
     .eq('status', 'finished')
     .gte('kickoff_at', since)
     .order('kickoff_at', { ascending: false })
@@ -302,7 +372,7 @@ export default async function MatchFactsPage({
       ) : selectedFixtureId ? (
         <div className="p-4">
           {selected ? (
-            <MatchCard entry={selected} backLinkAppSlug={appSlug} />
+            <MatchCard entry={selected} appSlug={appSlug} backLinkAppSlug={appSlug} linkError={linkError} />
           ) : (
             <div className="text-sm text-neutral-500">
               Fixture not found in the last {LOOKBACK_DAYS} days.{' '}
@@ -328,7 +398,7 @@ export default async function MatchFactsPage({
                       <h3 className="text-xs uppercase tracking-wide text-neutral-500 mb-2">{dateLabel(day)}</h3>
                       <div className="space-y-3">
                         {byDate.get(day)!.map((entry) => (
-                          <MatchCard key={entry.fixture.id} entry={entry} />
+                          <MatchCard key={entry.fixture.id} entry={entry} appSlug={appSlug} />
                         ))}
                       </div>
                     </div>
