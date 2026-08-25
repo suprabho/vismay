@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServerSupabase } from '@/lib/supabaseServer'
-import { linkFixtureToTheanalystMatch } from '@vismay/content-source/footshortsData'
+import { linkFixtureToTheanalystMatch, parseTheanalystMatchUrl } from '@vismay/content-source/footshortsData'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +34,8 @@ type FixtureRow = {
   competition_slug: string | null
   kickoff_at: string
   theanalyst_match_id: string | null
+  theanalyst_competition_id: string | null
+  theanalyst_season_id: string | null
   theanalyst_match_url: string | null
 }
 
@@ -154,6 +156,42 @@ async function linkTheanalystUrlAction(formData: FormData) {
   redirect(backTo)
 }
 
+/**
+ * Mirrors matchCentreUrl() in apps/footshorts/worker/src/theanalyst/matchCentre.ts —
+ * the dataviz widget theanalyst.com's own match-centre page iframes cross-origin,
+ * so it's frameable by us too (the wrapper theanalyst.com page is not). Falls back
+ * to re-parsing the stored URL for rows that predate the id columns.
+ */
+function matchCentreWidgetUrl(fixture: FixtureRow): string | null {
+  const ids =
+    fixture.theanalyst_competition_id && fixture.theanalyst_season_id && fixture.theanalyst_match_id
+      ? {
+          competitionId: fixture.theanalyst_competition_id,
+          seasonId: fixture.theanalyst_season_id,
+          matchId: fixture.theanalyst_match_id,
+        }
+      : fixture.theanalyst_match_url
+        ? parseTheanalystMatchUrl(fixture.theanalyst_match_url)
+        : null
+  if (!ids) return null
+  const params = new URLSearchParams({ competitionId: ids.competitionId, seasonId: ids.seasonId, matchId: ids.matchId })
+  return `https://dataviz.theanalyst.com/opta-football-match-centre/?${params}`
+}
+
+function MatchCentreEmbed({ url }: { url: string }) {
+  return (
+    <div className="mt-4 rounded-lg border border-white/10 overflow-hidden">
+      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
+        <span className="text-xs text-neutral-400">Opta match centre (live embed)</span>
+        <a href={url} target="_blank" rel="noreferrer" className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline">
+          Open ↗
+        </a>
+      </div>
+      <iframe src={url} title="Opta match centre" allow="fullscreen" loading="lazy" className="block w-full h-[720px] bg-white" />
+    </div>
+  )
+}
+
 function TheanalystLink({ url }: { url: string | null }) {
   if (!url) return null
   return (
@@ -251,7 +289,7 @@ export default async function MatchFactsPage({
   const { data: fixturesData, error: fixturesError } = await supabase
     .from('fixtures')
     .select(
-      'id, home_team_id, away_team_id, home_team_name, away_team_name, competition_slug, kickoff_at, theanalyst_match_id, theanalyst_match_url',
+      'id, home_team_id, away_team_id, home_team_name, away_team_name, competition_slug, kickoff_at, theanalyst_match_id, theanalyst_competition_id, theanalyst_season_id, theanalyst_match_url',
     )
     .eq('status', 'finished')
     .gte('kickoff_at', since)
@@ -336,6 +374,7 @@ export default async function MatchFactsPage({
       : activeDates.length > 0
         ? activeByDate!.get(activeDates[0])![0]
         : undefined
+  const activeWidgetUrl = activeEntry ? matchCentreWidgetUrl(activeEntry.fixture) : null
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -447,7 +486,10 @@ export default async function MatchFactsPage({
           {/* Column 3: facts for the active match */}
           <div className="min-h-0 overflow-y-auto p-4">
             {activeEntry ? (
-              <MatchFactsPanel entry={activeEntry} appSlug={appSlug} linkError={linkError} />
+              <>
+                <MatchFactsPanel entry={activeEntry} appSlug={appSlug} linkError={linkError} />
+                {activeWidgetUrl && <MatchCentreEmbed url={activeWidgetUrl} />}
+              </>
             ) : (
               <p className="text-sm text-neutral-500">Select a match.</p>
             )}
