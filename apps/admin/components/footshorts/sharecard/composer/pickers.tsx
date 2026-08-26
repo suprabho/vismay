@@ -81,6 +81,24 @@ function fixturesFor(ctx: FootshortsComposerCtx | null, compKey: unknown): Fixtu
   return ctx.data.fixturesByComp[compKey] ?? []
 }
 
+/** Case-insensitive team search over a fixture: either side's entity name/slug,
+ *  the raw `*_team_name` fallbacks (untracked teams), or the rendered label (so
+ *  "vs" / score queries work too). `q` must be pre-trimmed + lowercased; empty
+ *  matches everything. */
+function fixtureMatches(f: FixtureRow, q: string): boolean {
+  if (!q) return true
+  const haystacks = [
+    f.home?.name,
+    f.home?.slug,
+    f.away?.name,
+    f.away?.slug,
+    f.home_team_name,
+    f.away_team_name,
+    fixtureLabel(f),
+  ]
+  return haystacks.some((s) => !!s && s.toLowerCase().includes(q))
+}
+
 function CompetitionPicker({ value, onChange, ctx }: PickerEditorProps) {
   const c = asCtx(ctx)
   return (
@@ -100,40 +118,82 @@ function CompetitionPicker({ value, onChange, ctx }: PickerEditorProps) {
 
 function FixturePicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
   const fixtures = fixturesFor(asCtx(ctx), siblings.compKey)
+  const [q, setQ] = useState('')
+  const query = q.trim().toLowerCase()
+  const filtered = fixtures.filter((f) => fixtureMatches(f, query))
+  const selectedId = typeof value === 'string' ? value : ''
+  // Keep the current pick visible even when the search filters it out — a
+  // native <select> whose value has no matching <option> renders blank.
+  const selected =
+    selectedId && !filtered.some((f) => f.id === selectedId)
+      ? fixtures.find((f) => f.id === selectedId)
+      : undefined
   return (
-    <select className={selectCls} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{siblings.compKey ? 'Select fixture…' : 'Pick a competition first'}</option>
-      {fixtures.map((f) => (
-        <option key={f.id} value={f.id}>
-          {fixtureLabel(f)}
+    <div className="flex flex-col gap-1">
+      {fixtures.length > 0 ? (
+        <input
+          className={inputCls}
+          placeholder="Search team…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      ) : null}
+      <select className={selectCls} value={selectedId} onChange={(e) => onChange(e.target.value)}>
+        <option value="">
+          {siblings.compKey ? `Select fixture… (${filtered.length})` : 'Pick a competition first'}
         </option>
-      ))}
-    </select>
+        {selected ? (
+          <option value={selected.id}>{fixtureLabel(selected)}</option>
+        ) : null}
+        {filtered.map((f) => (
+          <option key={f.id} value={f.id}>
+            {fixtureLabel(f)}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }
 
 function FixtureMultiPicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
   const fixtures = fixturesFor(asCtx(ctx), siblings.compKey)
+  const [q, setQ] = useState('')
   const picked = Array.isArray(value) ? (value as string[]) : []
   const toggle = (id: string) =>
     onChange(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id])
   if (fixtures.length === 0) return <p className={hintCls}>Pick a competition first.</p>
+  const query = q.trim().toLowerCase()
+  const filtered = fixtures.filter((f) => fixtureMatches(f, query))
   return (
-    <div className="mt-1 max-h-48 overflow-auto rounded-md border border-white/10 bg-neutral-900 p-1">
-      {fixtures.map((f) => {
-        const on = picked.includes(f.id)
-        return (
-          <label
-            key={f.id}
-            className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
-              on ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
-            }`}
-          >
-            <input type="checkbox" checked={on} onChange={() => toggle(f.id)} />
-            <span className="truncate">{fixtureLabel(f)}</span>
-          </label>
-        )
-      })}
+    <div className="flex flex-col gap-1">
+      <input
+        className={inputCls}
+        placeholder="Search team…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <div className="mt-1 max-h-48 overflow-auto rounded-md border border-white/10 bg-neutral-900 p-1">
+        {filtered.map((f) => {
+          const on = picked.includes(f.id)
+          return (
+            <label
+              key={f.id}
+              className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
+                on ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
+              }`}
+            >
+              <input type="checkbox" checked={on} onChange={() => toggle(f.id)} />
+              <span className="truncate">{fixtureLabel(f)}</span>
+            </label>
+          )
+        })}
+        {filtered.length === 0 && (
+          <p className="px-1.5 py-1 text-[11px] text-neutral-600">No fixtures match “{q.trim()}”.</p>
+        )}
+      </div>
+      {/* Checked ids live in `value`, so selections filtered out of view persist —
+          surface the count so they aren't invisible. */}
+      {picked.length > 0 ? <p className={hintCls}>{picked.length} selected</p> : null}
     </div>
   )
 }
