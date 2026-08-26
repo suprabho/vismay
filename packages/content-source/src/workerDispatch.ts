@@ -80,6 +80,22 @@ export const SPORTRADAR_EVENTS_WORKER: WorkerDef = {
   schedule: 'Manual · also runs inside Daily recap',
 }
 
+/**
+ * On-demand single-fixture goal extraction from theanalyst's Opta match
+ * centre (footshorts-theanalyst-match-facts.yml, --fixture-id mode).
+ * Deliberately NOT in FOOTSHORTS_WORKERS: unlike the pipeline workers, this
+ * always targets one caller-picked fixture, dispatched from the share-card
+ * studio's Match Timeline layer editor rather than the Pipeline tab. The
+ * same workflow also runs unscoped on its own 3-hourly cron.
+ */
+export const THEANALYST_MATCH_FACTS_WORKER: WorkerDef = {
+  id: 'footshorts-theanalyst-match-facts',
+  workflowFile: 'footshorts-theanalyst-match-facts.yml',
+  label: 'theanalyst match facts',
+  description: 'Opta match-centre stats + timeline scrape (also runs every 3h on cron).',
+  schedule: 'Every 3h · manual single-fixture',
+}
+
 /** Most recent run of a worker's workflow, or null when it has never run. */
 export interface WorkerLastRun {
   status: string | null

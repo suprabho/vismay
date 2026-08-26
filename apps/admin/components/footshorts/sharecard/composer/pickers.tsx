@@ -569,6 +569,63 @@ function IconFieldPicker({ value, onChange }: PickerEditorProps) {
   )
 }
 
+/** `fscard:match-timeline.extractGoals` editor — a button that dispatches a
+ *  one-off, single-fixture goals-only Opta extraction (see
+ *  /api/footshorts/share/extract-goals). Fire-and-forget, matching every
+ *  other GitHub Actions dispatch button in this app (Power Rankings' "Run
+ *  scrape", the matchtime panel's "Sync now"): no polling, no config value
+ *  results from this action, so `onChange` is never called. */
+function ExtractGoalsPicker({ siblings }: PickerEditorProps) {
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err' | 'info'; msg?: string }>({ type: 'idle' })
+  const fixtureId = typeof siblings.fixtureId === 'string' ? siblings.fixtureId : ''
+  const compKey = typeof siblings.compKey === 'string' ? siblings.compKey : ''
+
+  const run = async () => {
+    setBusy(true)
+    setStatus({ type: 'idle' })
+    try {
+      const competitionSlug = compKey.split('::')[0] ?? ''
+      const res = await fetch('/api/footshorts/share/extract-goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fixtureId, competitionSlug }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; mode?: string; error?: string }
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+      setStatus(
+        body.mode === 'unconfigured'
+          ? {
+              type: 'info',
+              msg: 'Dispatch not configured — run `pnpm match-facts -- --fixture-id=<uuid> --competition=<slug>` in the footshorts worker locally.',
+            }
+          : { type: 'ok', msg: 'Requested — runs via GitHub Actions, can take 1–2 minutes. Reopen this card to see new goals.' },
+      )
+    } catch (e) {
+      setStatus({ type: 'err', msg: e instanceof Error ? e.message : 'Dispatch failed' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-1 flex flex-col gap-1.5">
+      <button
+        type="button"
+        className="rounded-md border border-white/10 px-2 py-1.5 text-[11px] text-neutral-200 hover:bg-white/5 disabled:opacity-40"
+        disabled={busy || !fixtureId || !compKey}
+        onClick={() => void run()}
+      >
+        {busy ? 'Requesting…' : 'Extract goals now'}
+      </button>
+      {!fixtureId ? <p className={hintCls}>Pick a fixture first.</p> : null}
+      {status.type !== 'idle' && status.msg ? (
+        <p className={`text-[11px] ${status.type === 'err' ? 'text-red-400' : 'text-neutral-400'}`}>{status.msg}</p>
+      ) : null}
+    </div>
+  )
+}
+
 /** `fscard:image.src` editor — upload / AI-generate / news-thumbnail picker,
  *  reading ratio + news + palette from the composer ctx. */
 function ImageFieldPicker({ value, onChange, ctx }: PickerEditorProps) {
@@ -614,4 +671,5 @@ export function registerFootshortsPickers(): void {
   registerPickerEditor('footshorts:emoji', EmojiFieldPicker)
   registerPickerEditor('footshorts:icon', IconFieldPicker)
   registerPickerEditor('footshorts:image', ImageFieldPicker)
+  registerPickerEditor('footshorts:extract-goals', ExtractGoalsPicker)
 }

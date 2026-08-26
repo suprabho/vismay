@@ -36,6 +36,16 @@ function adminForm(): AdminFormField[] {
         { value: 'subst', label: 'Subs' },
       ],
     },
+    // No config value results from this — it dispatches a one-off Opta
+    // extraction for the picked fixture, it doesn't edit the layer. See
+    // ExtractGoalsPicker (never calls onChange).
+    {
+      kind: 'picker',
+      key: 'extractGoals',
+      label: 'Opta goals',
+      pickerId: 'footshorts:extract-goals',
+      dependsOn: ['compKey', 'fixtureId'],
+    },
   ]
 }
 

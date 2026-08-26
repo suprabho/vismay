@@ -20,6 +20,14 @@
  *      double-write. --events-backfill opts stats-done, events-missing
  *      fixtures into a re-scrape to drain the backlog.
  *
+ * A third, manual mode — --fixture-id=<uuid> — narrows both phases to one
+ * fixture and always attempts it (bypassing the "already done"/gap-fill
+ * skip gates), writing ONLY its goal events. This is what the share-card
+ * studio's Match Timeline layer editor's "Extract goals now" button
+ * dispatches, for an immediate single-fixture result instead of waiting on
+ * the cron. Requires --competition alongside it (discovery needs to know
+ * which theanalyst.com competition to search).
+ *
  * Deterministic parsing throughout — no Gemini. Runs every 3h, 30min after
  * the scores refresh flips fixtures to 'finished'
  * (.github/workflows/footshorts-theanalyst-match-facts.yml).
@@ -30,6 +38,7 @@
  *   npm run match-facts -- --dry       # discover + scrape, print, no writes
  *   npm run match-facts -- --dry --dump-events   # + Opta DOM dump (selector debugging)
  *   npm run match-facts -- --events-backfill     # re-scrape stats-done fixtures lacking events
+ *   npm run match-facts -- --competition=premier-league --fixture-id=<uuid>  # manual, goals only
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -59,11 +68,13 @@ function parseArgs(argv: string[]): {
   dry: boolean;
   dumpEvents: boolean;
   eventsBackfill: boolean;
+  fixtureId: string | null;
 } {
   let competition: string | null = null;
   let dry = false;
   let dumpEvents = false;
   let eventsBackfill = false;
+  let fixtureId: string | null = null;
   for (const a of argv) {
     if (a.startsWith('--competition=')) competition = a.slice('--competition='.length) || null;
     else if (a === '--dry') dry = true;
@@ -76,9 +87,12 @@ function parseArgs(argv: string[]): {
     // the events extractor lands. Off by default so a fixture whose page
     // genuinely yields no events can't be re-scraped every cron run forever.
     else if (a === '--events-backfill') eventsBackfill = true;
+    // Manual single-fixture mode (the studio's "Extract goals now" button) —
+    // see the module doc comment.
+    else if (a.startsWith('--fixture-id=')) fixtureId = a.slice('--fixture-id='.length) || null;
     else console.warn(`[match-facts] ignoring unknown arg: ${a}`);
   }
-  return { competition, dry, dumpEvents, eventsBackfill };
+  return { competition, dry, dumpEvents, eventsBackfill, fixtureId };
 }
 
 type FixtureRow = {
@@ -106,15 +120,21 @@ function sideName(teamId: string | null, teamName: string | null, names: Map<str
   return (teamId ? names.get(teamId) : null) ?? teamName;
 }
 
-async function discoverForCompetition(comp: TheanalystCompetition, dry: boolean): Promise<number> {
+async function discoverForCompetition(
+  comp: TheanalystCompetition,
+  dry: boolean,
+  fixtureId?: string | null
+): Promise<number> {
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
-  const { data, error } = await supabase
+  let query = supabase
     .from('fixtures')
     .select('id, home_team_id, away_team_id, home_team_name, away_team_name, kickoff_at, theanalyst_match_id')
     .eq('competition_slug', comp.competitionSlug)
     .is('theanalyst_match_id', null)
     .in('status', ['finished', 'live'])
     .gte('kickoff_at', since);
+  if (fixtureId) query = query.eq('id', fixtureId);
+  const { data, error } = await query;
   if (error) throw new Error(`fixtures query failed: ${error.message}`);
 
   const rows = (data ?? []) as FixtureRow[];
@@ -138,7 +158,7 @@ async function discoverForCompetition(comp: TheanalystCompetition, dry: boolean)
   );
   if (dry) return resolved.size;
 
-  for (const [fixtureId, m] of resolved) {
+  for (const [resolvedFixtureId, m] of resolved) {
     const { error: updateError } = await supabase
       .from('fixtures')
       .update({
@@ -147,9 +167,9 @@ async function discoverForCompetition(comp: TheanalystCompetition, dry: boolean)
         theanalyst_season_id: m.seasonId,
         theanalyst_match_url: m.url,
       })
-      .eq('id', fixtureId);
+      .eq('id', resolvedFixtureId);
     if (updateError) {
-      console.error(`[match-facts] mapping persist failed for fixture ${fixtureId}: ${updateError.message}`);
+      console.error(`[match-facts] mapping persist failed for fixture ${resolvedFixtureId}: ${updateError.message}`);
     }
   }
   return resolved.size;
@@ -183,11 +203,16 @@ async function loadFixturesWithEvents(fixtureIds: string[]): Promise<Set<string>
 async function scrapeForCompetition(
   comp: TheanalystCompetition,
   budget: { remaining: number },
-  opts: { dry: boolean; dumpEvents: boolean; eventsBackfill: boolean }
+  opts: { dry: boolean; dumpEvents: boolean; eventsBackfill: boolean; fixtureId?: string | null }
 ): Promise<number> {
-  const { dry, dumpEvents, eventsBackfill } = opts;
+  const { dry, dumpEvents, eventsBackfill, fixtureId } = opts;
+  // Manual single-fixture mode always attempts the one fixture, bypassing the
+  // "already done"/gap-fill skip gates below — a user clicking the button
+  // expects an immediate attempt, not a silent no-op because an earlier
+  // automated run already touched this fixture.
+  const forced = Boolean(fixtureId);
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
-  const { data, error } = await supabase
+  let query = supabase
     .from('fixtures')
     .select(
       'id, theanalyst_match_id, theanalyst_competition_id, theanalyst_season_id, home_team_id, away_team_id'
@@ -196,6 +221,8 @@ async function scrapeForCompetition(
     .not('theanalyst_match_id', 'is', null)
     .eq('status', 'finished')
     .gte('kickoff_at', since);
+  if (fixtureId) query = query.eq('id', fixtureId);
+  const { data, error } = await query;
   if (error) throw new Error(`fixtures query failed: ${error.message}`);
 
   const mapped = (data ?? []) as Array<{
@@ -222,9 +249,10 @@ async function scrapeForCompetition(
   for (const fixture of mapped) {
     // Stats drive the scrape gate, exactly as before; --events-backfill
     // additionally opts stats-done fixtures that still lack events into a
-    // re-scrape (bounded by the same per-run budget).
-    const needsStats = !done.has(fixture.id);
-    const needsEvents = eventsBackfill && !hasEvents.has(fixture.id);
+    // re-scrape (bounded by the same per-run budget). Manual single-fixture
+    // mode (forced) ignores both gates.
+    const needsStats = forced || !done.has(fixture.id);
+    const needsEvents = forced || (eventsBackfill && !hasEvents.has(fixture.id));
     if (!needsStats && !needsEvents) continue;
     if (budget.remaining <= 0) {
       console.log('[match-facts] per-run scrape budget exhausted — remaining fixtures wait for the next run');
@@ -283,14 +311,27 @@ async function scrapeForCompetition(
     // Timeline events: mutual gap-fill with the API-Football/Sportradar
     // writers — write only while the fixture has ZERO fixture_events rows
     // (mirrors events.ts's own "no events yet" gate, so neither side ever
-    // double-writes; first writer wins).
-    if (!hasEvents.has(fixture.id) && facts.events.length > 0) {
-      const n = await writeFixtureEvents(fixture, facts.events, now);
+    // double-writes; first writer wins). Manual single-fixture mode instead
+    // always attempts a write, narrowed to goals only — safe/idempotent via
+    // the upsert's natural key (colliding keys just overwrite, non-colliding
+    // keys genuinely fill a gap against pre-existing rows).
+    const eventsForWrite = forced ? facts.events.filter((e) => e.type === 'goal') : facts.events;
+    if ((forced || !hasEvents.has(fixture.id)) && eventsForWrite.length > 0) {
+      const n = await writeFixtureEvents(fixture, eventsForWrite, now, { force: forced });
       if (n > 0) {
         eventsWritten += n;
         hasEvents.add(fixture.id);
-        console.log(`[match-facts] fixture ${fixture.id}: +${n} timeline event(s)`);
+        console.log(
+          `[match-facts] fixture ${fixture.id}: +${n} timeline event(s)${forced ? ' (manual, goals only)' : ''}`
+        );
       }
+    } else if (forced) {
+      // Distinguish "no goals in this match" from "the extractor found
+      // nothing at all" for whoever checks the Action log after clicking
+      // the button.
+      console.log(
+        `[match-facts] fixture ${fixture.id}: 0 goal event(s) parsed (${facts.events.length} total event(s) found)`
+      );
     }
   }
 
@@ -302,26 +343,32 @@ async function scrapeForCompetition(
 
 /**
  * Insert a fixture's Opta timeline into fixture_events. Returns rows written
- * (0 on skip/failure). Gap-fill only: a freshness re-check right before the
- * write shrinks the race against events.ts's twice-daily run from run-length
- * to seconds — and since both writers upsert on the same natural key, even a
- * lost race degrades to idempotent overwrites rather than duplicates (modulo
- * provider name-spelling drift).
+ * (0 on skip/failure). Gap-fill by default: a freshness re-check right
+ * before the write shrinks the race against events.ts's twice-daily run
+ * from run-length to seconds — and since both writers upsert on the same
+ * natural key, even a lost race degrades to idempotent overwrites rather
+ * than duplicates (modulo provider name-spelling drift). `opts.force` skips
+ * that pre-check entirely (the manual single-fixture button always wants an
+ * attempt, and the same natural-key upsert keeps it safe against whatever's
+ * already there).
  */
 async function writeFixtureEvents(
   fixture: { id: string; home_team_id: string | null; away_team_id: string | null },
   events: MatchEvent[],
-  now: string
+  now: string,
+  opts?: { force?: boolean }
 ): Promise<number> {
-  const { count, error: cntError } = await supabase
-    .from('fixture_events')
-    .select('id', { count: 'exact', head: true })
-    .eq('fixture_id', fixture.id);
-  if (cntError) {
-    console.error(`[match-facts] events pre-check failed for fixture ${fixture.id}: ${cntError.message}`);
-    return 0;
+  if (!opts?.force) {
+    const { count, error: cntError } = await supabase
+      .from('fixture_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('fixture_id', fixture.id);
+    if (cntError) {
+      console.error(`[match-facts] events pre-check failed for fixture ${fixture.id}: ${cntError.message}`);
+      return 0;
+    }
+    if ((count ?? 0) > 0) return 0;
   }
-  if ((count ?? 0) > 0) return 0;
 
   // Dedupe within the batch on the table's natural key — two rows sharing
   // (minute, type, player) in one upsert abort the whole statement ("ON
@@ -356,7 +403,10 @@ async function writeFixtureEvents(
 }
 
 async function run() {
-  const { competition, dry, dumpEvents, eventsBackfill } = parseArgs(process.argv.slice(2));
+  const { competition, dry, dumpEvents, eventsBackfill, fixtureId } = parseArgs(process.argv.slice(2));
+  if (fixtureId && !competition) {
+    throw new Error('--fixture-id requires --competition=<slug> (a single-fixture run must target exactly one competition)');
+  }
   const comps = THEANALYST_COMPETITIONS.filter(
     (c) => !competition || c.competitionSlug === competition
   );
@@ -369,8 +419,8 @@ async function run() {
 
   const budget = { remaining: MAX_SCRAPES_PER_RUN };
   for (const comp of comps) {
-    await discoverForCompetition(comp, dry);
-    await scrapeForCompetition(comp, budget, { dry, dumpEvents, eventsBackfill });
+    await discoverForCompetition(comp, dry, fixtureId);
+    await scrapeForCompetition(comp, budget, { dry, dumpEvents, eventsBackfill, fixtureId });
   }
 }
 
