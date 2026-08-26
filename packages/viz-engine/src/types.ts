@@ -223,13 +223,13 @@ export interface VizModule<TConfig = unknown> {
   placement?: 'stack' | 'overlay'
   /**
    * Upper bound for the composer's free-transform Width field (% of card).
-   * Defaults to 100 — set higher for modules whose content is designed to bleed
-   * past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
+   * Defaults to 200 — set higher for modules whose content is designed to bleed
+   * far past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
    */
   maxWidthPct?: number
   /**
    * Upper bound for the composer's free-transform Height field (% of card).
-   * Defaults to 100 — set higher for modules whose content can outgrow the card
+   * Defaults to 200 — set higher for modules whose content can outgrow the card
    * vertically (e.g. a tall bracket tree the author wants to size up rather than
    * scroll).
    */

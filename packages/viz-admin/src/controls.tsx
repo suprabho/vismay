@@ -210,15 +210,16 @@ export function TransformControls({
   transform,
   onChange,
   showHeight = false,
-  maxWidthPct = 100,
-  maxHeightPct = 100,
+  maxWidthPct = 200,
+  maxHeightPct = 200,
 }: {
   transform: TransformLike
   onChange: (patch: Partial<TransformLike>) => void
   showHeight?: boolean
-  /** Upper bound for the Width field (% of card). Defaults to 100. */
+  /** Upper bound for the Width field (% of card). Defaults to 200 — content past
+   *  100 bleeds over the card edge and is cropped there at render/export. */
   maxWidthPct?: number
-  /** Upper bound for the Height field (% of card). Defaults to 100. */
+  /** Upper bound for the Height field (% of card). Defaults to 200 — see maxWidthPct. */
   maxHeightPct?: number
 }) {
   return (
