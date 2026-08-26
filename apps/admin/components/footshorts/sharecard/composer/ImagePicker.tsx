@@ -160,7 +160,7 @@ export function ImagePicker({
               className={inputCls}
             />
             <div className="grid max-h-20 grid-cols-6 gap-1 overflow-y-auto">
-              {filteredRefNews.slice(0, 18).map((n) => (
+              {filteredRefNews.slice(0, 60).map((n) => (
                 <button
                   key={n.id}
                   type="button"
@@ -169,7 +169,7 @@ export function ImagePicker({
                   className="flex aspect-square items-center justify-center overflow-hidden rounded border border-white/10 bg-neutral-900 hover:border-white/30"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                  <img src={n.image_url!} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 </button>
               ))}
               {filteredRefNews.length === 0 && (
@@ -198,7 +198,7 @@ export function ImagePicker({
             className={inputCls}
           />
           <div className="mt-1.5 grid max-h-32 grid-cols-4 gap-1.5 overflow-y-auto">
-            {filteredNews.slice(0, 30).map((n) => (
+            {filteredNews.slice(0, 60).map((n) => (
               <button
                 key={n.id}
                 type="button"
@@ -207,7 +207,7 @@ export function ImagePicker({
                 className="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-white/10 bg-neutral-900 hover:border-white/30"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={n.image_url!} alt="" className="h-full w-full object-cover" />
+                <img src={n.image_url!} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               </button>
             ))}
             {filteredNews.length === 0 && (

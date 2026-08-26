@@ -503,7 +503,7 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
                   onChange={(e) => setRefQuery(e.target.value)}
                 />
                 <div className="grid max-h-24 grid-cols-6 gap-1 overflow-y-auto">
-                  {filteredRefNews.slice(0, 24).map((n) => (
+                  {filteredRefNews.slice(0, 60).map((n) => (
                     <button
                       key={n.id}
                       type="button"
@@ -512,7 +512,7 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
                       className="flex aspect-square items-center justify-center overflow-hidden rounded border border-white/10 bg-neutral-900 hover:border-white/30"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={proxiedImage(n.image_url!)} alt="" className="h-full w-full object-cover" />
+                      <img src={proxiedImage(n.image_url!)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     </button>
                   ))}
                   {filteredRefNews.length === 0 && (
