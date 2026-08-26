@@ -909,8 +909,36 @@ export interface PipelineStats {
     summarized: number
     failed: number
     pending: number
+    hidden: number
+    /** Window-scoped (see `window`) — the full table is too big to scan. */
     withImage: number
     withTags: number
+  }
+  /** Scope of the row-scanned stats: `byPublisher`, `byDay`, withImage/withTags. */
+  window: {
+    days: number
+    articles: number
+  }
+  /**
+   * What the public feed can actually see. The Discover query filters on
+   * `status='summarized'` AND a rolling `published_at` window, so a pipeline
+   * that runs green can still leave the app empty — these numbers are the ones
+   * that say whether it did.
+   */
+  feed: {
+    /** Rows the Discover query would return right now. Zero = empty app. */
+    eligibleNow: number
+    windowHours: number
+    latestEligiblePublishedAt: string | null
+    minutesSinceLatestEligible: number | null
+    /** Outcome of the last 24h of ingestion, by status. */
+    last24h: {
+      ingested: number
+      summarized: number
+      failed: number
+      pending: number
+      hidden: number
+    }
   }
   entities: {
     leagues: number
@@ -930,57 +958,186 @@ function dayKey(iso: string): string {
   return iso.slice(0, 10)
 }
 
+/** Rolling window the footshorts Discover feed queries — keep in sync with
+ *  `apps/footshorts/web/lib/useFeed.ts` and `mobile/src/lib/useFeed.ts`. */
+const FEED_WINDOW_HOURS = 24
+/** Days of history behind `byPublisher` / `byDay` / the quality percentages. */
+const STATS_WINDOW_DAYS = 14
+/** PostgREST `max_rows` ceiling — a select without `.range()` stops here. */
+const PAGE_SIZE = 1000
+/** Hard stop on paging, so a runaway table can't hang the admin request. */
+const MAX_PAGES = 30
+
+type ServiceClient = ReturnType<typeof createServiceClient>
+
+interface ArticleStatRow {
+  id: string
+  publisher: string
+  status: string
+  image_url: string | null
+  ingested_at: string
+}
+
+/** Filters for an exact `count` against `articles` (head request, no rows). */
+interface ArticleCountFilter {
+  status?: string
+  /** ISO lower bound on `ingested_at`. */
+  ingestedSince?: string
+  /** ISO lower bound on `published_at`. */
+  publishedSince?: string
+  /** Apply the feed's collapse-clusters-to-their-lead filter. */
+  clusterLeadOnly?: boolean
+}
+
+/**
+ * Exact row count for a slice of `articles`. Uses a `head` request so the
+ * count is the real total rather than the (capped) number of rows returned.
+ */
+async function countArticles(supabase: ServiceClient, f: ArticleCountFilter): Promise<number> {
+  let q = supabase.from('articles').select('id', { count: 'exact', head: true })
+  if (f.status) q = q.eq('status', f.status)
+  if (f.ingestedSince) q = q.gte('ingested_at', f.ingestedSince)
+  if (f.publishedSince) q = q.gte('published_at', f.publishedSince)
+  if (f.clusterLeadOnly) q = q.or('is_cluster_lead.eq.true,cluster_id.is.null')
+  const { count, error } = await q
+  if (error) throw error
+  return count ?? 0
+}
+
+/**
+ * Every article ingested since `sinceIso`, paged past the `max_rows` ceiling.
+ * Advances by what the server actually returned rather than by the requested
+ * page size, so a project configured with a lower `max_rows` still pages to
+ * the end instead of stopping after one short page.
+ */
+async function fetchArticlesSince(supabase: ServiceClient, sinceIso: string): Promise<ArticleStatRow[]> {
+  const rows: ArticleStatRow[] = []
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from('articles')
+      .select('id, publisher, status, image_url, ingested_at')
+      .gte('ingested_at', sinceIso)
+      .order('ingested_at', { ascending: false })
+      .range(rows.length, rows.length + PAGE_SIZE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as ArticleStatRow[]
+    if (batch.length === 0) break
+    rows.push(...batch)
+  }
+  return rows
+}
+
+/** Entity tags on articles ingested since `sinceIso`, paged the same way. The
+ *  `!inner` embed is what makes the `article.ingested_at` filter narrow the
+ *  tag rows themselves rather than just the embedded article. */
+async function fetchArticleEntitiesSince(
+  supabase: ServiceClient,
+  sinceIso: string,
+): Promise<Array<{ article_id: string; entity_id: string }>> {
+  const rows: Array<{ article_id: string; entity_id: string }> = []
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from('article_entities')
+      .select('article_id, entity_id, article:articles!inner(ingested_at)')
+      .gte('article.ingested_at', sinceIso)
+      .order('article_id', { ascending: true })
+      .range(rows.length, rows.length + PAGE_SIZE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as Array<{ article_id: string; entity_id: string }>
+    if (batch.length === 0) break
+    rows.push(...batch.map((r) => ({ article_id: r.article_id, entity_id: r.entity_id })))
+  }
+  return rows
+}
+
 /**
  * Ingest-pipeline health for the admin Pipeline tab: article counts by status,
- * freshness, per-publisher quality, 14-day ingest volume, and the most-tagged
- * entities. Reads the same `articles` / `entities` / `article_entities` tables
- * the footshorts feed uses. SERVER-ONLY (service-role client).
+ * freshness, how much of that reaches the public feed, per-publisher quality,
+ * 14-day ingest volume, and the most-tagged entities. Reads the same
+ * `articles` / `entities` / `article_entities` tables the footshorts feed uses.
+ *
+ * Status counts are exact `count` queries; the quality/volume breakdowns scan
+ * the last `STATS_WINDOW_DAYS` days of rows (a full-table scan silently
+ * truncates at PostgREST's `max_rows`, which made every "total" here a lie
+ * once the table passed 1000 rows). SERVER-ONLY (service-role client).
  */
 export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
   const supabase = createServiceClient()
-  const [articlesRes, entitiesRes, articleEntitiesRes] = await Promise.all([
+  const now = Date.now()
+  const feedSince = new Date(now - FEED_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+  const windowSince = new Date(now - STATS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
+  const [
+    total,
+    summarized,
+    failed,
+    pending,
+    hidden,
+    eligibleNow,
+    day1Ingested,
+    day1Summarized,
+    day1Failed,
+    day1Pending,
+    day1Hidden,
+    latestRes,
+    latestEligibleRes,
+    entitiesRes,
+    windowArticles,
+    windowArticleEntities,
+  ] = await Promise.all([
+    countArticles(supabase, {}),
+    countArticles(supabase, { status: 'summarized' }),
+    countArticles(supabase, { status: 'failed' }),
+    countArticles(supabase, { status: 'pending' }),
+    countArticles(supabase, { status: 'hidden' }),
+    countArticles(supabase, {
+      status: 'summarized',
+      publishedSince: feedSince,
+      clusterLeadOnly: true,
+    }),
+    countArticles(supabase, { ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'summarized', ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'failed', ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'pending', ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'hidden', ingestedSince: feedSince }),
     supabase
       .from('articles')
-      .select('id, publisher, status, image_url, ingested_at')
-      .order('ingested_at', { ascending: false }),
+      .select('ingested_at')
+      .order('ingested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('articles')
+      .select('published_at')
+      .eq('status', 'summarized')
+      .or('is_cluster_lead.eq.true,cluster_id.is.null')
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     supabase.from('entities').select('id, name, type, crest_url'),
-    supabase.from('article_entities').select('article_id, entity_id'),
+    fetchArticlesSince(supabase, windowSince),
+    fetchArticleEntitiesSince(supabase, windowSince),
   ])
 
-  if (articlesRes.error) throw articlesRes.error
+  if (latestRes.error) throw latestRes.error
+  if (latestEligibleRes.error) throw latestEligibleRes.error
   if (entitiesRes.error) throw entitiesRes.error
-  if (articleEntitiesRes.error) throw articleEntitiesRes.error
 
-  type ArticleRow = {
-    id: string
-    publisher: string
-    status: string
-    image_url: string | null
-    ingested_at: string
-  }
   type EntityRow = {
     id: string
     name: string
     type: string
     crest_url: string | null
   }
-
-  const articles = (articlesRes.data ?? []) as ArticleRow[]
   const entities = (entitiesRes.data ?? []) as EntityRow[]
-  const articleEntities = (articleEntitiesRes.data ?? []) as Array<{
-    article_id: string
-    entity_id: string
-  }>
 
-  const taggedArticleIds = new Set(articleEntities.map((r) => r.article_id))
+  const taggedArticleIds = new Set(windowArticleEntities.map((r) => r.article_id))
 
-  const totals = { total: articles.length, summarized: 0, failed: 0, pending: 0, withImage: 0, withTags: 0 }
-  for (const a of articles) {
-    if (a.status === 'summarized') totals.summarized++
-    else if (a.status === 'failed') totals.failed++
-    else if (a.status === 'pending') totals.pending++
-    if (a.image_url) totals.withImage++
-    if (taggedArticleIds.has(a.id)) totals.withTags++
+  let withImage = 0
+  let withTags = 0
+  for (const a of windowArticles) {
+    if (a.image_url) withImage++
+    if (taggedArticleIds.has(a.id)) withTags++
   }
 
   const ent = { leagues: 0, teams: 0, players: 0 }
@@ -990,13 +1147,19 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
     else if (e.type === 'player') ent.players++
   }
 
-  const latest = articles[0]?.ingested_at ?? null
+  const latest = (latestRes.data as { ingested_at: string } | null)?.ingested_at ?? null
   const minutesSinceLatest = latest
-    ? Math.floor((Date.now() - new Date(latest).getTime()) / 60_000)
+    ? Math.floor((now - new Date(latest).getTime()) / 60_000)
+    : null
+
+  const latestEligible =
+    (latestEligibleRes.data as { published_at: string } | null)?.published_at ?? null
+  const minutesSinceLatestEligible = latestEligible
+    ? Math.floor((now - new Date(latestEligible).getTime()) / 60_000)
     : null
 
   const pubMap = new Map<string, PublisherStat>()
-  for (const a of articles) {
+  for (const a of windowArticles) {
     let s = pubMap.get(a.publisher)
     if (!s) {
       s = { publisher: a.publisher, total: 0, summarized: 0, failed: 0, withImage: 0, withTags: 0 }
@@ -1011,22 +1174,19 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
   const byPublisher = Array.from(pubMap.values()).sort((a, b) => b.total - a.total)
 
   const dayMap = new Map<string, number>()
-  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000
-  for (const a of articles) {
-    const t = new Date(a.ingested_at).getTime()
-    if (t < cutoff) continue
+  for (const a of windowArticles) {
     dayMap.set(dayKey(a.ingested_at), (dayMap.get(dayKey(a.ingested_at)) ?? 0) + 1)
   }
   const byDay: PipelineDayPoint[] = []
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+  for (let i = STATS_WINDOW_DAYS - 1; i >= 0; i--) {
+    const d = new Date(now - i * 24 * 60 * 60 * 1000)
     const k = d.toISOString().slice(0, 10)
     byDay.push({ day: k, count: dayMap.get(k) ?? 0 })
   }
 
   const entById = new Map(entities.map((e) => [e.id, e]))
   const entityCount = new Map<string, number>()
-  for (const r of articleEntities) {
+  for (const r of windowArticleEntities) {
     entityCount.set(r.entity_id, (entityCount.get(r.entity_id) ?? 0) + 1)
   }
   const topEntities: PipelineTopEntity[] = Array.from(entityCount.entries())
@@ -1046,7 +1206,21 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
     .slice(0, 12)
 
   return {
-    articles: totals,
+    articles: { total, summarized, failed, pending, hidden, withImage, withTags },
+    window: { days: STATS_WINDOW_DAYS, articles: windowArticles.length },
+    feed: {
+      eligibleNow,
+      windowHours: FEED_WINDOW_HOURS,
+      latestEligiblePublishedAt: latestEligible,
+      minutesSinceLatestEligible,
+      last24h: {
+        ingested: day1Ingested,
+        summarized: day1Summarized,
+        failed: day1Failed,
+        pending: day1Pending,
+        hidden: day1Hidden,
+      },
+    },
     entities: ent,
     freshness: { latestIngestedAt: latest, minutesSinceLatest },
     byPublisher,
