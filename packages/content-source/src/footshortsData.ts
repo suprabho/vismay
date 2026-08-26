@@ -603,7 +603,8 @@ export interface FootshortsNewsItem {
 export interface NewsQuery {
   /** Filter to articles tagged with this team/league entity slug. */
   entitySlug?: string
-  /** Max articles to return after filtering (default 30). */
+  /** Max articles to return after filtering (default 30, clamped to 1000 — the
+   *  PostgREST `max_rows` ceiling; deeper history needs range pagination). */
   limit?: number
 }
 
@@ -628,11 +629,11 @@ interface ArticleDbRow {
  * narrowed to a single entity slug. SERVER-ONLY (service-role client).
  */
 export async function fetchFootshortsNews(q: NewsQuery = {}): Promise<FootshortsNewsItem[]> {
-  const limit = Math.min(Math.max(q.limit ?? 30, 1), 200)
+  const limit = Math.min(Math.max(q.limit ?? 30, 1), 1000)
   const supabase = createServiceClient()
   // Over-fetch when filtering by entity so the in-memory narrow still returns a
   // useful page (the entity tag lives on the joined table, not the article row).
-  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 400) : limit
+  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 1000) : limit
   const { data, error } = await supabase
     .from('articles')
     .select(

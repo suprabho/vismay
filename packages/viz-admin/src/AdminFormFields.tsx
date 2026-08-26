@@ -50,7 +50,7 @@ function Row({ field, value }: { field: AdminFormField; value: FieldValue }) {
 }
 
 function isRequired(field: AdminFormField): boolean {
-  if (field.kind === 'text' || field.kind === 'asset') return field.required === true
+  if (field.kind === 'text' || field.kind === 'textarea' || field.kind === 'asset') return field.required === true
   return false
 }
 

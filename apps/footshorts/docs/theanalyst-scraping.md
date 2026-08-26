@@ -18,7 +18,7 @@ verification checklist that MUST pass before the crons are trusted.
 |---|---|---|---|---|
 | General news | `worker/src/theanalyst/news.ts` | `ingest.ts` (`SCRAPE_SOURCES` loop) | `articles` (same pipeline as RSS: dedupe → Gemini summary → entity tags) | hourly, inside `footshorts-ingest.yml` |
 | Opta Power Rankings widget | `worker/src/theanalyst/powerRankings.ts` | `theanalystPowerRankings.ts` | `power_rankings`, as a **draft** for admin review — never auto-published | daily Mon-Fri, `footshorts-theanalyst-power-rankings.yml` (+ admin "Run scrape" button) |
-| Match centre stats | `worker/src/theanalyst/matchCentre.ts` + `matchDiscovery.ts` | `theanalystMatchFacts.ts` | `opta_match_facts` (per-side upsert) + theanalyst ids persisted on `fixtures` | 3-hourly (30 min after the scores refresh), `footshorts-theanalyst-match-facts.yml` |
+| Match centre stats + timeline | `worker/src/theanalyst/matchCentre.ts` + `matchDiscovery.ts` | `theanalystMatchFacts.ts` | `opta_match_facts` (per-side upsert) + theanalyst ids persisted on `fixtures` + `fixture_events` (timeline, **strict gap-fill**: only fixtures with zero existing events get rows — mirrors `events.ts`'s "no events yet" gate so the API-Football/Sportradar writers and this one never double-write; first writer wins) | 3-hourly (30 min after the scores refresh), `footshorts-theanalyst-match-facts.yml` |
 
 ### URL shapes
 
@@ -101,6 +101,7 @@ patch:
 | `theanalyst/powerRankings.ts` | the ranked list is a `<table>` with a `<thead>` (columns: rank/team/rating/ranking change), an `<ol>`, or "N. Team" text lines (three strategies tried in order) — **verified live**: it's the table, column-mapped by header text. Fixed a real bug along the way: `toNumber()` returned `0` (not `null`) for any digit-free string, so the "is this a team name, not a number" guard rejected every row. |
 | `theanalyst/matchCentre.ts` | stat rows contain a text label (spellings in `STAT_LABELS`) plus two numbers, home first — **confirmed FALSE, rewritten**: the widget renders six distinct `table.Opta-Stats-Bars` sub-widgets (two-`<tr>` label/data pairs, where the data row's middle bar `<div>` duplicates both values as text — a naive "N numbers near this label" scan over-collects) plus a separate `table.Opta-shotoverview` for xG (one `<tr>` per stat, `Opta-Home`/`Opta-StatLabel`/`Opta-Away`). Verified end-to-end against a real finished match (Arsenal 3-0 Coventry): xG 1.88 vs 0.2, 20 shots, 64.1% possession, 40+ additional raw stats, all correctly split home/away. Real label spellings also differed from the guesses: "Total Team xG", "Fouls conceded", "Corners won"/"Corner awarded" (STAT_LABELS updated). "Big chances"/"big chances missed" didn't appear on the one match checked — still unverified. |
 | `theanalyst/matchDiscovery.ts` | the match centre without a `matchId` lists the competition's matches as links carrying `?matchId=`, with "Home vs Away" link text — **confirmed FALSE, rewritten**: no such listing view exists at the match-centre URL at any layer. The real listing is a separate page — see the discovery section below. |
+| `theanalyst/matchCentre.ts` `extractMatchEvents` | **Verified live 2026-08-26** against a finished match (Atlético Madrid 2-2 Villarreal): the timeline is two `<ul class="Opta-Events Opta-Home\|Opta-Away">` lists of `<li class="Opta-MatchEvent">`, each with a clean `.Opta-Event-Title` / `.Opta-Event-Min`. The original best-guess version had three real bugs, all fixed: (1) it scanned each row's *flattened* text for a minute, so a `.Opta-groupcount` digit sitting before the real minute got picked up instead; (2) simultaneous substitutions bundle into ONE `<li>` with one `.Opta-EventGroup-TooltipContent` per sub — the old code concatenated them into one garbled event instead of splitting them; (3) Opta wraps the minute digits/"+" in invisible Unicode format characters (bidi marks) that `\s` doesn't match, so the "+N" extra-time capture silently failed (`90+1'` parsed as minute 90 with no extra time). Player names now come from the `.Opta-IconOff`/`.Opta-IconOn` markers (subs) or the plain-vs-`.Opta-assist`/`.Opta-Event-Reason` div split (goals/cards) instead of regex-stripping the row text. Confirmed against the real match report: 21 events, correct scorers/assists/cards, penalties classified separately from open-play goals, `90+1'`/`90+10'` both parsed with the right extra minute. |
 | `theanalyst/competitions.ts` | the Premier League id pair (taken from the feature request's example URL) is current — **superseded**: ids are no longer hand-curated at all, see the competition id map section above |
 | `sources.ts` | `SCRAPE_SOURCES[].listingUrl` points at a real article-listing page |
 
@@ -175,7 +176,9 @@ manually first. Do not rely on their schedules until all of this passes:
    parsed); match discovery via the fixtures-page calendar (9 real matches
    discovered over a 5-day window); match-centre stats end-to-end against a
    real finished match (xG, shots, possession, cards, 40+ raw stats, all
-   correctly split home/away). "Big chances"/"big chances missed" labels
+   correctly split home/away); match timeline end-to-end against a second
+   real finished match (21 events, scorers/assists/cards/subs all correct —
+   see the fragility table). "Big chances"/"big chances missed" labels
    remain unverified — didn't appear on the one match checked.
 4. **Populate `competitions.ts`** with verified current-season ids for every
    tracked competition. **Superseded** — ids are discovered live now, not
@@ -194,3 +197,16 @@ manually first. Do not rely on their schedules until all of this passes:
    publishes; fix the placeholder cron. **Done** — it's not weekly, the
    widget updates daily Mon-Fri per its own footer copy; cron is
    `0 9 * * 1-5` in `footshorts-theanalyst-power-rankings.yml`.
+7. **Match timeline extraction** (`extractMatchEvents` — see the fragility
+   table). **Done** — verified 2026-08-26 against a real finished match
+   (Atlético Madrid 2-2 Villarreal, dumped live via the match-centre widget):
+   21 events extracted, matched against the real match report end-to-end
+   (scorers, assists, minutes including `90+1'`/`90+10'`, both yellow and red
+   cards, penalties classified separately from open-play goals, simultaneous
+   substitutions correctly split one-per-player). Remaining: one real
+   competition-limited run (confirm `fixture_events` rows land and the share
+   card studio's Match-timeline card renders them), then a few
+   `events_backfill=true` dispatches to drain the stats-done/events-missing
+   backlog (each capped by the 20-page budget). Timeline extraction rides the
+   SAME page render as the stats scrape — no extra requests on the default
+   path; only `events_backfill` re-fetches (bounded, one-time).

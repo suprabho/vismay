@@ -41,6 +41,11 @@ function defaultTransform(type: string, ratio: AspectRatio): TransformLike {
   if (type === 'fscard:image') {
     return { ...DEFAULT_TRANSFORM, widthPct: 45, heightPct: 45 * ar }
   }
+  if (type === 'fscard:text') {
+    // Wrap-width box only — no heightPct, so the text self-sizes vertically and
+    // long copy grows instead of clipping.
+    return { ...DEFAULT_TRANSFORM, widthPct: 70 }
+  }
   if (type === 'fscard:news-image' || type === 'fscard:ai-image') {
     return { xPct: 50, yPct: 50, widthPct: 100, heightPct: 100, scale: 1, rotation: 0, opacity: 1 }
   }
@@ -67,6 +72,7 @@ const FOOTSHORTS_LAYER_TYPES: Array<{ type: string; name: string }> = [
   { type: 'fscard:image', name: 'Image' },
   { type: 'fscard:emoji', name: 'Emoji' },
   { type: 'fscard:icon', name: 'Icon' },
+  { type: 'fscard:text', name: 'Text' },
 ]
 
 const NAME_BY_TYPE = new Map(FOOTSHORTS_LAYER_TYPES.map((t) => [t.type, t.name]))
@@ -127,6 +133,9 @@ function defaultConfig(type: string, ctx: FootshortsComposerCtx): Record<string,
       return { type, iconName: 'SoccerBall', iconWeight: 'bold', iconColor: 'accent' }
     case 'fscard:image':
       return { type, src: '', objectFit: 'contain' }
+    case 'fscard:text':
+      // Seed visible copy so the fresh layer can be seen + selected on canvas.
+      return { type, text: 'Headline', size: 'lg', weight: 'bold', align: 'center', font: 'display', color: '' }
     default:
       return { type }
   }

@@ -81,6 +81,24 @@ function fixturesFor(ctx: FootshortsComposerCtx | null, compKey: unknown): Fixtu
   return ctx.data.fixturesByComp[compKey] ?? []
 }
 
+/** Case-insensitive team search over a fixture: either side's entity name/slug,
+ *  the raw `*_team_name` fallbacks (untracked teams), or the rendered label (so
+ *  "vs" / score queries work too). `q` must be pre-trimmed + lowercased; empty
+ *  matches everything. */
+function fixtureMatches(f: FixtureRow, q: string): boolean {
+  if (!q) return true
+  const haystacks = [
+    f.home?.name,
+    f.home?.slug,
+    f.away?.name,
+    f.away?.slug,
+    f.home_team_name,
+    f.away_team_name,
+    fixtureLabel(f),
+  ]
+  return haystacks.some((s) => !!s && s.toLowerCase().includes(q))
+}
+
 function CompetitionPicker({ value, onChange, ctx }: PickerEditorProps) {
   const c = asCtx(ctx)
   return (
@@ -100,40 +118,82 @@ function CompetitionPicker({ value, onChange, ctx }: PickerEditorProps) {
 
 function FixturePicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
   const fixtures = fixturesFor(asCtx(ctx), siblings.compKey)
+  const [q, setQ] = useState('')
+  const query = q.trim().toLowerCase()
+  const filtered = fixtures.filter((f) => fixtureMatches(f, query))
+  const selectedId = typeof value === 'string' ? value : ''
+  // Keep the current pick visible even when the search filters it out — a
+  // native <select> whose value has no matching <option> renders blank.
+  const selected =
+    selectedId && !filtered.some((f) => f.id === selectedId)
+      ? fixtures.find((f) => f.id === selectedId)
+      : undefined
   return (
-    <select className={selectCls} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{siblings.compKey ? 'Select fixture…' : 'Pick a competition first'}</option>
-      {fixtures.map((f) => (
-        <option key={f.id} value={f.id}>
-          {fixtureLabel(f)}
+    <div className="flex flex-col gap-1">
+      {fixtures.length > 0 ? (
+        <input
+          className={inputCls}
+          placeholder="Search team…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      ) : null}
+      <select className={selectCls} value={selectedId} onChange={(e) => onChange(e.target.value)}>
+        <option value="">
+          {siblings.compKey ? `Select fixture… (${filtered.length})` : 'Pick a competition first'}
         </option>
-      ))}
-    </select>
+        {selected ? (
+          <option value={selected.id}>{fixtureLabel(selected)}</option>
+        ) : null}
+        {filtered.map((f) => (
+          <option key={f.id} value={f.id}>
+            {fixtureLabel(f)}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }
 
 function FixtureMultiPicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
   const fixtures = fixturesFor(asCtx(ctx), siblings.compKey)
+  const [q, setQ] = useState('')
   const picked = Array.isArray(value) ? (value as string[]) : []
   const toggle = (id: string) =>
     onChange(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id])
   if (fixtures.length === 0) return <p className={hintCls}>Pick a competition first.</p>
+  const query = q.trim().toLowerCase()
+  const filtered = fixtures.filter((f) => fixtureMatches(f, query))
   return (
-    <div className="mt-1 max-h-48 overflow-auto rounded-md border border-white/10 bg-neutral-900 p-1">
-      {fixtures.map((f) => {
-        const on = picked.includes(f.id)
-        return (
-          <label
-            key={f.id}
-            className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
-              on ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
-            }`}
-          >
-            <input type="checkbox" checked={on} onChange={() => toggle(f.id)} />
-            <span className="truncate">{fixtureLabel(f)}</span>
-          </label>
-        )
-      })}
+    <div className="flex flex-col gap-1">
+      <input
+        className={inputCls}
+        placeholder="Search team…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <div className="mt-1 max-h-48 overflow-auto rounded-md border border-white/10 bg-neutral-900 p-1">
+        {filtered.map((f) => {
+          const on = picked.includes(f.id)
+          return (
+            <label
+              key={f.id}
+              className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
+                on ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
+              }`}
+            >
+              <input type="checkbox" checked={on} onChange={() => toggle(f.id)} />
+              <span className="truncate">{fixtureLabel(f)}</span>
+            </label>
+          )
+        })}
+        {filtered.length === 0 && (
+          <p className="px-1.5 py-1 text-[11px] text-neutral-600">No fixtures match “{q.trim()}”.</p>
+        )}
+      </div>
+      {/* Checked ids live in `value`, so selections filtered out of view persist —
+          surface the count so they aren't invisible. */}
+      {picked.length > 0 ? <p className={hintCls}>{picked.length} selected</p> : null}
     </div>
   )
 }
@@ -443,7 +503,7 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
                   onChange={(e) => setRefQuery(e.target.value)}
                 />
                 <div className="grid max-h-24 grid-cols-6 gap-1 overflow-y-auto">
-                  {filteredRefNews.slice(0, 24).map((n) => (
+                  {filteredRefNews.slice(0, 60).map((n) => (
                     <button
                       key={n.id}
                       type="button"
@@ -452,7 +512,7 @@ function AiImagePicker({ value, onChange, ctx }: PickerEditorProps) {
                       className="flex aspect-square items-center justify-center overflow-hidden rounded border border-white/10 bg-neutral-900 hover:border-white/30"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={proxiedImage(n.image_url!)} alt="" className="h-full w-full object-cover" />
+                      <img src={proxiedImage(n.image_url!)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     </button>
                   ))}
                   {filteredRefNews.length === 0 && (
@@ -509,6 +569,63 @@ function IconFieldPicker({ value, onChange }: PickerEditorProps) {
   )
 }
 
+/** `fscard:match-timeline.extractGoals` editor — a button that dispatches a
+ *  one-off, single-fixture goals-only Opta extraction (see
+ *  /api/footshorts/share/extract-goals). Fire-and-forget, matching every
+ *  other GitHub Actions dispatch button in this app (Power Rankings' "Run
+ *  scrape", the matchtime panel's "Sync now"): no polling, no config value
+ *  results from this action, so `onChange` is never called. */
+function ExtractGoalsPicker({ siblings }: PickerEditorProps) {
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<{ type: 'idle' | 'ok' | 'err' | 'info'; msg?: string }>({ type: 'idle' })
+  const fixtureId = typeof siblings.fixtureId === 'string' ? siblings.fixtureId : ''
+  const compKey = typeof siblings.compKey === 'string' ? siblings.compKey : ''
+
+  const run = async () => {
+    setBusy(true)
+    setStatus({ type: 'idle' })
+    try {
+      const competitionSlug = compKey.split('::')[0] ?? ''
+      const res = await fetch('/api/footshorts/share/extract-goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fixtureId, competitionSlug }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; mode?: string; error?: string }
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+      setStatus(
+        body.mode === 'unconfigured'
+          ? {
+              type: 'info',
+              msg: 'Dispatch not configured — run `pnpm match-facts -- --fixture-id=<uuid> --competition=<slug>` in the footshorts worker locally.',
+            }
+          : { type: 'ok', msg: 'Requested — runs via GitHub Actions, can take 1–2 minutes. Reopen this card to see new goals.' },
+      )
+    } catch (e) {
+      setStatus({ type: 'err', msg: e instanceof Error ? e.message : 'Dispatch failed' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-1 flex flex-col gap-1.5">
+      <button
+        type="button"
+        className="rounded-md border border-white/10 px-2 py-1.5 text-[11px] text-neutral-200 hover:bg-white/5 disabled:opacity-40"
+        disabled={busy || !fixtureId || !compKey}
+        onClick={() => void run()}
+      >
+        {busy ? 'Requesting…' : 'Extract goals now'}
+      </button>
+      {!fixtureId ? <p className={hintCls}>Pick a fixture first.</p> : null}
+      {status.type !== 'idle' && status.msg ? (
+        <p className={`text-[11px] ${status.type === 'err' ? 'text-red-400' : 'text-neutral-400'}`}>{status.msg}</p>
+      ) : null}
+    </div>
+  )
+}
+
 /** `fscard:image.src` editor — upload / AI-generate / news-thumbnail picker,
  *  reading ratio + news + palette from the composer ctx. */
 function ImageFieldPicker({ value, onChange, ctx }: PickerEditorProps) {
@@ -554,4 +671,5 @@ export function registerFootshortsPickers(): void {
   registerPickerEditor('footshorts:emoji', EmojiFieldPicker)
   registerPickerEditor('footshorts:icon', IconFieldPicker)
   registerPickerEditor('footshorts:image', ImageFieldPicker)
+  registerPickerEditor('footshorts:extract-goals', ExtractGoalsPicker)
 }

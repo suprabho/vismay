@@ -39,6 +39,26 @@ on:
         required: false
         type: string
         default: ''
+      fixture_id:
+        description: 'Fixture id (uuid) to limit to — requires competition to also be set. Blank = normal competition-wide run.'
+        required: false
+        type: string
+        default: ''
+      dry:
+        description: 'Discover + scrape + print, no Supabase writes.'
+        required: false
+        type: boolean
+        default: false
+      dump_events:
+        description: 'Print the widget''s Opta class inventory + unparsed DOM regions per page (event-selector debugging).'
+        required: false
+        type: boolean
+        default: false
+      events_backfill:
+        description: 'Also re-scrape stats-done fixtures that lack fixture_events rows (budget-capped).'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: footshorts-theanalyst-match-facts
@@ -81,7 +101,15 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
           INPUT_COMPETITION: ${{ inputs.competition }}
+          INPUT_FIXTURE_ID: ${{ inputs.fixture_id }}
+          INPUT_DRY: ${{ inputs.dry }}
+          INPUT_DUMP_EVENTS: ${{ inputs.dump_events }}
+          INPUT_EVENTS_BACKFILL: ${{ inputs.events_backfill }}
         run: |
           ARGS=()
           [ -n "$INPUT_COMPETITION" ] && ARGS+=("--competition=$INPUT_COMPETITION")
+          [ -n "$INPUT_FIXTURE_ID" ] && ARGS+=("--fixture-id=$INPUT_FIXTURE_ID")
+          [ "$INPUT_DRY" = "true" ] && ARGS+=("--dry")
+          [ "$INPUT_DUMP_EVENTS" = "true" ] && ARGS+=("--dump-events")
+          [ "$INPUT_EVENTS_BACKFILL" = "true" ] && ARGS+=("--events-backfill")
           pnpm match-facts:ci -- "${ARGS[@]}"

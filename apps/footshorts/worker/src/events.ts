@@ -98,12 +98,6 @@ async function loadTeamAfIds(teamIds: string[]): Promise<Map<string, number>> {
 async function loadCandidates(): Promise<FixtureRow[]> {
   const from = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: withEvents, error: weErr } = await supabase
-    .from('fixture_events')
-    .select('fixture_id');
-  if (weErr) throw weErr;
-  const hydrated = new Set((withEvents ?? []).map((r) => (r as any).fixture_id as string));
-
   const { data, error } = await supabase
     .from('fixtures')
     .select('id, api_football_id, kickoff_at, home_team_id, away_team_id')
@@ -111,8 +105,28 @@ async function loadCandidates(): Promise<FixtureRow[]> {
     .gte('kickoff_at', from)
     .order('kickoff_at', { ascending: true });
   if (error) throw error;
+  const fixtures = (data ?? []) as FixtureRow[];
+  if (fixtures.length === 0) return [];
 
-  return ((data ?? []) as FixtureRow[]).filter((f) => !hydrated.has(f.id));
+  // Scoped to the window's fixtures + paged: an unscoped select('fixture_id')
+  // tops out at PostgREST's max_rows (1000) and silently truncates once the
+  // table outgrows it — hydrated fixtures would then look eventless and this
+  // worker would re-spend AF quota on them every run.
+  const hydrated = new Set<string>();
+  const PAGE = 1000;
+  for (let start = 0; ; start += PAGE) {
+    const { data: withEvents, error: weErr } = await supabase
+      .from('fixture_events')
+      .select('fixture_id')
+      .in('fixture_id', fixtures.map((f) => f.id))
+      .order('id')
+      .range(start, start + PAGE - 1);
+    if (weErr) throw weErr;
+    for (const r of withEvents ?? []) hydrated.add((r as any).fixture_id as string);
+    if (!withEvents || withEvents.length < PAGE) break;
+  }
+
+  return fixtures.filter((f) => !hydrated.has(f.id));
 }
 
 function ymd(iso: string): string {

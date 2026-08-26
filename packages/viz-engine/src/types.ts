@@ -136,6 +136,8 @@ export interface VizPersistentRenderProps<TConfig> {
 export type AdminFormField =
   | { kind: 'asset'; key: string; label: string; accept: string[]; required?: boolean }
   | { kind: 'text'; key: string; label: string; placeholder?: string; required?: boolean }
+  /** Multi-line plain text (a `<textarea>`); `rows` is the visual height (default 3). */
+  | { kind: 'textarea'; key: string; label: string; placeholder?: string; rows?: number; required?: boolean }
   | { kind: 'number'; key: string; label: string; min?: number; max?: number; step?: number }
   | { kind: 'boolean'; key: string; label: string }
   | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[] }
@@ -223,13 +225,13 @@ export interface VizModule<TConfig = unknown> {
   placement?: 'stack' | 'overlay'
   /**
    * Upper bound for the composer's free-transform Width field (% of card).
-   * Defaults to 100 — set higher for modules whose content is designed to bleed
-   * past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
+   * Defaults to 200 — set higher for modules whose content is designed to bleed
+   * far past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
    */
   maxWidthPct?: number
   /**
    * Upper bound for the composer's free-transform Height field (% of card).
-   * Defaults to 100 — set higher for modules whose content can outgrow the card
+   * Defaults to 200 — set higher for modules whose content can outgrow the card
    * vertically (e.g. a tall bracket tree the author wants to size up rather than
    * scroll).
    */

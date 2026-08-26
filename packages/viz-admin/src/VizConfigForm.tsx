@@ -109,6 +109,23 @@ function Field({
         </label>
       )
 
+    case 'textarea':
+      return (
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>
+            {field.label}
+            {field.required ? ' *' : ''}
+          </span>
+          <textarea
+            value={typeof value === 'string' ? value : ''}
+            placeholder={field.placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            rows={field.rows ?? 3}
+            className={inputBase}
+          />
+        </label>
+      )
+
     case 'number':
       return (
         <label className="flex flex-col gap-1">

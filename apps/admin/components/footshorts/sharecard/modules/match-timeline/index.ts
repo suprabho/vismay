@@ -36,6 +36,16 @@ function adminForm(): AdminFormField[] {
         { value: 'subst', label: 'Subs' },
       ],
     },
+    // No config value results from this — it dispatches a one-off Opta
+    // extraction for the picked fixture, it doesn't edit the layer. See
+    // ExtractGoalsPicker (never calls onChange).
+    {
+      kind: 'picker',
+      key: 'extractGoals',
+      label: 'Opta goals',
+      pickerId: 'footshorts:extract-goals',
+      dependsOn: ['compKey', 'fixtureId'],
+    },
   ]
 }
 
@@ -44,7 +54,7 @@ const matchTimelineCardModule: VizModule<FsCardMatchTimelineConfig> = {
   label: 'Match timeline',
   slots: ['foreground'],
   // Timeline is built to stretch wide and crop horizontally, so allow up to 3×
-  // card width in the composer's Width field (default cap is 100%).
+  // card width in the composer's Width field (default cap is 200%).
   maxWidthPct: 300,
   parseConfig,
   adminForm,

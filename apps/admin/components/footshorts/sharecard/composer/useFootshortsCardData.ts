@@ -57,12 +57,15 @@ export function useFootshortsCardData({
   layers,
   competitions,
   ratio,
-  newsLimit = 40,
+  newsLimit = 1000,
   forceNews = false,
 }: {
   layers: ComposerLayer[]
   competitions: CompetitionOption[]
   ratio: AspectRatio
+  /** Max news items fetched for the pickers/modules. The default asks for the
+   *  practical maximum (PostgREST caps a single read at 1000 rows); items are
+   *  light (headline + short summary), so this is one modest admin-only fetch. */
   newsLimit?: number
   /** Fetch the news feed even when no news layer references it — set while the
    *  Background tab's image picker (which browses news thumbnails) is shown. */

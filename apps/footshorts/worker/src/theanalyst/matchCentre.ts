@@ -1,8 +1,10 @@
 /**
- * theanalyst.com Opta match-centre scraper — per-match stats for both sides.
+ * theanalyst.com Opta match-centre scraper — per-match stats for both sides,
+ * plus the match timeline (see the match-events section below).
  *
- * VERIFIED LIVE (2026-08-24) against a real finished match. Two things were
- * wrong in the original (authored without site access) version:
+ * VERIFIED LIVE (2026-08-24, timeline 2026-08-26) against a real finished
+ * match. Two things were wrong in the original (authored without site
+ * access) version:
  *
  * 1. The URL was the `theanalyst.com/opta-football-match-centre` wrapper
  *    page — same cross-origin-iframe problem as Power Rankings' article
@@ -56,6 +58,25 @@ export type MatchFactsPayload = {
   home: SideStats;
   away: SideStats;
 };
+
+/** One timeline event parsed off the match-centre widget, normalized to the
+ *  `fixture_events` vocabulary (types + detail spellings the MatchTimeline
+ *  renderer's regexes expect — see verticals/footshorts-viz MatchTimeline). */
+export type MatchEvent = {
+  side: 'home' | 'away';
+  /** "45+2'" → minute 45, extraMinute 2. */
+  minute: number;
+  extraMinute: number | null;
+  type: 'goal' | 'card' | 'subst' | 'var';
+  /** API-Football-style spelling: Normal Goal | Own Goal | Penalty |
+   *  Yellow Card | Red Card | Substitution | Missed Penalty. */
+  detail: string | null;
+  playerName: string | null;
+  /** Assister (goal) / player coming ON (subst). */
+  assistName: string | null;
+};
+
+export type MatchCentreData = MatchFactsPayload & { events: MatchEvent[] };
 
 export function matchCentreUrl(competitionId: string, seasonId: string, matchId: string): string {
   const params = new URLSearchParams({ competitionId, seasonId, matchId });
@@ -146,11 +167,184 @@ function extractLabelPairs($: cheerio.CheerioAPI): Map<string, [number, number]>
   return pairs;
 }
 
+// ── match events (timeline) ──────────────────────────────────────────────────
+//
+// Verified live 2026-08-26 against a finished La Liga match (Atlético 2-2
+// Villarreal): the timeline is two `<ul class="Opta-Events Opta-Home|Away">`
+// lists of `<li class="Opta-MatchEvent">`, each carrying `.Opta-Event-Title` /
+// `.Opta-Event-Min` and a tooltip body with the player name(s). Simultaneous
+// substitutions collapse into ONE `<li>` with a `.Opta-groupcount` badge and
+// one `.Opta-EventGroup-TooltipContent` per bundled sub — each must be read as
+// its own event or they garble together into one row (docs/theanalyst-scraping.md
+// fragility table has the full DOM shape).
+
+/** "45+2'" / "90 +4" / "12'" → { minute, extraMinute }; null when no digits.
+ *  Opta wraps the digits/"+" in invisible Unicode format characters (bidi
+ *  control marks) that `\s` doesn't match — left in place they silently sit
+ *  between "90" and "+", breaking the "+N" extra-time capture even though the
+ *  digits themselves still match. Strip all format chars (`\p{Cf}`) first. */
+export function parseEventMinute(raw: string): { minute: number; extraMinute: number | null } | null {
+  const cleaned = raw.replace(/\p{Cf}/gu, '');
+  const m = cleaned.match(/(\d{1,3})\s*(?:\+\s*(\d{1,2}))?\s*[''′]?/);
+  if (!m || !m[1]) return null;
+  const minute = Number(m[1]);
+  if (!Number.isFinite(minute) || minute > 130) return null;
+  const extra = m[2] ? Number(m[2]) : null;
+  return { minute, extraMinute: extra != null && Number.isFinite(extra) ? extra : null };
+}
+
+/** Classify an event from its `.Opta-Event-Title` text ("Goal", "Penalty
+ *  scored", "Yellow card", "Substitution", …). Returns the normalized
+ *  type/detail pair, or null when the title matches nothing event-like.
+ *  Order matters: "own goal"/"penalty" both contain "goal"; missed penalties
+ *  must never land as goals (the timeline would render a phantom scorer). */
+function classifyEvent(title: string): { type: MatchEvent['type']; detail: string | null } | null {
+  const h = title.toLowerCase();
+  if (/own[\s-]?goal/.test(h)) return { type: 'goal', detail: 'Own Goal' };
+  if (/pen/.test(h) && /(miss|sav|fail)/.test(h)) return { type: 'var', detail: 'Missed Penalty' };
+  if (/(penalty|\(pen\)|\bpen\b)/.test(h)) return { type: 'goal', detail: 'Penalty' };
+  if (/(goal|scor)/.test(h)) return { type: 'goal', detail: 'Normal Goal' };
+  // Any second-yellow/dismissal signal maps to 'Red Card' (diverging from
+  // API-Football's 'Second Yellow card' on purpose: the renderer colors by
+  // /red/i, and a second yellow should show as a red).
+  if (/(red[\s-]?card|second[\s-]?yellow|sent[\s-]?off|dismiss|\bred\b)/.test(h)) {
+    return { type: 'card', detail: 'Red Card' };
+  }
+  if (/(yellow|card|book)/.test(h)) return { type: 'card', detail: 'Yellow Card' };
+  if (/sub/.test(h)) return { type: 'subst', detail: 'Substitution' };
+  if (/\bvar\b/.test(h)) return { type: 'var', detail: null };
+  return null;
+}
+
+/** Text of the first element matching `selector` inside `$el`, with any
+ *  nested icon glyph stripped (icon `<span>`s carry no text, but stripping
+ *  keeps this robust to markup drift) and whitespace collapsed. */
+function textOf($el: cheerio.Cheerio<any>, selector: string): string | null {
+  const $found = $el.find(selector).first();
+  if (!$found.length) return null;
+  const text = $found.clone().find('.Opta-Icon').remove().end().text().replace(/\s+/g, ' ').trim();
+  return text || null;
+}
+
+/** Substitution names live as two `<p>` tags, each holding a name followed by
+ *  an Off/On icon glyph — `playerName` is the player coming OFF, `assistName`
+ *  the player coming ON (matches API-Football's subst convention, which
+ *  MatchTimeline renders as the primary line and the "on: …" line). */
+function extractSubstitutionNames($container: cheerio.Cheerio<any>): { player: string | null; assist: string | null } {
+  return {
+    player: textOf($container, 'p:has(.Opta-IconOff)'),
+    assist: textOf($container, 'p:has(.Opta-IconOn)'),
+  };
+}
+
+/** Goal/card/var tooltips hold the player as a plain `<div><p>Name</p></div>`
+ *  and, for goals, an optional `<div><p class="Opta-assist">Assist: X</p></div>`
+ *  sibling — cards have a same-shaped but always-empty `.Opta-Event-Reason`
+ *  sibling instead, so excluding both from the player-div search leaves only
+ *  the name. */
+function extractPlayerAndAssist($container: cheerio.Cheerio<any>): { player: string | null; assist: string | null } {
+  const assist = textOf($container, '.Opta-assist')?.replace(/^assist:?\s*/i, '').trim() || null;
+  const player = textOf($container, '> div:not(:has(.Opta-assist)):not(:has(.Opta-Event-Reason))');
+  return { player, assist };
+}
+
+/**
+ * Reads the two `<ul class="Opta-Events Opta-Home|Opta-Away">` timeline lists
+ * (verified live 2026-08-26 — see the section banner). Each `<li class="Opta-
+ * MatchEvent">` carries `.Opta-Event-Title` + `.Opta-Event-Min`; simultaneous
+ * substitutions bundle into one `<li>` with one `.Opta-EventGroup-
+ * TooltipContent` per sub, each split back out into its own event. Rows
+ * missing a title or a parseable minute are skipped and counted in a warning
+ * (the half/full-time "Whistle" markers in the separate `.Opta-Timeline` div
+ * are never matched — they're not inside either `Opta-Events` list).
+ */
+export function extractMatchEvents($: cheerio.CheerioAPI): MatchEvent[] {
+  const events: MatchEvent[] = [];
+  let skipped = 0;
+
+  (['home', 'away'] as const).forEach((side) => {
+    const sideClass = side === 'home' ? 'Opta-Home' : 'Opta-Away';
+    $(`ul.Opta-Events.${sideClass} > li.Opta-MatchEvent`).each((_, li) => {
+      const $li = $(li);
+      const title = textOf($li, '.Opta-Event-Title');
+      const minuteText = $li.find('.Opta-Event-Min').first().text();
+      const minute = title ? parseEventMinute(minuteText) : null;
+      const kind = title ? classifyEvent(title) : null;
+      if (!title || !minute || !kind) {
+        skipped++;
+        return;
+      }
+
+      const groups = $li.find('.Opta-EventGroup-TooltipContent');
+      const namesFor = kind.type === 'subst' ? extractSubstitutionNames : extractPlayerAndAssist;
+      const sources = groups.length > 0 ? groups.toArray().map((g) => $(g)) : [$li.find('.Opta-Hidden').first()];
+
+      for (const $source of sources) {
+        const { player, assist } = namesFor($source);
+        events.push({
+          side,
+          minute: minute.minute,
+          extraMinute: minute.extraMinute,
+          type: kind.type,
+          detail: kind.detail,
+          playerName: player,
+          assistName: assist,
+        });
+      }
+    });
+  });
+
+  if (skipped > 0) {
+    console.warn(`[match-centre] ${skipped} event row(s) skipped (no title/minute parsed)`);
+  }
+  return events;
+}
+
+/**
+ * Selector-debugging aid for the CI loop (workflow input dump_events=true):
+ * an inventory of every Opta-ish class token on the page, plus a text peek at
+ * each top-level Opta region OUTSIDE the two parsed stats tables — enough to
+ * read the real event-widget structure straight out of the workflow log
+ * without shipping page HTML.
+ */
+export function dumpUnparsedOptaRegions($: cheerio.CheerioAPI): string {
+  const lines: string[] = [];
+
+  const counts = new Map<string, number>();
+  $('[class*="Opta"], [class*="opta"]').each((_, el) => {
+    for (const token of ($(el).attr('class') ?? '').split(/\s+/)) {
+      if (/opta/i.test(token)) counts.set(token, (counts.get(token) ?? 0) + 1);
+    }
+  });
+  lines.push(`[dump] ${counts.size} distinct Opta class token(s):`);
+  for (const [token, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${n}× ${token}`);
+  }
+
+  const regions = $('[class*="Opta"]')
+    .toArray()
+    .filter(
+      (el) =>
+        $(el).closest('table.Opta-Stats-Bars, table.Opta-shotoverview').length === 0 &&
+        $(el).parents('[class*="Opta"]').length === 0
+    );
+  lines.push(`[dump] ${regions.length} top-level Opta region(s) outside the stats tables:`);
+  for (const el of regions.slice(0, 15)) {
+    const cls = ($(el).attr('class') ?? '').trim();
+    const text = $(el).text().replace(/\s+/g, ' ').trim().slice(0, 500);
+    lines.push(`  <${'tagName' in el ? (el as { tagName: string }).tagName : '?'} class="${cls}"> ${text}`);
+  }
+  if (regions.length > 15) lines.push(`  … ${regions.length - 15} more region(s) elided`);
+
+  return lines.join('\n');
+}
+
 export async function fetchMatchFacts(
   competitionId: string,
   seasonId: string,
-  matchId: string
-): Promise<MatchFactsPayload> {
+  matchId: string,
+  opts?: { dumpEvents?: boolean }
+): Promise<MatchCentreData> {
   const url = matchCentreUrl(competitionId, seasonId, matchId);
   const html = await fetchRenderedHtml(url, {
     waitForSelector: 'table.Opta-Stats-Bars, table.Opta-shotoverview',
@@ -193,5 +387,22 @@ export async function fetchMatchFacts(
     away.raw_stats[label] = a;
   }
 
-  return { home, away };
+  // Timeline events from the SAME render — zero extra page fetches. Extraction
+  // is isolated: a selector failure here (the events parser is still
+  // unverified, see the section banner above) degrades to an empty list and
+  // can never break the stats scrape.
+  let events: MatchEvent[] = [];
+  try {
+    events = extractMatchEvents($);
+  } catch (e) {
+    console.warn(
+      `[match-centre] event extraction failed (stats unaffected): ${(e as Error).message} (${url})`
+    );
+  }
+  if (opts?.dumpEvents) {
+    console.log(`[match-centre] ${url}\n[match-centre] parsed ${events.length} event(s): ${JSON.stringify(events)}`);
+    console.log(dumpUnparsedOptaRegions($));
+  }
+
+  return { home, away, events };
 }
