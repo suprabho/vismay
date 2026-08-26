@@ -12,6 +12,7 @@ import badgeCardModule from './badge'
 import emojiCardModule from './emoji'
 import iconCardModule from './icon'
 import imageCardModule from './image'
+import textCardModule from './text'
 
 /**
  * Register the footshorts share-card module family (`fscard:*`) into the
@@ -39,4 +40,5 @@ export function registerFootshortsShareCardModules(): void {
   register(emojiCardModule)
   register(iconCardModule)
   register(imageCardModule)
+  register(textCardModule)
 }

@@ -139,6 +139,30 @@ export interface FsCardImageConfig {
   objectFit: 'contain' | 'cover'
 }
 
+/** Font-size presets for `fscard:text`, resolved to container-query units of the
+ *  layer box so the W scrub reflows AND rescales the type predictably. */
+export type TextCardSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+export type TextCardWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'black'
+export type TextCardAlign = 'left' | 'center' | 'right'
+/** Theme faces emitted by `themeToVars` as `--sf-font-*`. */
+export type TextCardFont = 'sans' | 'display' | 'mono'
+
+/** Free-form text placed as an overlay layer: author-typed copy in the card's
+ *  brand faces. The transform box sets the wrap width (height is self-sized so
+ *  long copy never clips); corner-drag `scale` zooms it like any layer. */
+export interface FsCardTextConfig {
+  type: 'fscard:text'
+  text: string
+  size: TextCardSize
+  weight: TextCardWeight
+  align: TextCardAlign
+  font: TextCardFont
+  /** Hex (`#RRGGBB`) or a theme token (`accent` / `text` / `brand` / `muted`);
+   *  blank inherits the card text color. Same convention as `fscard:icon`. */
+  color: string
+  uppercase?: boolean
+}
+
 export type FsCardConfig =
   | FsCardMatchConfig
   | FsCardMatchTimelineConfig
@@ -153,3 +177,4 @@ export type FsCardConfig =
   | FsCardEmojiConfig
   | FsCardIconConfig
   | FsCardImageConfig
+  | FsCardTextConfig

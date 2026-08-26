@@ -136,6 +136,8 @@ export interface VizPersistentRenderProps<TConfig> {
 export type AdminFormField =
   | { kind: 'asset'; key: string; label: string; accept: string[]; required?: boolean }
   | { kind: 'text'; key: string; label: string; placeholder?: string; required?: boolean }
+  /** Multi-line plain text (a `<textarea>`); `rows` is the visual height (default 3). */
+  | { kind: 'textarea'; key: string; label: string; placeholder?: string; rows?: number; required?: boolean }
   | { kind: 'number'; key: string; label: string; min?: number; max?: number; step?: number }
   | { kind: 'boolean'; key: string; label: string }
   | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[] }
