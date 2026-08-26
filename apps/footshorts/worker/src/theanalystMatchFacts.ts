@@ -12,7 +12,13 @@
  *   2. SCRAPE — finished fixtures that have a theanalyst_match_id but no
  *      opta_match_facts rows get their match-centre page scraped and the
  *      per-side stats upserted on (fixture_id, side), so cron re-runs are
- *      idempotent.
+ *      idempotent. The SAME render also yields the match timeline
+ *      (matchCentre.ts's extractMatchEvents — selectors still unverified),
+ *      written into fixture_events as a strict gap-fill: only fixtures with
+ *      zero existing events get rows, mirroring events.ts's "no events yet"
+ *      gate so the API-Football/Sportradar writers and this one never
+ *      double-write. --events-backfill opts stats-done, events-missing
+ *      fixtures into a re-scrape to drain the backlog.
  *
  * Deterministic parsing throughout — no Gemini. Runs every 3h, 30min after
  * the scores refresh flips fixtures to 'finished'
@@ -22,12 +28,14 @@
  *   npm run match-facts                # all tracked competitions
  *   npm run match-facts -- --competition=premier-league
  *   npm run match-facts -- --dry       # discover + scrape, print, no writes
+ *   npm run match-facts -- --dry --dump-events   # + Opta DOM dump (selector debugging)
+ *   npm run match-facts -- --events-backfill     # re-scrape stats-done fixtures lacking events
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { THEANALYST_COMPETITIONS, TheanalystCompetition } from './theanalyst/competitions';
 import { discoverMatchesForCompetition, matchFixtures, UnmappedFixture } from './theanalyst/matchDiscovery';
-import { fetchMatchFacts } from './theanalyst/matchCentre';
+import { fetchMatchFacts, type MatchEvent } from './theanalyst/matchCentre';
 import { closeBrowser } from './theanalyst/fetch';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -46,15 +54,31 @@ const LOOKBACK_DAYS = 30;
 // drains any backlog; a matchday burst never turns into a request burst.
 const MAX_SCRAPES_PER_RUN = 20;
 
-function parseArgs(argv: string[]): { competition: string | null; dry: boolean } {
+function parseArgs(argv: string[]): {
+  competition: string | null;
+  dry: boolean;
+  dumpEvents: boolean;
+  eventsBackfill: boolean;
+} {
   let competition: string | null = null;
   let dry = false;
+  let dumpEvents = false;
+  let eventsBackfill = false;
   for (const a of argv) {
     if (a.startsWith('--competition=')) competition = a.slice('--competition='.length) || null;
     else if (a === '--dry') dry = true;
+    // Print the match-centre widget's Opta class inventory + unparsed regions
+    // per scraped page — the selector-debugging aid for the (still unverified)
+    // event extractor. See matchCentre.ts's match-events section.
+    else if (a === '--dump-events') dumpEvents = true;
+    // Also re-scrape fixtures whose stats are already in opta_match_facts but
+    // that have no fixture_events rows yet — the one-time backlog drain after
+    // the events extractor lands. Off by default so a fixture whose page
+    // genuinely yields no events can't be re-scraped every cron run forever.
+    else if (a === '--events-backfill') eventsBackfill = true;
     else console.warn(`[match-facts] ignoring unknown arg: ${a}`);
   }
-  return { competition, dry };
+  return { competition, dry, dumpEvents, eventsBackfill };
 }
 
 type FixtureRow = {
@@ -131,15 +155,43 @@ async function discoverForCompetition(comp: TheanalystCompetition, dry: boolean)
   return resolved.size;
 }
 
+/**
+ * Which of `fixtureIds` already have ANY fixture_events rows. Scoped to the
+ * candidate ids and paged — an unscoped `select('fixture_id')` tops out at
+ * PostgREST's max_rows (1000) and silently truncates once the table outgrows
+ * it, making hydrated fixtures look eventless (same pitfall as
+ * content-source's fetchMatchtimeCoverage works around).
+ */
+async function loadFixturesWithEvents(fixtureIds: string[]): Promise<Set<string>> {
+  const has = new Set<string>();
+  if (fixtureIds.length === 0) return has;
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('fixture_events')
+      .select('fixture_id')
+      .in('fixture_id', fixtureIds)
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`fixture_events query failed: ${error.message}`);
+    for (const r of data ?? []) has.add((r as { fixture_id: string }).fixture_id);
+    if (!data || data.length < PAGE) break;
+  }
+  return has;
+}
+
 async function scrapeForCompetition(
   comp: TheanalystCompetition,
   budget: { remaining: number },
-  dry: boolean
+  opts: { dry: boolean; dumpEvents: boolean; eventsBackfill: boolean }
 ): Promise<number> {
+  const { dry, dumpEvents, eventsBackfill } = opts;
   const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
   const { data, error } = await supabase
     .from('fixtures')
-    .select('id, theanalyst_match_id, theanalyst_competition_id, theanalyst_season_id')
+    .select(
+      'id, theanalyst_match_id, theanalyst_competition_id, theanalyst_season_id, home_team_id, away_team_id'
+    )
     .eq('competition_slug', comp.competitionSlug)
     .not('theanalyst_match_id', 'is', null)
     .eq('status', 'finished')
@@ -151,6 +203,8 @@ async function scrapeForCompetition(
     theanalyst_match_id: string;
     theanalyst_competition_id: string | null;
     theanalyst_season_id: string | null;
+    home_team_id: string | null;
+    away_team_id: string | null;
   }>;
   if (mapped.length === 0) return 0;
 
@@ -161,9 +215,17 @@ async function scrapeForCompetition(
   if (existingError) throw new Error(`opta_match_facts query failed: ${existingError.message}`);
   const done = new Set((existing ?? []).map((r) => r.fixture_id));
 
+  const hasEvents = await loadFixturesWithEvents(mapped.map((f) => f.id));
+
   let scraped = 0;
+  let eventsWritten = 0;
   for (const fixture of mapped) {
-    if (done.has(fixture.id)) continue;
+    // Stats drive the scrape gate, exactly as before; --events-backfill
+    // additionally opts stats-done fixtures that still lack events into a
+    // re-scrape (bounded by the same per-run budget).
+    const needsStats = !done.has(fixture.id);
+    const needsEvents = eventsBackfill && !hasEvents.has(fixture.id);
+    if (!needsStats && !needsEvents) continue;
     if (budget.remaining <= 0) {
       console.log('[match-facts] per-run scrape budget exhausted — remaining fixtures wait for the next run');
       break;
@@ -182,7 +244,8 @@ async function scrapeForCompetition(
       facts = await fetchMatchFacts(
         fixture.theanalyst_competition_id,
         fixture.theanalyst_season_id,
-        fixture.theanalyst_match_id
+        fixture.theanalyst_match_id,
+        { dumpEvents }
       );
     } catch (e: any) {
       console.error(`[match-facts] scrape failed for fixture ${fixture.id}: ${e.message ?? e}`);
@@ -190,12 +253,16 @@ async function scrapeForCompetition(
     }
 
     if (dry) {
+      // `facts` includes the parsed `events` array, so a dry run shows both.
       console.log(`[match-facts] (dry) fixture ${fixture.id}:`, JSON.stringify(facts));
       scraped++;
       continue;
     }
 
     const now = new Date().toISOString();
+    // On a backfill-only pass this re-upserts (refreshes) already-stored stats
+    // from the same render — idempotent on (fixture_id, side), so one write
+    // path stays simpler than gating it.
     const { error: upsertError } = await supabase.from('opta_match_facts').upsert(
       (['home', 'away'] as const).map((side) => ({
         fixture_id: fixture.id,
@@ -212,14 +279,84 @@ async function scrapeForCompetition(
       continue;
     }
     scraped++;
+
+    // Timeline events: mutual gap-fill with the API-Football/Sportradar
+    // writers — write only while the fixture has ZERO fixture_events rows
+    // (mirrors events.ts's own "no events yet" gate, so neither side ever
+    // double-writes; first writer wins).
+    if (!hasEvents.has(fixture.id) && facts.events.length > 0) {
+      const n = await writeFixtureEvents(fixture, facts.events, now);
+      if (n > 0) {
+        eventsWritten += n;
+        hasEvents.add(fixture.id);
+        console.log(`[match-facts] fixture ${fixture.id}: +${n} timeline event(s)`);
+      }
+    }
   }
 
-  console.log(`[match-facts] ${comp.competitionSlug}: scraped ${scraped} match(es)`);
+  console.log(
+    `[match-facts] ${comp.competitionSlug}: scraped ${scraped} match(es), wrote ${eventsWritten} timeline event(s)`
+  );
   return scraped;
 }
 
+/**
+ * Insert a fixture's Opta timeline into fixture_events. Returns rows written
+ * (0 on skip/failure). Gap-fill only: a freshness re-check right before the
+ * write shrinks the race against events.ts's twice-daily run from run-length
+ * to seconds — and since both writers upsert on the same natural key, even a
+ * lost race degrades to idempotent overwrites rather than duplicates (modulo
+ * provider name-spelling drift).
+ */
+async function writeFixtureEvents(
+  fixture: { id: string; home_team_id: string | null; away_team_id: string | null },
+  events: MatchEvent[],
+  now: string
+): Promise<number> {
+  const { count, error: cntError } = await supabase
+    .from('fixture_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('fixture_id', fixture.id);
+  if (cntError) {
+    console.error(`[match-facts] events pre-check failed for fixture ${fixture.id}: ${cntError.message}`);
+    return 0;
+  }
+  if ((count ?? 0) > 0) return 0;
+
+  // Dedupe within the batch on the table's natural key — two rows sharing
+  // (minute, type, player) in one upsert abort the whole statement ("ON
+  // CONFLICT ... cannot affect row a second time"). extra_minute isn't part of
+  // the key, so a 90' and a 90+3' goal by the same player collapse to one row
+  // — a schema trade-off the API-Football writer shares.
+  const byKey = new Map<string, Record<string, unknown>>();
+  for (const e of events) {
+    byKey.set(`${e.minute}|${e.type}|${e.playerName ?? ''}`, {
+      fixture_id: fixture.id,
+      team_id: e.side === 'home' ? fixture.home_team_id : fixture.away_team_id,
+      side: e.side,
+      minute: e.minute,
+      extra_minute: e.extraMinute,
+      type: e.type,
+      detail: e.detail,
+      player_name: e.playerName,
+      assist_name: e.assistName,
+      updated_at: now,
+    });
+  }
+  const rows = [...byKey.values()];
+
+  const { error } = await supabase
+    .from('fixture_events')
+    .upsert(rows, { onConflict: 'fixture_id,minute,type,player_name' });
+  if (error) {
+    console.error(`[match-facts] events upsert failed for fixture ${fixture.id}: ${error.message}`);
+    return 0;
+  }
+  return rows.length;
+}
+
 async function run() {
-  const { competition, dry } = parseArgs(process.argv.slice(2));
+  const { competition, dry, dumpEvents, eventsBackfill } = parseArgs(process.argv.slice(2));
   const comps = THEANALYST_COMPETITIONS.filter(
     (c) => !competition || c.competitionSlug === competition
   );
@@ -233,7 +370,7 @@ async function run() {
   const budget = { remaining: MAX_SCRAPES_PER_RUN };
   for (const comp of comps) {
     await discoverForCompetition(comp, dry);
-    await scrapeForCompetition(comp, budget, dry);
+    await scrapeForCompetition(comp, budget, { dry, dumpEvents, eventsBackfill });
   }
 }
 

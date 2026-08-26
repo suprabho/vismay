@@ -1,5 +1,6 @@
 /**
- * theanalyst.com Opta match-centre scraper — per-match stats for both sides.
+ * theanalyst.com Opta match-centre scraper — per-match stats for both sides,
+ * plus (UNVERIFIED, see the match-events section below) the match timeline.
  *
  * VERIFIED LIVE (2026-08-24) against a real finished match. Two things were
  * wrong in the original (authored without site access) version:
@@ -56,6 +57,25 @@ export type MatchFactsPayload = {
   home: SideStats;
   away: SideStats;
 };
+
+/** One timeline event parsed off the match-centre widget, normalized to the
+ *  `fixture_events` vocabulary (types + detail spellings the MatchTimeline
+ *  renderer's regexes expect — see verticals/footshorts-viz MatchTimeline). */
+export type MatchEvent = {
+  side: 'home' | 'away';
+  /** "45+2'" → minute 45, extraMinute 2. */
+  minute: number;
+  extraMinute: number | null;
+  type: 'goal' | 'card' | 'subst' | 'var';
+  /** API-Football-style spelling: Normal Goal | Own Goal | Penalty |
+   *  Yellow Card | Red Card | Substitution | Missed Penalty. */
+  detail: string | null;
+  playerName: string | null;
+  /** Assister (goal) / player coming ON (subst). */
+  assistName: string | null;
+};
+
+export type MatchCentreData = MatchFactsPayload & { events: MatchEvent[] };
 
 export function matchCentreUrl(competitionId: string, seasonId: string, matchId: string): string {
   const params = new URLSearchParams({ competitionId, seasonId, matchId });
@@ -146,11 +166,201 @@ function extractLabelPairs($: cheerio.CheerioAPI): Map<string, [number, number]>
   return pairs;
 }
 
+// ── match events (timeline) ──────────────────────────────────────────────────
+//
+// ⚠️ UNVERIFIED SELECTORS — authored without site access (this sandbox can't
+// reach theanalyst.com), the same starting point the stats parser above had
+// before its 2026-08-24 live pass proved two assumptions wrong. Everything
+// below is a deliberately-isolated best guess: run the match-facts workflow
+// with dump_events=true, read `dumpUnparsedOptaRegions`' output in the CI log,
+// and rewrite `extractMatchEvents` against the real widget DOM
+// (docs/theanalyst-scraping.md tracks verification state). Extraction failures
+// are contained by the caller — stats scraping is never affected.
+
+/** "45+2'" / "90 +4" / "12'" → { minute, extraMinute }; null when no digits. */
+export function parseEventMinute(raw: string): { minute: number; extraMinute: number | null } | null {
+  const m = raw.match(/(\d{1,3})\s*(?:\+\s*(\d{1,2}))?\s*[''′]?/);
+  if (!m || !m[1]) return null;
+  const minute = Number(m[1]);
+  if (!Number.isFinite(minute) || minute > 130) return null;
+  const extra = m[2] ? Number(m[2]) : null;
+  return { minute, extraMinute: extra != null && Number.isFinite(extra) ? extra : null };
+}
+
+/** Classify an event row from its class names + text. Returns the normalized
+ *  type/detail pair, or null when the haystack matches nothing event-like.
+ *  Order matters: "own goal"/"penalty" both contain "goal"; missed penalties
+ *  must never land as goals (the timeline would render a phantom scorer). */
+function classifyEvent(haystack: string): { type: MatchEvent['type']; detail: string | null } | null {
+  const h = haystack.toLowerCase();
+  if (/own[\s-]?goal/.test(h)) return { type: 'goal', detail: 'Own Goal' };
+  if (/pen/.test(h) && /(miss|sav|fail)/.test(h)) return { type: 'var', detail: 'Missed Penalty' };
+  if (/(penalty|\(pen\)|\bpen\b)/.test(h)) return { type: 'goal', detail: 'Penalty' };
+  if (/(goal|scor)/.test(h)) return { type: 'goal', detail: 'Normal Goal' };
+  // Any second-yellow/dismissal signal maps to 'Red Card' (diverging from
+  // API-Football's 'Second Yellow card' on purpose: the renderer colors by
+  // /red/i, and a second yellow should show as a red).
+  if (/(red[\s-]?card|second[\s-]?yellow|sent[\s-]?off|dismiss|\bred\b)/.test(h)) {
+    return { type: 'card', detail: 'Red Card' };
+  }
+  if (/(yellow|card|book)/.test(h)) return { type: 'card', detail: 'Yellow Card' };
+  if (/sub/.test(h)) return { type: 'subst', detail: 'Substitution' };
+  if (/\bvar\b/.test(h)) return { type: 'var', detail: null };
+  return null;
+}
+
+/** Home/away from Opta's class conventions (the stats tables use
+ *  Opta-Home/Opta-Away cells). Takes plain class strings — row's own +
+ *  ancestors' first, then descendants' — first hit wins. */
+function sideFromClassLists(classes: string[]): 'home' | 'away' | null {
+  for (const cls of classes) {
+    if (/home/i.test(cls)) return 'home';
+    if (/away/i.test(cls)) return 'away';
+  }
+  return null;
+}
+
+/** Pull a player (and assist / player-on) out of an event row's text after
+ *  stripping minute tokens, parentheticals, and event keywords. Word-boundary
+ *  replaces so names like "Cardoso" survive the "card" strip. */
+function extractNames(text: string): { player: string | null; assist: string | null } {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  const assist = flat.match(/assist(?:ed by)?[:\s]+([^()|,;]+)/i)?.[1]?.trim() ?? null;
+  const playerOn = flat.match(/\b(?:on|in)[:\s]+([^()|,;]+)/i)?.[1]?.trim() ?? null;
+  let t = flat
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\b\d{1,3}\s*(?:\+\s*\d{1,2})?\s*[''′]?/g, ' ')
+    .replace(/\b(own goal|goal|penalty|pen|yellow|red|card|second|substitution|sub|assist(?:ed by)?|off|on|var|missed|scored?)\b/gi, ' ')
+    .replace(/[|·•:,;–—-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { player: t || null, assist: assist ?? playerOn };
+}
+
+// Containers a timeline/events sub-widget plausibly lives in. Classic Opta
+// widgets are all `Opta-*`-classed; the real name comes from the CI dump.
+const EVENT_CONTAINER_SELECTOR = [
+  '[class*="Opta-MatchEvents"]',
+  '[class*="Opta-Match-Events"]',
+  '[class*="Opta-Events"]',
+  '[class*="Opta-Event"]',
+  '[class*="Opta-Timeline"]',
+  '[class*="Opta-Key-Events"]',
+  '[class*="Opta-Commentary"]',
+].join(', ');
+
+/**
+ * Best-guess event extraction (UNVERIFIED — see the section banner). Scans
+ * candidate event containers for rows carrying a parseable minute, classifies
+ * each from its class names + text, and resolves the side from Opta's
+ * home/away class conventions. Rows missing a minute, a classification, or a
+ * side are skipped (the write path can't use them) and counted in a warning.
+ */
+export function extractMatchEvents($: cheerio.CheerioAPI): MatchEvent[] {
+  const events: MatchEvent[] = [];
+  let skipped = 0;
+  const seenRows = new Set<unknown>();
+
+  $(EVENT_CONTAINER_SELECTOR).each((_, container) => {
+    $(container)
+      .find('li, tr')
+      .each((__, row) => {
+        if (seenRows.has(row)) return; // overlapping container selectors
+        seenRows.add(row);
+        if ($(row).find('li, tr').length > 0) return; // only leaf rows
+
+        const text = $(row).text().replace(/\s+/g, ' ').trim();
+        if (!text) return;
+        const minute = parseEventMinute(text);
+        if (!minute) return; // not an event row (headers, team names, …)
+
+        const selfAndAncestorClasses: string[] = [];
+        {
+          let cur = $(row);
+          for (let i = 0; i < 6 && cur.length; i++) {
+            const cls = cur.attr('class');
+            if (cls) selfAndAncestorClasses.push(cls);
+            cur = cur.parent();
+          }
+        }
+        const descendantClasses = $(row)
+          .find('[class]')
+          .toArray()
+          .map((n) => $(n).attr('class') ?? '');
+
+        const kind = classifyEvent(`${selfAndAncestorClasses[0] ?? ''} ${descendantClasses.join(' ')} ${text}`);
+        if (!kind) return;
+
+        const side = sideFromClassLists([...selfAndAncestorClasses, ...descendantClasses]);
+        if (!side) {
+          skipped++;
+          return;
+        }
+
+        const { player, assist } = extractNames(text);
+        events.push({
+          side,
+          minute: minute.minute,
+          extraMinute: minute.extraMinute,
+          type: kind.type,
+          detail: kind.detail,
+          playerName: player,
+          assistName: assist,
+        });
+      });
+  });
+
+  if (skipped > 0) {
+    console.warn(`[match-centre] ${skipped} event row(s) skipped (no home/away side resolved)`);
+  }
+  return events;
+}
+
+/**
+ * Selector-debugging aid for the CI loop (workflow input dump_events=true):
+ * an inventory of every Opta-ish class token on the page, plus a text peek at
+ * each top-level Opta region OUTSIDE the two parsed stats tables — enough to
+ * read the real event-widget structure straight out of the workflow log
+ * without shipping page HTML.
+ */
+export function dumpUnparsedOptaRegions($: cheerio.CheerioAPI): string {
+  const lines: string[] = [];
+
+  const counts = new Map<string, number>();
+  $('[class*="Opta"], [class*="opta"]').each((_, el) => {
+    for (const token of ($(el).attr('class') ?? '').split(/\s+/)) {
+      if (/opta/i.test(token)) counts.set(token, (counts.get(token) ?? 0) + 1);
+    }
+  });
+  lines.push(`[dump] ${counts.size} distinct Opta class token(s):`);
+  for (const [token, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+    lines.push(`  ${n}× ${token}`);
+  }
+
+  const regions = $('[class*="Opta"]')
+    .toArray()
+    .filter(
+      (el) =>
+        $(el).closest('table.Opta-Stats-Bars, table.Opta-shotoverview').length === 0 &&
+        $(el).parents('[class*="Opta"]').length === 0
+    );
+  lines.push(`[dump] ${regions.length} top-level Opta region(s) outside the stats tables:`);
+  for (const el of regions.slice(0, 15)) {
+    const cls = ($(el).attr('class') ?? '').trim();
+    const text = $(el).text().replace(/\s+/g, ' ').trim().slice(0, 500);
+    lines.push(`  <${'tagName' in el ? (el as { tagName: string }).tagName : '?'} class="${cls}"> ${text}`);
+  }
+  if (regions.length > 15) lines.push(`  … ${regions.length - 15} more region(s) elided`);
+
+  return lines.join('\n');
+}
+
 export async function fetchMatchFacts(
   competitionId: string,
   seasonId: string,
-  matchId: string
-): Promise<MatchFactsPayload> {
+  matchId: string,
+  opts?: { dumpEvents?: boolean }
+): Promise<MatchCentreData> {
   const url = matchCentreUrl(competitionId, seasonId, matchId);
   const html = await fetchRenderedHtml(url, {
     waitForSelector: 'table.Opta-Stats-Bars, table.Opta-shotoverview',
@@ -193,5 +403,22 @@ export async function fetchMatchFacts(
     away.raw_stats[label] = a;
   }
 
-  return { home, away };
+  // Timeline events from the SAME render — zero extra page fetches. Extraction
+  // is isolated: a selector failure here (the events parser is still
+  // unverified, see the section banner above) degrades to an empty list and
+  // can never break the stats scrape.
+  let events: MatchEvent[] = [];
+  try {
+    events = extractMatchEvents($);
+  } catch (e) {
+    console.warn(
+      `[match-centre] event extraction failed (stats unaffected): ${(e as Error).message} (${url})`
+    );
+  }
+  if (opts?.dumpEvents) {
+    console.log(`[match-centre] ${url}\n[match-centre] parsed ${events.length} event(s): ${JSON.stringify(events)}`);
+    console.log(dumpUnparsedOptaRegions($));
+  }
+
+  return { home, away, events };
 }

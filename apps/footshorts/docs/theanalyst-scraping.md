@@ -18,7 +18,7 @@ verification checklist that MUST pass before the crons are trusted.
 |---|---|---|---|---|
 | General news | `worker/src/theanalyst/news.ts` | `ingest.ts` (`SCRAPE_SOURCES` loop) | `articles` (same pipeline as RSS: dedupe → Gemini summary → entity tags) | hourly, inside `footshorts-ingest.yml` |
 | Opta Power Rankings widget | `worker/src/theanalyst/powerRankings.ts` | `theanalystPowerRankings.ts` | `power_rankings`, as a **draft** for admin review — never auto-published | daily Mon-Fri, `footshorts-theanalyst-power-rankings.yml` (+ admin "Run scrape" button) |
-| Match centre stats | `worker/src/theanalyst/matchCentre.ts` + `matchDiscovery.ts` | `theanalystMatchFacts.ts` | `opta_match_facts` (per-side upsert) + theanalyst ids persisted on `fixtures` | 3-hourly (30 min after the scores refresh), `footshorts-theanalyst-match-facts.yml` |
+| Match centre stats + timeline | `worker/src/theanalyst/matchCentre.ts` + `matchDiscovery.ts` | `theanalystMatchFacts.ts` | `opta_match_facts` (per-side upsert) + theanalyst ids persisted on `fixtures` + `fixture_events` (timeline, **strict gap-fill**: only fixtures with zero existing events get rows — mirrors `events.ts`'s "no events yet" gate so the API-Football/Sportradar writers and this one never double-write; first writer wins) | 3-hourly (30 min after the scores refresh), `footshorts-theanalyst-match-facts.yml` |
 
 ### URL shapes
 
@@ -101,6 +101,7 @@ patch:
 | `theanalyst/powerRankings.ts` | the ranked list is a `<table>` with a `<thead>` (columns: rank/team/rating/ranking change), an `<ol>`, or "N. Team" text lines (three strategies tried in order) — **verified live**: it's the table, column-mapped by header text. Fixed a real bug along the way: `toNumber()` returned `0` (not `null`) for any digit-free string, so the "is this a team name, not a number" guard rejected every row. |
 | `theanalyst/matchCentre.ts` | stat rows contain a text label (spellings in `STAT_LABELS`) plus two numbers, home first — **confirmed FALSE, rewritten**: the widget renders six distinct `table.Opta-Stats-Bars` sub-widgets (two-`<tr>` label/data pairs, where the data row's middle bar `<div>` duplicates both values as text — a naive "N numbers near this label" scan over-collects) plus a separate `table.Opta-shotoverview` for xG (one `<tr>` per stat, `Opta-Home`/`Opta-StatLabel`/`Opta-Away`). Verified end-to-end against a real finished match (Arsenal 3-0 Coventry): xG 1.88 vs 0.2, 20 shots, 64.1% possession, 40+ additional raw stats, all correctly split home/away. Real label spellings also differed from the guesses: "Total Team xG", "Fouls conceded", "Corners won"/"Corner awarded" (STAT_LABELS updated). "Big chances"/"big chances missed" didn't appear on the one match checked — still unverified. |
 | `theanalyst/matchDiscovery.ts` | the match centre without a `matchId` lists the competition's matches as links carrying `?matchId=`, with "Home vs Away" link text — **confirmed FALSE, rewritten**: no such listing view exists at the match-centre URL at any layer. The real listing is a separate page — see the discovery section below. |
+| `theanalyst/matchCentre.ts` `extractMatchEvents` | **UNVERIFIED — authored without site access.** Assumes the widget carries a timeline/events sub-widget in the same snapshot as the stats tables, in an `Opta-*`-classed container (`Opta-Events` / `Opta-Timeline` / `Opta-Commentary` / …), with leaf `li`/`tr` rows each carrying a parseable minute (`45+2'`), an event kind readable from class names + text, and home/away encoded via Opta's `*Home*`/`*Away*` class convention (as the stats tables do). Verify via a `workflow_dispatch` run with `dry=true, dump_events=true` and rewrite against the dumped regions; if the dump shows NO events in the snapshot (panel behind a tab / late-loading), switch the fetch to `newRenderedPage()` + a tab click (the matchDiscovery precedent). Extraction failures are isolated — stats scraping is unaffected either way. |
 | `theanalyst/competitions.ts` | the Premier League id pair (taken from the feature request's example URL) is current — **superseded**: ids are no longer hand-curated at all, see the competition id map section above |
 | `sources.ts` | `SCRAPE_SOURCES[].listingUrl` points at a real article-listing page |
 
@@ -194,3 +195,15 @@ manually first. Do not rely on their schedules until all of this passes:
    publishes; fix the placeholder cron. **Done** — it's not weekly, the
    widget updates daily Mon-Fri per its own footer copy; cron is
    `0 9 * * 1-5` in `footshorts-theanalyst-power-rankings.yml`.
+7. **Match timeline extraction** (`extractMatchEvents` — see the fragility
+   table): dispatch `footshorts-theanalyst-match-facts.yml` with
+   `competition=<one with recent finished fixtures>, dry=true,
+   dump_events=true`, read the dumped Opta class inventory + regions in the
+   job log, and fix the event selectors until the printed events match a real
+   match report (scorers/minutes/cards you can cross-check). Then one real
+   competition-limited run (confirm `fixture_events` rows land and the share
+   card studio's Match-timeline card renders them), then a few
+   `events_backfill=true` dispatches to drain the stats-done/events-missing
+   backlog (each capped by the 20-page budget). Timeline extraction rides the
+   SAME page render as the stats scrape — no extra requests on the default
+   path; only `events_backfill` re-fetches (bounded, one-time).
