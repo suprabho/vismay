@@ -62,6 +62,8 @@ type CandidateArticle = {
   snippet: string | null;
   imageUrl: string | null;
   publishedAt: string | null;
+  /** Source feed language ('es', ...). Omitted/'en' = English. */
+  language?: string;
 };
 
 async function isKnownUrl(urlHash: string): Promise<boolean> {
@@ -115,10 +117,17 @@ async function processCandidateArticle(
       headline: candidate.headline,
       body: candidate.body,
       publisher: candidate.publisher,
+      language: candidate.language,
     });
 
     const summaryAt = new Date().toISOString();
     const summaryModel = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+
+    // For non-English sources, replace the stored headline with Gemini's
+    // English translation (the original stays available at the linked URL).
+    const isNonEnglish = Boolean(candidate.language && candidate.language !== 'en');
+    const translatedHeadline =
+      isNonEnglish && gemini.headline_en?.trim() ? { headline: gemini.headline_en.trim() } : {};
 
     if (!gemini.is_football_news) {
       // Article isn't primarily about football — hide it from the feed. Stash the topic_category
@@ -126,6 +135,7 @@ async function processCandidateArticle(
       await supabase
         .from('articles')
         .update({
+          ...translatedHeadline,
           summary: gemini.summary,
           summary_model: summaryModel,
           summary_at: summaryAt,
@@ -143,6 +153,7 @@ async function processCandidateArticle(
     await supabase
       .from('articles')
       .update({
+        ...translatedHeadline,
         summary: gemini.summary,
         summary_model: summaryModel,
         summary_at: summaryAt,
@@ -209,6 +220,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
         snippet: item.contentSnippet ?? item.content ?? null,
         imageUrl: extractImage(item),
         publishedAt: item.isoDate ?? item.pubDate ?? null,
+        language: source.language,
       },
       stats
     );
