@@ -104,6 +104,27 @@ export function parseStoryConfigText(
     })
   }
 
+  const EASING_NAMES = new Set(['linear', 'ease', 'easeIn', 'easeOut', 'easeInOut'])
+  const validateEasing = (label: string, easing: unknown): void => {
+    if (easing === undefined) return
+    if (typeof easing === 'string') {
+      if (!EASING_NAMES.has(easing)) {
+        throw new Error(`${label}: unknown easing '${easing}'`)
+      }
+      return
+    }
+    const cb = (easing as { cubicBezier?: unknown })?.cubicBezier
+    if (
+      !Array.isArray(cb) ||
+      cb.length !== 4 ||
+      cb.some((n) => typeof n !== 'number' || !Number.isFinite(n))
+    ) {
+      throw new Error(
+        `${label}: easing must be a named easing or { cubicBezier: [n,n,n,n] }`
+      )
+    }
+  }
+
   // Validate the optional Tier-1 stage (`defaults.stage`). Shape checks only —
   // beat selectors are resolved against units later in `resolveStage`, and a
   // body's deep config validates downstream via its module's `parseConfig`.
@@ -140,14 +161,40 @@ export function parseStoryConfigText(
       if (!Array.isArray(ent.keyframes) || ent.keyframes.length === 0) {
         throw new Error(`${label} ('${ent.id}'): 'keyframes' must be a non-empty array`)
       }
-      ;(ent.keyframes as unknown[]).forEach((kf, k) => {
+      // Per-beat grouping (by textual identity) for the sub-keyframe rules:
+      // at most one `t`-less keyframe per beat, no duplicate `t`, and
+      // `delayMs`/`durationMs` only on a beat's sole keyframe (ms-mode).
+      const beatGroups = new Map<string, { tless: number; ts: Set<number>; count: number; timed: boolean }>()
+      const kfList = ent.keyframes as unknown[]
+      const beatKeyOf = (at: unknown): string =>
+        typeof at === 'number'
+          ? `#${at}`
+          : `${String((at as { section?: unknown }).section)}/${Number((at as { sub?: unknown }).sub ?? 0)}`
+      kfList.forEach((kf, k) => {
         const klabel = `${label} ('${ent.id}') keyframes[${k}]`
         if (!kf || typeof kf !== 'object') throw new Error(`${klabel}: must be an object`)
         const at = (kf as { at?: unknown }).at
         const atOk =
           typeof at === 'number' ||
           (typeof at === 'object' && at !== null && 'section' in (at as object))
-        if (!atOk) throw new Error(`${klabel}: 'at' must be a unit index or { section, sub? }`)
+        if (!atOk) throw new Error(`${klabel}: 'at' must be a unit index or { section, sub?, t? }`)
+        const t = typeof at === 'object' ? (at as { t?: unknown }).t : undefined
+        if (t !== undefined && (typeof t !== 'number' || !Number.isFinite(t) || t < 0 || t > 1)) {
+          throw new Error(`${klabel}: 'at.t' must be a number between 0 and 1`)
+        }
+        const delayMs = (kf as { delayMs?: unknown }).delayMs
+        const durationMs = (kf as { durationMs?: unknown }).durationMs
+        for (const [name, v] of [['delayMs', delayMs], ['durationMs', durationMs]] as const) {
+          if (v !== undefined && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) {
+            throw new Error(`${klabel}: '${name}' must be a number >= 0`)
+          }
+        }
+        if (t !== undefined && (delayMs !== undefined || durationMs !== undefined)) {
+          throw new Error(
+            `${klabel}: 't' sub-keyframes and 'delayMs'/'durationMs' are mutually exclusive on one keyframe`
+          )
+        }
+        validateEasing(klabel, (kf as { easing?: unknown }).easing)
         const tf = (kf as { transform?: unknown }).transform
         if (!tf || typeof tf !== 'object') throw new Error(`${klabel}: missing 'transform'`)
         const op = (tf as { opacity?: unknown }).opacity
@@ -158,7 +205,28 @@ export function parseStoryConfigText(
         if (zb !== undefined && zb !== 'behind' && zb !== 'mid' && zb !== 'front') {
           throw new Error(`${klabel}: transform.zBand must be 'behind' | 'mid' | 'front'`)
         }
+        const key = beatKeyOf(at)
+        const group = beatGroups.get(key) ?? { tless: 0, ts: new Set<number>(), count: 0, timed: false }
+        group.count++
+        if (t === undefined) group.tless++
+        else if (group.ts.has(t)) {
+          throw new Error(`${label} ('${ent.id}'): duplicate keyframe t=${t} for beat ${key}`)
+        } else group.ts.add(t)
+        if (delayMs !== undefined || durationMs !== undefined) group.timed = true
+        beatGroups.set(key, group)
       })
+      for (const [key, group] of beatGroups) {
+        if (group.tless > 1) {
+          throw new Error(
+            `${label} ('${ent.id}'): more than one keyframe without 't' for beat ${key} — give sub-keyframes explicit 't' values`
+          )
+        }
+        if (group.count > 1 && group.timed) {
+          throw new Error(
+            `${label} ('${ent.id}'): 'delayMs'/'durationMs' are only valid on a beat's sole keyframe — use 't' sub-keyframes for multi-step beats (beat ${key})`
+          )
+        }
+      }
       if (ent.role === 'object' && (ent.interactive === true || ent.zFocusCapable === true)) {
         console.warn(
           `[stage] ${label} ('${ent.id}'): 'interactive'/'zFocusCapable' are ignored for objects`
@@ -167,10 +235,97 @@ export function parseStoryConfigText(
     })
   }
 
+  // Per-section timeline clock + boundary transition (v0: triggered-only).
+  const validateSectionTiming = (label: string, s: Record<string, unknown>): void => {
+    const clock = s.clock
+    if (clock !== undefined) {
+      if (clock === 'scrubbed') {
+        throw new Error(
+          `${label}: clock 'scrubbed' is reserved for a future release (runway scrolling); v0 supports 'triggered' only`
+        )
+      }
+      if (clock !== 'triggered') {
+        throw new Error(`${label}: 'clock' must be 'triggered'`)
+      }
+    }
+    if (s.runway !== undefined) {
+      throw new Error(`${label}: 'runway' is reserved for clock: 'scrubbed' (not yet implemented)`)
+    }
+    const timelineMs = s.timelineMs
+    if (
+      timelineMs !== undefined &&
+      (typeof timelineMs !== 'number' || !Number.isFinite(timelineMs) || timelineMs <= 0)
+    ) {
+      throw new Error(`${label}: 'timelineMs' must be a number > 0`)
+    }
+    const transition = s.transition
+    if (transition === undefined) return
+    if (!transition || typeof transition !== 'object') {
+      throw new Error(`${label}: 'transition' must be an object`)
+    }
+    const tr = transition as Record<string, unknown>
+    if (
+      tr.durationMs !== undefined &&
+      (typeof tr.durationMs !== 'number' || !Number.isFinite(tr.durationMs) || tr.durationMs <= 0)
+    ) {
+      throw new Error(`${label}: transition.durationMs must be a number > 0`)
+    }
+    validateEasing(`${label} transition`, tr.easing)
+    const bg = tr.background
+    if (bg !== undefined && bg !== 'hold' && bg !== 'crossfade') {
+      if (bg === 'flyTo') {
+        throw new Error(
+          `${label}: transition.background 'flyTo' is reserved; the map's camera transition is configured via map.flySpeed today`
+        )
+      }
+      throw new Error(`${label}: transition.background must be 'hold' | 'crossfade'`)
+    }
+    const fg = tr.foreground
+    if (fg !== undefined) {
+      if (!fg || typeof fg !== 'object') {
+        throw new Error(`${label}: transition.foreground must be an object`)
+      }
+      const spec = fg as Record<string, unknown>
+      const kind = spec.kind
+      if (kind === 'scale' || kind === 'wipe' || kind === 'blur') {
+        throw new Error(
+          `${label}: transition.foreground kind '${kind}' is reserved, not yet implemented — use 'cut' | 'fade' | 'slide'`
+        )
+      }
+      if (kind !== 'cut' && kind !== 'fade' && kind !== 'slide') {
+        throw new Error(`${label}: transition.foreground.kind must be 'cut' | 'fade' | 'slide'`)
+      }
+      const dir = spec.direction
+      if (dir !== undefined) {
+        if (kind !== 'slide') {
+          throw new Error(`${label}: transition.foreground.direction is only valid with kind 'slide'`)
+        }
+        if (dir !== 'left' && dir !== 'right' && dir !== 'up' && dir !== 'down') {
+          throw new Error(
+            `${label}: transition.foreground.direction must be 'left' | 'right' | 'up' | 'down'`
+          )
+        }
+      }
+      if (
+        spec.durationMs !== undefined &&
+        (typeof spec.durationMs !== 'number' ||
+          !Number.isFinite(spec.durationMs) ||
+          spec.durationMs <= 0)
+      ) {
+        throw new Error(`${label}: transition.foreground.durationMs must be a number > 0`)
+      }
+      validateEasing(`${label} transition.foreground`, spec.easing)
+    }
+  }
+
   raw.sections.forEach((s, i) => {
     if (!s || typeof s !== 'object') {
       throw new Error(`Section ${i} in ${slug}.config.yaml is not an object`)
     }
+    validateSectionTiming(
+      `Section ${i} in ${slug}.config.yaml`,
+      s as unknown as Record<string, unknown>
+    )
     const hasText = typeof s.text === 'string' && s.text.trim().length > 0
     const hasSubs = Array.isArray(s.subsections) && s.subsections.length > 0
     if (!hasText && !hasSubs) {

@@ -5,6 +5,9 @@ import type { CSSProperties, ComponentType } from 'react'
 import type { ResolvedUnit, VizLayer, VizLayerStyle } from './lib/storyConfig.types'
 import { resolveSlots } from './lib/resolveSlots'
 import { getVizModule } from './registry'
+import { cssEasing } from './lib/stageEasing'
+import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion'
+import { resolveBackgroundTransition, type ResolvedBackgroundFade } from './lib/sectionTransition'
 import type {
   VizCaptureHandle,
   VizModule,
@@ -38,7 +41,8 @@ interface BackgroundVizSlotProps {
 function layerWrapperStyle(
   style: VizLayerStyle | undefined,
   index: number,
-  visible: boolean
+  visible: boolean,
+  fade: ResolvedBackgroundFade | null = null
 ): CSSProperties {
   const s = style ?? {}
   const isPositioned = s.position != null || s.size != null
@@ -51,8 +55,17 @@ function layerWrapperStyle(
     zIndex: s.zIndex ?? index,
     pointerEvents: s.pointerEvents ?? 'none',
     visibility: visible ? 'visible' : 'hidden',
+    // Hidden layers always sit at opacity 0 (the authored opacity is the
+    // visible ceiling). With no `transition` this is pixel-identical to the
+    // plain visibility flip; when the incoming section declares a crossfade,
+    // opacity animates and `visibility: hidden` lands only after the fade
+    // (delayed-visibility) so the outgoing layer fades out instead of popping.
+    opacity: visible ? s.opacity ?? 1 : 0,
   }
-  if (s.opacity != null) css.opacity = s.opacity
+  if (fade) {
+    const opacityRamp = `opacity ${fade.durationMs}ms ${cssEasing(fade.easing)}`
+    css.transition = visible ? opacityRamp : `${opacityRamp}, visibility 0s ${fade.durationMs}ms`
+  }
   if (s.blendMode) css.mixBlendMode = s.blendMode
   if (s.size?.width) css.width = s.size.width
   if (s.size?.height) css.height = s.size.height
@@ -198,6 +211,8 @@ interface PerUnitLayerProps {
   activeUnit: number
   mode: BackgroundVizSlotProps['mode']
   noteReady: () => void
+  /** Crossfade for the current boundary (incoming section's `transition.background`), or null = today's instant flip. */
+  fade: ResolvedBackgroundFade | null
 }
 
 function PerUnitLayer({
@@ -206,6 +221,7 @@ function PerUnitLayer({
   activeUnit,
   mode,
   noteReady,
+  fade,
 }: PerUnitLayerProps) {
   const captureRef = useRef<VizCaptureHandle | null>(null)
   const LazyComponent = useMemo(
@@ -239,7 +255,7 @@ function PerUnitLayer({
   }, [sampleLayer, entry.module, slug])
   if (!sampleLayer || config == null) return null
   return (
-    <div style={layerWrapperStyle(sampleLayer.style, entry.index, isVisible)}>
+    <div style={layerWrapperStyle(sampleLayer.style, entry.index, isVisible, fade)}>
       <Suspense fallback={null}>
         <LazyComponent
           slug={slug}
@@ -277,8 +293,16 @@ export default function BackgroundVizSlot({
   containerMode = 'viewport',
 }: BackgroundVizSlotProps) {
   const instances = useMemo(() => buildInstances(units), [units])
+  const reducedMotion = usePrefersReducedMotion()
   if (instances.length === 0) return null
   const isViewport = containerMode === 'viewport'
+  // Boundary crossfade owned by the INCOMING section: it drives both its own
+  // layer's fade-in and the outgoing layer's fade-out. Off in capture/print
+  // (deterministic frames) and under reduced motion — instant flip, as today.
+  const fade =
+    mode === 'capture' || mode === 'print' || reducedMotion
+      ? null
+      : resolveBackgroundTransition(units[activeUnit]?.parentConfig.transition)
   return (
     <div
       className={
@@ -311,6 +335,7 @@ export default function BackgroundVizSlot({
               activeUnit={activeUnit}
               mode={mode}
               noteReady={noteReady}
+              fade={fade}
             />
           )
         })}

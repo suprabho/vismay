@@ -28,7 +28,7 @@ The stage tier mounts once and persists across every beat. Scroll down — the a
 
 ## Ascent
 
-Now a *subject* enters. The rocket fades in from the upper-right and climbs as you scroll. Its lifetime starts here — before this beat it isn't on stage at all.
+Now a *subject* enters — on a slide timeline. Over this beat's 1.6-second choreography the rocket swings in from the right, overshoots low, then settles: three sub-keyframes (`t: 0 / 0.45 / 1`) on one beat, not one tween. Its lifetime starts here — before this beat it isn't on stage at all.
 
 ## Max-Q
 
@@ -36,11 +36,11 @@ Peak dynamic pressure. This beat has no keyframe of its own — the rocket's pos
 
 ## Orbit
 
-Z-focus. The rocket steps **in front** of this text panel — its keyframe sets `zBand: front`, lifting it above the foreground. That front/back capability is what separates a subject from an object.
+Z-focus — staggered. This text fades in first (this section's boundary is a `fade` transition, and this panel carries `revealDelayMs: 250`), a faint particle field crossfades up behind it, then the rocket waits 200 ms and steps **in front** of the panel over 900 ms (`zBand: front`), with a second spark field drifting in 450 ms behind it. Four elements, four clocks, one beat.
 
 ## Re-entry
 
-The descent begins. The rocket scales down and tips over as it heads toward its exit, which lands just after this beat.
+The descent begins — and this section *slides up* into place while Orbit's particle background crossfades back out (each boundary owns its own transition). The rocket scales down and tips over as it heads toward its exit, which lands just after this beat.
 
 ## Touchdown
 

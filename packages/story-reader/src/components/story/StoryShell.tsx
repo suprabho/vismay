@@ -11,7 +11,7 @@ import {
   StageVizSlot,
   StoryShellProvider,
 } from '@vismay/viz-engine'
-import { resolveSlots, resolveSlotsFlat, resolveStage } from '@vismay/viz-engine'
+import { resolveSlots, resolveSlotsFlat, resolveStage, resolveForegroundTransition } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
 import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette, VizLayer } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
@@ -209,6 +209,21 @@ export default function StoryShell({
 
   const current = units[activeUnit] ?? units[0]
   const activeSub = current?.subIndex ?? 0
+
+  // Section-enter transition gating for the FIXED-OVERLAY foreground paths
+  // (map format / autoplay / capture): the overlay remounts per unit, but the
+  // boundary belongs to the parent SECTION — sub-beat swaps inside one
+  // section keep today's hard cut. The deck in-flow path gates per-unit
+  // inside MapStorySection instead.
+  const prevParentRef = useRef<number | null>(null)
+  const parentChanged =
+    current != null && prevParentRef.current !== current.parentIndex
+  useEffect(() => {
+    prevParentRef.current = current?.parentIndex ?? null
+  }, [current?.parentIndex])
+  const overlayEnterTransition = parentChanged
+    ? resolveForegroundTransition(current?.parentConfig.transition)
+    : null
   // Full resolved shape so we can dispatch between the legacy flat chart-panel
   // path and the region-aware ForegroundLayoutSlot. Legacy stories stay on the
   // flat path (zero-visible-change); stories that opt in to
@@ -472,6 +487,7 @@ export default function StoryShell({
               unitKey={`${current?.parentIndex ?? 0}-${current?.subIndex ?? 0}`}
               activeStep={activeSub}
               mode={mode}
+              enterTransition={overlayEnterTransition}
             />
           </div>
         </div>
@@ -493,6 +509,7 @@ export default function StoryShell({
             activeStep={activeSub}
             mode={mode}
             isPortrait={isPortrait}
+            enterTransition={overlayEnterTransition}
           />
         </div>
       )}

@@ -147,6 +147,12 @@ export default function MapStorySection({
       mode={mode}
       isPortrait={isPortrait}
       isActive={isActive}
+      // The section-enter transition belongs to the SECTION boundary: only
+      // the section's first unit plays it (the layout slot self-resolves on
+      // `undefined`); later sub-units/slices keep today's hard cut (null).
+      enterTransition={
+        unit.subIndex === 0 && (unit.sliceIndex ?? 0) === 0 ? undefined : null
+      }
     />
   )
   // Deck-format kinds (other than cover/hero) carry their visual entirely

@@ -88,6 +88,12 @@ export interface VizLayerStyle {
   /** Optional chrome around the layer's wrapper box. */
   panel?: VizLayerPanel
   /**
+   * Extra delay (ms) added to this layer's section-enter transition, for
+   * staggered reveals within a beat. No effect unless the layer's section
+   * declares a `transition.foreground` other than 'cut'.
+   */
+  revealDelayMs?: number
+  /**
    * Per-slot overrides applied when `useIsMobile()` is true (portrait). Shallow-
    * merged over the base style — e.g. `portrait: { size: { height: '38vh' } }`
    * to tune a chart's stacked height, or `portrait: { opacity: 0 }` to drop a

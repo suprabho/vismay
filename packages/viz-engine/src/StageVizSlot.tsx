@@ -1,112 +1,114 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useLayoutEffect, useRef, type CSSProperties } from 'react'
 import { useStoryShell } from './StoryShellContext'
 import { resolveAssetUrl } from './lib/assetUrl'
+import { sampleBeat } from './lib/resolveStage'
+import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion'
 import type {
   ResolvedStage,
   ResolvedStageEntity,
-  ResolvedStageFrame,
-  StageEasing,
+  StageTransform,
 } from './lib/storyConfig.types'
 
 /**
- * Tier-1 "stage" renderer — the 3rd persistent tier (after background +
- * foreground). Paints flat 2D sprites for the story's subjects & objects,
- * reading `frames[activeUnit]` from the densified `ResolvedStage` and either
- * CSS-transitioning between beats (live) or snapping (capture / reduced-motion,
- * the map module's `jumpTo` analog) so headless video frames are deterministic.
+ * Stage renderer — the 3rd persistent tier (after background + foreground).
+ * Paints flat 2D sprites for the story's subjects & objects.
+ *
+ * v2 (the slide timeline): instead of one global CSS transition per beat
+ * change, a rAF clock plays the active beat's compiled segment list
+ * (`frames[activeUnit].segments`) — per-entity delays, durations, easings and
+ * sub-keyframes — sampling poses via the pure `sampleBeat` and writing
+ * transform/opacity imperatively. Interrupts (fast or reverse scroll) retarget
+ * from the last SAMPLED pose, so motion stays continuous. Capture
+ * (`isCapture`) and reduced-motion write the settled pose synchronously with
+ * no clock — byte-identical to the original snap path, keeping headless video
+ * frames deterministic. See docs/stage-timeline-and-section-transitions.md.
  *
  * Two fixed containers bracket the foreground (z-10): a BACK container painted
  * behind the scrolling content (z-auto, earlier in the DOM than the snap
  * container) for `zBand: 'behind' | 'mid'`, and a FRONT container (z-30, above
  * the foreground, below the logo at z-50) for `zBand: 'front'` (subject
  * z-focus). An entity moves between containers across beats by changing its
- * keyframe `zBand`.
+ * keyframe `zBand` (band membership is per-beat settled — never mid-tween).
  *
- * Tier 1 renders only `content.type === 'image'`; the VizRef shape lets a
- * Tier-2 3D body (e.g. `starship:viewer`) slot in later without re-authoring.
- * No `useStoryReadiness` wiring: StoryShell's live/autoplay path doesn't gate
- * on `window.__pdfReady__` (the PDF report/slides shells, which DO, don't
- * render the stage — that's a Tier-2 follow-up), and a second writer would
- * clobber that flag. Capture determinism comes from the snap path below.
+ * Renders only `content.type === 'image'`; the VizRef shape lets a Tier-2 3D
+ * body (e.g. `starship:viewer`) slot in later without re-authoring. No
+ * `useStoryReadiness` wiring: the PDF shells (which gate on
+ * `window.__pdfReady__`) don't render the stage, and a second writer would
+ * clobber that flag.
  */
 
-const TWEEN_MS = 700
 const FRONT_Z = 30
 
-function cssEasing(e: StageEasing): string {
-  if (typeof e === 'object') return `cubic-bezier(${e.cubicBezier.join(',')})`
-  switch (e) {
-    case 'easeIn':
-      return 'ease-in'
-    case 'easeOut':
-      return 'ease-out'
-    case 'easeInOut':
-      return 'ease-in-out'
-    case 'ease':
-      return 'ease'
-    default:
-      return 'linear'
-  }
+function clampIdx(activeUnit: number, len: number): number {
+  return Math.max(0, Math.min(activeUnit, len - 1))
 }
 
-function frameStyle(frame: ResolvedStageFrame, snap: boolean): CSSProperties {
-  const t = frame.transform
-  const x = t.position?.x ?? 0
-  const y = t.position?.y ?? 0
-  const scale = t.scale ?? 1
-  const rotation = t.rotation ?? 0
-  // Centered stage space: (0,0) = stage centre, 1.0 = half the viewport
-  // min-dimension (50vmin). y is screen-up, so CSS translateY is negated.
+/**
+ * The animated CSS channels for a pose, in centered stage space:
+ * (0,0) = stage centre, 1.0 = half the viewport min-dimension (50vmin).
+ * y is screen-up, so CSS translateY is negated.
+ */
+function poseCss(pose: StageTransform): { transform: string; opacity: number } {
+  const x = pose.position?.x ?? 0
+  const y = pose.position?.y ?? 0
+  const scale = pose.scale ?? 1
+  const rotation = pose.rotation ?? 0
   const dx = `${x * 50}vmin`
   const dy = `${-y * 50}vmin`
   return {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    transformOrigin: 'center',
     transform: `translate(calc(-50% + ${dx}), calc(-50% + ${dy})) scale(${scale}) rotate(${rotation}deg)`,
-    opacity: t.opacity ?? 1,
-    zIndex: t.zIndex ?? 0,
-    transition: snap
-      ? 'none'
-      : `transform ${TWEEN_MS}ms ${cssEasing(frame.easing)}, opacity ${TWEEN_MS}ms ${cssEasing(frame.easing)}`,
-    willChange: 'transform, opacity',
+    opacity: pose.opacity ?? 1,
   }
 }
 
 function StageEntityView({
   entity,
   activeUnit,
-  snap,
+  registerNode,
 }: {
   entity: ResolvedStageEntity
   activeUnit: number
-  snap: boolean
+  registerNode: (id: string, el: HTMLDivElement | null) => void
 }) {
-  const idx = Math.max(0, Math.min(activeUnit, entity.frames.length - 1))
+  const idx = clampIdx(activeUnit, entity.frames.length)
   const frame = entity.frames[idx]
   if (!frame?.present) return null
 
-  // Tier 1: image bodies only. (Other VizRef types are reserved for Tier 2.)
+  // Image bodies only. (Other VizRef types are reserved for the 3D tier.)
   if (entity.content.type !== 'image') return null
   const src = typeof entity.content.src === 'string' ? entity.content.src : undefined
   if (!src) return null
   const size = typeof entity.content.size === 'number' ? entity.content.size : 0.2
   const alt = typeof entity.content.alt === 'string' ? entity.content.alt : ''
 
+  // React renders the SETTLED pose for the active beat (correct for SSR and
+  // for any commit — the clock's layout effect overwrites with the sampled
+  // pose before paint). Because this style only changes when the beat
+  // changes, unrelated re-renders never clobber the rAF-written values.
+  const settled = poseCss(frame.transform)
+  const style: CSSProperties = {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    transformOrigin: 'center',
+    transform: settled.transform,
+    opacity: settled.opacity,
+    zIndex: frame.transform.zIndex ?? 0,
+    willChange: 'transform, opacity',
+    width: `${size * 100}vmin`,
+    height: 'auto',
+    pointerEvents: entity.interactive ? 'auto' : 'none',
+    cursor: entity.interactive ? 'grab' : 'default',
+    userSelect: 'none',
+  }
+
   return (
     <div
       data-stage-entity={entity.id}
-      style={{
-        ...frameStyle(frame, snap),
-        width: `${size * 100}vmin`,
-        height: 'auto',
-        pointerEvents: entity.interactive ? 'auto' : 'none',
-        cursor: entity.interactive ? 'grab' : 'default',
-        userSelect: 'none',
-      }}
+      ref={(el) => registerNode(entity.id, el)}
+      style={style}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -126,26 +128,82 @@ export interface StageVizSlotProps {
 
 export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
   const { isCapture } = useStoryShell()
-  const [reducedMotion, setReducedMotion] = useState(false)
+  const reducedMotion = usePrefersReducedMotion()
+  const snap = isCapture || reducedMotion
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReducedMotion(mq.matches)
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
+  const nodeRefs = useRef(new Map<string, HTMLDivElement | null>())
+  // Last SAMPLED pose per entity — the retarget source when a beat change
+  // interrupts a running tween. Rebased when the stage identity changes
+  // (orientation flip re-resolves against a different units array).
+  const lastPosesRef = useRef(new Map<string, StageTransform>())
+  const lastStageRef = useRef<ResolvedStage>(stage)
+
+  useLayoutEffect(() => {
+    if (lastStageRef.current !== stage) {
+      lastStageRef.current = stage
+      lastPosesRef.current.clear()
+    }
+
+    const runs = stage.entities.map((e) => {
+      const frame = e.frames[clampIdx(activeUnit, e.frames.length)]
+      return { e, frame, entryPose: lastPosesRef.current.get(e.id) ?? null }
+    })
+    // Absent entities render nothing; drop their remembered pose so a later
+    // re-entry (past a lifetime gap) doesn't retarget from a stale pose.
+    for (const r of runs) {
+      if (!r.frame?.present) lastPosesRef.current.delete(r.e.id)
+    }
+
+    const write = (tMs: number) => {
+      for (const r of runs) {
+        if (!r.frame?.present) continue
+        const el = nodeRefs.current.get(r.e.id)
+        if (!el) continue
+        const pose = sampleBeat(r.frame, tMs, r.entryPose)
+        const css = poseCss(pose)
+        el.style.transform = css.transform
+        el.style.opacity = String(css.opacity)
+        lastPosesRef.current.set(r.e.id, pose)
+      }
+    }
+
+    // Capture / reduced motion: settle instantly — the deterministic path the
+    // headless video walk depends on. (Playwright forces reduced-motion off,
+    // so `isCapture` does the work there.)
+    if (snap) {
+      write(Infinity)
+      return
+    }
+
+    write(0)
+    const total = runs.reduce((m, r) => Math.max(m, r.frame?.present ? r.frame.timelineMs : 0), 0)
+    if (total <= 0) return
+    const start = performance.now()
+    let raf = requestAnimationFrame(function tick(now: number) {
+      const tMs = now - start
+      if (tMs < total) {
+        write(tMs)
+        raf = requestAnimationFrame(tick)
+      } else {
+        write(Infinity)
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [stage, activeUnit, snap])
+
+  const registerNode = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) nodeRefs.current.set(id, el)
+    else nodeRefs.current.delete(id)
   }, [])
 
   if (!stage.entities.length) return null
-  const snap = isCapture || reducedMotion
 
-  // Split entities by their CURRENT beat's zBand: 'front' paints above the
-  // foreground, everything else behind the scrolling content.
+  // Split entities by their CURRENT beat's settled zBand: 'front' paints above
+  // the foreground, everything else behind the scrolling content.
   const back: ResolvedStageEntity[] = []
   const front: ResolvedStageEntity[] = []
   for (const e of stage.entities) {
-    const idx = Math.max(0, Math.min(activeUnit, e.frames.length - 1))
-    const f = e.frames[idx]
+    const f = e.frames[clampIdx(activeUnit, e.frames.length)]
     if (f?.present && f.transform.zBand === 'front') front.push(e)
     else back.push(e)
   }
@@ -157,14 +215,14 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
           map background (z-0) which is earlier still. */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden>
         {back.map((e) => (
-          <StageEntityView key={e.id} entity={e} activeUnit={activeUnit} snap={snap} />
+          <StageEntityView key={e.id} entity={e} activeUnit={activeUnit} registerNode={registerNode} />
         ))}
       </div>
       {/* FRONT — above the foreground (z-10) and hero (z-20), below the logo
           (z-50). Hosts subjects that take z-focus. */}
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: FRONT_Z }} aria-hidden>
         {front.map((e) => (
-          <StageEntityView key={e.id} entity={e} activeUnit={activeUnit} snap={snap} />
+          <StageEntityView key={e.id} entity={e} activeUnit={activeUnit} registerNode={registerNode} />
         ))}
       </div>
     </>

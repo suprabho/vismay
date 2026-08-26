@@ -2,7 +2,10 @@
 # Throwaway demo for the Tier-1 "stage" (subjects & objects). NOT listed.
 # Exercises: a subject (rocket) with a lifetime + z-focus, an ambient object
 # (particles), per-beat transform tracks, sparse-keyframe interpolation, and
-# capture snap. See docs/deck-stage-subjects-objects.md.
+# capture snap — plus the v0 slide timeline: sub-keyframes (Ascent),
+# delay/duration stagger (Orbit), and section transitions (Orbit, Re-entry).
+# See docs/deck-stage-subjects-objects.md and
+# docs/stage-timeline-and-section-transitions.md.
 # =============================================================================
 
 defaults:
@@ -36,19 +39,35 @@ defaults:
         enterTransform: { position: { x: 0.7, y: -0.8 }, opacity: 0, scale: 0.4, rotation: -10 }
         exitTransform: { position: { x: 0.2, y: 1.1 }, opacity: 0, scale: 0.5, rotation: 16 }
         keyframes:
-          - at: { section: ascent }
-            transform: { position: { x: 0.5, y: -0.4 }, scale: 0.6, opacity: 1, rotation: -8, zBand: mid }
+          # Ascent is a three-step sub-keyframe choreography on the section's
+          # 1600 ms timeline: swing in from the right, overshoot low, settle.
+          # The t:1 settled pose is byte-identical to the pre-timeline config
+          # so Max-Q's densified interpolation is unchanged (regression beat).
+          - at: { section: ascent, t: 0 }
+            transform: { position: { x: 0.85, y: -0.7 }, scale: 0.45, opacity: 0.2, rotation: -14, zBand: mid }
             easing: easeOut
+          - at: { section: ascent, t: 0.45 }
+            transform: { position: { x: 0.55, y: -0.5 }, scale: 0.68, opacity: 1, rotation: -4, zBand: mid }
+            easing: easeOut
+          - at: { section: ascent, t: 1 }
+            transform: { position: { x: 0.5, y: -0.4 }, scale: 0.6, opacity: 1, rotation: -8, zBand: mid }
+            easing: easeInOut
           - at: { section: maxq }
             transform: { position: { x: 0.35, y: 0.05 }, scale: 0.95, opacity: 1, rotation: 0, zBand: mid }
             easing: easeInOut
+          # Orbit: the rocket waits 200 ms after the beat lands, then takes
+          # z-focus over 900 ms (ms-mode delay/duration on a single keyframe).
           - at: { section: orbit }
+            delayMs: 200
+            durationMs: 900
             transform: { position: { x: 0.15, y: 0.0 }, scale: 1.25, opacity: 1, rotation: 4, zBand: front, zIndex: 5 }
             easing: easeInOut
           - at: { section: reentry }
             transform: { position: { x: 0.25, y: 0.3 }, scale: 0.8, opacity: 1, rotation: 12, zBand: mid }
             easing: easeIn
       # OBJECT — ambient decor, non-interactive, drifts the whole story.
+      # Deliberately untouched by the v0 timeline demo: its liftoff→touchdown
+      # long-arc interpolation is the cross-beat regression eyeball.
       - id: particles
         role: object
         content: { type: image, src: /demo-stage/particles.svg, size: 0.55, alt: "" }
@@ -59,6 +78,24 @@ defaults:
             easing: linear
           - at: { section: touchdown }
             transform: { position: { x: 0.5, y: -0.5 }, scale: 1.5, opacity: 0.35, zBand: behind }
+            easing: linear
+      # OBJECT — the stagger demo: enters at Orbit 450 ms after the rocket's
+      # 200 ms delay (per-entity delayMs = video-editor-style stagger).
+      - id: sparks
+        role: object
+        content: { type: image, src: /demo-stage/particles.svg, size: 0.28, alt: "" }
+        portrait: { hidden: true }
+        enter: { section: orbit }
+        exit: { section: touchdown }
+        enterTransform: { position: { x: -0.9, y: -0.6 }, opacity: 0, scale: 0.6 }
+        keyframes:
+          - at: { section: orbit }
+            delayMs: 450
+            durationMs: 800
+            transform: { position: { x: -0.55, y: -0.35 }, scale: 0.9, opacity: 0.45, zBand: behind }
+            easing: easeOut
+          - at: { section: touchdown }
+            transform: { position: { x: -0.2, y: 0.4 }, scale: 0.7, opacity: 0.2, zBand: behind }
             easing: linear
 
 sections:
@@ -76,6 +113,9 @@ sections:
   - id: ascent
     kind: bodyText
     text: "Ascent"
+    # Explicit (and default) clock; scale base for the rocket's t sub-keyframes.
+    clock: triggered
+    timelineMs: 1600
     background: { type: none }
     foreground:
       - type: bodyText
@@ -98,17 +138,32 @@ sections:
   - id: orbit
     kind: bodyText
     text: "Orbit"
-    background: { type: none }
+    # Boundary INTO Orbit: text fades in (staggered 250 ms) while a faint
+    # particle-field background crossfades up from black.
+    transition:
+      durationMs: 600
+      foreground: { kind: fade }
+      background: crossfade
+    background:
+      - type: image
+        src: /demo-stage/particles.svg
+        style: { opacity: 0.18 }
     foreground:
       - type: bodyText
         from: text
         style:
           position: { x: left, y: center }
           size: { width: "42%" }
+          revealDelayMs: 250
 
   - id: reentry
     kind: bodyText
     text: "Re-entry"
+    # Boundary INTO Re-entry: text slides up into place; Orbit's particle
+    # background crossfades back out (the incoming section owns the fade).
+    transition:
+      foreground: { kind: slide, direction: up, durationMs: 500, easing: easeOut }
+      background: crossfade
     background: { type: none }
     foreground:
       - type: bodyText
