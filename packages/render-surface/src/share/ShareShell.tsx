@@ -9,7 +9,7 @@ import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
 import ShareEditDrawer, { type SelectedCard } from './ShareEditDrawer'
-import { trackShareCardsDownloadedAll } from '@/lib/analytics'
+import { trackShareCardsDownloadedAll } from '../analytics'
 
 type EditView = 'visual' | 'yaml'
 

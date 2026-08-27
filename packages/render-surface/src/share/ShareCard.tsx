@@ -13,7 +13,7 @@ import ShareDeckForeground from './ShareDeckForeground'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
 import BrandingHeader from './BrandingFooter'
-import { trackShareCardDownloaded } from '@/lib/analytics'
+import { trackShareCardDownloaded } from '../analytics'
 
 /**
  * Shape of a `type: 'map'` layer as returned by `resolveSlotsFlat`. Mirrors

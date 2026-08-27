@@ -16,7 +16,7 @@ import { usePollVideoRender } from '@vismay/content-source/usePollVideoRender'
 import AutoplayAspectToggle, { type AutoplayRatio } from './AutoplayAspectToggle'
 import AutoplayMapEditor, { type MapPickerModalProps } from './AutoplayMapEditor'
 import TunePanel from './AutoplayTunePanel'
-import { trackAutoplayStarted, trackAutoplayVideoDownloaded } from '@/lib/analytics'
+import { trackAutoplayStarted, trackAutoplayVideoDownloaded } from '../analytics'
 
 /* ─── DB row shapes ────────────────────────────────────────────────── */
 

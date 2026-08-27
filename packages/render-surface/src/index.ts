@@ -31,3 +31,7 @@ export { themeToMapPalette } from './lib/themeToMapPalette'
 export { buildShareSampleYaml } from './lib/shareSampleYaml'
 export { applyShareBrandFonts } from './lib/shareTheme'
 export { useFitScale } from './lib/useFitScale'
+export {
+  registerRenderSurfaceAnalytics,
+  type RenderSurfaceAnalytics,
+} from './analytics'
