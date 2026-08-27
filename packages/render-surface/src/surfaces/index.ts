@@ -16,6 +16,10 @@ export {
   type CanvasFrameSurfaceProps,
 } from './CanvasFrameSurface'
 export {
+  StoryTimelineFrameSurface,
+  type StoryTimelineFrameSurfaceProps,
+} from './StoryTimelineFrameSurface'
+export {
   VideoProjectSurface,
   type VideoProjectSurfaceProps,
 } from './VideoProjectSurface'

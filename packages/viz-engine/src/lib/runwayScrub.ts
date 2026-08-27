@@ -55,3 +55,23 @@ export function coversCenterline(
   const center = scrollTop + viewport / 2
   return center >= sectionTop && center < sectionTop + sectionHeight
 }
+
+/**
+ * Inverse of `runwayProgress` — the scrollTop (container coordinates) that
+ * puts a runway section at beat-local time `t`. Used by the editor's seek
+ * bridge to land scroll position exactly at an arbitrary `t` rather than
+ * relying on the forward scroll→t mapping. Degenerate sections (height <=
+ * viewport) have no scroll range — any `t` maps to `sectionTop`, matching
+ * `runwayProgress`'s own degenerate-collapse rule.
+ */
+export function scrollTopForRunwayT(
+  sectionTop: number,
+  sectionHeight: number,
+  viewport: number,
+  t: number
+): number {
+  const range = sectionHeight - viewport
+  const clampedT = Math.max(0, Math.min(1, t))
+  if (range <= 0) return sectionTop
+  return sectionTop + clampedT * range
+}

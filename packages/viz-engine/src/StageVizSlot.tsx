@@ -127,7 +127,7 @@ export interface StageVizSlotProps {
 }
 
 export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
-  const { isCapture, units, scrub } = useStoryShell()
+  const { isCapture, units, scrub, seek } = useStoryShell()
   const reducedMotion = usePrefersReducedMotion()
   const snap = isCapture || reducedMotion
 
@@ -137,6 +137,11 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
   // re-run the clock effect (recapturing entry poses) on every scroll frame.
   const activeCfg = units[clampIdx(activeUnit, units.length)]?.parentConfig
   const scrubbedBeat = !snap && scrub != null && activeCfg?.clock === 'scrubbed'
+  // External seek (admin editor, E1): the shell publishes {unit, t} on the
+  // `seek` ref regardless of the beat's authored clock — it wins over BOTH
+  // `scrubbedBeat` and the triggered wall-clock. Detected the same way as
+  // `scrubbedBeat` — from the ref's presence, never a `t` prop.
+  const seeking = !snap && seek != null && seek.current != null && seek.current.unit === activeUnit
 
   const nodeRefs = useRef(new Map<string, HTMLDivElement | null>())
   // Last SAMPLED pose per entity — the retarget source when a beat change
@@ -180,6 +185,47 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
     if (snap) {
       write(Infinity)
       return
+    }
+
+    // External seek (admin editor, E1): wins over both clocks. A payload for
+    // another unit is a handoff frame from the admin timeline — ignored,
+    // same rule the scrub branch below uses. Entry pose is always the
+    // PREVIOUS beat's SETTLED transform (read fresh from `frames`, never
+    // `lastPosesRef`'s history-dependent last-sampled value) so seeking to
+    // the same (unit, t) renders identically no matter how the editor got
+    // there — jumped straight in vs. scrubbed through several beats first.
+    if (seeking && seek) {
+      const prevFrame =
+        activeUnit > 0 ? stage.entities.map((e) => e.frames[clampIdx(activeUnit - 1, e.frames.length)]) : null
+      const seekRuns = stage.entities.map((e, i) => {
+        const frame = e.frames[clampIdx(activeUnit, e.frames.length)]
+        const prev = prevFrame?.[i]
+        const entryPose = prev?.present ? prev.transform : null
+        return { e, frame, entryPose }
+      })
+      const writeSeek = (t: number) => {
+        for (const r of seekRuns) {
+          if (!r.frame?.present) continue
+          const el = nodeRefs.current.get(r.e.id)
+          if (!el) continue
+          const pose = sampleBeat(r.frame, t * r.frame.timelineMs, r.entryPose)
+          const css = poseCss(pose)
+          el.style.transform = css.transform
+          el.style.opacity = String(css.opacity)
+          lastPosesRef.current.set(r.e.id, pose)
+        }
+      }
+      let lastT = seek.current!.t
+      writeSeek(lastT)
+      let raf = requestAnimationFrame(function tick() {
+        const s = seek.current
+        if (s && s.unit === activeUnit && s.t !== lastT) {
+          lastT = s.t
+          writeSeek(lastT)
+        }
+        raf = requestAnimationFrame(tick)
+      })
+      return () => cancelAnimationFrame(raf)
     }
 
     // Scrubbed beat: scroll progress IS the clock. The loop lives for the
@@ -230,7 +276,7 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [stage, activeUnit, snap, scrubbedBeat, scrub])
+  }, [stage, activeUnit, snap, scrubbedBeat, scrub, seeking, seek])
 
   const registerNode = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) nodeRefs.current.set(id, el)

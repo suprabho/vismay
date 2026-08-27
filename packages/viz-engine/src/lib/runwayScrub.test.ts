@@ -1,8 +1,15 @@
 /** Throwaway check for the runway scrub math (clock: 'scrubbed', M3):
  *  sectionRunway resolution, runwayProgress clamping + degenerate collapse,
- *  the coversCenterline activation rule, and the scrub↔sampleBeat contract.
+ *  the coversCenterline activation rule, the scrollTopForRunwayT inverse
+ *  (E1 seek bridge), and the scrub↔sampleBeat contract.
  *  (run: npx tsx src/lib/runwayScrub.test.ts) */
-import { DEFAULT_RUNWAY, sectionRunway, runwayProgress, coversCenterline } from './runwayScrub'
+import {
+  DEFAULT_RUNWAY,
+  sectionRunway,
+  runwayProgress,
+  coversCenterline,
+  scrollTopForRunwayT,
+} from './runwayScrub'
 import { sampleBeat } from './resolveStage'
 import type { ResolvedStageFrame, StageTransform } from './storyConfig.types'
 
@@ -46,6 +53,28 @@ ok('centerline after', coversCenterline(3201, TOP, H, VP) === false)
 const claimsA = coversCenterline(3200, 1600, 2000, VP)
 const claimsB = coversCenterline(3200, 3600, 2000, VP)
 ok('adjacent runways: exactly one claims the boundary', !claimsA && claimsB)
+
+// ── scrollTopForRunwayT (inverse of runwayProgress, E1 seek bridge) ─────────
+for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+  const scrollTop = scrollTopForRunwayT(TOP, H, VP, t)
+  ok(
+    `scrollTopForRunwayT round-trips through runwayProgress at t=${t}`,
+    approx(runwayProgress(scrollTop, TOP, H, VP), t)
+  )
+}
+ok('scrollTopForRunwayT clamps t below 0', scrollTopForRunwayT(TOP, H, VP, -0.5) === TOP)
+ok(
+  'scrollTopForRunwayT clamps t above 1',
+  scrollTopForRunwayT(TOP, H, VP, 1.5) === TOP + (H - VP)
+)
+ok(
+  'scrollTopForRunwayT degenerate height==viewport → always sectionTop',
+  scrollTopForRunwayT(TOP, VP, VP, 0.7) === TOP
+)
+ok(
+  'scrollTopForRunwayT degenerate height<viewport → always sectionTop',
+  scrollTopForRunwayT(TOP, VP - 100, VP, 0.7) === TOP
+)
 
 // ── scrub ↔ sampleBeat contract (t * timelineMs drives the beat timeline) ───
 const settled: StageTransform = {
