@@ -31,6 +31,15 @@ export interface StoryShellContextValue {
    * left-half) is wrong for full-canvas deck slots that self-position.
    */
   format?: StoryFormat
+  /**
+   * Live scrub channel for `clock: 'scrubbed'` runway sections. A mutable ref
+   * the shell's scroll listener writes at scroll-frame rate; consumers
+   * (StageVizSlot) read it inside their own rAF loop, so scroll never rides a
+   * React render. `current: null` = no runway section engaged. Undefined =
+   * this surface doesn't drive scrubbing (embed, autoplay, capture, reduced
+   * motion, hand-built shells) — scrubbed beats then behave as triggered.
+   */
+  scrub?: { readonly current: { unit: number; t: number } | null }
 }
 
 const StoryShellContext = createContext<StoryShellContextValue | null>(null)

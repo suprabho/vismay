@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import type { ResolvedUnit, StatColor } from '@vismay/viz-engine'
 import { resolveSlots, resolveSlotsFlat, ForegroundLayoutSlot } from '@vismay/viz-engine'
 import { formatInlineMarkdown, getListItems, isListBlock } from '@vismay/viz-engine'
@@ -41,6 +42,14 @@ interface Props {
    * until the reader scrolls the section into view. Defaults true.
    */
   isActive?: boolean
+  /**
+   * Resolved runway height in viewports when this section is a live scrubbed
+   * runway (clock: 'scrubbed' + mode 'scroll', not embed, motion allowed),
+   * else null — the classic one-viewport snap target. Computed by StoryShell
+   * via `sectionRunway()` so the scroll listener, the observer skip-list and
+   * this geometry can never disagree.
+   */
+  runway?: number | null
 }
 
 /**
@@ -103,6 +112,55 @@ function aliasKind(kind: string): string {
   return kind
 }
 
+/**
+ * Snap target that can stretch into a scrub runway. `runway == null` renders
+ * the classic one-viewport target byte-identically. With a runway, the
+ * SECTION becomes the tall scroll box (the snap area) and a sticky inner
+ * viewport pins the visual content while the reader scrubs through it — the
+ * legacy ScrollySection pin pattern (relative section + sticky h-screen
+ * panel). `clip` carries the deck in-flow `overflow-hidden`; on a runway it
+ * moves onto the STICKY wrapper, because an overflow-hidden ancestor demotes
+ * `position: sticky` — the section itself must never clip when it is tall.
+ */
+function RunwaySection({
+  unitIndex,
+  runway,
+  clip = false,
+  children,
+}: {
+  unitIndex: number
+  runway: number | null
+  clip?: boolean
+  children?: ReactNode
+}) {
+  if (runway == null) {
+    return (
+      <section
+        data-unit-index={unitIndex}
+        className={`snap-start snap-always h-svh w-full relative${clip ? ' overflow-hidden' : ''}`}
+      >
+        {children}
+      </section>
+    )
+  }
+  return (
+    <section
+      data-unit-index={unitIndex}
+      data-runway={runway}
+      // `snap-start snap-always` kept: a snap area taller than the snapport
+      // permits free interior rest even under `mandatory` (scroll-snap spec).
+      // If a browser fights interior rest, the scoped fallback is dropping
+      // ` snap-always` (then `snap-start`) from THIS class string only.
+      className="snap-start snap-always w-full relative"
+      style={{ height: `${runway * 100}svh` }}
+    >
+      <div className={`sticky top-0 h-svh w-full${clip ? ' overflow-hidden' : ''}`}>
+        {children}
+      </div>
+    </section>
+  )
+}
+
 export default function MapStorySection({
   unitIndex,
   unit,
@@ -112,6 +170,7 @@ export default function MapStorySection({
   mode = 'scroll',
   isPortrait = false,
   isActive = true,
+  runway = null,
 }: Props) {
   const { parentConfig, heading, subheading, paragraphs, heroPart } = unit
   const rawKind = parentConfig.kind ?? 'text'
@@ -216,19 +275,15 @@ export default function MapStorySection({
   }
 
   if (usesRegions || suppressForDeckKind) {
+    // `clip` (overflow-hidden) only when rendering in-flow: each deck slide's
+    // over-tall content (e.g. a long `bodyText`) must clip at the viewport
+    // edge instead of bleeding into the adjacent snap target as it scrolls
+    // past. Off-deck this is an empty target. On a runway the clip rides the
+    // sticky inner wrapper (see RunwaySection).
     return (
-      <section
-        data-unit-index={unitIndex}
-        // `overflow-hidden` only when rendering in-flow: each deck section is a
-        // viewport-tall slide, so over-tall content (e.g. a long `bodyText`)
-        // must clip at the section edge instead of bleeding into the adjacent
-        // snap target as it scrolls past. Off-deck this is an empty target.
-        className={`snap-start snap-always h-svh w-full relative${
-          renderForegroundInline ? ' overflow-hidden' : ''
-        }`}
-      >
+      <RunwaySection unitIndex={unitIndex} runway={runway} clip={renderForegroundInline}>
         {inlineForeground}
-      </section>
+      </RunwaySection>
     )
   }
 
@@ -366,10 +421,7 @@ export default function MapStorySection({
   }
 
   return (
-    <section
-      data-unit-index={unitIndex}
-      className="snap-start snap-always h-svh w-full relative"
-    >
+    <RunwaySection unitIndex={unitIndex} runway={runway}>
       <div className={cardClasses} style={cardStyle}>
         <div className="mx-auto h-full flex flex-col justify-center">
           {kind === 'stat' && heading ? (
@@ -388,7 +440,7 @@ export default function MapStorySection({
           )}
         </div>
       </div>
-    </section>
+    </RunwaySection>
   )
 }
 

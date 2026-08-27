@@ -491,12 +491,21 @@ export interface StorySectionConfig {
     mobile?: MapOverrides
   }
   /**
-   * Beat clock for this section's stage choreography. v0 supports only
-   * 'triggered' (the default): landing on a beat plays its timeline over
-   * wall-clock time. 'scrubbed' (scroll-driven, with a `runway`) is reserved
-   * and rejected by the config validator until the runway scroll model ships.
+   * Beat clock for this section's stage choreography.
+   *  - 'triggered' (default): landing on the beat plays its timeline over
+   *    wall-clock time.
+   *  - 'scrubbed': in live scroll the section renders `runway` viewports tall
+   *    and scroll progress through it drives the beat-local timeline, forward
+   *    and backward. Requires a single-beat section (no `subsections`, no
+   *    `mobileParagraphs`, not a hero kind). Autoplay/capture/print/embed and
+   *    reduced motion collapse the runway and play the beat as triggered/snap.
    */
-  clock?: 'triggered'
+  clock?: 'triggered' | 'scrubbed'
+  /**
+   * Scroll runway for `clock: 'scrubbed'`, in viewports of scroll height
+   * (1.25–6, default 2). Only valid with clock 'scrubbed'.
+   */
+  runway?: number
   /**
    * Scale base (ms) for sub-keyframe `t` values in this section's beats:
    * a keyframe at `t: 0.5` lands at `0.5 * timelineMs`. Default 700 (the

@@ -62,6 +62,19 @@ defaults:
             durationMs: 900
             transform: { position: { x: 0.15, y: 0.0 }, scale: 1.25, opacity: 1, rotation: 4, zBand: front, zIndex: 5 }
             easing: easeInOut
+          # Coast (scrubbed): scroll progress through the runway drives these
+          # three sub-keyframes forward AND backward. t:0 duplicates Orbit's
+          # settled pose so entry is seamless; zBand stays front all beat
+          # (band membership is per-beat settled, from the t:1 member).
+          - at: { section: coast, t: 0 }
+            transform: { position: { x: 0.15, y: 0.0 }, scale: 1.25, opacity: 1, rotation: 4, zBand: front, zIndex: 5 }
+            easing: linear
+          - at: { section: coast, t: 0.5 }
+            transform: { position: { x: -0.25, y: 0.3 }, scale: 1.0, opacity: 1, rotation: -8, zBand: front, zIndex: 5 }
+            easing: easeInOut
+          - at: { section: coast, t: 1 }
+            transform: { position: { x: 0.3, y: 0.1 }, scale: 0.9, opacity: 1, rotation: 10, zBand: front, zIndex: 5 }
+            easing: easeInOut
           - at: { section: reentry }
             transform: { position: { x: 0.25, y: 0.3 }, scale: 0.8, opacity: 1, rotation: 12, zBand: mid }
             easing: easeIn
@@ -155,6 +168,22 @@ sections:
           position: { x: left, y: center }
           size: { width: "42%" }
           revealDelayMs: 250
+
+  - id: coast
+    kind: bodyText
+    text: "Coast"
+    # M3: 2.5 viewports of scroll runway drive this beat's stage timeline —
+    # scrub the rocket forward and backward. Collapses to a one-viewport
+    # triggered snap beat in autoplay/capture/embed and reduced motion.
+    clock: scrubbed
+    runway: 2.5
+    background: { type: none }
+    foreground:
+      - type: bodyText
+        from: text
+        style:
+          position: { x: left, y: center }
+          size: { width: "42%" }
 
   - id: reentry
     kind: bodyText

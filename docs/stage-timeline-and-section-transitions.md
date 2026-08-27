@@ -1,6 +1,6 @@
 # Stage timeline & section transitions — refining Tier 1 toward the editor
 
-**Status:** v0 implemented (M0 + M1 + M2-lite, triggered clock only — sub-keyframes, delay/duration stagger, rAF stage renderer, foreground `cut|fade|slide` + background `hold|crossfade`, `revealDelayMs`; `clock: scrubbed`/`runway` and remaining transition kinds are schema-reserved and rejected with clear errors). Scrubbed clock, capture seek bridge, autoplay dwell, and the editor remain future milestones.
+**Status:** v0 + M3 implemented (M0 + M1 + M2-lite: sub-keyframes, delay/duration stagger, rAF stage renderer, foreground `cut|fade|slide` + background `hold|crossfade`, `revealDelayMs`. M3: `clock: scrubbed` + `runway` — live-scroll-only runway sections whose scroll progress drives the beat timeline both directions, activated by a centerline rule; autoplay/capture/embed and reduced motion collapse the runway until the M4 seek bridge. Remaining transition kinds stay schema-reserved). Capture seek bridge, autoplay dwell, and the editor remain future milestones.
 **Refines:** [`deck-stage-subjects-objects.md`](deck-stage-subjects-objects.md) (the 3-tier stage, Tier 1 shipped PR #321)
 **Relates to:** the freeform video editor (`packages/viz-admin/src/video-project/`, `apps/admin/components/vizmaya/video/`) — the timeline vocabulary and UI this plan converges with
 **Generated:** August 20, 2026

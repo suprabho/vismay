@@ -38,6 +38,10 @@ Peak dynamic pressure. This beat has no keyframe of its own — the rocket's pos
 
 Z-focus — staggered. This text fades in first (this section's boundary is a `fade` transition, and this panel carries `revealDelayMs: 250`), a faint particle field crossfades up behind it, then the rocket waits 200 ms and steps **in front** of the panel over 900 ms (`zBand: front`), with a second spark field drifting in 450 ms behind it. Four elements, four clocks, one beat.
 
+## Coast
+
+Scrubbed. This section is 2.5 viewports of runway — this panel pins while your scroll position IS the timeline. Drag up and down: the rocket swings through its three coast keyframes forward and backward, a video-editor scrub driven by the page. In autoplay, capture and embeds this beat collapses back to a one-viewport triggered snap.
+
 ## Re-entry
 
 The descent begins — and this section *slides up* into place while Orbit's particle background crossfades back out (each boundary owns its own transition). The rocket scales down and tips over as it heads toward its exit, which lands just after this beat.

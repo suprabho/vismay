@@ -238,18 +238,45 @@ export function parseStoryConfigText(
   // Per-section timeline clock + boundary transition (v0: triggered-only).
   const validateSectionTiming = (label: string, s: Record<string, unknown>): void => {
     const clock = s.clock
-    if (clock !== undefined) {
-      if (clock === 'scrubbed') {
+    if (clock !== undefined && clock !== 'triggered' && clock !== 'scrubbed') {
+      throw new Error(`${label}: 'clock' must be 'triggered' | 'scrubbed'`)
+    }
+    const runway = s.runway
+    if (runway !== undefined) {
+      if (clock !== 'scrubbed') {
+        throw new Error(`${label}: 'runway' is only valid with clock: 'scrubbed'`)
+      }
+      if (
+        typeof runway !== 'number' ||
+        !Number.isFinite(runway) ||
+        runway < 1.25 ||
+        runway > 6
+      ) {
         throw new Error(
-          `${label}: clock 'scrubbed' is reserved for a future release (runway scrolling); v0 supports 'triggered' only`
+          `${label}: 'runway' must be a number between 1.25 and 6 (viewports of scroll height)`
         )
       }
-      if (clock !== 'triggered') {
-        throw new Error(`${label}: 'clock' must be 'triggered'`)
-      }
     }
-    if (s.runway !== undefined) {
-      throw new Error(`${label}: 'runway' is reserved for clock: 'scrubbed' (not yet implemented)`)
+    if (clock === 'scrubbed') {
+      // Scrubbed sections must stay single-beat: the runway maps scroll onto
+      // ONE beat's timeline, and hero/subsection/mobileParagraphs sections
+      // expand into multiple units (with different splits per orientation).
+      const kind = s.kind
+      if (kind === 'hero' || kind === 'cover') {
+        throw new Error(
+          `${label}: clock 'scrubbed' is not supported on kind '${String(kind)}' — hero sections split into title/dek units on mobile; use clock: 'triggered'`
+        )
+      }
+      if (Array.isArray(s.subsections) && (s.subsections as unknown[]).length > 0) {
+        throw new Error(
+          `${label}: clock 'scrubbed' requires a single-beat section — remove 'subsections' or use clock: 'triggered'`
+        )
+      }
+      if (s.mobileParagraphs !== undefined) {
+        throw new Error(
+          `${label}: clock 'scrubbed' requires a single-beat section — remove 'mobileParagraphs' or use clock: 'triggered'`
+        )
+      }
     }
     const timelineMs = s.timelineMs
     if (

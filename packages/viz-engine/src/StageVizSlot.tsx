@@ -127,9 +127,16 @@ export interface StageVizSlotProps {
 }
 
 export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
-  const { isCapture } = useStoryShell()
+  const { isCapture, units, scrub } = useStoryShell()
   const reducedMotion = usePrefersReducedMotion()
   const snap = isCapture || reducedMotion
+
+  // Scrubbed beat (clock: 'scrubbed'): the shell publishes scroll progress on
+  // the `scrub` ref and this beat's timeline is scroll-driven instead of
+  // wall-clock. Detected from config, never from a `t` prop — a prop would
+  // re-run the clock effect (recapturing entry poses) on every scroll frame.
+  const activeCfg = units[clampIdx(activeUnit, units.length)]?.parentConfig
+  const scrubbedBeat = !snap && scrub != null && activeCfg?.clock === 'scrubbed'
 
   const nodeRefs = useRef(new Map<string, HTMLDivElement | null>())
   // Last SAMPLED pose per entity — the retarget source when a beat change
@@ -175,6 +182,40 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
       return
     }
 
+    // Scrubbed beat: scroll progress IS the clock. The loop lives for the
+    // whole beat (the reader can park mid-runway and come back); t maps onto
+    // EACH entity's own beat timeline (t * frame.timelineMs), so every entity
+    // completes its choreography exactly at the runway's end and t=1 hits the
+    // settled pose by identity. entryPose semantics are unchanged — captured
+    // once at beat entry, so backward scrubs replay the identical curve.
+    if (scrubbedBeat && scrub) {
+      const writeScrub = (t: number) => {
+        for (const r of runs) {
+          if (!r.frame?.present) continue
+          const el = nodeRefs.current.get(r.e.id)
+          if (!el) continue
+          const pose = sampleBeat(r.frame, t * r.frame.timelineMs, r.entryPose)
+          const css = poseCss(pose)
+          el.style.transform = css.transform
+          el.style.opacity = String(css.opacity)
+          lastPosesRef.current.set(r.e.id, pose)
+        }
+      }
+      const initial = scrub.current
+      let lastT = initial && initial.unit === activeUnit ? initial.t : 0
+      writeScrub(lastT)
+      let raf = requestAnimationFrame(function tick() {
+        const s = scrub.current
+        // Ignore payloads for another unit (handoff frames) — hold the pose.
+        if (s && s.unit === activeUnit && s.t !== lastT) {
+          lastT = s.t
+          writeScrub(lastT)
+        }
+        raf = requestAnimationFrame(tick)
+      })
+      return () => cancelAnimationFrame(raf)
+    }
+
     write(0)
     const total = runs.reduce((m, r) => Math.max(m, r.frame?.present ? r.frame.timelineMs : 0), 0)
     if (total <= 0) return
@@ -189,7 +230,7 @@ export default function StageVizSlot({ stage, activeUnit }: StageVizSlotProps) {
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [stage, activeUnit, snap])
+  }, [stage, activeUnit, snap, scrubbedBeat, scrub])
 
   const registerNode = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) nodeRefs.current.set(id, el)

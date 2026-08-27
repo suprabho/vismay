@@ -11,7 +11,16 @@ import {
   StageVizSlot,
   StoryShellProvider,
 } from '@vismay/viz-engine'
-import { resolveSlots, resolveSlotsFlat, resolveStage, resolveForegroundTransition } from '@vismay/viz-engine'
+import {
+  resolveSlots,
+  resolveSlotsFlat,
+  resolveStage,
+  resolveForegroundTransition,
+  sectionRunway,
+  runwayProgress,
+  coversCenterline,
+  usePrefersReducedMotion,
+} from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
 import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette, VizLayer } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
@@ -168,6 +177,28 @@ export default function StoryShell({
       containerRef.current?.scrollTo({ top: 0 })
     }
   }, [isPortrait])
+
+  // ── Runway scrubbing (clock: 'scrubbed', M3) ──────────────────────────────
+  // Live scrubbing only: autoplay/capture keep the one-viewport snap walk the
+  // video/PDF pipelines depend on; embed keeps the linear scrollHeight
+  // mapping the host's viz-story-progress driver assumes (mode is 'scroll'
+  // in embed, so the flag is explicit); reduced motion collapses the runway
+  // so those readers aren't scrolling viewports of pinned static frame.
+  const reducedMotion = usePrefersReducedMotion()
+  const scrubEnabled = !isCapture && !isAutoplay && !isEmbed && !reducedMotion
+  // One entry per unit: runway viewports for live scrubbed sections, else
+  // null. Single source of truth for the section geometry (prop below), the
+  // IntersectionObserver skip-list, and the scroll listener.
+  const runwayByUnit = useMemo(
+    () => units.map((u) => (scrubEnabled ? sectionRunway(u.parentConfig) : null)),
+    [units, scrubEnabled]
+  )
+  const hasRunways = useMemo(() => runwayByUnit.some((r) => r != null), [runwayByUnit])
+  // Mutable scrub channel — written by the scroll listener ~per frame, read
+  // by StageVizSlot inside its own rAF. A ref, NOT state: publishing t
+  // through React would re-render the shell (and re-run the stage clock
+  // effect, recapturing its entry poses) on every scroll frame.
+  const scrubRef = useRef<{ unit: number; t: number } | null>(null)
 
   // Tier-1 stage: densify the story's `defaults.stage` into one settled frame
   // per active unit. Resolved here (not per render surface) so it rides the
@@ -332,9 +363,73 @@ export default function StoryShell({
       { root, threshold: [0.55] }
     )
 
-    els.forEach((el) => observer.observe(el))
+    els.forEach((el) => {
+      // Runway sections are activated by the scroll listener below (the
+      // centerline rule) — the observer's 0.55 threshold can never fire for
+      // an element taller than the root (max ratio = 1/runway), and its
+      // enter/leave records would activate a viewport early going down and
+      // go stale going back up. Everything else keeps the observer.
+      const idx = Number(el.dataset.unitIndex)
+      if (!Number.isNaN(idx) && runwayByUnit[idx] != null) return
+      observer.observe(el)
+    })
     return () => observer.disconnect()
-  }, [units.length, isPortrait])
+  }, [units.length, isPortrait, runwayByUnit])
+
+  // Runway scrub driver. Owns (a) per-runway progress t published on
+  // `scrubRef` and (b) `activeUnit` while a runway covers the scrollport
+  // centerline. rAF-throttled passive scroll listener (the HomeClient
+  // pattern); geometry (offsetTop/offsetHeight, container-relative) is cached
+  // and re-measured on resize — it never changes on scroll.
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root || !hasRunways) {
+      scrubRef.current = null
+      return
+    }
+    let geoms: Array<{ unit: number; top: number; height: number }> = []
+    const measure = () => {
+      geoms = []
+      for (const el of root.querySelectorAll<HTMLElement>('[data-unit-index]')) {
+        const idx = Number(el.dataset.unitIndex)
+        if (Number.isNaN(idx) || runwayByUnit[idx] == null) continue
+        geoms.push({ unit: idx, top: el.offsetTop, height: el.offsetHeight })
+      }
+    }
+    let raf = 0
+    const compute = () => {
+      raf = 0
+      const scrollTop = root.scrollTop
+      const viewport = root.clientHeight
+      let engaged: { unit: number; t: number } | null = null
+      for (const g of geoms) {
+        if (coversCenterline(scrollTop, g.top, g.height, viewport)) {
+          engaged = { unit: g.unit, t: runwayProgress(scrollTop, g.top, g.height, viewport) }
+          break
+        }
+      }
+      scrubRef.current = engaged
+      // No-op re-render when unchanged; the observer handles non-runway units.
+      if (engaged) setActiveUnit(engaged.unit)
+    }
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute)
+    }
+    measure()
+    compute()
+    root.addEventListener('scroll', onScroll, { passive: true })
+    const ro = new ResizeObserver(() => {
+      measure()
+      if (!raf) raf = requestAnimationFrame(compute)
+    })
+    ro.observe(root)
+    return () => {
+      root.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+      scrubRef.current = null
+    }
+  }, [units, runwayByUnit, hasRunways, isPortrait])
 
   // Host-driven scroll sync (`?embed=1`).
   // On mount the story advertises its section count so the host can size its
@@ -406,6 +501,10 @@ export default function StoryShell({
         isCapture,
         units,
         format,
+        // Undefined on non-scrubbing surfaces (embed/autoplay/capture/reduced
+        // motion, or no runway sections) so StageVizSlot can't accidentally
+        // enter scrub mode there.
+        scrub: scrubEnabled && hasRunways ? scrubRef : undefined,
       }}
     >
       {/* ─── Persistent background slot ──────────────────────────────────
@@ -546,6 +645,7 @@ export default function StoryShell({
             // The fixed-overlay paths (map format, autoplay, capture) mount
             // only the active unit, so they keep isActive=true by default.
             isActive={i === activeUnit}
+            runway={runwayByUnit[i]}
           />
         ))}
       </div>
