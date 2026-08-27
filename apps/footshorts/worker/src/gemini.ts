@@ -50,7 +50,12 @@ const responseSchema = {
     summary: {
       type: SchemaType.STRING,
       description:
-        'If is_football_news=true: a 55-60 word neutral-tone summary, leading with the news, no opinion. If is_football_news=false: a one-line note describing what the article is actually about (will be discarded).',
+        'If is_football_news=true: a 55-60 word neutral-tone summary IN ENGLISH (translate if the article is in another language), leading with the news, no opinion. If is_football_news=false: a one-line note describing what the article is actually about (will be discarded).',
+    },
+    headline_en: {
+      type: SchemaType.STRING,
+      description:
+        'The article headline in natural English. If the original headline is already English, copy it verbatim; otherwise translate it faithfully without editorializing.',
     },
     entities: {
       type: SchemaType.OBJECT,
@@ -74,10 +79,12 @@ const responseSchema = {
       required: ['leagues', 'teams', 'players'],
     },
   },
-  required: ['is_football_news', 'topic_category', 'summary', 'entities'],
+  required: ['is_football_news', 'topic_category', 'summary', 'headline_en', 'entities'],
 };
 
 const SYSTEM_INSTRUCTION = `You are a strict football-only news classifier and summarizer.
+
+Articles may arrive in languages other than English (e.g. Spanish outlets like Marca, Diario AS, Mundo Deportivo). ALL of your output — summary, headline_en, entity names — must be in English, regardless of the article's language. Classify from the original text; translate faithfully, never editorialize. Keep proper nouns as commonly written in English media (e.g. "fichaje" → "signing", but "Real Madrid" stays "Real Madrid").
 
 STEP 1 — Classify. Decide is_football_news. Be strict:
 - The article must be PRIMARILY about football: the sport itself, its players (on-pitch), clubs, matches, transfers, managers, or competitions.
@@ -91,8 +98,9 @@ STEP 1 — Classify. Decide is_football_news. Be strict:
 - Ownership, sackings, club finances, manager moves → is_football_news=true, topic_category='club_business'.
 
 STEP 2 — Summary.
-If is_football_news=true: write a 55-60 word neutral, factual summary. Lead with the news itself. No speculation, no opinion, no "reports suggest" hedging unless the original is explicitly rumor-based. Do not mention that this is a summary.
+If is_football_news=true: write a 55-60 word neutral, factual summary in English. Lead with the news itself. No speculation, no opinion, no "reports suggest" hedging unless the original is explicitly rumor-based. Do not mention that this is a summary or a translation.
 If is_football_news=false: write a one-line note describing what the article is actually about. It will not be shown to users.
+Always also fill headline_en: the headline in natural English (copied verbatim when the original is already English, translated faithfully otherwise).
 
 STEP 3 — Entities. Only extract when is_football_news=true. Precision matters more than recall — when in doubt, leave it out.
 
@@ -115,6 +123,8 @@ export type GeminiInput = {
   headline: string;
   body: string; // full article text or RSS description
   publisher: string;
+  /** ISO 639-1 language of the source feed ('es', ...). Omit for English. */
+  language?: string;
 };
 
 export async function summarizeAndTag(
@@ -132,7 +142,8 @@ export async function summarizeAndTag(
     },
   });
 
-  const prompt = `Publisher: ${input.publisher}
+  const prompt = `Publisher: ${input.publisher}${input.language && input.language !== 'en' ? `
+Article language: ${input.language} (translate all output to English)` : ''}
 Headline: ${input.headline}
 
 Article:

@@ -102,6 +102,9 @@ export const GeminiSummarySchema = z.object({
   is_football_news: z.boolean(),
   topic_category: TopicCategorySchema,
   summary: z.string(),
+  // English headline (translated for non-English sources, verbatim otherwise).
+  // Optional so pre-existing rows / older prompts without it still validate.
+  headline_en: z.string().optional(),
   entities: z.object({
     leagues: z.array(z.string()),  // league names/slugs Gemini spotted
     teams: z.array(z.string()),
