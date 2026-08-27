@@ -22,5 +22,11 @@ it at the project folder with `--workdir`:
 supabase --workdir supabase/footshorts db push
 ```
 
+**A merged migration is not an applied migration.** No CI job runs `db push`;
+until you run it, workers hit a schema they don't have. `pnpm --filter
+@footshorts/worker check:migrations` probes the live DB for every table/column
+the migrations declare and names any that are missing (the ingest workflow runs
+this first and fails red on a miss).
+
 (Only `footshorts/` currently has a `config.toml`. `vizmaya-fyi/` and `vizf1/`
 hold migrations applied via the Supabase dashboard / direct connection.)

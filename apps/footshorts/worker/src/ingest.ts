@@ -55,7 +55,7 @@ function hashUrl(url: string): string {
   return crypto.createHash('sha256').update(url).digest('hex');
 }
 
-type IngestStats = {
+export type IngestStats = {
   fetched: number;
   /** Rows inserted this run (i.e. URLs we hadn't seen before). */
   new: number;
@@ -69,7 +69,7 @@ type IngestStats = {
   sourceFailures: number;
 };
 
-const emptyStats = (): IngestStats => ({
+export const emptyStats = (): IngestStats => ({
   fetched: 0,
   new: 0,
   summarized: 0,
@@ -79,7 +79,7 @@ const emptyStats = (): IngestStats => ({
 });
 
 /** One article ready for steps 2-6, whichever source kind produced it. */
-type CandidateArticle = {
+export type CandidateArticle = {
   url: string;
   headline: string;
   publisher: string;
@@ -135,6 +135,24 @@ async function processCandidateArticle(
   }
 
   stats.new++;
+
+  await summarizeStoredArticle(sourceId, inserted.id, candidate, stats);
+}
+
+/**
+ * Steps 4-6 for an article row that already exists: summarize + tag →
+ * entity-link → status update. Split out of processCandidateArticle so
+ * requeueFailed.ts can re-run it on rows that landed as status='failed'
+ * (ingest dedupes on url_hash, so a failed row is otherwise never retried).
+ * Swallows its own errors into status='failed' + failure_reason.
+ */
+export async function summarizeStoredArticle(
+  sourceId: string,
+  articleId: string,
+  candidate: Pick<CandidateArticle, 'url' | 'headline' | 'body' | 'publisher'>,
+  stats: IngestStats
+): Promise<void> {
+  const inserted = { id: articleId };
 
   // Summarize + tag (async — but we await here for simplicity; parallelize later)
   try {

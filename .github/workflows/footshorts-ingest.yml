@@ -51,6 +51,15 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: .
 
+      # Migrations are applied by hand (`supabase db push`), never by CI. Fail
+      # here, with the migration named, rather than letting the worker mark
+      # every article failed against a schema it doesn't have (2026-08-24).
+      - name: Check migrations applied
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm check:migrations:ci
+
       - name: Run ingest
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

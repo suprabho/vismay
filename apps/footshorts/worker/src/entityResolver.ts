@@ -34,6 +34,7 @@ function normalize(s: string): string {
 // In-memory caches — refreshed on each worker run
 let entityCache: Map<string, string> | null = null;
 let aliasCache: Map<string, string> | null = null;
+let aliasWarned = false;
 
 async function loadEntityCache(supabase: SupabaseClient): Promise<Map<string, string>> {
   if (entityCache) return entityCache;
@@ -64,9 +65,20 @@ async function loadAliasCache(supabase: SupabaseClient): Promise<Map<string, str
     .from('entity_aliases')
     .select('entity_type, alias_slug, entity_id');
 
-  if (error) throw error;
-
   const cache = new Map<string, string>();
+  if (error) {
+    // The alias table is an optional enrichment on top of the hardcoded
+    // ALIASES map. If it is unreadable (most likely: the migration hasn't
+    // been `db push`ed yet — 2026-08-24 this took the whole news feed down,
+    // every article landing as status='failed'), degrade to ALIASES rather
+    // than failing every article in the run. Warn once per process.
+    if (!aliasWarned) {
+      aliasWarned = true;
+      console.warn(`[entityResolver] entity_aliases unavailable, using hardcoded ALIASES only: ${error.message}`);
+    }
+    return cache; // not cached — retried on the next call in case it was transient
+  }
+
   for (const a of data ?? []) {
     cache.set(`${a.entity_type}:${a.alias_slug}`, a.entity_id);
   }
