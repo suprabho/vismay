@@ -30,6 +30,39 @@ export function guessContentType(filename: string): string {
       return 'image/svg+xml'
     case 'mp4':
       return 'video/mp4'
+    // Documents — compose source uploads. Keep in sync with the story-sources
+    // bucket allowlist (migration 062) so a browser sending a generic
+    // content-type still passes storage validation.
+    case 'pdf':
+      return 'application/pdf'
+    case 'xlsx':
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    case 'xls':
+      return 'application/vnd.ms-excel'
+    case 'docx':
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    case 'doc':
+      return 'application/msword'
+    case 'pptx':
+      return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    case 'ppt':
+      return 'application/vnd.ms-powerpoint'
+    case 'epub':
+      return 'application/epub+zip'
+    case 'csv':
+      return 'text/csv'
+    case 'json':
+      return 'application/json'
+    case 'html':
+    case 'htm':
+      return 'text/html'
+    case 'md':
+    case 'markdown':
+      return 'text/markdown'
+    case 'txt':
+      return 'text/plain'
+    case 'eml':
+      return 'message/rfc822'
     case 'riv':
       return 'application/octet-stream'
     default:

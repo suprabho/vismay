@@ -1,0 +1,9 @@
+{
+  "actorSpecification": 1,
+  "name": "dc-yahoo-stock-scraper",
+  "title": "AI Data Centers — Yahoo Finance stock scraper",
+  "description": "Daily OHLCV bars from Yahoo Finance via residential proxy, for the AI Data Centers international tickers.",
+  "version": "0.1",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile"
+}

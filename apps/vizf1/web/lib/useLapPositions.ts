@@ -49,13 +49,22 @@ export function useLapPositions(
         .maybeSingle()
       if (!session) return { totalLaps: 0, lanes: [] }
 
-      const { data, error } = await sb
-        .from('vizf1_session_lap_positions')
-        .select('driver_id, lap, position')
-        .eq('session_id', session.id)
-      if (error) throw error
-
-      const rows = (data ?? []) as LapRow[]
+      // PostgREST caps an unpaginated select at 1000 rows. A full-length race
+      // (22 drivers x 70+ laps) exceeds that, and the truncated result was
+      // silently under-reporting totalLaps (whatever lap the 1000th row
+      // happened to land on) — page through everything instead.
+      const rows: LapRow[] = []
+      const PAGE_SIZE = 1000
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await sb
+          .from('vizf1_session_lap_positions')
+          .select('driver_id, lap, position')
+          .eq('session_id', session.id)
+          .range(from, from + PAGE_SIZE - 1)
+        if (error) throw error
+        rows.push(...((data ?? []) as LapRow[]))
+        if (!data || data.length < PAGE_SIZE) break
+      }
 
       const byDriver = new Map<string, { lap: number; position: number }[]>()
       let totalLaps = 0
@@ -67,12 +76,28 @@ export function useLapPositions(
       }
       for (const arr of byDriver.values()) arr.sort((a, b) => a.lap - b.lap)
 
+      // Headshots for the end-of-line avatars. The driver meta passed in (from
+      // useSessionResults) carries no headshot, so look them up directly.
+      const { data: heads } = await sb
+        .from('vizf1_drivers')
+        .select('driver_id, headshot_url')
+        .in(
+          'driver_id',
+          drivers.map((d) => d.driverId),
+        )
+      const headshots = new Map(
+        ((heads ?? []) as { driver_id: string; headshot_url: string | null }[]).map(
+          (h) => [h.driver_id, h.headshot_url],
+        ),
+      )
+
       const lanes: DriverLane[] = drivers
         .map((d) => ({
           driverId: d.driverId,
           driverCode: d.driverCode,
           driverName: d.driverName,
           color: d.constructorColor ?? '#9ca3af',
+          headshotUrl: headshots.get(d.driverId) ?? null,
           points: byDriver.get(d.driverId) ?? [],
         }))
         .filter((l) => l.points.length > 0)

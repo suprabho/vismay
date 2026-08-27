@@ -80,7 +80,18 @@ async function runStoryPdfGet(
   }
   const force = url.searchParams.get('force') === '1'
 
-  const baseUrl = `${url.protocol}//${url.host}`
+  // Render the PDF against the dedicated render service when its per-surface
+  // strangler env is set (RENDER_SURFACE_URL_REPORT / _SLIDES), falling back to
+  // this request's own origin — the historical behaviour — when unset. Mirrors
+  // the gate in @vismay/verticals `renderSurfaceUrl`, kept as a direct env read
+  // so content-source takes no dependency on the verticals registry. Set the
+  // env on whichever deployment runs this route (the consumer site that hosts
+  // the /reports builder, e.g. vizmaya-fyi).
+  const renderSurfaceEnv =
+    format === 'slides' ? 'RENDER_SURFACE_URL_SLIDES' : 'RENDER_SURFACE_URL_REPORT'
+  const baseUrl =
+    process.env[renderSurfaceEnv]?.replace(/\/$/, '') ||
+    `${url.protocol}//${url.host}`
 
   let supabase: ReturnType<typeof createServiceClient>
   let hash: string

@@ -46,7 +46,8 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'unknown feature' }, { status: 400 })
   }
   const model = typeof body.model === 'string' ? body.model : ''
-  const valid = aliasList(feature.modality).some((a) => a.alias === model)
+  const allowed = feature.choices ?? aliasList(feature.modality).map((a) => a.alias)
+  const valid = allowed.includes(model)
   if (!valid) {
     return NextResponse.json(
       { error: `model must be a valid ${feature.modality} alias` },

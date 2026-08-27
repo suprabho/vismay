@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { entityAvatarColor } from '@vismay/footshorts-viz/web';
 import type { Entity } from '@/lib/useEntities';
 
 // Color strategy: the card surface and text are FIXED to the theme tokens
@@ -55,9 +56,13 @@ export function CollapsedHeader({
   secondary: string | null;
   chipLabel: string | null;
 }) {
+  const avatarBg = entityAvatarColor(entity);
   return (
     <div className="flex items-center">
-      <div className="mr-3 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[color:var(--ink-faint)]">
+      <div
+        className="mr-3 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[color:var(--ink-faint)]"
+        style={{ backgroundColor: avatarBg ?? undefined }}
+      >
         {entity.crest_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={entity.crest_url} alt="" className="h-[42px] w-[42px] object-contain" />

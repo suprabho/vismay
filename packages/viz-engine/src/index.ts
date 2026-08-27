@@ -10,11 +10,16 @@ export { default as VerticalLoader } from './VerticalLoader'
 export { default as ForegroundVizSlot } from './ForegroundVizSlot'
 export { default as ForegroundLayoutSlot } from './ForegroundLayoutSlot'
 export { default as BackgroundVizSlot } from './BackgroundVizSlot'
+export { default as StageVizSlot } from './StageVizSlot'
 
 // Charts (consumers that import these directly: StoryMapShell, demo pages, the chart module wraps ChartPanel)
 export { default as ChartPanel } from './charts/ChartPanel'
 export { default as MapboxBackground } from './charts/MapboxBackground'
 export { default as GenericChart } from './charts/GenericChart'
+// StoryEChart + capture context: option-driven, capture-safe ECharts host for
+// verticals that render an inline ECharts option (e.g. f1:telemetry-chart).
+export { default as StoryEChart } from './charts/StoryEChart'
+export { ChartCaptureProvider, useChartCapture, type ChartCaptureValue } from './charts/chartCapture'
 
 // Story type taxonomy (formerly @/types/story)
 export * from './types/story'
@@ -24,9 +29,16 @@ export * from './lib/storyConfig.types'
 export * from './lib/logoPalette'
 export * from './lib/inlineMarkdown'
 export * from './lib/foregroundContent'
+export * from './lib/chartDataOverride'
 export * from './lib/storyMapOverrides'
 export * from './lib/assetUrl'
+export * from './lib/zodConfig'
 export * from './lib/resolveSlots'
+export * from './lib/resolveStage'
+export * from './lib/stageEasing'
+export * from './lib/sectionTransition'
+export * from './lib/usePrefersReducedMotion'
+export * from './lib/runwayScrub'
 export * from './foregroundLayouts'
 export * from './lib/storyReadiness'
 export * from './lib/pdfReadiness'

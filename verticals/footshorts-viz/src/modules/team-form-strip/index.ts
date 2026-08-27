@@ -1,6 +1,11 @@
 import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { FixtureRow } from '../../types'
 import type { TeamFormLayout } from '../../web/TeamFormStrip'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:team-form-strip` — Foreground viz module wrapping TeamFormStrip.
@@ -42,7 +47,7 @@ import type { TeamFormLayout } from '../../web/TeamFormStrip'
 
 const LAYOUTS: readonly TeamFormLayout[] = ['strip', 'grid']
 
-export interface TeamFormStripConfig {
+export interface TeamFormStripConfig extends FsBackgroundConfig {
   type: 'fs:team-form-strip'
   fixtures: FixtureRow[]
   teamId: string
@@ -113,6 +118,7 @@ function parseConfig(raw: unknown, ctx: { slug: string; label: string }): TeamFo
     ...(columns !== undefined ? { columns } : {}),
     ...(rows !== undefined ? { rows } : {}),
     ...(cardWidth !== undefined ? { cardWidth } : {}),
+    ...parseFsBackground(raw),
   }
 }
 
@@ -130,6 +136,7 @@ function adminForm(): AdminFormField[] {
     { kind: 'number', key: 'rows', label: 'Rows (grid only — caps to rows × columns)', min: 1, step: 1 },
     { kind: 'number', key: 'cardWidth', label: 'Card width in px (uniform; blank = auto)', min: 1, step: 1 },
     { kind: 'json', key: 'fixtures', label: 'Fixtures (oldest → newest)' },
+    ...fsBackgroundFields(),
   ]
 }
 
@@ -142,7 +149,7 @@ const teamFormStripModule: VizModule<TeamFormStripConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'instant',
   stableIdentity: (config) =>
-    `fs:team-form-strip:${config.layout}:${config.columns ?? ''}x${config.rows ?? ''}:${config.cardWidth ?? ''}:${config.teamId}:${config.fixtures.map((f) => f.id).join('|')}`,
+    `fs:team-form-strip:${config.layout}:${config.columns ?? ''}x${config.rows ?? ''}:${config.cardWidth ?? ''}:${config.teamId}:${config.fixtures.map((f) => f.id).join('|')}:${config.backgroundImage ?? ''}`,
 }
 
 export default teamFormStripModule

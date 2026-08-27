@@ -10,7 +10,8 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getContentSource } from '@vismay/content-source/contentSource'
 import { readComposeState } from '@vismay/content-source/composeState'
 import { listStorySources } from '@vismay/content-source/storySources'
-import { vizmayaPublicUrl } from '@/lib/publicSite'
+import { getTripItinerary } from '@vismay/content-source/travelTrips'
+import { renderSurfaceUrl } from '@/lib/publicSite'
 import CanvasClient from '@/components/canvas/CanvasClient'
 import {
   canvasFrameId,
@@ -65,6 +66,25 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
     cs.readMarkdown(slug).catch(() => null),
   ])
 
+  // Travel stories: the story-day's stop vocabulary (DB-mirrored itinerary,
+  // migration 076) feeds the Scrapbook slice editor's `stop:` hints.
+  // Best-effort — an unsynced itinerary just means no hints.
+  let travelStops: CanvasSources['travelStops'] = null
+  if (story.frontmatter.vertical === 'travel') {
+    try {
+      const tripSlug = story.frontmatter.trip ?? slug
+      const day = story.frontmatter.day ?? 3
+      const itinerary = await getTripItinerary(tripSlug)
+      travelStops =
+        itinerary?.days
+          .find((d) => d.n === day)
+          ?.stops.map((s) => ({ slug: s.slug, name: s.name, emoji: s.emoji, time: s.time })) ??
+        null
+    } catch {
+      travelStops = null
+    }
+  }
+
   const sources: CanvasSources = {
     shareYaml,
     reportYaml,
@@ -72,6 +92,7 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
     ttsYaml,
     configYaml,
     markdown,
+    travelStops,
   }
 
   // Pre-sign every iframe URL the canvas can mount. 24h TTL — well past
@@ -79,23 +100,30 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
   // The HMAC secret stays server-side; only the resulting URLs cross to
   // the client.
   //
-  // Every vertical's story renders through vizmaya-fyi (`vizmayaPublicUrl`,
-  // lib/publicSite) — it's the one headless render surface footshorts/vizf1
-  // already iframe into. So signing against it is correct for all verticals,
-  // not a vizmaya-only coupling.
+  // Every vertical's story renders through a headless render surface, resolved
+  // PER SURFACE (`renderSurfaceUrl`, lib/publicSite). Today every surface
+  // resolves to vizmaya-fyi (the one surface footshorts/vizf1 iframe into); the
+  // render-engine extraction flips them to the neutral apps/render service one
+  // surface at a time via RENDER_SURFACE_URL_<SURFACE>. The canvas-frame id and
+  // each output spec sign against their own surface, so a flip moves exactly
+  // that surface and the others keep their live vizmaya.fyi fallback.
+  const vertical =
+    typeof story.frontmatter.vertical === 'string'
+      ? story.frontmatter.vertical
+      : undefined
   const sectionUnits = units.filter((u) => u.subIndex === 0)
   const SIGN_TTL_SECONDS = 24 * 60 * 60
   const signedSrcById: Record<string, string> = {}
   for (const u of sectionUnits) {
     const sectionId = u.parentConfig.id ?? `section-${u.parentIndex}`
     signedSrcById[canvasFrameId(sectionId)] = signOutputUrl({
-      baseUrl: vizmayaPublicUrl,
+      baseUrl: renderSurfaceUrl('canvasFrame', vertical),
       path: `/story/${encodeURIComponent(slug)}/canvas-frame/${encodeURIComponent(sectionId)}`,
       ttlSeconds: SIGN_TTL_SECONDS,
     })
     for (const spec of outputSpecsForUnit(u, slug)) {
       signedSrcById[spec.id] = signOutputUrl({
-        baseUrl: vizmayaPublicUrl,
+        baseUrl: renderSurfaceUrl(spec.group, vertical),
         path: spec.path,
         ttlSeconds: SIGN_TTL_SECONDS,
         query: spec.query,
@@ -107,11 +135,7 @@ export default async function CanvasPage({ slug, canvasPath }: CanvasPageProps) 
   // so the vertical's modules can be loaded via dynamic import without
   // bloating the client bundle; the canvas only receives the resulting
   // string arrays. Failures fall back to core types.
-  const moduleTypes = await getModuleTypesForVertical(
-    typeof story.frontmatter.vertical === 'string'
-      ? story.frontmatter.vertical
-      : undefined
-  )
+  const moduleTypes = await getModuleTypesForVertical(vertical)
 
   // Compose scaffold (migration 056) — present only while a draft is being
   // composed. Best-effort: a missing column / fs-only dev just yields null and

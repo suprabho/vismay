@@ -3,6 +3,8 @@
 import { useEffect } from 'react'
 import type { VizRenderProps } from '@vismay/viz-engine'
 import { StandingsTable } from '../../web/StandingsTable'
+import { FsFrame } from '../../web/FsFrame'
+import { pickFsBackground } from '../shared/background'
 import type { StandingsTableConfig } from './index'
 
 export default function StandingsTableVizComponent({
@@ -15,20 +17,22 @@ export default function StandingsTableVizComponent({
   }, [noteReady])
 
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        overflowY: 'auto',
-      }}
-    >
-      <div style={{ width: '100%', maxWidth: '480px' }}>
-        <StandingsTable rows={config.rows} linkBase="https://footshorts.com" />
+    <FsFrame {...pickFsBackground(config)}>
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          overflowY: 'auto',
+        }}
+      >
+        <div style={{ width: '100%', maxWidth: '480px' }}>
+          <StandingsTable rows={config.rows} linkBase="https://footshorts.com" />
+        </div>
       </div>
-    </div>
+    </FsFrame>
   )
 }

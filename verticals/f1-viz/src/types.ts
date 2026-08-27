@@ -9,7 +9,7 @@
  * call sites keep working.
  */
 
-export type RaceStatus = 'upcoming' | 'live' | 'finished'
+export type RaceStatus = 'upcoming' | 'live' | 'finished' | 'canceled'
 
 export type RaceRow = {
   /** Composite key — `${season}-${round}`. */
@@ -69,6 +69,8 @@ export type DriverLane = {
   driverName: string
   /** Hex string used to colour the polyline; usually constructor accent. */
   color: string
+  /** Driver headshot URL for the end-of-line avatar. Null → initials monogram. */
+  headshotUrl?: string | null
   points: LapPosition[]
 }
 
@@ -97,6 +99,8 @@ export type QualifyingRow = {
   driverName: string
   constructorId: string
   constructorName: string
+  /** Constructor primary colour (e.g. `#27F4D2`). Tints the driver chip + team. */
+  constructorColor?: string | null
   q1: string | null
   q2: string | null
   q3: string | null

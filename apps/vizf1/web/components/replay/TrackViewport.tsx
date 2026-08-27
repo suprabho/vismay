@@ -171,7 +171,7 @@ export function TrackViewport({
             const p = projector.project(corner.x, corner.y)
             return (
               <g key={`${corner.number}-${corner.letter}`}>
-                <circle cx={p.sx} cy={p.sy} r={2} fill="#e10600" opacity={0.6} />
+                <circle cx={p.sx} cy={p.sy} r={2} fill="#ff4346" opacity={0.6} />
                 <text x={p.sx + 6} y={p.sy + 3} fontSize={9} fill="#8e8e99" fontFamily="monospace">
                   T{corner.number}
                   {corner.letter || ''}

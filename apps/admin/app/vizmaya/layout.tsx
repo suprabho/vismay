@@ -11,7 +11,7 @@ export default async function VizmayaLayout({ children }: { children: React.Reac
     <>
       {showTabs && (
         <div className="shrink-0 border-b border-white/10 bg-neutral-950/60 backdrop-blur px-4 py-2 flex items-center gap-3 text-sm">
-          <span className="text-neutral-500 text-xs uppercase tracking-wider">Vizmaya FYI</span>
+          <span className="shrink-0 whitespace-nowrap text-neutral-500 text-xs uppercase tracking-wider">Vizmaya FYI</span>
           <AdminTabs />
         </div>
       )}

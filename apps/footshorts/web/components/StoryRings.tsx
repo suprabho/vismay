@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
+import { entityAvatarColor } from '@vismay/footshorts-viz/web';
 import { useFollowedStories } from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
 
@@ -35,7 +36,9 @@ export function StoryRings() {
 
   return (
     <div className="-mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1">
-      {ordered.map(({ g, originalIndex, allSeen }) => (
+      {ordered.map(({ g, originalIndex, allSeen }) => {
+        const avatarBg = entityAvatarColor(g.entity);
+        return (
         <Link
           key={g.entity.id}
           href={`/story?start=${originalIndex}`}
@@ -47,12 +50,12 @@ export function StoryRings() {
           >
             <div className="flex h-full w-full items-center justify-center rounded-full bg-bg p-[2px]">
               <div
-                className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-surface"
-                style={{ opacity: allSeen ? 0.55 : 1 }}
+                className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-surface p-[5px]"
+                style={{ backgroundColor: avatarBg ?? undefined, opacity: allSeen ? 0.55 : 1 }}
               >
                 {g.entity.crest_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={g.entity.crest_url} alt="" className="h-full w-full object-cover" />
+                  <img src={g.entity.crest_url} alt="" className="h-full w-full object-contain" />
                 ) : (
                   <span className="text-sm font-semibold text-text">
                     {initialsOf(g.entity.name)}
@@ -68,7 +71,8 @@ export function StoryRings() {
             {g.entity.name}
           </span>
         </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

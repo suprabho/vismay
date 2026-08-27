@@ -1,7 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { notFound } from 'next/navigation'
-import { getStoryContent, getViewableStorySlugs } from '@vismay/content-source/content'
-import { hasStoryConfig } from '@vismay/content-source/storyConfig'
+import { getStoryContent, getPrerenderStorySlugs } from '@vismay/content-source/content'
 import { StoryOgCard } from '@/components/seo/StoryOgCard'
 
 export const runtime = 'nodejs'
@@ -10,11 +9,8 @@ export const contentType = 'image/png'
 export const alt = 'vizmaya story preview'
 
 export async function generateStaticParams() {
-  const slugs = await getViewableStorySlugs()
-  const withConfig = await Promise.all(
-    slugs.map(async (slug) => ((await hasStoryConfig(slug)) ? slug : null))
-  )
-  return withConfig.filter((s): s is string => s !== null).map((slug) => ({ slug }))
+  const slugs = await getPrerenderStorySlugs()
+  return slugs.map((slug) => ({ slug }))
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {

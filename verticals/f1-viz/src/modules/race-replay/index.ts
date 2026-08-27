@@ -7,20 +7,22 @@ import type { ReplayFixture } from '../../web/replay/dataSource'
  *
  * Telemetry is large, so it is NOT inlined frame-by-frame in story YAML the
  * way `f1:position-chart` carries its lap series. Instead a layer points at a
- * data source one of three ways (checked in this order):
+ * data source one of four ways (checked in this order):
  *
  *   1. `fixture:`    — an inline `ReplayFixture` (used by the catalog sample so
  *                      the preview renders with zero network).
- *   2. `fixtureUrl:` — an explicit URL to a `ReplayFixture` JSON.
- *   3. `sessionRef:` — resolved by the host app to `/fixtures/replay-<ref>.json`
+ *   2. `sessionKey:` — real ingested telemetry, fetched from the app's Supabase
+ *                      replay route (`<apiBase>/api/replay/<sessionKey>`).
+ *   3. `fixtureUrl:` — an explicit URL to a `ReplayFixture` JSON.
+ *   4. `sessionRef:` — resolved by the host app to `/fixtures/replay-<ref>.json`
  *                      (falls back to `<fallbackRef>`, default `demo`).
  *
- * Story YAML:
+ * Story JSON:
  *
  *   foreground:
  *     - type: f1:race-replay
  *       title: '2024 Monaco GP — opening laps'
- *       sessionRef: '2024-monaco'   # → /fixtures/replay-2024-monaco.json
+ *       sessionKey: '2024_monaco_R'   # → <apiBase>/api/replay/2024_monaco_R
  *       autoPlay: true
  */
 export interface RaceReplayConfig {
@@ -29,6 +31,13 @@ export interface RaceReplayConfig {
   title?: string
   /** Inline telemetry payload — renders with no network (catalog/SSG). */
   fixture?: ReplayFixture
+  /** Real telemetry session key, fetched from the Supabase-backed replay route. */
+  sessionKey?: string
+  /**
+   * Origin for the replay route when the module renders off the vizf1 origin
+   * (e.g. the shared render surface). Defaults to relative (same origin).
+   */
+  apiBase?: string
   /** Session reference resolved to `/fixtures/replay-<ref>.json` by the host app. */
   sessionRef?: string
   /** Explicit fixture URL, overriding the `sessionRef` → URL convention. */
@@ -49,17 +58,20 @@ function parseConfig(
   const r = raw as Record<string, unknown>
   const hasSource =
     (r.fixture && typeof r.fixture === 'object') ||
+    typeof r.sessionKey === 'string' ||
     typeof r.fixtureUrl === 'string' ||
     typeof r.sessionRef === 'string'
   if (!hasSource) {
     throw new Error(
-      `${ctx.label}: f1:race-replay requires one of 'fixture', 'fixtureUrl', or 'sessionRef'`,
+      `${ctx.label}: f1:race-replay requires one of 'fixture', 'sessionKey', 'fixtureUrl', or 'sessionRef'`,
     )
   }
   return {
     type: 'f1:race-replay',
     title: typeof r.title === 'string' ? r.title : undefined,
     fixture: (r.fixture as ReplayFixture | undefined) ?? undefined,
+    sessionKey: typeof r.sessionKey === 'string' ? r.sessionKey : undefined,
+    apiBase: typeof r.apiBase === 'string' ? r.apiBase : undefined,
     sessionRef: typeof r.sessionRef === 'string' ? r.sessionRef : undefined,
     fixtureUrl: typeof r.fixtureUrl === 'string' ? r.fixtureUrl : undefined,
     fallbackRef: typeof r.fallbackRef === 'string' ? r.fallbackRef : undefined,
@@ -75,7 +87,7 @@ const raceReplayModule: VizModule<RaceReplayConfig> = {
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
   stableIdentity: (config) =>
-    `f1:race-replay:${config.fixtureUrl ?? config.sessionRef ?? 'inline'}::${
+    `f1:race-replay:${config.sessionKey ?? config.fixtureUrl ?? config.sessionRef ?? 'inline'}::${
       config.fixture?.tracks.length ?? 0
     }`,
 }

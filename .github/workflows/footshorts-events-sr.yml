@@ -1,0 +1,77 @@
+name: Footshorts - WC match events (Sportradar)
+
+# On-demand run of the Sportradar World Cup match-timeline sync
+# (apps/footshorts/worker/src/events-sportradar.ts). The same sync already runs
+# as a step inside footshorts-recap.yml's twice-daily scheduled run; this
+# workflow exists so the admin Pipeline tab's "Match timelines" panel (and manual
+# dispatch) can hydrate a just-finished match's goals/cards/subs immediately
+# without waiting for the next recap run. Idempotent — fixtures that already have
+# events are skipped — and self-limited to 150 Sportradar calls/run (trial budget guard).
+#
+# Required repo secrets (in `Production`, shared with footshorts-scores):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   SPORTRADAR_API_KEY
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Lookback window in days for finished-but-eventless WC fixtures. Blank = script default (14).'
+        required: false
+        default: ''
+      dry:
+        description: "Set to 'true' to match + parse without writing (dry run)."
+        required: false
+        default: ''
+
+# Same group as footshorts-scores: that workflow runs this very sync as a step,
+# and the Sportradar trial key is 1 QPS — serialise so a manual dispatch can
+# never hit Sportradar concurrently with a scheduled scores run.
+concurrency:
+  group: footshorts-football-data
+  cancel-in-progress: false
+
+jobs:
+  events-sr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/footshorts/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Sync World Cup match events (Sportradar)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SPORTRADAR_API_KEY: ${{ secrets.SPORTRADAR_API_KEY }}
+          # 'trial' (default, api.sportradar.com trial tier) or 'production' — match
+          # the tier the SPORTRADAR_API_KEY secret was issued on. Unset → trial.
+          SPORTRADAR_ACCESS_LEVEL: ${{ vars.SPORTRADAR_ACCESS_LEVEL }}
+          DAYS: ${{ inputs.days }}
+          DRY: ${{ inputs.dry }}
+        # Only pass --days when set — the script treats a bare `--days=` as 0,
+        # which would empty the lookback window.
+        run: |
+          ARGS=""
+          if [ -n "$DAYS" ]; then ARGS="$ARGS --days=$DAYS"; fi
+          if [ "$DRY" = "true" ]; then ARGS="$ARGS --dry"; fi
+          pnpm events:sr:ci -- $ARGS

@@ -172,7 +172,7 @@ function EntityPlaceholder({ entities }: { entities: FeedCardEntity[] }) {
           <img
             src={withCrest.crest_url!}
             alt=""
-            className="h-1/2 max-h-40 w-auto object-contain drop-shadow-lg"
+            className="h-1/2 max-h-40 w-auto max-w-[60%] object-contain drop-shadow-lg"
           />
         </div>
       );
@@ -197,13 +197,15 @@ function EntityPlaceholder({ entities }: { entities: FeedCardEntity[] }) {
           <img
             src={a.entity.crest_url}
             alt=""
-            className="h-1/2 max-h-40 w-auto object-contain drop-shadow-lg"
+            className="h-1/2 max-h-40 w-auto max-w-[60%] object-contain drop-shadow-lg"
           />
         ) : null}
       </div>
     );
   }
 
+  // Crests are height-driven (`w-auto`), so wide national flags (England 5:3,
+  // Mexico 7:4) need the max-w caps below to stay on their own half of the split.
   const [a, b] = picked;
   const background = `linear-gradient(135deg, ${a.color} 0%, ${a.color} 50%, ${b.color} 50%, ${b.color} 100%)`;
   return (
@@ -214,7 +216,7 @@ function EntityPlaceholder({ entities }: { entities: FeedCardEntity[] }) {
           <img
             src={a.entity.crest_url}
             alt=""
-            className="h-[40%] max-h-32 w-auto object-contain drop-shadow-lg"
+            className="h-[40%] max-h-32 w-auto max-w-[32%] object-contain drop-shadow-lg"
           />
         ) : (
           <span />
@@ -224,7 +226,7 @@ function EntityPlaceholder({ entities }: { entities: FeedCardEntity[] }) {
           <img
             src={b.entity.crest_url}
             alt=""
-            className="h-1/2 max-h-32 w-auto object-contain drop-shadow-lg"
+            className="h-1/2 max-h-32 w-auto max-w-[32%] object-contain drop-shadow-lg"
           />
         ) : (
           <span />

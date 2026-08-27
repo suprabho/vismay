@@ -7,6 +7,7 @@ import {
 } from './vizEngine'
 import { VIZMAYA_PACK } from './packs/vizmaya'
 import type { DomainPack } from './packs/types'
+import { CHART_TYPES, SEMANTIC_TYPE_HINTS } from './chartVocab'
 
 /**
  * Zod schemas that constrain the two LLM calls at the provider level (via
@@ -139,30 +140,11 @@ export type AnglesBriefOutput = z.infer<typeof anglesBriefSchema>
 
 // ── Phase 2: story generation ──────────────────────────────────────────────
 
-export const chartSpecSchema = z.object({
-  id: z
-    .string()
-    .describe('kebab-case id; a chart layer references this exact id.'),
-  title: z.string().optional().describe('Chart title.'),
-  chartType: z.enum(['bar', 'line']).describe('Chart type.'),
-  categories: z.array(z.string()).describe('X-axis category labels.'),
-  series: z
-    .array(
-      z.object({
-        name: z.string().describe('Series name (shown in the legend).'),
-        data: z.array(z.number()).describe('One value per category, same order.'),
-      }),
-    )
-    .describe('One or more data series.'),
-  xLabel: z.string().optional(),
-  yLabel: z.string().optional(),
-})
-
 /**
  * A chart REQUIREMENT — what the outline plans, with no numbers. The outline is
- * a skeleton (no prose, no data); fabricating accurate series there is
- * unreliable, so the outline only declares the chart's shape + a precise
- * `requirement` describing what to plot. A focused, source-grounded
+ * a skeleton (no prose, no data); fabricating accurate data there is unreliable,
+ * so the outline only declares the chart's shape (one of {@link CHART_TYPES}) +
+ * a precise `requirement` describing what to plot. A focused, source-grounded
  * `generateChart` pass then fills in the data (see `chartDataSchema`).
  */
 export const chartRequirementSchema = z.object({
@@ -170,7 +152,9 @@ export const chartRequirementSchema = z.object({
     .string()
     .describe('kebab-case id; a chart layer references this exact id.'),
   title: z.string().optional().describe('Chart title.'),
-  chartType: z.enum(['bar', 'line']).describe('Chart type.'),
+  chartType: z
+    .enum(CHART_TYPES)
+    .describe('Chart template — pick the one that best fits what the chart shows.'),
   requirement: z
     .string()
     .describe(
@@ -183,21 +167,57 @@ export const chartRequirementSchema = z.object({
 })
 
 /**
- * The data-only OUTPUT of the `generateChart` pass: categories + numeric series
- * grounded in the sources. Merged with its `chartRequirement` (id/title/type/
- * axes) to form a full `ChartSpec` that `buildEChartsOption` expands.
+ * Channel → column-name encodings (flint `chart_spec.encodings`). Modelled as an
+ * explicit object (no `z.record`) for structured-output compatibility. `y` is an
+ * array so multiple measure columns fold into a static multi-series; a
+ * single-measure chart just passes a one-element array.
+ */
+export const chartEncodingsSchema = z.object({
+  x: z.string().optional().describe('Column for the x-axis.'),
+  y: z
+    .array(z.string())
+    .optional()
+    .describe('One or more measure columns for the y-axis (multiple → multi-series).'),
+  y2: z.string().optional().describe('Upper-bound column for a Range Area band.'),
+  color: z.string().optional().describe('Column that splits series / colours categories (legend).'),
+  size: z.string().optional().describe('Column controlling bubble size on a scatter.'),
+  angle: z.string().optional().describe('Slice measure for pie / rose charts.'),
+  value: z.string().optional().describe('Segment measure for funnel / pyramid charts.'),
+  group: z.string().optional().describe('Secondary grouping column (grouped / bump charts).'),
+  detail: z.string().optional().describe('Detail/grouping column for connected lines.'),
+  source: z
+    .string()
+    .optional()
+    .describe('Edge-source column for relationship charts (Sankey / Chord / Network Graph).'),
+  target: z
+    .string()
+    .optional()
+    .describe('Edge-target column for relationship charts (Sankey / Chord / Network Graph).'),
+})
+
+/**
+ * The data OUTPUT of the `generateChart` pass: a compact flint tabular spec —
+ * columns (each with a semantic type), rows, and channel encodings — grounded in
+ * the sources. Merged with its `chartRequirement` (id/title/type/axes) to form a
+ * full `ChartSpec`, which `buildEChartsOption` compiles to an ECharts option via
+ * flint's `assembleECharts`.
  */
 export const chartDataSchema = z.object({
-  categories: z.array(z.string()).describe('X-axis category labels.'),
-  series: z
+  columns: z
     .array(
       z.object({
-        name: z.string().describe('Series name (shown in the legend).'),
-        data: z.array(z.number()).describe('One value per category, same order.'),
+        name: z.string().describe('Column name — referenced by `encodings`.'),
+        semanticType: z
+          .string()
+          .describe(`Flint semantic type. Common ones — ${SEMANTIC_TYPE_HINTS}.`),
       }),
     )
     .min(1)
-    .describe('One or more data series, each with one value per category.'),
+    .describe('The data columns.'),
+  rows: z
+    .array(z.array(z.union([z.string(), z.number()])))
+    .describe('Data rows — each row has exactly one value per column, in `columns` order.'),
+  encodings: chartEncodingsSchema.describe('Map columns (by name) to chart channels.'),
 })
 
 // ── Map-region (choropleth) requirement + data pass ────────────────────────
@@ -286,10 +306,11 @@ export function sectionContentSchemaFor(format: 'deck' | 'map') {
       : z
           .array(z.string())
           .min(1)
-          .max(5)
+          .max(3)
           .describe(
-            'Body prose, one string per paragraph — lean panel copy: 30–60 words per paragraph, ' +
-              'no padding. Factual magazine register.',
+            'Body prose, one string per paragraph — a slide is not a scroll: 1–3 paragraphs of ' +
+              '20–40 words each, ≤ ~75 words total (the slide region clips on a phone, it does not ' +
+              'scroll). Lean panel copy, no padding. Factual magazine register.',
           )
   return z.object({
     heading: z
@@ -549,7 +570,10 @@ export const sectionStubSchema = sectionStubSchemaFor('deck')
 /** The outline schema, with section stubs narrowed to the format. */
 export function outlineSchemaFor(format: 'deck' | 'map', pack: DomainPack = VIZMAYA_PACK) {
   return z.object({
-    format: z.enum(['deck', 'map']).describe('The story format to produce.'),
+    // The caller's choice, forced by `toOutline` after generation — so it must
+    // not block validation when the model omits it. `.default(format)` keeps the
+    // parsed object well-formed with the correct format regardless.
+    format: z.enum(['deck', 'map']).default(format).describe('The story format to produce.'),
     title: z.string().describe('Story headline.'),
     subtitle: z.string().describe('One-line deck/subtitle.'),
     byline: z.string().describe(`Attribution line, e.g. "${pack.bylineExample}".`),

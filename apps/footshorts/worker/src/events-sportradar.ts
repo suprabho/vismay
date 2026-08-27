@@ -26,13 +26,23 @@
  *   npm run events:sr -- --season      # list the full WC season schedule + exit
  *   npm run events:sr -- --probe       # dump the first matched raw timeline + exit
  *   npm run events:sr -- --dry         # match + parse, don't write
+ *
+ * Also dispatchable from the admin Pipeline tab's "Match timelines" panel,
+ * which fires .github/workflows/footshorts-events-sr.yml (days/dry inputs map
+ * to the flags above).
  */
 
 import { createClient } from '@supabase/supabase-js';
 
 const SR_KEY = process.env.SPORTRADAR_API_KEY!;
-const SR_ACCESS = process.env.SPORTRADAR_ACCESS_LEVEL ?? 'trial';
-const SR_LANG = process.env.SPORTRADAR_LANG ?? 'en';
+// Default an unset OR empty access level/lang to the trial tier. In CI these
+// come from `${{ vars.SPORTRADAR_ACCESS_LEVEL }}`, which GitHub renders as an
+// empty string (not undefined) when the repo variable isn't set — so `??` would
+// NOT fall back and we'd build `.../soccer//v4/...` with an empty tier segment,
+// which Sportradar's gateway can't route → a deterministic 502 on every call.
+// `|| default` (with a trim to catch stray whitespace) treats empty as unset.
+const SR_ACCESS = process.env.SPORTRADAR_ACCESS_LEVEL?.trim() || 'trial';
+const SR_LANG = process.env.SPORTRADAR_LANG?.trim() || 'en';
 const SR_BASE = `https://api.sportradar.com/soccer/${SR_ACCESS}/v4/${SR_LANG}`;
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -58,14 +68,61 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let srCalls = 0;
 
+// Sportradar's gateway intermittently returns a transient 5xx (the 502 Bad
+// Gateway we saw abort a whole run) or a 429 when we brush the trial's 1-QPS
+// limit. A single blip shouldn't fail the job, so retry these with exponential
+// backoff. Other 4xx (bad key, not found) are permanent — thrown immediately so
+// we don't waste retries or the trial budget waiting on something that can't fix
+// itself.
+const SR_MAX_RETRIES = 4;
+const SR_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+// Cap a single backoff so a large/bogus Retry-After can't stall the job.
+const SR_MAX_BACKOFF_MS = 30 * 1000;
+
 async function srFetch<T>(path: string): Promise<T> {
-  srCalls++;
   const sep = path.includes('?') ? '&' : '?';
-  const res = await fetch(`${SR_BASE}${path}${sep}api_key=${SR_KEY}`);
-  if (!res.ok) {
-    throw new Error(`sportradar ${path} failed: ${res.status} ${res.statusText}`);
+  const url = `${SR_BASE}${path}${sep}api_key=${SR_KEY}`;
+
+  for (let attempt = 0; ; attempt++) {
+    srCalls++; // every attempt is a real request against the trial allowance
+
+    // fetch() rejects only on transport failures (DNS, reset, TLS); a bad HTTP
+    // status resolves normally. Capture whichever happened as a retry `reason`.
+    let res: Response | null = null;
+    let reason = '';
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      reason = (e as Error).message;
+    }
+
+    if (res) {
+      if (res.ok) return (await res.json()) as T;
+      // Permanent client errors won't change on retry — surface immediately.
+      if (!SR_RETRYABLE_STATUS.has(res.status)) {
+        throw new Error(`sportradar ${path} failed: ${res.status} ${res.statusText}`);
+      }
+      reason = `${res.status} ${res.statusText}`;
+    }
+
+    if (attempt >= SR_MAX_RETRIES) {
+      throw new Error(`sportradar ${path} failed after ${attempt + 1} attempts: ${reason}`);
+    }
+
+    // Honor Retry-After when present (429/503 often set it), else exponential
+    // backoff on the 1-QPS gap: 3s, 6s, 12s, 24s (capped).
+    const retryAfter = res ? Number(res.headers.get('retry-after')) : NaN;
+    const waitMs = Math.min(
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : SR_GAP_MS * 2 ** (attempt + 1),
+      SR_MAX_BACKOFF_MS,
+    );
+    console.warn(
+      `[events:sr] ${path} transient failure (${reason}); retry ${attempt + 1}/${SR_MAX_RETRIES} in ${Math.round(waitMs / 1000)}s`,
+    );
+    await sleep(waitMs);
   }
-  return (await res.json()) as T;
 }
 
 // Normalize team names to compare across providers: lowercase, strip accents and

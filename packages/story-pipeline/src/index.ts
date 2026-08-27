@@ -11,20 +11,51 @@
 
 export * from './types'
 export {
+  CHART_TYPES,
+  RELATIONSHIP_CHART_TYPES,
+  isRelationshipChartType,
+  type RelationshipChartType,
+} from './chartVocab'
+export {
   packForVertical,
   configFormatForVertical,
   VIZMAYA_PACK,
   F1_PACK,
   FOOTSHORTS_PACK,
+  TRAVEL_PACK,
   type DomainPack,
   type PackLayerType,
 } from './packs'
-export { ingestSources, extract, extractBuffer, extractText, extractPdfVision } from './ingest'
-export type { IngestInput, InputFile, InputText, ExtractedSource, VisionPdfOptions } from './ingest'
+export {
+  ingestSources,
+  extract,
+  extractBuffer,
+  extractText,
+  extractPdfVision,
+  extractPdfLite,
+  assessLiteExtraction,
+  extractWithMarkitdown,
+  isMarkitdownExt,
+  isMarkitdownAvailable,
+  MARKITDOWN_EXTS,
+} from './ingest'
+export type {
+  IngestInput,
+  InputFile,
+  InputText,
+  ExtractedSource,
+  VisionPdfOptions,
+  LiteExtractionResult,
+  LiteExtractionAssessment,
+  MarkitdownOptions,
+} from './ingest'
 export {
   graftRecapForeground,
   graftSectionBody,
   collectRecapDirectives,
+  collectVerticalDirectives,
+  collectForegroundLayers,
+  type ForegroundLayer,
   type GraftRecapResult,
 } from './ingest/recapForeground'
 export { research, type ResearchOptions } from './research'
@@ -32,7 +63,9 @@ export { generateAngles } from './angles'
 export {
   generateStory,
   generateOutline,
+  generateOutlineSection,
   generateChart,
+  generateChartRequirement,
   generateRegions,
   injectRegions,
   generateSection,

@@ -11,14 +11,11 @@ decision row and Phases 3/5).
 - **Tier:** free — **10 req/min**, **personal/educational only**, 13 competitions, no
   player/squad or per-match-stats endpoints. See [Constraints](#constraints--what-the-free-tier-doesnt-give-us).
 
-All three worker scripts share the same minimal wrapper:
+All three worker scripts (`seed.ts`, `fixtures.ts`, `scores.ts`) import one shared wrapper
+from `worker/src/footballData.ts`, which retries on a `429` (see below):
 
 ```ts
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, { headers: { 'X-Auth-Token': FD_TOKEN } });
-  if (!res.ok) throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
-}
+import { fdFetch, sleep, FD_TOKEN, filterCompetitions } from './footballData';
 ```
 
 ### Rate-limit response headers
@@ -32,9 +29,25 @@ Docs: <https://docs.football-data.org/general/v4/lookup_tables.html>
 | `X-API-Version` | API version in use (`v4`) |
 | `X-Authenticated-Client` | detected client, or `anonymous` |
 
-We currently **don't read** these — scripts pace blindly with a fixed `sleep(6500)` (6.5 s)
-between calls and throw on any non-200. A `429` is therefore a hard failure, not a backoff.
+Scripts pace blindly with a fixed `sleep(6500)` (6.5 s) between calls. The shared `fdFetch`
+also reads `X-RequestCounter-Reset` on a `429` and waits that many seconds (+1 s buffer,
+capped at 90 s) before retrying, up to 3 times — so a shared-token rate-limit hit no longer
+fails the whole competition. We don't yet read `X-RequestsAvailable` for adaptive pacing.
 See [Known gaps](#known-gaps).
+
+### Scoping a run to specific competitions
+
+`scores.ts` and `fixtures.ts` accept an optional `--competitions=` flag (or `COMPETITIONS`
+env var) to limit a run to a subset — handy for re-running just one competition after a
+rate-limit hit, or refreshing the World Cup after a knockout draw without touching the rest.
+
+- **scores** keys by football-data **code**: `pnpm scores -- --competitions=WC,PL`
+- **fixtures** keys by entity **slug**: `pnpm fixtures -- --competitions=world-cup,premier-league`
+
+Matching is case-insensitive; unmatched tokens are warned about and ignored. Both workflows
+expose the same filter as a `workflow_dispatch` input (blank on the schedule → all). The two
+workflows also share one `concurrency` group (`footshorts-football-data`) so a manual
+dispatch of one can't overlap a scheduled run of the other on the shared token.
 
 ### Enum lookup tables
 
@@ -88,6 +101,16 @@ Seeded competition codes:
 - `commonName()` strips club-type tokens (`FC`, `SSC`, `1. FC` …) and trailing founding
   years so FD's official names slugify to what news articles use: `"Juventus FC"` →
   `juventus`, `"Bologna FC 1909"` → `bologna`. Display `name` keeps the original.
+  Glued acronyms need their own strip entries (`\b` won't split them): `ACF`, `CFC`,
+  `BC` cover `"ACF Fiorentina"` → `fiorentina`, `"Genoa CFC"` → `genoa`,
+  `"Atalanta BC"` → `atalanta`. Club-type *words* count too: `CALCIO`, `US` cover
+  `"Cagliari Calcio"` → `cagliari`, `"US Sassuolo Calcio"` → `sassuolo`. If a team's
+  chip never appears despite coverage, check the worker logs for `[entity-miss]` —
+  the slug likely kept a token like this. Fixing one takes all three steps: add the
+  strip token here, migrate the existing `entities.slug` (a merged migration still
+  needs `supabase db push` — it is not applied by CI), and run
+  `pnpm backfill:entity-tags` so already-ingested articles pick up the tag (tags are
+  written only at ingest; misses are never retried).
 - `CL/EL/WC/EC` are non-domestic → membership recorded, but they don't set a team's
   `league_slug` (that always points at the domestic league).
 - Players are **not** seeded — squads are paid-tier (`seed-squads.ts` exists for the
@@ -104,14 +127,16 @@ Per seeded league (from `entities` where `football_data_id` is set):
 - `normalizeSeason()`: multi-year league (Aug→May) → `"25-26"`; single-year cup → `"2025"`.
 - **`fixture_stats` is left empty** — shots/possession/cards/xG are paid-tier.
 
-### `scores.ts` — finished-score refresh (every 12h)
+### `scores.ts` — finished-score refresh (every 3h)
 
 Update-only, never inserts. Per comp code:
 
 - `GET /competitions/{code}/matches?status=FINISHED&dateFrom&dateTo` over a **2-day** lookback.
 - Resolve each FD match to a local fixture by `(home_team_id, away_team_id, kickoff_at ±6h)`
   — skips if 0 or >1 match. Writes `home_score`, `away_score`, `status='finished'`.
-- Scheduled by `.github/workflows/scores.yml`.
+- Scheduled by `.github/workflows/footshorts-scores.yml` every 3 hours (scores only).
+  Events + recaps are decoupled into `.github/workflows/footshorts-recap.yml`, which
+  runs its own twice-daily (00:00/12:00 UTC) schedule.
 
 ### `entityResolver.ts` — names → canonical IDs
 
@@ -133,9 +158,8 @@ hallucinations from polluting the follow graph.
 
 ## Known gaps
 
-- `fdFetch` ignores `X-RequestsAvailable` / `X-RequestCounter-Reset` and doesn't special-case
-  `429`. A single rate-limit hit throws. Reading the headers would allow adaptive pacing
-  instead of a fixed 6.5 s.
+- The shared `fdFetch` retries on `429` (reads `X-RequestCounter-Reset`) but still ignores
+  `X-RequestsAvailable`; reading it would allow adaptive pacing instead of a fixed 6.5 s.
 - `normalizeStatus()` doesn't map `EXTRA_TIME` / `PENALTY_SHOOTOUT` / `AWARDED`; they fall
   through to `s.toLowerCase()`, so a knockout match in extra time lands as
   `status='extra_time'` rather than `live`. Tighten before knockout rounds.

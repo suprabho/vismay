@@ -7,6 +7,7 @@ import {
   ConstructorStandingsWidget,
 } from '@/components/StandingsWidgets'
 import { SeasonStandingsChart } from '@/components/SeasonStandingsChart'
+import { ScheduleList } from '@/components/ScheduleList'
 
 export function ForYouFeed() {
   return (
@@ -22,6 +23,9 @@ export function ForYouFeed() {
 
       <SectionHeader title="Standings over time" hint="Season so far" />
       <SeasonStandingsChart />
+
+      <SectionHeader title="Calendar" hint="Full season" />
+      <ScheduleList />
     </div>
   )
 }

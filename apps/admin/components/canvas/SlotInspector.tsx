@@ -32,6 +32,7 @@ import {
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import VizConfigForm from '@/components/vizmaya/VizConfigForm'
 import PromptBar from './PromptBar'
+import { useIsMobile } from './useIsMobile'
 
 type FormValue = string | number | boolean | object | null | undefined
 
@@ -198,6 +199,7 @@ export default function SlotInspector({
   onEditAsYaml,
   onClose,
 }: Props) {
+  const isMobile = useIsMobile()
   const vizModule = useMemo(() => getVizModule(layerType), [layerType])
   const schemaKeys = useMemo(
     () => vizModule?.adminForm?.(initialLayer as never)?.map((f) => f.key) ?? [],
@@ -267,7 +269,8 @@ export default function SlotInspector({
         top: 0,
         right: 0,
         bottom: 0,
-        width: 'min(360px, 34vw)',
+        left: isMobile ? 0 : undefined,
+        width: isMobile ? '100%' : 'min(360px, 34vw)',
         background: COLORS.surface,
         borderLeft: `1px solid ${COLORS.line}`,
         boxShadow: '-8px 0 24px rgba(0,0,0,0.5)',

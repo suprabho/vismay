@@ -20,6 +20,8 @@ export async function PUT(
     baseType?: string
     ratio?: string | null
     config?: unknown
+    carouselId?: string | null
+    carouselPosition?: number | null
   }
   const card = await updateShareCard(id, body)
   return NextResponse.json({ ok: true, card })

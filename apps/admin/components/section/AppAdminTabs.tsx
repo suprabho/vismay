@@ -17,8 +17,18 @@ export function AppAdminTabs({ appSlug }: Props) {
   if (appSlug === 'footshorts') {
     tabs.push({ href: `/${appSlug}/pipeline`, label: 'Pipeline' })
     tabs.push({ href: `/${appSlug}/recaps`, label: 'Recaps' })
+    tabs.push({ href: `/${appSlug}/power-rankings`, label: 'Power rankings' })
+    tabs.push({ href: `/${appSlug}/match-facts`, label: 'Match facts' })
     tabs.push({ href: `/${appSlug}/share-cards`, label: 'Share cards' })
     tabs.push({ href: `/${appSlug}/asset-studio`, label: 'Asset studio' })
+  }
+  // Recipe-corpora coverage (migration 070) + the history review queue
+  // (migration 071) are the food vertical's — umami-only. Social frames is the
+  // umami compose-frames creator (vizmaya layer composer in umami mode).
+  if (appSlug === 'umami') {
+    tabs.push({ href: `/${appSlug}/recipes`, label: 'Recipes' })
+    tabs.push({ href: `/${appSlug}/history`, label: 'History' })
+    tabs.push({ href: `/${appSlug}/share-cards`, label: 'Social frames' })
   }
   return <Tabs tabs={tabs} />
 }

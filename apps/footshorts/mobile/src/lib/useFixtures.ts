@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { filterHiddenFixtures, isHiddenCompetition } from './hiddenContent';
 
 // Football-domain types live in @vismay/footshorts-viz so mobile MatchRow
 // and any vertical components share a single source of truth.
@@ -14,6 +15,11 @@ const FIXTURE_COLS = `
 `;
 
 export type FixtureKind = 'past' | 'upcoming' | 'all';
+
+// Scores land in Supabase from batch syncs, so a mounted fixtures screen has
+// to poll to pick them up. 60s matches staleTime; foreground-only (the
+// refetchIntervalInBackground default) so a backgrounded app stays quiet.
+const FIXTURES_REFETCH_MS = 60 * 1000;
 
 function applyKind<T extends { lt: Function; gte: Function; order: Function }>(
   q: T,
@@ -38,7 +44,7 @@ export function useLeagueFixtures(
 ) {
   return useQuery({
     queryKey: ['fixtures', 'league', competitionSlug, kind, limit],
-    enabled: !!competitionSlug,
+    enabled: !!competitionSlug && !isHiddenCompetition(competitionSlug),
     queryFn: async (): Promise<FixtureRow[]> => {
       let q = supabase
         .from('fixtures')
@@ -50,6 +56,7 @@ export function useLeagueFixtures(
       return (data ?? []) as unknown as FixtureRow[];
     },
     staleTime: 60 * 1000,
+    refetchInterval: FIXTURES_REFETCH_MS,
   });
 }
 
@@ -69,8 +76,9 @@ export function useTeamFixtures(
       q = applyKind(q, kind, limit);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as FixtureRow[];
+      return filterHiddenFixtures((data ?? []) as unknown as FixtureRow[]);
     },
     staleTime: 60 * 1000,
+    refetchInterval: FIXTURES_REFETCH_MS,
   });
 }

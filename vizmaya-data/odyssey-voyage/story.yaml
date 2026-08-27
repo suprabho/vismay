@@ -1,0 +1,194 @@
+id: odyssey-voyage
+slug: odyssey-voyage
+title: "A two-week voyage, ten years long."
+deck: >
+  Odysseus's homeward trip from Troy to Ithaca is a real ~565-nautical-mile
+  route — a week or two of Bronze Age sailing. Homer stretches it into ten
+  years, of which only a few weeks are actual voyaging; the rest is
+  detention. The map is a deliberate blend of real Aegean places and an
+  invented Wonderland that begins at Cape Malea.
+status: draft
+era: "c. 1200 BCE (composed c. 8th c. BCE)"
+countries:
+  - Greece
+  - Turkey
+  - Italy
+  - Tunisia
+  - Libya
+  - Malta
+reporting_date: 2026-07-20
+data_cutoff: 2026-07-20
+authors:
+  - Vizmaya editorial
+license: CC-BY-4.0
+
+# NOTE: this is a LITERARY-GEOGRAPHY story, not a live dataset. Every landfall
+# after Cape Malea is contested; most classicists treat Books 9-12 as
+# imaginary. Only Troy, Ismaros/Maroneia and the Ithaki/Kefalonia zone rest on
+# excavation. Tag every post-Malea identification as "traditional" or
+# "contested," never as fact. See CLAUDE.md and INGEST_NOTES.md.
+
+# Wine-dark palette — deep burgundy -> indigo -> slate, tied to the Gladstone
+# "why not blue?" debate (see wine_dark_palette.csv).
+tokens:
+  ink:       "#0a0910"
+  surface:   "#100d18"
+  bone:      "#e8ddc9"
+  muted:     "#9a8f86"
+  line:      "#2a2636"
+  wine:      "#7c2438"
+  burgundy:  "#5a1a2b"
+  indigo:    "#4c5fb0"
+  slate:     "#5b7a8c"
+  loss:      "#c0603a"
+  status:
+    anchor:                  "#c9a24b"   # undisputed / excavated (Troy, Ismaros, Ithaki)
+    real_navigation:         "#5b7a8c"   # real, mappable (Cape Malea)
+    traditional:             "#7c2438"   # literary / tourist tradition
+    contested:               "#9a8f86"   # multiple rival IDs
+    archaeological_contested: "#3f8b7a"  # excavated but Homeric link questioned (Necromanteion)
+
+datasets:
+  voyage_stops:
+    file: voyage_stops.csv
+    schema: [seq, stop, episode, book, region, duration, duration_days, ships_after, men_after, id_status, traditional_place, lat, lon, notes]
+    rows: 15
+    coverage: Troy -> Ithaca, chronological order
+    source_of_record: Homer, Odyssey (Books 9-13)
+  route_theories:
+    file: route_theories.csv
+    schema: [theory_id, label, proponent, work, year, school, east_lon, west_lon, summary, key_ids]
+    rows: 5
+    coverage: the five main schools of reconstruction
+    source_of_record: Strabo; Berard 1929; Bradford 1963; Severin 1987
+  episode_identifications:
+    file: episode_identifications.csv
+    schema: [seq, episode, theory, proposed_place, modern_region, lat, lon, status]
+    rows: 34
+    coverage: rival landfall IDs per contested episode
+  timeline_allocation:
+    file: timeline_allocation.csv
+    schema: [seq, phase, category, duration_days, duration_label, share_of_decade_pct, note]
+    rows: 14
+    coverage: where the ten years actually go
+  distances:
+    file: distances.csv
+    schema: [measure, value, unit, comparison, note, source]
+    rows: 10
+    coverage: distance and transit-time facts
+  wine_dark_palette:
+    file: wine_dark_palette.csv
+    schema: [step, label, hex, greek_term, gloss, note]
+    rows: 6
+    coverage: the "wine-dark sea" color motif
+
+charts:
+  detention:
+    file: charts/detention-paradox.json
+    type: bar-horizontal
+    title: "The ten years are a trap of detention, not distance"
+    data_from: timeline_allocation
+  attrition:
+    file: charts/attrition.json
+    type: line-dual
+    title: "Twelve ships and 720 men, down to one man alone"
+    data_from: voyage_stops
+  distance:
+    file: charts/distance-vs-time.json
+    type: bar-horizontal
+    title: "A two-week voyage, stretched to ten years"
+    data_from: distances
+  routes:
+    file: charts/route-theories.json
+    type: scatter
+    title: "No single true route — only rival maps"
+    data_from: episode_identifications
+  timeline:
+    file: charts/voyage-timeline.json
+    type: timeline
+    title: "The voyage as it is told — a story within a story"
+    data_from: voyage_stops
+  casualties:
+    file: charts/casualties.json
+    type: bar-horizontal
+    title: "Where the men were lost"
+    data_from: voyage_stops
+
+sections:
+  - id: hero
+    label: "Troy to Ithaca"
+    kind: hero
+  - id: now
+    label: "The voyage in numbers"
+    kind: kpi-grid
+    items:
+      - { label: "Straight-line distance", value: "565 nm", sub: "Troy -> Ithaca, as the crow flies" }
+      - { label: "Years away from Ithaca", value: 20, sub: "10 at war + 10 wandering" }
+      - { label: "Of the wandering decade, detained", value: "~80%", sub: "Circe 1 yr + Calypso 7 yr", accent: true }
+      - { label: "Men home of 720", value: 1, sub: "Odysseus alone; 12 ships -> 0" }
+  - id: detention
+    label: "The detention paradox"
+    kind: chart
+    chart: detention
+  - id: distance
+    label: "A two-week trip, in ten years"
+    kind: chart
+    chart: distance
+  - id: attrition
+    label: "The cost of the voyage"
+    kind: chart
+    chart: attrition
+  - id: casualties
+    label: "Where the men were lost"
+    kind: chart
+    chart: casualties
+  - id: pivot
+    label: "Cape Malea — the hinge into Wonderland"
+    kind: quote
+    quote: "These are the last clearly identifiable places in O.'s wanderings. After this he leaves the sphere of Geography and enters Wonderland."
+    attribution: "W. B. Stanford, The Odyssey of Homer (1947), on Book 9.80-81"
+  - id: routes
+    label: "Rival maps, not one line"
+    kind: chart
+    chart: routes
+  - id: timeline
+    label: "The voyage as it is told"
+    kind: chart
+    chart: timeline
+  - id: winedark
+    label: "The wine-dark sea"
+    kind: palette
+    palette_from: wine_dark_palette
+    quote: "You will find the scene of the wanderings of Odysseus when you find the cobbler who sewed up the bag of the winds."
+    attribution: "Eratosthenes, via Strabo, Geography 1.2.15"
+  - id: data
+    label: "Sources & how to read this map"
+    kind: source-table
+
+sources:
+  primary_text:
+    - { title: "Homer, Odyssey — Perseus (Murray, Loeb)", url: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.01.0135" }
+    - { title: "Homer, Odyssey — Poetry in Translation (A. S. Kline)", url: "https://www.poetryintranslation.com/PITBR/Greek/Odhome.php" }
+    - { title: "Theoi — Odyssey text and commentary", url: "https://www.theoi.com/Text/HomerOdyssey9.html" }
+  scholarship:
+    - { title: "Wikipedia — Geography of the Odyssey", url: "https://en.wikipedia.org/wiki/Geography_of_the_Odyssey" }
+    - { title: "Strabo, Geography (Bk 1) — Perseus", url: "https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.01.0198" }
+    - { title: "Polybius, Histories (Bk 34) — LacusCurtius", url: "https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Polybius/34*.html" }
+    - { title: "W. B. Stanford, The Odyssey of Homer (1947)", url: "https://archive.org/details/odysseyofhomer0001home" }
+  reconstructions:
+    - { title: "Tim Severin, The Ulysses Voyage (1987) — Internet Archive", url: "https://archive.org/details/ulyssesvoyagesea0000seve" }
+    - { title: "Victor Berard, Les Navigations d'Ulysse (1927-29)", url: "https://catalogue.bnf.fr/ark:/12148/cb31782630f" }
+    - { title: "Robert Bittlestone, Odysseus Unbound (CUP, 2005)", url: "https://odysseus-unbound.org/" }
+    - { title: "Diggle & Underhill, 'Was Homer's Ithaca an Island?' (Antigone, 5 Jul 2026)", url: "https://antigonejournal.com/" }
+  motif:
+    - { title: "Wikipedia — Wine-dark sea", url: "https://en.wikipedia.org/wiki/Wine-dark_sea" }
+    - { title: "W. E. Gladstone, Studies on Homer and the Homeric Age (1858)", url: "https://archive.org/details/studiesonhomerh01gladgoog" }
+
+caveats:
+  - The geography is genuinely unresolved and probably unresolvable; most classicists treat Books 9-12 as imaginary.
+  - Every landfall after Cape Malea is contested. Present routes as layers, never assert one as true.
+  - Coordinates for mythic sites are traditional/literary associations, not proven locations. Only Troy, Ismaros/Maroneia and the Ithaki/Kefalonia zone rest on excavation.
+  - The Necromanteion's Homeric link is now contested — the ruins date no earlier than the later 4th c. BCE and may be a fortified farmhouse.
+  - Fleet numbers (720 men / 12 ships, ~60 per ship) are reconstructed; Homer is not perfectly explicit and translations vary.
+  - The Severin galley spec has a minor source conflict (54 ft / ~20 oars vs a local 14 m / 22-rower figure) — confirm against the primary book before publishing a precise number.
+  - Distance figures vary by method (straight-line ~565 nm vs actual coast-following routes of "several thousand miles"); always state which you mean.

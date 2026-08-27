@@ -1,6 +1,7 @@
 import matter from 'gray-matter'
 import { Frontmatter } from '@vismay/viz-engine'
 import { getContentSource } from './contentSource'
+import { hasStoryConfig } from './storyConfig'
 
 export interface ContentSection {
   heading: string
@@ -35,27 +36,16 @@ export function isListed(fm: Pick<Frontmatter, 'status' | 'listed'>): boolean {
 }
 
 /**
- * Reads a story markdown file and returns frontmatter + content split into sections by heading.
- * Each story page decides how to use these sections.
+ * Parse a raw markdown document (frontmatter + body) into StoryContent,
+ * splitting the body into sections by heading. Pure — no content-source or
+ * environment access, so hosts that store story markdown elsewhere (their own
+ * DB rows, a publish snapshot) can reuse the exact split the reader expects.
  *
- * Throws for drafts in production so the story route renders a 404 rather than
- * leaking unfinished work.
+ * Performs no viewability check: callers gate drafts themselves.
  */
-export async function getStoryContent(
-  slug: string,
-  opts: { allowDraft?: boolean } = {}
-): Promise<StoryContent> {
-  const raw = await getContentSource().readMarkdown(slug)
-  if (raw == null) throw new Error(`Story "${slug}" not found`)
+export function parseStoryContent(raw: string): StoryContent {
   const { data, content } = matter(raw)
-
   const frontmatter = data as Frontmatter
-  // `allowDraft` is for signed, admin-only preview surfaces (the canvas frame)
-  // that exist precisely to render unpublished work. The public story route
-  // omits it, so drafts stay hidden in production via `isViewable`.
-  if (!opts.allowDraft && !isViewable(frontmatter)) {
-    throw new Error(`Story "${slug}" is a draft and not viewable in this environment`)
-  }
 
   const sections: ContentSection[] = []
   let current: ContentSection | null = null
@@ -80,6 +70,31 @@ export async function getStoryContent(
   if (current) sections.push(current)
 
   return { frontmatter, sections, raw: content }
+}
+
+/**
+ * Reads a story markdown file and returns frontmatter + content split into sections by heading.
+ * Each story page decides how to use these sections.
+ *
+ * Throws for drafts in production so the story route renders a 404 rather than
+ * leaking unfinished work.
+ */
+export async function getStoryContent(
+  slug: string,
+  opts: { allowDraft?: boolean } = {}
+): Promise<StoryContent> {
+  const raw = await getContentSource().readMarkdown(slug)
+  if (raw == null) throw new Error(`Story "${slug}" not found`)
+  const parsed = parseStoryContent(raw)
+
+  // `allowDraft` is for signed, admin-only preview surfaces (the canvas frame)
+  // that exist precisely to render unpublished work. The public story route
+  // omits it, so drafts stay hidden in production via `isViewable`.
+  if (!opts.allowDraft && !isViewable(parsed.frontmatter)) {
+    throw new Error(`Story "${slug}" is a draft and not viewable in this environment`)
+  }
+
+  return parsed
 }
 
 /**
@@ -203,4 +218,33 @@ export async function getAllStories(appSlug?: string) {
 export async function getViewableStorySlugs(): Promise<string[]> {
   const metas = await getContentSource().listStories()
   return metas.filter((m) => isViewable({ status: m.status })).map((m) => m.slug)
+}
+
+const DEFAULT_PRERENDER_LIMIT = 12
+
+/**
+ * Slugs to pre-render at build time: the viewable-with-config set the story
+ * routes serve, capped so build time stays flat as the story count grows.
+ * Anything past the cap renders on first request instead (dynamicParams is
+ * on by default) and is cached from then on, so only the first visitor of a
+ * tail story pays the render.
+ *
+ * Ordering follows the home grid (`displayOrder`, lowest first, unset last),
+ * so the stories built ahead of time are the ones readers land on most.
+ * Set SSG_STORY_LIMIT to change the cap; 0 or a negative value pre-renders
+ * everything (the pre-cap behavior).
+ */
+export async function getPrerenderStorySlugs(): Promise<string[]> {
+  const parsed = Number.parseInt(process.env.SSG_STORY_LIMIT ?? '', 10)
+  const limit = Number.isNaN(parsed) ? DEFAULT_PRERENDER_LIMIT : parsed
+
+  const metas = await getContentSource().listStories()
+  const viewable = metas
+    .filter((m) => isViewable({ status: m.status }))
+    .sort((a, b) => (a.displayOrder ?? Infinity) - (b.displayOrder ?? Infinity))
+  const withConfig = await Promise.all(
+    viewable.map(async (m) => ((await hasStoryConfig(m.slug)) ? m.slug : null))
+  )
+  const slugs = withConfig.filter((s): s is string => s !== null)
+  return limit > 0 ? slugs.slice(0, limit) : slugs
 }

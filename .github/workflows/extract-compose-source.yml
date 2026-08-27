@@ -1,11 +1,14 @@
 name: Extract compose source
 
-# Triggered by the compose upload route's `workflow_dispatch` POST when a PDF is
-# added to a story. PDFs are transcribed page-by-page by a vision model (Claude
-# Sonnet, Gemini fallback), which on a long PDF can't run inside a serverless
-# function's time limit — a GitHub runner has no such cap. The worker writes the
-# extracted text straight back onto the `story_sources` row; the compose UI
-# polls until it flips to `extracted`. Same dispatch lane as render-video.yml.
+# Triggered by the compose upload route's `workflow_dispatch` POST when a PDF,
+# Office doc (Word/PowerPoint/Excel) or EPub is added to a story. markitdown (a
+# Python CLI) converts the file to Markdown; scanned/graphical PDFs fall back to
+# a vision model (Claude Sonnet, Gemini fallback). Neither runs in the Next
+# runtime — markitdown is Python, and a long PDF's vision pass can't fit a
+# serverless function's time limit — but a GitHub runner installs markitdown and
+# has no such cap. The worker writes the extracted text straight back onto the
+# `story_sources` row; the compose UI polls until it flips to `extracted`. Same
+# dispatch lane as render-video.yml.
 #
 # Required secrets (Production environment):
 #   NEXT_PUBLIC_SUPABASE_URL   — same value as in Vercel env
@@ -52,6 +55,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
         working-directory: .
+
+      # markitdown is the primary extractor (Office/EPub/text-layer PDF →
+      # Markdown). Python-only, so it's installed here, not in the Next runtime.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install markitdown
+        run: pip install 'markitdown[all]'
 
       - name: Extract
         env:

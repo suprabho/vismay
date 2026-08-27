@@ -20,6 +20,9 @@ export interface SavedVizmayaShareCard {
   ratio: string | null
   config: unknown
   imageUrl: string | null
+  appSlug: string | null
+  carouselId: string | null
+  carouselPosition: number | null
   createdAt: string
   updatedAt: string
 }
@@ -30,6 +33,9 @@ export interface NewVizmayaShareCard {
   baseType: string
   ratio?: string | null
   config: unknown
+  appSlug?: string | null
+  carouselId?: string | null
+  carouselPosition?: number | null
 }
 
 export interface UpdateVizmayaShareCard {
@@ -38,6 +44,8 @@ export interface UpdateVizmayaShareCard {
   baseType?: string
   ratio?: string | null
   config?: unknown
+  carouselId?: string | null
+  carouselPosition?: number | null
 }
 
 interface Row {
@@ -48,6 +56,9 @@ interface Row {
   ratio: string | null
   config: unknown
   image_url: string | null
+  app_slug: string | null
+  carousel_id: string | null
+  carousel_position: number | null
   created_at: string
   updated_at: string
 }
@@ -61,14 +72,21 @@ function rowToCard(r: Row): SavedVizmayaShareCard {
     ratio: r.ratio,
     config: r.config,
     imageUrl: r.image_url,
+    appSlug: r.app_slug,
+    carouselId: r.carousel_id,
+    carouselPosition: r.carousel_position,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }
 }
 
-/** List saved cards newest-first, optionally scoped to one story. */
+/**
+ * List saved cards newest-first, optionally scoped to one story and/or app.
+ * `appSlug: null` filters to legacy/vizmaya rows (`app_slug is null`); a string
+ * scopes to that app; undefined leaves the list unfiltered.
+ */
 export async function listShareCards(
-  opts: { storySlug?: string; limit?: number } = {},
+  opts: { storySlug?: string; appSlug?: string | null; limit?: number } = {},
 ): Promise<SavedVizmayaShareCard[]> {
   const sb = createServiceClient()
   let q = sb
@@ -77,6 +95,8 @@ export async function listShareCards(
     .order('created_at', { ascending: false })
     .limit(opts.limit ?? 100)
   if (opts.storySlug) q = q.eq('story_slug', opts.storySlug)
+  if (opts.appSlug === null) q = q.is('app_slug', null)
+  else if (opts.appSlug !== undefined) q = q.eq('app_slug', opts.appSlug)
   const { data, error } = await q
   if (error) throw new Error(`listShareCards: ${error.message}`)
   return (data as Row[]).map(rowToCard)
@@ -94,6 +114,9 @@ export async function createShareCard(
       base_type: input.baseType,
       ratio: input.ratio ?? null,
       config: input.config,
+      app_slug: input.appSlug ?? null,
+      carousel_id: input.carouselId ?? null,
+      carousel_position: input.carouselPosition ?? null,
     })
     .select('*')
     .single()
@@ -112,6 +135,9 @@ export async function updateShareCard(
   if (patch.baseType !== undefined) update.base_type = patch.baseType
   if (patch.ratio !== undefined) update.ratio = patch.ratio
   if (patch.config !== undefined) update.config = patch.config
+  if (patch.carouselId !== undefined) update.carousel_id = patch.carouselId
+  if (patch.carouselPosition !== undefined)
+    update.carousel_position = patch.carouselPosition
   const { data, error } = await sb
     .from('vizmaya_share_cards')
     .update(update)

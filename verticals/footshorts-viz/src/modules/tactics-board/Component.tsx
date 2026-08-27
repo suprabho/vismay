@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { VizRenderProps } from '@vismay/viz-engine'
+import { FsFrame } from '../../web/FsFrame'
+import { pickFsBackground } from '../shared/background'
 import type { TacticsBoardConfig } from './index'
 import type { PlayerSnapshot } from './types'
 import { PITCH_LENGTH, PITCH_WIDTH, dataToSvg, pointsToPath, type SvgPoint } from './coordinates'
@@ -183,6 +185,7 @@ export default function TacticsBoardComponent({
     ` ${snap.players.length} players.`
 
   return (
+    <FsFrame {...pickFsBackground(config)}>
     <div style={rootStyle}>
       <div style={captionStyle}>
         <span style={formationChip}>{phase.formation}</span>
@@ -368,6 +371,7 @@ export default function TacticsBoardComponent({
         </div>
       ) : null}
     </div>
+    </FsFrame>
   )
 }
 

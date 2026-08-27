@@ -15,7 +15,7 @@ import MethodologySection from './MethodologySection'
 import FooterBlock from './FooterBlock'
 import GenericBlock from './GenericBlock'
 
-function renderBlock(block: Block, index: number) {
+function renderBlock(block: Block, index: number, brandLabel?: string) {
   switch (block.type) {
     case 'hero':
       return <Hero key={index} block={block} />
@@ -42,7 +42,7 @@ function renderBlock(block: Block, index: number) {
     case 'methodology':
       return <MethodologySection key={index} block={block} />
     case 'footer':
-      return <FooterBlock key={index} block={block} />
+      return <FooterBlock key={index} block={block} brandLabel={brandLabel} />
     case 'unknown':
       return <GenericBlock key={index} block={block} />
     default:
@@ -54,15 +54,18 @@ export default function StoryRenderer({
   blocks,
   theme,
   meta,
+  brandLabel,
 }: {
   blocks: Block[]
   theme: Theme
   meta: Frontmatter
+  /** Brand mark rendered by the footer block. Defaults to 'vizmaya'. */
+  brandLabel?: string
 }) {
   return (
     <ThemeProvider theme={theme}>
       <article>
-        {blocks.map((block, index) => renderBlock(block, index))}
+        {blocks.map((block, index) => renderBlock(block, index, brandLabel))}
       </article>
     </ThemeProvider>
   )

@@ -1,7 +1,8 @@
 # Deck stage — subjects & objects (a 3-tier model)
 
-**Status:** design exploration (captured from discussion) · nothing built yet
+**Status:** **Tier 1 shipped** (flat 2D screen-space, Jun 23 · PR #321) · Tiers 2–4 (3D) remain design exploration
 **Relates to:** [`deck-layouts-de-hardcode.md`](deck-layouts-de-hardcode.md) (the vizslot tier) · [`roadmap-june-2026.md`](roadmap-june-2026.md) (Tier 1 fit)
+**Refined by:** [`stage-timeline-and-section-transitions.md`](stage-timeline-and-section-transitions.md) (slide-level timeline, per-section clocks & transitions, editor design — Aug 20)
 **Generated:** June 4, 2026
 
 ---
@@ -125,5 +126,6 @@ roadmap).
 
 ---
 
-*Captured June 4, 2026 from a design conversation. No implementation yet; Tier 1 is scoped into the
-June roadmap as a ④ Deck extension.*
+*Captured June 4, 2026 from a design conversation. **Tier 1 implemented Jun 23, 2026** (PR #321):
+`@vismay/viz-engine` `resolveStage` + `StageVizSlot`, authored under `defaults.stage`, flat-2D with a
+3D-ready transform track. Tiers 2–4 (fixed-z 3D, z-traversal-lite, true interleave) remain future work.*

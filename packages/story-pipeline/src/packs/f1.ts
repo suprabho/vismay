@@ -45,7 +45,17 @@ const SNAKE_SLUG = /^[a-z0-9]+(_[a-z0-9]+)*$/
  *                           app-supplied (DB-keyed) — absent it, the component
  *                           falls back to the team-coloured monogram chip.
  *
+ *   - f1:telemetry-clip   — animated lap-window clip; the model emits a lean
+ *                           REFERENCE (sessionKey + lapFrom/lapTo + driverNumbers),
+ *                           grounded by the telemetry brief in the sources. The
+ *                           app resolves the heavy payload — never inlined.
+ *   - f1:track-3d         — immersive 3D track view; same reference-only shape
+ *                           (sessionKey [+ focalDriverNumber/chaseCam/title]).
+ *
  * Skipped f1 modules, and why:
+ *   - f1:telemetry-chart — needs precomputed series (dataPoints); authored
+ *     manually or injected by the worker's telemetry brief via the f1: graft,
+ *     never generated from prose.
  *   - f1:position-chart — needs lap-by-lap position series; prose sources never
  *     carry them (telemetry/Ergast ingest required).
  *   - f1:race-replay    — points at real telemetry fixture files
@@ -163,6 +173,52 @@ const driverStandings: PackLayerType = {
   },
 }
 
+const telemetryClip: PackLayerType = {
+  type: 'f1:telemetry-clip',
+  label: 'an animated telemetry clip — track map + car dots + speed/throttle/brake dashboard over a lap window',
+  regions: ['chart', 'default'],
+  promptDoc:
+    'Use for a head-to-head or single-driver telemetry beat over a SHORT lap window (1–4 laps). ' +
+    'Reference the data ONLY: sessionKey (e.g. "2024_monaco_R"), lapFrom, lapTo, and driverNumbers ' +
+    '(1–3 car numbers); optionally focalDriverNumber and a one-line caption. NEVER inline telemetry ' +
+    'arrays — the app resolves the heavy payload from the session. Take the exact sessionKey / laps / ' +
+    'driver numbers from the telemetry brief in the sources; never invent them.',
+  schema: z.object({
+    type: z.literal('f1:telemetry-clip'),
+    sessionKey: z.string().min(1).describe('FastF1 session key, e.g. "2024_monaco_R".'),
+    lapFrom: z.number().int().describe('First lap in the window (inclusive).'),
+    lapTo: z.number().int().describe('Last lap in the window (inclusive).'),
+    driverNumbers: z
+      .array(z.number().int())
+      .min(1)
+      .max(3)
+      .describe('Car numbers to animate (1–3), e.g. [1, 16].'),
+    focalDriverNumber: z.number().int().optional().describe('Driver to highlight / follow.'),
+    caption: z
+      .string()
+      .optional()
+      .describe('One-line caption, e.g. "Verstappen vs Leclerc — sector 2 attack".'),
+  }),
+}
+
+const track3d: PackLayerType = {
+  type: 'f1:track-3d',
+  label: 'a 3D track view — extruded circuit ribbon, animated car markers, corner labels',
+  regions: ['chart', 'default'],
+  promptDoc:
+    'Use for an immersive single-session lap/track beat. Reference the data ONLY: sessionKey ' +
+    '(e.g. "2024_monaco_R"); optionally focalDriverNumber (the car the chase camera trails), ' +
+    'chaseCam (boolean), and a title. NEVER inline telemetry — the app resolves car positions and ' +
+    'circuit geometry from the session. Use a sessionKey named in the telemetry brief.',
+  schema: z.object({
+    type: z.literal('f1:track-3d'),
+    sessionKey: z.string().min(1).describe('FastF1 session key, e.g. "2024_monaco_R".'),
+    focalDriverNumber: z.number().int().optional().describe('Car the chase camera follows.'),
+    chaseCam: z.boolean().optional().describe('Trail the focused car during playback.'),
+    title: z.string().optional().describe('Optional heading shown above the view.'),
+  }),
+}
+
 export const F1_PACK: DomainPack = {
   id: 'f1',
   name: 'VizF1',
@@ -174,18 +230,21 @@ export const F1_PACK: DomainPack = {
   outlineGuidance:
     'PLAN THE VIZF1 MODULES (deck stories): when the sources carry a race result or fixture, ' +
     'that beat\'s "visual" should FEATURE f1:race-card — name the type explicitly; when they ' +
-    'carry a drivers\' championship table, plan f1:driver-standings. These REPLACE a generic ' +
-    'chart/keyValue for fixture and standings beats — plan charts only for trends (points ' +
-    'progression, lap-time evolution), never as table furniture. A typical F1 story features ' +
-    'at least one of these modules when the sources support it.',
+    'carry a drivers\' championship table, plan f1:driver-standings. When a telemetry brief is ' +
+    'in the sources, plan a telemetry beat around f1:telemetry-clip (a 1–4 lap head-to-head) or ' +
+    'f1:track-3d (an immersive lap), citing the sessionKey/laps/drivers the brief names. These ' +
+    'REPLACE a generic chart/keyValue for fixture, standings, and telemetry beats — plan charts ' +
+    'only for trends (points progression, lap-time evolution), never as table furniture. A typical ' +
+    'F1 story features at least one of these modules when the sources support it.',
   contentGuidance:
     'VOICE: motorsport desk, not a press release — championship stakes over hype, the ' +
     'engineering reason under every gap, exact figures (laps, tenths, points) from the ' +
     'sources. Name drivers and teams precisely; never round a lap time.',
   visualGuidance:
     'Prefer the VizF1 modules where they fit the beat: a race weekend (preview or result) ' +
-    'wants f1:race-card; a championship-table beat wants f1:driver-standings. Use core ' +
-    'layers (bigStat, chart, quote) for everything else.',
+    'wants f1:race-card; a championship-table beat wants f1:driver-standings; a telemetry beat ' +
+    'wants f1:telemetry-clip (short head-to-head) or f1:track-3d (immersive lap), referencing the ' +
+    'telemetry brief\'s sessionKey/laps/drivers. Use core layers (bigStat, chart, quote) otherwise.',
   bylineExample: 'By the VizF1 desk',
-  extraLayerTypes: [raceCard, driverStandings],
+  extraLayerTypes: [raceCard, driverStandings, telemetryClip, track3d],
 }

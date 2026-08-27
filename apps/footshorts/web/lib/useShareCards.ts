@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
 
@@ -24,6 +24,8 @@ const ENTITY_EMBED =
 const CARD_COLS = 'id, name, image_url, ratio, published_at, status';
 
 const DISCOVER_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Entity pages load cards a strip-page at a time (latest first). */
+export const ENTITY_CARDS_PAGE_SIZE = 10;
 
 type DiscoverRow = {
   id: string;
@@ -34,7 +36,7 @@ type DiscoverRow = {
   footshorts_share_card_entities: Array<{ entity: FeedCardEntity | null }> | null;
 };
 
-type CardEmbed = {
+type CardRow = {
   id: string;
   name: string;
   image_url: string | null;
@@ -57,7 +59,7 @@ function discoverRowToItem(r: DiscoverRow): ShareCardItem | null {
   };
 }
 
-function cardEmbedToItem(c: CardEmbed | null): ShareCardItem | null {
+function cardRowToItem(c: CardRow | null): ShareCardItem | null {
   if (!c || !c.image_url || !c.published_at) return null;
   return {
     id: c.id,
@@ -91,30 +93,34 @@ export function useDiscoverShareCards() {
   });
 }
 
-/** Published cards tagged with a single entity — for team / league pages. */
+/** Published cards tagged with a single entity — for team / league pages.
+ *  Paged latest-first, {@link ENTITY_CARDS_PAGE_SIZE} at a time; the strip calls
+ *  `fetchNextPage` as it nears its end. */
 export function useEntityShareCards(entityId: string | undefined) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['shareCards', 'entity', entityId],
     enabled: !!entityId,
-    queryFn: async (): Promise<ShareCardItem[]> => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }): Promise<ShareCardItem[]> => {
+      // Query from the cards side (inner-joined on the tag table) so order and
+      // range apply to the cards themselves — ordering via the embedded to-one
+      // `card` never reliably reordered the join rows, which would make offset
+      // pagination unstable. `id` tiebreaks equal timestamps for stable pages.
       const { data, error } = await supabase
-        .from('footshorts_share_card_entities')
-        .select(`card:footshorts_share_cards!inner(${CARD_COLS})`)
-        .eq('entity_id', entityId!)
-        .eq('card.status', 'published')
-        .order('published_at', { ascending: false, foreignTable: 'card' })
-        .limit(24);
+        .from('footshorts_share_cards')
+        .select(`${CARD_COLS}, footshorts_share_card_entities!inner(entity_id)`)
+        .eq('footshorts_share_card_entities.entity_id', entityId!)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(pageParam, pageParam + ENTITY_CARDS_PAGE_SIZE - 1);
       if (error) throw error;
-      const items: ShareCardItem[] = [];
-      const seen = new Set<string>();
-      for (const row of (data as unknown as Array<{ card: CardEmbed | null }>) ?? []) {
-        const item = cardEmbedToItem(row.card);
-        if (!item || seen.has(item.id)) continue;
-        seen.add(item.id);
-        items.push(item);
-      }
-      return items;
+      return ((data as unknown as CardRow[]) ?? [])
+        .map(cardRowToItem)
+        .filter((x): x is ShareCardItem => !!x);
     },
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.length < ENTITY_CARDS_PAGE_SIZE ? undefined : lastPageParam + ENTITY_CARDS_PAGE_SIZE,
     staleTime: 60 * 1000,
   });
 }

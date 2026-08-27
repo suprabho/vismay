@@ -1,10 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useTheme } from '@footshorts/brand/web';
 import type { ThemeName } from '@footshorts/brand';
 import { BackButton } from '@/components/BackButton';
 import { useAuth } from '@/lib/AuthProvider';
+import { supabase } from '@/lib/supabase';
 import { useFollows } from '@/lib/useFollows';
 
 const THEME_OPTIONS: { name: ThemeName; label: string }[] = [
@@ -14,10 +17,33 @@ const THEME_OPTIONS: { name: ThemeName; label: string }[] = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { session, signOut } = useAuth();
   const { data: follows } = useFollows();
   const { themeName, setTheme } = useTheme();
   const email = session?.user?.email;
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Play's Data Safety form requires a web-accessible deletion path; the
+  // mobile app has the same flow (Profile → Delete account).
+  async function deleteAccount() {
+    if (
+      !window.confirm(
+        'Permanently delete your account, follows and reading history? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+    setDeleteError(null);
+    const { error } = await supabase.rpc('delete_account');
+    if (error) {
+      setDeleteError(error.message);
+      return;
+    }
+    // Server-side sessions are cascade-deleted with the user; only clear local state.
+    await supabase.auth.signOut({ scope: 'local' });
+    router.replace('/');
+  }
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
@@ -63,6 +89,19 @@ export default function ProfilePage() {
       >
         Sign out
       </button>
+
+      {deleteError ? <p className="mt-3 text-sm text-red-400">{deleteError}</p> : null}
+      <button
+        type="button"
+        onClick={deleteAccount}
+        className="mt-3 w-full rounded-lg border border-red-500/40 py-3 font-medium text-red-400 hover:border-red-500"
+      >
+        Delete account
+      </button>
+
+      <Link href="/privacy" className="mt-6 block text-center text-xs text-muted hover:text-text">
+        Privacy policy
+      </Link>
     </main>
   );
 }

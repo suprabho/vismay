@@ -43,6 +43,16 @@ function looksFinished(s: OpenF1Session): boolean {
   return new Date(s.date_end).getTime() < Date.now()
 }
 
+// A session this far past its scheduled end with zero laps AND zero position
+// events never ran (the 2026 Bahrain/Saudi weekends were canceled but OpenF1
+// keeps their schedule entries + pre-seeded entry lists). Well beyond any
+// publication lag — real session data lands within hours.
+const CANCELED_GRACE_MS = 48 * 60 * 60 * 1000
+
+function looksCanceled(s: OpenF1Session): boolean {
+  return new Date(s.date_end).getTime() < Date.now() - CANCELED_GRACE_MS
+}
+
 async function upsertCircuit(sb: SupabaseClient, m: OpenF1Meeting) {
   const circuitId = slug(m.circuit_short_name || m.meeting_name)
   await sb
@@ -178,6 +188,23 @@ async function ingestSession(sb: SupabaseClient, raceId: string, openf1Session: 
     listPositions(openf1Session.session_key),
     listDrivers(openf1Session.session_key),
   ])
+
+  // No timing data at all — don't fabricate results off the pre-seeded entry
+  // list (that used to leave all-NULL husk rows for the canceled 2026
+  // Bahrain/Saudi weekends). Recently-ended sessions stay 'finished' and get
+  // their results on a later run once OpenF1 publishes; sessions long past
+  // with nothing are marked canceled so the UI can say so honestly.
+  if (laps.length === 0 && positions.length === 0) {
+    if (looksCanceled(openf1Session)) {
+      const { error } = await sb
+        .from('vizf1_sessions')
+        .update({ status: 'canceled', updated_at: new Date().toISOString() })
+        .eq('id', sessionId)
+      if (error) console.error(`[session] cancel mark failed (${sessionType}):`, error)
+      else console.log(`[session] marked canceled (${sessionType}, no data)`)
+    }
+    return
+  }
 
   await upsertDrivers(sb, drivers)
 

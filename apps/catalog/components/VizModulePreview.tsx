@@ -20,8 +20,11 @@ const verticalsReady = Promise.all(VERTICALS.map((v) => loadVertical(v.slug)))
 interface Props {
   type: string
   sample: unknown
+  /** Notice shown in every context — for modules that can't render in the catalog at all. */
   previewNotice?: string
-  /** Square box (true) for cards or full aspect-video (false) for detail. */
+  /** Notice shown only on the compact grid card; the detail page renders the live component. */
+  cardNotice?: string
+  /** True on grid cards, falsy on the detail page. Gates `cardNotice`. */
   compact?: boolean
 }
 
@@ -55,7 +58,7 @@ export default function VizModulePreview(props: Props) {
   )
 }
 
-function ReadyPreview({ type, sample, previewNotice }: Props) {
+function ReadyPreview({ type, sample, previewNotice, cardNotice, compact }: Props) {
   use(verticalsReady)
   const vizModule = useMemo(() => getVizModule(type), [type])
 
@@ -81,8 +84,12 @@ function ReadyPreview({ type, sample, previewNotice }: Props) {
     return lazy(vizModule.load) as ComponentType<VizRenderProps<unknown>>
   }, [vizModule])
 
-  if (previewNotice) {
-    return <FallbackChip message={previewNotice} />
+  // `previewNotice` suppresses the live render everywhere (the module can't render
+  // in the catalog at all). `cardNotice` only suppresses it on the compact grid
+  // card — the detail page (compact falsy) mounts the real component.
+  const notice = previewNotice ?? (compact ? cardNotice : undefined)
+  if (notice) {
+    return <FallbackChip message={notice} />
   }
 
   if (parsed.kind === 'error') {

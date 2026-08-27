@@ -6,6 +6,7 @@ import { generateAngles } from '@vismay/story-pipeline'
 import { listStorySources } from '@vismay/content-source/storySources'
 import { readComposeState, writeComposeState } from '@vismay/content-source/composeState'
 import { resolveModel, resolveStoryPack, sourcesToDocs } from '../shared'
+import { getFeatureModel } from '@/lib/aiModelSettings'
 
 /**
  * Compose stage 2 — generate (or refine) the angle options from the draft's
@@ -36,7 +37,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     return NextResponse.json({ error: 'no extracted sources yet — add a source first' }, { status: 422 })
   }
 
-  const model = resolveModel(body.model, state.model)
+  // Per-stage default from the admin "AI models" page; body.model (unused today)
+  // still wins, and state.model is intentionally not the fallback so each stage
+  // is controlled independently rather than pinned by whatever angles picked.
+  const model = resolveModel(body.model, await getFeatureModel('composeAngles'))
   const feedback = typeof body.feedback === 'string' ? body.feedback.trim() : ''
   const refine = feedback && body.previous ? { feedback, previous: body.previous } : undefined
   // "Create recap" launches angle generation with a match-day-recap steer.

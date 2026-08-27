@@ -64,6 +64,63 @@ A narrated render paces the headless walk off the TTS audio cues (`cue.end_ms - 
 - No new env vars; the dispatch path reuses `GITHUB_DISPATCH_TOKEN` / `GITHUB_DISPATCH_REPO` / `GITHUB_DISPATCH_REF`.
 - Same GitHub repo secrets as the video workflow (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`).
 
+## Story HTML newsletter render (+ Substack export)
+
+`/api/story-newsletter/[slug]` produces a hosted HTML issue of a story with
+selected map sections, charts and deck panels captured as static PNGs. Same
+dispatch-or-sync split and `{ status: 'ready' | 'rendering', public_url? }`
+polling shape as the PDF/video pipelines. One render yields two artifacts in
+the `story-newsletter` bucket:
+
+- `<slug>/newsletter.html` (`public_url`) — inline-styled, email-safe,
+  600px single-column document; doubles as the browser preview and works in
+  any ESP.
+- `<slug>/newsletter.substack.html` (`substack_url`) — stripped semantic
+  HTML (h2/h3, p, figure/img, blockquote, hr) matched to what Substack's
+  editor keeps on paste.
+
+**Substack v1 workflow (no API — Substack doesn't have a public one):** the
+`/newsletters/[slug]` builder's **Copy for Substack** button copies the
+substack variant as rich text; paste into a new Substack post, set
+title/subtitle, publish — Substack re-uploads the referenced images to its
+CDN and sends it as both the email newsletter and the blog post. The
+substack variant's public URL also works with Substack's post-import. A
+direct (unofficial, cookie-auth) API push is a deliberate non-goal for v1.
+
+- **Capture surface:** `/story/[slug]/newsletter` (`NewsletterSurface` in
+  `@vismay/render-surface`, mirrored in apps/render) renders only the visual
+  blocks at 1200px behind `[data-newsletter-visual="<key>"]` markers; the
+  worker waits for `window.__pdfReady__` (shared readiness coordinator) then
+  element-screenshots each marker. Signed-URL-gated (middleware matcher).
+- **Render worker:** [packages/content-source/src/storyNewsletterRender.ts](../../packages/content-source/src/storyNewsletterRender.ts)
+  (`renderStoryNewsletter`) — capture + pure HTML assembly
+  ([storyNewsletterHtml.ts](../../packages/content-source/src/storyNewsletterHtml.ts)).
+  Text-only issues skip the browser entirely. App wrapper
+  [lib/storyNewsletterRender.ts](lib/storyNewsletterRender.ts) owns URL
+  signing; CLI: `npx tsx scripts/generate-newsletter.ts <slug> [--force]`.
+- **Per-story config:** `content/stories/<slug>.newsletter.yaml` (also
+  `stories.newsletter_yaml` after migration 065). Inclusive by default —
+  every unit ships with text + visuals; overrides exclude units, hide
+  map/visual/text per unit, set captions, and frame the issue
+  (subject/preheader/intro/outro/CTA). Parser + block resolver:
+  [packages/content-source/src/storyNewsletterConfig.ts](../../packages/content-source/src/storyNewsletterConfig.ts).
+  Edited via the `/newsletters/[slug]` builder (signed-URL-gated).
+- **Cache key:** `(slug, content_revision_hash)` where the hash is sha256
+  over markdown + config.yaml + newsletter.yaml + every chart JSON. Rows in
+  `story_newsletters`; images at `<slug>/images/<key>.png` with `?v=<hash>`
+  cache-busting.
+- **Dispatch:** `storyNewsletterDispatch.ts` fires
+  `.github/workflows/render-newsletter.yml` when `GITHUB_DISPATCH_TOKEN` +
+  `GITHUB_DISPATCH_REPO` are set. Honors `RENDER_SURFACE_URL_NEWSLETTER` for
+  the render-service strangler, like report/slides.
+
+**Deploy requirements:**
+- Apply migration `065_story_newsletters.sql` — adds the `story_newsletters`
+  table, the `story-newsletter` bucket, and `stories.newsletter_yaml`.
+- No new env vars; the workflow reuses the PDF pipeline's secrets
+  (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `NEXT_PUBLIC_MAPBOX_TOKEN`, `ADMIN_SESSION_SECRET`).
+
 ## Epics (/energy-profile, /epstein, …)
 
 Topic collections that bundle a bespoke landing page with curated vizmaya stories. Data model lives in migration `015_epics_iea.sql` (per-epic tables still carry the `iea_` prefix from when the epic was called "iea"; renamed to `energy-profile` in migration 019).
@@ -102,6 +159,169 @@ Pump prices for gasoline, automotive diesel and light fuel oil across **33 count
 - **Refresh workflow:** IEA publishes the xlsx excerpt monthly. Open the `raw data` sheet, save-as CSV at the path above, re-run the importer. Idempotent (upsert on `country_code,product,currency,month`).
 - **Reader:** extended `getIeaCountryProfile` in [lib/epics.ts](lib/epics.ts) — adds `timeseries.oilPrices` (last 60 months, USD/L).
 - **Chart:** [components/energy-profile/charts/OilPricesChart.tsx](components/energy-profile/charts/OilPricesChart.tsx).
+
+### Global Trade (epic seeded as draft — data layer live)
+
+Yearly goods exports by HS product (HS2 + HS4) for the world aggregate plus
+the top-20 exporters, 2001+. Three providers write the same long fact table
+with `source` in the PK (`'oec' | 'comtrade' | 'trademap'`) so re-imports
+never clobber across providers; readers pin one source per view. Full
+provenance + gotchas: [vizmaya-data/global-trade/CLAUDE.md](../../vizmaya-data/global-trade/CLAUDE.md).
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/064_global_trade.sql](../../supabase/vizmaya-fyi/migrations/064_global_trade.sql) — `trade_countries`, `trade_products`, `trade_product_exports`, plus the `global-trade` epic row (`status='draft'`, so it stays invisible until the landing page ships). [065_trade_bilateral.sql](../../supabase/vizmaya-fyi/migrations/065_trade_bilateral.sql) adds `trade_bilateral_flows` (intra-tracked-pair HS2, both flow lenses) for the trade-web viz.
+- **Importers:** [scripts/trade/](scripts/trade/) — `pnpm trade:import-comtrade` (UN Comtrade API, **primary** — first backfill 2026-07-04: 630k rows, 2001–2025), `pnpm trade:import-comtrade-bilateral` (country↔country HS2 flows, ~2 calls/year), `pnpm trade:import-trademap` (manual TradeMap Excel→CSV drop under `scripts/trade/data/` — TradeMap has no API and must not be scraped; sole source of the `WLD` world series), `pnpm trade:import-oec` (**parked** — BotMarket only carries bilateral-HS6 BACI; see vizmaya-data/global-trade gotchas). All support `--dry-run`/`--full`/`--since`.
+- **Cron:** [.github/workflows/import-trade-data.yml](../../.github/workflows/import-trade-data.yml) — monthly incremental; `workflow_dispatch` inputs for `full_backfill` and read-only BotMarket `discovery`. The OEC step skips while `OEC_TRADE_DATASET_SLUG` is unset.
+- **Reader:** `getWorldTradeProfile` / `getProductExports` / `getReporterTradeProfile` in [packages/content-source/src/trade.ts](../../packages/content-source/src/trade.ts) — same dense `ChartSeries` shape as the energy-profile charts. World profile returns null until the first TradeMap drop.
+- **API:** `/api/global-trade/world`, `/api/global-trade/product/[hsCode]`.
+- **Secrets** (Production environment): `OEC_BOTMARKET_API_KEY`, `COMTRADE_API_KEY` (plus the usual Supabase pair). `OEC_TRADE_DATASET_SLUG` deliberately unset while OEC is parked.
+
+### AI Data Centers epic (/ai-data-centers)
+
+Tracks the build-out of frontier AI data centers (power, compute, capital cost) from **Epoch AI's Frontier Data Centers Hub** (CC BY 4.0, https://epoch.ai/data/ai-data-centers, refreshed ~weekly). Two surfaces share one dataset: a live Supabase-backed **explorer** and a frozen editorial **story**.
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/063_ai_data_centers.sql](../../supabase/vizmaya-fyi/migrations/063_ai_data_centers.sql) — `dc_facilities(slug, …, lat, lng, h100_equivalents, power_mw, capex_usd_bn, …)` (one row per facility) + `dc_facility_timeline(facility_slug, metric, as_of, value)` (long-form build-out series). Seeds the `ai-data-centers` epic row as **draft / hidden** — flip `status='published'` + `show_on_home=true` once the data is reconciled (see below).
+- **Importer:** [scripts/ai-data-centers/import-data-centers.ts](scripts/ai-data-centers/import-data-centers.ts). Run with `pnpm ai-data-centers:import`. Downloads Epoch's two CSVs (live path is `epoch.ai/data/data_centers/*.csv`; the `generated/` path 404s but is tried first — with local-file fallback via `--facilities`/`--timelines <path>`), resolves columns through header-drift-tolerant aliases (note the timeline's facility column is `Data center`, not `Name`), and upserts idempotently on `slug` and `(facility_slug, metric, as_of)`. **Coordinates:** Epoch ships an Address but no lat/lng, so the importer **geocodes the Address via Mapbox inline** (`geocodeMissing`, needs `NEXT_PUBLIC_MAPBOX_TOKEN`) to populate map pins; curated entries in [lib/ai-data-centers/facilityCoords.ts](lib/ai-data-centers/facilityCoords.ts) are the override layer (win over geocoding). `--geocode` prints override suggestions without writing. Test offline against `scripts/ai-data-centers/data/sample_*.csv`.
+- **Refresh workflow:** [.github/workflows/import-ai-data-centers.yml](../../.github/workflows/import-ai-data-centers.yml) — weekly (Mon 07:30 UTC) + manual dispatch. Runs in Actions because epoch.ai's Cloudflare blocks generic fetchers. Uses `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` + `NEXT_PUBLIC_MAPBOX_TOKEN` (all already Production secrets).
+- **Readers:** `listDataCenters()` + `getDataCenterProfile(slug)` in [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts).
+- **API:** `/api/ai-data-centers` (list) + `/api/ai-data-centers/[slug]` (facility + timeline). Both `force-dynamic`, cached `s-maxage=3600`.
+- **Explorer UI:** [app/ai-data-centers/page.tsx](app/ai-data-centers/page.tsx) → `AiDataCentersLanding.tsx` (Mapbox markers sized by a power/compute/capital toggle + sortable leaderboard) → `AiDataCenterDetail.tsx` in the shared [components/DetailSheet.tsx](components/DetailSheet.tsx) (stat tiles + per-metric timeline ECharts from `components/ai-data-centers/charts/`). Palette in [app/ai-data-centers/theme.ts](app/ai-data-centers/theme.ts). The page degrades to an empty map before migration 063 / the first import.
+- **Editorial story:** source of record in [vizmaya-data/ai-data-centers/](../../vizmaya-data/ai-data-centers/) (CSVs + `charts/*.json` with `_meta` + `story.yaml` + `INGEST_NOTES.md`); runtime copies at `content/stories/ai-data-centers.{md,config.yaml}` + `content/stories/ai-data-centers/charts/*.json` (served by `/api/chart-data/[slug]/[id]`). **The story figures are a representative snapshot** — epoch.ai is unreachable from the sandbox, so reconcile against the real `dc_*` tables (INGEST_NOTES.md checklist) before flipping the epic to published.
+
+### AI Data Centers news + stock pipeline
+
+Two daily feeds extend the epic beyond the Epoch facility registry: tagged
+industry news (AI / data centers / microprocessors / semiconductors) and
+daily price bars for ~29 related stocks, each tracked on its **home exchange**
+(NVDA on NASDAQ, Samsung as 005930.KS, Tokyo Electron as 8035.T, SMIC as
+0981.HK, …) in its native currency. Two deliberate exceptions: TSMC and ASML
+are tracked via their US ADRs (`TSM` on NYSE, `ASML` on NASDAQ; migration 067
+retired `2330.TW` and `ASML.AS`) so their prices import automatically with
+the US tickers instead of through the intl paths.
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/065_dc_news_stocks.sql](../../supabase/vizmaya-fyi/migrations/065_dc_news_stocks.sql) — `dc_news` (unique on `source_url`; classifier rejects persist with `relevant=false` so they're never re-sent to the LLM), `dc_stocks` (curated ticker registry, seeded in the migration — **adding a company is a single insert**, both pipelines read the table), `dc_stock_prices` (daily OHLCV, PK `(ticker, trade_date)`, dates in the exchange's own calendar, close split-adjusted).
+- **News scraper:** [scripts/ai-data-centers/scrape-news.ts](scripts/ai-data-centers/scrape-news.ts) (`pnpm ai-data-centers:scrape-news`) — Google News RSS across four queries, then Claude Haiku (`claude-haiku-4-5` via `@anthropic-ai/sdk`, structured outputs) applies a relevance gate + topic tags + ticker links. Classification runs through a 4-worker pool with a 25-min soft deadline (the sequential Gemma version needed 40–60 min/day and was hard-killed at the workflow's 30-min cap); single-feed RSS 503s are retried then skipped, not fatal. Cron: [.github/workflows/scrape-ai-data-centers-news.yml](../../.github/workflows/scrape-ai-data-centers-news.yml) (daily 06:45 UTC, staggered off the 06:15 energy-profile scrape). Secrets: the Supabase pair + `ANTHROPIC_API_KEY`.
+- **Stock importer → [scripts/ai-data-centers/import-stock-prices.ts](scripts/ai-data-centers/import-stock-prices.ts)** (`pnpm ai-data-centers:import-stocks`, cron [import-dc-stock-prices.yml](../../.github/workflows/import-dc-stock-prices.yml) 22:45 UTC Mon–Fri). One script, two sources split by `dc_stocks.market` (massive.com is US-only):
+  - **US tickers → massive.com** market-data REST API (Polygon-compatible `/v2/aggs/ticker/{t}/range/1/day/{from}/{to}`, `Authorization: Bearer $MASSIVE_API_TOKEN`; returns fractional split-adjusted volume, rounded to the `bigint` column). 429-cooldown + retry for the free tier.
+  - **International tickers (TW/KR/JP/NL/HK) → Yahoo Finance via the Apify actor [apify/dc-yahoo-stock-scraper](../../apify/dc-yahoo-stock-scraper/).** Yahoo blocks datacenter IPs (CI *is* one), so the importer can't fetch it directly — that's what kept this cron failing. The actor runs the same Yahoo v8 chart fetch on Apify's infra through a **residential proxy** (Yahoo sees a residential IP), scraping all intl tickers **concurrently**; the importer **starts the run async and polls** its status (not the `run-sync` endpoint — that hard-caps the wait at ~5 min, which a cold-start + residential scrape blew past, which was the failure), then reads the dataset and upserts the rows. Needs `APIFY_TOKEN` + `APIFY_ACTOR_ID`; missing ⇒ US still imports and intl is skipped with a note. Effectively free — Apify's $5/mo tier (email signup, no phone/card) covers a ~9-ticker daily run many times over. Deploy steps in the actor README.
+  - Flags: `--full` (~5y) / `--days N` / `--ticker` / `--dry-run`. **First deploy: migration 065, add `MASSIVE_API_TOKEN` + `APIFY_TOKEN`/`APIFY_ACTOR_ID`, dispatch with `full_backfill=true`.**
+  - **Manual fallback:** the admin **Pipeline** tab → AI Data Centers → *"International prices — Stooq upload"* (`apps/admin`, component `components/vizmaya/pipeline/StockUploadCard.tsx`, route `app/api/vizmaya/pipeline/stock-prices/route.ts`) still hand-loads a browser-downloaded Stooq CSV via `parseStooqCsv` + `upsertDcStockPrices` in [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts) (`listDcStockUploadTargets` drives the UI). Kept as a backstop for days Apify (or Yahoo) misbehaves; not the primary path anymore.
+  - Note: api.massive.com, api.apify.com and Yahoo are all unreachable from the dev sandbox proxy — the cron runs in Actions, the actor runs on Apify, the Stooq upload happens from a browser.
+- **Readers:** `getDcNews({limit, topic, ticker})` + `getDcStockMarket(days)` in [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts) — the market reader returns per-ticker close series + window `changePct`, keeping empty-series tickers visible pre-backfill.
+- **API:** `/api/ai-data-centers/news` (`?limit&topic&ticker`) + `/api/ai-data-centers/stocks` (`?days`, default 90, max 730). Static segments win over the `[slug]` route, so no collision.
+- **UI:** the public landing/detail pages don't render news or stocks yet — that's the natural next step once the tables have data. Internally, the admin **Pipeline** tab (`/vizmaya/pipeline?epic=ai-data-centers` in apps/admin) monitors both feeds: scrape volume + relevance-gate stats, topic/ticker breakdowns, recap freshness, stock-feed freshness, and a filterable news list (including classifier-rejected rows); the sibling **Recaps** tab (`/vizmaya/recaps`) shows the full recap snapshot timeline. Both tabs are epic-generalized — the DC feeds register as an adapter in [packages/content-source/src/pipelines.ts](../../packages/content-source/src/pipelines.ts), backed by `getDcPipelineStats()` + `listDcNewsForAdmin()` in [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts).
+
+### AI Data Centers daily news recap
+
+A daily markdown brief over the trailing 24h of `dc_news`, generated by a
+worker and stored as snapshot rows so the landing page (or anything else) can
+pull the latest recap straight from the API. Hybrid output, same recipe as
+the footshorts recap worker: Gemini (`gemini-2.5-flash`, JSON mode) writes the
+headline + overview + 2–5 themed sections grouping the day's stories; the
+linked headlines per theme, the "More coverage" list, and a "Market movers"
+table (largest daily moves from `dc_stock_prices`) are assembled
+deterministically. Without `GEMINI_API_KEY` — or on any generation failure —
+it degrades to a deterministic-only brief grouped by topic, so the cron never
+goes dark.
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/066_dc_news_recaps.sql](../../supabase/vizmaya-fyi/migrations/066_dc_news_recaps.sql) — `dc_news_recaps` snapshot rows (surrogate `id`, window bounds, `headline`, `markdown`, `topics`/`tickers` union, `article_count`). Each run INSERTS — re-runs and manual dispatches append a timeline; readers take the newest row.
+- **Worker:** [scripts/ai-data-centers/generate-news-recap.ts](scripts/ai-data-centers/generate-news-recap.ts) (`pnpm ai-data-centers:news-recap`, flags `--hours N` / `--dry-run` / `--out <path>`). No-ops when the window has zero relevant stories.
+- **Cron:** [.github/workflows/generate-dc-news-recap.yml](../../.github/workflows/generate-dc-news-recap.yml) — daily 08:15 UTC, 90 min after the 06:45 news scrape so the day's classified stories are in the table first; `workflow_dispatch` takes an `hours` input. Secrets: the Supabase pair + `GEMINI_API_KEY` (all already in Production).
+- **Readers:** `getLatestDcNewsRecap()` + `listDcNewsRecaps(limit)` in [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts).
+- **API:** `/api/ai-data-centers/recap` — `{ recap }` (newest, `null` before the first run); `?limit=N` returns `{ recaps }` for a timeline.
+- **First deploy:** apply migration 066, then dispatch the workflow once (or wait for the cron). Gemini is unreachable from the dev sandbox proxy — run in Actions, or use `--dry-run` locally to preview the deterministic layer.
+
+### Searching for Umami (`umami` app + epic, seeded draft — corpus pipeline)
+
+The food vertical. A standalone consumer app (`apps/umami/web`, registered as
+app slug `umami` — AppEntry in `packages/verticals/src/data.ts`, default
+domain umami.fyi) whose first corpus is scraped from TasteAtlas: the top-rated
+dishes tagged under five Asian cuisines (India, China, Thailand, Indonesia,
+Japan), one row per dish with region, category, key ingredients, rating and
+source link. The epic + corpus pipeline stay homed here (vizmaya-fyi
+scripts/data — same split as fifa-wc26, whose importer stayed after the epic
+moved to footshorts). Corpus source of record + rights note:
+[vizmaya-data/searching-for-umami/](../../vizmaya-data/searching-for-umami/)
+(README + INGEST_NOTES).
+
+- **Schema:** [supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql](../../supabase/vizmaya-fyi/migrations/069_searching_for_umami.sql)
+  — registers the `umami` row in `apps`, creates `food_dishes` (food-generic,
+  keyed by `epic_slug`, unique on `(epic_slug, slug)`, public-read RLS), and
+  seeds the `searching-for-umami` epic row (`app_slug='umami'`,
+  `status='draft'`, hidden from home).
+- **Consumer app:** [apps/umami/web](../umami/web) — landing + cuisine/dish
+  explorer at `/` (reads `listFoodDishes()` with anon-only env, degrades to
+  empty states without env), story reader at `/editorial/[slug]` via
+  `@vismay/story-embed` (iframes vizmaya.fyi — no umami vertical/viz package
+  yet, so umami stories carry no `vertical:` key and render as vizmaya's own).
+  Admin gets Stories/Compose/Epics tabs at `/umami` from the `apps` row alone.
+- **Reader:** `listFoodDishes(epicSlug)` in
+  [packages/content-source/src/epics.ts](../../packages/content-source/src/epics.ts)
+  (service-role with anon fallback — `food_dishes` is public-read).
+- **Scraper:** [scripts/searching-for-umami/scrape-tasteatlas.ts](scripts/searching-for-umami/scrape-tasteatlas.ts)
+  (`pnpm searching-for-umami:scrape --headed`). **Local-run only** — TasteAtlas
+  is behind Cloudflare and blocks datacenter IPs (sandbox proxy denies the
+  domain outright; GH-hosted runners would 403 too, same lesson as Yahoo →
+  Apify). **Listing-only capture** via system Chrome (`channel:'chrome'`,
+  bundled Chromium is fingerprint-blocked), headed, fresh `.browser-profile`
+  per listing; dish-page documents are hard-403'd and never visited, so
+  `ingredients`/`rating_count` stay empty. Each listing serves exactly 10 dish
+  cards to anonymous visitors → corpus ceiling is top-10 per cuisine. Full
+  Cloudflare playbook + card-markup traps:
+  `vizmaya-data/searching-for-umami/INGEST_NOTES.md`. Resumable, polite,
+  writes only `dishes.json` — never the DB. Full run ~4 min.
+- **Importer:** [scripts/searching-for-umami/import.ts](scripts/searching-for-umami/import.ts)
+  (`pnpm searching-for-umami:import`, `--dry-run` validates without env) —
+  dishes.json → `food_dishes`, idempotent upsert on `(epic_slug, slug)`.
+  Hard-fails on descriptions > 600 chars (rights: summaries stay truncated).
+- **Corpus status:** real scraped data since 2026-07-27 — 50 rows (top 10
+  best-rated per cuisine) with live ratings, regions, categories, blurbs and
+  CDN images; imported + idempotency-verified, sample rows purged from the DB.
+  Ingredients backfilled for 19/50 from the recipe corpora (tag
+  `ingredients:datasets`).
+- **Recipe corpora (migration 070):** `food_recipes` + `food_ingredients` —
+  internal grounding tables (NO anon RLS; instructions are rights-sensitive)
+  fed by two untracked local datasets under `vizmaya-data/` (Archana's
+  Kitchen 6.9k Indian recipes with instructions; CulinaryDB 45.8k world
+  recipes + 1k-term ingredient vocabulary).
+  `pnpm searching-for-umami:import-recipes` (idempotent, batched) and
+  `pnpm searching-for-umami:backfill-ingredients` (fills dishes.json
+  ingredient gaps by conservative title-matching, then re-run the dish
+  importer). Provenance + rights:
+  [vizmaya-data/searching-for-umami/INGEST_NOTES.md](../../vizmaya-data/searching-for-umami/INGEST_NOTES.md).
+  Admin coverage: the umami desk's **Recipes** tab (`/umami/recipes` in
+  apps/admin — stat cards, per-cuisine source bars, dish-backfill counts,
+  searchable browse; readers `getFoodRecipeCoverage`/`listFoodRecipesForAdmin`
+  in content-source epics.ts).
+- **History layer (migration 071):** `food_history_subjects` +
+  `food_history_events` — AI-extracted, per-claim-cited, **review-gated**
+  dish/ingredient timelines from Wikipedia (MediaWiki API, CC BY-SA;
+  paraphrase-enforced with a verbatim guard, `source_url` + `wiki_oldid`
+  permalink per claim). Worker `pnpm searching-for-umami:enrich-history`
+  (subject registry + title overrides in
+  scripts/searching-for-umami/history-subjects.ts; curated place coords in
+  lib/searching-for-umami/historyPlaceCoords.ts; `--force` replaces only
+  ai-draft rows). Review at the umami **History** tab (`/umami/history`,
+  approve/reject; readers `getFoodHistoryCoverage`/
+  `listFoodHistoryEventsForAdmin`/`setFoodHistoryEventStatus` in
+  content-source epics.ts). Composer grounding via the `food-history`
+  provider (whole-subject cited timelines, drafts flagged). No anon RLS —
+  public surfaces later via an additive reviewed-only policy (sketched in the
+  migration). Full rationale + rights: vizmaya-data/searching-for-umami/INGEST_NOTES.md.
+- **Deploy:** apply migration 069, `pnpm searching-for-umami:import`, create
+  the Vercel project for `apps/umami/web` (root dir `apps/umami/web`, env
+  `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and set
+  `NEXT_PUBLIC_UMAMI_URL` on the admin Vercel project so cross-app links
+  resolve.
+- **Publish checklist (later):** ~~real scrape → re-import~~ (done 2026-07-27)
+  → review/rewrite descriptions for rights (blurbs are truncated TasteAtlas
+  editorial text) → flip epic to `published` in a follow-up migration.
+  Composer grounding is live: `food-dishes` (list+search over the dish canon)
+  and `food-recipes` (search-only over the 52k corpus, so the AI research
+  agent reaches it; matches title / cuisine label / exact ingredient term)
+  providers in `apps/admin/lib/libraryProviders.ts`, both scoped to the
+  `umami` app. Remaining optional follow-up: a `verticals/umami-viz` package +
+  VerticalEntry when umami wants custom food viz modules (that also means
+  gen:sources + the transpile/dep wiring in the four shared surfaces).
 
 ## AI gateway
 

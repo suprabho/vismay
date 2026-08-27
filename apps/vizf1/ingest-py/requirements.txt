@@ -1,0 +1,9 @@
+# VizF1 FastF1 telemetry ingestion worker — Supabase-native.
+# Deliberately slim: NO LLM / Mongo / FastAPI deps from the f1_backend donor.
+fastf1>=3.4.0,<4.0
+pandas>=2.2.2,<3.0
+numpy>=1.26.4,<3.0
+supabase>=2.4.0,<3.0
+python-dotenv>=1.0.1,<2.0
+# direct dep of the OpenF1 fallback client (also pulled transitively by fastf1)
+requests>=2.32,<3

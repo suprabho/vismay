@@ -52,6 +52,7 @@ export default async function CatalogGrid() {
                   mountingMode={vizModule.mountingMode}
                   sample={entry.sample}
                   previewNotice={entry.previewNotice}
+                  cardNotice={entry.cardNotice}
                 />
               )
             })}

@@ -18,7 +18,8 @@
     "expo-router": "*",
     "expo-image": "*",
     "expo-linear-gradient": "*",
-    "nativewind": "*"
+    "nativewind": "*",
+    "react-native-svg": "*"
   },
   "peerDependenciesMeta": {
     "next": { "optional": true },
@@ -26,7 +27,8 @@
     "expo-router": { "optional": true },
     "expo-image": { "optional": true },
     "expo-linear-gradient": { "optional": true },
-    "nativewind": { "optional": true }
+    "nativewind": { "optional": true },
+    "react-native-svg": { "optional": true }
   },
   "dependencies": {
     "@vismay/viz-engine": "workspace:*"

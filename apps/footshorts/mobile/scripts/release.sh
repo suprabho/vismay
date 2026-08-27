@@ -3,34 +3,34 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+# Store release: cloud builds on EAS, production profile on both platforms.
+# - iOS: --auto-submit uploads straight to TestFlight (ascAppId in eas.json).
+# - Android: production builds an .aab; submit targets the Play internal
+#   track (eas.json submit config). NOTE: Play requires the very FIRST .aab
+#   of a new app to be uploaded manually in the Play Console UI — pass
+#   SKIP_ANDROID_SUBMIT=1 for that first run and upload the artifact from
+#   the EAS build page yourself.
 
-mkdir -p build
-
-echo "[1/3] Building iOS IPA locally..."
+echo "[1/2] Building iOS on EAS + submitting to TestFlight..."
 eas build \
   --platform ios \
   --profile production \
-  --local \
   --non-interactive \
-  --output "$(pwd)/build/app.ipa"
+  --auto-submit
 
-echo "[2/3] Uploading IPA to TestFlight..."
-eas submit \
-  --platform ios \
-  --path "$(pwd)/build/app.ipa" \
-  --profile production \
-  --non-interactive
+if [[ "${SKIP_ANDROID_SUBMIT:-0}" == "1" ]]; then
+  echo "[2/2] Building Android .aab on EAS (no submit — first upload is manual)..."
+  eas build \
+    --platform android \
+    --profile production \
+    --non-interactive
+else
+  echo "[2/2] Building Android .aab on EAS + submitting to the Play internal track..."
+  eas build \
+    --platform android \
+    --profile production \
+    --non-interactive \
+    --auto-submit
+fi
 
-echo "[3/3] Building Android APK locally..."
-eas build \
-  --platform android \
-  --profile preview \
-  --local \
-  --non-interactive \
-  --output "$(pwd)/build/app.apk"
-
-echo "Done."
-echo "  APK: apps/mobile/build/app.apk"
-echo "  IPA uploaded to TestFlight (processing on App Store Connect)."
+echo "Done. Track progress at https://expo.dev/accounts/promaddesign/projects/footshorts/builds"

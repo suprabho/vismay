@@ -1,8 +1,9 @@
 /**
  * Dispatch a compose-source extraction job to GitHub Actions.
  *
- * PDF sources are transcribed page-by-page by a vision model (Claude Sonnet,
- * Gemini fallback) — a long PDF blows past serverless function limits. So when
+ * PDF/Office/EPub sources are extracted by markitdown (a Python CLI) with a
+ * vision-model fallback for scanned PDFs — neither runs in the Next runtime, and
+ * a long PDF blows past serverless function limits. So when
  * `GITHUB_DISPATCH_TOKEN` is configured we fire a `workflow_dispatch` and let a
  * real Linux runner do the work (see `.github/workflows/extract-compose-source.yml`);
  * the runner writes the extracted text straight back onto the `story_sources`

@@ -29,6 +29,7 @@
     },
     "production": {
       "channel": "production",
+      "autoIncrement": true,
       "ios": {
         "image": "latest"
       },
@@ -45,6 +46,9 @@
     "production": {
       "ios": {
         "ascAppId": "6764502362"
+      },
+      "android": {
+        "track": "internal"
       }
     }
   }

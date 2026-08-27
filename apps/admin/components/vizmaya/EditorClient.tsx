@@ -12,7 +12,8 @@ import NarrationEditor, { type NarrationUnit } from './NarrationEditor'
 import AssetsPanel from './AssetsPanel'
 import { ComposeFlow } from '@/components/canvas/compose/ComposeFlowPanel'
 import { appStoryUrl, vizmayaUrl } from '@/lib/publicSite'
-import MoveStoryControl from '@/components/vizmaya/MoveStoryControl'
+import StorySettingsFields from '@/components/vizmaya/StorySettingsFields'
+import TravelPasswordSettings from '@/components/vizmaya/TravelPasswordSettings'
 import type { SignedStoryLinks } from '@/lib/signedConsumerLinks'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
 import type { Theme } from '@vismay/viz-engine'
@@ -94,6 +95,11 @@ export default function EditorClient({
     appSlug && appSlug !== 'vizmaya-fyi'
       ? `/${appSlug}/${slug}/canvas`
       : `/vizmaya/${slug}/canvas`
+  // Same routing split as canvas — see above.
+  const timelineHref =
+    appSlug && appSlug !== 'vizmaya-fyi'
+      ? `/${appSlug}/${slug}/timeline`
+      : `/vizmaya/${slug}/timeline`
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
@@ -281,11 +287,11 @@ export default function EditorClient({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
+      <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3 overflow-x-auto">
         <Link href={sectionHref} className="text-neutral-400 hover:text-white text-sm shrink-0">
           ← all
         </Link>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[5rem] flex-1">
           <div className="font-mono text-xs text-neutral-500 truncate">{slug}</div>
         </div>
         <button
@@ -312,12 +318,26 @@ export default function EditorClient({
           ✎ canvas
         </Link>
         <Link
+          href={timelineHref}
+          className="text-sm text-neutral-200 hover:text-white shrink-0"
+        >
+          ▶ timeline
+        </Link>
+        <Link
           href={signedLinks.reports}
           target="_blank"
           rel="noreferrer"
           className="text-sm text-neutral-400 hover:text-white shrink-0"
         >
           report ↗
+        </Link>
+        <Link
+          href={signedLinks.newsletter}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-neutral-400 hover:text-white shrink-0"
+        >
+          newsletter ↗
         </Link>
         <Link
           href={signedLinks.autoplay}
@@ -467,6 +487,7 @@ export default function EditorClient({
             listed={parsed.data.listed !== false}
             displayOrder={typeof parsed.data.displayOrder === 'number' ? parsed.data.displayOrder : null}
             onChange={updateMetadata}
+            tripSlug={appSlug === 'travel' ? ((parsed.data.trip as string | undefined) ?? slug) : null}
           />
         )}
       </div>
@@ -757,6 +778,7 @@ function SettingsPanel({
   listed,
   displayOrder,
   onChange,
+  tripSlug,
 }: {
   slug: string
   appSlug: string | null
@@ -764,59 +786,21 @@ function SettingsPanel({
   listed: boolean
   displayOrder: number | null
   onChange: (meta: Partial<{ status: string; listed: boolean; displayOrder: number | null }>) => void
+  /** Non-null only for travel stories — the trip whose password gate governs
+   *  this story (from `trip:` frontmatter, falling back to the story slug). */
+  tripSlug: string | null
 }) {
   return (
     <div className="flex-1 flex flex-col min-h-0 p-4 overflow-y-auto">
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium mb-2">App</label>
-          <MoveStoryControl slug={slug} currentAppSlug={appSlug} />
-          <p className="text-xs text-neutral-500 mt-1">
-            Move this story to another app, or unassign it back to Drafts.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Publishing Status</label>
-          <select
-            value={status}
-            onChange={(e) => onChange({ status: e.target.value })}
-            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="listed"
-            checked={listed}
-            onChange={(e) => onChange({ listed: e.target.checked })}
-            className="w-4 h-4 rounded"
-          />
-          <label htmlFor="listed" className="text-sm font-medium">
-            Show on home page
-          </label>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Display order on home page</label>
-          <input
-            type="number"
-            value={displayOrder ? String(displayOrder) : ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? null : parseInt(e.target.value, 10)
-              onChange({ displayOrder: val })
-            }}
-            placeholder="Leave empty for unordered"
-            className="w-full bg-neutral-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
-          />
-          <p className="text-xs text-neutral-500 mt-1">Lower numbers appear first (0-indexed). Leave empty to not display.</p>
-        </div>
-      </div>
+      <StorySettingsFields
+        slug={slug}
+        appSlug={appSlug}
+        status={status}
+        listed={listed}
+        displayOrder={displayOrder}
+        onChange={onChange}
+      />
+      {tripSlug && <TravelPasswordSettings tripSlug={tripSlug} />}
     </div>
   )
 }

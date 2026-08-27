@@ -14,7 +14,9 @@ import { findTeam, slugify } from './teams'
  */
 interface Props {
   team: string
-  size?: number
+  /** Box size in px (number) or any CSS length — pass a `clamp(min, Ncqi, max)`
+   *  string to let the crest scale fluidly with its container. */
+  size?: number | string
   crestUrl?: string
   className?: string
   style?: CSSProperties
@@ -55,8 +57,10 @@ export function Crest({ team, size = 48, crestUrl, className, style, color, seco
         <img
           src={resolvedUrl}
           alt={entry?.name ?? team}
-          width={size}
-          height={size}
+          // Intrinsic-size hints only when numeric; a fluid (string) size is
+          // governed by the span box + `width/height: 100%` below.
+          width={typeof size === 'number' ? size : undefined}
+          height={typeof size === 'number' ? size : undefined}
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           onError={() => setImgFailed(true)}
         />
@@ -67,18 +71,23 @@ export function Crest({ team, size = 48, crestUrl, className, style, color, seco
   const fill = color ?? entry?.color ?? '#404040'
   const stroke = secondary ?? entry?.secondary ?? '#FFFFFF'
   const monogram = entry?.monogram ?? team.slice(0, 3).toUpperCase()
-  const fontSize = Math.round(size * 0.32)
+  // viewBox is 64; for a numeric size keep the historical 0.32× ratio, for a
+  // fluid (string) size fall back to a fixed user-unit size that scales with the
+  // svg's rendered box.
+  const fontSize = typeof size === 'number' ? Math.round(size * 0.32) : 15
   // Key the gradient id off the team identity *and* the fill so two clubs that
   // share a monogram — or the same club previewed in two colors (asset studio)
   // — don't collide on a single shared <defs> id.
   const gradId = `crest-bg-${slugify(entry?.name ?? team)}-${fill.replace(/[^a-z0-9]/gi, '')}`
   return (
     <svg
-      width={size}
-      height={size}
+      width={typeof size === 'number' ? size : undefined}
+      height={typeof size === 'number' ? size : undefined}
       viewBox="0 0 64 64"
       className={className}
-      style={style}
+      // Inline width/height so a fluid (string) size still drives the box; the
+      // viewBox makes everything inside scale to it.
+      style={{ width: size, height: size, ...style }}
       aria-label={entry?.name ?? team}
       role="img"
     >

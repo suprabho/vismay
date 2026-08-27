@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { isAuthed } from '@/lib/adminAuth'
 import { listFootshortsCompetitions } from '@vismay/content-source/footshortsData'
 import { ShareCardCreator } from '@/components/footshorts/sharecard/ShareCardCreator'
+import { ShareCardCreator as VizmayaShareCardCreator } from '@/components/vizmaya/sharecard/ShareCardCreator'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,16 +11,36 @@ interface Props {
 }
 
 /**
- * Footshorts-only "Share cards" tab — a standalone on-brand share-card creator.
- * Pick real match / standings / form / news data (or generate an AI image),
- * preview the card live, and download a PNG in any social format. Reuses the
- * footshorts data routes (`/api/footshorts/data/*`) + viz components; capture is
- * client-side via html-to-image.
+ * Per-app share-card tabs.
+ *
+ * - `footshorts` — the standalone on-brand footshorts creator: pick real match /
+ *   standings / form / news data (or generate an AI image), preview live,
+ *   download a PNG. Reuses the footshorts data routes + viz components.
+ * - `umami` — "Social frames": the vizmaya layer composer in umami mode
+ *   (comparison / dish-spotlight / explainer-carousel templates, paper+spice
+ *   palettes, dish grounding, AI food imagery). Frames are story-less, so no
+ *   story list is fetched.
+ *
+ * Capture is client-side via html-to-image in both.
  */
 export default async function ShareCardsPage({ params }: Props) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/share-cards`)
-  // Share cards are wired to footshorts' football tables; no other vertical has them.
+
+  if (appSlug === 'umami') {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 text-neutral-100">
+        <VizmayaShareCardCreator
+          mode="umami"
+          stories={[]}
+          accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+        />
+      </div>
+    )
+  }
+
+  // The footshorts creator is wired to its football tables; no other vertical
+  // has this tab.
   if (appSlug !== 'footshorts') notFound()
 
   // Degrade to an empty picker rather than 500-ing the tab if the football
@@ -33,17 +54,8 @@ export default async function ShareCardsPage({ params }: Props) {
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-4 py-6 text-neutral-100">
-        <h1 className="text-lg font-semibold">Share cards</h1>
-        <p className="mt-0.5 text-sm text-neutral-400">
-          Build an on-brand share card from real match data, standings, form, news, or an AI image —
-          then download a PNG in any social format.
-        </p>
-        <div className="mt-5">
-          <ShareCardCreator initialCompetitions={competitions} />
-        </div>
-      </div>
+    <div data-composer-immersive className="min-h-0 flex-1 overflow-hidden text-neutral-100">
+      <ShareCardCreator initialCompetitions={competitions} />
     </div>
   )
 }

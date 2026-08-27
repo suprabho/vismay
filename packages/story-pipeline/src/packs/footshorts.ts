@@ -6,9 +6,11 @@ import type { DomainPack, PackLayerType } from './types'
  *
  * Generatable vertical layers (zod mirrors of each module's real parseConfig;
  * packs.test.ts round-trips a sample through the real parser):
- *   - fs:match-card      — editorial fixture card; crests/brand colors come
- *                          from the bundled team palette (and server-side
- *                          hydration), so the schema omits every URL/hex field.
+ *   - fs:match-card      — editorial fixture card: ONE fixture, or a `grid`
+ *                          tiling several fixtures (a matchday / results
+ *                          round-up). Crests/brand colors come from the bundled
+ *                          team palette (and server-side hydration), so the
+ *                          schema omits every URL/hex field.
  *   - fs:standings-table — league table from a sourced standings list; the
  *                          `team` ref is REQUIRED (the component dereferences
  *                          it), crest_url omitted (monogram fallback).
@@ -25,26 +27,72 @@ import type { DomainPack, PackLayerType } from './types'
  *   - fs:tactics-board — authored per-player x/y keyframes + timed
  *     annotations; an artifact, not derivable from text.
  *   - fs:match-row / fs:match-tile — tractable but redundant list furniture:
- *     match-card covers the fixture beat with richer layouts.
+ *     match-card covers the fixture beat with richer layouts, and its `grid`
+ *     variant now covers the multi-fixture round-up too.
  */
 
+/** One fixture in the `grid` variant — the editorial subset of the single-card
+ *  fields. Crests/brand colors come from the bundled palette (as for the single
+ *  layouts), so this omits every URL/hex field. */
+const matchCardItemSchema = z.object({
+  home: z.string().min(1).describe('Home team display name, e.g. "Arsenal".'),
+  away: z.string().min(1).describe('Away team display name, e.g. "Chelsea".'),
+  score: z
+    .string()
+    .optional()
+    .describe('Display score/status for this fixture, e.g. "2 – 1" or "FT" — post-match only.'),
+  kickoff: z
+    .string()
+    .optional()
+    .describe('Pre-match kickoff label for this fixture, e.g. "Sat · 17:30".'),
+  competition: z
+    .string()
+    .optional()
+    .describe('Per-card competition line, e.g. "Premier League". Omit when the cards share one.'),
+})
+
+// Mirror caveats vs the real parseConfig (this entry is intentionally not a
+// byte-exact mirror — a flat discriminated-union member can't be conditional):
+//   • home/away are .optional() because the `grid` layout drives off `cards[]`
+//     and the real parser ignores top-level home/away there. The four single
+//     layouts still REQUIRE them — enforced by the real parser on re-validation,
+//     and steered by the field describes + promptDoc, not by zod.
+//   • cards is min(2)/max(12) — a generation guardrail (a 1-card "grid" should
+//     be a single card; 12 caps a full matchday). The real parser allows 1 and
+//     is unbounded; do not "align" these without reading the prompt intent.
 const matchCard: PackLayerType = {
   type: 'fs:match-card',
-  label: 'an editorial fixture card — home/away, score or kickoff, competition',
+  label:
+    'an editorial fixture card — ONE fixture (home/away, score or kickoff, competition), ' +
+    'or a GRID tiling several fixtures',
   regions: ['chart', 'default'],
   promptDoc:
-    'Use for ONE match beat — a result, a preview, or the story\'s anchor fixture. home/away ' +
-    'are team display names ("Arsenal"); score is a free-form display string ("2 – 1", "FT"); ' +
-    'kickoff is the pre-match label; competition is the full line ("Premier League · matchday ' +
-    '35"). Crests and brand colors come from the bundled palette — never invent URLs or hex.',
+    'Use for the fixture beat. For ONE match — a result, a preview, or the story\'s anchor ' +
+    'fixture — set home/away at the top level with score (post-match) or kickoff (pre-match) ' +
+    'and competition. For SEVERAL fixtures in one beat — a matchday round-up, a results or ' +
+    'fixtures grid — set layout "grid" and list them in "cards" (2+, author order), one ' +
+    '{home, away, score?, kickoff?, competition?} per fixture; "columns" is cards per row ' +
+    '(default 2) and "rows" caps the count. In grid mode the top-level home/away are unused — ' +
+    'omit them. home/away are team display names ("Arsenal"); score is a free-form display ' +
+    'string ("2 – 1", "FT"); kickoff is the pre-match label; competition is the full line ' +
+    '("Premier League · matchday 35"). Crests and brand colors come from the bundled palette — ' +
+    'never invent URLs or hex.',
   schema: z.object({
     type: z.literal('fs:match-card'),
     layout: z
-      .enum(['compact', 'horizontal', 'portrait', 'score'])
+      .enum(['compact', 'horizontal', 'portrait', 'score', 'grid'])
       .optional()
-      .describe('Card variant. Omit for the default "score" result card.'),
-    home: z.string().min(1).describe('Home team display name, e.g. "Arsenal".'),
-    away: z.string().min(1).describe('Away team display name, e.g. "Chelsea".'),
+      .describe('Card variant. Omit for the default "score" result card; "grid" tiles "cards".'),
+    home: z
+      .string()
+      .min(1)
+      .optional()
+      .describe('Home team display name, e.g. "Arsenal". Required for the single-fixture layouts; omit for "grid".'),
+    away: z
+      .string()
+      .min(1)
+      .optional()
+      .describe('Away team display name, e.g. "Chelsea". Required for the single-fixture layouts; omit for "grid".'),
     score: z
       .string()
       .optional()
@@ -64,6 +112,24 @@ const matchCard: PackLayerType = {
       .string()
       .optional()
       .describe('Date label for the portrait variant, e.g. "Thursday, Jun 5".'),
+    cards: z
+      .array(matchCardItemSchema)
+      .min(2)
+      .max(12)
+      .optional()
+      .describe('Grid layout ONLY — the fixtures to tile (2+, author order), e.g. a matchday round-up.'),
+    columns: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Grid only — cards per row (default 2).'),
+    rows: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe('Grid only — caps visible cards to rows × columns.'),
   }),
 }
 
@@ -171,7 +237,9 @@ export const FOOTSHORTS_PACK: DomainPack = {
     'names. ',
   outlineGuidance:
     'PLAN THE FOOTSHORTS MODULES (deck stories): when the sources carry a fixture or result, ' +
-    'that beat\'s "visual" should FEATURE fs:match-card — name the type explicitly; a league ' +
+    'that beat\'s "visual" should FEATURE fs:match-card — one fixture for a single result or ' +
+    'preview, or an fs:match-card GRID (several fixtures tiled) for a matchday or results ' +
+    'round-up; name the type explicitly; a league ' +
     'table or standings beat MUST use fs:standings-table (the ONLY way to show standings — ' +
     'never a chart/keyValue/table); one team\'s recent run wants fs:team-form-strip. These ' +
     'REPLACE a generic chart/keyValue for fixture, table, and form beats — plan charts only ' +
@@ -183,7 +251,8 @@ export const FOOTSHORTS_PACK: DomainPack = {
     'precise stat beats three vague ones.',
   visualGuidance:
     'Prefer the Footshorts modules where they fit the beat: a fixture or result wants ' +
-    'fs:match-card; a team\'s recent run wants fs:team-form-strip. STANDINGS RULE: any ' +
+    'fs:match-card (one fixture; or layout "grid" with "cards" to tile several fixtures for a ' +
+    'matchday or results round-up); a team\'s recent run wants fs:team-form-strip. STANDINGS RULE: any ' +
     'league-table or standings beat MUST render as fs:standings-table with the table AS ' +
     'rows — never show standings as a chart, keyValue, bigStat list, or generic table. Use ' +
     'core layers (bigStat, chart, quote) for everything else.',

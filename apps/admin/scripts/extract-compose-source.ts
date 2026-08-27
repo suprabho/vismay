@@ -1,17 +1,23 @@
 /**
  * Async compose-source extractor — the GitHub Actions worker.
  *
- * Reads a `story_sources` row (a PDF uploaded in the compose flow), downloads
- * the original from the private `story-sources` bucket, transcribes it with a
- * vision model (Claude Sonnet, Gemini fallback — rasterise each page →
- * markdown), and writes the result back onto the row (`status: extracted` +
+ * Reads a `story_sources` row (a document uploaded in the compose flow),
+ * downloads the original from the private `story-sources` bucket, extracts it to
+ * Markdown, and writes the result back onto the row (`status: extracted` +
  * `extracted_text`, or `status: failed` + `error`). The compose UI polls
  * `GET …/sources` and re-enables "Generate angles" once the row flips to
  * `extracted`.
  *
- * Why a worker and not a request route: a multi-page PDF's page-by-page
- * transcription can blow past serverless function limits. A GitHub runner has
- * no such cap (see render-video.yml — same dispatch lane).
+ * Extraction strategy (see `extractSource`):
+ *   - Office / EPub / text-layer PDFs → markitdown (Python CLI → Markdown).
+ *   - Scanned / graphical PDFs → markitdown's text layer comes back sparse, so
+ *     we fall back to the vision transcriber (Claude Sonnet, Gemini fallback —
+ *     rasterise each page → markdown).
+ *
+ * Why a worker and not a request route: markitdown is Python (not installable in
+ * the Next runtime) and a multi-page PDF's page-by-page vision transcription can
+ * blow past serverless function limits. A GitHub runner has no such cap and
+ * `pip install`s markitdown (see render-video.yml — same dispatch lane).
  *
  *   pnpm exec tsx scripts/extract-compose-source.ts <source_id> [<source_id> …]
  *   pnpm exec tsx scripts/extract-compose-source.ts --all-pending
@@ -30,7 +36,62 @@ import {
   downloadSourceFile,
   type StorySource,
 } from '@vismay/content-source/storySources'
-import { extractPdfVision } from '@vismay/story-pipeline'
+import {
+  extractPdfVision,
+  extractWithMarkitdown,
+  isMarkitdownExt,
+  isMarkitdownAvailable,
+  type ExtractedSource,
+} from '@vismay/story-pipeline'
+
+/**
+ * Below this many characters, a PDF's markitdown text layer is treated as
+ * scanned/graphical and re-extracted with the vision transcriber. Override with
+ * COMPOSE_PDF_TEXT_MIN_CHARS.
+ */
+const MIN_PDF_TEXT_CHARS = Number(process.env.COMPOSE_PDF_TEXT_MIN_CHARS) || 200
+
+function isPdf(filename?: string): boolean {
+  return Boolean(filename && filename.toLowerCase().endsWith('.pdf'))
+}
+
+/**
+ * Extract a downloaded source to Markdown. markitdown handles Office/EPub and
+ * the PDF text layer; the vision transcriber is the fallback for scanned or
+ * graphical PDFs (where markitdown yields little/no text) and whenever
+ * markitdown is unavailable.
+ */
+async function extractSource(buf: Buffer, filename?: string): Promise<ExtractedSource> {
+  const pdf = isPdf(filename)
+  const useMarkitdown =
+    Boolean(filename) && isMarkitdownExt(filename!) && (await isMarkitdownAvailable())
+
+  if (useMarkitdown) {
+    try {
+      const ex = await extractWithMarkitdown(buf, { label: filename })
+      if (pdf && ex.body.length < MIN_PDF_TEXT_CHARS) {
+        console.log(
+          `  markitdown text layer sparse (${ex.body.length} chars) — falling back to vision`,
+        )
+        return extractPdfVision(buf, { label: filename })
+      }
+      return ex
+    } catch (e) {
+      // A markitdown failure on a PDF is recoverable via vision; on other
+      // formats there's nothing else to try, so surface the error.
+      if (!pdf) throw e
+      console.log(
+        `  markitdown failed (${e instanceof Error ? e.message : e}) — falling back to vision`,
+      )
+      return extractPdfVision(buf, { label: filename })
+    }
+  }
+
+  // No markitdown (e.g. not installed): PDFs still extract via vision; other
+  // formats can't be handled here — they should have gone the synchronous route.
+  if (pdf) return extractPdfVision(buf, { label: filename })
+  throw new Error(`markitdown unavailable; cannot extract ${filename ?? 'file'}`)
+}
 
 /** Best-effort .env load for local runs; a no-op in CI where env is preset. */
 function loadLocalEnv(): void {
@@ -56,8 +117,8 @@ async function extractOne(src: StorySource): Promise<void> {
   console.log(`→ ${label}: downloading…`)
   try {
     const bytes = await downloadSourceFile(src.storagePath)
-    console.log(`→ ${label}: transcribing ${bytes.length} bytes…`)
-    const ex = await extractPdfVision(Buffer.from(bytes), { label: src.filename ?? undefined })
+    console.log(`→ ${label}: extracting ${bytes.length} bytes…`)
+    const ex = await extractSource(Buffer.from(bytes), src.filename ?? undefined)
     await updateStorySource(src.id, {
       title: ex.title,
       byline: ex.byline ?? null,

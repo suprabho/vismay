@@ -1,10 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef } from 'react'
-import type { ComponentProps, ReactNode } from 'react'
-import Link from 'next/link'
-import { StoryShell as BaseStoryShell } from '@vismay/story-reader'
-import VizmayaLogo from '@/components/VizmayaLogo'
+import type { ComponentProps } from 'react'
+import { StoryShell as SurfaceStoryShell } from '@vismay/render-surface/story'
 import {
   trackStoryViewed,
   trackStorySectionViewed,
@@ -15,34 +13,18 @@ import {
 // 100% is reported separately as `story_completed`, so it isn't listed here.
 const DEPTH_MILESTONES = [25, 50, 75] as const
 
-// next/link-backed home link so the in-app reader keeps client-side nav +
-// prefetch. The generic shell defaults to a plain anchor (no Next dependency).
-function NextHomeLink({
-  href,
-  children,
-  ...rest
-}: {
-  href: string
-  className?: string
-  'aria-label'?: string
-  children: ReactNode
-}) {
-  return (
-    <Link href={href} {...rest}>
-      {children}
-    </Link>
-  )
-}
-
 /**
- * Vizmaya binding of the generic story shell (`@vismay/story-reader`): injects
- * the Vizmaya logo and a next/link home link, and maps the shell's
- * `onSectionChange` signal onto Amplitude reading-depth events. Every vizmaya
- * route imports the reader through this adapter, so all of them get depth
- * tracking for free — and because the base shell only fires `onSectionChange`
- * on genuine scroll reads, autoplay/capture/embed renders emit nothing.
+ * Public-reader binding of the story shell. Branding (Vizmaya logo + next/link
+ * home link) comes from `@vismay/render-surface/story` — extracted there in
+ * PR 1 — so this adapter only maps the shell's `onSectionChange` signal onto
+ * Amplitude reading-depth events. Every vizmaya route imports the reader
+ * through this adapter, so all of them get depth tracking for free — and
+ * because the base shell only fires `onSectionChange` on genuine scroll reads,
+ * autoplay/capture/embed/editor renders emit nothing.
  */
-export default function StoryShell(props: ComponentProps<typeof BaseStoryShell>) {
+export default function StoryShell(
+  props: ComponentProps<typeof SurfaceStoryShell>
+) {
   const { slug, format } = props
 
   // Per-read analytics state. The App Router remounts the page tree on a slug
@@ -84,12 +66,5 @@ export default function StoryShell(props: ComponentProps<typeof BaseStoryShell>)
     [slug, format]
   )
 
-  return (
-    <BaseStoryShell
-      {...props}
-      LogoComponent={VizmayaLogo}
-      LinkComponent={NextHomeLink}
-      onSectionChange={handleSectionChange}
-    />
-  )
+  return <SurfaceStoryShell {...props} onSectionChange={handleSectionChange} />
 }

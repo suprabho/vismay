@@ -12,8 +12,14 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { useFollowedStories, type StoryGroup } from '@/lib/useFollowedStories';
+import {
+  storyItemKey,
+  useFollowedStories,
+  type StoryGroup,
+  type StoryItem,
+} from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
+import { parseRatio } from '@/lib/useShareCards';
 
 const STORY_DURATION_MS = 6000;
 
@@ -31,7 +37,15 @@ export default function StoryScreen() {
   const insets = useSafeAreaInsets();
   const { start } = useLocalSearchParams<{ start?: string }>();
   const { data: groups, isLoading } = useFollowedStories();
-  const { seen, markSeen } = useSeenArticles();
+  const { seen, seenCards, markStorySeen } = useSeenArticles();
+
+  // Namespaced seen keys (article:<id> / card:<id>) so the two id spaces don't collide.
+  const seenKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const id of seen) s.add(`article:${id}`);
+    for (const id of seenCards) s.add(`card:${id}`);
+    return s;
+  }, [seen, seenCards]);
 
   const initial = Math.max(0, Math.min(Number(start) || 0, (groups?.length ?? 1) - 1));
 
@@ -46,8 +60,8 @@ export default function StoryScreen() {
   const [storyIdx, setStoryIdx] = useState<number>(() => {
     const g = groups?.[initial];
     if (!g) return 0;
-    const snap = new Set(seen);
-    const first = g.items.findIndex((it) => !snap.has(it.article_id));
+    const snap = new Set(seenKeys);
+    const first = g.items.findIndex((it) => !snap.has(storyItemKey(it)));
     snapshotRef.current = first < 0 ? new Set() : snap;
     snapshotEntityRef.current = initial;
     return first >= 0 ? first : 0;
@@ -55,7 +69,7 @@ export default function StoryScreen() {
   const progress = useSharedValue(0);
 
   const group = groups?.[entityIdx];
-  const story = group?.items[storyIdx];
+  const story: StoryItem | undefined = group?.items[storyIdx];
 
   // Re-snapshot + jump to first unseen whenever we enter a new entity
   // (also handles the cold-load case where `groups` arrives after mount).
@@ -65,12 +79,11 @@ export default function StoryScreen() {
     if (!g) return;
     if (snapshotEntityRef.current === entityIdx) return;
     snapshotEntityRef.current = entityIdx;
-    const snap = new Set(seen);
-    const first = g.items.findIndex((it) => !snap.has(it.article_id));
+    const snap = new Set(seenKeys);
+    const first = g.items.findIndex((it) => !snap.has(storyItemKey(it)));
     snapshotRef.current = first < 0 ? new Set() : snap;
     setStoryIdx(first >= 0 ? first : 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityIdx, groups]);
+  }, [entityIdx, groups, seenKeys]);
 
   const close = () => router.back();
 
@@ -78,7 +91,7 @@ export default function StoryScreen() {
     const snap = snapshotRef.current;
     for (let i = from + 1; i < g.items.length; i++) {
       const it = g.items[i];
-      if (it && !snap.has(it.article_id)) return i;
+      if (it && !snap.has(storyItemKey(it))) return i;
     }
     return -1;
   };
@@ -87,7 +100,7 @@ export default function StoryScreen() {
     const snap = snapshotRef.current;
     for (let i = from - 1; i >= 0; i--) {
       const it = g.items[i];
-      if (it && !snap.has(it.article_id)) return i;
+      if (it && !snap.has(storyItemKey(it))) return i;
     }
     return -1;
   };
@@ -129,14 +142,14 @@ export default function StoryScreen() {
 
   useEffect(() => {
     if (!story) return;
-    markSeen(story.article_id);
+    markStorySeen(story);
     progress.value = 0;
     progress.value = withTiming(1, { duration: STORY_DURATION_MS }, (finished) => {
       if (finished) runOnJS(goNext)();
     });
     return () => cancelAnimation(progress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityIdx, storyIdx, story?.article_id]);
+  }, [entityIdx, storyIdx, story ? storyItemKey(story) : undefined, markStorySeen]);
 
   // Press-and-hold to pause the countdown. Taps shorter than HOLD_THRESHOLD_MS
   // still navigate; anything longer is treated as a hold and suppresses nav.
@@ -181,15 +194,36 @@ export default function StoryScreen() {
 
   return (
     <View className="flex flex-col flex-1 justify-between bg-black">
-      {story.image_url ? (
-        <Image
-          source={{ uri: story.image_url }}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          contentFit="cover"
-          transition={150}
-        />
-      ) : null}
-      <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+      {story.kind === 'card' ? (
+        <>
+          {/* Blurred fill behind the contained card so portrait PNGs don't letterbox to bare black. */}
+          <Image
+            source={{ uri: story.image_url }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.4 }}
+            contentFit="cover"
+            blurRadius={40}
+          />
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
+          <CardSlide
+            imageUrl={story.image_url}
+            ratio={story.ratio}
+            topInset={insets.top + 16}
+            bottomInset={insets.bottom + 16}
+          />
+        </>
+      ) : (
+        <>
+          {story.image_url ? (
+            <Image
+              source={{ uri: story.image_url }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : null}
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+        </>
+      )}
 
       <Pressable
         onPressIn={pauseProgress}
@@ -235,42 +269,93 @@ export default function StoryScreen() {
         </View>
       </View>
 
-      <View className="flex m-2 rounded-xl flex-end px-4 pt-8 pb-10 mb-safe-offset-1 overflow-hidden">
-        <BlurView
-          intensity={50}
-          tint="dark"
-          experimentalBlurMethod="dimezisBlurView"
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(22,22,29,0.35)' }} />
-        <View
-          className="self-start rounded-full px-3 py-1 mb-3"
-          style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
-        >
-          <Text className="text-xs font-medium" style={{ color: '#fff' }}>{story.publisher}</Text>
-        </View>
-        <Text
-          className="text-2xl font-bold leading-tight mb-3"
-          style={{ color: '#fff' }}
-        >
-          {story.headline}
-        </Text>
-        {story.summary ? (
-          <Text
-            className="text-[15px] leading-[22px]"
-            numberOfLines={6}
-            style={{ color: 'rgba(255,255,255,0.9)' }}
+      {story.kind === 'article' ? (
+        <View className="flex m-2 rounded-xl flex-end px-4 pt-8 pb-10 mb-safe-offset-1 overflow-hidden">
+          <BlurView
+            intensity={50}
+            tint="dark"
+            experimentalBlurMethod="dimezisBlurView"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(22,22,29,0.35)' }} />
+          <View
+            className="self-start rounded-full px-3 py-1 mb-3"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' }}
           >
-            {story.summary}
+            <Text className="text-xs font-medium" style={{ color: '#fff' }}>{story.publisher}</Text>
+          </View>
+          <Text
+            className="text-2xl font-bold leading-tight mb-3"
+            style={{ color: '#fff' }}
+          >
+            {story.headline}
           </Text>
+          {story.summary ? (
+            <Text
+              className="text-[15px] leading-[22px]"
+              numberOfLines={6}
+              style={{ color: 'rgba(255,255,255,0.9)' }}
+            >
+              {story.summary}
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={() => router.push({ pathname: '/web', params: { url: story.url, publisher: story.publisher } })}
+            className="mt-4 self-start"
+            hitSlop={8}
+          >
+            <Text className="text-accent text-sm font-medium">Read at source →</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** A shipped share card, centered at its exact aspect ratio inside the viewer.
+ *  The available box is measured via onLayout; the PNG is sized to fit within
+ *  it (w = min(boxW, boxH·ar)) so `cover` never crops the rendered card. */
+function CardSlide({
+  imageUrl,
+  ratio,
+  topInset,
+  bottomInset,
+}: {
+  imageUrl: string;
+  ratio: string | null;
+  topInset: number;
+  bottomInset: number;
+}) {
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+
+  const ar = parseRatio(ratio);
+  const width = box ? Math.min(box.w, box.h * ar) : 0;
+  const height = width / ar;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        ...StyleSheet.absoluteFillObject,
+        paddingTop: topInset,
+        paddingBottom: bottomInset,
+        paddingHorizontal: 16,
+      }}
+    >
+      <View
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        onLayout={(e) =>
+          setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+        }
+      >
+        {box ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={{ width, height, borderRadius: 16 }}
+            contentFit="cover"
+            transition={150}
+          />
         ) : null}
-        <Pressable
-          onPress={() => router.push({ pathname: '/web', params: { url: story.url, publisher: story.publisher } })}
-          className="mt-4 self-start"
-          hitSlop={8}
-        >
-          <Text className="text-accent text-sm font-medium">Read at source →</Text>
-        </Pressable>
       </View>
     </View>
   );

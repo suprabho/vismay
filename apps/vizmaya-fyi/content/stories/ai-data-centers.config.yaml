@@ -1,0 +1,167 @@
+# Story config — ai-data-centers
+#
+# Format: MapStory (map-anchored scroll story), modeled on
+# _sample-adani-map.config.yaml and ebola-2026.config.yaml.
+#
+# Deliberately uses NO `foreground:` panels — on a map story a foreground slot
+# suppresses the section's prose rail. Prose + pins + charts only.
+#
+# Source: Epoch AI — Frontier Data Centers (CC BY 4.0),
+# https://epoch.ai/data/ai-data-centers. Figures are a representative snapshot
+# pending reconciliation (see vizmaya-data/ai-data-centers/INGEST_NOTES.md).
+#
+# Facility coordinates [lon, lat] (match lib/ai-data-centers/facilityCoords.ts):
+#   Stargate Abilene, TX      -99.8034  32.5227
+#   xAI Colossus, Memphis TN  -90.1479  35.0537
+#   Meta Hyperion, LA         -91.7337  32.4483
+#   Meta Prometheus, OH       -82.7885  40.0898
+#   Project Rainier, IN       -86.5264  41.7128
+#   Microsoft Fairwater, WI   -87.8721  42.7128
+
+defaults:
+  mapStyle: mapbox://styles/mapbox/dark-v11
+  mapOpacity: 0.55
+  pinColor: "#22d3ee"
+  pinRadius: 12
+  flySpeed: 1.2
+
+sections:
+
+  # ═══════════════════════════════════════════════
+  # HERO — continental US, all campuses
+  # ═══════════════════════════════════════════════
+
+  - id: hero
+    kind: hero
+    text: "The Gigawatt Race"
+    eyebrow: "AI infrastructure · July 2026 · Epoch AI"
+    map:
+      center: [-96.5, 38.5]
+      zoom: 3.6
+      pitch: 25
+      bearing: 0
+      opacity: 0.5
+      pins:
+        - coordinates: [-99.8034, 32.5227]
+          label: "Stargate Abilene · 900 MW"
+          color: "#22d3ee"
+          radius: 16
+          pulse: true
+        - coordinates: [-90.1479, 35.0537]
+          label: "xAI Colossus"
+          color: "#a78bfa"
+          radius: 13
+        - coordinates: [-91.7337, 32.4483]
+          label: "Meta Hyperion"
+          color: "#34d399"
+          radius: 12
+        - coordinates: [-86.5264, 41.7128]
+          label: "Project Rainier"
+          color: "#f59e0b"
+          radius: 12
+      mobile:
+        center: [-93.0, 38.0]
+        zoom: 2.9
+
+  # ═══════════════════════════════════════════════
+  # THE GIGAWATT RACE — build-out line chart
+  # ═══════════════════════════════════════════════
+
+  - id: buildout
+    text: "The gigawatt race"
+    chart: data:buildout
+    map:
+      center: [-99.8034, 32.5227]
+      zoom: 6.0
+      pitch: 30
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-99.8034, 32.5227]
+          label: "Stargate Abilene · ≈900 MW"
+          color: "#22d3ee"
+          radius: 16
+          labelAnchor: left
+          pulse: true
+      mobile:
+        center: [-99.8034, 32.5227]
+        zoom: 5.2
+
+  # ═══════════════════════════════════════════════
+  # WHERE THE COMPUTE SITS — leaderboard bar
+  # ═══════════════════════════════════════════════
+
+  - id: leaderboard
+    text: "Where the compute sits"
+    chart: data:leaderboard
+    map:
+      center: [-90.1479, 35.0537]
+      zoom: 5.4
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-90.1479, 35.0537]
+          label: "xAI Colossus · Memphis"
+          color: "#a78bfa"
+          radius: 14
+          labelAnchor: right
+        - coordinates: [-99.8034, 32.5227]
+          label: "Stargate Abilene"
+          color: "#22d3ee"
+          labelAnchor: left
+      mobile:
+        center: [-93.0, 34.0]
+        zoom: 4.0
+
+  # ═══════════════════════════════════════════════
+  # THE BILL — capex bar
+  # ═══════════════════════════════════════════════
+
+  - id: capex
+    text: "The bill"
+    chart: data:capex
+    map:
+      center: [-91.7337, 32.4483]
+      zoom: 5.2
+      pitch: 25
+      bearing: 0
+      opacity: 0.55
+      pins:
+        - coordinates: [-91.7337, 32.4483]
+          label: "Meta Hyperion · Louisiana"
+          color: "#34d399"
+          radius: 14
+          labelAnchor: right
+      mobile:
+        center: [-91.7337, 34.0]
+        zoom: 4.2
+
+  # ═══════════════════════════════════════════════
+  # DATA ACCESSIBILITY — closing
+  # ═══════════════════════════════════════════════
+
+  - id: data
+    text: "Data accessibility for builders"
+    map:
+      center: [-96.5, 38.5]
+      zoom: 3.6
+      pitch: 20
+      bearing: 0
+      opacity: 0.45
+      pins:
+        - coordinates: [-99.8034, 32.5227]
+          color: "#22d3ee"
+        - coordinates: [-90.1479, 35.0537]
+          color: "#a78bfa"
+        - coordinates: [-91.7337, 32.4483]
+          color: "#34d399"
+        - coordinates: [-82.7885, 40.0898]
+          color: "#34d399"
+        - coordinates: [-86.5264, 41.7128]
+          color: "#f59e0b"
+        - coordinates: [-87.8721, 42.7128]
+          color: "#22d3ee"
+      mobile:
+        center: [-93.0, 38.0]
+        zoom: 2.9

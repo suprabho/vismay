@@ -11,8 +11,11 @@
   --color-border: #1f2330;
   --color-text: #f5f5f5;
   --color-muted: #8e8e99;
-  --color-accent: #e10600;
-  --color-accent-text: #ffffff;
+  /* VizF1 brand coral red + near-black ink on it (Figma "Vismay Brands"
+   * node 120-196: primary lockup is black-on-red; #0b0d12 on #FF4346 keeps
+   * AA contrast at pill text sizes where white fails). */
+  --color-accent: #ff4346;
+  --color-accent-text: #0b0d12;
 }
 
 html,

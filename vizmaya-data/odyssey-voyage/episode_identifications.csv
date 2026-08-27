@@ -1,0 +1,35 @@
+seq,episode,theory,proposed_place,modern_region,lat,lon,status
+3,Lotus-Eaters,traditional,Djerba (Meninx),Tunisia,33.8000,10.9000,contested
+3,Lotus-Eaters,severin,Cyrenaica,Libya,32.8250,21.8600,contested
+4,Cyclops,traditional,Sicily near Mt Etna,Italy,37.5600,15.1600,contested
+4,Cyclops,berard,Posillipo (Naples),Italy,40.8100,14.1900,contested
+4,Cyclops,bradford,Favignana ('Goat Island'),Italy,37.9300,12.3300,contested
+4,Cyclops,severin,Crete,Greece,35.2400,24.8000,contested
+5,Aeolus,traditional,Lipari (Aeolian Islands),Italy,38.4700,14.9500,contested
+5,Aeolus,berard,Stromboli,Italy,38.7900,15.2100,contested
+5,Aeolus,bradford,Ustica,Italy,38.7100,13.1900,contested
+5,Aeolus,severin,Gramvousa (Korykos),Greece,35.6200,23.5800,contested
+6,Laestrygonians,traditional,Sicily,Italy,37.5000,15.0000,contested
+6,Laestrygonians,berard,Northern Sardinia,Italy,41.0000,9.4000,contested
+6,Laestrygonians,severin,Mezapos (Mani),Greece,36.3400,22.3800,contested
+7,Circe,traditional,Monte Circeo,Italy,41.2400,13.0900,traditional
+7,Circe,severin,Paxos,Greece,39.2000,20.1800,contested
+8,Underworld,archaeological,Necromanteion (Acheron),Greece,39.2400,20.5300,archaeological-contested
+8,Underworld,berard,Cumae / Lake Avernus,Italy,40.8400,14.0700,contested
+8,Underworld,traditional,Cape Tainaron,Greece,36.3900,22.4800,contested
+8,Underworld,atlantic,Atlantic Ocean,—,,,imaginary
+9,Sirens,traditional,Li Galli / Sirenuse,Italy,40.5800,14.4300,traditional
+9,Sirens,severin,Antipaxos,Greece,39.1500,20.2400,contested
+10,Scylla & Charybdis,traditional,Strait of Messina,Italy,38.2500,15.6300,traditional
+10,Scylla & Charybdis,severin,Lefkada channel,Greece,38.8300,20.7100,contested
+11,Thrinacia,traditional,Sicily ('Trinakria'),Italy,37.5000,14.0000,contested
+11,Thrinacia,traditional,Malta,Malta,35.9000,14.4000,contested
+11,Thrinacia,severin,Meganisi,Greece,38.6600,20.7800,contested
+12,Calypso,traditional,Gozo (Calypso's Cave),Malta,36.0600,14.2800,traditional
+12,Calypso,berard,Near the Straits of Gibraltar,Spain,36.0000,-5.6000,contested
+12,Calypso,atlantic,Atlantic west of Britain,—,,,imaginary
+13,Phaeacians,traditional,Corcyra / Corfu,Greece,39.6200,19.9200,strong
+13,Phaeacians,obregon,Cyprus,Cyprus,35.0000,33.0000,contested
+14,Ithaca,traditional,Modern Ithaki,Greece,38.4200,20.7100,anchor-contested
+14,Ithaca,bittlestone,Paliki (Kefalonia),Greece,38.2500,20.4200,contested
+14,Ithaca,older,Leucas (Lefkada),Greece,38.7200,20.6400,contested

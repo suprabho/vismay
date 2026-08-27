@@ -31,30 +31,33 @@ export interface FsDirective {
   config: Record<string, unknown>
 }
 
-/**
- * Matches a fence opener whose info-string names an `fs:` module, capturing the
- * type. Tolerates an optional language hint after the type (```fs:match-card json).
- * Anchored per-line via the `m` flag; `extractFsDirectives` scans line-by-line
- * so this is only used to recognise the opener.
- */
-export const FS_FENCE_OPEN = /^```(fs:[a-z0-9-]+)\b/
-
 /** A bare closing fence line. */
 export const FENCE_CLOSE = /^```\s*$/
 
 /**
- * Pull every `fs:` directive out of recap markdown, in document order. Bodies
- * that fail to parse as JSON, or that aren't a JSON object, are skipped (the
- * caller — viewer or ingest — degrades that block to plain text rather than
- * throwing on author error). Returns `[]` when there are none.
+ * Build a fence-opener matcher for a vertical namespace (e.g. `fs`, `f1`),
+ * capturing the full module type. Tolerates an optional language hint after the
+ * type (```f1:telemetry-clip json). The vizf1 telemetry suite uses the `f1:`
+ * namespace; footshorts uses `fs:`.
  */
-export function extractFsDirectives(markdown: string): FsDirective[] {
+export function fenceOpenFor(namespace: string): RegExp {
+  return new RegExp(`^\`\`\`(${namespace}:[a-z0-9-]+)\\b`)
+}
+
+/**
+ * Pull every directive in `namespace` out of markdown, in document order.
+ * Bodies that fail to parse as JSON, or that aren't a JSON object, are skipped
+ * (the caller degrades that block to plain text rather than throwing on author
+ * error). Returns `[]` when there are none.
+ */
+export function extractDirectives(markdown: string, namespace: string): FsDirective[] {
+  const open = fenceOpenFor(namespace)
   const out: FsDirective[] = []
   const lines = markdown.replace(/\r\n/g, '\n').split('\n')
   for (let i = 0; i < lines.length; i++) {
-    const open = FS_FENCE_OPEN.exec(lines[i]!)
-    if (!open) continue
-    const type = open[1]!
+    const m = open.exec(lines[i]!)
+    if (!m) continue
+    const type = m[1]!
     const body: string[] = []
     let j = i + 1
     for (; j < lines.length; j++) {
@@ -62,18 +65,18 @@ export function extractFsDirectives(markdown: string): FsDirective[] {
       body.push(lines[j]!)
     }
     i = j // resume after the closing fence (or EOF)
-    const parsed = parseFsBody(type, body.join('\n'))
+    const parsed = parseDirectiveBody(type, body.join('\n'))
     if (parsed) out.push(parsed)
   }
   return out
 }
 
 /**
- * Parse one fence body for a known `fs:` type. Back-fills `type` from the
- * info-string. Returns null on any malformed body so callers can fall back to
- * rendering the raw fence.
+ * Parse one fence body for a known directive type. Back-fills `type` from the
+ * info-string (authoritative). Returns null on any malformed body so callers
+ * can fall back to rendering the raw fence.
  */
-export function parseFsBody(type: string, body: string): FsDirective | null {
+export function parseDirectiveBody(type: string, body: string): FsDirective | null {
   const trimmed = body.trim()
   if (!trimmed) return null
   let value: unknown
@@ -83,8 +86,21 @@ export function parseFsBody(type: string, body: string): FsDirective | null {
     return null
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  // Back-fill `type` from the info-string, overriding any body value so the
-  // fence label is authoritative.
   const config: Record<string, unknown> = { ...(value as Record<string, unknown>), type }
   return { type, config }
+}
+
+// ── Back-compat `fs:` wrappers (footshorts recap path) ──────────────────────
+
+/** Matches an `fs:` fence opener. Prefer `fenceOpenFor(namespace)` for new code. */
+export const FS_FENCE_OPEN = fenceOpenFor('fs')
+
+/** Pull every `fs:` directive out of recap markdown. */
+export function extractFsDirectives(markdown: string): FsDirective[] {
+  return extractDirectives(markdown, 'fs')
+}
+
+/** Parse one `fs:` fence body. */
+export function parseFsBody(type: string, body: string): FsDirective | null {
+  return parseDirectiveBody(type, body)
 }

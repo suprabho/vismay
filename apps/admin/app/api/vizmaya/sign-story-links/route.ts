@@ -2,7 +2,7 @@
  * POST /api/vizmaya/sign-story-links
  *
  * Body: { slug: string }
- * Returns: SignedStoryLinks (autoplay, share, report, slides, reports)
+ * Returns: SignedStoryLinks (autoplay, share, report, slides, reports, newsletter)
  *
  * Cookie-gated (admin only). Lets client-side admin UIs that don't have
  * a natural server-render parent (e.g. the social planner's per-post

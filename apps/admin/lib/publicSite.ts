@@ -12,7 +12,15 @@
 // re-exports `registerAllVerticals`, which pulls in the viz-engine barrel
 // (deck.gl / mapbox / echarts). `/data` is route metadata + lazy import thunks
 // only, so this stays lean.
-import { VERTICALS } from '@vismay/verticals/data'
+import { APPS } from '@vismay/verticals/data'
+// Re-export the per-surface render-surface resolver from the registry so admin
+// signing sites import it from `@/lib/publicSite` as before. It lives in the
+// registry (not here) so vizmaya-side callers — e.g. the CI dispatch libs —
+// can resolve the same surface origins without importing admin code.
+export {
+  renderSurfaceUrl,
+  type RenderSurfaceKind,
+} from '@vismay/verticals/data'
 
 function normalize(url: string): string {
   return url.replace(/\/$/, '')
@@ -21,11 +29,22 @@ function normalize(url: string): string {
 export const vizmayaPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_VIZMAYA_URL || 'https://vizmaya.fyi'
 )
+// www is canonical: the apex 307s to www at the platform level WITHOUT CORS
+// headers, which kills cross-origin fetches (e.g. f1 modules loading telemetry
+// from a foreign render surface) at the redirect hop.
 export const vizf1PublicUrl: string = normalize(
-  process.env.NEXT_PUBLIC_VIZF1_URL || 'https://vizf1.com'
+  process.env.NEXT_PUBLIC_VIZF1_URL || 'https://www.vizf1.com'
 )
 export const footshortsPublicUrl: string = normalize(
   process.env.NEXT_PUBLIC_FOOTSHORTS_URL || 'https://footshorts.com'
+)
+// Placeholder default until the domain is purchased — override with the env
+// var once the Vercel project has a real hostname.
+export const umamiPublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_UMAMI_URL || 'https://umami.fyi'
+)
+export const travelPublicUrl: string = normalize(
+  process.env.NEXT_PUBLIC_TRAVEL_URL || 'https://protrip.vismay.xyz'
 )
 
 /**
@@ -44,12 +63,16 @@ export const adminFootshortsUrl: string = normalize(
 export const adminVizf1Url: string = normalize(
   process.env.NEXT_PUBLIC_ADMIN_VIZF1_URL || 'https://admin.vizf1.com'
 )
+export const adminUmamiUrl: string = normalize(
+  process.env.NEXT_PUBLIC_ADMIN_UMAMI_URL || 'https://admin.umami.fyi'
+)
 
 /** All per-vertical admin origins, for the CORS allow-list. */
 export const adminPublicOrigins: string[] = [
   adminVizmayaUrl,
   adminFootshortsUrl,
   adminVizf1Url,
+  adminUmamiUrl,
 ]
 
 /**
@@ -106,32 +129,28 @@ interface AppPublicRoutes {
   epicPath: ((slug: string) => string) | null
 }
 
-// Base brand. vizmaya.fyi is NOT a vertical (it's the headless render surface
-// itself), so its routing lives here rather than in the registry: stories at
-// /story/<slug>, epics own a top-level slug.
-const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {
-  'vizmaya-fyi': {
-    baseUrl: vizmayaPublicUrl,
-    storyPath: (slug) => `/story/${slug}`,
-    epicPath: (slug) => `/${slug}`,
-  },
-}
-
-// Per-vertical consumer routing comes from the registry (the single source of
-// truth — see packages/viz-engine/src/verticalRegistry.ts). Only the path
-// *shapes* live there; the base URL stays an app-routing concern resolved here
-// (env-overridable hostname), keyed by the consumer app slug.
-const VERTICAL_APP_BASE_URLS: Record<string, string> = {
+// Consumer base URLs keyed by app slug. These stay as static `NEXT_PUBLIC_*`
+// reads (above) rather than resolved through the registry's `resolveAppUrls`,
+// because publicSite is imported client-side (e.g. EditorClient) and Next only
+// inlines a *statically* referenced `process.env.NEXT_PUBLIC_*`. The registry
+// mirrors these as `{ env, default }` metadata for server callers.
+const CONSUMER_BASE_URLS: Record<string, string> = {
+  'vizmaya-fyi': vizmayaPublicUrl,
   footshorts: footshortsPublicUrl,
   vizf1: vizf1PublicUrl,
+  umami: umamiPublicUrl,
+  travel: travelPublicUrl,
 }
-for (const v of VERTICALS) {
-  const routes = v.publicRoutes
-  if (!routes) continue
-  APP_PUBLIC_ROUTES[routes.appSlug] = {
-    baseUrl: VERTICAL_APP_BASE_URLS[routes.appSlug] ?? vizmayaPublicUrl,
-    storyPath: routes.storyPath ?? null,
-    epicPath: routes.epicPath ?? null,
+
+// Path shapes now come from the app registry (`APPS[].routing`) — the single
+// source of truth. Only the base URL stays an app-routing concern resolved here
+// (the client-safe static consts above), keyed by the consumer app slug.
+const APP_PUBLIC_ROUTES: Record<string, AppPublicRoutes> = {}
+for (const app of APPS) {
+  APP_PUBLIC_ROUTES[app.slug] = {
+    baseUrl: CONSUMER_BASE_URLS[app.slug] ?? vizmayaPublicUrl,
+    storyPath: app.routing.storyPath ?? null,
+    epicPath: app.routing.epicPath ?? null,
   }
 }
 

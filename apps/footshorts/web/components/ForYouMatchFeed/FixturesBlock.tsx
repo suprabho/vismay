@@ -1,14 +1,20 @@
-import { MatchRow, MatchTile, TieCard, buildBracket } from '@vismay/footshorts-viz/web';
+import {
+  MatchRow,
+  MatchTile,
+  TieCard,
+  buildBracket,
+  isKnockoutStage,
+} from '@vismay/footshorts-viz/web';
 import type { FixtureRow } from '@/lib/useFixtures';
 import { useLeagueCrestMap } from '@/lib/useLeagueCrestMap';
 
 // Knockout when the migration's phase column says so, or — for rows that
-// haven't been re-ingested yet — when a stage is present and isn't one of the
-// non-knockout stage codes football-data.org uses.
+// haven't been re-ingested yet — when the stage is an allowlisted knockout
+// round. Allowlist, not deny-list: league fixtures arrive as REGULAR_SEASON
+// and must never fall into the bracket path.
 function isKnockoutFixture(f: FixtureRow): boolean {
   if (f.phase) return f.phase === 'knockout';
-  if (!f.stage) return false;
-  return f.stage !== 'GROUP_STAGE' && f.stage !== 'LEAGUE_STAGE';
+  return isKnockoutStage(f.stage);
 }
 
 type Props = {

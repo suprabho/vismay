@@ -493,6 +493,88 @@ export async function fetchFixtureEvents(fixtureId: string): Promise<FixtureEven
   return (data ?? []) as FixtureEventRow[]
 }
 
+// ── Sportradar match-timeline coverage (admin Pipeline tab) ──────────────────
+
+/** A finished World Cup fixture with its timeline-hydration state. */
+export interface MatchtimeFixture {
+  id: string
+  kickoffAt: string
+  home: string
+  away: string
+  /** Rows in fixture_events for this fixture; 0 = the next sync will target it. */
+  eventCount: number
+}
+
+export interface MatchtimeCoverage {
+  /** Finished World Cup fixtures, newest kickoff first. */
+  fixtures: MatchtimeFixture[]
+  finished: number
+  hydrated: number
+  pending: number
+}
+
+/**
+ * Timeline-hydration coverage for the Sportradar events sync (the worker's
+ * events-sportradar.ts): every finished World Cup fixture with its
+ * fixture_events count, so the admin Pipeline tab can show which matches the
+ * next run will hydrate. Scoped to the same competition slug the script uses.
+ */
+export async function fetchMatchtimeCoverage(): Promise<MatchtimeCoverage> {
+  const supabase = createServiceClient()
+
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('id, kickoff_at, home_team_id, away_team_id, home_team_name, away_team_name')
+    .eq('competition_slug', 'world-cup')
+    .eq('status', 'finished')
+    .order('kickoff_at', { ascending: false })
+  if (error) throw error
+  const rows = (data ?? []) as {
+    id: string
+    kickoff_at: string
+    home_team_id: string | null
+    away_team_id: string | null
+    home_team_name: string | null
+    away_team_name: string | null
+  }[]
+  if (rows.length === 0) return { fixtures: [], finished: 0, hydrated: 0, pending: 0 }
+
+  // Count events per fixture, paging because PostgREST caps a read at 1,000
+  // rows and a full WC is ~1,200 events. Ordered by pk so pages don't overlap.
+  const counts = new Map<string, number>()
+  const ids = rows.map((r) => r.id)
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data: evs, error: evErr } = await supabase
+      .from('fixture_events')
+      .select('id, fixture_id')
+      .in('fixture_id', ids)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (evErr) throw evErr
+    const page = (evs ?? []) as { fixture_id: string }[]
+    for (const e of page) counts.set(e.fixture_id, (counts.get(e.fixture_id) ?? 0) + 1)
+    if (page.length < PAGE) break
+  }
+
+  const entities = await loadTeamEntities(
+    supabase,
+    rows.flatMap((r) => [r.home_team_id, r.away_team_id]).filter((x): x is string => !!x),
+  )
+  const teamName = (id: string | null, fallback: string | null) =>
+    (id ? entities.get(id)?.name : null) ?? fallback ?? '?'
+
+  const fixtures = rows.map((r) => ({
+    id: r.id,
+    kickoffAt: r.kickoff_at,
+    home: teamName(r.home_team_id, r.home_team_name),
+    away: teamName(r.away_team_id, r.away_team_name),
+    eventCount: counts.get(r.id) ?? 0,
+  }))
+  const hydrated = fixtures.filter((f) => f.eventCount > 0).length
+  return { fixtures, finished: fixtures.length, hydrated, pending: fixtures.length - hydrated }
+}
+
 // ── news ──────────────────────────────────────────────────────────────────────
 
 /** A football-tagged entity attached to an article (team or league). */
@@ -521,7 +603,8 @@ export interface FootshortsNewsItem {
 export interface NewsQuery {
   /** Filter to articles tagged with this team/league entity slug. */
   entitySlug?: string
-  /** Max articles to return after filtering (default 30). */
+  /** Max articles to return after filtering (default 30, clamped to 1000 — the
+   *  PostgREST `max_rows` ceiling; deeper history needs range pagination). */
   limit?: number
 }
 
@@ -546,11 +629,11 @@ interface ArticleDbRow {
  * narrowed to a single entity slug. SERVER-ONLY (service-role client).
  */
 export async function fetchFootshortsNews(q: NewsQuery = {}): Promise<FootshortsNewsItem[]> {
-  const limit = Math.min(Math.max(q.limit ?? 30, 1), 200)
+  const limit = Math.min(Math.max(q.limit ?? 30, 1), 1000)
   const supabase = createServiceClient()
   // Over-fetch when filtering by entity so the in-memory narrow still returns a
   // useful page (the entity tag lives on the joined table, not the article row).
-  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 400) : limit
+  const fetchLimit = q.entitySlug ? Math.min(limit * 4, 1000) : limit
   const { data, error } = await supabase
     .from('articles')
     .select(
@@ -648,8 +731,15 @@ export interface AssetEntity {
   name: string
   country: string | null
   crest_url: string | null
+  /** Decorative brand color — card glow/border + match-tile gradients. */
   primary_color: string | null
+  /** Dedicated feed avatar-disc background, independent of primary_color. */
+  avatar_bg_color: string | null
 }
+
+/** Columns that hydrate an {@link AssetEntity}. One source of truth so the search
+ *  and the two color writers below always return the same shape. */
+const ASSET_ENTITY_COLS = 'id, type, slug, name, country, crest_url, primary_color, avatar_bg_color'
 
 /**
  * Search teams / competitions by name for the asset-studio picker. Unlike the
@@ -666,7 +756,7 @@ export async function searchAssetEntities(opts: {
   const supabase = createServiceClient()
   let query = supabase
     .from('entities')
-    .select('id, type, slug, name, country, crest_url, primary_color')
+    .select(ASSET_ENTITY_COLS)
     .in('type', opts.type ? [opts.type] : ['team', 'league'])
     .order('name', { ascending: true })
     .limit(limit)
@@ -695,11 +785,96 @@ export async function updateEntityPrimaryColor(
     .from('entities')
     .update({ primary_color: value })
     .eq('id', id)
-    .select('id, type, slug, name, country, crest_url, primary_color')
+    .select(ASSET_ENTITY_COLS)
     .single()
   if (error) throw error
   if (!data) throw new Error(`entity not found: ${id}`)
   return data as AssetEntity
+}
+
+/**
+ * Set (or clear) an entity's dedicated avatar background color — the disc behind
+ * the crest in the feed story-rings + cards. Independent of `primary_color`. Pass
+ * a `#RRGGBB` hex to set it, or `null` to clear back to "use primary_color".
+ * Returns the updated row. Throws on an invalid hex or a missing entity.
+ * SERVER-ONLY.
+ */
+export async function updateEntityAvatarBgColor(
+  id: string,
+  avatarBgColor: string | null,
+): Promise<AssetEntity> {
+  if (avatarBgColor !== null && !isPrimaryColorHex(avatarBgColor)) {
+    throw new Error(`invalid avatar_bg_color: expected #RRGGBB, got ${String(avatarBgColor)}`)
+  }
+  const value = avatarBgColor === null ? null : avatarBgColor.trim().toUpperCase()
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entities')
+    .update({ avatar_bg_color: value })
+    .eq('id', id)
+    .select(ASSET_ENTITY_COLS)
+    .single()
+  if (error) throw error
+  if (!data) throw new Error(`entity not found: ${id}`)
+  return data as AssetEntity
+}
+
+// ---------------------------------------------------------------------------
+// Entity aliases (admin "resolve identities" UI, e.g. Power rankings tab)
+// ---------------------------------------------------------------------------
+
+export interface EntityAlias {
+  id: string
+  entityType: 'league' | 'team' | 'player'
+  aliasSlug: string
+  aliasLabel: string
+  entityId: string
+  createdAt: string
+}
+
+/** Same normalization `entityResolver.ts` applies to a scraped label, so an
+ *  alias entered here matches it on the next scrape. Duplicated rather than
+ *  shared, same as the worker's own copy — the two run in different packages. */
+function normalizeAliasSlug(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/**
+ * Teach the resolver a raw-label -> canonical-entity mapping: upserts on
+ * (entity_type, alias_slug), so re-resolving the same label just repoints it.
+ * SERVER-ONLY.
+ */
+export async function upsertEntityAlias(opts: {
+  entityType: 'league' | 'team' | 'player'
+  aliasLabel: string
+  entityId: string
+}): Promise<EntityAlias> {
+  const aliasLabel = opts.aliasLabel.trim()
+  const aliasSlug = normalizeAliasSlug(aliasLabel)
+  if (!aliasSlug) throw new Error('upsertEntityAlias: empty alias label')
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('entity_aliases')
+    .upsert(
+      { entity_type: opts.entityType, alias_slug: aliasSlug, alias_label: aliasLabel, entity_id: opts.entityId },
+      { onConflict: 'entity_type,alias_slug' },
+    )
+    .select('id, entity_type, alias_slug, alias_label, entity_id, created_at')
+    .single()
+  if (error) throw error
+  return {
+    id: data.id,
+    entityType: data.entity_type,
+    aliasSlug: data.alias_slug,
+    aliasLabel: data.alias_label,
+    entityId: data.entity_id,
+    createdAt: data.created_at,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -734,8 +909,36 @@ export interface PipelineStats {
     summarized: number
     failed: number
     pending: number
+    hidden: number
+    /** Window-scoped (see `window`) — the full table is too big to scan. */
     withImage: number
     withTags: number
+  }
+  /** Scope of the row-scanned stats: `byPublisher`, `byDay`, withImage/withTags. */
+  window: {
+    days: number
+    articles: number
+  }
+  /**
+   * What the public feed can actually see. The Discover query filters on
+   * `status='summarized'` AND a rolling `published_at` window, so a pipeline
+   * that runs green can still leave the app empty — these numbers are the ones
+   * that say whether it did.
+   */
+  feed: {
+    /** Rows the Discover query would return right now. Zero = empty app. */
+    eligibleNow: number
+    windowHours: number
+    latestEligiblePublishedAt: string | null
+    minutesSinceLatestEligible: number | null
+    /** Outcome of the last 24h of ingestion, by status. */
+    last24h: {
+      ingested: number
+      summarized: number
+      failed: number
+      pending: number
+      hidden: number
+    }
   }
   entities: {
     leagues: number
@@ -755,57 +958,186 @@ function dayKey(iso: string): string {
   return iso.slice(0, 10)
 }
 
+/** Rolling window the footshorts Discover feed queries — keep in sync with
+ *  `apps/footshorts/web/lib/useFeed.ts` and `mobile/src/lib/useFeed.ts`. */
+const FEED_WINDOW_HOURS = 24
+/** Days of history behind `byPublisher` / `byDay` / the quality percentages. */
+const STATS_WINDOW_DAYS = 14
+/** PostgREST `max_rows` ceiling — a select without `.range()` stops here. */
+const PAGE_SIZE = 1000
+/** Hard stop on paging, so a runaway table can't hang the admin request. */
+const MAX_PAGES = 30
+
+type ServiceClient = ReturnType<typeof createServiceClient>
+
+interface ArticleStatRow {
+  id: string
+  publisher: string
+  status: string
+  image_url: string | null
+  ingested_at: string
+}
+
+/** Filters for an exact `count` against `articles` (head request, no rows). */
+interface ArticleCountFilter {
+  status?: string
+  /** ISO lower bound on `ingested_at`. */
+  ingestedSince?: string
+  /** ISO lower bound on `published_at`. */
+  publishedSince?: string
+  /** Apply the feed's collapse-clusters-to-their-lead filter. */
+  clusterLeadOnly?: boolean
+}
+
+/**
+ * Exact row count for a slice of `articles`. Uses a `head` request so the
+ * count is the real total rather than the (capped) number of rows returned.
+ */
+async function countArticles(supabase: ServiceClient, f: ArticleCountFilter): Promise<number> {
+  let q = supabase.from('articles').select('id', { count: 'exact', head: true })
+  if (f.status) q = q.eq('status', f.status)
+  if (f.ingestedSince) q = q.gte('ingested_at', f.ingestedSince)
+  if (f.publishedSince) q = q.gte('published_at', f.publishedSince)
+  if (f.clusterLeadOnly) q = q.or('is_cluster_lead.eq.true,cluster_id.is.null')
+  const { count, error } = await q
+  if (error) throw error
+  return count ?? 0
+}
+
+/**
+ * Every article ingested since `sinceIso`, paged past the `max_rows` ceiling.
+ * Advances by what the server actually returned rather than by the requested
+ * page size, so a project configured with a lower `max_rows` still pages to
+ * the end instead of stopping after one short page.
+ */
+async function fetchArticlesSince(supabase: ServiceClient, sinceIso: string): Promise<ArticleStatRow[]> {
+  const rows: ArticleStatRow[] = []
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from('articles')
+      .select('id, publisher, status, image_url, ingested_at')
+      .gte('ingested_at', sinceIso)
+      .order('ingested_at', { ascending: false })
+      .range(rows.length, rows.length + PAGE_SIZE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as ArticleStatRow[]
+    if (batch.length === 0) break
+    rows.push(...batch)
+  }
+  return rows
+}
+
+/** Entity tags on articles ingested since `sinceIso`, paged the same way. The
+ *  `!inner` embed is what makes the `article.ingested_at` filter narrow the
+ *  tag rows themselves rather than just the embedded article. */
+async function fetchArticleEntitiesSince(
+  supabase: ServiceClient,
+  sinceIso: string,
+): Promise<Array<{ article_id: string; entity_id: string }>> {
+  const rows: Array<{ article_id: string; entity_id: string }> = []
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from('article_entities')
+      .select('article_id, entity_id, article:articles!inner(ingested_at)')
+      .gte('article.ingested_at', sinceIso)
+      .order('article_id', { ascending: true })
+      .range(rows.length, rows.length + PAGE_SIZE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as Array<{ article_id: string; entity_id: string }>
+    if (batch.length === 0) break
+    rows.push(...batch.map((r) => ({ article_id: r.article_id, entity_id: r.entity_id })))
+  }
+  return rows
+}
+
 /**
  * Ingest-pipeline health for the admin Pipeline tab: article counts by status,
- * freshness, per-publisher quality, 14-day ingest volume, and the most-tagged
- * entities. Reads the same `articles` / `entities` / `article_entities` tables
- * the footshorts feed uses. SERVER-ONLY (service-role client).
+ * freshness, how much of that reaches the public feed, per-publisher quality,
+ * 14-day ingest volume, and the most-tagged entities. Reads the same
+ * `articles` / `entities` / `article_entities` tables the footshorts feed uses.
+ *
+ * Status counts are exact `count` queries; the quality/volume breakdowns scan
+ * the last `STATS_WINDOW_DAYS` days of rows (a full-table scan silently
+ * truncates at PostgREST's `max_rows`, which made every "total" here a lie
+ * once the table passed 1000 rows). SERVER-ONLY (service-role client).
  */
 export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
   const supabase = createServiceClient()
-  const [articlesRes, entitiesRes, articleEntitiesRes] = await Promise.all([
+  const now = Date.now()
+  const feedSince = new Date(now - FEED_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+  const windowSince = new Date(now - STATS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
+  const [
+    total,
+    summarized,
+    failed,
+    pending,
+    hidden,
+    eligibleNow,
+    day1Ingested,
+    day1Summarized,
+    day1Failed,
+    day1Pending,
+    day1Hidden,
+    latestRes,
+    latestEligibleRes,
+    entitiesRes,
+    windowArticles,
+    windowArticleEntities,
+  ] = await Promise.all([
+    countArticles(supabase, {}),
+    countArticles(supabase, { status: 'summarized' }),
+    countArticles(supabase, { status: 'failed' }),
+    countArticles(supabase, { status: 'pending' }),
+    countArticles(supabase, { status: 'hidden' }),
+    countArticles(supabase, {
+      status: 'summarized',
+      publishedSince: feedSince,
+      clusterLeadOnly: true,
+    }),
+    countArticles(supabase, { ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'summarized', ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'failed', ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'pending', ingestedSince: feedSince }),
+    countArticles(supabase, { status: 'hidden', ingestedSince: feedSince }),
     supabase
       .from('articles')
-      .select('id, publisher, status, image_url, ingested_at')
-      .order('ingested_at', { ascending: false }),
+      .select('ingested_at')
+      .order('ingested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('articles')
+      .select('published_at')
+      .eq('status', 'summarized')
+      .or('is_cluster_lead.eq.true,cluster_id.is.null')
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     supabase.from('entities').select('id, name, type, crest_url'),
-    supabase.from('article_entities').select('article_id, entity_id'),
+    fetchArticlesSince(supabase, windowSince),
+    fetchArticleEntitiesSince(supabase, windowSince),
   ])
 
-  if (articlesRes.error) throw articlesRes.error
+  if (latestRes.error) throw latestRes.error
+  if (latestEligibleRes.error) throw latestEligibleRes.error
   if (entitiesRes.error) throw entitiesRes.error
-  if (articleEntitiesRes.error) throw articleEntitiesRes.error
 
-  type ArticleRow = {
-    id: string
-    publisher: string
-    status: string
-    image_url: string | null
-    ingested_at: string
-  }
   type EntityRow = {
     id: string
     name: string
     type: string
     crest_url: string | null
   }
-
-  const articles = (articlesRes.data ?? []) as ArticleRow[]
   const entities = (entitiesRes.data ?? []) as EntityRow[]
-  const articleEntities = (articleEntitiesRes.data ?? []) as Array<{
-    article_id: string
-    entity_id: string
-  }>
 
-  const taggedArticleIds = new Set(articleEntities.map((r) => r.article_id))
+  const taggedArticleIds = new Set(windowArticleEntities.map((r) => r.article_id))
 
-  const totals = { total: articles.length, summarized: 0, failed: 0, pending: 0, withImage: 0, withTags: 0 }
-  for (const a of articles) {
-    if (a.status === 'summarized') totals.summarized++
-    else if (a.status === 'failed') totals.failed++
-    else if (a.status === 'pending') totals.pending++
-    if (a.image_url) totals.withImage++
-    if (taggedArticleIds.has(a.id)) totals.withTags++
+  let withImage = 0
+  let withTags = 0
+  for (const a of windowArticles) {
+    if (a.image_url) withImage++
+    if (taggedArticleIds.has(a.id)) withTags++
   }
 
   const ent = { leagues: 0, teams: 0, players: 0 }
@@ -815,13 +1147,19 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
     else if (e.type === 'player') ent.players++
   }
 
-  const latest = articles[0]?.ingested_at ?? null
+  const latest = (latestRes.data as { ingested_at: string } | null)?.ingested_at ?? null
   const minutesSinceLatest = latest
-    ? Math.floor((Date.now() - new Date(latest).getTime()) / 60_000)
+    ? Math.floor((now - new Date(latest).getTime()) / 60_000)
+    : null
+
+  const latestEligible =
+    (latestEligibleRes.data as { published_at: string } | null)?.published_at ?? null
+  const minutesSinceLatestEligible = latestEligible
+    ? Math.floor((now - new Date(latestEligible).getTime()) / 60_000)
     : null
 
   const pubMap = new Map<string, PublisherStat>()
-  for (const a of articles) {
+  for (const a of windowArticles) {
     let s = pubMap.get(a.publisher)
     if (!s) {
       s = { publisher: a.publisher, total: 0, summarized: 0, failed: 0, withImage: 0, withTags: 0 }
@@ -836,22 +1174,19 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
   const byPublisher = Array.from(pubMap.values()).sort((a, b) => b.total - a.total)
 
   const dayMap = new Map<string, number>()
-  const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000
-  for (const a of articles) {
-    const t = new Date(a.ingested_at).getTime()
-    if (t < cutoff) continue
+  for (const a of windowArticles) {
     dayMap.set(dayKey(a.ingested_at), (dayMap.get(dayKey(a.ingested_at)) ?? 0) + 1)
   }
   const byDay: PipelineDayPoint[] = []
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+  for (let i = STATS_WINDOW_DAYS - 1; i >= 0; i--) {
+    const d = new Date(now - i * 24 * 60 * 60 * 1000)
     const k = d.toISOString().slice(0, 10)
     byDay.push({ day: k, count: dayMap.get(k) ?? 0 })
   }
 
   const entById = new Map(entities.map((e) => [e.id, e]))
   const entityCount = new Map<string, number>()
-  for (const r of articleEntities) {
+  for (const r of windowArticleEntities) {
     entityCount.set(r.entity_id, (entityCount.get(r.entity_id) ?? 0) + 1)
   }
   const topEntities: PipelineTopEntity[] = Array.from(entityCount.entries())
@@ -871,11 +1206,83 @@ export async function fetchFootshortsPipelineStats(): Promise<PipelineStats> {
     .slice(0, 12)
 
   return {
-    articles: totals,
+    articles: { total, summarized, failed, pending, hidden, withImage, withTags },
+    window: { days: STATS_WINDOW_DAYS, articles: windowArticles.length },
+    feed: {
+      eligibleNow,
+      windowHours: FEED_WINDOW_HOURS,
+      latestEligiblePublishedAt: latestEligible,
+      minutesSinceLatestEligible,
+      last24h: {
+        ingested: day1Ingested,
+        summarized: day1Summarized,
+        failed: day1Failed,
+        pending: day1Pending,
+        hidden: day1Hidden,
+      },
+    },
     entities: ent,
     freshness: { latestIngestedAt: latest, minutesSinceLatest },
     byPublisher,
     byDay,
     topEntities,
   }
+}
+
+// ── theanalyst.com manual match linking ──────────────────────────────────────
+//
+// The admin's Match facts tab lets an editor paste a theanalyst.com URL for a
+// fixture auto-discovery couldn't match (matchDiscovery.ts in the footshorts
+// worker resolves the same ids automatically for everything it can). Both
+// paths write the same three columns plus the URL itself
+// (supabase/footshorts/migrations/20260824000003_fixtures_theanalyst_url.sql).
+
+/**
+ * Pulls competitionId/seasonId/matchId out of any theanalyst.com URL that
+ * carries them as query params — verified live as
+ * `https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…`
+ * (the href on theanalyst's own fixture-tile links), but this doesn't care
+ * about path or param order so the dataviz widget URL works too. Returns
+ * null on anything that isn't a parseable theanalyst.com URL with all three.
+ */
+export function parseTheanalystMatchUrl(
+  raw: string,
+): { matchId: string; competitionId: string; seasonId: string } | null {
+  let url: URL
+  try {
+    url = new URL(raw.trim())
+  } catch {
+    return null
+  }
+  if (!url.hostname.endsWith('theanalyst.com')) return null
+  const matchId = url.searchParams.get('matchId')
+  const competitionId = url.searchParams.get('competitionId')
+  const seasonId = url.searchParams.get('seasonId')
+  if (!matchId || !competitionId || !seasonId) return null
+  return { matchId, competitionId, seasonId }
+}
+
+/**
+ * Manually links a fixture to a theanalyst.com match from a pasted URL —
+ * same three id columns matchDiscovery.ts sets automatically, plus the URL
+ * verbatim as pasted. Throws on an unparseable URL; the next match-facts
+ * cron run picks up the new theanalyst_match_id like any other resolved
+ * fixture (scrape is a separate phase, budget-limited per run).
+ */
+export async function linkFixtureToTheanalystMatch(fixtureId: string, url: string): Promise<void> {
+  const parsed = parseTheanalystMatchUrl(url)
+  if (!parsed) {
+    throw new Error('Not a theanalyst.com match URL — expected matchId/competitionId/seasonId query params')
+  }
+  const supabase = createServiceClient()
+  const { error } = await supabase
+    .from('fixtures')
+    .update({
+      theanalyst_match_id: parsed.matchId,
+      theanalyst_competition_id: parsed.competitionId,
+      theanalyst_season_id: parsed.seasonId,
+      theanalyst_match_url: url.trim(),
+    })
+    .eq('id', fixtureId)
+  if (error) throw error
 }

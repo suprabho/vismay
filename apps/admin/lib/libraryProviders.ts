@@ -1,4 +1,14 @@
 import { createServiceClient } from '@vismay/content-source/supabase'
+import {
+  getIeaCountryProfile,
+  type IeaCountryProfile,
+  listDcNewsForAdmin,
+  listDcNewsRecaps,
+  getDcNewsRecap,
+  getDcStockMarket,
+  type DcStockSeries,
+  listFoodHistoryForSubject,
+} from '@vismay/content-source/epics'
 
 /**
  * Compose "from library" PROVIDERS — pluggable sources of in-DB content that can
@@ -30,6 +40,28 @@ export interface LibraryGroup {
   items: LibraryItem[]
 }
 
+/** One page of a provider's items plus the full (filtered) match count — drives
+ *  the picker's per-tab "Load more" affordance. */
+export interface LibraryPage {
+  items: LibraryItem[]
+  total: number
+}
+
+/** How the picker's tab strip should present a tab. `provider` tabs are backed
+ *  by a `LibraryProvider`; `sources`/`assets` are the two synthetic tabs handled
+ *  directly by the page route. */
+export type LibraryTabKind = 'provider' | 'sources' | 'assets'
+
+/** Lightweight tab descriptor for the picker — no items, so it's cheap to build
+ *  (just the app-scope filter, no per-provider query). */
+export interface LibraryTab {
+  key: string
+  label: string
+  /** `list` tabs surface content up front; `search` tabs need a query first. */
+  mode: 'list' | 'search'
+  kind: LibraryTabKind
+}
+
 /** Extracted text for one item, ready to snapshot as a source row. */
 export interface LibraryExtract {
   title: string
@@ -42,28 +74,41 @@ interface ListCtx {
   appSlug: string | null
   /** The draft's own slug — excluded from results so you can't attach yourself. */
   excludeSlug: string
+  /** Zero-based row offset for the requested page. */
+  offset: number
+  /** Max rows to return for the page. */
+  limit: number
+  /** Optional server-side text filter scoped to the active tab. */
+  query?: string
 }
 
 interface SearchCtx extends ListCtx {
   /** The user's (sanitised) query — never empty when `search` is invoked. */
   query: string
-  /** Max hits to return. */
-  limit: number
 }
 
 /**
  * A provider is `list`-based (bounded set surfaced up front — stories, epics,
  * news), `search`-based (large corpus queried on demand — the datasets), or
- * both. `extract` resolves a chosen item's text regardless of how it surfaced.
+ * both. Each returns a `LibraryPage` (a page of items + the full match count)
+ * so the picker can paginate. `extract` resolves a chosen item's text
+ * regardless of how it surfaced.
  */
 interface LibraryProvider {
   key: string
   label: string
   /** Which app_slugs this provider serves; omit to serve every app. */
   apps?: string[]
-  list?(ctx: ListCtx): Promise<LibraryItem[]>
-  search?(ctx: SearchCtx): Promise<LibraryItem[]>
+  list?(ctx: ListCtx): Promise<LibraryPage>
+  search?(ctx: SearchCtx): Promise<LibraryPage>
   extract(id: string): Promise<LibraryExtract | null>
+}
+
+/** Slice an already-materialised item list into a page + report its full size.
+ *  Used by providers whose corpus is fetched whole (small sets or reader-backed
+ *  queries that don't take an offset), then paged in memory. */
+function pageOf(items: LibraryItem[], offset: number, limit: number): LibraryPage {
+  return { items: items.slice(offset, offset + limit), total: items.length }
 }
 
 /** Strip characters that would break a PostgREST `.or(...)` filter, then wrap as
@@ -73,31 +118,81 @@ function ilikePattern(query: string): string {
   return `%${safe}%`
 }
 
+// ── Cross-app epic sharing ───────────────────────────────────────────────────
+
+/**
+ * Vizmaya epics whose compose research material — the explainer AND the curated
+ * member stories — is also offered to other desks' drafts. Sharing is read-only
+ * and picker-level: ownership (`epics.app_slug`), homepage surfacing, and story
+ * routing are untouched, unlike the fifa-wc26 move which repointed app_slug.
+ * Epic slug → extra app_slugs that may attach its material.
+ *
+ * The football desk's nation stories (fifa-wc26) lean on vizmaya's country
+ * context: global-trade is the trade counterpart to the country energy
+ * profiles dataset below, and energy-profile's explainer + story rail
+ * complement that dataset's numbers.
+ */
+const SHARED_EPICS: Record<string, string[]> = {
+  'global-trade': ['footshorts'],
+  'energy-profile': ['footshorts'],
+}
+
+/** Epic slugs shared with an app, beyond the ones it owns. */
+function sharedEpicSlugsFor(appSlug: string | null): string[] {
+  if (!appSlug) return []
+  return Object.entries(SHARED_EPICS)
+    .filter(([, apps]) => apps.includes(appSlug))
+    .map(([slug]) => slug)
+}
+
+/** Published-story slugs curated into the epics shared with an app. Empty when
+ *  nothing is shared; slugs are kebab-case so they embed safely in a
+ *  PostgREST `.or(slug.in.(...))` filter. */
+async function sharedEpicStorySlugs(appSlug: string | null): Promise<string[]> {
+  const shared = sharedEpicSlugsFor(appSlug)
+  if (!shared.length) return []
+  const sb = createServiceClient()
+  const { data, error } = await sb.from('story_epics').select('story_slug').in('epic_slug', shared)
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as Array<{ story_slug: string }>
+  return [...new Set(rows.map((r) => r.story_slug))]
+}
+
 // ── Providers ───────────────────────────────────────────────────────────────
 
 /** Published stories — reuse another story's prose. Covers every vertical, since
- *  footshorts/f1 editorial stories are rows in the shared `stories` table. */
+ *  footshorts/f1 editorial stories are rows in the shared `stories` table.
+ *  Beyond the draft's own app, stories curated into a SHARED_EPICS epic are
+ *  included too (their app_slug subtitle marks the cross-desk origin). */
 const storiesProvider: LibraryProvider = {
   key: 'story',
   label: 'Published stories',
-  async list({ appSlug, excludeSlug }) {
+  async list({ appSlug, excludeSlug, offset, limit, query }) {
     const sb = createServiceClient()
     let q = sb
       .from('stories')
-      .select('slug, title, app_slug')
+      .select('slug, title, app_slug', { count: 'exact' })
       .eq('status', 'published')
       .neq('slug', excludeSlug)
       .order('updated_at', { ascending: false })
-      .limit(500)
-    if (appSlug) q = q.eq('app_slug', appSlug)
-    const { data, error } = await q
+    if (query) q = q.ilike('title', ilikePattern(query))
+    if (appSlug) {
+      const sharedStories = await sharedEpicStorySlugs(appSlug)
+      q = sharedStories.length
+        ? q.or(`app_slug.eq.${appSlug},slug.in.(${sharedStories.join(',')})`)
+        : q.eq('app_slug', appSlug)
+    }
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ slug: string; title: string | null; app_slug: string | null }>
-    return rows.map((r) => ({
-      id: r.slug,
-      title: r.title ?? r.slug,
-      subtitle: r.app_slug ?? undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.slug,
+        title: r.title ?? r.slug,
+        subtitle: r.app_slug ?? undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(slug) {
     const sb = createServiceClient()
@@ -109,14 +204,20 @@ const storiesProvider: LibraryProvider = {
 }
 
 /** Epic explainers — the evergreen pillar narrative + key takeaways for a topic
- *  hub. Only epics that actually carry explainer prose are offered. */
+ *  hub. Only epics that actually carry explainer prose are offered. An app sees
+ *  its own epics plus any listed for it in SHARED_EPICS. */
 const epicsProvider: LibraryProvider = {
   key: 'epic',
   label: 'Epic explainers',
-  async list({ appSlug }) {
+  async list({ appSlug, offset, limit, query }) {
     const sb = createServiceClient()
     let q = sb.from('epics').select('slug, name, description, explainer').order('slug', { ascending: true })
-    if (appSlug) q = q.eq('app_slug', appSlug)
+    if (appSlug) {
+      const shared = sharedEpicSlugsFor(appSlug)
+      q = shared.length
+        ? q.or(`app_slug.eq.${appSlug},slug.in.(${shared.join(',')})`)
+        : q.eq('app_slug', appSlug)
+    }
     const { data, error } = await q
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
@@ -125,9 +226,14 @@ const epicsProvider: LibraryProvider = {
       description: string | null
       explainer: string | null
     }>
-    return rows
+    // Explainer prose is required, so we filter (and query) in memory over the
+    // small epic set, then page the result.
+    const ql = query?.trim().toLowerCase()
+    const items = rows
       .filter((r) => (r.explainer ?? '').trim().length > 0)
+      .filter((r) => !ql || `${r.name ?? ''} ${r.description ?? ''} ${r.slug}`.toLowerCase().includes(ql))
       .map((r) => ({ id: r.slug, title: r.name ?? r.slug, subtitle: r.description ?? undefined }))
+    return pageOf(items, offset, limit)
   },
   async extract(slug) {
     const sb = createServiceClient()
@@ -162,7 +268,7 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
     key: opts.key,
     label: opts.label,
     apps: [opts.app],
-    async list() {
+    async list({ offset, limit, query }) {
       const sb = createServiceClient()
       const { data, error } = await sb
         .from(opts.table)
@@ -177,9 +283,14 @@ function newsProvider(opts: { key: string; label: string; table: string; app: st
         publisher: string | null
         summary: string | null
       }>
-      return rows
+      // A usable `summary` is required, so filter (and query) in memory over the
+      // bounded feed, then page the result.
+      const ql = query?.trim().toLowerCase()
+      const items = rows
         .filter((r) => (r.summary ?? '').trim().length > 0)
+        .filter((r) => !ql || `${r.headline ?? ''} ${r.publisher ?? ''}`.toLowerCase().includes(ql))
         .map((r) => ({ id: r.id, title: r.headline ?? 'Untitled', subtitle: r.publisher ?? undefined }))
+      return pageOf(items, offset, limit)
     },
     async extract(id) {
       const sb = createServiceClient()
@@ -217,13 +328,14 @@ const recapsProvider: LibraryProvider = {
   key: 'footshorts-recap',
   label: 'Match recaps',
   apps: ['footshorts'],
-  async list() {
+  async list({ offset, limit, query }) {
     const sb = createServiceClient()
-    const { data, error } = await sb
+    let q = sb
       .from('daily_recaps')
-      .select('id, scope, window_hours, fixture_count, article_count, generated_at')
+      .select('id, scope, window_hours, fixture_count, article_count, generated_at', { count: 'exact' })
       .order('generated_at', { ascending: false })
-      .limit(100)
+    if (query) q = q.ilike('scope', ilikePattern(query))
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       id: string
@@ -233,7 +345,7 @@ const recapsProvider: LibraryProvider = {
       article_count: number | null
       generated_at: string
     }>
-    return rows.map((r) => {
+    const items = rows.map((r) => {
       const scope = r.scope ?? 'all'
       const counts = [
         r.fixture_count ? `${r.fixture_count} fixtures` : null,
@@ -249,6 +361,7 @@ const recapsProvider: LibraryProvider = {
         subtitle: counts || undefined,
       }
     })
+    return { items, total: count ?? items.length }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -279,22 +392,25 @@ const ieaNewsProvider: LibraryProvider = {
   key: 'iea-news',
   label: 'IEA energy news',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('iea_news')
-      .select('id, title, summary, published_at')
+      .select('id, title, summary, published_at', { count: 'exact' })
       .or(`title.ilike.${pat},summary.ilike.${pat}`)
       .order('published_at', { ascending: false })
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{ id: number; title: string | null; summary: string | null }>
-    return rows.map((r) => ({
-      id: String(r.id),
-      title: r.title ?? 'Untitled',
-      subtitle: r.summary?.slice(0, 120) ?? undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: String(r.id),
+        title: r.title ?? 'Untitled',
+        subtitle: r.summary?.slice(0, 120) ?? undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -328,15 +444,15 @@ const epsteinProvider: LibraryProvider = {
   key: 'epstein',
   label: 'Epstein documents',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('epstein_documents')
-      .select('id, filename, source, page_count')
+      .select('id, filename, source, page_count', { count: 'exact' })
       .or(`filename.ilike.${pat},raw_text.ilike.${pat}`)
       .not('raw_text', 'is', null)
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       id: string
@@ -344,11 +460,14 @@ const epsteinProvider: LibraryProvider = {
       source: string | null
       page_count: number | null
     }>
-    return rows.map((r) => ({
-      id: r.id,
-      title: r.filename ?? 'Untitled document',
-      subtitle: [r.source, r.page_count ? `${r.page_count}p` : null].filter(Boolean).join(' · ') || undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        title: r.filename ?? 'Untitled document',
+        subtitle: [r.source, r.page_count ? `${r.page_count}p` : null].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -375,18 +494,86 @@ const epsteinProvider: LibraryProvider = {
   },
 }
 
+// Reference books scraped into per-article rows (migration 068). Book-generic:
+// one provider searches book_articles across every book-epic, keyed by
+// book_name. Search-based so the composer's AI research agent reaches it too,
+// not just the picker. Adding a book = a migration + importer, no code here.
+const bookFactsProvider: LibraryProvider = {
+  key: 'book-facts',
+  label: 'Book facts',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error, count } = await sb
+      .from('book_articles')
+      .select('id, title, book_name, section, page_start', { count: 'exact' })
+      .or(`title.ilike.${pat},body.ilike.${pat}`)
+      .order('article_index', { ascending: true })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      id: string
+      title: string | null
+      book_name: string | null
+      section: string | null
+      page_start: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        title: r.title ?? 'Untitled',
+        subtitle:
+          [r.book_name, r.section, r.page_start ? `p${r.page_start}` : null].filter(Boolean).join(' · ') ||
+          undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('book_articles')
+      .select('title, book_name, section, page_start, page_end, body')
+      .eq('id', id)
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      book_name: string | null
+      section: string | null
+      page_start: number | null
+      page_end: number | null
+      body: string | null
+    } | null
+    if (!row?.body) return null
+    const body = row.body.length > MAX_DOC_TEXT ? `${row.body.slice(0, MAX_DOC_TEXT)}\n\n…[truncated]` : row.body
+    const pages =
+      row.page_start != null
+        ? row.page_end != null && row.page_end !== row.page_start
+          ? `pp. ${row.page_start}–${row.page_end}`
+          : `p. ${row.page_start}`
+        : null
+    const head = [row.book_name, row.section, pages].filter(Boolean).join(' · ')
+    return {
+      title: row.title ?? 'Book excerpt',
+      byline: row.book_name ? `${row.book_name}${row.section ? ` · ${row.section}` : ''}` : 'Book facts',
+      text: [head, row.title, body].filter(Boolean).join('\n\n').trim(),
+    }
+  },
+}
+
 const cokeStudioProvider: LibraryProvider = {
   key: 'coke-studio',
   label: 'Coke Studio songs',
   apps: ['vizmaya-fyi'],
-  async search({ query, limit }) {
+  async search({ query, limit, offset }) {
     const sb = createServiceClient()
     const pat = ilikePattern(query)
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from('coke_studio_songs')
-      .select('song_id, title, artists, season, notes')
+      .select('song_id, title, artists, season, notes', { count: 'exact' })
       .or(`title.ilike.${pat},artists.ilike.${pat},notes.ilike.${pat}`)
-      .limit(limit)
+      .range(offset, offset + limit - 1)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Array<{
       song_id: string
@@ -394,11 +581,14 @@ const cokeStudioProvider: LibraryProvider = {
       artists: string | null
       season: number | null
     }>
-    return rows.map((r) => ({
-      id: r.song_id,
-      title: r.title ?? r.song_id,
-      subtitle: [r.artists, r.season ? `S${r.season}` : null].filter(Boolean).join(' · ') || undefined,
-    }))
+    return {
+      items: rows.map((r) => ({
+        id: r.song_id,
+        title: r.title ?? r.song_id,
+        subtitle: [r.artists, r.season ? `S${r.season}` : null].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
   },
   async extract(id) {
     const sb = createServiceClient()
@@ -463,15 +653,846 @@ const cokeStudioProvider: LibraryProvider = {
   },
 }
 
+// ── Food vertical (umami) providers ──────────────────────────────────────────
+// The searching-for-umami epic's two data layers (migrations 069–070): the
+// curated public dish canon and the big internal recipe corpora. Recipes are
+// search-only so the composer's AI research agent reaches them too.
+
+/** Human labels for `food_recipes.source`. */
+const FOOD_RECIPE_SOURCES: Record<string, string> = {
+  'archanas-kitchen': "Archana's Kitchen",
+  culinarydb: 'CulinaryDB',
+}
+
+/**
+ * Curated dishes (`food_dishes`) — the TasteAtlas-scraped canon behind the
+ * umami explorer (top-10 best-rated per cuisine + backfilled ingredients).
+ * Small and browsable, so list-based with a server-side filter; `search` is
+ * also provided so the AI research agent can query dishes directly. Items are
+ * keyed by dish slug (one food epic today; revisit if a second epic lands).
+ */
+const foodDishesProvider: LibraryProvider = {
+  key: 'food-dishes',
+  label: 'Dishes',
+  apps: ['umami'],
+  async list({ offset, limit, query }) {
+    const sb = createServiceClient()
+    let q = sb
+      .from('food_dishes')
+      .select('slug, name, cuisine, category, rating, rank_in_cuisine', { count: 'exact' })
+      .order('cuisine', { ascending: true })
+      .order('rank_in_cuisine', { ascending: true, nullsFirst: false })
+    if (query) {
+      const pat = ilikePattern(query)
+      q = q.or(
+        `name.ilike.${pat},cuisine.ilike.${pat},category.ilike.${pat},region.ilike.${pat},description.ilike.${pat}`,
+      )
+    }
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      slug: string
+      name: string | null
+      cuisine: string | null
+      category: string | null
+      rating: number | null
+      rank_in_cuisine: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: r.slug,
+        title: r.name ?? r.slug,
+        subtitle:
+          [
+            r.cuisine,
+            r.category,
+            r.rating != null ? `★ ${r.rating.toFixed(1)}` : null,
+            r.rank_in_cuisine != null ? `#${r.rank_in_cuisine}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async search(ctx) {
+    return this.list!(ctx)
+  },
+  async extract(slug) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('food_dishes')
+      .select('name, cuisine, country_code, region, category, description, ingredients, rating, rank_in_cuisine, source_url')
+      .eq('slug', slug)
+      .limit(1)
+    const row = (data?.[0] ?? null) as {
+      name: string | null
+      cuisine: string | null
+      country_code: string | null
+      region: string | null
+      category: string | null
+      description: string | null
+      ingredients: string[] | null
+      rating: number | null
+      rank_in_cuisine: number | null
+      source_url: string | null
+    } | null
+    if (!row) return null
+    const meta = [
+      row.category ? `Category: ${row.category}` : null,
+      row.region ? `Region: ${row.region}` : null,
+      row.rating != null
+        ? `TasteAtlas rating: ${row.rating.toFixed(1)}${row.rank_in_cuisine != null ? ` (best-rated #${row.rank_in_cuisine} in ${row.cuisine})` : ''}`
+        : null,
+      row.ingredients?.length ? `Key ingredients: ${row.ingredients.join(', ')}` : null,
+      row.source_url ? `Source: ${row.source_url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const text = [
+      `# ${row.name ?? slug} — ${row.cuisine ?? 'dish'}`,
+      meta,
+      row.description?.trim() || null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return {
+      title: `${row.name ?? slug} · dish`,
+      byline: 'Searching for Umami · TasteAtlas',
+      text,
+    }
+  },
+}
+
+/**
+ * Recipe corpora (`food_recipes`, migration 070) — 52k rows across
+ * Archana's Kitchen (Indian, with instructions) and CulinaryDB (world
+ * cuisines as ingredient sets). Search-only: matches title, the dataset's own
+ * cuisine label, or an exact ingredient term (array-contains). These are
+ * internal grounding tables — attaching one snapshots its text as research;
+ * composed prose must not republish instructions verbatim (see the
+ * searching-for-umami INGEST_NOTES rights section).
+ */
+const foodRecipesProvider: LibraryProvider = {
+  key: 'food-recipes',
+  label: 'Food recipes',
+  apps: ['umami'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    // Exact ingredient term for the array-contains arm ("soy sauce" works;
+    // quotes/braces are stripped so the .or() filter can't be broken).
+    const term = query.replace(/["{}(),\\]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+    const ors = [`title.ilike.${pat}`, `cuisine_raw.ilike.${pat}`]
+    if (term) ors.push(`ingredients.cs.{"${term}"}`)
+    const { data, error, count } = await sb
+      .from('food_recipes')
+      .select('id, title, source, cuisine_raw, course, total_min', { count: 'exact' })
+      .or(ors.join(','))
+      .order('source', { ascending: true }) // archanas-kitchen first — richer rows
+      .order('title', { ascending: true })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      id: number
+      title: string | null
+      source: string | null
+      cuisine_raw: string | null
+      course: string | null
+      total_min: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: String(r.id),
+        title: r.title ?? 'Untitled recipe',
+        subtitle:
+          [
+            r.source ? FOOD_RECIPE_SOURCES[r.source] ?? r.source : null,
+            r.cuisine_raw,
+            r.course,
+            r.total_min != null ? `${r.total_min} min` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('food_recipes')
+      .select(
+        'title, title_native, source, cuisine, cuisine_raw, course, diet, prep_min, cook_min, total_min, servings, ingredients, instructions, url',
+      )
+      .eq('id', Number(id))
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      title_native: string | null
+      source: string | null
+      cuisine: string | null
+      cuisine_raw: string | null
+      course: string | null
+      diet: string | null
+      prep_min: number | null
+      cook_min: number | null
+      total_min: number | null
+      servings: number | null
+      ingredients: string[] | null
+      instructions: string | null
+      url: string | null
+    } | null
+    if (!row) return null
+    const sourceLabel = row.source ? FOOD_RECIPE_SOURCES[row.source] ?? row.source : 'Recipe corpus'
+    const times = [
+      row.prep_min != null ? `prep ${row.prep_min} min` : null,
+      row.cook_min != null ? `cook ${row.cook_min} min` : null,
+      row.total_min != null ? `total ${row.total_min} min` : null,
+      row.servings != null ? `serves ${row.servings}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    const meta = [
+      [row.cuisine_raw ?? row.cuisine, row.course, row.diet].filter(Boolean).join(' · ') || null,
+      times || null,
+      row.ingredients?.length ? `Ingredients: ${row.ingredients.join(', ')}` : null,
+      row.url ? `Source: ${row.url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const instructions = row.instructions?.trim()
+      ? row.instructions.length > MAX_DOC_TEXT
+        ? `${row.instructions.slice(0, MAX_DOC_TEXT)}\n\n…[truncated]`
+        : row.instructions
+      : null
+    const text = [
+      row.title_native ? `# ${row.title} (${row.title_native})` : `# ${row.title}`,
+      meta,
+      instructions ? `Instructions:\n${instructions}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return {
+      title: `${row.title ?? 'Recipe'} · recipe`,
+      byline: `${sourceLabel}${row.cuisine_raw ? ` · ${row.cuisine_raw}` : ''}`,
+      text,
+    }
+  },
+}
+
+/**
+ * Food history (`food_history_subjects` + `food_history_events`, migration
+ * 071) — the AI-extracted, per-claim-cited dish & ingredient timelines.
+ * Search-only so the AI research agent reaches it. Items are SUBJECTS
+ * (id '<kind>:<slug>'), not events — a story wants the whole timeline in one
+ * attach. Matches subject names plus event places/claims (event hits map back
+ * to their subject). Rejected events never surface; ai-draft events are
+ * included but flagged [unreviewed] (stories get human review anyway).
+ */
+const foodHistoryProvider: LibraryProvider = {
+  key: 'food-history',
+  label: 'Food history',
+  apps: ['umami'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    // Subject-name hits + event place/claim hits, merged subject-level.
+    const [subjectsRes, eventsRes, allEventsRes] = await Promise.all([
+      sb
+        .from('food_history_subjects')
+        .select('kind, slug, name')
+        .or(`name.ilike.${pat},slug.ilike.${pat}`),
+      sb
+        .from('food_history_events')
+        .select('subject_kind, subject_slug')
+        .or(`place.ilike.${pat},claim.ilike.${pat}`)
+        .neq('status', 'rejected')
+        .limit(400),
+      sb.from('food_history_events').select('subject_kind, subject_slug, status'),
+    ])
+    for (const r of [subjectsRes, eventsRes, allEventsRes]) {
+      if (r.error) throw new Error(r.error.message)
+    }
+    const nameBySubject = new Map<string, string>()
+    const hitKeys: string[] = []
+    for (const s of (subjectsRes.data ?? []) as Array<{ kind: string; slug: string; name: string }>) {
+      const k = `${s.kind}:${s.slug}`
+      nameBySubject.set(k, s.name)
+      hitKeys.push(k)
+    }
+    for (const e of (eventsRes.data ?? []) as Array<{ subject_kind: string; subject_slug: string }>) {
+      const k = `${e.subject_kind}:${e.subject_slug}`
+      if (!hitKeys.includes(k)) hitKeys.push(k)
+    }
+    // Event counts per subject for the subtitle (small corpus — count in JS).
+    const counts = new Map<string, { total: number; reviewed: number }>()
+    for (const e of (allEventsRes.data ?? []) as Array<{
+      subject_kind: string
+      subject_slug: string
+      status: string
+    }>) {
+      if (e.status === 'rejected') continue
+      const k = `${e.subject_kind}:${e.subject_slug}`
+      const c = counts.get(k) ?? { total: 0, reviewed: 0 }
+      c.total++
+      if (e.status === 'reviewed') c.reviewed++
+      counts.set(k, c)
+    }
+    // Only surface subjects that actually have events; fill names for
+    // event-hit subjects that didn't match by name.
+    const withEvents = hitKeys.filter((k) => (counts.get(k)?.total ?? 0) > 0)
+    if (withEvents.some((k) => !nameBySubject.has(k))) {
+      const { data } = await sb.from('food_history_subjects').select('kind, slug, name')
+      for (const s of (data ?? []) as Array<{ kind: string; slug: string; name: string }>) {
+        nameBySubject.set(`${s.kind}:${s.slug}`, s.name)
+      }
+    }
+    const items = withEvents.map((k) => {
+      const [kind] = k.split(':')
+      const c = counts.get(k)!
+      return {
+        id: k,
+        title: nameBySubject.get(k) ?? k,
+        subtitle: `${kind} · ${c.total} events (${c.reviewed} reviewed)`,
+      }
+    })
+    return pageOf(items, offset, limit)
+  },
+  async extract(id) {
+    const [kind, ...rest] = id.split(':')
+    const slug = rest.join(':')
+    if (!kind || !slug) return null
+    const events = await listFoodHistoryForSubject(kind, slug, { includeDrafts: true })
+    if (events.length === 0) return null
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('food_history_subjects')
+      .select('name, wiki_title, wiki_url')
+      .eq('kind', kind)
+      .eq('slug', slug)
+      .maybeSingle()
+    const name = (data?.name as string | undefined) ?? slug
+    const lines = events.map((e) => {
+      const where = e.place
+        ? ` — ${e.place}${e.lat != null && e.lng != null ? ` (${e.lat.toFixed(2)}, ${e.lng.toFixed(2)})` : ''}`
+        : ''
+      const flag = e.status === 'ai-draft' ? ' [unreviewed]' : ''
+      const rev = e.wikiOldid ? ` (rev ${e.wikiOldid})` : ''
+      return `- ${e.dateText}${where}: ${e.claim}${flag}\n  Source: ${e.sourceUrl}${rev}`
+    })
+    const text = [
+      `# History of ${name} (${kind})`,
+      lines.join('\n'),
+      'All claims AI-extracted from Wikipedia (CC BY-SA); lines marked [unreviewed] have not passed editorial review. Cite places and dates from these events rather than asserting from memory.',
+    ].join('\n\n')
+    return {
+      title: `${name} · history`,
+      byline: 'Searching for Umami · Wikipedia (CC BY-SA)',
+      text,
+    }
+  },
+}
+
+/**
+ * Country energy profiles (`iea_countries` + `iea_country_energy` +
+ * `iea_oil_prices_monthly`) — the per-country dataset behind the vizmaya
+ * `/energy-profile` epic map. Like the WC26 teams table, the map only reads it
+ * through its own API, so without a provider the numbers can't be reused as
+ * research. `extract` reuses the epic's own reader (`getIeaCountryProfile`) and
+ * flattens it to the CountryDetail sheet's content: editorial summary, the four
+ * stat tiles, latest-year electricity / primary mixes, pump prices, and the
+ * country's recent energy news.
+ *
+ * Serves footshorts as well as vizmaya-fyi: the fifa-wc26 epic gives the
+ * football desk per-nation stories, and country energy context belongs in the
+ * same research pool. The embedded 30-day news slice also means footshorts gets
+ * energy news per country without opening the separate `iea-news` provider.
+ */
+type EnergyMix = IeaCountryProfile['timeseries']['electricityMix']
+
+/** The most recent year with any share data, flattened to "Source share%"
+ *  parts sorted largest-first; null when the mix is empty. */
+function latestMixBreakdown(mix: EnergyMix): { year: number; parts: string[] } | null {
+  for (let i = mix.years.length - 1; i >= 0; i--) {
+    const entries = mix.series
+      .map((s) => ({ name: s.name, value: s.values[i] }))
+      .filter((e): e is { name: string; value: number } => e.value != null && e.value > 0)
+    if (entries.length) {
+      entries.sort((a, b) => b.value - a.value)
+      return { year: mix.years[i], parts: entries.map((e) => `${e.name} ${e.value.toFixed(1)}%`) }
+    }
+  }
+  return null
+}
+
+const energyProfileProvider: LibraryProvider = {
+  key: 'energy-profile',
+  label: 'Country energy profiles',
+  apps: ['vizmaya-fyi', 'footshorts'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error, count } = await sb
+      .from('iea_countries')
+      .select('code, name, summary', { count: 'exact' })
+      .or(`name.ilike.${pat},code.ilike.${pat}`)
+      .order('name', { ascending: true })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{ code: string; name: string | null; summary: string | null }>
+    return {
+      items: rows.map((r) => ({
+        id: r.code,
+        title: r.name ?? r.code,
+        subtitle: r.summary?.slice(0, 120) ?? undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(code) {
+    const profile = await getIeaCountryProfile(code)
+    if (!profile) return null
+
+    const tile = (key: string, label: string, format: (v: number) => string): string | null => {
+      const t = profile.latest[key]
+      return t ? `${label}: ${format(t.value)} (${t.year})` : null
+    }
+    const tiles = [
+      tile('energy_per_capita_kwh', 'Energy use per person', (v) => `${Math.round(v).toLocaleString('en-US')} kWh`),
+      tile('ghg_from_energy_mt', 'GHG from energy', (v) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} Mt CO₂e`),
+      tile('renewables_share_energy', 'Renewables share of energy', (v) => `${v.toFixed(1)}%`),
+      tile('electricity_demand_twh', 'Electricity demand', (v) => `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} TWh`),
+    ].filter(Boolean) as string[]
+
+    const elec = latestMixBreakdown(profile.timeseries.electricityMix)
+    const primary = latestMixBreakdown(profile.timeseries.primaryEnergyMix)
+
+    const { months, gasoline, diesel } = profile.timeseries.oilPrices
+    const lastMonth = months.length ? months[months.length - 1] : null
+    const lastGasoline = gasoline.length ? gasoline[gasoline.length - 1] : null
+    const lastDiesel = diesel.length ? diesel[diesel.length - 1] : null
+    const fuel =
+      lastMonth && (lastGasoline != null || lastDiesel != null)
+        ? `Retail fuel prices (${lastMonth}, USD/L): ` +
+          [
+            lastGasoline != null ? `gasoline ${lastGasoline.toFixed(2)}` : null,
+            lastDiesel != null ? `diesel ${lastDiesel.toFixed(2)}` : null,
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : null
+
+    const news = profile.news
+      .slice(0, 6)
+      .map((n) => `- ${n.title} (${n.publishedAt.slice(0, 10)})${n.summary ? ` — ${n.summary}` : ''}`)
+      .join('\n')
+
+    const text = [
+      `# ${profile.name} (${profile.code}) — country energy profile`,
+      profile.summary?.trim() || null,
+      tiles.length ? tiles.join('\n') : null,
+      elec ? `Electricity mix (${elec.year}): ${elec.parts.join(', ')}` : null,
+      primary ? `Primary energy mix (${primary.year}): ${primary.parts.join(', ')}` : null,
+      fuel,
+      news ? `Recent energy news (30d):\n${news}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+
+    return {
+      title: `${profile.name} · energy profile`,
+      byline: 'Energy profile · OWID / IEA',
+      text,
+    }
+  },
+}
+
+/**
+ * FIFA World Cup 2026 teams (`fifa_wc26_teams`) — the per-nation dataset behind
+ * the footshorts `fifa-wc26` epic map / team-profile panel: squad value, GDP,
+ * population, inequality, democracy index, FIFA rank, GHI, WHR. The map only
+ * reads this table client-side, so without a provider the numbers can't be
+ * reused as research; this surfaces one team's full profile on attach.
+ *
+ * Search-based (48 rows, but the picker's "type to query datasets" affordance
+ * is search): match a country name / FIFA code / confederation. App-scoped to
+ * footshorts, where the epic now lives. `extract` reproduces the panel's stat
+ * block AND each metric's rank among the 48 — computed exactly like the
+ * landing's `getFifaWc26TeamProfile` (rank 1 = highest value).
+ */
+const FIFA_WC26_COLS =
+  'code, name, confederation, qualification, is_host, is_debut, ' +
+  'squad_value_eur_mn, gdp_nominal_usd_bn, gdp_per_capita_ppp_usd, ' +
+  'population_mn, land_area_sq_km, gini_index, eiu_democracy_index_2024, ' +
+  'regime_type, fifa_ranking, ghi_2025_score, whr_2025_rank'
+
+interface FifaWc26Row {
+  code: string
+  name: string
+  confederation: string
+  qualification: string
+  is_host: boolean
+  is_debut: boolean
+  squad_value_eur_mn: number | null
+  gdp_nominal_usd_bn: number | null
+  gdp_per_capita_ppp_usd: number | null
+  population_mn: number | null
+  land_area_sq_km: number | null
+  gini_index: number | null
+  eiu_democracy_index_2024: number | null
+  regime_type: string | null
+  fifa_ranking: number | null
+  ghi_2025_score: number | null
+  whr_2025_rank: number | null
+}
+
+/** Rank a value (1 = highest) within a desc-sorted list; null → no rank. */
+function fifaRankOf(value: number | null, descSorted: number[]): number | null {
+  if (value == null) return null
+  const idx = descSorted.findIndex((v) => v <= value)
+  return idx === -1 ? descSorted.length : idx + 1
+}
+
+const fifaWc26Provider: LibraryProvider = {
+  key: 'fifa-wc26',
+  label: 'World Cup 2026 teams',
+  apps: ['footshorts'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error, count } = await sb
+      .from('fifa_wc26_teams')
+      .select('code, name, confederation, squad_value_eur_mn, fifa_ranking', { count: 'exact' })
+      .or(`name.ilike.${pat},code.ilike.${pat},confederation.ilike.${pat}`)
+      .order('squad_value_eur_mn', { ascending: false, nullsFirst: false })
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      code: string
+      name: string | null
+      confederation: string | null
+      squad_value_eur_mn: number | null
+      fifa_ranking: number | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: r.code,
+        title: r.name ?? r.code,
+        subtitle:
+          [
+            r.confederation,
+            r.squad_value_eur_mn != null ? `€${r.squad_value_eur_mn.toLocaleString('en-US')}mn squad` : null,
+            r.fifa_ranking != null ? `FIFA #${r.fifa_ranking}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(code) {
+    const sb = createServiceClient()
+    // The row IS the profile, but ranks need the whole field — fetch all 48.
+    const { data, error } = await sb.from('fifa_wc26_teams').select(FIFA_WC26_COLS)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as unknown as FifaWc26Row[]
+    const team = rows.find((r) => r.code === code)
+    if (!team) return null
+
+    const total = rows.length
+    const sortedDesc = (pick: (r: FifaWc26Row) => number | null): number[] =>
+      rows
+        .map(pick)
+        .filter((v): v is number => v != null)
+        .sort((a, b) => b - a)
+    const rank = (value: number | null, pick: (r: FifaWc26Row) => number | null): string =>
+      value == null ? '' : ` (#${fifaRankOf(value, sortedDesc(pick))} of ${total})`
+
+    const num = (n: number | null): string => (n == null ? '—' : n.toLocaleString('en-US'))
+    const gdpNominal = (n: number | null): string =>
+      n == null ? '—' : n >= 1000 ? `$${(n / 1000).toFixed(2)} tn` : `$${n.toLocaleString('en-US')} bn`
+    const flags = [team.is_host ? 'Host' : null, team.is_debut ? 'Debut' : null].filter(Boolean).join(', ')
+
+    const lines = [
+      `Confederation: ${team.confederation}`,
+      `Qualification: ${team.qualification}${flags ? ` (${flags})` : ''}`,
+      team.fifa_ranking != null ? `FIFA ranking: #${team.fifa_ranking}` : null,
+      '',
+      `Squad value: €${num(team.squad_value_eur_mn)} mn${rank(team.squad_value_eur_mn, (r) => r.squad_value_eur_mn)}`,
+      `GDP nominal: ${gdpNominal(team.gdp_nominal_usd_bn)}${rank(team.gdp_nominal_usd_bn, (r) => r.gdp_nominal_usd_bn)}`,
+      `GDP per capita (PPP): $${num(team.gdp_per_capita_ppp_usd)}${rank(team.gdp_per_capita_ppp_usd, (r) => r.gdp_per_capita_ppp_usd)}`,
+      `Population: ${num(team.population_mn)} mn${rank(team.population_mn, (r) => r.population_mn)}`,
+      `Land area: ${num(team.land_area_sq_km)} sq km${rank(team.land_area_sq_km, (r) => r.land_area_sq_km)}`,
+      `Gini index: ${num(team.gini_index)}`,
+      `EIU democracy index 2024: ${num(team.eiu_democracy_index_2024)}${rank(team.eiu_democracy_index_2024, (r) => r.eiu_democracy_index_2024)}`,
+      team.regime_type ? `Regime: ${team.regime_type}` : null,
+      team.ghi_2025_score != null ? `Global Hunger Index 2025: ${num(team.ghi_2025_score)}` : null,
+      team.whr_2025_rank != null ? `World Happiness Report 2025 rank: #${team.whr_2025_rank}` : null,
+    ]
+      .filter((l) => l != null)
+      .join('\n')
+
+    const text = `# ${team.name} (${team.code}) — World Cup 2026 profile\n\n${lines}`
+    return {
+      title: `${team.name} · World Cup 2026`,
+      byline: `FIFA World Cup 2026 · ${team.confederation}`,
+      text,
+    }
+  },
+}
+
+// ── AI Data Centers epic providers ───────────────────────────────────────────
+// The epic's three live streams (migrations 065–066), all scoped to vizmaya-fyi:
+// the DC-specific news feed, the daily recap briefs, and the stock watchlist.
+// All reuse content-source readers so the dc_* SQL stays in one place.
+
+/**
+ * AI Data Centers news (`dc_news`) — the DC-specific Google-News feed, Gemma
+ * relevance-gated and ticker-linked. Distinct from `iea_news` above (energy-
+ * agency coverage). Search-based like its IEA sibling; reuses the admin reader
+ * so only classifier-relevant stories surface.
+ */
+const dcNewsProvider: LibraryProvider = {
+  key: 'dc-news',
+  label: 'Data center news',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit, offset }) {
+    // The admin reader takes no offset, so this is a single page: report
+    // total = items.length (no "Load more"), and beyond page 1 return nothing.
+    if (offset > 0) return { items: [], total: 0 }
+    const rows = await listDcNewsForAdmin({ q: query, limit, relevance: 'relevant' })
+    return {
+      items: rows.map((r) => ({
+        id: String(r.id),
+        title: r.title,
+        subtitle: r.source ?? r.summary?.slice(0, 120) ?? undefined,
+      })),
+      total: rows.length,
+    }
+  },
+  async extract(id) {
+    const sb = createServiceClient()
+    const { data } = await sb
+      .from('dc_news')
+      .select('title, summary, source, source_url, topics, tickers')
+      .eq('id', Number(id))
+      .maybeSingle()
+    const row = data as {
+      title: string | null
+      summary: string | null
+      source: string | null
+      source_url: string | null
+      topics: string[] | null
+      tickers: string[] | null
+    } | null
+    if (!row) return null
+    const meta = [
+      row.topics?.length ? `Topics: ${row.topics.join(', ')}` : null,
+      row.tickers?.length ? `Tickers: ${row.tickers.join(', ')}` : null,
+      row.source_url ? `Source: ${row.source_url}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    const text = [row.title, row.summary, meta].filter(Boolean).join('\n\n').trim()
+    if (!text) return null
+    return { title: row.title ?? 'Data center news', byline: row.source ?? 'Data center news', text }
+  },
+}
+
+/**
+ * AI Data Centers recaps (`dc_news_recaps`) — the daily markdown brief digesting
+ * dc_news (LLM headline + themed sections + a market-movers table), one row per
+ * run. List-based like the footshorts recap provider; the markdown is the
+ * research text verbatim (plain prose/links, no `fs:` fences to graft).
+ */
+const dcNewsRecapProvider: LibraryProvider = {
+  key: 'dc-news-recap',
+  label: 'Data center recaps',
+  apps: ['vizmaya-fyi'],
+  async list({ offset, limit, query }) {
+    const recaps = await listDcNewsRecaps(100)
+    const ql = query?.trim().toLowerCase()
+    const items = recaps
+      .map((r) => {
+        const when = new Date(r.generatedAt).toISOString().slice(0, 16).replace('T', ' ')
+        const meta = [
+          r.windowHours ? `last ${r.windowHours}h` : null,
+          r.articleCount ? `${r.articleCount} stories` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        return {
+          id: String(r.id),
+          title: r.headline ?? `${when} recap`,
+          subtitle: meta || undefined,
+        }
+      })
+      .filter((it) => !ql || `${it.title} ${it.subtitle ?? ''}`.toLowerCase().includes(ql))
+    return pageOf(items, offset, limit)
+  },
+  async extract(id) {
+    const recap = await getDcNewsRecap(Number(id))
+    const text = (recap?.markdown ?? '').trim()
+    if (!recap || !text) return null
+    const day = new Date(recap.generatedAt).toISOString().slice(0, 10)
+    return {
+      title: recap.headline ?? `Data center recap · ${day}`,
+      byline: `Data center recap · ${day}`,
+      text,
+    }
+  },
+}
+
+// ── Stock watchlist (`dc_stocks` + `dc_stock_prices`) ─────────────────────────
+// Two providers keyed distinctly so a single query can't collide their groups
+// (the picker keys sections by provider key): a list-only whole-market snapshot
+// surfaced up front, and a search-only per-ticker lookup (also reachable by the
+// AI-research enrich agent, which only sees `search` providers). Both flatten
+// getDcStockMarket's computed series into research prose; the heavy price read
+// runs only on attach (extract), never on list.
+
+const DC_STOCK_WINDOW_DAYS = 90
+const DC_CATEGORY_LABELS: Record<string, string> = {
+  semiconductors: 'Semiconductors',
+  'semi-equipment': 'Semiconductor equipment',
+  hyperscalers: 'Hyperscalers',
+  'data-centers': 'Data centers & infrastructure',
+}
+const dcCategoryLabel = (cat: string): string => DC_CATEGORY_LABELS[cat] ?? cat
+const fmtClose = (value: number | null, currency: string): string =>
+  value == null ? '—' : `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${currency}`
+const fmtPct = (pct: number | null): string =>
+  pct == null ? 'n/a' : `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+
+const dcStockMarketProvider: LibraryProvider = {
+  key: 'dc-stock-market',
+  label: 'Data center market',
+  apps: ['vizmaya-fyi'],
+  async list({ offset, limit, query }) {
+    // Cheap head-count only — the price series is read lazily in extract.
+    const sb = createServiceClient()
+    const { count } = await sb
+      .from('dc_stocks')
+      .select('ticker', { count: 'exact', head: true })
+      .eq('is_active', true)
+    const item: LibraryItem = {
+      id: 'snapshot',
+      title: 'Market snapshot — all tracked tickers',
+      subtitle: count ? `${count} tickers · latest closes + ${DC_STOCK_WINDOW_DAYS}d change` : undefined,
+    }
+    const ql = query?.trim().toLowerCase()
+    const items = ql && !item.title.toLowerCase().includes(ql) ? [] : [item]
+    return pageOf(items, offset, limit)
+  },
+  async extract() {
+    const market = await getDcStockMarket(DC_STOCK_WINDOW_DAYS)
+    if (!market.length) return null
+    const dates = market.map((s) => s.latestDate).filter((d): d is string => !!d).sort()
+    const latestDate = dates.length ? dates[dates.length - 1] : null
+    const byCategory = new Map<string, DcStockSeries[]>()
+    for (const s of market) {
+      if (!byCategory.has(s.category)) byCategory.set(s.category, [])
+      byCategory.get(s.category)!.push(s)
+    }
+    const sections = [...byCategory.entries()].map(([cat, list]) => {
+      const lines = list.map(
+        (s) => `- ${s.name} (${s.ticker}): ${fmtClose(s.latestClose, s.currency)}, ${fmtPct(s.changePct)}`,
+      )
+      return `${dcCategoryLabel(cat)}\n${lines.join('\n')}`
+    })
+    const text = [
+      `# Data center stock watchlist — ${DC_STOCK_WINDOW_DAYS}-day snapshot`,
+      latestDate
+        ? `Latest close ${latestDate}. Prices are in each listing's native currency; change is first→last close over the ${DC_STOCK_WINDOW_DAYS}-day window.`
+        : null,
+      ...sections,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return { title: 'Data center market snapshot', byline: `Stock watchlist · ${latestDate ?? 'latest'}`, text }
+  },
+}
+
+const dcStocksProvider: LibraryProvider = {
+  key: 'dc-stocks',
+  label: 'Data center stocks',
+  apps: ['vizmaya-fyi'],
+  async search({ query, limit, offset }) {
+    const sb = createServiceClient()
+    const pat = ilikePattern(query)
+    const { data, error, count } = await sb
+      .from('dc_stocks')
+      .select('ticker, name, exchange, category', { count: 'exact' })
+      .eq('is_active', true)
+      .or(`name.ilike.${pat},ticker.ilike.${pat},category.ilike.${pat}`)
+      .order('category')
+      .order('ticker')
+      .range(offset, offset + limit - 1)
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Array<{
+      ticker: string
+      name: string | null
+      exchange: string | null
+      category: string | null
+    }>
+    return {
+      items: rows.map((r) => ({
+        id: r.ticker,
+        title: r.name ? `${r.name} (${r.ticker})` : r.ticker,
+        subtitle:
+          [r.category ? dcCategoryLabel(r.category) : null, r.exchange].filter(Boolean).join(' · ') || undefined,
+      })),
+      total: count ?? rows.length,
+    }
+  },
+  async extract(ticker) {
+    const market = await getDcStockMarket(DC_STOCK_WINDOW_DAYS)
+    const s = market.find((x) => x.ticker === ticker)
+    if (!s) return null
+    const tail = s.points
+      .slice(-10)
+      .map(([d, c]) => `  ${d}: ${c.toLocaleString('en-US', { maximumFractionDigits: 2 })}`)
+    const text = [
+      `# ${s.name} (${s.ticker}) — ${dcCategoryLabel(s.category)}`,
+      [
+        `Exchange: ${s.exchange} (${s.market})`,
+        `Currency: ${s.currency}`,
+        `Latest close: ${fmtClose(s.latestClose, s.currency)}${s.latestDate ? ` (${s.latestDate})` : ''}`,
+        `Change over ${DC_STOCK_WINDOW_DAYS}d: ${fmtPct(s.changePct)}`,
+      ].join('\n'),
+      tail.length ? `Recent closes (${s.currency}):\n${tail.join('\n')}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim()
+    return { title: `${s.name} · stock`, byline: `Stock · ${s.ticker}`, text }
+  },
+}
+
 const PROVIDERS: LibraryProvider[] = [
   storiesProvider,
   epicsProvider,
   newsProvider({ key: 'footshorts-news', label: 'Football news', table: 'articles', app: 'footshorts' }),
   recapsProvider,
+  fifaWc26Provider,
   newsProvider({ key: 'vizf1-news', label: 'F1 news', table: 'vizf1_articles', app: 'vizf1' }),
   ieaNewsProvider,
+  energyProfileProvider,
   epsteinProvider,
+  bookFactsProvider,
   cokeStudioProvider,
+  foodDishesProvider,
+  foodRecipesProvider,
+  foodHistoryProvider,
+  dcNewsProvider,
+  dcNewsRecapProvider,
+  dcStockMarketProvider,
+  dcStocksProvider,
 ]
 
 const byKey = new Map(PROVIDERS.map((p) => [p.key, p]))
@@ -489,27 +1510,73 @@ export async function getDraftApp(slug: string): Promise<string | null> {
   }
 }
 
+/** Default page size for a picker tab. */
+const PAGE_LIMIT = 20
+
+/** Is a provider in scope for a draft's app? Providers with no `apps` serve all. */
+function providerServesApp(p: LibraryProvider, appSlug: string | null): boolean {
+  return !p.apps || (appSlug != null && p.apps.includes(appSlug))
+}
+
 /**
- * Every applicable provider's group for a draft. Each provider runs
- * independently — one that throws (missing table, etc.) is dropped rather than
- * failing the whole picker. Empty groups are omitted.
+ * The picker's tab strip for a draft — every applicable provider (one tab each)
+ * plus the two synthetic "Research sources" and "Document assets" tabs. Cheap:
+ * only the app-scope filter runs, no per-provider query, so items are loaded
+ * lazily per tab through {@link getLibraryGroupPage} / the page route.
+ *
+ * Unlike the old flat list this does NOT drop empty providers (that would need a
+ * query per provider) — a provider whose corpus is empty simply shows an empty
+ * tab. For the primary desks every applicable provider is backed by a real
+ * table, so phantom tabs are not a concern in practice.
  */
-export async function getLibraryGroups(slug: string): Promise<LibraryGroup[]> {
+export async function getLibraryTabs(slug: string): Promise<LibraryTab[]> {
   const appSlug = await getDraftApp(slug)
-  const applicable = PROVIDERS.filter(
-    (p) => p.list && (!p.apps || (appSlug != null && p.apps.includes(appSlug))),
-  )
-  const groups = await Promise.all(
-    applicable.map(async (p) => {
-      try {
-        const items = await p.list!({ appSlug, excludeSlug: slug })
-        return items.length ? { key: p.key, label: p.label, items } : null
-      } catch {
-        return null
-      }
-    }),
-  )
-  return groups.filter((g): g is LibraryGroup => g != null)
+  const providerTabs: LibraryTab[] = PROVIDERS.filter(
+    (p) => (p.list || p.search) && providerServesApp(p, appSlug),
+  ).map((p) => ({
+    key: p.key,
+    label: p.label,
+    mode: p.list ? 'list' : 'search',
+    kind: 'provider',
+  }))
+  return [
+    ...providerTabs,
+    { key: 'sources', label: 'Research sources', mode: 'list', kind: 'sources' },
+    { key: 'assets', label: 'Document assets', mode: 'list', kind: 'assets' },
+  ]
+}
+
+/**
+ * One page of a single provider tab. Uses the provider's `list` when it has one
+ * (passing the active `query` for a server-side filter), else its `search`
+ * (which needs a >=2-char query — short queries return an empty page, matching
+ * {@link searchLibrary}). App-scope is enforced and errors are isolated, so a
+ * bad tab yields an empty page rather than failing the picker.
+ */
+export async function getLibraryGroupPage(
+  slug: string,
+  key: string,
+  opts: { offset?: number; limit?: number; query?: string } = {},
+): Promise<LibraryPage> {
+  const provider = byKey.get(key)
+  if (!provider) return { items: [], total: 0 }
+  const appSlug = await getDraftApp(slug)
+  if (!providerServesApp(provider, appSlug)) return { items: [], total: 0 }
+  const offset = opts.offset ?? 0
+  const limit = opts.limit ?? PAGE_LIMIT
+  const query = (opts.query ?? '').trim()
+  try {
+    if (provider.list) {
+      return await provider.list({ appSlug, excludeSlug: slug, offset, limit, query: query || undefined })
+    }
+    if (provider.search) {
+      if (query.length < 2) return { items: [], total: 0 }
+      return await provider.search({ appSlug, excludeSlug: slug, query, offset, limit })
+    }
+    return { items: [], total: 0 }
+  } catch {
+    return { items: [], total: 0 }
+  }
 }
 
 /** Max hits returned per dataset for a single query. */
@@ -531,7 +1598,7 @@ export async function searchLibrary(slug: string, rawQuery: string): Promise<Lib
   const groups = await Promise.all(
     applicable.map(async (p) => {
       try {
-        const items = await p.search!({ appSlug, excludeSlug: slug, query, limit: SEARCH_LIMIT })
+        const { items } = await p.search!({ appSlug, excludeSlug: slug, query, limit: SEARCH_LIMIT, offset: 0 })
         return items.length ? { key: p.key, label: p.label, items } : null
       } catch {
         return null

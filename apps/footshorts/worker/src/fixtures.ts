@@ -16,27 +16,14 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { fdFetch, sleep, FD_TOKEN, filterCompetitions } from './footballData';
 
-const FD_BASE = 'https://api.football-data.org/v4';
-const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN },
-  });
-  if (!res.ok) {
-    throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 type FdSeason = { startDate: string; endDate: string };
 
@@ -63,6 +50,40 @@ function formatGroupLabel(group: string | null | undefined): string {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+}
+
+// Mirror of the phase backfill in migration 20260521000000_competition_phases
+// and footshorts-viz's KNOCKOUT_STAGES. Allowlist (not a deny-list of
+// GROUP_STAGE/LEAGUE_STAGE/etc) so stage codes we haven't seen don't get
+// mis-classified as knockouts — league fixtures arrive as 'REGULAR_SEASON'.
+const KNOCKOUT_STAGES = new Set([
+  'PRELIMINARY_ROUND',
+  'FIRST_QUALIFYING_ROUND',
+  'SECOND_QUALIFYING_ROUND',
+  'THIRD_QUALIFYING_ROUND',
+  'PLAY_OFFS',
+  'PLAY_OFF_ROUND',
+  'PLAYOFFS',
+  'LAST_64',
+  'ROUND_OF_32',
+  'LAST_32',
+  'ROUND_OF_16',
+  'LAST_16',
+  'QUARTER_FINALS',
+  'SEMI_FINALS',
+  'THIRD_PLACE',
+  'FINAL',
+]);
+
+function derivePhase(
+  stage: string | null | undefined,
+  matchday: number | null | undefined,
+): string | null {
+  if (stage === 'GROUP_STAGE') return 'group';
+  if (stage === 'LEAGUE_STAGE') return 'league';
+  if (stage && KNOCKOUT_STAGES.has(stage)) return 'knockout';
+  if (matchday != null) return 'league';
+  return null;
 }
 
 function normalizeStatus(s: string): string {
@@ -131,6 +152,7 @@ async function syncFixtures(
       season: normalizeSeason(m.season),
       matchday: m.matchday ?? null,
       stage: m.stage ?? null,
+      phase: derivePhase(m.stage, m.matchday),
       home_team_id: homeId,
       away_team_id: awayId,
       home_team_name: homeId ? null : m.homeTeam?.name ?? 'TBD',
@@ -244,7 +266,15 @@ async function syncStandings(
 async function main() {
   if (!FD_TOKEN) throw new Error('FOOTBALL_DATA_TOKEN required');
 
-  const comps = await loadCompetitions();
+  // Optional --competitions=world-cup,premier-league (or COMPETITIONS env) to
+  // scope a run to a subset — e.g. refreshing just the World Cup after a draw.
+  // Keyed by slug (the seeded league's entity slug), not the FD code.
+  const comps = filterCompetitions(await loadCompetitions(), (c) => c.slug, 'fixtures');
+  if (comps.length === 0) {
+    console.log('[fixtures] no competitions selected; nothing to do.');
+    return;
+  }
+
   const teamIndex = await loadTeamIndex();
   console.log(
     `[fixtures] ${comps.length} competitions, ${teamIndex.size} teams indexed`,

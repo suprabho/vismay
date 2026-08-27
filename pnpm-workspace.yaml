@@ -3,5 +3,7 @@ packages:
   - 'apps/footshorts/*'
   - 'apps/vizf1/*'
   - 'apps/kidzovo/*'
+  - 'apps/umami/*'
+  - 'apps/travel/*'
   - 'packages/*'
   - 'verticals/*'

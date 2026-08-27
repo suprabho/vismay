@@ -208,6 +208,28 @@ export async function saveMarkdown(slug: string, markdown: string): Promise<void
   await putStory(slug, { markdown })
 }
 
+/**
+ * Persist story-level publishing metadata. Sends the frontmatter mirror
+ * (`markdown`) alongside the explicit `status` / `listed` / `displayOrder`
+ * fields so the DB columns and the markdown copy stay in sync — the same
+ * payload shape the classic editor's Save uses. Only defined keys are sent.
+ */
+export async function saveStoryMetadata(
+  slug: string,
+  meta: {
+    markdown: string
+    status?: string
+    listed?: boolean
+    displayOrder?: number | null
+  }
+): Promise<void> {
+  const body: Record<string, unknown> = { markdown: meta.markdown }
+  if (meta.status !== undefined) body.status = meta.status
+  if (meta.listed !== undefined) body.listed = meta.listed
+  if (meta.displayOrder !== undefined) body.displayOrder = meta.displayOrder
+  await putStory(slug, body)
+}
+
 async function putStory(slug: string, body: Record<string, unknown>): Promise<void> {
   const res = await fetch(`/api/stories/${encodeURIComponent(slug)}`, {
     method: 'PUT',

@@ -1,0 +1,77 @@
+name: Render story newsletter
+
+# Triggered by the API route's `workflow_dispatch` POST when an editor clicks
+# "Render" on the /newsletters builder. Runs on ubuntu-latest because the
+# section-visual captures need real Chromium binaries — Vercel-style
+# serverless can't host that synchronously. Same shape as render-pdf.yml.
+#
+# Required repo secrets (Production environment):
+#   NEXT_PUBLIC_SUPABASE_URL       — same value as in Vercel env
+#   SUPABASE_SERVICE_ROLE_KEY      — service role key for storage writes
+#   NEXT_PUBLIC_MAPBOX_TOKEN       — map sections render Mapbox tiles
+#   ADMIN_SESSION_SECRET           — REQUIRED. The renderer signs the gated
+#                                    /story/<slug>/newsletter capture URL via
+#                                    signOutputUrl(); MUST match the value on
+#                                    the consumer deployments (signer and
+#                                    verifying middleware need the same value).
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: Story slug
+        required: true
+        type: string
+      base_url:
+        description: Site URL the headless browser should hit
+        required: true
+        type: string
+        default: https://vizmaya.fyi
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Pull the Supabase / Mapbox / admin secrets from the `Production`
+    # environment, where they're already configured for the other render
+    # workflows.
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/vizmaya-fyi
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `--with-deps` pulls the system libs Chromium needs (libnss3, etc.).
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Render
+        env:
+          # Story content lives in Postgres in production. Without this, the
+          # script defaults to CONTENT_SOURCE=fs and reads from the runner's
+          # git checkout — missing admin-authored stories and computing a
+          # different content_revision_hash than the Vercel API route.
+          CONTENT_SOURCE: db
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          ADMIN_SESSION_SECRET: ${{ secrets.ADMIN_SESSION_SECRET }}
+          BASE_URL: ${{ inputs.base_url }}
+        # `--force` because cache-miss is the only reason this workflow runs.
+        # The API route only dispatches after confirming the cached row's
+        # hash doesn't match the current content_revision_hash.
+        run: pnpm exec tsx scripts/generate-newsletter.ts "${{ inputs.slug }}" --force

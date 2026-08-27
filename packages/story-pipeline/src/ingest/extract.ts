@@ -80,7 +80,29 @@ export async function ensureCanvasGlobals(): Promise<void> {
   }
 }
 
+/**
+ * PDF → markdown for the SYNCHRONOUS path (local dev, link-PDFs). Tries
+ * LiteParse first — local, fast, and it reconstructs headings/tables that the
+ * pdf-parse text layer flattens — then falls back to `pdf-parse` text if the
+ * LiteParse native binding can't load. The escalation signal LiteParse computes
+ * is ignored here (this entry returns a plain `ExtractedSource`); the compose
+ * upload route calls `extractPdfLite` directly when it wants to escalate thin
+ * documents to the vision worker.
+ */
 async function extractPdf(buf: Buffer): Promise<ExtractedSource> {
+  try {
+    const { extractPdfLite } = await import('./litePdf')
+    const { source } = await extractPdfLite(buf)
+    if (source.body.trim()) return source
+    // Empty body (image-only/scanned PDF with OCR off) — let pdf-parse try; it
+    // occasionally recovers a sparse text layer LiteParse's projection drops.
+  } catch {
+    // Native binding unavailable or parse error — fall through to pdf-parse.
+  }
+  return extractPdfParse(buf)
+}
+
+async function extractPdfParse(buf: Buffer): Promise<ExtractedSource> {
   await ensureCanvasGlobals()
   // pdf-parse 2.x exposes a PDFParse class (not a default function).
   // Signature: new PDFParse({ data: Uint8Array }); then await getText() / getInfo().

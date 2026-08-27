@@ -5,17 +5,31 @@ import {
   getCompetitionDisplayName,
   getCompetitionPalette,
 } from '../competitionMeta';
+import { Crest } from '../data/Crest';
 
 type Props = {
   fixture: FixtureRow;
   // Crest washed into the bottom-right corner. Pass null/omit for no watermark.
   competitionCrest?: string | null;
+  // Optional pre-formatted main score (e.g. "1 – 1") that replaces the
+  // fixture-derived scoreline. We don't always have the right result in data,
+  // so callers can hardcode it; omit/null to use the fixture's own score.
+  scoreOverride?: string | null;
+  // Optional shootout note (e.g. "pens 2 – 3") shown next to the score.
+  // Shootout data isn't ingested, so callers pass a hardcoded value when a
+  // knockout tie was decided on penalties; omit/null for everything else.
+  penaltyNote?: string | null;
 };
 
 // Self-sized at h-32; parents control width via a wrapper (`w-56`, `w-full`,
 // etc.) so the tile drops cleanly into horizontal strips, grids, or single
 // callouts without baking a width into the component.
-export function MatchTile({ fixture, competitionCrest = null }: Props) {
+export function MatchTile({
+  fixture,
+  competitionCrest = null,
+  scoreOverride = null,
+  penaltyNote = null,
+}: Props) {
   const home = fixture.home;
   const away = fixture.away;
   const isFinished = fixture.status === 'finished';
@@ -34,12 +48,28 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
       : homeColor;
 
   // Top-left label: score for finished games, LIVE pill, or local kick-off
-  // time. Day label for non-today fixtures so a strip of tiles self-orients.
+  // time. Non-today fixtures pair the day with the time so a strip of tiles
+  // self-orients and still tells you when the match starts.
   let topLabel: React.ReactNode;
-  if (isFinished && fixture.home_score != null && fixture.away_score != null) {
+  // A hardcoded score override asserts the result, so it wins over the
+  // fixture-derived label regardless of status; otherwise fall back to the
+  // finished score, the LIVE pill, or the kick-off time.
+  if (scoreOverride) {
+    topLabel = (
+      <span className="font-bold tabular-nums">
+        {scoreOverride}
+        {penaltyNote ? (
+          <span className="ml-1.5 font-semibold normal-case opacity-80">({penaltyNote})</span>
+        ) : null}
+      </span>
+    );
+  } else if (isFinished && fixture.home_score != null && fixture.away_score != null) {
     topLabel = (
       <span className="font-bold tabular-nums">
         {fixture.home_score} – {fixture.away_score}
+        {penaltyNote ? (
+          <span className="ml-1.5 font-semibold normal-case opacity-80">({penaltyNote})</span>
+        ) : null}
       </span>
     );
   } else if (isLive) {
@@ -53,16 +83,17 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
     const d = new Date(fixture.kickoff_at);
     const today = new Date();
     const isToday = d.toDateString() === today.toDateString();
+    const time = d.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
     topLabel = isToday
-      ? d.toLocaleTimeString(undefined, {
-          hour: 'numeric',
-          minute: '2-digit',
-        })
-      : d.toLocaleDateString(undefined, {
+      ? time
+      : `${d.toLocaleDateString(undefined, {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
-        });
+        })} · ${time}`;
   }
 
   const competitionName = getCompetitionDisplayName(fixture.competition_slug);
@@ -90,8 +121,16 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
         </div>
 
         <div className="mt-2 flex-1 space-y-1.5 overflow-hidden">
-          <TeamRow name={homeName} crest={home?.crest_url ?? null} />
-          <TeamRow name={awayName} crest={away?.crest_url ?? null} />
+          <TeamRow
+            teamKey={home?.slug ?? home?.id ?? homeName}
+            name={homeName}
+            crestUrl={home?.crest_url ?? undefined}
+          />
+          <TeamRow
+            teamKey={away?.slug ?? away?.id ?? awayName}
+            name={awayName}
+            crestUrl={away?.crest_url ?? undefined}
+          />
         </div>
 
         <div className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/80">
@@ -103,19 +142,21 @@ export function MatchTile({ fixture, competitionCrest = null }: Props) {
 }
 
 function TeamRow({
+  teamKey,
   name,
-  crest,
+  crestUrl,
 }: {
+  /** Slug/name used to resolve the bundled crest when no explicit URL is given. */
+  teamKey: string;
   name: string;
-  crest: string | null;
+  crestUrl?: string;
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/85">
-        {crest ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={crest} alt="" className="h-4 w-4 object-contain" />
-        ) : null}
+      {/* White chip hosts the crest; Crest resolves the bundled flag/badge and
+          falls back to a monogram, so a missing crest_url is never a blank circle. */}
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/85">
+        <Crest team={teamKey} crestUrl={crestUrl} size={20} />
       </span>
       <span className="truncate text-sm font-semibold">{name}</span>
     </div>

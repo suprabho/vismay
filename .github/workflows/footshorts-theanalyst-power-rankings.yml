@@ -1,0 +1,97 @@
+name: Footshorts - theanalyst power rankings
+
+# Scrapes theanalyst.com's Opta Power Rankings — a continuously-updated
+# widget embedded in an evergreen explainer article, not a weekly article
+# itself (worker/src/theanalystPowerRankings.ts) — and inserts a
+# status='draft' row into the `power_rankings` table for editorial review in
+# the admin app's Power rankings tab. Never auto-publishes. Idempotent: a
+# content hash skips the insert when the widget's data hasn't changed since
+# the last run.
+#
+# Two entry points:
+#   • schedule — the automatic daily (Mon-Fri) run.
+#   • workflow_dispatch — the admin tab's "Run scrape" button
+#     (/api/footshorts/power-rankings/trigger → powerRankingsDispatch.ts),
+#     optionally with an article-URL override.
+#
+# Selectors + fetch mode verified live 2026-08-24 (docs/theanalyst-scraping.md):
+# the ranked list is a client-rendered table in a separate cross-origin
+# widget (dataviz.theanalyst.com), located via the article's iframe and
+# fetched with headless Chromium. Still unverified: an actual insert against
+# Supabase (`--dry` then for real, checklist item 5) — run via
+# workflow_dispatch first before trusting the schedule.
+#
+# Required repo secrets (in `Production` — shared project-wide):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   GEMINI_API_KEY               - for the narrative summary (optional at
+#                                  runtime: without it the draft lands with
+#                                  narrative=null for the editor to write)
+# Optional repo variable:
+#   GEMINI_MODEL                 - overrides default (gemini-2.5-flash)
+
+on:
+  schedule:
+    # VERIFIED (2026-08-24) against the live dataviz widget's own footer
+    # copy: "Updates daily Monday to Friday." This isn't a weekly article —
+    # the ranked list is a continuously-updated widget embedded in an
+    # evergreen explainer article (see docs/theanalyst-scraping.md). 09:00
+    # UTC gives the widget's daily refresh time to land first.
+    - cron: '0 9 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'theanalyst.com article URL to scrape. Blank = the default Power Rankings URL.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  # Own group — no shared external-API budget with the football-data /
+  # API-Football / Sportradar jobs, so no reason to serialise against them.
+  group: footshorts-theanalyst-power-rankings
+  cancel-in-progress: false
+
+jobs:
+  power-rankings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: Production
+    defaults:
+      run:
+        working-directory: apps/footshorts/worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` — pnpm/action-setup@v4 picks it up from the root
+      # package.json's `packageManager` field and rejects having both.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22+: @supabase/realtime-js needs native WebSocket which Node 20 doesn't have.
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      # The ranked list is client-rendered — power-rankings.ts fetches it
+      # with headless Chromium, not plain fetch.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Scrape power rankings
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
+          INPUT_URL: ${{ inputs.url }}
+        run: |
+          ARGS=()
+          [ -n "$INPUT_URL" ] && ARGS+=("--url=$INPUT_URL")
+          pnpm power-rankings:ci -- "${ARGS[@]}"

@@ -89,9 +89,19 @@ function staticStory(): GeneratedStory {
       {
         id: 'by-state',
         title: 'New capacity by state, FY26',
-        chartType: 'bar',
-        categories: ['Gujarat', 'Maharashtra', 'Rajasthan', 'Tamil Nadu', 'Karnataka'],
-        series: [{ name: 'GW', data: [4.1, 3.6, 2.9, 1.8, 1.5] }],
+        chartType: 'Bar Chart',
+        columns: [
+          { name: 'state', semanticType: 'State' },
+          { name: 'capacityGW', semanticType: 'Quantity' },
+        ],
+        rows: [
+          ['Gujarat', 4.1],
+          ['Maharashtra', 3.6],
+          ['Rajasthan', 2.9],
+          ['Tamil Nadu', 1.8],
+          ['Karnataka', 1.5],
+        ],
+        encodings: { x: 'state', y: ['capacityGW'] },
         yLabel: 'GW',
       },
     ],

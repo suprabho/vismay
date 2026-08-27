@@ -33,6 +33,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  */
 const SURFACES = [
   'apps/vizmaya-fyi/app',
+  'apps/render/app',
   'apps/admin/app',
   'apps/catalog/app',
 ]

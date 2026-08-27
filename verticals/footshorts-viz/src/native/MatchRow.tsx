@@ -1,8 +1,7 @@
-import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { FixtureRow } from '../types';
-import { teamCrestUrl } from '../data/teams';
+import { Crest } from './Crest';
 
 export type MatchRowVariant = 'compact' | 'expanded';
 
@@ -104,16 +103,9 @@ function TeamCell({
   const nameClass = isStack
     ? `w-full text-center ${sizes.teamText} text-text`
     : `flex-shrink ${sizes.teamText} text-text`;
-  // Explicit crest_url wins, else fall back to the bundled palette crest so
-  // teams show a badge everywhere (Crest's SVG monogram is web-only).
-  const crestUri = crest ?? teamCrestUrl(slug ?? name);
-  const crestEl = crestUri ? (
-    <Image
-      source={{ uri: crestUri }}
-      style={{ width: sizes.crest, height: sizes.crest }}
-      contentFit="contain"
-    />
-  ) : null;
+  // Crest resolves the explicit crest_url first, then the bundled palette
+  // crest, then its SVG monogram badge — so every team shows a badge.
+  const crestEl = <Crest team={slug ?? name} crestUrl={crest ?? undefined} size={sizes.crest} />;
   const body = (
     <View className={`flex-1 items-center ${sizes.gap} ${directionClass} ${justifyClass}`}>
       {align === 'right' ? null : crestEl}
@@ -143,7 +135,7 @@ export function MatchRow({ fixture, variant = 'compact' }: Props) {
       : 'vs';
 
   return (
-    <View className={`flex-row items-center border-b border-white/20 ${sizes.padding}`}>
+    <View className={`flex-row items-center border-b border-border ${sizes.padding}`}>
       <TeamCell
         name={homeName}
         crest={fixture.home?.crest_url ?? null}

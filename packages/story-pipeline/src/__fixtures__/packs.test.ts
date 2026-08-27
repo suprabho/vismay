@@ -31,7 +31,7 @@ import {
 import { sectionVisualSchemaFor } from '../schema'
 import { normalizeSectionBody } from '../vizEngine'
 import { lintSectionBody } from '../lintLayout'
-import { F1_PACK, FOOTSHORTS_PACK, VIZMAYA_PACK, packForVertical } from '../packs'
+import { F1_PACK, FOOTSHORTS_PACK, TRAVEL_PACK, VIZMAYA_PACK, packForVertical } from '../packs'
 import type { PackLayerType } from '../packs'
 
 let failed = false
@@ -74,7 +74,18 @@ check('vizmaya menu has no vertical types', !vmVisual.includes('f1:') && !vmVisu
 check('f1 outline inline list has f1 types', outlineSystem('deck', F1_PACK).includes('f1:race-card'))
 check('f1 outline plans the modules', outlineSystem('deck', F1_PACK).includes(F1_PACK.outlineGuidance!))
 check('fs outline plans the modules', outlineSystem('deck', FOOTSHORTS_PACK).includes(FOOTSHORTS_PACK.outlineGuidance!))
-check('packForVertical resolves', packForVertical('f1') === F1_PACK && packForVertical('footshorts') === FOOTSHORTS_PACK && packForVertical(null) === VIZMAYA_PACK && packForVertical('starship') === VIZMAYA_PACK)
+check('packForVertical resolves', packForVertical('f1') === F1_PACK && packForVertical('footshorts') === FOOTSHORTS_PACK && packForVertical('travel') === TRAVEL_PACK && packForVertical(null) === VIZMAYA_PACK && packForVertical('starship') === VIZMAYA_PACK)
+
+// Travel is prose-only: no vertical layers (visuals are injection-owned by
+// content-source/travelScrapbook) — only the desk name/voice may differ from
+// vizmaya's prompts, never the layer menu.
+const travelVisual = visualSystem('map', TRAVEL_PACK)
+check('travel menu has no travel types', !travelVisual.includes('travel:'))
+check('travel has no vertical doc block', !visualSystem('deck', TRAVEL_PACK).includes('VERTICAL MODULES'))
+check('travel desk name splices', chartSystem(TRAVEL_PACK).includes('a Travel data story'))
+check('travel is map-only prose desk', TRAVEL_PACK.formats?.length === 1 && TRAVEL_PACK.formats[0] === 'map' && TRAVEL_PACK.extraLayerTypes.length === 0)
+check('travel content voice', contentSystem('map', TRAVEL_PACK).includes(TRAVEL_PACK.contentGuidance!))
+check('travel research persona', researchSystem(TRAVEL_PACK).startsWith(TRAVEL_PACK.persona))
 
 // ── 3. voice splice ─────────────────────────────────────────────────────────
 check('f1 research persona', researchSystem(F1_PACK).startsWith(F1_PACK.persona))
@@ -117,6 +128,22 @@ const SAMPLES: Record<string, Record<string, unknown>> = {
     away: 'Chelsea',
     score: '2 – 1',
     competition: 'Premier League · matchday 35',
+  },
+  'f1:telemetry-clip': {
+    type: 'f1:telemetry-clip',
+    sessionKey: '2024_monaco_R',
+    lapFrom: 12,
+    lapTo: 14,
+    driverNumbers: [1, 16],
+    focalDriverNumber: 1,
+    caption: 'Verstappen vs Leclerc — sector 2',
+  },
+  'f1:track-3d': {
+    type: 'f1:track-3d',
+    sessionKey: '2024_monaco_R',
+    focalDriverNumber: 1,
+    chaseCam: true,
+    title: 'Monaco — the climb to Casino',
   },
   'fs:standings-table': {
     type: 'fs:standings-table',
@@ -220,6 +247,8 @@ check(
 const MODULE_PATHS: Record<string, string> = {
   'f1:race-card': 'f1-viz/src/modules/race-card',
   'f1:driver-standings': 'f1-viz/src/modules/driver-standings',
+  'f1:telemetry-clip': 'f1-viz/src/modules/telemetry-clip',
+  'f1:track-3d': 'f1-viz/src/modules/track-3d',
   'fs:match-card': 'footshorts-viz/src/modules/match-card',
   'fs:standings-table': 'footshorts-viz/src/modules/standings-table',
   'fs:team-form-strip': 'footshorts-viz/src/modules/team-form-strip',
@@ -252,9 +281,53 @@ async function antiDrift(packTypes: readonly PackLayerType[]) {
   }
 }
 
+/** Re-validate one (type, sample) pair: zod mirror accepts it AND the REAL
+ *  module parseConfig does too. Used for variants the single SAMPLES map can't
+ *  cover (e.g. fs:match-card's grid alongside its single-fixture sample). */
+async function antiDriftSample(
+  type: string,
+  sample: Record<string, unknown>,
+  variant: string,
+  packTypes: readonly PackLayerType[],
+) {
+  const t = packTypes.find((x) => x.type === type)
+  const rel = MODULE_PATHS[type]
+  if (!t || !rel) {
+    check(`anti-drift ${type} (${variant})`, false, 'no pack type or module path')
+    return
+  }
+  const zodOk = t.schema.safeParse(sample)
+  check(`zod accepts ${type} ${variant} sample`, zodOk.success, zodOk.success ? '' : zodOk.error.issues[0]?.message)
+  try {
+    const path = join(__dirname, '../../../..', 'verticals', rel, 'index.ts')
+    const mod = (await import(pathToFileURL(path).href)).default as {
+      parseConfig: (raw: unknown, ctx: { slug: string; label: string }) => unknown
+    }
+    mod.parseConfig(zodOk.success ? zodOk.data : sample, { slug: 'packs-test', label: `${type} ${variant}` })
+    check(`real parseConfig accepts ${type} ${variant}`, true)
+  } catch (e) {
+    check(`real parseConfig accepts ${type} ${variant}`, false, e instanceof Error ? e.message : String(e))
+  }
+}
+
 void (async () => {
   await antiDrift(F1_PACK.extraLayerTypes)
   await antiDrift(FOOTSHORTS_PACK.extraLayerTypes)
+  // fs:match-card grid — the multi-fixture variant the single-card SAMPLE can't reach.
+  await antiDriftSample(
+    'fs:match-card',
+    {
+      type: 'fs:match-card',
+      layout: 'grid',
+      columns: 2,
+      cards: [
+        { home: 'Arsenal', away: 'Chelsea', score: '2 – 1', competition: 'Premier League' },
+        { home: 'Liverpool', away: 'Man City', score: '1 – 1' },
+      ],
+    },
+    'grid',
+    FOOTSHORTS_PACK.extraLayerTypes,
+  )
   console.log(failed ? '\n✗ FAILURES above' : '\n✓ all pack checks passed')
   if (failed) process.exitCode = 1
 })()

@@ -1,0 +1,92 @@
+{
+  "_meta": {
+    "id": "route-theories",
+    "title": "There is no single true route — only rival maps",
+    "subtitle": "Longitude of each school's proposed landfalls, west of the Cape Malea pivot",
+    "source": "Strabo/Polybius; Berard 1929; Bradford 1963; Severin 1987; Apollodorus/Crates",
+    "note": "Present these as layers, never one line. Severin keeps almost everything near Greece; Berard and the western-Med school push to Gibraltar; the fringe drifts into the Atlantic. Everything west of Cape Malea (23.2 E) is contested."
+  },
+  "grid": { "left": 8, "right": 24, "top": 20, "bottom": 44, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0a0910",
+    "borderColor": "#2a2636",
+    "textStyle": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{a}<br/>{c} E"
+  },
+  "legend": {
+    "bottom": 0,
+    "icon": "circle",
+    "itemWidth": 8,
+    "itemHeight": 8,
+    "textStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "xAxis": {
+    "type": "value",
+    "name": "longitude (E)",
+    "min": -18,
+    "max": 27,
+    "interval": 5,
+    "nameLocation": "middle",
+    "nameGap": 26,
+    "nameTextStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 10 },
+    "axisLine": { "lineStyle": { "color": "#2a2636" } },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#2a2636", "type": "dashed" } },
+    "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "{value}" }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": ["Atlantic / fringe", "Berard (W. Med)", "Bradford (W. Med)", "Traditional (Sicily/Italy)", "Severin (Greek coast)"],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#e8ddc9", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "series": [
+    {
+      "name": "Severin (Greek coast)",
+      "type": "scatter",
+      "symbolSize": 12,
+      "itemStyle": { "color": "rgba(63,139,122,0.85)", "borderColor": "#3f8b7a", "borderWidth": 1 },
+      "data": [ [19.92, "Severin (Greek coast)"], [20.18, "Severin (Greek coast)"], [20.53, "Severin (Greek coast)"], [20.71, "Severin (Greek coast)"], [20.78, "Severin (Greek coast)"], [21.86, "Severin (Greek coast)"], [22.38, "Severin (Greek coast)"], [24.80, "Severin (Greek coast)"] ]
+    },
+    {
+      "name": "Traditional (Sicily/Italy)",
+      "type": "scatter",
+      "symbolSize": 12,
+      "itemStyle": { "color": "rgba(201,162,75,0.85)", "borderColor": "#c9a24b", "borderWidth": 1 },
+      "data": [ [10.90, "Traditional (Sicily/Italy)"], [13.09, "Traditional (Sicily/Italy)"], [14.28, "Traditional (Sicily/Italy)"], [14.43, "Traditional (Sicily/Italy)"], [14.95, "Traditional (Sicily/Italy)"], [15.16, "Traditional (Sicily/Italy)"], [15.63, "Traditional (Sicily/Italy)"], [19.92, "Traditional (Sicily/Italy)"], [20.71, "Traditional (Sicily/Italy)"] ]
+    },
+    {
+      "name": "Bradford (W. Med)",
+      "type": "scatter",
+      "symbolSize": 12,
+      "itemStyle": { "color": "rgba(91,122,140,0.85)", "borderColor": "#5b7a8c", "borderWidth": 1 },
+      "data": [ [9.40, "Bradford (W. Med)"], [12.33, "Bradford (W. Med)"], [13.19, "Bradford (W. Med)"], [14.28, "Bradford (W. Med)"], [14.43, "Bradford (W. Med)"] ]
+    },
+    {
+      "name": "Berard (W. Med)",
+      "type": "scatter",
+      "symbolSize": 12,
+      "itemStyle": { "color": "rgba(76,95,176,0.85)", "borderColor": "#4c5fb0", "borderWidth": 1 },
+      "data": [ [-5.60, "Berard (W. Med)"], [9.40, "Berard (W. Med)"], [10.90, "Berard (W. Med)"], [13.19, "Berard (W. Med)"], [14.07, "Berard (W. Med)"], [14.19, "Berard (W. Med)"], [15.21, "Berard (W. Med)"] ]
+    },
+    {
+      "name": "Atlantic / fringe",
+      "type": "scatter",
+      "symbolSize": 12,
+      "itemStyle": { "color": "rgba(107,98,112,0.6)", "borderColor": "#6b6270", "borderWidth": 1, "borderType": "dashed" },
+      "data": [ [-14.0, "Atlantic / fringe"], [-9.5, "Atlantic / fringe"], [-6.0, "Atlantic / fringe"] ],
+      "markLine": {
+        "silent": true,
+        "symbol": "none",
+        "lineStyle": { "color": "#7c2438", "width": 1.5, "type": "dashed" },
+        "label": { "color": "#7c2438", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 10, "position": "insideEndTop" },
+        "data": [
+          { "xAxis": 23.19, "name": "Cape Malea", "label": { "formatter": "Cape Malea — into Wonderland" } },
+          { "xAxis": -5.60, "name": "Gibraltar", "lineStyle": { "color": "#6b6270", "type": "dotted" }, "label": { "formatter": "Gibraltar", "color": "#6b6270" } }
+        ]
+      }
+    }
+  ]
+}

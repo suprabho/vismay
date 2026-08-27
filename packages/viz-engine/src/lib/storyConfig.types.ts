@@ -260,6 +260,14 @@ export interface StoryDefaults {
    * `logoPalette` over this. Values are theme tokens (`"$accent"`) or hex.
    */
   logoPalette?: LogoPalette
+  /**
+   * Tier-1 "stage" — persistent flat-sprite entities (subjects + objects) that
+   * flow across beats with per-beat transform tracks. Mounts once at the page
+   * level (like `storyBackground`), between background and foreground. The flat
+   * renderer ignores the transform's reserved 3D fields.
+   * See docs/deck-stage-subjects-objects.md.
+   */
+  stage?: StageConfig
 }
 
 export interface MapPinConfig {
@@ -482,11 +490,212 @@ export interface StorySectionConfig {
     /** Overrides applied on portrait / mobile viewports. */
     mobile?: MapOverrides
   }
+  /**
+   * Beat clock for this section's stage choreography.
+   *  - 'triggered' (default): landing on the beat plays its timeline over
+   *    wall-clock time.
+   *  - 'scrubbed': in live scroll the section renders `runway` viewports tall
+   *    and scroll progress through it drives the beat-local timeline, forward
+   *    and backward. Requires a single-beat section (no `subsections`, no
+   *    `mobileParagraphs`, not a hero kind). Autoplay/capture/print/embed and
+   *    reduced motion collapse the runway and play the beat as triggered/snap.
+   */
+  clock?: 'triggered' | 'scrubbed'
+  /**
+   * Scroll runway for `clock: 'scrubbed'`, in viewports of scroll height
+   * (1.25–6, default 2). Only valid with clock 'scrubbed'.
+   */
+  runway?: number
+  /**
+   * Scale base (ms) for sub-keyframe `t` values in this section's beats:
+   * a keyframe at `t: 0.5` lands at `0.5 * timelineMs`. Default 700 (the
+   * legacy single-tween length). The beat's actual timeline length is always
+   * derived from its keyframes, not this field.
+   */
+  timelineMs?: number
+  /** How the story transitions INTO this section (owned by the incoming section). */
+  transition?: SectionTransition
+}
+
+/* ─── Section transitions (boundary dressing) ───────────────────────
+ *
+ * Per-section vocabulary for how the three tiers hand off at a section
+ * boundary. The boundary belongs to the INCOMING section (the video-editor
+ * convention). Defaults preserve today's behavior: foreground cuts,
+ * background holds. Shared with the freeform video editor's transition
+ * vocabulary (viz-admin `EnterExitAnim` is a subset — convergence planned).
+ * See docs/stage-timeline-and-section-transitions.md.
+ */
+
+export type TransitionDirection = 'left' | 'right' | 'up' | 'down'
+
+/**
+ * One tier's transition preset. v0 implements 'cut' | 'fade' | 'slide';
+ * 'scale' | 'wipe' | 'blur' are reserved (the validator rejects them).
+ */
+export interface TransitionSpec {
+  kind: 'cut' | 'fade' | 'slide'
+  /** Travel direction (slide only): `up` = content rises into place. Default 'up'. */
+  direction?: TransitionDirection
+  /** Ramp length. Default: the boundary's `durationMs`, else 500. */
+  durationMs?: number
+  /** Default: the boundary's `easing`, else 'easeOut'. */
+  easing?: StageEasing
+}
+
+export interface SectionTransition {
+  /** Foreground vizslot dressing. Default 'cut' (today's hard swap). */
+  foreground?: TransitionSpec
+  /**
+   * Background handoff for per-unit background layers. 'hold' (default) is
+   * today's instant visibility flip; 'crossfade' opacity-blends across the
+   * boundary. 'flyTo' is reserved — the map's camera transition remains
+   * configured via `map.flySpeed` for now (validator rejects 'flyTo').
+   */
+  background?: 'hold' | 'crossfade'
+  /** Boundary-level default ramp length (ms) inherited by the tiers. */
+  durationMs?: number
+  /** Boundary-level default easing inherited by the tiers. */
+  easing?: StageEasing
 }
 
 export interface StoryConfig {
   defaults: StoryDefaults
   sections: StorySectionConfig[]
+}
+
+/* ─── Stage tier (subjects & objects, Tier 1) ───────────────────────
+ *
+ * A 3rd persistent render tier on top of background + foreground. Authorable
+ * entities flow across beats (units) with enter/exit lifetimes + per-beat
+ * transform tracks, interpolated on beat change. Tier 1 renders flat 2D image
+ * sprites; the transform is authored 3D-ready (`position3d` / `quaternion` /
+ * `camera` are reserved for Tier 2 and ignored by the flat renderer). The map
+ * module's persistent-aggregated camera is the prototype this generalizes.
+ * See docs/deck-stage-subjects-objects.md.
+ */
+
+/**
+ * Per-keyframe transform in normalized, centered stage space: (0,0) = stage
+ * centre, 1.0 = half the viewport min-dimension (vmin). Reflow-safe across
+ * landscape/portrait and the natural frame for a future 3D camera.
+ */
+export interface StageTransform {
+  /** Position; {x:0,y:0} = centre. Default {x:0,y:0}. */
+  position?: { x: number; y: number }
+  /** Uniform scale multiplier. Default 1. */
+  scale?: number
+  /** 0..1. Default 1. */
+  opacity?: number
+  /** In-plane (screen-Z) rotation, degrees — the only rotation the flat renderer applies. Default 0. */
+  rotation?: number
+  /**
+   * Coarse depth band for "step in front of content" (z-focus):
+   *   'behind' → behind the foreground (ambient objects)
+   *   'mid'    → between background and foreground (default)
+   *   'front'  → in front of foreground content/text (subject z-focus)
+   */
+  zBand?: 'behind' | 'mid' | 'front'
+  /** Fine z-ordering within a band. Default 0. */
+  zIndex?: number
+
+  /* ── Reserved for Tier 2/3 — authored now, ignored by the flat renderer ── */
+  /** Full 3D position in stage space. When set, x/y should equal `position`. */
+  position3d?: { x: number; y: number; z: number }
+  /** Orientation quaternion [x,y,z,w]. */
+  quaternion?: [number, number, number, number]
+  /** Euler sugar (deg) for hand-authoring before a visual editor exists. */
+  rotation3d?: { x: number; y: number; z: number }
+  /** Per-keyframe camera target for the fixed-z 3D stage (Tier 2). */
+  camera?: {
+    position?: { x: number; y: number; z: number }
+    target?: { x: number; y: number; z: number }
+    fov?: number
+  }
+}
+
+/**
+ * Which beat a keyframe / lifetime edge targets. A bare number is sugar for the
+ * flat desktop-unit index (escape hatch). The object form resolves to a unit
+ * index against the story's units so it survives content edits:
+ *   { section: 'ascent', sub: 1 }  — by section id + subsection index
+ *   { section: 3 }                 — by section index, sub defaults to 0
+ */
+export type BeatSelector = { section: string | number; sub?: number }
+
+export type StageEasing =
+  | 'linear'
+  | 'ease'
+  | 'easeIn'
+  | 'easeOut'
+  | 'easeInOut'
+  | { cubicBezier: [number, number, number, number] }
+
+/**
+ * Beat selector for a keyframe, plus optional beat-local time. `t` is only
+ * meaningful on keyframes (not on `enter`/`exit` lifetimes, which keep the
+ * plain `BeatSelector`).
+ */
+export type StageKeyframeAt = BeatSelector & {
+  /**
+   * Beat-local time 0..1, scaled by the section's `timelineMs` (default 700).
+   * Omitted: the sole keyframe for its beat = the beat's settled pose (t:1,
+   * the legacy semantics); one of several keyframes for a beat = the beat's
+   * start pose (t:0).
+   */
+  t?: number
+}
+
+export interface StageKeyframe {
+  /** Beat (and optional beat-local time) this keyframe targets. */
+  at: StageKeyframeAt | number
+  /** Target transform at this beat. */
+  transform: StageTransform
+  /** Easing of the segment ARRIVING at this keyframe's pose. Default 'easeInOut'. */
+  easing?: StageEasing
+  /**
+   * ms after beat entry before the arriving segment starts (per-entity
+   * stagger). Default 0. Mutually exclusive with `at.t`.
+   */
+  delayMs?: number
+  /**
+   * Arriving segment length in ms. Default 700 (the legacy tween length).
+   * Mutually exclusive with `at.t`.
+   */
+  durationMs?: number
+}
+
+export interface StageEntity {
+  /** Stable id (capture diagnostics / a future editor). Unique within the stage. */
+  id: string
+  /** 'subject' = center-stage, interactive, z-focus capable. 'object' = ambient decor. */
+  role: 'subject' | 'object'
+  /**
+   * What renders. Any registered viz type (a `VizRef`); Tier 1 renders only
+   * `{ type: 'image', src }` (`assets://`, http(s), or same-origin `/path`).
+   * The VizRef shape lets a Tier-2 `{ type: 'starship:viewer', … }` body slot
+   * in without re-authoring the motion track.
+   */
+  content: VizRef
+  /** Enter beat. Omit = from the first beat. Outside [enter, exit] the entity is absent. */
+  enter?: BeatSelector | number
+  /** Exit beat (inclusive — last visible beat). Omit = through the last beat. */
+  exit?: BeatSelector | number
+  /** Optional pre-roll / post-roll poses at the lifetime edges (e.g. opacity 0 + offscreen) so the entity fades/flies in and out. */
+  enterTransform?: StageTransform
+  exitTransform?: StageTransform
+  /** Sparse, beat-keyed transform track. At least one keyframe. */
+  keyframes: StageKeyframe[]
+  /** Subject-only: reader can interact (hit-test/hover now; grab/scrub in Tier 2). Forced false for objects. Default true for subjects. */
+  interactive?: boolean
+  /** Subject-only: may take z-focus (zBand 'front'). Forced false for objects. */
+  zFocusCapable?: boolean
+  /** Portrait degrade. Default: objects hide on portrait, subjects keep. */
+  portrait?: { hidden?: boolean }
+}
+
+export interface StageConfig {
+  entities: StageEntity[]
 }
 
 /* ─── Share mode config ─────────────────────────────────────────── */
@@ -790,4 +999,62 @@ export interface ResolvedUnit {
    * overrides survive content tweaks within the same section.
    */
   sliceIndex?: number
+}
+
+/* ─── Resolved stage (output of resolveStage) ───────────────────────
+ *
+ * One settled frame per unit, index-aligned with the active units array (like
+ * map steps align with units), plus a compiled beat-local segment list per
+ * frame that the rAF renderer samples via `sampleBeat(frame, tMs, entryPose)`.
+ * Capture/reduced-motion snap straight to `transform` (the settled pose).
+ * Pure primitives — safe to serialize from a server component into a client one.
+ */
+
+/**
+ * One beat-local animation segment. Segments are sorted and contiguous in
+ * time within a frame; `from: null` (only on the first segment) means "the
+ * entity's live pose captured at beat entry" — the retarget semantics that
+ * keep fast/reverse scrolling continuous.
+ */
+export interface ResolvedStageSegment {
+  startMs: number
+  /** >= startMs; start === end ⇒ hard set to `to`. */
+  endMs: number
+  /** Pose at startMs; null ⇒ retarget from the entity's live pose. */
+  from: StageTransform | null
+  /** Fully-defaulted pose at endMs; zBand/zIndex normalized to the beat's settled values. */
+  to: StageTransform
+  easing: StageEasing
+}
+
+export interface ResolvedStageFrame {
+  /** False outside the entity's lifetime — the renderer paints nothing. */
+  present: boolean
+  /** Fully-resolved SETTLED transform (Tier-1 defaults applied). */
+  transform: StageTransform
+  /** Easing to use when animating INTO this frame from the previous one. */
+  easing: StageEasing
+  /**
+   * Beat-local choreography. Present frames carry >= 1 segment (legacy beats
+   * compile to one `{0, 700, from: null, to: settled}` segment); absent
+   * frames carry none.
+   */
+  segments: ResolvedStageSegment[]
+  /** Derived beat length = max segment endMs. 0 on absent frames. */
+  timelineMs: number
+}
+
+export interface ResolvedStageEntity {
+  id: string
+  role: 'subject' | 'object'
+  content: VizRef
+  /** Resolved interactivity (forced false for objects / when not interactive). */
+  interactive: boolean
+  zFocusCapable: boolean
+  /** One frame per unit, index-aligned with the active units array. */
+  frames: ResolvedStageFrame[]
+}
+
+export interface ResolvedStage {
+  entities: ResolvedStageEntity[]
 }

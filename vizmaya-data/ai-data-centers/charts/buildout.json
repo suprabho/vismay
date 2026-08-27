@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "id": "buildout",
+    "title": "The gigawatt race",
+    "subtitle": "Power online (MW) by facility, 2024–2026",
+    "source": "Epoch AI — Frontier Data Centers (CC BY 4.0)",
+    "data_cutoff": "2026-06-01",
+    "note": "Representative snapshot — reconcile against dc_facility_timeline before publishing"
+  },
+  "grid": { "left": 48, "right": 24, "top": 28, "bottom": 40, "containLabel": true },
+  "tooltip": {
+    "trigger": "axis",
+    "backgroundColor": "#0b0e12",
+    "borderColor": "#232b33",
+    "textStyle": { "color": "#dbe7f0", "fontFamily": "JetBrains Mono", "fontSize": 11 }
+  },
+  "legend": {
+    "bottom": 0,
+    "icon": "circle",
+    "itemWidth": 8,
+    "itemHeight": 8,
+    "textStyle": { "color": "#8b98a5", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "xAxis": {
+    "type": "category",
+    "boundaryGap": false,
+    "data": ["Jun '24", "Dec '24", "Jun '25", "Jun '26"],
+    "axisLine": { "lineStyle": { "color": "#232b33" } },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#8b98a5", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "yAxis": {
+    "type": "value",
+    "name": "MW",
+    "nameTextStyle": { "color": "#8b98a5", "fontFamily": "Inter", "fontSize": 10 },
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#232b33", "type": "dashed" } },
+    "axisLabel": { "color": "#8b98a5", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "series": [
+    { "name": "Stargate Abilene", "type": "line", "smooth": 0.3, "symbol": "circle", "symbolSize": 7, "data": [0, 200, 500, 900], "lineStyle": { "color": "#22d3ee", "width": 2 }, "itemStyle": { "color": "#22d3ee" } },
+    { "name": "xAI Colossus", "type": "line", "smooth": 0.3, "symbol": "circle", "symbolSize": 7, "data": [100, 250, 400, 560], "lineStyle": { "color": "#a78bfa", "width": 2 }, "itemStyle": { "color": "#a78bfa" } },
+    { "name": "Meta Hyperion", "type": "line", "smooth": 0.3, "symbol": "circle", "symbolSize": 7, "data": [null, null, 150, 500], "lineStyle": { "color": "#34d399", "width": 2 }, "itemStyle": { "color": "#34d399" } },
+    { "name": "Project Rainier", "type": "line", "smooth": 0.3, "symbol": "circle", "symbolSize": 7, "data": [0, null, 200, 400], "lineStyle": { "color": "#f59e0b", "width": 2 }, "itemStyle": { "color": "#f59e0b" } }
+  ]
+}

@@ -10,8 +10,10 @@ import {
   type SessionType,
 } from '@/lib/useSessionResults'
 import { useLapPositions } from '@/lib/useLapPositions'
+import { useTelemetrySession } from '@/lib/useTelemetrySession'
+import { RaceTelemetry } from './RaceTelemetry'
 
-type Tab = 'standings' | 'qualifying' | 'fp1' | 'fp2' | 'fp3' | 'sprintQ' | 'sprint'
+type Tab = 'standings' | 'qualifying' | 'fp1' | 'fp2' | 'fp3' | 'sprintQ' | 'sprint' | 'telemetry'
 
 function TabButton({
   active,
@@ -215,6 +217,9 @@ function PositionByLap({ round, raceLabel, topN = 6 }: {
 
 export function RaceWeekendTabs({ race }: { race: RaceRow }) {
   const [tab, setTab] = useState<Tab>('standings')
+  // The Telemetry tab only appears when a race telemetry session is ingested.
+  // Linked by GP name (telemetry/schedule round numbers differ).
+  const hasTelemetry = !!useTelemetrySession(race.raceName).data
 
   return (
     <div className="space-y-3">
@@ -246,6 +251,11 @@ export function RaceWeekendTabs({ race }: { race: RaceRow }) {
             </TabButton>
           </>
         ) : null}
+        {hasTelemetry ? (
+          <TabButton active={tab === 'telemetry'} onClick={() => setTab('telemetry')}>
+            Telemetry
+          </TabButton>
+        ) : null}
       </div>
 
       {tab === 'standings' && (
@@ -260,6 +270,7 @@ export function RaceWeekendTabs({ race }: { race: RaceRow }) {
       {tab === 'fp3' && <SessionTable round={race.round} type="fp3" emptyLabel="FP3 data" />}
       {tab === 'sprintQ' && <SessionTable round={race.round} type="sprint_quali" emptyLabel="sprint quali" />}
       {tab === 'sprint' && <SessionTable round={race.round} type="sprint" emptyLabel="sprint" />}
+      {tab === 'telemetry' && <RaceTelemetry raceName={race.raceName} />}
     </div>
   )
 }

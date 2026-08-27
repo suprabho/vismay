@@ -4,6 +4,7 @@ import mapModule from './modules/map'
 import imageModule from './modules/image'
 import embedModule from './modules/embed'
 import videoModule from './modules/video'
+import audioModule from './modules/audio'
 import riveModule from './modules/rive'
 import textModule from './modules/text'
 import bigStatModule from './modules/bigStat'
@@ -27,6 +28,7 @@ const core: AnyVizModule[] = [
   imageModule,
   embedModule,
   videoModule,
+  audioModule,
   riveModule,
   textModule,
   bigStatModule,

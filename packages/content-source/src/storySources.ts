@@ -86,25 +86,47 @@ export interface SourceListItem {
   createdAt: string
 }
 
+/** A page of extracted sources plus the full (query-filtered) match count. */
+export interface ExtractedSourcesPage {
+  items: SourceListItem[]
+  total: number
+}
+
 /**
  * Extracted sources from every draft EXCEPT `slug` (you reuse other stories'
  * research, not your own draft's rows), newest first. Metadata only — the text
  * is fetched on attach so this stays cheap even with many drafts.
+ *
+ * Paginated for the compose picker's "Research sources" tab: `offset`/`limit`
+ * page the result via `.range()` and the `count` reports the full match size so
+ * the modal can drive a "Load more" affordance. An optional `q` filters by
+ * title / filename / source URL server-side.
  */
 export async function listExtractedSourcesExcept(
   slug: string,
-  limit = 200,
-): Promise<SourceListItem[]> {
+  opts: { offset?: number; limit?: number; q?: string } = {},
+): Promise<ExtractedSourcesPage> {
+  const { offset = 0, limit = 200, q } = opts
   const sb = createServiceClient()
-  const { data, error } = await sb
+  let query = sb
     .from('story_sources')
-    .select('id, story_slug, kind, filename, source_url, mime, title, byline, created_at')
+    .select('id, story_slug, kind, filename, source_url, mime, title, byline, created_at', {
+      count: 'exact',
+    })
     .eq('status', 'extracted')
     .neq('story_slug', slug)
+  const term = (q ?? '').trim()
+  if (term) {
+    // Strip PostgREST `.or(...)` filter syntax before wrapping as an ilike pattern.
+    const safe = term.replace(/[%,()*\\:]/g, ' ').replace(/\s+/g, ' ').trim()
+    const pat = `%${safe}%`
+    query = query.or(`title.ilike.${pat},filename.ilike.${pat},source_url.ilike.${pat}`)
+  }
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(offset, offset + limit - 1)
   if (error) throw new Error(`listExtractedSourcesExcept ${slug}: ${error.message}`)
-  return (data ?? []).map((row: any) => ({
+  const items: SourceListItem[] = (data ?? []).map((row: any) => ({
     id: row.id,
     storySlug: row.story_slug,
     kind: row.kind,
@@ -115,6 +137,7 @@ export async function listExtractedSourcesExcept(
     byline: row.byline ?? null,
     createdAt: row.created_at,
   }))
+  return { items, total: count ?? items.length }
 }
 
 export async function listStorySources(slug: string): Promise<StorySource[]> {
@@ -197,6 +220,26 @@ export async function deleteStorySource(id: string): Promise<void> {
 export function sourceStoragePath(slug: string, id: string, filename: string): string {
   const safe = filename.replace(/[^a-zA-Z0-9._-]+/g, '_')
   return `${slug}/${id}-${safe}`
+}
+
+/**
+ * Issue a short-lived signed upload URL so the browser can PUT a source file
+ * straight into the private `story-sources` bucket, bypassing the Next.js route.
+ * Vercel rejects request bodies over ~4.5 MB (a plain-text 413), so large PDFs
+ * can't be proxied through the compose upload route — the browser uploads
+ * directly, then triggers extraction by id. Mirrors the assets `sign-upload`.
+ */
+export async function signSourceUpload(
+  storagePath: string,
+): Promise<{ signedUrl: string; token: string }> {
+  const sb = createServiceClient()
+  const { data, error } = await sb.storage
+    .from(BUCKET)
+    .createSignedUploadUrl(storagePath, { upsert: true })
+  if (error || !data) {
+    throw new Error(`signSourceUpload ${storagePath}: ${error?.message ?? 'no signed url'}`)
+  }
+  return { signedUrl: data.signedUrl, token: data.token }
 }
 
 export async function uploadSourceFile(

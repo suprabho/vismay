@@ -12,6 +12,7 @@ interface Props {
   mountingMode?: string
   sample: unknown
   previewNotice?: string
+  cardNotice?: string
 }
 
 export default function ModuleCard({
@@ -22,6 +23,7 @@ export default function ModuleCard({
   mountingMode,
   sample,
   previewNotice,
+  cardNotice,
 }: Props) {
   return (
     // Outer is a div, not an anchor: several vertical viz components (F1
@@ -31,7 +33,13 @@ export default function ModuleCard({
     // catalog's grid scan-then-click flow.
     <div className="rounded-lg border border-[color:var(--color-line)] overflow-hidden hover:border-[color:var(--color-accent)] transition-colors">
       <div className="relative aspect-video w-full bg-[color:var(--color-surface)] overflow-hidden">
-        <VizModulePreview type={type} sample={sample} previewNotice={previewNotice} />
+        <VizModulePreview
+          type={type}
+          sample={sample}
+          previewNotice={previewNotice}
+          cardNotice={cardNotice}
+          compact
+        />
       </div>
       <Link
         href={`/${encodeURIComponent(routeId ?? type)}`}

@@ -29,7 +29,7 @@ function brandForHost(host: string | null): AdminBrand {
   const h = (host ?? '').toLowerCase()
   if (h.includes('vizmaya')) return { name: 'Vizmaya Admin', accent: '#7c5cff', accentFg: '#ffffff' }
   if (h.includes('footshorts')) return { name: 'Footshorts Admin', accent: '#16a34a', accentFg: '#ffffff' }
-  if (h.includes('vizf1')) return { name: 'VizF1 Admin', accent: '#e10600', accentFg: '#ffffff' }
+  if (h.includes('vizf1')) return { name: 'VizF1 Admin', accent: '#ff4346', accentFg: '#0a0a0a' }
   return { name: 'Vismay Admin', accent: '#fde047', accentFg: '#0a0a0a' }
 }
 

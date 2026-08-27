@@ -7,6 +7,8 @@
  *                    document order and reports unused directives.
  *   3. content graft — graftSectionBody fills a section's layer with the recap
  *                    directive whose teams/competition overlap the section text.
+ *   4. grid graft   — a GRID match-card keeps its layout and fills each tile from
+ *                    a matching single-fixture directive (never collapses to one).
  */
 import assert from 'node:assert'
 import { extractFsDirectives } from '@vismay/viz-engine/src/lib/recapFences'
@@ -95,5 +97,43 @@ const filled = graftSectionBody(body, directives2, 'Liverpool thrash Everton 3�
 assert.equal(filled, 1)
 assert.equal((body.foreground[0] as any).home, 'Liverpool', 'content match chose Liverpool card')
 console.log('✓ content graft: layer filled by team/competition overlap, not order')
+
+// 4. grid graft --------------------------------------------------------------
+// The recap emits ONE single-fixture card per match; a "matchday at a glance"
+// beat is a GRID match-card tiling several. Grafting must fill each tile from a
+// matching fixture directive, NOT collapse the grid onto a single fixture.
+const gridDirectives = collectRecapDirectives([recap])
+const gridBody = {
+  foreground: [
+    {
+      type: 'fs:match-card',
+      layout: 'grid',
+      columns: 2,
+      // Model-guessed tiles (note "Liverpool/Everton" name + intentionally
+      // reversed order vs. the recap document order).
+      cards: [
+        { home: 'Liverpool', away: 'Everton' },
+        { home: 'Arsenal', away: 'Chelsea' },
+      ],
+    },
+  ],
+}
+const gridFilled = graftSectionBody(
+  gridBody as any,
+  gridDirectives,
+  'Match-day round-up: Arsenal beat Chelsea and Liverpool thrashed Everton.',
+)
+assert.equal(gridFilled, 1, 'one grid layer grafted')
+const grid = gridBody.foreground[0] as any
+assert.equal(grid.layout, 'grid', 'grid layout preserved (not collapsed)')
+assert.equal(grid.columns, 2, 'grid columns preserved')
+assert.ok(Array.isArray(grid.cards) && grid.cards.length === 2, 'both tiles kept')
+// Tile order is the model's; each tile carries its OWN fixture's real data.
+assert.equal(grid.cards[0].home, 'Liverpool', 'tile 0 stays Liverpool')
+assert.equal(grid.cards[0].score, '3–0', 'tile 0 got Liverpool–Everton score')
+assert.equal(grid.cards[1].home, 'Arsenal', 'tile 1 stays Arsenal')
+assert.equal(grid.cards[1].score, '2–1', 'tile 1 got Arsenal–Chelsea score')
+assert.equal(grid.cards[1].competition, 'Premier League · matchday 35', 'tile 1 competition filled')
+console.log('✓ grid graft: layout preserved, each tile filled by its own fixture')
 
 console.log('\nALL RECAP INGESTION CHECKS PASSED')

@@ -1,9 +1,11 @@
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { useTheme } from '@footshorts/brand/native';
 import type { ThemeName } from '@footshorts/brand';
 import { useAuth } from '@/lib/AuthProvider';
+import { PRIVACY_URL } from '@/lib/links';
 import { useFollows } from '@/lib/useFollows';
 
 const THEME_OPTIONS: { name: ThemeName; label: string }[] = [
@@ -15,7 +17,7 @@ const THEME_OPTIONS: { name: ThemeName; label: string }[] = [
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, signOut } = useAuth();
+  const { session, signOut, deleteAccount } = useAuth();
   const { data: follows } = useFollows();
   const { themeName, setTheme } = useTheme();
   const email = session?.user?.email;
@@ -36,14 +38,6 @@ export default function ProfileScreen() {
         <Text className="text-muted text-sm">
           {follows?.length ?? 0} →
         </Text>
-      </Pressable>
-
-      <Pressable
-        onPress={() => router.push('/admin')}
-        className="flex-row items-center justify-between bg-surface border border-border rounded-lg px-4 py-3 mb-3"
-      >
-        <Text className="text-text font-medium">Pipeline stats</Text>
-        <Text className="text-muted text-sm">→</Text>
       </Pressable>
 
       <View className="bg-surface border border-border rounded-lg px-4 py-3 mb-3">
@@ -81,6 +75,38 @@ export default function ProfileScreen() {
         className="bg-surface border border-border rounded-lg py-3 items-center mt-4"
       >
         <Text className="text-text font-medium">Sign out</Text>
+      </Pressable>
+
+      {/* App Store guideline 5.1.1(v): in-app account deletion. */}
+      <Pressable
+        onPress={() =>
+          Alert.alert(
+            'Delete account?',
+            'This permanently deletes your account, follows and reading history. This cannot be undone.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  const { error } = await deleteAccount();
+                  if (error) Alert.alert('Could not delete account', error);
+                },
+              },
+            ],
+          )
+        }
+        className="border border-red-500/40 rounded-lg py-3 items-center mt-3"
+      >
+        <Text className="text-red-400 font-medium">Delete account</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+        className="mt-6 self-center"
+        hitSlop={6}
+      >
+        <Text className="text-muted text-xs">Privacy policy</Text>
       </Pressable>
     </View>
   );

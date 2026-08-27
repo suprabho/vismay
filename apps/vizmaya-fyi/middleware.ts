@@ -27,9 +27,12 @@ export const config = {
     '/story/:slug/share',
     '/story/:slug/autoplay',
     '/story/:slug/canvas-frame/:id',
+    '/story/:slug/timeline-frame',
     '/story/:slug/report',
     '/story/:slug/slides',
+    '/story/:slug/newsletter',
     '/reports',
     '/reports/:slug',
+    '/newsletters/:slug',
   ],
 }

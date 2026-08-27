@@ -42,8 +42,19 @@ export type EditableKind =
   | 'narration'
   // Frame inputs — sliced from the story's config.yaml + markdown body.
   | 'content'
+  // Deck cover editorial text — the `eyebrow` / `heading` / `dek` / `byline`
+  // fields the full-bleed cover paints over its hero image. They live at the
+  // section root in config.yaml (NOT the markdown body), so a cover needs its
+  // own slot: editing the markdown `content` doesn't touch them. Only offered
+  // on deck `kind: cover` sections, where it REPLACES the Content leaf.
+  | 'cover'
   | 'layout'
   | 'background'
+  // Travel scrapbook declaration — the section-root `scrapbook:` block
+  // (stop/template/max/offset/tip/video) that render-time injection turns
+  // into the spread's photo/note layers (content-source/travelScrapbook).
+  // Only surfaced on travel stories.
+  | 'scrapbook'
   // Story-wide `defaults` block (config.yaml `defaults:`). For deck stories
   // this holds the page backdrop (storyBackground/overlay), the default panel
   // chrome, scroll behaviour, and chart defaults — none of which the legacy
@@ -230,6 +241,30 @@ export function buildEditableSlice(
       }
     }
 
+    case 'cover': {
+      // The cover's editorial text lives at the section root in config.yaml.
+      // Present the fields that render (in top-to-bottom cover order) as a
+      // small YAML mapping; heading falls back to the resolved unit heading so
+      // the current title always shows even if it's only anchored in markdown.
+      const section = readConfigSection(sources.configYaml, unit.parentIndex)
+      const str = (key: string): string => {
+        const v = section?.[key]
+        return typeof v === 'string' ? v.trim() : ''
+      }
+      const fields: Record<string, string> = {}
+      if (str('eyebrow')) fields.eyebrow = str('eyebrow')
+      const heading = str('heading') || (unit.heading ?? '').trim()
+      if (heading) fields.heading = heading
+      if (str('dek')) fields.dek = str('dek')
+      if (str('byline')) fields.byline = str('byline')
+      return {
+        text: Object.keys(fields).length === 0 ? '' : safeStringify(fields),
+        language: 'yaml',
+        title: `Cover · §${unit.parentIndex}`,
+        placeholder: COVER_PLACEHOLDER,
+      }
+    }
+
     case 'layout': {
       const section = readConfigSection(sources.configYaml, unit.parentIndex)
       const fg = section?.foreground
@@ -257,6 +292,27 @@ export function buildEditableSlice(
         language: 'yaml',
         title: `Background · §${unit.parentIndex}`,
         placeholder: BACKGROUND_PLACEHOLDER,
+      }
+    }
+
+    case 'scrapbook': {
+      const section = readConfigSection(sources.configYaml, unit.parentIndex)
+      const meta = (section as { scrapbook?: unknown } | null)?.scrapbook
+      // Append the day's valid stop slugs as YAML comments — mergeSlice
+      // re-parses the edited text, so the comments strip on save.
+      const stops = sources.travelStops ?? []
+      const stopHints =
+        stops.length > 0
+          ? '\n# Stops on this story’s day (valid `stop:` values):\n' +
+            stops
+              .map((s) => `#   ${s.slug} — ${[s.emoji, s.name, s.time && `(${s.time})`].filter(Boolean).join(' ')}`)
+              .join('\n')
+          : ''
+      return {
+        text: meta === undefined ? '' : safeStringify(meta) + stopHints,
+        language: 'yaml',
+        title: `Scrapbook · §${unit.parentIndex}`,
+        placeholder: SCRAPBOOK_PLACEHOLDER + (stopHints ? '\n' + stopHints.trimStart() : ''),
       }
     }
 
@@ -561,6 +617,40 @@ export function mergeSlice(
       }
     }
 
+    case 'cover': {
+      // Splice the editorial fields back onto the section entry in config.yaml,
+      // preserving everything else (layout, panel, foreground, background …).
+      // Each known field is set when present + non-empty, else deleted — so
+      // clearing a field in the editor removes it (heading then falls back to
+      // the markdown anchor heading). Unknown keys the user might type are
+      // ignored: this slot owns only the cover's copy.
+      const { doc, section } = mutableConfigSection(
+        sources.configYaml,
+        unit.parentIndex
+      )
+      const parsed = trimmed === '' ? {} : parseYaml(editedText)
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error(
+          'Cover text must be a mapping of eyebrow / heading / dek / byline.'
+        )
+      }
+      const p = parsed as Record<string, unknown>
+      for (const key of ['eyebrow', 'heading', 'dek', 'byline'] as const) {
+        const v = p[key]
+        if (typeof v === 'string' && v.trim()) {
+          section[key] = v.trim()
+        } else {
+          delete section[key]
+        }
+      }
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
+
     case 'layout': {
       const { doc, section } = mutableConfigSection(
         sources.configYaml,
@@ -604,6 +694,37 @@ export function mergeSlice(
         delete (section as Record<string, unknown>).background
       } else {
         section.background = parseYaml(editedText)
+      }
+      const newRaw = yamlStringify(doc)
+      return {
+        target: 'config',
+        patch: { configYaml: newRaw },
+        newRaw,
+      }
+    }
+
+    case 'scrapbook': {
+      const { doc, section } = mutableConfigSection(
+        sources.configYaml,
+        unit.parentIndex
+      )
+      if (trimmed === '') {
+        // Empty save removes the block — the spread keeps only its
+        // hand-authored layers (injection has nothing to fill from).
+        delete (section as Record<string, unknown>).scrapbook
+      } else {
+        const parsed = parseYaml(editedText)
+        if (
+          !parsed ||
+          typeof parsed !== 'object' ||
+          Array.isArray(parsed) ||
+          typeof (parsed as { stop?: unknown }).stop !== 'string'
+        ) {
+          throw new Error(
+            'scrapbook block needs at least `stop: <stop-slug>` (a stop from the trip itinerary — see the placeholder for all fields)'
+          )
+        }
+        ;(section as Record<string, unknown>).scrapbook = parsed
       }
       const newRaw = yamlStringify(doc)
       return {
@@ -862,6 +983,17 @@ const SHARE_MAP_PLACEHOLDER = `# Share-card map override for this section. Examp
 # Empty body removes the override. Wraps live under \`sections.<id>.map:\`
 # in share.yaml — same shape ShareCard reads.`
 
+const COVER_PLACEHOLDER = `# Editorial text for this deck cover — painted over the full-bleed hero.
+# Every field is optional; omit one (or leave it blank) to drop it.
+#
+# eyebrow: "Topic · Date · What this is"   # kicker line above the title
+# heading: "The cover title"               # the big display headline
+# dek:     "One-line standfirst below the title."
+# byline:  "By …"                          # optional attribution line
+#
+# Saved onto this section in config.yaml. Clearing \`heading\` falls back to the
+# markdown anchor heading ("Cover").`
+
 const DEFAULTS_PLACEHOLDER = `# Story-wide defaults (config.yaml \`defaults:\`). Deck stories use:
 #
 # storyBackground:        # page-level backdrop, renders once behind every slide
@@ -881,6 +1013,18 @@ const DEFAULTS_PLACEHOLDER = `# Story-wide defaults (config.yaml \`defaults:\`).
 # chart:                  # chart theme + grid defaults
 #   theme: light-editorial
 `
+
+const SCRAPBOOK_PLACEHOLDER = `# Travel scrapbook declaration — render-time injection fills this spread's
+# photo/note layers from the trip's curated media (travel_trip_media).
+#
+# stop: walk-the-brooklyn-bridge   # REQUIRED — a stop slug from the trip itinerary
+# template: scatter                # hero | scatter | grid | stack | ticket | note (auto-picked when omitted)
+# max: 3                           # cap photos shown (rest becomes "+N more")
+# offset: 0                        # skip the first N photos (a stop's 2nd spread)
+# tip: true                        # inject the stop's tip as a footer tape note (default true)
+# video: false                     # true = include first curated clip, or an index
+#
+# Empty save removes the block (spread keeps only hand-authored layers).`
 
 const BACKGROUND_PLACEHOLDER = `# Section background layer stack (replaces the legacy \`map:\` field).
 # Examples:

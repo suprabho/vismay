@@ -1,17 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type {
   ComposeOutlineEntry,
   ComposePhase,
   ComposeState,
 } from '@vismay/content-source/composeState'
-import type {
-  StorySource,
-  SourceListItem as LibrarySource,
-} from '@vismay/content-source/storySources'
+import type { StorySource } from '@vismay/content-source/storySources'
 import { composeImageFilename } from '@vismay/story-pipeline/cover'
-import type { LibraryAsset, LibraryGroup } from './SourceLibraryModal'
+import type { LibraryTab, LibraryPage } from './SourceLibraryModal'
 import { canvasFrameId } from '../canvasOutputs'
 import type { ChartRequirementView } from './ChartCard'
 
@@ -25,8 +22,44 @@ import type { ChartRequirementView } from './ChartCard'
 
 const base = `/api/stories`
 
+/** A driver in an ingested telemetry session (for the "Add telemetry session" picker). */
+export interface TelemetryDriver {
+  number: number
+  abbr: string
+  name: string
+  team: string
+  teamId: string
+  teamColour: string
+}
+/** A constructor derived from a session's driver roster. */
+export interface TelemetryConstructor {
+  name: string
+  id: string
+  colour: string
+}
+/** One ingested telemetry session, with its roster + constructors. */
+export interface TelemetrySession {
+  sessionKey: string
+  label: string
+  season: number
+  round: number | null
+  sessionType: string
+  ready: boolean
+  drivers: TelemetryDriver[]
+  constructors: TelemetryConstructor[]
+}
+
 /** How many section "Write"/"Rewrite" calls may materialise concurrently. */
 export const MAX_CONCURRENT_SECTIONS = 3
+
+/**
+ * Files larger than this go straight to storage via a signed URL instead of the
+ * multipart route — Vercel rejects proxied request bodies over ~4.5 MB (413).
+ * 4 MB leaves headroom under that cap.
+ */
+const DIRECT_UPLOAD_OVER_BYTES = 4 * 1024 * 1024
+/** Hard client-side ceiling for a source file (the bucket allows up to 100 MB). */
+const MAX_SOURCE_FILE_BYTES = 50 * 1024 * 1024
 
 /** The four author-facing stages — also the tab ids. The visual/done phases
  *  collapse into the content stage. */
@@ -76,6 +109,9 @@ export function useComposeFlow({
   // Per-chart generation outcome (id → ok), set by the batch "Generate charts"
   // step so each chart shows ✓ / ✗ after a run.
   const [chartResults, setChartResults] = useState<Record<string, boolean>>({})
+  // Failure reason for the charts that came back ✗ (id → message), so a failed
+  // card can explain WHY and the author can judge whether a retry will help.
+  const [chartErrors, setChartErrors] = useState<Record<string, string>>({})
 
   // Chart REQUIREMENTS the outline planned (no data yet) — the batch step turns
   // these into chart_data via the source-grounded generateChart pass.
@@ -133,9 +169,18 @@ export function useComposeFlow({
     setError(null)
     try {
       const res = await fetch(`${base}/${slug}/canvas/compose/${path}`, init)
-      const data = await res.json()
+      // Tolerate non-JSON bodies: a too-large upload trips Vercel's ~4.5 MB
+      // request cap, which replies with plain-text "Request Entity Too Large"
+      // (HTTP 413) — calling res.json() on that throws an opaque
+      // "Unexpected token 'R'…". Parse defensively and surface a real message.
+      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setError(data.error ?? `${label} failed`)
+        setError(
+          data?.error ??
+            (res.status === 413
+              ? `${label} failed: file too large to send through the server`
+              : `${label} failed (HTTP ${res.status})`),
+        )
         return null
       }
       return data as T
@@ -167,6 +212,16 @@ export function useComposeFlow({
     return !!data?.source
   }
   async function addFile(file: File): Promise<boolean> {
+    if (file.size > MAX_SOURCE_FILE_BYTES) {
+      setError(
+        `"${file.name}" is too large (max ${Math.round(MAX_SOURCE_FILE_BYTES / 1024 / 1024)} MB)`,
+      )
+      return false
+    }
+    // Files over Vercel's ~4.5 MB request cap can't be proxied through the
+    // multipart route (they 413 before the handler runs). Upload those straight
+    // to storage via a signed URL; small files keep the simple multipart path.
+    if (file.size > DIRECT_UPLOAD_OVER_BYTES) return addFileDirect(file)
     const form = new FormData()
     form.append('file', file)
     const data = await call<{ source: StorySource }>('upload file', 'sources', {
@@ -175,6 +230,67 @@ export function useComposeFlow({
     })
     if (data?.source) setSources((s) => [...s, data.source])
     return !!data?.source
+  }
+  // Large-file path: ask for a signed URL (creates a pending row), PUT the file
+  // straight to the story-sources bucket, then trigger extraction via PATCH.
+  async function addFileDirect(file: File): Promise<boolean> {
+    setBusy('upload file')
+    setError(null)
+    try {
+      const signRes = await fetch(`${base}/${slug}/canvas/compose/sources`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          signUpload: { filename: file.name, mime: file.type || 'application/octet-stream' },
+        }),
+      })
+      const signData = await signRes.json().catch(() => null)
+      if (!signRes.ok || !signData?.source || !signData?.upload?.signedUrl) {
+        setError(signData?.error ?? `upload file failed (HTTP ${signRes.status})`)
+        return false
+      }
+      const row = signData.source as StorySource
+      const { signedUrl, contentType } = signData.upload as {
+        signedUrl: string
+        contentType: string
+      }
+      // Show the pending row immediately so the author sees progress.
+      setSources((s) => [...s, row])
+
+      const putRes = await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType, 'x-upsert': 'true' },
+        body: file,
+      })
+      if (!putRes.ok) {
+        const pb = await putRes.json().catch(() => null)
+        const error = pb?.message ?? pb?.error ?? `upload failed (HTTP ${putRes.status})`
+        setError(error)
+        setSources((s) => s.map((x) => (x.id === row.id ? { ...x, status: 'failed', error } : x)))
+        return false
+      }
+
+      // Trigger extraction from the stored original (same path as re-extract):
+      // resolves to `extracted` (LiteParse) or `pending` (vision worker; the
+      // polling effect then watches it settle).
+      const exRes = await fetch(`${base}/${slug}/canvas/compose/sources`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: row.id }),
+      })
+      const exData = await exRes.json().catch(() => null)
+      if (exRes.ok && exData?.source) {
+        setSources((s) => s.map((x) => (x.id === row.id ? (exData.source as StorySource) : x)))
+        return true
+      }
+      setError(exData?.error ?? `extraction failed (HTTP ${exRes.status})`)
+      return false
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      return false
+    } finally {
+      setBusy(null)
+    }
   }
   // Attach an existing extracted source from another draft — the server copies
   // its text into a fresh row for this draft (snapshot, no live link).
@@ -224,42 +340,42 @@ export function useComposeFlow({
     }
     return { ok: false, message: data?.message ?? 'No dataset material found.' }
   }
-  // Dynamic dataset search — the large corpora (IEA/Epstein/Coke Studio) are
-  // queried on demand rather than listed. Returns matching provider groups.
-  async function searchDatasets(query: string): Promise<LibraryGroup[]> {
+  // The "from library" picker's tab strip — one tab per applicable provider
+  // plus the synthetic Research sources / Document assets tabs. Cheap metadata
+  // only; each tab's items load lazily through `loadLibraryPage`. Memoised on
+  // `slug` so the modal's fetch effects don't re-run (and reset pagination)
+  // every time the panel re-renders — e.g. after each "Add".
+  const loadLibraryTabs = useCallback(async (): Promise<LibraryTab[]> => {
     try {
-      const res = await fetch(
-        `${base}/${slug}/canvas/compose/library/search?q=${encodeURIComponent(query)}`,
-        { cache: 'no-store' },
-      )
+      const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
       if (!res.ok) return []
-      const data = (await res.json()) as { groups?: LibraryGroup[] }
-      return data.groups ?? []
+      const data = (await res.json()) as { tabs?: LibraryTab[] }
+      return data.tabs ?? []
     } catch {
       return []
     }
-  }
-  // Pull the "from library" picker contents — prior extracted sources, doc
-  // assets, and provider groups (stories/epics). Not single-flight (`call`):
-  // the modal owns its own loading state.
-  async function loadLibrary(): Promise<{
-    sources: LibrarySource[]
-    assets: LibraryAsset[]
-    groups: LibraryGroup[]
-  }> {
-    try {
-      const res = await fetch(`${base}/${slug}/canvas/compose/library`, { cache: 'no-store' })
-      if (!res.ok) return { sources: [], assets: [], groups: [] }
-      const data = (await res.json()) as {
-        sources?: LibrarySource[]
-        assets?: LibraryAsset[]
-        groups?: LibraryGroup[]
+  }, [slug])
+  // One paginated page of a single picker tab (`tab` = a provider key, or
+  // `sources` / `assets`). `total` is the full match count so the modal can
+  // drive "Load more". Memoised on `slug` (see above). Not single-flight
+  // (`call`): the modal owns its loading state.
+  const loadLibraryPage = useCallback(
+    async (tab: string, offset: number, limit: number, q: string): Promise<LibraryPage> => {
+      try {
+        const qs = new URLSearchParams({ tab, offset: String(offset), limit: String(limit) })
+        if (q) qs.set('q', q)
+        const res = await fetch(`${base}/${slug}/canvas/compose/library/page?${qs.toString()}`, {
+          cache: 'no-store',
+        })
+        if (!res.ok) return { items: [], total: 0 }
+        const data = (await res.json()) as { items?: LibraryPage['items']; total?: number }
+        return { items: data.items ?? [], total: data.total ?? 0 }
+      } catch {
+        return { items: [], total: 0 }
       }
-      return { sources: data.sources ?? [], assets: data.assets ?? [], groups: data.groups ?? [] }
-    } catch {
-      return { sources: [], assets: [], groups: [] }
-    }
-  }
+    },
+    [slug],
+  )
   async function removeSource(id: string) {
     const data = await call<{ ok: boolean }>('remove', `sources?id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -297,6 +413,36 @@ export function useComposeFlow({
   // (recap-only picker); this just runs angle generation with the recap steer.
   async function createRecap(): Promise<boolean> {
     return genAngles(undefined, 'recap')
+  }
+
+  // ── F1 telemetry source (vizf1 only) ─────────────────────────────────────
+  // List the ingested telemetry sessions (+ their drivers/constructors) for the
+  // "Add telemetry session" picker. This route lives outside the per-story
+  // compose namespace, so it's a direct fetch rather than `call`.
+  async function loadTelemetrySessions(): Promise<TelemetrySession[]> {
+    try {
+      const res = await fetch('/api/vizf1/telemetry/sessions', { cache: 'no-store' })
+      if (!res.ok) return []
+      const data = (await res.json()) as { sessions?: TelemetrySession[] }
+      return data.sessions ?? []
+    } catch {
+      return []
+    }
+  }
+  // Build a focused telemetry brief server-side and attach it as a text source.
+  async function createTelemetrySource(opts: {
+    sessionKey: string
+    driverNumbers?: number[]
+    constructors?: string[]
+    prompt?: string
+  }): Promise<boolean> {
+    const data = await call<{ source: StorySource }>('add telemetry', 'telemetry-source', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(opts),
+    })
+    if (data?.source) setSources((s) => [...s, data.source])
+    return !!data?.source
   }
   function pickAngle(id: string) {
     setSt((s) => ({ ...s, chosenAngleId: id }))
@@ -338,6 +484,40 @@ export function useComposeFlow({
       }))
       setTab('outline')
     }
+    return !!data?.outline
+  }
+  // Regenerate ONE outline section in place — a fresh stub for just this slide,
+  // leaving the rest of the deck untouched. Outline-phase, unmaterialised only.
+  async function regenSection(entryId: string, feedback?: string): Promise<boolean> {
+    const data = await call<{ entry: ComposeOutlineEntry; outline: ComposeOutlineEntry[] }>(
+      `regen:${entryId}`,
+      'outline/section',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: 'regenerate', entryId, ...(feedback ? { feedback } : {}) }),
+      },
+    )
+    if (data?.outline) setSt((s) => ({ ...s, outline: data.outline }))
+    return !!data?.outline
+  }
+  // Add a NEW outline section from a prompt, slotted after `afterId` (or at the
+  // end). Lands as a `pending` entry the author can then accept + materialise.
+  async function addSection(prompt?: string, afterId?: string): Promise<boolean> {
+    const data = await call<{ entry: ComposeOutlineEntry; outline: ComposeOutlineEntry[] }>(
+      'add-section',
+      'outline/section',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'add',
+          ...(prompt ? { prompt } : {}),
+          ...(afterId ? { afterId } : {}),
+        }),
+      },
+    )
+    if (data?.outline) setSt((s) => ({ ...s, outline: data.outline }))
     return !!data?.outline
   }
   async function persistOutline(outline: ComposeOutlineEntry[]) {
@@ -455,18 +635,89 @@ export function useComposeFlow({
 
   // ── Charts: turn the outline's chart requirements into source-grounded
   // chart_data in one batch (per-chart regenerate also lives on the canvas). ──
+
+  /** Fold a batch/retry run's per-chart outcomes into results + errors. */
+  function applyChartOutcomes(outcomes: Array<{ id: string; ok: boolean; error?: string }>) {
+    setChartResults((prev) => {
+      const next = { ...prev }
+      for (const c of outcomes) next[c.id] = c.ok
+      return next
+    })
+    setChartErrors((prev) => {
+      const next = { ...prev }
+      for (const c of outcomes) {
+        if (c.ok) delete next[c.id]
+        else next[c.id] = c.error || 'generation failed'
+      }
+      return next
+    })
+  }
+
   async function genCharts() {
     if (!charts.length || busy) return
-    const data = await call<{ charts: Array<{ id: string; ok: boolean }> }>('charts', 'charts', {
-      method: 'POST',
+    const data = await call<{ charts: Array<{ id: string; ok: boolean; error?: string }> }>(
+      'charts',
+      'charts',
+      { method: 'POST' },
+    )
+    if (data?.charts) applyChartOutcomes(data.charts)
+  }
+
+  // Retry ONE failed chart's DATA in place — regenerates + writes just this
+  // chart (not the whole batch), leaving the ones that already succeeded
+  // untouched. A per-chart busy key means only this card's button spins.
+  async function retryChart(id: string): Promise<boolean> {
+    const data = await call<{ charts: Array<{ id: string; ok: boolean; error?: string }> }>(
+      `chart-retry:${id}`,
+      'charts',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      },
+    )
+    if (data?.charts) applyChartOutcomes(data.charts)
+    return data?.charts?.some((c) => c.id === id && c.ok) ?? false
+  }
+
+  // Re-plan ONE chart's REQUIREMENT (its prompt), optionally with a note. The
+  // server regenerates the chartType/title/axes + "what to plot" and persists it
+  // into storyOutline.charts; mirror the new requirement into local state so the
+  // card updates without a reload. This re-plans the chart — its DATA is then
+  // regenerated via "Generate charts" (or the canvas node).
+  async function regenChartPrompt(id: string, feedback?: string): Promise<boolean> {
+    const data = await call<{ chart: ChartRequirementView }>(`chart:${id}`, 'charts', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, ...(feedback ? { feedback } : {}) }),
     })
-    if (data?.charts) {
-      setChartResults((prev) => {
-        const next = { ...prev }
-        for (const c of data.charts) next[c.id] = c.ok
-        return next
-      })
-    }
+    if (!data?.chart) return false
+    setSt((s) => {
+      const outline = (s.storyOutline ?? null) as { charts?: ChartRequirementView[] } | null
+      if (!outline?.charts) return s
+      return {
+        ...s,
+        storyOutline: {
+          ...outline,
+          charts: outline.charts.map((c) => (c.id === id ? data.chart : c)),
+        },
+      }
+    })
+    // The persisted data (if any) is now stale relative to the new plan — clear
+    // its ✓/✗ (and any prior failure reason) so the author knows to regenerate it.
+    setChartResults((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setChartErrors((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    return true
   }
 
   const phase = st.phase
@@ -494,6 +745,7 @@ export function useComposeFlow({
     setTab,
     charts,
     chartResults,
+    chartErrors,
     extracted,
     pending,
     written,
@@ -505,15 +757,19 @@ export function useComposeFlow({
     addFromSource,
     addAsset,
     addFromProvider,
-    loadLibrary,
-    searchDatasets,
+    loadLibraryTabs,
+    loadLibraryPage,
     addEnrich,
     removeSource,
     reextract,
     genAngles,
     createRecap,
+    loadTelemetrySessions,
+    createTelemetrySource,
     pickAngle,
     genOutline,
+    regenSection,
+    addSection,
     cycleStatus,
     move,
     materialize,
@@ -521,6 +777,8 @@ export function useComposeFlow({
     frameSrcFor,
     genImages,
     genCharts,
+    retryChart,
+    regenChartPrompt,
     phase,
     newAcceptedCount,
     outlineEditable,

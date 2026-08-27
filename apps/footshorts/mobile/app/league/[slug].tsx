@@ -1,31 +1,29 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { useEntity } from '@/lib/useEntity';
+import { isHiddenCompetition } from '@/lib/hiddenContent';
 import { useStandings, groupStandings } from '@/lib/useStandings';
 import { useLeagueFixtures } from '@/lib/useFixtures';
 import {
   StandingsTable,
   MatchRow,
-  Bracket,
-  buildBracket,
-  isBracketDrawn,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/native';
+import { EntityShareCards } from '@/components/EntityShareCards';
 
 // Mirror web's max-w-2xl readable column so the league hub sits in a
 // centered 640px frame on tablets/landscape and bleeds-to-edge on phones.
 const MAX_CONTENT_WIDTH = 640;
 
-type Tab = 'recent' | 'standings' | 'schedule' | 'glory';
+type Tab = 'recent' | 'standings' | 'schedule';
 
 const TAB_LABEL: Record<Tab, string> = {
   recent: 'Recent',
   standings: 'Standings',
   schedule: 'Schedule',
-  glory: 'Road to Glory',
 };
 
 export default function LeagueScreen() {
@@ -38,37 +36,38 @@ export default function LeagueScreen() {
   const standings = useStandings(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
-  // Full schedule for every competition — feeds both the Schedule tab and the
-  // bracket. A complete domestic season is ~380 fixtures, so cap well above that.
+  // Full schedule for every competition — feeds the Schedule tab. A complete
+  // domestic season is ~380 fixtures, so cap well above that.
   const scheduleFixtures = useLeagueFixtures(slug, 'all', 500);
 
   const standingGroups = useMemo(
     () => (standings.data ? groupStandings(standings.data) : []),
     [standings.data],
   );
-  const bracket = useMemo(
-    () => buildBracket(scheduleFixtures.data ?? []),
-    [scheduleFixtures.data],
-  );
-  const bracketDrawn = isBracketDrawn(bracket);
   const scheduleRounds = useMemo(
     () => groupFixturesByRound(scheduleFixtures.data ?? []),
     [scheduleFixtures.data],
   );
 
-  // Tabs surface only when their data exists. A competition with both a league
-  // phase and knockouts (World Cup, new-format UCL) shows Standings AND Road to
-  // Glory together. Recent is always available and is the default.
+  // Tabs surface only when their data exists. Recent is always available and is
+  // the default. (Knockout brackets are authored in admin as editorial assets
+  // rather than auto-derived here — football-data's free feed carries no draw
+  // linkage, so the tree can't be reconstructed reliably from fixtures.)
   const availableTabs = useMemo<Tab[]>(
     () => [
       'recent',
       ...(standingGroups.length > 0 ? (['standings'] as const) : []),
       ...(scheduleRounds.length > 0 ? (['schedule'] as const) : []),
-      ...(bracket ? (['glory'] as const) : []),
     ],
-    [standingGroups.length, scheduleRounds.length, bracket],
+    [standingGroups.length, scheduleRounds.length],
   );
   const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
+
+  // Deep-link guard: hidden competitions (see hiddenContent.ts) never render.
+  // Placed after the hook calls so the hook order stays unconditional.
+  if (isHiddenCompetition(slug)) {
+    return <Redirect href="/" />;
+  }
 
   if (league.isLoading) {
     return (
@@ -115,6 +114,8 @@ export default function LeagueScreen() {
             </View>
           </View>
         </View>
+
+        <EntityShareCards entityId={league.data.id} />
 
         <TabBar tabs={availableTabs} active={activeTab} onChange={setTab} />
 
@@ -175,14 +176,6 @@ export default function LeagueScreen() {
               </View>
             ) : (
               <EmptyNote text="No fixtures scheduled yet." />
-            )
-          ) : null}
-
-          {activeTab === 'glory' ? (
-            bracketDrawn ? (
-              <Bracket bracket={bracket!} />
-            ) : (
-              <EmptyNote text="Knockout draw not set yet — see the Schedule tab for upcoming rounds." />
             )
           ) : null}
         </View>

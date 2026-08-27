@@ -1,18 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTeams } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
-import { EntityChip } from '@vismay/footshorts-viz/native';
+import { EntityCard } from '@vismay/footshorts-viz/native';
 
 const MIN_TEAMS = 3;
 
 export default function OnboardingTeams() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // 2-up card grid on phones, 3-up on wide layouts — mirrors web's
+  // `grid-cols-2 sm:grid-cols-3`.
+  const { width } = useWindowDimensions();
+  const cols = width >= 640 ? 3 : 2;
   const { session, refreshProfile } = useAuth();
   const { leagues, edit } = useLocalSearchParams<{ leagues?: string; edit?: string }>();
   const leagueSlugs = useMemo(() => (leagues ? leagues.split(',').filter(Boolean) : []), [leagues]);
@@ -101,15 +113,17 @@ export default function OnboardingTeams() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-        <View className="flex-row flex-wrap">
+        <View className="flex-row flex-wrap" style={{ marginHorizontal: -6 }}>
           {filtered.map((t) => (
-            <EntityChip
-              key={t.id}
-              name={t.name}
-              crestUrl={t.crest_url}
-              selected={picked.has(t.id)}
-              onPress={() => toggle(t.id)}
-            />
+            <View key={t.id} style={{ width: `${100 / cols}%`, padding: 6 }}>
+              <EntityCard
+                name={t.name}
+                crestUrl={t.crest_url}
+                country={t.country}
+                selected={picked.has(t.id)}
+                onPress={() => toggle(t.id)}
+              />
+            </View>
           ))}
         </View>
         {filtered.length === 0 ? (

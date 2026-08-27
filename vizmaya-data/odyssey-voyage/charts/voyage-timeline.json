@@ -1,0 +1,84 @@
+{
+  "_meta": {
+    "id": "voyage-timeline",
+    "title": "The voyage as it is told — a story within a story",
+    "subtitle": "The fourteen landfalls, in chronological order, across three lanes",
+    "source": "Homer, Odyssey (Books 9-13)",
+    "note": "Books 9-12 (Cyclops through Thrinacia) are a flashback narrated by Odysseus himself at the Phaeacian court — recounted by a famously unreliable narrator, not shown in sequence."
+  },
+  "grid": { "left": 80, "right": 24, "top": 20, "bottom": 70, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0a0910",
+    "borderColor": "#2a2636",
+    "textStyle": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{a}<br/>{b}"
+  },
+  "legend": {
+    "bottom": 0,
+    "icon": "circle",
+    "itemWidth": 8,
+    "itemHeight": 8,
+    "textStyle": { "color": "#9a8f86", "fontFamily": "Inter", "fontSize": 11 }
+  },
+  "xAxis": {
+    "type": "category",
+    "data": ["Troy", "Cicones", "Malea", "Lotus-Eaters", "Cyclops", "Aeolus", "Laestrygonians", "Circe", "Underworld", "Sirens", "Scylla", "Thrinacia", "Calypso", "Scheria", "Ithaca"],
+    "axisLine": { "lineStyle": { "color": "#2a2636" } },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10, "rotate": 40 }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": ["Fleet loss", "Voyaging", "Detention"],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#e8ddc9", "fontFamily": "Inter", "fontWeight": 600, "fontSize": 11 }
+  },
+  "series": [
+    {
+      "name": "Voyaging",
+      "type": "scatter",
+      "symbolSize": 11,
+      "itemStyle": { "color": "rgba(91,122,140,0.9)", "borderColor": "#0a0910", "borderWidth": 1 },
+      "data": [
+        { "value": ["Troy", "Voyaging"] },
+        { "value": ["Cicones", "Voyaging"] },
+        { "value": ["Malea", "Voyaging"] },
+        { "value": ["Lotus-Eaters", "Voyaging"] },
+        { "value": ["Cyclops", "Voyaging"] },
+        { "value": ["Aeolus", "Voyaging"] },
+        { "value": ["Laestrygonians", "Voyaging"] },
+        { "value": ["Underworld", "Voyaging"] },
+        { "value": ["Sirens", "Voyaging"] },
+        { "value": ["Scylla", "Voyaging"] },
+        { "value": ["Thrinacia", "Voyaging"] },
+        { "value": ["Scheria", "Voyaging"] },
+        { "value": ["Ithaca", "Voyaging"] }
+      ]
+    },
+    {
+      "name": "Detention",
+      "type": "scatter",
+      "symbolSize": 26,
+      "itemStyle": { "color": "rgba(90,26,43,0.95)", "borderColor": "#7c2438", "borderWidth": 1.5 },
+      "data": [
+        { "value": ["Circe", "Detention"], "label": { "show": true, "position": "top", "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 10, "formatter": "1 yr" } },
+        { "value": ["Calypso", "Detention"], "symbolSize": 40, "label": { "show": true, "position": "top", "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "7 yr" } }
+      ]
+    },
+    {
+      "name": "Fleet loss",
+      "type": "scatter",
+      "symbolSize": 13,
+      "itemStyle": { "color": "rgba(192,96,58,0.95)", "borderColor": "#0a0910", "borderWidth": 1 },
+      "data": [
+        { "value": ["Cicones", "Fleet loss"], "label": { "show": true, "position": "bottom", "color": "#c0603a", "fontFamily": "JetBrains Mono", "fontSize": 9, "formatter": "-72" } },
+        { "value": ["Cyclops", "Fleet loss"], "label": { "show": true, "position": "bottom", "color": "#c0603a", "fontFamily": "JetBrains Mono", "fontSize": 9, "formatter": "-6" } },
+        { "value": ["Laestrygonians", "Fleet loss"], "symbolSize": 22, "label": { "show": true, "position": "bottom", "color": "#c0603a", "fontFamily": "JetBrains Mono", "fontSize": 9, "formatter": "-11 ships" } },
+        { "value": ["Scylla", "Fleet loss"], "label": { "show": true, "position": "bottom", "color": "#c0603a", "fontFamily": "JetBrains Mono", "fontSize": 9, "formatter": "-6" } },
+        { "value": ["Thrinacia", "Fleet loss"], "symbolSize": 20, "label": { "show": true, "position": "bottom", "color": "#c0603a", "fontFamily": "JetBrains Mono", "fontSize": 9, "formatter": "all" } }
+      ]
+    }
+  ]
+}

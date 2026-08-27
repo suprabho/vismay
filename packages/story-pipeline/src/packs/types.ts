@@ -46,7 +46,10 @@ export interface PackLayerType {
  * voice and layers for other desks without moving vizmaya an inch.
  */
 export interface DomainPack {
-  id: 'vizmaya' | 'f1' | 'footshorts'
+  /** Stable pack identifier. Built-in packs use 'vizmaya' | 'f1' | 'footshorts'
+   *  | 'travel'; external consumers (e.g. GreenMentor) pass their own packs by
+   *  value, so the id is an open string rather than a closed union. */
+  id: string
   /** Proper-noun desk name spliced inline: "a <name> deck data story",
    *  "the <name> desk". */
   name: string

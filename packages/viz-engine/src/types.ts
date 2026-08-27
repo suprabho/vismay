@@ -88,6 +88,12 @@ export interface VizLayerStyle {
   /** Optional chrome around the layer's wrapper box. */
   panel?: VizLayerPanel
   /**
+   * Extra delay (ms) added to this layer's section-enter transition, for
+   * staggered reveals within a beat. No effect unless the layer's section
+   * declares a `transition.foreground` other than 'cut'.
+   */
+  revealDelayMs?: number
+  /**
    * Per-slot overrides applied when `useIsMobile()` is true (portrait). Shallow-
    * merged over the base style — e.g. `portrait: { size: { height: '38vh' } }`
    * to tune a chart's stacked height, or `portrait: { opacity: 0 }` to drop a
@@ -136,11 +142,23 @@ export interface VizPersistentRenderProps<TConfig> {
 export type AdminFormField =
   | { kind: 'asset'; key: string; label: string; accept: string[]; required?: boolean }
   | { kind: 'text'; key: string; label: string; placeholder?: string; required?: boolean }
+  /** Multi-line plain text (a `<textarea>`); `rows` is the visual height (default 3). */
+  | { kind: 'textarea'; key: string; label: string; placeholder?: string; rows?: number; required?: boolean }
   | { kind: 'number'; key: string; label: string; min?: number; max?: number; step?: number }
   | { kind: 'boolean'; key: string; label: string }
   | { kind: 'select'; key: string; label: string; options: { value: string; label: string }[] }
   | { kind: 'theme-token'; key: string; label: string }
   | { kind: 'json'; key: string; label: string; placeholder?: string }
+  /**
+   * A domain-specific picker (e.g. "pick a live fixture / team / news item").
+   * The engine owns only the field *shape*; the concrete editor is resolved at
+   * render time from a host-registered picker registry keyed by `pickerId`
+   * (see `@vismay/viz-admin`'s picker registry + VizConfigForm's `picker` case).
+   * `dependsOn` lists sibling field keys whose values scope the picker (e.g. a
+   * `fixture` picker depends on `compKey`). This keeps `VizConfigForm` domain-free
+   * while letting modules declare rich selectors.
+   */
+  | { kind: 'picker'; key: string; label: string; pickerId: string; dependsOn?: string[]; required?: boolean }
 
 /**
  * Background-slot mounting strategies.
@@ -203,4 +221,25 @@ export interface VizModule<TConfig = unknown> {
    * authoritative gate).
    */
   regionPreferences?: readonly ForegroundRegionName[]
+  /**
+   * Composer placement hint. `stack` (default) flows the layer in the arrangement
+   * (a vertical stack slot / a region); `overlay` floats it freely over the whole
+   * surface (positioned by its own config/style), outside the stack flow — used
+   * for badges/stickers. The composer shell reads this to decide where a layer
+   * renders; it has no effect on the story renderers.
+   */
+  placement?: 'stack' | 'overlay'
+  /**
+   * Upper bound for the composer's free-transform Width field (% of card).
+   * Defaults to 200 — set higher for modules whose content is designed to bleed
+   * far past the card edge (e.g. a wide timeline that scrolls/crops horizontally).
+   */
+  maxWidthPct?: number
+  /**
+   * Upper bound for the composer's free-transform Height field (% of card).
+   * Defaults to 200 — set higher for modules whose content can outgrow the card
+   * vertically (e.g. a tall bracket tree the author wants to size up rather than
+   * scroll).
+   */
+  maxHeightPct?: number
 }

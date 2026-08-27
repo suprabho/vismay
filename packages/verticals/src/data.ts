@@ -105,9 +105,313 @@ export const VERTICALS: VerticalEntry[] = [
     loadBundle: () => import('@vismay/starship-viz'),
     tailwindSources: ['verticals/starship-viz/src/**/*.{ts,tsx}'],
   },
+  {
+    slug: 'travel',
+    loadBundle: () => import('@vismay/travel-viz'),
+    tailwindSources: ['verticals/travel-viz/src/**/*.{ts,tsx}'],
+    publicRoutes: {
+      appSlug: 'travel',
+      storyPath: (slug) => `/t/${slug}/story`,
+    },
+  },
 ]
 
 /** Lookup by slug, for callers that need a single entry. */
 export const VERTICAL_BY_SLUG: Map<string, VerticalEntry> = new Map(
   VERTICALS.map((v) => [v.slug, v])
 )
+
+/**
+ * Map a story's `vertical:` frontmatter to the consumer **app** slug whose
+ * render surface owns it. The vertical slug and the app slug differ in general
+ * (the `f1` vertical renders on the `vizf1` app); verticals with no consumer
+ * app (kidzovo, starship) and stories with no vertical at all are vizmaya's
+ * own — they render on `vizmaya-fyi`.
+ */
+export function appSlugForVertical(vertical?: string | null): string {
+  if (!vertical) return 'vizmaya-fyi'
+  const v = VERTICAL_BY_SLUG.get(vertical)
+  return v?.publicRoutes?.appSlug ?? 'vizmaya-fyi'
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * App registry
+ *
+ * The companion to `VERTICALS`: one declarative entry per consumer **app**
+ * (vizmaya-fyi, footshorts, vizf1, …). A vertical renders *under* an app
+ * (`publicRoutes.appSlug` is the link); this registry owns everything about
+ * the app itself that used to be smeared across `apps/admin/lib/publicSite.ts`
+ * and a fistful of `NEXT_PUBLIC_*` env vars:
+ *
+ *   (a) URLs        — render-surface origin, consumer base, admin origin
+ *   (b) branding    — logo, brand fonts, theme defaults, autoplay logo policy
+ *   (c) surfaces    — which of share/report/slides/autoplay the app exposes
+ *                     and the CI workflow + storage bucket each dispatches to
+ *   (d) routing     — story / epic path shapes on the consumer app
+ *
+ * The render-surface origin is the seam the render-engine extraction (roadmap
+ * ⑧ / option C, docs/vertical-registration-drift.md) hangs off: every app's
+ * `renderSurface` defaults to https://vizmaya.fyi today (the one headless
+ * render surface every vertical iframes into) and is flipped to the neutral
+ * `apps/render` service one app/surface at a time via its env override.
+ *
+ * Each URL is declared as an `{ env, default }` pair rather than resolved
+ * eagerly, because how it resolves depends on the caller:
+ *   - render-surface + admin origins are read **server-side only** (URL signing,
+ *     CI dispatch, CORS), so `resolveAppUrls()` resolves them with a dynamic
+ *     `process.env[env]` read — fine on the server.
+ *   - consumer base URLs are also read **client-side** (cross-app preview links),
+ *     where Next only inlines a *statically* referenced `process.env.NEXT_PUBLIC_*`.
+ *     Those stay declared as static reads in `publicSite.ts`; the metadata here
+ *     mirrors them for server callers and documentation. Do NOT resolve a
+ *     `NEXT_PUBLIC_*` consumer URL through `resolveAppUrls()` in client code.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** An env-overridable URL: the env var name to read and the production default. */
+export interface AppUrl {
+  env: string
+  default: string
+}
+
+export interface AppUrls {
+  /** Where this app's headless render surface (share/report/slides/autoplay/
+   *  canvas-frame) is served. Server-resolved. Defaults to vizmaya.fyi until
+   *  the strangler flips it to the neutral render service. */
+  renderSurface: AppUrl
+  /** Public consumer base (where the app's own reader/landing lives). */
+  consumer: AppUrl
+  /** Admin origin for this app, for the cross-origin `/api/*` CORS allow-list. */
+  admin: AppUrl
+}
+
+export interface AppBranding {
+  /** Inline logo SVG, re-tinted per theme by the render surface. */
+  logoSvg?: string
+  /** Brand font family overrides applied to share cards (replaces the old
+   *  per-vertical `applyShareBrandFonts` special-case). */
+  brandFonts?: { serif?: string; sans?: string; mono?: string }
+  /** Default theme token overrides for this app. */
+  themeDefaults?: Record<string, unknown>
+  /** Suppress the render surface's own logo during autoplay (verticals bring
+   *  their own brand chrome). */
+  hideLogoInAutoplay: boolean
+  /** Embed-mode chrome toggles for the consumer iframe. */
+  embedChrome?: { backButton?: boolean; logo?: boolean }
+  /** The `[data-vertical]` hook surface CSS keys off (e.g. footshorts share). */
+  dataAttr?: string
+}
+
+/** Dispatch target for a heavy (CI-rendered) surface. */
+export interface SurfaceDispatch {
+  workflow: string
+  bucket: string
+}
+
+export interface AppSurfaces {
+  share: boolean
+  report: boolean
+  slides: boolean
+  autoplay: boolean
+  dispatch?: {
+    pdf?: SurfaceDispatch
+    video?: SurfaceDispatch
+    audio?: SurfaceDispatch
+  }
+}
+
+export interface AppRouting {
+  /** Path for a story on the consumer app, or omitted if it has no story route. */
+  storyPath?: (slug: string) => string
+  /** Path for an epic landing on the consumer app, or omitted if it has none. */
+  epicPath?: (slug: string) => string
+}
+
+export interface AppEntry {
+  /** App slug — the `APP_PUBLIC_ROUTES` key, and the value
+   *  `appSlugForVertical()` resolves a story's vertical to. */
+  slug: string
+  urls: AppUrls
+  branding: AppBranding
+  surfaces: AppSurfaces
+  routing: AppRouting
+}
+
+const PDF_DISPATCH: SurfaceDispatch = { workflow: 'render-pdf.yml', bucket: 'story-pdf' }
+const VIDEO_DISPATCH: SurfaceDispatch = { workflow: 'render-video.yml', bucket: 'story-video' }
+const AUDIO_DISPATCH: SurfaceDispatch = { workflow: 'render-audio.yml', bucket: 'story-video' }
+const ALL_SURFACES_DISPATCH = { pdf: PDF_DISPATCH, video: VIDEO_DISPATCH, audio: AUDIO_DISPATCH }
+
+/**
+ * VizF1 chequered-flag mark (flat colorway), linework as `currentColor` so
+ * consumers tint it with their surrounding text color. Source: Figma
+ * "Vismay Brands" node 120-196; React siblings (monograms, gradient flag)
+ * live in apps/vizf1/brand/src/logos.tsx — keep the geometry in sync.
+ */
+const VIZF1_LOGO_SVG =
+  '<svg viewBox="0 0 406.319 238.021" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.0213 226L108.191 129.83" stroke="currentColor" stroke-width="24.0426" stroke-linecap="round"/><path d="M146.66 115.404H103.383L114.525 104.792C133.302 86.9103 158.237 76.9362 184.166 76.9362H204.362L176.505 103.466C168.459 111.13 157.772 115.404 146.66 115.404Z" fill="currentColor"/><path d="M242.83 76.9362H199.553L227.409 50.4065C235.456 42.7427 246.143 38.4681 257.255 38.4681H300.532L272.676 64.9978C264.629 72.6615 253.942 76.9362 242.83 76.9362Z" fill="currentColor"/><path d="M276.489 115.404H223.596L257.936 82.6995C261.82 78.9998 266.98 76.9362 272.345 76.9362H276.491C293.853 76.9362 302.327 98.124 289.754 110.098C286.178 113.504 281.428 115.404 276.489 115.404Z" fill="currentColor"/><path d="M222.634 38.4681H175.511C201.44 13.7738 235.874 0 271.681 0H276.489L245.848 29.1827C239.589 35.1434 231.277 38.4681 222.634 38.4681Z" fill="currentColor"/><path d="M165.405 153.872H163.873C148.976 153.872 141.705 135.693 152.492 125.42C159.243 118.99 168.208 115.404 177.531 115.404H223.596L196.094 141.597C187.819 149.477 176.831 153.872 165.405 153.872Z" fill="currentColor"/><path d="M344.77 38.4681H305.34L330.411 14.5913C340.246 5.22456 353.308 0 366.889 0H406.319L381.249 23.8767C371.413 33.2435 358.352 38.4681 344.77 38.4681Z" fill="currentColor"/></svg>'
+
+/**
+ * Every consumer app. Order is stable. Stories with no consumer app
+ * (kidzovo/starship internals, vizmaya's own) resolve to `vizmaya-fyi` via
+ * `appSlugForVertical()`, so only apps that own a render surface need an entry.
+ */
+export const APPS: AppEntry[] = [
+  {
+    slug: 'vizmaya-fyi',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_VIZMAYA', default: 'https://vizmaya.fyi' },
+      consumer: { env: 'NEXT_PUBLIC_VIZMAYA_URL', default: 'https://vizmaya.fyi' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_VIZMAYA_URL', default: 'https://admin.vizmaya.fyi' },
+    },
+    branding: { hideLogoInAutoplay: false, dataAttr: 'vizmaya' },
+    surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
+    // vizmaya.fyi is the base brand: stories at /story/<slug>, epics own a
+    // top-level slug (each ships its own bespoke landing under app/<slug>/).
+    routing: { storyPath: (slug) => `/story/${slug}`, epicPath: (slug) => `/${slug}` },
+  },
+  {
+    slug: 'footshorts',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_FOOTSHORTS', default: 'https://vizmaya.fyi' },
+      consumer: { env: 'NEXT_PUBLIC_FOOTSHORTS_URL', default: 'https://footshorts.com' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_FOOTSHORTS_URL', default: 'https://admin.footshorts.com' },
+    },
+    branding: {
+      hideLogoInAutoplay: true,
+      dataAttr: 'footshorts',
+      // footshorts brand type families, per its `type-display` guideline:
+      // Forum (editorial display serif), Manrope (UI/body), Space Mono
+      // (numbers/scores/timers/@handles). Drives `applyShareBrandFonts` so
+      // every footshorts share card adopts these while keeping story colours.
+      brandFonts: { serif: 'Forum', sans: 'Manrope', mono: 'Space Mono' },
+    },
+    surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
+    routing: { storyPath: (slug) => `/editorial/${slug}`, epicPath: (slug) => `/editorial/epic/${slug}` },
+  },
+  {
+    slug: 'vizf1',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_VIZF1', default: 'https://vizmaya.fyi' },
+      // www is canonical — the apex 307s to www without CORS headers, which
+      // breaks cross-origin telemetry fetches at the redirect hop.
+      consumer: { env: 'NEXT_PUBLIC_VIZF1_URL', default: 'https://www.vizf1.com' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_VIZF1_URL', default: 'https://admin.vizf1.com' },
+    },
+    branding: { hideLogoInAutoplay: true, dataAttr: 'vizf1', logoSvg: VIZF1_LOGO_SVG },
+    // vizf1 has no epic landing route.
+    surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
+    routing: { storyPath: (slug) => `/editorial/${slug}` },
+  },
+  {
+    slug: 'umami',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_UMAMI', default: 'https://vizmaya.fyi' },
+      consumer: { env: 'NEXT_PUBLIC_UMAMI_URL', default: 'https://umami.fyi' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_UMAMI_URL', default: 'https://admin.umami.fyi' },
+    },
+    branding: {
+      hideLogoInAutoplay: false,
+      dataAttr: 'umami',
+      // Umami brand type: Forum (editorial display serif) + Manrope (UI/body)
+      // + Space Mono (numbers/@handles) — the same registered families the
+      // admin "Social frames" composer seeds with, so share/report surfaces
+      // and social exports agree.
+      brandFonts: { serif: 'Forum', sans: 'Manrope', mono: 'Space Mono' },
+    },
+    surfaces: { share: true, report: true, slides: true, autoplay: true, dispatch: ALL_SURFACES_DISPATCH },
+    // Searching for Umami is a single-epic app for now: the app home IS the
+    // food epic's landing, so every epic resolves to `/`. Stories embed the
+    // vizmaya render (no umami vertical/viz package yet).
+    routing: { storyPath: (slug) => `/editorial/${slug}`, epicPath: () => '/' },
+  },
+  {
+    slug: 'travel',
+    urls: {
+      renderSurface: { env: 'RENDER_SURFACE_URL_TRAVEL', default: 'https://vizmaya.fyi' },
+      consumer: { env: 'NEXT_PUBLIC_TRAVEL_URL', default: 'https://protrip.vismay.xyz' },
+      admin: { env: 'NEXT_PUBLIC_ADMIN_TRAVEL_URL', default: 'https://vismay.xyz' },
+    },
+    branding: { hideLogoInAutoplay: true, dataAttr: 'travel' },
+    // Personal trip stories: password-gated reader only — no share cards,
+    // PDFs, or autoplay videos are rendered for this app (the artifacts land
+    // in public buckets, which would leak gated content).
+    surfaces: { share: false, report: false, slides: false, autoplay: false },
+    routing: { storyPath: (slug) => `/t/${slug}/story` },
+  },
+]
+
+/** Lookup by app slug. */
+export const APP_BY_SLUG: Map<string, AppEntry> = new Map(APPS.map((a) => [a.slug, a]))
+
+function normalizeUrl(url: string): string {
+  return url.replace(/\/$/, '')
+}
+
+/** Resolve an `{ env, default }` URL declaration against `process.env`. */
+function resolveUrl(u: AppUrl): string {
+  return normalizeUrl(process.env[u.env] || u.default)
+}
+
+/**
+ * Resolve an app's URLs against the current environment. **Server-only** for
+ * the consumer URL (it may be a `NEXT_PUBLIC_*` var that only inlines via a
+ * static read client-side — see the registry header). The render-surface and
+ * admin URLs are server-only by nature (signing, dispatch, CORS). Falls back to
+ * the `vizmaya-fyi` entry for an unknown slug so callers always get a base.
+ */
+export function resolveAppUrls(slug: string): {
+  renderSurfaceUrl: string
+  consumerUrl: string
+  adminUrl: string
+} {
+  const app = APP_BY_SLUG.get(slug) ?? APP_BY_SLUG.get('vizmaya-fyi')!
+  return {
+    renderSurfaceUrl: resolveUrl(app.urls.renderSurface),
+    consumerUrl: resolveUrl(app.urls.consumer),
+    adminUrl: resolveUrl(app.urls.admin),
+  }
+}
+
+/**
+ * The headless render surfaces, in the order the render-engine extraction
+ * repoints them off vizmaya.fyi onto the neutral `apps/render` service.
+ */
+export type RenderSurfaceKind =
+  | 'canvasFrame'
+  | 'share'
+  | 'slides'
+  | 'report'
+  | 'autoplay'
+  | 'timelineFrame'
+
+/** Per-surface env override — the strangler's flip knob, one per surface. */
+const RENDER_SURFACE_ENV: Record<RenderSurfaceKind, string> = {
+  canvasFrame: 'RENDER_SURFACE_URL_CANVAS_FRAME',
+  share: 'RENDER_SURFACE_URL_SHARE',
+  slides: 'RENDER_SURFACE_URL_SLIDES',
+  report: 'RENDER_SURFACE_URL_REPORT',
+  autoplay: 'RENDER_SURFACE_URL_AUTOPLAY',
+  timelineFrame: 'RENDER_SURFACE_URL_TIMELINE_FRAME',
+}
+
+/**
+ * Render-surface origin for one surface of a story. **Server-only** (URL
+ * signing / CI dispatch). Resolved in order:
+ *   1. `RENDER_SURFACE_URL_<SURFACE>` — the strangler knob. Set it to the
+ *      apps/render origin to flip that one surface off vizmaya.fyi; unset
+ *      surfaces keep rendering on the live vizmaya.fyi fallback, so surfaces
+ *      move one at a time and each is independently revertable (unset the env).
+ *   2. the owning app's render surface (`RENDER_SURFACE_URL_<APP>` or default),
+ *      so a single app (e.g. footshorts) can be flipped independently.
+ *   3. `https://vizmaya.fyi` (the app default).
+ *
+ * Behaviour-neutral until one of the envs above is set.
+ */
+export function renderSurfaceUrl(
+  surface: RenderSurfaceKind,
+  vertical?: string | null
+): string {
+  const perSurface = process.env[RENDER_SURFACE_ENV[surface]]
+  if (perSurface) return normalizeUrl(perSurface)
+  return resolveAppUrls(appSlugForVertical(vertical)).renderSurfaceUrl
+}

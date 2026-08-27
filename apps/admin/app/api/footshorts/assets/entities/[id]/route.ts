@@ -3,12 +3,16 @@ import { isAuthed } from '@/lib/adminAuth'
 import {
   isPrimaryColorHex,
   updateEntityPrimaryColor,
+  updateEntityAvatarBgColor,
+  type AssetEntity,
 } from '@vismay/content-source/footshortsData'
 
 /**
- * Set (or clear) an entity's primary brand color.
- *   PATCH /api/footshorts/assets/entities/:id  body: { primary_color: "#RRGGBB" | null }
- * Writes `entities.primary_color`, which the live footshorts app + recaps read.
+ * Set (or clear) an entity's colors. Send whichever field(s) you're editing:
+ *   PATCH /api/footshorts/assets/entities/:id
+ *     body: { primary_color?: "#RRGGBB" | null, avatar_bg_color?: "#RRGGBB" | null }
+ * `primary_color` drives card glow + match tiles; `avatar_bg_color` is the
+ * dedicated feed avatar-disc background. Both are read by the live footshorts app.
  */
 
 export const runtime = 'nodejs'
@@ -27,16 +31,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } catch {
     return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 })
   }
-  const raw = (body as { primary_color?: unknown })?.primary_color
-  if (raw !== null && !isPrimaryColorHex(raw)) {
+  const b = (body ?? {}) as { primary_color?: unknown; avatar_bg_color?: unknown }
+  const hasPrimary = 'primary_color' in b
+  const hasAvatar = 'avatar_bg_color' in b
+  if (!hasPrimary && !hasAvatar) {
     return NextResponse.json(
-      { error: 'primary_color must be a #RRGGBB hex string or null' },
+      { error: 'provide primary_color and/or avatar_bg_color' },
       { status: 400 },
     )
   }
+  for (const [key, raw] of [
+    ['primary_color', b.primary_color] as const,
+    ['avatar_bg_color', b.avatar_bg_color] as const,
+  ]) {
+    if (!(key in b)) continue
+    if (raw !== null && !isPrimaryColorHex(raw)) {
+      return NextResponse.json(
+        { error: `${key} must be a #RRGGBB hex string or null` },
+        { status: 400 },
+      )
+    }
+  }
 
   try {
-    const entity = await updateEntityPrimaryColor(id, raw as string | null)
+    let entity: AssetEntity | undefined
+    if (hasPrimary) entity = await updateEntityPrimaryColor(id, b.primary_color as string | null)
+    if (hasAvatar) entity = await updateEntityAvatarBgColor(id, b.avatar_bg_color as string | null)
     return NextResponse.json({ ok: true, entity })
   } catch (e) {
     return NextResponse.json(

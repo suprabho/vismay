@@ -1,5 +1,10 @@
-import type { VizModule } from '@vismay/viz-engine'
+import type { VizModule, AdminFormField } from '@vismay/viz-engine'
 import type { TeamLane } from '../../types'
+import {
+  type FsBackgroundConfig,
+  fsBackgroundFields,
+  parseFsBackground,
+} from '../shared/background'
 
 /**
  * `fs:standings-over-matchdays` — Foreground viz module wrapping
@@ -36,7 +41,7 @@ import type { TeamLane } from '../../types'
  *             - { ... }
  */
 
-export interface StandingsOverMatchdaysConfig {
+export interface StandingsOverMatchdaysConfig extends FsBackgroundConfig {
   type: 'fs:standings-over-matchdays'
   competitionLabel: string
   lanes: TeamLane[]
@@ -96,7 +101,19 @@ function parseConfig(
     matchdayRange,
     loop: typeof r.loop === 'boolean' ? r.loop : undefined,
     loopDelayMs: typeof r.loopDelayMs === 'number' ? r.loopDelayMs : undefined,
+    ...parseFsBackground(r),
   }
+}
+
+function adminForm(): AdminFormField[] {
+  return [
+    { kind: 'text', key: 'competitionLabel', label: 'Competition label', required: true },
+    { kind: 'json', key: 'lanes', label: 'Team lanes (per-team matchday series)' },
+    { kind: 'number', key: 'totalMatchdays', label: 'Total matchdays', min: 1, step: 1 },
+    { kind: 'boolean', key: 'loop', label: 'Loop the line-draw entrance' },
+    { kind: 'number', key: 'loopDelayMs', label: 'Loop delay (ms)', min: 0, step: 100 },
+    ...fsBackgroundFields(),
+  ]
 }
 
 const standingsOverMatchdaysModule: VizModule<StandingsOverMatchdaysConfig> = {
@@ -104,10 +121,11 @@ const standingsOverMatchdaysModule: VizModule<StandingsOverMatchdaysConfig> = {
   label: 'Footshorts — standings over matchdays',
   slots: ['foreground'],
   parseConfig,
+  adminForm,
   load: () => import('./Component'),
   readinessProfile: 'first-paint',
   stableIdentity: (config) =>
-    `fs:standings-over-matchdays:${config.competitionLabel}::${config.lanes.length}`,
+    `fs:standings-over-matchdays:${config.competitionLabel}::${config.lanes.length}:${config.backgroundImage ?? ''}`,
 }
 
 export default standingsOverMatchdaysModule

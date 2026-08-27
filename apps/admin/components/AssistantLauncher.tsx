@@ -55,6 +55,9 @@ const ASK_MODELS: { value: string; label: string }[] = [
   { value: 'text.fast', label: 'Gemini Flash' },
   { value: 'text.pro', label: 'Gemini Pro' },
   { value: 'text.claude', label: 'Claude Sonnet' },
+  { value: 'text.opus', label: 'Claude Opus' },
+  { value: 'text.fable', label: 'Claude Fable · frontier' },
+  { value: 'text.grok', label: 'Grok 4.5 · fast' },
 ]
 
 /** A removable context chip shown above the composer. */

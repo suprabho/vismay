@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "id": "casualties",
+    "title": "Where the men were lost",
+    "subtitle": "Crew killed per episode (reconstructed at ~60 per ship)",
+    "source": "Homer, Odyssey; loss events explicit in the text",
+    "note": "Only the loss events are explicit; the per-episode headcount depends on the ~60-men-per-ship reconstruction. The Laestrygonians sank 11 of 12 ships with all aboard — the single greatest loss — while the surviving crew died at Thrinacia."
+  },
+  "grid": { "left": 8, "right": 56, "top": 12, "bottom": 28, "containLabel": true },
+  "tooltip": {
+    "trigger": "item",
+    "backgroundColor": "#0a0910",
+    "borderColor": "#2a2636",
+    "textStyle": { "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11 },
+    "formatter": "{b}<br/><b>{c}</b> men"
+  },
+  "xAxis": {
+    "type": "value",
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "splitLine": { "lineStyle": { "color": "#2a2636", "type": "dashed" } },
+    "axisLabel": { "color": "#9a8f86", "fontFamily": "JetBrains Mono", "fontSize": 10 }
+  },
+  "yAxis": {
+    "type": "category",
+    "data": ["Cyclops (Polyphemus)", "Scylla", "Thrinacia (Zeus's bolt)", "Cicones / Ismaros", "Laestrygonians"],
+    "axisLine": { "show": false },
+    "axisTick": { "show": false },
+    "axisLabel": { "color": "#e8ddc9", "fontFamily": "Inter", "fontSize": 12 }
+  },
+  "series": [
+    {
+      "type": "bar",
+      "barCategoryGap": "36%",
+      "itemStyle": { "color": "#7c2438", "borderRadius": [0, 2, 2, 0] },
+      "label": { "show": true, "position": "right", "color": "#e8ddc9", "fontFamily": "JetBrains Mono", "fontSize": 11, "formatter": "{c}" },
+      "data": [
+        { "value": 6,   "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 6,   "itemStyle": { "color": "#5b7a8c" } },
+        { "value": 39,  "itemStyle": { "color": "#c0603a" } },
+        { "value": 72,  "itemStyle": { "color": "#c0603a" } },
+        { "value": 594, "itemStyle": { "color": "#5a1a2b" } }
+      ]
+    }
+  ]
+}

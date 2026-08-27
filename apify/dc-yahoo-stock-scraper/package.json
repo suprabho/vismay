@@ -1,0 +1,17 @@
+{
+  "name": "dc-yahoo-stock-scraper",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Fetches daily OHLCV bars from Yahoo Finance via Apify residential proxy for the AI Data Centers international tickers. Deployed as an Apify actor; called by apps/vizmaya-fyi/scripts/ai-data-centers/import-stock-prices.ts.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "apify": "^3.2.6",
+    "undici": "^6.21.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

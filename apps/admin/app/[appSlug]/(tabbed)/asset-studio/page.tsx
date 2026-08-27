@@ -36,8 +36,12 @@ export default async function AssetStudioPage({ params }: Props) {
       <div className="mx-auto max-w-6xl px-4 py-6 text-neutral-100">
         <h1 className="text-lg font-semibold">Asset studio</h1>
         <p className="mt-0.5 text-sm text-neutral-400">
-          Pick a team or competition, preview its primary color across every match card, tile,
-          table, bracket and chart in each theme, then save the color to the live entity.
+          Pick a team or competition, then set two colors saved to the live entity: its{' '}
+          <span className="text-neutral-300">primary color</span> (card glow, borders and match-tile
+          gradients, previewed below across each theme) and a dedicated{' '}
+          <span className="text-neutral-300">avatar background</span> for the feed story-ring and
+          card disc behind the crest. Leave the avatar background unset to fall back to the primary
+          color.
         </p>
         <div className="mt-5">
           <AssetStudio initialEntities={initialEntities} />

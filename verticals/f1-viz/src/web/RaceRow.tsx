@@ -22,6 +22,7 @@ const MONTH_SHORT = [
 
 function dateLabel(iso: string, status: RaceRowData['status']): string {
   if (status === 'live') return 'LIVE'
+  if (status === 'canceled') return 'CANCELED'
   const d = new Date(`${iso}T00:00:00Z`)
   // Locale-independent: previously used `toLocaleDateString(undefined, ...)`
   // which produced different output on server vs client when their default
@@ -31,7 +32,7 @@ function dateLabel(iso: string, status: RaceRowData['status']): string {
 
 function statusBadge(status: RaceRowData['status']): string {
   if (status === 'live') return 'text-accent'
-  if (status === 'finished') return 'text-muted'
+  if (status === 'finished' || status === 'canceled') return 'text-muted'
   return 'text-text/80'
 }
 

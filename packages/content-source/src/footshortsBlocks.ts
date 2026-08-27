@@ -74,6 +74,8 @@ const STAGE_LABELS: Record<string, string> = {
   PLAY_OFF_ROUND: 'Play-off Round',
   ROUND_OF_32: 'Round of 32',
   ROUND_OF_16: 'Round of 16',
+  LAST_64: 'Round of 64',
+  LAST_32: 'Round of 32',
   LAST_16: 'Round of 16',
   QUARTER_FINALS: 'Quarter-finals',
   SEMI_FINALS: 'Semi-finals',

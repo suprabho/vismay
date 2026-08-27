@@ -17,7 +17,7 @@ export function NewsReelCard({ card }: { card: NewsCard }) {
       href={card.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative flex h-full w-full snap-start flex-col justify-end overflow-hidden bg-surface"
+      className="relative flex h-full w-full flex-col justify-end overflow-hidden rounded-3xl border border-border bg-surface"
     >
       {card.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

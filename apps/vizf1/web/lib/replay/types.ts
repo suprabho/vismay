@@ -19,6 +19,8 @@ export interface CarPositionFrames {
   x: number[]
   /** Track-frame Y (meters). */
   y: number[]
+  /** Track-frame Z elevation (meters); present only on elevation-enriched sessions. */
+  z?: number[]
   /** Lap number at this frame. */
   lap: number[]
   /** 0 = on track, 1 = off track, 2 = in pit. */
@@ -52,8 +54,9 @@ export interface CircuitGeometry {
     angle: number
     distance: number
   }[]
-  /** Raw outline polyline in track meters (NOT an SVG path). */
-  outline: { x: number[]; y: number[] }
+  /** Raw outline polyline in track meters (NOT an SVG path). `z` (elevation) is
+   * present only on elevation-enriched sessions and drives the 3D track view. */
+  outline: { x: number[]; y: number[]; z?: number[] }
   bounds: { minX: number; maxX: number; minY: number; maxY: number } | null
   /** Indices into `outline` marking the S1/S2 and S2/S3 boundaries. */
   sectorBoundaries?: { index1: number; index2: number } | null

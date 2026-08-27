@@ -80,3 +80,33 @@ export const AlertIcon = ({ size = 20, className }: IconProps) =>
 
 export const SpinnerIcon = ({ size = 16, className }: IconProps) =>
   svg(size, className, <path d="M21 12a9 9 0 1 1-6.219-8.56" />)
+
+export const ResetIcon = ({ size = 16, className }: IconProps) =>
+  svg(
+    size,
+    className,
+    <>
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </>,
+  )
+
+export const CameraIcon = ({ size = 16, className }: IconProps) =>
+  svg(
+    size,
+    className,
+    <>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </>,
+  )
+
+export const GaugeIcon = ({ size = 14, className }: IconProps) =>
+  svg(
+    size,
+    className,
+    <>
+      <path d="M12 14l4-4" />
+      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+    </>,
+  )

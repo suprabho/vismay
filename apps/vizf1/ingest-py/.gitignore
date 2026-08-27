@@ -1,0 +1,8 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+# FastF1 cache (when FASTF1_CACHE_DIR points inside the repo)
+fastf1_cache/
+*.egg-info/

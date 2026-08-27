@@ -9,9 +9,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { fdFetch, sleep, FD_TOKEN } from './footballData';
 
-const FD_BASE = 'https://api.football-data.org/v4';
-const FD_TOKEN = process.env.FOOTBALL_DATA_TOKEN!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -38,8 +37,11 @@ function commonName(name: string): string {
   return name
     // Drop governing-body prefixes on league names
     .replace(/\b(UEFA|FIFA|CONMEBOL|CONCACAF|AFC Champions)\b/gi, '')
-    // Drop club-type tokens anywhere in the name (case-insensitive: VfB, HSV, etc.)
-    .replace(/\b(FC|CF|CD|SSC|SS|AFC|AC|AS|RC|RCD|CA|SL|SC|BK|IF|FK|NK|HSV|TSV|VFL|VFB|RB)\b/gi, '')
+    // Drop club-type tokens anywhere in the name (case-insensitive: VfB, HSV, etc.).
+    // Glued acronyms (ACF Fiorentina, Genoa CFC, Atalanta BC) need their own
+    // entries — \b won't split them into AC/CF etc. Club-type words count too:
+    // Calcio (Cagliari Calcio, Parma Calcio 1913) and US (US Sassuolo Calcio).
+    .replace(/\b(FC|CFC|CF|CD|SSC|SS|AFC|ACF|AC|AS|RC|RCD|CALCIO|CA|SL|SC|BC|BK|IF|FK|NK|US|HSV|TSV|VFL|VFB|RB)\b/gi, '')
     // Drop leading "1. FC" / "1. FSV" style prefixes (German)
     .replace(/^\s*\d+\.\s*(FC|FSV|FCN)?\s*/i, '')
     // Drop trailing founding years
@@ -47,19 +49,6 @@ function commonName(name: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
-
-async function fdFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${FD_BASE}${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN },
-  });
-  if (!res.ok) {
-    throw new Error(`football-data ${path} failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
-}
-
-// Rate limit: 10 req/min on free tier → sleep 6.5s between calls to be safe
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function seedLeagues() {
   console.log('[seed] leagues...');

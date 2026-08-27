@@ -43,6 +43,8 @@ export interface SignedStoryLinks {
   slides: string
   /** /reports/<slug> (gated per-story report+slides builder UI on consumer domain) */
   reports: string
+  /** /newsletters/<slug> (gated per-story newsletter builder UI on consumer domain) */
+  newsletter: string
 }
 
 /**
@@ -68,6 +70,7 @@ export function signStoryLinks(
     report: sign(`/story/${slug}/report`),
     slides: sign(`/story/${slug}/slides`),
     reports: sign(`/reports/${slug}`),
+    newsletter: sign(`/newsletters/${slug}`),
   }
 }
 

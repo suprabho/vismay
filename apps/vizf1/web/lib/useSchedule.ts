@@ -30,6 +30,10 @@ function statusFor(
   raceSessionStatus: string | undefined,
 ): RaceRow['status'] {
   if (raceSessionStatus === 'finished') return 'finished'
+  // Set by ingestSessions when a long-past session never produced any data
+  // (e.g. the canceled 2026 Bahrain/Saudi rounds) — without this the date
+  // fallback below would show a canceled race as perpetually "live".
+  if (raceSessionStatus === 'canceled') return 'canceled'
   const now = Date.now()
   const start = new Date(`${date}T${time ?? '00:00:00Z'}`).getTime()
   if (start < now) return 'live'

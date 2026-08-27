@@ -1,0 +1,93 @@
+id: ai-data-centers
+slug: ai-data-centers
+title: "The gigawatt race"
+deck: >
+  A handful of US campuses now account for most of the world's frontier AI
+  compute. Epoch AI tracks their power, chips, and cost from satellite
+  imagery and permits — here is where the build-out stands.
+status: draft
+countries:
+  - United States
+reporting_date: 2026-07-04
+data_cutoff: 2026-06-01
+authors:
+  - Vizmaya editorial
+license: CC-BY-4.0
+
+# NOTE: the figures in this folder are a REPRESENTATIVE SNAPSHOT compiled from
+# public reporting, not a verbatim copy of the Epoch CSV (epoch.ai is not
+# reachable from the dev sandbox). Before publishing, run the importer and
+# reconcile every value against dc_facilities / dc_facility_timeline. See
+# INGEST_NOTES.md.
+
+tokens:
+  ink:     "#0a0c0f"
+  surface: "#0b0e12"
+  bone:    "#dbe7f0"
+  muted:   "#8b98a5"
+  line:    "#232b33"
+  power:   "#22d3ee"
+  compute: "#a78bfa"
+  capex:   "#34d399"
+
+datasets:
+  facilities:
+    file: data_centers.csv
+    schema: [name, h100_equivalents, power_mw, capex_usd_bn, owner, users, project, country, address, notes]
+    rows: 6
+    coverage: US frontier AI campuses
+    source_of_record: Epoch AI — Frontier Data Centers (CC BY 4.0)
+  timelines:
+    file: data_center_timelines.csv
+    schema: [name, date, power_mw, h100_equivalents, capex_usd_bn]
+    coverage: 2024-06 to 2026-06
+    source_of_record: Epoch AI — Frontier Data Center Timelines (CC BY 4.0)
+
+charts:
+  buildout:
+    file: charts/buildout.json
+    type: line
+    title: "The gigawatt race, MW online over time"
+    data_from: timelines
+  leaderboard:
+    file: charts/leaderboard.json
+    type: bar-horizontal
+    title: "Compute by facility, H100-equivalents"
+    data_from: facilities
+  capex:
+    file: charts/capex.json
+    type: bar-horizontal
+    title: "Capital committed, 2025 USD billions"
+    data_from: facilities
+
+sections:
+  - id: hero
+    label: "US frontier AI campuses"
+    kind: hero
+  - id: buildout
+    label: "The gigawatt race"
+    kind: chart
+    chart: buildout
+  - id: leaderboard
+    label: "Where the compute sits"
+    kind: chart
+    chart: leaderboard
+  - id: capex
+    label: "The bill"
+    kind: chart
+    chart: capex
+  - id: data
+    label: "Data accessibility for builders"
+    kind: source-table
+
+sources:
+  epoch:
+    - { title: "Epoch AI — AI Data Centers", url: "https://epoch.ai/data/ai-data-centers" }
+    - { title: "Epoch AI — Frontier Data Centers documentation", url: "https://epoch.ai/data/data-centers-documentation" }
+    - { title: "Epoch AI — Introducing the Frontier Data Centers Hub", url: "https://epoch.ai/blog/introducing-the-frontier-data-centers-hub/" }
+
+caveats:
+  - Figures here are a representative snapshot, not the verbatim Epoch CSV — reconcile before publishing.
+  - Epoch estimates power from satellite-visible cooling infrastructure; margins are real.
+  - H100-equivalents blend chip counts across GPU generations into one performance unit.
+  - Epoch refreshes ~weekly; the live /ai-data-centers explorer is the current view, this story is frozen at its cutoff.

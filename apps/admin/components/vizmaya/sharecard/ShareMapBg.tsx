@@ -4,20 +4,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapPinConfig, MapPalette } from '@vismay/viz-engine'
-import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel } from '@vismay/viz-engine'
+import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel, StoryFocusArea } from '@vismay/viz-engine'
 import { MapboxBackground } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
-
-// Per-aspect-ratio focus area for the share-card map. Mapbox padding shifts
-// the geographic center coordinate to land inside this fractional rectangle
-// of the canvas; the rest of the map fills around it.
-type FocusArea = { top: number; left: number; width: number; height: number }
-const SHARE_FOCUS_AREA: Record<AspectRatio, FocusArea> = {
-  '1:1': { top: 0.20, left: 0, width: 1.0, height: 0.40 },
-  '4:5': { top: 0.22, left: 0, width: 1.0, height: 0.40 },
-  '3:4': { top: 0.25, left: 0, width: 1.0, height: 0.40 },
-  '4:3': { top: 0.10, left: 0.28, width: 0.70, height: 0.40 },
-}
+import { SHARE_FOCUS_AREA } from './constants'
 
 interface Props {
   /** Share-card aspect ratio — picks the focal area used to frame the map. */
@@ -51,6 +41,13 @@ interface Props {
    * the canvas into the higher-resolution output.
    */
   pixelRatio?: number
+  /**
+   * Override the focal rectangle. Defaults to the full-bleed per-ratio
+   * `SHARE_FOCUS_AREA`. Contained maps (hero / free-object roles) pass a
+   * centered full-box area so the geographic center sits at the box center
+   * with no overlay-reserved padding.
+   */
+  focusArea?: StoryFocusArea
 }
 
 /**
@@ -83,8 +80,9 @@ export default function ShareMapBg({
   defaultPinColor,
   defaultPinRadius,
   pixelRatio,
+  focusArea: focusAreaProp,
 }: Props) {
-  const focusArea = SHARE_FOCUS_AREA[ratio]
+  const focusArea = focusAreaProp ?? SHARE_FOCUS_AREA[ratio]
   const hostRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
 

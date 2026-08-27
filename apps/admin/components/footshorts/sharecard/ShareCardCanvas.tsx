@@ -13,9 +13,12 @@ import {
   type MatchCardLayout,
 } from '@vismay/footshorts-viz/web'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
+import type { VizLayer } from '@vismay/viz-engine'
 import { themes, themeToVars } from '@footshorts/brand'
 import { AuraBackground } from '@vismay/ui'
 import { FootshortsLogo } from './FootshortsLogo'
+import { FootshortsDataProvider, type FootshortsCardData } from './modules/dataContext'
+import { FsCardLayerView } from './modules/render'
 import {
   OUTPUT_SIZE,
   RENDER_SCALE,
@@ -407,15 +410,27 @@ function CardBackgroundLayer({
         <img src={background.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : background.type === 'aura' ? (
         <>
-          <AuraBackground slug={background.slug} />
-          {/* Fill the .bn-aura wrapper the embed emits so the iframe covers the card. */}
-          <style>{`
-            .bn-aura { position: absolute; inset: 0; overflow: hidden; }
-            .bn-aura iframe {
-              position: absolute; inset: 0; width: 100%; height: 100%;
-              border: 0; display: block; background: transparent;
-            }
-          `}</style>
+          {/* Poster underneath the live embed: the static fallback that rasterizes
+              into the PNG (the cross-origin iframe never does). */}
+          {background.posterSrc && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={background.posterSrc.startsWith('data:') ? background.posterSrc : proxiedImage(background.posterSrc)}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div data-share-ui="true" className="absolute inset-0">
+            <AuraBackground slug={background.slug} />
+            {/* Fill the .bn-aura wrapper the embed emits so the iframe covers the card. */}
+            <style>{`
+              .bn-aura { position: absolute; inset: 0; overflow: hidden; }
+              .bn-aura iframe {
+                position: absolute; inset: 0; width: 100%; height: 100%;
+                border: 0; display: block; background: transparent;
+              }
+            `}</style>
+          </div>
         </>
       ) : null}
       {scrim > 0 && (
@@ -428,10 +443,12 @@ function CardBackgroundLayer({
 /** Badge overlays placed on the card (crests / logos / flags). Display-only and
  *  proxied for capture; drag/resize is handled by the editor over the preview. */
 function OverlayLayer({ overlays }: { overlays: Overlay[] }) {
-  if (overlays.length === 0) return null
+  // Image-backed overlays only — emoji / icon kinds carry no `url`.
+  const imageOverlays = overlays.filter((o): o is Overlay & { url: string } => Boolean(o.url))
+  if (imageOverlays.length === 0) return null
   return (
     <div className="pointer-events-none absolute inset-0 z-30">
-      {overlays.map((o) => (
+      {imageOverlays.map((o) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={o.id}
@@ -455,6 +472,12 @@ interface Props {
   content: CardContent
   frame: CardFrameConfig
   overlays?: Overlay[]
+  /** The current card as a single `fscard:*` foreground layer (picks). The body
+   *  renders through the viz-engine registry from this; `content` is retained
+   *  for the frame chrome (bleed detection + caption). */
+  layer?: VizLayer | null
+  /** Live data the layer's module resolves its picks against (injected). */
+  data?: FootshortsCardData
 }
 
 /**
@@ -465,7 +488,7 @@ interface Props {
  * header/footer chrome.
  */
 export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareCardCanvas(
-  { content, frame, overlays },
+  { content, frame, overlays, layer, data },
   ref,
 ) {
   const out = OUTPUT_SIZE[frame.ratio]
@@ -493,12 +516,22 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
     !bleed && frame.background && frame.background.type !== 'none' ? frame.background : null
   const backgroundScrim = frame.backgroundScrim ?? 0.5
 
+  // The card body renders through the viz-engine registry from the layer's picks,
+  // resolved against the injected data. `content` still drives the frame chrome
+  // (bleed layout + caption). Falls back to nothing if no layer was supplied.
+  const body =
+    layer && data ? (
+      <FootshortsDataProvider value={data}>
+        <FsCardLayerView layer={layer} />
+      </FootshortsDataProvider>
+    ) : null
+
   return (
     <div ref={ref} className="relative flex flex-col overflow-hidden bg-bg text-text" style={style}>
       {bleed ? (
         <>
           <div className="absolute inset-0">
-            <CardBody content={content} />
+            {body}
           </div>
           <div className="relative z-10 flex h-full flex-col justify-between">
             <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
@@ -520,7 +553,7 @@ export const ShareCardCanvas = forwardRef<HTMLDivElement, Props>(function ShareC
           <div className="relative z-10 flex h-full min-h-0 flex-col">
             <Header eyebrow={frame.eyebrow} logoSize={frame.logoSize} logoVariant={frame.logoVariant} />
             <div className="min-h-0 flex-1 py-2">
-              <CardBody content={content} />
+              {body}
             </div>
             <Footer handle={frame.handle} />
           </div>
