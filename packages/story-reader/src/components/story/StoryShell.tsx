@@ -11,7 +11,17 @@ import {
   StageVizSlot,
   StoryShellProvider,
 } from '@vismay/viz-engine'
-import { resolveSlots, resolveSlotsFlat, resolveStage } from '@vismay/viz-engine'
+import {
+  resolveSlots,
+  resolveSlotsFlat,
+  resolveStage,
+  resolveForegroundTransition,
+  sectionRunway,
+  runwayProgress,
+  coversCenterline,
+  scrollTopForRunwayT,
+  usePrefersReducedMotion,
+} from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
 import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette, VizLayer } from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
@@ -139,11 +149,19 @@ export default function StoryShell({
   // below is suppressed so the host overlays its own chrome. Direct vizmaya.fyi
   // readers never set this flag and keep the logo.
   const [isEmbed, setIsEmbed] = useState(false)
+  // `?editor=1` is set by the admin stage-timeline editor (E1) when it loads
+  // this shell headless in an iframe to scrub it via the `viz-story-seek`
+  // postMessage bridge. Like embed it suppresses chrome and CSS snap, but it
+  // is a DISTINCT flag: it needs real runway geometry (the editor drives
+  // exact scroll positions itself) whereas embed collapses runways entirely
+  // (its host does a linear whole-page scroll with no per-section concept).
+  const [isEditor, setIsEditor] = useState(false)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setIsAutoplay(params.get('autoplay') === '1')
     setIsCapture(params.get('capture') === '1')
     setIsEmbed(params.get('embed') === '1')
+    setIsEditor(params.get('editor') === '1')
   }, [])
 
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
@@ -168,6 +186,45 @@ export default function StoryShell({
       containerRef.current?.scrollTo({ top: 0 })
     }
   }, [isPortrait])
+
+  // ── Runway scrubbing (clock: 'scrubbed', M3) + editor seeking (E1) ────────
+  // Two independent concerns, previously one `scrubEnabled` flag:
+  //   - runwayGeometryEnabled: whether a scrubbed section renders at its
+  //     authored TALL height at all. True for live scroll AND the editor —
+  //     both need real geometry (the editor drives it via seeks instead of
+  //     raw gestures, but it's still WYSIWYG: "what you scrub is what
+  //     ships"). False for autoplay/capture (the deterministic one-viewport
+  //     walk the video/PDF pipelines depend on), embed (its host does a
+  //     linear whole-page scroll with no per-section runway concept), and
+  //     reduced motion (no reader should scroll viewports of pinned static
+  //     frame).
+  //   - liveScrubEnabled: whether the reader's OWN raw scroll gesture on this
+  //     container drives the beat clock. True for live scroll only — the
+  //     editor excludes itself here because it drives `seekRef` (below)
+  //     explicitly; running both listeners at once would race.
+  const reducedMotion = usePrefersReducedMotion()
+  const runwayGeometryEnabled = !isCapture && !isAutoplay && !isEmbed && !reducedMotion
+  const liveScrubEnabled = runwayGeometryEnabled && !isEditor
+  // One entry per unit: runway viewports for sections that render tall in
+  // this mode, else null. Single source of truth for the section geometry
+  // (prop below), the IntersectionObserver skip-list, and both scroll/seek
+  // drivers.
+  const runwayByUnit = useMemo(
+    () => units.map((u) => (runwayGeometryEnabled ? sectionRunway(u.parentConfig) : null)),
+    [units, runwayGeometryEnabled]
+  )
+  const hasRunways = useMemo(() => runwayByUnit.some((r) => r != null), [runwayByUnit])
+  // Mutable scrub channel — written by the live-scroll listener ~per frame,
+  // read by StageVizSlot inside its own rAF. A ref, NOT state: publishing t
+  // through React would re-render the shell (and re-run the stage clock
+  // effect, recapturing its entry poses) on every scroll frame.
+  const scrubRef = useRef<{ unit: number; t: number } | null>(null)
+  // Mutable seek channel — written by the editor's `viz-story-seek` message
+  // handler (below), read by StageVizSlot the same way `scrubRef` is.
+  // Independent of `scrubRef`: kept separate so a live scrubbed section can
+  // never respond to a stray editor payload, and an editor seek can never
+  // accidentally satisfy `scrub`'s embed/capture exclusion.
+  const seekRef = useRef<{ unit: number; t: number } | null>(null)
 
   // Tier-1 stage: densify the story's `defaults.stage` into one settled frame
   // per active unit. Resolved here (not per render surface) so it rides the
@@ -209,6 +266,21 @@ export default function StoryShell({
 
   const current = units[activeUnit] ?? units[0]
   const activeSub = current?.subIndex ?? 0
+
+  // Section-enter transition gating for the FIXED-OVERLAY foreground paths
+  // (map format / autoplay / capture): the overlay remounts per unit, but the
+  // boundary belongs to the parent SECTION — sub-beat swaps inside one
+  // section keep today's hard cut. The deck in-flow path gates per-unit
+  // inside MapStorySection instead.
+  const prevParentRef = useRef<number | null>(null)
+  const parentChanged =
+    current != null && prevParentRef.current !== current.parentIndex
+  useEffect(() => {
+    prevParentRef.current = current?.parentIndex ?? null
+  }, [current?.parentIndex])
+  const overlayEnterTransition = parentChanged
+    ? resolveForegroundTransition(current?.parentConfig.transition)
+    : null
   // Full resolved shape so we can dispatch between the legacy flat chart-panel
   // path and the region-aware ForegroundLayoutSlot. Legacy stories stay on the
   // flat path (zero-visible-change); stories that opt in to
@@ -317,9 +389,114 @@ export default function StoryShell({
       { root, threshold: [0.55] }
     )
 
-    els.forEach((el) => observer.observe(el))
+    els.forEach((el) => {
+      // Runway sections are activated by the scroll listener below (the
+      // centerline rule) — the observer's 0.55 threshold can never fire for
+      // an element taller than the root (max ratio = 1/runway), and its
+      // enter/leave records would activate a viewport early going down and
+      // go stale going back up. Everything else keeps the observer.
+      const idx = Number(el.dataset.unitIndex)
+      if (!Number.isNaN(idx) && runwayByUnit[idx] != null) return
+      observer.observe(el)
+    })
     return () => observer.disconnect()
-  }, [units.length, isPortrait])
+  }, [units.length, isPortrait, runwayByUnit])
+
+  // Runway scrub driver. Owns (a) per-runway progress t published on
+  // `scrubRef` and (b) `activeUnit` while a runway covers the scrollport
+  // centerline. rAF-throttled passive scroll listener (the HomeClient
+  // pattern); geometry (offsetTop/offsetHeight, container-relative) is cached
+  // and re-measured on resize — it never changes on scroll. Disabled in the
+  // editor (`!liveScrubEnabled`) — the editor drives `seekRef` explicitly
+  // instead, and running this listener too would race those writes.
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root || !hasRunways || !liveScrubEnabled) {
+      scrubRef.current = null
+      return
+    }
+    let geoms: Array<{ unit: number; top: number; height: number }> = []
+    const measure = () => {
+      geoms = []
+      for (const el of root.querySelectorAll<HTMLElement>('[data-unit-index]')) {
+        const idx = Number(el.dataset.unitIndex)
+        if (Number.isNaN(idx) || runwayByUnit[idx] == null) continue
+        geoms.push({ unit: idx, top: el.offsetTop, height: el.offsetHeight })
+      }
+    }
+    let raf = 0
+    const compute = () => {
+      raf = 0
+      const scrollTop = root.scrollTop
+      const viewport = root.clientHeight
+      let engaged: { unit: number; t: number } | null = null
+      for (const g of geoms) {
+        if (coversCenterline(scrollTop, g.top, g.height, viewport)) {
+          engaged = { unit: g.unit, t: runwayProgress(scrollTop, g.top, g.height, viewport) }
+          break
+        }
+      }
+      scrubRef.current = engaged
+      // No-op re-render when unchanged; the observer handles non-runway units.
+      if (engaged) setActiveUnit(engaged.unit)
+    }
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute)
+    }
+    measure()
+    compute()
+    root.addEventListener('scroll', onScroll, { passive: true })
+    const ro = new ResizeObserver(() => {
+      measure()
+      if (!raf) raf = requestAnimationFrame(compute)
+    })
+    ro.observe(root)
+    return () => {
+      root.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+      scrubRef.current = null
+    }
+  }, [units, runwayByUnit, hasRunways, liveScrubEnabled, isPortrait])
+
+  // Editor seek bridge (`?editor=1`, E1). Lands the shell at an EXACT
+  // (unit, t) — unlike the IntersectionObserver or the runway scroll
+  // listener above, both of which are async and gesture-driven. `unit`
+  // indexes THIS shell's own `units` (desktop, unless the preview happens to
+  // be portrait) — the admin timeline must resolve the same array to keep
+  // indices aligned.
+  const seekToUnit = useCallback(
+    (unit: number, t: number) => {
+      const root = containerRef.current
+      if (!root || units.length === 0) return
+      const clamped = Math.max(0, Math.min(unit, units.length - 1))
+      const tClamped = Math.max(0, Math.min(1, t))
+      setActiveUnit(clamped)
+      seekRef.current = { unit: clamped, t: tClamped }
+      const el = root.querySelector<HTMLElement>(`[data-unit-index="${clamped}"]`)
+      if (!el) return
+      const runway = runwayByUnit[clamped]
+      root.scrollTop =
+        runway != null
+          ? scrollTopForRunwayT(el.offsetTop, el.offsetHeight, root.clientHeight, tClamped)
+          : el.offsetTop
+    },
+    [units.length, runwayByUnit]
+  )
+
+  useEffect(() => {
+    if (!isEditor) return
+    window.parent.postMessage({ type: 'viz-story-ready', sectionCount: units.length }, '*')
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'viz-story-seek') return
+      const unit = Number(e.data.unit)
+      const t = Number(e.data.t)
+      if (Number.isNaN(unit) || Number.isNaN(t)) return
+      seekToUnit(unit, t)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [isEditor, units.length, seekToUnit])
 
   // Host-driven scroll sync (`?embed=1`).
   // On mount the story advertises its section count so the host can size its
@@ -367,9 +544,10 @@ export default function StoryShell({
 
   // Story-scoped opt-in via `defaults.progress: true` in the .config.yaml.
   // Hidden during autoplay/capture so the indicator doesn't appear in
-  // rendered video frames.
+  // rendered video frames, and in the editor (its own timeline is the
+  // progress UI — a second jump control would be redundant chrome).
   const showProgress =
-    isDeckFormat && defaults.progress === true && !isAutoplay && !isCapture
+    isDeckFormat && defaults.progress === true && !isAutoplay && !isCapture && !isEditor
 
   const handleProgressJump = useCallback((targetIndex: number) => {
     const root = containerRef.current
@@ -391,6 +569,13 @@ export default function StoryShell({
         isCapture,
         units,
         format,
+        // Undefined on non-scrubbing surfaces (embed/autoplay/capture/reduced
+        // motion, or no runway sections) so StageVizSlot can't accidentally
+        // enter scrub mode there.
+        scrub: liveScrubEnabled && hasRunways ? scrubRef : undefined,
+        // Undefined everywhere except the editor iframe — every other
+        // surface has no seek bridge and this branch is dead code there.
+        seek: isEditor ? seekRef : undefined,
       }}
     >
       {/* ─── Persistent background slot ──────────────────────────────────
@@ -472,6 +657,7 @@ export default function StoryShell({
               unitKey={`${current?.parentIndex ?? 0}-${current?.subIndex ?? 0}`}
               activeStep={activeSub}
               mode={mode}
+              enterTransition={overlayEnterTransition}
             />
           </div>
         </div>
@@ -493,6 +679,7 @@ export default function StoryShell({
             activeStep={activeSub}
             mode={mode}
             isPortrait={isPortrait}
+            enterTransition={overlayEnterTransition}
           />
         </div>
       )}
@@ -505,7 +692,12 @@ export default function StoryShell({
       <div
         ref={containerRef}
         className={`relative h-svh overflow-y-scroll overscroll-contain hide-scrollbar${
-          isEmbed ? '' : ' snap-y snap-mandatory'
+          // Snap disabled in embed (host-driven scrollTop writes) and the
+          // editor (seekToUnit's own scrollTop writes) — in both cases an
+          // external driver owns scroll position and the snap engine
+          // fighting it after a programmatic write would misplace the
+          // reader.
+          isEmbed || isEditor ? '' : ' snap-y snap-mandatory'
         }`}
       >
         {units.map((unit, i) => (
@@ -529,6 +721,7 @@ export default function StoryShell({
             // The fixed-overlay paths (map format, autoplay, capture) mount
             // only the active unit, so they keep isActive=true by default.
             isActive={i === activeUnit}
+            runway={runwayByUnit[i]}
           />
         ))}
       </div>

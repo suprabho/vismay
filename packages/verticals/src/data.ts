@@ -373,7 +373,7 @@ export function resolveAppUrls(slug: string): {
 }
 
 /**
- * The five headless render surfaces, in the order the render-engine extraction
+ * The headless render surfaces, in the order the render-engine extraction
  * repoints them off vizmaya.fyi onto the neutral `apps/render` service.
  */
 export type RenderSurfaceKind =
@@ -382,6 +382,7 @@ export type RenderSurfaceKind =
   | 'slides'
   | 'report'
   | 'autoplay'
+  | 'timelineFrame'
 
 /** Per-surface env override — the strangler's flip knob, one per surface. */
 const RENDER_SURFACE_ENV: Record<RenderSurfaceKind, string> = {
@@ -390,6 +391,7 @@ const RENDER_SURFACE_ENV: Record<RenderSurfaceKind, string> = {
   slides: 'RENDER_SURFACE_URL_SLIDES',
   report: 'RENDER_SURFACE_URL_REPORT',
   autoplay: 'RENDER_SURFACE_URL_AUTOPLAY',
+  timelineFrame: 'RENDER_SURFACE_URL_TIMELINE_FRAME',
 }
 
 /**

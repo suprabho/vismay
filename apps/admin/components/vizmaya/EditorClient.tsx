@@ -95,6 +95,11 @@ export default function EditorClient({
     appSlug && appSlug !== 'vizmaya-fyi'
       ? `/${appSlug}/${slug}/canvas`
       : `/vizmaya/${slug}/canvas`
+  // Same routing split as canvas — see above.
+  const timelineHref =
+    appSlug && appSlug !== 'vizmaya-fyi'
+      ? `/${appSlug}/${slug}/timeline`
+      : `/vizmaya/${slug}/timeline`
   const searchParams = useSearchParams()
   const initialTab: Tab = (() => {
     const q = searchParams.get('tab')
@@ -311,6 +316,12 @@ export default function EditorClient({
           className="text-sm text-neutral-200 hover:text-white shrink-0"
         >
           ✎ canvas
+        </Link>
+        <Link
+          href={timelineHref}
+          className="text-sm text-neutral-200 hover:text-white shrink-0"
+        >
+          ▶ timeline
         </Link>
         <Link
           href={signedLinks.reports}

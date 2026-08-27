@@ -31,6 +31,30 @@ export interface StoryShellContextValue {
    * left-half) is wrong for full-canvas deck slots that self-position.
    */
   format?: StoryFormat
+  /**
+   * Live scrub channel for `clock: 'scrubbed'` runway sections. A mutable ref
+   * the shell's scroll listener writes at scroll-frame rate; consumers
+   * (StageVizSlot) read it inside their own rAF loop, so scroll never rides a
+   * React render. `current: null` = no runway section engaged. Undefined =
+   * this surface doesn't drive scrubbing (embed, autoplay, capture, reduced
+   * motion, hand-built shells) — scrubbed beats then behave as triggered.
+   */
+  scrub?: { readonly current: { unit: number; t: number } | null }
+  /**
+   * External seek channel (the admin editor's postMessage seek bridge, E1).
+   * A mutable ref the shell's `viz-story-seek` listener writes on each
+   * inbound message; consumers (StageVizSlot) read it inside their own rAF
+   * loop and — when present for the active beat — it wins over BOTH clocks
+   * (`scrub` and the triggered wall-clock), sampling exactly like `scrub`
+   * does. `current: null` = no seek received yet. Undefined = this surface
+   * has no seek bridge (every surface except the editor iframe).
+   * Deliberately independent of `scrub`: `scrub` stays scoped to a live
+   * reader's own runway-scroll gesture (and is excluded on embed/autoplay/
+   * capture); conflating the two would let an editor seek accidentally
+   * satisfy embed/capture's scrub-exclusion rules, or let a live scrubbed
+   * section respond to a stray seek payload.
+   */
+  seek?: { readonly current: { unit: number; t: number } | null }
 }
 
 const StoryShellContext = createContext<StoryShellContextValue | null>(null)

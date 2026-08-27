@@ -1,9 +1,12 @@
 'use client'
 
-import { Suspense, lazy, useMemo, useRef } from 'react'
+import { Suspense, lazy, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ComponentType } from 'react'
 import type { VizLayer } from './lib/storyConfig.types'
 import { getVizModule } from './registry'
+import { cssEasing } from './lib/stageEasing'
+import { usePrefersReducedMotion } from './lib/usePrefersReducedMotion'
+import type { ResolvedEnterTransition } from './lib/sectionTransition'
 import type { VizCaptureHandle, VizLayerPanel, VizLayerStyle, VizModule, VizRenderProps } from './types'
 
 interface ForegroundVizSlotProps {
@@ -41,6 +44,14 @@ interface ForegroundVizSlotProps {
    * capture) — which only ever mount the active unit — animate immediately.
    */
   isActive?: boolean
+  /**
+   * Resolved section-enter transition (`transition.foreground`, non-cut) for
+   * this slot's boundary, or null/omitted for today's hard cut. Each layer
+   * reveals from the transition's from-pose when it becomes active, staggered
+   * by its `style.revealDelayMs`. Forced off in capture/print and under
+   * reduced motion.
+   */
+  enterTransition?: ResolvedEnterTransition | null
 }
 
 /**
@@ -167,6 +178,52 @@ function layerWrapperStyle(
   return css
 }
 
+/** From-pose translate for a slide reveal; direction = direction of travel. */
+function slideFrom(direction: ResolvedEnterTransition['direction']): string {
+  switch (direction) {
+    case 'up':
+      return 'translateY(48px)'
+    case 'down':
+      return 'translateY(-48px)'
+    case 'left':
+      return 'translateX(48px)'
+    default:
+      return 'translateX(-48px)'
+  }
+}
+
+const REVEAL_IDENTITY: CSSProperties = { width: '100%', height: '100%' }
+
+/**
+ * Section-enter reveal for one layer. Two-phase: the from-pose paints on
+ * mount, then `entered` flips one frame later so the CSS transition runs.
+ * With `isActive` false (deck in-flow, section not yet on screen) the layer
+ * holds the from-pose and reveals when the IntersectionObserver activates the
+ * section. Null spec = identity (today's behavior, byte-for-byte).
+ */
+function useEnterReveal(
+  spec: ResolvedEnterTransition | null,
+  isActive: boolean,
+  delayMs: number
+): CSSProperties {
+  const [entered, setEntered] = useState(false)
+  useLayoutEffect(() => {
+    if (!spec) return
+    const raf = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(raf)
+  }, [spec])
+  if (!spec) return REVEAL_IDENTITY
+  const shown = isActive && entered
+  const timing = `${spec.durationMs}ms ${cssEasing(spec.easing)} ${delayMs}ms`
+  return {
+    width: '100%',
+    height: '100%',
+    opacity: shown ? 1 : 0,
+    transform: shown || spec.kind !== 'slide' ? 'none' : slideFrom(spec.direction),
+    transition: `opacity ${timing}, transform ${timing}`,
+  }
+}
+
 interface LayerProps {
   slug: string
   layer: VizLayer
@@ -179,6 +236,7 @@ interface LayerProps {
   stack: boolean
   noteReady: () => void
   isActive: boolean
+  enterTransition: ResolvedEnterTransition | null
 }
 
 function ForegroundLayer({
@@ -193,6 +251,7 @@ function ForegroundLayer({
   stack,
   noteReady,
   isActive,
+  enterTransition,
 }: LayerProps) {
   const captureRef = useRef<VizCaptureHandle | null>(null)
   // Lazy import the module's component once per module. `useMemo` keys on the
@@ -209,21 +268,28 @@ function ForegroundLayer({
       return null
     }
   }, [layer, module, slug, index])
+  const revealDelayMs = resolveLayerStyle(layer, module, isPortrait).revealDelayMs ?? 0
+  // The reveal rides an INNER div so the positioned wrapper's own transform
+  // (load-bearing for centered layers) is never touched. `pointer-events`
+  // inherits, so the wrapper's setting still governs interactivity.
+  const revealStyle = useEnterReveal(enterTransition, isActive, revealDelayMs)
   if (config == null) return null
   return (
     <div style={layerWrapperStyle(layer, index, module, { isPortrait, stack })}>
-      <Suspense fallback={null}>
-        <LazyComponent
-          slug={slug}
-          unitKey={unitKey}
-          config={config}
-          activeStep={activeStep}
-          mode={mode}
-          noteReady={noteReady}
-          captureRef={captureRef}
-          isActive={isActive}
-        />
-      </Suspense>
+      <div style={revealStyle}>
+        <Suspense fallback={null}>
+          <LazyComponent
+            slug={slug}
+            unitKey={unitKey}
+            config={config}
+            activeStep={activeStep}
+            mode={mode}
+            noteReady={noteReady}
+            captureRef={captureRef}
+            isActive={isActive}
+          />
+        </Suspense>
+      </div>
     </div>
   )
 }
@@ -238,8 +304,15 @@ export default function ForegroundVizSlot({
   portraitStack = false,
   noteLayerReady,
   isActive = true,
+  enterTransition = null,
 }: ForegroundVizSlotProps) {
+  const reducedMotion = usePrefersReducedMotion()
   if (layers.length === 0) return null
+
+  // Reveal transitions never run in capture/print (deterministic frames) or
+  // under reduced motion — the layers mount settled, exactly as before.
+  const reveal =
+    mode === 'capture' || mode === 'print' || reducedMotion ? null : enterTransition
 
   const renderedLayers = layers.map((layer, index) => {
     const module = getVizModule(layer.type)
@@ -269,6 +342,7 @@ export default function ForegroundVizSlot({
         stack={portraitStack}
         noteReady={() => noteLayerReady?.(layerKey)}
         isActive={isActive}
+        enterTransition={reveal}
       />
     )
   })

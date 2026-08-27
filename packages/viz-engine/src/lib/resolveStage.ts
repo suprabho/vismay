@@ -2,13 +2,16 @@ import type {
   ResolvedUnit,
   StageConfig,
   StageEntity,
+  StageKeyframe,
   StageTransform,
   StageEasing,
   BeatSelector,
   ResolvedStage,
   ResolvedStageEntity,
   ResolvedStageFrame,
+  ResolvedStageSegment,
 } from './storyConfig.types'
+import { evalEasing } from './stageEasing'
 
 /**
  * Densify a story's Tier-1 stage config into per-unit frames.
@@ -16,17 +19,24 @@ import type {
  * Mirrors the map module's persistent-aggregated pattern: sparse, beat-keyed
  * transform keyframes become one settled transform PER unit (index-aligned
  * with the active `units` array), interpolating between bracketing keyframes
- * and holding at the ends. The renderer then just reads `frames[activeUnit]`
- * and tweens (live) or snaps (capture) to it — beat→beat smoothing is a CSS
- * transition, so this resolver does plain linear sampling; the per-segment
- * `easing` rides on each frame for the renderer's transition-timing-function.
+ * and holding at the ends. On top of the settled pose, each present frame
+ * carries a compiled beat-local SEGMENT list (the slide timeline): sub-
+ * keyframes (`at.t`) and per-keyframe `delayMs`/`durationMs` become
+ * `{startMs, endMs, from, to, easing}` runs that the renderer's rAF clock
+ * samples via `sampleBeat`. Beats authored the legacy way (one keyframe, no
+ * timing) compile to a single `{0, 700, from: null, to: settled}` segment —
+ * exactly the old global tween — and capture/reduced-motion snap straight to
+ * `frames[activeUnit].transform`, so the settled contract is unchanged.
  *
  * Beat selectors resolve against `units` (by section id / index + subIndex) so
  * tracks survive content edits, exactly like the (parentIndex, subIndex)
  * identity `lib/storyTts.ts` uses. Pure — no content or DOM access.
+ * See docs/stage-timeline-and-section-transitions.md.
  */
 
 const DEFAULT_EASING: StageEasing = 'easeInOut'
+/** Legacy single-tween length — the default segment duration everywhere. */
+const DEFAULT_SEGMENT_MS = 700
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t
@@ -136,6 +146,148 @@ const ABSENT_FRAME: ResolvedStageFrame = {
   present: false,
   transform: withDefaults({}),
   easing: 'linear',
+  segments: [],
+  timelineMs: 0,
+}
+
+/** One keyframe of a beat-local group. `t` is the EFFECTIVE beat-local time; `explicitT` records whether the author wrote it. */
+interface BeatGroupMember {
+  t: number
+  explicitT: boolean
+  transform: StageTransform
+  easing: StageEasing
+  delayMs?: number
+  durationMs?: number
+}
+
+interface BeatGroup {
+  idx: number
+  /** Sorted by effective t; the last member is the beat's settled pose. */
+  members: BeatGroupMember[]
+}
+
+/**
+ * Group an entity's keyframes by resolved beat index and assign effective
+ * beat-local times: a sole `t`-less keyframe is the settled pose (t = 1,
+ * legacy semantics); a `t`-less member of a multi-keyframe group is the
+ * beat's start pose (t = 0). Duplicates (same t, or a second `t`-less member)
+ * were rejected at parse; here we drop them defensively with a warning.
+ */
+function groupKeyframes(units: ResolvedUnit[], entity: StageEntity): BeatGroup[] {
+  const byIdx = new Map<number, Array<{ kf: StageKeyframe; t: number | null }>>()
+  for (const kf of entity.keyframes) {
+    const idx = resolveBeatIndex(units, kf.at)
+    if (idx < 0) continue
+    const t = typeof kf.at === 'object' && typeof kf.at.t === 'number' ? kf.at.t : null
+    const list = byIdx.get(idx) ?? []
+    list.push({ kf, t })
+    byIdx.set(idx, list)
+  }
+  const groups: BeatGroup[] = []
+  for (const [idx, list] of byIdx) {
+    const members: BeatGroupMember[] = []
+    const seenT = new Set<number>()
+    let sawTless = false
+    for (const { kf, t } of list) {
+      const effective = t ?? (list.length === 1 ? 1 : 0)
+      if (t == null && sawTless) {
+        console.warn(`[stage] entity '${entity.id}': multiple t-less keyframes for one beat — dropping extras`)
+        continue
+      }
+      if (t == null) sawTless = true
+      if (seenT.has(effective)) {
+        console.warn(`[stage] entity '${entity.id}': duplicate keyframe t=${effective} for one beat — dropping`)
+        continue
+      }
+      seenT.add(effective)
+      members.push({
+        t: effective,
+        explicitT: t != null,
+        transform: kf.transform,
+        easing: kf.easing ?? DEFAULT_EASING,
+        delayMs: kf.delayMs,
+        durationMs: kf.durationMs,
+      })
+    }
+    members.sort((a, b) => a.t - b.t)
+    if (members.length > 0) groups.push({ idx, members })
+  }
+  return groups.sort((a, b) => a.idx - b.idx)
+}
+
+/** One implicit legacy segment: tween into the settled pose over 700 ms. */
+function implicitSegments(transform: StageTransform, easing: StageEasing): ResolvedStageSegment[] {
+  return [{ startMs: 0, endMs: DEFAULT_SEGMENT_MS, from: null, to: transform, easing }]
+}
+
+/** Normalize a segment pose's discrete fields to the beat's settled values. */
+function normalizeToSettled(pose: StageTransform, settled: StageTransform): StageTransform {
+  return { ...pose, zBand: settled.zBand, zIndex: settled.zIndex }
+}
+
+/**
+ * Compile a beat group into its segment list.
+ *  - ms-mode (one keyframe, no `t`): `[delayMs, delayMs + durationMs]` into
+ *    the settled pose, retargeting from the live pose (`from: null`).
+ *  - t-mode: contiguous runs between sub-keyframe poses at `t * timelineMs`.
+ *    A missing `t: 0` gets a prepended retarget run from the live pose; an
+ *    authored `t: 0` is a hard start (zero-length segment — intentional cut).
+ */
+function compileSegments(
+  group: BeatGroup,
+  settled: StageTransform,
+  sectionTimelineMs: number | undefined
+): ResolvedStageSegment[] {
+  const members = group.members
+  const usesT = members.length > 1 || members.some((m) => m.explicitT)
+  if (!usesT) {
+    const sole = members[0]
+    const start = sole.delayMs ?? 0
+    return [{ startMs: start, endMs: start + (sole.durationMs ?? DEFAULT_SEGMENT_MS), from: null, to: settled, easing: sole.easing }]
+  }
+  const T = sectionTimelineMs ?? DEFAULT_SEGMENT_MS
+  const poses = members.map((m) => normalizeToSettled(withDefaults(m.transform), settled))
+  const segments: ResolvedStageSegment[] = []
+  // First pose: hard start when authored at t:0, retarget run when not.
+  segments.push({ startMs: 0, endMs: members[0].t * T, from: null, to: poses[0], easing: members[0].easing })
+  for (let k = 1; k < members.length; k++) {
+    segments.push({
+      startMs: members[k - 1].t * T,
+      endMs: members[k].t * T,
+      from: poses[k - 1],
+      to: poses[k],
+      easing: members[k].easing,
+    })
+  }
+  return segments
+}
+
+/**
+ * Sample a beat-local pose at `tMs` (ms since beat entry). `entryPose` feeds
+ * `from: null` segments — the entity's live pose captured at beat entry, so
+ * interrupted tweens retarget continuously; null falls back to the segment's
+ * own `to` (motionless — e.g. first mount). At/after `timelineMs` this
+ * returns the frame's settled transform by identity, which is the literal
+ * back-compat/capture guarantee.
+ */
+export function sampleBeat(
+  frame: ResolvedStageFrame,
+  tMs: number,
+  entryPose: StageTransform | null
+): StageTransform {
+  if (!frame.present || frame.segments.length === 0) return frame.transform
+  if (tMs >= frame.timelineMs) return frame.transform
+  const segs = frame.segments
+  let seg = segs[0]
+  if (tMs < seg.startMs) return seg.from ?? entryPose ?? seg.to
+  for (const s of segs) {
+    if (s.startMs <= tMs) seg = s
+    else break
+  }
+  if (tMs >= seg.endMs) return seg.to
+  const from = seg.from ?? entryPose ?? seg.to
+  const p = (tMs - seg.startMs) / (seg.endMs - seg.startMs)
+  return interpolateTransform(from, seg.to, evalEasing(seg.easing, p))
 }
 
 function resolveEntity(
@@ -147,14 +299,14 @@ function resolveEntity(
   const portraitHidden = entity.portrait?.hidden ?? entity.role === 'object'
   if (opts.isPortrait && portraitHidden) return null
 
-  const resolved: ResolvedKeyframe[] = entity.keyframes
-    .map((kf) => ({
-      idx: resolveBeatIndex(units, kf.at),
-      transform: kf.transform,
-      easing: kf.easing ?? DEFAULT_EASING,
-    }))
-    .filter((k) => k.idx >= 0)
-    .sort((a, b) => a.idx - b.idx)
+  // Beat groups (sub-keyframes); the settled member of each group feeds the
+  // cross-beat densifier below EXACTLY like a legacy keyframe, so settled
+  // poses (and thus capture snaps and cross-beat interpolation) are unchanged.
+  const groups = groupKeyframes(units, entity)
+  const resolved: ResolvedKeyframe[] = groups.map((g) => {
+    const settledMember = g.members[g.members.length - 1]
+    return { idx: g.idx, transform: settledMember.transform, easing: settledMember.easing }
+  })
 
   if (resolved.length === 0) {
     console.warn(
@@ -171,6 +323,7 @@ function resolveEntity(
   const interactive = entity.role === 'subject' ? entity.interactive ?? true : false
   const zFocusCapable = entity.role === 'subject' ? entity.zFocusCapable ?? false : false
 
+  const groupByIdx = new Map(groups.map((g) => [g.idx, g]))
   const frames: ResolvedStageFrame[] = []
   for (let i = 0; i < units.length; i++) {
     if (i < lo || i > hi) {
@@ -178,24 +331,36 @@ function resolveEntity(
       continue
     }
     const { transform, easing } = sampleTrack(resolved, i)
-    frames.push({ present: true, transform, easing })
+    const group = groupByIdx.get(i)
+    const segments = group
+      ? compileSegments(group, transform, units[i].parentConfig.timelineMs)
+      : implicitSegments(transform, easing)
+    const timelineMs = segments.reduce((m, s) => Math.max(m, s.endMs), 0)
+    frames.push({ present: true, transform, easing, segments, timelineMs })
   }
 
   // Lifetime-edge pre-roll / post-roll poses: render one mounted frame just
   // before enter (in `enterTransform`) and just after exit (in `exitTransform`)
   // so the entity animates in/out instead of popping.
   if (entity.enterTransform && lo - 1 >= 0) {
+    const transform = withDefaults(entity.enterTransform)
     frames[lo - 1] = {
       present: true,
-      transform: withDefaults(entity.enterTransform),
+      transform,
       easing: resolved[0].easing,
+      segments: implicitSegments(transform, resolved[0].easing),
+      timelineMs: DEFAULT_SEGMENT_MS,
     }
   }
   if (entity.exitTransform && hi + 1 < units.length) {
+    const transform = withDefaults(entity.exitTransform)
+    const easing = resolved[resolved.length - 1].easing
     frames[hi + 1] = {
       present: true,
-      transform: withDefaults(entity.exitTransform),
-      easing: resolved[resolved.length - 1].easing,
+      transform,
+      easing,
+      segments: implicitSegments(transform, easing),
+      timelineMs: DEFAULT_SEGMENT_MS,
     }
   }
 

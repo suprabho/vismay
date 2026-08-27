@@ -2,6 +2,7 @@
 
 **Status:** **Tier 1 shipped** (flat 2D screen-space, Jun 23 · PR #321) · Tiers 2–4 (3D) remain design exploration
 **Relates to:** [`deck-layouts-de-hardcode.md`](deck-layouts-de-hardcode.md) (the vizslot tier) · [`roadmap-june-2026.md`](roadmap-june-2026.md) (Tier 1 fit)
+**Refined by:** [`stage-timeline-and-section-transitions.md`](stage-timeline-and-section-transitions.md) (slide-level timeline, per-section clocks & transitions, editor design — Aug 20)
 **Generated:** June 4, 2026
 
 ---

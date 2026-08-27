@@ -11,6 +11,7 @@ import {
 import type { ResolvedForeground } from './lib/resolveSlots'
 import type { ResolvedUnit } from './lib/storyConfig.types'
 import type { ForegroundLayoutDef } from './types'
+import { resolveForegroundTransition, type ResolvedEnterTransition } from './lib/sectionTransition'
 
 interface ForegroundLayoutSlotProps {
   slug: string
@@ -33,6 +34,13 @@ interface ForegroundLayoutSlotProps {
    * call sites (map format, autoplay, capture) animate immediately.
    */
   isActive?: boolean
+  /**
+   * Section-enter transition for this slot's boundary. `undefined` (omitted)
+   * = resolve from `unit.parentConfig.transition`; `null` = explicitly no
+   * transition (callers pass null for non-boundary mounts, e.g. sub-beat
+   * swaps inside one section). Forwarded to every region's ForegroundVizSlot.
+   */
+  enterTransition?: ResolvedEnterTransition | null
 }
 
 /**
@@ -60,7 +68,12 @@ export default function ForegroundLayoutSlot({
   isPortrait = false,
   noteLayerReady,
   isActive = true,
+  enterTransition,
 }: ForegroundLayoutSlotProps) {
+  const resolvedEnter =
+    enterTransition !== undefined
+      ? enterTransition
+      : resolveForegroundTransition(unit.parentConfig.transition)
   const { layoutDef, regions } = useMemo(() => {
     if (foreground.kind === 'flat') {
       const def = getForegroundLayout(FLAT_FOREGROUND_LAYOUT)
@@ -119,6 +132,7 @@ export default function ForegroundLayoutSlot({
               portraitStack={portraitStack}
               noteLayerReady={noteLayerReady}
               isActive={isActive}
+              enterTransition={resolvedEnter}
             />
           </div>
         )
