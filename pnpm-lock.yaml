@@ -161,7 +161,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -573,7 +573,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.2.2
-        version: 16.2.2(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.2.2(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.0
@@ -991,6 +991,9 @@ importers:
 
   apps/vizmaya-fyi:
     dependencies:
+      '@amplitude/analytics-browser':
+        specifier: ^2.44.1
+        version: 2.45.7
       '@anthropic-ai/sdk':
         specifier: ^0.95.1
         version: 0.95.2(zod@3.25.76)
@@ -1935,6 +1938,39 @@ packages:
 
   '@amcharts/amcharts5@5.14.4':
     resolution: {integrity: sha512-Tl7wQLWvsvyWVtlCIm1yhZtJviSDYjuNTnlUkO0D49GyByoK0nb9fr0DK4rUw4DVgyLcySxWBsb2lzTJm5Rd9Q==}
+
+  '@amplitude/analytics-browser@2.45.7':
+    resolution: {integrity: sha512-Ykq7AeVHdgwJLnpqaOfKfHPvcVowDbwhG2ioLNeTzynMW89c7ntKdclF1laCOqZZZgOOUpTl8u+KhGIQKUaO7g==}
+
+  '@amplitude/analytics-connector@1.6.7':
+    resolution: {integrity: sha512-eaWNp+JAeITRpX8+Ph5PdAzYs/M8c1JmQ0YJI8glCvuYjW0NvO9VA5jpPqfnoBvAx+/vTuasDqVOMbO8jbAEYg==}
+
+  '@amplitude/analytics-core@2.55.0':
+    resolution: {integrity: sha512-fzjXEWX2o5I58Tl5jYaw2G5Tp5ejfcDkayWMogEThCl/fd6AqRKkrl/dVVqGV3h/GS3HZws7J4baIWkaq92jkQ==}
+
+  '@amplitude/element-selector@0.2.1':
+    resolution: {integrity: sha512-QZYvhO2cyaw6B7gFWu95QrE/l2a5oSCHgYR2S6DqZ6/NVDWIzbBtEjwLcxZFPXbO+DM1Rng6GUNljMNFtdlFDw==}
+
+  '@amplitude/plugin-autocapture-browser@1.28.12':
+    resolution: {integrity: sha512-aY9FFR+NvFaMgCudBERjjYMWEO7qIJO0rQFpytSro5nAjCatJEUOUBZinOjI2H8Y2rKI0PFCHVjjX4fcr1I5eg==}
+
+  '@amplitude/plugin-custom-enrichment-browser@0.1.22':
+    resolution: {integrity: sha512-KDTVCOmivrLzp1Q9EJuU61Yzw0Mip9DU/VnMnfROD37rCv0QX78O7RuYVzN+R6sprgUw+tkmS512PmkbVLOFsA==}
+
+  '@amplitude/plugin-event-property-attribution-browser@0.2.14':
+    resolution: {integrity: sha512-uFuKp4sADFMLgh6vM/+c8RC6AXpMwcYVD9ZKkTjQn6tTz20cct1AFEjnnFc7/n9oT0D8EKvUUE7SsLg+V55QvQ==}
+
+  '@amplitude/plugin-network-capture-browser@1.10.14':
+    resolution: {integrity: sha512-MGRgT89KaPDvrZXMp+5rWgF5GTC7YkCj/gIgHZ22FgH1CrejwHhA5FWTurW28f48rOgZ+V1Ruqab70/sst4KJQ==}
+
+  '@amplitude/plugin-page-url-enrichment-browser@0.7.24':
+    resolution: {integrity: sha512-kYwEBh+ssdbdqslGHVV3/m0ao139HWjd4SOwBZ47EQjeYXRDzNAw752iQIr1vx/+zRRdEOLQHO3GS1JGdWSIKw==}
+
+  '@amplitude/plugin-page-view-tracking-browser@2.11.14':
+    resolution: {integrity: sha512-FgdBz7o0XOwfgXFppIj3O+ENeGYhmkQW6LUOEcKQwR1/kKgT+2GhOLD/u9rWnGXYcjYrWH8jtmr7D62OvlF6Dg==}
+
+  '@amplitude/plugin-web-vitals-browser@1.1.46':
+    resolution: {integrity: sha512-Pko9gf7yDNmiEhGq2aJmJmSFckN155AYJWn/3t8NPQXakzWLagFjmOuxvPx4OefIJtyROU1rYmGM/hwTrBSvBQ==}
 
   '@anthropic-ai/sdk@0.95.2':
     resolution: {integrity: sha512-Egddwo3sheo1PzUrMkZnH6VkQYwS0h/b/i8vSK8Ta9M45UQipAMeDFH57dYuDAfXMEUUGeKw6CMlremgMZgrSQ==}
@@ -4812,6 +4848,9 @@ packages:
 
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
+
+  '@types/zen-observable@0.8.3':
+    resolution: {integrity: sha512-fbF6oTd4sGGy0xjHPKAt+eS2CrxJ3+6gQ3FGcBoIJR2TLAyCkCyI8JqZNy+FeON0AhVgNJoUumVoZQjBFUqHkw==}
 
   '@typescript-eslint/eslint-plugin@8.59.3':
     resolution: {integrity: sha512-PwFvSKsXGShKGW6n5bZOhGHEcCZXM8HofLK9fNsEwZXzFRjoY+XT1Vsf1zgyXdwTr0ZYz1/2tkZ0DBTT9jZjhw==}
@@ -9136,6 +9175,9 @@ packages:
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 
+  safe-json-stringify@1.2.0:
+    resolution: {integrity: sha512-gH8eh2nZudPQO6TytOvbxnuhYBOvDBBLW52tz5q6X58lJcd/tkmqFR+5Z9adS8aJtURSXWThWy/xJtJwixErvg==}
+
   safe-push-apply@1.0.0:
     resolution: {integrity: sha512-iKE9w/Z7xCzUMIZqdBsp6pEQvwuEebH4vdpjcDWnyzaI6yl6O9FHvVpmGelvEHNsoY6wGblkxR6Zty/h00WiSA==}
     engines: {node: '>= 0.4'}
@@ -9983,6 +10025,9 @@ packages:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
     engines: {node: '>= 8'}
 
+  web-vitals@5.1.0:
+    resolution: {integrity: sha512-ArI3kx5jI0atlTtmV0fWU3fjpLmq/nD3Zr1iFFlJLaqa5wLBkUSzINwBPySCX/8jRyjlmy1Volw1kz1g9XE4Jg==}
+
   webgl-constants@1.1.1:
     resolution: {integrity: sha512-LkBXKjU5r9vAW7Gcu3T5u+5cvSvh5WwINdr0C+9jpzVB41cjQAP5ePArDtk/WHYdVj0GefCgM73BA7FlIiNtdg==}
 
@@ -10175,6 +10220,9 @@ packages:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
 
+  zen-observable@0.10.0:
+    resolution: {integrity: sha512-iI3lT0iojZhKwT5DaFy2Ce42n3yFcLdFyOh01G7H0flMY60P8MJuVFEoJoNwXlmAyQ45GrjL6AcZmmlv8A5rbw==}
+
   zod-to-json-schema@3.25.2:
     resolution: {integrity: sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==}
     peerDependencies:
@@ -10277,6 +10325,69 @@ snapshots:
       seedrandom: 3.0.5
       svg-arc-to-cubic-bezier: 3.2.0
       tslib: 2.8.1
+
+  '@amplitude/analytics-browser@2.45.7':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      '@amplitude/plugin-autocapture-browser': 1.28.12
+      '@amplitude/plugin-custom-enrichment-browser': 0.1.22
+      '@amplitude/plugin-event-property-attribution-browser': 0.2.14
+      '@amplitude/plugin-network-capture-browser': 1.10.14
+      '@amplitude/plugin-page-url-enrichment-browser': 0.7.24
+      '@amplitude/plugin-page-view-tracking-browser': 2.11.14
+      '@amplitude/plugin-web-vitals-browser': 1.1.46
+      tslib: 2.8.1
+
+  '@amplitude/analytics-connector@1.6.7': {}
+
+  '@amplitude/analytics-core@2.55.0':
+    dependencies:
+      '@amplitude/analytics-connector': 1.6.7
+      '@types/zen-observable': 0.8.3
+      safe-json-stringify: 1.2.0
+      tslib: 2.8.1
+      zen-observable: 0.10.0
+
+  '@amplitude/element-selector@0.2.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@amplitude/plugin-autocapture-browser@1.28.12':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      '@amplitude/element-selector': 0.2.1
+      tslib: 2.8.1
+
+  '@amplitude/plugin-custom-enrichment-browser@0.1.22':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      tslib: 2.8.1
+
+  '@amplitude/plugin-event-property-attribution-browser@0.2.14':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      tslib: 2.8.1
+
+  '@amplitude/plugin-network-capture-browser@1.10.14':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      tslib: 2.8.1
+
+  '@amplitude/plugin-page-url-enrichment-browser@0.7.24':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      tslib: 2.8.1
+
+  '@amplitude/plugin-page-view-tracking-browser@2.11.14':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      tslib: 2.8.1
+
+  '@amplitude/plugin-web-vitals-browser@1.1.46':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      tslib: 2.8.1
+      web-vitals: 5.1.0
 
   '@anthropic-ai/sdk@0.95.2(zod@3.25.76)':
     dependencies:
@@ -13703,6 +13814,8 @@ snapshots:
   '@types/yargs@17.0.35':
     dependencies:
       '@types/yargs-parser': 21.0.3
+
+  '@types/zen-observable@0.8.3': {}
 
   '@typescript-eslint/eslint-plugin@8.59.3(@typescript-eslint/parser@8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
@@ -18728,6 +18841,8 @@ snapshots:
 
   safe-buffer@5.2.1: {}
 
+  safe-json-stringify@1.2.0: {}
+
   safe-push-apply@1.0.0:
     dependencies:
       es-errors: 1.3.0
@@ -19691,6 +19806,8 @@ snapshots:
 
   web-streams-polyfill@3.3.3: {}
 
+  web-vitals@5.1.0: {}
+
   webgl-constants@1.1.1: {}
 
   webgl-sdf-generator@1.1.1: {}
@@ -19866,6 +19983,8 @@ snapshots:
       yoctocolors: 2.1.2
 
   yoctocolors@2.1.2: {}
+
+  zen-observable@0.10.0: {}
 
   zod-to-json-schema@3.25.2(zod@3.25.76):
     dependencies:
