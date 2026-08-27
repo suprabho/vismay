@@ -1,6 +1,6 @@
 # Stage timeline & section transitions — refining Tier 1 toward the editor
 
-**Status:** v0 + M3 implemented (M0 + M1 + M2-lite: sub-keyframes, delay/duration stagger, rAF stage renderer, foreground `cut|fade|slide` + background `hold|crossfade`, `revealDelayMs`. M3: `clock: scrubbed` + `runway` — live-scroll-only runway sections whose scroll progress drives the beat timeline both directions, activated by a centerline rule; autoplay/capture/embed and reduced motion collapse the runway until the M4 seek bridge. Remaining transition kinds stay schema-reserved). Capture seek bridge, autoplay dwell, and the editor remain future milestones.
+**Status:** v0 + M3 implemented (M0 + M1 + M2-lite: sub-keyframes, delay/duration stagger, rAF stage renderer, foreground `cut|fade|slide` + background `hold|crossfade`, `revealDelayMs`. M3: `clock: scrubbed` + `runway` — live-scroll-only runway sections whose scroll progress drives the beat timeline both directions, activated by a centerline rule; autoplay/capture/embed and reduced motion collapse the runway until the M4 seek bridge. Remaining transition kinds stay schema-reserved). **Editor: E1 shipped** (beats-grid scrub & inspect at `apps/admin/components/timeline/`, driving the real `StoryShell` through the `viz-story-seek` bridge + `StoryTimelineFrameSurface`), **E2 in progress** (keyframe & timing editing — transform/easing/`t`/delay-duration edits, diamond drag between beats, comment-preserving YAML save). Capture/autoplay integration (M4) remains a future milestone — the seek bridge it needs now exists.
 **Refines:** [`deck-stage-subjects-objects.md`](deck-stage-subjects-objects.md) (the 3-tier stage, Tier 1 shipped PR #321)
 **Relates to:** the freeform video editor (`packages/viz-admin/src/video-project/`, `apps/admin/components/vizmaya/video/`) — the timeline vocabulary and UI this plan converges with
 **Generated:** August 20, 2026
@@ -284,8 +284,13 @@ The editor starts the moment the seek bridge exists — and the seek bridge is c
   previous settled pose"? Proposal: retarget (cheap, predictable); revisit if it reads badly.
 - **`timelineMs` vs TTS length in autoplay** — dwell is `max` of the two; does a much-longer TTS
   hold `t=1` (proposed) or stretch the choreography to fit?
-- **Editor persistence for fs-backed stories** — YAML export from E2 or admin-only (db-backed)
-  editing until the online-content migration lands?
+- ~~**Editor persistence for fs-backed stories**~~ — answered by E2: edits
+  persist through the standard `PUT /api/stories/[slug]` `{config_yaml}`
+  route, which is backing-agnostic (fs locally, db in prod) and format-aware
+  (JSON-native stories are converted server-side). Comment preservation via
+  `yaml`'s `parseDocument` + per-changed-keyframe `setIn`
+  (`apps/admin/components/timeline/spliceStage.ts`) — no admin-only fork
+  needed.
 
 ---
 

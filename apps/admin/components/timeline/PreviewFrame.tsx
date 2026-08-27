@@ -29,11 +29,15 @@ export default function PreviewFrame({ src, seek }: PreviewFrameProps) {
     return () => window.removeEventListener('message', onMessage)
   }, [])
 
-  // The iframe reloads on src change (a fresh signed URL, or a different
-  // story) — reset the handshake so seeks buffer again until it re-fires.
-  useEffect(() => {
+  // The iframe reloads on src change (a fresh signed URL, a save nonce, or a
+  // different story) — reset the handshake so seeks buffer again until it
+  // re-fires. Adjusted during render (React's prev-value pattern) rather than
+  // in an effect.
+  const [prevSrc, setPrevSrc] = useState(src)
+  if (prevSrc !== src) {
+    setPrevSrc(src)
     setReady(false)
-  }, [src])
+  }
 
   useEffect(() => {
     if (!seek) return
