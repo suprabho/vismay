@@ -4,6 +4,12 @@ import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  trackAccountDeleted,
+  trackSignedIn,
+  trackSignedOut,
+  trackSignedUp,
+} from './analytics';
 import { supabase } from './supabase';
 
 // Closes the auth popup if the app was reopened by the OAuth redirect.
@@ -87,10 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signInWithPassword: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) trackSignedIn('password');
       return { error: error?.message ?? null };
     },
     signUpWithPassword: async (email, password) => {
       const { error } = await supabase.auth.signUp({ email, password });
+      if (!error) trackSignedUp('password');
       return { error: error?.message ?? null };
     },
     signInWithGoogle: async () => {
@@ -114,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!code) return { error: 'Google sign-in did not complete. Please try again.' };
 
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (!exchangeError) trackSignedIn('google');
       return { error: exchangeError?.message ?? null };
     },
     signInWithApple: async () => {
@@ -141,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           token: credential.identityToken,
           nonce: rawNonce,
         });
+        if (!error) trackSignedIn('apple');
         return { error: error?.message ?? null };
       } catch (e: unknown) {
         // Cancel is not an error — mirrors the Google flow's dismiss handling.
@@ -149,11 +159,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     signOut: async () => {
+      // Track before the session drops so the event still carries the user id.
+      trackSignedOut();
       await supabase.auth.signOut();
     },
     deleteAccount: async () => {
       const { error } = await supabase.rpc('delete_account');
       if (error) return { error: error.message };
+      trackAccountDeleted();
       // Server-side sessions are cascade-deleted with the user; a global
       // signOut would 403 against a nonexistent user, so only clear local state.
       await supabase.auth.signOut({ scope: 'local' });

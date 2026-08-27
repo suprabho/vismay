@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { EntityCard } from '@vismay/footshorts-viz/web';
 import { BackButton } from '@/components/BackButton';
+import { trackOnboardingLeaguesSelected } from '@/lib/analytics';
 import { useLeagues } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 
@@ -59,10 +60,11 @@ function OnboardingLeaguesInner() {
     const toFollow = Array.from(picked).filter((id) => !initial.has(id));
     const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
     await Promise.all([
-      ...toFollow.map((id) => follow.mutateAsync(id)),
-      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+      ...toFollow.map((id) => follow.mutateAsync({ entityId: id, source: 'onboarding' })),
+      ...toUnfollow.map((id) => unfollow.mutateAsync({ entityId: id, source: 'onboarding' })),
     ]);
     setBusy(false);
+    if (!edit) trackOnboardingLeaguesSelected(picked.size);
     const slugs = (leagues ?? []).filter((l) => picked.has(l.id)).map((l) => l.slug);
     const qs = new URLSearchParams({ leagues: slugs.join(',') });
     if (edit) qs.set('edit', '1');

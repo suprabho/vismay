@@ -10,6 +10,7 @@ InShorts-style football news app. Swipe 60-word AI-summarized cards, follow leag
 - **Ingestion worker:** Node/TS, run on GitHub Actions cron
 - **AI:** Gemini 2.5 Flash for summarization + entity extraction
 - **Stats:** football-data.org (fixtures, standings, scores)
+- **Analytics:** Amplitude on web + mobile. One shared event taxonomy in `packages/shared/src/analytics.ts`; per-app SDK wrappers in `web/lib/analytics.ts` (Browser SDK, autocaptured page views) and `mobile/src/lib/analytics.ts` (React Native SDK, explicit `screen_viewed`). No-ops without `NEXT_PUBLIC_AMPLITUDE_API_KEY` / `EXPO_PUBLIC_AMPLITUDE_API_KEY`.
 - **News source:** RSS from 15–20 publishers (BBC, Guardian, ESPN FC, OneFootball, Goal, etc.)
 
 ## Monorepo layout

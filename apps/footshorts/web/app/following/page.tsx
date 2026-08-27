@@ -50,7 +50,7 @@ export default function FollowingPage() {
                   name={f.entity.name}
                   crestUrl={f.entity.crest_url}
                   selected
-                  onClick={() => unfollow.mutate(f.entity_id)}
+                  onClick={() => unfollow.mutate({ entityId: f.entity_id, source: 'following' })}
                 />
               ))}
             </div>

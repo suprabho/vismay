@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { FlatList, useWindowDimensions, View, type ViewToken } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FeedCard as FeedCardType } from '@footshorts/shared/schemas';
+import { trackArticleSeen } from '@/lib/analytics';
 import type { ShareCardItem } from '@/lib/useShareCards';
 import { FeedCard } from './FeedCard';
 import { ShareCardFeedItem } from './ShareCardFeedItem';
@@ -33,12 +34,14 @@ export function CardSwiper({ rows, onEndReached, ListFooterComponent, topGap: to
       viewabilityConfig: { itemVisiblePercentThreshold: 80, minimumViewTime: 1000 },
       onViewableItemsChanged: ({ viewableItems }: { viewableItems: ViewToken[] }) => {
         const cb = onItemSeenRef.current;
-        if (!cb) return;
         for (const v of viewableItems) {
           const row = v.item as DiscoverRow | undefined;
           // Only article rows feed the persisted seen-set; swiping past a
           // share card in Discover never marks it seen (web parity).
-          if (row?.kind === 'article') cb(row.article.article_id);
+          if (row?.kind === 'article') {
+            cb?.(row.article.article_id);
+            trackArticleSeen(row.article.article_id, row.article.publisher);
+          }
         }
       },
     },

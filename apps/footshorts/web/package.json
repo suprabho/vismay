@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.44.1",
     "@footshorts/brand": "workspace:*",
     "@footshorts/shared": "workspace:*",
     "@supabase/ssr": "^0.10.3",

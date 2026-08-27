@@ -22,6 +22,11 @@
     "travel:sync-story-db": "tsx scripts/travel/sync-story-db.ts",
     "travel:set-password": "tsx scripts/travel/set-trip-password.ts"
   },
+  "pnpm": {
+    "overrides": {
+      "@amplitude/analytics-react-native>@react-native-async-storage/async-storage": "^2.2.0"
+    }
+  },
   "devDependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "exifr": "^7.1.3",

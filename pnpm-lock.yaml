@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@amplitude/analytics-react-native>@react-native-async-storage/async-storage': ^2.2.0
+
 importers:
 
   .:
@@ -260,6 +263,9 @@ importers:
 
   apps/footshorts/mobile:
     dependencies:
+      '@amplitude/analytics-react-native':
+        specifier: ^1.4.13
+        version: 1.7.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       '@expo-google-fonts/forum':
         specifier: ^0.4.1
         version: 0.4.1
@@ -275,6 +281,9 @@ importers:
       '@footshorts/shared':
         specifier: workspace:*
         version: link:../shared
+      '@react-native-async-storage/async-storage':
+        specifier: ^2.2.0
+        version: 2.2.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))
       '@supabase/supabase-js':
         specifier: ^2.45.4
         version: 2.105.4
@@ -415,6 +424,9 @@ importers:
 
   apps/footshorts/web:
     dependencies:
+      '@amplitude/analytics-browser':
+        specifier: ^2.44.1
+        version: 2.45.7
       '@footshorts/brand':
         specifier: workspace:*
         version: link:../brand
@@ -1948,6 +1960,12 @@ packages:
   '@amplitude/analytics-core@2.55.0':
     resolution: {integrity: sha512-fzjXEWX2o5I58Tl5jYaw2G5Tp5ejfcDkayWMogEThCl/fd6AqRKkrl/dVVqGV3h/GS3HZws7J4baIWkaq92jkQ==}
 
+  '@amplitude/analytics-react-native@1.7.0':
+    resolution: {integrity: sha512-+iJ5vneBXJIJYVKe4ettvY2sUIZ0WbWqCeixdxWZR5zvnpl3Av11yqYk05exlkgSG6QvBdqOKOuiovKj/fSNZw==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
   '@amplitude/element-selector@0.2.1':
     resolution: {integrity: sha512-QZYvhO2cyaw6B7gFWu95QrE/l2a5oSCHgYR2S6DqZ6/NVDWIzbBtEjwLcxZFPXbO+DM1Rng6GUNljMNFtdlFDw==}
 
@@ -1971,6 +1989,9 @@ packages:
 
   '@amplitude/plugin-web-vitals-browser@1.1.46':
     resolution: {integrity: sha512-Pko9gf7yDNmiEhGq2aJmJmSFckN155AYJWn/3t8NPQXakzWLagFjmOuxvPx4OefIJtyROU1rYmGM/hwTrBSvBQ==}
+
+  '@amplitude/ua-parser-js@0.7.33':
+    resolution: {integrity: sha512-wKEtVR4vXuPT9cVEIJkYWnlF++Gx3BdLatPBM+SZ1ztVIvnhdGBZR/mn9x/PzyrMcRlZmyi6L56I2J3doVBnjA==}
 
   '@anthropic-ai/sdk@0.95.2':
     resolution: {integrity: sha512-Egddwo3sheo1PzUrMkZnH6VkQYwS0h/b/i8vSK8Ta9M45UQipAMeDFH57dYuDAfXMEUUGeKw6CMlremgMZgrSQ==}
@@ -4207,6 +4228,11 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@react-native-async-storage/async-storage@2.2.0':
+    resolution: {integrity: sha512-gvRvjR5JAaUZF8tv2Kcq/Gbt3JHwbKFYfmb445rhOj6NUMx3qPLixmDx5pZAyb9at1bYvJ4/eTUipU5aki45xw==}
+    peerDependencies:
+      react-native: ^0.0.0-0 || >=0.65 <1.0
 
   '@react-native/assets-registry@0.83.6':
     resolution: {integrity: sha512-iljb4ue1yWJ3EhySz7EjV6CzSVrI2uNtR8BI2jzP5+QS5E4Cl3fdIJRmVwDEx1pu8uE97PGEusGRHnoaZ9Q3jg==}
@@ -7454,6 +7480,10 @@ packages:
     resolution: {integrity: sha512-IlsXEHOjtKhpN8r/tRFj2nDyTmHvcfNeu/nrRIcXE17ROeatXchkojffa1SpdqW4cr/Fj6QkEf/Gn4zf6KKvEQ==}
     engines: {node: '>=12'}
 
+  is-plain-obj@2.1.0:
+    resolution: {integrity: sha512-YWnfyRwxL/+SsrWYfOpUtz5b3YD+nyfkHvjbcanzk8zgyO4ASD67uVMRt8k5bM4lLMDnXfriRhOpemw+NfT1eA==}
+    engines: {node: '>=8'}
+
   is-plain-obj@4.1.0:
     resolution: {integrity: sha512-+Pgi+vMuUNkJyExiMBt5IlFoMyKnr5zhJ4Uspz58WOhBF5QoIZkFyNHIbBAtHwzVAgk5RtndVNsDRN61/mmDqg==}
     engines: {node: '>=12'}
@@ -8060,6 +8090,10 @@ packages:
   merge-descriptors@2.0.0:
     resolution: {integrity: sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==}
     engines: {node: '>=18'}
+
+  merge-options@3.0.4:
+    resolution: {integrity: sha512-2Sug1+knBjkaMsMgf1ctR1Ujx+Ayku4EdJN4Z+C2+JzoeF7A3OZ9KM2GY0CpQS51NR61LTurMJrRKPhSs3ZRTQ==}
+    engines: {node: '>=10'}
 
   merge-stream@2.0.0:
     resolution: {integrity: sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w==}
@@ -10348,6 +10382,16 @@ snapshots:
       tslib: 2.8.1
       zen-observable: 0.10.0
 
+  '@amplitude/analytics-react-native@1.7.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@amplitude/analytics-core': 2.55.0
+      '@amplitude/plugin-network-capture-browser': 1.10.14
+      '@amplitude/ua-parser-js': 0.7.33
+      '@react-native-async-storage/async-storage': 2.2.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))
+      react: 19.2.4
+      react-native: 0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
+      tslib: 2.8.1
+
   '@amplitude/element-selector@0.2.1':
     dependencies:
       tslib: 2.8.1
@@ -10388,6 +10432,8 @@ snapshots:
       '@amplitude/analytics-core': 2.55.0
       tslib: 2.8.1
       web-vitals: 5.1.0
+
+  '@amplitude/ua-parser-js@0.7.33': {}
 
   '@anthropic-ai/sdk@0.95.2(zod@3.25.76)':
     dependencies:
@@ -13057,6 +13103,11 @@ snapshots:
       react: 19.2.4
     optionalDependencies:
       '@types/react': 19.2.14
+
+  '@react-native-async-storage/async-storage@2.2.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))':
+    dependencies:
+      merge-options: 3.0.4
+      react-native: 0.83.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)
 
   '@react-native/assets-registry@0.83.6': {}
 
@@ -16843,6 +16894,8 @@ snapshots:
 
   is-obj@3.0.0: {}
 
+  is-plain-obj@2.1.0: {}
+
   is-plain-obj@4.1.0: {}
 
   is-plain-object@2.0.4:
@@ -17456,6 +17509,10 @@ snapshots:
   memoize-one@6.0.0: {}
 
   merge-descriptors@2.0.0: {}
+
+  merge-options@3.0.4:
+    dependencies:
+      is-plain-obj: 2.1.0
 
   merge-stream@2.0.0: {}
 

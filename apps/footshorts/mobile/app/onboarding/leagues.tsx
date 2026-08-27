@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { trackOnboardingLeaguesSelected } from '@/lib/analytics';
 import { useLeagues } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 import { EntityCard } from '@vismay/footshorts-viz/native';
@@ -57,10 +58,11 @@ export default function OnboardingLeagues() {
     const toFollow = Array.from(picked).filter((id) => !initial.has(id));
     const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
     await Promise.all([
-      ...toFollow.map((id) => follow.mutateAsync(id)),
-      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+      ...toFollow.map((id) => follow.mutateAsync({ entityId: id, source: 'onboarding' })),
+      ...toUnfollow.map((id) => unfollow.mutateAsync({ entityId: id, source: 'onboarding' })),
     ]);
     setBusy(false);
+    if (!edit) trackOnboardingLeaguesSelected(picked.size);
     const slugs = (leagues ?? []).filter((l) => picked.has(l.id)).map((l) => l.slug);
     router.push({
       pathname: '/onboarding/teams',

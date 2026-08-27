@@ -18,6 +18,7 @@ import {
   type StoryGroup,
   type StoryItem,
 } from '@/lib/useFollowedStories';
+import { trackStoryViewerOpened } from '@/lib/analytics';
 import { useSeenArticles } from '@/lib/useSeenArticles';
 import { parseRatio } from '@/lib/useShareCards';
 
@@ -70,6 +71,14 @@ export default function StoryScreen() {
 
   const group = groups?.[entityIdx];
   const story: StoryItem | undefined = group?.items[storyIdx];
+
+  // One open event per viewer mount, once groups have arrived.
+  const openTrackedRef = useRef(false);
+  useEffect(() => {
+    if (openTrackedRef.current || !groups) return;
+    openTrackedRef.current = true;
+    trackStoryViewerOpened({ start_index: initial, group_count: groups.length });
+  }, [groups, initial]);
 
   // Re-snapshot + jump to first unseen whenever we enter a new entity
   // (also handles the cold-load case where `groups` arrives after mount).

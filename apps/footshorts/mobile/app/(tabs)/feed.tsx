@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@footshorts/brand/native';
 import { useAuth } from '@/lib/AuthProvider';
+import { trackFeedTabSelected } from '@/lib/analytics';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useFollowedStories } from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
@@ -202,6 +203,11 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('discover');
 
+  function handleTab(next: Tab) {
+    trackFeedTabSelected(next);
+    setTab(next);
+  }
+
   return (
     <View className="flex-1 bg-bg">
       <FeedBody tab={tab} />
@@ -213,7 +219,7 @@ export default function Home() {
         style={{ top: insets.top + 8 }}
       >
         
-        <PillTabs active={tab} onChange={setTab} />
+        <PillTabs active={tab} onChange={handleTab} />
         <View className="w-10" />
         <ProfileButton />
       </View>

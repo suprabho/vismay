@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./schemas": "./src/schemas.ts",
-    "./editorial": "./src/editorial.ts"
+    "./editorial": "./src/editorial.ts",
+    "./analytics": "./src/analytics.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

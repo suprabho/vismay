@@ -13,6 +13,7 @@ import { useAuthModal } from '@/lib/AuthModalProvider';
 import { useDiscoverFeed } from '@/lib/useFeed';
 import { useDiscoverShareCards, type ShareCardItem } from '@/lib/useShareCards';
 import { useSeenArticles } from '@/lib/useSeenArticles';
+import { trackFeedTabSelected } from '@/lib/analytics';
 import type { FeedCard as FeedCardType } from '@footshorts/shared/schemas';
 
 type DiscoverRow =
@@ -217,6 +218,7 @@ function FeedPageInner() {
       requireAuth(`/feed?tab=${next}`);
       return;
     }
+    trackFeedTabSelected(next);
     setPicked(next);
   }
 

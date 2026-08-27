@@ -5,6 +5,7 @@ import { Pressable, Text, View, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getCompetitionPalette, darkenHex } from '@vismay/footshorts-viz/native';
+import { trackArticleSourceOpened } from '@/lib/analytics';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
 
 const VISIBLE_TAGS = 3;
@@ -119,7 +120,10 @@ export function FeedCard({ headline, summary, imageUrl, publisher, url, publishe
         ) : null}
 
         <Pressable
-          onPress={() => router.push({ pathname: '/web', params: { url, publisher } })}
+          onPress={() => {
+            trackArticleSourceOpened({ publisher, url });
+            router.push({ pathname: '/web', params: { url, publisher } });
+          }}
           className="mt-auto pt-4 self-start"
           hitSlop={8}
         >
