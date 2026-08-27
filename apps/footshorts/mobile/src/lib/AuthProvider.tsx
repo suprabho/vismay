@@ -5,11 +5,20 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
+  setSignupMethod,
   trackAccountDeleted,
   trackSignedIn,
   trackSignedOut,
   trackSignedUp,
 } from './analytics';
+
+// A Supabase session's `user.created_at` within this window of "now" means
+// the OAuth/idToken exchange just created the account — Supabase's OAuth and
+// signInWithIdToken calls sign up on first use, so there's no separate
+// signup step to hook for Google/Apple the way password auth has one.
+const NEW_ACCOUNT_WINDOW_MS = 5 * 60_000;
+const isNewAccount = (createdAt: string | undefined): boolean =>
+  !!createdAt && Date.now() - Date.parse(createdAt) < NEW_ACCOUNT_WINDOW_MS;
 import { supabase } from './supabase';
 
 // Closes the auth popup if the app was reopened by the OAuth redirect.
@@ -98,7 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     signUpWithPassword: async (email, password) => {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (!error) trackSignedUp('password');
+      if (!error) {
+        trackSignedUp('password');
+        setSignupMethod('password');
+      }
       return { error: error?.message ?? null };
     },
     signInWithGoogle: async () => {
@@ -121,8 +133,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const code = url.searchParams.get('code');
       if (!code) return { error: 'Google sign-in did not complete. Please try again.' };
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (!exchangeError) trackSignedIn('google');
+      const { data: exchangeData, error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(code);
+      if (!exchangeError) {
+        if (isNewAccount(exchangeData.session?.user.created_at)) {
+          trackSignedUp('google');
+          setSignupMethod('google');
+        } else {
+          trackSignedIn('google');
+        }
+      }
       return { error: exchangeError?.message ?? null };
     },
     signInWithApple: async () => {
@@ -145,12 +165,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!credential.identityToken) {
           return { error: 'Apple sign-in did not complete. Please try again.' };
         }
-        const { error } = await supabase.auth.signInWithIdToken({
+        const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'apple',
           token: credential.identityToken,
           nonce: rawNonce,
         });
-        if (!error) trackSignedIn('apple');
+        if (!error) {
+          if (isNewAccount(data.session?.user.created_at)) {
+            trackSignedUp('apple');
+            setSignupMethod('apple');
+          } else {
+            trackSignedIn('apple');
+          }
+        }
         return { error: error?.message ?? null };
       } catch (e: unknown) {
         // Cancel is not an error — mirrors the Google flow's dismiss handling.

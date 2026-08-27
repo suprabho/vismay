@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/AuthProvider';
-import { initAnalytics, setAnalyticsUser, trackSignedIn } from '@/lib/analytics';
+import { initAnalytics, setAnalyticsUser, setSignupMethod, trackSignedIn } from '@/lib/analytics';
 
 /**
  * Boots Amplitude once on the client and keeps the Amplitude identity in sync
@@ -42,11 +42,13 @@ export default function AmplitudeProvider() {
       | 'apple'
       | 'email'
       | undefined;
-    trackSignedIn({
-      method: method === 'email' ? 'password' : method,
-      // Freshly created account ⇒ this sign-in is also the sign-up.
-      is_new_user: Number.isFinite(createdAt) ? Date.now() - createdAt < 5 * 60_000 : undefined,
-    });
+    const normalizedMethod = method === 'email' ? 'password' : method;
+    // Freshly created account ⇒ this sign-in is also the sign-up. (The
+    // password path also tracks this directly at signUpWithPassword; this
+    // covers Google/Apple, which land here instead of a call site.)
+    const isNewUser = Number.isFinite(createdAt) ? Date.now() - createdAt < 5 * 60_000 : undefined;
+    if (isNewUser && normalizedMethod) setSignupMethod(normalizedMethod);
+    trackSignedIn({ method: normalizedMethod, is_new_user: isNewUser });
   }, [session, loading]);
 
   return null;

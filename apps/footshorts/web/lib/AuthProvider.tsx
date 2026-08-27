@@ -3,7 +3,7 @@
 import { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from './supabase';
-import { trackSignedOut, trackSignedUp } from './analytics';
+import { setSignupMethod, trackSignedOut, trackSignedUp } from './analytics';
 
 type Profile = {
   id: string;
@@ -83,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     signUpWithPassword: async (email, password) => {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (!error) trackSignedUp('password');
+      if (!error) {
+        trackSignedUp('password');
+        setSignupMethod('password');
+      }
       return { error: error?.message ?? null };
     },
     signOut: async () => {

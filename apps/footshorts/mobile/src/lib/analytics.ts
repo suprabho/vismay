@@ -51,6 +51,18 @@ export function setAnalyticsUser(userId: string | null): void {
   }
 }
 
+/**
+ * Set the durable "signup_method" user property (Identify, not an event) so
+ * cohorts can be segmented in Amplitude by how someone joined. `setOnce`
+ * keeps the original method even if the same account later re-authenticates
+ * via a different provider.
+ */
+export function setSignupMethod(method: AuthMethod): void {
+  if (!initialized) return;
+  const identify = new amplitude.Identify().setOnce('signup_method', method);
+  amplitude.identify(identify);
+}
+
 /** Low-level emit. No-ops until `initAnalytics()` has succeeded. */
 export function track<E extends AnalyticsEventName>(
   event: E,
