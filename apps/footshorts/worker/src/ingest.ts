@@ -14,6 +14,12 @@
  * Both source kinds converge on processCandidateArticle() — steps 2-6 are
  * identical regardless of how the article text was obtained.
  *
+ * Steps 2-6 swallow their own errors so one bad article can't abort the batch;
+ * runIngestion() therefore ends with a health check (ingestFailureReason) that
+ * exits non-zero when a run produced no feed-eligible article at all. Without
+ * it a run where every summarization failed still exits 0, and the admin
+ * Pipeline tab reports a green worker while Discover shows "Nothing here yet".
+ *
  * Run via: `npm run ingest` (one-shot) or schedule via cron
  */
 
@@ -49,7 +55,28 @@ function hashUrl(url: string): string {
   return crypto.createHash('sha256').update(url).digest('hex');
 }
 
-type IngestStats = { fetched: number; new: number; hidden: number; errors: number };
+type IngestStats = {
+  fetched: number;
+  /** Rows inserted this run (i.e. URLs we hadn't seen before). */
+  new: number;
+  /** Of those, the ones that reached status='summarized' — the only status the
+   *  feed reads. This is what "did the run actually produce anything?" means. */
+  summarized: number;
+  /** Dropped by the "is this football?" classifier. */
+  hidden: number;
+  errors: number;
+  /** Sources whose feed/listing couldn't be fetched at all this run. */
+  sourceFailures: number;
+};
+
+const emptyStats = (): IngestStats => ({
+  fetched: 0,
+  new: 0,
+  summarized: 0,
+  hidden: 0,
+  errors: 0,
+  sourceFailures: 0,
+});
 
 /** One article ready for steps 2-6, whichever source kind produced it. */
 type CandidateArticle = {
@@ -150,7 +177,7 @@ async function processCandidateArticle(
     const entityIds = await resolveEntities(supabase, gemini.entities);
 
     // Update article + link entities in a logical transaction
-    await supabase
+    const { error: updateError } = await supabase
       .from('articles')
       .update({
         ...translatedHeadline,
@@ -160,6 +187,15 @@ async function processCandidateArticle(
         status: 'summarized',
       })
       .eq('id', inserted.id);
+
+    // An unchecked failure here leaves the row stuck at 'pending' forever — it
+    // has a summary but the feed, which filters on status, will never show it.
+    if (updateError) {
+      console.error(`[${sourceId}] status update failed for ${candidate.url}:`, updateError);
+      stats.errors++;
+      return;
+    }
+    stats.summarized++;
 
     if (entityIds.length > 0) {
       await supabase.from('article_entities').insert(
@@ -180,7 +216,7 @@ async function processCandidateArticle(
 }
 
 async function ingestSource(source: RssSource): Promise<IngestStats> {
-  const stats: IngestStats = { fetched: 0, new: 0, hidden: 0, errors: 0 };
+  const stats = emptyStats();
 
   let feed;
   try {
@@ -203,6 +239,7 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
         console.error(`[${source.id}] diagnostic probe also failed:`, probeErr);
       }
     }
+    stats.sourceFailures++;
     return stats;
   }
 
@@ -235,13 +272,14 @@ async function ingestSource(source: RssSource): Promise<IngestStats> {
 const MAX_SCRAPED_ARTICLES_PER_RUN = 10;
 
 async function ingestScrapeSource(source: ScrapeSource): Promise<IngestStats> {
-  const stats: IngestStats = { fetched: 0, new: 0, hidden: 0, errors: 0 };
+  const stats = emptyStats();
 
   let links;
   try {
     links = await listArticleLinks(source.listingUrl);
   } catch (e: any) {
     console.error(`[${source.id}] listing fetch failed:`, e.message ?? e);
+    stats.sourceFailures++;
     return stats;
   }
 
@@ -313,16 +351,50 @@ export function extractImage(item: Parser.Item & Record<string, any>): string | 
   return match?.[1] ?? null;
 }
 
+/**
+ * Below this many new articles a run is too small to judge: a handful of
+ * genuinely non-football items in a quiet hour shouldn't fail the workflow.
+ */
+const MIN_NEW_FOR_HEALTH_CHECK = 5;
+
+/**
+ * Reasons to call a completed run a failed one. Every step above swallows its
+ * own errors so one bad article can't abort the batch — which also means the
+ * process exits 0 when *every* article fails, and the admin Pipeline tab (which
+ * shows the workflow's conclusion) reports a green worker over an empty feed.
+ * This is the check that closes that gap.
+ *
+ * Deliberately silent on quiet runs: zero new articles is normal when every
+ * candidate URL is already known.
+ */
+function ingestFailureReason(totals: IngestStats, sourceCount: number): string | null {
+  if (sourceCount > 0 && totals.sourceFailures === sourceCount) {
+    return `all ${sourceCount} sources failed to fetch`;
+  }
+  if (totals.summarized > 0) return null;
+  if (totals.errors > 0) {
+    return `${totals.new} new articles, ${totals.errors} errors, none summarized — summarization is failing for everything`;
+  }
+  if (totals.new >= MIN_NEW_FOR_HEALTH_CHECK) {
+    return `${totals.new} new articles, none summarized (hidden=${totals.hidden}) — the football classifier rejected the whole run`;
+  }
+  return null;
+}
+
 export async function runIngestion() {
   console.log(`[ingest] starting at ${new Date().toISOString()}`);
-  const totals: IngestStats = { fetched: 0, new: 0, hidden: 0, errors: 0 };
+  const totals = emptyStats();
 
   const addTotals = (id: string, stats: IngestStats) => {
-    console.log(`[${id}] fetched=${stats.fetched} new=${stats.new} hidden=${stats.hidden} errors=${stats.errors}`);
+    console.log(
+      `[${id}] fetched=${stats.fetched} new=${stats.new} summarized=${stats.summarized} hidden=${stats.hidden} errors=${stats.errors}`
+    );
     totals.fetched += stats.fetched;
     totals.new += stats.new;
+    totals.summarized += stats.summarized;
     totals.hidden += stats.hidden;
     totals.errors += stats.errors;
+    totals.sourceFailures += stats.sourceFailures;
   };
 
   for (const source of RSS_SOURCES) {
@@ -332,7 +404,13 @@ export async function runIngestion() {
     addTotals(source.id, await ingestScrapeSource(source));
   }
 
-  console.log(`[ingest] done: fetched=${totals.fetched} new=${totals.new} hidden=${totals.hidden} errors=${totals.errors}`);
+  console.log(
+    `[ingest] done: fetched=${totals.fetched} new=${totals.new} summarized=${totals.summarized} hidden=${totals.hidden} errors=${totals.errors} sourceFailures=${totals.sourceFailures}`
+  );
+
+  const reason = ingestFailureReason(totals, RSS_SOURCES.length + SCRAPE_SOURCES.length);
+  if (reason) throw new Error(`ingest run unhealthy: ${reason}`);
+
   return totals;
 }
 
