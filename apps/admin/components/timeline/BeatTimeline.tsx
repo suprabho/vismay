@@ -34,6 +34,7 @@ export default function BeatTimeline({
   onSeek,
   onSelect,
   onMoveKeyframes,
+  onAddKeyframe,
 }: {
   columns: TimelineColumn[]
   lifetimes: EntityLifetime[]
@@ -43,6 +44,7 @@ export default function BeatTimeline({
   onSeek: (unit: number, t: number) => void
   onSelect: (selection: Selection) => void
   onMoveKeyframes: (entityId: string, fromBeat: number, toBeat: number) => void
+  onAddKeyframe: (entityId: string, beat: number) => void
 }) {
   const gridRef = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<{ entityId: string; fromBeat: number } | null>(null)
@@ -139,6 +141,7 @@ export default function BeatTimeline({
                 if (drag) onMoveKeyframes(drag.entityId, drag.fromBeat, toBeat)
                 setDrag(null)
               }}
+              onAddKeyframeAt={(beat) => onAddKeyframe(lt.id, beat)}
             />
           ))}
 

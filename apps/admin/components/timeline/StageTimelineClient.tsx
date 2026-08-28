@@ -10,11 +10,16 @@ import {
 import {
   type KeyframeAddress,
   type TransformPatch,
+  addEntity,
+  addKeyframe,
   effectiveT,
   findBaselineKf,
   getKeyframe,
   keyframeAddressForBeat,
   patchTransform,
+  removeEntity,
+  removeKeyframe,
+  setEntityContent,
   setKeyframeT,
   setKeyframeTiming,
   clearKeyframeTiming,
@@ -26,6 +31,7 @@ import { spliceStageIntoConfig } from './spliceStage'
 import PreviewFrame from './PreviewFrame'
 import BeatTimeline, { type Selection } from './BeatTimeline'
 import InspectorPanel from './InspectorPanel'
+import AddEntityDialog from './AddEntityDialog'
 
 const HISTORY_CAP = 100
 
@@ -61,6 +67,7 @@ export default function StageTimelineClient({
   const [configText, setConfigText] = useState(initialConfigText)
   const [status, setStatus] = useState<Status>({ type: 'idle' })
   const [saving, setSaving] = useState(false)
+  const [addingEntity, setAddingEntity] = useState(false)
   // Undo past-stack in a ref: only `setStage` needs to re-render, and keeping
   // the push out of a state updater keeps it StrictMode-safe (updaters can be
   // double-invoked).
@@ -301,6 +308,72 @@ export default function StageTimelineClient({
     [stage, baseline, authoredIndex, playhead.unit, playhead.t, applyEdit]
   )
 
+  // ── entity / keyframe CRUD (W3) ──────────────────────────────────────────
+  const handleAddEntity = useCallback(
+    (opts: { id: string; role: 'subject' | 'object'; assetRef: string }) => {
+      applyEdit(addEntity(stage, { ...opts, beat: playhead.unit, columns }), null)
+      setAddingEntity(false)
+      setSelection({ entityId: opts.id, beat: playhead.unit })
+    },
+    [stage, playhead.unit, columns, applyEdit]
+  )
+
+  const handleDeleteEntity = useCallback(
+    (entityId: string) => {
+      if (!stage) return
+      applyEdit(removeEntity(stage, entityId), null)
+      setSelection((sel) => (sel?.entityId === entityId ? null : sel))
+    },
+    [stage, applyEdit]
+  )
+
+  const handleAddKeyframe = useCallback(
+    (entityId: string, beat: number) => {
+      if (!stage) return
+      // Seed from the nearest authored keyframe so the new one starts where
+      // the entity already is, not at the centre.
+      const byBeat = authoredIndex[entityId] ?? {}
+      let seed
+      let bestDist = Infinity
+      for (const [b, kfs] of Object.entries(byBeat)) {
+        const d = Math.abs(Number(b) - beat)
+        if (d < bestDist && kfs.length > 0) {
+          bestDist = d
+          seed = kfs[kfs.length - 1].kf.transform
+        }
+      }
+      const next = addKeyframe(stage, entityId, beat, columns, seed)
+      if (next === null) {
+        setStatus({ type: 'warn', msg: 'this beat already has a keyframe for that entity' })
+        return
+      }
+      applyEdit(next, null)
+      setSelection({ entityId, beat })
+    },
+    [stage, columns, authoredIndex, applyEdit]
+  )
+
+  const handleDeleteKeyframe = useCallback(
+    (addr: KeyframeAddress) => {
+      if (!stage) return
+      const next = removeKeyframe(stage, addr)
+      if (next === null) {
+        setStatus({ type: 'warn', msg: 'last keyframe — delete the entity instead' })
+        return
+      }
+      applyEdit(next, null)
+    },
+    [stage, applyEdit]
+  )
+
+  const handleSizeChange = useCallback(
+    (entityId: string, size: number) => {
+      if (!stage) return
+      applyEdit(setEntityContent(stage, entityId, { size }), `size:${entityId}`)
+    },
+    [stage, applyEdit]
+  )
+
   // ⌘Z/⌘S land in the iframe's document while it holds focus (after a
   // preview click) — the chrome forwards them as intents.
   const handleHotkey = useCallback(
@@ -318,6 +391,13 @@ export default function StageTimelineClient({
           Stage timeline — <span className="text-neutral-500">{slug}</span>
         </h1>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setAddingEntity(true)}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-neutral-300 hover:bg-white/5"
+          >
+            ＋ entity
+          </button>
           <StatusBadge status={status} dirty={dirty} />
           <button
             type="button"
@@ -355,6 +435,10 @@ export default function StageTimelineClient({
             onClearMsTiming={handleClearMsTiming}
             onTimingChange={handleTiming}
             onEasingChange={handleEasing}
+            onAddKeyframe={handleAddKeyframe}
+            onDeleteKeyframe={handleDeleteKeyframe}
+            onDeleteEntity={handleDeleteEntity}
+            onSizeChange={handleSizeChange}
           />
         </div>
       </div>
@@ -369,8 +453,18 @@ export default function StageTimelineClient({
           onSeek={(unit, t) => setPlayhead({ unit, t })}
           onSelect={setSelection}
           onMoveKeyframes={handleMoveKeyframes}
+          onAddKeyframe={handleAddKeyframe}
         />
       </div>
+
+      {addingEntity && (
+        <AddEntityDialog
+          slug={slug}
+          existingIds={new Set(stage?.entities.map((e) => e.id) ?? [])}
+          onCreate={handleAddEntity}
+          onClose={() => setAddingEntity(false)}
+        />
+      )}
     </div>
   )
 }

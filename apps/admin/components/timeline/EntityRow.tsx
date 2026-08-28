@@ -25,6 +25,7 @@ export default function EntityRow({
   onDragStart,
   onDragEnd,
   onDrop,
+  onAddKeyframeAt,
 }: {
   role: 'subject' | 'object'
   enterBeat: number
@@ -39,6 +40,8 @@ export default function EntityRow({
   onDragStart: (fromBeat: number) => void
   onDragEnd: () => void
   onDrop: (toBeat: number) => void
+  /** Double-click on a keyframe-less cell adds a keyframe there (W3). */
+  onAddKeyframeAt: (beat: number) => void
 }) {
   const [overBeat, setOverBeat] = useState<number | null>(null)
   const tint = role === 'subject' ? 'bg-sky-500/15' : 'bg-violet-500/10'
@@ -55,6 +58,9 @@ export default function EntityRow({
             key={beat}
             type="button"
             onClick={() => onSelectBeat(beat)}
+            onDoubleClick={() => {
+              if (!kfs) onAddKeyframeAt(beat)
+            }}
             style={{ width: BEAT_COL_W }}
             className={`relative shrink-0 border-r border-white/5 ${present ? tint : ''} ${
               selected ? 'ring-1 ring-inset ring-sky-300' : ''

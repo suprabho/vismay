@@ -91,9 +91,8 @@ function spliceWholeEntity(doc: Document, yamlIdx: number, entity: StageEntity) 
 
 /** Entity-level fields equal (everything but the keyframes array)? */
 function entityShellEqual(a: StageEntity, b: StageEntity): boolean {
-  const { keyframes: _a, ...aRest } = a
-  const { keyframes: _b, ...bRest } = b
-  return deepEq(aRest, bRest)
+  const shell = ({ keyframes, ...rest }: StageEntity) => (void keyframes, rest)
+  return deepEq(shell(a), shell(b))
 }
 
 export function spliceStageIntoConfig(

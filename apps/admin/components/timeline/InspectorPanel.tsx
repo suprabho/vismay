@@ -33,6 +33,10 @@ export default function InspectorPanel({
   onClearMsTiming,
   onTimingChange,
   onEasingChange,
+  onAddKeyframe,
+  onDeleteKeyframe,
+  onDeleteEntity,
+  onSizeChange,
 }: {
   stage: StageConfig | null
   authoredIndex: AuthoredKeyframeIndex
@@ -43,6 +47,10 @@ export default function InspectorPanel({
   onClearMsTiming: (addr: KeyframeAddress) => void
   onTimingChange: (addr: KeyframeAddress, timing: { delayMs: number; durationMs: number }) => void
   onEasingChange: (addr: KeyframeAddress, easing: StageEasing | undefined) => void
+  onAddKeyframe: (entityId: string, beat: number) => void
+  onDeleteKeyframe: (addr: KeyframeAddress) => void
+  onDeleteEntity: (entityId: string) => void
+  onSizeChange: (entityId: string, size: number) => void
 }) {
   if (!selection) {
     return (
@@ -62,11 +70,25 @@ export default function InspectorPanel({
   )
   const msAllowed = canUseMsTiming(authoredIndex, entity.id, selection.beat)
 
+  const size = typeof entity.content.size === 'number' ? entity.content.size : 0.2
+
   return (
     <div className="flex h-full w-full flex-col overflow-y-auto p-3 text-[12px]">
-      <div className="mb-3">
-        <div className="text-[13px] font-medium text-neutral-100">{entity.id}</div>
-        <div className="text-neutral-500">beat {selection.beat}</div>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div>
+          <div className="text-[13px] font-medium text-neutral-100">{entity.id}</div>
+          <div className="text-neutral-500">beat {selection.beat}</div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(`Delete entity "${entity.id}" and all its keyframes?`))
+              onDeleteEntity(entity.id)
+          }}
+          className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:bg-red-500/10 hover:text-red-300"
+        >
+          ✕ entity
+        </button>
       </div>
 
       <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
@@ -88,8 +110,28 @@ export default function InspectorPanel({
         </dd>
       </dl>
 
+      <div className="mb-4">
+        <ScrubField
+          label="Size"
+          value={size}
+          min={0.02}
+          max={1.5}
+          step={0.01}
+          onChange={(v) => onSizeChange(entity.id, v)}
+        />
+      </div>
+
       {keyframes.length === 0 ? (
-        <p className="italic text-neutral-500">interpolated — no keyframe authored on this beat</p>
+        <div className="space-y-2">
+          <p className="italic text-neutral-500">interpolated — no keyframe authored on this beat</p>
+          <button
+            type="button"
+            onClick={() => onAddKeyframe(entity.id, selection.beat)}
+            className="rounded border border-white/10 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/5"
+          >
+            + add keyframe here
+          </button>
+        </div>
       ) : (
         keyframes.map(({ kfIndex, kf }) => {
           const addr: KeyframeAddress = { entityId: entity.id, kfIndex }
@@ -99,6 +141,8 @@ export default function InspectorPanel({
               kf={kf}
               addr={addr}
               soleOnBeat={keyframes.length === 1}
+              soleInEntity={entity.keyframes.length === 1}
+              onDeleteKeyframe={onDeleteKeyframe}
               msAllowed={msAllowed}
               onTransformChange={onTransformChange}
               onTChange={onTChange}
@@ -122,6 +166,8 @@ function KeyframeCard({
   kf,
   addr,
   soleOnBeat,
+  soleInEntity,
+  onDeleteKeyframe,
   msAllowed,
   onTransformChange,
   onTChange,
@@ -133,6 +179,8 @@ function KeyframeCard({
   kf: StageKeyframe
   addr: KeyframeAddress
   soleOnBeat: boolean
+  soleInEntity: boolean
+  onDeleteKeyframe: (addr: KeyframeAddress) => void
   msAllowed: boolean
   onTransformChange: (addr: KeyframeAddress, patch: TransformPatch) => void
   onTChange: (addr: KeyframeAddress, t: number) => void
@@ -151,6 +199,15 @@ function KeyframeCard({
     <div className="mb-3 rounded-lg border border-white/10 bg-neutral-900/40 p-2">
       <div className="mb-2 flex items-center justify-between">
         <span className="rotate-0 text-[11px] font-medium text-sky-300">◆ {label}</span>
+        <button
+          type="button"
+          disabled={soleInEntity}
+          title={soleInEntity ? 'last keyframe — delete the entity instead' : 'delete keyframe'}
+          onClick={() => onDeleteKeyframe(addr)}
+          className="rounded px-1 text-[11px] text-neutral-500 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          ✕
+        </button>
       </div>
 
       <StageTransformControls
