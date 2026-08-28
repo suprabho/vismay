@@ -204,7 +204,16 @@ project's ms axis; a story's beat axis), shared transform editing (the composer'
   | iframe → parent | `viz-story-ready` | `{sectionCount}` | handshake; parent flushes buffered messages |
   | parent → iframe | `viz-story-seek` | `{unit, t}` | move the playhead (E1) |
   | parent → iframe | `viz-story-stage` | `{stage: StageConfig \| null}` | render UNSAVED edits live, no reload; `null` reverts to server config (W1) |
+  | parent → iframe | `viz-story-selection` | `{id: string \| null, editable}` | which entity the in-iframe edit chrome rings; `editable` = a keyframe exists on the current beat (W2) |
+  | iframe → parent | `viz-story-entity-pointerdown` | `{id}` | user pressed an entity — select-then-drag (W2) |
+  | iframe → parent | `viz-story-entity-edit` | `{id, gesture, phase, patch}` | on-canvas move/scale/rotate; absolute-from-gesture-start stage units; `gesture` doubles as the undo key (W2) |
   | parent → iframe | `viz-story-progress` | `{value: 0..1}` | embed-mode host scroll sync (pre-dates the editor) |
+
+  All gesture math lives inside the iframe (`StageEditChrome` in viz-engine,
+  mounted only under the shell context's `editing` flag) because the iframe
+  is cross-origin — only semantic edits cross the boundary, and the parent's
+  `viz-story-stage` push is the render path (the chrome never writes entity
+  styles; the rAF clock owns them).
 - **Timeline panel** (bottom) — horizontal axis = **beats** (sections/subsections as columns,
   proportional to `timelineMs` / `runway`). Boundary gutters between sections carry a
   **transition chip** (click → transition picker: kind, direction, duration, easing).

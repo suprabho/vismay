@@ -1,7 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { StageConfig } from '@vismay/viz-engine'
+import {
+  isStageEntityEditMsg,
+  isStageEntityPointerDownMsg,
+  isStageHotkeyMsg,
+} from '@vismay/viz-engine'
+import type { StageConfig, StageEntityEditMsg } from '@vismay/viz-engine'
 
 interface PreviewFrameProps {
   src: string
@@ -15,6 +20,16 @@ interface PreviewFrameProps {
   stage: StageConfig | null
   /** True when the stage has `role: 'object'` entities (portrait-hidden by default). */
   hasObjects: boolean
+  /** Selected entity — posted as `viz-story-selection` so the in-iframe edit
+   *  chrome shows its ring/handles. `editable` = a keyframe exists on the
+   *  current beat for it (gestures may write). */
+  selectedEntityId: string | null
+  selectionEditable: boolean
+  /** In-iframe gesture events (W2), already shape-validated. */
+  onEntityPointerDown: (id: string) => void
+  onEntityEdit: (msg: StageEntityEditMsg) => void
+  /** ⌘Z/⌘S pressed while the iframe holds focus (forwarded intents). */
+  onHotkey: (action: 'undo' | 'save') => void
 }
 
 /**
@@ -26,7 +41,17 @@ interface PreviewFrameProps {
  * an unsaved edit is never lost to a message sent before the listener
  * attaches.
  */
-export default function PreviewFrame({ src, seek, stage, hasObjects }: PreviewFrameProps) {
+export default function PreviewFrame({
+  src,
+  seek,
+  stage,
+  hasObjects,
+  selectedEntityId,
+  selectionEditable,
+  onEntityPointerDown,
+  onEntityEdit,
+  onHotkey,
+}: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
@@ -34,12 +59,23 @@ export default function PreviewFrame({ src, seek, stage, hasObjects }: PreviewFr
   const pendingRef = useRef<{ unit: number; t: number } | null>(null)
   const latestStageRef = useRef<StageConfig | null>(stage)
   const stageRafRef = useRef<number | null>(null)
+  const entityHandlersRef = useRef({ onEntityPointerDown, onEntityEdit, onHotkey })
+  useEffect(() => {
+    entityHandlersRef.current = { onEntityPointerDown, onEntityEdit, onHotkey }
+  }, [onEntityPointerDown, onEntityEdit, onHotkey])
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source !== iframeRef.current?.contentWindow) return
-      if (e.data?.type !== 'viz-story-ready') return
-      setReady(true)
+      if (e.data?.type === 'viz-story-ready') {
+        setReady(true)
+      } else if (isStageEntityPointerDownMsg(e.data)) {
+        entityHandlersRef.current.onEntityPointerDown(e.data.id)
+      } else if (isStageEntityEditMsg(e.data)) {
+        entityHandlersRef.current.onEntityEdit(e.data)
+      } else if (isStageHotkeyMsg(e.data)) {
+        entityHandlersRef.current.onHotkey(e.data.action)
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
@@ -102,6 +138,19 @@ export default function PreviewFrame({ src, seek, stage, hasObjects }: PreviewFr
       win.postMessage({ type: 'viz-story-stage', stage: latestStageRef.current }, '*')
     }
   }, [ready])
+
+  // Selection push (W2): the parent is the source of truth; the in-iframe
+  // chrome renders whatever this says. Ready-gated, and re-fires when the
+  // handshake flips after a reload.
+  useEffect(() => {
+    if (!ready) return
+    const win = iframeRef.current?.contentWindow
+    if (!win) return
+    win.postMessage(
+      { type: 'viz-story-selection', id: selectedEntityId, editable: selectionEditable },
+      '*'
+    )
+  }, [selectedEntityId, selectionEditable, ready])
 
   // Surface (don't fight) resolveStage's portrait degrade: a taller-than-wide
   // preview box hides `role: 'object'` entities by default.

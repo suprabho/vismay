@@ -607,6 +607,7 @@ export default function StoryShell({
         // Undefined everywhere except the editor iframe — every other
         // surface has no seek bridge and this branch is dead code there.
         seek: isEditor ? seekRef : undefined,
+        editing: isEditor || undefined,
       }}
     >
       {/* ─── Persistent background slot ──────────────────────────────────

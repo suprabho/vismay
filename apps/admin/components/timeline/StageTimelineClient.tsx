@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { StageConfig, StageEasing } from '@vismay/viz-engine'
+import type { StageConfig, StageEasing, StageEntityEditMsg } from '@vismay/viz-engine'
 import {
   type TimelineColumn,
   buildAuthoredKeyframeIndex,
@@ -10,7 +10,9 @@ import {
 import {
   type KeyframeAddress,
   type TransformPatch,
+  effectiveT,
   getKeyframe,
+  keyframeAddressForBeat,
   patchTransform,
   setKeyframeT,
   setKeyframeTiming,
@@ -63,6 +65,9 @@ export default function StageTimelineClient({
   // double-invoked).
   const historyRef = useRef<StageConfig[]>([])
   const lastEditKey = useRef<string | null>(null)
+  // W2: each on-canvas gesture's target keyframe, resolved ONCE at its first
+  // frame — playhead motion mid-gesture can never retarget the write.
+  const gestureAddrRef = useRef(new Map<string, KeyframeAddress>())
 
   const authoredIndex = useMemo(() => buildAuthoredKeyframeIndex(stage, columns), [stage, columns])
   const lifetimes = useMemo(() => buildEntityLifetimes(stage, columns), [stage, columns])
@@ -247,6 +252,59 @@ export default function StageTimelineClient({
     [stage]
   )
 
+  // ── on-canvas gesture routing (W2) ───────────────────────────────────────
+  const selectionEditable = useMemo(
+    () =>
+      selection != null &&
+      keyframeAddressForBeat(authoredIndex, selection.entityId, playhead.unit, playhead.t) != null,
+    [selection, authoredIndex, playhead.unit, playhead.t]
+  )
+
+  const handleEntityPointerDown = useCallback(
+    (id: string) => {
+      setSelection({ entityId: id, beat: playhead.unit })
+      // Snap the playhead to the target keyframe's effective t so the
+      // rendered pose IS the keyframe pose — a drag then writes exactly what
+      // the cursor shows (no offset after the config round-trip).
+      const addr = keyframeAddressForBeat(authoredIndex, id, playhead.unit, playhead.t)
+      if (addr && stage) {
+        const kf = getKeyframe(stage, addr)
+        const sole = (authoredIndex[id]?.[playhead.unit]?.length ?? 0) === 1
+        if (kf) setPlayhead((p) => ({ unit: p.unit, t: effectiveT(kf, sole) }))
+      }
+    },
+    [playhead.unit, playhead.t, authoredIndex, stage]
+  )
+
+  const handleEntityEdit = useCallback(
+    (msg: StageEntityEditMsg) => {
+      if (!stage) return
+      let addr = gestureAddrRef.current.get(msg.gesture)
+      if (!addr) {
+        addr = keyframeAddressForBeat(authoredIndex, msg.id, playhead.unit, playhead.t) ?? undefined
+        if (!addr) return
+        gestureAddrRef.current.set(msg.gesture, addr)
+      }
+      const baselineKf = baseline ? getKeyframe(baseline, addr) : undefined
+      applyEdit(patchTransform(stage, addr, msg.patch, baselineKf), msg.gesture)
+      if (msg.phase === 'end') {
+        lastEditKey.current = null
+        gestureAddrRef.current.delete(msg.gesture)
+      }
+    },
+    [stage, baseline, authoredIndex, playhead.unit, playhead.t, applyEdit]
+  )
+
+  // ⌘Z/⌘S land in the iframe's document while it holds focus (after a
+  // preview click) — the chrome forwards them as intents.
+  const handleHotkey = useCallback(
+    (action: 'undo' | 'save') => {
+      if (action === 'undo') undo()
+      else if (dirty && !saving) void save()
+    },
+    [undo, dirty, saving, save]
+  )
+
   return (
     <div className="flex h-screen flex-col gap-3 bg-neutral-950 p-3 text-neutral-100">
       <div className="flex items-center justify-between">
@@ -268,7 +326,17 @@ export default function StageTimelineClient({
 
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-white/10 bg-black">
-          <PreviewFrame src={previewUrl} seek={playhead} stage={stage} hasObjects={hasObjects} />
+          <PreviewFrame
+            src={previewUrl}
+            seek={playhead}
+            stage={stage}
+            hasObjects={hasObjects}
+            selectedEntityId={selection?.entityId ?? null}
+            selectionEditable={selectionEditable}
+            onEntityPointerDown={handleEntityPointerDown}
+            onEntityEdit={handleEntityEdit}
+            onHotkey={handleHotkey}
+          />
         </div>
         <div className="w-[280px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-neutral-950/40">
           <InspectorPanel

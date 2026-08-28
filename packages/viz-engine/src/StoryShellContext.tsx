@@ -55,6 +55,17 @@ export interface StoryShellContextValue {
    * section respond to a stray seek payload.
    */
   seek?: { readonly current: { unit: number; t: number } | null }
+  /**
+   * Editor mode (the admin stage-timeline iframe, W2). When true,
+   * `StageVizSlot` makes every stage entity hittable (overriding the
+   * authored `interactive` flag — `role: 'object'` entities are otherwise
+   * `pointer-events: none` by design) and mounts the on-canvas edit chrome
+   * (selection ring, transform handles, the `viz-story-entity-*` message
+   * bridge). Undefined/false = every non-editor surface; the editing
+   * branches are dead code there. Optional like `scrub`/`seek` so
+   * hand-built providers compile untouched.
+   */
+  editing?: boolean
 }
 
 const StoryShellContext = createContext<StoryShellContextValue | null>(null)

@@ -219,6 +219,41 @@ export function setKeyframeEasing(
   return replaceKeyframe(stage, addr, next)
 }
 
+/**
+ * The keyframe an on-canvas gesture writes (W2): the entity's keyframes on
+ * `beat`; none → null (drag disabled), one → it, several → nearest effective
+ * `t` to the playhead (a t-less keyframe among several is the beat's start
+ * pose, effective t=0; a sole keyframe needs no rule).
+ */
+export function keyframeAddressForBeat(
+  index: AuthoredKeyframeIndex,
+  entityId: string,
+  beat: number,
+  playheadT: number
+): KeyframeAddress | null {
+  const kfs = index[entityId]?.[beat]
+  if (!kfs || kfs.length === 0) return null
+  if (kfs.length === 1) return { entityId, kfIndex: kfs[0].kfIndex }
+  let best = kfs[0]
+  let bestD = Infinity
+  for (const a of kfs) {
+    const t = (typeof a.kf.at === 'object' ? a.kf.at.t : undefined) ?? 0
+    const d = Math.abs(t - playheadT)
+    if (d < bestD) {
+      bestD = d
+      best = a
+    }
+  }
+  return { entityId, kfIndex: best.kfIndex }
+}
+
+/** The beat-local t a keyframe's pose renders at (for playhead snapping):
+ *  explicit `at.t`, else 1 when sole on its beat (settled), else 0 (start). */
+export function effectiveT(kf: StageKeyframe, soleOnBeat: boolean): number {
+  const t = typeof kf.at === 'object' ? kf.at.t : undefined
+  return t ?? (soleOnBeat ? 1 : 0)
+}
+
 /** validateStage's rule precomputed for the UI: ms timing only on a beat's sole keyframe. */
 export function canUseMsTiming(
   index: AuthoredKeyframeIndex,
