@@ -1,6 +1,7 @@
 import type {
   StageConfig,
   StageEasing,
+  StageEntity,
   StageKeyframe,
   StageKeyframeAt,
   StageTransform,
@@ -278,6 +279,144 @@ export function canDropKeyframes(
 ): boolean {
   if (toBeat === fromBeat) return false
   return (index[entityId]?.[toBeat]?.length ?? 0) === 0
+}
+
+/* ── W3: entity / keyframe CRUD (all pure; the splice's order invariant —
+ *    additions append, removals filter, nothing reorders — is enforced
+ *    here by construction) ─────────────────────────────────────────────── */
+
+/**
+ * Append a new entity with one seeded keyframe at `beat` (validateStage
+ * requires a non-empty keyframes array) and a centred transform.
+ */
+export function addEntity(
+  stage: StageConfig | null,
+  opts: {
+    id: string
+    role: 'subject' | 'object'
+    assetRef: string
+    beat: number
+    columns: TimelineColumn[]
+  }
+): StageConfig {
+  const entity: StageEntity = {
+    id: opts.id,
+    role: opts.role,
+    content: { type: 'image', src: opts.assetRef },
+    keyframes: [
+      { at: selectorForBeat(opts.columns, opts.beat), transform: { position: { x: 0, y: 0 } } },
+    ],
+  }
+  return { ...(stage ?? {}), entities: [...(stage?.entities ?? []), entity] }
+}
+
+export function removeEntity(stage: StageConfig, entityId: string): StageConfig {
+  return { ...stage, entities: stage.entities.filter((e) => e.id !== entityId) }
+}
+
+/**
+ * Insert a keyframe on `beat`, seeded from `seed` (callers pass the nearest
+ * authored keyframe's transform; default = centred). Inserted beat-sorted
+ * (after the last keyframe whose resolved beat precedes the target) so the
+ * authored array stays readable. Returns `null` when the beat already holds
+ * a t-less keyframe for this entity — the new keyframe is t-less too, and
+ * validateStage allows at most one per beat.
+ */
+export function addKeyframe(
+  stage: StageConfig,
+  entityId: string,
+  beat: number,
+  columns: TimelineColumn[],
+  seed?: StageTransform
+): StageConfig | null {
+  const entity = stage.entities.find((e) => e.id === entityId)
+  if (!entity) return stage
+  const collision = entity.keyframes.some(
+    (kf) =>
+      beatIndexForSelector(columns, kf.at) === beat &&
+      (typeof kf.at !== 'object' || kf.at.t === undefined)
+  )
+  if (collision) return null
+  const next: StageKeyframe = {
+    at: selectorForBeat(columns, beat),
+    transform: seed ? structuredClone(seed) : { position: { x: 0, y: 0 } },
+  }
+  let insertAt = 0
+  entity.keyframes.forEach((kf, i) => {
+    const b = beatIndexForSelector(columns, kf.at)
+    if (b >= 0 && b <= beat) insertAt = i + 1
+  })
+  const keyframes = [...entity.keyframes]
+  keyframes.splice(insertAt, 0, next)
+  return {
+    ...stage,
+    entities: stage.entities.map((e) => (e.id === entityId ? { ...e, keyframes } : e)),
+  }
+}
+
+/**
+ * Delete a keyframe. Returns `null` when it is the entity's LAST keyframe —
+ * validateStage requires a non-empty array; deleting the entity is the path.
+ */
+export function removeKeyframe(stage: StageConfig, addr: KeyframeAddress): StageConfig | null {
+  const entity = stage.entities.find((e) => e.id === addr.entityId)
+  if (!entity || !entity.keyframes[addr.kfIndex]) return stage
+  if (entity.keyframes.length <= 1) return null
+  return {
+    ...stage,
+    entities: stage.entities.map((e) =>
+      e.id === addr.entityId
+        ? { ...e, keyframes: e.keyframes.filter((_, i) => i !== addr.kfIndex) }
+        : e
+    ),
+  }
+}
+
+/** Entity-level content edit (src/size/alt) — the splice's whole-entity-replace case. */
+export function setEntityContent(
+  stage: StageConfig,
+  entityId: string,
+  patch: { src?: string; size?: number; alt?: string }
+): StageConfig {
+  return {
+    ...stage,
+    entities: stage.entities.map((e) =>
+      e.id === entityId ? { ...e, content: { ...e.content, ...patch } } : e
+    ),
+  }
+}
+
+/** Slugified basename as the suggested entity id, deduped with -2, -3, … */
+export function suggestEntityId(filename: string, existing: Set<string>): string {
+  const base =
+    filename
+      .replace(/\.[^.]+$/, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'entity'
+  if (!existing.has(base)) return base
+  for (let n = 2; ; n++) {
+    const candidate = `${base}-${n}`
+    if (!existing.has(candidate)) return candidate
+  }
+}
+
+/**
+ * Baseline keyframe lookup by entity id + `at` identity (JSON-equal), NOT by
+ * array index — CRUD breaks index alignment between baseline and edited.
+ * `undefined` for keyframes that didn't exist at load (or whose `at` was
+ * rewritten by a move): `patchTransform` then prunes against pure engine
+ * defaults, which is exactly right for a new keyframe.
+ */
+export function findBaselineKf(
+  baseline: StageConfig | null,
+  entityId: string,
+  at: StageKeyframeAt | number
+): StageKeyframe | undefined {
+  const key = JSON.stringify(at)
+  return baseline?.entities
+    .find((e) => e.id === entityId)
+    ?.keyframes.find((kf) => JSON.stringify(kf.at) === key)
 }
 
 /**

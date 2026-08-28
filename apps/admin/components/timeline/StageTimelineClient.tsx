@@ -11,6 +11,7 @@ import {
   type KeyframeAddress,
   type TransformPatch,
   effectiveT,
+  findBaselineKf,
   getKeyframe,
   keyframeAddressForBeat,
   patchTransform,
@@ -111,7 +112,8 @@ export default function StageTimelineClient({
   }, [])
 
   const save = useCallback(async () => {
-    if (!stage || !baseline || saving) return
+    // Baseline may be null (story had no stage until an entity was added).
+    if (!stage || saving) return
     setSaving(true)
     setStatus({ type: 'idle' })
     try {
@@ -178,8 +180,11 @@ export default function StageTimelineClient({
   // ── inspector edit routing ────────────────────────────────────────────────
   const handleTransform = useCallback(
     (addr: KeyframeAddress, patch: TransformPatch) => {
-      if (!stage || !baseline) return
-      const baselineKf = getKeyframe(baseline, addr)
+      if (!stage) return
+      // Baseline lookup by `at` identity, not index — CRUD (W3) breaks index
+      // alignment between the edited and as-loaded arrays.
+      const current = getKeyframe(stage, addr)
+      const baselineKf = current ? findBaselineKf(baseline, addr.entityId, current.at) : undefined
       const field = Object.keys(patch)[0] ?? ''
       applyEdit(
         patchTransform(stage, addr, patch, baselineKf),
@@ -285,7 +290,8 @@ export default function StageTimelineClient({
         if (!addr) return
         gestureAddrRef.current.set(msg.gesture, addr)
       }
-      const baselineKf = baseline ? getKeyframe(baseline, addr) : undefined
+      const current = getKeyframe(stage, addr)
+      const baselineKf = current ? findBaselineKf(baseline, addr.entityId, current.at) : undefined
       applyEdit(patchTransform(stage, addr, msg.patch, baselineKf), msg.gesture)
       if (msg.phase === 'end') {
         lastEditKey.current = null
