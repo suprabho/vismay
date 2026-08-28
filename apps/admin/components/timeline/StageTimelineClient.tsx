@@ -58,7 +58,6 @@ export default function StageTimelineClient({
   const [configText, setConfigText] = useState(initialConfigText)
   const [status, setStatus] = useState<Status>({ type: 'idle' })
   const [saving, setSaving] = useState(false)
-  const [previewNonce, setPreviewNonce] = useState(0)
   // Undo past-stack in a ref: only `setStage` needs to re-render, and keeping
   // the push out of a state updater keeps it StrictMode-safe (updaters can be
   // double-invoked).
@@ -130,9 +129,11 @@ export default function StageTimelineClient({
       } else {
         setStatus({ type: 'ok', msg: 'Saved' })
       }
+      // No preview reload: the iframe already renders the live (now saved)
+      // stage via the `viz-story-stage` push — a reload would flash and drop
+      // the playhead for no gain.
       setBaseline(stage)
       setConfigText(spliced)
-      setPreviewNonce((n) => n + 1)
     } catch (e) {
       setStatus({ type: 'err', msg: e instanceof Error ? e.message : 'Save failed' })
     } finally {
@@ -241,7 +242,10 @@ export default function StageTimelineClient({
     [stage, columns, authoredIndex, applyEdit]
   )
 
-  const previewSrc = previewNonce > 0 ? `${previewUrl}&v=${previewNonce}` : previewUrl
+  const hasObjects = useMemo(
+    () => stage?.entities.some((e) => e.role === 'object') ?? false,
+    [stage]
+  )
 
   return (
     <div className="flex h-screen flex-col gap-3 bg-neutral-950 p-3 text-neutral-100">
@@ -264,7 +268,7 @@ export default function StageTimelineClient({
 
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-white/10 bg-black">
-          <PreviewFrame src={previewSrc} seek={playhead} />
+          <PreviewFrame src={previewUrl} seek={playhead} stage={stage} hasObjects={hasObjects} />
         </div>
         <div className="w-[280px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-neutral-950/40">
           <InspectorPanel

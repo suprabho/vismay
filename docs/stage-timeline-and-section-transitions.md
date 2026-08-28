@@ -1,6 +1,6 @@
 # Stage timeline & section transitions — refining Tier 1 toward the editor
 
-**Status:** v0 + M3 implemented (M0 + M1 + M2-lite: sub-keyframes, delay/duration stagger, rAF stage renderer, foreground `cut|fade|slide` + background `hold|crossfade`, `revealDelayMs`. M3: `clock: scrubbed` + `runway` — live-scroll-only runway sections whose scroll progress drives the beat timeline both directions, activated by a centerline rule; autoplay/capture/embed and reduced motion collapse the runway until the M4 seek bridge. Remaining transition kinds stay schema-reserved). **Editor: E1 shipped** (beats-grid scrub & inspect at `apps/admin/components/timeline/`, driving the real `StoryShell` through the `viz-story-seek` bridge + `StoryTimelineFrameSurface`), **E2 in progress** (keyframe & timing editing — transform/easing/`t`/delay-duration edits, diamond drag between beats, comment-preserving YAML save). Capture/autoplay integration (M4) remains a future milestone — the seek bridge it needs now exists.
+**Status:** v0 + M3 implemented (M0 + M1 + M2-lite: sub-keyframes, delay/duration stagger, rAF stage renderer, foreground `cut|fade|slide` + background `hold|crossfade`, `revealDelayMs`. M3: `clock: scrubbed` + `runway` — live-scroll-only runway sections whose scroll progress drives the beat timeline both directions, activated by a centerline rule; autoplay/capture/embed and reduced motion collapse the runway until the M4 seek bridge. Remaining transition kinds stay schema-reserved). **Editor: E1 + E2 shipped** (beats-grid scrub & inspect + keyframe/timing editing with comment-preserving YAML save, at `apps/admin/components/timeline/`, driving the real `StoryShell` through the postMessage bridge + `StoryTimelineFrameSurface`), **W1 live preview shipped** (`viz-story-stage` — unsaved edits render in the preview instantly, save no longer reloads), **W2 on-canvas manipulation / W3 entity CRUD in progress**. Capture/autoplay integration (M4) remains a future milestone — the seek bridge it needs now exists.
 **Refines:** [`deck-stage-subjects-objects.md`](deck-stage-subjects-objects.md) (the 3-tier stage, Tier 1 shipped PR #321)
 **Relates to:** the freeform video editor (`packages/viz-admin/src/video-project/`, `apps/admin/components/vizmaya/video/`) — the timeline vocabulary and UI this plan converges with
 **Generated:** August 20, 2026
@@ -195,9 +195,16 @@ project's ms axis; a story's beat axis), shared transform editing (the composer'
 ### Layout
 
 - **Preview pane** — the *real* `StoryShell` in an iframe. The editor drives it over a
-  postMessage seek bridge (`viz-story-seek { unit, t }` — the sibling of the existing
-  `viz-story-progress` outbound message). No parallel preview renderer; what you scrub is what
-  ships.
+  postMessage bridge. No parallel preview renderer; what you scrub is what ships.
+  The editor protocol as implemented (all flat `{type, ...}` payloads, `'*'` target,
+  shape-guarded on receipt; the iframe advertises readiness first and the parent
+  buffers everything until then):
+  | direction | message | payload | purpose |
+  |---|---|---|---|
+  | iframe → parent | `viz-story-ready` | `{sectionCount}` | handshake; parent flushes buffered messages |
+  | parent → iframe | `viz-story-seek` | `{unit, t}` | move the playhead (E1) |
+  | parent → iframe | `viz-story-stage` | `{stage: StageConfig \| null}` | render UNSAVED edits live, no reload; `null` reverts to server config (W1) |
+  | parent → iframe | `viz-story-progress` | `{value: 0..1}` | embed-mode host scroll sync (pre-dates the editor) |
 - **Timeline panel** (bottom) — horizontal axis = **beats** (sections/subsections as columns,
   proportional to `timelineMs` / `runway`). Boundary gutters between sections carry a
   **transition chip** (click → transition picker: kind, direction, duration, easing).
