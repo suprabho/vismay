@@ -107,6 +107,16 @@ interface Props {
    * stories, whose `vertical` is undefined, keep the logo in autoplay).
    */
   hideLogoInAutoplay?: boolean
+  /**
+   * Called as the active section settles, with the active unit index and the
+   * total unit count. Fires once on first settle and again on every section
+   * change — but ONLY during a genuine scroll read: it's suppressed in
+   * autoplay, capture, and embed modes so analytics hosts see real readers,
+   * not render pipelines or iframes. Optional; the shell stays
+   * analytics-agnostic and the host decides what (if anything) to emit. Use it
+   * for reading-depth / completion tracking.
+   */
+  onSectionChange?: (activeIndex: number, totalSections: number) => void
 }
 
 /**
@@ -140,6 +150,7 @@ export default function StoryShell({
   LogoComponent,
   LinkComponent = DefaultHomeLink,
   hideLogoInAutoplay = false,
+  onSectionChange,
 }: Props) {
   const isDeckFormat = format === 'deck'
   const [activeUnit, setActiveUnit] = useState(0)
@@ -163,12 +174,17 @@ export default function StoryShell({
   // exact scroll positions itself) whereas embed collapses runways entirely
   // (its host does a linear whole-page scroll with no per-section concept).
   const [isEditor, setIsEditor] = useState(false)
+  // Gates the analytics emit below: the mode flags above default to false, so
+  // without this we'd report a "read" for one commit before the URL params
+  // resolve — including on autoplay/capture/embed/editor surfaces.
+  const [paramsReady, setParamsReady] = useState(false)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setIsAutoplay(params.get('autoplay') === '1')
     setIsCapture(params.get('capture') === '1')
     setIsEmbed(params.get('embed') === '1')
     setIsEditor(params.get('editor') === '1')
+    setParamsReady(true)
   }, [])
 
   // `useIsMobile` and "portrait" use the same (max-aspect-ratio: 1/1)
@@ -528,6 +544,17 @@ export default function StoryShell({
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [isEditor])
+
+  // Reading-depth signal for analytics hosts (opt-in via `onSectionChange`).
+  // Scoped to genuine scroll reads — never autoplay/capture/embed/editor — and held
+  // until the URL params resolve so a render surface can't leak a spurious
+  // section-0 event. Fires once on first settle (activeUnit starts at 0) and
+  // on every subsequent section change.
+  const isRealRead = paramsReady && !isAutoplay && !isCapture && !isEmbed && !isEditor
+  useEffect(() => {
+    if (!isRealRead) return
+    onSectionChange?.(activeUnit, units.length)
+  }, [isRealRead, activeUnit, units.length, onSectionChange])
 
   // Host-driven scroll sync (`?embed=1`).
   // On mount the story advertises its section count so the host can size its

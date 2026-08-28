@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
+import { trackStoryPdfExported } from '@/lib/analytics'
 
 interface CachedPdf {
   public_url: string
@@ -100,6 +101,7 @@ function PdfTile({
         const body = await res.json().catch(() => ({}))
         if (res.status === 200 && body.public_url) {
           setResolved({ public_url: body.public_url, thumbnail_url: body.thumbnail_url ?? null })
+          trackStoryPdfExported(storySlug, { format })
           return
         }
         if (res.status >= 400 && res.status !== 202) {
