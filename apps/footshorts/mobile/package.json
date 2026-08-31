@@ -13,11 +13,13 @@
     "apk:local": "bash scripts/build-local-apk.sh"
   },
   "dependencies": {
+    "@amplitude/analytics-react-native": "^1.4.13",
     "@expo-google-fonts/forum": "^0.4.1",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo-google-fonts/space-mono": "^0.4.2",
     "@footshorts/brand": "workspace:*",
     "@footshorts/shared": "workspace:*",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-query": "^5.56.2",
     "@vismay/footshorts-viz": "workspace:*",

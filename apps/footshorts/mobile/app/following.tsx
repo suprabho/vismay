@@ -69,7 +69,7 @@ export default function FollowingScreen() {
                     name={f.entity.name}
                     crestUrl={f.entity.crest_url}
                     selected
-                    onPress={() => unfollow.mutate(f.entity_id)}
+                    onPress={() => unfollow.mutate({ entityId: f.entity_id, source: 'following' })}
                   />
                 ))}
               </View>

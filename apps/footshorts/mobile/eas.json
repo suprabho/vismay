@@ -24,7 +24,8 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://grbrfpaznehikakupavx.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_nFT6O21VoCZSKs7lQe-UaA_tSkoc4su"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_nFT6O21VoCZSKs7lQe-UaA_tSkoc4su",
+        "EXPO_PUBLIC_AMPLITUDE_API_KEY": "de475c2f40cb9fe42f87051f01b8817b"
       }
     },
     "production": {
@@ -38,14 +39,15 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://grbrfpaznehikakupavx.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_nFT6O21VoCZSKs7lQe-UaA_tSkoc4su"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_nFT6O21VoCZSKs7lQe-UaA_tSkoc4su",
+        "EXPO_PUBLIC_AMPLITUDE_API_KEY": "de475c2f40cb9fe42f87051f01b8817b"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6764502362"
+        "ascAppId": "6790273858"
       },
       "android": {
         "track": "internal"

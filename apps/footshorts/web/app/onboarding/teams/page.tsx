@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import { EntityCard } from '@vismay/footshorts-viz/web';
 import { BackButton } from '@/components/BackButton';
+import { trackOnboardingCompleted } from '@/lib/analytics';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useTeams } from '@/lib/useEntities';
@@ -75,8 +76,8 @@ function OnboardingTeamsInner() {
     const toFollow = Array.from(picked).filter((id) => !initial.has(id));
     const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
     await Promise.all([
-      ...toFollow.map((id) => follow.mutateAsync(id)),
-      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+      ...toFollow.map((id) => follow.mutateAsync({ entityId: id, source: 'onboarding' })),
+      ...toUnfollow.map((id) => unfollow.mutateAsync({ entityId: id, source: 'onboarding' })),
     ]);
     if (!edit) {
       await supabase
@@ -84,6 +85,7 @@ function OnboardingTeamsInner() {
         .update({ onboarded_at: new Date().toISOString() })
         .eq('id', session.user.id);
       await refreshProfile();
+      trackOnboardingCompleted(picked.size);
     }
     setBusy(false);
     router.replace(edit ? '/following' : '/feed');

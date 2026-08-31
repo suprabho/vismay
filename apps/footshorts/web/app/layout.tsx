@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/AuthProvider';
 import { AuthModalProvider } from '@/lib/AuthModalProvider';
 import { QueryProvider } from '@/lib/QueryProvider';
 import { Analytics } from '@vercel/analytics/next';
+import AmplitudeProvider from '@/components/AmplitudeProvider';
 
 export const metadata: Metadata = {
   applicationName: 'Footshorts',
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>
+              <AmplitudeProvider />
               <AuthModalProvider>{children}</AuthModalProvider>
             </AuthProvider>
           </QueryProvider>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getCompetitionPalette, darkenHex } from '@vismay/footshorts-viz/web';
+import { trackArticleSeen, trackArticleSourceOpened } from '@/lib/analytics';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
 
 const VISIBLE_TAGS = 3;
@@ -73,6 +74,7 @@ export function FeedCard({
         for (const entry of entries) {
           if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
             onSeen(articleId);
+            trackArticleSeen(articleId, publisher);
             observer.disconnect();
           }
         }
@@ -81,7 +83,7 @@ export function FeedCard({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [articleId, onSeen]);
+  }, [articleId, onSeen, publisher]);
 
   return (
     <article
@@ -149,6 +151,7 @@ export function FeedCard({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackArticleSourceOpened({ article_id: articleId, publisher, url })}
           className="pt-2 self-start text-sm font-medium text-accent hover:underline"
         >
           Read at source →

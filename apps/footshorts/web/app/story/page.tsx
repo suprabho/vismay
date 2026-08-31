@@ -8,6 +8,7 @@ import {
   type StoryGroup,
 } from '@/lib/useFollowedStories';
 import { useSeenArticles } from '@/lib/useSeenArticles';
+import { trackStoryViewerOpened } from '@/lib/analytics';
 
 const STORY_DURATION_MS = 6000;
 const HOLD_THRESHOLD_MS = 180;
@@ -118,6 +119,14 @@ function StoryViewer() {
   useEffect(() => {
     if (story) markStorySeen(story);
   }, [story, markStorySeen]);
+
+  // One open event per viewer mount, once groups have arrived.
+  const openTrackedRef = useRef(false);
+  useEffect(() => {
+    if (openTrackedRef.current || !groups) return;
+    openTrackedRef.current = true;
+    trackStoryViewerOpened({ start_index: initial, group_count: groups.length });
+  }, [groups, initial]);
 
   // ESC to close, arrow keys to navigate
   useEffect(() => {

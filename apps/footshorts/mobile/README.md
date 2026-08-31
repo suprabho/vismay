@@ -15,7 +15,7 @@ pnpm --filter @footshorts/mobile apk:local  # from the repo root
 ```
 
 Output: `android/app/build/outputs/apk/release/app-release.apk` (~95 MB universal;
-package `app.footshorts`). It's signed with the Expo debug keystore, so it installs
+package `com.promad.footshorts`). It's signed with the Expo debug keystore, so it installs
 directly and runs standalone (JS bundled with Hermes — no Metro dev server needed).
 
 **Prerequisites** (already set up on the primary dev Mac):

@@ -19,14 +19,19 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import { SpaceMono_400Regular } from '@expo-google-fonts/space-mono';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from '@/lib/AuthProvider';
+import { AuthProvider, useAuth } from '@/lib/AuthProvider';
+import { initAnalytics, setAnalyticsUser, trackScreenViewed } from '@/lib/analytics';
+
+// Boot Amplitude before the first screen renders. No-ops without
+// EXPO_PUBLIC_AMPLITUDE_API_KEY (local dev builds send nothing).
+initAnalytics();
 
 // React Native has no window focus event, so refetchOnWindowFocus is inert
 // unless the focus manager is driven by AppState. Without this, an app
@@ -75,6 +80,27 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Native counterpart of web's autocaptured page views: one `screen_viewed`
+ * per route change, and the Amplitude identity kept in sync with the
+ * Supabase session (auth method events are tracked in AuthProvider).
+ */
+function AnalyticsTracker() {
+  const pathname = usePathname();
+  const { session, loading } = useAuth();
+
+  useEffect(() => {
+    trackScreenViewed(pathname);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (loading) return;
+    setAnalyticsUser(session?.user.id ?? null);
+  }, [session, loading]);
+
+  return null;
+}
+
 function ThemedStack() {
   const { theme } = useTheme();
   return (
@@ -107,6 +133,7 @@ export default function RootLayout() {
         <ThemeProvider storage={themeStorage}>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
+              <AnalyticsTracker />
               <ThemedStack />
             </AuthProvider>
           </QueryClientProvider>

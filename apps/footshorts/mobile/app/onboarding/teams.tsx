@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { trackOnboardingCompleted } from '@/lib/analytics';
 import { useTeams } from '@/lib/useEntities';
 import { useFollowMutation, useFollows } from '@/lib/useFollows';
 import { useAuth } from '@/lib/AuthProvider';
@@ -72,8 +73,8 @@ export default function OnboardingTeams() {
     const toFollow = Array.from(picked).filter((id) => !initial.has(id));
     const toUnfollow = Array.from(initial).filter((id) => !picked.has(id));
     await Promise.all([
-      ...toFollow.map((id) => follow.mutateAsync(id)),
-      ...toUnfollow.map((id) => unfollow.mutateAsync(id)),
+      ...toFollow.map((id) => follow.mutateAsync({ entityId: id, source: 'onboarding' })),
+      ...toUnfollow.map((id) => unfollow.mutateAsync({ entityId: id, source: 'onboarding' })),
     ]);
     if (!edit) {
       await supabase
@@ -81,6 +82,7 @@ export default function OnboardingTeams() {
         .update({ onboarded_at: new Date().toISOString() })
         .eq('id', session.user.id);
       await refreshProfile();
+      trackOnboardingCompleted(picked.size);
     }
     setBusy(false);
     router.replace(edit ? '/following' : '/(tabs)/feed');
