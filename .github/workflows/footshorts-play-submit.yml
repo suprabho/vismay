@@ -1,0 +1,58 @@
+# Submit a footshorts .aab to Google Play — keyless.
+#
+# Replaces EAS Submit for Android: the org policy iam.disableServiceAccountKeyCreation
+# blocks service-account JSON keys, so this job authenticates via Workload Identity
+# Federation instead (GitHub's OIDC token exchanged for short-lived Google creds;
+# nothing to leak, nothing to rotate).
+#
+# Run it from the Actions tab (workflow_dispatch) with the EAS build artifact URL
+# (printed by `eas build`, or copy it from the build page on expo.dev).
+#
+# Repo variables required (Settings → Secrets and variables → Actions → Variables):
+#   GCP_WIF_PROVIDER  projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github/providers/github-actions
+#   PLAY_SA_EMAIL     the service account email invited in Play Console (Release to testing tracks)
+#
+# NOTE: the Play API can only add releases to an existing app — the very first
+# .aab of a new app must still be uploaded manually in the Play Console UI.
+
+name: footshorts-play-submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      aab_url:
+        description: 'EAS build artifact URL (.aab)'
+        required: true
+        type: string
+      track:
+        description: 'Play track'
+        required: true
+        default: internal
+        type: choice
+        options: [internal, alpha, beta, production]
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: apps/footshorts/mobile/scripts
+
+      - name: Authenticate to Google Cloud (WIF, keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.PLAY_SA_EMAIL }}
+
+      - name: Download .aab from EAS
+        run: curl -fsSL -o app.aab "${{ inputs.aab_url }}" && ls -lh app.aab
+
+      - name: Upload to Play track
+        run: |
+          npm install --no-save googleapis
+          node apps/footshorts/mobile/scripts/play-upload.mjs app.aab "${{ inputs.track }}"
