@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { chromium } from 'playwright'
+import type { Browser } from 'playwright-core'
 import { isAuthed } from '@/lib/adminAuth'
 
 export const runtime = 'nodejs'
@@ -12,6 +12,25 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,199}$/i
 function clampDim(v: unknown, fallback: number): number {
   const n = typeof v === 'number' ? Math.round(v) : NaN
   return Number.isFinite(n) ? Math.min(Math.max(n, 320), 2160) : fallback
+}
+
+/** Local dev launches the Playwright-managed Chromium install. On Vercel that
+ *  download doesn't exist inside the function bundle (`playwright` resolves a
+ *  browsers cache that was never populated), so launch the @sparticuz/chromium
+ *  build shipped in node_modules through playwright-core instead — the same
+ *  pattern as any serverless headless-Chromium function. */
+async function launchBrowser(): Promise<Browser> {
+  if (process.env.VERCEL) {
+    const { default: sparticuz } = await import('@sparticuz/chromium')
+    const { chromium } = await import('playwright-core')
+    return chromium.launch({
+      args: sparticuz.args,
+      executablePath: await sparticuz.executablePath(),
+      headless: true,
+    })
+  }
+  const { chromium } = await import('playwright')
+  return chromium.launch({ args: ['--disable-blink-features=AutomationControlled'] })
 }
 
 /**
@@ -39,10 +58,11 @@ export async function POST(request: NextRequest) {
   const width = clampDim(body.width, 1080)
   const height = clampDim(body.height, 1350)
 
-  const browser = await chromium.launch({
-    args: ['--disable-blink-features=AutomationControlled'],
-  })
+  // Launch inside the try: a failed launch (e.g. a missing browser binary)
+  // must surface as our JSON error, not an unhandled 500 the client can't read.
+  let browser: Browser | null = null
   try {
+    browser = await launchBrowser()
     const page = await browser.newPage({ viewport: { width, height } })
     const url = `https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=off&theme=light`
     await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
@@ -58,6 +78,6 @@ export async function POST(request: NextRequest) {
       { status: 502 },
     )
   } finally {
-    await browser.close().catch(() => {})
+    await browser?.close().catch(() => {})
   }
 }
