@@ -1,12 +1,14 @@
 name: Footshorts - WC match events (Sportradar)
 
 # On-demand run of the Sportradar World Cup match-timeline sync
-# (apps/footshorts/worker/src/events-sportradar.ts). The same sync already runs
-# as a step inside footshorts-recap.yml's twice-daily scheduled run; this
-# workflow exists so the admin Pipeline tab's "Match timelines" panel (and manual
-# dispatch) can hydrate a just-finished match's goals/cards/subs immediately
-# without waiting for the next recap run. Idempotent — fixtures that already have
-# events are skipped — and self-limited to 150 Sportradar calls/run (trial budget guard).
+# (apps/footshorts/worker/src/events-sportradar.ts), driven from the admin
+# Pipeline tab's "Match timelines" panel or by manual dispatch. Idempotent —
+# fixtures that already have events are skipped — and self-limited to 150
+# Sportradar calls/run (trial budget guard).
+#
+# This sync used to ALSO run as a step on footshorts-recap.yml's twice-daily
+# cron. That schedule was retired and the step was not rehomed, so this workflow
+# is now the only thing that hydrates WC timelines — nothing does it automatically.
 #
 # Required repo secrets (in `Production`, shared with footshorts-scores):
 #   NEXT_PUBLIC_SUPABASE_URL

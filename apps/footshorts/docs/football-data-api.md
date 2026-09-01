@@ -135,8 +135,10 @@ Update-only, never inserts. Per comp code:
 - Resolve each FD match to a local fixture by `(home_team_id, away_team_id, kickoff_at ±6h)`
   — skips if 0 or >1 match. Writes `home_score`, `away_score`, `status='finished'`.
 - Scheduled by `.github/workflows/footshorts-scores.yml` every 3 hours (scores only).
-  Events + recaps are decoupled into `.github/workflows/footshorts-recap.yml`, which
-  runs its own twice-daily (00:00/12:00 UTC) schedule.
+  Events + recaps are decoupled into `.github/workflows/footshorts-recap.yml`. That
+  workflow's twice-daily (00:00/12:00 UTC) schedule has been **retired**: recaps are
+  now manual-dispatch only, and the event syncs it carried (`events.ts`,
+  `events-sportradar.ts`) no longer run on any cron.
 
 ### `entityResolver.ts` — names → canonical IDs
 
