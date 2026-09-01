@@ -17,7 +17,6 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     'playwright',
     'playwright-core',
-    '@sparticuz/chromium',
     'pdf-parse',
     'pdfjs-dist',
     '@napi-rs/canvas',
@@ -30,15 +29,6 @@ const nextConfig: NextConfig = {
   // and is otherwise dropped. Globs cover both the pnpm store layout and a
   // hoisted node_modules. Harmless if LiteParse isn't installed.
   outputFileTracingIncludes: {
-    // The aura-poster route launches @sparticuz/chromium on Vercel; its
-    // brotli-packed browser lives in bin/ and is read via fs at runtime with
-    // computed paths, so the tracer would otherwise drop it. Globs cover the
-    // pnpm store layout and a hoisted node_modules, like liteparse below.
-    '/api/footshorts/share/aura-poster': [
-      '../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**',
-      '../../node_modules/@sparticuz/chromium/bin/**',
-      './node_modules/@sparticuz/chromium/bin/**',
-    ],
     '/api/stories/[slug]/canvas/compose/sources': [
       '../../node_modules/.pnpm/@llamaindex+liteparse@*/node_modules/@llamaindex/liteparse/*.{node,so}',
       '../../node_modules/@llamaindex/liteparse/*.{node,so}',

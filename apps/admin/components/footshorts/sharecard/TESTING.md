@@ -121,7 +121,10 @@ place anywhere on the card.
 - **Aura backgrounds** rasterize as a *still* poster frame (auto-captured via
   `/api/footshorts/share/aura-poster`, or hand-picked) — the animation itself can never
   reach the PNG (cross-origin iframe). Ship/Download fail loudly if no poster can be
-  captured, instead of silently publishing a blank backdrop.
+  captured, instead of silently publishing a blank backdrop. **Deployed admin needs
+  `AURA_POSTER_SERVICE_URL` (+ `AURA_POSTER_SERVICE_TOKEN`)** pointing at the
+  standalone `apps/aura-poster` service; local dev falls back to its own Playwright
+  Chromium.
 - On-canvas interaction is **drag-to-move only**; **resize / rotate / opacity** are via the
   **Transform panel sliders** (no corner/rotate handles on the canvas yet).
 - **Background** supports **aura + AI** only; the old **news-thumbnail** background is not

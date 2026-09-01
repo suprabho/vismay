@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import type { Browser } from 'playwright-core'
 import { isAuthed } from '@/lib/adminAuth'
 
 export const runtime = 'nodejs'
@@ -14,23 +13,48 @@ function clampDim(v: unknown, fallback: number): number {
   return Number.isFinite(n) ? Math.min(Math.max(n, 320), 2160) : fallback
 }
 
-/** Local dev launches the Playwright-managed Chromium install. On Vercel that
- *  download doesn't exist inside the function bundle (`playwright` resolves a
- *  browsers cache that was never populated), so launch the @sparticuz/chromium
- *  build shipped in node_modules through playwright-core instead — the same
- *  pattern as any serverless headless-Chromium function. */
-async function launchBrowser(): Promise<Browser> {
-  if (process.env.VERCEL) {
-    const { default: sparticuz } = await import('@sparticuz/chromium')
-    const { chromium } = await import('playwright-core')
-    return chromium.launch({
-      args: sparticuz.args,
-      executablePath: await sparticuz.executablePath(),
-      headless: true,
-    })
+const FETCH_TIMEOUT_MS = 60_000
+
+/** Fetch the poster frame from the standalone aura-poster service (see
+ *  apps/aura-poster) — a plain container with a real Chromium, which is far
+ *  more reliable than launching a browser inside a serverless function. */
+async function posterFromService(slug: string, width: number, height: number): Promise<Buffer> {
+  const base = process.env.AURA_POSTER_SERVICE_URL!.replace(/\/+$/, '')
+  const token = process.env.AURA_POSTER_SERVICE_TOKEN
+  const res = await fetch(
+    `${base}/poster/${encodeURIComponent(slug)}?width=${width}&height=${height}`,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      cache: 'no-store',
+    },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `poster service HTTP ${res.status}`)
   }
+  return Buffer.from(await res.arrayBuffer())
+}
+
+/** Local-dev fallback: no poster service needed on a laptop — launch the
+ *  Playwright-managed Chromium directly (it exists there, unlike in a deployed
+ *  function's bundle). */
+async function posterFromLocalBrowser(slug: string, width: number, height: number): Promise<Buffer> {
   const { chromium } = await import('playwright')
-  return chromium.launch({ args: ['--disable-blink-features=AutomationControlled'] })
+  const browser = await chromium.launch({
+    args: ['--disable-blink-features=AutomationControlled'],
+  })
+  try {
+    const page = await browser.newPage({ viewport: { width, height } })
+    const url = `https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=off&theme=light`
+    await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
+    // The scene boots and animates after load; give it a moment so the shot
+    // lands mid-animation instead of on a blank or fading-in first frame.
+    await page.waitForTimeout(2_500)
+    return await page.screenshot({ type: 'jpeg', quality: 88 })
+  } finally {
+    await browser.close().catch(() => {})
+  }
 }
 
 /**
@@ -38,11 +62,15 @@ async function launchBrowser(): Promise<Browser> {
  *
  * The share-card composer shows the aura as a live cross-origin iframe, which
  * html-to-image can never rasterize — so without a poster image the aura is
- * silently absent from the published PNG. This route screenshots the embed in
- * headless Chromium at the card's output size and returns it as a JPEG data
- * URL the composer attaches as the aura background's `posterSrc` (JPEG keeps
- * the multi-hundred-KB frame from ballooning the config snapshot, which
- * travels as JSON through the publish route's ~4.5 MB body cap).
+ * silently absent from the published PNG. This route returns the frame as a
+ * JPEG data URL the composer attaches as the aura background's `posterSrc`
+ * (JPEG keeps the multi-hundred-KB frame from ballooning the config snapshot,
+ * which travels as JSON through the publish route's ~4.5 MB body cap).
+ *
+ * The frame comes from the aura-poster service (`AURA_POSTER_SERVICE_URL` +
+ * `AURA_POSTER_SERVICE_TOKEN`, see apps/aura-poster/README.md); the route
+ * itself never launches a browser in a deployed environment. Local dev without
+ * the service configured falls back to the machine's own Playwright Chromium.
  */
 export async function POST(request: NextRequest) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
@@ -58,18 +86,21 @@ export async function POST(request: NextRequest) {
   const width = clampDim(body.width, 1080)
   const height = clampDim(body.height, 1350)
 
-  // Launch inside the try: a failed launch (e.g. a missing browser binary)
-  // must surface as our JSON error, not an unhandled 500 the client can't read.
-  let browser: Browser | null = null
   try {
-    browser = await launchBrowser()
-    const page = await browser.newPage({ viewport: { width, height } })
-    const url = `https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=off&theme=light`
-    await page.goto(url, { waitUntil: 'load', timeout: 30_000 })
-    // The scene boots and animates after load; give it a moment so the shot
-    // lands mid-animation instead of on a blank or fading-in first frame.
-    await page.waitForTimeout(2_500)
-    const jpeg = await page.screenshot({ type: 'jpeg', quality: 88 })
+    let jpeg: Buffer
+    if (process.env.AURA_POSTER_SERVICE_URL) {
+      jpeg = await posterFromService(slug, width, height)
+    } else if (!process.env.VERCEL) {
+      jpeg = await posterFromLocalBrowser(slug, width, height)
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            'AURA_POSTER_SERVICE_URL is not configured — deploy apps/aura-poster and set it (plus AURA_POSTER_SERVICE_TOKEN) on this project.',
+        },
+        { status: 503 },
+      )
+    }
     const dataUrl = `data:image/jpeg;base64,${jpeg.toString('base64')}`
     return NextResponse.json({ ok: true, dataUrl })
   } catch (e) {
@@ -77,7 +108,5 @@ export async function POST(request: NextRequest) {
       { error: e instanceof Error ? e.message : 'aura poster capture failed' },
       { status: 502 },
     )
-  } finally {
-    await browser?.close().catch(() => {})
   }
 }
