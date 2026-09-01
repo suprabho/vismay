@@ -87,7 +87,9 @@ place anywhere on the card.
   **Eyebrow override** + **Show eyebrow** — each changes the card chrome live.
 
 ### 8. Background (behind the layer stack)
-- **Aura slug** input → sets an aura background (preview only; not in the PNG — expected).
+- **Aura slug** input → sets an aura background; a poster frame is auto-captured
+  server-side after ~a second (spinner on the **recapture** button) and that frame is
+  what lands in the exported/shipped PNG. A hand-picked poster image overrides it.
 - **AI background:** describe + **Gen** → an AI image backdrop; **Scrim** slider dims it.
 - **clear** removes it.
 
@@ -116,7 +118,10 @@ place anywhere on the card.
 4. **Existing saved cards still load** (v1→v2 migration).
 
 ## Known limitations (intentional, not bugs)
-- **Aura backgrounds** never rasterize into the PNG (cross-origin iframe) — preview only.
+- **Aura backgrounds** rasterize as a *still* poster frame (auto-captured via
+  `/api/footshorts/share/aura-poster`, or hand-picked) — the animation itself can never
+  reach the PNG (cross-origin iframe). Ship/Download fail loudly if no poster can be
+  captured, instead of silently publishing a blank backdrop.
 - On-canvas interaction is **drag-to-move only**; **resize / rotate / opacity** are via the
   **Transform panel sliders** (no corner/rotate handles on the canvas yet).
 - **Background** supports **aura + AI** only; the old **news-thumbnail** background is not
