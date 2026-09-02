@@ -4,11 +4,12 @@ name: Footshorts - scores refresh
 # footshorts Supabase. Update-only (never inserts) and idempotent, so it's safe
 # to re-run. Runs every 3 hours to keep results fresh.
 #
-# Recaps and their event-sync prerequisites are DECOUPLED from this workflow:
-# they run on their own twice-daily schedule in footshorts-recap.yml. Keeping
-# scores on its own job means a 3-hourly top-up never drags along the
-# Gemini / API-Football / Sportradar budgets a recap consumes, and a recap
-# failure can't fail the scores refresh (or vice versa).
+# Recaps and their event-sync prerequisites are DECOUPLED from this workflow.
+# They used to run on their own twice-daily schedule in footshorts-recap.yml;
+# that schedule has since been retired, so recaps are manual-only and the event
+# syncs have no scheduled writer at all. Either way this job stays scores-only:
+# a 3-hourly top-up never drags along the Gemini / API-Football / Sportradar
+# budgets a recap consumes.
 #
 # Required repo secrets (in `Production` — shared project-wide with vizmaya /
 # vizf1 / energy-profile workflows):

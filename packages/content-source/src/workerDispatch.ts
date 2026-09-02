@@ -58,26 +58,26 @@ export const FOOTSHORTS_WORKERS: WorkerDef[] = [
   {
     id: 'footshorts-recap',
     workflowFile: 'footshorts-recap.yml',
-    label: 'Daily recap',
+    label: 'Ad-hoc recap',
     description:
-      'Generates the editorial recap over a trailing window (scheduled run first hydrates match events).',
-    schedule: 'Every 12h · manual ad-hoc',
+      'Generates the editorial recap over a trailing window, from the match events already stored.',
+    schedule: 'Manual only',
   },
 ]
 
 /**
  * The on-demand Sportradar WC match-timeline sync (footshorts-events-sr.yml).
  * Deliberately NOT in FOOTSHORTS_WORKERS: it has its own Pipeline-tab panel
- * with inputs (lookback days / dry run), and the scheduled Daily recap run
- * already hydrates WC events as one of its steps — so a generic entry here would
- * be redundant.
+ * with inputs (lookback days / dry run), so a generic entry here would be
+ * redundant. Since the recap schedule was retired this is the ONLY way WC
+ * timelines get hydrated — nothing runs it on a cron.
  */
 export const SPORTRADAR_EVENTS_WORKER: WorkerDef = {
   id: 'footshorts-events-sr',
   workflowFile: 'footshorts-events-sr.yml',
   label: 'WC match timelines (Sportradar)',
   description: 'Hydrates finished World Cup fixtures with goals/cards/subs from Sportradar.',
-  schedule: 'Manual · also runs inside Daily recap',
+  schedule: 'Manual only',
 }
 
 /**
