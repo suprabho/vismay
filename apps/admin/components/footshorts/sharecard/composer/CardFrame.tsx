@@ -86,7 +86,8 @@ function Footer({ handle }: { handle: string }) {
 
 /** Decorative backdrop behind the layer stack. News thumbnail (proxied) / AI image
  *  rasterize into the export; an aura embeds the animated iframe for the preview
- *  only (never captured). A scrim keeps content legible. */
+ *  only (never captured) — its auto-captured/hand-picked poster underneath is
+ *  what carries the aura into the PNG. A scrim keeps content legible. */
 function CardBackgroundLayer({ background, scrim }: { background: CardBackground; scrim: number }) {
   return (
     <div className="absolute inset-0 z-0" aria-hidden>

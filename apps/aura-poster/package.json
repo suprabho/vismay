@@ -1,0 +1,13 @@
+{
+  "name": "aura-poster",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lightweight screenshot service: still poster frames of aura.promad.design embeds, for share-card exports.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.60.0"
+  }
+}

@@ -330,6 +330,23 @@ function DraggableSheet({
   )
 }
 
+/** Capture a still frame of the aura embed server-side (the cross-origin iframe
+ *  can't be rasterized in the browser) and return it as a data URL to use as
+ *  the aura background's `posterSrc`. */
+async function fetchAuraPoster(slug: string, ratio: AspectRatio): Promise<string> {
+  const out = OUTPUT_SIZE[ratio]
+  const res = await fetch('/api/footshorts/share/aura-poster', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, width: out.w, height: out.h }),
+  })
+  const body = (await res.json().catch(() => ({}))) as { ok?: boolean; dataUrl?: string; error?: string }
+  if (!res.ok || !body.ok || !body.dataUrl) {
+    throw new Error(body.error ?? `Aura poster capture failed (HTTP ${res.status})`)
+  }
+  return body.dataUrl
+}
+
 export function ShareCardCreator({ initialCompetitions }: { initialCompetitions: CompetitionOption[] }) {
   const competitions = initialCompetitions
 
@@ -361,6 +378,44 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   const [background, setBackground] = useState<CardBackground>({ type: 'none' })
   const [backgroundScrim, setBackgroundScrim] = useState(0.5)
   const [auraSlug, setAuraSlug] = useState('')
+  // Aura poster auto-capture. The aura embeds as a cross-origin iframe that
+  // html-to-image can never rasterize, so without a poster the aura is silently
+  // absent from the exported/published PNG. Whenever an aura slug is set we
+  // screenshot the embed server-side and attach the frame as `posterSrc`.
+  // `autoPosterForRef` records which "slug@ratio" the attached poster was
+  // captured for — null means it was hand-picked and must not be replaced.
+  const [posterFetching, setPosterFetching] = useState(false)
+  const [posterError, setPosterError] = useState<string | null>(null)
+  const autoPosterForRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (background.type !== 'aura' || !background.slug) return
+    const key = `${background.slug}@${ratio}`
+    const autoStale = autoPosterForRef.current !== null && autoPosterForRef.current !== key
+    if (background.posterSrc && !autoStale) return
+    let cancelled = false
+    // Debounced so typing a slug doesn't fire a headless capture per keystroke.
+    const t = setTimeout(async () => {
+      setPosterFetching(true)
+      setPosterError(null)
+      try {
+        const slug = background.slug
+        const dataUrl = await fetchAuraPoster(slug, ratio)
+        if (cancelled) return
+        autoPosterForRef.current = key
+        setBackground((bg) =>
+          bg.type === 'aura' && bg.slug === slug ? { ...bg, posterSrc: dataUrl } : bg,
+        )
+      } catch (e) {
+        if (!cancelled) setPosterError(e instanceof Error ? e.message : 'Poster capture failed')
+      } finally {
+        if (!cancelled) setPosterFetching(false)
+      }
+    }, 700)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [background, ratio])
 
   // card library + publish. The gallery lists lightweight summaries (no config)
   // and pages in more on scroll; a card's full config is fetched on open.
@@ -510,6 +565,19 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     pixelRatio,
     backgroundColor: bgHex,
   })
+
+  // Ship/download guard: if the aura background still lacks a poster (the
+  // auto-capture is debounced and can fail), block on capturing one now —
+  // otherwise the exported PNG silently loses the aura. Returns the background
+  // the capture will actually render, for snapshotting.
+  const ensureAuraPoster = useCallback(async (): Promise<CardBackground> => {
+    if (background.type !== 'aura' || background.posterSrc) return background
+    const posterSrc = await fetchAuraPoster(background.slug, ratio)
+    const next: CardBackground = { ...background, posterSrc }
+    autoPosterForRef.current = `${background.slug}@${ratio}`
+    setBackground(next)
+    return next
+  }, [background, ratio])
 
   // Entity tags suggested by the layers (the teams in a match, the competition of
   // a table, a news item's entities) — sent with the ship payload.
@@ -707,8 +775,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     return () => io.disconnect()
   }, [showSavedModal, hasMoreCards, loadMoreCards])
 
+  // `overrides` lets a caller holding fresher state than this closure (e.g.
+  // handleShip after attaching an aura poster mid-flight) snapshot it directly.
   const buildSnapshot = useCallback(
-    (): ShareCardSnapshotV2 => ({
+    (overrides?: Partial<Omit<ShareCardSnapshotV2, 'version'>>): ShareCardSnapshotV2 => ({
       version: 2,
       themeName,
       themeOverride,
@@ -723,6 +793,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       backgroundScrim,
       foreground: composer.layers,
       groups: composer.groups,
+      ...overrides,
     }),
     [themeName, themeOverride, ratio, accentHex, handle, logoSize, logoVariant, eyebrowOverride, showEyebrow, background, backgroundScrim, composer],
   )
@@ -741,6 +812,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setBackground(bg)
     setBackgroundScrim(snap.backgroundScrim ?? 0.5)
     if (bg.type === 'aura') setAuraSlug(bg.slug)
+    // A restored poster's provenance is unknown — treat it as hand-picked so
+    // the auto-capture effect doesn't clobber it on the next ratio change.
+    autoPosterForRef.current = null
     setComposer(
       normalizeGroupContiguity({
         layers: snap.version === 2 ? (snap.foreground ?? []) : v1ToForeground(snap),
@@ -757,11 +831,16 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     if (!hasLayers) return
     setDownloading(true)
     try {
+      await ensureAuraPoster()
       await download(`footshorts-${representativeType}-${ratio.replace(':', 'x')}.png`)
+    } catch (e) {
+      // Surfaces in the Aura tab; the download is aborted rather than shipping
+      // a card missing its background.
+      setPosterError(e instanceof Error ? e.message : 'Poster capture failed')
     } finally {
       setDownloading(false)
     }
-  }, [hasLayers, download, representativeType, ratio])
+  }, [hasLayers, download, representativeType, ratio, ensureAuraPoster])
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!hasLayers) return false
@@ -923,6 +1002,10 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setShipping(true)
     setShipError(null)
     try {
+      // A missing aura poster would publish a card with a blank backdrop —
+      // block on capturing one now (usually the auto-capture effect already
+      // attached it while editing).
+      const shipBackground = await ensureAuraPoster()
       const dataUrl = await capture()
       if (!dataUrl) throw new Error('Could not render the card image.')
       // Rendered PNG → Blob: a base64 data URL carried in the publish JSON blows
@@ -938,7 +1021,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
           id: currentCardId ?? undefined,
           name,
           cardType: representativeType,
-          config: buildSnapshot(),
+          // Snapshot with the background the capture actually rendered — a
+          // poster attached inside this handler isn't in the closure state yet.
+          config: buildSnapshot({ background: shipBackground }),
         }),
       })
       const sign = (await signRes.json().catch(() => ({}))) as {
@@ -986,7 +1071,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     } finally {
       setShipping(false)
     }
-  }, [hasLayers, currentCardName, representativeType, buildSnapshot, capture, currentCardId, ratio, tags])
+  }, [hasLayers, currentCardName, representativeType, buildSnapshot, capture, ensureAuraPoster, currentCardId, ratio, tags])
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 p-5 text-neutral-200">
@@ -1221,8 +1306,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
             )}
             {activeTab === 'aura' && (
               <div className="space-y-4">
-                {/* Aura backdrop: an animated embed — shows in the live preview only,
-                    never rasterized into the exported PNG. */}
+                {/* Aura backdrop: an animated embed in the live preview; a poster
+                    frame (auto-captured server-side, or hand-picked) is what
+                    rasterizes into the exported PNG. */}
                 <div className="flex flex-col gap-3 rounded-lg border border-white/10 p-3">
                   <div className="flex items-center justify-between">
                     <span className={labelCls}>Aura background</span>
@@ -1239,8 +1325,8 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                     )}
                   </div>
 
-                  <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
-                    Aura animates in the live preview only. Attach a poster image below — that’s what lands in the exported PNG.
+                  <p className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-neutral-400">
+                    Aura animates in the live preview. A still frame is captured automatically and lands in the exported PNG — or attach your own poster image below to override it.
                   </p>
 
                   <label className={labelCls}>
@@ -1268,7 +1354,26 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
                   {background.type === 'aura' && (
                     <div className="flex flex-col gap-2">
-                      <span className={labelCls}>Poster image (for export)</span>
+                      <div className="flex items-center justify-between">
+                        <span className={labelCls}>Poster image (for export)</span>
+                        <button
+                          className="text-[11px] text-neutral-400 underline disabled:opacity-50"
+                          disabled={posterFetching}
+                          onClick={() => {
+                            // Drop the poster and let the auto-capture effect
+                            // fetch a fresh frame for the current slug + ratio.
+                            autoPosterForRef.current = null
+                            setBackground({ type: 'aura', slug: background.slug })
+                          }}
+                        >
+                          {posterFetching ? 'capturing…' : 'recapture'}
+                        </button>
+                      </div>
+                      {posterError && (
+                        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
+                          Poster capture failed: {posterError}
+                        </p>
+                      )}
                       {background.posterSrc && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -1281,7 +1386,12 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                         ratio={ratio}
                         paletteHexes={bgPaletteHexes}
                         news={data.news}
-                        onPick={(src) => setBackground({ type: 'aura', slug: background.slug, posterSrc: src })}
+                        onPick={(src) => {
+                          // Hand-picked poster: pin it so the auto-capture
+                          // effect never replaces it.
+                          autoPosterForRef.current = null
+                          setBackground({ type: 'aura', slug: background.slug, posterSrc: src })
+                        }}
                       />
                     </div>
                   )}
