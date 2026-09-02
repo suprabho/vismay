@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useMemo, useState, forwardRef, useImperativeHandle } from 'react'
 import { toPng } from 'html-to-image'
-import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility, VizLayer, MapRegionLayer, HeatmapLayer } from '@vismay/viz-engine'
+import type { ResolvedUnit, MapPinConfig, MapPinOverride, MapPalette, ShareSectionOverride, ShareLayerVisibility, VizLayer, MapRegionLayer, HeatmapLayer, StoryBackgroundConfig, OverlayConfig } from '@vismay/viz-engine'
 import type { MapTextLabel } from '@vismay/viz-engine'
 import { resolveSlotsFlat } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
@@ -12,6 +12,7 @@ import ShareHeroCard from './ShareHeroCard'
 import ShareDeckForeground from './ShareDeckForeground'
 import ShareMapBg from './ShareMapBg'
 import MapLegend from './MapLegend'
+import ExportBackdrop from '../story/ExportBackdrop'
 import BrandingHeader from './BrandingFooter'
 import { trackShareCardDownloaded } from '../analytics'
 
@@ -43,6 +44,16 @@ type ResolvedMapLayer = {
  *   4:3 → 1440×1080  (pixelRatio ≈ 2.77)
  */
 const BASE = 390
+
+/**
+ * 1×1 transparent PNG. html-to-image swaps this in for any image it fails to
+ * fetch (404, CORS) instead of assigning an empty `src` to the clone — which
+ * fires `error` and rejects the whole capture. A card with one missing asset
+ * (a stale logo path, an aura still the service couldn't render) should still
+ * export, minus that asset, rather than yield nothing.
+ */
+const TRANSPARENT_PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
 const RENDER_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '1:1': { w: BASE, h: BASE },
@@ -82,6 +93,14 @@ interface Props {
   title: string
   /** Story vertical (e.g. `footshorts`) — scopes brand chrome on the card. */
   vertical?: string
+  /**
+   * Deck page backdrop painted behind the card content as a static still
+   * (aura → `capture.png`, requested at the export's output size so the
+   * html-to-image upscale stays crisp). Skipped on cards that show a map.
+   */
+  background?: StoryBackgroundConfig
+  /** `defaults.overlay`, layered above `background`. */
+  overlay?: OverlayConfig
   accessToken: string
   /** Card variant — 'auto' picks by section kind, 'map-title' forces map + title overlay */
   variant?: CardVariant
@@ -139,7 +158,7 @@ export function extractHeroBits(paragraphs: string[]): { dek: string; byline: st
 }
 
 const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
-  { unit, index, ratio, slug, title, vertical, accessToken, variant = 'auto', graphScope = 'all', itemSlice, itemHeading, shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
+  { unit, index, ratio, slug, title, vertical, background, overlay, accessToken, variant = 'auto', graphScope = 'all', itemSlice, itemHeading, shareOverride, palette, fontstack, highlightCountry, highlightColor, mapOpacity, mapStyle, defaultPinColor, defaultPinRadius, logo, disableDownload = false },
   ref
 ) {
   const captureRef = useRef<HTMLDivElement>(null)
@@ -369,12 +388,15 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
       // Wait for every <img> in the capture target to finish loading
       // before snapshotting. html-to-image clones the node and re-fetches
       // each src; if the image hasn't resolved yet the cloned <img>
-      // rasterizes empty.
+      // rasterizes empty. An image that has already FAILED (`complete` with
+      // no natural size — e.g. an aura still the service couldn't render)
+      // must count as settled too: its load/error events have already
+      // fired, so waiting on them here would hang the capture forever.
       const imgs = Array.from(node.querySelectorAll('img'))
       await Promise.all(
         imgs.map((img) => {
-          if (img.complete && img.naturalWidth > 0) {
-            return img.decode().catch(() => undefined)
+          if (img.complete) {
+            return img.naturalWidth > 0 ? img.decode().catch(() => undefined) : undefined
           }
           return new Promise<void>((resolve) => {
             img.addEventListener('load', () => resolve(), { once: true })
@@ -388,6 +410,7 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
         height: h,
         pixelRatio,
         backgroundColor: getComputedStyle(node).getPropertyValue('--color-bg').trim() || '#0a0e14',
+        imagePlaceholder: TRANSPARENT_PIXEL,
         filter: (el) => {
           // Hide download buttons during capture
           if (el instanceof HTMLElement && el.dataset.shareUi === 'true') return false
@@ -426,6 +449,18 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function ShareCard(
           fontSize: 20,
         }}
       >
+          {/* Deck page backdrop (aura still + tint + overlay). First in DOM so
+              everything below paints over it; `capture()` already waits for
+              every <img> in the card, which covers the still. */}
+          {background && !showMap && (
+            <ExportBackdrop
+              background={background}
+              overlay={overlay}
+              width={output.w}
+              height={output.h}
+            />
+          )}
+
           {/* Map background layer — only on hero and map-title cards */}
           {showMap && (
             <>

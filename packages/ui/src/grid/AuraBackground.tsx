@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { auraEmbedUrl } from '@vismay/viz-engine'
 
 /**
  * Lazy-loaded iframe of the per-story aura visual served from
@@ -40,7 +41,7 @@ export function AuraBackground({
       {show && (
         <iframe
           title=""
-          src={`https://aura.promad.design/embed/${slug}?hideText=true&hideIcons=true&input=${input}&theme=light`}
+          src={auraEmbedUrl(slug, { input })}
           loading="lazy"
           tabIndex={-1}
         />
