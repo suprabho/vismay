@@ -78,9 +78,10 @@ export default async function AppRecapsPage({ params, searchParams }: Props) {
         </div>
       ) : list.length === 0 ? (
         <div className="px-4 py-10 text-sm text-neutral-500 text-center">
-          No recaps yet. Generate one with{' '}
+          No recaps yet. Recaps are no longer generated on a schedule — run one from the
+          Pipeline tab, or with{' '}
           <code className="font-mono text-neutral-400">pnpm recap</code> in the footshorts
-          worker — it runs automatically twice a day and covers the last 24 hours.
+          worker. Each run covers the last 24 hours by default.
         </div>
       ) : (
         <div className="flex-1 min-h-0 grid grid-cols-[260px_1fr]">

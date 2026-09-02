@@ -344,7 +344,7 @@ async function scrapeForCompetition(
 /**
  * Insert a fixture's Opta timeline into fixture_events. Returns rows written
  * (0 on skip/failure). Gap-fill by default: a freshness re-check right
- * before the write shrinks the race against events.ts's twice-daily run
+ * before the write shrinks the race against a manual events.ts run
  * from run-length to seconds — and since both writers upsert on the same
  * natural key, even a lost race degrades to idempotent overwrites rather
  * than duplicates (modulo provider name-spelling drift). `opts.force` skips

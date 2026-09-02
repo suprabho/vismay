@@ -87,8 +87,9 @@ function Footer({ handle }: { handle: string }) {
 
 /** Decorative backdrop behind the layer stack. News thumbnail (proxied) / AI image
  *  rasterize into the export; an aura embeds the animated iframe for the preview
- *  only (never captured) over a static still of the same scene that does. A scrim
- *  keeps content legible. */
+ *  only (never captured) over a still that does: the auto-captured/hand-picked
+ *  poster when one is attached, else the scene's own capture.png. A scrim keeps
+ *  content legible. */
 function CardBackgroundLayer({
   background,
   scrim,
@@ -118,8 +119,10 @@ function CardBackgroundLayer({
         <>
           {/* The still <img> is the only aura layer that rasterizes — it sits
               underneath the live embed and carries the background into the PNG.
-              An uploaded poster wins; otherwise the scene's own capture.png
-              (via the same-origin proxy, like every remote image here). */}
+              The attached poster (auto-captured by the creator or hand-picked)
+              wins; otherwise the scene's own capture.png, via the same-origin
+              proxy like every remote image here — so a card still exports its
+              aura if the server capture failed or hasn't fired yet. */}
           <AuraPoster
             slug={background.slug}
             width={output.w}

@@ -130,11 +130,12 @@ export type CardContent =
  *  standings, fixtures, form, timeline, news-article). Bleed cards
  *  (news-image / ai-image) ignore it — their image already IS the card.
  *  `aura` embeds the animated `aura.promad.design` iframe for the LIVE preview;
- *  the cross-origin iframe can't be rasterized, so the optional `posterSrc` still
- *  image (data URL upload/generation, or a proxied remote URL) is what lands in
- *  the exported PNG — mirroring the vizmaya aura layer. Without a poster the
- *  export falls back to the card background + scrim. News and AI image
- *  backgrounds capture cleanly. */
+ *  the cross-origin iframe can't be rasterized, so the `posterSrc` still image
+ *  is what lands in the exported PNG. The creator auto-captures a poster frame
+ *  server-side (`/api/footshorts/share/aura-poster`) whenever a slug is set,
+ *  and Ship/Download block on one existing — a hand-picked image (data URL
+ *  upload/generation, or a proxied remote URL) overrides the auto frame. News
+ *  and AI image backgrounds capture cleanly. */
 export type CardBackground =
   | { type: 'none' }
   | { type: 'news'; url: string; label?: string }
