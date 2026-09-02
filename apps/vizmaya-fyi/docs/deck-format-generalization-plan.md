@@ -219,11 +219,14 @@ deck spec's legibility floor for charts over moving aurora.
 
 ### 2.5 PDF print mode ✅
 
-In `mode === 'print'` the aura should swap to a solid color (or be omitted
-entirely) for legibility. **Done** — `StoryBackgroundSlot` has a `mode === 'print'`
-branch returning a flat `var(--color-bg, #000)` fill, and `StoryBackgroundOverlay`
-drops its translucent layer in print too. This is the only mode-specific
-behavior the backdrop needs.
+In `mode === 'print'` the animated aura iframe can't be captured, so it swaps
+for a **static still** of the same scene. **Done** — `StoryBackgroundSlot`'s
+`mode === 'print'` branch paints `auraCaptureUrl(slug)` (an `<img>` of
+`/scenes/<slug>/capture.png`) over the theme colour, keeping the `tint` layer;
+`StoryBackgroundOverlay` applies in every mode. The PDF shells (`SlidesShell`,
+`ReportShell`) and share cards paint the same still per slide / page / card via
+`ExportBackdrop` in `@vismay/render-surface`. (Originally this branch collapsed
+to a flat `var(--color-bg)` fill, which is why exports lost the backdrop.)
 
 ### 2.6 Readiness
 

@@ -20,8 +20,8 @@ import type {
   StoryFocusArea,
   ResolvedForeground,
 } from '@vismay/viz-engine'
-import { resolveSlotsFlat, ChartDataOverrideProvider, ForegroundLayoutSlot } from '@vismay/viz-engine'
-import { AuraBackground } from '@vismay/ui'
+import { resolveSlotsFlat, ChartDataOverrideProvider, ForegroundLayoutSlot, auraCaptureUrl } from '@vismay/viz-engine'
+import { AuraBackground, AuraPoster } from '@vismay/ui'
 import type { AspectRatio } from './AspectRatioToggle'
 import type { CardComposition, ElementLayer, MapSpec } from './layers/types'
 import { DEFAULT_GRAPHIC_HEIGHT_PCT, bareChartId } from './layers/types'
@@ -61,6 +61,10 @@ export const OUTPUT_SIZE: Record<AspectRatio, { w: number; h: number }> = {
   '3:4': { w: 1080, h: 1440 },
   '4:3': { w: 1440, h: 1080 },
 }
+
+/** 1×1 transparent PNG — html-to-image's stand-in for an image it can't fetch. */
+const TRANSPARENT_PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
 /** Default zoom-out applied to the story's configured zoom when a map slot has
  *  no explicit per-ratio camera — the small card crops less of the subject. */
@@ -411,8 +415,11 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
         height: h,
         pixelRatio,
         backgroundColor: getComputedStyle(node).getPropertyValue('--color-bg').trim() || '#0a0e14',
+        // A failed image fetch becomes a transparent pixel instead of an empty
+        // clone `src` (whose error event would reject the whole capture).
+        imagePlaceholder: TRANSPARENT_PIXEL,
         // Strip composer chrome AND the live aura iframe (cross-origin, can't
-        // rasterize — the poster <img> underneath carries the background).
+        // rasterize — the still <img> underneath carries the background).
         filter: (el) => !(el instanceof HTMLElement && el.dataset.shareUi === 'true'),
         includeQueryParams: true,
         cacheBust: true,
@@ -467,14 +474,17 @@ const ShareCard = forwardRef<ShareCardHandle, Props>(function LayeredShareCard(
       case 'aura':
         return (
           <>
-            {bg.posterSrc && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={proxiedOverlaySrc(bg.posterSrc)}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            )}
+            {/* Still underneath the live embed — the only aura layer that
+                rasterizes. An uploaded poster wins; otherwise the scene's own
+                capture.png, routed through the same-origin proxy. */}
+            <AuraPoster
+              slug={bg.slug}
+              width={output.w}
+              height={output.h}
+              src={proxiedOverlaySrc(
+                bg.posterSrc ?? auraCaptureUrl(bg.slug, { w: output.w, h: output.h })
+              )}
+            />
             {/* Live preview only — cross-origin iframe is stripped from capture. */}
             <div data-share-ui="true" className="absolute inset-0">
               <AuraBackground slug={bg.slug} />

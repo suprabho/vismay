@@ -4,6 +4,19 @@ import { useCallback, type RefObject } from 'react'
 import { toPng } from 'html-to-image'
 
 /**
+ * 1×1 transparent PNG. html-to-image swaps this in for any image it fails to
+ * fetch (404 / CORS / proxy 502) instead of assigning an empty `src` to its
+ * clone — which fires `error` and rejects the whole capture. A card with one
+ * missing asset (a crest, an aura still the service couldn't render) should
+ * still export, minus that asset, rather than yield nothing.
+ */
+const TRANSPARENT_PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+
+/** Cap on waiting for a still-pending <img> before snapshotting. */
+const IMG_READY_TIMEOUT_MS = 20_000
+
+/**
  * Rasterize a DOM node to a PNG data URL. Ported from vizmaya-fyi's ShareCard
  * capture: wait for fonts + every `<img>` to finish loading/decoding before
  * snapshotting (html-to-image clones the node and re-fetches each src; an
@@ -30,16 +43,25 @@ export function useCapture(
       await raf()
       await raf()
       await delay(180)
+      // An image that has already FAILED (`complete` with no natural size) is
+      // settled too — its load/error events already fired, so waiting on them
+      // would hang the capture forever.
       const imgs = Array.from(node.querySelectorAll('img'))
       await Promise.all(
         imgs.map((img) => {
-          if (img.complete && img.naturalWidth > 0) {
-            return img.decode().catch(() => undefined)
+          if (img.complete) {
+            return img.naturalWidth > 0 ? img.decode().catch(() => undefined) : undefined
           }
-          return new Promise<void>((resolve) => {
-            img.addEventListener('load', () => resolve(), { once: true })
-            img.addEventListener('error', () => resolve(), { once: true })
-          })
+          // Pending images race a backstop: a fresh aura still can take ~15s
+          // on a capture-cache miss, and html-to-image re-fetches every src
+          // itself anyway, so giving up on the wait never drops the image.
+          return Promise.race([
+            new Promise<void>((resolve) => {
+              img.addEventListener('load', () => resolve(), { once: true })
+              img.addEventListener('error', () => resolve(), { once: true })
+            }),
+            delay(IMG_READY_TIMEOUT_MS),
+          ])
         }),
       )
       return await toPng(node, {
@@ -47,6 +69,7 @@ export function useCapture(
         height,
         pixelRatio,
         backgroundColor: backgroundColor ?? '#0B0B0F',
+        imagePlaceholder: TRANSPARENT_PIXEL,
         // Key html-to-image's process-lifetime cache on the FULL url (query string
         // included). By default it strips the query string, so every proxied crest
         // (/api/.../proxy-image?url=...) collides on one key and the first flag

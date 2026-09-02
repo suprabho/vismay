@@ -6,6 +6,7 @@ import { resolveUnits } from '@vismay/content-source/resolveUnits'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
 import { signActionToken } from '@vismay/admin-core/actionToken'
 import type { ResolvedUnit } from '@vismay/viz-engine'
+import { resolveStoryBackground } from '@vismay/viz-engine'
 import { themedLogoDataUrl } from '../lib/themeLogo'
 import { applyShareBrandFonts } from '../lib/shareTheme'
 import { buildShareSampleYaml } from '../lib/shareSampleYaml'
@@ -72,6 +73,12 @@ export async function ShareSurface({
   const fontImportUrl = getFontImportUrl(shareTheme.fonts)
   const logo = await themedLogoDataUrl(shareConfig?.logo, shareTheme)
   const sampleYaml = buildShareSampleYaml(units)
+  // Deck stories carry their page backdrop onto the cards (as a still); map
+  // stories don't — mirrors the `hasBackdrop` gate on the live story page.
+  const isDeck = story.frontmatter.format === 'deck'
+  const background = isDeck
+    ? resolveStoryBackground(config.defaults.storyBackground, story.frontmatter.aura)
+    : undefined
 
   // Cross-TLD save credential. The page itself was reached via a signed
   // URL (middleware-verified); we mint a narrow action token here so the
@@ -99,6 +106,8 @@ export async function ShareSurface({
           config={config}
           title={story.frontmatter.title}
           vertical={story.frontmatter.vertical}
+          background={background}
+          overlay={isDeck ? config.defaults.overlay : undefined}
           accessToken={mapboxToken}
           shareOverrides={shareConfig?.sections ?? null}
           shareYamlText={shareYamlText ?? ''}

@@ -7,7 +7,8 @@ import { resolveSlotsFlat, resolveSlots, getVizModule } from '@vismay/viz-engine
 import type { StoryFormat } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFlowFrame from './PreviewFlowFrame'
-import { useStoryReadiness } from '@vismay/viz-engine'
+import { useStoryReadiness, resolveStoryBackground } from '@vismay/viz-engine'
+import ExportBackdrop, { backdropNeedsSignal } from '../story/ExportBackdrop'
 import {
   getReportMapOverride,
   getReportPins,
@@ -31,7 +32,11 @@ interface Props {
    * preserved via `ForegroundLayoutSlot`.
    */
   format?: StoryFormat
-  /** Frontmatter aura slug — reserved for future per-page backdrop. */
+  /**
+   * Frontmatter aura slug. For deck stories it is the fallback page backdrop
+   * (`defaults.storyBackground` wins), painted behind the cover and every
+   * page as a static still — see `ExportBackdrop`. Map stories ignore it.
+   */
   aura?: string
   accessToken: string
   logo?: string
@@ -72,7 +77,7 @@ export default function ReportShell({
   units,
   config,
   format = 'map',
-  aura: _aura,
+  aura,
   accessToken,
   logo,
   print = false,
@@ -80,14 +85,34 @@ export default function ReportShell({
 }: Props) {
   const isDeck = format === 'deck'
   const byline = useMemo(() => extractByline(units), [units])
+  // Deck page backdrop, resolved exactly like the live story page. Rendered
+  // on the cover + every page as a still so it survives page.pdf(). A4 gets
+  // dpr 2 — at 96 dpi CSS px a 1× still is visibly soft when zoomed.
+  const backdrop = useMemo(
+    () => (isDeck ? resolveStoryBackground(config.defaults.storyBackground, aura) : null),
+    [isDeck, config.defaults.storyBackground, aura]
+  )
+  const backdropSignals = backdropNeedsSignal(backdrop) ? 1 : 0
+  const renderBackdrop = (): ReactNode =>
+    backdrop ? (
+      <ExportBackdrop
+        background={backdrop}
+        overlay={config.defaults.overlay}
+        width={PAGE_W}
+        height={PAGE_H}
+        dpr={2}
+        onReady={noteReady}
+      />
+    ) : null
   // Sum capture-blocking signals: each visible map page + each foreground
   // viz layer (chart / image / video / rive / embed) WHOSE MODULE IS
   // REGISTERED. Unknown layer types render null in `ForegroundVizSlot`
   // without firing `noteReady`, so counting them would prevent
   // `__pdfReady__` from ever flipping true. Matches the unified readiness
-  // model in `lib/storyReadiness.ts`.
+  // model in `lib/storyReadiness.ts`. Deck backdrops add one still per page
+  // plus one for the cover.
   const expectedSignals = useMemo(() => {
-    let total = 0
+    let total = backdropSignals * (units.length + 1)
     for (const u of units) {
       const subMap = u.parentConfig.subsections?.[u.subIndex]?.map
       const ov = getReportMapOverride(u.parentConfig)
@@ -103,7 +128,7 @@ export default function ReportShell({
       }
     }
     return total
-  }, [units])
+  }, [units, backdropSignals])
   const { noteReady } = useStoryReadiness(expectedSignals)
   const noteMapReady = noteReady
 
@@ -119,7 +144,8 @@ export default function ReportShell({
         padding: '96px',
       }}
     >
-        <div className="h-full flex flex-col justify-between">
+        {renderBackdrop()}
+        <div className="relative h-full flex flex-col justify-between">
           <div>
             {logo && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -185,6 +211,7 @@ export default function ReportShell({
           fontFamily: 'var(--font-sans)',
         }}
       >
+        {renderBackdrop()}
         <div className="absolute inset-0">
           <ForegroundLayoutSlot
             slug={slug}

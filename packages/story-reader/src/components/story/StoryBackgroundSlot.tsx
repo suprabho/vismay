@@ -2,6 +2,7 @@
 
 import type { ComponentType } from 'react'
 import type { OverlayConfig, StoryBackgroundConfig } from '@vismay/viz-engine'
+import { auraCaptureUrl, overlayBackground, resolveStoryBackground } from '@vismay/viz-engine'
 
 /** Host-injected aura iframe renderer (e.g. vizmaya's AuraBackground). */
 type AuraComponentType = ComponentType<{ slug: string; input?: 'off' | 'mic' }>
@@ -16,8 +17,10 @@ type RenderMode = 'scroll' | 'autoplay' | 'capture' | 'print'
  *   2. `frontmatterAura` (legacy field that also drives the home tile)
  *   3. `{ type: 'none' }`
  *
- * In `mode === 'print'` the aura is replaced with the theme background color
- * so PDF exports stay legible — animated aurorae render terribly in print.
+ * In `mode === 'print'` the animated aura iframe is swapped for a static
+ * still of the same scene (`auraCaptureUrl`) — an iframe never survives PDF
+ * capture, a plain `<img>` does. The theme colour stays underneath as the
+ * fallback while the still loads (or if the aura service is down).
  *
  * Sits at z-index -2 so the story shell's own background slot (z-0) and
  * foreground (z-10+) layer cleanly on top. The accompanying overlay layer
@@ -35,15 +38,14 @@ export default function StoryBackgroundSlot({
   /** Host-injected aura renderer. When omitted, the aura layer is skipped. */
   AuraComponent?: AuraComponentType
 }) {
-  const resolved: StoryBackgroundConfig =
-    config ?? (frontmatterAura ? { type: 'aura', slug: frontmatterAura } : { type: 'none' })
+  const resolved: StoryBackgroundConfig = resolveStoryBackground(config, frontmatterAura)
 
   if (resolved.type === 'none') return null
 
-  // Print mode: collapse anything visually busy into a flat theme-colored
-  // surface. The overlay's color (Phase 2.4) is what carries any remaining
-  // tint; the aura embed never makes it into the rendered PDF.
-  if (mode === 'print') {
+  // Print mode: the aura embed never makes it into a rendered PDF, so paint a
+  // static still of the scene instead (same tint layering as the live path).
+  // Sized for a landscape viewport; `cover` absorbs any aspect mismatch.
+  if (mode === 'print' && resolved.type === 'aura') {
     return (
       <div
         aria-hidden
@@ -53,8 +55,34 @@ export default function StoryBackgroundSlot({
           zIndex: -2,
           background: 'var(--color-bg, #000)',
           pointerEvents: 'none',
+          overflow: 'hidden',
         }}
-      />
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={auraCaptureUrl(resolved.slug, { w: 1920, h: 1080 })}
+          alt=""
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+        {resolved.tint && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: resolved.tint,
+              mixBlendMode: resolved.tintBlendMode ?? 'multiply',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+      </div>
     )
   }
 
@@ -138,37 +166,16 @@ export default function StoryBackgroundSlot({
  */
 export function StoryBackgroundOverlay({
   config,
-  mode = 'scroll',
 }: {
   config?: OverlayConfig
+  /**
+   * Accepted for callers that thread the render mode through, but no longer
+   * consulted: print paints the aura still (see above), so the overlay — what
+   * keeps charts legible over the scene — applies in every mode.
+   */
   mode?: RenderMode
 }) {
-  if (!config) return null
-  // In print mode, drop the overlay too — the print-mode backdrop is already
-  // a flat solid; an additional translucent layer would just darken text.
-  if (mode === 'print') return null
-
-  const baseColor = config.color
-  const baseOpacity = config.opacity ?? 1
-  const baseBackground = baseColor
-    ? config.opacity != null
-      ? mixWithOpacity(baseColor, baseOpacity)
-      : baseColor
-    : undefined
-
-  const gradientBackground = config.gradient
-    ? config.gradient.type === 'radial'
-      ? `radial-gradient(circle at center, ${config.gradient.from}, ${config.gradient.to})`
-      : `linear-gradient(${config.gradient.angle ?? 'to bottom'}, ${config.gradient.from}, ${config.gradient.to})`
-    : undefined
-
-  // When both a solid color and a gradient are specified, layer gradient over
-  // color via CSS multi-background. Author intent in the deck spec is
-  // gradient-above-color, so the gradient comes first in the shorthand.
-  const background = gradientBackground && baseBackground
-    ? `${gradientBackground}, ${baseBackground}`
-    : (gradientBackground ?? baseBackground)
-
+  const background = overlayBackground(config)
   if (!background) return null
 
   return (
@@ -183,23 +190,4 @@ export function StoryBackgroundOverlay({
       }}
     />
   )
-}
-
-/**
- * Best-effort: combine a CSS color (hex / rgb / rgba / theme var) with an
- * opacity. For hex/rgb we can construct rgba; for anything else we fall back
- * to wrapping in a CSS `color-mix` against transparent so the alpha applies
- * without requiring the input to be a known format.
- */
-function mixWithOpacity(color: string, opacity: number): string {
-  const a = Math.max(0, Math.min(1, opacity))
-  const hex = color.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
-  if (hex) {
-    const h = hex[1]
-    const r = parseInt(h.length === 3 ? h[0] + h[0] : h.slice(0, 2), 16)
-    const g = parseInt(h.length === 3 ? h[1] + h[1] : h.slice(2, 4), 16)
-    const b = parseInt(h.length === 3 ? h[2] + h[2] : h.slice(4, 6), 16)
-    return `rgba(${r}, ${g}, ${b}, ${a})`
-  }
-  return `color-mix(in srgb, ${color} ${a * 100}%, transparent)`
 }

@@ -4,7 +4,14 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import type { ResolvedUnit, StoryConfig, ShareSectionOverride, ShareItemGroup } from '@vismay/viz-engine'
+import type {
+  ResolvedUnit,
+  StoryConfig,
+  ShareSectionOverride,
+  ShareItemGroup,
+  StoryBackgroundConfig,
+  OverlayConfig,
+} from '@vismay/viz-engine'
 import { resolveSlotsFlat, classifyForegroundLayers } from '@vismay/viz-engine'
 import AspectRatioToggle, { type AspectRatio } from './AspectRatioToggle'
 import ShareCard, { type ShareCardHandle, type CardVariant } from './ShareCard'
@@ -20,6 +27,14 @@ interface Props {
   title: string
   /** Story vertical (e.g. `footshorts`) — scopes brand chrome on the cards. */
   vertical?: string
+  /**
+   * Deck-format page backdrop (resolved `defaults.storyBackground` →
+   * frontmatter `aura`), painted behind every non-map card as a static still.
+   * Undefined for map stories — their cards carry their own map / flat bg.
+   */
+  background?: StoryBackgroundConfig
+  /** `defaults.overlay` — layered above `background` exactly like the live page. */
+  overlay?: OverlayConfig
   accessToken: string
   shareOverrides: Record<string, ShareSectionOverride> | null
   /** Raw on-disk share.yaml text (or '' when none). Source of truth for YAML view. */
@@ -215,6 +230,8 @@ export default function ShareShell({
   config,
   title,
   vertical,
+  background,
+  overlay,
   accessToken,
   shareOverrides,
   shareYamlText,
@@ -610,6 +627,8 @@ export default function ShareShell({
                       slug={slug}
                       title={title}
                       vertical={vertical}
+                      background={background}
+                      overlay={overlay}
                       accessToken={accessToken}
                       variant={card.variant}
                       graphScope={card.graphScope ?? 'all'}

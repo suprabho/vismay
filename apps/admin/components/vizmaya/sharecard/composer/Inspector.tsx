@@ -279,9 +279,9 @@ function BackgroundInspector({
             <input value={bg.slug} onChange={(e) => onChange(patchBackground(composition, { slug: e.target.value }))} placeholder="aura embed slug" className={inputCls} />
           </Field>
           <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[10px] text-amber-200">
-            Aura animates in the preview only. Attach a poster image below — that&apos;s what lands in the exported PNG.
+            Aura animates in the preview only. The export uses a still of the same scene automatically — attach a poster image below to use your own instead.
           </p>
-          <span className={labelCls}>Poster image (for export)</span>
+          <span className={labelCls}>Poster image (optional export override)</span>
           {bg.posterSrc && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={bg.posterSrc} alt="" className="h-16 w-full rounded border border-white/10 object-cover" />

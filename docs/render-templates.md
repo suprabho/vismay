@@ -134,7 +134,7 @@ These are the frontmatter keys the routes read directly; `Frontmatter` is define
 | `theme` | `Theme` | — | yes | Color + font palette (`theme.colors`, `theme.fonts`). Drives `ThemeProvider` CSS vars, map palette (`themeToMapPalette`), font imports (`getFontImportUrl`), and the OG card colors. |
 | `status` | `'draft' \| 'published' \| 'archived'` | `'published'` | no | Publication state (missing = published, back-compat). |
 | `listed` | boolean | `true` | no | Whether the story appears on the home grid. |
-| `aura` | string | — | no | Aura embed slug (`https://aura.promad.design/embed/<slug>`). Used as the home-tile background; for deck stories also the page-level backdrop fallback when `defaults.storyBackground` is absent. |
+| `aura` | string | — | no | Aura embed slug (`https://aura.promad.design/embed/<slug>`). Used as the home-tile background; for deck stories also the page-level backdrop fallback when `defaults.storyBackground` is absent. Export surfaces (report/slides PDF, share cards, print mode) paint a static still of the scene (`/scenes/<slug>/capture.png?w=&h=&dpr=`) instead of the animated iframe. |
 | `vertical` | string | — | no | Vertical bundle to load (`@vismay/<vertical>-viz`) so its viz types register. Unknown verticals are ignored with a console warning. `footshorts` additionally triggers Supabase entity hydration in the reader route. |
 | `format` | `'map' \| 'deck'` | `'map'` | no | The renderer discriminator (above). |
 
@@ -1486,7 +1486,7 @@ layer painted above it.
 | Option | Type | Default | Required | Description |
 |---|---|---|---|---|
 | `type` | `'aura'` | — | yes | Discriminator. |
-| `slug` | `string` | — | yes | Aura scene slug (`aura.promad.design` / `https://aura.promad.design/embed/<slug>`). |
+| `slug` | `string` | — | yes | Aura scene slug (`aura.promad.design` / `https://aura.promad.design/embed/<slug>`). Exports (report/slides PDF, share cards, print) paint the scene's static still — `auraCaptureUrl()` in `@vismay/viz-engine` — via `ExportBackdrop`, since an animated cross-origin iframe never survives PDF / html-to-image capture. The `tint` + `defaults.overlay` layering is preserved. |
 | `input` | `'on' \| 'off'` | `'off'` (in deck) | no | Whether the aura embed reacts to audio (mic). In `StoryBackgroundSlot` it is forwarded to `AuraComponent` as `input={resolved.input === 'on' ? 'mic' : 'off'}`. |
 | `tint` | `string` (CSS color) | undefined | no | Color cast layered above the aura iframe via a blend mode. When unset, no tint layer renders. |
 | `tintBlendMode` | `'multiply' \| 'screen' \| 'overlay' \| 'soft-light' \| 'difference' \| 'normal'` | `'multiply'` | no | `mix-blend-mode` for the tint layer (only meaningful when `tint` is set). Defaults to `multiply` when `tint` is present. |
@@ -2478,7 +2478,7 @@ The frontmatter is parsed from the YAML block at the top of `<slug>.md`. The fou
 | `theme` | `Theme` | — (required) | Color + font palette for the whole story. See [Theme](#theme). |
 | `status` | `'draft' \| 'published' \| 'archived'` | `'published'` (when missing) | Publication state. `StoryStatus`. Missing is treated as published for backwards compatibility. |
 | `listed` | boolean | `true` (when missing) | Whether the story appears on the home grid. Set `false` to keep a story reachable by URL but off the grid. |
-| `aura` | string | unset | Aura embed slug (`https://aura.promad.design/embed/<slug>`) used as the home-tile background. In the **deck** format it is also the fallback page backdrop when `defaults.storyBackground` is omitted. |
+| `aura` | string | unset | Aura embed slug (`https://aura.promad.design/embed/<slug>`) used as the home-tile background. In the **deck** format it is also the fallback page backdrop when `defaults.storyBackground` is omitted — live as the animated embed, in exports as a static still (`/scenes/<slug>/capture.png`). |
 | `vertical` | string | unset | Vertical bundle to load. When set, the page loads `components/story/viz/verticals/<vertical>/` so that vertical's viz types register before slots look them up (e.g. `starship` registers `starship:viewer`). Unknown verticals are ignored with a console warning. See `components/story/viz/verticals.ts`. |
 | `format` | `'map' \| 'deck'` | `'map'` (when missing) | Top-level renderer discriminator (`StoryFormat`). `map` = legacy map-anchored scrollytelling (every section has its own `map:` camera). `deck` = snap-scrolled slide deck over a page-level backdrop. The page route branches on this. |
 

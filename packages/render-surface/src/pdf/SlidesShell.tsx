@@ -7,7 +7,8 @@ import { resolveSlotsFlat, resolveSlots, getVizModule } from '@vismay/viz-engine
 import type { StoryFormat } from '@vismay/viz-engine'
 import PdfMapBg from './PdfMapBg'
 import PreviewFrame from './PreviewFrame'
-import { useStoryReadiness } from '@vismay/viz-engine'
+import { useStoryReadiness, resolveStoryBackground } from '@vismay/viz-engine'
+import ExportBackdrop, { backdropNeedsSignal } from '../story/ExportBackdrop'
 import {
   getReportMapOverride,
   getReportPins,
@@ -30,7 +31,12 @@ interface Props {
    * same in slides as on the live page.
    */
   format?: StoryFormat
-  /** Frontmatter aura slug. For deck stories, used as the per-slide backdrop. */
+  /**
+   * Frontmatter aura slug. For deck stories it is the fallback page backdrop
+   * (`defaults.storyBackground` wins) and is painted behind every slide as a
+   * static still — see `ExportBackdrop`. Map stories ignore it (their slides
+   * carry a map; the aura is only their home tile).
+   */
   aura?: string
   accessToken: string
   logo?: string
@@ -59,17 +65,20 @@ export default function SlidesShell({
   units,
   config,
   format = 'map',
-  // aura intentionally unused in this PR — deck slides paint the theme
-  // background as their backdrop. A future iteration can render the aura
-  // embed per slide (deferred because animated iframes don't help PDF
-  // capture and visually compete with frosted-glass slot chrome).
-  aura: _aura,
+  aura,
   accessToken,
   logo,
   print = false,
   embed = false,
 }: Props) {
   const isDeck = format === 'deck'
+  // Deck page backdrop, resolved exactly like the live story page. Rendered
+  // per slide as a still (aura → capture.png) so it survives page.pdf().
+  const backdrop = useMemo(
+    () => (isDeck ? resolveStoryBackground(config.defaults.storyBackground, aura) : null),
+    [isDeck, config.defaults.storyBackground, aura]
+  )
+  const backdropSignals = backdropNeedsSignal(backdrop) ? 1 : 0
   const slides = useMemo(() => {
     return units.map((unit) => {
       const map = unit.parentConfig.map
@@ -96,10 +105,12 @@ export default function SlidesShell({
   // REGISTERED. Unknown layer types (e.g. a deck-format `quote` layer when
   // the quote module hasn't been registered yet) silently render null in
   // `ForegroundVizSlot` and never fire `noteReady` — counting them would
-  // keep `__pdfReady__` from ever flipping true.
+  // keep `__pdfReady__` from ever flipping true. Each deck slide's backdrop
+  // still (aura / image) adds one more.
   const expectedSignals = useMemo(() => {
     let total = 0
     for (const s of slides) {
+      total += backdropSignals
       if (
         !!s.center &&
         typeof s.zoom === 'number' &&
@@ -114,7 +125,7 @@ export default function SlidesShell({
       }
     }
     return total
-  }, [slides])
+  }, [slides, backdropSignals])
   const { noteReady } = useStoryReadiness(expectedSignals)
   // Keep the legacy alias so the JSX below doesn't have to thread a renamed prop.
   const noteMapReady = noteReady
@@ -137,6 +148,15 @@ export default function SlidesShell({
     const isHeroLike = rawKind === 'cover' || rawKind === 'hero'
     return (
       <div className="absolute inset-0">
+        {backdrop && (
+          <ExportBackdrop
+            background={backdrop}
+            overlay={config.defaults.overlay}
+            width={SLIDE_W}
+            height={SLIDE_H}
+            onReady={noteReady}
+          />
+        )}
         <ForegroundLayoutSlot
           slug={slug}
           foreground={resolved.foreground}
@@ -417,7 +437,7 @@ export default function SlidesShell({
               fontFamily: 'var(--font-sans)',
             }}
           >
-            {renderSlideContent(slide, i)}
+            {isDeck ? renderDeckSlide(slide.unit) : renderSlideContent(slide, i)}
           </section>
         </PreviewFrame>
       ))}
