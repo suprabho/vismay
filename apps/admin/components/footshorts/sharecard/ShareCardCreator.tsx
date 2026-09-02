@@ -1240,7 +1240,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
                   </div>
 
                   <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
-                    Aura animates in the live preview only. Attach a poster image below — that’s what lands in the exported PNG.
+                    Aura animates in the live preview only. The export uses a still of the same scene automatically — attach a poster image below to use your own instead.
                   </p>
 
                   <label className={labelCls}>
@@ -1268,7 +1268,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
 
                   {background.type === 'aura' && (
                     <div className="flex flex-col gap-2">
-                      <span className={labelCls}>Poster image (for export)</span>
+                      <span className={labelCls}>Poster image (optional export override)</span>
                       {background.posterSrc && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img

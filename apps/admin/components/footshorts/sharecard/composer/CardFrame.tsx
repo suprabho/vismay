@@ -2,7 +2,8 @@
 
 import { forwardRef, type CSSProperties, type ReactNode } from 'react'
 import { themeToVars } from '@footshorts/brand'
-import { AuraBackground } from '@vismay/ui'
+import { AuraBackground, AuraPoster } from '@vismay/ui'
+import { auraCaptureUrl } from '@vismay/viz-engine'
 import { LayerView, type ComposerLayer } from '@vismay/viz-admin'
 import { FootshortsLogo } from '../FootshortsLogo'
 import { FootshortsDataProvider, type FootshortsCardData } from '../modules/dataContext'
@@ -86,8 +87,18 @@ function Footer({ handle }: { handle: string }) {
 
 /** Decorative backdrop behind the layer stack. News thumbnail (proxied) / AI image
  *  rasterize into the export; an aura embeds the animated iframe for the preview
- *  only (never captured). A scrim keeps content legible. */
-function CardBackgroundLayer({ background, scrim }: { background: CardBackground; scrim: number }) {
+ *  only (never captured) over a static still of the same scene that does. A scrim
+ *  keeps content legible. */
+function CardBackgroundLayer({
+  background,
+  scrim,
+  output,
+}: {
+  background: CardBackground
+  scrim: number
+  /** Export size — the aura still is requested at exactly this aspect. */
+  output: { w: number; h: number }
+}) {
   return (
     <div className="absolute inset-0 z-0" aria-hidden>
       {background.type === 'image' ? (
@@ -105,16 +116,22 @@ function CardBackgroundLayer({ background, scrim }: { background: CardBackground
         <img src={background.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : background.type === 'aura' ? (
         <>
-          {/* The poster <img> is the only aura layer that rasterizes — it sits
-              underneath the live embed and carries the background into the PNG. */}
-          {background.posterSrc && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={background.posterSrc.startsWith('data:') ? background.posterSrc : proxiedImage(background.posterSrc)}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          )}
+          {/* The still <img> is the only aura layer that rasterizes — it sits
+              underneath the live embed and carries the background into the PNG.
+              An uploaded poster wins; otherwise the scene's own capture.png
+              (via the same-origin proxy, like every remote image here). */}
+          <AuraPoster
+            slug={background.slug}
+            width={output.w}
+            height={output.h}
+            src={
+              background.posterSrc
+                ? background.posterSrc.startsWith('data:')
+                  ? background.posterSrc
+                  : proxiedImage(background.posterSrc)
+                : proxiedImage(auraCaptureUrl(background.slug, { w: output.w, h: output.h }))
+            }
+          />
           {/* Live preview only — the cross-origin iframe can't be rasterized, so
               flag it data-share-ui and the capture filter strips it (the poster
               above is what lands in the export). */}
@@ -175,7 +192,7 @@ export const CardFrame = forwardRef<
 
   return (
     <div ref={ref} className="relative overflow-hidden bg-bg text-text" style={style}>
-      {background && <CardBackgroundLayer background={background} scrim={scrim} />}
+      {background && <CardBackgroundLayer background={background} scrim={scrim} output={out} />}
       <FootshortsDataProvider value={data}>
         {/* Free-positioned layer canvas — each layer absolutely placed by its transform. */}
         <div className="absolute inset-0 z-10">{children}</div>

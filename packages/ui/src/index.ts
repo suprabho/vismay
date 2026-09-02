@@ -15,6 +15,7 @@ export type { StoryBentoGridProps, RenderCardContext } from './grid/StoryBentoGr
 export { StoryGridStyles, storyGridCss } from './grid/StoryGridStyles'
 export { StoryGridFonts } from './grid/StoryGridFonts'
 export { AuraBackground } from './grid/AuraBackground'
+export { AuraPoster } from './grid/AuraPoster'
 export {
   cardThemeStyle,
   storyCardTheme,
