@@ -23,7 +23,14 @@ import {
   usePrefersReducedMotion,
 } from '@vismay/viz-engine'
 import { useIsMobile } from '@vismay/viz-engine'
-import type { ResolvedUnit, StoryDefaults, StoryFormat, LogoPalette, VizLayer } from '@vismay/viz-engine'
+import type {
+  ResolvedUnit,
+  StageConfig,
+  StoryDefaults,
+  StoryFormat,
+  LogoPalette,
+  VizLayer,
+} from '@vismay/viz-engine'
 import type { MapOverrideConfig } from '@vismay/viz-engine'
 
 /** Props for the home-link wrapper the shell renders around the logo. */
@@ -242,12 +249,20 @@ export default function StoryShell({
   // accidentally satisfy `scrub`'s embed/capture exclusion.
   const seekRef = useRef<{ unit: number; t: number } | null>(null)
 
+  // Editor live-edit bridge (W1): the admin timeline posts its UNSAVED edited
+  // stage config via `viz-story-stage`; while set, it wins over the
+  // server-loaded `defaults.stage` so edits render immediately with no
+  // reload. `null` (the default, and the message's explicit reset value)
+  // falls through to the authored config — non-editor surfaces never receive
+  // the message, so this is provably inert outside the editor iframe.
+  const [stageOverride, setStageOverride] = useState<StageConfig | null>(null)
+
   // Tier-1 stage: densify the story's `defaults.stage` into one settled frame
   // per active unit. Resolved here (not per render surface) so it rides the
   // existing `defaults` + active `units` with no extra props on the page route.
   const resolvedStage = useMemo(
-    () => resolveStage(units, defaults.stage, { isPortrait }),
-    [units, defaults.stage, isPortrait]
+    () => resolveStage(units, stageOverride ?? defaults.stage, { isPortrait }),
+    [units, defaults.stage, stageOverride, isPortrait]
   )
 
   // The map-step layering (parent/sub/autoplay/mobile) now lives inside the
@@ -514,6 +529,22 @@ export default function StoryShell({
     return () => window.removeEventListener('message', onMessage)
   }, [isEditor, units.length, seekToUnit])
 
+  // Editor live-edit bridge (W1): `viz-story-stage { stage }` carries the
+  // admin timeline's unsaved edited stage config; `stage: null` reverts to
+  // the server-loaded config. Separate from the seek effect so each message
+  // stays single-purpose (the protocol's house style).
+  useEffect(() => {
+    if (!isEditor) return
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'viz-story-stage') return
+      const s = e.data.stage as StageConfig | null
+      if (s !== null && (typeof s !== 'object' || !Array.isArray(s?.entities))) return
+      setStageOverride(s)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [isEditor])
+
   // Reading-depth signal for analytics hosts (opt-in via `onSectionChange`).
   // Scoped to genuine scroll reads — never autoplay/capture/embed/editor — and held
   // until the URL params resolve so a render surface can't leak a spurious
@@ -603,6 +634,7 @@ export default function StoryShell({
         // Undefined everywhere except the editor iframe — every other
         // surface has no seek bridge and this branch is dead code there.
         seek: isEditor ? seekRef : undefined,
+        editing: isEditor || undefined,
       }}
     >
       {/* ─── Persistent background slot ──────────────────────────────────
