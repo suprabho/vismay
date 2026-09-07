@@ -566,17 +566,25 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     backgroundColor: bgHex,
   })
 
-  // Ship/download guard: if the aura background still lacks a poster (the
-  // auto-capture is debounced and can fail), block on capturing one now —
-  // otherwise the exported PNG silently loses the aura. Returns the background
-  // the capture will actually render, for snapshotting.
+  // Ship/download step: if the aura background still lacks a poster (the
+  // auto-capture is debounced and can fail), try capturing one now. Best-effort
+  // only — CardFrame already paints the scene's own capture.png still under the
+  // live iframe (AuraPoster), so the export keeps its aura even when the poster
+  // service is down or misconfigured; the failure just surfaces in the Aura tab.
+  // Returns the background the capture will actually render, for snapshotting.
   const ensureAuraPoster = useCallback(async (): Promise<CardBackground> => {
     if (background.type !== 'aura' || background.posterSrc) return background
-    const posterSrc = await fetchAuraPoster(background.slug, ratio)
-    const next: CardBackground = { ...background, posterSrc }
-    autoPosterForRef.current = `${background.slug}@${ratio}`
-    setBackground(next)
-    return next
+    try {
+      const posterSrc = await fetchAuraPoster(background.slug, ratio)
+      const next: CardBackground = { ...background, posterSrc }
+      autoPosterForRef.current = `${background.slug}@${ratio}`
+      setBackground(next)
+      setPosterError(null)
+      return next
+    } catch (e) {
+      setPosterError(e instanceof Error ? e.message : 'Poster capture failed')
+      return background
+    }
   }, [background, ratio])
 
   // Entity tags suggested by the layers (the teams in a match, the competition of
@@ -834,9 +842,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
       await ensureAuraPoster()
       await download(`footshorts-${representativeType}-${ratio.replace(':', 'x')}.png`)
     } catch (e) {
-      // Surfaces in the Aura tab; the download is aborted rather than shipping
-      // a card missing its background.
-      setPosterError(e instanceof Error ? e.message : 'Poster capture failed')
+      console.error('Share card download failed:', e)
     } finally {
       setDownloading(false)
     }
@@ -1002,9 +1008,9 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
     setShipping(true)
     setShipError(null)
     try {
-      // A missing aura poster would publish a card with a blank backdrop —
-      // block on capturing one now (usually the auto-capture effect already
-      // attached it while editing).
+      // Try to attach an aura poster if none is set yet (usually the
+      // auto-capture effect already did while editing); the capture.png still
+      // is the fallback backdrop, so a poster failure never blocks shipping.
       const shipBackground = await ensureAuraPoster()
       const dataUrl = await capture()
       if (!dataUrl) throw new Error('Could not render the card image.')
