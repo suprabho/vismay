@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getCompetitionPalette, darkenHex } from '@vismay/footshorts-viz/native';
 import { trackArticleSourceOpened } from '@/lib/analytics';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
+import { isVideoUrl } from '@footshorts/shared/media';
+import { ArticleVideo } from './ArticleVideo';
 
 const VISIBLE_TAGS = 3;
 
@@ -38,6 +40,9 @@ type Props = {
   url: string;
   publishedAt: string;
   entities?: FeedCardEntity[];
+  /** Whether this card is the one on screen. Only an active card plays its
+   *  video; defaults to true for hosts that render a single card. */
+  active?: boolean;
 };
 
 function relativeTime(iso: string): string {
@@ -49,7 +54,16 @@ function relativeTime(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export function FeedCard({ headline, summary, imageUrl, publisher, url, publishedAt, entities }: Props) {
+export function FeedCard({
+  headline,
+  summary,
+  imageUrl,
+  publisher,
+  url,
+  publishedAt,
+  entities,
+  active = true,
+}: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [tagsExpanded, setTagsExpanded] = useState(false);
@@ -62,7 +76,9 @@ export function FeedCard({ headline, summary, imageUrl, publisher, url, publishe
     <View className="flex-1 bg-bg">
       {/* Image: takes up top ~40% so the text block below has room for a 60-word summary */}
       <View style={{ flex: 0.4 }} className="bg-surface">
-        {imageUrl ? (
+        {imageUrl && isVideoUrl(imageUrl) ? (
+          <ArticleVideo uri={imageUrl} active={active} />
+        ) : imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
             style={{ width: '100%', height: '100%' }}

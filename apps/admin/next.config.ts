@@ -49,6 +49,7 @@ const nextConfig: NextConfig = {
     '@vismay/verticals',
     '@vismay/ui',
     '@vismay/viz-admin',
+    '@footshorts/shared',
   ],
 }
 

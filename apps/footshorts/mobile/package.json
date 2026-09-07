@@ -41,6 +41,7 @@
     "expo-status-bar": "~55.0.5",
     "expo-system-ui": "~55.0.16",
     "expo-updates": "~55.0.21",
+    "expo-video": "~55.0.21",
     "expo-web-browser": "~55.0.17",
     "nativewind": "^4.1.23",
     "react": "19.2.4",

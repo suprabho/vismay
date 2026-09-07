@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { FlatList, useWindowDimensions, View, type ViewToken } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FeedCard as FeedCardType } from '@footshorts/shared/schemas';
@@ -10,6 +10,10 @@ import { ShareCardFeedItem } from './ShareCardFeedItem';
 export type DiscoverRow =
   | { kind: 'article'; published_at: string; article: FeedCardType }
   | { kind: 'card'; published_at: string; card: ShareCardItem };
+
+function rowKey(row: DiscoverRow): string {
+  return row.kind === 'article' ? `a:${row.article.article_id}` : `c:${row.card.id}`;
+}
 
 type Props = {
   rows: DiscoverRow[];
@@ -25,11 +29,24 @@ export function CardSwiper({ rows, onEndReached, ListFooterComponent, topGap: to
   const cardHeight = height;
   const topGap = topGapOverride ?? insets.top + 56;
 
+  // The row currently filling the viewport, so only its video plays — the list
+  // keeps a window of cards mounted, and every one of them would otherwise be
+  // streaming. Tracked with a zero-dwell config, separate from the 1s "seen"
+  // one, so playback starts on the first paint of a card.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
   // FlatList requires stable refs for viewability config + callback.
   const onItemSeenRef = useRef(onItemSeen);
   onItemSeenRef.current = onItemSeen;
 
   const viewabilityPairs = useRef([
+    {
+      viewabilityConfig: { itemVisiblePercentThreshold: 50, minimumViewTime: 0 },
+      onViewableItemsChanged: ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+        const row = viewableItems[0]?.item as DiscoverRow | undefined;
+        setActiveKey(row ? rowKey(row) : null);
+      },
+    },
     {
       viewabilityConfig: { itemVisiblePercentThreshold: 80, minimumViewTime: 1000 },
       onViewableItemsChanged: ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -50,9 +67,8 @@ export function CardSwiper({ rows, onEndReached, ListFooterComponent, topGap: to
   return (
     <FlatList
       data={rows}
-      keyExtractor={(row) =>
-        row.kind === 'article' ? `a:${row.article.article_id}` : `c:${row.card.id}`
-      }
+      keyExtractor={rowKey}
+      extraData={activeKey}
       renderItem={({ item }) => (
         <View style={{ height: cardHeight, paddingTop: topGap, paddingHorizontal: 12 }}>
           <View className="flex-1 rounded-t-3xl overflow-hidden bg-surface border border-b-0 border-border">
@@ -65,6 +81,7 @@ export function CardSwiper({ rows, onEndReached, ListFooterComponent, topGap: to
                 url={item.article.url}
                 publishedAt={item.article.published_at}
                 entities={item.article.entities}
+                active={rowKey(item) === activeKey}
               />
             ) : (
               <ShareCardFeedItem
