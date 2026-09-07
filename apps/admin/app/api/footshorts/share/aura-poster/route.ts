@@ -15,23 +15,39 @@ function clampDim(v: unknown, fallback: number): number {
 
 const FETCH_TIMEOUT_MS = 60_000
 
-/** Fetch the poster frame from the standalone aura-poster service (see
- *  apps/aura-poster) — a plain container with a real Chromium, which is far
- *  more reliable than launching a browser inside a serverless function. */
+/**
+ * Fetch the poster frame from the aura render service (`aura-render` on Fly,
+ * source: beautiful-headers/render-service) — the same warm-browser service
+ * that backs `aura.promad.design/scenes/<slug>/capture.png`. Contract:
+ * `GET /scene/<slug>/capture.(png|webp)?w=&h=&dpr=` authenticated with the
+ * `x-render-secret` header. We ask for webp: the frame travels as a data URL
+ * inside the card's config snapshot (publish route ≈ 4.5 MB body cap), and a
+ * 1080×1350 png is ~2.6 MB where the webp is ~300 KB.
+ */
 async function posterFromService(slug: string, width: number, height: number): Promise<Buffer> {
   const base = process.env.AURA_POSTER_SERVICE_URL!.replace(/\/+$/, '')
-  const token = process.env.AURA_POSTER_SERVICE_TOKEN
-  const res = await fetch(
-    `${base}/poster/${encodeURIComponent(slug)}?width=${width}&height=${height}`,
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      cache: 'no-store',
-    },
-  )
+  const secret = process.env.AURA_POSTER_SERVICE_TOKEN
+  const q = new URLSearchParams({
+    w: String(width),
+    h: String(height),
+    dpr: '1',
+    hideText: 'true',
+    hideIcons: 'true',
+    theme: 'light',
+    quality: '85',
+  })
+  const res = await fetch(`${base}/scene/${encodeURIComponent(slug)}/capture.webp?${q}`, {
+    headers: secret ? { 'x-render-secret': secret } : undefined,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    cache: 'no-store',
+  })
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null
-    throw new Error(body?.error ?? `poster service HTTP ${res.status}`)
+    const body = (await res.text().catch(() => '')).trim().slice(0, 200)
+    throw new Error(
+      res.status === 401
+        ? 'aura render service rejected the secret (AURA_POSTER_SERVICE_TOKEN must equal its RENDER_SECRET)'
+        : `aura render service HTTP ${res.status}${body ? `: ${body}` : ''}`,
+    )
   }
   return Buffer.from(await res.arrayBuffer())
 }
@@ -61,16 +77,18 @@ async function posterFromLocalBrowser(slug: string, width: number, height: numbe
  * Capture a still poster frame of an `aura.promad.design` embed.
  *
  * The share-card composer shows the aura as a live cross-origin iframe, which
- * html-to-image can never rasterize — so without a poster image the aura is
- * silently absent from the published PNG. This route returns the frame as a
- * JPEG data URL the composer attaches as the aura background's `posterSrc`
- * (JPEG keeps the multi-hundred-KB frame from ballooning the config snapshot,
- * which travels as JSON through the publish route's ~4.5 MB body cap).
+ * html-to-image can never rasterize. CardFrame already paints the scene's
+ * public `capture.png` still underneath as the export fallback; this route
+ * upgrades that with a frame rendered on demand at the card's exact size and
+ * hands it back as a data URL the composer attaches as the aura background's
+ * `posterSrc` (webp keeps the frame small enough for the publish route's
+ * ~4.5 MB body cap).
  *
- * The frame comes from the aura-poster service (`AURA_POSTER_SERVICE_URL` +
- * `AURA_POSTER_SERVICE_TOKEN`, see apps/aura-poster/README.md); the route
- * itself never launches a browser in a deployed environment. Local dev without
- * the service configured falls back to the machine's own Playwright Chromium.
+ * The frame comes from the aura render service (`AURA_POSTER_SERVICE_URL` =
+ * the aura-render host, `AURA_POSTER_SERVICE_TOKEN` = its `RENDER_SECRET`);
+ * the route itself never launches a browser in a deployed environment. Local
+ * dev without the service configured falls back to the machine's own
+ * Playwright Chromium.
  */
 export async function POST(request: NextRequest) {
   if (!(await isAuthed())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
@@ -87,21 +105,21 @@ export async function POST(request: NextRequest) {
   const height = clampDim(body.height, 1350)
 
   try {
-    let jpeg: Buffer
+    let frame: { bytes: Buffer; mime: 'image/webp' | 'image/jpeg' }
     if (process.env.AURA_POSTER_SERVICE_URL) {
-      jpeg = await posterFromService(slug, width, height)
+      frame = { bytes: await posterFromService(slug, width, height), mime: 'image/webp' }
     } else if (!process.env.VERCEL) {
-      jpeg = await posterFromLocalBrowser(slug, width, height)
+      frame = { bytes: await posterFromLocalBrowser(slug, width, height), mime: 'image/jpeg' }
     } else {
       return NextResponse.json(
         {
           error:
-            'AURA_POSTER_SERVICE_URL is not configured — deploy apps/aura-poster and set it (plus AURA_POSTER_SERVICE_TOKEN) on this project.',
+            'AURA_POSTER_SERVICE_URL is not configured — set it to the aura-render host (plus AURA_POSTER_SERVICE_TOKEN = its RENDER_SECRET) on this project.',
         },
         { status: 503 },
       )
     }
-    const dataUrl = `data:image/jpeg;base64,${jpeg.toString('base64')}`
+    const dataUrl = `data:${frame.mime};base64,${frame.bytes.toString('base64')}`
     return NextResponse.json({ ok: true, dataUrl })
   } catch (e) {
     return NextResponse.json(
