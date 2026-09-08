@@ -71,19 +71,21 @@ export function useSessionResults(round: number | null, type: SessionType) {
       const year = String(new Date().getFullYear())
       // Resolve race id, then session id, then results — keeps the join shallow
       // and tolerant of races/sessions being upserted by different jobs.
-      const { data: race } = await sb
+      const { data: race, error: raceError } = await sb
         .from('vizf1_races')
         .select('id')
         .eq('season', year)
         .eq('round', round!)
         .maybeSingle()
+      if (raceError) throw raceError
       if (!race) return []
-      const { data: session } = await sb
+      const { data: session, error: sessionError } = await sb
         .from('vizf1_sessions')
         .select('id')
         .eq('race_id', race.id)
         .eq('session_type', type)
         .maybeSingle()
+      if (sessionError) throw sessionError
       if (!session) return []
       const { data, error } = await sb
         .from('vizf1_session_results')
