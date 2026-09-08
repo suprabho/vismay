@@ -102,3 +102,27 @@ default). A staleness warning appears when the newest recap is older than 36h.
 - Shared bits (timeAgo/isStale/Badge) live in
   [components/vizmaya/pipeline/shared.tsx](components/vizmaya/pipeline/shared.tsx),
   used by both tabs.
+
+## Story themes (saved presets)
+
+The theme editor (`components/vizmaya/ThemeEditor.tsx`, used by the classic
+editor's Theme tab and the canvas `ThemeEditOverlay`) renders a "Presets" strip
+(`components/vizmaya/ThemePresets.tsx`) backed by the `story_themes` table
+(migration `supabase/vizmaya-fyi/migrations/077_story_themes.sql`, reader
+`@vismay/content-source/storyThemes`). Editors can apply a preset (a COPY into
+the story frontmatter — they still Save), save the current theme as a preset
+scoped to one app or shared by all, delete non-built-in presets, and mark one
+preset per app as the default that `POST /api/stories/compose` seeds new
+stories from (falling back to the engine's `DEFAULT_THEME`).
+
+- **API:** `GET/POST /api/story-themes?appSlug=` and `PUT/DELETE
+  /api/story-themes/[id]`, `isAuthed()`-gated. `GET` answers **503** when the DB
+  is unreachable (fs-mode dev / no service key) so the strip shows the built-in
+  presets with a "library unavailable" note instead of erroring.
+- **Built-ins** (footshorts Classic/Pitch/Terrace, vizf1 Paddock) are defined
+  in `packages/viz-engine/src/lib/themeDefaults.ts` (`STORY_THEME_PRESETS`) and
+  seeded by migration 077 — keep both in sync. DB rows win over the list by
+  `slug`.
+- **App slug, not vertical:** the canvas passes the story's *vertical* as
+  `appSlug` (`f1`); `CanvasClient` resolves it with `appSlugForVertical()` from
+  `@vismay/verticals/data` before it reaches the presets strip (`vizf1`).

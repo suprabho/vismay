@@ -38,6 +38,7 @@ import { completeCoverBody, isDeckCover } from './cover'
 import { completeMapHero, completeMapHeroProse } from './mapHero'
 import { lintOutline, lintSectionBody, formatLintIssue } from './lintLayout'
 import { DEFAULT_THEME } from './defaults'
+import type { Theme } from '@vismay/viz-engine/src/types/story'
 import { validateStory } from './validate'
 import type {
   GeneratedStory,
@@ -69,6 +70,9 @@ export interface GenerateOptions {
   /** Pre-resolved data for pack `hydrate` steps (e.g. f1 driver headshots). See
    *  {@link SectionGenOptions.hydrationDeps}. */
   hydrationDeps?: Record<string, unknown>
+  /** Seed theme folded into the frontmatter (an app's default preset from
+   *  `story_themes`). Defaults to the neutral editorial `DEFAULT_THEME`. */
+  theme?: Theme
 }
 
 export interface GenerateInput {
@@ -88,8 +92,8 @@ export function slugify(title: string): string {
   )
 }
 
-function buildFrontmatter(outline: StoryOutline): Record<string, unknown> {
-  const colors: Record<string, string> = { ...DEFAULT_THEME.colors }
+function buildFrontmatter(outline: StoryOutline, theme: Theme = DEFAULT_THEME): Record<string, unknown> {
+  const colors: Record<string, string> = { ...theme.colors }
   if (outline.accentColors?.accent) colors.accent = outline.accentColors.accent
   if (outline.accentColors?.accent2) colors.accent2 = outline.accentColors.accent2
   return {
@@ -99,7 +103,7 @@ function buildFrontmatter(outline: StoryOutline): Record<string, unknown> {
     date: new Date().toISOString().slice(0, 10),
     format: outline.format,
     status: 'draft',
-    theme: { colors, fonts: DEFAULT_THEME.fonts },
+    theme: { colors, fonts: theme.fonts },
   }
 }
 
@@ -602,11 +606,12 @@ export function assembleStory(
   outline: StoryOutline,
   sections: GeneratedSection[],
   charts: ChartSpec[] = [],
+  theme: Theme = DEFAULT_THEME,
 ): GeneratedStory {
   return {
     slug: slugify(outline.title),
     format: outline.format,
-    frontmatter: buildFrontmatter(outline),
+    frontmatter: buildFrontmatter(outline, theme),
     sections,
     charts,
     imagePrompts: outline.imagePrompts,
@@ -645,6 +650,6 @@ export async function generateStory(
       ),
     )
   }
-  const story = assembleStory(outline, sections, charts)
+  const story = assembleStory(outline, sections, charts, opts.theme)
   return { story, issues: validateStory(story, { pack: opts.pack }) }
 }

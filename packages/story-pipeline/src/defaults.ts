@@ -1,55 +1,46 @@
+// Deep imports (not the `@vismay/viz-engine` barrel): this package typechecks
+// standalone without JSX, so it must never pull the engine's .tsx modules.
+import type { Theme } from '@vismay/viz-engine/src/types/story'
+import { DEFAULT_THEME, isDarkTheme } from '@vismay/viz-engine/src/lib/themeDefaults'
 import type { StoryFormat } from './types'
 
 /**
- * A complete, neutral editorial theme. The engine injects this so the model
- * never has to author a full palette (and so every token the renderer reads is
- * present). The model may suggest accent colours, which `buildFrontmatter`
- * folds over this base.
+ * The neutral editorial base theme now lives in the engine
+ * (`@vismay/viz-engine` → lib/themeDefaults) so content-source can validate
+ * saved themes against it without a dependency cycle. Re-exported here so
+ * existing `@vismay/story-pipeline` importers keep working.
  */
-export const DEFAULT_THEME = {
-  colors: {
-    background: '#f6f4ef',
-    text: '#1a1c22',
-    accent: '#2f4b7c',
-    accent2: '#d4612a',
-    teal: '#2a9d8f',
-    surface: '#ffffff',
-    muted: '#6b7280',
-    positive: '#2a9d8f',
-    amber: '#e0a13c',
-    red: '#c0432f',
-    line: '#e2ddd3',
-  },
-  fonts: {
-    serif: 'Fraunces',
-    sans: 'Inter',
-    mono: 'JetBrains Mono',
-  },
-} as const
+export { DEFAULT_THEME }
 
 /**
  * Story-wide `defaults` for the config.yaml, per format. Deliberately
  * conservative so a freshly generated story renders without missing assets:
  * the deck background is a flat theme colour (no aura slug to resolve), map
  * sections carry their own cameras.
+ *
+ * `theme` is the story's seed theme (an app's default preset, or
+ * `DEFAULT_THEME`): the deck backdrop, map pin colour and basemap follow it so
+ * a dark-app story (footshorts, vizf1) doesn't open on a cream deck or a light
+ * basemap.
  */
-export function defaultsFor(format: StoryFormat): Record<string, unknown> {
+export function defaultsFor(format: StoryFormat, theme: Theme = DEFAULT_THEME): Record<string, unknown> {
+  const dark = isDarkTheme(theme)
   if (format === 'map') {
     return {
       scroll: { mode: 'continuous' },
       chart: { theme: 'light-editorial' },
       // Declare the map look explicitly (instead of relying on renderer
-      // fallbacks): a light basemap that matches the editorial theme, dimmed so
+      // fallbacks): a basemap that matches the theme's scheme, dimmed so
       // overlays read, with accent-coloured pins.
-      mapStyle: 'mapbox://styles/mapbox/light-v11',
+      mapStyle: dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
       mapOpacity: 0.6,
-      pinColor: DEFAULT_THEME.colors.accent2,
+      pinColor: theme.colors.accent2,
       pinRadius: 8,
       flySpeed: 1.2,
     }
   }
   return {
-    storyBackground: { type: 'color', value: DEFAULT_THEME.colors.background, fixed: true },
+    storyBackground: { type: 'color', value: theme.colors.background, fixed: true },
     overlay: { color: 'transparent', opacity: 0 },
     panel: { background: 'transparent', border: 'none' },
     scroll: { mode: 'snap', paddingY: '12vh' },

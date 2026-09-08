@@ -25,6 +25,8 @@ interface Props {
   onClose: () => void
   /** Story slug — required to surface the AI prompt input. */
   slug?: string
+  /** Owning app slug (already resolved from the vertical) for the presets strip. */
+  appSlug?: string
 }
 
 export default function ThemeEditOverlay({
@@ -34,6 +36,7 @@ export default function ThemeEditOverlay({
   onSave,
   onClose,
   slug,
+  appSlug,
 }: Props) {
   // Local draft so the editor is responsive without round-tripping through
   // a server save on every color pick. The user explicitly hits Save.
@@ -193,6 +196,7 @@ export default function ThemeEditOverlay({
         <ThemeEditor
           theme={draft ?? undefined}
           onChange={(next) => setDraft(next)}
+          appSlug={appSlug}
         />
       </div>
     </div>

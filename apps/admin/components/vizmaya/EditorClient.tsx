@@ -397,6 +397,7 @@ export default function EditorClient({
             theme={theme}
             yamlError={parsed.yamlError}
             onChange={updateTheme}
+            appSlug={appSlug ?? 'vizmaya-fyi'}
           />
         )}
         {tab === 'edit' && (

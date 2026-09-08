@@ -11,6 +11,7 @@ const KNOWN_WEIGHTS: Record<string, number[]> = {
   'Manrope': [400, 500, 600, 700, 800],
   'Forum': [400], // single-weight display serif — Google Fonts ships only 400
   'Space Mono': [400, 700],
+  'Space Grotesk': [400, 500, 600, 700], // footshorts UI sans — same weights the app loads
   'Instrument Serif': [400, 600],
 }
 
