@@ -5,6 +5,30 @@
  * uses Tailwind classes too, so point the scanner at its source. */
 @source '../../../../verticals/f1-viz/src';
 
+/* Inline resolution keeps next/font variables valid for SVGs and portals too. */
+@theme inline {
+  --font-sans: var(--font-vf-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-vf-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --wdth-display: 68%;
+  --wdth-body: 100%;
+  --wdth-dense: 112%;
+  --wdth-kicker: 120%;
+}
+
+@utility wdth-display { font-stretch: var(--wdth-display); }
+@utility wdth-body { font-stretch: var(--wdth-body); }
+@utility wdth-dense { font-stretch: var(--wdth-dense); }
+@utility wdth-kicker { font-stretch: var(--wdth-kicker); }
+
+/* Data always uses its natural width, even within a dense interface row. */
+@utility font-mono {
+  font-stretch: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
 @theme {
   --color-bg: #0b0d12;
   --color-surface: #13161d;
@@ -22,5 +46,4 @@ html,
 body {
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: ui-sans-serif, system-ui, sans-serif;
 }

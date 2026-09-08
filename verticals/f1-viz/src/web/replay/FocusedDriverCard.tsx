@@ -56,23 +56,23 @@ export function FocusedDriverCard({ driver, currentLap, aggregates, livePosition
         style={{ borderLeftWidth: 3, borderLeftColor: colour }}
       >
         <div
-          className="flex h-8 w-8 items-center justify-center font-mono font-bold text-white"
+          className="flex h-8 w-8 items-center justify-center font-mono tabular-nums font-bold text-white"
           style={{ backgroundColor: colour }}
         >
           {driver.driverNumber}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-mono text-xs font-bold text-text">
+          <div className="truncate wdth-dense text-xs font-semibold text-text">
             {driver.fullName || driver.abbreviation}
           </div>
-          <div className="font-mono text-[9px] uppercase tracking-widest text-muted">
+          <div className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
             {driver.teamName || '—'} · Lap {currentLap}
           </div>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-accent"
+            className="font-mono tabular-nums text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-accent"
           >
             Unfocus
           </button>
@@ -80,7 +80,7 @@ export function FocusedDriverCard({ driver, currentLap, aggregates, livePosition
       </div>
 
       {!current ? (
-        <div className="px-4 py-6 text-center font-mono text-[10px] text-muted">
+        <div className="px-4 py-6 text-center font-mono tabular-nums text-[10px] text-muted">
           No telemetry for lap {currentLap}.
         </div>
       ) : (
@@ -88,10 +88,10 @@ export function FocusedDriverCard({ driver, currentLap, aggregates, livePosition
           {/* Speed row with sparkline */}
           <div className="flex items-end justify-between">
             <div className="flex flex-col">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Avg Speed</span>
-              <span className="font-mono text-2xl font-bold text-text">
+              <span className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Avg Speed</span>
+              <span className="font-mono tabular-nums text-sm font-bold text-text">
                 {Math.round(current.avgSpeed)}
-                <span className="ml-1 font-mono text-[10px] text-muted">km/h</span>
+                <span className="ml-1 font-mono tabular-nums text-[10px] text-muted">km/h</span>
               </span>
             </div>
             <Sparkline data={trend} color={colour} width={90} height={30} />
@@ -110,8 +110,8 @@ export function FocusedDriverCard({ driver, currentLap, aggregates, livePosition
 function Metric({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="flex flex-col">
-      <span className="font-mono text-[9px] uppercase tracking-widest text-muted">{label}</span>
-      <span className="font-mono text-base font-bold text-text">{value}</span>
+      <span className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">{label}</span>
+      <span className="font-mono tabular-nums text-sm font-bold text-text">{value}</span>
     </div>
   )
 }

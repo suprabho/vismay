@@ -40,8 +40,8 @@ export function ChampionshipPodiums() {
       ].map(({ id, title, content }) => (
         <section key={id} id={id} aria-labelledby={`${id}-heading`} className="min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border border-border bg-surface">
           <div className="flex items-center justify-between gap-3 px-5 pt-5">
-            <div><h2 id={`${id}-heading`} className="text-lg font-semibold">{title}</h2><p className="mt-1 text-xs text-muted">Championship standings</p></div>
-            <span className="text-[11px] font-semibold tracking-widest text-muted">TOP 3</span>
+            <div><h2 id={`${id}-heading`} className="wdth-body text-lg font-semibold">{title}</h2><p className="mt-1 text-xs text-muted">Championship standings</p></div>
+            <span className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">TOP 3</span>
           </div>
           {content}
         </section>

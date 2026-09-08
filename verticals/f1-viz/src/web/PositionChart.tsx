@@ -115,12 +115,12 @@ export function PositionChart({
         {/* Y axis labels — P1, mid, last */}
         {[1, Math.ceil(maxPos / 2), maxPos].map((p) => (
           <g key={p}>
-            <text
+            <text fontFamily="var(--font-mono, monospace)"
               x={PADDING.left - 6}
               y={yScale(p) + 3}
               textAnchor="end"
               className="fill-muted"
-              style={{ fontSize: 10 }}
+              style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%', fontSize: 10 }}
             >
               P{p}
             </text>
@@ -137,13 +137,13 @@ export function PositionChart({
         ))}
         {/* X axis labels — first, mid, last (deduped for a 1- or 2-round span) */}
         {[...new Set([minLap, Math.round((minLap + maxLap) / 2), maxLap])].map((lap) => (
-          <text
+          <text fontFamily="var(--font-mono, monospace)"
             key={lap}
             x={xScale(lap)}
             y={viewH - 6}
             textAnchor="middle"
             className="fill-muted"
-            style={{ fontSize: 10 }}
+            style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%', fontSize: 10 }}
           >
             {xTickFormat(lap)}
           </text>
@@ -183,13 +183,13 @@ export function PositionChart({
                 clipPath={`url(#hc-${uid}-${i})`}
               />
             ) : (
-              <text
+              <text fontFamily="var(--font-mono, monospace)"
                 x={m.cx}
                 y={m.cy}
                 textAnchor="middle"
                 dominantBaseline="central"
                 className="fill-text"
-                style={{ fontSize: 8, fontWeight: 600 }}
+                style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%', fontSize: 8, fontWeight: 600 }}
               >
                 {initialsFor(m.lane)}
               </text>

@@ -26,8 +26,8 @@ export function Podium({ entries, label }: { entries: PodiumEntry[]; label: stri
               {entry ? (
                 <Link href={entry.href} className="flex w-full min-w-0 flex-col items-center gap-2 rounded-md hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
                   {entry.avatar}
-                  <span className="text-xs leading-snug font-semibold break-words text-text sm:text-sm">{entry.name}</span>
-                  <span className="text-[11px] leading-snug break-words text-muted">{entry.subtitle}</span>
+                  <span className="wdth-dense text-xs leading-snug font-semibold break-words text-text sm:text-sm">{entry.name}</span>
+                  <span className="wdth-dense text-[11px] font-medium leading-snug break-words text-muted">{entry.subtitle}</span>
                 </Link>
               ) : <span className="text-xs text-muted">Awaiting result</span>}
             </div>
@@ -35,8 +35,8 @@ export function Podium({ entries, label }: { entries: PodiumEntry[]; label: stri
               className={`${height} rounded-t-md border-t-[3px] px-1 py-3`}
               style={{ borderColor: 'var(--podium-color)', background: 'linear-gradient(180deg, color-mix(in srgb, var(--podium-color) 14%, var(--color-surface)), var(--color-surface))' }}
             >
-              <span className={`block text-2xl leading-none font-bold italic ${position === 1 ? 'text-text' : 'text-muted'}`}><span className="sr-only">Position </span>{position}</span>
-              <div className="mt-2 text-sm font-bold tabular-nums text-text sm:text-lg">{entry?.value ?? '—'}</div>
+              <span className={`block wdth-display text-2xl leading-none font-extrabold italic ${position === 1 ? 'text-text' : 'text-muted'}`}><span className="sr-only">Position </span>{position}</span>
+              <div className="mt-2 font-mono text-sm font-bold tabular-nums text-text">{entry?.value ?? '—'}</div>
               {entry?.detail != null && <div className="mt-1 text-[11px] text-muted">{entry.detail}</div>}
             </div>
           </div>

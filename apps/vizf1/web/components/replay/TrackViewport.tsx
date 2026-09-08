@@ -172,7 +172,7 @@ export function TrackViewport({
             return (
               <g key={`${corner.number}-${corner.letter}`}>
                 <circle cx={p.sx} cy={p.sy} r={2} fill="#ff4346" opacity={0.6} />
-                <text x={p.sx + 6} y={p.sy + 3} fontSize={9} fill="#8e8e99" fontFamily="monospace">
+                <text x={p.sx + 6} y={p.sy + 3} fontSize={9} fill="#8e8e99" fontFamily="var(--font-mono, monospace)">
                   T{corner.number}
                   {corner.letter || ''}
                 </text>
@@ -211,9 +211,9 @@ export function TrackViewport({
                 fontWeight={700}
                 fill={colour}
                 textAnchor="middle"
-                fontFamily="monospace"
+                fontFamily="var(--font-mono, monospace)"
                 opacity={0}
-                style={{ paintOrder: 'stroke', stroke: '#0b0d12', strokeWidth: 2 }}
+                style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%', paintOrder: 'stroke', stroke: '#0b0d12', strokeWidth: 2 }}
               >
                 {d.abbreviation || String(d.driverNumber)}
               </text>
@@ -227,9 +227,9 @@ export function TrackViewport({
                 y={-100}
                 fontSize={8}
                 fill="#c7cbd4"
-                fontFamily="monospace"
+                fontFamily="var(--font-mono, monospace)"
                 opacity={0}
-                style={{ paintOrder: 'stroke', stroke: '#0b0d12', strokeWidth: 2 }}
+                style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%', paintOrder: 'stroke', stroke: '#0b0d12', strokeWidth: 2 }}
               />
             </g>
           )

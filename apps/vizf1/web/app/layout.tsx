@@ -1,8 +1,24 @@
 import type { Metadata, Viewport } from 'next'
-import './globals.css'
+import { Saira, Martian_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/lib/ThemeProvider'
 import { QueryProvider } from '@/lib/QueryProvider'
 import { AuthProvider } from '@/lib/AuthProvider'
+import './globals.css'
+
+const saira = Saira({
+  subsets: ['latin'],
+  axes: ['wdth'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-vf-sans',
+})
+
+const martian = Martian_Mono({
+  subsets: ['latin'],
+  axes: ['wdth'],
+  display: 'swap',
+  variable: '--font-vf-mono',
+})
 
 export const metadata: Metadata = {
   applicationName: 'VizF1',
@@ -35,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${saira.variable} ${martian.variable}`}>
       <body className="bg-bg text-text antialiased min-h-screen">
         <ThemeProvider>
           <QueryProvider>

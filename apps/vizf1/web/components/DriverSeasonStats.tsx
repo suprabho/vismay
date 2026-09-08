@@ -100,12 +100,12 @@ export function DriverSeasonStats({ driverId }: { driverId: string }) {
               ← Overview
             </Link>
             <div className="mt-1 flex items-baseline gap-3">
-              <h1 className="text-3xl font-bold leading-tight tracking-tight text-text sm:text-4xl">
+              <h1 className="wdth-display text-3xl font-bold leading-tight tracking-[-0.025em] text-text sm:text-4xl">
                 {name}
               </h1>
               {d?.permanent_number ? (
                 <span
-                  className="text-3xl font-bold tabular-nums sm:text-4xl"
+                  className="wdth-display text-3xl font-bold italic tabular-nums sm:text-4xl"
                   style={{ color }}
                 >
                   #{d.permanent_number}
@@ -114,7 +114,7 @@ export function DriverSeasonStats({ driverId }: { driverId: string }) {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
               {d?.code ? (
-                <span className="rounded bg-surface/80 px-1.5 py-0.5 font-mono text-text/80">
+                <span className="rounded bg-surface/80 px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.04em] text-text/80">
                   {d.code}
                 </span>
               ) : null}
@@ -216,7 +216,7 @@ function DriverStandingsTable({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-muted">
+                <tr className="wdth-kicker text-[10px] uppercase tracking-[0.06em] text-muted">
                   <th className="px-4 py-3 text-left font-semibold">Grand Prix</th>
                   <th className="px-4 py-3 text-left font-semibold">Date</th>
                   <th className="px-4 py-3 text-left font-semibold">Team</th>
@@ -237,10 +237,10 @@ function DriverStandingsTable({
                       </td>
                       <td className="px-4 py-3 text-text">{shortDate(row.date)}</td>
                       <td className="px-4 py-3 text-text">{row.constructorName || '—'}</td>
-                      <td className="px-4 py-3 text-text tabular-nums">
+                      <td className="px-4 py-3 font-mono text-text tabular-nums">
                         {positionLabel(row.position, row.status)}
                       </td>
-                      <td className="px-4 py-3 text-right text-text tabular-nums">{row.points}</td>
+                      <td className="px-4 py-3 text-right font-mono text-text tabular-nums">{row.points}</td>
                     </tr>
                   )
                 })}
@@ -312,8 +312,8 @@ function Stat({
       <div
         className={
           large
-            ? 'mt-1 text-4xl font-bold leading-none text-text tabular-nums'
-            : 'mt-1 text-2xl font-bold leading-none text-text tabular-nums'
+            ? 'wdth-display mt-1 text-4xl font-bold leading-none text-text tabular-nums'
+            : 'wdth-display mt-1 text-2xl font-bold leading-none text-text tabular-nums'
         }
       >
         {value}

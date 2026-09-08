@@ -17,7 +17,7 @@ const SIZE = {
 
 export function DriverAvatar({ name, code, headshotUrl, accent, size = 'md' }: Props) {
   const initials = code ?? name.split(' ').map((p) => p[0]).slice(0, 2).join('')
-  const ring = accent ?? 'var(--color-accent)'
+  const ring = accent ?? 'var(--color-border)'
   if (headshotUrl) {
     return (
       <span
@@ -31,7 +31,7 @@ export function DriverAvatar({ name, code, headshotUrl, accent, size = 'md' }: P
   }
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full border-2 font-semibold text-text ${SIZE[size]}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border-2 wdth-dense font-semibold text-text ${SIZE[size]}`}
       style={{ borderColor: ring, backgroundColor: 'var(--color-surface)' }}
     >
       {initials}

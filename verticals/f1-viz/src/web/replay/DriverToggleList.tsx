@@ -48,12 +48,12 @@ export function DriverToggleList({
   return (
     <div className="rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border bg-bg px-4 py-2.5">
-        <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted">
+        <span className="font-mono tabular-nums text-[9px] font-bold uppercase tracking-widest text-muted">
           Drivers ({visible.size}/{sorted.length})
         </span>
         <button
           onClick={() => onToggleAll(!allOn)}
-          className="font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-accent"
+          className="font-mono tabular-nums text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-accent"
         >
           {allOn ? 'Hide all' : 'Show all'}
         </button>
@@ -63,11 +63,11 @@ export function DriverToggleList({
           <button
             key={m}
             onClick={() => onSortModeChange(m)}
-            className={`flex-1 py-1.5 font-mono text-[9px] uppercase tracking-widest transition-colors ${
+            className={`flex-1 py-1.5 wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
               sortMode === m ? 'bg-accent text-accent-text' : 'text-muted hover:text-text'
             }`}
           >
-            {m === 'championship' ? 'Champ' : 'Live'}
+            {m === 'championship' ? 'Champ' : <span className="italic">Live</span>}
           </button>
         ))}
       </div>
@@ -103,16 +103,16 @@ export function DriverToggleList({
               </button>
 
               <span
-                className={`w-8 px-1 text-center font-mono text-[10px] font-bold ${
+                className={`w-8 px-1 text-center font-mono tabular-nums text-[10px] font-bold ${
                   sortMode === 'live' ? 'bg-accent text-accent-text' : 'bg-[#262b3b] text-text'
                 }`}
                 title={sortMode === 'live' ? 'Live race position' : 'Championship position'}
               >
                 {posLabel}
               </span>
-              <span className="w-6 font-mono text-[11px] text-muted">#{d.driverNumber}</span>
-              <span className="w-12 font-mono text-xs font-bold text-text">{d.abbreviation || '—'}</span>
-              <span className="flex-1 truncate font-mono text-[10px] text-muted">{d.fullName || ''}</span>
+              <span className="w-10 shrink-0 font-mono tabular-nums text-[11px] text-muted">#{d.driverNumber}</span>
+              <span className="w-12 font-mono tabular-nums text-[11px] font-medium tracking-[0.04em] text-text">{d.abbreviation || '—'}</span>
+              <span className="flex-1 truncate wdth-dense text-[10px] font-medium text-muted">{d.fullName || ''}</span>
 
               {/* Focus button */}
               <button

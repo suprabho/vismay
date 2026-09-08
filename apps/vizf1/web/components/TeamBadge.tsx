@@ -47,7 +47,7 @@ export function TeamBadge({
   return (
     <span className="inline-flex items-center gap-2 align-middle">
       <span
-        className={`inline-flex shrink-0 items-center justify-center rounded-md font-semibold tracking-wide ${box} ${showLogo ? pad : ''} ${text}`}
+        className={`inline-flex shrink-0 items-center justify-center rounded-md wdth-dense font-semibold tracking-wide ${box} ${showLogo ? pad : ''} ${text}`}
         style={
           showLogo
             ? { backgroundColor: 'rgba(255,255,255,0.95)' }

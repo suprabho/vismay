@@ -61,7 +61,7 @@ export function PlaybackControls({
             className="flex items-center gap-1.5 bg-accent px-3 py-1.5 text-accent-text transition-colors hover:opacity-90"
           >
             {playing ? <PauseIcon size={13} /> : <PlayIcon size={13} />}
-            <span className="font-mono text-[10px] uppercase tracking-widest">{playing ? 'Pause' : 'Play'}</span>
+            <span className="font-mono tabular-nums text-[10px] uppercase tracking-widest">{playing ? 'Pause' : 'Play'}</span>
           </button>
           <button
             onClick={onSkipToEnd}
@@ -77,7 +77,7 @@ export function PlaybackControls({
             <button
               key={s}
               onClick={() => onSpeedChange(s)}
-              className={`px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+              className={`px-2 py-1 font-mono tabular-nums text-[10px] uppercase tracking-wider transition-colors ${
                 speed === s ? 'bg-accent text-accent-text' : 'text-muted hover:text-text'
               }`}
             >
@@ -86,7 +86,7 @@ export function PlaybackControls({
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-4 font-mono text-[11px] text-muted">
+        <div className="ml-auto flex items-center gap-4 font-mono tabular-nums text-[11px] text-muted">
           <span>
             Lap <span className="font-bold text-text">{currentLap}</span> / {totalLaps}
           </span>
@@ -113,7 +113,7 @@ export function PlaybackControls({
       </div>
 
       {/* Lap range */}
-      <div className="flex items-center gap-3 font-mono text-[10px] text-muted">
+      <div className="flex items-center gap-3 font-mono tabular-nums text-[10px] text-muted">
         <span className="uppercase tracking-widest">Lap range</span>
         <input
           type="number"

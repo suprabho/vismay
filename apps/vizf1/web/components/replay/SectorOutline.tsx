@@ -111,10 +111,10 @@ export function SectorOutline({ circuit, viewportW, viewportH, sectorColors }: P
           <>
             <circle cx={p1.sx} cy={p1.sy} r={3.5} fill="#fff" stroke="#0b0d12" strokeWidth={1} />
             <circle cx={p2.sx} cy={p2.sy} r={3.5} fill="#fff" stroke="#0b0d12" strokeWidth={1} />
-            <text x={p1.sx + 6} y={p1.sy - 6} fontSize={9} fontFamily="monospace" fill="#8e8e99" fontWeight={700}>
+            <text x={p1.sx + 6} y={p1.sy - 6} fontSize={9} fontFamily="var(--font-mono, monospace)" style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%' }} fill="#8e8e99" fontWeight={700}>
               S1/S2
             </text>
-            <text x={p2.sx + 6} y={p2.sy - 6} fontSize={9} fontFamily="monospace" fill="#8e8e99" fontWeight={700}>
+            <text x={p2.sx + 6} y={p2.sy - 6} fontSize={9} fontFamily="var(--font-mono, monospace)" style={{ fontVariantNumeric: 'tabular-nums', fontStretch: '100%' }} fill="#8e8e99" fontWeight={700}>
               S2/S3
             </text>
           </>
