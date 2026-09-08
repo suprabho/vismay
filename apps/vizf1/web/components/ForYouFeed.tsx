@@ -14,8 +14,8 @@ export function ForYouFeed() {
       <StoryRings />
 
       <div className="py-6">
-        <p className="text-[11px] font-semibold tracking-widest text-muted">{new Date().getFullYear()} CHAMPIONSHIP</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">The season, at a glance.</h1>
+        <p className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">{new Date().getFullYear()} CHAMPIONSHIP</p>
+        <h1 className="mt-2 wdth-display text-3xl font-bold tracking-[-0.025em] sm:text-4xl">The season, at a glance.</h1>
       </div>
       <ChampionshipPodiums />
       <RaceWeekends />

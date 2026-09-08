@@ -17,7 +17,7 @@ function RacePodium({ race }: { race: RaceRow }) {
     <section id="race-podium" aria-label={`${race.raceName} podium`} aria-live="polite" className="overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
         <div>
-          <p className="text-[11px] font-semibold tracking-widest text-muted">ROUND {String(race.round).padStart(2, '0')} / RACE PODIUM</p>
+          <p className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">ROUND {String(race.round).padStart(2, '0')} / RACE PODIUM</p>
           <h3 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">{race.raceName}</h3>
           <p className="mt-1 text-xs text-muted">{race.circuitName} · {raceDateLabel(race.date)}</p>
         </div>
@@ -31,9 +31,9 @@ function RacePodium({ race }: { race: RaceRow }) {
           color: r.constructorColor, href: `/driver/${r.driverId}`,
           avatar: <DriverAvatar name={r.driverName} code={r.driverCode} headshotUrl={r.headshotUrl} accent={r.constructorColor} />,
           // This source has gaps, not total race duration. Never substitute best lap time.
-          value: r.position === 1 ? 'Winner' : r.gapToLeaderMs != null && r.gapToLeaderMs > 0
-            ? `+${(r.gapToLeaderMs / 1000).toFixed(3)}s` : r.status && r.status !== 'Finished' ? r.status : 'Finished',
-          detail: r.points != null ? `${r.points} points` : r.lapsCompleted != null ? `${r.lapsCompleted} laps` : undefined,
+          value: r.position === 1 ? <span className="font-sans wdth-body">Winner</span> : r.gapToLeaderMs != null && r.gapToLeaderMs > 0
+            ? <span className="italic">+{(r.gapToLeaderMs / 1000).toFixed(3)}s</span> : <span className="font-sans wdth-body">{r.status && r.status !== 'Finished' ? r.status : 'Finished'}</span>,
+          detail: r.points != null ? <><span className="font-mono">{r.points}</span> points</> : r.lapsCompleted != null ? <><span className="font-mono">{r.lapsCompleted}</span> laps</> : undefined,
         }))} /></div>}
     </section>
   )
@@ -68,7 +68,7 @@ export function RaceWeekends() {
   return (
     <section className="mt-8" aria-labelledby="race-weekends-heading">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div><h2 id="race-weekends-heading" className="text-lg font-semibold">Race weekends</h2><p className="mt-1 text-xs text-muted">{races.length} completed races</p></div>
+        <div><h2 id="race-weekends-heading" className="wdth-body text-lg font-semibold">Race weekends</h2><p className="mt-1 text-xs text-muted">{races.length} completed races</p></div>
         {races.length > 0 && <div className="flex gap-2">
           <button type="button" onClick={() => scroll(-1)} disabled={edges.start} aria-label="Earlier races" className="h-11 w-11 rounded-full border border-border bg-surface disabled:opacity-30">←</button>
           <button type="button" onClick={() => scroll(1)} disabled={edges.end} aria-label="Later races" className="h-11 w-11 rounded-full border border-border bg-surface disabled:opacity-30">→</button>

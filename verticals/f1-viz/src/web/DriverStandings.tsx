@@ -26,7 +26,7 @@ function DriverHead({ name, code, headshotUrl, color }: {
   const initials = code ?? name.split(' ').map((p) => p[0]).slice(0, 2).join('')
   return (
     <span
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] font-semibold text-text"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border wdth-dense text-[10px] font-semibold text-text"
       style={{ borderColor: ring, backgroundColor: 'var(--color-surface)' }}
     >
       {initials}
@@ -37,7 +37,7 @@ function DriverHead({ name, code, headshotUrl, color }: {
 export function DriverStandings({ rows }: Props) {
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="grid grid-cols-[28px_1fr_60px_40px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
+      <div className="grid grid-cols-[28px_minmax(0,1fr)_60px_40px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 wdth-kicker text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
         <span>#</span>
         <span>Driver</span>
         <span className="truncate">Team</span>
@@ -46,15 +46,15 @@ export function DriverStandings({ rows }: Props) {
       </div>
 
       {rows.map((r) => {
-        // `${hex}1f` is ~12% alpha — a subtle team-coloured tint behind each row
+        // `${hex}1a` is ~10% alpha — a subtle team-coloured tint behind each row
         // that stays legible on the dark surface.
-        const tint = r.constructorColor ? `${r.constructorColor}1f` : undefined
+        const tint = r.constructorColor ? `${r.constructorColor}1a` : undefined
         const inner = (
           <div
-            className="grid grid-cols-[28px_1fr_60px_40px_40px] items-center gap-2 border-b border-border/50 px-3 py-2 text-xs last:border-b-0"
+            className="grid grid-cols-[28px_minmax(0,1fr)_60px_40px_40px] items-center gap-1 border-b border-border/50 px-3 py-2 wdth-dense text-xs last:border-b-0"
             style={tint ? { backgroundColor: tint } : undefined}
           >
-            <span className="text-text">{r.position}</span>
+            <span className="font-mono text-text">{r.position}</span>
             <span className="flex min-w-0 items-center gap-2">
               <DriverHead
                 name={r.driverName}
@@ -62,16 +62,16 @@ export function DriverStandings({ rows }: Props) {
                 headshotUrl={r.headshotUrl}
                 color={r.constructorColor}
               />
-              <span className="truncate text-text">{r.driverName}</span>
+              <span className="truncate font-semibold text-text">{r.driverName}</span>
             </span>
             <span
-              className="truncate text-muted"
+              className="truncate font-semibold text-muted"
               style={r.constructorColor ? { color: r.constructorColor } : undefined}
             >
               {r.constructorName}
             </span>
-            <span className="text-center text-text">{r.wins}</span>
-            <span className="text-center font-semibold text-text">{r.points}</span>
+            <span className="text-center font-mono text-text">{r.wins}</span>
+            <span className="text-center font-mono font-semibold text-text">{r.points}</span>
           </div>
         )
         return (

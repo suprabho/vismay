@@ -17,7 +17,7 @@ function DriverRing({ d }: { d: FollowedDriver }) {
         headshotUrl={d.headshotUrl ?? null}
         accent={d.primaryColor ?? null}
       />
-      <span className="w-full truncate text-center text-[10px] text-muted">
+      <span className="w-full truncate text-center wdth-dense text-[10px] font-medium text-muted">
         {d.name.split(' ').slice(-1)[0] ?? d.name}
       </span>
     </Link>
@@ -45,7 +45,7 @@ export function StoryRings() {
               logoUrl={c.logoUrl ?? null}
               size="md"
             />
-            <span className="w-full truncate text-center text-[10px] text-muted">{c.name}</span>
+            <span className="w-full truncate text-center wdth-dense text-[10px] font-medium text-muted">{c.name}</span>
           </Link>
         ))}
       </div>

@@ -11,7 +11,7 @@ type Props = {
 export function SectionHeader({ title, href, hint }: Props) {
   const inner = (
     <div className="flex items-baseline justify-between">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">{title}</h2>
+      <h2 className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">{title}</h2>
       {hint ? <span className="text-[11px] text-muted">{hint}</span> : null}
     </div>
   )

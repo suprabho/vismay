@@ -71,7 +71,7 @@ function DriverCell({
     <span className="flex min-w-0 items-center gap-2">
       {code ? (
         <span
-          className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+          className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.04em]"
           style={{
             backgroundColor: color ? `${color}22` : 'var(--color-bg)',
             color: color ?? 'var(--color-text)',
@@ -80,7 +80,7 @@ function DriverCell({
           {code}
         </span>
       ) : null}
-      <span className="truncate text-text">{name}</span>
+      <span className="truncate wdth-dense font-semibold text-text">{name}</span>
     </span>
   )
 }
@@ -102,8 +102,8 @@ function SessionTable({
 
   if (RACE_LIKE.includes(type)) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="grid grid-cols-[28px_1fr_70px_40px_56px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+        <div className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_80px_40px_88px] items-center gap-1 border-b border-border bg-bg px-3 py-2 wdth-kicker text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
           <span>#</span>
           <span>Driver</span>
           <span>Team</span>
@@ -113,12 +113,12 @@ function SessionTable({
         {rows.map((r, i) => (
           <div
             key={r.driverId}
-            className="grid grid-cols-[28px_1fr_70px_40px_56px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
+            className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_80px_40px_88px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
           >
-            <span className="text-text">{r.position ?? i + 1}</span>
+            <span className="font-mono text-text">{r.position ?? i + 1}</span>
             <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
-            <span className="truncate text-muted">{r.constructorName ?? ''}</span>
-            <span className="text-center text-text">{r.lapsCompleted ?? '—'}</span>
+            <span className="truncate font-semibold text-muted">{r.constructorName ?? ''}</span>
+            <span className="text-center font-mono text-text">{r.lapsCompleted ?? '—'}</span>
             <span className="text-center font-mono text-[11px] text-text/80">
               {formatLapMs(r.bestLapMs)}
             </span>
@@ -130,8 +130,8 @@ function SessionTable({
 
   if (QUALI_LIKE.includes(type)) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="grid grid-cols-[28px_1fr_70px_70px_56px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+        <div className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_80px_88px_88px] items-center gap-1 border-b border-border bg-bg px-3 py-2 wdth-kicker text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
           <span>#</span>
           <span>Driver</span>
           <span>Team</span>
@@ -141,15 +141,15 @@ function SessionTable({
         {rows.map((r, i) => (
           <div
             key={r.driverId}
-            className="grid grid-cols-[28px_1fr_70px_70px_56px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
+            className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_80px_88px_88px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
           >
-            <span className="text-text">{r.position ?? i + 1}</span>
+            <span className="font-mono text-text">{r.position ?? i + 1}</span>
             <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
-            <span className="truncate text-muted">{r.constructorName ?? ''}</span>
+            <span className="truncate font-semibold text-muted">{r.constructorName ?? ''}</span>
             <span className="text-center font-mono text-[11px] text-text/80">
               {formatLapMs(r.bestLapMs)}
             </span>
-            <span className="text-center font-mono text-[11px] text-muted">
+            <span className="text-center font-mono text-[11px] italic text-muted">
               {formatGapMs(r.gapToLeaderMs)}
             </span>
           </div>
@@ -160,8 +160,8 @@ function SessionTable({
 
   // Practice: pos | driver | best | gap | laps
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="grid grid-cols-[28px_1fr_70px_60px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 text-[10px] text-muted">
+    <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+      <div className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_88px_88px_40px] items-center gap-1 border-b border-border bg-bg px-3 py-2 wdth-kicker text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
         <span>#</span>
         <span>Driver</span>
         <span className="text-center">Best</span>
@@ -171,17 +171,17 @@ function SessionTable({
       {rows.map((r, i) => (
         <div
           key={r.driverId}
-          className="grid grid-cols-[28px_1fr_70px_60px_40px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
+          className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_88px_88px_40px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
         >
-          <span className="text-text">{r.position ?? i + 1}</span>
+          <span className="font-mono text-text">{r.position ?? i + 1}</span>
           <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
           <span className="text-center font-mono text-[11px] text-text/80">
             {formatLapMs(r.bestLapMs)}
           </span>
-          <span className="text-center font-mono text-[11px] text-muted">
+          <span className="text-center font-mono text-[11px] italic text-muted">
             {formatGapMs(r.gapToLeaderMs)}
           </span>
-          <span className="text-center text-muted">{r.lapsCompleted ?? '—'}</span>
+          <span className="text-center font-mono text-muted">{r.lapsCompleted ?? '—'}</span>
         </div>
       ))}
     </div>
