@@ -205,6 +205,8 @@ export const GRANDS_PRIX: Record<string, GrandPrixEntry> = {
 function gpSlug(s: string): string {
   return s
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/\bgrand prix\b/g, '')
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
