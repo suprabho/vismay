@@ -12,10 +12,11 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   scheme: 'footshorts',
   icon: './assets/icon.png',
-  // 0.3.0: expo-apple-authentication + expo-splash-screen (0.2.0 added
-  // react-native-svg + expo-web-browser + expo-crypto). Each runtime bump
+  // 0.4.0: expo-video (feed cards play HLS article video). 0.3.0 added
+  // expo-apple-authentication + expo-splash-screen; 0.2.0 added
+  // react-native-svg + expo-web-browser + expo-crypto. Each runtime bump
   // fences OTA updates away from binaries that lack the new native modules.
-  runtimeVersion: '0.3.0',
+  runtimeVersion: '0.4.0',
   updates: {
     url: 'https://u.expo.dev/ec487831-05e0-4a95-8ae4-c14736fa0375',
   },
@@ -34,6 +35,7 @@ const config: ExpoConfig = {
   plugins: [
     'expo-web-browser',
     'expo-apple-authentication',
+    'expo-video',
     [
       'expo-splash-screen',
       {

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { getCompetitionPalette, darkenHex } from '@vismay/footshorts-viz/web';
 import { trackArticleSeen, trackArticleSourceOpened } from '@/lib/analytics';
 import type { FeedCardEntity } from '@footshorts/shared/schemas';
+import { isVideoUrl } from '@footshorts/shared/media';
+import { ArticleVideo } from './ArticleVideo';
 
 const VISIBLE_TAGS = 3;
 
@@ -91,7 +93,9 @@ export function FeedCard({
       className="flex h-full flex-col overflow-hidden rounded-t-3xl border border-b-0 border-border bg-surface"
     >
       <div className="grow basis-[30%] overflow-hidden bg-bg">
-        {imageUrl ? (
+        {imageUrl && isVideoUrl(imageUrl) ? (
+          <ArticleVideo src={imageUrl} className="h-full w-full object-cover" />
+        ) : imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="" className="h-full w-full object-cover" />
         ) : (
