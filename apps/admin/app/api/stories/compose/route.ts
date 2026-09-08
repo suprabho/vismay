@@ -7,6 +7,8 @@ import {
   type ConfigFormat,
 } from '@vismay/content-source/contentSource'
 import { writeComposeState } from '@vismay/content-source/composeState'
+import { getDefaultStoryTheme } from '@vismay/content-source/storyThemes'
+import { builtinDefaultThemeFor, type Theme } from '@vismay/viz-engine'
 import {
   slugify,
   defaultsFor,
@@ -39,6 +41,7 @@ function seedStory(
   title: string,
   format: StoryFormat,
   appSlug: string,
+  theme: Theme,
 ): { markdown: string; configYaml: string; configFormat: ConfigFormat } {
   const today = new Date().toISOString().slice(0, 10)
   // footshorts/vizf1 drafts must declare their `vertical` or the app's viz
@@ -58,9 +61,10 @@ function seedStory(
     listed: false,
     // The renderer hard-reads `frontmatter.theme.{colors,fonts}` on every path
     // (themeToMapPalette, getFontImportUrl, ThemeProvider), so a draft without a
-    // theme crashes the canvas. Seed the same neutral base `buildFrontmatter`
-    // injects; the compose passes can fold accent overrides over it later.
-    theme: DEFAULT_THEME,
+    // theme crashes the canvas. Seed the app's default saved theme (or the
+    // neutral base `buildFrontmatter` injects); the compose passes can fold
+    // accent overrides over it later.
+    theme,
   }
   const markdown = `---\n${yamlStringify(frontmatter)}---\n\n## Draft\n\nStart composing from your sources.\n`
 
@@ -68,7 +72,7 @@ function seedStory(
     format === 'map'
       ? { text: 'Draft', map: { center: [0, 0], zoom: 1 } }
       : { text: 'Draft', foreground: [] as unknown[] }
-  const configObj = { defaults: defaultsFor(format), sections: [section] }
+  const configObj = { defaults: defaultsFor(format, theme), sections: [section] }
   const configYaml =
     configFormat === 'json'
       ? JSON.stringify(configObj, null, 2) + '\n'
@@ -112,7 +116,15 @@ export async function POST(req: Request) {
     )
   }
 
-  const { markdown, configYaml, configFormat } = seedStory(title, format, appSlug)
+  // The app's default preset from `story_themes` (footshorts → Classic, vizf1
+  // → Paddock, …). Best-effort: fs-mode dev / a missing service key falls
+  // back to the same built-in list compiled into the engine, then to the
+  // neutral editorial base, as before.
+  const theme =
+    (await getDefaultStoryTheme(appSlug).catch(() => null)) ??
+    builtinDefaultThemeFor(appSlug) ??
+    DEFAULT_THEME
+  const { markdown, configYaml, configFormat } = seedStory(title, format, appSlug, theme)
   try {
     await src.writeMarkdown(slug, markdown) // creates the row (db upsert)
     await src.writeConfig(slug, configYaml, configFormat)

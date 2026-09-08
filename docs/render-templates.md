@@ -2544,6 +2544,40 @@ Note the optional tokens (`positive`, `amber`, `red`) only emit their CSS var wh
 
 The wrapper is forced into its own stacking context (`position: relative; z-index: 0`) so a deck story's fixed `z-index: -2` backdrop paints correctly above the wrapper background. It also publishes a `ChartColors` object (derived by `themeToChartColors`) through `ChartColorsProvider`, because ECharts needs real color strings at construction time, not `var(--...)` references.
 
+#### Saved themes & per-app defaults
+
+Themes can be saved to a library and reused across every app. Source: table
+`story_themes` (`supabase/vizmaya-fyi/migrations/077_story_themes.sql`),
+reader/writer `packages/content-source/src/storyThemes.ts`, admin API
+`/api/story-themes` (+ `/[id]`), and the "Presets" strip the admin theme
+editor renders (`apps/admin/components/vizmaya/ThemePresets.tsx`, hosted by
+`ThemeEditor` in both the classic editor and the canvas overlay).
+
+- A saved theme is a full `Theme` (`colors` + `fonts`) under a name. `app_slug`
+  null = offered to every app ("shared"); set = only that app's editors see it.
+- One row per app may be `is_default`: `POST /api/stories/compose` seeds new
+  stories of that app from it (frontmatter `theme` **and** `defaultsFor()`
+  — deck `storyBackground`, map `pinColor`, and a `dark-v11` / `light-v11`
+  basemap chosen by `isDarkTheme()`), falling back to the neutral
+  `DEFAULT_THEME`. Shared rows can't be defaults.
+- Applying a preset **copies** it into the story frontmatter through the normal
+  save path — stories never link to a row, so editing a row never restyles
+  existing stories.
+- Built-in presets mirror the apps' brand palettes and live twice on purpose:
+  `STORY_THEME_PRESETS` in `packages/viz-engine/src/lib/themeDefaults.ts`
+  (the compile-time / no-DB fallback, also what `builtinDefaultThemeFor()`
+  seeds from when the library is unreachable) and the `builtin = true` rows
+  migration 077 inserts from the same values. The admin merges rows over the
+  list by `slug`, so built-ins can be edited and re-defaulted but not deleted.
+  Today: footshorts **Classic** (default), **Pitch**, **Terrace**
+  (`apps/footshorts/brand/src/themes/*` mapped onto the story tokens — accent =
+  brand orange-red, accent2 = the "live" green) and VizF1 **Paddock**
+  (default; `apps/vizf1/brand` coral accent, F1 timing purple as accent2).
+- `normalizeTheme()` (same module) is the write-side validator: required colours
+  must be hex, optional ones are dropped when empty, fonts are 1–60 chars.
+  `fillTheme()` back-fills a partial theme with `DEFAULT_THEME` so a sparse row
+  can never crash `ThemeProvider`.
+
 #### The `$token` syntax in configs
 
 Many config values accept a **theme token reference**: a string starting with `$` whose remainder names a `theme.colors` key. It is resolved against the active theme at render time. The convention is shared by maps, charts, choropleth ramps, label colors, and the logo palette.

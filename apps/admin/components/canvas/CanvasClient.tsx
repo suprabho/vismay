@@ -119,6 +119,7 @@ import ChartEditPanel from './ChartEditPanel'
 import StorySettingsPanel from './StorySettingsPanel'
 import { ComposeFlowPanel } from './compose/ComposeFlowPanel'
 import { parseFrontmatter, serializeFrontmatter } from '@vismay/content-source/frontmatter'
+import { appSlugForVertical } from '@vismay/verticals/data'
 import type { ComposeState } from '@vismay/content-source/composeState'
 import type { StorySource } from '@vismay/content-source/storySources'
 
@@ -5085,6 +5086,10 @@ export default function CanvasClient({
           onSave={handleThemeSave}
           onClose={closeSlot}
           slug={slug}
+          // `appSlug` here is the story's VERTICAL (CanvasPage passes
+          // frontmatter.vertical: 'f1', 'footshorts', null); the presets
+          // library is keyed by the consumer app ('vizf1', …).
+          appSlug={appSlugForVertical(appSlug)}
         />
       )}
       {slotTarget?.mode === 'chart' && (

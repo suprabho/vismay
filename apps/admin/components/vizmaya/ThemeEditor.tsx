@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { Theme } from '@vismay/viz-engine'
 import { getFontImportUrl } from '@vismay/content-source/getFontImports'
+import ThemePresets from './ThemePresets'
 
 interface Props {
   theme: Partial<Theme> | undefined
@@ -10,6 +11,9 @@ interface Props {
   /** YAML parse error from the markdown frontmatter, if any. When set, the
    *  editor surfaces a banner so authors don't see defaults silently. */
   yamlError?: string | null
+  /** Owning app slug (`vizf1`, `footshorts`, `vizmaya-fyi`, …). When set, the
+   *  saved-theme "Presets" strip renders above the preview. */
+  appSlug?: string
 }
 
 /** Ordered so color swatches read left-to-right the way they compose on screen. */
@@ -33,9 +37,9 @@ const COLOR_FIELDS: {
 ]
 
 const FONT_PRESETS: { serif: string[]; sans: string[]; mono: string[] } = {
-  serif: ['Merriweather', 'Instrument Serif', 'Playfair Display', 'Fraunces', 'Lora', 'EB Garamond'],
-  sans: ['Inter', 'Geist', 'IBM Plex Sans', 'Work Sans', 'Manrope'],
-  mono: ['JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Geist Mono'],
+  serif: ['Merriweather', 'Instrument Serif', 'Playfair Display', 'Fraunces', 'Lora', 'EB Garamond', 'Forum'],
+  sans: ['Inter', 'Geist', 'IBM Plex Sans', 'Work Sans', 'Manrope', 'Space Grotesk'],
+  mono: ['JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Geist Mono', 'Space Mono'],
 }
 
 const EMPTY_THEME: Theme = {
@@ -60,7 +64,7 @@ function mergeTheme(partial: Partial<Theme> | undefined): Theme {
 
 type FontStatus = 'loading' | 'loaded' | 'error'
 
-export default function ThemeEditor({ theme, onChange, yamlError }: Props) {
+export default function ThemeEditor({ theme, onChange, yamlError, appSlug }: Props) {
   // Recompute on every render rather than memoize: mergeTheme is two object
   // spreads and the cost is negligible, while skipping useMemo here removes a
   // class of subtle bugs where a stale `theme` reference (e.g. cached parent
@@ -134,6 +138,12 @@ export default function ThemeEditor({ theme, onChange, yamlError }: Props) {
             </div>
           </div>
         )}
+        {appSlug && (
+          <Section title="Presets">
+            <ThemePresets appSlug={appSlug} current={t} onApply={onChange} />
+          </Section>
+        )}
+
         <ThemePreview theme={t} />
 
         <Section title="Colors">
