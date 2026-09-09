@@ -1,5 +1,6 @@
 import type { FixtureRow } from './types'
 import { isKnockoutStage, stageLabel, stageRank } from './stageLabel'
+import { compareSeasons } from './season'
 
 /**
  * One "round" of a competition schedule — a league/group matchday or a knockout
@@ -11,6 +12,8 @@ import { isKnockoutStage, stageLabel, stageRank } from './stageLabel'
 export type ScheduleRound = {
   key: string
   label: string
+  /** Season the round belongs to, e.g. "26-27". */
+  season: string
   fixtures: FixtureRow[]
   /** Earliest kickoff in the round (ISO) — used for display, not ordering. */
   startsAt: string
@@ -24,11 +27,16 @@ function roundOrder(f: FixtureRow): [number, number] {
   return [base, f.matchday ?? 0]
 }
 
+// Season leads the key so "Matchday 1" of 26-27 can never absorb "Matchday 1"
+// of 25-26. The fixtures table keeps every season it has ever ingested, so a
+// caller that forgets to scope its query would otherwise render one round made
+// of three seasons' matches.
 function roundKey(f: FixtureRow): string {
-  if (isKnockoutStage(f.stage)) return `k:${f.stage}`
-  if (f.matchday != null) return `m:${f.stage ?? ''}:${f.matchday}`
-  if (f.stage) return `s:${f.stage}`
-  return 'other'
+  const season = f.season ?? ''
+  if (isKnockoutStage(f.stage)) return `${season}:k:${f.stage}`
+  if (f.matchday != null) return `${season}:m:${f.stage ?? ''}:${f.matchday}`
+  if (f.stage) return `${season}:s:${f.stage}`
+  return `${season}:other`
 }
 
 function roundLabel(f: FixtureRow): string {
@@ -58,8 +66,23 @@ export function groupFixturesByRound(fixtures: FixtureRow[]): ScheduleRound[] {
       const sorted = [...fixtures].sort((a, b) =>
         a.kickoff_at.localeCompare(b.kickoff_at),
       )
-      return { key, order, label: roundLabel(sorted[0]!), fixtures: sorted, startsAt: sorted[0]!.kickoff_at }
+      return {
+        key,
+        order,
+        label: roundLabel(sorted[0]!),
+        season: sorted[0]!.season ?? '',
+        fixtures: sorted,
+        startsAt: sorted[0]!.kickoff_at,
+      }
     })
-    .sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1] || a.startsAt.localeCompare(b.startsAt))
-    .map(({ key, label, fixtures, startsAt }) => ({ key, label, fixtures, startsAt }))
+    .sort(
+      (a, b) =>
+        // Newest season first, so a list that does span seasons opens on the
+        // current one instead of burying it under an archived campaign.
+        compareSeasons(b.season, a.season) ||
+        a.order[0] - b.order[0] ||
+        a.order[1] - b.order[1] ||
+        a.startsAt.localeCompare(b.startsAt),
+    )
+    .map(({ key, label, season, fixtures, startsAt }) => ({ key, label, season, fixtures, startsAt }))
 }

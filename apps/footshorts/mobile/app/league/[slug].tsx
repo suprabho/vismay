@@ -6,10 +6,11 @@ import { useMemo, useState } from 'react';
 import { useEntity } from '@/lib/useEntity';
 import { isHiddenCompetition } from '@/lib/hiddenContent';
 import { useStandings, groupStandings } from '@/lib/useStandings';
-import { useLeagueFixtures } from '@/lib/useFixtures';
+import { useCurrentSeason, useLeagueFixtures } from '@/lib/useFixtures';
 import {
   StandingsTable,
   MatchRow,
+  formatSeason,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/native';
 import { EntityShareCards } from '@/components/EntityShareCards';
@@ -34,9 +35,14 @@ export default function LeagueScreen() {
 
   const league = useEntity('league', slug);
   const standings = useStandings(slug);
+  // Every fixture query below is scoped to the competition's current season —
+  // the fixtures table keeps previous seasons, and an unscoped read serves them
+  // as if they were live (last season's final under "Recent results", three
+  // seasons of Matchday 1 stacked into one round under "Schedule").
+  const season = useCurrentSeason(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
-  // Full schedule for every competition — feeds the Schedule tab. A complete
+  // Full schedule for the current season — feeds the Schedule tab. A complete
   // domestic season is ~380 fixtures, so cap well above that.
   const scheduleFixtures = useLeagueFixtures(slug, 'all', 500);
 
@@ -62,6 +68,12 @@ export default function LeagueScreen() {
     [standingGroups.length, scheduleRounds.length],
   );
   const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
+
+  // "England · 2026/27" — naming the season on the screen is half the fix: the
+  // data was never wrong, it just wasn't saying which campaign it belonged to.
+  const subtitle = [league.data?.country, season.data ? formatSeason(season.data) : null]
+    .filter(Boolean)
+    .join(' · ');
 
   // Deep-link guard: hidden competitions (see hiddenContent.ts) never render.
   // Placed after the hook calls so the hook order stays unconditional.
@@ -108,8 +120,8 @@ export default function LeagueScreen() {
             ) : null}
             <View className="flex-1">
               <Text className="text-text text-2xl font-bold">{league.data.name}</Text>
-              {league.data.country ? (
-                <Text className="text-muted text-xs mt-0.5">{league.data.country}</Text>
+              {subtitle ? (
+                <Text className="text-muted text-xs mt-0.5">{subtitle}</Text>
               ) : null}
             </View>
           </View>
@@ -127,7 +139,7 @@ export default function LeagueScreen() {
                 <FixtureList
                   loading={pastFixtures.isLoading}
                   data={pastFixtures.data ?? []}
-                  emptyText="No recent results."
+                  emptyText="No results yet this season."
                 />
               </View>
               <View>
@@ -135,7 +147,7 @@ export default function LeagueScreen() {
                 <FixtureList
                   loading={upcomingFixtures.isLoading}
                   data={upcomingFixtures.data ?? []}
-                  emptyText="No upcoming fixtures."
+                  emptyText="No upcoming fixtures this season."
                 />
               </View>
             </View>

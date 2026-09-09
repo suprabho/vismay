@@ -127,6 +127,43 @@ Per seeded league (from `entities` where `football_data_id` is set):
 - `normalizeSeason()`: multi-year league (Aug→May) → `"25-26"`; single-year cup → `"2025"`.
 - **`fixture_stats` is left empty** — shots/possession/cards/xG are paid-tier.
 
+### Seasons — the table is an archive, reads have to say "this one"
+
+`fixtures` is append-only across seasons: the sync upserts on `football_data_id` and never
+deletes, so a competition accumulates one row-set per campaign (Champions League is on its
+third in the table). Nothing about that is wrong — recaps, match facts (`opta_match_facts`)
+and `fixture_events` all hang off historical fixture rows — but it means **a read that
+doesn't name a season is reading the archive**, and the moment a new season starts the most
+recent rows by `kickoff_at` are still last season's:
+
+- "Recent results" for a competition = last season's knockout rounds, until the new
+  campaign has actually played a round.
+- The Schedule tab (`groupFixturesByRound` over an unscoped `all` query) merged
+  same-numbered matchdays from every season it pulled into one round.
+
+So competition-scoped reads pin the season, and `groupFixturesByRound` keys its rounds by
+season as a backstop:
+
+- `useCurrentSeason(slug)` / `resolveCurrentSeason()` (web `lib/useFixtures.ts`, mobile
+  `src/lib/useFixtures.ts`) resolve a competition's current season as **the season of its
+  furthest-out fixture** — read off the data, not the calendar, so it works for `"26-27"`
+  and `"2026"` alike. `/competitions/{id}/matches` only ever returns the current season, so
+  the newest row we hold belongs to it; a sync of a new campaign moves every read over
+  within the 30-minute cache window.
+- Team-level and cross-competition reads (team pages, followed teams, the landing snapshot
+  strip) can't pin one label — a club's season is `"26-27"` in the league and `"2026"` in a
+  cup — so they filter on `kickoff_at >= seasonStartIso()`, the June 1 season boundary from
+  `@vismay/footshorts-viz`'s `season.ts`.
+- Season labels never sort as plain strings (`"2026" < "25-26"`); use `compareSeasons` /
+  `latestSeason` from the same module.
+
+Indexed by `idx_fixtures_competition_season_kickoff` (migration `20260909000000`).
+
+`pnpm fixtures:seasons` (worker, read-only) prints what the table actually holds per
+competition — every season, its fixture/finished counts and date range, and which one the
+apps treat as current. A competition whose current season has already ended is flagged:
+that's a sync that isn't reaching it, not a display bug.
+
 ### `scores.ts` — finished-score refresh (every 3h)
 
 Update-only, never inserts. Per comp code:

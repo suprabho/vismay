@@ -116,7 +116,7 @@ export default function TeamScreen() {
           <FixtureList
             loading={pastFixtures.isLoading}
             data={pastFixtures.data ?? []}
-            emptyText="No recent results."
+            emptyText="No results yet this season."
           />
         </Section>
 

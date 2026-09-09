@@ -1,11 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { isKnockoutStage } from '@vismay/footshorts-viz/web';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { isKnockoutStage, seasonStartIso } from '@vismay/footshorts-viz/web';
 import { supabase } from './supabase';
 import { useAuth } from './AuthProvider';
 import type { Entity } from './useEntities';
-import type { FixtureRow } from './useFixtures';
+import { resolveCurrentSeason, type FixtureRow } from './useFixtures';
 
 const FIXTURE_COLS = `
   id, competition_slug, season, matchday, stage, phase, kickoff_at, status,
@@ -111,6 +111,9 @@ function groupRound(fixtures: FixtureRow[], kind: 'past' | 'upcoming'): RoundGro
 export function useFollowedFixtures() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
+  // Current-season lookups go through the query client so several followed
+  // competitions (and the competition pages) share one cached answer each.
+  const qc = useQueryClient();
 
   return useQuery({
     queryKey: ['followedFixtures', userId],
@@ -130,12 +133,29 @@ export function useFollowedFixtures() {
 
       const now = new Date().toISOString();
 
+      // Competition sections are scoped to the competition's current season.
+      // The fixtures table keeps every season it has ingested, so an unscoped
+      // "last finished round" hands back last season's final for weeks after a
+      // new campaign has kicked off.
       const leaguePromises = leagueEntities.map(async (league): Promise<LeagueSection> => {
+        const season = await resolveCurrentSeason(qc, league.slug);
+        if (!season) {
+          return {
+            entity: league,
+            lastMatchday: [],
+            nextMatchday: [],
+            lastMatchdayNumber: null,
+            nextMatchdayNumber: null,
+            lastStage: null,
+            nextStage: null,
+          };
+        }
         const [pastRes, upRes] = await Promise.all([
           supabase
             .from('fixtures')
             .select(FIXTURE_COLS)
             .eq('competition_slug', league.slug)
+            .eq('season', season)
             .eq('status', 'finished')
             .order('kickoff_at', { ascending: false })
             .limit(30),
@@ -143,6 +163,7 @@ export function useFollowedFixtures() {
             .from('fixtures')
             .select(FIXTURE_COLS)
             .eq('competition_slug', league.slug)
+            .eq('season', season)
             .gte('kickoff_at', now)
             .in('status', ['scheduled', 'live'])
             .order('kickoff_at', { ascending: true })
@@ -165,12 +186,17 @@ export function useFollowedFixtures() {
         };
       });
 
+      // A team plays across competitions whose season labels differ, so its
+      // results are scoped by the season boundary date rather than a label.
+      const seasonStart = seasonStartIso();
+
       const teamPromises = teamEntities.map(async (team): Promise<TeamSection> => {
         const [pastRes, upRes] = await Promise.all([
           supabase
             .from('fixtures')
             .select(FIXTURE_COLS)
             .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+            .gte('kickoff_at', seasonStart)
             .lt('kickoff_at', now)
             .order('kickoff_at', { ascending: false })
             .limit(5),

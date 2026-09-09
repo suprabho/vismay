@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { latestSeason } from '@vismay/footshorts-viz/web';
 import { supabase } from './supabase';
 
 // StandingRow lives in @vismay/footshorts-viz so StandingsTable can be reused.
@@ -15,15 +16,16 @@ const STANDING_COLS = `
   team:entities!standings_team_id_fkey(id, slug, name, crest_url)
 `;
 
+// Ordered client-side rather than with `.order('season')`: season labels don't
+// sort as plain strings ("2026" lands before "25-26" because it compares '0'
+// against '5'), which would pin a cup's standings to a season it has left.
 async function fetchLatestSeason(competitionSlug: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('standings')
     .select('season')
-    .eq('competition_slug', competitionSlug)
-    .order('season', { ascending: false })
-    .limit(1);
+    .eq('competition_slug', competitionSlug);
   if (error) throw error;
-  return data?.[0]?.season ?? null;
+  return latestSeason(((data ?? []) as Array<{ season: string }>).map((r) => r.season));
 }
 
 export function useStandings(competitionSlug: string | undefined, season?: string) {
@@ -72,16 +74,18 @@ export function useTeamStanding(teamId: string | undefined, competitionSlug: str
     queryKey: ['standings', 'team', teamId, competitionSlug],
     enabled: !!teamId && !!competitionSlug,
     queryFn: async (): Promise<StandingRow | null> => {
+      // One row per season for this team; pick the newest chronologically
+      // rather than with a string sort on the season label (see
+      // fetchLatestSeason above).
       const { data, error } = await supabase
         .from('standings')
         .select(STANDING_COLS)
         .eq('competition_slug', competitionSlug!)
-        .eq('team_id', teamId!)
-        .order('season', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq('team_id', teamId!);
       if (error) throw error;
-      return (data as unknown as StandingRow) ?? null;
+      const rows = (data ?? []) as unknown as StandingRow[];
+      const newest = latestSeason(rows.map((r) => r.season));
+      return rows.find((r) => r.season === newest) ?? null;
     },
     staleTime: 5 * 60 * 1000,
   });
