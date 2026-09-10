@@ -119,6 +119,7 @@ const ALIASES: Record<string, string> = {
   'west-brom': 'west-bromwich-albion',
   'nottm-forest': 'nottingham-forest',
   // teams — long official names → common names
+  'sporting': 'sporting-clube-de-portugal',   // theanalyst.com's "Sporting"; "sporting" alone is a noise token in teamKeyVariants
   'newcastle': 'newcastle-united',
   'real-betis': 'real-betis-balompie',
   // leagues — renames Gemini uses vs official seed names
