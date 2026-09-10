@@ -106,8 +106,18 @@ const ALIASES: Record<string, string> = {
   'genoa-cfc': 'genoa',
   // teams — French
   'psg': 'paris-saint-germain',
+  'paris-sg': 'paris-saint-germain',   // theanalyst.com's spelling
   'lyon': 'olympique-lyonnais',
   'marseille': 'olympique-de-marseille',
+  // teams — theanalyst.com's Championship short forms (verified live 2026-09-09;
+  // these have no token in common with the official name, so per-word
+  // teamKeyVariants can't bridge them)
+  'qpr': 'queens-park-rangers',
+  'sheff-utd': 'sheffield-united',
+  'sheff-wed': 'sheffield-wednesday',
+  'bristol-c': 'bristol-city',
+  'west-brom': 'west-bromwich-albion',
+  'nottm-forest': 'nottingham-forest',
   // teams — long official names → common names
   'newcastle': 'newcastle-united',
   'real-betis': 'real-betis-balompie',
@@ -208,29 +218,70 @@ export function canonicalTeamKey(name: string): string {
 }
 
 /**
+ * Tokens that never identify a club on their own — club-type words, articles,
+ * founding years, generic prefixes ("Real", "Stade", "Racing") shared by many
+ * clubs. Dropped from teamKeyVariants' per-word variants so "RC Strasbourg
+ * Alsace" contributes {strasbourg, alsace}, not {rc}. The full canonical key
+ * always stays in the set, so "Real Madrid" ↔ "Real Madrid CF" still matches
+ * exactly even though "real" alone is dropped.
+ */
+const TEAM_NOISE_TOKENS = new Set([
+  'fc', 'cf', 'afc', 'ac', 'as', 'ss', 'ssc', 'us', 'sc', 'rc', 'rcd', 'ca', 'cd', 'ud', 'sd', 'sv', 'fsv',
+  'tsg', 'vfb', 'vfl', 'bsc', 'fk', 'sk', 'bk', 'if', 'sco', 'sg',
+  'club', 'clube', 'calcio', 'futbol', 'football', 'sport', 'sports', 'sportverein', 'sporting',
+  'racing', 'stade', 'olympique', 'real', 'athletic-club',
+  'de', 'la', 'le', 'les', 'del', 'di', 'da', 'do', 'du', 'dos', 'e', 'y', 'und', 'of',
+]);
+
+/**
+ * Word-level synonyms between providers' spellings of the same club stem —
+ * theanalyst.com's media-style short names vs the official names our
+ * entities carry. Applied per token (both directions) so "Stade Brestois 29"
+ * ↔ "Brest" and "Borussia Mönchengladbach" ↔ "M'gladbach" meet in the middle.
+ * Verified against the live fixtures pages 2026-09-09 (Ligue 1, Bundesliga).
+ */
+const TEAM_TOKEN_SYNONYMS: Record<string, string> = {
+  brestois: 'brest',
+  rennais: 'rennes',
+  hamburger: 'hamburg',
+  monchengladbach: 'gladbach',
+  mgladbach: 'gladbach',
+  leverkusen: 'bayer',
+  internazionale: 'inter',
+};
+
+/**
  * Variant keys for fuzzy team-name matching across providers with very
  * different naming conventions for the same club — theanalyst.com favours
  * media-style single-word nicknames ("Palace", "Forest", "Villa", "Hull",
- * "Leeds") where our own entity names are full official names ("Crystal
- * Palace FC", "Nottingham Forest FC", ...). Alongside the canonical key,
- * includes the first and last word of a multi-word name — covers both
- * prefix nicknames (Hull, Ipswich, Coventry) and suffix nicknames (Forest,
- * Villa, Palace). A handful of mid-word nicknames (e.g. "Betis" for "Real
- * Betis Balompié") aren't covered by this and need an explicit ALIASES
- * entry instead. False positives are bounded by the caller's ambiguity
- * check: a spurious single-word collision just means the pairing is
- * skipped, not mis-mapped, unless it's the ONLY candidate for BOTH sides
- * in the date window.
+ * "Leeds", "Brest", "Sassuolo") where our own entity names are full official
+ * names ("Crystal Palace FC", "Nottingham Forest FC", "Stade Brestois 29",
+ * "US Sassuolo Calcio"). Alongside the canonical key, includes every
+ * meaningful word of the name (TEAM_NOISE_TOKENS dropped: club-type
+ * abbreviations, articles, founding years, generic "Real"/"Stade" prefixes)
+ * plus TEAM_TOKEN_SYNONYMS stems. Earlier this was first+last word only,
+ * which missed every "<abbr> <Name> <suffix>" official name ("RC Celta de
+ * Vigo", "1. FSV Mainz 05", "RCD Espanyol de Barcelona") — a whole
+ * matchday's worth of La Liga/Bundesliga/Ligue 1 fixtures a run (verified
+ * 2026-09-09). False positives are bounded by the caller's ambiguity check:
+ * a spurious single-word collision just means the pairing is skipped, not
+ * mis-mapped, unless it's the ONLY candidate for BOTH sides in the date
+ * window.
  */
 export function teamKeyVariants(name: string): Set<string> {
   const key = canonicalTeamKey(name);
   const variants = new Set([key]);
-  const tokens = key.split('-');
-  const first = tokens[0];
-  const last = tokens[tokens.length - 1];
-  if (tokens.length > 1 && first && last) {
-    variants.add(first);
-    variants.add(last);
+  const tokens = key.split('-').filter(Boolean);
+  if (tokens.length > 1) {
+    for (const t of tokens) {
+      if (t.length < 3 || /^\d+$/.test(t) || TEAM_NOISE_TOKENS.has(t)) continue;
+      variants.add(t);
+      const syn = TEAM_TOKEN_SYNONYMS[t];
+      if (syn) variants.add(syn);
+    }
+  } else if (tokens[0]) {
+    const syn = TEAM_TOKEN_SYNONYMS[tokens[0]];
+    if (syn) variants.add(syn);
   }
   return variants;
 }

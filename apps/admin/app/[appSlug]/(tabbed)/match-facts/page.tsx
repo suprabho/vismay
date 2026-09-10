@@ -3,6 +3,11 @@ import { revalidatePath } from 'next/cache'
 import { isAuthed } from '@/lib/adminAuth'
 import { createServerSupabase } from '@/lib/supabaseServer'
 import { linkFixtureToTheanalystMatch, parseTheanalystMatchUrl } from '@vismay/content-source/footshortsData'
+import {
+  THEANALYST_MATCH_FACTS_WORKER,
+  dispatchWorker,
+  isWorkerDispatchConfigured,
+} from '@vismay/content-source/workerDispatch'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,7 +71,7 @@ const STAT_ROWS: Array<{ key: keyof FactsRow; label: string; suffix?: string }> 
 // Familiar-first ordering for the tracked theanalyst competitions
 // (apps/footshorts/worker/src/theanalyst/competitions.ts) — anything else
 // (untracked competitions that will never get scraped) sorts after, alphabetically.
-const COMPETITION_ORDER = ['premier-league', 'primera-division', 'serie-a', 'bundesliga', 'ligue-1', 'champions-league']
+const COMPETITION_ORDER = ['premier-league', 'primera-division', 'serie-a', 'bundesliga', 'ligue-1', 'champions-league', 'championship']
 
 const LOOKBACK_DAYS = 30 // mirrors theanalystMatchFacts.ts's own scrape window
 const FIXTURE_LIMIT = 300
@@ -131,11 +136,27 @@ function StatsTable({ home, away, homeName, awayName }: { home: FactsRow | null;
 }
 
 /**
+ * Fires the match-facts worker in --url mode for one pasted theanalyst.com
+ * match-centre link (footshorts-theanalyst-match-facts.yml `match_url`
+ * input). Returns the dispatch outcome for the redirect banner; throws on a
+ * GitHub API failure.
+ */
+async function dispatchUrlScrape(matchUrl: string, fixtureId?: string): Promise<'dispatched' | 'unconfigured'> {
+  if (!isWorkerDispatchConfigured()) return 'unconfigured'
+  await dispatchWorker(THEANALYST_MATCH_FACTS_WORKER, {
+    match_url: matchUrl,
+    ...(fixtureId ? { fixture_id: fixtureId } : {}),
+  })
+  return 'dispatched'
+}
+
+/**
  * Manually links a fixture to a theanalyst.com match — the "not yet
  * discovered" fallback for when auto-discovery's team-name/date matching
  * misses (an obscure nickname, a fixture outside the 30-day window, etc.).
- * Same three id columns matchDiscovery.ts sets automatically, so the next
- * match-facts cron run scrapes it like any other resolved fixture.
+ * Same three id columns matchDiscovery.ts sets automatically — and then
+ * dispatches the worker in --url mode pinned to this fixture, so the stats
+ * land in minutes instead of waiting for the 3-hourly cron's scrape budget.
  */
 async function linkTheanalystUrlAction(formData: FormData) {
   'use server'
@@ -146,14 +167,72 @@ async function linkTheanalystUrlAction(formData: FormData) {
   if (!appSlug || !fixtureId) return
 
   const backTo = `/${appSlug}/match-facts?competition=${encodeURIComponent(competition)}&fixture=${fixtureId}`
+  let outcome: string
   try {
     await linkFixtureToTheanalystMatch(fixtureId, theanalystUrl)
+    outcome = await dispatchUrlScrape(theanalystUrl, fixtureId)
   } catch (e) {
     const message = e instanceof Error ? e.message : 'failed to link'
     redirect(`${backTo}&linkError=${encodeURIComponent(message)}`)
   }
   revalidatePath(`/${appSlug}/match-facts`)
-  redirect(backTo)
+  redirect(`${backTo}&scrape=${outcome}`)
+}
+
+/**
+ * "Scrape from URL" — any theanalyst.com match-centre link, no fixture
+ * picked up front. The worker reads the widget's own scoreboard (teams,
+ * date, competition), matches it against fixtures the way discovery does,
+ * or creates a minimal fixtures row when nothing matches (a competition
+ * football-data doesn't cover). With a fixtureId (the "Scrape now" button on
+ * an already-linked match) the worker skips the matching and uses that row.
+ */
+async function scrapeTheanalystUrlAction(formData: FormData) {
+  'use server'
+  const appSlug = String(formData.get('appSlug') ?? '')
+  const competition = String(formData.get('competition') ?? '')
+  const fixtureId = String(formData.get('fixtureId') ?? '').trim()
+  const theanalystUrl = String(formData.get('theanalystUrl') ?? '').trim()
+  if (!appSlug) return
+
+  const backTo =
+    `/${appSlug}/match-facts` +
+    (competition ? `?competition=${encodeURIComponent(competition)}` : '') +
+    (fixtureId ? `${competition ? '&' : '?'}fixture=${fixtureId}` : '')
+  const sep = backTo.includes('?') ? '&' : '?'
+  if (!parseTheanalystMatchUrl(theanalystUrl)) {
+    redirect(
+      `${backTo}${sep}scrapeError=${encodeURIComponent('Not a theanalyst.com match URL — expected matchId/competitionId/seasonId query params')}`,
+    )
+  }
+  let outcome: string
+  try {
+    outcome = await dispatchUrlScrape(theanalystUrl, fixtureId || undefined)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'dispatch failed'
+    redirect(`${backTo}${sep}scrapeError=${encodeURIComponent(message)}`)
+  }
+  redirect(`${backTo}${sep}scrape=${outcome}`)
+}
+
+function ScrapeBanner({ scrape, scrapeError }: { scrape?: string; scrapeError?: string }) {
+  if (scrapeError) return <p className="text-xs text-amber-400">{scrapeError}</p>
+  if (scrape === 'dispatched') {
+    return (
+      <p className="text-xs text-emerald-400">
+        Scrape dispatched — the worker runs on GitHub Actions and usually lands stats within a couple of minutes. Reload to see them.
+      </p>
+    )
+  }
+  if (scrape === 'unconfigured') {
+    return (
+      <p className="text-xs text-amber-400">
+        Worker dispatch isn’t configured on this deployment (GITHUB_DISPATCH_TOKEN / GITHUB_DISPATCH_REPO) — run
+        <code className="mx-1">pnpm match-facts -- --url=…</code> in apps/footshorts/worker instead.
+      </p>
+    )
+  }
+  return null
 }
 
 /**
@@ -205,6 +284,17 @@ function TheanalystLink({ url }: { url: string | null }) {
 function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; appSlug: string; linkError?: string }) {
   const { fixture, home, away, homeName, awayName } = entry
   const hasFacts = home || away
+  // What "Scrape now" hands the worker: the stored wrapper URL, else one
+  // rebuilt from the id columns (rows discovery linked before the URL column existed).
+  const scrapeUrl =
+    fixture.theanalyst_match_url ??
+    (fixture.theanalyst_competition_id && fixture.theanalyst_season_id && fixture.theanalyst_match_id
+      ? `https://theanalyst.com/opta-football-match-centre?${new URLSearchParams({
+          competitionId: fixture.theanalyst_competition_id,
+          seasonId: fixture.theanalyst_season_id,
+          matchId: fixture.theanalyst_match_id,
+        })}`
+      : null)
   return (
     <div className="rounded-lg border border-white/10 overflow-hidden">
       <div className="px-3 py-2.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
@@ -229,7 +319,23 @@ function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; app
       ) : fixture.theanalyst_match_id ? (
         <div className="px-3 py-3 text-xs text-neutral-500 flex items-center justify-between gap-3">
           <span>Matched on theanalyst.com — not scraped yet (waits on the per-run scrape budget).</span>
-          <TheanalystLink url={fixture.theanalyst_match_url} />
+          <div className="flex items-center gap-3 shrink-0">
+            <TheanalystLink url={fixture.theanalyst_match_url} />
+            {scrapeUrl && (
+              <form action={scrapeTheanalystUrlAction}>
+                <input type="hidden" name="appSlug" value={appSlug} />
+                <input type="hidden" name="competition" value={fixture.competition_slug ?? ''} />
+                <input type="hidden" name="fixtureId" value={fixture.id} />
+                <input type="hidden" name="theanalystUrl" value={scrapeUrl} />
+                <button
+                  type="submit"
+                  className="rounded-md bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 text-xs text-neutral-200 whitespace-nowrap"
+                >
+                  Scrape now
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       ) : (
         <div className="px-3 py-3">
@@ -250,7 +356,7 @@ function MatchFactsPanel({ entry, appSlug, linkError }: { entry: MatchEntry; app
               type="submit"
               className="rounded-md bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 text-xs text-neutral-200 whitespace-nowrap"
             >
-              Link match
+              Link + scrape now
             </button>
           </form>
         </div>
@@ -277,11 +383,17 @@ export default async function MatchFactsPage({
   searchParams,
 }: {
   params: Promise<{ appSlug: string }>
-  searchParams: Promise<{ competition?: string; fixture?: string; linkError?: string }>
+  searchParams: Promise<{
+    competition?: string
+    fixture?: string
+    linkError?: string
+    scrape?: string
+    scrapeError?: string
+  }>
 }) {
   const { appSlug } = await params
   if (!(await isAuthed())) redirect(`/login?next=/${appSlug}/match-facts`)
-  const { competition: competitionParam, fixture: fixtureParam, linkError } = await searchParams
+  const { competition: competitionParam, fixture: fixtureParam, linkError, scrape, scrapeError } = await searchParams
 
   const supabase = await createServerSupabase()
 
@@ -386,6 +498,25 @@ export default async function MatchFactsPage({
             (last {LOOKBACK_DAYS}d) scraped
           </p>
         </div>
+        {/* Any theanalyst.com match-centre link → worker --url mode (see scrapeTheanalystUrlAction). */}
+        <form action={scrapeTheanalystUrlAction} className="flex items-center gap-2">
+          <input type="hidden" name="appSlug" value={appSlug} />
+          <input type="hidden" name="competition" value={activeCompetition ?? ''} />
+          <input
+            type="url"
+            name="theanalystUrl"
+            placeholder="Scrape from URL — paste a theanalyst.com match-centre link (…?competitionId=…&seasonId=…&matchId=…)"
+            required
+            className="flex-1 max-w-2xl bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-neutral-200 placeholder:text-neutral-600"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 text-sm text-neutral-200 whitespace-nowrap"
+          >
+            Scrape match facts
+          </button>
+        </form>
+        <ScrapeBanner scrape={scrape} scrapeError={scrapeError} />
         {entries.length > 0 && (
           <form method="GET" className="flex items-center gap-2">
             <select

@@ -40,7 +40,12 @@ on:
         type: string
         default: ''
       fixture_id:
-        description: 'Fixture id (uuid) to limit to — requires competition to also be set. Blank = normal competition-wide run.'
+        description: 'Fixture id (uuid) to limit to — requires competition to also be set (or match_url, to pin which fixture the link belongs to). Blank = normal competition-wide run.'
+        required: false
+        type: string
+        default: ''
+      match_url:
+        description: 'One theanalyst.com match-centre link (…?competitionId=…&seasonId=…&matchId=…) to scrape directly — no discovery; the fixture is matched by team names + date, or created if none exists. Ignores competition.'
         required: false
         type: string
         default: ''
@@ -102,6 +107,7 @@ jobs:
           # Read inputs via env (not direct ${{ }} interpolation) to avoid shell injection.
           INPUT_COMPETITION: ${{ inputs.competition }}
           INPUT_FIXTURE_ID: ${{ inputs.fixture_id }}
+          INPUT_MATCH_URL: ${{ inputs.match_url }}
           INPUT_DRY: ${{ inputs.dry }}
           INPUT_DUMP_EVENTS: ${{ inputs.dump_events }}
           INPUT_EVENTS_BACKFILL: ${{ inputs.events_backfill }}
@@ -109,6 +115,7 @@ jobs:
           ARGS=()
           [ -n "$INPUT_COMPETITION" ] && ARGS+=("--competition=$INPUT_COMPETITION")
           [ -n "$INPUT_FIXTURE_ID" ] && ARGS+=("--fixture-id=$INPUT_FIXTURE_ID")
+          [ -n "$INPUT_MATCH_URL" ] && ARGS+=("--url=$INPUT_MATCH_URL")
           [ "$INPUT_DRY" = "true" ] && ARGS+=("--dry")
           [ "$INPUT_DUMP_EVENTS" = "true" ] && ARGS+=("--dump-events")
           [ "$INPUT_EVENTS_BACKFILL" = "true" ] && ARGS+=("--events-backfill")

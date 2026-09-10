@@ -16,13 +16,21 @@ verification checklist that MUST pass before the crons are trusted.
 
 | Target | Adapter | Entry point | Destination | Cadence |
 |---|---|---|---|---|
-| General news | `worker/src/theanalyst/news.ts` | `ingest.ts` (`SCRAPE_SOURCES` loop) | `articles` (same pipeline as RSS: dedupe → Gemini summary → entity tags) | hourly, inside `footshorts-ingest.yml` |
+| General news — per-competition article listings (`sources.ts` `SCRAPE_SOURCES`: Premier League, Champions League) | `worker/src/theanalyst/news.ts` | `ingest.ts` (`SCRAPE_SOURCES` loop) | `articles` (same pipeline as RSS: dedupe → Gemini summary → entity tags) | hourly, inside `footshorts-ingest.yml` |
 | Opta Power Rankings widget | `worker/src/theanalyst/powerRankings.ts` | `theanalystPowerRankings.ts` | `power_rankings`, as a **draft** for admin review — never auto-published | daily Mon-Fri, `footshorts-theanalyst-power-rankings.yml` (+ admin "Run scrape" button) |
-| Match centre stats + timeline | `worker/src/theanalyst/matchCentre.ts` + `matchDiscovery.ts` | `theanalystMatchFacts.ts` | `opta_match_facts` (per-side upsert) + theanalyst ids persisted on `fixtures` + `fixture_events` (timeline, **strict gap-fill**: only fixtures with zero existing events get rows — mirrors `events.ts`'s "no events yet" gate so the API-Football/Sportradar writers and this one never double-write; first writer wins) | 3-hourly (30 min after the scores refresh), `footshorts-theanalyst-match-facts.yml` |
+| Match centre stats + timeline (cron discovery, or one pasted link via `--url` — see below) | `worker/src/theanalyst/matchCentre.ts` + `matchDiscovery.ts` | `theanalystMatchFacts.ts` | `opta_match_facts` (per-side upsert) + theanalyst ids persisted on `fixtures` + `fixture_events` (timeline, **strict gap-fill**: only fixtures with zero existing events get rows — mirrors `events.ts`'s "no events yet" gate so the API-Football/Sportradar writers and this one never double-write; first writer wins) | 3-hourly (30 min after the scores refresh), `footshorts-theanalyst-match-facts.yml` |
 
 ### URL shapes
 
 - Articles: `https://theanalyst.com/articles/<slug>`
+- Article listings, per competition (what `SCRAPE_SOURCES[].listingUrl`
+  points at): `https://theanalyst.com/competition/<theanalystSlug>/articles`
+  — server-rendered, 10 `article.teaser` cards per page (`/page/N` paginates;
+  we only read page 1 hourly). Verified live 2026-09-09 for
+  `uefa-champions-league` and `premier-league`. The `/articles/feed` link
+  the page carries is a **404** (WordPress category feed disabled) — no RSS,
+  the listing scrape stays. `/articles/author/…` and `/articles/tag/…` are
+  excluded by `news.ts`'s slug regex.
 - Power Rankings explainer article (title/publishedAt/narrative only — NOT
   where the ranked list lives): `https://theanalyst.com/articles/who-are-the-best-football-team-in-the-world-opta-power-rankings`
 - Power Rankings widget (the actual ranked list; a continuously-updated
@@ -97,13 +105,14 @@ patch:
 
 | File | Assumption to verify |
 |---|---|
-| `theanalyst/news.ts` | listing pages link articles at `/articles/<slug>`; article pages expose `og:title` / `article:published_time` / `og:image` and body text under `<article>`/`<main>` — **verified live, working over plain fetch** |
+| `theanalyst/news.ts` | listing pages link articles at `/articles/<slug>`; article pages expose `og:title` / `article:published_time` / `og:image` and body text under `<article>`/`<main>` — **verified live, working over plain fetch**. Re-verified 2026-09-09 on the per-competition listings: links are now read from the `main.posts-wrapper article.teaser` cards (`a.teaser-content-link` + `h3.teaser-title`) so site chrome (NBA/FPL/predictions nav, all `/articles/<slug>` too) stays out; the page-wide scan remains as a fallback that warns when the cards vanish. `og:title` carries a "… \| Opta Analyst" suffix, stripped. |
 | `theanalyst/powerRankings.ts` | the ranked list is a `<table>` with a `<thead>` (columns: rank/team/rating/ranking change), an `<ol>`, or "N. Team" text lines (three strategies tried in order) — **verified live**: it's the table, column-mapped by header text. Fixed a real bug along the way: `toNumber()` returned `0` (not `null`) for any digit-free string, so the "is this a team name, not a number" guard rejected every row. |
 | `theanalyst/matchCentre.ts` | stat rows contain a text label (spellings in `STAT_LABELS`) plus two numbers, home first — **confirmed FALSE, rewritten**: the widget renders six distinct `table.Opta-Stats-Bars` sub-widgets (two-`<tr>` label/data pairs, where the data row's middle bar `<div>` duplicates both values as text — a naive "N numbers near this label" scan over-collects) plus a separate `table.Opta-shotoverview` for xG (one `<tr>` per stat, `Opta-Home`/`Opta-StatLabel`/`Opta-Away`). Verified end-to-end against a real finished match (Arsenal 3-0 Coventry): xG 1.88 vs 0.2, 20 shots, 64.1% possession, 40+ additional raw stats, all correctly split home/away. Real label spellings also differed from the guesses: "Total Team xG", "Fouls conceded", "Corners won"/"Corner awarded" (STAT_LABELS updated). "Big chances"/"big chances missed" didn't appear on the one match checked — still unverified. |
 | `theanalyst/matchDiscovery.ts` | the match centre without a `matchId` lists the competition's matches as links carrying `?matchId=`, with "Home vs Away" link text — **confirmed FALSE, rewritten**: no such listing view exists at the match-centre URL at any layer. The real listing is a separate page — see the discovery section below. |
 | `theanalyst/matchCentre.ts` `extractMatchEvents` | **Verified live 2026-08-26** against a finished match (Atlético Madrid 2-2 Villarreal): the timeline is two `<ul class="Opta-Events Opta-Home\|Opta-Away">` lists of `<li class="Opta-MatchEvent">`, each with a clean `.Opta-Event-Title` / `.Opta-Event-Min`. The original best-guess version had three real bugs, all fixed: (1) it scanned each row's *flattened* text for a minute, so a `.Opta-groupcount` digit sitting before the real minute got picked up instead; (2) simultaneous substitutions bundle into ONE `<li>` with one `.Opta-EventGroup-TooltipContent` per sub — the old code concatenated them into one garbled event instead of splitting them; (3) Opta wraps the minute digits/"+" in invisible Unicode format characters (bidi marks) that `\s` doesn't match, so the "+N" extra-time capture silently failed (`90+1'` parsed as minute 90 with no extra time). Player names now come from the `.Opta-IconOff`/`.Opta-IconOn` markers (subs) or the plain-vs-`.Opta-assist`/`.Opta-Event-Reason` div split (goals/cards) instead of regex-stripping the row text. Confirmed against the real match report: 21 events, correct scorers/assists/cards, penalties classified separately from open-play goals, `90+1'`/`90+10'` both parsed with the right extra minute. |
 | `theanalyst/competitions.ts` | the Premier League id pair (taken from the feature request's example URL) is current — **superseded**: ids are no longer hand-curated at all, see the competition id map section above |
-| `sources.ts` | `SCRAPE_SOURCES[].listingUrl` points at a real article-listing page |
+| `sources.ts` | `SCRAPE_SOURCES[].listingUrl` points at a real article-listing page — **verified live 2026-09-09**: `/competition/premier-league/articles` and `/competition/uefa-champions-league/articles`, 10 clean cards each |
+| `theanalyst/matchCentre.ts` `extractMatchHeader` | **Verified live 2026-09-09** (AEK Athens 1-0 LASK, UCL): the scoreboard is `table.Opta-MatchHeader.Opta-MatchHeader-Crested` — `td.Opta-TeamName.Opta-Home/Away` names, `td.Opta-Score .Opta-Team-Score` digits, `tr.Opta-Score-Extras` "HT 1-0", and `tr.Opta-MatchHeader-Details` with `.Opta-Competition` ("UEFA Champions League") + `.Opta-Date` ("Tuesday 8 September 2026"). A second plain `table.Opta-MatchHeader` (sticky copy) renders blank scores — prefer the crested one. Isolated like the events parser: failure → `header: null`, stats unaffected. |
 
 Power Rankings and the match centre came back empty over plain fetch+cheerio
 ("JS-rendered page or selector drift?") and now go through `fetchRenderedHtml`
@@ -111,6 +120,45 @@ Power Rankings and the match centre came back empty over plain fetch+cheerio
 fetch is ever blocked outright (datacenter IPs flagged, CAPTCHA), the next
 fallback is an Apify actor like the yahoo-stock one
 (`apify/dc-yahoo-stock-scraper`).
+
+## Scraping one match from a pasted link (`--url`)
+
+`theanalystMatchFacts.ts --url='https://theanalyst.com/opta-football-match-centre?competitionId=…&seasonId=…&matchId=…'`
+scrapes exactly one match, no discovery, no `--competition`. The admin
+Match facts tab exposes it three ways (all `workflow_dispatch` on
+`footshorts-theanalyst-match-facts.yml` with the `match_url` input):
+"Scrape from URL" in the header (any link), "Link + scrape now" on an
+undiscovered fixture (link, then scrape pinned to it), and "Scrape now" on a
+matched-but-unscraped fixture.
+
+How the worker finds the fixtures row (in order):
+
+1. `--fixture-id` (the admin passes it whenever it knows the row).
+2. A fixture already carrying this `theanalyst_match_id`.
+3. The widget's own scoreboard (`extractMatchHeader`: team names + date)
+   matched with discovery's `matchFixtures` against every fixture within
+   ±1 day, **any competition** — the link is the scope. "AEK Athens FC"
+   finds "PAE AEK" via `teamKeyVariants`. More than one hit → error asking
+   for `--fixture-id` (never a guess).
+4. Nothing matched → a minimal `fixtures` row is **created** from the
+   scoreboard (raw team names, no entity ids, date at 12:00Z since the
+   widget prints no kickoff time, scores, `status='finished'`,
+   `competition_slug` from `OPTA_COMPETITION_SLUGS` or a slugified name).
+   This is for competitions football-data doesn't cover; `football_data_id`
+   stays null so a later football-data ingest of that competition would not
+   dedupe against it — the log says loudly when a row was created.
+
+Then: theanalyst ids + URL are written onto the fixture (a pasted link
+re-links a fixture that pointed elsewhere — treated as an editorial
+correction, logged), `opta_match_facts` upserts both sides, and the full
+timeline goes into `fixture_events` under the same strict gap-fill as the
+cron (only if the fixture has zero events; first writer wins). Verified
+end-to-end 2026-09-09 against a real UCL match (AEK Athens 1-0 LASK, a
+fixture the cron's discovery had missed): matched by scoreboard, 40 raw
+stats/side, 11 timeline events.
+
+`--dry` prints the resolved fixture (or "would create") and the parsed
+payload without writing.
 
 ## Match discovery — a calendar, not a listing
 
@@ -144,6 +192,45 @@ Verified end-to-end 2026-08-24: discovered 9 real Premier League matches
 over a 5-day window, correctly team-matched 3 of them against fabricated
 fixtures, and successfully scraped full match-centre stats for one.
 
+### Two bugs found on the 2026-09-09 backfill (both fixed)
+
+1. **Calendar month navigation.** `collectMatchdaysInWindow` pages the
+   calendar *back* to reach the lookback cutoff and leaves it there; the
+   click loop then asked for `td[data-date="2026-09-08"]` while the August
+   grid (26 Jul → 5 Sep) was showing → 30 s timeout → the whole run died
+   (and, since competitions ran in one loop with no isolation, every
+   competition after it was starved too). The Premier League never hit it
+   only because its early-September matchdays fell inside August's trailing
+   week. `showMonthContaining` now pages forward/back (`[aria-label="Next
+   month"]` / `"Previous month"`) until the target cell is in the grid, each
+   matchday click is try/caught individually, and `theanalystMatchFacts.ts`
+   isolates discovery/scrape failures per competition (logs, continues,
+   exits non-zero at the end).
+2. **Team-name matching was first+last word only.** Official names shaped
+   `<abbr> <Name> <suffix>` ("RC Celta de Vigo", "1. FSV Mainz 05", "RCD
+   Espanyol de Barcelona", "Stade Brestois 29", "US Sassuolo Calcio") never
+   overlapped theanalyst's short names ("Celta", "Mainz", "Espanyol",
+   "Brest", "Sassuolo") — 27 fixtures across La Liga / Bundesliga / Ligue 1 /
+   Serie A in one month. `teamKeyVariants` now emits every meaningful word
+   (noise tokens dropped: club-type abbreviations, articles, years, generic
+   "Real"/"Stade"/"Racing"), plus per-word synonyms for stems that differ
+   (`brestois→brest`, `rennais→rennes`, `hamburger→hamburg`,
+   `monchengladbach→gladbach`), plus `ALIASES` entries for short forms with
+   no shared token at all (`qpr`, `sheff-utd`, `sheff-wed`, `bristol-c`,
+   `west-brom`, `nottm-forest`, `paris-sg`). Live theanalyst spellings per
+   league are listed in the entityResolver comments' verification note; the
+   backfill then reached 100% of finished fixtures in every tracked
+   competition (PL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, Championship).
+
+### Coverage
+
+theanalyst's football nav (2026-09-09): Premier League, Championship
+(`english-championship`), League One/Two, La Liga, Serie A, Bundesliga,
+Ligue 1, UCL, UEL, UECL, Scottish Premiership, MLS, Saudi Pro League, WSL.
+Of the leagues football-data feeds us, **Eredivisie, Primeira Liga and the
+Brasileirão are not covered** (all 404) — those fixtures will never get
+Opta facts from this source.
+
 ## Verification checklist — before trusting the crons
 
 Both new workflows ship with `workflow_dispatch` so every step can be run
@@ -168,7 +255,9 @@ manually first. Do not rely on their schedules until all of this passes:
 2. **RSS re-check**: confirm theanalyst really publishes no feed (footer,
    `/feed`, `<link rel="alternate">`). If a feed exists, prefer it for the
    general-news part — it's strictly better than scraping and replaces
-   `news.ts`'s listing scrape.
+   `news.ts`'s listing scrape. **Checked 2026-09-09:** the competition
+   listings link `…/articles/feed`, which returns 404 (`application/rss+xml`
+   content-type wrapping an HTML error page, 0 items). No feed; scrape stays.
 3. **Real-DOM pass**: fetch a listing page, one article, the Power Rankings
    article, and one match-centre page from an environment with site access;
    fix the assumptions in the table above. **Done for all four adapters** —

@@ -71,6 +71,7 @@ export function theanalystMatchUrl(competitionId: string, seasonId: string, matc
 const CALENDAR_HEADER_SELECTOR = '.DatePickerHeader-module_datepicker-header-date-month-year__DQNgv';
 const CALENDAR_GRID_SELECTOR = 'table[role="grid"]';
 const PREV_MONTH_SELECTOR = '[aria-label="Previous month"]';
+const NEXT_MONTH_SELECTOR = '[aria-label="Next month"]';
 
 // Safety backstops, not expected limits in normal operation (a 30-day
 // lookback in one league is typically well under both).
@@ -127,6 +128,33 @@ async function collectMatchdaysInWindow(
   return [...collected].sort();
 }
 
+/**
+ * Pages the OPEN calendar to the month whose grid contains `date`, so the
+ * day cell can be clicked. Needed because collectMatchdaysInWindow leaves the
+ * calendar on whatever month it paged back to, and a click only works on a
+ * cell in the currently-rendered grid (each grid spans ~6 weeks, e.g. the
+ * August grid runs 26 Jul → 5 Sep). Verified live 2026-09-09: this is why
+ * UCL discovery timed out every run — its first matchday of the season
+ * (8 Sep) sat just past the August grid the collector had paged back to,
+ * while the Premier League's early-September dates happened to fall inside
+ * August's trailing week, so it never hit the bug.
+ */
+async function showMonthContaining(page: import('playwright').Page, date: string): Promise<boolean> {
+  for (let step = 0; step < 6; step++) {
+    const range = await page.evaluate(() => {
+      const cells = Array.from(document.querySelectorAll('td[data-date]')).map((td) => td.getAttribute('data-date')!);
+      return cells.length ? { first: cells[0]!, last: cells[cells.length - 1]! } : null;
+    });
+    if (!range) return false;
+    if (date >= range.first && date <= range.last) return true;
+    const btn = page.locator(date < range.first ? PREV_MONTH_SELECTOR : NEXT_MONTH_SELECTOR);
+    if ((await btn.getAttribute('disabled')) !== null) return false;
+    await btn.click();
+    await page.waitForTimeout(600);
+  }
+  return false;
+}
+
 /** "Arsenal" / "Coventry" text nodes under one fixture tile → [home, away]. */
 async function readMatchesForVisibleDay(
   page: import('playwright').Page,
@@ -181,10 +209,20 @@ export async function discoverMatchesForCompetition(
 
     const results: DiscoveredMatch[] = [];
     for (const date of matchdays) {
-      await ensureCalendarOpen(page);
-      await page.click(`td[data-date="${date}"]`);
-      await page.waitForTimeout(1000);
-      results.push(...(await readMatchesForVisibleDay(page, date)));
+      // One unreachable/unclickable day shouldn't lose the whole
+      // competition's run — log it and move on to the next matchday.
+      try {
+        await ensureCalendarOpen(page);
+        if (!(await showMonthContaining(page, date))) {
+          console.warn(`[theanalyst-discovery] ${theanalystSlug}: could not page calendar to ${date} — skipped`);
+          continue;
+        }
+        await page.click(`td[data-date="${date}"]`, { timeout: 10_000 });
+        await page.waitForTimeout(1000);
+        results.push(...(await readMatchesForVisibleDay(page, date)));
+      } catch (e: any) {
+        console.warn(`[theanalyst-discovery] ${theanalystSlug}: ${date} failed — ${e?.message?.split('\n')[0] ?? e}`);
+      }
     }
     return results;
   } finally {

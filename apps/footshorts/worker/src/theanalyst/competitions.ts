@@ -12,7 +12,7 @@
  * discovering zero matches. Reading them fresh off the live page removes
  * that whole maintenance burden.
  *
- * theanalystSlug values verified live 2026-08-24 by requesting
+ * theanalystSlug values verified live 2026-08-24 (Championship: 2026-09-09) by requesting
  * `https://theanalyst.com/competition/<slug>/fixtures` and checking the
  * page title. Note it doesn't always match our own slug (`la-liga` vs our
  * `primera-division`), and `champions-league` 301-redirects to
@@ -32,4 +32,11 @@ export const THEANALYST_COMPETITIONS: TheanalystCompetition[] = [
   { competitionSlug: 'bundesliga', theanalystSlug: 'bundesliga' },
   { competitionSlug: 'ligue-1', theanalystSlug: 'ligue-1' },
   { competitionSlug: 'champions-league', theanalystSlug: 'uefa-champions-league' },
+  // Verified live 2026-09-09: `/competition/championship` 301s here. Of the
+  // other football-data leagues we ingest, theanalyst covers none of
+  // eredivisie / primeira-liga / campeonato-brasileiro-serie-a (all 404) —
+  // its football nav is PL, Championship, League One/Two, La Liga, Serie A,
+  // Bundesliga, Ligue 1, UCL/UEL/UECL, Scottish Premiership, MLS, Saudi
+  // Pro League, WSL.
+  { competitionSlug: 'championship', theanalystSlug: 'english-championship' },
 ];
