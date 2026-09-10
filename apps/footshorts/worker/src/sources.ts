@@ -227,14 +227,28 @@ export type ScrapeSource = {
 };
 
 export const SCRAPE_SOURCES: ScrapeSource[] = [
+  // Per-competition article listings, `/competition/<slug>/articles` — the
+  // same slugs theanalyst/competitions.ts uses for fixtures discovery.
+  // Verified live 2026-09-09 (server-rendered teaser cards, 10 per page;
+  // theanalyst/news.ts reads them). The site publishes no RSS — the
+  // `/articles/feed` link in the page footer 404s.
+  //
+  // One id per listing so the ingest log attributes fetches per competition;
+  // cross-listing duplicates (an article tagged with two competitions) are
+  // deduped by URL before any article page is fetched.
   {
     id: 'theanalyst',
     publisher: 'The Analyst (Opta)',
-    // TODO(verify): confirm the football listing path against the live site
-    // before enabling in production — see docs/theanalyst-scraping.md.
-    listingUrl: 'https://theanalyst.com/competition/premier-league',
+    listingUrl: 'https://theanalyst.com/competition/premier-league/articles',
     tier: 1,
-    scope: 'global',
+    scope: 'english',
+  },
+  {
+    id: 'theanalyst-ucl',
+    publisher: 'The Analyst (Opta)',
+    listingUrl: 'https://theanalyst.com/competition/uefa-champions-league/articles',
+    tier: 1,
+    scope: 'european',
   },
 ];
 

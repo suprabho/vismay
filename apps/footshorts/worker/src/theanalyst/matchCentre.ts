@@ -76,11 +76,119 @@ export type MatchEvent = {
   assistName: string | null;
 };
 
-export type MatchCentreData = MatchFactsPayload & { events: MatchEvent[] };
+/**
+ * The widget's own scoreboard (`table.Opta-MatchHeader-Crested`, verified
+ * live 2026-09-09): team names, full-time + half-time score, competition
+ * name and the match date. This is what lets a pasted match-centre URL be
+ * scraped WITHOUT already knowing which fixtures row it belongs to
+ * (theanalystMatchFacts.ts --url mode matches these against fixtures by
+ * team names + date, the same way discovery does).
+ */
+export type MatchHeader = {
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  homeHtScore: number | null;
+  awayHtScore: number | null;
+  /** e.g. "UEFA Champions League" — Opta's display name, not our slug. */
+  competitionName: string | null;
+  /** YYYY-MM-DD, parsed from "Tuesday 8 September 2026"; null if unparseable. */
+  matchDate: string | null;
+};
+
+export type MatchCentreData = MatchFactsPayload & { events: MatchEvent[]; header: MatchHeader | null };
+
+export type MatchCentreIds = { competitionId: string; seasonId: string; matchId: string };
 
 export function matchCentreUrl(competitionId: string, seasonId: string, matchId: string): string {
   const params = new URLSearchParams({ competitionId, seasonId, matchId });
   return `https://dataviz.theanalyst.com/opta-football-match-centre/?${params}`;
+}
+
+/**
+ * Pulls the id triple out of any theanalyst.com match URL — the human
+ * wrapper page (`theanalyst.com/opta-football-match-centre?…`, what the
+ * site's own fixture tiles and a person's address bar carry) or the dataviz
+ * widget URL above. Path/param order don't matter; null unless all three
+ * ids are present. Mirror of parseTheanalystMatchUrl in
+ * packages/content-source/src/footshortsData.ts (the admin side) — the
+ * worker has no dependency on that package, so keep both in sync.
+ */
+export function parseMatchCentreUrl(raw: string): MatchCentreIds | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (!url.hostname.endsWith('theanalyst.com')) return null;
+  const matchId = url.searchParams.get('matchId');
+  const competitionId = url.searchParams.get('competitionId');
+  const seasonId = url.searchParams.get('seasonId');
+  if (!matchId || !competitionId || !seasonId) return null;
+  return { matchId, competitionId, seasonId };
+}
+
+const MONTHS: Record<string, number> = {
+  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+};
+
+/** "Tuesday 8 September 2026" → "2026-09-08". */
+export function parseHeaderDate(raw: string): string | null {
+  const m = raw.replace(/\s+/g, ' ').trim().match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  const [, day, monthName, year] = m ?? [];
+  if (!day || !monthName || !year) return null;
+  const month = MONTHS[monthName.toLowerCase()];
+  if (!month) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+function headerScore(raw: string): number | null {
+  const n = Number(raw.replace(/\u00a0/g, ' ').trim());
+  return Number.isFinite(n) && raw.trim() !== '' ? n : null;
+}
+
+/**
+ * Scoreboard parser. The widget renders TWO `table.Opta-MatchHeader`s: the
+ * crested one (with competition/date details and real scores) and a plain
+ * sticky copy whose scores are blank until scrolled — so prefer the crested
+ * table and fall back to the first table carrying both team names.
+ */
+export function extractMatchHeader($: cheerio.CheerioAPI): MatchHeader | null {
+  const tables = $('table.Opta-MatchHeader').toArray();
+  const table =
+    tables.find((t) => $(t).hasClass('Opta-MatchHeader-Crested')) ??
+    tables.find((t) => $(t).find('td.Opta-TeamName').length >= 2);
+  if (!table) return null;
+  const $t = $(table);
+
+  const teamName = (side: 'Home' | 'Away') =>
+    $t.find(`td.Opta-TeamName.Opta-${side}`).first().text().replace(/\s+/g, ' ').trim();
+  const homeTeamName = teamName('Home');
+  const awayTeamName = teamName('Away');
+  if (!homeTeamName || !awayTeamName) return null;
+
+  const score = (side: 'Home' | 'Away') =>
+    headerScore($t.find(`td.Opta-Score.Opta-${side} .Opta-Team-Score`).first().text());
+
+  // "HT 1-0" — abbr text + score; only the digits matter.
+  const ht = $t.find('tr.Opta-Score-Extras').text().match(/(\d+)\s*-\s*(\d+)/);
+
+  const competitionName = $t.find('.Opta-Competition').first().text().replace(/\s+/g, ' ').trim() || null;
+  const dateRaw = $t.find('.Opta-Date').first().text();
+
+  return {
+    homeTeamName,
+    awayTeamName,
+    homeScore: score('Home'),
+    awayScore: score('Away'),
+    homeHtScore: ht ? Number(ht[1]) : null,
+    awayHtScore: ht ? Number(ht[2]) : null,
+    competitionName,
+    matchDate: dateRaw ? parseHeaderDate(dateRaw) : null,
+  };
 }
 
 /** Column name → label spellings to try, most specific (real, verified) first. */
@@ -404,5 +512,14 @@ export async function fetchMatchFacts(
     console.log(dumpUnparsedOptaRegions($));
   }
 
-  return { home, away, events };
+  // Scoreboard — same isolation as events: a header-selector failure logs
+  // and yields null, never blocks the stats.
+  let header: MatchHeader | null = null;
+  try {
+    header = extractMatchHeader($);
+  } catch (e) {
+    console.warn(`[match-centre] header extraction failed (stats unaffected): ${(e as Error).message} (${url})`);
+  }
+
+  return { home, away, events, header };
 }
