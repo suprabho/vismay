@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   BEAT_COL_W,
   ROW_H,
@@ -9,6 +9,7 @@ import {
   type AuthoredKeyframeIndex,
   type EntityLifetime,
 } from './timelineShape'
+import { canDropKeyframes } from './stageEditing'
 import EntityRow from './EntityRow'
 
 export interface Selection {
@@ -19,10 +20,10 @@ export interface Selection {
 /**
  * The beats-axis grid: a header row of `TimelineColumn`s, one `EntityRow`
  * per stage entity lifetime, and a draggable playhead — a beats-axis mirror
- * of `TimelinePanel.tsx`'s ms-axis pointer-drag gesture (window-level
- * `pointermove`/`pointerup`, position mapped back to a continuous value on
- * every move). Clicking a cell both selects it (for the inspector) and
- * seeks the preview to that exact beat, so the two never desync.
+ * of `TimelinePanel.tsx`'s ms-axis pointer-drag gesture. Clicking a cell both
+ * selects it (for the inspector) and seeks the preview to that exact beat.
+ * E2 adds diamond drag: `drag` state lives here so only the source entity's
+ * row participates, and legality routes through `canDropKeyframes`.
  */
 export default function BeatTimeline({
   columns,
@@ -32,6 +33,8 @@ export default function BeatTimeline({
   selection,
   onSeek,
   onSelect,
+  onMoveKeyframes,
+  onAddKeyframe,
 }: {
   columns: TimelineColumn[]
   lifetimes: EntityLifetime[]
@@ -40,8 +43,11 @@ export default function BeatTimeline({
   selection: Selection | null
   onSeek: (unit: number, t: number) => void
   onSelect: (selection: Selection) => void
+  onMoveKeyframes: (entityId: string, fromBeat: number, toBeat: number) => void
+  onAddKeyframe: (entityId: string, beat: number) => void
 }) {
   const gridRef = useRef<HTMLDivElement>(null)
+  const [drag, setDrag] = useState<{ entityId: string; fromBeat: number } | null>(null)
   const totalBeats = columns.length
 
   const seekFromClientX = useCallback(
@@ -83,15 +89,6 @@ export default function BeatTimeline({
   const timelineWidthPx = totalBeats * BEAT_COL_W
   const playheadLeft = (playhead.unit + playhead.t) * BEAT_COL_W
 
-  const authoredBeatsByEntity = useMemo(() => {
-    const m = new Map<string, Set<number>>()
-    for (const lt of lifetimes) {
-      const byBeat = authoredIndex[lt.id] ?? {}
-      m.set(lt.id, new Set(Object.keys(byBeat).map(Number)))
-    }
-    return m
-  }, [lifetimes, authoredIndex])
-
   return (
     <div className="flex min-h-0 flex-col rounded-xl border border-white/10 bg-neutral-950/40">
       <div ref={gridRef} className="relative min-w-0 flex-1 overflow-x-auto">
@@ -131,9 +128,20 @@ export default function BeatTimeline({
               enterBeat={lt.enterBeat}
               exitBeat={lt.exitBeat}
               totalBeats={totalBeats}
-              authoredBeats={authoredBeatsByEntity.get(lt.id) ?? new Set()}
+              authored={authoredIndex[lt.id] ?? {}}
               selectedBeat={selection?.entityId === lt.id ? selection.beat : null}
               onSelectBeat={(beat) => handleSelectBeat(lt.id, beat)}
+              drag={drag?.entityId === lt.id ? { fromBeat: drag.fromBeat } : null}
+              canDrop={(toBeat) =>
+                drag != null && canDropKeyframes(authoredIndex, lt.id, drag.fromBeat, toBeat)
+              }
+              onDragStart={(fromBeat) => setDrag({ entityId: lt.id, fromBeat })}
+              onDragEnd={() => setDrag(null)}
+              onDrop={(toBeat) => {
+                if (drag) onMoveKeyframes(drag.entityId, drag.fromBeat, toBeat)
+                setDrag(null)
+              }}
+              onAddKeyframeAt={(beat) => onAddKeyframe(lt.id, beat)}
             />
           ))}
 
