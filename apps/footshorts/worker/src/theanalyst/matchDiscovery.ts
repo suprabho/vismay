@@ -155,13 +155,36 @@ async function showMonthContaining(page: import('playwright').Page, date: string
   return false;
 }
 
-/** "Arsenal" / "Coventry" text nodes under one fixture tile → [home, away]. */
+/**
+ * One day's fixture tiles → DiscoveredMatch[]. Tile markup as verified live
+ * 2026-09-10 (it changed overnight from the 2026-08-24 shape, which had the
+ * team nodes INSIDE the match-centre `<a>` — the reader silently returned
+ * zero matches for a day until this was widened):
+ *
+ *   <li class="MatchTileShell…match-tile-shell FixtureTile…fixture-tile">
+ *     <a class="…match-tile-shell__link" href="…?competitionId=…&seasonId=…&matchId=…">
+ *       <span class="…match-tile-shell__sr">Real Madrid v Internazionale (opens in a new tab)</span>
+ *     </a>
+ *     <div class="…fixture-tile__row">
+ *       … <a class="…fixture-tile-team"><span class="…fixture-tile-team__name">Real Madrid</span>…</a>
+ *       … <a class="…fixture-tile-team …--reverse"><span class="…fixture-tile-team__name">Inter</span>
+ *                                                  <span class="…fixture-tile-team__sr">Internazionale</span>…</a>
+ *
+ * So: the tile is the matchId link's closest `<li>`, team names are the
+ * `fixture-tile-team__name` nodes anywhere in it (display short names —
+ * "Inter", the same spellings teamKeyVariants/ALIASES are tuned to), with
+ * the link's own "A v B" screen-reader text as the fallback. The page also
+ * carries a horizontal "match ticker" strip (`match-ticker-tile`) of
+ * today's/live matches regardless of the selected day — skipped, or they'd
+ * be stamped with the wrong kickoffDate. Deduped by matchId.
+ */
 async function readMatchesForVisibleDay(
   page: import('playwright').Page,
   kickoffDate: string
 ): Promise<DiscoveredMatch[]> {
   return page.evaluate((kickoffDate) => {
-    const tiles = Array.from(document.querySelectorAll('a[href*="matchId="]'));
+    const anchors = Array.from(document.querySelectorAll('a[href*="matchId="]'));
+    const seen = new Set<string>();
     const out: {
       matchId: string;
       competitionId: string;
@@ -170,23 +193,42 @@ async function readMatchesForVisibleDay(
       awayTeamRaw: string;
       kickoffDate: string;
     }[] = [];
-    for (const tile of tiles) {
-      const teams = Array.from(tile.querySelectorAll('[class*="fixture-tile-team"]'))
-        .map((t) => t.textContent?.trim())
-        .filter((t): t is string => !!t);
-      if (teams.length < 2) continue;
-      const href = (tile as HTMLAnchorElement).href;
+    for (const a of anchors) {
       let u: URL;
       try {
-        u = new URL(href);
+        u = new URL((a as HTMLAnchorElement).href);
       } catch {
         continue;
       }
       const matchId = u.searchParams.get('matchId');
       const competitionId = u.searchParams.get('competitionId');
       const seasonId = u.searchParams.get('seasonId');
+      if (!matchId || !competitionId || !seasonId || seen.has(matchId)) continue;
+
+      const tile = a.closest('li') ?? a;
+      if (/match-ticker-tile/.test(tile.className)) continue;
+
+      let teams = Array.from(tile.querySelectorAll('[class*="fixture-tile-team__name"]'))
+        .map((t) => t.textContent?.trim())
+        .filter((t): t is string => !!t);
+      if (teams.length < 2) {
+        // Pre-2026-09-10 shape: whole team-link text, inside or beside the anchor.
+        teams = Array.from(tile.querySelectorAll('[class*="fixture-tile-team"]'))
+          .filter((t) => !/__(sr|badge|name)/.test(t.className))
+          .map((t) => t.textContent?.trim())
+          .filter((t): t is string => !!t);
+      }
+      if (teams.length < 2) {
+        // Last resort: the link's screen-reader label "Home v Away (opens in a new tab)".
+        const sr = a.textContent?.replace(/\(opens in.*$/i, '').replace(/,.*$/, '').trim() ?? '';
+        const parts = sr.split(/\s+v\s+/);
+        if (parts.length === 2) teams = parts.map((p) => p.trim());
+      }
+      if (teams.length < 2) continue;
+
       const [homeTeamRaw, awayTeamRaw] = teams;
-      if (!matchId || !competitionId || !seasonId || !homeTeamRaw || !awayTeamRaw) continue;
+      if (!homeTeamRaw || !awayTeamRaw) continue;
+      seen.add(matchId);
       out.push({ matchId, competitionId, seasonId, homeTeamRaw, awayTeamRaw, kickoffDate });
     }
     return out;
