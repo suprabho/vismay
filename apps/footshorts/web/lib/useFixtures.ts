@@ -1,6 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { seasonStartIso } from '@vismay/footshorts-viz/web';
 import { supabase } from './supabase';
 
 // Football-domain types now live in @vismay/footshorts-viz so MatchRow and
@@ -18,20 +19,84 @@ const FIXTURE_COLS = `
 
 export type FixtureKind = 'past' | 'upcoming' | 'all';
 
+// The fixtures sync upserts on football_data_id and never deletes, so the table
+// holds every season it has ever pulled. Reads therefore have to name a season:
+// without one, "recent results" for a competition between campaigns is last
+// season's knockout rounds, and a full schedule is three seasons of Matchday 1s
+// stacked on top of each other.
+const CURRENT_SEASON_STALE_MS = 30 * 60 * 1000;
+
+/**
+ * The season a competition is currently in — the season of its furthest-out
+ * fixture.
+ *
+ * Read off the data rather than the calendar, so it holds for multi-year league
+ * labels ("26-27") and single-year cup labels ("2026") alike without assuming a
+ * rollover date. football-data.org's /matches endpoint only ever returns the
+ * competition's current season, so the newest fixture we hold is by definition
+ * part of it; the moment the daily sync pulls a new campaign, every read here
+ * follows it over.
+ */
+export async function fetchCurrentSeason(competitionSlug: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('season')
+    .eq('competition_slug', competitionSlug)
+    .order('kickoff_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return (data?.[0]?.season as string | undefined) ?? null;
+}
+
+const currentSeasonKey = (competitionSlug: string) =>
+  ['fixtures', 'current-season', competitionSlug] as const;
+
+/**
+ * Resolve (and cache) a competition's current season. Shared through the query
+ * client so the three fixture queries a competition page fires resolve it once
+ * between them rather than three times.
+ */
+export function resolveCurrentSeason(
+  qc: QueryClient,
+  competitionSlug: string,
+): Promise<string | null> {
+  return qc.fetchQuery({
+    queryKey: currentSeasonKey(competitionSlug),
+    queryFn: () => fetchCurrentSeason(competitionSlug),
+    staleTime: CURRENT_SEASON_STALE_MS,
+  });
+}
+
+/** The current season of a competition, for labelling a page or an empty state. */
+export function useCurrentSeason(competitionSlug: string | undefined) {
+  return useQuery({
+    queryKey: currentSeasonKey(competitionSlug ?? ''),
+    enabled: !!competitionSlug,
+    queryFn: () => fetchCurrentSeason(competitionSlug!),
+    staleTime: CURRENT_SEASON_STALE_MS,
+  });
+}
+
 export function useLeagueFixtures(
   competitionSlug: string | undefined,
   kind: FixtureKind = 'past',
-  limit = 10
+  limit = 10,
+  /** Pin a specific season; defaults to the competition's current one. */
+  season?: string,
 ) {
+  const qc = useQueryClient();
   return useQuery({
-    queryKey: ['fixtures', 'league', competitionSlug, kind, limit],
+    queryKey: ['fixtures', 'league', competitionSlug, kind, limit, season ?? 'current'],
     enabled: !!competitionSlug,
     queryFn: async (): Promise<FixtureRow[]> => {
+      const s = season ?? (await resolveCurrentSeason(qc, competitionSlug!));
+      if (!s) return [];
       const now = new Date().toISOString();
       const base = supabase
         .from('fixtures')
         .select(FIXTURE_COLS)
-        .eq('competition_slug', competitionSlug!);
+        .eq('competition_slug', competitionSlug!)
+        .eq('season', s);
       const q =
         kind === 'past'
           ? base.lt('kickoff_at', now).order('kickoff_at', { ascending: false }).limit(limit)
@@ -56,10 +121,16 @@ export function useTeamFixtures(
     enabled: !!teamId,
     queryFn: async (): Promise<FixtureRow[]> => {
       const now = new Date().toISOString();
+      // A team's matches span competitions whose season labels differ ("26-27"
+      // in the league, "2026" in a cup), so this scopes by the season boundary
+      // date instead of a season string. Same intent as the league queries:
+      // never present a finished campaign as the current one.
+      const seasonStart = seasonStartIso();
       const base = supabase
         .from('fixtures')
         .select(FIXTURE_COLS)
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+        .gte('kickoff_at', seasonStart);
       const q =
         kind === 'past'
           ? base.lt('kickoff_at', now).order('kickoff_at', { ascending: false }).limit(limit)

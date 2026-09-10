@@ -5,11 +5,12 @@ import { useParams } from 'next/navigation';
 import {
   MatchRow,
   StandingsTable,
+  formatSeason,
   groupFixturesByRound,
 } from '@vismay/footshorts-viz/web';
 import { EntityShareCards } from '@/components/EntityShareCards';
 import { useEntity } from '@/lib/useEntity';
-import { useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
+import { useCurrentSeason, useLeagueFixtures, type FixtureRow } from '@/lib/useFixtures';
 import { useStandings, groupStandings } from '@/lib/useStandings';
 
 type Tab = 'recent' | 'standings' | 'schedule';
@@ -92,9 +93,14 @@ export default function LeaguePage() {
 
   const league = useEntity('league', slug);
   const standings = useStandings(slug);
+  // Every fixture query below is scoped to the competition's current season —
+  // the fixtures table keeps previous seasons, and an unscoped read serves them
+  // as if they were live (last season's final under "Recent results", three
+  // seasons of Matchday 1 stacked into one round under "Schedule").
+  const season = useCurrentSeason(slug);
   const pastFixtures = useLeagueFixtures(slug, 'past', 10);
   const upcomingFixtures = useLeagueFixtures(slug, 'upcoming', 10);
-  // Full schedule for every competition — feeds the Schedule tab. A complete
+  // Full schedule for the current season — feeds the Schedule tab. A complete
   // domestic season is ~380 fixtures, so cap well above that.
   const scheduleFixtures = useLeagueFixtures(slug, 'all', 500);
 
@@ -121,6 +127,12 @@ export default function LeaguePage() {
   );
   const activeTab: Tab = availableTabs.includes(tab) ? tab : 'recent';
 
+  // "England · 2026/27" — naming the season on the page is half the fix: the
+  // data was never wrong, it just wasn't saying which campaign it belonged to.
+  const subtitle = [league.data?.country, season.data ? formatSeason(season.data) : null]
+    .filter(Boolean)
+    .join(' · ');
+
   if (league.isLoading) return <Spinner />;
 
   if (!league.data) {
@@ -144,9 +156,7 @@ export default function LeaguePage() {
         ) : null}
         <div>
           <h1 className="text-2xl font-bold text-text">{league.data.name}</h1>
-          {league.data.country ? (
-            <p className="mt-0.5 text-xs text-muted">{league.data.country}</p>
-          ) : null}
+          {subtitle ? <p className="mt-0.5 text-xs text-muted">{subtitle}</p> : null}
         </div>
       </header>
 
@@ -162,7 +172,7 @@ export default function LeaguePage() {
               <FixtureList
                 loading={pastFixtures.isLoading}
                 data={pastFixtures.data ?? []}
-                emptyText="No recent results."
+                emptyText="No results yet this season."
               />
             </section>
             <section>
@@ -170,7 +180,7 @@ export default function LeaguePage() {
               <FixtureList
                 loading={upcomingFixtures.isLoading}
                 data={upcomingFixtures.data ?? []}
-                emptyText="No upcoming fixtures."
+                emptyText="No upcoming fixtures this season."
               />
             </section>
           </div>

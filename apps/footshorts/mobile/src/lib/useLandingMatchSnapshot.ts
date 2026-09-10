@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { seasonStartIso } from '@vismay/footshorts-viz/native';
 import { supabase } from './supabase';
 import { hiddenCompetitionInList } from './hiddenContent';
 import type { FixtureRow } from './useFixtures';
@@ -24,12 +25,17 @@ export function useLandingMatchSnapshot() {
     queryKey: ['landing', 'snapshot'],
     queryFn: async (): Promise<FixtureRow[]> => {
       const now = new Date().toISOString();
+      // The strip spans every competition, so it scopes results by the season
+      // boundary date: between campaigns "recent" would otherwise mean the
+      // finals of a season that ended months ago.
+      const seasonStart = seasonStartIso();
       const [past, upcoming] = await Promise.all([
         supabase
           .from('fixtures')
           .select(SNAPSHOT_COLS)
           .eq('status', 'finished')
           .not('competition_slug', 'in', hiddenCompetitionInList())
+          .gte('kickoff_at', seasonStart)
           .lt('kickoff_at', now)
           .order('kickoff_at', { ascending: false })
           .limit(3),

@@ -30,6 +30,14 @@ export { groupFixturesByRound } from '../scheduleRounds'
 export type { ScheduleRound } from '../scheduleRounds'
 export { stageLabel, stageRank, isKnockoutStage } from '../stageLabel'
 export {
+  compareSeasons,
+  latestSeason,
+  formatSeason,
+  seasonStartYear,
+  seasonStartAt,
+  seasonStartIso,
+} from '../season'
+export {
   getCompetitionDisplayName,
   getCompetitionPalette,
   resolveCompetitionColor,
