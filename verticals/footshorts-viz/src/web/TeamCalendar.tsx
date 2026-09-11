@@ -26,10 +26,10 @@ import {
  *
  *   - competition  → a colored short-code chip ("PL", "UCL", "FAC") in the
  *                    cell's top-right corner, using the competition palette;
- *   - home / away  → a house icon (home) or a plane icon (away) before the
- *                    opponent code; home days are also filled with the team's
- *                    brand color, away days outlined/dashed;
- *   - opponent     → the opponent's crest plus a 3-letter code.
+ *   - home / away  → a house icon (home) or a plane icon (away) under the
+ *                    crest; home days are also filled with the team's brand
+ *                    color, away days outlined/dashed;
+ *   - opponent     → the opponent's crest (the cell tooltip carries the name).
  *
  * Finished matches also show the score from the team's perspective, colored
  * W / D / L. A legend under the grid decodes the fill/dash convention and every
@@ -46,15 +46,6 @@ const RESULT_COLOR: Record<NonNullable<TeamFixture['result']>, string> = {
   W: '#00D26A',
   D: '#8E8E99',
   L: '#EF4444',
-}
-
-/** 3-letter opponent code: the bundled monogram when we know the club, else the
- *  first three letters of the name ("Sheffield Wednesday" → "SHE"). */
-function opponentCode(name: string): string {
-  const entry = findTeam(name)
-  if (entry) return entry.monogram
-  const word = name.split(/\s+/).find((w) => w.length >= 3) ?? name
-  return word.slice(0, 3).toUpperCase()
 }
 
 /** The team's brand hex — from a fixture ref's `primary_color` when a consumer
@@ -92,7 +83,7 @@ const SIZE = {
   cellRadius: 'clamp(3px, 1.2cqi, 10px)',
   day: 'clamp(7px, 2.2cqi, 13px)',
   chip: 'clamp(6px, 1.7cqi, 10px)',
-  opp: 'clamp(7px, 2.3cqi, 13px)',
+  venue: 'clamp(9px, 2.8cqi, 16px)',
   score: 'clamp(7px, 2.1cqi, 12px)',
   crest: 'clamp(12px, 5.8cqi, 36px)',
   weekday: 'clamp(7px, 2cqi, 11px)',
@@ -170,7 +161,7 @@ function DayCell({
     alignItems: 'center',
     justifyContent: 'space-between',
     // Preferred shape; a grid item's automatic minimum height still lets the
-    // cell grow when the four rows (day+chip, crest, opponent, score) need more
+    // cell grow when the four rows (day+chip, crest, venue, score) need more
     // than this at the smallest sizes — the row stretches to its tallest cell.
     aspectRatio: '1 / 1.15',
     padding: SIZE.cellPad,
@@ -230,22 +221,17 @@ function DayCell({
         <Crest team={opponentName} crestUrl={opponent?.crest_url ?? undefined} size={SIZE.crest} />
       </div>
 
+      {/* Venue on its own row — the crest above already names the opponent. */}
       <div
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.25em',
-          fontSize: SIZE.opp,
-          lineHeight: 1.1,
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
-          maxWidth: '100%',
-          textDecoration: dim ? 'line-through' : undefined,
-          opacity: dim ? 0.6 : 1,
+          fontSize: SIZE.venue,
+          lineHeight: 1,
+          opacity: dim ? 0.5 : 1,
         }}
       >
         <VenueIcon home={home} />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{opponentCode(opponentName)}</span>
       </div>
 
       <div style={{ fontSize: SIZE.score, lineHeight: 1, minHeight: '1em' }}>
