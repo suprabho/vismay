@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import { AirplaneTilt, House } from '@phosphor-icons/react'
 import type { FixtureRow } from '../types'
 import { Crest } from '../data/Crest'
 import { findTeam } from '../data/teams'
@@ -25,9 +26,9 @@ import {
  *
  *   - competition  → a colored short-code chip ("PL", "UCL", "FAC") in the
  *                    cell's top-right corner, using the competition palette;
- *   - home / away  → home days are filled (tinted with the team's brand color)
- *                    and read "vs OPP"; away days are outlined/dashed and read
- *                    "@ OPP";
+ *   - home / away  → a house icon (home) or a plane icon (away) before the
+ *                    opponent code; home days are also filled with the team's
+ *                    brand color, away days outlined/dashed;
  *   - opponent     → the opponent's crest plus a 3-letter code.
  *
  * Finished matches also show the score from the team's perspective, colored
@@ -123,6 +124,17 @@ function CompetitionChip({ slug, size }: { slug: string; size: string }) {
   )
 }
 
+/** Home = house, away = plane. Sized to the surrounding text (1em) so it
+ *  scales with the cell; `aria-label` keeps the meaning for screen readers. */
+function VenueIcon({ home }: { home: boolean }) {
+  const style: CSSProperties = { width: '1.05em', height: '1.05em', flexShrink: 0, opacity: 0.85 }
+  return home ? (
+    <House weight="fill" style={style} aria-label="Home" />
+  ) : (
+    <AirplaneTilt weight="fill" style={style} aria-label="Away" />
+  )
+}
+
 function StatusLine({ tf, showScores }: { tf: TeamFixture; showScores: boolean }) {
   const { fixture, score, result } = tf
   if (fixture.status === 'live') {
@@ -193,7 +205,7 @@ function DayCell({
   return (
     <div
       style={{ ...base, ...(home ? homeStyle : awayStyle) }}
-      title={`${home ? 'vs' : '@'} ${opponentName} · ${getCompetitionDisplayName(fixture.competition_slug)}`}
+      title={`${home ? 'Home vs' : 'Away at'} ${opponentName} · ${getCompetitionDisplayName(fixture.competition_slug)}`}
     >
       <div
         style={{
@@ -220,19 +232,20 @@ function DayCell({
 
       <div
         style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.25em',
           fontSize: SIZE.opp,
           lineHeight: 1.1,
           fontWeight: 600,
           whiteSpace: 'nowrap',
           maxWidth: '100%',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
           textDecoration: dim ? 'line-through' : undefined,
           opacity: dim ? 0.6 : 1,
         }}
       >
-        <span style={{ opacity: 0.7, fontWeight: 500 }}>{home ? 'vs ' : '@ '}</span>
-        {opponentCode(opponentName)}
+        <VenueIcon home={home} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{opponentCode(opponentName)}</span>
       </div>
 
       <div style={{ fontSize: SIZE.score, lineHeight: 1, minHeight: '1em' }}>
@@ -376,7 +389,7 @@ export function TeamCalendar({
                 border: `1px solid ${tint ? withAlpha(tint, 0.7) : ink(0.35)}`,
               }}
             />
-            vs · home
+            <VenueIcon home /> home
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4em' }}>
             <span
@@ -388,7 +401,7 @@ export function TeamCalendar({
                 border: `1px dashed ${ink(0.45)}`,
               }}
             />
-            @ · away
+            <VenueIcon home={false} /> away
           </span>
           {competitions.map((slug) => (
             <span key={slug} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4em' }}>
