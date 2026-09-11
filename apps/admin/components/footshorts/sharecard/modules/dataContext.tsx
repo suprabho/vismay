@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { FixtureRow, StandingRow, FixtureEvent } from '@vismay/footshorts-viz/types'
 import type { AspectRatio, NewsItem } from '../types'
 
@@ -68,6 +68,34 @@ export function useFootshortsFixtures(compKey: string): {
 } {
   const d = useFootshortsData()
   return { fixtures: d.fixturesByComp[compKey] ?? [], meta: d.compMeta[compKey] ?? null }
+}
+
+/**
+ * Fixtures merged across several competitions (the calendar spans league +
+ * cups). `loaded` is true once every key has an entry in the store — a
+ * competition still fetching is absent, not empty — so capture can wait for
+ * the whole month. Stable across renders for the same key set.
+ */
+export function useFootshortsFixturesMulti(compKeys: string[]): {
+  fixtures: FixtureRow[]
+  loaded: boolean
+} {
+  const { fixturesByComp } = useFootshortsData()
+  const keysKey = compKeys.join('|')
+  return useMemo(() => {
+    const keys = keysKey ? keysKey.split('|') : []
+    const fixtures: FixtureRow[] = []
+    const seen = new Set<string>()
+    for (const k of keys) {
+      for (const f of fixturesByComp[k] ?? []) {
+        if (!seen.has(f.id)) {
+          seen.add(f.id)
+          fixtures.push(f)
+        }
+      }
+    }
+    return { fixtures, loaded: keys.every((k) => k in fixturesByComp) }
+  }, [keysKey, fixturesByComp])
 }
 
 export function useFootshortsEvents(fixtureId: string): FixtureEvent[] {

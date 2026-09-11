@@ -25,6 +25,7 @@ export async function register(): Promise<void> {
     { default: tacticsBoardModule },
     { default: standingsOverMatchdaysModule },
     { default: teamFormStripModule },
+    { default: teamCalendarModule },
   ] = await Promise.all([
     import('./modules/match-card'),
     import('./modules/match-row'),
@@ -35,6 +36,7 @@ export async function register(): Promise<void> {
     import('./modules/tactics-board'),
     import('./modules/standings-over-matchdays'),
     import('./modules/team-form-strip'),
+    import('./modules/team-calendar'),
   ])
   registerVizModule(matchCardModule)
   registerVizModule(matchRowModule)
@@ -45,4 +47,5 @@ export async function register(): Promise<void> {
   registerVizModule(tacticsBoardModule)
   registerVizModule(standingsOverMatchdaysModule)
   registerVizModule(teamFormStripModule)
+  registerVizModule(teamCalendarModule)
 }

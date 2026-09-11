@@ -41,6 +41,7 @@ import {
   sample as teamFormStripSample,
   sampleGrid as teamFormGridSample,
 } from '@vismay/footshorts-viz/modules/team-form-strip/sample'
+import { sample as teamCalendarSample } from '@vismay/footshorts-viz/modules/team-calendar/sample'
 import { sample as starshipViewerSample } from '@vismay/starship-viz/modules/starship/sample'
 import { sample as kzCharacterSample } from '@vismay/kidzovo-viz/modules/character/sample'
 import { sample as kzBubbleSample } from '@vismay/kidzovo-viz/modules/bubble/sample'
@@ -182,6 +183,7 @@ export const catalogModules: CatalogEntry[] = [
     category: 'Footshorts',
     sample: teamFormGridSample,
   },
+  { type: 'fs:team-calendar', category: 'Footshorts', sample: teamCalendarSample },
   {
     type: 'starship:viewer',
     category: 'Starship',

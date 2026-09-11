@@ -4,6 +4,7 @@ import matchTimelineCardModule from './match-timeline'
 import fixturesCardModule from './fixtures'
 import standingsCardModule from './standings'
 import formCardModule from './form'
+import calendarCardModule from './calendar'
 import bracketCardModule from './bracket'
 import newsImageCardModule from './news-image'
 import newsArticleCardModule from './news-article'
@@ -32,6 +33,7 @@ export function registerFootshortsShareCardModules(): void {
   register(fixturesCardModule)
   register(standingsCardModule)
   register(formCardModule)
+  register(calendarCardModule)
   register(bracketCardModule)
   register(newsImageCardModule)
   register(newsArticleCardModule)

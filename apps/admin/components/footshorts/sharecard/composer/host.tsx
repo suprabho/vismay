@@ -49,6 +49,11 @@ function defaultTransform(type: string, ratio: AspectRatio): TransformLike {
   if (type === 'fscard:news-image' || type === 'fscard:ai-image') {
     return { xPct: 50, yPct: 50, widthPct: 100, heightPct: 100, scale: 1, rotation: 0, opacity: 1 }
   }
+  // A 7-column month grid: ~5–6 rows of tall cells plus heading + legend, so the
+  // box is about 1.15× as tall as it is wide (in card-relative %, via `ar`).
+  if (type === 'fscard:calendar') {
+    return { ...DEFAULT_TRANSFORM, widthPct: 90, heightPct: Math.min(84, Math.round(90 * ar * 1.15)) }
+  }
   // A bracket tree needs most of the card.
   if (type === 'fscard:bracket') {
     return { ...DEFAULT_TRANSFORM, widthPct: 94, heightPct: 84 }
@@ -64,6 +69,7 @@ const FOOTSHORTS_LAYER_TYPES: Array<{ type: string; name: string }> = [
   { type: 'fscard:fixtures', name: 'Fixtures' },
   { type: 'fscard:standings', name: 'Standings' },
   { type: 'fscard:form', name: 'Form grid' },
+  { type: 'fscard:calendar', name: 'Team calendar' },
   { type: 'fscard:bracket', name: 'Bracket' },
   { type: 'fscard:news-image', name: 'News image' },
   { type: 'fscard:news-article', name: 'News article' },
@@ -92,6 +98,9 @@ function defaultConfig(type: string, ctx: FootshortsComposerCtx): Record<string,
       return { type, compKey, group: null }
     case 'fscard:form':
       return { type, compKey, teamSlug: '' }
+    case 'fscard:calendar':
+      // Blank month = the team's next fixture; the author narrows it later.
+      return { type, compKeys: compKey ? [compKey] : [], teamSlug: '', month: '', showScores: true, showLegend: true }
     case 'fscard:bracket':
       // Seed an *incomplete* draw so the card renders something on insert —
       // a few locked-in teams, the rest qualification placeholders, empty

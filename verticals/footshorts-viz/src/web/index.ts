@@ -11,6 +11,18 @@ export { EntityCard } from './EntityCard'
 export { Bracket, TieCard } from './Bracket'
 export { BracketTree } from './BracketTree'
 export { TeamFormStrip } from './TeamFormStrip'
+export { TeamCalendar } from './TeamCalendar'
+export {
+  calendarMonthOf,
+  defaultCalendarMonth,
+  formatCalendarMonth,
+  isCalendarMonth,
+  monthGrid,
+  parseCalendarMonth,
+  teamFixturesInMonth,
+  teamMonths,
+} from '../teamCalendar'
+export type { CalendarCell, TeamFixture, WeekStart } from '../teamCalendar'
 export { FsFrame } from './FsFrame'
 export type { FsBackgroundConfig } from '../modules/shared/background'
 export { Crest } from '../data/Crest'
@@ -39,6 +51,7 @@ export {
 } from '../season'
 export {
   getCompetitionDisplayName,
+  getCompetitionShortCode,
   getCompetitionPalette,
   resolveCompetitionColor,
   darkenHex,
