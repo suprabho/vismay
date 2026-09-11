@@ -57,7 +57,7 @@ export function UpcomingRaceCalendar() {
                   if (!cell.date) return <div key={`blank-${w}-${cell.column}`} className="min-h-20 min-w-0 rounded-lg sm:min-h-28" />
                   if (!cell.race) return <div key={cell.date} className={`min-h-20 min-w-0 rounded-lg sm:min-h-28 ${cell.column >= 5 ? 'bg-border/50' : 'bg-bg/60'}`}><span className="block py-2 text-center font-mono text-xs text-muted">{Number(cell.date.slice(-2))}</span></div>
                   const race = cell.race
-                  return <WeekendCell key={cell.date} date={cell.date} race={race} span={cell.span} active={race.id === selected?.race.id} onSelect={() => setSelectedId(race.id)} />
+                  return <WeekendCell key={cell.date} race={race} span={cell.span} active={race.id === selected?.race.id} onSelect={() => setSelectedId(race.id)} />
                 }))}
               </div>
             </div>
@@ -78,26 +78,19 @@ export function UpcomingRaceCalendar() {
 }
 
 type WeekendCellProps = {
-  /** First visible day of the weekend in this week row. */
-  date: string
   race: RaceRow
   span: number
   active: boolean
   onSelect: () => void
 }
 
-/** One race weekend, spanning its visible days in the week row. Day numbers stay aligned to the columns underneath. */
-function WeekendCell({ date, race, span, active, onSelect }: WeekendCellProps) {
+/** One race weekend, spanning its visible days in the week row. The span itself marks the dates, so the cell shows only the race. */
+function WeekendCell({ race, span, active, onSelect }: WeekendCellProps) {
   const gp = findGrandPrix(race.raceName)
   const weekend = raceWeekend(race)
-  const first = weekend.days.indexOf(date)
-  const days = weekend.days.slice(first, first + span)
   const time = raceTimeLabel(race, undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
   return (
-    <button type="button" onClick={onSelect} aria-pressed={active} aria-controls="upcoming-race-details" aria-label={`${weekendRangeLabel(weekend, { weekday: 'long', day: 'numeric', month: 'long' })}: ${race.raceName}${time ? `, race at ${time}` : ''}`} style={{ gridColumn: `span ${span}`, backgroundColor: countryTint(gp, active ? 34 : 18) }} className={`flex min-h-20 min-w-0 flex-col items-center gap-1 rounded-lg border px-0.5 py-2 text-center sm:min-h-28 sm:px-1 ${active ? 'border-accent shadow-[inset_0_0_0_1px_var(--color-accent)]' : 'border-border hover:border-muted'}`}>
-      <span aria-hidden="true" className="grid w-full font-mono text-xs" style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))` }}>
-        {days.map(day => <span key={day} className={day === weekend.end ? 'font-semibold' : 'text-muted'}>{Number(day.slice(-2))}</span>)}
-      </span>
+    <button type="button" onClick={onSelect} aria-pressed={active} aria-controls="upcoming-race-details" aria-label={`${weekendRangeLabel(weekend, { weekday: 'long', day: 'numeric', month: 'long' })}: ${race.raceName}${time ? `, race at ${time}` : ''}`} style={{ gridColumn: `span ${span}`, backgroundColor: countryTint(gp, active ? 34 : 18) }} className={`flex min-h-20 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-0.5 py-2 text-center sm:min-h-28 sm:px-1 ${active ? 'border-accent shadow-[inset_0_0_0_1px_var(--color-accent)]' : 'border-border hover:border-muted'}`}>
       <span className="flex w-full flex-col items-center gap-1 wdth-dense text-[11px] font-medium leading-tight break-words text-text">
         <CalendarFlag gp={gp} />
         <span className="font-mono font-semibold">R{race.round}</span>
