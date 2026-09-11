@@ -61,6 +61,22 @@ export interface FsCardFormConfig {
 }
 
 /**
+ * `fscard:calendar` — one team's month as a wall calendar. Spans several
+ * competitions (league + cups + Europe), so it carries `compKeys` (plural) —
+ * the data manager fetches each, and the module merges them before filtering
+ * to the team. `month` is `YYYY-MM`, or blank for "the team's next fixture's
+ * month" resolved at render time.
+ */
+export interface FsCardCalendarConfig {
+  type: 'fscard:calendar'
+  compKeys: string[]
+  teamSlug: string
+  month: string
+  showScores: boolean
+  showLegend: boolean
+}
+
+/**
  * `fscard:bracket` — a knockout bracket card. Two data sources, pick one:
  *  - `rounds`: an explicit, *incomplete* draw (slot-vs-slot ties where a slot
  *    may be a confirmed team, a qualification placeholder, or TBD). Authored
@@ -169,6 +185,7 @@ export type FsCardConfig =
   | FsCardFixturesConfig
   | FsCardStandingsConfig
   | FsCardFormConfig
+  | FsCardCalendarConfig
   | FsCardBracketConfig
   | FsCardNewsImageConfig
   | FsCardNewsArticleConfig

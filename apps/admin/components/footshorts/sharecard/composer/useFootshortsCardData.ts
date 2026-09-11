@@ -21,6 +21,11 @@ function usedCompKeys(layers: ComposerLayer[]): string[] {
   for (const l of layers) {
     const k = l.layer.compKey
     if (typeof k === 'string' && k) set.add(k)
+    // Multi-competition layers (fscard:calendar) carry `compKeys`.
+    const ks = l.layer.compKeys
+    if (Array.isArray(ks)) {
+      for (const x of ks) if (typeof x === 'string' && x) set.add(x)
+    }
   }
   return Array.from(set)
 }

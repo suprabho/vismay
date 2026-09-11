@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { FixtureRow } from '@vismay/footshorts-viz/types'
+import { formatCalendarMonth, teamMonths } from '@vismay/footshorts-viz/web'
 import { themes } from '@footshorts/brand'
 import { registerPickerEditor, type PickerEditorProps } from '@vismay/viz-admin'
 import { SHARE_IMAGE_STYLES } from '@/lib/footshortsShareStyles'
@@ -214,6 +215,106 @@ function TeamPicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
       {options.map((t) => (
         <option key={t.slug} value={t.slug}>
           {t.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+/** Fixtures merged across the layer's `compKeys` (the calendar's multi-competition
+ *  pick), de-duplicated by fixture id. */
+function fixturesForKeys(ctx: FootshortsComposerCtx | null, compKeys: unknown): FixtureRow[] {
+  if (!ctx || !Array.isArray(compKeys)) return []
+  const out: FixtureRow[] = []
+  const seen = new Set<string>()
+  for (const k of compKeys) {
+    if (typeof k !== 'string') continue
+    for (const f of ctx.data.fixturesByComp[k] ?? []) {
+      if (!seen.has(f.id)) {
+        seen.add(f.id)
+        out.push(f)
+      }
+    }
+  }
+  return out
+}
+
+/** Tick every competition a team plays in — the calendar merges their fixtures. */
+function CompetitionMultiPicker({ value, onChange, ctx }: PickerEditorProps) {
+  const c = asCtx(ctx)
+  const picked = Array.isArray(value) ? (value as string[]) : []
+  const toggle = (key: string) =>
+    onChange(picked.includes(key) ? picked.filter((x) => x !== key) : [...picked, key])
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="mt-1 max-h-48 overflow-auto rounded-md border border-white/10 bg-neutral-900 p-1">
+        {c?.competitions.map((comp) => {
+          const key = compKeyOf(comp)
+          const on = picked.includes(key)
+          return (
+            <label
+              key={key}
+              className={`flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-[11px] ${
+                on ? 'bg-white/10 text-neutral-100' : 'text-neutral-400 hover:bg-white/5'
+              }`}
+            >
+              <input type="checkbox" checked={on} onChange={() => toggle(key)} />
+              <span className="truncate">
+                {comp.name} · {comp.season}
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      <p className={hintCls}>
+        {picked.length === 0
+          ? 'Tick the league plus any cups / European competition.'
+          : `${picked.length} selected — only the picked team's matches are shown.`}
+      </p>
+    </div>
+  )
+}
+
+/** Team list unioned across the layer's `compKeys` (TeamPicker reads one `compKey`). */
+function TeamMultiPicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
+  const fixtures = fixturesForKeys(asCtx(ctx), siblings.compKeys)
+  const teams = new Map<string, string>()
+  for (const f of fixtures) {
+    if (f.home?.slug) teams.set(f.home.slug, f.home.name)
+    if (f.away?.slug) teams.set(f.away.slug, f.away.name)
+  }
+  const options = Array.from(teams, ([slug, name]) => ({ slug, name })).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )
+  const hasComps = Array.isArray(siblings.compKeys) && siblings.compKeys.length > 0
+  return (
+    <select className={selectCls} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{hasComps ? 'Select team…' : 'Pick a competition first'}</option>
+      {options.map((t) => (
+        <option key={t.slug} value={t.slug}>
+          {t.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+/** Months the picked team plays in (across the picked competitions), with match
+ *  counts. Blank = auto: the month of the team's next fixture. */
+function MonthPicker({ value, onChange, siblings, ctx }: PickerEditorProps) {
+  const fixtures = fixturesForKeys(asCtx(ctx), siblings.compKeys)
+  const teamSlug = typeof siblings.teamSlug === 'string' ? siblings.teamSlug : ''
+  const months = teamSlug ? teamMonths(fixtures, teamSlug) : []
+  const selected = typeof value === 'string' ? value : ''
+  // Keep a saved month visible even if the fixture data no longer covers it.
+  const stray = selected && !months.some((m) => m.month === selected)
+  return (
+    <select className={selectCls} value={selected} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{teamSlug ? 'Auto — next fixture' : 'Pick a team first'}</option>
+      {stray ? <option value={selected}>{formatCalendarMonth(selected)}</option> : null}
+      {months.map((m) => (
+        <option key={m.month} value={m.month}>
+          {formatCalendarMonth(m.month)} · {m.count} {m.count === 1 ? 'match' : 'matches'}
         </option>
       ))}
     </select>
@@ -664,6 +765,9 @@ export function registerFootshortsPickers(): void {
   registerPickerEditor('footshorts:fixture', FixturePicker)
   registerPickerEditor('footshorts:fixture-multi', FixtureMultiPicker)
   registerPickerEditor('footshorts:team', TeamPicker)
+  registerPickerEditor('footshorts:competition-multi', CompetitionMultiPicker)
+  registerPickerEditor('footshorts:team-multi', TeamMultiPicker)
+  registerPickerEditor('footshorts:month', MonthPicker)
   registerPickerEditor('footshorts:standings-group', StandingsGroupPicker)
   registerPickerEditor('footshorts:news', NewsPicker)
   registerPickerEditor('footshorts:badge', BadgePicker)

@@ -611,6 +611,18 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
         if (f?.home) push({ id: f.home.id, type: 'team', slug: f.home.slug, name: f.home.name, crest_url: f.home.crest_url })
         if (f?.away) push({ id: f.away.id, type: 'team', slug: f.away.slug, name: f.away.name, crest_url: f.away.crest_url })
       }
+      if (cfg.type === 'fscard:calendar' && typeof cfg.teamSlug === 'string' && cfg.teamSlug) {
+        const keys = Array.isArray(cfg.compKeys) ? cfg.compKeys.filter((k): k is string => typeof k === 'string') : []
+        for (const k of keys) {
+          const c = compByKey.get(k)
+          if (c) push({ id: '', type: 'league', slug: c.slug, name: c.name, crest_url: null })
+        }
+        const f = keys
+          .flatMap((k) => data.fixturesByComp[k] ?? [])
+          .find((x) => x.home?.slug === cfg.teamSlug || x.away?.slug === cfg.teamSlug)
+        const ref = f?.home?.slug === cfg.teamSlug ? f?.home : f?.away
+        push({ id: ref?.id ?? '', type: 'team', slug: cfg.teamSlug, name: ref?.name ?? cfg.teamSlug, crest_url: ref?.crest_url ?? null })
+      }
       if (cfg.type === 'fscard:form' && typeof cfg.teamSlug === 'string' && cfg.teamSlug) {
         const f = (data.fixturesByComp[ck] ?? []).find(
           (x) => x.home?.slug === cfg.teamSlug || x.away?.slug === cfg.teamSlug,
@@ -633,7 +645,7 @@ export function ShareCardCreator({ initialCompetitions }: { initialCompetitions:
   // Re-seed publish tags when the layers' content changes; a loaded card restores
   // its own saved tags via pendingTagsRef instead.
   const tagKey = layers
-    .map((l) => `${l.layer.type}:${l.layer.compKey ?? ''}:${l.layer.fixtureId ?? ''}:${l.layer.teamSlug ?? ''}:${l.layer.newsId ?? ''}`)
+    .map((l) => `${l.layer.type}:${l.layer.compKey ?? ''}:${Array.isArray(l.layer.compKeys) ? l.layer.compKeys.join('+') : ''}:${l.layer.fixtureId ?? ''}:${l.layer.teamSlug ?? ''}:${l.layer.newsId ?? ''}`)
     .join('|')
   useEffect(() => {
     if (pendingTagsRef.current) {

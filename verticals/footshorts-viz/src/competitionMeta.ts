@@ -20,6 +20,17 @@ const COMPETITION_DISPLAY_NAME: Record<string, string> = {
   'primeira-liga': 'Primeira Liga',
   championship: 'Championship',
   'campeonato-brasileiro-serie-a': 'Brasileirão',
+  // Cups — not ingested by the worker today, but authored fixtures (team
+  // calendar, match cards) reference them, so give them names + chips.
+  'conference-league': 'Conference League',
+  'fa-cup': 'FA Cup',
+  'efl-cup': 'EFL Cup',
+  'copa-del-rey': 'Copa del Rey',
+  'dfb-pokal': 'DFB-Pokal',
+  'coppa-italia': 'Coppa Italia',
+  'coupe-de-france': 'Coupe de France',
+  'club-world-cup': 'Club World Cup',
+  'super-cup': 'Super Cup',
 }
 
 const COMPETITION_PALETTE: Record<string, string> = {
@@ -37,6 +48,38 @@ const COMPETITION_PALETTE: Record<string, string> = {
   championship: '#1A1A1A',
   // CBF green — original yellow killed white-text contrast on the league tile.
   'campeonato-brasileiro-serie-a': '#009C3B',
+  'conference-league': '#00A85A',
+  'fa-cup': '#E4002B',
+}
+
+/**
+ * Short codes for tight layouts — the per-match competition chip on the team
+ * calendar, where a full name won't fit in a day cell. Unknown slugs fall back
+ * to the initials of the display name (see `getCompetitionShortCode`).
+ */
+const COMPETITION_SHORT_CODE: Record<string, string> = {
+  'premier-league': 'PL',
+  'primera-division': 'LAL',
+  bundesliga: 'BL',
+  'serie-a': 'SA',
+  'ligue-1': 'L1',
+  'champions-league': 'UCL',
+  'europa-league': 'UEL',
+  'conference-league': 'UECL',
+  'world-cup': 'WC',
+  'european-championship': 'EURO',
+  eredivisie: 'ERE',
+  'primeira-liga': 'LP',
+  championship: 'EFL',
+  'campeonato-brasileiro-serie-a': 'BRA',
+  'fa-cup': 'FAC',
+  'efl-cup': 'EFLC',
+  'copa-del-rey': 'CDR',
+  'dfb-pokal': 'DFB',
+  'coppa-italia': 'CI',
+  'coupe-de-france': 'CDF',
+  'club-world-cup': 'CWC',
+  'super-cup': 'SC',
 }
 
 /**
@@ -84,6 +127,23 @@ export function competitionFollowLabel(slug: string | null | undefined): string 
 export function getCompetitionDisplayName(slug: string | null | undefined): string {
   if (!slug) return ''
   return COMPETITION_DISPLAY_NAME[slug] ?? slug
+}
+
+/**
+ * 2–4 letter code for a competition slug ("PL", "UCL", "FAC"). Unknown slugs
+ * fall back to the initials of their display name — or of the slug's words when
+ * there's no display name either — capped to 4 chars, so a new competition still
+ * gets a readable chip instead of an empty one.
+ */
+export function getCompetitionShortCode(slug: string | null | undefined): string {
+  if (!slug) return ''
+  const known = COMPETITION_SHORT_CODE[slug]
+  if (known) return known
+  const words = getCompetitionDisplayName(slug)
+    .split(/[\s-]+/)
+    .filter((w) => w.length > 0)
+  const initials = words.map((w) => w[0]!.toUpperCase()).join('')
+  return (initials.length >= 2 ? initials : words[0]?.slice(0, 3).toUpperCase() ?? '').slice(0, 4)
 }
 
 /**
