@@ -5,14 +5,7 @@ import Link from 'next/link'
 import type { RaceRow } from '@vismay/f1-viz/types'
 import { findGrandPrix, flagUrl } from '@vismay/f1-viz/grands-prix'
 import { useSessionResults, formatLapMs } from '@/lib/useSessionResults'
-
-function dateLabel(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
-}
+import { raceDayLabel } from '@/lib/raceCalendar'
 
 function statusPill(status: RaceRow['status']) {
   if (status === 'live')
@@ -73,7 +66,7 @@ export function RaceCardExpandable({ race }: { race: RaceRow }) {
         ) : null}
         <div className="flex w-14 flex-col items-center">
           <span className="text-sm font-semibold text-text">R{race.round}</span>
-          <span className="mt-0.5 text-[10px] text-muted">{dateLabel(race.date)}</span>
+          <span className="mt-0.5 text-[10px] text-muted">{raceDayLabel(race)}</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="truncate text-sm text-text">{race.raceName}</div>
