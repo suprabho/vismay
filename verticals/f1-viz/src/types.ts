@@ -21,9 +21,9 @@ export type RaceRow = {
   circuitName: string
   country: string
   locality: string | null
-  /** ISO `YYYY-MM-DD` of the race day. */
+  /** ISO `YYYY-MM-DD` (UTC) of the first day of the race weekend — the meeting start, usually Friday. Race day is two days later. */
   date: string
-  /** ISO time of the race start in UTC, e.g. `13:00:00Z`. May be null for very-early-season placeholders. */
+  /** ISO time of day of the race start in UTC, e.g. `13:00:00Z`. May be null for very-early-season placeholders. */
   time: string | null
   status: RaceStatus
   /** True when the weekend includes a sprint (Sprint Q + Sprint). */

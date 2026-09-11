@@ -11,8 +11,12 @@ export type RaceWeekend = {
   days: string[]
 }
 
-/** Grand Prix weekends run Friday–Sunday (practice, qualifying/sprint, race), so a weekend spans race day and the two days before it. */
+/**
+ * Grand Prix weekends run Friday–Sunday (practice, qualifying/sprint, race). Schedule rows store the
+ * UTC date the meeting starts (the Friday), so the weekend is that day plus the next two and race day is the last of them.
+ */
 export const WEEKEND_DAYS = 3
+export const RACE_DAY_OFFSET = WEEKEND_DAYS - 1
 
 export function racesByStatus(races: RaceRow[], status: RaceRow['status']) {
   return races.filter(r => r.status === status).sort((a, b) => a.date.localeCompare(b.date) || a.round - b.round)
@@ -23,9 +27,14 @@ export function raceDateLabel(date: string, options: Intl.DateTimeFormatOptions 
   return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { ...options, timeZone: 'UTC' })
 }
 
-/** The race start as an instant, or null when the schedule only carries a placeholder day without a start time. */
+/** UTC race day: the stored weekend start plus two days. */
+export function utcRaceDate(race: RaceTiming) {
+  return shiftDate(race.date, RACE_DAY_OFFSET)
+}
+
+/** The race start as an instant (UTC race day + UTC start time), or null when the schedule has no start time yet. */
 export function raceStart(race: RaceTiming): Date | null {
-  return race.time ? new Date(`${race.date}T${race.time}`) : null
+  return race.time ? new Date(`${utcRaceDate(race)}T${race.time}`) : null
 }
 
 function calendarDateIn(instant: Date, timeZone?: string) {
@@ -36,12 +45,12 @@ function calendarDateIn(instant: Date, timeZone?: string) {
 
 /**
  * Race day as a calendar date in the viewer's time zone (or the given one).
- * Schedule rows store the UTC race day, which is the day before for viewers west of the venue
- * (e.g. a 06:00 UTC Las Vegas start is Saturday evening in Nevada).
+ * The UTC race day is the day before for viewers west of the venue
+ * (e.g. a 04:00 UTC Las Vegas start is Saturday evening in Nevada).
  */
 export function localRaceDate(race: RaceTiming, timeZone?: string) {
   const start = raceStart(race)
-  return start ? calendarDateIn(start, timeZone) : race.date
+  return start ? calendarDateIn(start, timeZone) : utcRaceDate(race)
 }
 
 export function shiftDate(date: string, deltaDays: number) {
@@ -51,7 +60,7 @@ export function shiftDate(date: string, deltaDays: number) {
 
 export function raceWeekend(race: RaceTiming, timeZone?: string): RaceWeekend {
   const end = localRaceDate(race, timeZone)
-  const days = Array.from({ length: WEEKEND_DAYS }, (_, i) => shiftDate(end, i - (WEEKEND_DAYS - 1)))
+  const days = Array.from({ length: WEEKEND_DAYS }, (_, i) => shiftDate(end, i - RACE_DAY_OFFSET))
   return { start: days[0], end, days }
 }
 
@@ -67,7 +76,7 @@ export function weekendRangeLabel(weekend: RaceWeekend, options: Intl.DateTimeFo
 /** Race day formatted in the viewer's time zone, e.g. "Sun 4 Oct". */
 export function raceDayLabel(race: RaceTiming, options: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' }, timeZone?: string) {
   const start = raceStart(race)
-  return start ? start.toLocaleDateString('en-GB', { ...options, timeZone }) : raceDateLabel(race.date, options)
+  return start ? start.toLocaleDateString('en-GB', { ...options, timeZone }) : raceDateLabel(utcRaceDate(race), options)
 }
 
 /** Start time in the viewer's time zone with a short zone name, e.g. "14:00 GMT+5:30", or null when the time is not yet confirmed. */

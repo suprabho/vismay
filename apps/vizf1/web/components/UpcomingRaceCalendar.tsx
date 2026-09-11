@@ -21,8 +21,8 @@ function CalendarFlag({ gp, large = false }: { gp: GrandPrixEntry | null; large?
 
 export function UpcomingRaceCalendar() {
   const q = useSchedule()
-  // The schedule stores the UTC race day; everything below is laid out on the viewer's own calendar
-  // (weekend spans, month grouping, start times) so a Sunday-evening race stays on Sunday in Nevada too.
+  // The schedule stores the UTC weekend start and race start time; everything below is laid out on the viewer's
+  // own calendar (weekend spans, month grouping, start times) so a Sunday-evening race stays on Sunday in Nevada too.
   const upcoming = racesByStatus(q.data ?? [], 'upcoming').map(race => ({ race, weekend: raceWeekend(race) }))
   const firstMonth = upcoming[0]?.weekend.end.slice(0, 7)
   const lastMonth = upcoming.at(-1)?.weekend.end.slice(0, 7)
