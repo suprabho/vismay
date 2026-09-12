@@ -34,12 +34,15 @@ export function TeamBadge({
   const [logoFailed, setLogoFailed] = useState(false)
   const showLogo = !!logoUrl && !logoFailed
 
-  const abbr = name
-    .replace(/[^A-Za-z ]/g, '')
-    .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 3) || (constructorId ?? '?').slice(0, 3).toUpperCase()
+  // Multi-word names use their initials (Red Bull Racing → RBR, Aston Martin
+  // → AM); single-word names take their first three letters (Ferrari → FER,
+  // Mercedes → MER) so the chip never collapses to a lone letter.
+  const words = name.replace(/[^A-Za-z ]/g, '').trim().split(/\s+/).filter(Boolean)
+  const abbr =
+    (words.length > 1
+      ? words.map((w) => w[0]?.toUpperCase() ?? '').join('').slice(0, 3)
+      : (words[0] ?? '').slice(0, 3).toUpperCase()) ||
+    (constructorId ?? '?').slice(0, 3).toUpperCase()
 
   const resolved =
     color ?? F1_BRAND.constructors[constructorId as ConstructorId] ?? F1_BRAND.colors.muted

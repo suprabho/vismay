@@ -6,6 +6,7 @@ import type { RaceRow } from '@vismay/f1-viz/types'
 import { findGrandPrix, flagUrl } from '@vismay/f1-viz/grands-prix'
 import { useSessionResults, formatLapMs } from '@/lib/useSessionResults'
 import { raceDayLabel } from '@/lib/raceCalendar'
+import { TeamBadge } from '@/components/TeamBadge'
 
 function statusPill(status: RaceRow['status']) {
   if (status === 'live')
@@ -124,17 +125,13 @@ function Top10({ round }: { round: number }) {
         >
           <span className="text-muted">{r.position ?? i + 1}</span>
           <span className="flex min-w-0 items-center gap-2">
-            {r.driverCode ? (
-              <span
-                className="rounded px-1.5 py-0.5 font-mono text-[10px]"
-                style={{
-                  backgroundColor: r.constructorColor ? `${r.constructorColor}22` : 'var(--color-bg)',
-                  color: r.constructorColor ?? 'var(--color-text)',
-                }}
-              >
-                {r.driverCode}
-              </span>
-            ) : null}
+            <TeamBadge
+              constructorId={r.constructorId}
+              name={r.constructorName ?? r.constructorId ?? ''}
+              color={r.constructorColor}
+              logoUrl={r.constructorLogoUrl}
+              size="sm"
+            />
             <span className="truncate text-text">{r.driverName}</span>
           </span>
           <span className="font-mono text-[11px] text-text/70">{formatLapMs(r.bestLapMs)}</span>
