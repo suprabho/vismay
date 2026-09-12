@@ -6,7 +6,7 @@ import type { RaceRow } from '@vismay/f1-viz/types'
 import { findGrandPrix, flagUrl } from '@vismay/f1-viz/grands-prix'
 import { useSchedule } from '@/lib/useSchedule'
 import { useSessionResults } from '@/lib/useSessionResults'
-import { raceDateLabel, racesByStatus } from '@/lib/raceCalendar'
+import { raceDayLabel, racesByStatus } from '@/lib/raceCalendar'
 import { DriverAvatar } from '@/components/DriverAvatar'
 import { Podium, PodiumMessage } from '@/components/Podium'
 
@@ -19,7 +19,7 @@ function RacePodium({ race }: { race: RaceRow }) {
         <div>
           <p className="wdth-kicker text-[11px] font-bold uppercase tracking-[0.14em] text-muted">ROUND {String(race.round).padStart(2, '0')} / RACE PODIUM</p>
           <h3 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">{race.raceName}</h3>
-          <p className="mt-1 text-xs text-muted">{race.circuitName} · {raceDateLabel(race.date)}</p>
+          <p className="mt-1 text-xs text-muted">{race.circuitName} · {raceDayLabel(race, { day: 'numeric', month: 'short' })}</p>
         </div>
         <Link href={`/race/${race.round}`} className="rounded-md py-2 text-xs text-text hover:text-accent">Full race details →</Link>
       </div>
@@ -92,7 +92,7 @@ export function RaceWeekends() {
                   {gp && <img src={flagUrl(gp.code, 80)} alt="" width={20} height={14} className="h-3.5 w-5 object-cover" />}
                 </span>
                 <span className="mt-2 block text-sm font-semibold">{r.raceName.replace(/ Grand Prix$/, '')}</span>
-                <span className="mt-1 block text-[11px] text-muted">{raceDateLabel(r.date)}</span>
+                <span className="mt-1 block text-[11px] text-muted">{raceDayLabel(r, { day: 'numeric', month: 'short' })}</span>
                 <span className={`mt-3 block text-[11px] ${active ? 'font-semibold text-text' : 'text-muted'}`}>✓ {latest ? 'Latest completed' : 'Completed'}</span>
               </button>
             })}
