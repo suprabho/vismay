@@ -12,6 +12,7 @@ import {
 import { useLapPositions } from '@/lib/useLapPositions'
 import { useTelemetrySession } from '@/lib/useTelemetrySession'
 import { RaceTelemetry } from './RaceTelemetry'
+import { TeamBadge } from './TeamBadge'
 
 type Tab = 'standings' | 'qualifying' | 'fp1' | 'fp2' | 'fp3' | 'sprintQ' | 'sprint' | 'telemetry'
 
@@ -50,36 +51,39 @@ function Empty({ label }: { label: string }) {
 /**
  * All session tables share the same Supabase source (ingestSessions). The only
  * difference between them is which columns make sense for the session type:
- *   race / sprint  — pos | driver+team-color | team | laps | best lap
- *   quali / sprintQ — pos | driver+team-color | team | best lap | gap
- *   fp1 / fp2 / fp3 — pos | driver+team-color | best lap | gap | laps
+ *   race / sprint  — pos | team-badge+driver | team | laps | best lap
+ *   quali / sprintQ — pos | team-badge+driver | team | best lap | gap
+ *   fp1 / fp2 / fp3 — pos | team-badge+driver | best lap | gap | laps
  */
 
 const RACE_LIKE: SessionType[] = ['race', 'sprint']
 const QUALI_LIKE: SessionType[] = ['quali', 'sprint_quali']
 
 function DriverCell({
-  code,
   name,
-  color,
+  constructorId,
+  constructorName,
+  constructorColor,
+  constructorLogoUrl,
 }: {
-  code: string | null
   name: string
-  color: string | null
+  constructorId: string | null
+  constructorName: string | null
+  constructorColor: string | null
+  constructorLogoUrl: string | null
 }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
-      {code ? (
-        <span
-          className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.04em]"
-          style={{
-            backgroundColor: color ? `${color}22` : 'var(--color-bg)',
-            color: color ?? 'var(--color-text)',
-          }}
-        >
-          {code}
-        </span>
-      ) : null}
+      {/* Team logo (or tinted team initials when no logo is available) so the
+          row reads as "which car" at a glance — the driver's own name sits
+          right next to it, so a driver-code chip was redundant. */}
+      <TeamBadge
+        constructorId={constructorId}
+        name={constructorName ?? constructorId ?? ''}
+        color={constructorColor}
+        logoUrl={constructorLogoUrl}
+        size="sm"
+      />
       <span className="truncate wdth-dense font-semibold text-text">{name}</span>
     </span>
   )
@@ -116,7 +120,13 @@ function SessionTable({
             className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_80px_40px_88px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
           >
             <span className="font-mono text-text">{r.position ?? i + 1}</span>
-            <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
+            <DriverCell
+              name={r.driverName}
+              constructorId={r.constructorId}
+              constructorName={r.constructorName}
+              constructorColor={r.constructorColor}
+              constructorLogoUrl={r.constructorLogoUrl}
+            />
             <span className="truncate font-semibold text-muted">{r.constructorName ?? ''}</span>
             <span className="text-center font-mono text-text">{r.lapsCompleted ?? '—'}</span>
             <span className="text-center font-mono text-[11px] text-text/80">
@@ -144,7 +154,13 @@ function SessionTable({
             className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_80px_88px_88px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
           >
             <span className="font-mono text-text">{r.position ?? i + 1}</span>
-            <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
+            <DriverCell
+              name={r.driverName}
+              constructorId={r.constructorId}
+              constructorName={r.constructorName}
+              constructorColor={r.constructorColor}
+              constructorLogoUrl={r.constructorLogoUrl}
+            />
             <span className="truncate font-semibold text-muted">{r.constructorName ?? ''}</span>
             <span className="text-center font-mono text-[11px] text-text/80">
               {formatLapMs(r.bestLapMs)}
@@ -174,7 +190,13 @@ function SessionTable({
           className="min-w-[470px] wdth-dense grid grid-cols-[28px_minmax(110px,1fr)_88px_88px_40px] items-center gap-1 border-b border-border/50 px-3 py-2.5 text-xs last:border-b-0"
         >
           <span className="font-mono text-text">{r.position ?? i + 1}</span>
-          <DriverCell code={r.driverCode} name={r.driverName} color={r.constructorColor} />
+          <DriverCell
+              name={r.driverName}
+              constructorId={r.constructorId}
+              constructorName={r.constructorName}
+              constructorColor={r.constructorColor}
+              constructorLogoUrl={r.constructorLogoUrl}
+            />
           <span className="text-center font-mono text-[11px] text-text/80">
             {formatLapMs(r.bestLapMs)}
           </span>
