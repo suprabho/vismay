@@ -5,7 +5,7 @@ import type { Theme } from '@vismay/viz-engine'
 import type { AspectRatio } from '../AspectRatioToggle'
 import { FLAG_COUNTRIES, flagImageUrl, flagThumbUrl } from '../flags'
 import type { CardComposition, ElementGroup, ElementLayer, TextBlock, Transform } from '../layers/types'
-import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TRANSFORM, emptyMapSpec } from '../layers/types'
+import { DEFAULT_GRAPHIC_HEIGHT_PCT, DEFAULT_TRANSFORM, emptyMapSpec, mapBoxHeightPct } from '../layers/types'
 import {
   addAnnotation,
   addElement,
@@ -33,20 +33,9 @@ import { ImagePicker, type AssetEntry } from './ImagePicker'
 import { LogoPicker } from './LogoPicker'
 import { IconPicker } from './IconPicker'
 import { EmojiPicker } from './EmojiPicker'
-import { Inspector, type MapDefaults } from './Inspector'
-import type { MapImportSources } from './MapSectionImport'
 import { labelCls } from './controls'
 
 export type LayerSection = 'background' | 'text' | 'elements' | 'branding'
-
-/** Story slice the inline element inspectors need (superset of `story`). */
-export interface InspectorStory {
-  slug: string
-  theme: Theme
-  assets: AssetEntry[]
-  defaults: MapDefaults
-  mapSources?: MapImportSources
-}
 
 interface Props {
   composition: CardComposition
@@ -55,13 +44,11 @@ interface Props {
   setSelection: (s: Selection | null) => void
   story: { slug: string; theme: Theme; assets: AssetEntry[] }
   /** Which slot sections to render. Defaults to all (the icon-rail tabs pass a
-   *  single section). */
+   *  single section). Layer-level controls live in the right-hand Inspector;
+   *  this panel only lists, adds, orders and selects. */
   sections?: LayerSection[]
-  /** When present, each element renders as a collapsible card with its inspector
-   *  inline in the expanded body. Required to edit elements from the panel. */
-  inspectorStory?: InspectorStory
+  /** Card format — sizes a new map's square box against the card. */
   ratio?: AspectRatio
-  onEditMap?: (s: Selection) => void
   /** Story chart id used to seed a "+ Chart" graphic (blank → custom chart). */
   defaultChartId?: string
   /** Fill the parent's height and scroll only the element list (the Foreground
@@ -83,11 +70,13 @@ const ELEMENT_DEFAULT_WIDTH: Record<ElementLayer['kind'], number> = {
   map: 60,
 }
 
-/** Newly added graphics get a width×height box; decorations size by width only. */
-function newTransform(kind: ElementLayer['kind']): Transform {
+/** Newly added graphics get a width×height box; decorations size by width only.
+ *  A new map starts as a locked 1:1 box (the inspector's Aspect control switches
+ *  it to other shapes). */
+function newTransform(kind: ElementLayer['kind'], ratio: AspectRatio): Transform {
   const base: Transform = { ...DEFAULT_TRANSFORM, widthPct: ELEMENT_DEFAULT_WIDTH[kind] }
   if (kind === 'chart') return { ...base, yPct: 56, heightPct: DEFAULT_GRAPHIC_HEIGHT_PCT }
-  if (kind === 'map') return { ...base, heightPct: 45 }
+  if (kind === 'map') return { ...base, heightPct: mapBoxHeightPct(base.widthPct, '1:1', ratio) }
   return base
 }
 
@@ -103,9 +92,7 @@ export function LayerPanel({
   setSelection,
   story,
   sections,
-  inspectorStory,
-  ratio,
-  onEditMap,
+  ratio = '1:1',
   defaultChartId,
   fillHeight,
   multiSel = [],
@@ -124,26 +111,11 @@ export function LayerPanel({
 
   const addEl = (data: Partial<ElementLayer> & { kind: ElementLayer['kind'] }, name: string) => {
     const id = uid('el')
-    const full = { id, name, visible: true, locked: false, transform: newTransform(data.kind), ...data } as ElementLayer
+    const full = { id, name, visible: true, locked: false, transform: newTransform(data.kind, ratio), ...data } as ElementLayer
     onChange(addElement(composition, full))
     setSelection({ kind: 'element', id })
     setAddMode(null)
   }
-
-  // ── element inline-inspector slot (shared by grouped + ungrouped rows) ──────
-  const inspectorFor = (el: ElementLayer) =>
-    inspectorStory && ratio && onEditMap ? (
-      <div className="border-t border-white/10 p-2">
-        <Inspector
-          composition={composition}
-          selection={{ kind: 'element', id: el.id }}
-          onChange={onChange}
-          story={inspectorStory}
-          ratio={ratio}
-          onEditMap={onEditMap}
-        />
-      </div>
-    ) : null
 
   // ── multi-select (ungrouped only) ───────────────────────────────────────────
   const toggleSel = (id: string) =>
@@ -268,7 +240,7 @@ export function LayerPanel({
               + Chart
             </button>
             <button
-              onClick={() => addEl({ kind: 'map', ...emptyMapSpec() }, 'Map')}
+              onClick={() => addEl({ kind: 'map', aspect: '1:1', ...emptyMapSpec() }, 'Map')}
               className="rounded-md border border-white/15 px-2 py-1 text-[11px] text-neutral-300 hover:bg-white/10"
             >
               + Map
@@ -345,19 +317,18 @@ export function LayerPanel({
                   <ElementRow
                     key={el.id}
                     el={el}
-                    expanded={isSel(selection, { kind: 'element', id: el.id })}
+                    selected={isSel(selection, { kind: 'element', id: el.id })}
                     checked={multiSel.includes(el.id)}
                     showCheckbox={!!setMultiSel}
                     canUp={canBlockUp}
                     canDown={canBlockDown}
                     onToggleCheck={() => toggleSel(el.id)}
                     onToggleVisible={() => onChange(updateElement(composition, el.id, { visible: !el.visible }))}
-                    onSelect={() => setSelection(isSel(selection, { kind: 'element', id: el.id }) ? null : { kind: 'element', id: el.id })}
+                    onSelect={() => setSelection({ kind: 'element', id: el.id })}
                     onDuplicate={() => duplicateEl(el.id)}
                     onMoveUp={() => onChange(moveElement(composition, el.id, -1))}
                     onMoveDown={() => onChange(moveElement(composition, el.id, 1))}
                     onDelete={() => removeElAndSel(el.id)}
-                    inspector={isSel(selection, { kind: 'element', id: el.id }) ? inspectorFor(el) : null}
                   />
                 )
               }
@@ -374,7 +345,7 @@ export function LayerPanel({
                     allVisible={allVisible}
                     canUp={canBlockUp}
                     canDown={canBlockDown}
-                    onSelect={() => setSelection(selectedGroup ? null : { kind: 'group', id: gid })}
+                    onSelect={() => setSelection({ kind: 'group', id: gid })}
                     onToggleCollapsed={() => onChange(setGroupCollapsed(composition, gid, !group.collapsed))}
                     onToggleVisible={() => onChange(setGroupVisible(composition, gid, !allVisible))}
                     onRename={() => {
@@ -397,11 +368,6 @@ export function LayerPanel({
                     onMoveUp={() => onChange(moveGroup(composition, gid, -1))}
                     onMoveDown={() => onChange(moveGroup(composition, gid, 1))}
                   />
-                  {selectedGroup && (
-                    <p className="px-2 pb-1.5 text-[10px] text-neutral-500">
-                      Drag the box on the canvas to move · corner to resize · top handle to rotate.
-                    </p>
-                  )}
                   {!group.collapsed && (
                     <div className="space-y-1 border-t border-white/10 p-1.5">
                       {block.elements.map((el, mi) => (
@@ -409,19 +375,18 @@ export function LayerPanel({
                           key={el.id}
                           el={el}
                           grouped
-                          expanded={isSel(selection, { kind: 'element', id: el.id })}
+                          selected={isSel(selection, { kind: 'element', id: el.id })}
                           checked={false}
                           showCheckbox={false}
                           canUp={mi > 0}
                           canDown={mi < block.elements.length - 1}
                           onToggleCheck={() => {}}
                           onToggleVisible={() => onChange(updateElement(composition, el.id, { visible: !el.visible }))}
-                          onSelect={() => setSelection(isSel(selection, { kind: 'element', id: el.id }) ? null : { kind: 'element', id: el.id })}
+                          onSelect={() => setSelection({ kind: 'element', id: el.id })}
                           onDuplicate={() => duplicateEl(el.id)}
                           onMoveUp={() => onChange(moveElement(composition, el.id, -1))}
                           onMoveDown={() => onChange(moveElement(composition, el.id, 1))}
                           onDelete={() => removeElAndSel(el.id)}
-                          inspector={isSel(selection, { kind: 'element', id: el.id }) ? inspectorFor(el) : null}
                         />
                       ))}
                     </div>
@@ -462,10 +427,12 @@ function elementLabel(el: ElementLayer): string {
   }
 }
 
+/** One layer row: select (edits in the right Inspector), show/hide, duplicate,
+ *  reorder, delete. */
 function ElementRow({
   el,
   grouped,
-  expanded,
+  selected,
   checked,
   showCheckbox,
   canUp,
@@ -477,11 +444,10 @@ function ElementRow({
   onMoveUp,
   onMoveDown,
   onDelete,
-  inspector,
 }: {
   el: ElementLayer
   grouped?: boolean
-  expanded: boolean
+  selected: boolean
   checked: boolean
   showCheckbox: boolean
   canUp: boolean
@@ -493,11 +459,10 @@ function ElementRow({
   onMoveUp: () => void
   onMoveDown: () => void
   onDelete: () => void
-  inspector: React.ReactNode
 }) {
   return (
-    <div className={`overflow-hidden rounded-md border ${expanded ? 'border-sky-400/70' : grouped ? 'border-white/5' : 'border-white/10'}`}>
-      <div className={`flex items-center gap-1.5 px-2 py-1.5 text-[12px] ${expanded ? 'bg-white/5' : ''}`}>
+    <div className={`overflow-hidden rounded-md border ${selected ? 'border-sky-400/70' : grouped ? 'border-white/5' : 'border-white/10'}`}>
+      <div className={`flex items-center gap-1.5 px-2 py-1.5 text-[12px] ${selected ? 'bg-white/5' : ''}`}>
         {showCheckbox && (
           <input
             type="checkbox"
@@ -511,7 +476,6 @@ function ElementRow({
           {el.visible ? '👁' : '🚫'}
         </button>
         <button className="flex min-w-0 flex-1 items-center gap-1 truncate text-left text-neutral-200" onClick={onSelect}>
-          <span className="text-neutral-500">{expanded ? '▾' : '▸'}</span>
           <span className="truncate">{elementLabel(el)}</span>
         </button>
         <IconBtn label="Duplicate" onClick={onDuplicate}>⧉</IconBtn>
@@ -519,7 +483,6 @@ function ElementRow({
         <IconBtn label="Down" disabled={!canDown} onClick={onMoveDown}>↓</IconBtn>
         <IconBtn label="Delete" onClick={onDelete}>×</IconBtn>
       </div>
-      {expanded && inspector}
     </div>
   )
 }

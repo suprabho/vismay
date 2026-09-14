@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { ScrubField } from '@vismay/viz-admin'
 import type { Transform } from '../layers/types'
 import { DEFAULT_GRAPHIC_HEIGHT_PCT } from '../layers/types'
 
@@ -114,10 +115,11 @@ export function ColorField({
   )
 }
 
-/** Position / size / rotation / opacity for a freely-placed layer. Position is
- *  drag-on-canvas primarily; sliders here cover fine control + keyboard a11y.
- *  `showHeight` adds a Height slider for box-sized graphics (chart / map / box
- *  image) — the "Size" slider then reads "Width". */
+/** Position / size / rotation / opacity for a freely-placed layer, as the same
+ *  compact grid of scrubbable fields the footshorts composer uses (drag a label
+ *  to scrub, or type). Position is drag-on-canvas primarily; these cover fine
+ *  control + keyboard a11y. `showHeight` adds a Height field for box-sized
+ *  graphics (chart / map / box image). */
 export function TransformControls({
   transform,
   onChange,
@@ -128,22 +130,28 @@ export function TransformControls({
   showHeight?: boolean
 }) {
   return (
-    <div className="space-y-2 rounded-md border border-white/10 bg-neutral-950/40 p-2.5">
-      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Transform</span>
-      <div className="grid grid-cols-2 gap-2">
-        <NumberSlider label="X" value={Math.round(transform.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
-        <NumberSlider label="Y" value={Math.round(transform.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
-      </div>
+    <div className="grid grid-cols-2 gap-1.5">
+      <ScrubField label="X" value={Math.round(transform.xPct)} min={0} max={100} step={1} onChange={(v) => onChange({ xPct: v })} format={(v) => `${v}%`} />
+      <ScrubField label="Y" value={Math.round(transform.yPct)} min={0} max={100} step={1} onChange={(v) => onChange({ yPct: v })} format={(v) => `${v}%`} />
+      <ScrubField label="W" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
       {showHeight ? (
-        <div className="grid grid-cols-2 gap-2">
-          <NumberSlider label="Width" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
-          <NumberSlider label="Height" value={Math.round(transform.heightPct ?? DEFAULT_GRAPHIC_HEIGHT_PCT)} min={4} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
-        </div>
+        <ScrubField label="H" value={Math.round(transform.heightPct ?? DEFAULT_GRAPHIC_HEIGHT_PCT)} min={4} max={100} step={1} onChange={(v) => onChange({ heightPct: v })} format={(v) => `${v}%`} />
       ) : (
-        <NumberSlider label="Size" value={Math.round(transform.widthPct)} min={4} max={100} step={1} onChange={(v) => onChange({ widthPct: v })} format={(v) => `${v}%`} />
+        <div />
       )}
-      <NumberSlider label="Rotate" value={Math.round(transform.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
-      <NumberSlider label="Opacity" value={transform.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
+      <ScrubField label="Rotate" value={Math.round(transform.rotation)} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} format={(v) => `${v}°`} />
+      <ScrubField label="Opacity" value={transform.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} format={(v) => v.toFixed(2)} />
     </div>
+  )
+}
+
+/** Titled, divider-separated inspector section (Figma-style dense grouping),
+ *  matching the footshorts composer's right-hand ConfigPanel. */
+export function InspectorSection({ title, children, last }: { title: string; children: ReactNode; last?: boolean }) {
+  return (
+    <section className={`px-1 py-2.5 ${last ? '' : 'border-b border-white/10'}`}>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{title}</p>
+      {children}
+    </section>
   )
 }

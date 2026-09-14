@@ -191,8 +191,55 @@ export type ElementLayer = ElementBase &
         heading?: string
         subheading?: string
       }
-    | ({ kind: 'map' } & MapSpec)
+    | ({
+        kind: 'map'
+        /** Locked box aspect (w:h). When set, the inspector drives `heightPct`
+         *  from `widthPct` so the map keeps this shape as it's resized and when
+         *  the card format changes. Absent = free W×H box (or, with no
+         *  `heightPct`, the legacy self-sized square). */
+        aspect?: MapAspect
+      } & MapSpec)
   )
+
+/** Box aspect presets a map element can lock to (w:h). */
+export type MapAspect = '1:1' | '4:5' | '3:4' | '4:3' | '3:2' | '16:9' | '9:16'
+
+export const MAP_ASPECTS: Array<{ id: MapAspect; label: string }> = [
+  { id: '1:1', label: 'Square 1:1' },
+  { id: '4:5', label: 'Portrait 4:5' },
+  { id: '3:4', label: 'Tall 3:4' },
+  { id: '9:16', label: 'Story 9:16' },
+  { id: '4:3', label: 'Landscape 4:3' },
+  { id: '3:2', label: 'Photo 3:2' },
+  { id: '16:9', label: 'Wide 16:9' },
+]
+
+/** w/h of an `a:b` ratio string (card format or map aspect). */
+function ratioWH(r: string): number {
+  const [a, b] = r.split(':').map(Number)
+  return a / b
+}
+
+/** The `heightPct` (% of card height) that gives a box `widthPct` wide (% of
+ *  card width) the given w:h aspect on a card of the given format. Percentages
+ *  are relative to different card edges, so the card's own ratio folds in. */
+export function mapBoxHeightPct(widthPct: number, aspect: MapAspect, cardRatio: AspectRatio): number {
+  return Math.round((widthPct * ratioWH(cardRatio)) / ratioWH(aspect) * 100) / 100
+}
+
+/** Keep every aspect-locked map box in shape after the card format changes
+ *  (their `heightPct` is relative to the old card height). */
+export function reflowMapAspects(elements: ElementLayer[], cardRatio: AspectRatio): ElementLayer[] {
+  let changed = false
+  const next = elements.map((el) => {
+    if (el.kind !== 'map' || !el.aspect) return el
+    const h = mapBoxHeightPct(el.transform.widthPct, el.aspect, cardRatio)
+    if (h === el.transform.heightPct) return el
+    changed = true
+    return { ...el, transform: { ...el.transform, heightPct: h } }
+  })
+  return changed ? next : elements
+}
 
 export type PhosphorWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
 

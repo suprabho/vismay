@@ -18,7 +18,7 @@ import { flushSync } from 'react-dom'
 import ShareCard, { RENDER_SIZE, OUTPUT_SIZE, type ShareCardHandle } from './ShareCard'
 import { ASPECT_RATIOS, SHARE_FOCUS_AREA } from './constants'
 import { seedTemplate, detectSupport, SEED_GRAPHIC_ID } from './layers/seedTemplate'
-import { isUmamiKind, type CardComposition, type MapSpec, type TemplateKind, type Transform, type UmamiTemplateKind } from './layers/types'
+import { isUmamiKind, reflowMapAspects, type CardComposition, type MapSpec, type TemplateKind, type Transform, type UmamiTemplateKind } from './layers/types'
 import { remapCompositionTheme } from './layers/retheme'
 import { UMAMI_PAPER, UMAMI_SPICE, UMAMI_THEMES, umamiThemeName, type UmamiThemeName } from './umami/themes'
 import { seedUmamiTemplate, type UmamiDishLite, type UmamiSeedContent } from './umami/seeds'
@@ -540,6 +540,13 @@ export function ShareCardCreator({
     },
     [activeUmamiTheme],
   )
+
+  // Card format change: percentages are relative to card edges, so re-derive
+  // every aspect-locked map box's height against the new format.
+  const pickRatio = useCallback((next: AspectRatio) => {
+    setRatio(next)
+    setComposition((prev) => (prev ? { ...prev, elements: reflowMapAspects(prev.elements, next) } : prev))
+  }, [])
 
   const pickStory = useCallback(
     (nextSlug: string) => {
@@ -1324,6 +1331,18 @@ export function ShareCardCreator({
   })()
   const mapEditIsBackground = mapEditSel?.kind === 'background'
 
+  // Camera-editor frame for a map ELEMENT: its real box in output pixels (an
+  // unboxed legacy map is square), so the picker previews the exact shape the
+  // card renders — not a fixed 1:1.
+  const mapElementFrame = (() => {
+    const el = mapEditSel?.kind === 'element' ? composition?.elements.find((e) => e.id === mapEditSel.id) : undefined
+    const out = OUTPUT_SIZE[ratio]
+    const w = el ? Math.round((el.transform.widthPct / 100) * out.w) : 1080
+    const h = el?.transform.heightPct != null ? Math.round((el.transform.heightPct / 100) * out.h) : w
+    const shape = el?.kind === 'map' && el.aspect ? el.aspect : `${w}×${h}`
+    return { width: w, height: h, label: `Map element · ${shape}` }
+  })()
+
   // Seed for a "+ Chart" graphic: the current section's story chart id (if any).
   const defaultChartId = useMemo(() => detectSupport(selectedUnit).chartId ?? '', [selectedUnit])
 
@@ -1335,7 +1354,14 @@ export function ShareCardCreator({
 
       {/* ── Top bar: title · saved cards · actions ─────────────────────────── */}
       <div className="flex shrink-0 items-center gap-3">
-        <h1 className="text-lg font-semibold text-neutral-100">{isUmami ? 'Social frames' : 'Share cards'}</h1>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-neutral-100">{isUmami ? 'Social frames' : 'Share cards'}</h1>
+          <p className="text-[11px] text-neutral-500">
+            {currentCardId
+              ? `Editing “${savedCards.find((c) => c.id === currentCardId)?.name ?? 'saved card'}”`
+              : 'Layers on the left · canvas in the middle · selected-layer controls on the right.'}
+          </p>
+        </div>
 
         <div ref={savedRef} className="relative">
           <button
@@ -1557,7 +1583,9 @@ export function ShareCardCreator({
           ))}
         </div>
 
-        {/* active-category panel */}
+        {/* active-category panel — card setup, theme, and the layer LISTS
+            (background / foreground / text). Every layer-level control lives in
+            the right-hand Inspector column, like the footshorts composer. */}
         <div className="min-w-0 flex-1 space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           {error && (
             <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">{error}</p>
@@ -1614,7 +1642,7 @@ export function ShareCardCreator({
                 </label>
                 <label className={labelCls}>
                   Format
-                  <select value={ratio} onChange={(e) => setRatio(e.target.value as AspectRatio)} className={selectCls}>
+                  <select value={ratio} onChange={(e) => pickRatio(e.target.value as AspectRatio)} className={selectCls}>
                     {(isUmami ? ASPECT_RATIOS.filter((r) => r.id === '1:1' || r.id === '4:5') : ASPECT_RATIOS).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.label}
@@ -1699,21 +1727,29 @@ export function ShareCardCreator({
             />
           )}
 
-          {composition && inspectorStory && activeTab === 'background' && (
-            <Inspector composition={composition} selection={{ kind: 'background' }} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
+          {composition && story && activeTab === 'background' && (
+            <>
+              <LayerPanel
+                composition={composition}
+                onChange={setComposition}
+                selection={selection}
+                setSelection={setSelection}
+                story={{ slug: story.slug, theme: story.theme, assets }}
+                sections={['background', 'branding']}
+              />
+              <p className="text-[10px] text-neutral-600">Pick a row to edit its type and settings on the right.</p>
+            </>
           )}
 
-          {composition && inspectorStory && activeTab === 'elements' && (
+          {composition && story && activeTab === 'elements' && (
             <LayerPanel
               composition={composition}
               onChange={setComposition}
               selection={selection}
               setSelection={setSelection}
-              story={{ slug: story!.slug, theme: story!.theme, assets }}
+              story={{ slug: story.slug, theme: story.theme, assets }}
               sections={['elements']}
-              inspectorStory={inspectorStory}
               ratio={ratio}
-              onEditMap={onEditMap}
               defaultChartId={defaultChartId}
               fillHeight
               multiSel={multiSel}
@@ -1721,22 +1757,15 @@ export function ShareCardCreator({
             />
           )}
 
-          {composition && activeTab === 'text' && (
-            <>
-              <LayerPanel
-                composition={composition}
-                onChange={setComposition}
-                selection={selection}
-                setSelection={setSelection}
-                story={{ slug: story!.slug, theme: story!.theme, assets }}
-                sections={['text']}
-              />
-              {(selection?.kind === 'text' || selection?.kind === 'annotation') && inspectorStory && (
-                <div className="border-t border-white/10 pt-3">
-                  <Inspector composition={composition} selection={selection} onChange={setComposition} story={inspectorStory} ratio={ratio} onEditMap={onEditMap} />
-                </div>
-              )}
-            </>
+          {composition && story && activeTab === 'text' && (
+            <LayerPanel
+              composition={composition}
+              onChange={setComposition}
+              selection={selection}
+              setSelection={setSelection}
+              story={{ slug: story.slug, theme: story.theme, assets }}
+              sections={['text']}
+            />
           )}
 
           {!composition && !loading && <p className="text-[11px] text-neutral-600">Pick a story to start.</p>}
@@ -1860,6 +1889,22 @@ export function ShareCardCreator({
           <p className="py-20 text-center text-xs text-neutral-600">{loading ? 'Loading story…' : 'Pick a story and section to start.'}</p>
         )}
       </div>
+
+      {/* ── Right: selected-layer properties (transform · content) ─────────── */}
+      <div className="w-full shrink-0 lg:h-full lg:min-h-0 lg:w-80 lg:overflow-y-auto lg:pl-1">
+        {composition && inspectorStory ? (
+          <Inspector
+            composition={composition}
+            selection={selection}
+            onChange={setComposition}
+            story={inspectorStory}
+            ratio={ratio}
+            onEditMap={onEditMap}
+          />
+        ) : (
+          <p className="px-1 py-2 text-[11px] text-neutral-600">Select a layer to edit it.</p>
+        )}
+      </div>
       </div>
 
       {/* ── Map edit overlay ───────────────────────────────────────────────── */}
@@ -1871,7 +1916,7 @@ export function ShareCardCreator({
           focusArea={mapEditIsBackground ? SHARE_FOCUS_AREA[ratio] : CONTAINED_FOCUS}
           frame={
             mapEditSel?.kind === 'element'
-              ? { width: 1080, height: 1080, label: `Map element · ${ratio}` }
+              ? mapElementFrame
               : { width: OUTPUT_SIZE[ratio].w, height: OUTPUT_SIZE[ratio].h, label: `Share card · ${ratio}` }
           }
           onApplyView={applyMapView}
