@@ -8,6 +8,7 @@ import type { MapRegionLayer, HeatmapLayer, MapStep, MapTextLabel, StoryFocusAre
 import { MapboxBackground } from '@vismay/viz-engine'
 import type { AspectRatio } from './AspectRatioToggle'
 import { SHARE_FOCUS_AREA } from './constants'
+import { proxyRegionsGeojson } from './layers/regionsProxy'
 
 interface Props {
   /** Share-card aspect ratio — picks the focal area used to frame the map. */
@@ -114,6 +115,11 @@ export default function ShareMapBg({
     [pins]
   )
 
+  // Custom choropleth GeoJSON is referenced by a root-relative path on the
+  // public site (`/data/x.geojson`); route it through the admin proxy so it
+  // loads from this origin. Identity-stable when nothing needs rewriting.
+  const proxiedRegions = useMemo(() => proxyRegionsGeojson(regions), [regions])
+
   const steps: MapStep[] = useMemo(
     () => [
       {
@@ -122,12 +128,12 @@ export default function ShareMapBg({
         pitch,
         bearing,
         pins: scaledPins,
-        regions,
+        regions: proxiedRegions,
         heatmap,
         textLabels,
       },
     ],
-    [center, zoom, pitch, bearing, scaledPins, regions, heatmap, textLabels]
+    [center, zoom, pitch, bearing, scaledPins, proxiedRegions, heatmap, textLabels]
   )
 
   return (
