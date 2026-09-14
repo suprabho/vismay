@@ -12,6 +12,7 @@ export type SessionResultRow = {
   constructorId: string | null
   constructorName: string | null
   constructorColor: string | null
+  constructorLogoUrl: string | null
   headshotUrl: string | null
   position: number | null
   bestLapMs: number | null
@@ -38,7 +39,7 @@ type DbRow = {
     headshot_url: string | null
     constructor_id: string | null
     primary_color: string | null
-    constructors: { name: string } | null
+    constructors: { name: string; logo_url: string | null } | null
   } | null
 }
 
@@ -51,6 +52,7 @@ function rowToResult(r: DbRow): SessionResultRow {
     constructorId: d?.constructor_id ?? null,
     constructorName: d?.constructors?.name ?? null,
     constructorColor: d?.primary_color ?? null,
+    constructorLogoUrl: d?.constructors?.logo_url ?? null,
     headshotUrl: d?.headshot_url ?? null,
     position: r.position,
     bestLapMs: r.best_lap_ms,
@@ -90,7 +92,7 @@ export function useSessionResults(round: number | null, type: SessionType) {
       const { data, error } = await sb
         .from('vizf1_session_results')
         .select(
-          'driver_id, position, best_lap_ms, gap_to_leader_ms, laps_completed, status, points, grid, drivers:vizf1_drivers(given_name, family_name, code, headshot_url, constructor_id, primary_color, constructors:vizf1_constructors(name))',
+          'driver_id, position, best_lap_ms, gap_to_leader_ms, laps_completed, status, points, grid, drivers:vizf1_drivers(given_name, family_name, code, headshot_url, constructor_id, primary_color, constructors:vizf1_constructors(name, logo_url))',
         )
         .eq('session_id', session.id)
         .order('position', { ascending: true, nullsFirst: false })

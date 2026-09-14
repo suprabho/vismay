@@ -19,9 +19,11 @@ const SIZE = {
 }
 
 /**
- * Compact team badge: a square chip with either the constructor's logo (on a
- * light background) or a tinted abbreviation in the team's primary colour as
- * fallback. Used next to driver rows and on team pages.
+ * Compact team badge: a square chip tinted in the team's primary colour with
+ * either the constructor's logo mark or, as fallback, the team's abbreviation.
+ * The bundled marks are white glyphs (see @vizf1/brand constructorLogos), so
+ * the chip background is always the dark team tint — never white.
+ * Used next to driver rows and on team pages.
  */
 export function TeamBadge({
   constructorId,
@@ -34,12 +36,15 @@ export function TeamBadge({
   const [logoFailed, setLogoFailed] = useState(false)
   const showLogo = !!logoUrl && !logoFailed
 
-  const abbr = name
-    .replace(/[^A-Za-z ]/g, '')
-    .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 3) || (constructorId ?? '?').slice(0, 3).toUpperCase()
+  // Multi-word names use their initials (Red Bull Racing → RBR, Aston Martin
+  // → AM); single-word names take their first three letters (Ferrari → FER,
+  // Mercedes → MER) so the chip never collapses to a lone letter.
+  const words = name.replace(/[^A-Za-z ]/g, '').trim().split(/\s+/).filter(Boolean)
+  const abbr =
+    (words.length > 1
+      ? words.map((w) => w[0]?.toUpperCase() ?? '').join('').slice(0, 3)
+      : (words[0] ?? '').slice(0, 3).toUpperCase()) ||
+    (constructorId ?? '?').slice(0, 3).toUpperCase()
 
   const resolved =
     color ?? F1_BRAND.constructors[constructorId as ConstructorId] ?? F1_BRAND.colors.muted
@@ -48,11 +53,7 @@ export function TeamBadge({
     <span className="inline-flex items-center gap-2 align-middle">
       <span
         className={`inline-flex shrink-0 items-center justify-center rounded-md wdth-dense font-semibold tracking-wide ${box} ${showLogo ? pad : ''} ${text}`}
-        style={
-          showLogo
-            ? { backgroundColor: 'rgba(255,255,255,0.95)' }
-            : { backgroundColor: `${resolved}22`, color: resolved }
-        }
+        style={{ backgroundColor: `${resolved}22`, color: resolved }}
       >
         {showLogo ? (
           <img
